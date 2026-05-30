@@ -26,16 +26,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         <CardContent className="grid gap-4 py-8">
           <h2 className="text-xl font-semibold">Brak połączenia z Supabase</h2>
           <p className="text-sm leading-6 text-slate-600">
-            Utwórz plik <code className="rounded bg-slate-100 px-1">.env.local</code> w
-            katalogu projektu i dodaj klucze z panelu Supabase:
+            Aplikacja nie widzi kluczy Supabase. Lokalnie dodaj je do{" "}
+            <code className="rounded bg-slate-100 px-1">.env.local</code>, a na Vercel
+            w <strong>Settings → Environment Variables</strong>.
           </p>
           <pre className="overflow-x-auto rounded-xl bg-slate-950 p-4 text-xs text-slate-100">
 {`NEXT_PUBLIC_SUPABASE_URL=https://twoj-projekt.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=twoj-anon-key`}
           </pre>
           <p className="text-sm text-slate-600">
-            Następnie uruchom SQL z pliku <code className="rounded bg-slate-100 px-1">supabase/schema.sql</code>{" "}
-            w Supabase → SQL Editor.
+            Po dodaniu zmiennych na Vercel kliknij <strong>Redeploy</strong> — klucze
+            NEXT_PUBLIC_ są wczytywane przy buildzie, nie wystarczy samo odświeżenie strony.
           </p>
         </CardContent>
       </Card>
