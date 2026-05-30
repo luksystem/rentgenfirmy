@@ -25,9 +25,9 @@ export function MetricCard({
   return (
     <Card className={cn("bg-gradient-to-br", toneClasses[tone])}>
       <CardContent>
-        <p className="text-sm font-medium text-slate-500">{label}</p>
-        <div className="mt-3 flex items-end justify-between gap-4">
-          <p className="text-3xl font-semibold tracking-tight">{value}</p>
+        <p className="text-xs font-medium text-slate-500 sm:text-sm">{label}</p>
+        <div className="mt-2 flex items-end justify-between gap-2 sm:mt-3 sm:gap-4">
+          <p className="text-2xl font-semibold tracking-tight sm:text-3xl">{value}</p>
           {helper ? <p className="text-right text-xs text-slate-500">{helper}</p> : null}
         </div>
       </CardContent>

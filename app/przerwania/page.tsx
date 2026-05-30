@@ -3,6 +3,7 @@
 import { BarPanel } from "@/components/charts";
 import { InterruptionForm } from "@/components/interruption-form";
 import { MetricCard } from "@/components/metric-card";
+import { MobileField, MobileListCard } from "@/components/mobile-list-card";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import {
@@ -26,7 +27,7 @@ export default function InterruptionsPage() {
         description="Rejestr telefonów, pytań, zmian, reklamacji i spotkań, które wybijają z rytmu operacyjnego."
       />
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         <MetricCard
           label="Liczba przerwań dziennie"
           value={interruptionsPerDay(interruptions).at(-1)?.value ?? 0}
@@ -40,7 +41,7 @@ export default function InterruptionsPage() {
         <MetricCard label="Wszystkie przerwania" value={interruptions.length} />
       </section>
 
-      <section className="mt-6">
+      <section className="mt-4 sm:mt-6">
         <InterruptionForm
           projects={projects.map((project) => ({ id: project.id, name: project.name }))}
           isSaving={isSaving}
@@ -48,7 +49,7 @@ export default function InterruptionsPage() {
         />
       </section>
 
-      <section className="mt-6 grid gap-4 xl:grid-cols-2">
+      <section className="mt-4 grid gap-4 sm:mt-6 xl:grid-cols-2">
         <BarPanel title="Przerwania wg typu" data={interruptionsByType(interruptions)} />
         <BarPanel
           title="Projekty generujące najwięcej przerwań"
@@ -56,7 +57,21 @@ export default function InterruptionsPage() {
         />
       </section>
 
-      <Card className="mt-6 overflow-hidden">
+      <div className="mt-4 grid gap-3 sm:mt-6 md:hidden">
+        {interruptions.map((item) => (
+          <MobileListCard
+            key={item.id}
+            title={item.type}
+            subtitle={formatDate(item.date)}
+          >
+            <MobileField label="Osoba" value={item.person} />
+            <MobileField label="Projekt" value={projectNames.get(item.projectId) ?? "-"} />
+            <MobileField label="Opis" value={item.description} stack />
+          </MobileListCard>
+        ))}
+      </div>
+
+      <Card className="mt-4 hidden overflow-hidden sm:mt-6 md:block">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">

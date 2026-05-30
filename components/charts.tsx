@@ -53,7 +53,7 @@ export function BarPanel({ title, data }: { title: string; data: ChartData }) {
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent className="h-80 min-h-80">
+      <CardContent className="h-64 min-h-64 sm:h-80 sm:min-h-80">
         <ClientOnlyChart>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ left: -24, right: 8, top: 8 }}>
@@ -83,7 +83,7 @@ export function PiePanel({ title, data }: { title: string; data: ChartData }) {
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent className="h-80 min-h-80">
+      <CardContent className="h-64 min-h-64 sm:h-80 sm:min-h-80">
         <ClientOnlyChart>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>

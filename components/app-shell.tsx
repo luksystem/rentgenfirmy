@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   Activity,
   BarChart3,
@@ -9,23 +10,36 @@ import {
   Clock3,
   FolderKanban,
   Home,
+  Menu,
   PauseCircle,
   PhoneCall,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navigation = [
-  { href: "/", label: "Dashboard", icon: Home },
+const primaryNav = [
+  { href: "/", label: "Start", icon: Home },
   { href: "/projekty", label: "Projekty", icon: FolderKanban },
+  { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
+];
+
+const secondaryNav = [
   { href: "/do-zamkniecia", label: "Do zamknięcia", icon: CheckCircle2 },
   { href: "/bez-kontaktu", label: "Bez kontaktu", icon: Clock3 },
   { href: "/oczekujace", label: "Oczekujące", icon: PauseCircle },
-  { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
   { href: "/raport", label: "Raport", icon: BarChart3 },
 ];
 
+const allNav = [...primaryNav, ...secondaryNav];
+
+function isActive(pathname: string, href: string) {
+  return pathname === href || (href !== "/" && pathname.startsWith(href));
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const currentPage = allNav.find((item) => isActive(pathname, item.href));
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
@@ -41,11 +55,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Link>
 
         <nav className="grid gap-1">
-          {navigation.map((item) => {
+          {allNav.map((item) => {
             const Icon = item.icon;
-            const active =
-              pathname === item.href ||
-              (item.href !== "/" && pathname.startsWith(item.href));
+            const active = isActive(pathname, item.href);
 
             return (
               <Link
@@ -65,24 +77,103 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="xl:pl-72">
-        <header className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50/85 px-5 py-4 backdrop-blur xl:hidden">
-          <div className="flex items-center gap-3 overflow-x-auto">
-            {navigation.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "whitespace-nowrap rounded-full px-3 py-2 text-sm font-medium text-slate-600",
-                  pathname === item.href && "bg-slate-950 text-white",
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur xl:hidden">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white">
+              <Activity className="h-4 w-4" />
+            </Link>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">
+                {currentPage?.label ?? "Rentgen firmy"}
+              </p>
+              <p className="truncate text-xs text-slate-500">Smart Home / BMS</p>
+            </div>
           </div>
         </header>
 
-        <main className="mx-auto max-w-[1500px] px-5 py-6 lg:px-8">{children}</main>
+        <main className="mx-auto max-w-[1500px] px-4 py-4 pb-24 sm:px-5 sm:py-6 sm:pb-24 xl:px-8 xl:pb-6">
+          {children}
+        </main>
+
+        <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur xl:hidden">
+          <div className="mx-auto grid max-w-lg grid-cols-4">
+            {primaryNav.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(pathname, item.href);
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMenuOpen(false)}
+                  className={cn(
+                    "flex flex-col items-center gap-1 px-2 py-2.5 text-[11px] font-medium text-slate-500",
+                    active && "text-slate-950",
+                  )}
+                >
+                  <Icon className={cn("h-5 w-5", active && "text-slate-950")} />
+                  {item.label}
+                </Link>
+              );
+            })}
+
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              className={cn(
+                "flex flex-col items-center gap-1 px-2 py-2.5 text-[11px] font-medium text-slate-500",
+                secondaryNav.some((item) => isActive(pathname, item.href)) && "text-slate-950",
+              )}
+            >
+              <Menu className="h-5 w-5" />
+              Więcej
+            </button>
+          </div>
+        </nav>
+
+        {menuOpen ? (
+          <div className="fixed inset-0 z-40 xl:hidden">
+            <button
+              type="button"
+              aria-label="Zamknij menu"
+              className="absolute inset-0 bg-slate-950/40"
+              onClick={() => setMenuOpen(false)}
+            />
+            <div className="absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-slate-200 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="font-semibold">Więcej widoków</p>
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen(false)}
+                  className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="grid gap-2">
+                {secondaryNav.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(pathname, item.href);
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMenuOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-700",
+                        active ? "bg-slate-950 text-white" : "bg-slate-50",
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

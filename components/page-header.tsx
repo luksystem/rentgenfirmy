@@ -21,7 +21,7 @@ export function PageHeader({
             {eyebrow}
           </p>
         ) : null}
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
           {title}
         </h1>
         {description ? (
@@ -30,7 +30,7 @@ export function PageHeader({
           </p>
         ) : null}
       </div>
-      {action ? <div className="flex items-center gap-2">{action}</div> : null}
+      {action ? <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">{action}</div> : null}
     </div>
   );
 }

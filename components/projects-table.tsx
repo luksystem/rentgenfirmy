@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Edit, Plus, Trash2 } from "lucide-react";
+import { MobileField, MobileListCard } from "@/components/mobile-list-card";
 import { ProjectForm } from "@/components/project-form";
 import { PriorityBadge, ProjectStatusBadge } from "@/components/project-status-badge";
 import { Button } from "@/components/ui/button";
@@ -100,13 +101,13 @@ export function ProjectsTable() {
               Kliknij wiersz lub ikonę edycji, aby zmienić wszystkie pola projektu.
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <Select
               value={typeFilter}
               onChange={(event) =>
                 setTypeFilter(event.target.value as ProjectType | "Wszystkie")
               }
-              className="w-44"
+              className="w-full sm:w-44"
               aria-label="Filtr typu projektu"
             >
               <option>Wszystkie</option>
@@ -119,7 +120,7 @@ export function ProjectsTable() {
               onChange={(event) =>
                 setFlowStatusFilter(event.target.value as FlowStatus | "Wszystkie")
               }
-              className="w-56"
+              className="w-full sm:w-56"
               aria-label="Filtr statusu przepływu"
             >
               <option>Wszystkie</option>
@@ -127,14 +128,63 @@ export function ProjectsTable() {
                 <option key={status}>{status}</option>
               ))}
             </Select>
-            <Button onClick={openCreate}>
+            <Button onClick={openCreate} className="w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               Dodaj projekt
             </Button>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="grid gap-3 p-4 md:hidden">
+          {filteredProjects.map((project) => (
+            <MobileListCard
+              key={project.id}
+              title={project.name}
+              subtitle={project.type}
+              onClick={() => openEdit(project)}
+              badges={
+                <>
+                  <ProjectStatusBadge
+                    status={project.flowStatus}
+                    priority={project.priority}
+                  />
+                  <PriorityBadge priority={project.priority} />
+                </>
+              }
+              footer={
+                <div
+                  className="flex gap-2"
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                >
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => openEdit(project)}
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                    Edytuj
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => void handleDelete(project.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              }
+            >
+              <MobileField label="Etap" value={project.stage} />
+              <MobileField label="Krok" value={project.nextStepOwner} />
+              <MobileField label="Kontakt" value={formatDate(project.nextContactDate)} />
+              <MobileField label="Blokada" value={project.blockerReason ?? "-"} />
+            </MobileListCard>
+          ))}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[1250px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>

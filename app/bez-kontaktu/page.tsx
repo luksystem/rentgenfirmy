@@ -1,6 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/page-header";
+import { MobileField, MobileListCard } from "@/components/mobile-list-card";
 import { Card } from "@/components/ui/card";
 import { isWithoutContact } from "@/lib/domain";
 import { daysBetween, formatDate } from "@/lib/utils";
@@ -18,7 +19,18 @@ export default function NoContactPage() {
         description="Projekty, w których data kolejnego kontaktu minęła i nie było aktywności dłużej niż 14 dni."
       />
 
-      <Card className="overflow-hidden">
+      <div className="grid gap-3 md:hidden">
+        {staleProjects.map((project) => (
+          <MobileListCard key={project.id} title={project.name}>
+            <MobileField label="Właściciel kroku" value={project.nextStepOwner} />
+            <MobileField label="Ostatni kontakt" value={formatDate(project.lastContactDate)} />
+            <MobileField label="Dni bez aktywności" value={daysBetween(project.lastContactDate)} />
+            <MobileField label="Blokada" value={project.blockerReason ?? "-"} />
+          </MobileListCard>
+        ))}
+      </div>
+
+      <Card className="hidden overflow-hidden md:block">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>

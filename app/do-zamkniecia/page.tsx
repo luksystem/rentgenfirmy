@@ -1,6 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/page-header";
+import { MobileField, MobileListCard } from "@/components/mobile-list-card";
 import { PriorityBadge, ProjectStatusBadge } from "@/components/project-status-badge";
 import { Card } from "@/components/ui/card";
 import { closingStatuses, priorityWeight } from "@/lib/domain";
@@ -21,7 +22,30 @@ export default function ClosingPage() {
         description="Projekty w fazie wdrożenia, poprawek albo gotowe do odbioru, posortowane najpierw po krytyczności."
       />
 
-      <Card className="overflow-hidden">
+      <div className="grid gap-3 md:hidden">
+        {closingProjects.map((project) => (
+          <MobileListCard
+            key={project.id}
+            title={project.name}
+            badges={
+              <>
+                <ProjectStatusBadge status={project.flowStatus} priority={project.priority} />
+                <PriorityBadge priority={project.priority} />
+              </>
+            }
+          >
+            <MobileField
+              label="Blokuje zamknięcie"
+              value={project.closeBlocker ?? project.blockerReason ?? "-"}
+            />
+            <MobileField label="Godziny zostały" value={`${project.remainingHours ?? 0} h`} />
+            <MobileField label="Następna akcja" value={project.nextAction ?? "-"} />
+            <MobileField label="Termin" value={formatDate(project.closeDeadline)} />
+          </MobileListCard>
+        ))}
+      </div>
+
+      <Card className="hidden overflow-hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">

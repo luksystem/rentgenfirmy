@@ -1,6 +1,7 @@
 "use client";
 
 import { BarPanel, PiePanel } from "@/components/charts";
+import { InterruptionForm } from "@/components/interruption-form";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeader, ResetButton } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +14,8 @@ import {
 import { useAppStore } from "@/store/app-store";
 
 export default function Home() {
-  const { projects, interruptions, seedDemoData, isSaving } = useAppStore();
+  const { projects, interruptions, addInterruption, seedDemoData, isSaving } =
+    useAppStore();
   const metrics = projectMetrics(projects);
 
   return (
@@ -27,7 +29,7 @@ export default function Home() {
         }
       />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Wszystkie projekty" value={metrics.all} />
         <MetricCard label="Projekty aktywne" value={metrics.active} tone="green" />
         <MetricCard label="Projekty oczekujące" value={metrics.waiting} tone="amber" />
@@ -46,13 +48,29 @@ export default function Home() {
         <MetricCard label="Projekty krytyczne" value={metrics.critical} tone="red" />
       </section>
 
-      <section className="mt-6 grid gap-4 xl:grid-cols-3">
+      <section className="mt-4 sm:mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Szybkie wpisanie przerwania</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <InterruptionForm
+              projects={projects.map((project) => ({ id: project.id, name: project.name }))}
+              isSaving={isSaving}
+              onSubmit={addInterruption}
+              className="border-0 p-0"
+            />
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mt-4 grid gap-4 sm:mt-6 xl:grid-cols-3">
         <BarPanel title="Projekty wg statusów" data={projectsByStatus(projects)} />
         <PiePanel title="Projekty wg powodów blokady" data={projectsByBlocker(projects)} />
         <BarPanel title="Przerwania wg typu" data={interruptionsByType(interruptions)} />
       </section>
 
-      <section className="mt-6 grid gap-4 xl:grid-cols-2">
+      <section className="mt-4 grid gap-4 sm:mt-6 xl:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Co wymaga uwagi</CardTitle>
@@ -64,15 +82,15 @@ export default function Home() {
               .map((project) => (
                 <div
                   key={project.id}
-                  className="flex items-center justify-between rounded-xl border border-slate-200 p-3"
+                  className="flex flex-col gap-3 rounded-xl border border-slate-200 p-3 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-medium">{project.name}</p>
                     <p className="text-sm text-slate-500">
                       {project.nextStepOwner} · {project.blockerReason ?? "Brak blokady"}
                     </p>
                   </div>
-                  <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                  <span className="w-fit rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
                     Krytyczny
                   </span>
                 </div>

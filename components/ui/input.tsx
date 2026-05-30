@@ -53,13 +53,15 @@ export function Field({
   label,
   error,
   children,
+  className,
 }: {
   label: string;
   error?: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+    <label className={cn("grid gap-1.5 text-sm font-medium text-slate-700", className)}>
       {label}
       {children}
       {error ? <span className="text-xs font-normal text-rose-600">{error}</span> : null}
