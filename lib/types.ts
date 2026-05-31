@@ -3,6 +3,8 @@ import {
   type FieldOptions,
 } from "@/lib/field-options";
 
+import type { ReportPeriod } from "@/lib/report-period";
+
 export type { FieldOptions };
 
 export const projectTypes = DEFAULT_FIELD_OPTIONS.projectTypes;
@@ -90,6 +92,8 @@ export type QuickWin = {
 };
 
 export type WeeklyReport = {
+  period: ReportPeriod;
+  periodLabel: string;
   activeProjects: number;
   waitingProjects: number;
   closedProjects: number;
@@ -101,6 +105,7 @@ export type WeeklyReport = {
   interruptionTrends: {
     daily: TrendComparison;
     weekly: TrendComparison;
+    previousPeriodLabel: string;
   };
   criticalProjects: Project[];
   waitingProjectsList: Project[];

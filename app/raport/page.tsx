@@ -1,192 +1,158 @@
 "use client";
 
-import { useState } from "react";
-import { BarPanel, PiePanel } from "@/components/charts";
-import { MetricCard } from "@/components/metric-card";
+import { useMemo, useRef, useState } from "react";
+import { Download, FileBarChart } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { PriorityBadge, ProjectStatusBadge } from "@/components/project-status-badge";
-import { QuickWinsPanel } from "@/components/quick-wins-panel";
+import { ReportContent } from "@/components/report-content";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { generateWeeklyReport } from "@/lib/domain";
-import { formatTrendHelper } from "@/lib/report-insights";
-import type { Project } from "@/lib/types";
+import { Card, CardContent } from "@/components/ui/card";
+import { Field, Input } from "@/components/ui/input";
+import { generateReport } from "@/lib/domain";
+import { exportElementToPdf } from "@/lib/export-report-pdf";
+import {
+  createWeeklyPeriod,
+  periodFromPreset,
+  reportFilename,
+  validatePeriod,
+  type ReportPreset,
+} from "@/lib/report-period";
 import { useAppStore } from "@/store/app-store";
 
-function ReportProjectList({
-  title,
-  emptyMessage,
-  projects,
-  detail,
-}: {
-  title: string;
-  emptyMessage: string;
-  projects: Project[];
-  detail: (project: Project) => string;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          {title}{" "}
-          <span className="text-sm font-normal text-muted">({projects.length})</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-3">
-        {projects.length === 0 ? (
-          <p className="text-sm text-muted">{emptyMessage}</p>
-        ) : (
-          projects.map((project) => (
-            <div
-              key={project.id}
-              className="rounded-xl border border-border bg-surface-muted p-3"
-            >
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <p className="font-medium">{project.name}</p>
-                <div className="flex flex-wrap gap-2">
-                  <ProjectStatusBadge
-                    status={project.flowStatus}
-                    priority={project.priority}
-                    isActive={project.isActive}
-                  />
-                  <PriorityBadge priority={project.priority} />
-                </div>
-              </div>
-              <p className="text-sm text-muted">{detail(project)}</p>
-            </div>
-          ))
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+const presetLabels: Record<ReportPreset, string> = {
+  weekly: "Ostatnie 7 dni",
+  last30: "Ostatnie 30 dni",
+  thisMonth: "Ten miesiąc",
+  custom: "Własny zakres",
+};
 
 export default function ReportPage() {
   const { projects, interruptions, fieldOptions } = useAppStore();
+  const defaultPeriod = createWeeklyPeriod();
+  const [preset, setPreset] = useState<ReportPreset>("weekly");
+  const [customStart, setCustomStart] = useState(defaultPeriod.startDate);
+  const [customEnd, setCustomEnd] = useState(defaultPeriod.endDate);
   const [generated, setGenerated] = useState(false);
-  const report = generateWeeklyReport(projects, interruptions, fieldOptions);
-  const { daily, weekly } = report.interruptionTrends;
+  const [periodError, setPeriodError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  const period = useMemo(
+    () => periodFromPreset(preset, customStart, customEnd),
+    [preset, customStart, customEnd],
+  );
+
+  const report = useMemo(
+    () => generateReport(projects, interruptions, fieldOptions, period),
+    [projects, interruptions, fieldOptions, period],
+  );
+
+  function handleGenerate() {
+    if (preset === "custom") {
+      const error = validatePeriod(customStart, customEnd);
+      setPeriodError(error);
+      if (error) {
+        return;
+      }
+    }
+
+    setPeriodError(null);
+    setGenerated(true);
+  }
+
+  async function handleExportPdf() {
+    if (!reportRef.current) {
+      return;
+    }
+
+    setIsExporting(true);
+
+    try {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+      await exportElementToPdf(reportRef.current, reportFilename(period));
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   return (
     <>
       <PageHeader
         eyebrow="Podsumowanie"
-        title="Raport tygodniowy"
-        description="Podsumowanie stanu projektów, trendów przerwań i sugerowanych quick winów."
+        title="Raport operacyjny"
+        description="Stan projektów na dziś oraz przerwania z wybranego okresu. Raport liczony na żywo — nie jest zapisywany w bazie."
         action={
-          <Button onClick={() => setGenerated(true)}>Generuj raport tygodniowy</Button>
+          generated ? (
+            <Button variant="secondary" onClick={() => void handleExportPdf()} disabled={isExporting}>
+              <Download className="h-4 w-4" />
+              {isExporting ? "Eksport..." : "Eksport PDF"}
+            </Button>
+          ) : null
         }
       />
+
+      <Card className="mb-4">
+        <CardContent className="grid gap-4 py-5">
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(presetLabels) as ReportPreset[]).map((key) => (
+              <Button
+                key={key}
+                type="button"
+                size="sm"
+                variant={preset === key ? "default" : "secondary"}
+                onClick={() => {
+                  setPreset(key);
+                  setPeriodError(null);
+                }}
+              >
+                {presetLabels[key]}
+              </Button>
+            ))}
+          </div>
+
+          {preset === "custom" ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Od">
+                <Input
+                  type="date"
+                  value={customStart}
+                  onChange={(event) => setCustomStart(event.target.value)}
+                />
+              </Field>
+              <Field label="Do">
+                <Input
+                  type="date"
+                  value={customEnd}
+                  onChange={(event) => setCustomEnd(event.target.value)}
+                />
+              </Field>
+            </div>
+          ) : (
+            <p className="text-sm text-muted">
+              Zakres: <strong className="text-foreground">{report.periodLabel}</strong>
+            </p>
+          )}
+
+          {periodError ? <p className="text-sm text-rose-400">{periodError}</p> : null}
+
+          <div>
+            <Button onClick={handleGenerate}>
+              <FileBarChart className="h-4 w-4" />
+              Generuj raport
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {!generated ? (
         <Card>
           <CardContent className="py-12 text-center text-muted">
-            Kliknij przycisk, aby wygenerować raport na podstawie aktualnych danych.
+            Wybierz okres i kliknij „Generuj raport”.
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
-          <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-            <MetricCard label="Aktywne" value={report.activeProjects} tone="green" />
-            <MetricCard label="Oczekujące" value={report.waitingProjects} tone="amber" />
-            <MetricCard label="Do zamknięcia" value={report.closingProjects} tone="slate" />
-            <MetricCard label="Zamknięte" value={report.closedProjects} />
-            <MetricCard
-              label="Przerwania dziś"
-              value={daily.current}
-              helper={formatTrendHelper(daily, "wczoraj")}
-              tone={daily.direction === "up" ? "red" : daily.direction === "down" ? "green" : "default"}
-            />
-            <MetricCard
-              label="Przerwania 7 dni"
-              value={weekly.current}
-              helper={formatTrendHelper(weekly, "poprzednie 7 dni")}
-              tone={weekly.direction === "up" ? "amber" : weekly.direction === "down" ? "green" : "default"}
-            />
-          </section>
-
-          <Card className="panel-success border">
-            <CardHeader>
-              <CardTitle>Quick wins — co wdrożyć teraz</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <QuickWinsPanel wins={report.quickWins} />
-            </CardContent>
-          </Card>
-
-          <Card className="border border-border bg-surface-muted">
-            <CardContent className="grid gap-2 py-4 text-sm text-muted">
-              <p className="font-medium text-foreground">Trend przerwań</p>
-              <p>
-                <strong>Dziś vs wczoraj:</strong> {daily.current} / {daily.previous} —{" "}
-                {formatTrendHelper(daily, "wczoraj")}
-              </p>
-              <p>
-                <strong>Ostatnie 7 dni vs poprzednie 7:</strong> {weekly.current} /{" "}
-                {weekly.previous} — {formatTrendHelper(weekly, "poprzednie 7 dni")}
-              </p>
-              <p className="pt-1">
-                <strong>Przerwania</strong> — pełna historia w bazie.{" "}
-                <strong>Powody blokady</strong> — tylko aktualny stan projektu.
-              </p>
-            </CardContent>
-          </Card>
-
-          <section className="grid gap-4 xl:grid-cols-2">
-            <PiePanel title="Aktualne powody blokady (projekty)" data={report.blockersByReason} />
-            <BarPanel title="Przerwania wg typu (historia)" data={report.interruptionsByTypeChart} />
-          </section>
-
-          <section className="grid gap-4 xl:grid-cols-3">
-            <ReportProjectList
-              title="Projekty krytyczne"
-              emptyMessage="Brak projektów krytycznych."
-              projects={report.criticalProjects}
-              detail={(project) =>
-                `${project.nextStepOwner} · ${project.blockerReason ?? "Brak blokady"}`
-              }
-            />
-            <ReportProjectList
-              title="Projekty oczekujące"
-              emptyMessage="Brak projektów ze statusem oczekującym."
-              projects={report.waitingProjectsList}
-              detail={(project) =>
-                `${project.nextStepOwner} · ${project.blockerReason ?? "Brak powodu blokady"}`
-              }
-            />
-            <ReportProjectList
-              title="Projekty do zamknięcia"
-              emptyMessage="Brak projektów w trakcie na etapie do zamknięcia."
-              projects={report.closingProjectsList}
-              detail={(project) =>
-                `${project.stage} · ${project.closeBlocker ?? project.blockerReason ?? "Brak blokady"}`
-              }
-            />
-          </section>
-
-          <section className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Najczęstszy powód blokady</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm">
-                <span className="text-2xl font-semibold text-foreground">
-                  {report.mostCommonBlocker}
-                </span>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Najczęstsze źródło przerwań</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm">
-                <span className="text-2xl font-semibold text-foreground">
-                  {report.mostCommonInterruptionSource}
-                </span>
-              </CardContent>
-            </Card>
-          </section>
-        </div>
+        <ReportContent ref={reportRef} report={report} light={isExporting} />
       )}
     </>
   );

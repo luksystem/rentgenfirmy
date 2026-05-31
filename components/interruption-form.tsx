@@ -37,6 +37,7 @@ export function InterruptionForm({
   isSaving = false,
   onSubmit,
   onCancel,
+  layout = "stacked",
   className,
 }: {
   projects: Array<{ id: string; name: string }>;
@@ -44,6 +45,8 @@ export function InterruptionForm({
   isSaving?: boolean;
   onSubmit: (values: FormValues) => void | Promise<void>;
   onCancel?: () => void;
+  /** stacked — kolumny (karta dashboardu); inline — jeden rząd na szerokim ekranie */
+  layout?: "stacked" | "inline";
   className?: string;
 }) {
   const fieldOptions = useAppStore((state) => state.fieldOptions);
@@ -91,8 +94,11 @@ export function InterruptionForm({
         }
       })}
       className={cn(
-        "grid gap-4 rounded-2xl border border-border bg-surface p-4 sm:grid-cols-2",
-        !onCancel && "lg:grid-cols-[140px_180px_200px_240px_1fr_auto] lg:items-end",
+        "grid gap-4 rounded-2xl border border-border bg-surface p-4",
+        layout === "stacked" && "sm:grid-cols-2",
+        layout === "inline" &&
+          !onCancel &&
+          "sm:grid-cols-2 2xl:grid-cols-[140px_180px_200px_minmax(180px,1fr)_minmax(180px,1.5fr)_auto] 2xl:items-end",
         className,
       )}
     >
@@ -113,7 +119,7 @@ export function InterruptionForm({
           ))}
         </Select>
       </Field>
-      <Field label="Projekt" className="sm:col-span-2 lg:col-span-1">
+      <Field label="Projekt" className={layout === "inline" ? "sm:col-span-2 2xl:col-span-1" : "sm:col-span-2"}>
         <Select {...register("projectId", { required: true })}>
           {projects.map((project) => (
             <option key={project.id} value={project.id}>
@@ -122,13 +128,14 @@ export function InterruptionForm({
           ))}
         </Select>
       </Field>
-      <Field label="Opis" className="sm:col-span-2 lg:col-span-1">
-        <Textarea className="min-h-20 sm:min-h-10" {...register("description", { required: true })} />
+      <Field label="Opis" className={layout === "inline" ? "sm:col-span-2 2xl:col-span-1" : "sm:col-span-2"}>
+        <Textarea className={cn("min-h-20", layout === "inline" && "sm:min-h-10")} {...register("description", { required: true })} />
       </Field>
       <div
         className={cn(
-          "flex w-full gap-2 sm:col-span-2",
-          onCancel ? "justify-end" : "flex-col lg:w-auto",
+          "flex w-full gap-2",
+          layout === "stacked" || onCancel ? "sm:col-span-2" : "sm:col-span-2",
+          onCancel ? "justify-end" : layout === "inline" ? "flex-col 2xl:w-auto" : "flex-col",
         )}
       >
         {onCancel ? (
@@ -139,7 +146,7 @@ export function InterruptionForm({
         <Button
           type="submit"
           disabled={isSaving || projects.length === 0}
-          className={cn("h-11", onCancel ? "" : "w-full lg:w-auto")}
+          className={cn("h-11 w-full", layout === "inline" && !onCancel && "2xl:w-auto")}
         >
           {isSaving ? "Zapisywanie..." : isEditing ? "Zapisz zmiany" : "Dodaj przerwanie"}
         </Button>

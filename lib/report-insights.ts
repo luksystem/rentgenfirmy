@@ -5,6 +5,12 @@ import {
   isProjectForClosing,
   isWaitingFlowStatus,
 } from "@/lib/field-options";
+import {
+  filterInterruptionsByPeriod,
+  formatPeriodLabel,
+  previousPeriod,
+  type ReportPeriod,
+} from "@/lib/report-period";
 import type { Interruption, Project, QuickWin, TrendComparison, WeeklyReport } from "@/lib/types";
 
 export type { QuickWin, TrendComparison };
@@ -41,23 +47,30 @@ export function countInterruptionsBetween(
 
 export function interruptionTrends(
   interruptions: Interruption[],
+  period: ReportPeriod,
   referenceDate = new Date(),
 ) {
+  const inPeriod = filterInterruptionsByPeriod(interruptions, period);
+  const prev = previousPeriod(period);
+  const inPrevious = filterInterruptionsByPeriod(interruptions, prev);
+  const periodComparison = compareCounts(inPeriod.length, inPrevious.length);
+
   const today = toISODate(referenceDate);
   const yesterday = toISODate(addDays(referenceDate, -1));
-  const last7Start = addDays(referenceDate, -6);
-  const prev7Start = addDays(referenceDate, -13);
-  const prev7End = addDays(referenceDate, -7);
-
-  const todayCount = interruptions.filter((item) => item.date === today).length;
-  const yesterdayCount = interruptions.filter((item) => item.date === yesterday).length;
+  const todayInPeriod = period.endDate >= today && period.startDate <= today;
+  const todayCount = todayInPeriod
+    ? inPeriod.filter((item) => item.date === today).length
+    : inPeriod.filter((item) => item.date === period.endDate).length;
+  const yesterdayCount = todayInPeriod
+    ? interruptions.filter((item) => item.date === yesterday).length
+    : interruptions.filter(
+        (item) => item.date === toISODate(addDays(new Date(period.endDate), -1)),
+      ).length;
 
   return {
     daily: compareCounts(todayCount, yesterdayCount),
-    weekly: compareCounts(
-      countInterruptionsBetween(interruptions, last7Start, referenceDate),
-      countInterruptionsBetween(interruptions, prev7Start, prev7End),
-    ),
+    weekly: periodComparison,
+    previousPeriodLabel: formatPeriodLabel(prev),
   };
 }
 
@@ -93,13 +106,15 @@ export function generateQuickWins(
   const topBlocker = report.blockersByReason[0];
   const waitingShare =
     nonClosedCount > 0 ? report.waitingProjects / nonClosedCount : 0;
+  const periodLabel = report.periodLabel.toLowerCase();
+  const previousLabel = report.interruptionTrends.previousPeriodLabel.toLowerCase();
 
   if (weekly.direction === "up" && weekly.delta >= 3) {
     wins.push({
       id: "interruptions-week-up",
       severity: "warning",
-      title: "Przerwania rosną tygodniowo",
-      description: `W ostatnich 7 dniach było ${weekly.current} przerwań, wcześniej ${weekly.previous}.`,
+      title: "Przerwania rosną w wybranym okresie",
+      description: `W okresie ${periodLabel} było ${weekly.current} przerwań, wcześniej ${weekly.previous}.`,
       action:
         "Przejrzyj typy przerwań i wprowadź jedną regułę ograniczającą najczęstsze źródło.",
     });
@@ -107,8 +122,8 @@ export function generateQuickWins(
     wins.push({
       id: "interruptions-week-down",
       severity: "info",
-      title: "Mniej przerwań niż tydzień temu",
-      description: `Tygodniowo spadło z ${weekly.previous} do ${weekly.current} przerwań.`,
+      title: "Mniej przerwań niż w poprzednim okresie",
+      description: `Spadek z ${weekly.previous} do ${weekly.current} przerwań (${previousLabel}).`,
       action: "Utrzymaj obecne reguły pracy — co działa, zapisz w checklistcie zespołu.",
     });
   }
@@ -117,8 +132,8 @@ export function generateQuickWins(
     wins.push({
       id: "interruptions-day-up",
       severity: "warning",
-      title: "Dziś więcej przerwań niż wczoraj",
-      description: `Dziś ${daily.current}, wczoraj ${daily.previous}.`,
+      title: "Skok przerwań pod koniec okresu",
+      description: `Ostatni dzień okresu: ${daily.current}, dzień wcześniej: ${daily.previous}.`,
       action: "Odłóż reaktywne tematy na jutro i domknij 1 oczekujący projekt.",
     });
   }
@@ -128,7 +143,7 @@ export function generateQuickWins(
       id: "top-interruption-type",
       severity: weekly.direction === "up" ? "critical" : "warning",
       title: `Dominuje: ${topInterruption.name}`,
-      description: `${topInterruption.value} przerwań tego typu w bazie.`,
+      description: `${topInterruption.value} przerwań tego typu w wybranym okresie.`,
       action: getInterruptionTypeSuggestion(topInterruption.name, options),
     });
   }
@@ -191,11 +206,10 @@ export function generateQuickWins(
       return false;
     }
 
-    const recentCount = countInterruptionsBetween(
+    const recentCount = filterInterruptionsByPeriod(
       interruptions.filter((item) => item.projectId === project.id),
-      addDays(new Date(), -6),
-      new Date(),
-    );
+      report.period,
+    ).length;
 
     return recentCount >= 2;
   });
@@ -205,7 +219,7 @@ export function generateQuickWins(
       id: "inactive-with-interruptions",
       severity: "warning",
       title: "Przerwania w nieaktywnych projektach",
-      description: `${noisyInactive.length} nieaktywnych projektów generuje przerwania w tym tygodniu.`,
+      description: `${noisyInactive.length} nieaktywnych projektów generuje przerwania w wybranym okresie.`,
       action:
         "Albo oznacz projekt jako aktywny, albo ustal regułę „nie reagujemy” i komunikuj ją klientowi lub ekipie.",
     });

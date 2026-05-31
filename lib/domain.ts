@@ -10,6 +10,12 @@ import {
   generateQuickWins,
   interruptionTrends,
 } from "@/lib/report-insights";
+import {
+  createWeeklyPeriod,
+  filterInterruptionsByPeriod,
+  formatPeriodLabel,
+  type ReportPeriod,
+} from "@/lib/report-period";
 import type {
   Interruption,
   Priority,
@@ -133,18 +139,22 @@ export function topInterruptionProjects(
     .slice(0, 8);
 }
 
-export function generateWeeklyReport(
+export function generateReport(
   projects: Project[],
   interruptions: Interruption[],
   options: FieldOptions,
+  period: ReportPeriod = createWeeklyPeriod(),
 ): WeeklyReport {
+  const periodInterruptions = filterInterruptionsByPeriod(interruptions, period);
   const metrics = projectMetrics(projects, options);
   const blockers = projectsByBlocker(projects).sort((a, b) => b.value - a.value);
-  const sources = interruptionsByType(interruptions).sort((a, b) => b.value - a.value);
+  const sources = interruptionsByType(periodInterruptions).sort((a, b) => b.value - a.value);
   const sortByPriority = (a: Project, b: Project) =>
     priorityWeight(b.priority) - priorityWeight(a.priority);
 
   const baseReport = {
+    period,
+    periodLabel: formatPeriodLabel(period),
     activeProjects: metrics.active,
     waitingProjects: metrics.waiting,
     closedProjects: projects.filter((project) =>
@@ -153,9 +163,9 @@ export function generateWeeklyReport(
     closingProjects: metrics.closing,
     noContactProjects: metrics.noContact,
     mostCommonBlocker: blockers[0]?.name ?? "Brak",
-    interruptionsCount: interruptions.length,
+    interruptionsCount: periodInterruptions.length,
     mostCommonInterruptionSource: sources[0]?.name ?? "Brak",
-    interruptionTrends: interruptionTrends(interruptions),
+    interruptionTrends: interruptionTrends(interruptions, period),
     criticalProjects: projects
       .filter((project) => project.priority === "Krytyczny")
       .sort(sortByPriority),
@@ -171,6 +181,14 @@ export function generateWeeklyReport(
 
   return {
     ...baseReport,
-    quickWins: generateQuickWins(projects, interruptions, options, baseReport),
+    quickWins: generateQuickWins(projects, periodInterruptions, options, baseReport),
   };
+}
+
+export function generateWeeklyReport(
+  projects: Project[],
+  interruptions: Interruption[],
+  options: FieldOptions,
+): WeeklyReport {
+  return generateReport(projects, interruptions, options, createWeeklyPeriod());
 }

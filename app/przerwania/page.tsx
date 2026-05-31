@@ -146,6 +146,7 @@ export default function InterruptionsPage() {
           projects={projectOptions}
           isSaving={isSaving}
           onSubmit={addInterruption}
+          layout="inline"
         />
       </section>
 
