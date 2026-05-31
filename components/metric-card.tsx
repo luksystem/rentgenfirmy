@@ -27,37 +27,48 @@ export function MetricCard({
   return (
     <Card
       className={cn(
-        "overflow-hidden",
-        size === "compact" && "min-w-[140px] shrink-0",
+        "overflow-hidden rounded-xl sm:rounded-2xl",
+        size === "compact" && "min-w-[96px] shrink-0 sm:min-w-[140px]",
         size === "hero" && "border-accent/20 bg-surface-elevated",
       )}
     >
-      <div className={cn("h-1 w-full", accentBar[tone])} aria-hidden />
-      <CardContent className={cn(size === "hero" && "py-5", size === "compact" && "py-3")}>
+      <div className={cn("h-0.5 w-full sm:h-1", accentBar[tone])} aria-hidden />
+      <CardContent
+        className={cn(
+          "p-2.5 sm:p-5",
+          size === "hero" && "py-2 sm:py-5",
+          size === "compact" && "py-2 sm:py-3",
+          size === "default" && "py-3 sm:py-5",
+        )}
+      >
         <p
           className={cn(
-            "font-medium uppercase tracking-[0.12em] text-muted",
-            size === "hero" ? "text-xs" : "text-[11px]",
+            "font-medium uppercase leading-tight tracking-[0.1em] text-muted",
+            size === "hero" && "text-[9px] sm:text-xs",
+            size === "compact" && "text-[9px] sm:text-[11px]",
+            size === "default" && "text-[10px] sm:text-[11px]",
           )}
         >
           {label}
         </p>
         <div
           className={cn(
-            "mt-2 flex items-end justify-between gap-2",
-            size === "hero" && "mt-3",
+            "mt-1 flex items-end justify-between gap-1 sm:mt-2 sm:gap-2",
+            size === "hero" && "sm:mt-3",
           )}
         >
           <p
             className={cn(
-              "font-semibold tracking-tight text-foreground",
-              size === "hero" ? "text-4xl" : size === "compact" ? "text-xl" : "text-2xl sm:text-3xl",
+              "font-semibold leading-none tracking-tight text-foreground",
+              size === "hero" && "text-2xl sm:text-4xl",
+              size === "compact" && "text-lg sm:text-xl",
+              size === "default" && "text-xl sm:text-2xl md:text-3xl",
             )}
           >
             {value}
           </p>
           {helper ? (
-            <p className="text-right text-[11px] leading-4 text-muted">{helper}</p>
+            <p className="hidden text-right text-[11px] leading-4 text-muted sm:block">{helper}</p>
           ) : null}
         </div>
       </CardContent>

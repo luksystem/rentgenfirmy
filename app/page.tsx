@@ -36,13 +36,13 @@ export default function Home() {
         }
       />
 
-      <section className="grid gap-3 sm:gap-4 md:grid-cols-3">
+      <section className="grid grid-cols-3 gap-2 sm:gap-4">
         <MetricCard label="Aktywne" value={metrics.active} tone="green" size="hero" />
         <MetricCard label="Oczekujące" value={metrics.waiting} tone="amber" size="hero" />
         <MetricCard label="Krytyczne" value={metrics.critical} tone="red" size="hero" />
       </section>
 
-      <section className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:mt-4 sm:flex-wrap sm:overflow-visible sm:px-0">
+      <section className="-mx-1 mt-2 flex gap-1.5 overflow-x-auto px-1 pb-0.5 sm:mx-0 sm:mt-4 sm:gap-2 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-1">
         <MetricCard label="Wszystkie" value={metrics.all} size="compact" />
         <MetricCard label="Nieaktywne" value={metrics.inactive} tone="slate" size="compact" />
         <MetricCard label="Do zamknięcia" value={metrics.closing} tone="slate" size="compact" />
