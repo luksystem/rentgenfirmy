@@ -52,6 +52,9 @@ export type Project = {
   remainingHours?: number;
   nextAction?: string;
   closeDeadline?: string;
+  waitingDependsOnUs?: boolean;
+  waitingIncreasesCostLater?: boolean;
+  waitingBlocksSettlement?: boolean;
 };
 
 export type ProjectInput = Omit<

@@ -29,17 +29,17 @@ function ReportProjectList({
       <CardHeader>
         <CardTitle>
           {title}{" "}
-          <span className="text-sm font-normal text-slate-500">({projects.length})</span>
+          <span className="text-sm font-normal text-muted">({projects.length})</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3">
         {projects.length === 0 ? (
-          <p className="text-sm text-slate-500">{emptyMessage}</p>
+          <p className="text-sm text-muted">{emptyMessage}</p>
         ) : (
           projects.map((project) => (
             <div
               key={project.id}
-              className="rounded-xl border border-slate-200 p-3"
+              className="rounded-xl border border-border bg-surface-muted p-3"
             >
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <p className="font-medium">{project.name}</p>
@@ -52,7 +52,7 @@ function ReportProjectList({
                   <PriorityBadge priority={project.priority} />
                 </div>
               </div>
-              <p className="text-sm text-slate-500">{detail(project)}</p>
+              <p className="text-sm text-muted">{detail(project)}</p>
             </div>
           ))
         )}
@@ -80,7 +80,7 @@ export default function ReportPage() {
 
       {!generated ? (
         <Card>
-          <CardContent className="py-12 text-center text-slate-500">
+          <CardContent className="py-12 text-center text-muted">
             Kliknij przycisk, aby wygenerować raport na podstawie aktualnych danych.
           </CardContent>
         </Card>
@@ -105,7 +105,7 @@ export default function ReportPage() {
             />
           </section>
 
-          <Card className="border-emerald-200 bg-emerald-50/40">
+          <Card className="panel-success border">
             <CardHeader>
               <CardTitle>Quick wins — co wdrożyć teraz</CardTitle>
             </CardHeader>
@@ -114,9 +114,9 @@ export default function ReportPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 bg-slate-50">
-            <CardContent className="grid gap-2 py-4 text-sm text-slate-600">
-              <p className="font-medium text-slate-900">Trend przerwań</p>
+          <Card className="border border-border bg-surface-muted">
+            <CardContent className="grid gap-2 py-4 text-sm text-muted">
+              <p className="font-medium text-foreground">Trend przerwań</p>
               <p>
                 <strong>Dziś vs wczoraj:</strong> {daily.current} / {daily.previous} —{" "}
                 {formatTrendHelper(daily, "wczoraj")}
@@ -170,7 +170,7 @@ export default function ReportPage() {
                 <CardTitle>Najczęstszy powód blokady</CardTitle>
               </CardHeader>
               <CardContent className="text-sm">
-                <span className="text-2xl font-semibold text-slate-950">
+                <span className="text-2xl font-semibold text-foreground">
                   {report.mostCommonBlocker}
                 </span>
               </CardContent>
@@ -180,7 +180,7 @@ export default function ReportPage() {
                 <CardTitle>Najczęstsze źródło przerwań</CardTitle>
               </CardHeader>
               <CardContent className="text-sm">
-                <span className="text-2xl font-semibold text-slate-950">
+                <span className="text-2xl font-semibold text-foreground">
                   {report.mostCommonInterruptionSource}
                 </span>
               </CardContent>

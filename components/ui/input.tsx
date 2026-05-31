@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const fieldClassName =
-  "w-full rounded-2xl border border-transparent bg-surface-muted px-3 text-sm text-foreground outline-none ring-1 ring-border/60 transition placeholder:text-stone-400 focus:bg-surface focus:ring-2 focus:ring-accent/30";
+  "w-full rounded-xl border border-border bg-surface-muted px-3 text-sm text-foreground outline-none transition placeholder:text-muted/70 focus:border-accent/40 focus:bg-surface-elevated focus:ring-2 focus:ring-accent/20";
 
 export function Input({
   className,
@@ -47,10 +47,10 @@ export function Field({
   className?: string;
 }) {
   return (
-    <label className={cn("grid gap-1.5 text-sm font-medium text-stone-700", className)}>
+    <label className={cn("grid gap-1.5 text-sm font-medium text-foreground/90", className)}>
       {label}
       {children}
-      {error ? <span className="text-xs font-normal text-rose-600">{error}</span> : null}
+      {error ? <span className="text-xs font-normal text-rose-400">{error}</span> : null}
     </label>
   );
 }

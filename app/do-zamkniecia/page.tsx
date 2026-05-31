@@ -54,7 +54,7 @@ export default function ClosingPage() {
       <Card className="hidden overflow-hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <thead className="bg-surface-muted text-xs uppercase tracking-wide text-muted">
               <tr>
                 <th className="px-4 py-3">Projekt</th>
                 <th className="px-4 py-3">Status</th>
@@ -65,7 +65,7 @@ export default function ClosingPage() {
                 <th className="px-4 py-3">Termin zamknięcia</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {closingProjects.map((project) => (
                 <tr key={project.id}>
                   <td className="px-4 py-3 font-medium">{project.name}</td>

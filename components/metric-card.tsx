@@ -10,11 +10,11 @@ type MetricCardProps = {
 };
 
 const accentBar = {
-  default: "bg-stone-300",
+  default: "bg-zinc-600",
   green: "bg-emerald-500",
   amber: "bg-amber-500",
   red: "bg-rose-500",
-  slate: "bg-stone-400",
+  slate: "bg-zinc-500",
 };
 
 export function MetricCard({
@@ -29,7 +29,7 @@ export function MetricCard({
       className={cn(
         "overflow-hidden",
         size === "compact" && "min-w-[140px] shrink-0",
-        size === "hero" && "shadow-card",
+        size === "hero" && "border-accent/20 bg-surface-elevated",
       )}
     >
       <div className={cn("h-1 w-full", accentBar[tone])} aria-hidden />

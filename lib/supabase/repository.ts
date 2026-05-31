@@ -120,6 +120,40 @@ export async function createInterruption(
   return rowToInterruption(data);
 }
 
+export async function updateInterruptionRecord(
+  id: string,
+  interruption: Omit<Interruption, "id">,
+): Promise<Interruption> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("interruptions")
+    .update({
+      date: interruption.date,
+      person: interruption.person,
+      type: interruption.type,
+      project_id: interruption.projectId,
+      description: interruption.description,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToInterruption(data);
+}
+
+export async function deleteInterruptionRecord(id: string): Promise<void> {
+  const supabase = getSupabase();
+  const { error } = await supabase.from("interruptions").delete().eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export async function clearAllData(): Promise<void> {
   const supabase = getSupabase();
 

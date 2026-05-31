@@ -174,7 +174,7 @@ export function InterruptionTypesOptionsEditor({
         <CardTitle>{FIELD_OPTION_LABELS.interruptionTypes}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4">
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           Przy każdym typie przerwania możesz wpisać sugestię quick win — pojawi się w raporcie,
           gdy ten typ dominuje w przerwaniach.
         </p>
@@ -182,14 +182,14 @@ export function InterruptionTypesOptionsEditor({
         {items.map((item, index) => (
           <div
             key={`${item.name}-${index}`}
-            className="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-3"
+            className="grid gap-2 rounded-xl border border-border bg-surface-muted p-3"
           >
             <div className="flex flex-wrap items-center gap-2">
               <Input
                 value={item.name}
                 onChange={(event) => updateName(index, event.target.value)}
                 placeholder="Nazwa typu"
-                className="min-w-[180px] flex-1 bg-white"
+                className="min-w-[180px] flex-1"
               />
               <Button
                 type="button"
@@ -226,7 +226,7 @@ export function InterruptionTypesOptionsEditor({
               onChange={(event) => updateSuggestion(index, event.target.value)}
               placeholder="Sugestia quick win dla tego typu przerwania..."
               rows={2}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+              className="w-full rounded-xl border border-border bg-surface-muted px-3 py-2 text-sm text-foreground outline-none focus:border-accent/40 focus:ring-2 focus:ring-accent/20"
             />
           </div>
         ))}
@@ -334,7 +334,7 @@ export function FlowStatusesOptionsEditor({
         <CardTitle>{FIELD_OPTION_LABELS.flowStatuses}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3">
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           Każdy status ma jedną kategorię przepływu: <strong>W trakcie</strong>,{" "}
           <strong>Oczekujące</strong> lub <strong>Zamknięty</strong>. Do widoku Do zamknięcia
           trafia projekt ze statusem W trakcie na etapie oznaczonym jako Do zamknięcia — bez
@@ -348,30 +348,30 @@ export function FlowStatusesOptionsEditor({
               onChange={(event) => updateName(index, event.target.value)}
               className="min-w-[180px] flex-1"
             />
-            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm whitespace-nowrap">
+            <label className="flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3 py-2 text-sm whitespace-nowrap">
               <input
                 type="checkbox"
                 checked={item.isInProgress}
                 onChange={() => toggleInProgress(index)}
-                className="h-4 w-4 rounded border-slate-300"
+                className="h-4 w-4 rounded border-border bg-surface text-accent"
               />
               W trakcie
             </label>
-            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm whitespace-nowrap">
+            <label className="flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3 py-2 text-sm whitespace-nowrap">
               <input
                 type="checkbox"
                 checked={item.isWaiting}
                 onChange={() => toggleWaiting(index)}
-                className="h-4 w-4 rounded border-slate-300"
+                className="h-4 w-4 rounded border-border bg-surface text-accent"
               />
               Oczekujące
             </label>
-            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm whitespace-nowrap">
+            <label className="flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3 py-2 text-sm whitespace-nowrap">
               <input
                 type="checkbox"
                 checked={item.isClosed}
                 onChange={() => toggleClosed(index)}
-                className="h-4 w-4 rounded border-slate-300"
+                className="h-4 w-4 rounded border-border bg-surface text-accent"
               />
               Zamknięty
             </label>
@@ -480,7 +480,7 @@ export function StagesOptionsEditor({
         <CardTitle>{FIELD_OPTION_LABELS.implementationStages}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3">
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           Zaznacz „Do zamknięcia” przy etapach, które kwalifikują aktywny projekt do widoku Do
           zamknięcia.
         </p>
@@ -492,12 +492,12 @@ export function StagesOptionsEditor({
               onChange={(event) => updateName(index, event.target.value)}
               className="min-w-[180px] flex-1"
             />
-            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm whitespace-nowrap">
+            <label className="flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3 py-2 text-sm whitespace-nowrap">
               <input
                 type="checkbox"
                 checked={item.forClosing}
                 onChange={() => toggleClosing(index)}
-                className="h-4 w-4 rounded border-slate-300"
+                className="h-4 w-4 rounded border-border bg-surface text-accent"
               />
               Do zamknięcia
             </label>

@@ -26,6 +26,9 @@ export async function seedDemoData() {
       remainingHours: project.remainingHours,
       nextAction: project.nextAction,
       closeDeadline: project.closeDeadline,
+      waitingDependsOnUs: project.waitingDependsOnUs,
+      waitingIncreasesCostLater: project.waitingIncreasesCostLater,
+      waitingBlocksSettlement: project.waitingBlocksSettlement,
     }),
   );
 

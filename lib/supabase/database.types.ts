@@ -17,6 +17,9 @@ export type ProjectRow = {
   remaining_hours: number | null;
   next_action: string | null;
   close_deadline: string | null;
+  waiting_depends_on_us: boolean;
+  waiting_increases_cost_later: boolean;
+  waiting_blocks_settlement: boolean;
   created_at: string;
 };
 

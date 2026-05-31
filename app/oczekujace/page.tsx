@@ -32,7 +32,7 @@ export default function WaitingPage() {
             <CardHeader>
               <CardTitle>
                 {reason}{" "}
-                <span className="text-sm font-normal text-slate-500">
+                <span className="text-sm font-normal text-muted">
                   ({items?.length ?? 0})
                 </span>
               </CardTitle>
@@ -41,7 +41,7 @@ export default function WaitingPage() {
               {items?.map((project) => (
                 <div
                   key={project.id}
-                  className="rounded-2xl border border-slate-200 p-4"
+                  className="rounded-xl border border-border bg-surface-muted p-4"
                 >
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <p className="font-medium">{project.name}</p>
@@ -51,7 +51,7 @@ export default function WaitingPage() {
                       isActive={project.isActive}
                     />
                   </div>
-                  <div className="grid gap-2 text-sm text-slate-600 md:grid-cols-3">
+                  <div className="grid gap-2 text-sm text-muted md:grid-cols-3">
                     <span>Etap: {project.stage}</span>
                     <span>Krok: {project.nextStepOwner}</span>
                     <span>Kontakt: {formatDate(project.nextContactDate)}</span>

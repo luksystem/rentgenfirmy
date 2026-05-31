@@ -19,18 +19,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 type ChartData = Array<{ name: string; value: number }>;
 
 export const CHART_COLORS = [
-  "#059669",
-  "#0d9488",
-  "#d97706",
-  "#e11d48",
-  "#7c3aed",
-  "#2563eb",
-  "#ca8a04",
-  "#65a30d",
-  "#ea580c",
-  "#0891b2",
-  "#db2777",
-  "#78716c",
+  "#34d399",
+  "#2dd4bf",
+  "#fbbf24",
+  "#fb7185",
+  "#a78bfa",
+  "#60a5fa",
+  "#f472b6",
+  "#4ade80",
+  "#fb923c",
+  "#38bdf8",
+  "#c084fc",
+  "#94a3b8",
 ];
 
 function colorForIndex(index: number) {
@@ -68,7 +68,7 @@ function ChartTooltip({
 
   const item = payload[0];
   return (
-    <div className="rounded-2xl border border-border/80 bg-surface px-3 py-2 text-sm shadow-soft">
+    <div className="rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm shadow-soft">
       <p className="font-medium text-foreground">{item.name}</p>
       <p className="text-muted">{item.value}</p>
     </div>
@@ -90,17 +90,17 @@ export function BarPanel({ title, data }: { title: string; data: ChartData }) {
           <ClientOnlyChart>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data} margin={{ left: -24, right: 8, top: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e7e5e4" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#27272a" />
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 11, fill: "#78716c" }}
+                  tick={{ fontSize: 11, fill: "#a1a1aa" }}
                   interval={0}
                   angle={-25}
                   textAnchor="end"
                   height={80}
                 />
-                <YAxis tick={{ fontSize: 11, fill: "#78716c" }} allowDecimals={false} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: "#f5f0e8" }} />
+                <YAxis tick={{ fontSize: 11, fill: "#a1a1aa" }} allowDecimals={false} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
                 <Bar dataKey="value" radius={[8, 8, 0, 0]}>
                   {data.map((item, index) => (
                     <Cell key={item.name} fill={colorForIndex(index)} />
@@ -137,7 +137,7 @@ export function PiePanel({ title, data }: { title: string; data: ChartData }) {
                   innerRadius={52}
                   outerRadius={92}
                   paddingAngle={3}
-                  stroke="#fff"
+                  stroke="#18181b"
                   strokeWidth={2}
                 >
                   {data.map((item, index) => (
@@ -148,7 +148,7 @@ export function PiePanel({ title, data }: { title: string; data: ChartData }) {
                 <Legend
                   verticalAlign="bottom"
                   iconType="circle"
-                  wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
+                  wrapperStyle={{ fontSize: 12, paddingTop: 8, color: "#a1a1aa" }}
                 />
               </PieChart>
             </ResponsiveContainer>

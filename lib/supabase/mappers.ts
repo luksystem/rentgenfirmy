@@ -32,6 +32,9 @@ export function rowToProject(row: ProjectRow): Project {
     remainingHours: row.remaining_hours ?? undefined,
     nextAction: row.next_action ?? undefined,
     closeDeadline: row.close_deadline ?? undefined,
+    waitingDependsOnUs: row.waiting_depends_on_us,
+    waitingIncreasesCostLater: row.waiting_increases_cost_later,
+    waitingBlocksSettlement: row.waiting_blocks_settlement,
   };
 }
 
@@ -56,6 +59,9 @@ export function projectToInsert(
     remaining_hours: project.remainingHours ?? null,
     next_action: project.nextAction ?? null,
     close_deadline: project.closeDeadline ?? null,
+    waiting_depends_on_us: project.waitingDependsOnUs ?? false,
+    waiting_increases_cost_later: project.waitingIncreasesCostLater ?? false,
+    waiting_blocks_settlement: project.waitingBlocksSettlement ?? false,
   };
 }
 

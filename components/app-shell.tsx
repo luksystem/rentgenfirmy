@@ -78,7 +78,7 @@ function NavLink({
           "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition",
           active
             ? "bg-sidebar-accent-soft text-sidebar-accent"
-            : "bg-surface-muted text-stone-700 hover:bg-stone-200/60",
+            : "border border-border bg-surface-muted text-muted hover:bg-surface-elevated hover:text-foreground",
         )}
       >
         <Icon className="h-4 w-4" />
@@ -111,7 +111,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 flex-col border-r border-sidebar-border bg-sidebar p-5 xl:flex">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 flex-col border-r border-sidebar-border bg-sidebar/95 p-5 backdrop-blur-xl xl:flex">
         <Link href="/" className="mb-8 flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-white shadow-soft">
             <Activity className="h-5 w-5" />
@@ -147,7 +147,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="xl:pl-72">
-        <header className="sticky top-0 z-20 border-b border-border/60 bg-background/90 px-4 py-3 backdrop-blur xl:hidden">
+        <header className="sticky top-0 z-20 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-xl xl:hidden">
           <div className="flex items-center gap-3">
             <Link
               href="/"
@@ -169,7 +169,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
 
         <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 xl:hidden">
-          <div className="mx-auto grid max-w-lg grid-cols-5 rounded-3xl border border-sidebar-border bg-sidebar/95 px-1 py-1 shadow-card backdrop-blur-md">
+          <div className="mx-auto grid max-w-lg grid-cols-5 rounded-2xl border border-border bg-surface-elevated/95 px-1 py-1 shadow-card backdrop-blur-xl">
             {mobileNavLeft.map((item) => {
               const Icon = item.icon;
               const active = isActive(pathname, item.href);
@@ -260,10 +260,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               aria-label="Zamknij menu"
-              className="absolute inset-0 bg-stone-950/50 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
               onClick={() => setMenuOpen(false)}
             />
-            <div className="absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-border/80 bg-surface p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-card">
+            <div className="absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-border bg-surface-elevated p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-card">
               <div className="mb-4 flex items-center justify-between">
                 <p className="font-semibold text-foreground">Więcej widoków</p>
                 <button

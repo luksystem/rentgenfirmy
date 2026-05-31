@@ -25,16 +25,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       <Card className="mx-auto mt-10 max-w-2xl">
         <CardContent className="grid gap-4 py-8">
           <h2 className="text-xl font-semibold">Brak połączenia z Supabase</h2>
-          <p className="text-sm leading-6 text-slate-600">
+          <p className="text-sm leading-6 text-muted">
             Aplikacja nie widzi kluczy Supabase. Lokalnie dodaj je do{" "}
-            <code className="rounded bg-slate-100 px-1">.env.local</code>, a na Vercel
+            <code className="rounded bg-surface-muted px-1.5 py-0.5 text-foreground">.env.local</code>, a na Vercel
             w <strong>Settings → Environment Variables</strong>.
           </p>
-          <pre className="overflow-x-auto rounded-xl bg-slate-950 p-4 text-xs text-slate-100">
+          <pre className="overflow-x-auto rounded-xl border border-border bg-black/50 p-4 text-xs text-foreground">
 {`NEXT_PUBLIC_SUPABASE_URL=https://twoj-projekt.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=twoj-anon-key`}
           </pre>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-muted">
             Po dodaniu zmiennych na Vercel kliknij <strong>Redeploy</strong> — klucze
             NEXT_PUBLIC_ są wczytywane przy buildzie, nie wystarczy samo odświeżenie strony.
           </p>
@@ -45,7 +45,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=twoj-anon-key`}
 
   if (isLoading && !isInitialized) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-500">
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted">
         Ładowanie danych z Supabase...
       </div>
     );
@@ -53,13 +53,13 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=twoj-anon-key`}
 
   if (error && !isInitialized) {
     return (
-      <Card className="mx-auto mt-10 max-w-2xl border-rose-200">
+      <Card className="mx-auto mt-10 max-w-2xl border-rose-500/30">
         <CardContent className="grid gap-4 py-8">
-          <h2 className="text-xl font-semibold text-rose-700">Błąd połączenia</h2>
-          <p className="text-sm text-slate-600">{error}</p>
-          <p className="text-sm text-slate-600">
+          <h2 className="text-xl font-semibold text-rose-300">Błąd połączenia</h2>
+          <p className="text-sm text-muted">{error}</p>
+          <p className="text-sm text-muted">
             Upewnij się, że uruchomiłeś skrypt SQL z{" "}
-            <code className="rounded bg-slate-100 px-1">supabase/schema.sql</code>.
+            <code className="rounded bg-surface-muted px-1.5 py-0.5 text-foreground">supabase/schema.sql</code>.
           </p>
           <div className="flex gap-2">
             <Button onClick={() => void initialize()}>Spróbuj ponownie</Button>
@@ -75,7 +75,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=twoj-anon-key`}
   return (
     <>
       {error ? (
-        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="panel-danger mb-4 rounded-xl border px-4 py-3 text-sm text-rose-300">
           {error}
         </div>
       ) : null}

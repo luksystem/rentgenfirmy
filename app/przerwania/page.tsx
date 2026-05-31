@@ -1,18 +1,28 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Edit, Trash2 } from "lucide-react";
 import { BarPanel } from "@/components/charts";
 import { InterruptionForm } from "@/components/interruption-form";
 import { MetricCard } from "@/components/metric-card";
 import { MobileField, MobileListCard } from "@/components/mobile-list-card";
 import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   interruptionsByType,
   interruptionsPerDay,
   interruptionsPerWeek,
   topInterruptionProjects,
 } from "@/lib/domain";
+import type { Interruption } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 
@@ -31,8 +41,11 @@ function scrollToInterruptionForm() {
 }
 
 export default function InterruptionsPage() {
-  const { interruptions, projects, addInterruption, isSaving } = useAppStore();
+  const { interruptions, projects, addInterruption, updateInterruption, deleteInterruption, isSaving } =
+    useAppStore();
   const projectNames = new Map(projects.map((project) => [project.id, project.name]));
+  const projectOptions = projects.map((project) => ({ id: project.id, name: project.name }));
+  const [editingInterruption, setEditingInterruption] = useState<Interruption | null>(null);
 
   useEffect(() => {
     if (window.location.hash !== "#dodaj-przerwanie") {
@@ -50,6 +63,58 @@ export default function InterruptionsPage() {
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
+
+  async function handleDelete(id: string) {
+    if (!window.confirm("Usunąć to przerwanie?")) {
+      return;
+    }
+
+    try {
+      await deleteInterruption(id);
+      if (editingInterruption?.id === id) {
+        setEditingInterruption(null);
+      }
+    } catch {
+      // Błąd wyświetla DataProvider
+    }
+  }
+
+  async function handleEditSubmit(values: Omit<Interruption, "id">) {
+    if (!editingInterruption) {
+      return;
+    }
+
+    try {
+      await updateInterruption(editingInterruption.id, values);
+      setEditingInterruption(null);
+    } catch {
+      // Błąd wyświetla DataProvider
+    }
+  }
+
+  function renderActions(item: Interruption) {
+    return (
+      <div className="flex gap-2">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setEditingInterruption(item)}
+          title="Edytuj przerwanie"
+        >
+          <Edit className="h-3.5 w-3.5" />
+          Edytuj
+        </Button>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => void handleDelete(item.id)}
+          title="Usuń przerwanie"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -78,7 +143,7 @@ export default function InterruptionsPage() {
         className="mt-4 scroll-mt-24 sm:mt-6"
       >
         <InterruptionForm
-          projects={projects.map((project) => ({ id: project.id, name: project.name }))}
+          projects={projectOptions}
           isSaving={isSaving}
           onSubmit={addInterruption}
         />
@@ -98,6 +163,7 @@ export default function InterruptionsPage() {
             key={item.id}
             title={item.type}
             subtitle={formatDate(item.date)}
+            footer={renderActions(item)}
           >
             <MobileField label="Osoba" value={item.person} />
             <MobileField label="Projekt" value={projectNames.get(item.projectId) ?? "-"} />
@@ -108,30 +174,58 @@ export default function InterruptionsPage() {
 
       <Card className="mt-4 hidden overflow-hidden sm:mt-6 md:block">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+          <table className="w-full min-w-[980px] text-left text-sm">
+            <thead className="bg-surface-muted text-xs uppercase tracking-wide text-muted">
               <tr>
                 <th className="px-4 py-3">Data</th>
                 <th className="px-4 py-3">Osoba</th>
                 <th className="px-4 py-3">Typ przerwania</th>
                 <th className="px-4 py-3">Projekt</th>
                 <th className="px-4 py-3">Opis</th>
+                <th className="px-4 py-3">Akcje</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border/60">
               {interruptions.map((item) => (
-                <tr key={item.id}>
+                <tr key={item.id} className="transition hover:bg-surface-muted/60">
                   <td className="px-4 py-3">{formatDate(item.date)}</td>
                   <td className="px-4 py-3">{item.person}</td>
                   <td className="px-4 py-3">{item.type}</td>
                   <td className="px-4 py-3">{projectNames.get(item.projectId) ?? "-"}</td>
                   <td className="px-4 py-3">{item.description}</td>
+                  <td className="px-4 py-3">{renderActions(item)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </Card>
+
+      <Dialog
+        open={editingInterruption !== null}
+        onOpenChange={(open) => !open && setEditingInterruption(null)}
+      >
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Edytuj przerwanie</DialogTitle>
+            <DialogDescription>
+              Zmień datę, typ, projekt lub opis. Zapis nadpisze istniejący wpis.
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingInterruption ? (
+            <InterruptionForm
+              key={editingInterruption.id}
+              projects={projectOptions}
+              interruption={editingInterruption}
+              isSaving={isSaving}
+              onSubmit={handleEditSubmit}
+              onCancel={() => setEditingInterruption(null)}
+              className="border-0 p-0 shadow-none"
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

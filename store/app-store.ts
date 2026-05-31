@@ -9,9 +9,11 @@ import {
 import {
   createInterruption,
   createProject,
+  deleteInterruptionRecord,
   deleteProjectRecord,
   fetchInterruptions,
   fetchProjects,
+  updateInterruptionRecord,
   updateProjectRecord,
 } from "@/lib/supabase/repository";
 import { fetchFieldOptions, saveFieldOptions } from "@/lib/supabase/settings-repository";
@@ -31,6 +33,8 @@ type AppState = {
   updateProject: (id: string, project: ProjectInput) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   addInterruption: (interruption: Omit<Interruption, "id">) => Promise<void>;
+  updateInterruption: (id: string, interruption: Omit<Interruption, "id">) => Promise<void>;
+  deleteInterruption: (id: string) => Promise<void>;
   updateFieldOptions: (options: FieldOptions) => Promise<void>;
   seedDemoData: () => Promise<void>;
 };
@@ -153,6 +157,44 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : "Nie udało się dodać przerwania",
+        isSaving: false,
+      });
+      throw error;
+    }
+  },
+
+  updateInterruption: async (id, interruption) => {
+    set({ isSaving: true, error: null });
+
+    try {
+      const updated = await updateInterruptionRecord(id, interruption);
+      set((state) => ({
+        interruptions: state.interruptions.map((item) => (item.id === id ? updated : item)),
+        isSaving: false,
+        error: null,
+      }));
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Nie udało się zaktualizować przerwania",
+        isSaving: false,
+      });
+      throw error;
+    }
+  },
+
+  deleteInterruption: async (id) => {
+    set({ isSaving: true, error: null });
+
+    try {
+      await deleteInterruptionRecord(id);
+      set((state) => ({
+        interruptions: state.interruptions.filter((item) => item.id !== id),
+        isSaving: false,
+        error: null,
+      }));
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Nie udało się usunąć przerwania",
         isSaving: false,
       });
       throw error;

@@ -33,7 +33,7 @@ export default function NoContactPage() {
 
       <Card className="hidden overflow-hidden md:block">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+          <thead className="bg-surface-muted text-xs uppercase tracking-wide text-muted">
             <tr>
               <th className="px-4 py-3">Projekt</th>
               <th className="px-4 py-3">Właściciel kolejnego kroku</th>
@@ -42,7 +42,7 @@ export default function NoContactPage() {
               <th className="px-4 py-3">Powód blokady</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {staleProjects.map((project) => (
               <tr key={project.id}>
                 <td className="px-4 py-3 font-medium">{project.name}</td>

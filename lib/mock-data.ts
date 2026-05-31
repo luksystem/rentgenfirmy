@@ -1,5 +1,6 @@
 import { DEFAULT_FIELD_OPTIONS } from "@/lib/field-options";
 import { addDays, toISODate } from "@/lib/utils";
+import { applyWaitingPriority } from "@/lib/waiting-priority";
 import type {
   FlowStatus,
   ImplementationStage,
@@ -106,7 +107,17 @@ export const mockProjects: Project[] = projectNames.map((name, index) => {
   const stage = stages[index % stages.length];
   const isClosingStage = stage === "Wdrożenie i przekazanie" && isClosing;
 
-  return {
+  const isWaitingStatus = flowStatus.startsWith("Oczekuje");
+  const waitingFlags =
+    isWaitingStatus && index % 3 === 0
+      ? {
+          waitingDependsOnUs: index % 2 === 0,
+          waitingIncreasesCostLater: index % 4 === 0,
+          waitingBlocksSettlement: index % 5 === 0,
+        }
+      : {};
+
+  const base = {
     id: `project-${index + 1}`,
     name,
     isActive,
@@ -125,7 +136,10 @@ export const mockProjects: Project[] = projectNames.map((name, index) => {
     remainingHours: isClosingStage ? 4 + ((index * 3) % 18) : undefined,
     nextAction: isClosingStage ? "Ustalić termin odbioru i listę poprawek" : undefined,
     closeDeadline: isClosingStage ? toISODate(addDays(today, 3 + index)) : undefined,
+    ...waitingFlags,
   };
+
+  return applyWaitingPriority(base, isWaitingStatus);
 });
 
 export const mockInterruptions: Interruption[] = Array.from({ length: 100 }).map(

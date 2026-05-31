@@ -16,17 +16,17 @@ export function DialogContent({
 }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-stone-950/50 backdrop-blur-sm" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
       <DialogPrimitive.Content
         className={cn(
-          "fixed z-50 overflow-y-auto border border-border/80 bg-surface shadow-card",
-          "inset-x-4 top-[max(1rem,env(safe-area-inset-top))] max-h-[calc(100dvh-2rem)] w-auto -translate-x-0 -translate-y-0 rounded-3xl p-5 sm:inset-x-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90vh] sm:w-[min(720px,calc(100vw-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:p-6",
+          "fixed z-50 overflow-y-auto border border-border bg-surface-elevated shadow-card",
+          "inset-x-4 top-[max(1rem,env(safe-area-inset-top))] max-h-[calc(100dvh-2rem)] w-auto -translate-x-0 -translate-y-0 rounded-2xl p-5 sm:inset-x-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90vh] sm:w-[min(720px,calc(100vw-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:p-6",
           className,
         )}
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-xl p-1.5 text-muted transition hover:bg-surface-muted hover:text-foreground">
+        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-lg p-1.5 text-muted transition hover:bg-surface-muted hover:text-foreground">
           <X className="h-4 w-4" />
           <span className="sr-only">Zamknij</span>
         </DialogPrimitive.Close>

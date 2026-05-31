@@ -2,9 +2,9 @@ import { cn } from "@/lib/utils";
 import type { QuickWin } from "@/lib/types";
 
 const severityStyles = {
-  info: "border-teal-200/80 bg-teal-50/80",
-  warning: "border-amber-200/80 bg-amber-50/80",
-  critical: "border-rose-200/80 bg-rose-50/80",
+  info: "panel-info",
+  warning: "panel-warning",
+  critical: "panel-danger",
 };
 
 const severityLabels = {
@@ -14,9 +14,9 @@ const severityLabels = {
 };
 
 const severityDots = {
-  info: "bg-teal-500",
-  warning: "bg-amber-500",
-  critical: "bg-rose-500",
+  info: "bg-teal-400",
+  warning: "bg-amber-400",
+  critical: "bg-rose-400",
 };
 
 export function QuickWinsPanel({
@@ -36,25 +36,25 @@ export function QuickWinsPanel({
         <article
           key={win.id}
           className={cn(
-            "rounded-2xl border p-4",
+            "rounded-xl border p-4",
             severityStyles[win.severity],
             compact && "p-3",
           )}
         >
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-surface/80 px-2.5 py-0.5 text-xs font-semibold text-stone-600">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-muted px-2.5 py-0.5 text-xs font-semibold text-muted">
               <span
                 className={cn("h-1.5 w-1.5 rounded-full", severityDots[win.severity])}
                 aria-hidden
               />
               {severityLabels[win.severity]}
             </span>
-            <span className="text-xs font-medium text-stone-400">#{index + 1}</span>
-            <h3 className={cn("font-semibold text-stone-900", compact && "text-sm")}>
+            <span className="text-xs font-medium text-muted/70">#{index + 1}</span>
+            <h3 className={cn("font-semibold text-foreground", compact && "text-sm")}>
               {win.title}
             </h3>
           </div>
-          <p className={cn("text-sm leading-6 text-stone-700", compact && "text-xs leading-5")}>
+          <p className={cn("text-sm leading-6 text-muted", compact && "text-xs leading-5")}>
             {win.description}
           </p>
           <p

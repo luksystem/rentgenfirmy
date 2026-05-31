@@ -21,6 +21,9 @@ create table if not exists public.projects (
   remaining_hours numeric,
   next_action text,
   close_deadline date,
+  waiting_depends_on_us boolean not null default false,
+  waiting_increases_cost_later boolean not null default false,
+  waiting_blocks_settlement boolean not null default false,
   created_at timestamptz not null default now()
 );
 

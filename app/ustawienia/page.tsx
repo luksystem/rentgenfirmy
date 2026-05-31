@@ -145,16 +145,16 @@ export default function SettingsPage() {
       />
 
       {saved ? (
-        <Card className="mb-4 border-emerald-200 bg-emerald-50">
+        <Card className="panel-success mb-4 border">
           <CardContent className="py-3 text-sm text-emerald-700">
             Ustawienia zostały zapisane.
           </CardContent>
         </Card>
       ) : null}
 
-      <Card className="mb-6 border-slate-200 bg-slate-50">
-        <CardContent className="grid gap-3 py-4 text-sm text-slate-700">
-          <p className="font-semibold text-slate-900">Zależności flag</p>
+      <Card className="mb-6 border border-border bg-surface-muted">
+        <CardContent className="grid gap-3 py-4 text-sm text-muted">
+          <p className="font-semibold text-foreground">Zależności flag</p>
           <ul className="grid list-disc gap-2 pl-5">
             <li>
               <strong>Status przepływu</strong> — kategoria: W trakcie / Oczekujące / Zamknięty

@@ -7,12 +7,12 @@ type BadgeProps = {
 };
 
 const toneClasses = {
-  active: "border-emerald-200/80 bg-emerald-50 text-emerald-800",
-  waiting: "border-amber-200/80 bg-amber-50 text-amber-800",
-  critical: "border-rose-200/80 bg-rose-50 text-rose-800",
-  closed: "border-stone-200 bg-stone-100 text-stone-600",
-  neutral: "border-border bg-surface text-stone-700",
-  blue: "border-teal-200/80 bg-teal-50 text-teal-800",
+  active: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+  waiting: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+  critical: "border-rose-500/30 bg-rose-500/10 text-rose-300",
+  closed: "border-border bg-surface-muted text-muted",
+  neutral: "border-border bg-surface-muted text-foreground/80",
+  blue: "border-teal-500/30 bg-teal-500/10 text-teal-300",
 };
 
 export function Badge({ children, tone = "neutral", className }: BadgeProps) {
@@ -27,12 +27,12 @@ export function Badge({ children, tone = "neutral", className }: BadgeProps) {
       <span
         className={cn(
           "h-1.5 w-1.5 shrink-0 rounded-full",
-          tone === "active" && "bg-emerald-500",
-          tone === "waiting" && "bg-amber-500",
-          tone === "critical" && "bg-rose-500",
-          tone === "closed" && "bg-stone-400",
-          tone === "neutral" && "bg-stone-400",
-          tone === "blue" && "bg-teal-500",
+          tone === "active" && "bg-emerald-400",
+          tone === "waiting" && "bg-amber-400",
+          tone === "critical" && "bg-rose-400",
+          tone === "closed" && "bg-zinc-500",
+          tone === "neutral" && "bg-zinc-500",
+          tone === "blue" && "bg-teal-400",
         )}
         aria-hidden
       />

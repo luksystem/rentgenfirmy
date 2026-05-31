@@ -12,7 +12,7 @@ type MobileListCardProps = {
 };
 
 const accentBar = {
-  default: "bg-stone-300",
+  default: "bg-zinc-600",
   green: "bg-emerald-500",
   amber: "bg-amber-500",
   red: "bg-rose-500",
@@ -44,12 +44,12 @@ export function MobileListCard({
           : undefined
       }
       className={cn(
-        "w-full overflow-hidden rounded-3xl border border-border/80 bg-surface text-left shadow-soft",
-        onClick && "cursor-pointer transition hover:-translate-y-0.5 hover:shadow-card",
+        "w-full overflow-hidden rounded-2xl border border-border bg-surface text-left shadow-soft",
+        onClick && "cursor-pointer transition hover:border-border hover:bg-surface-muted",
         className,
       )}
     >
-      <div className={cn("h-1 w-full", accentBar[accent])} aria-hidden />
+      <div className={cn("h-0.5 w-full", accentBar[accent])} aria-hidden />
       <div className="p-4">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -60,8 +60,8 @@ export function MobileListCard({
             <div className="flex shrink-0 flex-wrap justify-end gap-1">{badges}</div>
           ) : null}
         </div>
-        <div className="grid gap-2 text-sm text-stone-600">{children}</div>
-        {footer ? <div className="mt-3 border-t border-border/60 pt-3">{footer}</div> : null}
+        <div className="grid gap-2 text-sm text-muted">{children}</div>
+        {footer ? <div className="mt-3 border-t border-border pt-3">{footer}</div> : null}
       </div>
     </div>
   );
@@ -80,7 +80,7 @@ export function MobileField({
     return (
       <div className="grid gap-1">
         <span className="text-muted">{label}</span>
-        <span className="font-medium text-stone-800">{value}</span>
+        <span className="font-medium text-foreground">{value}</span>
       </div>
     );
   }
@@ -88,7 +88,7 @@ export function MobileField({
   return (
     <div className="flex items-start justify-between gap-3">
       <span className="shrink-0 text-muted">{label}</span>
-      <span className="text-right font-medium text-stone-800">{value}</span>
+      <span className="text-right font-medium text-foreground">{value}</span>
     </div>
   );
 }

@@ -64,7 +64,7 @@ export default function Home() {
       </section>
 
       <section className="mt-4 grid gap-4 sm:mt-6 xl:grid-cols-5">
-        <Card className="border-emerald-200/60 xl:col-span-3">
+        <Card className="panel-success border xl:col-span-3">
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
             <CardTitle>Quick wins</CardTitle>
             <Button variant="secondary" size="sm" asChild>
@@ -117,7 +117,7 @@ export default function Home() {
                       {project.nextStepOwner} · {project.blockerReason ?? "Brak blokady"}
                     </p>
                   </div>
-                  <span className="w-fit rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                  <span className="w-fit rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-300">
                     Krytyczny
                   </span>
                 </div>

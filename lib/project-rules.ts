@@ -28,6 +28,12 @@
  * WALIDACJA BLOKADY (formularz):
  * - Wymagana gdy status przepływu: Oczekujące
  * - Wymagana gdy: !isActive i status ≠ Zamknięty
+ *
+ * OCZEKIWANIE — checkboxy (formularz, pod powodem blokady):
+ * - Czy zależne od nas?
+ * - Czy nie wykonanie zwiększy koszty później?
+ * - Czy blokuje rozliczenie?
+ * Priorytet: 1 zaznaczenie → Wysoki, 2+ → Krytyczny
  */
 
 export const PROJECT_RULES = {
