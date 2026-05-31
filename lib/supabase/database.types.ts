@@ -36,6 +36,8 @@ export type InterruptionRow = {
   type: string;
   project_id: string;
   description: string;
+  was_necessary: boolean;
+  is_recurring: boolean;
   created_at: string;
 };
 

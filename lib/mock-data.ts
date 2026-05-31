@@ -5,8 +5,6 @@ import type {
   FlowStatus,
   ImplementationStage,
   Interruption,
-  NextStepOwner,
-  Person,
   Priority,
   Project,
   ProjectType,
@@ -82,17 +80,8 @@ const stages: ImplementationStage[] = [
 ];
 
 const priorities: Priority[] = ["Niski", "Normalny", "Wysoki", "Krytyczny"];
-const owners: NextStepOwner[] = [
-  "Łukasz",
-  "Koordynator techniczny",
-  "Lider operacyjny",
-  "Programista",
-  "Monter",
-  "Klient",
-  "Inna branża",
-];
+const owners = DEFAULT_FIELD_OPTIONS.nextStepOwners;
 const blockers = DEFAULT_FIELD_OPTIONS.blockerReasons;
-const people: Person[] = ["Łukasz", "Koordynator techniczny", "Lider operacyjny"];
 const interruptionTypeNamesList = DEFAULT_FIELD_OPTIONS.interruptionTypes.map(
   (item) => item.name,
 );
@@ -129,7 +118,7 @@ export const mockProjects: Project[] = projectNames.map((name, index) => {
     nextContactDate: toISODate(addDays(today, index % 5 === 0 ? -index - 2 : index + 1)),
     blockerReason: isActive ? undefined : blockers[index % blockers.length],
     notes: `Notatka operacyjna dla projektu ${name}.`,
-    lastChangedBy: people[index % people.length],
+    lastChangedBy: owners[index % owners.length],
     lastChangedAt: addDays(today, -index).toISOString(),
     lastContactDate: toISODate(addDays(today, index % 4 === 0 ? -18 - index : -index)),
     closeBlocker: isClosingStage ? blockers[(index + 3) % blockers.length] : undefined,
@@ -149,10 +138,12 @@ export const mockInterruptions: Interruption[] = Array.from({ length: 100 }).map
     return {
       id: `interruption-${index + 1}`,
       date: toISODate(addDays(today, -(index % 28))),
-      person: people[index % people.length],
+      person: owners[index % owners.length],
       type: interruptionTypeNamesList[(index * 5) % interruptionTypeNamesList.length],
       projectId: project.id,
       description: `Przerwanie dotyczące: ${project.name}. Wymaga szybkiej decyzji lub informacji zwrotnej.`,
+      wasNecessary: index % 3 === 0,
+      isRecurring: index % 5 === 0,
     };
   },
 );

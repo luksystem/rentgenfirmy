@@ -34,6 +34,8 @@ create table if not exists public.interruptions (
   type text not null,
   project_id uuid not null references public.projects (id) on delete cascade,
   description text not null,
+  was_necessary boolean not null default false,
+  is_recurring boolean not null default false,
   created_at timestamptz not null default now()
 );
 

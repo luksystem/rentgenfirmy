@@ -335,6 +335,10 @@ export function defaultInterruptionTypeName(options: FieldOptions) {
   return interruptionTypeNames(options)[0] ?? "Telefon klienta";
 }
 
+export function defaultNextStepOwner(options: FieldOptions) {
+  return options.nextStepOwners[0] ?? "Łukasz";
+}
+
 export function getInterruptionTypeSuggestion(typeName: string, options: FieldOptions) {
   const suggestion = options.interruptionTypes.find((item) => item.name === typeName)?.suggestion;
 

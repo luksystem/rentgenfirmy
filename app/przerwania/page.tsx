@@ -40,6 +40,10 @@ function scrollToInterruptionForm() {
   firstField?.focus({ preventScroll: true });
 }
 
+function formatFlag(value: boolean) {
+  return value ? "Tak" : "Nie";
+}
+
 export default function InterruptionsPage() {
   const { interruptions, projects, addInterruption, updateInterruption, deleteInterruption, isSaving } =
     useAppStore();
@@ -168,6 +172,8 @@ export default function InterruptionsPage() {
           >
             <MobileField label="Osoba" value={item.person} />
             <MobileField label="Projekt" value={projectNames.get(item.projectId) ?? "-"} />
+            <MobileField label="Konieczne" value={formatFlag(item.wasNecessary)} />
+            <MobileField label="Powtarza się" value={formatFlag(item.isRecurring)} />
             <MobileField label="Opis" value={item.description} stack />
           </MobileListCard>
         ))}
@@ -183,6 +189,8 @@ export default function InterruptionsPage() {
                 <th className="px-4 py-3">Typ przerwania</th>
                 <th className="px-4 py-3">Projekt</th>
                 <th className="px-4 py-3">Opis</th>
+                <th className="px-4 py-3">Konieczne?</th>
+                <th className="px-4 py-3">Powtarza się?</th>
                 <th className="px-4 py-3">Akcje</th>
               </tr>
             </thead>
@@ -194,6 +202,8 @@ export default function InterruptionsPage() {
                   <td className="px-4 py-3">{item.type}</td>
                   <td className="px-4 py-3">{projectNames.get(item.projectId) ?? "-"}</td>
                   <td className="px-4 py-3">{item.description}</td>
+                  <td className="px-4 py-3">{formatFlag(item.wasNecessary)}</td>
+                  <td className="px-4 py-3">{formatFlag(item.isRecurring)}</td>
                   <td className="px-4 py-3">{renderActions(item)}</td>
                 </tr>
               ))}

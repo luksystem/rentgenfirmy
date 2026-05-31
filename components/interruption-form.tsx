@@ -7,11 +7,12 @@ import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { cn, toISODate } from "@/lib/utils";
 import {
   defaultInterruptionTypeName,
+  defaultNextStepOwner,
   interruptionTypeNames,
   pickOption,
   type FieldOptions,
 } from "@/lib/field-options";
-import { people, type Interruption } from "@/lib/types";
+import type { Interruption } from "@/lib/types";
 import { useAppStore } from "@/store/app-store";
 
 type FormValues = Omit<Interruption, "id">;
@@ -21,14 +22,33 @@ function interruptionToFormValues(
   fieldOptions: FieldOptions,
 ): FormValues {
   const defaultType = defaultInterruptionTypeName(fieldOptions);
+  const defaultOwner = defaultNextStepOwner(fieldOptions);
 
   return {
     date: interruption.date,
-    person: interruption.person,
+    person: pickOption(interruption.person, fieldOptions.nextStepOwners, defaultOwner),
     type: pickOption(interruption.type, interruptionTypeNames(fieldOptions), defaultType),
     projectId: interruption.projectId,
     description: interruption.description,
+    wasNecessary: interruption.wasNecessary ?? false,
+    isRecurring: interruption.isRecurring ?? false,
   };
+}
+
+function InterruptionCheckbox({
+  label,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-border/80 bg-surface-muted/50 px-3 py-2.5 text-sm">
+      <input
+        type="checkbox"
+        className="h-4 w-4 rounded border-border bg-surface-muted text-accent focus:ring-accent/30"
+        {...props}
+      />
+      <span className="font-medium text-foreground">{label}</span>
+    </label>
+  );
 }
 
 export function InterruptionForm({
@@ -51,6 +71,7 @@ export function InterruptionForm({
 }) {
   const fieldOptions = useAppStore((state) => state.fieldOptions);
   const defaultType = defaultInterruptionTypeName(fieldOptions);
+  const defaultOwner = defaultNextStepOwner(fieldOptions);
   const isEditing = Boolean(interruption);
 
   const { register, handleSubmit, reset } = useForm<FormValues>({
@@ -58,10 +79,12 @@ export function InterruptionForm({
       ? interruptionToFormValues(interruption, fieldOptions)
       : {
           date: toISODate(new Date()),
-          person: "Łukasz",
+          person: defaultOwner,
           type: defaultType,
           projectId: projects[0]?.id ?? "",
           description: "",
+          wasNecessary: false,
+          isRecurring: false,
         },
   });
 
@@ -73,12 +96,14 @@ export function InterruptionForm({
 
     reset({
       date: toISODate(new Date()),
-      person: "Łukasz",
+      person: defaultOwner,
       type: defaultType,
       projectId: projects[0]?.id ?? "",
       description: "",
+      wasNecessary: false,
+      isRecurring: false,
     });
-  }, [interruption, fieldOptions, defaultType, projects, reset]);
+  }, [interruption, fieldOptions, defaultType, defaultOwner, projects, reset]);
 
   return (
     <form
@@ -89,6 +114,8 @@ export function InterruptionForm({
           reset({
             ...values,
             description: "",
+            wasNecessary: false,
+            isRecurring: false,
             type: pickOption(undefined, interruptionTypeNames(fieldOptions), defaultType),
           });
         }
@@ -107,7 +134,7 @@ export function InterruptionForm({
       </Field>
       <Field label="Osoba">
         <Select {...register("person", { required: true })}>
-          {people.map((person) => (
+          {fieldOptions.nextStepOwners.map((person) => (
             <option key={person}>{person}</option>
           ))}
         </Select>
@@ -131,6 +158,15 @@ export function InterruptionForm({
       <Field label="Opis" className={layout === "inline" ? "sm:col-span-2 2xl:col-span-1" : "sm:col-span-2"}>
         <Textarea className={cn("min-h-20", layout === "inline" && "sm:min-h-10")} {...register("description", { required: true })} />
       </Field>
+      <div
+        className={cn(
+          "flex flex-wrap gap-2",
+          layout === "stacked" || onCancel ? "sm:col-span-2" : "sm:col-span-2 2xl:col-span-2",
+        )}
+      >
+        <InterruptionCheckbox label="Czy to było konieczne?" {...register("wasNecessary")} />
+        <InterruptionCheckbox label="Czy to się powtarza?" {...register("isRecurring")} />
+      </div>
       <div
         className={cn(
           "flex w-full gap-2",

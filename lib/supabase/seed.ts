@@ -1,6 +1,6 @@
 import { mockInterruptions, mockProjects } from "@/lib/mock-data";
 import { getSupabase } from "@/lib/supabase/client";
-import { projectToInsert } from "@/lib/supabase/mappers";
+import { interruptionToInsert, projectToInsert } from "@/lib/supabase/mappers";
 import { clearAllData } from "@/lib/supabase/repository";
 
 export async function seedDemoData() {
@@ -45,13 +45,12 @@ export async function seedDemoData() {
     mockProjects.map((project, index) => [project.id, insertedProjects[index].id]),
   );
 
-  const interruptionRows = mockInterruptions.map((interruption) => ({
-    date: interruption.date,
-    person: interruption.person,
-    type: interruption.type,
-    project_id: idMap.get(interruption.projectId)!,
-    description: interruption.description,
-  }));
+  const interruptionRows = mockInterruptions.map((interruption) =>
+    interruptionToInsert({
+      ...interruption,
+      projectId: idMap.get(interruption.projectId)!,
+    }),
+  );
 
   const { error: interruptionsError } = await supabase
     .from("interruptions")

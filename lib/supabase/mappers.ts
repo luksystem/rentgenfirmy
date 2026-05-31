@@ -1,4 +1,9 @@
-import type { InterruptionRow, ProjectInsert, ProjectRow } from "@/lib/supabase/database.types";
+import type {
+  InterruptionInsert,
+  InterruptionRow,
+  ProjectInsert,
+  ProjectRow,
+} from "@/lib/supabase/database.types";
 import type {
   BlockerReason,
   FlowStatus,
@@ -83,5 +88,21 @@ export function rowToInterruption(row: InterruptionRow): Interruption {
     type: row.type as Interruption["type"],
     projectId: row.project_id,
     description: row.description,
+    wasNecessary: row.was_necessary ?? false,
+    isRecurring: row.is_recurring ?? false,
+  };
+}
+
+export function interruptionToInsert(
+  interruption: Omit<Interruption, "id">,
+): InterruptionInsert {
+  return {
+    date: interruption.date,
+    person: interruption.person,
+    type: interruption.type,
+    project_id: interruption.projectId,
+    description: interruption.description,
+    was_necessary: interruption.wasNecessary,
+    is_recurring: interruption.isRecurring,
   };
 }

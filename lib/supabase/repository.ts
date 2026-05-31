@@ -2,6 +2,7 @@ import { getSupabase } from "@/lib/supabase/client";
 import {
   inputToProjectPayload,
   projectToInsert,
+  interruptionToInsert,
   rowToInterruption,
   rowToProject,
 } from "@/lib/supabase/mappers";
@@ -103,13 +104,7 @@ export async function createInterruption(
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("interruptions")
-    .insert({
-      date: interruption.date,
-      person: interruption.person,
-      type: interruption.type,
-      project_id: interruption.projectId,
-      description: interruption.description,
-    })
+    .insert(interruptionToInsert(interruption))
     .select("*")
     .single();
 
@@ -127,13 +122,7 @@ export async function updateInterruptionRecord(
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("interruptions")
-    .update({
-      date: interruption.date,
-      person: interruption.person,
-      type: interruption.type,
-      project_id: interruption.projectId,
-      description: interruption.description,
-    })
+    .update(interruptionToInsert(interruption))
     .eq("id", id)
     .select("*")
     .single();

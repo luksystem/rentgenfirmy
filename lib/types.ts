@@ -28,12 +28,8 @@ export type InterruptionType = string;
 export const priorities = ["Niski", "Normalny", "Wysoki", "Krytyczny"] as const;
 export type Priority = (typeof priorities)[number];
 
-export const people = [
-  "Łukasz",
-  "Koordynator techniczny",
-  "Lider operacyjny",
-] as const;
-export type Person = (typeof people)[number];
+/** Osoba przy przerwaniu / autor zmiany — wartości z ustawień (właściciel kolejnego kroku). */
+export type Person = string;
 
 export type Project = {
   id: string;
@@ -73,6 +69,8 @@ export type Interruption = {
   type: InterruptionType;
   projectId: string;
   description: string;
+  wasNecessary: boolean;
+  isRecurring: boolean;
 };
 
 export type TrendComparison = {
