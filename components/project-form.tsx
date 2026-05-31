@@ -11,6 +11,7 @@ import {
   defaultStageName,
   flowStatusNames,
   isClosedFlowStatus,
+  isWaitingFlowStatus,
   pickOption,
   stageNames,
   type FieldOptions,
@@ -58,14 +59,18 @@ function createSchema(options: FieldOptions) {
       closeDeadline: z.string().optional(),
     })
     .superRefine((value, ctx) => {
-      if (!value.isActive && !isClosedFlowStatus(value.flowStatus, options)) {
-        if (!value.blockerReason) {
-          ctx.addIssue({
-            code: "custom",
-            message: "Powód blokady jest wymagany, gdy projekt nie jest aktywny",
-            path: ["blockerReason"],
-          });
-        }
+      const requiresBlocker =
+        isWaitingFlowStatus(value.flowStatus, options) ||
+        (!value.isActive && !isClosedFlowStatus(value.flowStatus, options));
+
+      if (requiresBlocker && !value.blockerReason) {
+        ctx.addIssue({
+          code: "custom",
+          message: isWaitingFlowStatus(value.flowStatus, options)
+            ? "Powód blokady jest wymagany dla statusu oczekującego"
+            : "Powód blokady jest wymagany, gdy projekt nie jest aktywny",
+          path: ["blockerReason"],
+        });
       }
     });
 }
@@ -170,7 +175,9 @@ export function ProjectForm({
         <span>
           <span className="block text-sm font-semibold text-slate-900">Aktywny</span>
           <span className="mt-1 block text-sm text-slate-600">
-            Projekt liczy się jako aktywny w dashboardzie i raportach. Niezależny od statusu przepływu.
+            Czy zespół teraz aktywnie pracuje nad projektem. Niezależne od statusu przepływu (W
+            trakcie / Oczekujące / Zamknięty). Projekt może być np. oczekujący i nieaktywny —
+            wtedy świadomie go nie prowadzimy, ale przerwania nadal warto rejestrować.
           </span>
         </span>
       </label>

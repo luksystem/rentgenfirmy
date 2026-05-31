@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { BarPanel } from "@/components/charts";
 import { InterruptionForm } from "@/components/interruption-form";
 import { MetricCard } from "@/components/metric-card";
@@ -15,9 +16,40 @@ import {
 import { formatDate } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 
+function scrollToInterruptionForm() {
+  const section = document.getElementById("dodaj-przerwanie");
+  if (!section) {
+    return;
+  }
+
+  section.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  const firstField = section.querySelector<HTMLElement>(
+    "input, select, textarea, button",
+  );
+  firstField?.focus({ preventScroll: true });
+}
+
 export default function InterruptionsPage() {
   const { interruptions, projects, addInterruption, isSaving } = useAppStore();
   const projectNames = new Map(projects.map((project) => [project.id, project.name]));
+
+  useEffect(() => {
+    if (window.location.hash !== "#dodaj-przerwanie") {
+      return;
+    }
+
+    scrollToInterruptionForm();
+
+    function handleHashChange() {
+      if (window.location.hash === "#dodaj-przerwanie") {
+        scrollToInterruptionForm();
+      }
+    }
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
 
   return (
     <>
@@ -41,7 +73,10 @@ export default function InterruptionsPage() {
         <MetricCard label="Wszystkie przerwania" value={interruptions.length} />
       </section>
 
-      <section className="mt-4 sm:mt-6">
+      <section
+        id="dodaj-przerwanie"
+        className="mt-4 scroll-mt-24 sm:mt-6"
+      >
         <InterruptionForm
           projects={projects.map((project) => ({ id: project.id, name: project.name }))}
           isSaving={isSaving}

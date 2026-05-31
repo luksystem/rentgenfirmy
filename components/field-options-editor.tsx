@@ -5,10 +5,16 @@ import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import type { FlowStatusOption, StageOption, StringListFieldOptionKey } from "@/lib/field-options";
+import type {
+  FlowStatusOption,
+  InterruptionTypeOption,
+  StageOption,
+  StringListFieldOptionKey,
+} from "@/lib/field-options";
 import {
   FIELD_OPTION_LABELS,
   getDefaultFlowStatusOptions,
+  getDefaultInterruptionTypeOptions,
   getDefaultOptionsForKey,
   getDefaultStageOptions,
 } from "@/lib/field-options";
@@ -118,6 +124,134 @@ function OptionsListEditor({
   );
 }
 
+export function InterruptionTypesOptionsEditor({
+  items,
+  onChange,
+}: {
+  items: InterruptionTypeOption[];
+  onChange: (items: InterruptionTypeOption[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+
+  function addItem() {
+    const name = draft.trim();
+    if (!name || items.some((item) => item.name === name)) {
+      return;
+    }
+
+    onChange([...items, { name, suggestion: "" }]);
+    setDraft("");
+  }
+
+  function updateName(index: number, name: string) {
+    onChange(items.map((item, itemIndex) => (itemIndex === index ? { ...item, name } : item)));
+  }
+
+  function updateSuggestion(index: number, suggestion: string) {
+    onChange(
+      items.map((item, itemIndex) => (itemIndex === index ? { ...item, suggestion } : item)),
+    );
+  }
+
+  function removeItem(index: number) {
+    onChange(items.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  function moveItem(index: number, direction: -1 | 1) {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= items.length) {
+      return;
+    }
+
+    const next = [...items];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    onChange(next);
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{FIELD_OPTION_LABELS.interruptionTypes}</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        <p className="text-sm text-slate-600">
+          Przy każdym typie przerwania możesz wpisać sugestię quick win — pojawi się w raporcie,
+          gdy ten typ dominuje w przerwaniach.
+        </p>
+
+        {items.map((item, index) => (
+          <div
+            key={`${item.name}-${index}`}
+            className="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-3"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                value={item.name}
+                onChange={(event) => updateName(index, event.target.value)}
+                placeholder="Nazwa typu"
+                className="min-w-[180px] flex-1 bg-white"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => moveItem(index, -1)}
+                disabled={index === 0}
+                title="Przesuń w górę"
+              >
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => moveItem(index, 1)}
+                disabled={index === items.length - 1}
+                title="Przesuń w dół"
+              >
+                <ArrowDown className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={() => removeItem(index)}
+                title="Usuń"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <textarea
+              value={item.suggestion}
+              onChange={(event) => updateSuggestion(index, event.target.value)}
+              placeholder="Sugestia quick win dla tego typu przerwania..."
+              rows={2}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+            />
+          </div>
+        ))}
+
+        <div className="flex gap-2">
+          <Input
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder="Nowy typ przerwania..."
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                addItem();
+              }
+            }}
+          />
+          <Button type="button" variant="secondary" onClick={addItem}>
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function FlowStatusesOptionsEditor({
   items,
   onChange,
@@ -133,7 +267,7 @@ export function FlowStatusesOptionsEditor({
       return;
     }
 
-    onChange([...items, { name, isClosed: false, isWaiting: false }]);
+    onChange([...items, { name, isInProgress: false, isClosed: false, isWaiting: false }]);
     setDraft("");
   }
 
@@ -141,20 +275,42 @@ export function FlowStatusesOptionsEditor({
     onChange(items.map((item, itemIndex) => (itemIndex === index ? { ...item, name } : item)));
   }
 
-  function toggleClosed(index: number) {
+  function setFlowCategory(
+    index: number,
+    category: "inProgress" | "waiting" | "closed",
+  ) {
     onChange(
-      items.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, isClosed: !item.isClosed } : item,
-      ),
+      items.map((item, itemIndex) => {
+        if (itemIndex !== index) {
+          return item;
+        }
+
+        const enabled = !(
+          (category === "inProgress" && item.isInProgress) ||
+          (category === "waiting" && item.isWaiting) ||
+          (category === "closed" && item.isClosed)
+        );
+
+        return {
+          ...item,
+          isInProgress: enabled && category === "inProgress",
+          isWaiting: enabled && category === "waiting",
+          isClosed: enabled && category === "closed",
+        };
+      }),
     );
   }
 
+  function toggleInProgress(index: number) {
+    setFlowCategory(index, "inProgress");
+  }
+
+  function toggleClosed(index: number) {
+    setFlowCategory(index, "closed");
+  }
+
   function toggleWaiting(index: number) {
-    onChange(
-      items.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, isWaiting: !item.isWaiting } : item,
-      ),
-    );
+    setFlowCategory(index, "waiting");
   }
 
   function removeItem(index: number) {
@@ -179,9 +335,10 @@ export function FlowStatusesOptionsEditor({
       </CardHeader>
       <CardContent className="grid gap-3">
         <p className="text-sm text-slate-600">
-          Zaznacz „Oczekujące” przy statusach blokujących przepływ. Zaznacz „Zamknięty” przy
-          statusach kończących projekt — takie projekty są wykluczane z widoku Bez kontaktu i
-          liczone jako zamknięte w raporcie.
+          Każdy status ma jedną kategorię przepływu: <strong>W trakcie</strong>,{" "}
+          <strong>Oczekujące</strong> lub <strong>Zamknięty</strong>. Do widoku Do zamknięcia
+          trafia projekt ze statusem W trakcie na etapie oznaczonym jako Do zamknięcia — bez
+          wymogu checkboxa Aktywny na projekcie.
         </p>
 
         {items.map((item, index) => (
@@ -191,6 +348,15 @@ export function FlowStatusesOptionsEditor({
               onChange={(event) => updateName(index, event.target.value)}
               className="min-w-[180px] flex-1"
             />
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm whitespace-nowrap">
+              <input
+                type="checkbox"
+                checked={item.isInProgress}
+                onChange={() => toggleInProgress(index)}
+                className="h-4 w-4 rounded border-slate-300"
+              />
+              W trakcie
+            </label>
             <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm whitespace-nowrap">
               <input
                 type="checkbox"
@@ -425,4 +591,9 @@ export function FieldOptionsEditor({
   );
 }
 
-export { getDefaultFlowStatusOptions, getDefaultOptionsForKey, getDefaultStageOptions };
+export {
+  getDefaultFlowStatusOptions,
+  getDefaultInterruptionTypeOptions,
+  getDefaultOptionsForKey,
+  getDefaultStageOptions,
+};

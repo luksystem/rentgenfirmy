@@ -12,7 +12,9 @@ export const implementationStages = DEFAULT_FIELD_OPTIONS.implementationStages.m
 );
 export const nextStepOwners = DEFAULT_FIELD_OPTIONS.nextStepOwners;
 export const blockerReasons = DEFAULT_FIELD_OPTIONS.blockerReasons;
-export const interruptionTypes = DEFAULT_FIELD_OPTIONS.interruptionTypes;
+export const interruptionTypes = DEFAULT_FIELD_OPTIONS.interruptionTypes.map(
+  (item) => item.name,
+);
 
 export type ProjectType = string;
 export type FlowStatus = string;
@@ -68,12 +70,39 @@ export type Interruption = {
   description: string;
 };
 
+export type TrendComparison = {
+  current: number;
+  previous: number;
+  delta: number;
+  direction: "up" | "down" | "same";
+  percentChange: number | null;
+};
+
+export type QuickWin = {
+  id: string;
+  severity: "info" | "warning" | "critical";
+  title: string;
+  description: string;
+  action: string;
+};
+
 export type WeeklyReport = {
   activeProjects: number;
   waitingProjects: number;
   closedProjects: number;
+  closingProjects: number;
+  noContactProjects: number;
   mostCommonBlocker: string;
   interruptionsCount: number;
   mostCommonInterruptionSource: string;
+  interruptionTrends: {
+    daily: TrendComparison;
+    weekly: TrendComparison;
+  };
   criticalProjects: Project[];
+  waitingProjectsList: Project[];
+  closingProjectsList: Project[];
+  blockersByReason: Array<{ name: string; value: number }>;
+  interruptionsByTypeChart: Array<{ name: string; value: number }>;
+  quickWins: QuickWin[];
 };

@@ -1,6 +1,15 @@
 import { countBy, daysBetween } from "@/lib/utils";
 import type { FieldOptions } from "@/lib/field-options";
-import { isClosedFlowStatus, isProjectForClosing, isWaitingFlowStatus } from "@/lib/field-options";
+import {
+  isClosedFlowStatus,
+  isInProgressFlowStatus,
+  isProjectForClosing,
+  isWaitingFlowStatus,
+} from "@/lib/field-options";
+import {
+  generateQuickWins,
+  interruptionTrends,
+} from "@/lib/report-insights";
 import type {
   Interruption,
   Priority,
@@ -22,7 +31,19 @@ export function statusTone(
     return "active";
   }
 
-  if (options ? isClosedFlowStatus(status, options) : status === "Zamknięty") {
+  if (options) {
+    if (isClosedFlowStatus(status, options)) {
+      return "closed";
+    }
+
+    if (isWaitingFlowStatus(status, options)) {
+      return "waiting";
+    }
+
+    if (isInProgressFlowStatus(status, options)) {
+      return "blue";
+    }
+  } else if (status === "Zamknięty") {
     return "closed";
   }
 
@@ -51,6 +72,7 @@ export function projectMetrics(projects: Project[], options: FieldOptions) {
   return {
     all: projects.length,
     active: projects.filter((project) => project.isActive).length,
+    inactive: projects.filter((project) => !project.isActive).length,
     waiting: projects.filter((project) => isWaitingFlowStatus(project.flowStatus, options))
       .length,
     closing: projects.filter((project) => isProjectForClosing(project, options)).length,
@@ -116,19 +138,39 @@ export function generateWeeklyReport(
   interruptions: Interruption[],
   options: FieldOptions,
 ): WeeklyReport {
+  const metrics = projectMetrics(projects, options);
   const blockers = projectsByBlocker(projects).sort((a, b) => b.value - a.value);
   const sources = interruptionsByType(interruptions).sort((a, b) => b.value - a.value);
+  const sortByPriority = (a: Project, b: Project) =>
+    priorityWeight(b.priority) - priorityWeight(a.priority);
 
-  return {
-    activeProjects: projectMetrics(projects, options).active,
-    waitingProjects: projectMetrics(projects, options).waiting,
-    closedProjects: projects.filter((project) => isClosedFlowStatus(project.flowStatus, options))
-      .length,
+  const baseReport = {
+    activeProjects: metrics.active,
+    waitingProjects: metrics.waiting,
+    closedProjects: projects.filter((project) =>
+      isClosedFlowStatus(project.flowStatus, options),
+    ).length,
+    closingProjects: metrics.closing,
+    noContactProjects: metrics.noContact,
     mostCommonBlocker: blockers[0]?.name ?? "Brak",
     interruptionsCount: interruptions.length,
     mostCommonInterruptionSource: sources[0]?.name ?? "Brak",
+    interruptionTrends: interruptionTrends(interruptions),
     criticalProjects: projects
       .filter((project) => project.priority === "Krytyczny")
-      .sort((a, b) => priorityWeight(b.priority) - priorityWeight(a.priority)),
+      .sort(sortByPriority),
+    waitingProjectsList: projects
+      .filter((project) => isWaitingFlowStatus(project.flowStatus, options))
+      .sort(sortByPriority),
+    closingProjectsList: projects
+      .filter((project) => isProjectForClosing(project, options))
+      .sort(sortByPriority),
+    blockersByReason: blockers,
+    interruptionsByTypeChart: sources,
+  };
+
+  return {
+    ...baseReport,
+    quickWins: generateQuickWins(projects, interruptions, options, baseReport),
   };
 }

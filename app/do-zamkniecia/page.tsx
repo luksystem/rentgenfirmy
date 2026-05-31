@@ -21,7 +21,7 @@ export default function ClosingPage() {
       <PageHeader
         eyebrow="Kontrola domknięć"
         title="Do zamknięcia"
-        description="Aktywne projekty na etapie oznaczonym jako do zamknięcia, posortowane najpierw po krytyczności."
+        description="Projekty ze statusem W trakcie na etapie oznaczonym jako do zamknięcia, posortowane najpierw po krytyczności."
       />
 
       <div className="grid gap-3 md:hidden">

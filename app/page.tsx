@@ -1,22 +1,29 @@
 "use client";
 
+import Link from "next/link";
 import { BarPanel, PiePanel } from "@/components/charts";
 import { InterruptionForm } from "@/components/interruption-form";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeader, ResetButton } from "@/components/page-header";
+import { QuickWinsPanel } from "@/components/quick-wins-panel";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  generateWeeklyReport,
   interruptionsByType,
   projectMetrics,
   projectsByBlocker,
   projectsByStatus,
 } from "@/lib/domain";
+import { formatTrendHelper } from "@/lib/report-insights";
 import { useAppStore } from "@/store/app-store";
 
 export default function Home() {
   const { projects, interruptions, addInterruption, seedDemoData, isSaving, fieldOptions } =
     useAppStore();
   const metrics = projectMetrics(projects, fieldOptions);
+  const report = generateWeeklyReport(projects, interruptions, fieldOptions);
+  const { daily, weekly } = report.interruptionTrends;
 
   return (
     <>
@@ -29,13 +36,40 @@ export default function Home() {
         }
       />
 
-      <section className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Wszystkie projekty" value={metrics.all} />
-        <MetricCard label="Projekty aktywne" value={metrics.active} tone="green" />
-        <MetricCard label="Projekty oczekujące" value={metrics.waiting} tone="amber" />
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
+        <MetricCard label="Wszystkie" value={metrics.all} />
+        <MetricCard label="Aktywne" value={metrics.active} tone="green" />
+        <MetricCard label="Nieaktywne" value={metrics.inactive} tone="slate" />
+        <MetricCard label="Oczekujące" value={metrics.waiting} tone="amber" />
         <MetricCard label="Do zamknięcia" value={metrics.closing} tone="slate" />
-        <MetricCard label="Bez kontaktu > 14 dni" value={metrics.noContact} tone="red" />
-        <MetricCard label="Projekty krytyczne" value={metrics.critical} tone="red" />
+        <MetricCard label="Bez kontaktu" value={metrics.noContact} tone="red" />
+        <MetricCard label="Krytyczne" value={metrics.critical} tone="red" />
+        <MetricCard
+          label="Przerwania dziś"
+          value={daily.current}
+          helper={formatTrendHelper(daily, "wczoraj")}
+          tone={daily.direction === "up" ? "red" : daily.direction === "down" ? "green" : "default"}
+        />
+        <MetricCard
+          label="Przerwania 7 dni"
+          value={weekly.current}
+          helper={formatTrendHelper(weekly, "poprzednie 7 dni")}
+          tone={weekly.direction === "up" ? "amber" : weekly.direction === "down" ? "green" : "default"}
+        />
+      </section>
+
+      <section className="mt-4 sm:mt-6">
+        <Card className="border-emerald-200">
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+            <CardTitle>Quick wins</CardTitle>
+            <Button variant="secondary" size="sm" asChild>
+              <Link href="/raport">Pełny raport</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <QuickWinsPanel wins={report.quickWins} limit={3} compact />
+          </CardContent>
+        </Card>
       </section>
 
       <section className="mt-4 sm:mt-6">

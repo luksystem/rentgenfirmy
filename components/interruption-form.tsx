@@ -4,7 +4,11 @@ import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { cn, toISODate } from "@/lib/utils";
-import { pickOption } from "@/lib/field-options";
+import {
+  defaultInterruptionTypeName,
+  interruptionTypeNames,
+  pickOption,
+} from "@/lib/field-options";
 import { people, type Interruption } from "@/lib/types";
 import { useAppStore } from "@/store/app-store";
 
@@ -22,11 +26,12 @@ export function InterruptionForm({
   className?: string;
 }) {
   const fieldOptions = useAppStore((state) => state.fieldOptions);
+  const defaultType = defaultInterruptionTypeName(fieldOptions);
   const { register, handleSubmit, reset } = useForm<FormValues>({
     defaultValues: {
       date: toISODate(new Date()),
       person: "Łukasz",
-      type: pickOption(undefined, fieldOptions.interruptionTypes, "Telefon klienta"),
+      type: defaultType,
       projectId: projects[0]?.id ?? "",
       description: "",
     },
@@ -39,7 +44,7 @@ export function InterruptionForm({
         reset({
           ...values,
           description: "",
-          type: pickOption(undefined, fieldOptions.interruptionTypes, "Telefon klienta"),
+          type: pickOption(undefined, interruptionTypeNames(fieldOptions), defaultType),
         });
       })}
       className={cn(
@@ -59,7 +64,7 @@ export function InterruptionForm({
       </Field>
       <Field label="Typ przerwania">
         <Select {...register("type", { required: true })}>
-          {fieldOptions.interruptionTypes.map((type) => (
+          {interruptionTypeNames(fieldOptions).map((type) => (
             <option key={type}>{type}</option>
           ))}
         </Select>

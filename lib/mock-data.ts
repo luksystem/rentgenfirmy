@@ -92,13 +92,19 @@ const owners: NextStepOwner[] = [
 ];
 const blockers = DEFAULT_FIELD_OPTIONS.blockerReasons;
 const people: Person[] = ["Łukasz", "Koordynator techniczny", "Lider operacyjny"];
-const interruptionTypes = DEFAULT_FIELD_OPTIONS.interruptionTypes;
+const interruptionTypeNamesList = DEFAULT_FIELD_OPTIONS.interruptionTypes.map(
+  (item) => item.name,
+);
 
 export const mockProjects: Project[] = projectNames.map((name, index) => {
   const flowStatus = statuses[index % statuses.length];
   const isActive = index % statuses.length === 0;
+  const isClosing =
+    flowStatus === "Wdrożenie i przekazanie" ||
+    flowStatus === "Poprawki" ||
+    flowStatus === "Gotowy do odbioru";
   const stage = stages[index % stages.length];
-  const isClosing = isActive && stage === "Wdrożenie i przekazanie";
+  const isClosingStage = stage === "Wdrożenie i przekazanie" && isClosing;
 
   return {
     id: `project-${index + 1}`,
@@ -115,10 +121,10 @@ export const mockProjects: Project[] = projectNames.map((name, index) => {
     lastChangedBy: people[index % people.length],
     lastChangedAt: addDays(today, -index).toISOString(),
     lastContactDate: toISODate(addDays(today, index % 4 === 0 ? -18 - index : -index)),
-    closeBlocker: isClosing ? blockers[(index + 3) % blockers.length] : undefined,
-    remainingHours: isClosing ? 4 + ((index * 3) % 18) : undefined,
-    nextAction: isClosing ? "Ustalić termin odbioru i listę poprawek" : undefined,
-    closeDeadline: isClosing ? toISODate(addDays(today, 3 + index)) : undefined,
+    closeBlocker: isClosingStage ? blockers[(index + 3) % blockers.length] : undefined,
+    remainingHours: isClosingStage ? 4 + ((index * 3) % 18) : undefined,
+    nextAction: isClosingStage ? "Ustalić termin odbioru i listę poprawek" : undefined,
+    closeDeadline: isClosingStage ? toISODate(addDays(today, 3 + index)) : undefined,
   };
 });
 
@@ -130,7 +136,7 @@ export const mockInterruptions: Interruption[] = Array.from({ length: 100 }).map
       id: `interruption-${index + 1}`,
       date: toISODate(addDays(today, -(index % 28))),
       person: people[index % people.length],
-      type: interruptionTypes[(index * 5) % interruptionTypes.length],
+      type: interruptionTypeNamesList[(index * 5) % interruptionTypeNamesList.length],
       projectId: project.id,
       description: `Przerwanie dotyczące: ${project.name}. Wymaga szybkiej decyzji lub informacji zwrotnej.`,
     };

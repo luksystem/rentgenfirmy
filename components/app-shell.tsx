@@ -13,16 +13,22 @@ import {
   Menu,
   PauseCircle,
   PhoneCall,
+  Plus,
   Settings,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const primaryNav = [
+const mobileNavLeft = [
   { href: "/", label: "Start", icon: Home },
   { href: "/projekty", label: "Projekty", icon: FolderKanban },
+];
+
+const mobileNavRight = [
   { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
 ];
+
+const primaryNav = [...mobileNavLeft, ...mobileNavRight];
 
 const secondaryNav = [
   { href: "/do-zamkniecia", label: "Do zamknięcia", icon: CheckCircle2 },
@@ -98,8 +104,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
 
         <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur xl:hidden">
-          <div className="mx-auto grid max-w-lg grid-cols-4">
-            {primaryNav.map((item) => {
+          <div className="mx-auto grid max-w-lg grid-cols-5">
+            {mobileNavLeft.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(pathname, item.href);
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMenuOpen(false)}
+                  className={cn(
+                    "flex flex-col items-center gap-1 px-2 py-2.5 text-[11px] font-medium text-slate-500",
+                    active && "text-slate-950",
+                  )}
+                >
+                  <Icon className={cn("h-5 w-5", active && "text-slate-950")} />
+                  {item.label}
+                </Link>
+              );
+            })}
+
+            <div className="flex justify-center">
+              <Link
+                href="/przerwania#dodaj-przerwanie"
+                onClick={() => setMenuOpen(false)}
+                aria-label="Dodaj przerwanie"
+                className="-mt-5 flex flex-col items-center gap-1"
+              >
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-950 text-white shadow-lg ring-4 ring-white">
+                  <Plus className="h-6 w-6" />
+                </span>
+                <span className="text-[11px] font-medium text-slate-500">Dodaj</span>
+              </Link>
+            </div>
+
+            {mobileNavRight.map((item) => {
               const Icon = item.icon;
               const active = isActive(pathname, item.href);
 

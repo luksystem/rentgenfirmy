@@ -5,8 +5,10 @@ import { RotateCcw } from "lucide-react";
 import {
   FieldOptionsEditor,
   FlowStatusesOptionsEditor,
+  InterruptionTypesOptionsEditor,
   StagesOptionsEditor,
   getDefaultFlowStatusOptions,
+  getDefaultInterruptionTypeOptions,
   getDefaultOptionsForKey,
   getDefaultStageOptions,
 } from "@/components/field-options-editor";
@@ -15,11 +17,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   DEFAULT_FIELD_OPTIONS,
-  INTERRUPTION_FIELD_OPTION_KEYS,
   PROJECT_STRING_FIELD_OPTION_KEYS,
   type FieldOptions,
   type StringListFieldOptionKey,
 } from "@/lib/field-options";
+import { PROJECT_RULES } from "@/lib/project-rules";
 import { useAppStore } from "@/store/app-store";
 
 export default function SettingsPage() {
@@ -47,6 +49,7 @@ export default function SettingsPage() {
       flowStatuses: statuses
         .map((status) => ({
           name: status.name.trim(),
+          isInProgress: status.isInProgress,
           isClosed: status.isClosed,
           isWaiting: status.isWaiting,
         }))
@@ -64,6 +67,27 @@ export default function SettingsPage() {
           forClosing: stage.forClosing,
         }))
         .filter((stage) => stage.name),
+    }));
+    setSaved(false);
+  }
+
+  function updateInterruptionTypes(types: FieldOptions["interruptionTypes"]) {
+    setDraft((current) => ({
+      ...current,
+      interruptionTypes: types
+        .map((item) => ({
+          name: item.name.trim(),
+          suggestion: item.suggestion.trim(),
+        }))
+        .filter((item) => item.name),
+    }));
+    setSaved(false);
+  }
+
+  function resetInterruptionTypes() {
+    setDraft((current) => ({
+      ...current,
+      interruptionTypes: getDefaultInterruptionTypeOptions(),
     }));
     setSaved(false);
   }
@@ -128,6 +152,30 @@ export default function SettingsPage() {
         </Card>
       ) : null}
 
+      <Card className="mb-6 border-slate-200 bg-slate-50">
+        <CardContent className="grid gap-3 py-4 text-sm text-slate-700">
+          <p className="font-semibold text-slate-900">Zależności flag</p>
+          <ul className="grid list-disc gap-2 pl-5">
+            <li>
+              <strong>Status przepływu</strong> — kategoria: W trakcie / Oczekujące / Zamknięty
+              (ustawiana poniżej).
+            </li>
+            <li>
+              <strong>Aktywny</strong> (checkbox w projekcie) — {PROJECT_RULES.activeField}
+            </li>
+            <li>
+              <strong>Do zamknięcia</strong> — {PROJECT_RULES.closingView}
+            </li>
+            <li>
+              <strong>Oczekujące</strong> (widok) — {PROJECT_RULES.waitingView}
+            </li>
+            <li>
+              <strong>Bez kontaktu</strong> — {PROJECT_RULES.noContactView}
+            </li>
+          </ul>
+        </CardContent>
+      </Card>
+
       <section className="grid gap-6">
         <div>
           <h2 className="mb-4 text-lg font-semibold">Projekty</h2>
@@ -169,12 +217,18 @@ export default function SettingsPage() {
 
         <div>
           <h2 className="mb-4 text-lg font-semibold">Przerwania</h2>
-          <FieldOptionsEditor
-            values={draft}
-            keys={INTERRUPTION_FIELD_OPTION_KEYS}
-            onChange={updateList}
-            onResetSection={resetSection}
-          />
+          <div className="grid gap-2">
+            <div className="flex justify-end">
+              <Button type="button" variant="ghost" size="sm" onClick={resetInterruptionTypes}>
+                <RotateCcw className="h-3.5 w-3.5" />
+                Przywróć domyślne typy
+              </Button>
+            </div>
+            <InterruptionTypesOptionsEditor
+              items={draft.interruptionTypes}
+              onChange={updateInterruptionTypes}
+            />
+          </div>
         </div>
       </section>
     </>
