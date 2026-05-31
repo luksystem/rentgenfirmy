@@ -2,6 +2,11 @@
 
 import { create } from "zustand";
 import {
+  DEFAULT_FIELD_OPTIONS,
+  normalizeFieldOptions,
+  type FieldOptions,
+} from "@/lib/field-options";
+import {
   createInterruption,
   createProject,
   deleteProjectRecord,
@@ -9,12 +14,14 @@ import {
   fetchProjects,
   updateProjectRecord,
 } from "@/lib/supabase/repository";
+import { fetchFieldOptions, saveFieldOptions } from "@/lib/supabase/settings-repository";
 import { seedDemoData } from "@/lib/supabase/seed";
 import type { Interruption, Project, ProjectInput } from "@/lib/types";
 
 type AppState = {
   projects: Project[];
   interruptions: Interruption[];
+  fieldOptions: FieldOptions;
   isLoading: boolean;
   isInitialized: boolean;
   isSaving: boolean;
@@ -24,12 +31,14 @@ type AppState = {
   updateProject: (id: string, project: ProjectInput) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   addInterruption: (interruption: Omit<Interruption, "id">) => Promise<void>;
+  updateFieldOptions: (options: FieldOptions) => Promise<void>;
   seedDemoData: () => Promise<void>;
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
   projects: [],
   interruptions: [],
+  fieldOptions: DEFAULT_FIELD_OPTIONS,
   isLoading: false,
   isInitialized: false,
   isSaving: false,
@@ -43,14 +52,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const [projects, interruptions] = await Promise.all([
+      const [projects, interruptions, fieldOptions] = await Promise.all([
         fetchProjects(),
         fetchInterruptions(),
+        fetchFieldOptions(),
       ]);
 
       set({
         projects,
         interruptions,
+        fieldOptions,
         isInitialized: true,
         isLoading: false,
         error: null,
@@ -142,6 +153,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : "Nie udało się dodać przerwania",
+        isSaving: false,
+      });
+      throw error;
+    }
+  },
+
+  updateFieldOptions: async (options) => {
+    set({ isSaving: true, error: null });
+
+    try {
+      const fieldOptions = await saveFieldOptions(normalizeFieldOptions(options));
+      set({
+        fieldOptions,
+        isSaving: false,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Nie udało się zapisać ustawień",
         isSaving: false,
       });
       throw error;

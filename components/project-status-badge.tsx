@@ -1,15 +1,21 @@
 import { Badge } from "@/components/ui/badge";
 import { statusTone } from "@/lib/domain";
-import type { FlowStatus, Priority } from "@/lib/types";
+import type { Priority } from "@/lib/types";
 
 export function ProjectStatusBadge({
   status,
   priority,
+  isActive,
 }: {
-  status: FlowStatus;
+  status: string;
   priority?: Priority;
+  isActive?: boolean;
 }) {
-  return <Badge tone={statusTone(status, priority)}>{status}</Badge>;
+  return <Badge tone={statusTone(status, priority, isActive)}>{status}</Badge>;
+}
+
+export function ActiveBadge() {
+  return <Badge tone="active">Aktywny</Badge>;
 }
 
 export function PriorityBadge({ priority }: { priority: Priority }) {

@@ -1,10 +1,9 @@
+import { DEFAULT_FIELD_OPTIONS } from "@/lib/field-options";
 import { addDays, toISODate } from "@/lib/utils";
 import type {
-  BlockerReason,
   FlowStatus,
   ImplementationStage,
   Interruption,
-  InterruptionType,
   NextStepOwner,
   Person,
   Priority,
@@ -61,7 +60,6 @@ const types: ProjectType[] = [
 ];
 
 const statuses: FlowStatus[] = [
-  "Aktywny",
   "Oczekuje na budowę",
   "Oczekuje na klienta",
   "Oczekuje na inną branżę",
@@ -92,37 +90,13 @@ const owners: NextStepOwner[] = [
   "Klient",
   "Inna branża",
 ];
-const blockers: BlockerReason[] = [
-  "Tynki",
-  "Wylewki",
-  "Klient",
-  "Elektryk",
-  "HVAC",
-  "Internet",
-  "Brak materiału",
-  "Programowanie",
-  "Poprawki po naszej stronie",
-  "Odbiór klienta",
-  "Brak decyzji klienta",
-  "Inna branża",
-  "Inne",
-];
+const blockers = DEFAULT_FIELD_OPTIONS.blockerReasons;
 const people: Person[] = ["Łukasz", "Koordynator techniczny", "Lider operacyjny"];
-const interruptionTypes: InterruptionType[] = [
-  "Telefon klienta",
-  "Telefon ekipy",
-  "Pytanie techniczne",
-  "Zmiana projektu",
-  "Problem materiałowy",
-  "Serwis",
-  "Reklamacja",
-  "Spotkanie",
-  "Inne",
-];
+const interruptionTypes = DEFAULT_FIELD_OPTIONS.interruptionTypes;
 
 export const mockProjects: Project[] = projectNames.map((name, index) => {
   const flowStatus = statuses[index % statuses.length];
-  const isActive = flowStatus === "Aktywny";
+  const isActive = index % statuses.length === 0;
   const isClosing =
     flowStatus === "Wdrożenie i przekazanie" ||
     flowStatus === "Poprawki" ||
@@ -131,6 +105,7 @@ export const mockProjects: Project[] = projectNames.map((name, index) => {
   return {
     id: `project-${index + 1}`,
     name,
+    isActive,
     type: types[index],
     flowStatus,
     stage: stages[index % stages.length],

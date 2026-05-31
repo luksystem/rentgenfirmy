@@ -7,6 +7,7 @@ create table if not exists public.projects (
   name text not null,
   type text not null,
   flow_status text not null,
+  is_active boolean not null default false,
   stage text not null,
   priority text not null,
   next_step_owner text not null,
@@ -39,8 +40,15 @@ create index if not exists projects_priority_idx on public.projects (priority);
 create index if not exists interruptions_date_idx on public.interruptions (date);
 create index if not exists interruptions_project_id_idx on public.interruptions (project_id);
 
+create table if not exists public.app_settings (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
 alter table public.projects enable row level security;
 alter table public.interruptions enable row level security;
+alter table public.app_settings enable row level security;
 
 -- Tymczasowe polityki bez logowania (MVP wewnętrzne).
 -- Po dodaniu auth zamień na polityki oparte o auth.uid().
@@ -52,6 +60,10 @@ drop policy if exists "interruptions_select_all" on public.interruptions;
 drop policy if exists "interruptions_insert_all" on public.interruptions;
 drop policy if exists "interruptions_update_all" on public.interruptions;
 drop policy if exists "interruptions_delete_all" on public.interruptions;
+drop policy if exists "app_settings_select_all" on public.app_settings;
+drop policy if exists "app_settings_insert_all" on public.app_settings;
+drop policy if exists "app_settings_update_all" on public.app_settings;
+drop policy if exists "app_settings_delete_all" on public.app_settings;
 
 create policy "projects_select_all" on public.projects for select using (true);
 create policy "projects_insert_all" on public.projects for insert with check (true);
@@ -62,3 +74,8 @@ create policy "interruptions_select_all" on public.interruptions for select usin
 create policy "interruptions_insert_all" on public.interruptions for insert with check (true);
 create policy "interruptions_update_all" on public.interruptions for update using (true);
 create policy "interruptions_delete_all" on public.interruptions for delete using (true);
+
+create policy "app_settings_select_all" on public.app_settings for select using (true);
+create policy "app_settings_insert_all" on public.app_settings for insert with check (true);
+create policy "app_settings_update_all" on public.app_settings for update using (true);
+create policy "app_settings_delete_all" on public.app_settings for delete using (true);

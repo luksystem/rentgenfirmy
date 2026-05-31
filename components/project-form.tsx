@@ -1,60 +1,78 @@
 "use client";
 
+import { useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type Resolver, useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
-import {
-  blockerReasons,
-  flowStatuses,
-  implementationStages,
-  nextStepOwners,
-  priorities,
-  projectTypes,
-  type Project,
-  type ProjectInput,
-} from "@/lib/types";
+import { defaultFlowStatus, pickOption, type FieldOptions } from "@/lib/field-options";
+import { priorities, type Project, type ProjectInput } from "@/lib/types";
 import { toISODate } from "@/lib/utils";
+import { zodStringOption } from "@/lib/zod-helpers";
+import { useAppStore } from "@/store/app-store";
 
-const schema = z
-  .object({
-    name: z.string().min(2, "Podaj nazwę projektu"),
-    type: z.enum(projectTypes),
-    flowStatus: z.enum(flowStatuses),
-    stage: z.enum(implementationStages),
-    priority: z.enum(priorities),
-    nextStepOwner: z.enum(nextStepOwners),
-    nextContactDate: z.string().min(1, "Podaj datę kontaktu"),
-    blockerReason: z.enum(blockerReasons).optional().or(z.literal("")),
-    notes: z.string().optional(),
-    closeBlocker: z.string().optional(),
-    remainingHours: z.number().min(0).optional(),
-    nextAction: z.string().optional(),
-    closeDeadline: z.string().optional(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.flowStatus !== "Aktywny" && value.flowStatus !== "Zamknięty") {
-      if (!value.blockerReason) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Powód blokady jest wymagany poza statusem Aktywny",
-          path: ["blockerReason"],
-        });
+type FormValues = {
+  name: string;
+  isActive: boolean;
+  type: string;
+  flowStatus: string;
+  stage: string;
+  priority: (typeof priorities)[number];
+  nextStepOwner: string;
+  nextContactDate: string;
+  blockerReason?: string;
+  notes?: string;
+  closeBlocker?: string;
+  remainingHours?: number;
+  nextAction?: string;
+  closeDeadline?: string;
+};
+
+function createSchema(options: FieldOptions) {
+  return z
+    .object({
+      name: z.string().min(2, "Podaj nazwę projektu"),
+      isActive: z.boolean(),
+      type: zodStringOption(options.projectTypes, "Wybierz typ projektu"),
+      flowStatus: zodStringOption(options.flowStatuses, "Wybierz status przepływu"),
+      stage: zodStringOption(options.implementationStages, "Wybierz etap"),
+      priority: z.enum(priorities),
+      nextStepOwner: zodStringOption(options.nextStepOwners, "Wybierz właściciela kroku"),
+      nextContactDate: z.string().min(1, "Podaj datę kontaktu"),
+      blockerReason: z
+        .union([zodStringOption(options.blockerReasons, "Wybierz powód blokady"), z.literal("")])
+        .optional(),
+      notes: z.string().optional(),
+      closeBlocker: z.string().optional(),
+      remainingHours: z.number().min(0).optional(),
+      nextAction: z.string().optional(),
+      closeDeadline: z.string().optional(),
+    })
+    .superRefine((value, ctx) => {
+      const closedStatus = options.flowStatuses.find((status) => status === "Zamknięty") ?? "Zamknięty";
+
+      if (!value.isActive && value.flowStatus !== closedStatus) {
+        if (!value.blockerReason) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Powód blokady jest wymagany, gdy projekt nie jest aktywny",
+            path: ["blockerReason"],
+          });
+        }
       }
-    }
-  });
+    });
+}
 
-type FormValues = z.infer<typeof schema>;
-
-export function projectToFormValues(project: Project): FormValues {
+export function projectToFormValues(project: Project, options: FieldOptions): FormValues {
   return {
     name: project.name,
-    type: project.type,
-    flowStatus: project.flowStatus,
-    stage: project.stage,
+    isActive: project.isActive,
+    type: pickOption(project.type, options.projectTypes, "Dom"),
+    flowStatus: pickOption(project.flowStatus, options.flowStatuses, defaultFlowStatus(options)),
+    stage: pickOption(project.stage, options.implementationStages, "Projektowanie"),
     priority: project.priority,
-    nextStepOwner: project.nextStepOwner,
+    nextStepOwner: pickOption(project.nextStepOwner, options.nextStepOwners, "Łukasz"),
     nextContactDate: project.nextContactDate,
     blockerReason: project.blockerReason ?? "",
     notes: project.notes ?? "",
@@ -65,21 +83,24 @@ export function projectToFormValues(project: Project): FormValues {
   };
 }
 
-const defaultValues: FormValues = {
-  name: "",
-  type: "Dom",
-  flowStatus: "Aktywny",
-  stage: "Projektowanie",
-  priority: "Normalny",
-  nextStepOwner: "Łukasz",
-  nextContactDate: toISODate(new Date()),
-  blockerReason: "",
-  notes: "",
-  closeBlocker: "",
-  remainingHours: 0,
-  nextAction: "",
-  closeDeadline: "",
-};
+function createDefaultValues(options: FieldOptions): FormValues {
+  return {
+    name: "",
+    isActive: true,
+    type: pickOption(undefined, options.projectTypes, "Dom"),
+    flowStatus: defaultFlowStatus(options),
+    stage: pickOption(undefined, options.implementationStages, "Projektowanie"),
+    priority: "Normalny",
+    nextStepOwner: pickOption(undefined, options.nextStepOwners, "Łukasz"),
+    nextContactDate: toISODate(new Date()),
+    blockerReason: "",
+    notes: "",
+    closeBlocker: "",
+    remainingHours: 0,
+    nextAction: "",
+    closeDeadline: "",
+  };
+}
 
 export function ProjectForm({
   project,
@@ -92,13 +113,20 @@ export function ProjectForm({
   onSubmit: (project: ProjectInput) => void | Promise<void>;
   onCancel: () => void;
 }) {
+  const fieldOptions = useAppStore((state) => state.fieldOptions);
+  const schema = useMemo(() => createSchema(fieldOptions), [fieldOptions]);
+  const defaultValues = useMemo(
+    () => (project ? projectToFormValues(project, fieldOptions) : createDefaultValues(fieldOptions)),
+    [project, fieldOptions],
+  );
+
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema) as Resolver<FormValues>,
-    defaultValues: project ? projectToFormValues(project) : defaultValues,
+    defaultValues,
   });
 
   function submit(values: FormValues) {
@@ -120,21 +148,38 @@ export function ProjectForm({
         </Field>
         <Field label="Typ projektu" error={errors.type?.message}>
           <Select {...register("type")}>
-            {projectTypes.map((type) => (
+            {fieldOptions.projectTypes.map((type) => (
               <option key={type}>{type}</option>
             ))}
           </Select>
         </Field>
+      </div>
+
+      <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+        <input
+          type="checkbox"
+          className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+          {...register("isActive")}
+        />
+        <span>
+          <span className="block text-sm font-semibold text-slate-900">Aktywny</span>
+          <span className="mt-1 block text-sm text-slate-600">
+            Projekt liczy się jako aktywny w dashboardzie i raportach. Niezależny od statusu przepływu.
+          </span>
+        </span>
+      </label>
+
+      <div className="grid gap-4 md:grid-cols-2">
         <Field label="Status przepływu" error={errors.flowStatus?.message}>
           <Select {...register("flowStatus")}>
-            {flowStatuses.map((status) => (
+            {fieldOptions.flowStatuses.map((status) => (
               <option key={status}>{status}</option>
             ))}
           </Select>
         </Field>
         <Field label="Etap" error={errors.stage?.message}>
           <Select {...register("stage")}>
-            {implementationStages.map((stage) => (
+            {fieldOptions.implementationStages.map((stage) => (
               <option key={stage}>{stage}</option>
             ))}
           </Select>
@@ -148,7 +193,7 @@ export function ProjectForm({
         </Field>
         <Field label="Właściciel kolejnego kroku" error={errors.nextStepOwner?.message}>
           <Select {...register("nextStepOwner")}>
-            {nextStepOwners.map((owner) => (
+            {fieldOptions.nextStepOwners.map((owner) => (
               <option key={owner}>{owner}</option>
             ))}
           </Select>
@@ -159,7 +204,7 @@ export function ProjectForm({
         <Field label="Powód blokady" error={errors.blockerReason?.message}>
           <Select {...register("blockerReason")}>
             <option value="">Brak</option>
-            {blockerReasons.map((reason) => (
+            {fieldOptions.blockerReasons.map((reason) => (
               <option key={reason}>{reason}</option>
             ))}
           </Select>

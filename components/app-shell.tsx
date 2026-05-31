@@ -13,6 +13,7 @@ import {
   Menu,
   PauseCircle,
   PhoneCall,
+  Settings,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ const secondaryNav = [
   { href: "/bez-kontaktu", label: "Bez kontaktu", icon: Clock3 },
   { href: "/oczekujace", label: "Oczekujące", icon: PauseCircle },
   { href: "/raport", label: "Raport", icon: BarChart3 },
+  { href: "/ustawienia", label: "Ustawienia", icon: Settings },
 ];
 
 const allNav = [...primaryNav, ...secondaryNav];

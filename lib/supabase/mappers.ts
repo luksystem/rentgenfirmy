@@ -16,6 +16,7 @@ export function rowToProject(row: ProjectRow): Project {
   return {
     id: row.id,
     name: row.name,
+    isActive: row.is_active ?? row.flow_status === "Aktywny",
     type: row.type as ProjectType,
     flowStatus: row.flow_status as FlowStatus,
     stage: row.stage as ImplementationStage,
@@ -41,6 +42,7 @@ export function projectToInsert(
     name: project.name,
     type: project.type,
     flow_status: project.flowStatus,
+    is_active: project.isActive,
     stage: project.stage,
     priority: project.priority,
     next_step_owner: project.nextStepOwner,

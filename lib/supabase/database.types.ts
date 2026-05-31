@@ -3,6 +3,7 @@ export type ProjectRow = {
   name: string;
   type: string;
   flow_status: string;
+  is_active: boolean;
   stage: string;
   priority: string;
   next_step_owner: string;
@@ -41,6 +42,18 @@ export type InterruptionInsert = Omit<InterruptionRow, "id" | "created_at"> & {
 
 export type InterruptionUpdate = Partial<InterruptionInsert>;
 
+export type AppSettingsRow = {
+  id: string;
+  data: Record<string, unknown>;
+  updated_at: string;
+};
+
+export type AppSettingsInsert = {
+  id: string;
+  data: Record<string, unknown>;
+  updated_at?: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -63,6 +76,12 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      app_settings: {
+        Row: AppSettingsRow;
+        Insert: AppSettingsInsert;
+        Update: Partial<AppSettingsInsert>;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;

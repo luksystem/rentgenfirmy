@@ -1,34 +1,30 @@
 import { countBy, daysBetween } from "@/lib/utils";
 import type {
-  BlockerReason,
-  FlowStatus,
   Interruption,
-  InterruptionType,
   Priority,
   Project,
-  ProjectType,
   WeeklyReport,
 } from "@/lib/types";
 
-export const waitingStatuses: FlowStatus[] = [
+export const waitingStatuses: string[] = [
   "Oczekuje na budowę",
   "Oczekuje na klienta",
   "Oczekuje na inną branżę",
   "Oczekuje na materiały",
 ];
 
-export const closingStatuses: FlowStatus[] = [
+export const closingStatuses: string[] = [
   "Wdrożenie i przekazanie",
   "Poprawki",
   "Gotowy do odbioru",
 ];
 
-export function statusTone(status: FlowStatus, priority?: Priority) {
+export function statusTone(status: string, priority?: Priority, isActive?: boolean) {
   if (priority === "Krytyczny") {
     return "critical";
   }
 
-  if (status === "Aktywny") {
+  if (isActive) {
     return "active";
   }
 
@@ -60,7 +56,7 @@ export function isWithoutContact(project: Project) {
 export function projectMetrics(projects: Project[]) {
   return {
     all: projects.length,
-    active: projects.filter((project) => project.flowStatus === "Aktywny").length,
+    active: projects.filter((project) => project.isActive).length,
     waiting: projects.filter((project) => waitingStatuses.includes(project.flowStatus))
       .length,
     waitingClient: projects.filter(
@@ -84,16 +80,16 @@ export function projectsByBlocker(projects: Project[]) {
   return countBy(
     projects
       .map((project) => project.blockerReason)
-      .filter(Boolean) as BlockerReason[],
+      .filter(Boolean) as string[],
   );
 }
 
 export function projectsByType(projects: Project[]) {
-  return countBy(projects.map((project) => project.type as ProjectType));
+  return countBy(projects.map((project) => project.type));
 }
 
 export function interruptionsByType(interruptions: Interruption[]) {
-  return countBy(interruptions.map((item) => item.type as InterruptionType));
+  return countBy(interruptions.map((item) => item.type));
 }
 
 export function interruptionsPerDay(interruptions: Interruption[]) {

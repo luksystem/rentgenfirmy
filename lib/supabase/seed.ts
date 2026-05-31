@@ -10,6 +10,7 @@ export async function seedDemoData() {
   const projectRows = mockProjects.map((project) =>
     projectToInsert({
       name: project.name,
+      isActive: project.isActive,
       type: project.type,
       flowStatus: project.flowStatus,
       stage: project.stage,

@@ -29,7 +29,11 @@ export default function ClosingPage() {
             title={project.name}
             badges={
               <>
-                <ProjectStatusBadge status={project.flowStatus} priority={project.priority} />
+                <ProjectStatusBadge
+                  status={project.flowStatus}
+                  priority={project.priority}
+                  isActive={project.isActive}
+                />
                 <PriorityBadge priority={project.priority} />
               </>
             }
@@ -67,6 +71,7 @@ export default function ClosingPage() {
                     <ProjectStatusBadge
                       status={project.flowStatus}
                       priority={project.priority}
+                      isActive={project.isActive}
                     />
                   </td>
                   <td className="px-4 py-3">

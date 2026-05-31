@@ -47,6 +47,7 @@ export default function WaitingPage() {
                     <ProjectStatusBadge
                       status={project.flowStatus}
                       priority={project.priority}
+                      isActive={project.isActive}
                     />
                   </div>
                   <div className="grid gap-2 text-sm text-slate-600 md:grid-cols-3">

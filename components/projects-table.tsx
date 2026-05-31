@@ -18,8 +18,6 @@ import { Select } from "@/components/ui/input";
 import { useAppStore } from "@/store/app-store";
 import { formatDate } from "@/lib/utils";
 import {
-  flowStatuses,
-  projectTypes,
   type FlowStatus,
   type Project,
   type ProjectInput,
@@ -29,7 +27,8 @@ import {
 type DialogMode = "create" | "edit" | null;
 
 export function ProjectsTable() {
-  const { projects, addProject, updateProject, deleteProject, isSaving } = useAppStore();
+  const { projects, addProject, updateProject, deleteProject, isSaving, fieldOptions } =
+    useAppStore();
   const [typeFilter, setTypeFilter] = useState<ProjectType | "Wszystkie">("Wszystkie");
   const [flowStatusFilter, setFlowStatusFilter] = useState<FlowStatus | "Wszystkie">(
     "Wszystkie",
@@ -111,7 +110,7 @@ export function ProjectsTable() {
               aria-label="Filtr typu projektu"
             >
               <option>Wszystkie</option>
-              {projectTypes.map((type) => (
+              {fieldOptions.projectTypes.map((type) => (
                 <option key={type}>{type}</option>
               ))}
             </Select>
@@ -124,7 +123,7 @@ export function ProjectsTable() {
               aria-label="Filtr statusu przepływu"
             >
               <option>Wszystkie</option>
-              {flowStatuses.map((status) => (
+              {fieldOptions.flowStatuses.map((status) => (
                 <option key={status}>{status}</option>
               ))}
             </Select>
@@ -147,6 +146,7 @@ export function ProjectsTable() {
                   <ProjectStatusBadge
                     status={project.flowStatus}
                     priority={project.priority}
+                    isActive={project.isActive}
                   />
                   <PriorityBadge priority={project.priority} />
                 </>
@@ -214,6 +214,7 @@ export function ProjectsTable() {
                     <ProjectStatusBadge
                       status={project.flowStatus}
                       priority={project.priority}
+                      isActive={project.isActive}
                     />
                   </td>
                   <td className="px-4 py-3">{project.stage}</td>
