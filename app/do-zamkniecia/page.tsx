@@ -4,14 +4,16 @@ import { PageHeader } from "@/components/page-header";
 import { MobileField, MobileListCard } from "@/components/mobile-list-card";
 import { PriorityBadge, ProjectStatusBadge } from "@/components/project-status-badge";
 import { Card } from "@/components/ui/card";
-import { closingStatuses, priorityWeight } from "@/lib/domain";
+import { priorityWeight } from "@/lib/domain";
+import { isProjectForClosing } from "@/lib/field-options";
 import { formatDate } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 
 export default function ClosingPage() {
   const projects = useAppStore((state) => state.projects);
+  const fieldOptions = useAppStore((state) => state.fieldOptions);
   const closingProjects = projects
-    .filter((project) => closingStatuses.includes(project.flowStatus))
+    .filter((project) => isProjectForClosing(project, fieldOptions))
     .sort((a, b) => priorityWeight(b.priority) - priorityWeight(a.priority));
 
   return (
@@ -19,7 +21,7 @@ export default function ClosingPage() {
       <PageHeader
         eyebrow="Kontrola domknięć"
         title="Do zamknięcia"
-        description="Projekty w fazie wdrożenia, poprawek albo gotowe do odbioru, posortowane najpierw po krytyczności."
+        description="Aktywne projekty na etapie oznaczonym jako do zamknięcia, posortowane najpierw po krytyczności."
       />
 
       <div className="grid gap-3 md:hidden">

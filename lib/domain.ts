@@ -1,4 +1,6 @@
 import { countBy, daysBetween } from "@/lib/utils";
+import type { FieldOptions } from "@/lib/field-options";
+import { isClosedFlowStatus, isProjectForClosing, isWaitingFlowStatus } from "@/lib/field-options";
 import type {
   Interruption,
   Priority,
@@ -6,20 +8,12 @@ import type {
   WeeklyReport,
 } from "@/lib/types";
 
-export const waitingStatuses: string[] = [
-  "Oczekuje na budowę",
-  "Oczekuje na klienta",
-  "Oczekuje na inną branżę",
-  "Oczekuje na materiały",
-];
-
-export const closingStatuses: string[] = [
-  "Wdrożenie i przekazanie",
-  "Poprawki",
-  "Gotowy do odbioru",
-];
-
-export function statusTone(status: string, priority?: Priority, isActive?: boolean) {
+export function statusTone(
+  status: string,
+  priority?: Priority,
+  isActive?: boolean,
+  options?: FieldOptions,
+) {
   if (priority === "Krytyczny") {
     return "critical";
   }
@@ -28,7 +22,7 @@ export function statusTone(status: string, priority?: Priority, isActive?: boole
     return "active";
   }
 
-  if (status === "Zamknięty") {
+  if (options ? isClosedFlowStatus(status, options) : status === "Zamknięty") {
     return "closed";
   }
 
@@ -44,30 +38,23 @@ export function priorityWeight(priority: Priority) {
   }[priority];
 }
 
-export function isWithoutContact(project: Project) {
+export function isWithoutContact(project: Project, options: FieldOptions) {
   const today = new Date();
   return (
     new Date(project.nextContactDate) < today &&
     daysBetween(project.lastContactDate) > 14 &&
-    project.flowStatus !== "Zamknięty"
+    !isClosedFlowStatus(project.flowStatus, options)
   );
 }
 
-export function projectMetrics(projects: Project[]) {
+export function projectMetrics(projects: Project[], options: FieldOptions) {
   return {
     all: projects.length,
     active: projects.filter((project) => project.isActive).length,
-    waiting: projects.filter((project) => waitingStatuses.includes(project.flowStatus))
+    waiting: projects.filter((project) => isWaitingFlowStatus(project.flowStatus, options))
       .length,
-    waitingClient: projects.filter(
-      (project) => project.flowStatus === "Oczekuje na klienta",
-    ).length,
-    waitingBuild: projects.filter(
-      (project) => project.flowStatus === "Oczekuje na budowę",
-    ).length,
-    closing: projects.filter((project) => closingStatuses.includes(project.flowStatus))
-      .length,
-    noContact: projects.filter(isWithoutContact).length,
+    closing: projects.filter((project) => isProjectForClosing(project, options)).length,
+    noContact: projects.filter((project) => isWithoutContact(project, options)).length,
     critical: projects.filter((project) => project.priority === "Krytyczny").length,
   };
 }
@@ -127,14 +114,15 @@ export function topInterruptionProjects(
 export function generateWeeklyReport(
   projects: Project[],
   interruptions: Interruption[],
+  options: FieldOptions,
 ): WeeklyReport {
   const blockers = projectsByBlocker(projects).sort((a, b) => b.value - a.value);
   const sources = interruptionsByType(interruptions).sort((a, b) => b.value - a.value);
 
   return {
-    activeProjects: projectMetrics(projects).active,
-    waitingProjects: projectMetrics(projects).waiting,
-    closedProjects: projects.filter((project) => project.flowStatus === "Zamknięty")
+    activeProjects: projectMetrics(projects, options).active,
+    waitingProjects: projectMetrics(projects, options).waiting,
+    closedProjects: projects.filter((project) => isClosedFlowStatus(project.flowStatus, options))
       .length,
     mostCommonBlocker: blockers[0]?.name ?? "Brak",
     interruptionsCount: interruptions.length,

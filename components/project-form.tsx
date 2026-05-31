@@ -6,7 +6,15 @@ import { type Resolver, useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
-import { defaultFlowStatus, pickOption, type FieldOptions } from "@/lib/field-options";
+import {
+  defaultFlowStatus,
+  defaultStageName,
+  flowStatusNames,
+  isClosedFlowStatus,
+  pickOption,
+  stageNames,
+  type FieldOptions,
+} from "@/lib/field-options";
 import { priorities, type Project, type ProjectInput } from "@/lib/types";
 import { toISODate } from "@/lib/utils";
 import { zodStringOption } from "@/lib/zod-helpers";
@@ -35,8 +43,8 @@ function createSchema(options: FieldOptions) {
       name: z.string().min(2, "Podaj nazwę projektu"),
       isActive: z.boolean(),
       type: zodStringOption(options.projectTypes, "Wybierz typ projektu"),
-      flowStatus: zodStringOption(options.flowStatuses, "Wybierz status przepływu"),
-      stage: zodStringOption(options.implementationStages, "Wybierz etap"),
+      flowStatus: zodStringOption(flowStatusNames(options), "Wybierz status przepływu"),
+      stage: zodStringOption(stageNames(options), "Wybierz etap"),
       priority: z.enum(priorities),
       nextStepOwner: zodStringOption(options.nextStepOwners, "Wybierz właściciela kroku"),
       nextContactDate: z.string().min(1, "Podaj datę kontaktu"),
@@ -50,9 +58,7 @@ function createSchema(options: FieldOptions) {
       closeDeadline: z.string().optional(),
     })
     .superRefine((value, ctx) => {
-      const closedStatus = options.flowStatuses.find((status) => status === "Zamknięty") ?? "Zamknięty";
-
-      if (!value.isActive && value.flowStatus !== closedStatus) {
+      if (!value.isActive && !isClosedFlowStatus(value.flowStatus, options)) {
         if (!value.blockerReason) {
           ctx.addIssue({
             code: "custom",
@@ -69,8 +75,8 @@ export function projectToFormValues(project: Project, options: FieldOptions): Fo
     name: project.name,
     isActive: project.isActive,
     type: pickOption(project.type, options.projectTypes, "Dom"),
-    flowStatus: pickOption(project.flowStatus, options.flowStatuses, defaultFlowStatus(options)),
-    stage: pickOption(project.stage, options.implementationStages, "Projektowanie"),
+    flowStatus: pickOption(project.flowStatus, flowStatusNames(options), defaultFlowStatus(options)),
+    stage: pickOption(project.stage, stageNames(options), defaultStageName(options)),
     priority: project.priority,
     nextStepOwner: pickOption(project.nextStepOwner, options.nextStepOwners, "Łukasz"),
     nextContactDate: project.nextContactDate,
@@ -89,7 +95,7 @@ function createDefaultValues(options: FieldOptions): FormValues {
     isActive: true,
     type: pickOption(undefined, options.projectTypes, "Dom"),
     flowStatus: defaultFlowStatus(options),
-    stage: pickOption(undefined, options.implementationStages, "Projektowanie"),
+    stage: defaultStageName(options),
     priority: "Normalny",
     nextStepOwner: pickOption(undefined, options.nextStepOwners, "Łukasz"),
     nextContactDate: toISODate(new Date()),
@@ -172,14 +178,14 @@ export function ProjectForm({
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Status przepływu" error={errors.flowStatus?.message}>
           <Select {...register("flowStatus")}>
-            {fieldOptions.flowStatuses.map((status) => (
+            {flowStatusNames(fieldOptions).map((status) => (
               <option key={status}>{status}</option>
             ))}
           </Select>
         </Field>
         <Field label="Etap" error={errors.stage?.message}>
           <Select {...register("stage")}>
-            {fieldOptions.implementationStages.map((stage) => (
+            {stageNames(fieldOptions).map((stage) => (
               <option key={stage}>{stage}</option>
             ))}
           </Select>

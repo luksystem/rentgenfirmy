@@ -3,14 +3,15 @@
 import { PageHeader } from "@/components/page-header";
 import { ProjectStatusBadge } from "@/components/project-status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { waitingStatuses } from "@/lib/domain";
+import { isWaitingFlowStatus } from "@/lib/field-options";
 import { formatDate } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 
 export default function WaitingPage() {
   const projects = useAppStore((state) => state.projects);
+  const fieldOptions = useAppStore((state) => state.fieldOptions);
   const waitingProjects = projects.filter((project) =>
-    waitingStatuses.includes(project.flowStatus),
+    isWaitingFlowStatus(project.flowStatus, fieldOptions),
   );
   const groups = Object.groupBy(
     waitingProjects,
@@ -22,7 +23,7 @@ export default function WaitingPage() {
       <PageHeader
         eyebrow="Blokady"
         title="Projekty oczekujące"
-        description="Widok tematów oczekujących na budowę, klienta, inną branżę lub materiały, pogrupowany według powodu blokady."
+        description="Projekty ze statusem przepływu oznaczonym jako oczekujące, pogrupowane według powodu blokady."
       />
 
       <div className="grid gap-4 xl:grid-cols-2">

@@ -9,9 +9,9 @@ import { generateWeeklyReport } from "@/lib/domain";
 import { useAppStore } from "@/store/app-store";
 
 export default function ReportPage() {
-  const { projects, interruptions } = useAppStore();
+  const { projects, interruptions, fieldOptions } = useAppStore();
   const [generated, setGenerated] = useState(false);
-  const report = generateWeeklyReport(projects, interruptions);
+  const report = generateWeeklyReport(projects, interruptions, fieldOptions);
 
   return (
     <>

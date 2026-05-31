@@ -97,10 +97,8 @@ const interruptionTypes = DEFAULT_FIELD_OPTIONS.interruptionTypes;
 export const mockProjects: Project[] = projectNames.map((name, index) => {
   const flowStatus = statuses[index % statuses.length];
   const isActive = index % statuses.length === 0;
-  const isClosing =
-    flowStatus === "Wdrożenie i przekazanie" ||
-    flowStatus === "Poprawki" ||
-    flowStatus === "Gotowy do odbioru";
+  const stage = stages[index % stages.length];
+  const isClosing = isActive && stage === "Wdrożenie i przekazanie";
 
   return {
     id: `project-${index + 1}`,
@@ -108,7 +106,7 @@ export const mockProjects: Project[] = projectNames.map((name, index) => {
     isActive,
     type: types[index],
     flowStatus,
-    stage: stages[index % stages.length],
+    stage,
     priority: priorities[(index + 1) % priorities.length],
     nextStepOwner: owners[index % owners.length],
     nextContactDate: toISODate(addDays(today, index % 5 === 0 ? -index - 2 : index + 1)),

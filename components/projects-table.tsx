@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/input";
+import { flowStatusNames } from "@/lib/field-options";
 import { useAppStore } from "@/store/app-store";
 import { formatDate } from "@/lib/utils";
 import {
@@ -123,7 +124,7 @@ export function ProjectsTable() {
               aria-label="Filtr statusu przepływu"
             >
               <option>Wszystkie</option>
-              {fieldOptions.flowStatuses.map((status) => (
+              {flowStatusNames(fieldOptions).map((status) => (
                 <option key={status}>{status}</option>
               ))}
             </Select>

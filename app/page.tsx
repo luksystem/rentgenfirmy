@@ -14,9 +14,9 @@ import {
 import { useAppStore } from "@/store/app-store";
 
 export default function Home() {
-  const { projects, interruptions, addInterruption, seedDemoData, isSaving } =
+  const { projects, interruptions, addInterruption, seedDemoData, isSaving, fieldOptions } =
     useAppStore();
-  const metrics = projectMetrics(projects);
+  const metrics = projectMetrics(projects, fieldOptions);
 
   return (
     <>
@@ -33,16 +33,6 @@ export default function Home() {
         <MetricCard label="Wszystkie projekty" value={metrics.all} />
         <MetricCard label="Projekty aktywne" value={metrics.active} tone="green" />
         <MetricCard label="Projekty oczekujące" value={metrics.waiting} tone="amber" />
-        <MetricCard
-          label="Oczekujące na klienta"
-          value={metrics.waitingClient}
-          tone="amber"
-        />
-        <MetricCard
-          label="Oczekujące na budowę"
-          value={metrics.waitingBuild}
-          tone="amber"
-        />
         <MetricCard label="Do zamknięcia" value={metrics.closing} tone="slate" />
         <MetricCard label="Bez kontaktu > 14 dni" value={metrics.noContact} tone="red" />
         <MetricCard label="Projekty krytyczne" value={metrics.critical} tone="red" />

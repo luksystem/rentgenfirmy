@@ -9,7 +9,8 @@ import { useAppStore } from "@/store/app-store";
 
 export default function NoContactPage() {
   const projects = useAppStore((state) => state.projects);
-  const staleProjects = projects.filter(isWithoutContact);
+  const fieldOptions = useAppStore((state) => state.fieldOptions);
+  const staleProjects = projects.filter((project) => isWithoutContact(project, fieldOptions));
 
   return (
     <>

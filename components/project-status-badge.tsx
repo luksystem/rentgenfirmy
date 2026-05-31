@@ -1,6 +1,9 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
 import { statusTone } from "@/lib/domain";
 import type { Priority } from "@/lib/types";
+import { useAppStore } from "@/store/app-store";
 
 export function ProjectStatusBadge({
   status,
@@ -11,7 +14,11 @@ export function ProjectStatusBadge({
   priority?: Priority;
   isActive?: boolean;
 }) {
-  return <Badge tone={statusTone(status, priority, isActive)}>{status}</Badge>;
+  const fieldOptions = useAppStore((state) => state.fieldOptions);
+
+  return (
+    <Badge tone={statusTone(status, priority, isActive, fieldOptions)}>{status}</Badge>
+  );
 }
 
 export function ActiveBadge() {
