@@ -19,29 +19,89 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const mobileNavLeft = [
-  { href: "/", label: "Start", icon: Home },
-  { href: "/projekty", label: "Projekty", icon: FolderKanban },
+const navGroups = [
+  {
+    label: "Główne",
+    items: [
+      { href: "/", label: "Start", icon: Home },
+      { href: "/projekty", label: "Projekty", icon: FolderKanban },
+      { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
+    ],
+  },
+  {
+    label: "Widoki",
+    items: [
+      { href: "/do-zamkniecia", label: "Do zamknięcia", icon: CheckCircle2 },
+      { href: "/bez-kontaktu", label: "Bez kontaktu", icon: Clock3 },
+      { href: "/oczekujace", label: "Oczekujące", icon: PauseCircle },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { href: "/raport", label: "Raport", icon: BarChart3 },
+      { href: "/ustawienia", label: "Ustawienia", icon: Settings },
+    ],
+  },
 ];
 
-const mobileNavRight = [
-  { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
-];
-
-const primaryNav = [...mobileNavLeft, ...mobileNavRight];
-
-const secondaryNav = [
-  { href: "/do-zamkniecia", label: "Do zamknięcia", icon: CheckCircle2 },
-  { href: "/bez-kontaktu", label: "Bez kontaktu", icon: Clock3 },
-  { href: "/oczekujace", label: "Oczekujące", icon: PauseCircle },
-  { href: "/raport", label: "Raport", icon: BarChart3 },
-  { href: "/ustawienia", label: "Ustawienia", icon: Settings },
-];
-
-const allNav = [...primaryNav, ...secondaryNav];
+const mobileNavLeft = navGroups[0].items.slice(0, 2);
+const mobileNavRight = [navGroups[0].items[2]];
+const secondaryNav = [...navGroups[1].items, ...navGroups[2].items];
+const allNav = navGroups.flatMap((group) => group.items);
 
 function isActive(pathname: string, href: string) {
   return pathname === href || (href !== "/" && pathname.startsWith(href));
+}
+
+function NavLink({
+  href,
+  label,
+  icon: Icon,
+  active,
+  onClick,
+  variant = "sidebar",
+}: {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  active: boolean;
+  onClick?: () => void;
+  variant?: "sidebar" | "sheet";
+}) {
+  if (variant === "sheet") {
+    return (
+      <Link
+        href={href}
+        onClick={onClick}
+        className={cn(
+          "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition",
+          active
+            ? "bg-sidebar-accent-soft text-sidebar-accent"
+            : "bg-surface-muted text-stone-700 hover:bg-stone-200/60",
+        )}
+      >
+        <Icon className="h-4 w-4" />
+        {label}
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
+        active
+          ? "border-l-[3px] border-sidebar-accent bg-sidebar-accent-soft pl-[calc(0.75rem-3px)] text-sidebar-accent"
+          : "border-l-[3px] border-transparent text-sidebar-muted hover:bg-white/5 hover:text-sidebar-foreground",
+      )}
+    >
+      <Icon className={cn("h-4 w-4", active && "text-sidebar-accent")} />
+      {label}
+    </Link>
+  );
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -50,61 +110,66 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const currentPage = allNav.find((item) => isActive(pathname, item.href));
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-950">
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 border-r border-slate-200 bg-white/90 p-5 backdrop-blur xl:block">
+    <div className="min-h-screen bg-background text-foreground">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 flex-col border-r border-sidebar-border bg-sidebar p-5 xl:flex">
         <Link href="/" className="mb-8 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-white">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-white shadow-soft">
             <Activity className="h-5 w-5" />
           </div>
           <div>
-            <p className="font-semibold">Rentgen firmy</p>
-            <p className="text-xs text-slate-500">Smart Home / BMS</p>
+            <p className="font-semibold text-sidebar-foreground">Rentgen firmy</p>
+            <p className="text-xs text-sidebar-muted">Smart Home / BMS</p>
           </div>
         </Link>
 
-        <nav className="grid gap-1">
-          {allNav.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(pathname, item.href);
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950",
-                  active && "bg-slate-950 text-white hover:bg-slate-950 hover:text-white",
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="grid flex-1 gap-6">
+          {navGroups.map((group) => (
+            <div key={group.label}>
+              <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-sidebar-muted">
+                {group.label}
+              </p>
+              <div className="grid gap-0.5">
+                {group.items.map((item) => (
+                  <NavLink
+                    key={item.href}
+                    {...item}
+                    active={isActive(pathname, item.href)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
         </nav>
+
+        <p className="mt-4 px-3 text-xs leading-5 text-sidebar-muted">
+          Przepływ projektów bez CRM-owego szumu — status, blokada i następny krok.
+        </p>
       </aside>
 
       <div className="xl:pl-72">
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur xl:hidden">
+        <header className="sticky top-0 z-20 border-b border-border/60 bg-background/90 px-4 py-3 backdrop-blur xl:hidden">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white">
+            <Link
+              href="/"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-white shadow-soft"
+            >
               <Activity className="h-4 w-4" />
             </Link>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">
                 {currentPage?.label ?? "Rentgen firmy"}
               </p>
-              <p className="truncate text-xs text-slate-500">Smart Home / BMS</p>
+              <p className="truncate text-xs text-muted">Smart Home / BMS</p>
             </div>
           </div>
         </header>
 
-        <main className="mx-auto max-w-[1500px] px-4 py-4 pb-24 sm:px-5 sm:py-6 sm:pb-24 xl:px-8 xl:pb-6">
+        <main className="mx-auto max-w-[1500px] px-4 py-4 pb-28 sm:px-5 sm:py-6 sm:pb-28 xl:px-8 xl:pb-6">
           {children}
         </main>
 
-        <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur xl:hidden">
-          <div className="mx-auto grid max-w-lg grid-cols-5">
+        <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 xl:hidden">
+          <div className="mx-auto grid max-w-lg grid-cols-5 rounded-3xl border border-sidebar-border bg-sidebar/95 px-1 py-1 shadow-card backdrop-blur-md">
             {mobileNavLeft.map((item) => {
               const Icon = item.icon;
               const active = isActive(pathname, item.href);
@@ -115,12 +180,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   href={item.href}
                   onClick={() => setMenuOpen(false)}
                   className={cn(
-                    "flex flex-col items-center gap-1 px-2 py-2.5 text-[11px] font-medium text-slate-500",
-                    active && "text-slate-950",
+                    "flex flex-col items-center gap-0.5 rounded-2xl px-2 py-2 text-[10px] font-medium transition",
+                    active ? "text-sidebar-accent" : "text-sidebar-muted",
                   )}
                 >
-                  <Icon className={cn("h-5 w-5", active && "text-slate-950")} />
+                  <Icon className="h-5 w-5" />
                   {item.label}
+                  {active ? (
+                    <span className="h-1 w-1 rounded-full bg-sidebar-accent" aria-hidden />
+                  ) : (
+                    <span className="h-1 w-1" aria-hidden />
+                  )}
                 </Link>
               );
             })}
@@ -130,12 +200,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 href="/przerwania#dodaj-przerwanie"
                 onClick={() => setMenuOpen(false)}
                 aria-label="Dodaj przerwanie"
-                className="-mt-5 flex flex-col items-center gap-1"
+                className="-mt-7 flex flex-col items-center gap-1"
               >
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-950 text-white shadow-lg ring-4 ring-white">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 text-white shadow-card ring-4 ring-background">
                   <Plus className="h-6 w-6" />
                 </span>
-                <span className="text-[11px] font-medium text-slate-500">Dodaj</span>
+                <span className="text-[10px] font-medium text-sidebar-muted">Dodaj</span>
               </Link>
             </div>
 
@@ -149,12 +219,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   href={item.href}
                   onClick={() => setMenuOpen(false)}
                   className={cn(
-                    "flex flex-col items-center gap-1 px-2 py-2.5 text-[11px] font-medium text-slate-500",
-                    active && "text-slate-950",
+                    "flex flex-col items-center gap-0.5 rounded-2xl px-2 py-2 text-[10px] font-medium transition",
+                    active ? "text-sidebar-accent" : "text-sidebar-muted",
                   )}
                 >
-                  <Icon className={cn("h-5 w-5", active && "text-slate-950")} />
+                  <Icon className="h-5 w-5" />
                   {item.label}
+                  {active ? (
+                    <span className="h-1 w-1 rounded-full bg-sidebar-accent" aria-hidden />
+                  ) : (
+                    <span className="h-1 w-1" aria-hidden />
+                  )}
                 </Link>
               );
             })}
@@ -163,12 +238,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               type="button"
               onClick={() => setMenuOpen(true)}
               className={cn(
-                "flex flex-col items-center gap-1 px-2 py-2.5 text-[11px] font-medium text-slate-500",
-                secondaryNav.some((item) => isActive(pathname, item.href)) && "text-slate-950",
+                "flex flex-col items-center gap-0.5 rounded-2xl px-2 py-2 text-[10px] font-medium transition",
+                secondaryNav.some((item) => isActive(pathname, item.href))
+                  ? "text-sidebar-accent"
+                  : "text-sidebar-muted",
               )}
             >
               <Menu className="h-5 w-5" />
               Więcej
+              {secondaryNav.some((item) => isActive(pathname, item.href)) ? (
+                <span className="h-1 w-1 rounded-full bg-sidebar-accent" aria-hidden />
+              ) : (
+                <span className="h-1 w-1" aria-hidden />
+              )}
             </button>
           </div>
         </nav>
@@ -178,40 +260,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               aria-label="Zamknij menu"
-              className="absolute inset-0 bg-slate-950/40"
+              className="absolute inset-0 bg-stone-950/50 backdrop-blur-sm"
               onClick={() => setMenuOpen(false)}
             />
-            <div className="absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-slate-200 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            <div className="absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-border/80 bg-surface p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-card">
               <div className="mb-4 flex items-center justify-between">
-                <p className="font-semibold">Więcej widoków</p>
+                <p className="font-semibold text-foreground">Więcej widoków</p>
                 <button
                   type="button"
                   onClick={() => setMenuOpen(false)}
-                  className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+                  className="rounded-xl p-2 text-muted hover:bg-surface-muted"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
               <div className="grid gap-2">
-                {secondaryNav.map((item) => {
-                  const Icon = item.icon;
-                  const active = isActive(pathname, item.href);
-
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setMenuOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-700",
-                        active ? "bg-slate-950 text-white" : "bg-slate-50",
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
+                {secondaryNav.map((item) => (
+                  <NavLink
+                    key={item.href}
+                    {...item}
+                    active={isActive(pathname, item.href)}
+                    onClick={() => setMenuOpen(false)}
+                    variant="sheet"
+                  />
+                ))}
               </div>
             </div>
           </div>

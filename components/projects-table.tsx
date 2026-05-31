@@ -94,10 +94,10 @@ export function ProjectsTable() {
   return (
     <>
       <Card className="overflow-hidden">
-        <div className="flex flex-col justify-between gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center">
+        <div className="flex flex-col justify-between gap-3 border-b border-border/80 p-4 md:flex-row md:items-center">
           <div>
-            <p className="font-semibold">Tabela projektów</p>
-            <p className="text-sm text-slate-500">
+            <p className="font-semibold text-foreground">Tabela projektów</p>
+            <p className="text-sm text-muted">
               Kliknij wiersz lub ikonę edycji, aby zmienić wszystkie pola projektu.
             </p>
           </div>
@@ -187,7 +187,7 @@ export function ProjectsTable() {
 
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[1250px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <thead className="bg-surface-muted text-xs uppercase tracking-wide text-muted">
               <tr>
                 <th className="px-4 py-3">Nazwa projektu</th>
                 <th className="px-4 py-3">Typ</th>
@@ -202,14 +202,14 @@ export function ProjectsTable() {
                 <th className="px-4 py-3">Akcje</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border/60">
               {filteredProjects.map((project) => (
                 <tr
                   key={project.id}
-                  className="cursor-pointer hover:bg-slate-50/70"
+                  className="cursor-pointer transition hover:bg-surface-muted/60"
                   onClick={() => openEdit(project)}
                 >
-                  <td className="px-4 py-3 font-medium text-slate-950">{project.name}</td>
+                  <td className="px-4 py-3 font-medium text-foreground">{project.name}</td>
                   <td className="px-4 py-3">{project.type}</td>
                   <td className="px-4 py-3">
                     <ProjectStatusBadge

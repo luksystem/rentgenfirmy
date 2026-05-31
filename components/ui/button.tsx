@@ -4,19 +4,23 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl text-sm font-medium transition-all duration-200 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "bg-slate-950 text-white hover:bg-slate-800",
-        secondary: "bg-slate-100 text-slate-900 hover:bg-slate-200",
-        outline: "border border-slate-200 bg-white hover:bg-slate-50",
-        destructive: "bg-rose-600 text-white hover:bg-rose-700",
-        ghost: "hover:bg-slate-100",
+        default:
+          "bg-accent text-accent-foreground shadow-soft hover:bg-[var(--accent-hover)] active:scale-[0.98]",
+        secondary:
+          "bg-surface-muted text-foreground hover:bg-stone-200/60 active:scale-[0.98]",
+        outline:
+          "border border-border bg-surface text-foreground hover:bg-surface-muted active:scale-[0.98]",
+        destructive:
+          "bg-rose-600 text-white shadow-soft hover:bg-rose-700 active:scale-[0.98]",
+        ghost: "text-muted hover:bg-surface-muted hover:text-foreground",
       },
       size: {
         default: "h-10 px-4 py-2",
-        sm: "h-8 rounded-lg px-3 text-xs",
+        sm: "h-8 rounded-xl px-3 text-xs",
         lg: "h-12 rounded-2xl px-6",
       },
     },

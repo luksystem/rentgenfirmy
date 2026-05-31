@@ -2,15 +2,21 @@ import { cn } from "@/lib/utils";
 import type { QuickWin } from "@/lib/types";
 
 const severityStyles = {
-  info: "border-sky-200 bg-sky-50",
-  warning: "border-amber-200 bg-amber-50",
-  critical: "border-rose-200 bg-rose-50",
+  info: "border-teal-200/80 bg-teal-50/80",
+  warning: "border-amber-200/80 bg-amber-50/80",
+  critical: "border-rose-200/80 bg-rose-50/80",
 };
 
 const severityLabels = {
   info: "Info",
   warning: "Uwaga",
   critical: "Pilne",
+};
+
+const severityDots = {
+  info: "bg-teal-500",
+  warning: "bg-amber-500",
+  critical: "bg-rose-500",
 };
 
 export function QuickWinsPanel({
@@ -26,7 +32,7 @@ export function QuickWinsPanel({
 
   return (
     <div className="grid gap-3">
-      {items.map((win) => (
+      {items.map((win, index) => (
         <article
           key={win.id}
           className={cn(
@@ -36,17 +42,27 @@ export function QuickWinsPanel({
           )}
         >
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-white/80 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-slate-600">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-surface/80 px-2.5 py-0.5 text-xs font-semibold text-stone-600">
+              <span
+                className={cn("h-1.5 w-1.5 rounded-full", severityDots[win.severity])}
+                aria-hidden
+              />
               {severityLabels[win.severity]}
             </span>
-            <h3 className={cn("font-semibold text-slate-900", compact && "text-sm")}>
+            <span className="text-xs font-medium text-stone-400">#{index + 1}</span>
+            <h3 className={cn("font-semibold text-stone-900", compact && "text-sm")}>
               {win.title}
             </h3>
           </div>
-          <p className={cn("text-sm text-slate-700", compact && "text-xs")}>
+          <p className={cn("text-sm leading-6 text-stone-700", compact && "text-xs leading-5")}>
             {win.description}
           </p>
-          <p className={cn("mt-2 text-sm font-medium text-slate-900", compact && "text-xs")}>
+          <p
+            className={cn(
+              "mt-2 text-sm font-medium text-accent",
+              compact && "text-xs",
+            )}
+          >
             → {win.action}
           </p>
         </article>

@@ -17,20 +17,20 @@ export function PageHeader({
     <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
       <div>
         {eyebrow ? (
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
             {eyebrow}
           </p>
         ) : null}
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
           {title}
         </h1>
         {description ? (
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            {description}
-          </p>
+          <p className="mt-2 max-w-3xl text-sm leading-7 text-muted">{description}</p>
         ) : null}
       </div>
-      {action ? <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">{action}</div> : null}
+      {action ? (
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">{action}</div>
+      ) : null}
     </div>
   );
 }

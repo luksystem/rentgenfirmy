@@ -36,30 +36,35 @@ export default function Home() {
         }
       />
 
-      <section className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
-        <MetricCard label="Wszystkie" value={metrics.all} />
-        <MetricCard label="Aktywne" value={metrics.active} tone="green" />
-        <MetricCard label="Nieaktywne" value={metrics.inactive} tone="slate" />
-        <MetricCard label="Oczekujące" value={metrics.waiting} tone="amber" />
-        <MetricCard label="Do zamknięcia" value={metrics.closing} tone="slate" />
-        <MetricCard label="Bez kontaktu" value={metrics.noContact} tone="red" />
-        <MetricCard label="Krytyczne" value={metrics.critical} tone="red" />
+      <section className="grid gap-3 sm:gap-4 md:grid-cols-3">
+        <MetricCard label="Aktywne" value={metrics.active} tone="green" size="hero" />
+        <MetricCard label="Oczekujące" value={metrics.waiting} tone="amber" size="hero" />
+        <MetricCard label="Krytyczne" value={metrics.critical} tone="red" size="hero" />
+      </section>
+
+      <section className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:mt-4 sm:flex-wrap sm:overflow-visible sm:px-0">
+        <MetricCard label="Wszystkie" value={metrics.all} size="compact" />
+        <MetricCard label="Nieaktywne" value={metrics.inactive} tone="slate" size="compact" />
+        <MetricCard label="Do zamknięcia" value={metrics.closing} tone="slate" size="compact" />
+        <MetricCard label="Bez kontaktu" value={metrics.noContact} tone="red" size="compact" />
         <MetricCard
           label="Przerwania dziś"
           value={daily.current}
           helper={formatTrendHelper(daily, "wczoraj")}
           tone={daily.direction === "up" ? "red" : daily.direction === "down" ? "green" : "default"}
+          size="compact"
         />
         <MetricCard
           label="Przerwania 7 dni"
           value={weekly.current}
           helper={formatTrendHelper(weekly, "poprzednie 7 dni")}
           tone={weekly.direction === "up" ? "amber" : weekly.direction === "down" ? "green" : "default"}
+          size="compact"
         />
       </section>
 
-      <section className="mt-4 sm:mt-6">
-        <Card className="border-emerald-200">
+      <section className="mt-4 grid gap-4 sm:mt-6 xl:grid-cols-5">
+        <Card className="border-emerald-200/60 xl:col-span-3">
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
             <CardTitle>Quick wins</CardTitle>
             <Button variant="secondary" size="sm" asChild>
@@ -70,10 +75,8 @@ export default function Home() {
             <QuickWinsPanel wins={report.quickWins} limit={3} compact />
           </CardContent>
         </Card>
-      </section>
 
-      <section className="mt-4 sm:mt-6">
-        <Card>
+        <Card className="xl:col-span-2">
           <CardHeader>
             <CardTitle>Szybkie wpisanie przerwania</CardTitle>
           </CardHeader>
@@ -106,11 +109,11 @@ export default function Home() {
               .map((project) => (
                 <div
                   key={project.id}
-                  className="flex flex-col gap-3 rounded-xl border border-slate-200 p-3 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 rounded-2xl border border-border/80 bg-surface-muted/50 p-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0">
-                    <p className="font-medium">{project.name}</p>
-                    <p className="text-sm text-slate-500">
+                    <p className="font-medium text-foreground">{project.name}</p>
+                    <p className="text-sm text-muted">
                       {project.nextStepOwner} · {project.blockerReason ?? "Brak blokady"}
                     </p>
                   </div>
@@ -125,7 +128,7 @@ export default function Home() {
           <CardHeader>
             <CardTitle>Najkrótsza odpowiedź operacyjna</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm leading-6 text-slate-600">
+          <CardContent className="text-sm leading-7 text-muted">
             Aplikacja nie próbuje być CRM-em. Jej główny rytm to: status,
             blokada, właściciel następnego kroku i data kontaktu. Dzięki temu
             łatwo oddzielić realnie aktywne projekty od tematów, które tylko

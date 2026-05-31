@@ -19,18 +19,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 type ChartData = Array<{ name: string; value: number }>;
 
 export const CHART_COLORS = [
-  "#2563eb",
   "#059669",
+  "#0d9488",
   "#d97706",
-  "#dc2626",
+  "#e11d48",
   "#7c3aed",
-  "#0891b2",
-  "#db2777",
+  "#2563eb",
+  "#ca8a04",
   "#65a30d",
   "#ea580c",
-  "#4f46e5",
-  "#0d9488",
-  "#c026d3",
+  "#0891b2",
+  "#db2777",
+  "#78716c",
 ];
 
 function colorForIndex(index: number) {
@@ -46,7 +46,7 @@ function ClientOnlyChart({ children }: { children: React.ReactNode }) {
 
   if (!mounted) {
     return (
-      <div className="flex h-full items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-400">
+      <div className="flex h-full items-center justify-center rounded-xl bg-surface-muted text-sm text-muted">
         Ładowanie wykresu...
       </div>
     );
@@ -68,9 +68,9 @@ function ChartTooltip({
 
   const item = payload[0];
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-md">
-      <p className="font-medium text-slate-900">{item.name}</p>
-      <p className="text-slate-600">{item.value}</p>
+    <div className="rounded-2xl border border-border/80 bg-surface px-3 py-2 text-sm shadow-soft">
+      <p className="font-medium text-foreground">{item.name}</p>
+      <p className="text-muted">{item.value}</p>
     </div>
   );
 }
@@ -83,24 +83,24 @@ export function BarPanel({ title, data }: { title: string; data: ChartData }) {
       </CardHeader>
       <CardContent className="h-64 min-h-64 sm:h-80 sm:min-h-80">
         {data.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-slate-400">
+          <div className="flex h-full items-center justify-center text-sm text-muted">
             Brak danych
           </div>
         ) : (
           <ClientOnlyChart>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data} margin={{ left: -24, right: 8, top: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e7e5e4" />
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  tick={{ fontSize: 11, fill: "#78716c" }}
                   interval={0}
                   angle={-25}
                   textAnchor="end"
                   height={80}
                 />
-                <YAxis tick={{ fontSize: 11, fill: "#64748b" }} allowDecimals={false} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: "#f8fafc" }} />
+                <YAxis tick={{ fontSize: 11, fill: "#78716c" }} allowDecimals={false} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: "#f5f0e8" }} />
                 <Bar dataKey="value" radius={[8, 8, 0, 0]}>
                   {data.map((item, index) => (
                     <Cell key={item.name} fill={colorForIndex(index)} />
@@ -123,7 +123,7 @@ export function PiePanel({ title, data }: { title: string; data: ChartData }) {
       </CardHeader>
       <CardContent className="h-64 min-h-64 sm:h-80 sm:min-h-80">
         {data.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-slate-400">
+          <div className="flex h-full items-center justify-center text-sm text-muted">
             Brak danych
           </div>
         ) : (
