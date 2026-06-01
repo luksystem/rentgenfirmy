@@ -21,7 +21,7 @@
  * | Aktywne             | isActive                                     |
  * | Nieaktywne          | !isActive                                    |
  * | Oczekujące          | status przepływu: Oczekujące                 |
- * | Do zamknięcia       | status: W trakcie + etap: Do zamknięcia      |
+ * | Do zamknięcia       | status: W trakcie lub Oczekujące + etap Do zamknięcia |
  * | Bez kontaktu        | daty kontaktu + status ≠ Zamknięty           |
  * | Krytyczne           | priorytet Krytyczny                          |
  *
@@ -41,7 +41,7 @@ export const PROJECT_RULES = {
   activeField:
     "Checkbox Aktywny — czy zespół teraz pracuje nad projektem (niezależnie od statusu przepływu).",
   closingView:
-    "Do zamknięcia = status W trakcie + etap z flagą Do zamknięcia (bez wymogu Aktywny).",
+    "Do zamknięcia = status W trakcie lub Oczekujące + etap z flagą Do zamknięcia (bez wymogu Aktywny).",
   waitingView: "Oczekujące = status przepływu z flagą Oczekujące.",
   noContactView:
     "Bez kontaktu = przeterminowany kontakt, brak aktywności >14 dni, status ≠ Zamknięty.",

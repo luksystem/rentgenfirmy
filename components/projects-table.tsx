@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Select } from "@/components/ui/input";
+import { Input, Select } from "@/components/ui/input";
 import { flowStatusNames } from "@/lib/field-options";
 import {
   DEFAULT_PROJECTS_VIEW_FILTERS,
@@ -113,6 +113,14 @@ export function ProjectsTable() {
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+            <Input
+              type="search"
+              value={viewFilters.nameQuery}
+              onChange={(event) => updateViewFilters({ nameQuery: event.target.value })}
+              placeholder="Szukaj po nazwie..."
+              className="w-full sm:min-w-[200px] sm:flex-1"
+              aria-label="Szukaj projektu po nazwie"
+            />
             <Select
               value={viewFilters.typeFilter}
               onChange={(event) =>

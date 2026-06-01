@@ -486,8 +486,8 @@ export function FlowStatusesOptionsEditor({
         <p className="text-sm text-muted">
           Każdy status ma jedną kategorię przepływu: <strong>W trakcie</strong>,{" "}
           <strong>Oczekujące</strong> lub <strong>Zamknięty</strong>. Do widoku Do zamknięcia
-          trafia projekt ze statusem W trakcie na etapie oznaczonym jako Do zamknięcia — bez
-          wymogu checkboxa Aktywny na projekcie.
+          trafia projekt ze statusem W trakcie lub Oczekujące na etapie oznaczonym jako Do
+          zamknięcia — bez wymogu checkboxa Aktywny na projekcie.
         </p>
 
         {items.map((item, index) => (
@@ -630,8 +630,8 @@ export function StagesOptionsEditor({
       </CardHeader>
       <CardContent className="grid gap-3">
         <p className="text-sm text-muted">
-          Zaznacz „Do zamknięcia” przy etapach, które kwalifikują aktywny projekt do widoku Do
-          zamknięcia.
+          Zaznacz „Do zamknięcia” przy etapach finalizacji. Do widoku trafia projekt ze statusem W
+          trakcie lub Oczekujące na takim etapie.
         </p>
 
         {items.map((item, index) => (

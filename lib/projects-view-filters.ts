@@ -30,6 +30,7 @@ export type ProjectBlockerFaultFilterId =
 export type ProjectsViewFilters = {
   typeFilter: ProjectType | "Wszystkie";
   flowStatusFilter: FlowStatus | "Wszystkie";
+  nameQuery: string;
   categories: ProjectCategoryFilterId[];
   blockerFaults: ProjectBlockerFaultFilterId[];
 };
@@ -37,9 +38,23 @@ export type ProjectsViewFilters = {
 export const DEFAULT_PROJECTS_VIEW_FILTERS: ProjectsViewFilters = {
   typeFilter: "Wszystkie",
   flowStatusFilter: "Wszystkie",
+  nameQuery: "",
   categories: [],
   blockerFaults: [],
 };
+
+function normalizeNameQuery(query: string) {
+  return query.trim().toLocaleLowerCase("pl");
+}
+
+export function projectMatchesNameQuery(project: Project, nameQuery: string) {
+  const normalized = normalizeNameQuery(nameQuery);
+  if (!normalized) {
+    return true;
+  }
+
+  return project.name.toLocaleLowerCase("pl").includes(normalized);
+}
 
 const STORAGE_KEY = "rentgen-projects-view-filters";
 
@@ -109,8 +124,15 @@ export function filterProjectsByView(
       filters.blockerFaults.some((fault) =>
         matchesProjectBlockerFault(project, fault, options),
       );
+    const matchesName = projectMatchesNameQuery(project, filters.nameQuery);
 
-    return matchesType && matchesFlowStatus && matchesCategories && matchesBlockerFaults;
+    return (
+      matchesType &&
+      matchesFlowStatus &&
+      matchesCategories &&
+      matchesBlockerFaults &&
+      matchesName
+    );
   });
 }
 
@@ -140,6 +162,7 @@ export function loadProjectsViewFilters(): ProjectsViewFilters {
         typeof parsed.flowStatusFilter === "string"
           ? parsed.flowStatusFilter
           : "Wszystkie",
+      nameQuery: typeof parsed.nameQuery === "string" ? parsed.nameQuery : "",
       categories,
       blockerFaults,
     };
@@ -160,6 +183,7 @@ export function isDefaultProjectsViewFilters(filters: ProjectsViewFilters) {
   return (
     filters.typeFilter === DEFAULT_PROJECTS_VIEW_FILTERS.typeFilter &&
     filters.flowStatusFilter === DEFAULT_PROJECTS_VIEW_FILTERS.flowStatusFilter &&
+    filters.nameQuery.trim() === "" &&
     filters.categories.length === 0 &&
     filters.blockerFaults.length === 0
   );

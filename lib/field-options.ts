@@ -513,10 +513,11 @@ export function isProjectForClosing(
   project: { flowStatus: string; stage: string },
   options: FieldOptions,
 ) {
-  return (
-    isInProgressFlowStatus(project.flowStatus, options) &&
-    isClosingStage(project.stage, options)
-  );
+  const flowAllowsClosing =
+    isInProgressFlowStatus(project.flowStatus, options) ||
+    isWaitingFlowStatus(project.flowStatus, options);
+
+  return flowAllowsClosing && isClosingStage(project.stage, options);
 }
 
 export function pickOption<T extends string>(
