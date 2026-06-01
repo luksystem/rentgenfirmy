@@ -12,7 +12,7 @@ const toneClasses = {
   critical: "border-rose-500/30 bg-rose-500/10 text-rose-300",
   closed: "border-border bg-surface-muted text-muted",
   neutral: "border-border bg-surface-muted text-foreground/80",
-  blue: "border-teal-500/30 bg-teal-500/10 text-teal-300",
+  blue: "border-blue-500/30 bg-blue-500/10 text-blue-300",
 };
 
 export function Badge({ children, tone = "neutral", className }: BadgeProps) {
@@ -32,7 +32,7 @@ export function Badge({ children, tone = "neutral", className }: BadgeProps) {
           tone === "critical" && "bg-rose-400",
           tone === "closed" && "bg-zinc-500",
           tone === "neutral" && "bg-zinc-500",
-          tone === "blue" && "bg-teal-400",
+          tone === "blue" && "bg-blue-400",
         )}
         aria-hidden
       />

@@ -14,7 +14,7 @@ const severityLabels = {
 };
 
 const severityDots = {
-  info: "bg-teal-400",
+  info: "bg-sky-400",
   warning: "bg-amber-400",
   critical: "bg-rose-400",
 };

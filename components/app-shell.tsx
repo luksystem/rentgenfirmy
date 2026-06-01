@@ -113,7 +113,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background text-foreground">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 flex-col border-r border-sidebar-border bg-sidebar/95 p-5 backdrop-blur-xl xl:flex">
         <Link href="/" className="mb-8 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-white shadow-soft">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-soft">
             <Activity className="h-5 w-5" />
           </div>
           <div>
@@ -151,7 +151,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-white shadow-soft"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-soft"
             >
               <Activity className="h-4 w-4" />
             </Link>
@@ -202,7 +202,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 aria-label="Dodaj przerwanie"
                 className="-mt-7 flex flex-col items-center gap-1"
               >
-                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 text-white shadow-card ring-4 ring-background">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-card ring-4 ring-background">
                   <Plus className="h-6 w-6" />
                 </span>
                 <span className="text-[10px] font-medium text-sidebar-muted">Dodaj</span>

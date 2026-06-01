@@ -13,18 +13,24 @@
   --sidebar-foreground: #e4e4e7;
   --sidebar-muted: #71717a;
   --sidebar-border: rgba(255, 255, 255, 0.06);
-  --sidebar-accent: #34d399;
-  --sidebar-accent-soft: rgba(52, 211, 153, 0.1);
+  --sidebar-accent: #60a5fa;
+  --sidebar-accent-soft: rgba(96, 165, 250, 0.12);
 
-  --accent: #10b981;
-  --accent-hover: #059669;
-  --accent-soft: rgba(16, 185, 129, 0.12);
-  --accent-foreground: #ecfdf5;
+  /* Przyciski, linki, focus, nawigacja */
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-soft: rgba(59, 130, 246, 0.14);
+  --accent-foreground: #ffffff;
+
+  /* Semantyka: aktywne projekty, poprawny trend, sukces */
+  --success: #10b981;
+  --success-soft: rgba(16, 185, 129, 0.12);
+  --success-foreground: #6ee7b7;
 
   --success-panel: rgba(16, 185, 129, 0.1);
   --warning-panel: rgba(245, 158, 11, 0.1);
   --danger-panel: rgba(244, 63, 94, 0.1);
-  --info-panel: rgba(45, 212, 191, 0.1);
+  --info-panel: rgba(96, 165, 250, 0.1);
 
   --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 20px rgba(0, 0, 0, 0.35);
   --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 12px 40px rgba(0, 0, 0, 0.5);
@@ -52,8 +58,8 @@
 body {
   background-color: var(--background);
   background-image:
-    radial-gradient(ellipse 90% 60% at 50% -30%, rgba(16, 185, 129, 0.07), transparent),
-    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(45, 212, 191, 0.04), transparent);
+    radial-gradient(ellipse 90% 60% at 50% -30%, rgba(59, 130, 246, 0.06), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(167, 139, 250, 0.04), transparent);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
@@ -100,6 +106,6 @@ select option {
 }
 
 .panel-info {
-  border-color: rgba(45, 212, 191, 0.25);
+  border-color: rgba(96, 165, 250, 0.25);
   background: var(--info-panel);
 }

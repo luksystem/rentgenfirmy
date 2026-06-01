@@ -146,7 +146,7 @@ export default function SettingsPage() {
 
       {saved ? (
         <Card className="panel-success mb-4 border">
-          <CardContent className="py-3 text-sm text-emerald-700">
+          <CardContent className="py-3 text-sm text-emerald-300">
             Ustawienia zostały zapisane.
           </CardContent>
         </Card>
