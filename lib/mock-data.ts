@@ -1,4 +1,4 @@
-import { DEFAULT_FIELD_OPTIONS } from "@/lib/field-options";
+import { blockerReasonNames, DEFAULT_FIELD_OPTIONS } from "@/lib/field-options";
 import { addDays, toISODate } from "@/lib/utils";
 import { applyWaitingPriority } from "@/lib/waiting-priority";
 import type {
@@ -81,7 +81,7 @@ const stages: ImplementationStage[] = [
 
 const priorities: Priority[] = ["Niski", "Normalny", "Wysoki", "Krytyczny"];
 const owners = DEFAULT_FIELD_OPTIONS.nextStepOwners;
-const blockers = DEFAULT_FIELD_OPTIONS.blockerReasons;
+const blockers = blockerReasonNames(DEFAULT_FIELD_OPTIONS);
 const interruptionTypeNamesList = DEFAULT_FIELD_OPTIONS.interruptionTypes.map(
   (item) => item.name,
 );

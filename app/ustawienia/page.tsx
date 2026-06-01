@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import {
+  BlockerReasonsOptionsEditor,
   FieldOptionsEditor,
   FlowStatusesOptionsEditor,
   InterruptionTypesOptionsEditor,
   StagesOptionsEditor,
+  getDefaultBlockerReasonOptions,
   getDefaultFlowStatusOptions,
   getDefaultInterruptionTypeOptions,
   getDefaultOptionsForKey,
@@ -67,6 +69,28 @@ export default function SettingsPage() {
           forClosing: stage.forClosing,
         }))
         .filter((stage) => stage.name),
+    }));
+    setSaved(false);
+  }
+
+  function updateBlockerReasons(reasons: FieldOptions["blockerReasons"]) {
+    setDraft((current) => ({
+      ...current,
+      blockerReasons: reasons
+        .map((item) => ({
+          name: item.name.trim(),
+          isInternal: item.isInternal,
+          isExternal: item.isExternal,
+        }))
+        .filter((item) => item.name),
+    }));
+    setSaved(false);
+  }
+
+  function resetBlockerReasons() {
+    setDraft((current) => ({
+      ...current,
+      blockerReasons: getDefaultBlockerReasonOptions(),
     }));
     setSaved(false);
   }
@@ -172,6 +196,9 @@ export default function SettingsPage() {
             <li>
               <strong>Bez kontaktu</strong> — {PROJECT_RULES.noContactView}
             </li>
+            <li>
+              <strong>Powód blokady</strong> — {PROJECT_RULES.blockerFault}
+            </li>
           </ul>
         </CardContent>
       </Card>
@@ -187,6 +214,19 @@ export default function SettingsPage() {
           />
 
           <div className="mt-4 grid gap-4">
+            <div className="grid gap-2">
+              <div className="flex justify-end">
+                <Button type="button" variant="ghost" size="sm" onClick={resetBlockerReasons}>
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Przywróć domyślne powody blokady
+                </Button>
+              </div>
+              <BlockerReasonsOptionsEditor
+                items={draft.blockerReasons}
+                onChange={updateBlockerReasons}
+              />
+            </div>
+
             <div className="grid gap-2">
               <div className="flex justify-end">
                 <Button type="button" variant="ghost" size="sm" onClick={resetFlowStatuses}>

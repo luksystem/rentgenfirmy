@@ -90,9 +90,19 @@ export const ReportContent = forwardRef<HTMLDivElement, ReportContentProps>(
           </p>
         </div>
 
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8">
           <MetricCard label="Aktywne" value={report.activeProjects} tone="green" />
           <MetricCard label="Oczekujące" value={report.waitingProjects} tone="amber" />
+          <MetricCard
+            label="Oczek. nasza wina"
+            value={report.waitingInternalProjects}
+            tone="amber"
+          />
+          <MetricCard
+            label="Oczek. zewnętrzna"
+            value={report.waitingExternalProjects}
+            tone="slate"
+          />
           <MetricCard label="Do zamknięcia" value={report.closingProjects} tone="slate" />
           <MetricCard label="Zamknięte" value={report.closedProjects} />
           <MetricCard

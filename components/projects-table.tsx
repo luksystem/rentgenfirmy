@@ -5,7 +5,7 @@ import { Edit, Plus, Trash2 } from "lucide-react";
 import { MobileField, MobileListCard } from "@/components/mobile-list-card";
 import { useProjectEdit } from "@/components/project-edit-provider";
 import { ProjectForm } from "@/components/project-form";
-import { ProjectCategoryFiltersBar } from "@/components/projects-view-filters";
+import { ProjectViewFiltersBar } from "@/components/projects-view-filters";
 import { PriorityBadge, ProjectStatusBadge } from "@/components/project-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -161,11 +161,13 @@ export function ProjectsTable() {
         </div>
 
         <div className="border-b border-border/80 px-4 pb-4">
-          <ProjectCategoryFiltersBar
+          <ProjectViewFiltersBar
             categories={viewFilters.categories}
+            blockerFaults={viewFilters.blockerFaults}
             onCategoriesChange={(categories: ProjectCategoryFilterId[]) =>
               updateViewFilters({ categories })
             }
+            onBlockerFaultsChange={(blockerFaults) => updateViewFilters({ blockerFaults })}
           />
         </div>
 

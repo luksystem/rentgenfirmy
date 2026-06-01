@@ -15,12 +15,19 @@ export type InterruptionTypeOption = {
   suggestion: string;
 };
 
+/** Powód blokady — flagi określają winę: nasza (firma) lub zewnętrzna (klient / inna strona). */
+export type BlockerReasonOption = {
+  name: string;
+  isInternal: boolean;
+  isExternal: boolean;
+};
+
 export type FieldOptions = {
   projectTypes: string[];
   flowStatuses: FlowStatusOption[];
   implementationStages: StageOption[];
   nextStepOwners: string[];
-  blockerReasons: string[];
+  blockerReasons: BlockerReasonOption[];
   interruptionTypes: InterruptionTypeOption[];
 };
 
@@ -28,7 +35,7 @@ export type FieldOptionKey = keyof FieldOptions;
 
 export type StringListFieldOptionKey = Exclude<
   FieldOptionKey,
-  "implementationStages" | "flowStatuses" | "interruptionTypes"
+  "implementationStages" | "flowStatuses" | "interruptionTypes" | "blockerReasons"
 >;
 
 const DEFAULT_STAGE_OPTIONS: StageOption[] = [
@@ -123,19 +130,19 @@ export const DEFAULT_FIELD_OPTIONS: FieldOptions = {
     "Inna branża",
   ],
   blockerReasons: [
-    "Tynki",
-    "Wylewki",
-    "Klient",
-    "Elektryk",
-    "HVAC",
-    "Internet",
-    "Brak materiału",
-    "Programowanie",
-    "Poprawki po naszej stronie",
-    "Odbiór klienta",
-    "Brak decyzji klienta",
-    "Inna branża",
-    "Inne",
+    { name: "Tynki", isInternal: false, isExternal: true },
+    { name: "Wylewki", isInternal: false, isExternal: true },
+    { name: "Klient", isInternal: false, isExternal: true },
+    { name: "Elektryk", isInternal: false, isExternal: true },
+    { name: "HVAC", isInternal: false, isExternal: true },
+    { name: "Internet", isInternal: false, isExternal: true },
+    { name: "Brak materiału", isInternal: true, isExternal: false },
+    { name: "Programowanie", isInternal: true, isExternal: false },
+    { name: "Poprawki po naszej stronie", isInternal: true, isExternal: false },
+    { name: "Odbiór klienta", isInternal: false, isExternal: true },
+    { name: "Brak decyzji klienta", isInternal: false, isExternal: true },
+    { name: "Inna branża", isInternal: false, isExternal: true },
+    { name: "Inne", isInternal: false, isExternal: false },
   ],
   interruptionTypes: DEFAULT_INTERRUPTION_TYPE_OPTIONS,
 };
@@ -152,7 +159,6 @@ export const FIELD_OPTION_LABELS: Record<FieldOptionKey, string> = {
 export const PROJECT_STRING_FIELD_OPTION_KEYS: StringListFieldOptionKey[] = [
   "projectTypes",
   "nextStepOwners",
-  "blockerReasons",
 ];
 
 export const PROJECT_FIELD_OPTION_KEYS: FieldOptionKey[] = [
@@ -308,6 +314,58 @@ function normalizeFlowStatusOptions(input?: unknown): FlowStatusOption[] {
     .filter((status): status is FlowStatusOption => status !== null);
 }
 
+function normalizeBlockerReasonOptions(input?: unknown): BlockerReasonOption[] {
+  if (!Array.isArray(input) || input.length === 0) {
+    return DEFAULT_FIELD_OPTIONS.blockerReasons.map((item) => ({ ...item }));
+  }
+
+  if (typeof input[0] === "string") {
+    return input
+      .map((value) => {
+        const name = String(value).trim();
+        if (!name) {
+          return null;
+        }
+
+        const fromDefault = DEFAULT_FIELD_OPTIONS.blockerReasons.find(
+          (item) => item.name === name,
+        );
+
+        return (
+          fromDefault ?? {
+            name,
+            isInternal: false,
+            isExternal: false,
+          }
+        );
+      })
+      .filter((item): item is BlockerReasonOption => item !== null);
+  }
+
+  const seen = new Set<string>();
+
+  return input
+    .map((value) => {
+      if (!value || typeof value !== "object" || !("name" in value)) {
+        return null;
+      }
+
+      const name = String((value as BlockerReasonOption).name).trim();
+      if (!name || seen.has(name)) {
+        return null;
+      }
+
+      seen.add(name);
+
+      return {
+        name,
+        isInternal: Boolean((value as BlockerReasonOption).isInternal),
+        isExternal: Boolean((value as BlockerReasonOption).isExternal),
+      };
+    })
+    .filter((item): item is BlockerReasonOption => item !== null);
+}
+
 export function normalizeFieldOptions(input?: Partial<FieldOptions> | null): FieldOptions {
   const merge = (key: StringListFieldOptionKey) => {
     const values = input?.[key]
@@ -322,9 +380,52 @@ export function normalizeFieldOptions(input?: Partial<FieldOptions> | null): Fie
     flowStatuses: normalizeFlowStatusOptions(input?.flowStatuses),
     implementationStages: normalizeStageOptions(input?.implementationStages),
     nextStepOwners: merge("nextStepOwners"),
-    blockerReasons: merge("blockerReasons"),
+    blockerReasons: normalizeBlockerReasonOptions(input?.blockerReasons),
     interruptionTypes: normalizeInterruptionTypeOptions(input?.interruptionTypes),
   };
+}
+
+export function blockerReasonNames(options: FieldOptions): string[] {
+  return options.blockerReasons.map((item) => item.name);
+}
+
+export function getBlockerReasonOption(
+  name: string | undefined,
+  options: FieldOptions,
+): BlockerReasonOption | undefined {
+  if (!name) {
+    return undefined;
+  }
+
+  return options.blockerReasons.find((item) => item.name === name);
+}
+
+export function isInternalBlockerReason(name: string | undefined, options: FieldOptions) {
+  return getBlockerReasonOption(name, options)?.isInternal ?? false;
+}
+
+export function isExternalBlockerReason(name: string | undefined, options: FieldOptions) {
+  return getBlockerReasonOption(name, options)?.isExternal ?? false;
+}
+
+export function isWaitingWithInternalBlocker(
+  project: { flowStatus: string; blockerReason?: string },
+  options: FieldOptions,
+) {
+  return (
+    isProjectWaiting(project, options) &&
+    isInternalBlockerReason(project.blockerReason, options)
+  );
+}
+
+export function isWaitingWithExternalBlocker(
+  project: { flowStatus: string; blockerReason?: string },
+  options: FieldOptions,
+) {
+  return (
+    isProjectWaiting(project, options) &&
+    isExternalBlockerReason(project.blockerReason, options)
+  );
 }
 
 export function interruptionTypeNames(options: FieldOptions): string[] {
@@ -444,4 +545,8 @@ export function getDefaultFlowStatusOptions() {
 
 export function getDefaultInterruptionTypeOptions() {
   return DEFAULT_INTERRUPTION_TYPE_OPTIONS.map((item) => ({ ...item }));
+}
+
+export function getDefaultBlockerReasonOptions() {
+  return DEFAULT_FIELD_OPTIONS.blockerReasons.map((item) => ({ ...item }));
 }

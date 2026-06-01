@@ -5,6 +5,8 @@ import {
   isInProgressFlowStatus,
   isProjectForClosing,
   isWaitingFlowStatus,
+  isWaitingWithExternalBlocker,
+  isWaitingWithInternalBlocker,
 } from "@/lib/field-options";
 import {
   generateQuickWins,
@@ -81,6 +83,12 @@ export function projectMetrics(projects: Project[], options: FieldOptions) {
     inactive: projects.filter((project) => !project.isActive).length,
     waiting: projects.filter((project) => isWaitingFlowStatus(project.flowStatus, options))
       .length,
+    waitingInternal: projects.filter((project) =>
+      isWaitingWithInternalBlocker(project, options),
+    ).length,
+    waitingExternal: projects.filter((project) =>
+      isWaitingWithExternalBlocker(project, options),
+    ).length,
     closing: projects.filter((project) => isProjectForClosing(project, options)).length,
     noContact: projects.filter((project) => isWithoutContact(project, options)).length,
     critical: projects.filter((project) => project.priority === "Krytyczny").length,
@@ -157,6 +165,8 @@ export function generateReport(
     periodLabel: formatPeriodLabel(period),
     activeProjects: metrics.active,
     waitingProjects: metrics.waiting,
+    waitingInternalProjects: metrics.waitingInternal,
+    waitingExternalProjects: metrics.waitingExternal,
     closedProjects: projects.filter((project) =>
       isClosedFlowStatus(project.flowStatus, options),
     ).length,

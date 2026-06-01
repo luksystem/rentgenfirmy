@@ -45,6 +45,18 @@ export default function Home() {
 
       <section className="-mx-1 mt-2 flex gap-1.5 overflow-x-auto px-1 pb-0.5 sm:mx-0 sm:mt-4 sm:gap-2 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-1">
         <MetricCard label="Wszystkie" value={metrics.all} size="compact" />
+        <MetricCard
+          label="Oczek. nasza"
+          value={metrics.waitingInternal}
+          tone="amber"
+          size="compact"
+        />
+        <MetricCard
+          label="Oczek. zewn."
+          value={metrics.waitingExternal}
+          tone="slate"
+          size="compact"
+        />
         <MetricCard label="Nieaktywne" value={metrics.inactive} tone="slate" size="compact" />
         <MetricCard label="Do zamknięcia" value={metrics.closing} tone="slate" size="compact" />
         <MetricCard label="Bez kontaktu" value={metrics.noContact} tone="red" size="compact" />

@@ -45,4 +45,6 @@ export const PROJECT_RULES = {
   waitingView: "Oczekujące = status przepływu z flagą Oczekujące.",
   noContactView:
     "Bez kontaktu = przeterminowany kontakt, brak aktywności >14 dni, status ≠ Zamknięty.",
+  blockerFault:
+    "Oczekujące z naszej / zewnętrznej winy = status Oczekujące + powód blokady z flagą Nasza lub Zewnętrzna w ustawieniach.",
 } as const;

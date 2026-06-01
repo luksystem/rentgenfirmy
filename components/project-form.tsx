@@ -9,6 +9,7 @@ import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import {
   defaultFlowStatus,
   defaultStageName,
+  blockerReasonNames,
   flowStatusNames,
   isClosedFlowStatus,
   isWaitingFlowStatus,
@@ -58,7 +59,10 @@ function createSchema(options: FieldOptions) {
       nextStepOwner: zodStringOption(options.nextStepOwners, "Wybierz właściciela kroku"),
       nextContactDate: z.string().min(1, "Podaj datę kontaktu"),
       blockerReason: z
-        .union([zodStringOption(options.blockerReasons, "Wybierz powód blokady"), z.literal("")])
+        .union([
+          zodStringOption(blockerReasonNames(options), "Wybierz powód blokady"),
+          z.literal(""),
+        ])
         .optional(),
       notes: z.string().optional(),
       closeBlocker: z.string().optional(),
@@ -328,7 +332,7 @@ export function ProjectForm({
         <Field label="Powód blokady" error={errors.blockerReason?.message}>
           <Select {...register("blockerReason")}>
             <option value="">Brak</option>
-            {fieldOptions.blockerReasons.map((reason) => (
+            {blockerReasonNames(fieldOptions).map((reason) => (
               <option key={reason}>{reason}</option>
             ))}
           </Select>

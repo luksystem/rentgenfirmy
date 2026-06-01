@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type {
+  BlockerReasonOption,
   FlowStatusOption,
   InterruptionTypeOption,
   StageOption,
@@ -13,6 +14,7 @@ import type {
 } from "@/lib/field-options";
 import {
   FIELD_OPTION_LABELS,
+  getDefaultBlockerReasonOptions,
   getDefaultFlowStatusOptions,
   getDefaultInterruptionTypeOptions,
   getDefaultOptionsForKey,
@@ -108,6 +110,153 @@ function OptionsListEditor({
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder="Nowa opcja..."
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                addItem();
+              }
+            }}
+          />
+          <Button type="button" variant="secondary" onClick={addItem}>
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function BlockerReasonsOptionsEditor({
+  items,
+  onChange,
+}: {
+  items: BlockerReasonOption[];
+  onChange: (items: BlockerReasonOption[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+
+  function addItem() {
+    const name = draft.trim();
+    if (!name || items.some((item) => item.name === name)) {
+      return;
+    }
+
+    onChange([...items, { name, isInternal: false, isExternal: false }]);
+    setDraft("");
+  }
+
+  function updateName(index: number, name: string) {
+    onChange(items.map((item, itemIndex) => (itemIndex === index ? { ...item, name } : item)));
+  }
+
+  function toggleFlag(
+    index: number,
+    key: "isInternal" | "isExternal",
+    enabled: boolean,
+  ) {
+    onChange(
+      items.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [key]: enabled } : item,
+      ),
+    );
+  }
+
+  function removeItem(index: number) {
+    onChange(items.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  function moveItem(index: number, direction: -1 | 1) {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= items.length) {
+      return;
+    }
+
+    const next = [...items];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    onChange(next);
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{FIELD_OPTION_LABELS.blockerReasons}</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        <p className="text-sm text-muted">
+          Oznacz, czy blokada leży po stronie firmy (nasza) czy klienta / innej strony (zewnętrzna).
+          Liczniki na dashboardzie i w raporcie zliczają oczekujące projekty według tych flag.
+        </p>
+
+        {items.map((item, index) => (
+          <div
+            key={`${item.name}-${index}`}
+            className="grid gap-2 rounded-xl border border-border bg-surface-muted p-3"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                value={item.name}
+                onChange={(event) => updateName(index, event.target.value)}
+                placeholder="Nazwa powodu"
+                className="min-w-[180px] flex-1"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => moveItem(index, -1)}
+                disabled={index === 0}
+                title="Przesuń w górę"
+              >
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => moveItem(index, 1)}
+                disabled={index === items.length - 1}
+                title="Przesuń w dół"
+              >
+                <ArrowDown className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={() => removeItem(index)}
+                title="Usuń"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={item.isInternal}
+                  onChange={(event) => toggleFlag(index, "isInternal", event.target.checked)}
+                  className="h-4 w-4 rounded border-border bg-surface text-accent"
+                />
+                Nasza (firma)
+              </label>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={item.isExternal}
+                  onChange={(event) => toggleFlag(index, "isExternal", event.target.checked)}
+                  className="h-4 w-4 rounded border-border bg-surface text-accent"
+                />
+                Zewnętrzna (klient / inna strona)
+              </label>
+            </div>
+          </div>
+        ))}
+
+        <div className="flex gap-2">
+          <Input
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder="Nowy powód blokady..."
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();
@@ -592,6 +741,7 @@ export function FieldOptionsEditor({
 }
 
 export {
+  getDefaultBlockerReasonOptions,
   getDefaultFlowStatusOptions,
   getDefaultInterruptionTypeOptions,
   getDefaultOptionsForKey,

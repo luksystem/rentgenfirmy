@@ -13,7 +13,7 @@ export const implementationStages = DEFAULT_FIELD_OPTIONS.implementationStages.m
   (stage) => stage.name,
 );
 export const nextStepOwners = DEFAULT_FIELD_OPTIONS.nextStepOwners;
-export const blockerReasons = DEFAULT_FIELD_OPTIONS.blockerReasons;
+export const blockerReasons = DEFAULT_FIELD_OPTIONS.blockerReasons.map((item) => item.name);
 export const interruptionTypes = DEFAULT_FIELD_OPTIONS.interruptionTypes.map(
   (item) => item.name,
 );
@@ -94,6 +94,8 @@ export type WeeklyReport = {
   periodLabel: string;
   activeProjects: number;
   waitingProjects: number;
+  waitingInternalProjects: number;
+  waitingExternalProjects: number;
   closedProjects: number;
   closingProjects: number;
   noContactProjects: number;
