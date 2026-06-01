@@ -1,5 +1,3 @@
-import { Button } from "@/components/ui/button";
-
 type PageHeaderProps = {
   eyebrow?: string;
   title: string;
@@ -32,19 +30,5 @@ export function PageHeader({
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">{action}</div>
       ) : null}
     </div>
-  );
-}
-
-export function ResetButton({
-  onReset,
-  disabled,
-}: {
-  onReset: () => void | Promise<void>;
-  disabled?: boolean;
-}) {
-  return (
-    <Button variant="secondary" disabled={disabled} onClick={() => void onReset()}>
-      Załaduj dane demo
-    </Button>
   );
 }

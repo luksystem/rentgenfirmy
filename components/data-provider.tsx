@@ -9,10 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const initialize = useAppStore((state) => state.initialize);
-  const seedDemoData = useAppStore((state) => state.seedDemoData);
   const isLoading = useAppStore((state) => state.isLoading);
   const isInitialized = useAppStore((state) => state.isInitialized);
-  const isSaving = useAppStore((state) => state.isSaving);
   const error = useAppStore((state) => state.error);
 
   useEffect(() => {
@@ -62,12 +60,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=twoj-anon-key`}
             Upewnij się, że uruchomiłeś skrypt SQL z{" "}
             <code className="rounded bg-surface-muted px-1.5 py-0.5 text-foreground">supabase/schema.sql</code>.
           </p>
-          <div className="flex gap-2">
-            <Button onClick={() => void initialize()}>Spróbuj ponownie</Button>
-            <Button variant="secondary" disabled={isSaving} onClick={() => void seedDemoData()}>
-              Załaduj dane demo
-            </Button>
-          </div>
+          <Button onClick={() => void initialize()}>Spróbuj ponownie</Button>
         </CardContent>
       </Card>
     );

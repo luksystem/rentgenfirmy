@@ -17,7 +17,6 @@ import {
   updateProjectRecord,
 } from "@/lib/supabase/repository";
 import { fetchFieldOptions, saveFieldOptions } from "@/lib/supabase/settings-repository";
-import { seedDemoData } from "@/lib/supabase/seed";
 import type { Interruption, Project, ProjectInput } from "@/lib/types";
 
 type AppState = {
@@ -36,7 +35,6 @@ type AppState = {
   updateInterruption: (id: string, interruption: Omit<Interruption, "id">) => Promise<void>;
   deleteInterruption: (id: string) => Promise<void>;
   updateFieldOptions: (options: FieldOptions) => Promise<void>;
-  seedDemoData: () => Promise<void>;
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -214,31 +212,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : "Nie udało się zapisać ustawień",
-        isSaving: false,
-      });
-      throw error;
-    }
-  },
-
-  seedDemoData: async () => {
-    set({ isSaving: true, error: null });
-
-    try {
-      await seedDemoData();
-      const [projects, interruptions] = await Promise.all([
-        fetchProjects(),
-        fetchInterruptions(),
-      ]);
-
-      set({
-        projects,
-        interruptions,
-        isSaving: false,
-        error: null,
-      });
-    } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : "Nie udało się załadować danych demo",
         isSaving: false,
       });
       throw error;

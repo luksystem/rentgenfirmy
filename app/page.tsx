@@ -4,7 +4,7 @@ import Link from "next/link";
 import { BarPanel, PiePanel } from "@/components/charts";
 import { InterruptionForm } from "@/components/interruption-form";
 import { MetricCard } from "@/components/metric-card";
-import { PageHeader, ResetButton } from "@/components/page-header";
+import { PageHeader } from "@/components/page-header";
 import { ClickableProjectCard } from "@/components/project-edit-provider";
 import { QuickWinsPanel } from "@/components/quick-wins-panel";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,7 @@ import { formatTrendHelper } from "@/lib/report-insights";
 import { useAppStore } from "@/store/app-store";
 
 export default function Home() {
-  const { projects, interruptions, addInterruption, seedDemoData, isSaving, fieldOptions } =
-    useAppStore();
+  const { projects, interruptions, addInterruption, isSaving, fieldOptions } = useAppStore();
   const metrics = projectMetrics(projects, fieldOptions);
   const report = generateWeeklyReport(projects, interruptions, fieldOptions);
   const { daily, weekly } = report.interruptionTrends;
@@ -32,9 +31,6 @@ export default function Home() {
         eyebrow="Centrum operacyjne"
         title="Dashboard przepływu projektów"
         description="Szybki obraz tego, ile tematów naprawdę żyje, co stoi w miejscu i gdzie organizacja generuje najwięcej przerwań."
-        action={
-          <ResetButton onReset={() => seedDemoData()} disabled={isSaving} />
-        }
       />
 
       <section className="grid grid-cols-3 gap-2 sm:gap-4">
