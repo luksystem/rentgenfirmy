@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Edit, Plus, Trash2 } from "lucide-react";
 import { MobileField, MobileListCard } from "@/components/mobile-list-card";
+import { useProjectEdit } from "@/components/project-edit-provider";
 import { ProjectForm } from "@/components/project-form";
+import { ProjectCategoryFiltersBar } from "@/components/projects-view-filters";
 import { PriorityBadge, ProjectStatusBadge } from "@/components/project-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,63 +18,67 @@ import {
 } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/input";
 import { flowStatusNames } from "@/lib/field-options";
+import {
+  DEFAULT_PROJECTS_VIEW_FILTERS,
+  filterProjectsByView,
+  isDefaultProjectsViewFilters,
+  loadProjectsViewFilters,
+  saveProjectsViewFilters,
+  type ProjectCategoryFilterId,
+  type ProjectsViewFilters,
+} from "@/lib/projects-view-filters";
 import { useAppStore } from "@/store/app-store";
 import { formatDate } from "@/lib/utils";
-import {
-  type FlowStatus,
-  type Project,
-  type ProjectInput,
-  type ProjectType,
-} from "@/lib/types";
+import { type FlowStatus, type ProjectInput, type ProjectType } from "@/lib/types";
 
-type DialogMode = "create" | "edit" | null;
+type DialogMode = "create" | null;
 
 export function ProjectsTable() {
-  const { projects, addProject, updateProject, deleteProject, isSaving, fieldOptions } =
-    useAppStore();
-  const [typeFilter, setTypeFilter] = useState<ProjectType | "Wszystkie">("Wszystkie");
-  const [flowStatusFilter, setFlowStatusFilter] = useState<FlowStatus | "Wszystkie">(
-    "Wszystkie",
+  const { projects, addProject, deleteProject, isSaving, fieldOptions } = useAppStore();
+  const { openProjectEdit } = useProjectEdit();
+  const [viewFilters, setViewFilters] = useState<ProjectsViewFilters>(
+    DEFAULT_PROJECTS_VIEW_FILTERS,
   );
+  const [filtersReady, setFiltersReady] = useState(false);
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
-  const [editingProject, setEditingProject] = useState<Project | undefined>();
+
+  useEffect(() => {
+    setViewFilters(loadProjectsViewFilters());
+    setFiltersReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!filtersReady) {
+      return;
+    }
+
+    saveProjectsViewFilters(viewFilters);
+  }, [viewFilters, filtersReady]);
 
   const filteredProjects = useMemo(
-    () =>
-      projects.filter((project) => {
-        const matchesType = typeFilter === "Wszystkie" || project.type === typeFilter;
-        const matchesFlowStatus =
-          flowStatusFilter === "Wszystkie" || project.flowStatus === flowStatusFilter;
-        return matchesType && matchesFlowStatus;
-      }),
-    [projects, typeFilter, flowStatusFilter],
+    () => filterProjectsByView(projects, viewFilters, fieldOptions),
+    [projects, viewFilters, fieldOptions],
   );
 
-  const isDialogOpen = dialogMode !== null;
-
-  function openCreate() {
-    setEditingProject(undefined);
-    setDialogMode("create");
+  function updateViewFilters(patch: Partial<ProjectsViewFilters>) {
+    setViewFilters((current) => ({ ...current, ...patch }));
   }
 
-  function openEdit(project: Project) {
-    setEditingProject(project);
-    setDialogMode("edit");
+  function resetViewFilters() {
+    setViewFilters(DEFAULT_PROJECTS_VIEW_FILTERS);
+  }
+
+  function openCreate() {
+    setDialogMode("create");
   }
 
   function closeDialog() {
     setDialogMode(null);
-    setEditingProject(undefined);
   }
 
   async function handleSubmit(project: ProjectInput) {
     try {
-      if (dialogMode === "edit" && editingProject) {
-        await updateProject(editingProject.id, project);
-      } else {
-        await addProject(project);
-      }
-
+      await addProject(project);
       closeDialog();
     } catch {
       // Błąd wyświetla DataProvider
@@ -99,13 +105,20 @@ export function ProjectsTable() {
             <p className="font-semibold text-foreground">Tabela projektów</p>
             <p className="text-sm text-muted">
               Kliknij wiersz lub ikonę edycji, aby zmienić wszystkie pola projektu.
+              {filtersReady ? (
+                <span className="mt-1 block text-foreground/80">
+                  Widoczne: {filteredProjects.length} z {projects.length}
+                </span>
+              ) : null}
             </p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
             <Select
-              value={typeFilter}
+              value={viewFilters.typeFilter}
               onChange={(event) =>
-                setTypeFilter(event.target.value as ProjectType | "Wszystkie")
+                updateViewFilters({
+                  typeFilter: event.target.value as ProjectType | "Wszystkie",
+                })
               }
               className="w-full sm:w-44"
               aria-label="Filtr typu projektu"
@@ -116,9 +129,11 @@ export function ProjectsTable() {
               ))}
             </Select>
             <Select
-              value={flowStatusFilter}
+              value={viewFilters.flowStatusFilter}
               onChange={(event) =>
-                setFlowStatusFilter(event.target.value as FlowStatus | "Wszystkie")
+                updateViewFilters({
+                  flowStatusFilter: event.target.value as FlowStatus | "Wszystkie",
+                })
               }
               className="w-full sm:w-56"
               aria-label="Filtr statusu przepływu"
@@ -128,11 +143,30 @@ export function ProjectsTable() {
                 <option key={status}>{status}</option>
               ))}
             </Select>
+            {!isDefaultProjectsViewFilters(viewFilters) ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={resetViewFilters}
+                className="w-full sm:w-auto"
+              >
+                Domyślny widok
+              </Button>
+            ) : null}
             <Button onClick={openCreate} className="w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               Dodaj projekt
             </Button>
           </div>
+        </div>
+
+        <div className="border-b border-border/80 px-4 pb-4">
+          <ProjectCategoryFiltersBar
+            categories={viewFilters.categories}
+            onCategoriesChange={(categories: ProjectCategoryFilterId[]) =>
+              updateViewFilters({ categories })
+            }
+          />
         </div>
 
         <div className="grid gap-3 p-4 md:hidden">
@@ -141,7 +175,7 @@ export function ProjectsTable() {
               key={project.id}
               title={project.name}
               subtitle={project.type}
-              onClick={() => openEdit(project)}
+              onClick={() => openProjectEdit(project)}
               badges={
                 <>
                   <ProjectStatusBadge
@@ -162,7 +196,7 @@ export function ProjectsTable() {
                     variant="secondary"
                     size="sm"
                     className="flex-1"
-                    onClick={() => openEdit(project)}
+                    onClick={() => openProjectEdit(project)}
                   >
                     <Edit className="h-3.5 w-3.5" />
                     Edytuj
@@ -207,7 +241,7 @@ export function ProjectsTable() {
                 <tr
                   key={project.id}
                   className="cursor-pointer transition hover:bg-surface-muted/60"
-                  onClick={() => openEdit(project)}
+                  onClick={() => openProjectEdit(project)}
                 >
                   <td className="px-4 py-3 font-medium text-foreground">{project.name}</td>
                   <td className="px-4 py-3">{project.type}</td>
@@ -232,7 +266,7 @@ export function ProjectsTable() {
                       <Button
                         variant="secondary"
                         size="sm"
-                        onClick={() => openEdit(project)}
+                        onClick={() => openProjectEdit(project)}
                         title="Edytuj projekt"
                       >
                         <Edit className="h-3.5 w-3.5" />
@@ -255,22 +289,15 @@ export function ProjectsTable() {
         </div>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={(open) => !open && closeDialog()}>
+      <Dialog open={dialogMode === "create"} onOpenChange={(open) => !open && closeDialog()}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>
-              {dialogMode === "edit" ? "Edytuj projekt" : "Dodaj projekt"}
-            </DialogTitle>
-            <DialogDescription>
-              {dialogMode === "edit"
-                ? "Zmień dowolne pole projektu. Po zapisie zaktualizowane zostaną data i autor ostatniej zmiany."
-                : "Uzupełnij dane nowego projektu."}
-            </DialogDescription>
+            <DialogTitle>Dodaj projekt</DialogTitle>
+            <DialogDescription>Uzupełnij dane nowego projektu.</DialogDescription>
           </DialogHeader>
 
           <ProjectForm
-            key={editingProject?.id ?? "new"}
-            project={editingProject}
+            key="new-project"
             isSaving={isSaving}
             onSubmit={handleSubmit}
             onCancel={closeDialog}

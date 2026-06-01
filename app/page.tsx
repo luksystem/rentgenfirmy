@@ -5,6 +5,7 @@ import { BarPanel, PiePanel } from "@/components/charts";
 import { InterruptionForm } from "@/components/interruption-form";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeader, ResetButton } from "@/components/page-header";
+import { ClickableProjectCard } from "@/components/project-edit-provider";
 import { QuickWinsPanel } from "@/components/quick-wins-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -107,9 +108,10 @@ export default function Home() {
               .filter((project) => project.priority === "Krytyczny")
               .slice(0, 5)
               .map((project) => (
-                <div
+                <ClickableProjectCard
                   key={project.id}
-                  className="flex flex-col gap-3 rounded-2xl border border-border/80 bg-surface-muted/50 p-3 sm:flex-row sm:items-center sm:justify-between"
+                  project={project}
+                  className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0">
                     <p className="font-medium text-foreground">{project.name}</p>
@@ -120,7 +122,7 @@ export default function Home() {
                   <span className="w-fit rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-300">
                     Krytyczny
                   </span>
-                </div>
+                </ClickableProjectCard>
               ))}
           </CardContent>
         </Card>

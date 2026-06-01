@@ -1,15 +1,32 @@
 "use client";
 
+import { useProjectClickHandlers, useProjectEdit } from "@/components/project-edit-provider";
 import { PageHeader } from "@/components/page-header";
 import { MobileField, MobileListCard } from "@/components/mobile-list-card";
 import { Card } from "@/components/ui/card";
 import { isWithoutContact } from "@/lib/domain";
+import type { Project } from "@/lib/types";
 import { daysBetween, formatDate } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
+
+function NoContactProjectRow({ project }: { project: Project }) {
+  const rowClick = useProjectClickHandlers(project, { asTableRow: true });
+
+  return (
+    <tr {...rowClick}>
+      <td className="px-4 py-3 font-medium">{project.name}</td>
+      <td className="px-4 py-3">{project.nextStepOwner}</td>
+      <td className="px-4 py-3">{formatDate(project.lastContactDate)}</td>
+      <td className="px-4 py-3">{daysBetween(project.lastContactDate)}</td>
+      <td className="px-4 py-3">{project.blockerReason ?? "-"}</td>
+    </tr>
+  );
+}
 
 export default function NoContactPage() {
   const projects = useAppStore((state) => state.projects);
   const fieldOptions = useAppStore((state) => state.fieldOptions);
+  const { openProjectEdit } = useProjectEdit();
   const staleProjects = projects.filter((project) => isWithoutContact(project, fieldOptions));
 
   return (
@@ -22,7 +39,11 @@ export default function NoContactPage() {
 
       <div className="grid gap-3 md:hidden">
         {staleProjects.map((project) => (
-          <MobileListCard key={project.id} title={project.name}>
+          <MobileListCard
+            key={project.id}
+            title={project.name}
+            onClick={() => openProjectEdit(project)}
+          >
             <MobileField label="Właściciel kroku" value={project.nextStepOwner} />
             <MobileField label="Ostatni kontakt" value={formatDate(project.lastContactDate)} />
             <MobileField label="Dni bez aktywności" value={daysBetween(project.lastContactDate)} />
@@ -44,13 +65,7 @@ export default function NoContactPage() {
           </thead>
           <tbody className="divide-y divide-border">
             {staleProjects.map((project) => (
-              <tr key={project.id}>
-                <td className="px-4 py-3 font-medium">{project.name}</td>
-                <td className="px-4 py-3">{project.nextStepOwner}</td>
-                <td className="px-4 py-3">{formatDate(project.lastContactDate)}</td>
-                <td className="px-4 py-3">{daysBetween(project.lastContactDate)}</td>
-                <td className="px-4 py-3">{project.blockerReason ?? "-"}</td>
-              </tr>
+              <NoContactProjectRow key={project.id} project={project} />
             ))}
           </tbody>
         </table>

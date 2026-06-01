@@ -1,5 +1,6 @@
 "use client";
 
+import { ClickableProjectCard } from "@/components/project-edit-provider";
 import { PageHeader } from "@/components/page-header";
 import { ProjectStatusBadge } from "@/components/project-status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,10 +40,7 @@ export default function WaitingPage() {
             </CardHeader>
             <CardContent className="grid gap-3">
               {items?.map((project) => (
-                <div
-                  key={project.id}
-                  className="rounded-xl border border-border bg-surface-muted p-4"
-                >
+                <ClickableProjectCard key={project.id} project={project} className="p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <p className="font-medium">{project.name}</p>
                     <ProjectStatusBadge
@@ -56,7 +54,7 @@ export default function WaitingPage() {
                     <span>Krok: {project.nextStepOwner}</span>
                     <span>Kontakt: {formatDate(project.nextContactDate)}</span>
                   </div>
-                </div>
+                </ClickableProjectCard>
               ))}
             </CardContent>
           </Card>

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { useAppStore } from "@/store/app-store";
+import { ProjectEditProvider } from "@/components/project-edit-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -79,7 +80,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=twoj-anon-key`}
           {error}
         </div>
       ) : null}
-      {children}
+      <ProjectEditProvider>{children}</ProjectEditProvider>
     </>
   );
 }

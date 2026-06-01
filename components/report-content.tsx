@@ -4,6 +4,7 @@ import { forwardRef } from "react";
 import { BarPanel, PiePanel } from "@/components/charts";
 import { MetricCard } from "@/components/metric-card";
 import { PriorityBadge, ProjectStatusBadge } from "@/components/project-status-badge";
+import { ClickableProjectCard } from "@/components/project-edit-provider";
 import { QuickWinsPanel } from "@/components/quick-wins-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatTrendHelper } from "@/lib/report-insights";
@@ -38,13 +39,7 @@ function ReportProjectList({
           <p className={cn("text-sm text-muted", light && "text-zinc-600")}>{emptyMessage}</p>
         ) : (
           projects.map((project) => (
-            <div
-              key={project.id}
-              className={cn(
-                "rounded-xl border border-border bg-surface-muted p-3",
-                light && "border-zinc-200 bg-zinc-50",
-              )}
-            >
+            <ClickableProjectCard key={project.id} project={project} light={light}>
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <p className={cn("font-medium", light && "text-zinc-900")}>{project.name}</p>
                 <div className="flex flex-wrap gap-2">
@@ -59,7 +54,7 @@ function ReportProjectList({
               <p className={cn("text-sm text-muted", light && "text-zinc-600")}>
                 {detail(project)}
               </p>
-            </div>
+            </ClickableProjectCard>
           ))
         )}
       </CardContent>
