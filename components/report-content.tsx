@@ -8,6 +8,7 @@ import { ClickableProjectCard } from "@/components/project-edit-provider";
 import { QuickWinsPanel } from "@/components/quick-wins-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatTrendHelper } from "@/lib/report-insights";
+import { formatMinutes } from "@/lib/utils";
 import type { Project, WeeklyReport } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -90,7 +91,7 @@ export const ReportContent = forwardRef<HTMLDivElement, ReportContentProps>(
           </p>
         </div>
 
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8">
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-9">
           <MetricCard label="Aktywne" value={report.activeProjects} tone="green" />
           <MetricCard label="Oczekujące" value={report.waitingProjects} tone="amber" />
           <MetricCard
@@ -108,6 +109,12 @@ export const ReportContent = forwardRef<HTMLDivElement, ReportContentProps>(
           <MetricCard
             label="Przerwania w okresie"
             value={report.interruptionsCount}
+            tone="default"
+          />
+          <MetricCard
+            label="Czas przerwań"
+            value={formatMinutes(report.interruptionMinutesTotal)}
+            helper={`${report.focusCount} bloków skupienia · ${formatMinutes(report.focusMinutesTotal)}`}
             tone="default"
           />
           <MetricCard
@@ -141,6 +148,13 @@ export const ReportContent = forwardRef<HTMLDivElement, ReportContentProps>(
             <p className={cn(light && "text-zinc-700")}>
               <strong>Okres vs poprzedni:</strong> {weekly.current} / {weekly.previous} —{" "}
               {formatTrendHelper(weekly, periodTrendLabel)}
+            </p>
+            <p className={cn(light && "text-zinc-700")}>
+              <strong>Czas przerwań w okresie:</strong>{" "}
+              {formatMinutes(report.interruptionMinutesTotal)}
+              {report.focusMinutesTotal > 0
+                ? ` · skupienie: ${formatMinutes(report.focusMinutesTotal)}`
+                : ""}
             </p>
           </CardContent>
         </Card>

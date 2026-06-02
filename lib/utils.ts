@@ -30,6 +30,25 @@ export function formatDate(value?: string) {
   }).format(new Date(value));
 }
 
+export function formatMinutes(total: number) {
+  if (total <= 0) {
+    return "—";
+  }
+
+  const hours = Math.floor(total / 60);
+  const minutes = total % 60;
+
+  if (hours === 0) {
+    return `${minutes} min`;
+  }
+
+  if (minutes === 0) {
+    return `${hours} h`;
+  }
+
+  return `${hours} h ${minutes} min`;
+}
+
 export function daysBetween(from: string, to = new Date()) {
   const start = new Date(from);
   const end = new Date(to);

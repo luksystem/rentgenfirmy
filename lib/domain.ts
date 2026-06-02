@@ -111,12 +111,28 @@ export function projectsByType(projects: Project[]) {
   return countBy(projects.map((project) => project.type));
 }
 
+export function interruptionsOnly(interruptions: Interruption[]) {
+  return interruptions.filter((item) => item.kind !== "focus");
+}
+
+export function focusBlocksOnly(interruptions: Interruption[]) {
+  return interruptions.filter((item) => item.kind === "focus");
+}
+
+export function sumDurationMinutes(interruptions: Interruption[]) {
+  return interruptions.reduce((sum, item) => sum + (item.durationMinutes ?? 0), 0);
+}
+
 export function interruptionsByType(interruptions: Interruption[]) {
-  return countBy(interruptions.map((item) => item.type));
+  return countBy(
+    interruptionsOnly(interruptions)
+      .map((item) => item.type)
+      .filter(Boolean),
+  );
 }
 
 export function interruptionsPerDay(interruptions: Interruption[]) {
-  return countBy(interruptions.map((item) => item.date)).sort((a, b) =>
+  return countBy(interruptionsOnly(interruptions).map((item) => item.date)).sort((a, b) =>
     a.name.localeCompare(b.name),
   );
 }
@@ -131,7 +147,9 @@ export function interruptionWeekKey(date: string) {
 }
 
 export function interruptionsPerWeek(interruptions: Interruption[]) {
-  return countBy(interruptions.map((item) => interruptionWeekKey(item.date)));
+  return countBy(
+    interruptionsOnly(interruptions).map((item) => interruptionWeekKey(item.date)),
+  );
 }
 
 export function topInterruptionProjects(
@@ -141,7 +159,9 @@ export function topInterruptionProjects(
   const projectNames = new Map(projects.map((project) => [project.id, project.name]));
 
   return countBy(
-    interruptions.map((item) => projectNames.get(item.projectId) ?? "Bez projektu"),
+    interruptionsOnly(interruptions).map(
+      (item) => (item.projectId ? projectNames.get(item.projectId) : null) ?? "Bez projektu",
+    ),
   )
     .sort((a, b) => b.value - a.value)
     .slice(0, 8);
@@ -154,6 +174,8 @@ export function generateReport(
   period: ReportPeriod = createWeeklyPeriod(),
 ): WeeklyReport {
   const periodInterruptions = filterInterruptionsByPeriod(interruptions, period);
+  const periodInterruptionItems = interruptionsOnly(periodInterruptions);
+  const periodFocusItems = focusBlocksOnly(periodInterruptions);
   const metrics = projectMetrics(projects, options);
   const blockers = projectsByBlocker(projects).sort((a, b) => b.value - a.value);
   const sources = interruptionsByType(periodInterruptions).sort((a, b) => b.value - a.value);
@@ -173,9 +195,12 @@ export function generateReport(
     closingProjects: metrics.closing,
     noContactProjects: metrics.noContact,
     mostCommonBlocker: blockers[0]?.name ?? "Brak",
-    interruptionsCount: periodInterruptions.length,
+    interruptionsCount: periodInterruptionItems.length,
+    interruptionMinutesTotal: sumDurationMinutes(periodInterruptionItems),
+    focusCount: periodFocusItems.length,
+    focusMinutesTotal: sumDurationMinutes(periodFocusItems),
     mostCommonInterruptionSource: sources[0]?.name ?? "Brak",
-    interruptionTrends: interruptionTrends(interruptions, period),
+    interruptionTrends: interruptionTrends(interruptionsOnly(interruptions), period),
     criticalProjects: projects
       .filter((project) => project.priority === "Krytyczny")
       .sort(sortByPriority),
@@ -191,7 +216,7 @@ export function generateReport(
 
   return {
     ...baseReport,
-    quickWins: generateQuickWins(projects, periodInterruptions, options, baseReport),
+    quickWins: generateQuickWins(projects, periodInterruptionItems, options, baseReport),
   };
 }
 

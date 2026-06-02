@@ -62,13 +62,17 @@ export type ProjectInput = Omit<
   lastContactDate?: string;
 };
 
+export type InterruptionKind = "interruption" | "focus";
+
 export type Interruption = {
   id: string;
   date: string;
   person: Person;
+  kind: InterruptionKind;
   type: InterruptionType;
-  projectId: string;
+  projectId: string | null;
   description: string;
+  durationMinutes: number | null;
   wasNecessary: boolean;
   isRecurring: boolean;
 };
@@ -101,6 +105,9 @@ export type WeeklyReport = {
   noContactProjects: number;
   mostCommonBlocker: string;
   interruptionsCount: number;
+  interruptionMinutesTotal: number;
+  focusCount: number;
+  focusMinutesTotal: number;
   mostCommonInterruptionSource: string;
   interruptionTrends: {
     daily: TrendComparison;

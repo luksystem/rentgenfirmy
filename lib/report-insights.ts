@@ -207,7 +207,9 @@ export function generateQuickWins(
     }
 
     const recentCount = filterInterruptionsByPeriod(
-      interruptions.filter((item) => item.projectId === project.id),
+      interruptions.filter(
+        (item) => item.kind !== "focus" && item.projectId === project.id,
+      ),
       report.period,
     ).length;
 

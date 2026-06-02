@@ -16,14 +16,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { formatDate, formatMinutes } from "@/lib/utils";
 import {
+  focusBlocksOnly,
+  interruptionsOnly,
   interruptionsByType,
   interruptionsPerDay,
   interruptionsPerWeek,
+  sumDurationMinutes,
   topInterruptionProjects,
 } from "@/lib/domain";
 import type { Interruption } from "@/lib/types";
-import { formatDate } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 
 function scrollToInterruptionForm() {
@@ -40,6 +43,22 @@ function scrollToInterruptionForm() {
   firstField?.focus({ preventScroll: true });
 }
 
+function formatKind(kind: Interruption["kind"]) {
+  return kind === "focus" ? "Skupienie" : "Przerwanie";
+}
+
+function formatDuration(minutes: number | null) {
+  return formatMinutes(minutes ?? 0);
+}
+
+function formatEntryLabel(item: Interruption) {
+  if (item.kind === "focus") {
+    return "Skupienie";
+  }
+
+  return item.type || "Przerwanie";
+}
+
 function formatFlag(value: boolean) {
   return value ? "Tak" : "Nie";
 }
@@ -50,6 +69,8 @@ export default function InterruptionsPage() {
   const projectNames = new Map(projects.map((project) => [project.id, project.name]));
   const projectOptions = projects.map((project) => ({ id: project.id, name: project.name }));
   const [editingInterruption, setEditingInterruption] = useState<Interruption | null>(null);
+  const interruptionItems = interruptionsOnly(interruptions);
+  const focusItems = focusBlocksOnly(interruptions);
 
   useEffect(() => {
     if (window.location.hash !== "#dodaj-przerwanie") {
@@ -128,7 +149,7 @@ export default function InterruptionsPage() {
         description="Rejestr telefonów, pytań, zmian, reklamacji i spotkań, które wybijają z rytmu operacyjnego."
       />
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 sm:gap-4">
         <MetricCard
           label="Liczba przerwań dziennie"
           value={interruptionsPerDay(interruptions).at(-1)?.value ?? 0}
@@ -139,7 +160,12 @@ export default function InterruptionsPage() {
           value={interruptionsPerWeek(interruptions).at(-1)?.value ?? 0}
           helper="ostatni tydzień"
         />
-        <MetricCard label="Wszystkie przerwania" value={interruptions.length} />
+        <MetricCard label="Przerwania łącznie" value={interruptionItems.length} />
+        <MetricCard
+          label="Czas przerwań"
+          value={formatMinutes(sumDurationMinutes(interruptionItems))}
+          helper={`${focusItems.length} bloków skupienia · ${formatMinutes(sumDurationMinutes(focusItems))}`}
+        />
       </section>
 
       <section
@@ -166,15 +192,20 @@ export default function InterruptionsPage() {
         {interruptions.map((item) => (
           <MobileListCard
             key={item.id}
-            title={item.type}
+            title={formatEntryLabel(item)}
             subtitle={formatDate(item.date)}
             footer={renderActions(item)}
           >
+            <MobileField label="Rodzaj" value={formatKind(item.kind)} />
             <MobileField label="Osoba" value={item.person} />
-            <MobileField label="Projekt" value={projectNames.get(item.projectId) ?? "-"} />
+            <MobileField
+              label="Projekt"
+              value={item.projectId ? projectNames.get(item.projectId) ?? "—" : "Bez projektu"}
+            />
+            <MobileField label="Czas" value={formatDuration(item.durationMinutes)} />
             <MobileField label="Konieczne" value={formatFlag(item.wasNecessary)} />
             <MobileField label="Powtarza się" value={formatFlag(item.isRecurring)} />
-            <MobileField label="Opis" value={item.description} stack />
+            <MobileField label="Opis" value={item.description || "—"} stack />
           </MobileListCard>
         ))}
       </div>
@@ -185,9 +216,11 @@ export default function InterruptionsPage() {
             <thead className="bg-surface-muted text-xs uppercase tracking-wide text-muted">
               <tr>
                 <th className="px-4 py-3">Data</th>
+                <th className="px-4 py-3">Rodzaj</th>
                 <th className="px-4 py-3">Osoba</th>
-                <th className="px-4 py-3">Typ przerwania</th>
+                <th className="px-4 py-3">Typ / temat</th>
                 <th className="px-4 py-3">Projekt</th>
+                <th className="px-4 py-3">Czas</th>
                 <th className="px-4 py-3">Opis</th>
                 <th className="px-4 py-3">Konieczne?</th>
                 <th className="px-4 py-3">Powtarza się?</th>
@@ -198,10 +231,14 @@ export default function InterruptionsPage() {
               {interruptions.map((item) => (
                 <tr key={item.id} className="transition hover:bg-surface-muted/60">
                   <td className="px-4 py-3">{formatDate(item.date)}</td>
+                  <td className="px-4 py-3">{formatKind(item.kind)}</td>
                   <td className="px-4 py-3">{item.person}</td>
-                  <td className="px-4 py-3">{item.type}</td>
-                  <td className="px-4 py-3">{projectNames.get(item.projectId) ?? "-"}</td>
-                  <td className="px-4 py-3">{item.description}</td>
+                  <td className="px-4 py-3">{formatEntryLabel(item)}</td>
+                  <td className="px-4 py-3">
+                    {item.projectId ? projectNames.get(item.projectId) ?? "—" : "Bez projektu"}
+                  </td>
+                  <td className="px-4 py-3">{formatDuration(item.durationMinutes)}</td>
+                  <td className="px-4 py-3">{item.description || "—"}</td>
                   <td className="px-4 py-3">{formatFlag(item.wasNecessary)}</td>
                   <td className="px-4 py-3">{formatFlag(item.isRecurring)}</td>
                   <td className="px-4 py-3">{renderActions(item)}</td>

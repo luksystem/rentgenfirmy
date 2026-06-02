@@ -139,9 +139,14 @@ export const mockInterruptions: Interruption[] = Array.from({ length: 100 }).map
       id: `interruption-${index + 1}`,
       date: toISODate(addDays(today, -(index % 28))),
       person: owners[index % owners.length],
+      kind: index % 11 === 0 ? "focus" : "interruption",
       type: interruptionTypeNamesList[(index * 5) % interruptionTypeNamesList.length],
-      projectId: project.id,
-      description: `Przerwanie dotyczące: ${project.name}. Wymaga szybkiej decyzji lub informacji zwrotnej.`,
+      projectId: index % 7 === 0 ? null : project.id,
+      description:
+        index % 4 === 0
+          ? ""
+          : `Przerwanie dotyczące: ${project.name}. Wymaga szybkiej decyzji lub informacji zwrotnej.`,
+      durationMinutes: index % 3 === 0 ? 15 + (index % 45) : null,
       wasNecessary: index % 3 === 0,
       isRecurring: index % 5 === 0,
     };

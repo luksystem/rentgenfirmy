@@ -31,11 +31,13 @@ create table if not exists public.interruptions (
   id uuid primary key default gen_random_uuid(),
   date date not null,
   person text not null,
-  type text not null,
-  project_id uuid not null references public.projects (id) on delete cascade,
-  description text not null,
+  type text not null default '',
+  project_id uuid references public.projects (id) on delete set null,
+  description text not null default '',
   was_necessary boolean not null default false,
   is_recurring boolean not null default false,
+  duration_minutes integer check (duration_minutes is null or duration_minutes >= 0),
+  kind text not null default 'interruption' check (kind in ('interruption', 'focus')),
   created_at timestamptz not null default now()
 );
 
@@ -44,6 +46,7 @@ create index if not exists projects_type_idx on public.projects (type);
 create index if not exists projects_priority_idx on public.projects (priority);
 create index if not exists interruptions_date_idx on public.interruptions (date);
 create index if not exists interruptions_project_id_idx on public.interruptions (project_id);
+create index if not exists interruptions_kind_idx on public.interruptions (kind);
 
 create table if not exists public.app_settings (
   id text primary key,

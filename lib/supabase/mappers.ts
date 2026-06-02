@@ -81,13 +81,17 @@ export function inputToProjectPayload(
 }
 
 export function rowToInterruption(row: InterruptionRow): Interruption {
+  const kind = row.kind === "focus" ? "focus" : "interruption";
+
   return {
     id: row.id,
     date: row.date,
     person: row.person as Person,
-    type: row.type as Interruption["type"],
+    kind,
+    type: row.type,
     projectId: row.project_id,
-    description: row.description,
+    description: row.description ?? "",
+    durationMinutes: row.duration_minutes ?? null,
     wasNecessary: row.was_necessary ?? false,
     isRecurring: row.is_recurring ?? false,
   };
@@ -99,10 +103,12 @@ export function interruptionToInsert(
   return {
     date: interruption.date,
     person: interruption.person,
-    type: interruption.type,
+    type: interruption.kind === "focus" ? "" : interruption.type,
     project_id: interruption.projectId,
-    description: interruption.description,
+    description: interruption.description ?? "",
     was_necessary: interruption.wasNecessary,
     is_recurring: interruption.isRecurring,
+    duration_minutes: interruption.durationMinutes,
+    kind: interruption.kind,
   };
 }

@@ -34,10 +34,12 @@ export type InterruptionRow = {
   date: string;
   person: string;
   type: string;
-  project_id: string;
+  project_id: string | null;
   description: string;
   was_necessary: boolean;
   is_recurring: boolean;
+  duration_minutes: number | null;
+  kind: string;
   created_at: string;
 };
 
