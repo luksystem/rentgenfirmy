@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Edit, Plus, Trash2 } from "lucide-react";
 import { MobileField, MobileListCard } from "@/components/mobile-list-card";
 import { useProjectEdit } from "@/components/project-edit-provider";
@@ -19,53 +19,44 @@ import {
 import { Input, Select } from "@/components/ui/input";
 import { flowStatusNames } from "@/lib/field-options";
 import {
+  ALL_FILTER,
   DEFAULT_PROJECTS_VIEW_FILTERS,
   filterProjectsByView,
   isDefaultProjectsViewFilters,
-  loadProjectsViewFilters,
-  saveProjectsViewFilters,
   type ProjectCategoryFilterId,
   type ProjectsViewFilters,
 } from "@/lib/projects-view-filters";
 import { useAppStore } from "@/store/app-store";
 import { formatDate } from "@/lib/utils";
-import { type FlowStatus, type ProjectInput, type ProjectType } from "@/lib/types";
+import { type FlowStatus, type NextStepOwner, type ProjectInput, type ProjectType } from "@/lib/types";
 
 type DialogMode = "create" | null;
 
 export function ProjectsTable() {
-  const { projects, addProject, deleteProject, isSaving, fieldOptions } = useAppStore();
+  const {
+    projects,
+    addProject,
+    deleteProject,
+    isSaving,
+    fieldOptions,
+    projectsViewFilters,
+    updateProjectsViewFilters,
+    isInitialized,
+  } = useAppStore();
   const { openProjectEdit } = useProjectEdit();
-  const [viewFilters, setViewFilters] = useState<ProjectsViewFilters>(
-    DEFAULT_PROJECTS_VIEW_FILTERS,
-  );
-  const [filtersReady, setFiltersReady] = useState(false);
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
 
-  useEffect(() => {
-    setViewFilters(loadProjectsViewFilters());
-    setFiltersReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!filtersReady) {
-      return;
-    }
-
-    saveProjectsViewFilters(viewFilters);
-  }, [viewFilters, filtersReady]);
-
   const filteredProjects = useMemo(
-    () => filterProjectsByView(projects, viewFilters, fieldOptions),
-    [projects, viewFilters, fieldOptions],
+    () => filterProjectsByView(projects, projectsViewFilters, fieldOptions),
+    [projects, projectsViewFilters, fieldOptions],
   );
 
   function updateViewFilters(patch: Partial<ProjectsViewFilters>) {
-    setViewFilters((current) => ({ ...current, ...patch }));
+    updateProjectsViewFilters({ ...projectsViewFilters, ...patch });
   }
 
   function resetViewFilters() {
-    setViewFilters(DEFAULT_PROJECTS_VIEW_FILTERS);
+    updateProjectsViewFilters(DEFAULT_PROJECTS_VIEW_FILTERS);
   }
 
   function openCreate() {
@@ -105,7 +96,7 @@ export function ProjectsTable() {
             <p className="font-semibold text-foreground">Tabela projektów</p>
             <p className="text-sm text-muted">
               Kliknij wiersz lub ikonę edycji, aby zmienić wszystkie pola projektu.
-              {filtersReady ? (
+              {isInitialized ? (
                 <span className="mt-1 block text-foreground/80">
                   Widoczne: {filteredProjects.length} z {projects.length}
                 </span>
@@ -115,43 +106,64 @@ export function ProjectsTable() {
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
             <Input
               type="search"
-              value={viewFilters.nameQuery}
+              value={projectsViewFilters.nameQuery}
               onChange={(event) => updateViewFilters({ nameQuery: event.target.value })}
               placeholder="Szukaj po nazwie..."
               className="w-full sm:min-w-[200px] sm:flex-1"
               aria-label="Szukaj projektu po nazwie"
             />
             <Select
-              value={viewFilters.typeFilter}
+              value={projectsViewFilters.typeFilter}
               onChange={(event) =>
                 updateViewFilters({
-                  typeFilter: event.target.value as ProjectType | "Wszystkie",
+                  typeFilter: event.target.value as ProjectType | typeof ALL_FILTER,
                 })
               }
               className="w-full sm:w-44"
               aria-label="Filtr typu projektu"
             >
-              <option>Wszystkie</option>
+              <option value={ALL_FILTER}>Typ</option>
               {fieldOptions.projectTypes.map((type) => (
-                <option key={type}>{type}</option>
+                <option key={type} value={type}>
+                  {type}
+                </option>
               ))}
             </Select>
             <Select
-              value={viewFilters.flowStatusFilter}
+              value={projectsViewFilters.flowStatusFilter}
               onChange={(event) =>
                 updateViewFilters({
-                  flowStatusFilter: event.target.value as FlowStatus | "Wszystkie",
+                  flowStatusFilter: event.target.value as FlowStatus | typeof ALL_FILTER,
                 })
               }
               className="w-full sm:w-56"
               aria-label="Filtr statusu przepływu"
             >
-              <option>Wszystkie</option>
+              <option value={ALL_FILTER}>Status</option>
               {flowStatusNames(fieldOptions).map((status) => (
-                <option key={status}>{status}</option>
+                <option key={status} value={status}>
+                  {status}
+                </option>
               ))}
             </Select>
-            {!isDefaultProjectsViewFilters(viewFilters) ? (
+            <Select
+              value={projectsViewFilters.ownerFilter}
+              onChange={(event) =>
+                updateViewFilters({
+                  ownerFilter: event.target.value as NextStepOwner | typeof ALL_FILTER,
+                })
+              }
+              className="w-full sm:w-48"
+              aria-label="Filtr właściciela kolejnego kroku"
+            >
+              <option value={ALL_FILTER}>Właściciel</option>
+              {fieldOptions.nextStepOwners.map((owner) => (
+                <option key={owner} value={owner}>
+                  {owner}
+                </option>
+              ))}
+            </Select>
+            {!isDefaultProjectsViewFilters(projectsViewFilters) ? (
               <Button
                 type="button"
                 variant="secondary"
@@ -170,8 +182,8 @@ export function ProjectsTable() {
 
         <div className="border-b border-border/80 px-4 pb-4">
           <ProjectViewFiltersBar
-            categories={viewFilters.categories}
-            blockerFaults={viewFilters.blockerFaults}
+            categories={projectsViewFilters.categories}
+            blockerFaults={projectsViewFilters.blockerFaults}
             onCategoriesChange={(categories: ProjectCategoryFilterId[]) =>
               updateViewFilters({ categories })
             }

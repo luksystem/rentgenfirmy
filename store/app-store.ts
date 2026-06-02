@@ -7,6 +7,10 @@ import {
   type FieldOptions,
 } from "@/lib/field-options";
 import {
+  DEFAULT_PROJECTS_VIEW_FILTERS,
+  type ProjectsViewFilters,
+} from "@/lib/projects-view-filters";
+import {
   createInterruption,
   createProject,
   deleteInterruptionRecord,
@@ -16,13 +20,21 @@ import {
   updateInterruptionRecord,
   updateProjectRecord,
 } from "@/lib/supabase/repository";
+import {
+  fetchProjectsViewFilters,
+  saveProjectsViewFilters,
+} from "@/lib/supabase/projects-view-filters-repository";
 import { fetchFieldOptions, saveFieldOptions } from "@/lib/supabase/settings-repository";
 import type { Interruption, Project, ProjectInput } from "@/lib/types";
+
+const PROJECTS_VIEW_FILTERS_SAVE_DELAY_MS = 400;
+let projectsViewFiltersSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
 type AppState = {
   projects: Project[];
   interruptions: Interruption[];
   fieldOptions: FieldOptions;
+  projectsViewFilters: ProjectsViewFilters;
   isLoading: boolean;
   isInitialized: boolean;
   isSaving: boolean;
@@ -35,12 +47,14 @@ type AppState = {
   updateInterruption: (id: string, interruption: Omit<Interruption, "id">) => Promise<void>;
   deleteInterruption: (id: string) => Promise<void>;
   updateFieldOptions: (options: FieldOptions) => Promise<void>;
+  updateProjectsViewFilters: (filters: ProjectsViewFilters) => void;
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
   projects: [],
   interruptions: [],
   fieldOptions: DEFAULT_FIELD_OPTIONS,
+  projectsViewFilters: DEFAULT_PROJECTS_VIEW_FILTERS,
   isLoading: false,
   isInitialized: false,
   isSaving: false,
@@ -54,16 +68,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const [projects, interruptions, fieldOptions] = await Promise.all([
+      const [projects, interruptions, fieldOptions, projectsViewFilters] = await Promise.all([
         fetchProjects(),
         fetchInterruptions(),
         fetchFieldOptions(),
+        fetchProjectsViewFilters(),
       ]);
 
       set({
         projects,
         interruptions,
         fieldOptions,
+        projectsViewFilters,
         isInitialized: true,
         isLoading: false,
         error: null,
@@ -216,5 +232,34 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
       throw error;
     }
+  },
+
+  updateProjectsViewFilters: (filters) => {
+    set({ projectsViewFilters: filters, error: null });
+
+    if (projectsViewFiltersSaveTimer) {
+      clearTimeout(projectsViewFiltersSaveTimer);
+    }
+
+    projectsViewFiltersSaveTimer = setTimeout(async () => {
+      set({ isSaving: true });
+
+      try {
+        const projectsViewFilters = await saveProjectsViewFilters(filters);
+        set({
+          projectsViewFilters,
+          isSaving: false,
+          error: null,
+        });
+      } catch (error) {
+        set({
+          error:
+            error instanceof Error
+              ? error.message
+              : "Nie udało się zapisać filtrów widoku",
+          isSaving: false,
+        });
+      }
+    }, PROJECTS_VIEW_FILTERS_SAVE_DELAY_MS);
   },
 }));

@@ -7,7 +7,9 @@ import {
   isProjectInProgress,
   isProjectWaiting,
 } from "@/lib/field-options";
-import type { FlowStatus, Project, ProjectType } from "@/lib/types";
+import type { FlowStatus, NextStepOwner, Project, ProjectType } from "@/lib/types";
+
+export const ALL_FILTER = "Wszystkie" as const;
 
 export const PROJECT_CATEGORY_FILTERS = [
   { id: "active", label: "Aktywne" },
@@ -28,16 +30,18 @@ export type ProjectBlockerFaultFilterId =
   (typeof PROJECT_BLOCKER_FAULT_FILTERS)[number]["id"];
 
 export type ProjectsViewFilters = {
-  typeFilter: ProjectType | "Wszystkie";
-  flowStatusFilter: FlowStatus | "Wszystkie";
+  typeFilter: ProjectType | typeof ALL_FILTER;
+  flowStatusFilter: FlowStatus | typeof ALL_FILTER;
+  ownerFilter: NextStepOwner | typeof ALL_FILTER;
   nameQuery: string;
   categories: ProjectCategoryFilterId[];
   blockerFaults: ProjectBlockerFaultFilterId[];
 };
 
 export const DEFAULT_PROJECTS_VIEW_FILTERS: ProjectsViewFilters = {
-  typeFilter: "Wszystkie",
-  flowStatusFilter: "Wszystkie",
+  typeFilter: ALL_FILTER,
+  flowStatusFilter: ALL_FILTER,
+  ownerFilter: ALL_FILTER,
   nameQuery: "",
   categories: [],
   blockerFaults: [],
@@ -56,7 +60,7 @@ export function projectMatchesNameQuery(project: Project, nameQuery: string) {
   return project.name.toLocaleLowerCase("pl").includes(normalized);
 }
 
-const STORAGE_KEY = "rentgen-projects-view-filters";
+const LEGACY_STORAGE_KEY = "rentgen-projects-view-filters";
 
 function isCategoryFilterId(value: unknown): value is ProjectCategoryFilterId {
   return PROJECT_CATEGORY_FILTERS.some((item) => item.id === value);
@@ -110,10 +114,13 @@ export function filterProjectsByView(
 ) {
   return projects.filter((project) => {
     const matchesType =
-      filters.typeFilter === "Wszystkie" || project.type === filters.typeFilter;
+      filters.typeFilter === ALL_FILTER || project.type === filters.typeFilter;
     const matchesFlowStatus =
-      filters.flowStatusFilter === "Wszystkie" ||
+      filters.flowStatusFilter === ALL_FILTER ||
       project.flowStatus === filters.flowStatusFilter;
+    const matchesOwner =
+      filters.ownerFilter === ALL_FILTER ||
+      project.nextStepOwner === filters.ownerFilter;
     const matchesCategories =
       filters.categories.length === 0 ||
       filters.categories.some((category) =>
@@ -129,6 +136,7 @@ export function filterProjectsByView(
     return (
       matchesType &&
       matchesFlowStatus &&
+      matchesOwner &&
       matchesCategories &&
       matchesBlockerFaults &&
       matchesName
@@ -136,53 +144,54 @@ export function filterProjectsByView(
   });
 }
 
-export function loadProjectsViewFilters(): ProjectsViewFilters {
+export function normalizeProjectsViewFilters(
+  parsed: Partial<ProjectsViewFilters>,
+): ProjectsViewFilters {
+  const categories = Array.isArray(parsed.categories)
+    ? parsed.categories.filter(isCategoryFilterId)
+    : [];
+  const blockerFaults = Array.isArray(parsed.blockerFaults)
+    ? parsed.blockerFaults.filter(isBlockerFaultFilterId)
+    : [];
+
+  return {
+    typeFilter:
+      typeof parsed.typeFilter === "string" ? parsed.typeFilter : ALL_FILTER,
+    flowStatusFilter:
+      typeof parsed.flowStatusFilter === "string"
+        ? parsed.flowStatusFilter
+        : ALL_FILTER,
+    ownerFilter:
+      typeof parsed.ownerFilter === "string" ? parsed.ownerFilter : ALL_FILTER,
+    nameQuery: typeof parsed.nameQuery === "string" ? parsed.nameQuery : "",
+    categories,
+    blockerFaults,
+  };
+}
+
+/** Jednorazowa migracja z localStorage (przed Supabase). */
+export function migrateProjectsViewFiltersFromLocalStorage(): ProjectsViewFilters {
   if (typeof window === "undefined") {
     return DEFAULT_PROJECTS_VIEW_FILTERS;
   }
 
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) {
       return DEFAULT_PROJECTS_VIEW_FILTERS;
     }
 
-    const parsed = JSON.parse(raw) as Partial<ProjectsViewFilters>;
-    const categories = Array.isArray(parsed.categories)
-      ? parsed.categories.filter(isCategoryFilterId)
-      : [];
-    const blockerFaults = Array.isArray(parsed.blockerFaults)
-      ? parsed.blockerFaults.filter(isBlockerFaultFilterId)
-      : [];
-
-    return {
-      typeFilter:
-        typeof parsed.typeFilter === "string" ? parsed.typeFilter : "Wszystkie",
-      flowStatusFilter:
-        typeof parsed.flowStatusFilter === "string"
-          ? parsed.flowStatusFilter
-          : "Wszystkie",
-      nameQuery: typeof parsed.nameQuery === "string" ? parsed.nameQuery : "",
-      categories,
-      blockerFaults,
-    };
+    return normalizeProjectsViewFilters(JSON.parse(raw) as Partial<ProjectsViewFilters>);
   } catch {
     return DEFAULT_PROJECTS_VIEW_FILTERS;
   }
-}
-
-export function saveProjectsViewFilters(filters: ProjectsViewFilters) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
 }
 
 export function isDefaultProjectsViewFilters(filters: ProjectsViewFilters) {
   return (
     filters.typeFilter === DEFAULT_PROJECTS_VIEW_FILTERS.typeFilter &&
     filters.flowStatusFilter === DEFAULT_PROJECTS_VIEW_FILTERS.flowStatusFilter &&
+    filters.ownerFilter === DEFAULT_PROJECTS_VIEW_FILTERS.ownerFilter &&
     filters.nameQuery.trim() === "" &&
     filters.categories.length === 0 &&
     filters.blockerFaults.length === 0

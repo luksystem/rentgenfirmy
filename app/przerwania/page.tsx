@@ -149,22 +149,25 @@ export default function InterruptionsPage() {
         description="Rejestr telefonów, pytań, zmian, reklamacji i spotkań, które wybijają z rytmu operacyjnego."
       />
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 sm:gap-4">
+      <section className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 sm:mx-0 sm:gap-2 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-1">
         <MetricCard
-          label="Liczba przerwań dziennie"
+          label="Przerwania dziś"
           value={interruptionsPerDay(interruptions).at(-1)?.value ?? 0}
           helper="ostatni dzień w danych"
+          size="compact"
         />
         <MetricCard
-          label="Liczba przerwań tygodniowo"
+          label="Przerwania 7 dni"
           value={interruptionsPerWeek(interruptions).at(-1)?.value ?? 0}
           helper="ostatni tydzień"
+          size="compact"
         />
-        <MetricCard label="Przerwania łącznie" value={interruptionItems.length} />
+        <MetricCard label="Przerwania łącznie" value={interruptionItems.length} size="compact" />
         <MetricCard
           label="Czas przerwań"
           value={formatMinutes(sumDurationMinutes(interruptionItems))}
           helper={`${focusItems.length} bloków skupienia · ${formatMinutes(sumDurationMinutes(focusItems))}`}
+          size="compact"
         />
       </section>
 
