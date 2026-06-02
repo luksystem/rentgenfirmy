@@ -144,7 +144,7 @@ const PRINT_STYLES = `
   .diff-over { color: #be123c; }
   .diff-under { color: #047857; }
   .footnote { margin-top: 10px; font-size: 8.5pt; color: #a1a1aa; }
-  footer {
+  .doc-footer {
     margin-top: 24px;
     padding-top: 12px;
     border-top: 1px solid #e4e4e7;
@@ -153,9 +153,20 @@ const PRINT_STYLES = `
     color: #a1a1aa;
   }
   @media print {
-    body { background: #fff; }
+    html, body {
+      width: 100%;
+      height: auto;
+      overflow: visible;
+      background: #fff !important;
+      color: #000 !important;
+    }
+    .doc {
+      max-width: none;
+      width: 100%;
+    }
     .cost-section, .comparison { break-inside: avoid; }
     .block { break-inside: avoid; }
+    .header { break-inside: avoid; }
   }
 `;
 
@@ -320,7 +331,7 @@ export function buildServiceReportPrintDocument(
       </div>
     </section>
 
-    <footer>Dokument wygenerowany w module Serwis · Rentgen firmy</footer>
+    <div class="doc-footer">Dokument wygenerowany w module Serwis · Rentgen firmy</div>
   </div>
 </body>
 </html>`;
@@ -328,46 +339,50 @@ export function buildServiceReportPrintDocument(
 
 export function printServiceReport(service: ServiceRecord, projectName?: string) {
   const html = buildServiceReportPrintDocument(service, projectName);
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
 
-  const iframe = document.createElement("iframe");
-  iframe.setAttribute("title", "Raport serwisowy");
-  iframe.style.cssText =
-    "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+  // Bez noopener — okno musi załadować blob URL z pełnym HTML raportu.
+  const printWindow = window.open(url, "_blank");
 
-  document.body.appendChild(iframe);
-
-  const frameWindow = iframe.contentWindow;
-  const frameDoc = frameWindow?.document;
-
-  if (!frameWindow || !frameDoc) {
-    document.body.removeChild(iframe);
-    window.alert("Nie udało się przygotować raportu do druku.");
+  if (!printWindow) {
+    URL.revokeObjectURL(url);
+    window.alert(
+      "Przeglądarka zablokowała okno druku. Zezwól na wyskakujące okna dla tej strony i spróbuj ponownie.",
+    );
     return;
   }
 
-  frameDoc.open();
-  frameDoc.write(html);
-  frameDoc.close();
-
   const cleanup = () => {
-    if (iframe.parentNode) {
-      iframe.parentNode.removeChild(iframe);
+    URL.revokeObjectURL(url);
+    if (!printWindow.closed) {
+      printWindow.close();
     }
   };
 
   const triggerPrint = () => {
     try {
-      frameWindow.focus();
-      frameWindow.print();
-    } finally {
-      frameWindow.addEventListener("afterprint", cleanup, { once: true });
-      window.setTimeout(cleanup, 60_000);
+      printWindow.focus();
+      printWindow.print();
+    } catch {
+      window.alert("Nie udało się otworzyć dialogu druku.");
+      cleanup();
+      return;
     }
+
+    printWindow.addEventListener("afterprint", cleanup, { once: true });
+    window.setTimeout(cleanup, 120_000);
   };
 
-  if (frameDoc.readyState === "complete") {
-    window.setTimeout(triggerPrint, 150);
-  } else {
-    iframe.addEventListener("load", () => window.setTimeout(triggerPrint, 150), { once: true });
+  const waitForRender = () => window.setTimeout(triggerPrint, 400);
+
+  try {
+    if (printWindow.document.readyState === "complete") {
+      waitForRender();
+    } else {
+      printWindow.addEventListener("load", waitForRender, { once: true });
+    }
+  } catch {
+    waitForRender();
   }
 }

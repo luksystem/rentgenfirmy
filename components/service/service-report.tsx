@@ -172,6 +172,10 @@ export function ServiceReport({
         <Button type="button" onClick={handlePrint}>
           Drukuj / eksportuj PDF
         </Button>
+        <p className="text-xs text-muted">
+          Otworzy się podgląd raportu w nowej karcie. W oknie druku możesz wyłączyć „Nagłówki i stopki”
+          przeglądarki, jeśli widzisz pustą stronę z samą datą i numerem strony.
+        </p>
       </div>
 
       <article className="service-report-document mx-auto max-w-[210mm] overflow-hidden rounded-lg bg-white text-zinc-900 shadow-lg ring-1 ring-zinc-200">
