@@ -328,25 +328,46 @@ export function buildServiceReportPrintDocument(
 
 export function printServiceReport(service: ServiceRecord, projectName?: string) {
   const html = buildServiceReportPrintDocument(service, projectName);
-  const printWindow = window.open("", "_blank", "noopener,noreferrer,width=900,height=1200");
 
-  if (!printWindow) {
-    window.alert("Przeglądarka zablokowała okno druku. Zezwól na wyskakujące okna i spróbuj ponownie.");
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("title", "Raport serwisowy");
+  iframe.style.cssText =
+    "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+
+  document.body.appendChild(iframe);
+
+  const frameWindow = iframe.contentWindow;
+  const frameDoc = frameWindow?.document;
+
+  if (!frameWindow || !frameDoc) {
+    document.body.removeChild(iframe);
+    window.alert("Nie udało się przygotować raportu do druku.");
     return;
   }
 
-  printWindow.document.open();
-  printWindow.document.write(html);
-  printWindow.document.close();
+  frameDoc.open();
+  frameDoc.write(html);
+  frameDoc.close();
 
-  const triggerPrint = () => {
-    printWindow.focus();
-    printWindow.print();
+  const cleanup = () => {
+    if (iframe.parentNode) {
+      iframe.parentNode.removeChild(iframe);
+    }
   };
 
-  if (printWindow.document.readyState === "complete") {
-    triggerPrint();
+  const triggerPrint = () => {
+    try {
+      frameWindow.focus();
+      frameWindow.print();
+    } finally {
+      frameWindow.addEventListener("afterprint", cleanup, { once: true });
+      window.setTimeout(cleanup, 60_000);
+    }
+  };
+
+  if (frameDoc.readyState === "complete") {
+    window.setTimeout(triggerPrint, 150);
   } else {
-    printWindow.addEventListener("load", triggerPrint, { once: true });
+    iframe.addEventListener("load", () => window.setTimeout(triggerPrint, 150), { once: true });
   }
 }
