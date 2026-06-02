@@ -15,6 +15,7 @@ import {
   PhoneCall,
   Plus,
   Settings,
+  Wrench,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ const navGroups = [
       { href: "/", label: "Start", icon: Home },
       { href: "/projekty", label: "Projekty", icon: FolderKanban },
       { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
+      { href: "/serwis", label: "Serwis", icon: Wrench },
     ],
   },
   {
@@ -45,9 +47,14 @@ const navGroups = [
   },
 ];
 
-const mobileNavLeft = navGroups[0].items.slice(0, 2);
-const mobileNavRight = [navGroups[0].items[2]];
-const secondaryNav = [...navGroups[1].items, ...navGroups[2].items];
+const serwisNav = navGroups[0].items.find((item) => item.href === "/serwis");
+const mobileNavLeft = navGroups[0].items.filter((item) => item.href !== "/serwis").slice(0, 2);
+const mobileNavRight = navGroups[0].items.filter((item) => item.href !== "/serwis").slice(2);
+const secondaryNav = [
+  ...(serwisNav ? [serwisNav] : []),
+  ...navGroups[1].items,
+  ...navGroups[2].items,
+];
 const allNav = navGroups.flatMap((group) => group.items);
 
 function isActive(pathname: string, href: string) {

@@ -9,6 +9,15 @@ export function toISODate(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
+export function formatMoney(value: number) {
+  return new Intl.NumberFormat("pl-PL", {
+    style: "currency",
+    currency: "PLN",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 export function formatDate(value?: string) {
   if (!value) {
     return "-";

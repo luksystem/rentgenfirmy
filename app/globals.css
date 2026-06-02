@@ -109,3 +109,33 @@ select option {
   border-color: rgba(96, 165, 250, 0.25);
   background: var(--info-panel);
 }
+
+@media print {
+  body {
+    background: #fff !important;
+    color: #111 !important;
+    background-image: none !important;
+  }
+
+  aside,
+  header,
+  nav,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+
+  .service-report {
+    color: #111 !important;
+  }
+
+  .service-report section {
+    break-inside: avoid;
+    border-color: #ccc !important;
+    background: #fff !important;
+  }
+}
