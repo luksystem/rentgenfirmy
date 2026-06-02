@@ -59,6 +59,46 @@ export type AppSettingsInsert = {
   updated_at?: string;
 };
 
+export type ServiceRow = {
+  id: string;
+  project_id: string | null;
+  status: string;
+  service_type: string;
+  title: string;
+  client_full_name: string;
+  client_location: string;
+  client_email: string;
+  client_phone: string;
+  rates: Record<string, unknown>;
+  discounts: Record<string, unknown>;
+  zone_settings: Record<string, unknown>;
+  estimate: Record<string, unknown>;
+  actual: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ServiceInsert = {
+  id?: string;
+  project_id?: string | null;
+  status: string;
+  service_type: string;
+  title: string;
+  client_full_name: string;
+  client_location: string;
+  client_email: string;
+  client_phone: string;
+  rates: Record<string, unknown>;
+  discounts: Record<string, unknown>;
+  zone_settings: Record<string, unknown>;
+  estimate: Record<string, unknown>;
+  actual: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ServiceUpdate = Partial<ServiceInsert>;
+
 export type Database = {
   public: {
     Tables: {
@@ -87,6 +127,20 @@ export type Database = {
         Insert: AppSettingsInsert;
         Update: Partial<AppSettingsInsert>;
         Relationships: [];
+      };
+      services: {
+        Row: ServiceRow;
+        Insert: ServiceInsert;
+        Update: ServiceUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "services_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
       };
     };
     Views: Record<string, never>;

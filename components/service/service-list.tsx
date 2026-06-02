@@ -11,6 +11,7 @@ import { cn, formatDate, formatMoney } from "@/lib/utils";
 export function ServiceList() {
   const services = useServiceStore((s) => s.services);
   const deleteService = useServiceStore((s) => s.deleteService);
+  const isSaving = useServiceStore((s) => s.isSaving);
   const projects = useAppStore((s) => s.projects);
 
   const projectNames = useMemo(
@@ -97,9 +98,16 @@ export function ServiceList() {
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => {
-                        if (window.confirm("Usunąć ten serwis?")) {
-                          deleteService(service.id);
+                      disabled={isSaving}
+                      onClick={async () => {
+                        if (!window.confirm("Usunąć ten serwis?")) {
+                          return;
+                        }
+
+                        try {
+                          await deleteService(service.id);
+                        } catch {
+                          window.alert("Nie udało się usunąć serwisu.");
                         }
                       }}
                     >

@@ -36,6 +36,7 @@ export function ServiceForm({
   const router = useRouter();
   const projects = useAppStore((s) => s.projects);
   const upsertService = useServiceStore((s) => s.upsertService);
+  const isSaving = useServiceStore((s) => s.isSaving);
 
   const [service, setService] = useState(initialService);
   const [step, setStep] = useState(0);
@@ -49,7 +50,7 @@ export function ServiceForm({
     ? projects.find((p) => p.id === service.projectId)?.name
     : undefined;
 
-  function save(statusOverride?: ServiceRecord["status"]) {
+  async function save(statusOverride?: ServiceRecord["status"]) {
     const validationErrors = validateService(service);
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
@@ -63,11 +64,16 @@ export function ServiceForm({
       projectId: withoutProject ? null : service.projectId,
     };
 
-    upsertService(payload);
-    router.push("/serwis");
+    try {
+      const saved = await upsertService(payload);
+      router.push("/serwis");
+      return saved;
+    } catch {
+      setErrors(["Nie udało się zapisać serwisu. Sprawdź połączenie z Supabase."]);
+    }
   }
 
-  function settle() {
+  async function settle() {
     const validationErrors = validateService(service);
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
@@ -81,11 +87,15 @@ export function ServiceForm({
       projectId: withoutProject ? null : service.projectId,
     };
 
-    upsertService(payload);
-    setService(payload);
-    setErrors([]);
-    setShowReport(true);
-    setStep(4);
+    try {
+      const saved = await upsertService(payload);
+      setService(saved);
+      setErrors([]);
+      setShowReport(true);
+      setStep(4);
+    } catch {
+      setErrors(["Nie udało się rozliczyć serwisu. Sprawdź połączenie z Supabase."]);
+    }
   }
 
   return (
@@ -448,10 +458,10 @@ export function ServiceForm({
               Dalej
             </Button>
           ) : null}
-          <Button type="button" variant="secondary" onClick={() => save()}>
-            Zapisz
+          <Button type="button" variant="secondary" disabled={isSaving} onClick={() => save()}>
+            {isSaving ? "Zapisywanie…" : "Zapisz"}
           </Button>
-          <Button type="button" onClick={() => settle()}>
+          <Button type="button" disabled={isSaving} onClick={() => settle()}>
             Rozlicz serwis
           </Button>
           {mode === "edit" ? (

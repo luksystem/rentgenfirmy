@@ -3,7 +3,13 @@
 import { create } from "zustand";
 import { calculateServiceCost } from "@/lib/service/calculate-service-cost";
 import { DEFAULT_SERVICE_SETTINGS } from "@/lib/service/defaults";
-import { loadServiceSettings, loadServices, saveServices, saveServiceSettings } from "@/lib/service/storage";
+import {
+  bootstrapServiceModule,
+  deleteServiceRecord,
+  ensureServiceUuid,
+  saveServiceSettings,
+  upsertServiceRecord,
+} from "@/lib/supabase/service-repository";
 import {
   emptyLineItems,
   type ServiceGlobalSettings,
@@ -14,17 +20,16 @@ type ServiceStore = {
   services: ServiceRecord[];
   settings: ServiceGlobalSettings;
   hydrated: boolean;
-  hydrate: () => void;
-  upsertService: (service: ServiceRecord) => void;
-  deleteService: (id: string) => void;
+  isLoading: boolean;
+  isSaving: boolean;
+  error: string | null;
+  hydrate: () => Promise<void>;
+  upsertService: (service: ServiceRecord) => Promise<ServiceRecord>;
+  deleteService: (id: string) => Promise<void>;
   getServiceById: (id: string) => ServiceRecord | undefined;
-  updateSettings: (settings: ServiceGlobalSettings) => void;
+  updateSettings: (settings: ServiceGlobalSettings) => Promise<void>;
   createEmptyService: () => ServiceRecord;
 };
-
-function newId() {
-  return `service-${crypto.randomUUID()}`;
-}
 
 export function buildServiceCosts(service: ServiceRecord) {
   const estimate = calculateServiceCost(
@@ -48,42 +53,90 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
   services: [],
   settings: DEFAULT_SERVICE_SETTINGS,
   hydrated: false,
+  isLoading: false,
+  isSaving: false,
+  error: null,
 
-  hydrate: () => {
-    if (get().hydrated) {
+  hydrate: async () => {
+    if (get().hydrated || get().isLoading) {
       return;
     }
 
-    set({
-      services: loadServices(),
-      settings: loadServiceSettings(),
-      hydrated: true,
-    });
+    set({ isLoading: true, error: null });
+
+    try {
+      const { services, settings } = await bootstrapServiceModule();
+      set({
+        services,
+        settings,
+        hydrated: true,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Nie udało się pobrać danych serwisu",
+        isLoading: false,
+      });
+    }
   },
 
-  upsertService: (service) => {
-    const services = get().services;
-    const index = services.findIndex((item) => item.id === service.id);
-    const next =
-      index >= 0
-        ? services.map((item) => (item.id === service.id ? service : item))
-        : [service, ...services];
+  upsertService: async (service) => {
+    set({ isSaving: true, error: null });
 
-    saveServices(next);
-    set({ services: next });
+    try {
+      const saved = await upsertServiceRecord(service);
+      const services = get().services;
+      const index = services.findIndex((item) => item.id === service.id);
+      const next =
+        index >= 0
+          ? services.map((item) => (item.id === service.id ? saved : item))
+          : [saved, ...services];
+
+      set({ services: next, isSaving: false });
+      return saved;
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Nie udało się zapisać serwisu",
+        isSaving: false,
+      });
+      throw error;
+    }
   },
 
-  deleteService: (id) => {
-    const next = get().services.filter((item) => item.id !== id);
-    saveServices(next);
-    set({ services: next });
+  deleteService: async (id) => {
+    set({ isSaving: true, error: null });
+
+    try {
+      await deleteServiceRecord(id);
+      set({
+        services: get().services.filter((item) => item.id !== id),
+        isSaving: false,
+      });
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Nie udało się usunąć serwisu",
+        isSaving: false,
+      });
+      throw error;
+    }
   },
 
   getServiceById: (id) => get().services.find((item) => item.id === id),
 
-  updateSettings: (settings) => {
-    saveServiceSettings(settings);
-    set({ settings });
+  updateSettings: async (settings) => {
+    set({ isSaving: true, error: null });
+
+    try {
+      const saved = await saveServiceSettings(settings);
+      set({ settings: saved, isSaving: false });
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Nie udało się zapisać ustawień",
+        isSaving: false,
+      });
+      throw error;
+    }
   },
 
   createEmptyService: () => {
@@ -91,7 +144,7 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
     const now = new Date().toISOString();
 
     return {
-      id: newId(),
+      id: ensureServiceUuid(crypto.randomUUID()),
       createdAt: now,
       updatedAt: now,
       status: "Wycena",

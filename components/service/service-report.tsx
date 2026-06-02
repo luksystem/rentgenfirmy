@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { printServiceReport } from "@/lib/service/print-service-report";
 import { buildServiceCosts } from "@/store/service-store";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
 import type { ServiceCostBreakdown, ServiceRecord } from "@/lib/service/types";
@@ -158,18 +159,12 @@ export function ServiceReport({
   const materialsNote = service.actual.materialsNote || service.estimate.materialsNote;
 
   const handlePrint = useCallback(() => {
-    document.body.classList.add("printing-service-report");
-    window.addEventListener(
-      "afterprint",
-      () => document.body.classList.remove("printing-service-report"),
-      { once: true },
-    );
-    window.print();
-  }, []);
+    printServiceReport(service, projectName);
+  }, [service, projectName]);
 
   return (
-    <div className="print:hidden rounded-2xl border border-border bg-surface-muted/30 p-4 sm:p-6">
-      <div className="print-controls mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="rounded-2xl border border-border bg-surface-muted/30 p-4 sm:p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Raport serwisowy</h2>
           <p className="text-sm text-muted">Podgląd dokumentu do rozliczenia / faktury</p>

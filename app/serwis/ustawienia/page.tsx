@@ -12,6 +12,8 @@ import { useServiceStore } from "@/store/service-store";
 export default function SerwisSettingsPage() {
   const settings = useServiceStore((s) => s.settings);
   const updateSettings = useServiceStore((s) => s.updateSettings);
+  const isSaving = useServiceStore((s) => s.isSaving);
+  const error = useServiceStore((s) => s.error);
 
   return (
     <>
@@ -25,6 +27,8 @@ export default function SerwisSettingsPage() {
           </Button>
         }
       />
+
+      {error ? <p className="mb-4 text-sm text-rose-400">{error}</p> : null}
 
       <Card>
         <CardContent className="grid gap-4 py-5 sm:grid-cols-2">
@@ -43,7 +47,7 @@ export default function SerwisSettingsPage() {
               <NumericInput
                 value={settings.rates[key]}
                 onChange={(value) =>
-                  updateSettings({
+                  void updateSettings({
                     ...settings,
                     rates: { ...settings.rates, [key]: value },
                   })
@@ -57,7 +61,7 @@ export default function SerwisSettingsPage() {
               decimals={false}
               value={settings.zoneSettings.zone1ThresholdKm}
               onChange={(value) =>
-                updateSettings({
+                void updateSettings({
                   ...settings,
                   zoneSettings: {
                     ...settings.zoneSettings,
@@ -72,7 +76,7 @@ export default function SerwisSettingsPage() {
               decimals={false}
               value={settings.zoneSettings.zone2ThresholdKm}
               onChange={(value) =>
-                updateSettings({
+                void updateSettings({
                   ...settings,
                   zoneSettings: {
                     ...settings.zoneSettings,
@@ -87,7 +91,7 @@ export default function SerwisSettingsPage() {
               decimals={false}
               value={settings.zoneSettings.zone3ThresholdKm}
               onChange={(value) =>
-                updateSettings({
+                void updateSettings({
                   ...settings,
                   zoneSettings: {
                     ...settings.zoneSettings,
@@ -102,7 +106,7 @@ export default function SerwisSettingsPage() {
             <NumericInput
               value={settings.defaultDiscounts.percentDiscount}
               onChange={(value) =>
-                updateSettings({
+                void updateSettings({
                   ...settings,
                   defaultDiscounts: {
                     ...settings.defaultDiscounts,
@@ -116,7 +120,7 @@ export default function SerwisSettingsPage() {
             <NumericInput
               value={settings.defaultDiscounts.specialDiscountPln}
               onChange={(value) =>
-                updateSettings({
+                void updateSettings({
                   ...settings,
                   defaultDiscounts: {
                     ...settings.defaultDiscounts,
@@ -130,7 +134,7 @@ export default function SerwisSettingsPage() {
             <Select
               value={settings.defaultDiscounts.vatRate}
               onChange={(e) =>
-                updateSettings({
+                void updateSettings({
                   ...settings,
                   defaultDiscounts: {
                     ...settings.defaultDiscounts,
@@ -148,7 +152,9 @@ export default function SerwisSettingsPage() {
           </Field>
 
           <div className="sm:col-span-2">
-            <Button onClick={() => updateSettings(settings)}>Zapisz ustawienia</Button>
+            <Button disabled={isSaving} onClick={() => void updateSettings(settings)}>
+              {isSaving ? "Zapisywanie…" : "Zapisz ustawienia"}
+            </Button>
           </div>
         </CardContent>
       </Card>
