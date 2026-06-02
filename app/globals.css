@@ -111,31 +111,47 @@ select option {
 }
 
 @media print {
-  body {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  body.printing-service-report {
     background: #fff !important;
-    color: #111 !important;
     background-image: none !important;
   }
 
-  aside,
-  header,
-  nav,
-  .print\:hidden {
+  body.printing-service-report * {
+    visibility: hidden !important;
+  }
+
+  body.printing-service-report .service-report-document,
+  body.printing-service-report .service-report-document * {
+    visibility: visible !important;
+  }
+
+  body.printing-service-report .service-report-document {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: #18181b !important;
+    overflow: visible !important;
+  }
+
+  body.printing-service-report .print-controls {
     display: none !important;
   }
 
-  main {
-    padding: 0 !important;
-    max-width: none !important;
-  }
-
-  .service-report {
-    color: #111 !important;
-  }
-
-  .service-report section {
+  body.printing-service-report .service-report-document section,
+  body.printing-service-report .service-report-document header,
+  body.printing-service-report .service-report-document footer {
     break-inside: avoid;
-    border-color: #ccc !important;
-    background: #fff !important;
   }
 }

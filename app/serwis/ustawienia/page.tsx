@@ -4,15 +4,10 @@ import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Field, Input, Select } from "@/components/ui/input";
-import { DEFAULT_SERVICE_SETTINGS } from "@/lib/service/defaults";
+import { Field, Select } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { VAT_RATES } from "@/lib/service/types";
 import { useServiceStore } from "@/store/service-store";
-
-function num(value: string) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
-}
 
 export default function SerwisSettingsPage() {
   const settings = useServiceStore((s) => s.settings);
@@ -45,15 +40,12 @@ export default function SerwisSettingsPage() {
             ] as const
           ).map(([key, label]) => (
             <Field key={key} label={label}>
-              <Input
-                type="number"
-                min={0}
-                step={0.01}
+              <NumericInput
                 value={settings.rates[key]}
-                onChange={(e) =>
+                onChange={(value) =>
                   updateSettings({
                     ...settings,
-                    rates: { ...settings.rates, [key]: num(e.target.value) },
+                    rates: { ...settings.rates, [key]: value },
                   })
                 }
               />
@@ -61,48 +53,45 @@ export default function SerwisSettingsPage() {
           ))}
 
           <Field label="Próg strefy 1 (km)">
-            <Input
-              type="number"
-              min={0}
+            <NumericInput
+              decimals={false}
               value={settings.zoneSettings.zone1ThresholdKm}
-              onChange={(e) =>
+              onChange={(value) =>
                 updateSettings({
                   ...settings,
                   zoneSettings: {
                     ...settings.zoneSettings,
-                    zone1ThresholdKm: num(e.target.value),
+                    zone1ThresholdKm: value,
                   },
                 })
               }
             />
           </Field>
           <Field label="Próg strefy 2">
-            <Input
-              type="number"
-              min={0}
+            <NumericInput
+              decimals={false}
               value={settings.zoneSettings.zone2ThresholdKm}
-              onChange={(e) =>
+              onChange={(value) =>
                 updateSettings({
                   ...settings,
                   zoneSettings: {
                     ...settings.zoneSettings,
-                    zone2ThresholdKm: num(e.target.value),
+                    zone2ThresholdKm: value,
                   },
                 })
               }
             />
           </Field>
           <Field label="Próg strefy 3">
-            <Input
-              type="number"
-              min={0}
+            <NumericInput
+              decimals={false}
               value={settings.zoneSettings.zone3ThresholdKm}
-              onChange={(e) =>
+              onChange={(value) =>
                 updateSettings({
                   ...settings,
                   zoneSettings: {
                     ...settings.zoneSettings,
-                    zone3ThresholdKm: num(e.target.value),
+                    zone3ThresholdKm: value,
                   },
                 })
               }
@@ -110,33 +99,28 @@ export default function SerwisSettingsPage() {
           </Field>
 
           <Field label="Domyślny rabat %">
-            <Input
-              type="number"
-              min={0}
-              max={100}
+            <NumericInput
               value={settings.defaultDiscounts.percentDiscount}
-              onChange={(e) =>
+              onChange={(value) =>
                 updateSettings({
                   ...settings,
                   defaultDiscounts: {
                     ...settings.defaultDiscounts,
-                    percentDiscount: num(e.target.value),
+                    percentDiscount: Math.min(100, value),
                   },
                 })
               }
             />
           </Field>
           <Field label="Domyślny rabat specjalny PLN">
-            <Input
-              type="number"
-              min={0}
+            <NumericInput
               value={settings.defaultDiscounts.specialDiscountPln}
-              onChange={(e) =>
+              onChange={(value) =>
                 updateSettings({
                   ...settings,
                   defaultDiscounts: {
                     ...settings.defaultDiscounts,
-                    specialDiscountPln: num(e.target.value),
+                    specialDiscountPln: value,
                   },
                 })
               }
@@ -163,11 +147,8 @@ export default function SerwisSettingsPage() {
             </Select>
           </Field>
 
-          <div className="sm:col-span-2 flex flex-wrap gap-2">
+          <div className="sm:col-span-2">
             <Button onClick={() => updateSettings(settings)}>Zapisz ustawienia</Button>
-            <Button variant="secondary" onClick={() => updateSettings(DEFAULT_SERVICE_SETTINGS)}>
-              Przywróć domyślne
-            </Button>
           </div>
         </CardContent>
       </Card>

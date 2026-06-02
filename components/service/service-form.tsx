@@ -11,6 +11,7 @@ import { SummaryCard } from "@/components/service/summary-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { VAT_RATES, SERVICE_STATUSES, SERVICE_TYPES, type ServiceRecord } from "@/lib/service/types";
 import { validateService } from "@/lib/service/validate";
 import { cn } from "@/lib/utils";
@@ -24,11 +25,6 @@ const STEPS = [
   "Koszty rzeczywiste",
   "Podsumowanie i raport",
 ] as const;
-
-function num(value: string) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
-}
 
 export function ServiceForm({
   initialService,
@@ -264,15 +260,12 @@ export function ServiceForm({
                 ] as const
               ).map(([key, label]) => (
                 <Field key={key} label={label}>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={0.01}
+                  <NumericInput
                     value={service.rates[key]}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setService({
                         ...service,
-                        rates: { ...service.rates, [key]: num(e.target.value) },
+                        rates: { ...service.rates, [key]: value },
                       })
                     }
                   />
@@ -280,48 +273,45 @@ export function ServiceForm({
               ))}
 
               <Field label="Próg strefy 1 (km w jedną stronę)">
-                <Input
-                  type="number"
-                  min={0}
+                <NumericInput
+                  decimals={false}
                   value={service.zoneSettings.zone1ThresholdKm}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     setService({
                       ...service,
                       zoneSettings: {
                         ...service.zoneSettings,
-                        zone1ThresholdKm: num(e.target.value),
+                        zone1ThresholdKm: value,
                       },
                     })
                   }
                 />
               </Field>
               <Field label="Próg strefy 2">
-                <Input
-                  type="number"
-                  min={0}
+                <NumericInput
+                  decimals={false}
                   value={service.zoneSettings.zone2ThresholdKm}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     setService({
                       ...service,
                       zoneSettings: {
                         ...service.zoneSettings,
-                        zone2ThresholdKm: num(e.target.value),
+                        zone2ThresholdKm: value,
                       },
                     })
                   }
                 />
               </Field>
               <Field label="Próg strefy 3">
-                <Input
-                  type="number"
-                  min={0}
+                <NumericInput
+                  decimals={false}
                   value={service.zoneSettings.zone3ThresholdKm}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     setService({
                       ...service,
                       zoneSettings: {
                         ...service.zoneSettings,
-                        zone3ThresholdKm: num(e.target.value),
+                        zone3ThresholdKm: value,
                       },
                     })
                   }
@@ -329,33 +319,28 @@ export function ServiceForm({
               </Field>
 
               <Field label="Rabat procentowy %">
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
+                <NumericInput
                   value={service.discounts.percentDiscount}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     setService({
                       ...service,
                       discounts: {
                         ...service.discounts,
-                        percentDiscount: num(e.target.value),
+                        percentDiscount: Math.min(100, value),
                       },
                     })
                   }
                 />
               </Field>
               <Field label="Rabat specjalny PLN">
-                <Input
-                  type="number"
-                  min={0}
+                <NumericInput
                   value={service.discounts.specialDiscountPln}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     setService({
                       ...service,
                       discounts: {
                         ...service.discounts,
-                        specialDiscountPln: num(e.target.value),
+                        specialDiscountPln: value,
                       },
                     })
                   }

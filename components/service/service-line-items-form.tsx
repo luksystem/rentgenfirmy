@@ -1,6 +1,7 @@
 "use client";
 
-import { Field, Input, Textarea } from "@/components/ui/input";
+import { Field, Textarea } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { resolveKilometerZone } from "@/lib/service/kilometer-zone";
 import type { BillableFlags, KilometerZoneSettings, ServiceLineItems } from "@/lib/service/types";
 
@@ -24,11 +25,6 @@ function BillableCheckbox({
       <span>{label}</span>
     </label>
   );
-}
-
-function num(value: string) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
 export function ServiceLineItemsForm({
@@ -65,12 +61,10 @@ export function ServiceLineItemsForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Ilość noclegów">
-          <Input
-            type="number"
-            min={0}
-            step={1}
+          <NumericInput
+            decimals={false}
             value={items.accommodations}
-            onChange={(e) => patch("accommodations", num(e.target.value))}
+            onChange={(value) => patch("accommodations", value)}
           />
           <BillableCheckbox
             label="Do rozliczenia"
@@ -80,12 +74,9 @@ export function ServiceLineItemsForm({
         </Field>
 
         <Field label="Godziny nadzoru">
-          <Input
-            type="number"
-            min={0}
-            step={0.5}
+          <NumericInput
             value={items.supervisionHours}
-            onChange={(e) => patch("supervisionHours", num(e.target.value))}
+            onChange={(value) => patch("supervisionHours", value)}
           />
           <BillableCheckbox
             label="Do rozliczenia"
@@ -95,12 +86,9 @@ export function ServiceLineItemsForm({
         </Field>
 
         <Field label="Godziny programisty">
-          <Input
-            type="number"
-            min={0}
-            step={0.5}
+          <NumericInput
             value={items.programmerHours}
-            onChange={(e) => patch("programmerHours", num(e.target.value))}
+            onChange={(value) => patch("programmerHours", value)}
           />
           <BillableCheckbox
             label="Do rozliczenia"
@@ -110,12 +98,9 @@ export function ServiceLineItemsForm({
         </Field>
 
         <Field label="Godziny instalatora">
-          <Input
-            type="number"
-            min={0}
-            step={0.5}
+          <NumericInput
             value={items.installerHours}
-            onChange={(e) => patch("installerHours", num(e.target.value))}
+            onChange={(value) => patch("installerHours", value)}
           />
           <BillableCheckbox
             label="Do rozliczenia"
@@ -125,12 +110,9 @@ export function ServiceLineItemsForm({
         </Field>
 
         <Field label="Godziny pomocnika">
-          <Input
-            type="number"
-            min={0}
-            step={0.5}
+          <NumericInput
             value={items.helperHours}
-            onChange={(e) => patch("helperHours", num(e.target.value))}
+            onChange={(value) => patch("helperHours", value)}
           />
           <BillableCheckbox
             label="Do rozliczenia"
@@ -140,12 +122,9 @@ export function ServiceLineItemsForm({
         </Field>
 
         <Field label="Godziny w aucie">
-          <Input
-            type="number"
-            min={0}
-            step={0.5}
+          <NumericInput
             value={items.carHours}
-            onChange={(e) => patch("carHours", num(e.target.value))}
+            onChange={(value) => patch("carHours", value)}
           />
           <BillableCheckbox
             label="Do rozliczenia"
@@ -155,12 +134,10 @@ export function ServiceLineItemsForm({
         </Field>
 
         <Field label="Kilometry w jedną stronę">
-          <Input
-            type="number"
-            min={0}
-            step={1}
+          <NumericInput
+            decimals={false}
             value={items.kilometersOneWay}
-            onChange={(e) => patch("kilometersOneWay", num(e.target.value))}
+            onChange={(value) => patch("kilometersOneWay", value)}
           />
           <BillableCheckbox
             label="Kilometry auta — do rozliczenia"
@@ -170,12 +147,9 @@ export function ServiceLineItemsForm({
         </Field>
 
         <Field label="Koszt materiałów (PLN)">
-          <Input
-            type="number"
-            min={0}
-            step={0.01}
+          <NumericInput
             value={items.materialsCost}
-            onChange={(e) => patch("materialsCost", num(e.target.value))}
+            onChange={(value) => patch("materialsCost", value)}
           />
           <BillableCheckbox
             label="Do rozliczenia"
