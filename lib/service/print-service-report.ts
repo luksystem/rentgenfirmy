@@ -1,4 +1,11 @@
-import { calculateServiceCost } from "@/lib/service/calculate-service-cost";
+import {
+  buildServiceReportCosts,
+  getServiceReportBillingBreakdown,
+  getServiceReportDocumentMeta,
+  getServiceReportMaterialsNote,
+  getServiceReportWorkNote,
+  isServiceSettled,
+} from "@/lib/service/report-document";
 import { formatDate, formatMoney } from "@/lib/utils";
 import type { ServiceCostBreakdown, ServiceRecord } from "@/lib/service/types";
 
@@ -19,7 +26,7 @@ function field(label: string, value: string) {
   `;
 }
 
-function costRows(breakdown: ServiceCostBreakdown) {
+function costRows(breakdown: ServiceCostBreakdown, emptyMessage: string) {
   const rows = [
     { label: "Auto (kilometry)", value: breakdown.categories.car },
     { label: "Godziny w aucie", value: breakdown.categories.carHours },
@@ -29,7 +36,7 @@ function costRows(breakdown: ServiceCostBreakdown) {
   ].filter((row) => row.value > 0);
 
   if (rows.length === 0) {
-    return `<tr><td colspan="2" class="muted">Brak pozycji do rozliczenia</td></tr>`;
+    return `<tr><td colspan="2" class="muted">${escapeHtml(emptyMessage)}</td></tr>`;
   }
 
   return rows
@@ -174,35 +181,25 @@ export function buildServiceReportPrintDocument(
   service: ServiceRecord,
   projectName?: string,
 ) {
-  const costs = {
-    estimate: calculateServiceCost(
-      service.estimate,
-      service.rates,
-      service.zoneSettings,
-      service.discounts,
-    ),
-    actual: calculateServiceCost(
-      service.actual,
-      service.rates,
-      service.zoneSettings,
-      service.discounts,
-    ),
-  };
-  const actual = costs.actual;
-  const workNote = service.actual.workReportNote || service.estimate.workReportNote || "Brak opisu prac.";
+  const settled = isServiceSettled(service);
+  const meta = getServiceReportDocumentMeta(service);
+  const costs = buildServiceReportCosts(service);
+  const billing = getServiceReportBillingBreakdown(service, costs);
+  const workNote =
+    getServiceReportWorkNote(service, settled) || "Brak opisu prac.";
   const materialsNote =
-    service.actual.materialsNote || service.estimate.materialsNote || "Brak informacji o materiałach.";
+    getServiceReportMaterialsNote(service, settled) || "Brak informacji o materiałach.";
   const projectLabel = projectName ?? (service.projectId ? "—" : "Bez projektu");
 
-  const diffNet = actual.netTotal - costs.estimate.netTotal;
-  const diffGross = actual.grossTotal - costs.estimate.grossTotal;
+  const diffNet = costs.actual.netTotal - costs.estimate.netTotal;
+  const diffGross = costs.actual.grossTotal - costs.estimate.grossTotal;
   const diffClass = diffNet > 0 ? "diff-over" : diffNet < 0 ? "diff-under" : "";
 
   const discountRows = [
     service.discounts.percentDiscount > 0
       ? `<tr class="summary">
           <td>Rabat ${service.discounts.percentDiscount}%</td>
-          <td class="num discount">−${escapeHtml(formatMoney(actual.percentDiscountAmount))}</td>
+          <td class="num discount">−${escapeHtml(formatMoney(billing.percentDiscountAmount))}</td>
         </tr>`
       : "",
     service.discounts.specialDiscountPln > 0
@@ -213,11 +210,31 @@ export function buildServiceReportPrintDocument(
       : "",
   ].join("");
 
+  const comparisonSection = meta.showComparison
+    ? `<section class="block">
+      <h2 class="section-title">Porównanie z estymacją</h2>
+      <div class="comparison">
+        <div>
+          <p class="label">Estymacja</p>
+          <p class="value">netto ${escapeHtml(formatMoney(costs.estimate.netTotal))}<br />brutto ${escapeHtml(formatMoney(costs.estimate.grossTotal))}</p>
+        </div>
+        <div>
+          <p class="label">Rzeczywiste</p>
+          <p class="value">netto ${escapeHtml(formatMoney(costs.actual.netTotal))}<br />brutto ${escapeHtml(formatMoney(costs.actual.grossTotal))}</p>
+        </div>
+        <div>
+          <p class="label">Różnica</p>
+          <p class="value ${diffClass}">netto ${diffNet >= 0 ? "+" : ""}${escapeHtml(formatMoney(diffNet))}<br />brutto ${diffGross >= 0 ? "+" : ""}${escapeHtml(formatMoney(diffGross))}</p>
+        </div>
+      </div>
+    </section>`
+    : "";
+
   return `<!DOCTYPE html>
 <html lang="pl">
 <head>
   <meta charset="utf-8" />
-  <title>Raport serwisowy — ${escapeHtml(service.title)}</title>
+  <title>${escapeHtml(meta.title)} — ${escapeHtml(service.title)}</title>
   <style>${PRINT_STYLES}</style>
 </head>
 <body>
@@ -225,12 +242,12 @@ export function buildServiceReportPrintDocument(
     <header class="header">
       <div>
         <p class="brand">Rentgen firmy</p>
-        <h1>Raport serwisowy</h1>
-        <p class="subtitle">Smart Home / BMS · rozliczenie serwisu</p>
+        <h1>${escapeHtml(meta.title)}</h1>
+        <p class="subtitle">${escapeHtml(meta.subtitle)}</p>
       </div>
       <dl class="meta">
         <div>
-          <dt>Data raportu</dt>
+          <dt>${escapeHtml(meta.dateLabel)}</dt>
           <dd>${escapeHtml(formatDate(service.updatedAt))}</dd>
         </div>
         <div>
@@ -262,7 +279,7 @@ export function buildServiceReportPrintDocument(
     </div>
 
     <section class="block">
-      <h2 class="section-title">Wykonane prace</h2>
+      <h2 class="section-title">${escapeHtml(meta.worksSectionTitle)}</h2>
       <p>${escapeHtml(workNote)}</p>
     </section>
 
@@ -270,14 +287,14 @@ export function buildServiceReportPrintDocument(
       <h2 class="section-title">Materiały</h2>
       <p>${escapeHtml(materialsNote)}</p>
       ${
-        actual.categories.materials > 0
-          ? `<p class="block-note">Koszt materiałów (rozliczane): <strong>${escapeHtml(formatMoney(actual.categories.materials))}</strong></p>`
+        billing.categories.materials > 0
+          ? `<p class="block-note">${escapeHtml(meta.materialsCostLabel)}: <strong>${escapeHtml(formatMoney(billing.categories.materials))}</strong></p>`
           : ""
       }
     </section>
 
     <section class="cost-section">
-      <h2 class="section-title">Rozliczenie kosztów serwisu</h2>
+      <h2 class="section-title">${escapeHtml(meta.costSectionTitle)}</h2>
       <table>
         <thead>
           <tr>
@@ -286,50 +303,34 @@ export function buildServiceReportPrintDocument(
           </tr>
         </thead>
         <tbody>
-          ${costRows(actual)}
+          ${costRows(billing, meta.emptyCostRowsMessage)}
           <tr class="summary">
             <td>Suma bez rabatu</td>
-            <td class="num">${escapeHtml(formatMoney(actual.subtotalBeforeDiscount))}</td>
+            <td class="num">${escapeHtml(formatMoney(billing.subtotalBeforeDiscount))}</td>
           </tr>
           ${discountRows}
           <tr class="total-net">
             <td>Cena netto</td>
-            <td class="num">${escapeHtml(formatMoney(actual.netTotal))}</td>
+            <td class="num">${escapeHtml(formatMoney(billing.netTotal))}</td>
           </tr>
           <tr class="summary">
             <td>VAT ${service.discounts.vatRate}%</td>
-            <td class="num">${escapeHtml(formatMoney(actual.vatAmount))}</td>
+            <td class="num">${escapeHtml(formatMoney(billing.vatAmount))}</td>
           </tr>
           <tr class="total-gross">
-            <td>Cena brutto do faktury</td>
-            <td class="num">${escapeHtml(formatMoney(actual.grossTotal))}</td>
+            <td>${escapeHtml(meta.grossTotalLabel)}</td>
+            <td class="num">${escapeHtml(formatMoney(billing.grossTotal))}</td>
           </tr>
         </tbody>
       </table>
       ${
-        actual.kilometerZone > 0
-          ? `<p class="footnote">Strefa kilometrowa: ${actual.kilometerZone} · Sugerowane godziny w aucie: ${actual.suggestedCarHoursFromZone}</p>`
+        billing.kilometerZone > 0
+          ? `<p class="footnote">Strefa kilometrowa: ${billing.kilometerZone} · Sugerowane godziny w aucie: ${billing.suggestedCarHoursFromZone}</p>`
           : ""
       }
     </section>
 
-    <section class="block">
-      <h2 class="section-title">Porównanie z estymacją</h2>
-      <div class="comparison">
-        <div>
-          <p class="label">Estymacja</p>
-          <p class="value">netto ${escapeHtml(formatMoney(costs.estimate.netTotal))}<br />brutto ${escapeHtml(formatMoney(costs.estimate.grossTotal))}</p>
-        </div>
-        <div>
-          <p class="label">Rzeczywiste</p>
-          <p class="value">netto ${escapeHtml(formatMoney(actual.netTotal))}<br />brutto ${escapeHtml(formatMoney(actual.grossTotal))}</p>
-        </div>
-        <div>
-          <p class="label">Różnica</p>
-          <p class="value ${diffClass}">netto ${diffNet >= 0 ? "+" : ""}${escapeHtml(formatMoney(diffNet))}<br />brutto ${diffGross >= 0 ? "+" : ""}${escapeHtml(formatMoney(diffGross))}</p>
-        </div>
-      </div>
-    </section>
+    ${comparisonSection}
 
     <div class="doc-footer">Dokument wygenerowany w module Serwis · Rentgen firmy</div>
   </div>

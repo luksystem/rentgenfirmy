@@ -36,7 +36,7 @@ export default function EditServicePage() {
           </Button>
         }
       />
-      <ServiceForm key={service.id} initialService={service} mode="edit" />
+      <ServiceForm key={service.id} initialService={service} />
     </>
   );
 }

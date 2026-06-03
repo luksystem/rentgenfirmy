@@ -28,10 +28,8 @@ const STEPS = [
 
 export function ServiceForm({
   initialService,
-  mode,
 }: {
   initialService: ServiceRecord;
-  mode: "create" | "edit";
 }) {
   const router = useRouter();
   const projects = useAppStore((s) => s.projects);
@@ -42,7 +40,7 @@ export function ServiceForm({
   const [step, setStep] = useState(0);
   const [withoutProject, setWithoutProject] = useState(!initialService.projectId);
   const [errors, setErrors] = useState<string[]>([]);
-  const [showReport, setShowReport] = useState(false);
+  const [showReport, setShowReport] = useState(true);
 
   const costs = useMemo(() => buildServiceCosts(service), [service]);
 
@@ -443,8 +441,11 @@ export function ServiceForm({
                 suggestedCarHours={costs.actual.suggestedCarHoursFromZone}
               />
             </div>
-            {showReport ? <ServiceReport service={service} projectName={projectName} /> : null}
           </div>
+        ) : null}
+
+        {showReport ? (
+          <ServiceReport service={service} projectName={projectName} />
         ) : null}
 
         <div className="flex flex-wrap gap-2">
@@ -464,11 +465,9 @@ export function ServiceForm({
           <Button type="button" disabled={isSaving} onClick={() => settle()}>
             Rozlicz serwis
           </Button>
-          {mode === "edit" ? (
-            <Button type="button" variant="outline" onClick={() => setShowReport(true)}>
-              Pokaż raport
-            </Button>
-          ) : null}
+          <Button type="button" variant="outline" onClick={() => setShowReport((value) => !value)}>
+            {showReport ? "Ukryj podgląd" : "Pokaż podgląd"}
+          </Button>
         </div>
       </div>
 

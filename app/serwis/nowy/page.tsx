@@ -16,7 +16,7 @@ export default function NewServicePage() {
         title="Wyceń serwis"
         description="Uzupełnij dane klienta, stawki, estymację i po wykonaniu koszty rzeczywiste."
       />
-      <ServiceForm initialService={service} mode="create" />
+      <ServiceForm initialService={service} />
     </>
   );
 }

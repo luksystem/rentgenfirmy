@@ -3,7 +3,14 @@
 import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { printServiceReport } from "@/lib/service/print-service-report";
-import { buildServiceCosts } from "@/store/service-store";
+import {
+  buildServiceReportCosts,
+  getServiceReportBillingBreakdown,
+  getServiceReportDocumentMeta,
+  getServiceReportMaterialsNote,
+  getServiceReportWorkNote,
+  isServiceSettled,
+} from "@/lib/service/report-document";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
 import type { ServiceCostBreakdown, ServiceRecord } from "@/lib/service/types";
 
@@ -21,11 +28,15 @@ function CostTable({
   vatRate,
   percentDiscount,
   specialDiscountPln,
+  emptyMessage,
+  grossTotalLabel,
 }: {
   breakdown: ServiceCostBreakdown;
   vatRate: number;
   percentDiscount: number;
   specialDiscountPln: number;
+  emptyMessage: string;
+  grossTotalLabel: string;
 }) {
   const rows = [
     { label: "Auto (kilometry)", value: breakdown.categories.car },
@@ -54,7 +65,7 @@ function CostTable({
         ) : (
           <tr className="border-b border-zinc-100">
             <td colSpan={2} className="py-3 text-zinc-500">
-              Brak pozycji do rozliczenia
+              {emptyMessage}
             </td>
           </tr>
         )}
@@ -93,7 +104,7 @@ function CostTable({
           </td>
         </tr>
         <tr>
-          <td className="py-3 pr-4 text-base font-bold text-zinc-900">Cena brutto do faktury</td>
+          <td className="py-3 pr-4 text-base font-bold text-zinc-900">{grossTotalLabel}</td>
           <td className="py-3 text-right tabular-nums text-base font-bold text-blue-700">
             {formatMoney(breakdown.grossTotal)}
           </td>
@@ -153,10 +164,12 @@ export function ServiceReport({
   service: ServiceRecord;
   projectName?: string;
 }) {
-  const costs = buildServiceCosts(service);
-  const actual = costs.actual;
-  const workNote = service.actual.workReportNote || service.estimate.workReportNote;
-  const materialsNote = service.actual.materialsNote || service.estimate.materialsNote;
+  const settled = isServiceSettled(service);
+  const meta = getServiceReportDocumentMeta(service);
+  const costs = buildServiceReportCosts(service);
+  const billing = getServiceReportBillingBreakdown(service, costs);
+  const workNote = getServiceReportWorkNote(service, settled);
+  const materialsNote = getServiceReportMaterialsNote(service, settled);
 
   const handlePrint = useCallback(() => {
     printServiceReport(service, projectName);
@@ -166,8 +179,8 @@ export function ServiceReport({
     <div className="rounded-2xl border border-border bg-surface-muted/30 p-4 sm:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Raport serwisowy</h2>
-          <p className="text-sm text-muted">Podgląd dokumentu do rozliczenia / faktury</p>
+          <h2 className="text-lg font-semibold text-foreground">{meta.title}</h2>
+          <p className="text-sm text-muted">{meta.previewDescription}</p>
         </div>
         <Button type="button" onClick={handlePrint}>
           Drukuj / eksportuj PDF
@@ -186,13 +199,13 @@ export function ServiceReport({
                 Rentgen firmy
               </p>
               <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900">
-                Raport serwisowy
+                {meta.title}
               </h1>
-              <p className="mt-1 text-sm text-zinc-500">Smart Home / BMS · rozliczenie serwisu</p>
+              <p className="mt-1 text-sm text-zinc-500">{meta.subtitle}</p>
             </div>
             <dl className="grid gap-1 text-right text-sm sm:text-base">
               <div>
-                <dt className="text-[11px] uppercase tracking-wide text-zinc-500">Data raportu</dt>
+                <dt className="text-[11px] uppercase tracking-wide text-zinc-500">{meta.dateLabel}</dt>
                 <dd className="font-medium text-zinc-900">{formatDate(service.updatedAt)}</dd>
               </div>
               <div>
@@ -234,7 +247,7 @@ export function ServiceReport({
 
         <section className="border-t border-zinc-100 px-6 py-5 sm:px-8">
           <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-700">
-            Wykonane prace
+            {meta.worksSectionTitle}
           </h2>
           <p className="whitespace-pre-wrap text-sm leading-7 text-zinc-800">
             {workNote || "Brak opisu prac."}
@@ -248,11 +261,11 @@ export function ServiceReport({
           <p className="whitespace-pre-wrap text-sm leading-7 text-zinc-800">
             {materialsNote || "Brak informacji o materiałach."}
           </p>
-          {actual.categories.materials > 0 ? (
+          {billing.categories.materials > 0 ? (
             <p className="mt-3 text-sm text-zinc-600">
-              Koszt materiałów (rozliczane):{" "}
+              {meta.materialsCostLabel}:{" "}
               <span className="font-semibold tabular-nums text-zinc-900">
-                {formatMoney(actual.categories.materials)}
+                {formatMoney(billing.categories.materials)}
               </span>
             </p>
           ) : null}
@@ -260,28 +273,32 @@ export function ServiceReport({
 
         <section className="border-t border-zinc-200 bg-zinc-50/80 px-6 py-6 sm:px-8">
           <h2 className="mb-4 text-xs font-bold uppercase tracking-wide text-zinc-700">
-            Rozliczenie kosztów serwisu
+            {meta.costSectionTitle}
           </h2>
           <CostTable
-            breakdown={actual}
+            breakdown={billing}
             vatRate={service.discounts.vatRate}
             percentDiscount={service.discounts.percentDiscount}
             specialDiscountPln={service.discounts.specialDiscountPln}
+            emptyMessage={meta.emptyCostRowsMessage}
+            grossTotalLabel={meta.grossTotalLabel}
           />
-          {actual.kilometerZone > 0 ? (
+          {billing.kilometerZone > 0 ? (
             <p className="mt-4 text-xs text-zinc-500">
-              Strefa kilometrowa: {actual.kilometerZone} · Sugerowane godziny w aucie:{" "}
-              {actual.suggestedCarHoursFromZone}
+              Strefa kilometrowa: {billing.kilometerZone} · Sugerowane godziny w aucie:{" "}
+              {billing.suggestedCarHoursFromZone}
             </p>
           ) : null}
         </section>
 
-        <section className="border-t border-zinc-100 px-6 py-5 sm:px-8">
-          <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-700">
-            Porównanie z estymacją
-          </h2>
-          <ComparisonMini estimate={costs.estimate} actual={actual} />
-        </section>
+        {meta.showComparison ? (
+          <section className="border-t border-zinc-100 px-6 py-5 sm:px-8">
+            <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-700">
+              Porównanie z estymacją
+            </h2>
+            <ComparisonMini estimate={costs.estimate} actual={costs.actual} />
+          </section>
+        ) : null}
 
         <footer className="border-t border-zinc-200 px-6 py-4 text-center text-xs text-zinc-400 sm:px-8">
           Dokument wygenerowany w module Serwis · Rentgen firmy
