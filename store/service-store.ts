@@ -36,14 +36,14 @@ export function buildServiceCosts(service: ServiceRecord) {
     service.estimate,
     service.rates,
     service.zoneSettings,
-    service.discounts,
+    service.estimateDiscounts,
   );
 
   const actual = calculateServiceCost(
     service.actual,
     service.rates,
     service.zoneSettings,
-    service.discounts,
+    service.actualDiscounts,
   );
 
   return { estimate, actual };
@@ -149,6 +149,7 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
       updatedAt: now,
       status: "Wycena",
       projectId: null,
+      clientId: null,
       client: {
         fullName: "",
         location: "",
@@ -158,8 +159,10 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
       title: "",
       serviceType: "Pogwarancyjny",
       rates: { ...settings.rates },
-      discounts: { ...settings.defaultDiscounts },
+      estimateDiscounts: { ...settings.defaultDiscounts },
+      actualDiscounts: { ...settings.defaultDiscounts },
       zoneSettings: { ...settings.zoneSettings },
+      detailedSettlement: false,
       estimate: emptyLineItems(),
       actual: emptyLineItems(),
     };

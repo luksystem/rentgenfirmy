@@ -34,6 +34,7 @@ export type Person = string;
 export type Project = {
   id: string;
   name: string;
+  clientId?: string | null;
   isActive: boolean;
   type: ProjectType;
   flowStatus: FlowStatus;
@@ -60,6 +61,7 @@ export type ProjectInput = Omit<
   "id" | "lastChangedBy" | "lastChangedAt" | "lastContactDate"
 > & {
   lastContactDate?: string;
+  clientId?: string | null;
 };
 
 export type InterruptionKind = "interruption" | "focus";

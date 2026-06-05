@@ -24,7 +24,14 @@ import {
   fetchProjectsViewFilters,
   saveProjectsViewFilters,
 } from "@/lib/supabase/projects-view-filters-repository";
+import {
+  createClientRecord,
+  deleteClientRecord,
+  fetchClients,
+  updateClientRecord,
+} from "@/lib/supabase/client-repository";
 import { fetchFieldOptions, saveFieldOptions } from "@/lib/supabase/settings-repository";
+import type { Client, ClientInput } from "@/lib/service/types";
 import type { Interruption, Project, ProjectInput } from "@/lib/types";
 
 const PROJECTS_VIEW_FILTERS_SAVE_DELAY_MS = 400;
@@ -32,6 +39,7 @@ let projectsViewFiltersSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
 type AppState = {
   projects: Project[];
+  clients: Client[];
   interruptions: Interruption[];
   fieldOptions: FieldOptions;
   projectsViewFilters: ProjectsViewFilters;
@@ -48,10 +56,14 @@ type AppState = {
   deleteInterruption: (id: string) => Promise<void>;
   updateFieldOptions: (options: FieldOptions) => Promise<void>;
   updateProjectsViewFilters: (filters: ProjectsViewFilters) => void;
+  addClient: (input: ClientInput) => Promise<Client>;
+  updateClient: (id: string, input: ClientInput) => Promise<void>;
+  deleteClient: (id: string) => Promise<void>;
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
   projects: [],
+  clients: [],
   interruptions: [],
   fieldOptions: DEFAULT_FIELD_OPTIONS,
   projectsViewFilters: DEFAULT_PROJECTS_VIEW_FILTERS,
@@ -68,8 +80,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const [projects, interruptions, fieldOptions, projectsViewFilters] = await Promise.all([
+      const [projects, clients, interruptions, fieldOptions, projectsViewFilters] =
+        await Promise.all([
         fetchProjects(),
+        fetchClients(),
         fetchInterruptions(),
         fetchFieldOptions(),
         fetchProjectsViewFilters(),
@@ -77,6 +91,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       set({
         projects,
+        clients,
         interruptions,
         fieldOptions,
         projectsViewFilters,
@@ -261,5 +276,70 @@ export const useAppStore = create<AppState>((set, get) => ({
         });
       }
     }, PROJECTS_VIEW_FILTERS_SAVE_DELAY_MS);
+  },
+
+  addClient: async (input) => {
+    set({ isSaving: true, error: null });
+
+    try {
+      const created = await createClientRecord(input);
+      set((state) => ({
+        clients: [...state.clients, created].sort((a, b) =>
+          a.fullName.localeCompare(b.fullName, "pl"),
+        ),
+        isSaving: false,
+        error: null,
+      }));
+      return created;
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Nie udało się dodać klienta",
+        isSaving: false,
+      });
+      throw error;
+    }
+  },
+
+  updateClient: async (id, input) => {
+    set({ isSaving: true, error: null });
+
+    try {
+      const updated = await updateClientRecord(id, input);
+      set((state) => ({
+        clients: state.clients
+          .map((item) => (item.id === id ? updated : item))
+          .sort((a, b) => a.fullName.localeCompare(b.fullName, "pl")),
+        isSaving: false,
+        error: null,
+      }));
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Nie udało się zaktualizować klienta",
+        isSaving: false,
+      });
+      throw error;
+    }
+  },
+
+  deleteClient: async (id) => {
+    set({ isSaving: true, error: null });
+
+    try {
+      await deleteClientRecord(id);
+      set((state) => ({
+        clients: state.clients.filter((item) => item.id !== id),
+        projects: state.projects.map((project) =>
+          project.clientId === id ? { ...project, clientId: null } : project,
+        ),
+        isSaving: false,
+        error: null,
+      }));
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Nie udało się usunąć klienta",
+        isSaving: false,
+      });
+      throw error;
+    }
   },
 }));

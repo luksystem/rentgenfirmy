@@ -29,6 +29,7 @@ import { useAppStore } from "@/store/app-store";
 
 type FormValues = {
   name: string;
+  clientId: string;
   isActive: boolean;
   type: string;
   flowStatus: string;
@@ -51,6 +52,7 @@ function createSchema(options: FieldOptions) {
   return z
     .object({
       name: z.string().min(2, "Podaj nazwę projektu"),
+      clientId: z.string().optional(),
       isActive: z.boolean(),
       type: zodStringOption(options.projectTypes, "Wybierz typ projektu"),
       flowStatus: zodStringOption(flowStatusNames(options), "Wybierz status przepływu"),
@@ -93,6 +95,7 @@ function createSchema(options: FieldOptions) {
 export function projectToFormValues(project: Project, options: FieldOptions): FormValues {
   return {
     name: project.name,
+    clientId: project.clientId ?? "",
     isActive: project.isActive,
     type: pickOption(project.type, options.projectTypes, "Dom"),
     flowStatus: pickOption(project.flowStatus, flowStatusNames(options), defaultFlowStatus(options)),
@@ -115,6 +118,7 @@ export function projectToFormValues(project: Project, options: FieldOptions): Fo
 function createDefaultValues(options: FieldOptions): FormValues {
   return {
     name: "",
+    clientId: "",
     isActive: true,
     type: pickOption(undefined, options.projectTypes, "Dom"),
     flowStatus: defaultFlowStatus(options),
@@ -169,6 +173,7 @@ export function ProjectForm({
   onCancel: () => void;
 }) {
   const fieldOptions = useAppStore((state) => state.fieldOptions);
+  const clients = useAppStore((state) => state.clients);
   const schema = useMemo(() => createSchema(fieldOptions), [fieldOptions]);
   const defaultValues = useMemo(
     () => (project ? projectToFormValues(project, fieldOptions) : createDefaultValues(fieldOptions)),
@@ -242,6 +247,7 @@ export function ProjectForm({
 
     void onSubmit({
       name: payload.name,
+      clientId: values.clientId || null,
       isActive: payload.isActive,
       type: payload.type,
       flowStatus: payload.flowStatus,
@@ -271,6 +277,16 @@ export function ProjectForm({
           <Select {...register("type")}>
             {fieldOptions.projectTypes.map((type) => (
               <option key={type}>{type}</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Klient">
+          <Select {...register("clientId")}>
+            <option value="">Bez klienta</option>
+            {clients.map((client) => (
+              <option key={client.id} value={client.id}>
+                {client.fullName}
+              </option>
             ))}
           </Select>
         </Field>

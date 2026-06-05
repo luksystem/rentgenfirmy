@@ -6,6 +6,7 @@ import { printServiceReport } from "@/lib/service/print-service-report";
 import {
   buildServiceReportCosts,
   getServiceReportBillingBreakdown,
+  getServiceReportBillingDiscounts,
   getServiceReportDocumentMeta,
   getServiceReportMaterialsNote,
   getServiceReportWorkNote,
@@ -168,6 +169,7 @@ export function ServiceReport({
   const meta = getServiceReportDocumentMeta(service);
   const costs = buildServiceReportCosts(service);
   const billing = getServiceReportBillingBreakdown(service, costs);
+  const billingDiscounts = getServiceReportBillingDiscounts(service);
   const workNote = getServiceReportWorkNote(service, settled);
   const materialsNote = getServiceReportMaterialsNote(service, settled);
 
@@ -261,7 +263,7 @@ export function ServiceReport({
           <p className="whitespace-pre-wrap text-sm leading-7 text-zinc-800">
             {materialsNote || "Brak informacji o materiałach."}
           </p>
-          {billing.categories.materials > 0 ? (
+          {meta.showDetailedCosts && billing.categories.materials > 0 ? (
             <p className="mt-3 text-sm text-zinc-600">
               {meta.materialsCostLabel}:{" "}
               <span className="font-semibold tabular-nums text-zinc-900">
@@ -275,15 +277,26 @@ export function ServiceReport({
           <h2 className="mb-4 text-xs font-bold uppercase tracking-wide text-zinc-700">
             {meta.costSectionTitle}
           </h2>
-          <CostTable
-            breakdown={billing}
-            vatRate={service.discounts.vatRate}
-            percentDiscount={service.discounts.percentDiscount}
-            specialDiscountPln={service.discounts.specialDiscountPln}
-            emptyMessage={meta.emptyCostRowsMessage}
-            grossTotalLabel={meta.grossTotalLabel}
-          />
-          {billing.kilometerZone > 0 ? (
+          {meta.showDetailedCosts ? (
+            <CostTable
+              breakdown={billing}
+              vatRate={billingDiscounts.vatRate}
+              percentDiscount={billingDiscounts.percentDiscount}
+              specialDiscountPln={billingDiscounts.specialDiscountPln}
+              emptyMessage={meta.emptyCostRowsMessage}
+              grossTotalLabel={meta.grossTotalLabel}
+            />
+          ) : (
+            <div className="rounded-lg border border-zinc-200 bg-white px-4 py-6 text-center">
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                {meta.grossTotalLabel}
+              </p>
+              <p className="mt-2 text-3xl font-bold tabular-nums text-blue-700">
+                {formatMoney(billing.grossTotal)}
+              </p>
+            </div>
+          )}
+          {meta.showDetailedCosts && billing.kilometerZone > 0 ? (
             <p className="mt-4 text-xs text-zinc-500">
               Strefa kilometrowa: {billing.kilometerZone} · Sugerowane godziny w aucie:{" "}
               {billing.suggestedCarHoursFromZone}

@@ -3,8 +3,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ClientPicker } from "@/components/client-picker";
 import { ServiceComparisonTable } from "@/components/service/service-comparison-table";
 import { ServiceCostBreakdownPanel } from "@/components/service/service-cost-breakdown";
+import { ServiceDiscountsForm } from "@/components/service/service-discounts-form";
 import { ServiceLineItemsForm } from "@/components/service/service-line-items-form";
 import { ServiceReport } from "@/components/service/service-report";
 import { SummaryCard } from "@/components/service/summary-card";
@@ -12,7 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
-import { VAT_RATES, SERVICE_STATUSES, SERVICE_TYPES, type ServiceRecord } from "@/lib/service/types";
+import {
+  copyEstimateToActual,
+  prepareServiceForActualStep,
+} from "@/lib/service/copy-estimate-to-actual";
+import { SERVICE_STATUSES, SERVICE_TYPES, type ServiceRecord } from "@/lib/service/types";
 import { validateService } from "@/lib/service/validate";
 import { cn } from "@/lib/utils";
 import { buildServiceCosts, useServiceStore } from "@/store/service-store";
@@ -20,7 +26,7 @@ import { useAppStore } from "@/store/app-store";
 
 const STEPS = [
   "Dane klienta i zgłoszenia",
-  "Stawki i rabaty",
+  "Stawki",
   "Estymacja przed wyjazdem",
   "Koszty rzeczywiste",
   "Podsumowanie i raport",
@@ -33,6 +39,8 @@ export function ServiceForm({
 }) {
   const router = useRouter();
   const projects = useAppStore((s) => s.projects);
+  const clients = useAppStore((s) => s.clients);
+  const addClient = useAppStore((s) => s.addClient);
   const upsertService = useServiceStore((s) => s.upsertService);
   const isSaving = useServiceStore((s) => s.isSaving);
 
@@ -47,6 +55,14 @@ export function ServiceForm({
   const projectName = service.projectId
     ? projects.find((p) => p.id === service.projectId)?.name
     : undefined;
+
+  function goToStep(nextStep: number) {
+    if (nextStep === 3) {
+      setService((current) => prepareServiceForActualStep(current));
+    }
+
+    setStep(nextStep);
+  }
 
   async function save(statusOverride?: ServiceRecord["status"]) {
     const validationErrors = validateService(service);
@@ -63,26 +79,26 @@ export function ServiceForm({
     };
 
     try {
-      const saved = await upsertService(payload);
+      await upsertService(payload);
       router.push("/serwis");
-      return saved;
     } catch {
       setErrors(["Nie udało się zapisać serwisu. Sprawdź połączenie z Supabase."]);
     }
   }
 
   async function settle() {
-    const validationErrors = validateService(service);
+    const prepared = copyEstimateToActual(service);
+    const validationErrors = validateService(prepared);
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
       return;
     }
 
     const payload: ServiceRecord = {
-      ...service,
+      ...prepared,
       updatedAt: new Date().toISOString(),
       status: "Rozliczony",
-      projectId: withoutProject ? null : service.projectId,
+      projectId: withoutProject ? null : prepared.projectId,
     };
 
     try {
@@ -104,7 +120,7 @@ export function ServiceForm({
             <button
               key={label}
               type="button"
-              onClick={() => setStep(index)}
+              onClick={() => goToStep(index)}
               className={cn(
                 "rounded-full border px-3 py-1.5 text-xs font-medium transition",
                 step === index
@@ -168,51 +184,18 @@ export function ServiceForm({
                   ))}
                 </Select>
               </Field>
-              <Field label="Imię i nazwisko klienta">
-                <Input
-                  value={service.client.fullName}
-                  onChange={(e) =>
-                    setService({
-                      ...service,
-                      client: { ...service.client, fullName: e.target.value },
-                    })
+
+              <div className="sm:col-span-2">
+                <ClientPicker
+                  clients={clients}
+                  clientId={service.clientId}
+                  clientSnapshot={service.client}
+                  onSelectClient={(clientId, snapshot) =>
+                    setService({ ...service, clientId, client: snapshot })
                   }
+                  onCreateClient={addClient}
                 />
-              </Field>
-              <Field label="Obiekt / lokalizacja">
-                <Input
-                  value={service.client.location}
-                  onChange={(e) =>
-                    setService({
-                      ...service,
-                      client: { ...service.client, location: e.target.value },
-                    })
-                  }
-                />
-              </Field>
-              <Field label="E-mail">
-                <Input
-                  type="email"
-                  value={service.client.email}
-                  onChange={(e) =>
-                    setService({
-                      ...service,
-                      client: { ...service.client, email: e.target.value },
-                    })
-                  }
-                />
-              </Field>
-              <Field label="Telefon">
-                <Input
-                  value={service.client.phone}
-                  onChange={(e) =>
-                    setService({
-                      ...service,
-                      client: { ...service.client, phone: e.target.value },
-                    })
-                  }
-                />
-              </Field>
+              </div>
 
               <div className="sm:col-span-2 grid gap-3 rounded-xl border border-border/80 p-3">
                 <label className="flex items-center gap-2 text-sm">
@@ -250,7 +233,7 @@ export function ServiceForm({
           <Card>
             <CardContent className="grid gap-4 py-5 sm:grid-cols-2">
               <p className="sm:col-span-2 text-sm text-muted">
-                Stawki i progi stref możesz też edytować globalnie w{" "}
+                Stawki i progi stref możesz edytować globalnie w{" "}
                 <Link href="/serwis/ustawienia" className="text-accent underline">
                   ustawieniach serwisu
                 </Link>
@@ -279,101 +262,6 @@ export function ServiceForm({
                   />
                 </Field>
               ))}
-
-              <Field label="Próg strefy 1 (km w jedną stronę)">
-                <NumericInput
-                  decimals={false}
-                  value={service.zoneSettings.zone1ThresholdKm}
-                  onChange={(value) =>
-                    setService({
-                      ...service,
-                      zoneSettings: {
-                        ...service.zoneSettings,
-                        zone1ThresholdKm: value,
-                      },
-                    })
-                  }
-                />
-              </Field>
-              <Field label="Próg strefy 2">
-                <NumericInput
-                  decimals={false}
-                  value={service.zoneSettings.zone2ThresholdKm}
-                  onChange={(value) =>
-                    setService({
-                      ...service,
-                      zoneSettings: {
-                        ...service.zoneSettings,
-                        zone2ThresholdKm: value,
-                      },
-                    })
-                  }
-                />
-              </Field>
-              <Field label="Próg strefy 3">
-                <NumericInput
-                  decimals={false}
-                  value={service.zoneSettings.zone3ThresholdKm}
-                  onChange={(value) =>
-                    setService({
-                      ...service,
-                      zoneSettings: {
-                        ...service.zoneSettings,
-                        zone3ThresholdKm: value,
-                      },
-                    })
-                  }
-                />
-              </Field>
-
-              <Field label="Rabat procentowy %">
-                <NumericInput
-                  value={service.discounts.percentDiscount}
-                  onChange={(value) =>
-                    setService({
-                      ...service,
-                      discounts: {
-                        ...service.discounts,
-                        percentDiscount: Math.min(100, value),
-                      },
-                    })
-                  }
-                />
-              </Field>
-              <Field label="Rabat specjalny PLN">
-                <NumericInput
-                  value={service.discounts.specialDiscountPln}
-                  onChange={(value) =>
-                    setService({
-                      ...service,
-                      discounts: {
-                        ...service.discounts,
-                        specialDiscountPln: value,
-                      },
-                    })
-                  }
-                />
-              </Field>
-              <Field label="Stawka VAT">
-                <Select
-                  value={service.discounts.vatRate}
-                  onChange={(e) =>
-                    setService({
-                      ...service,
-                      discounts: {
-                        ...service.discounts,
-                        vatRate: Number(e.target.value) as ServiceRecord["discounts"]["vatRate"],
-                      },
-                    })
-                  }
-                >
-                  {VAT_RATES.map((rate) => (
-                    <option key={rate} value={rate}>
-                      {rate}%
-                    </option>
-                  ))}
-                </Select>
-              </Field>
             </CardContent>
           </Card>
         ) : null}
@@ -381,17 +269,35 @@ export function ServiceForm({
         {step === 2 ? (
           <Card>
             <CardContent className="py-5">
+              <label className="mb-4 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={service.detailedSettlement}
+                  onChange={(event) =>
+                    setService({ ...service, detailedSettlement: event.target.checked })
+                  }
+                  className="h-4 w-4 rounded border-border"
+                />
+                Rozliczenie szczegółowe (pełny rozbicie kosztów w raporcie)
+              </label>
               <ServiceLineItemsForm
                 title="Estymacja przed wyjazdem"
                 items={service.estimate}
                 zoneSettings={service.zoneSettings}
                 onChange={(estimate) => setService({ ...service, estimate })}
               />
+              <div className="mt-6 grid gap-4">
+                <h3 className="text-sm font-semibold text-foreground">Rabaty estymacji</h3>
+                <ServiceDiscountsForm
+                  discounts={service.estimateDiscounts}
+                  onChange={(estimateDiscounts) => setService({ ...service, estimateDiscounts })}
+                />
+              </div>
               <div className="mt-6">
                 <ServiceCostBreakdownPanel
                   title="Podsumowanie estymacji"
                   breakdown={costs.estimate}
-                  discounts={service.discounts}
+                  discounts={service.estimateDiscounts}
                   kilometerZone={costs.estimate.kilometerZone}
                   suggestedCarHours={costs.estimate.suggestedCarHoursFromZone}
                 />
@@ -409,11 +315,18 @@ export function ServiceForm({
                 zoneSettings={service.zoneSettings}
                 onChange={(actual) => setService({ ...service, actual })}
               />
+              <div className="mt-6 grid gap-4">
+                <h3 className="text-sm font-semibold text-foreground">Rabaty rozliczenia</h3>
+                <ServiceDiscountsForm
+                  discounts={service.actualDiscounts}
+                  onChange={(actualDiscounts) => setService({ ...service, actualDiscounts })}
+                />
+              </div>
               <div className="mt-6">
                 <ServiceCostBreakdownPanel
                   title="Podsumowanie rzeczywistych"
                   breakdown={costs.actual}
-                  discounts={service.discounts}
+                  discounts={service.actualDiscounts}
                   kilometerZone={costs.actual.kilometerZone}
                   suggestedCarHours={costs.actual.suggestedCarHoursFromZone}
                 />
@@ -424,19 +337,24 @@ export function ServiceForm({
 
         {step === 4 ? (
           <div className="grid gap-4">
-            <ServiceComparisonTable estimate={costs.estimate} actual={costs.actual} />
+            <ServiceComparisonTable
+              estimate={costs.estimate}
+              actual={costs.actual}
+              estimateDiscounts={service.estimateDiscounts}
+              actualDiscounts={service.actualDiscounts}
+            />
             <div className="grid gap-4 lg:grid-cols-2">
               <ServiceCostBreakdownPanel
                 title="Estymacja"
                 breakdown={costs.estimate}
-                discounts={service.discounts}
+                discounts={service.estimateDiscounts}
                 kilometerZone={costs.estimate.kilometerZone}
                 suggestedCarHours={costs.estimate.suggestedCarHoursFromZone}
               />
               <ServiceCostBreakdownPanel
                 title="Rzeczywiste"
                 breakdown={costs.actual}
-                discounts={service.discounts}
+                discounts={service.actualDiscounts}
                 kilometerZone={costs.actual.kilometerZone}
                 suggestedCarHours={costs.actual.suggestedCarHoursFromZone}
               />
@@ -450,12 +368,12 @@ export function ServiceForm({
 
         <div className="flex flex-wrap gap-2">
           {step > 0 ? (
-            <Button type="button" variant="secondary" onClick={() => setStep(step - 1)}>
+            <Button type="button" variant="secondary" onClick={() => goToStep(step - 1)}>
               Wstecz
             </Button>
           ) : null}
           {step < STEPS.length - 1 ? (
-            <Button type="button" onClick={() => setStep(step + 1)}>
+            <Button type="button" onClick={() => goToStep(step + 1)}>
               Dalej
             </Button>
           ) : null}

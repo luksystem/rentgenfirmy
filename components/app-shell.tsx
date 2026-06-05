@@ -15,6 +15,7 @@ import {
   PhoneCall,
   Plus,
   Settings,
+  Users,
   Wrench,
   X,
 } from "lucide-react";
@@ -26,6 +27,7 @@ const navGroups = [
     items: [
       { href: "/", label: "Start", icon: Home },
       { href: "/projekty", label: "Projekty", icon: FolderKanban },
+      { href: "/klienci", label: "Klienci", icon: Users },
       { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
       { href: "/serwis", label: "Serwis", icon: Wrench },
     ],

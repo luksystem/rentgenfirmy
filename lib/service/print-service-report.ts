@@ -1,6 +1,7 @@
 import {
   buildServiceReportCosts,
   getServiceReportBillingBreakdown,
+  getServiceReportBillingDiscounts,
   getServiceReportDocumentMeta,
   getServiceReportMaterialsNote,
   getServiceReportWorkNote,
@@ -185,6 +186,7 @@ export function buildServiceReportPrintDocument(
   const meta = getServiceReportDocumentMeta(service);
   const costs = buildServiceReportCosts(service);
   const billing = getServiceReportBillingBreakdown(service, costs);
+  const billingDiscounts = getServiceReportBillingDiscounts(service);
   const workNote =
     getServiceReportWorkNote(service, settled) || "Brak opisu prac.";
   const materialsNote =
@@ -195,20 +197,60 @@ export function buildServiceReportPrintDocument(
   const diffGross = costs.actual.grossTotal - costs.estimate.grossTotal;
   const diffClass = diffNet > 0 ? "diff-over" : diffNet < 0 ? "diff-under" : "";
 
-  const discountRows = [
-    service.discounts.percentDiscount > 0
-      ? `<tr class="summary">
-          <td>Rabat ${service.discounts.percentDiscount}%</td>
+  const discountRows = meta.showDetailedCosts
+    ? [
+        billingDiscounts.percentDiscount > 0
+          ? `<tr class="summary">
+          <td>Rabat ${billingDiscounts.percentDiscount}%</td>
           <td class="num discount">−${escapeHtml(formatMoney(billing.percentDiscountAmount))}</td>
         </tr>`
-      : "",
-    service.discounts.specialDiscountPln > 0
-      ? `<tr class="summary">
+          : "",
+        billingDiscounts.specialDiscountPln > 0
+          ? `<tr class="summary">
           <td>Rabat specjalny</td>
-          <td class="num discount">−${escapeHtml(formatMoney(service.discounts.specialDiscountPln))}</td>
+          <td class="num discount">−${escapeHtml(formatMoney(billingDiscounts.specialDiscountPln))}</td>
         </tr>`
-      : "",
-  ].join("");
+          : "",
+      ].join("")
+    : "";
+
+  const costTableBody = meta.showDetailedCosts
+    ? `${costRows(billing, meta.emptyCostRowsMessage)}
+          <tr class="summary">
+            <td>Suma bez rabatu</td>
+            <td class="num">${escapeHtml(formatMoney(billing.subtotalBeforeDiscount))}</td>
+          </tr>
+          ${discountRows}
+          <tr class="total-net">
+            <td>Cena netto</td>
+            <td class="num">${escapeHtml(formatMoney(billing.netTotal))}</td>
+          </tr>
+          <tr class="summary">
+            <td>VAT ${billingDiscounts.vatRate}%</td>
+            <td class="num">${escapeHtml(formatMoney(billing.vatAmount))}</td>
+          </tr>
+          <tr class="total-gross">
+            <td>${escapeHtml(meta.grossTotalLabel)}</td>
+            <td class="num">${escapeHtml(formatMoney(billing.grossTotal))}</td>
+          </tr>`
+    : `<tr class="total-gross">
+            <td>${escapeHtml(meta.grossTotalLabel)}</td>
+            <td class="num">${escapeHtml(formatMoney(billing.grossTotal))}</td>
+          </tr>`;
+
+  const costTableHead = meta.showDetailedCosts
+    ? `<thead>
+          <tr>
+            <th>Pozycja</th>
+            <th>Kwota netto</th>
+          </tr>
+        </thead>`
+    : "";
+
+  const materialsCostLine =
+    meta.showDetailedCosts && billing.categories.materials > 0
+      ? `<p class="block-note">${escapeHtml(meta.materialsCostLabel)}: <strong>${escapeHtml(formatMoney(billing.categories.materials))}</strong></p>`
+      : "";
 
   const comparisonSection = meta.showComparison
     ? `<section class="block">
@@ -287,44 +329,20 @@ export function buildServiceReportPrintDocument(
       <h2 class="section-title">Materiały</h2>
       <p>${escapeHtml(materialsNote)}</p>
       ${
-        billing.categories.materials > 0
-          ? `<p class="block-note">${escapeHtml(meta.materialsCostLabel)}: <strong>${escapeHtml(formatMoney(billing.categories.materials))}</strong></p>`
-          : ""
+        materialsCostLine
       }
     </section>
 
     <section class="cost-section">
       <h2 class="section-title">${escapeHtml(meta.costSectionTitle)}</h2>
       <table>
-        <thead>
-          <tr>
-            <th>Pozycja</th>
-            <th>Kwota netto</th>
-          </tr>
-        </thead>
+        ${costTableHead}
         <tbody>
-          ${costRows(billing, meta.emptyCostRowsMessage)}
-          <tr class="summary">
-            <td>Suma bez rabatu</td>
-            <td class="num">${escapeHtml(formatMoney(billing.subtotalBeforeDiscount))}</td>
-          </tr>
-          ${discountRows}
-          <tr class="total-net">
-            <td>Cena netto</td>
-            <td class="num">${escapeHtml(formatMoney(billing.netTotal))}</td>
-          </tr>
-          <tr class="summary">
-            <td>VAT ${service.discounts.vatRate}%</td>
-            <td class="num">${escapeHtml(formatMoney(billing.vatAmount))}</td>
-          </tr>
-          <tr class="total-gross">
-            <td>${escapeHtml(meta.grossTotalLabel)}</td>
-            <td class="num">${escapeHtml(formatMoney(billing.grossTotal))}</td>
-          </tr>
+          ${costTableBody}
         </tbody>
       </table>
       ${
-        billing.kilometerZone > 0
+        meta.showDetailedCosts && billing.kilometerZone > 0
           ? `<p class="footnote">Strefa kilometrowa: ${billing.kilometerZone} · Sugerowane godziny w aucie: ${billing.suggestedCarHoursFromZone}</p>`
           : ""
       }

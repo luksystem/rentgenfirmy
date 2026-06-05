@@ -2,6 +2,18 @@
 
 create extension if not exists "pgcrypto";
 
+create table if not exists public.clients (
+  id uuid primary key default gen_random_uuid(),
+  full_name text not null,
+  location text not null default '',
+  email text not null default '',
+  phone text not null default '',
+  notes text,
+  external_id text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.projects (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -24,6 +36,7 @@ create table if not exists public.projects (
   waiting_depends_on_us boolean not null default false,
   waiting_increases_cost_later boolean not null default false,
   waiting_blocks_settlement boolean not null default false,
+  client_id uuid references public.clients (id) on delete set null,
   created_at timestamptz not null default now()
 );
 
@@ -57,6 +70,7 @@ create table if not exists public.app_settings (
 create table if not exists public.services (
   id uuid primary key default gen_random_uuid(),
   project_id uuid references public.projects (id) on delete set null,
+  client_id uuid references public.clients (id) on delete set null,
   status text not null,
   service_type text not null,
   title text not null,
@@ -66,7 +80,10 @@ create table if not exists public.services (
   client_phone text not null default '',
   rates jsonb not null,
   discounts jsonb not null,
+  estimate_discounts jsonb,
+  actual_discounts jsonb,
   zone_settings jsonb not null,
+  detailed_settlement boolean not null default false,
   estimate jsonb not null,
   actual jsonb not null,
   created_at timestamptz not null default now(),
@@ -81,6 +98,7 @@ alter table public.projects enable row level security;
 alter table public.interruptions enable row level security;
 alter table public.app_settings enable row level security;
 alter table public.services enable row level security;
+alter table public.clients enable row level security;
 
 -- Tymczasowe polityki bez logowania (MVP wewnętrzne).
 -- Po dodaniu auth zamień na polityki oparte o auth.uid().
@@ -120,3 +138,13 @@ create policy "services_select_all" on public.services for select using (true);
 create policy "services_insert_all" on public.services for insert with check (true);
 create policy "services_update_all" on public.services for update using (true);
 create policy "services_delete_all" on public.services for delete using (true);
+
+drop policy if exists "clients_select_all" on public.clients;
+drop policy if exists "clients_insert_all" on public.clients;
+drop policy if exists "clients_update_all" on public.clients;
+drop policy if exists "clients_delete_all" on public.clients;
+
+create policy "clients_select_all" on public.clients for select using (true);
+create policy "clients_insert_all" on public.clients for insert with check (true);
+create policy "clients_update_all" on public.clients for update using (true);
+create policy "clients_delete_all" on public.clients for delete using (true);

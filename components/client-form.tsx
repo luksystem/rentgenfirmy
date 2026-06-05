@@ -1,0 +1,73 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { Field, Input, Textarea } from "@/components/ui/input";
+import type { Client, ClientInput } from "@/lib/service/types";
+
+export function ClientForm({
+  client,
+  isSaving,
+  onSubmit,
+  onCancel,
+}: {
+  client: Client | null;
+  isSaving: boolean;
+  onSubmit: (input: ClientInput) => void | Promise<void>;
+  onCancel?: () => void;
+}) {
+  const defaults: ClientInput = {
+    fullName: client?.fullName ?? "",
+    location: client?.location ?? "",
+    email: client?.email ?? "",
+    phone: client?.phone ?? "",
+    notes: client?.notes ?? "",
+    externalId: client?.externalId ?? null,
+  };
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+
+    await onSubmit({
+      fullName: String(form.get("fullName") ?? ""),
+      location: String(form.get("location") ?? ""),
+      email: String(form.get("email") ?? ""),
+      phone: String(form.get("phone") ?? ""),
+      notes: String(form.get("notes") ?? ""),
+      externalId: String(form.get("externalId") ?? "") || null,
+    });
+  }
+
+  return (
+    <form className="grid gap-3" onSubmit={(event) => void handleSubmit(event)}>
+      <Field label="Imię i nazwisko">
+        <Input name="fullName" defaultValue={defaults.fullName} required />
+      </Field>
+      <Field label="Obiekt / lokalizacja">
+        <Input name="location" defaultValue={defaults.location} />
+      </Field>
+      <Field label="E-mail">
+        <Input name="email" type="email" defaultValue={defaults.email} />
+      </Field>
+      <Field label="Telefon">
+        <Input name="phone" defaultValue={defaults.phone} />
+      </Field>
+      <Field label="ID zewnętrzne (np. Pipedrive)">
+        <Input name="externalId" defaultValue={defaults.externalId ?? ""} />
+      </Field>
+      <Field label="Notatki">
+        <Textarea name="notes" defaultValue={defaults.notes ?? ""} rows={3} />
+      </Field>
+      <div className="flex flex-wrap gap-2 pt-2">
+        <Button type="submit" disabled={isSaving}>
+          {isSaving ? "Zapisywanie…" : client ? "Zapisz zmiany" : "Dodaj klienta"}
+        </Button>
+        {onCancel ? (
+          <Button type="button" variant="secondary" onClick={onCancel}>
+            Anuluj
+          </Button>
+        ) : null}
+      </div>
+    </form>
+  );
+}

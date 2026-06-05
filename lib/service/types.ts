@@ -75,18 +75,44 @@ export type ServiceClient = {
   phone: string;
 };
 
+export type Client = {
+  id: string;
+  fullName: string;
+  location: string;
+  email: string;
+  phone: string;
+  notes?: string;
+  externalId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ClientInput = Omit<Client, "id" | "createdAt" | "updatedAt">;
+
+export function clientToServiceClient(client: Pick<Client, "fullName" | "location" | "email" | "phone">): ServiceClient {
+  return {
+    fullName: client.fullName,
+    location: client.location,
+    email: client.email,
+    phone: client.phone,
+  };
+}
+
 export type ServiceRecord = {
   id: string;
   createdAt: string;
   updatedAt: string;
   status: ServiceStatus;
   projectId: string | null;
+  clientId: string | null;
   client: ServiceClient;
   title: string;
   serviceType: ServiceType;
   rates: ServiceRates;
-  discounts: ServiceDiscounts;
+  estimateDiscounts: ServiceDiscounts;
+  actualDiscounts: ServiceDiscounts;
   zoneSettings: KilometerZoneSettings;
+  detailedSettlement: boolean;
   estimate: ServiceLineItems;
   actual: ServiceLineItems;
 };

@@ -20,6 +20,7 @@ export type ProjectRow = {
   waiting_depends_on_us: boolean;
   waiting_increases_cost_later: boolean;
   waiting_blocks_settlement: boolean;
+  client_id: string | null;
   created_at: string;
 };
 
@@ -64,6 +65,7 @@ export type AppSettingsInsert = {
 export type ServiceRow = {
   id: string;
   project_id: string | null;
+  client_id: string | null;
   status: string;
   service_type: string;
   title: string;
@@ -73,16 +75,46 @@ export type ServiceRow = {
   client_phone: string;
   rates: Record<string, unknown>;
   discounts: Record<string, unknown>;
+  estimate_discounts: Record<string, unknown> | null;
+  actual_discounts: Record<string, unknown> | null;
   zone_settings: Record<string, unknown>;
+  detailed_settlement: boolean;
   estimate: Record<string, unknown>;
   actual: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 };
 
+export type ClientRow = {
+  id: string;
+  full_name: string;
+  location: string;
+  email: string;
+  phone: string;
+  notes: string | null;
+  external_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ClientInsert = {
+  id?: string;
+  full_name: string;
+  location?: string;
+  email?: string;
+  phone?: string;
+  notes?: string | null;
+  external_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ClientUpdate = Partial<ClientInsert>;
+
 export type ServiceInsert = {
   id?: string;
   project_id?: string | null;
+  client_id?: string | null;
   status: string;
   service_type: string;
   title: string;
@@ -92,7 +124,10 @@ export type ServiceInsert = {
   client_phone: string;
   rates: Record<string, unknown>;
   discounts: Record<string, unknown>;
+  estimate_discounts?: Record<string, unknown> | null;
+  actual_discounts?: Record<string, unknown> | null;
   zone_settings: Record<string, unknown>;
+  detailed_settlement?: boolean;
   estimate: Record<string, unknown>;
   actual: Record<string, unknown>;
   created_at?: string;
@@ -142,7 +177,20 @@ export type Database = {
             referencedRelation: "projects";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "services_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
         ];
+      };
+      clients: {
+        Row: ClientRow;
+        Insert: ClientInsert;
+        Update: ClientUpdate;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;

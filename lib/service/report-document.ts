@@ -16,6 +16,7 @@ export type ServiceReportDocumentMeta = {
   emptyCostRowsMessage: string;
   grossTotalLabel: string;
   showComparison: boolean;
+  showDetailedCosts: boolean;
 };
 
 export function getServiceReportDocumentMeta(
@@ -33,6 +34,7 @@ export function getServiceReportDocumentMeta(
       emptyCostRowsMessage: "Brak pozycji do rozliczenia",
       grossTotalLabel: "Cena brutto do faktury",
       showComparison: true,
+      showDetailedCosts: service.detailedSettlement,
     };
   }
 
@@ -47,6 +49,7 @@ export function getServiceReportDocumentMeta(
     emptyCostRowsMessage: "Brak pozycji do wyceny",
     grossTotalLabel: "Cena brutto",
     showComparison: false,
+    showDetailedCosts: service.detailedSettlement,
   };
 }
 
@@ -56,13 +59,13 @@ export function buildServiceReportCosts(service: ServiceRecord) {
       service.estimate,
       service.rates,
       service.zoneSettings,
-      service.discounts,
+      service.estimateDiscounts,
     ),
     actual: calculateServiceCost(
       service.actual,
       service.rates,
       service.zoneSettings,
-      service.discounts,
+      service.actualDiscounts,
     ),
   };
 }
@@ -80,6 +83,10 @@ export function getServiceReportWorkNote(service: ServiceRecord, settled: boolea
   }
 
   return service.estimate.workReportNote || service.actual.workReportNote;
+}
+
+export function getServiceReportBillingDiscounts(service: ServiceRecord) {
+  return isServiceSettled(service) ? service.actualDiscounts : service.estimateDiscounts;
 }
 
 export function getServiceReportMaterialsNote(service: ServiceRecord, settled: boolean) {

@@ -52,8 +52,10 @@ export function validateService(service: ServiceRecord): string[] {
     service.rates.carPerKm,
     service.rates.carHourly,
     service.rates.accommodationCost,
-    service.discounts.percentDiscount,
-    service.discounts.specialDiscountPln,
+    service.estimateDiscounts.percentDiscount,
+    service.estimateDiscounts.specialDiscountPln,
+    service.actualDiscounts.percentDiscount,
+    service.actualDiscounts.specialDiscountPln,
   ];
 
   if (numbers.some((value) => value < 0)) {
