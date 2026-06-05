@@ -1,5 +1,6 @@
 import { calculateServiceCost } from "@/lib/service/calculate-service-cost";
-import type { ServiceCostBreakdown, ServiceRecord } from "@/lib/service/types";
+import type { ServiceCostBreakdown, ServiceDiscounts, ServiceRecord } from "@/lib/service/types";
+import { formatMoney } from "@/lib/utils";
 
 export function isServiceSettled(service: ServiceRecord): boolean {
   return service.status === "Rozliczony";
@@ -24,7 +25,7 @@ export function getServiceReportDocumentMeta(
 ): ServiceReportDocumentMeta {
   if (isServiceSettled(service)) {
     return {
-      title: "Raport serwisowy",
+      title: "Rozliczenie Prac",
       subtitle: "Smart Home / BMS · rozliczenie serwisu",
       previewDescription: "Podgląd dokumentu do rozliczenia / faktury",
       dateLabel: "Data raportu",
@@ -95,4 +96,31 @@ export function getServiceReportMaterialsNote(service: ServiceRecord, settled: b
   }
 
   return service.estimate.materialsNote || service.actual.materialsNote;
+}
+
+export function hasAppliedDiscount(discounts: ServiceDiscounts) {
+  return discounts.percentDiscount > 0 || discounts.specialDiscountPln > 0;
+}
+
+export function getAppliedDiscountDescription(
+  discounts: ServiceDiscounts,
+  breakdown: ServiceCostBreakdown,
+) {
+  if (!hasAppliedDiscount(discounts)) {
+    return "Brak rabatu";
+  }
+
+  const parts: string[] = [];
+
+  if (discounts.percentDiscount > 0) {
+    parts.push(
+      `rabat ${discounts.percentDiscount}% (−${formatMoney(breakdown.percentDiscountAmount)} netto)`,
+    );
+  }
+
+  if (discounts.specialDiscountPln > 0) {
+    parts.push(`rabat specjalny −${formatMoney(discounts.specialDiscountPln)} netto`);
+  }
+
+  return parts.join(" · ");
 }

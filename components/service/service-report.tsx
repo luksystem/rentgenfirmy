@@ -5,15 +5,17 @@ import { Button } from "@/components/ui/button";
 import { printServiceReport } from "@/lib/service/print-service-report";
 import {
   buildServiceReportCosts,
+  getAppliedDiscountDescription,
   getServiceReportBillingBreakdown,
   getServiceReportBillingDiscounts,
   getServiceReportDocumentMeta,
   getServiceReportMaterialsNote,
   getServiceReportWorkNote,
+  hasAppliedDiscount,
   isServiceSettled,
 } from "@/lib/service/report-document";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
-import type { ServiceCostBreakdown, ServiceRecord } from "@/lib/service/types";
+import type { ServiceCostBreakdown, ServiceDiscounts, ServiceRecord } from "@/lib/service/types";
 
 function ReportField({ label, value }: { label: string; value: string }) {
   return (
@@ -71,27 +73,39 @@ function CostTable({
           </tr>
         )}
         <tr className="border-b border-zinc-100">
-          <td className="py-2.5 pr-4 text-zinc-600">Suma bez rabatu</td>
+          <td className="py-2.5 pr-4 text-zinc-600">Suma netto przed rabatem</td>
           <td className="py-2.5 text-right tabular-nums font-medium text-zinc-900">
             {formatMoney(breakdown.subtotalBeforeDiscount)}
           </td>
         </tr>
         {percentDiscount > 0 ? (
-          <tr className="border-b border-zinc-100">
-            <td className="py-2.5 pr-4 text-zinc-600">Rabat {percentDiscount}%</td>
-            <td className="py-2.5 text-right tabular-nums text-rose-700">
+          <tr className="border-b border-rose-100 bg-rose-50/80">
+            <td className="py-2.5 pr-4 font-medium text-rose-900">
+              Rabat procentowy ({percentDiscount}%)
+            </td>
+            <td className="py-2.5 text-right tabular-nums font-semibold text-rose-700">
               −{formatMoney(breakdown.percentDiscountAmount)}
             </td>
           </tr>
-        ) : null}
-        {specialDiscountPln > 0 ? (
+        ) : (
           <tr className="border-b border-zinc-100">
-            <td className="py-2.5 pr-4 text-zinc-600">Rabat specjalny</td>
-            <td className="py-2.5 text-right tabular-nums text-rose-700">
+            <td className="py-2.5 pr-4 text-zinc-600">Rabat procentowy (0%)</td>
+            <td className="py-2.5 text-right tabular-nums text-zinc-500">—</td>
+          </tr>
+        )}
+        {specialDiscountPln > 0 ? (
+          <tr className="border-b border-rose-100 bg-rose-50/80">
+            <td className="py-2.5 pr-4 font-medium text-rose-900">Rabat specjalny</td>
+            <td className="py-2.5 text-right tabular-nums font-semibold text-rose-700">
               −{formatMoney(specialDiscountPln)}
             </td>
           </tr>
-        ) : null}
+        ) : (
+          <tr className="border-b border-zinc-100">
+            <td className="py-2.5 pr-4 text-zinc-600">Rabat specjalny</td>
+            <td className="py-2.5 text-right tabular-nums text-zinc-500">—</td>
+          </tr>
+        )}
         <tr className="border-b border-zinc-200">
           <td className="py-3 pr-4 font-semibold text-zinc-900">Cena netto</td>
           <td className="py-3 text-right tabular-nums font-semibold text-zinc-900">
@@ -112,6 +126,112 @@ function CostTable({
         </tr>
       </tbody>
     </table>
+  );
+}
+
+function DiscountBanner({
+  discounts,
+  breakdown,
+}: {
+  discounts: ServiceDiscounts;
+  breakdown: ServiceCostBreakdown;
+}) {
+  const description = getAppliedDiscountDescription(discounts, breakdown);
+  const active = hasAppliedDiscount(discounts);
+
+  return (
+    <div
+      className={cn(
+        "mb-4 rounded-lg border px-4 py-3 text-sm",
+        active
+          ? "border-rose-200 bg-rose-50 text-rose-950"
+          : "border-zinc-200 bg-zinc-50 text-zinc-700",
+      )}
+    >
+      <p className="text-[11px] font-bold uppercase tracking-wide text-zinc-500">Przyznany rabat</p>
+      <p className={cn("mt-1 font-semibold", active && "text-rose-900")}>{description}</p>
+    </div>
+  );
+}
+
+function CompactCostSummary({
+  breakdown,
+  discounts,
+  grossTotalLabel,
+}: {
+  breakdown: ServiceCostBreakdown;
+  discounts: ServiceDiscounts;
+  grossTotalLabel: string;
+}) {
+  return (
+    <div className="mx-auto max-w-md rounded-lg border border-zinc-200 bg-white px-4 py-5">
+      <dl className="grid gap-3 text-sm">
+        <div className="flex items-center justify-between gap-4">
+          <dt className="text-zinc-600">Suma netto przed rabatem</dt>
+          <dd className="font-medium tabular-nums text-zinc-900">
+            {formatMoney(breakdown.subtotalBeforeDiscount)}
+          </dd>
+        </div>
+        <div
+          className={cn(
+            "flex items-center justify-between gap-4 rounded-md px-2 py-1.5",
+            discounts.percentDiscount > 0 ? "bg-rose-50" : "",
+          )}
+        >
+          <dt className={discounts.percentDiscount > 0 ? "font-medium text-rose-900" : "text-zinc-600"}>
+            Rabat procentowy ({discounts.percentDiscount}%)
+          </dt>
+          <dd
+            className={cn(
+              "tabular-nums font-semibold",
+              discounts.percentDiscount > 0 ? "text-rose-700" : "text-zinc-500",
+            )}
+          >
+            {discounts.percentDiscount > 0
+              ? `−${formatMoney(breakdown.percentDiscountAmount)}`
+              : "—"}
+          </dd>
+        </div>
+        <div
+          className={cn(
+            "flex items-center justify-between gap-4 rounded-md px-2 py-1.5",
+            discounts.specialDiscountPln > 0 ? "bg-rose-50" : "",
+          )}
+        >
+          <dt
+            className={
+              discounts.specialDiscountPln > 0 ? "font-medium text-rose-900" : "text-zinc-600"
+            }
+          >
+            Rabat specjalny
+          </dt>
+          <dd
+            className={cn(
+              "tabular-nums font-semibold",
+              discounts.specialDiscountPln > 0 ? "text-rose-700" : "text-zinc-500",
+            )}
+          >
+            {discounts.specialDiscountPln > 0 ? `−${formatMoney(discounts.specialDiscountPln)}` : "—"}
+          </dd>
+        </div>
+        <div className="flex items-center justify-between gap-4 border-t border-zinc-200 pt-3">
+          <dt className="font-semibold text-zinc-900">Cena netto</dt>
+          <dd className="font-semibold tabular-nums text-zinc-900">
+            {formatMoney(breakdown.netTotal)}
+          </dd>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <dt className="text-zinc-600">VAT {discounts.vatRate}%</dt>
+          <dd className="font-medium tabular-nums text-zinc-900">
+            {formatMoney(breakdown.vatAmount)}
+          </dd>
+        </div>
+        <div className="flex items-center justify-between gap-4 border-t border-zinc-200 pt-3 text-base font-bold">
+          <dt className="text-zinc-900">{grossTotalLabel}</dt>
+          <dd className="tabular-nums text-blue-700">{formatMoney(breakdown.grossTotal)}</dd>
+        </div>
+      </dl>
+    </div>
   );
 }
 
@@ -277,6 +397,7 @@ export function ServiceReport({
           <h2 className="mb-4 text-xs font-bold uppercase tracking-wide text-zinc-700">
             {meta.costSectionTitle}
           </h2>
+          <DiscountBanner discounts={billingDiscounts} breakdown={billing} />
           {meta.showDetailedCosts ? (
             <CostTable
               breakdown={billing}
@@ -287,14 +408,11 @@ export function ServiceReport({
               grossTotalLabel={meta.grossTotalLabel}
             />
           ) : (
-            <div className="rounded-lg border border-zinc-200 bg-white px-4 py-6 text-center">
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                {meta.grossTotalLabel}
-              </p>
-              <p className="mt-2 text-3xl font-bold tabular-nums text-blue-700">
-                {formatMoney(billing.grossTotal)}
-              </p>
-            </div>
+            <CompactCostSummary
+              breakdown={billing}
+              discounts={billingDiscounts}
+              grossTotalLabel={meta.grossTotalLabel}
+            />
           )}
           {meta.showDetailedCosts && billing.kilometerZone > 0 ? (
             <p className="mt-4 text-xs text-zinc-500">

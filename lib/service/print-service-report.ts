@@ -1,14 +1,16 @@
 import {
   buildServiceReportCosts,
+  getAppliedDiscountDescription,
   getServiceReportBillingBreakdown,
   getServiceReportBillingDiscounts,
   getServiceReportDocumentMeta,
   getServiceReportMaterialsNote,
   getServiceReportWorkNote,
+  hasAppliedDiscount,
   isServiceSettled,
 } from "@/lib/service/report-document";
 import { formatDate, formatMoney } from "@/lib/utils";
-import type { ServiceCostBreakdown, ServiceRecord } from "@/lib/service/types";
+import type { ServiceCostBreakdown, ServiceDiscounts, ServiceRecord } from "@/lib/service/types";
 
 function escapeHtml(value: string) {
   return value
@@ -50,6 +52,48 @@ function costRows(breakdown: ServiceCostBreakdown, emptyMessage: string) {
       `,
     )
     .join("");
+}
+
+function discountSummaryRows(
+  billing: ServiceCostBreakdown,
+  discounts: ServiceDiscounts,
+) {
+  const percentRow =
+    discounts.percentDiscount > 0
+      ? `<tr class="summary discount-row">
+          <td>Rabat procentowy (${discounts.percentDiscount}%)</td>
+          <td class="num discount">−${escapeHtml(formatMoney(billing.percentDiscountAmount))}</td>
+        </tr>`
+      : `<tr class="summary">
+          <td>Rabat procentowy (0%)</td>
+          <td class="num muted-cell">—</td>
+        </tr>`;
+
+  const specialRow =
+    discounts.specialDiscountPln > 0
+      ? `<tr class="summary discount-row">
+          <td>Rabat specjalny</td>
+          <td class="num discount">−${escapeHtml(formatMoney(discounts.specialDiscountPln))}</td>
+        </tr>`
+      : `<tr class="summary">
+          <td>Rabat specjalny</td>
+          <td class="num muted-cell">—</td>
+        </tr>`;
+
+  return `${percentRow}${specialRow}`;
+}
+
+function discountBannerHtml(
+  discounts: ServiceDiscounts,
+  billing: ServiceCostBreakdown,
+) {
+  const description = getAppliedDiscountDescription(discounts, billing);
+  const active = hasAppliedDiscount(discounts);
+
+  return `<div class="discount-banner${active ? "" : " inactive"}">
+    <p class="label">Przyznany rabat</p>
+    <p><strong>${escapeHtml(description)}</strong></p>
+  </div>`;
 }
 
 const PRINT_STYLES = `
@@ -130,6 +174,33 @@ const PRINT_STYLES = `
     padding-top: 12px;
   }
   .discount { color: #be123c; }
+  .discount-banner {
+    border: 1px solid #fecdd3;
+    background: #fff1f2;
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    font-size: 10pt;
+    color: #881337;
+  }
+  .discount-banner.inactive {
+    border-color: #e4e4e7;
+    background: #fafafa;
+    color: #52525b;
+  }
+  .discount-banner .label {
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #71717a;
+    margin-bottom: 4px;
+  }
+  tr.discount-row td {
+    background: #fff1f2;
+    font-weight: 600;
+  }
+  .muted-cell { color: #a1a1aa; }
   .comparison {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -197,31 +268,9 @@ export function buildServiceReportPrintDocument(
   const diffGross = costs.actual.grossTotal - costs.estimate.grossTotal;
   const diffClass = diffNet > 0 ? "diff-over" : diffNet < 0 ? "diff-under" : "";
 
-  const discountRows = meta.showDetailedCosts
-    ? [
-        billingDiscounts.percentDiscount > 0
-          ? `<tr class="summary">
-          <td>Rabat ${billingDiscounts.percentDiscount}%</td>
-          <td class="num discount">−${escapeHtml(formatMoney(billing.percentDiscountAmount))}</td>
-        </tr>`
-          : "",
-        billingDiscounts.specialDiscountPln > 0
-          ? `<tr class="summary">
-          <td>Rabat specjalny</td>
-          <td class="num discount">−${escapeHtml(formatMoney(billingDiscounts.specialDiscountPln))}</td>
-        </tr>`
-          : "",
-      ].join("")
-    : "";
+  const discountRows = discountSummaryRows(billing, billingDiscounts);
 
-  const costTableBody = meta.showDetailedCosts
-    ? `${costRows(billing, meta.emptyCostRowsMessage)}
-          <tr class="summary">
-            <td>Suma bez rabatu</td>
-            <td class="num">${escapeHtml(formatMoney(billing.subtotalBeforeDiscount))}</td>
-          </tr>
-          ${discountRows}
-          <tr class="total-net">
+  const totalsTail = `<tr class="total-net">
             <td>Cena netto</td>
             <td class="num">${escapeHtml(formatMoney(billing.netTotal))}</td>
           </tr>
@@ -232,11 +281,22 @@ export function buildServiceReportPrintDocument(
           <tr class="total-gross">
             <td>${escapeHtml(meta.grossTotalLabel)}</td>
             <td class="num">${escapeHtml(formatMoney(billing.grossTotal))}</td>
-          </tr>`
-    : `<tr class="total-gross">
-            <td>${escapeHtml(meta.grossTotalLabel)}</td>
-            <td class="num">${escapeHtml(formatMoney(billing.grossTotal))}</td>
           </tr>`;
+
+  const costTableBody = meta.showDetailedCosts
+    ? `${costRows(billing, meta.emptyCostRowsMessage)}
+          <tr class="summary">
+            <td>Suma netto przed rabatem</td>
+            <td class="num">${escapeHtml(formatMoney(billing.subtotalBeforeDiscount))}</td>
+          </tr>
+          ${discountRows}
+          ${totalsTail}`
+    : `<tr class="summary">
+            <td>Suma netto przed rabatem</td>
+            <td class="num">${escapeHtml(formatMoney(billing.subtotalBeforeDiscount))}</td>
+          </tr>
+          ${discountRows}
+          ${totalsTail}`;
 
   const costTableHead = meta.showDetailedCosts
     ? `<thead>
@@ -245,7 +305,12 @@ export function buildServiceReportPrintDocument(
             <th>Kwota netto</th>
           </tr>
         </thead>`
-    : "";
+    : `<thead>
+          <tr>
+            <th>Pozycja</th>
+            <th>Kwota</th>
+          </tr>
+        </thead>`;
 
   const materialsCostLine =
     meta.showDetailedCosts && billing.categories.materials > 0
@@ -335,6 +400,7 @@ export function buildServiceReportPrintDocument(
 
     <section class="cost-section">
       <h2 class="section-title">${escapeHtml(meta.costSectionTitle)}</h2>
+      ${discountBannerHtml(billingDiscounts, billing)}
       <table>
         ${costTableHead}
         <tbody>
