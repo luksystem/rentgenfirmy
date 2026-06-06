@@ -355,7 +355,7 @@ export function ServiceForm({
           <ServiceReport service={service} projectName={projectName} />
         ) : null}
 
-        <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-10 -mx-4 space-y-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur-xl sm:-mx-5 sm:px-5 xl:bottom-0 xl:mx-0 xl:px-0">
+        <div className="space-y-3 border-t border-border pt-3">
           <label className="flex items-start gap-2 rounded-xl border border-border/80 bg-surface-muted/50 px-3 py-2.5 text-sm">
             <input
               type="checkbox"

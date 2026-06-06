@@ -169,9 +169,30 @@ export function getServiceReportWorkTimeSections(service: ServiceRecord) {
   const settled = isServiceSettled(service);
 
   return {
-    showPredicted: true,
-    showActual: settled,
+    showComparison: settled,
     predicted: buildServiceWorkTimeBreakdown(service.estimate),
     actual: buildServiceWorkTimeBreakdown(service.actual),
+  };
+}
+
+export type ServiceQuantitySummary = {
+  materialsCost: number;
+  accommodations: number;
+};
+
+export function buildServiceQuantitySummary(items: ServiceLineItems): ServiceQuantitySummary {
+  return {
+    materialsCost: items.materialsCost,
+    accommodations: items.accommodations,
+  };
+}
+
+export function getServiceReportQuantitySections(service: ServiceRecord) {
+  const settled = isServiceSettled(service);
+
+  return {
+    showComparison: settled,
+    predicted: buildServiceQuantitySummary(service.estimate),
+    actual: buildServiceQuantitySummary(service.actual),
   };
 }

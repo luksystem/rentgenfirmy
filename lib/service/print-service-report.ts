@@ -5,13 +5,19 @@ import {
   getServiceReportBillingDiscounts,
   getServiceReportDocumentMeta,
   getServiceReportMaterialsNote,
+  getServiceReportQuantitySections,
   getServiceReportWorkNote,
   getServiceReportWorkTimeSections,
   hasAppliedDiscount,
   isServiceSettled,
-  type ServiceWorkTimeBreakdown,
 } from "@/lib/service/report-document";
-import { formatDate, formatHours, formatMoney } from "@/lib/utils";
+import {
+  buildAccommodationsCompareRows,
+  buildMaterialsCompareRows,
+  buildWorkTimeCompareRows,
+  type ReportCompareRow,
+} from "@/lib/service/report-compare-rows";
+import { formatDate, formatMoney } from "@/lib/utils";
 import type { ServiceCostBreakdown, ServiceDiscounts, ServiceRecord } from "@/lib/service/types";
 
 function escapeHtml(value: string) {
@@ -98,97 +104,130 @@ function discountBannerHtml(
   </div>`;
 }
 
-function workTimeRowsDetailed(breakdown: ServiceWorkTimeBreakdown) {
-  const { lines } = breakdown;
-
-  return `
-    <tr class="work-time-group">
-      <td>Logistyka i nadzór</td>
-      <td class="num">${escapeHtml(formatHours(breakdown.logisticsAndSupervisionTotal))}</td>
+function compareTableHead(showComparison: boolean, valueHeader: string) {
+  return `<thead>
+    <tr>
+      <th>Pozycja</th>
+      <th>${escapeHtml(showComparison ? "Przewidywane" : valueHeader)}</th>
+      ${showComparison ? "<th>Rozliczone</th>" : ""}
     </tr>
-    <tr class="work-time-detail">
-      <td>Godziny w aucie</td>
-      <td class="num">${escapeHtml(formatHours(lines.logistics.carHours))}</td>
-    </tr>
-    <tr class="work-time-detail">
-      <td>Godziny nadzoru</td>
-      <td class="num">${escapeHtml(formatHours(lines.logistics.supervisionHours))}</td>
-    </tr>
-    <tr class="work-time-group">
-      <td>Godziny pracy</td>
-      <td class="num">${escapeHtml(formatHours(breakdown.workHoursTotal))}</td>
-    </tr>
-    <tr class="work-time-detail">
-      <td>Godziny instalatora</td>
-      <td class="num">${escapeHtml(formatHours(lines.work.installerHours))}</td>
-    </tr>
-    <tr class="work-time-detail">
-      <td>Godziny pomocnika</td>
-      <td class="num">${escapeHtml(formatHours(lines.work.helperHours))}</td>
-    </tr>
-    <tr class="work-time-detail">
-      <td>Godziny programisty</td>
-      <td class="num">${escapeHtml(formatHours(lines.work.programmerHours))}</td>
-    </tr>
-  `;
+  </thead>`;
 }
 
-function workTimeRowsCompact(breakdown: ServiceWorkTimeBreakdown) {
-  return `
-    <tr>
-      <td>Logistyka i nadzór</td>
-      <td class="num">${escapeHtml(formatHours(breakdown.logisticsAndSupervisionTotal))}</td>
+function compareTableRows(rows: ReportCompareRow[], showComparison: boolean) {
+  return rows
+    .map(
+      (row) => `
+    <tr class="${row.group ? "work-time-group" : row.detail ? "work-time-detail" : ""}">
+      <td>${escapeHtml(row.label)}</td>
+      <td class="num">${escapeHtml(row.predicted)}</td>
+      ${showComparison ? `<td class="num">${escapeHtml(row.settled)}</td>` : ""}
     </tr>
-    <tr>
-      <td>Godziny pracy</td>
-      <td class="num">${escapeHtml(formatHours(breakdown.workHoursTotal))}</td>
-    </tr>
-  `;
+  `,
+    )
+    .join("");
 }
 
-function workTimeSectionHtml(
+function compareSectionHtml(
   title: string,
-  breakdown: ServiceWorkTimeBreakdown,
-  detailed: boolean,
+  rows: ReportCompareRow[],
+  showComparison: boolean,
+  valueHeader: string,
+  compact = false,
 ) {
-  const rows = detailed ? workTimeRowsDetailed(breakdown) : workTimeRowsCompact(breakdown);
-  const tableClass = detailed ? "work-time-table" : "work-time-table work-time-table-compact";
+  const tableClass = compact
+    ? "work-time-table work-time-table-compact"
+    : "work-time-table";
+  const wrapClass = compact ? "work-time-compact-wrap" : "";
 
   return `<section class="block work-time-section">
     <h2 class="section-title">${escapeHtml(title)}</h2>
-    <div class="${detailed ? "" : "work-time-compact-wrap"}">
+    <div class="${wrapClass}">
       <table class="${tableClass}">
-        <thead>
-          <tr>
-            <th>Pozycja</th>
-            <th>Ilość</th>
-          </tr>
-        </thead>
+        ${compareTableHead(showComparison, valueHeader)}
         <tbody>
-          ${rows}
+          ${compareTableRows(rows, showComparison)}
         </tbody>
       </table>
     </div>
   </section>`;
 }
 
-function workTimeSectionsHtml(service: ServiceRecord, detailed: boolean) {
-  const sections = getServiceReportWorkTimeSections(service);
+function materialsSectionHtml(
+  materialsNote: string,
+  rows: ReportCompareRow[],
+  showComparison: boolean,
+  showDetailedCosts: boolean,
+  materialsCostLine: string,
+) {
+  const compactTable = showDetailedCosts
+    ? ""
+    : `<div class="work-time-compact-wrap">
+        <table class="work-time-table work-time-table-compact">
+          ${compareTableHead(showComparison, "Koszt")}
+          <tbody>
+            ${compareTableRows(rows, showComparison)}
+          </tbody>
+        </table>
+      </div>`;
+
+  return `<section class="block">
+    <h2 class="section-title">Materiały</h2>
+    <p>${escapeHtml(materialsNote)}</p>
+    ${materialsCostLine}
+    ${compactTable}
+  </section>`;
+}
+
+function reportCompareSectionsHtml(service: ServiceRecord, detailed: boolean) {
+  const workTimeSections = getServiceReportWorkTimeSections(service);
+  const quantitySections = getServiceReportQuantitySections(service);
+  const workTimeRows = buildWorkTimeCompareRows(
+    workTimeSections.predicted,
+    workTimeSections.actual,
+    detailed,
+  );
+  const materialsRows = buildMaterialsCompareRows(
+    quantitySections.predicted.materialsCost,
+    quantitySections.actual.materialsCost,
+  );
+  const accommodationsRows = buildAccommodationsCompareRows(
+    quantitySections.predicted.accommodations,
+    quantitySections.actual.accommodations,
+  );
+  const workTimeTitle = workTimeSections.showComparison
+    ? "Czas pracy"
+    : "Przewidywany czas pracy";
+
   const parts: string[] = [];
 
-  if (sections.showPredicted) {
+  if (!detailed) {
     parts.push(
-      workTimeSectionHtml("Przewidywany czas pracy", sections.predicted, detailed),
+      compareSectionHtml(
+        "Noclegi",
+        accommodationsRows,
+        quantitySections.showComparison,
+        "Ilość",
+        true,
+      ),
     );
   }
 
-  if (sections.showActual) {
-    parts.push(
-      workTimeSectionHtml("Rzeczywisty czas pracy", sections.actual, detailed),
-    );
-  }
+  parts.push(
+    compareSectionHtml(
+      workTimeTitle,
+      workTimeRows,
+      workTimeSections.showComparison,
+      "Ilość",
+      !detailed,
+    ),
+  );
 
-  return parts.join("");
+  return {
+    materialsRows,
+    quantityShowComparison: quantitySections.showComparison,
+    body: parts.join(""),
+  };
 }
 
 const PRINT_STYLES = `
@@ -281,6 +320,8 @@ const PRINT_STYLES = `
     font-weight: 700;
   }
   thead th:last-child { text-align: right; }
+  thead th:nth-child(2) { text-align: right; }
+  thead th:nth-child(3) { text-align: right; }
   tbody td { padding: 9px 0; border-bottom: 1px solid #f4f4f5; vertical-align: top; }
   tbody td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
   tbody tr.summary td { font-weight: 600; color: #3f3f46; }
@@ -437,6 +478,8 @@ export function buildServiceReportPrintDocument(
       ? `<p class="block-note">${escapeHtml(meta.materialsCostLabel)}: <strong>${escapeHtml(formatMoney(billing.categories.materials))}</strong></p>`
       : "";
 
+  const compareSections = reportCompareSectionsHtml(service, meta.showDetailedCosts);
+
   const comparisonSection = meta.showComparison
     ? `<section class="block">
       <h2 class="section-title">Porównanie z przewidywanymi kosztami</h2>
@@ -510,15 +553,15 @@ export function buildServiceReportPrintDocument(
       <p>${escapeHtml(workNote)}</p>
     </section>
 
-    <section class="block">
-      <h2 class="section-title">Materiały</h2>
-      <p>${escapeHtml(materialsNote)}</p>
-      ${
-        materialsCostLine
-      }
-    </section>
+    ${materialsSectionHtml(
+      materialsNote,
+      compareSections.materialsRows,
+      compareSections.quantityShowComparison,
+      meta.showDetailedCosts,
+      materialsCostLine,
+    )}
 
-    ${workTimeSectionsHtml(service, meta.showDetailedCosts)}
+    ${compareSections.body}
 
     <section class="cost-section">
       <h2 class="section-title">${escapeHtml(meta.costSectionTitle)}</h2>

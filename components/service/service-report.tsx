@@ -10,13 +10,19 @@ import {
   getServiceReportBillingDiscounts,
   getServiceReportDocumentMeta,
   getServiceReportMaterialsNote,
+  getServiceReportQuantitySections,
   getServiceReportWorkNote,
   getServiceReportWorkTimeSections,
   hasAppliedDiscount,
   isServiceSettled,
-  type ServiceWorkTimeBreakdown,
 } from "@/lib/service/report-document";
-import { cn, formatDate, formatHours, formatMoney } from "@/lib/utils";
+import {
+  buildAccommodationsCompareRows,
+  buildMaterialsCompareRows,
+  buildWorkTimeCompareRows,
+  type ReportCompareRow,
+} from "@/lib/service/report-compare-rows";
+import { cn, formatDate, formatMoney } from "@/lib/utils";
 import type { ServiceCostBreakdown, ServiceDiscounts, ServiceRecord } from "@/lib/service/types";
 
 function ReportField({ label, value }: { label: string; value: string }) {
@@ -237,93 +243,74 @@ function CompactCostSummary({
   );
 }
 
-function WorkTimeSection({
+function ReportCompareTable({
   title,
-  breakdown,
-  detailed,
+  rows,
+  showComparison,
+  valueHeader = "Wartość",
+  compact = false,
 }: {
   title: string;
-  breakdown: ServiceWorkTimeBreakdown;
-  detailed: boolean;
+  rows: ReportCompareRow[];
+  showComparison: boolean;
+  valueHeader?: string;
+  compact?: boolean;
 }) {
-  const { lines } = breakdown;
-
-  if (detailed) {
-    return (
-      <section className="border-t border-zinc-100 px-6 py-5 sm:px-8">
-        <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-700">{title}</h2>
+  return (
+    <section className="border-t border-zinc-100 px-6 py-5 sm:px-8">
+      <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-700">{title}</h2>
+      <div className={cn(compact && "ml-auto max-w-lg")}>
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b-2 border-zinc-200 text-left text-[11px] uppercase tracking-wide text-zinc-500">
               <th className="py-2 pr-4 font-semibold">Pozycja</th>
-              <th className="py-2 text-right font-semibold">Ilość</th>
+              <th className="py-2 text-right font-semibold">
+                {showComparison ? "Przewidywane" : valueHeader}
+              </th>
+              {showComparison ? (
+                <th className="py-2 pl-4 text-right font-semibold">Rozliczone</th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-zinc-200">
-              <td className="py-2.5 pr-4 font-semibold text-zinc-900">Logistyka i nadzór</td>
-              <td className="py-2.5 text-right tabular-nums font-semibold text-zinc-900">
-                {formatHours(breakdown.logisticsAndSupervisionTotal)}
-              </td>
-            </tr>
-            <tr className="border-b border-zinc-100">
-              <td className="py-2.5 pr-4 pl-4 text-zinc-600">Godziny w aucie</td>
-              <td className="py-2.5 text-right tabular-nums text-zinc-900">
-                {formatHours(lines.logistics.carHours)}
-              </td>
-            </tr>
-            <tr className="border-b border-zinc-100">
-              <td className="py-2.5 pr-4 pl-4 text-zinc-600">Godziny nadzoru</td>
-              <td className="py-2.5 text-right tabular-nums text-zinc-900">
-                {formatHours(lines.logistics.supervisionHours)}
-              </td>
-            </tr>
-            <tr className="border-b border-zinc-200">
-              <td className="py-2.5 pr-4 font-semibold text-zinc-900">Godziny pracy</td>
-              <td className="py-2.5 text-right tabular-nums font-semibold text-zinc-900">
-                {formatHours(breakdown.workHoursTotal)}
-              </td>
-            </tr>
-            <tr className="border-b border-zinc-100">
-              <td className="py-2.5 pr-4 pl-4 text-zinc-600">Godziny instalatora</td>
-              <td className="py-2.5 text-right tabular-nums text-zinc-900">
-                {formatHours(lines.work.installerHours)}
-              </td>
-            </tr>
-            <tr className="border-b border-zinc-100">
-              <td className="py-2.5 pr-4 pl-4 text-zinc-600">Godziny pomocnika</td>
-              <td className="py-2.5 text-right tabular-nums text-zinc-900">
-                {formatHours(lines.work.helperHours)}
-              </td>
-            </tr>
-            <tr>
-              <td className="py-2.5 pr-4 pl-4 text-zinc-600">Godziny programisty</td>
-              <td className="py-2.5 text-right tabular-nums text-zinc-900">
-                {formatHours(lines.work.programmerHours)}
-              </td>
-            </tr>
+            {rows.map((row) => (
+              <tr
+                key={row.label}
+                className={cn(
+                  "border-b border-zinc-100",
+                  row.group && "border-zinc-200",
+                )}
+              >
+                <td
+                  className={cn(
+                    "py-2.5 pr-4",
+                    row.group ? "font-semibold text-zinc-900" : "pl-4 text-zinc-600",
+                  )}
+                >
+                  {row.label}
+                </td>
+                <td
+                  className={cn(
+                    "py-2.5 text-right tabular-nums",
+                    row.group ? "font-semibold text-zinc-900" : "text-zinc-900",
+                  )}
+                >
+                  {row.predicted}
+                </td>
+                {showComparison ? (
+                  <td
+                    className={cn(
+                      "py-2.5 pl-4 text-right tabular-nums",
+                      row.group ? "font-semibold text-zinc-900" : "text-zinc-900",
+                    )}
+                  >
+                    {row.settled}
+                  </td>
+                ) : null}
+              </tr>
+            ))}
           </tbody>
         </table>
-      </section>
-    );
-  }
-
-  return (
-    <section className="border-t border-zinc-100 px-6 py-5 sm:px-8">
-      <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-700">{title}</h2>
-      <div className="ml-auto max-w-md rounded-lg border border-zinc-200 bg-white px-4 py-5">
-        <dl className="grid gap-3 text-sm">
-          <div className="flex items-center justify-between gap-4">
-            <dt className="font-medium text-zinc-900">Logistyka i nadzór</dt>
-            <dd className="tabular-nums text-zinc-900">
-              {formatHours(breakdown.logisticsAndSupervisionTotal)}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between gap-4 border-t border-zinc-200 pt-3">
-            <dt className="font-medium text-zinc-900">Godziny pracy</dt>
-            <dd className="tabular-nums text-zinc-900">{formatHours(breakdown.workHoursTotal)}</dd>
-          </div>
-        </dl>
       </div>
     </section>
   );
@@ -387,6 +374,23 @@ export function ServiceReport({
   const workNote = getServiceReportWorkNote(service, settled);
   const materialsNote = getServiceReportMaterialsNote(service, settled);
   const workTimeSections = getServiceReportWorkTimeSections(service);
+  const quantitySections = getServiceReportQuantitySections(service);
+  const workTimeRows = buildWorkTimeCompareRows(
+    workTimeSections.predicted,
+    workTimeSections.actual,
+    meta.showDetailedCosts,
+  );
+  const materialsRows = buildMaterialsCompareRows(
+    quantitySections.predicted.materialsCost,
+    quantitySections.actual.materialsCost,
+  );
+  const accommodationsRows = buildAccommodationsCompareRows(
+    quantitySections.predicted.accommodations,
+    quantitySections.actual.accommodations,
+  );
+  const workTimeTitle = workTimeSections.showComparison
+    ? "Czas pracy"
+    : "Przewidywany czas pracy";
 
   const handlePrint = useCallback(() => {
     printServiceReport(service, projectName);
@@ -486,23 +490,57 @@ export function ServiceReport({
               </span>
             </p>
           ) : null}
+          {!meta.showDetailedCosts ? (
+            <div className="mt-4 ml-auto max-w-lg">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b-2 border-zinc-200 text-left text-[11px] uppercase tracking-wide text-zinc-500">
+                    <th className="py-2 pr-4 font-semibold">Pozycja</th>
+                    <th className="py-2 text-right font-semibold">
+                      {quantitySections.showComparison ? "Przewidywane" : "Koszt"}
+                    </th>
+                    {quantitySections.showComparison ? (
+                      <th className="py-2 pl-4 text-right font-semibold">Rozliczone</th>
+                    ) : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  {materialsRows.map((row) => (
+                    <tr key={row.label} className="border-b border-zinc-200">
+                      <td className="py-2.5 pr-4 font-semibold text-zinc-900">{row.label}</td>
+                      <td className="py-2.5 text-right tabular-nums font-semibold text-zinc-900">
+                        {row.predicted}
+                      </td>
+                      {quantitySections.showComparison ? (
+                        <td className="py-2.5 pl-4 text-right tabular-nums font-semibold text-zinc-900">
+                          {row.settled}
+                        </td>
+                      ) : null}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
         </section>
 
-        {workTimeSections.showPredicted ? (
-          <WorkTimeSection
-            title="Przewidywany czas pracy"
-            breakdown={workTimeSections.predicted}
-            detailed={meta.showDetailedCosts}
+        {!meta.showDetailedCosts ? (
+          <ReportCompareTable
+            title="Noclegi"
+            rows={accommodationsRows}
+            showComparison={quantitySections.showComparison}
+            valueHeader="Ilość"
+            compact
           />
         ) : null}
 
-        {workTimeSections.showActual ? (
-          <WorkTimeSection
-            title="Rzeczywisty czas pracy"
-            breakdown={workTimeSections.actual}
-            detailed={meta.showDetailedCosts}
-          />
-        ) : null}
+        <ReportCompareTable
+          title={workTimeTitle}
+          rows={workTimeRows}
+          showComparison={workTimeSections.showComparison}
+          valueHeader="Ilość"
+          compact={!meta.showDetailedCosts}
+        />
 
         <section className="border-t border-zinc-200 bg-zinc-50/80 px-6 py-6 sm:px-8">
           <h2 className="mb-4 text-xs font-bold uppercase tracking-wide text-zinc-700">

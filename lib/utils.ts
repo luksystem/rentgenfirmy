@@ -41,6 +41,16 @@ export function formatHours(value: number) {
   }).format(value)} godz.`;
 }
 
+export function formatCount(value: number) {
+  if (value <= 0) {
+    return "—";
+  }
+
+  return new Intl.NumberFormat("pl-PL", {
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 export function formatMinutes(total: number) {
   if (total <= 0) {
     return "—";
