@@ -13,6 +13,7 @@ import { useServiceStore } from "@/store/service-store";
 export function useServiceDetailAutoRefresh(
   service: ServiceRecord,
   setService: Dispatch<SetStateAction<ServiceRecord>>,
+  onRemoteSync?: (service: ServiceRecord) => void,
 ) {
   const refresh = useServiceStore((state) => state.refresh);
   const getServiceById = useServiceStore((state) => state.getServiceById);
@@ -30,9 +31,11 @@ export function useServiceDetailAutoRefresh(
         return current;
       }
 
-      return mergeClientOfferFromRemote(current, remote);
+      const merged = mergeClientOfferFromRemote(current, remote);
+      onRemoteSync?.(merged);
+      return merged;
     });
-  }, [getServiceById, refresh, service.id, setService]);
+  }, [getServiceById, onRemoteSync, refresh, service.id, setService]);
 
   useListAutoRefresh(syncFromRemote, 30_000, waitingForClient);
 }

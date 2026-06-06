@@ -31,10 +31,12 @@ export async function regenerateClientOfferForService(
       ? service.clientOffer.message
       : service.clientOffer.lastClientMessage;
   const historyType = service.clientOffer.token ? "link_regenerated" : "link_generated";
+  const preserveServiceStatus =
+    service.status === "Rozliczony" || service.status === "Do rozliczenia";
 
   const updated: ServiceRecord = {
     ...service,
-    status: "Oczekuje na klienta",
+    status: preserveServiceStatus ? service.status : "Oczekuje na klienta",
     updatedAt: new Date().toISOString(),
     clientOfferHistory: appendClientOfferHistory(service.clientOfferHistory, {
       type: historyType,

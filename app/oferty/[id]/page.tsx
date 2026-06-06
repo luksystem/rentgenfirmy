@@ -36,7 +36,10 @@ export default function EditOfferPage() {
           </Button>
         }
       />
-      <ServiceForm key={service.id} initialService={service} />
+      <ServiceForm
+        key={`${service.id}:${service.status}:${service.updatedAt}`}
+        initialService={service}
+      />
     </>
   );
 }
