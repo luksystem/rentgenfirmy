@@ -39,10 +39,20 @@ const warrantyBillable: BillableFlags = {
 };
 
 function makeService(
-  partial: Omit<ServiceRecord, "id" | "createdAt" | "updatedAt" | "clientOffer"> & {
+  partial: Omit<
+    ServiceRecord,
+    | "id"
+    | "createdAt"
+    | "updatedAt"
+    | "clientOffer"
+    | "clientOfferHistory"
+    | "clientOfferAcceptedDocument"
+  > & {
     id: string;
     createdAt: string;
     clientOffer?: ServiceRecord["clientOffer"];
+    clientOfferHistory?: ServiceRecord["clientOfferHistory"];
+    clientOfferAcceptedDocument?: ServiceRecord["clientOfferAcceptedDocument"];
   },
 ): ServiceRecord {
   const emptyOffer: ServiceRecord["clientOffer"] = {
@@ -57,6 +67,8 @@ function makeService(
   return {
     ...partial,
     clientOffer: partial.clientOffer ?? emptyOffer,
+    clientOfferHistory: partial.clientOfferHistory ?? [],
+    clientOfferAcceptedDocument: partial.clientOfferAcceptedDocument ?? null,
     updatedAt: partial.createdAt,
   };
 }
@@ -66,7 +78,15 @@ export function createSampleServices(): ServiceRecord[] {
   const now = new Date();
 
   const samples: Array<
-    Omit<ServiceRecord, "id" | "createdAt" | "updatedAt" | "clientOffer">
+    Omit<
+      ServiceRecord,
+      | "id"
+      | "createdAt"
+      | "updatedAt"
+      | "clientOffer"
+      | "clientOfferHistory"
+      | "clientOfferAcceptedDocument"
+    >
   > = [
     {
       status: "Wycena",

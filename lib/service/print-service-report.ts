@@ -18,6 +18,7 @@ import {
   type ReportCompareRow,
 } from "@/lib/service/report-compare-rows";
 import { formatDate, formatMoney } from "@/lib/utils";
+import { openHtmlDocument } from "@/lib/service/open-html-document";
 import type { ServiceCostBreakdown, ServiceDiscounts, ServiceRecord } from "@/lib/service/types";
 
 function escapeHtml(value: string) {
@@ -153,15 +154,10 @@ function compareSectionHtml(
   </section>`;
 }
 
-function materialsSectionHtml(
-  materialsNote: string,
-  showDetailedCosts: boolean,
-  materialsCostLine: string,
-) {
+function materialsSectionHtml(materialsNote: string) {
   return `<section class="block">
     <h2 class="section-title">Materiały</h2>
     <p>${escapeHtml(materialsNote)}</p>
-    ${materialsCostLine}
   </section>`;
 }
 
@@ -187,16 +183,17 @@ function reportCompareSectionsHtml(service: ServiceRecord, detailed: boolean) {
 
   const parts: string[] = [];
 
+  parts.push(
+    compareSectionHtml(
+      "Koszty materiałów",
+      materialsRows,
+      quantitySections.showComparison,
+      "Koszt",
+      !detailed,
+    ),
+  );
+
   if (!detailed) {
-    parts.push(
-      compareSectionHtml(
-        "Koszty materiałów",
-        materialsRows,
-        quantitySections.showComparison,
-        "Koszt",
-        true,
-      ),
-    );
     parts.push(
       compareSectionHtml(
         "Noclegi",
@@ -468,11 +465,6 @@ export function buildServiceReportPrintDocument(
           </tr>
         </thead>`;
 
-  const materialsCostLine =
-    meta.showDetailedCosts && billing.categories.materials > 0
-      ? `<p class="block-note">${escapeHtml(meta.materialsCostLabel)}: <strong>${escapeHtml(formatMoney(billing.categories.materials))}</strong></p>`
-      : "";
-
   const compareSections = reportCompareSectionsHtml(service, meta.showDetailedCosts);
 
   const comparisonSection = meta.showComparison
@@ -548,7 +540,7 @@ export function buildServiceReportPrintDocument(
       <p>${escapeHtml(workNote)}</p>
     </section>
 
-    ${materialsSectionHtml(materialsNote, meta.showDetailedCosts, materialsCostLine)}
+    ${materialsSectionHtml(materialsNote)}
 
     ${compareSections.body}
 
@@ -588,51 +580,5 @@ export function buildServiceReportPrintDocument(
 }
 
 export function printServiceReport(service: ServiceRecord, projectName?: string) {
-  const html = buildServiceReportPrintDocument(service, projectName);
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-
-  // Bez noopener — okno musi załadować blob URL z pełnym HTML raportu.
-  const printWindow = window.open(url, "_blank");
-
-  if (!printWindow) {
-    URL.revokeObjectURL(url);
-    window.alert(
-      "Przeglądarka zablokowała okno druku. Zezwól na wyskakujące okna dla tej strony i spróbuj ponownie.",
-    );
-    return;
-  }
-
-  const cleanup = () => {
-    URL.revokeObjectURL(url);
-    if (!printWindow.closed) {
-      printWindow.close();
-    }
-  };
-
-  const triggerPrint = () => {
-    try {
-      printWindow.focus();
-      printWindow.print();
-    } catch {
-      window.alert("Nie udało się otworzyć dialogu druku.");
-      cleanup();
-      return;
-    }
-
-    printWindow.addEventListener("afterprint", cleanup, { once: true });
-    window.setTimeout(cleanup, 120_000);
-  };
-
-  const waitForRender = () => window.setTimeout(triggerPrint, 400);
-
-  try {
-    if (printWindow.document.readyState === "complete") {
-      waitForRender();
-    } else {
-      printWindow.addEventListener("load", waitForRender, { once: true });
-    }
-  } catch {
-    waitForRender();
-  }
+  openHtmlDocument(buildServiceReportPrintDocument(service, projectName));
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ClientPicker } from "@/components/client-picker";
 import { ClientOfferPanel } from "@/components/service/client-offer-panel";
+import { ClientOfferHistoryPanel } from "@/components/service/client-offer-history-panel";
 import { ServiceComparisonTable } from "@/components/service/service-comparison-table";
 import { ServiceCostBreakdownPanel } from "@/components/service/service-cost-breakdown";
 import { ServiceDiscountsForm } from "@/components/service/service-discounts-form";
@@ -355,6 +356,7 @@ export function ServiceForm({
         {showReport ? (
           <>
             <ClientOfferPanel service={service} onServiceUpdated={setService} />
+            <ClientOfferHistoryPanel service={service} />
             <ServiceReport service={service} projectName={projectName} />
           </>
         ) : null}

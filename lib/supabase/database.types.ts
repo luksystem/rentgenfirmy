@@ -87,6 +87,8 @@ export type ServiceRow = {
   client_offer_message?: string | null;
   client_offer_responded_at?: string | null;
   client_offer_last_client_message?: string | null;
+  client_offer_history?: unknown;
+  client_offer_accepted_document?: unknown;
   created_at: string;
   updated_at: string;
 };
@@ -142,6 +144,8 @@ export type ServiceInsert = {
   client_offer_message?: string | null;
   client_offer_responded_at?: string | null;
   client_offer_last_client_message?: string | null;
+  client_offer_history?: unknown;
+  client_offer_accepted_document?: unknown;
   created_at?: string;
   updated_at?: string;
 };

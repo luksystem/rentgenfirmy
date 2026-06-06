@@ -27,6 +27,7 @@ type ServiceStore = {
   upsertService: (service: ServiceRecord) => Promise<ServiceRecord>;
   deleteService: (id: string) => Promise<void>;
   getServiceById: (id: string) => ServiceRecord | undefined;
+  replaceService: (service: ServiceRecord) => void;
   updateSettings: (settings: ServiceGlobalSettings) => Promise<void>;
   createEmptyService: () => ServiceRecord;
 };
@@ -124,6 +125,19 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
 
   getServiceById: (id) => get().services.find((item) => item.id === id),
 
+  replaceService: (service) => {
+    const services = get().services;
+    const index = services.findIndex((item) => item.id === service.id);
+
+    if (index < 0) {
+      return;
+    }
+
+    set({
+      services: services.map((item) => (item.id === service.id ? service : item)),
+    });
+  },
+
   updateSettings: async (settings) => {
     set({ isSaving: true, error: null });
 
@@ -173,6 +187,8 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
         respondedAt: null,
         lastClientMessage: null,
       },
+      clientOfferHistory: [],
+      clientOfferAcceptedDocument: null,
     };
   },
 }));

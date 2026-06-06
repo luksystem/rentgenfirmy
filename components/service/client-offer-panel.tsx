@@ -15,12 +15,15 @@ import {
   canGenerateClientOffer,
   canSendClientOffer,
   CLIENT_OFFER_STATUS_LABELS,
+  getClientOfferGenerateBlockReason,
   getClientOfferUrl,
   isClientOfferActive,
 } from "@/lib/service/client-offer";
+import { openHtmlDocument } from "@/lib/service/open-html-document";
 import type { ServiceRecord } from "@/lib/service/types";
 import { generateClientOfferForService } from "@/lib/supabase/client-offer-repository";
-import { formatDate } from "@/lib/utils";
+import { useServiceStore } from "@/store/service-store";
+import { formatDate, formatMoney } from "@/lib/utils";
 
 export function ClientOfferPanel({
   service,
@@ -33,6 +36,7 @@ export function ClientOfferPanel({
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [canShare, setCanShare] = useState(false);
+  const replaceService = useServiceStore((state) => state.replaceService);
 
   useEffect(() => {
     setCanShare(canShareClientOffer());
@@ -63,6 +67,7 @@ export function ClientOfferPanel({
 
     try {
       const updated = await generateClientOfferForService(service);
+      replaceService(updated);
       onServiceUpdated(updated);
     } catch (generateError) {
       setError(
@@ -113,6 +118,7 @@ export function ClientOfferPanel({
   const canSend = canSendClientOffer(service);
   const offerActive = isClientOfferActive(service.clientOffer);
   const regenerationHint = getOfferRegenerationHint(service);
+  const generateBlockReason = getClientOfferGenerateBlockReason(service);
 
   return (
     <Card className="border-accent/20 bg-accent-soft/20">
@@ -194,13 +200,32 @@ export function ClientOfferPanel({
           >
             {isGenerating ? "Generowanie…" : getRegenerateOfferLabel(service)}
           </Button>
+          {service.clientOfferAcceptedDocument ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() =>
+                openHtmlDocument(
+                  service.clientOfferAcceptedDocument!.reportHtml,
+                  "Przeglądarka zablokowała podgląd zaakceptowanej wyceny.",
+                )
+              }
+            >
+              Zaakceptowana wycena (PDF)
+            </Button>
+          ) : null}
         </div>
 
-        {!canGenerate ? (
+        {service.clientOfferAcceptedDocument ? (
           <p className="text-xs text-muted">
-            Nowy link można wygenerować dla wyceny, oczekiwania na klienta lub po negocjacji
-            (statusy inne niż rozliczony / anulowany).
+            Zaakceptowano {formatDate(service.clientOfferAcceptedDocument.acceptedAt)} · brutto{" "}
+            {formatMoney(service.clientOfferAcceptedDocument.grossTotal)} — dokument zamrożony w
+            momencie akceptacji przez klienta.
           </p>
+        ) : null}
+
+        {!canGenerate && generateBlockReason ? (
+          <p className="text-xs text-muted">{generateBlockReason}</p>
         ) : null}
 
         {canSend ? (

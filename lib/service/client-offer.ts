@@ -33,15 +33,15 @@ export const CLIENT_OFFER_ACTION_LABELS: Record<ClientOfferAction, string> = {
 };
 
 export function canGenerateClientOffer(service: ServiceRecord) {
-  if (service.status === "Anulowany" || service.status === "Rozliczony") {
-    return false;
+  return service.clientOffer.status !== "accepted";
+}
+
+export function getClientOfferGenerateBlockReason(service: ServiceRecord) {
+  if (canGenerateClientOffer(service)) {
+    return null;
   }
 
-  return (
-    service.status === "Wycena" ||
-    service.status === "Oczekuje na klienta" ||
-    service.clientOffer.status === "negotiation"
-  );
+  return "Klient zaakceptował ofertę. Nowy link nie może zastąpić zaakceptowanej wersji — otwórz zapisany dokument zaakceptowanej wyceny (PDF).";
 }
 
 export function canSendClientOffer(service: ServiceRecord) {

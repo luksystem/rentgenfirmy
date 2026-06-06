@@ -4,6 +4,9 @@ import {
   statusAfterClientOfferAction,
   type ClientOfferAction,
 } from "@/lib/service/client-offer";
+import { appendClientOfferHistory } from "@/lib/service/client-offer-history";
+import { getPublicOfferView } from "@/lib/service/client-offer-public-view";
+import { buildAcceptedOfferDocument } from "@/lib/service/client-offer-snapshot";
 import type { ServiceRecord } from "@/lib/service/types";
 import { getSupabase } from "@/lib/supabase/client";
 import { getSupabaseServer } from "@/lib/supabase/server";
@@ -26,11 +29,16 @@ export async function regenerateClientOfferForService(
     service.clientOffer.status === "negotiation" && service.clientOffer.message
       ? service.clientOffer.message
       : service.clientOffer.lastClientMessage;
+  const historyType = service.clientOffer.token ? "link_regenerated" : "link_generated";
 
   const updated: ServiceRecord = {
     ...service,
     status: "Oczekuje na klienta",
     updatedAt: new Date().toISOString(),
+    clientOfferHistory: appendClientOfferHistory(service.clientOfferHistory, {
+      type: historyType,
+      offerStatus: "pending",
+    }),
     clientOffer: {
       token,
       expiresAt: defaultClientOfferExpiry(),
@@ -57,6 +65,10 @@ export async function regenerateClientOfferForService(
 export async function generateClientOfferForService(
   service: ServiceRecord,
 ): Promise<ServiceRecord> {
+  if (service.clientOffer.status === "accepted") {
+    throw new Error("Nie można wygenerować nowego linku — oferta została zaakceptowana.");
+  }
+
   if (service.clientOffer.token) {
     return regenerateClientOfferForService(service);
   }
@@ -87,6 +99,17 @@ export async function fetchServiceByClientOfferToken(
   return data ? rowToService(data) : null;
 }
 
+function historyTypeForAction(action: ClientOfferAction) {
+  switch (action) {
+    case "accept":
+      return "client_accepted" as const;
+    case "reject":
+      return "client_rejected" as const;
+    case "negotiate":
+      return "client_negotiation" as const;
+  }
+}
+
 export async function respondToClientOffer(
   token: string,
   action: ClientOfferAction,
@@ -112,16 +135,31 @@ export async function respondToClientOffer(
   }
 
   const now = new Date().toISOString();
+  const offerStatus = offerStatusAfterClientOfferAction(action);
+  const clientMessage = action === "negotiate" ? message?.trim() ?? null : null;
+
   const updated: ServiceRecord = {
     ...service,
     status: statusAfterClientOfferAction(action),
     updatedAt: now,
+    clientOfferHistory: appendClientOfferHistory(service.clientOfferHistory, {
+      type: historyTypeForAction(action),
+      message: clientMessage,
+      offerStatus,
+      at: now,
+    }),
     clientOffer: {
       ...service.clientOffer,
-      status: offerStatusAfterClientOfferAction(action),
-      message: action === "negotiate" ? message?.trim() ?? null : null,
+      status: offerStatus,
+      message: clientMessage,
       respondedAt: now,
+      lastClientMessage:
+        action === "negotiate" ? clientMessage : service.clientOffer.lastClientMessage,
     },
+    clientOfferAcceptedDocument:
+      action === "accept"
+        ? buildAcceptedOfferDocument(getPublicOfferView(service), now)
+        : service.clientOfferAcceptedDocument,
   };
 
   const { data, error } = await supabase
@@ -137,14 +175,7 @@ export async function respondToClientOffer(
   return rowToService(data);
 }
 
-export function getPublicOfferView(service: ServiceRecord): ServiceRecord {
-  return {
-    ...service,
-    status: "Wycena",
-    actual: { ...service.estimate },
-    actualDiscounts: { ...service.estimateDiscounts },
-  };
-}
+export { getPublicOfferView } from "@/lib/service/client-offer-public-view";
 
 export function isPublicOfferAvailable(service: ServiceRecord) {
   return (

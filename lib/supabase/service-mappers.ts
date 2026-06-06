@@ -3,6 +3,8 @@ import {
   CLIENT_OFFER_STATUSES,
   type ClientOfferStatus,
 } from "@/lib/service/client-offer";
+import { normalizeClientOfferHistory } from "@/lib/service/client-offer-history";
+import { normalizeClientOfferAcceptedDocument } from "@/lib/service/client-offer-snapshot";
 import type { ServiceRow, ServiceInsert } from "@/lib/supabase/database.types";
 import {
   emptyLineItems,
@@ -171,6 +173,10 @@ export function rowToService(row: ServiceRow): ServiceRecord {
     estimate: normalizeLineItems(row.estimate),
     actual: normalizeLineItems(row.actual),
     clientOffer: normalizeClientOffer(row),
+    clientOfferHistory: normalizeClientOfferHistory(row.client_offer_history),
+    clientOfferAcceptedDocument: normalizeClientOfferAcceptedDocument(
+      row.client_offer_accepted_document,
+    ),
   };
 }
 
@@ -200,6 +206,8 @@ export function serviceToInsert(service: ServiceRecord): ServiceInsert {
     client_offer_message: service.clientOffer.message,
     client_offer_responded_at: service.clientOffer.respondedAt,
     client_offer_last_client_message: service.clientOffer.lastClientMessage,
+    client_offer_history: service.clientOfferHistory,
+    client_offer_accepted_document: service.clientOfferAcceptedDocument,
     created_at: service.createdAt,
     updated_at: service.updatedAt,
   };

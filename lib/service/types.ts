@@ -1,4 +1,6 @@
 import type { ClientOfferStatus } from "@/lib/service/client-offer";
+import type { ClientOfferAcceptedDocument } from "@/lib/service/client-offer-snapshot";
+import type { ClientOfferHistoryEntry } from "@/lib/service/client-offer-history";
 
 export const SERVICE_TYPES = [
   "Gwarancyjny",
@@ -126,6 +128,8 @@ export type ServiceRecord = {
     respondedAt: string | null;
     lastClientMessage: string | null;
   };
+  clientOfferHistory: ClientOfferHistoryEntry[];
+  clientOfferAcceptedDocument: ClientOfferAcceptedDocument | null;
 };
 
 export type ServiceGlobalSettings = {

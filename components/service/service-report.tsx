@@ -469,25 +469,15 @@ export function ServiceReport({
           <p className="whitespace-pre-wrap text-sm leading-7 text-zinc-800">
             {materialsNote || "Brak informacji o materiałach."}
           </p>
-          {meta.showDetailedCosts && billing.categories.materials > 0 ? (
-            <p className="mt-3 text-sm text-zinc-600">
-              {meta.materialsCostLabel}:{" "}
-              <span className="font-semibold tabular-nums text-zinc-900">
-                {formatMoney(billing.categories.materials)}
-              </span>
-            </p>
-          ) : null}
         </section>
 
-        {!meta.showDetailedCosts ? (
-          <ReportCompareTable
-            title="Koszty materiałów"
-            rows={materialsRows}
-            showComparison={quantitySections.showComparison}
-            valueHeader="Koszt"
-            compact
-          />
-        ) : null}
+        <ReportCompareTable
+          title="Koszty materiałów"
+          rows={materialsRows}
+          showComparison={quantitySections.showComparison}
+          valueHeader="Koszt"
+          compact={!meta.showDetailedCosts}
+        />
 
         {!meta.showDetailedCosts ? (
           <ReportCompareTable
