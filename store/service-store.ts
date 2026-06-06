@@ -24,6 +24,7 @@ type ServiceStore = {
   isSaving: boolean;
   error: string | null;
   hydrate: () => Promise<void>;
+  refresh: () => Promise<void>;
   upsertService: (service: ServiceRecord) => Promise<ServiceRecord>;
   deleteService: (id: string) => Promise<void>;
   getServiceById: (id: string) => ServiceRecord | undefined;
@@ -78,6 +79,22 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
       set({
         error: error instanceof Error ? error.message : "Nie udało się pobrać danych serwisu",
         isLoading: false,
+      });
+    }
+  },
+
+  refresh: async () => {
+    try {
+      const { services, settings } = await bootstrapServiceModule();
+      set({
+        services,
+        settings,
+        hydrated: true,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Nie udało się odświeżyć ofert",
       });
     }
   },

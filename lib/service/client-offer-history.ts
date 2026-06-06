@@ -128,6 +128,23 @@ export function serviceOfferListRowClassName(tone: ServiceOfferListTone | null) 
   }
 }
 
+export function serviceOfferListCardClassName(tone: ServiceOfferListTone | null) {
+  switch (tone) {
+    case "quote":
+      return "border-sky-500/25 bg-sky-500/8";
+    case "pending":
+      return "border-amber-500/30 bg-amber-500/10";
+    case "negotiation":
+      return "border-orange-500/30 bg-orange-500/10";
+    case "accepted":
+      return "border-emerald-500/30 bg-emerald-500/10";
+    case "rejected":
+      return "border-rose-500/30 bg-rose-500/10";
+    default:
+      return "border-border/80 bg-surface";
+  }
+}
+
 export function serviceOfferListBadge(tone: ServiceOfferListTone | null) {
   switch (tone) {
     case "quote":

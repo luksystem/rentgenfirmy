@@ -16,6 +16,7 @@ type WorkOrderStore = {
   isSaving: boolean;
   error: string | null;
   hydrate: () => Promise<void>;
+  refresh: () => Promise<void>;
   upsertOrder: (order: WorkOrderRecord) => Promise<WorkOrderRecord>;
   deleteOrder: (id: string) => Promise<void>;
   getOrderById: (id: string) => WorkOrderRecord | undefined;
@@ -45,6 +46,17 @@ export const useWorkOrderStore = create<WorkOrderStore>((set, get) => ({
       set({
         error: error instanceof Error ? error.message : "Nie udało się pobrać zleceń",
         isLoading: false,
+      });
+    }
+  },
+
+  refresh: async () => {
+    try {
+      const orders = await fetchWorkOrders();
+      set({ orders, hydrated: true, error: null });
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Nie udało się odświeżyć zleceń",
       });
     }
   },

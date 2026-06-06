@@ -71,9 +71,9 @@ function discountSummaryRows(
     discounts.percentDiscount > 0
       ? `<tr class="summary discount-row">
           <td>Rabat procentowy (${discounts.percentDiscount}%)</td>
-          <td class="num discount">−${escapeHtml(formatMoney(billing.percentDiscountAmount))}</td>
+          <td class="num">−${escapeHtml(formatMoney(billing.percentDiscountAmount))}</td>
         </tr>`
-      : `<tr class="summary">
+      : `<tr class="summary muted-row">
           <td>Rabat procentowy (0%)</td>
           <td class="num muted-cell">—</td>
         </tr>`;
@@ -82,9 +82,9 @@ function discountSummaryRows(
     discounts.specialDiscountPln > 0
       ? `<tr class="summary discount-row">
           <td>Rabat specjalny</td>
-          <td class="num discount">−${escapeHtml(formatMoney(discounts.specialDiscountPln))}</td>
+          <td class="num">−${escapeHtml(formatMoney(discounts.specialDiscountPln))}</td>
         </tr>`
-      : `<tr class="summary">
+      : `<tr class="summary muted-row">
           <td>Rabat specjalny</td>
           <td class="num muted-cell">—</td>
         </tr>`;
@@ -99,7 +99,7 @@ function discountBannerHtml(
   const description = getAppliedDiscountDescription(discounts, billing);
   const active = hasAppliedDiscount(discounts);
 
-  return `<div class="discount-banner${active ? "" : " inactive"}">
+  return `<div class="discount-note${active ? "" : " inactive"}">
     <p class="label">Przyznany rabat</p>
     <p><strong>${escapeHtml(description)}</strong></p>
   </div>`;
@@ -141,8 +141,8 @@ function compareSectionHtml(
     : "work-time-table";
   const wrapClass = compact ? "work-time-compact-wrap" : "";
 
-  return `<section class="block work-time-section">
-    <h2 class="section-title">${escapeHtml(title)}</h2>
+  return `<section class="sub-block work-time-section">
+    <h3 class="subsection-title">${escapeHtml(title)}</h3>
     <div class="${wrapClass}">
       <table class="${tableClass}">
         ${compareTableHead(showComparison, valueHeader)}
@@ -155,10 +155,10 @@ function compareSectionHtml(
 }
 
 function materialsSectionHtml(materialsNote: string) {
-  return `<section class="block">
-    <h2 class="section-title">Materiały</h2>
-    <p>${escapeHtml(materialsNote)}</p>
-  </section>`;
+  return `<div class="sub-block">
+    <h3 class="subsection-title">Materiały</h3>
+    <p class="prose">${escapeHtml(materialsNote)}</p>
+  </div>`;
 }
 
 function reportCompareSectionsHtml(service: ServiceRecord, detailed: boolean) {
@@ -227,8 +227,8 @@ const PRINT_STYLES = `
   @page { size: A4; margin: 14mm 16mm; }
   html, body {
     font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-    font-size: 11pt;
-    line-height: 1.45;
+    font-size: 10.5pt;
+    line-height: 1.5;
     color: #18181b;
     background: #fff;
     -webkit-print-color-adjust: exact;
@@ -236,56 +236,96 @@ const PRINT_STYLES = `
   }
   .doc { max-width: 180mm; margin: 0 auto; }
   .header {
-    border-bottom: 3px solid #2563eb;
-    padding-bottom: 14px;
-    margin-bottom: 20px;
+    border-bottom: 2px solid #18181b;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
     display: flex;
     justify-content: space-between;
     gap: 24px;
     align-items: flex-start;
   }
-  .brand { color: #2563eb; font-size: 9pt; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
-  h1 { font-size: 20pt; font-weight: 700; margin-top: 4px; color: #09090b; }
+  .brand {
+    font-size: 8.5pt;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #71717a;
+  }
+  h1 { font-size: 19pt; font-weight: 700; margin-top: 6px; color: #09090b; letter-spacing: -0.02em; }
   .subtitle { font-size: 10pt; color: #71717a; margin-top: 4px; }
   .meta { text-align: right; font-size: 10pt; }
-  .meta dt { color: #71717a; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .meta dt { color: #a1a1aa; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
   .meta dd { font-weight: 600; color: #18181b; margin-top: 2px; }
-  .meta > div + div { margin-top: 8px; }
-  .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px; }
-  .section-title {
-    font-size: 8.5pt;
+  .meta > div + div { margin-top: 10px; }
+  .major-section {
+    border-top: 1.5px solid #27272a;
+    padding: 22px 0 4px;
+    margin-top: 4px;
+  }
+  .major-label {
+    font-size: 7.5pt;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.14em;
+    color: #a1a1aa;
+    margin-bottom: 16px;
+  }
+  .columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+  .columns > section + section {
+    border-left: 1px solid #e4e4e7;
+    padding-left: 28px;
+  }
+  .section-title {
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #18181b;
+    margin-bottom: 12px;
+  }
+  .subsection-title {
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: 0.03em;
     color: #3f3f46;
-    border-bottom: 1px solid #e4e4e7;
+    margin-bottom: 8px;
     padding-bottom: 6px;
-    margin-bottom: 10px;
+    border-bottom: 1px solid #e4e4e7;
   }
-  .fields { display: grid; gap: 10px; }
-  .field dt { font-size: 8pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #71717a; }
-  .field dd { font-size: 10.5pt; color: #18181b; margin-top: 2px; }
-  .block { border-top: 1px solid #f4f4f5; padding: 16px 0; }
-  .block p { font-size: 10.5pt; color: #27272a; white-space: pre-wrap; line-height: 1.55; }
-  .block-note { margin-top: 10px; font-size: 10pt; color: #52525b; }
-  .block-note strong { color: #18181b; }
-  .cost-section {
-    background: #fafafa;
-    border: 1px solid #e4e4e7;
-    border-radius: 6px;
-    padding: 16px;
-    margin: 8px 0 20px;
+  .fields { display: grid; gap: 11px; }
+  .field dt {
+    font-size: 7.5pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #a1a1aa;
   }
+  .field dd { font-size: 10.5pt; color: #18181b; margin-top: 3px; font-weight: 500; }
+  .sub-block { margin-bottom: 18px; }
+  .sub-block:last-child { margin-bottom: 0; }
+  .prose {
+    font-size: 10.5pt;
+    color: #27272a;
+    white-space: pre-wrap;
+    line-height: 1.6;
+  }
+  .scope-stack { display: grid; gap: 20px; }
+  .cost-section { padding-top: 4px; }
   table { width: 100%; border-collapse: collapse; font-size: 10pt; }
   .cost-totals-compact {
     margin-left: auto;
-    max-width: 420px;
+    max-width: 400px;
+    border-top: 2px solid #27272a;
+    padding-top: 4px;
   }
   .work-time-section { break-inside: avoid; }
   .work-time-table { width: 100%; }
   .work-time-table-compact {
     margin-left: auto;
-    max-width: 420px;
+    max-width: 400px;
   }
   .work-time-compact-wrap {
     display: flex;
@@ -294,95 +334,97 @@ const PRINT_STYLES = `
   tbody tr.work-time-group td {
     font-weight: 700;
     color: #18181b;
-    border-bottom: 1px solid #e4e4e7;
+    border-bottom: 1px solid #d4d4d8;
     padding-top: 12px;
   }
   tbody tr.work-time-detail td {
     color: #52525b;
     padding-left: 14px;
+    font-size: 9.5pt;
   }
   thead th {
     text-align: left;
-    font-size: 8pt;
+    font-size: 7.5pt;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #71717a;
-    border-bottom: 2px solid #e4e4e7;
-    padding: 8px 0;
+    letter-spacing: 0.07em;
+    color: #a1a1aa;
+    border-bottom: 1.5px solid #27272a;
+    padding: 8px 0 7px;
     font-weight: 700;
   }
   thead th:last-child { text-align: right; }
   thead th:nth-child(2) { text-align: right; }
   thead th:nth-child(3) { text-align: right; }
-  tbody td { padding: 9px 0; border-bottom: 1px solid #f4f4f5; vertical-align: top; }
+  tbody td { padding: 8px 0; border-bottom: 1px solid #f4f4f5; vertical-align: top; }
   tbody td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
   tbody tr.summary td { font-weight: 600; color: #3f3f46; }
-  tbody tr.total-net td { font-weight: 700; border-bottom: 2px solid #e4e4e7; padding-top: 12px; }
+  tbody tr.muted-row td { color: #a1a1aa; font-weight: 400; }
+  tbody tr.total-net td {
+    font-weight: 700;
+    border-top: 1.5px solid #d4d4d8;
+    border-bottom: none;
+    padding-top: 14px;
+  }
   tbody tr.total-gross td {
     font-size: 12pt;
     font-weight: 700;
-    color: #1d4ed8;
+    color: #18181b;
     border-bottom: none;
-    padding-top: 12px;
+    padding-top: 10px;
   }
-  .discount { color: #047857; }
-  .discount-banner {
-    border: 1px solid #a7f3d0;
-    background: #ecfdf5;
-    border-radius: 6px;
-    padding: 12px 14px;
-    margin-bottom: 14px;
+  .discount-note {
+    border-left: 2px solid #27272a;
+    padding: 2px 0 2px 12px;
+    margin-bottom: 16px;
     font-size: 10pt;
-    color: #065f46;
+    color: #3f3f46;
   }
-  .discount-banner.inactive {
-    border-color: #e4e4e7;
-    background: #fafafa;
-    color: #52525b;
+  .discount-note.inactive {
+    border-left-color: #e4e4e7;
+    color: #71717a;
   }
-  .discount-banner .label {
-    font-size: 8pt;
+  .discount-note .label {
+    font-size: 7.5pt;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: #71717a;
+    color: #a1a1aa;
     margin-bottom: 4px;
   }
-  tr.discount-row td {
-    background: #ecfdf5;
-    color: #065f46;
-    font-weight: 600;
-  }
-  .muted-cell { color: #a1a1aa; }
+  tr.discount-row td { font-weight: 600; color: #3f3f46; }
+  .muted-cell { color: #a1a1aa; font-weight: 400; }
   .comparison {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 12px;
+    gap: 0;
     border: 1px solid #e4e4e7;
-    border-radius: 6px;
-    padding: 12px;
-    background: #fafafa;
     font-size: 9.5pt;
   }
+  .comparison > div {
+    padding: 12px 14px;
+    border-right: 1px solid #e4e4e7;
+  }
+  .comparison > div:last-child { border-right: none; }
   .comparison .label {
-    font-size: 8pt;
+    font-size: 7.5pt;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #71717a;
-    margin-bottom: 4px;
+    letter-spacing: 0.06em;
+    color: #a1a1aa;
+    margin-bottom: 6px;
   }
-  .comparison .value { font-variant-numeric: tabular-nums; font-weight: 500; }
-  .diff-over { color: #be123c; }
-  .diff-under { color: #047857; }
-  .footnote { margin-top: 10px; font-size: 8.5pt; color: #a1a1aa; }
+  .comparison .value { font-variant-numeric: tabular-nums; font-weight: 600; color: #18181b; }
+  .diff-over { font-weight: 700; }
+  .diff-under { font-weight: 700; }
+  .footnote { margin-top: 12px; font-size: 8.5pt; color: #a1a1aa; }
   .doc-footer {
-    margin-top: 24px;
-    padding-top: 12px;
+    margin-top: 28px;
+    padding-top: 14px;
     border-top: 1px solid #e4e4e7;
     text-align: center;
-    font-size: 8.5pt;
+    font-size: 8pt;
     color: #a1a1aa;
+    letter-spacing: 0.02em;
   }
   @media print {
     html, body {
@@ -392,12 +434,9 @@ const PRINT_STYLES = `
       background: #fff !important;
       color: #000 !important;
     }
-    .doc {
-      max-width: none;
-      width: 100%;
-    }
+    .doc { max-width: none; width: 100%; }
     .cost-section, .comparison { break-inside: avoid; }
-    .block { break-inside: avoid; }
+    .major-section { break-inside: avoid; }
     .header { break-inside: avoid; }
   }
 `;
@@ -468,7 +507,8 @@ export function buildServiceReportPrintDocument(
   const compareSections = reportCompareSectionsHtml(service, meta.showDetailedCosts);
 
   const comparisonSection = meta.showComparison
-    ? `<section class="block">
+    ? `<section class="major-section">
+      <p class="major-label">Porównanie</p>
       <h2 class="section-title">Porównanie z przewidywanymi kosztami</h2>
       <div class="comparison">
         <div>
@@ -514,61 +554,74 @@ export function buildServiceReportPrintDocument(
       </dl>
     </header>
 
-    <div class="columns">
-      <section>
-        <h2 class="section-title">Dane klienta</h2>
-        <dl class="fields">
-          ${field("Imię i nazwisko", service.client.fullName)}
-          ${field("Obiekt / lokalizacja", service.client.location)}
-          ${field("E-mail", service.client.email)}
-          ${field("Telefon", service.client.phone)}
-        </dl>
-      </section>
-      <section>
-        <h2 class="section-title">Zgłoszenie</h2>
-        <dl class="fields">
-          ${field("Tytuł", service.title)}
-          ${field("Typ serwisu", service.serviceType)}
-          ${field("Projekt", projectLabel)}
-          ${field("Data utworzenia", formatDate(service.createdAt))}
-        </dl>
-      </section>
-    </div>
-
-    <section class="block">
-      <h2 class="section-title">${escapeHtml(meta.worksSectionTitle)}</h2>
-      <p>${escapeHtml(workNote)}</p>
+    <section class="major-section">
+      <p class="major-label">Informacje</p>
+      <div class="columns">
+        <section>
+          <h2 class="section-title">Dane klienta</h2>
+          <dl class="fields">
+            ${field("Imię i nazwisko", service.client.fullName)}
+            ${field("Obiekt / lokalizacja", service.client.location)}
+            ${field("E-mail", service.client.email)}
+            ${field("Telefon", service.client.phone)}
+          </dl>
+        </section>
+        <section>
+          <h2 class="section-title">Zgłoszenie</h2>
+          <dl class="fields">
+            ${field("Tytuł", service.title)}
+            ${field("Typ serwisu", service.serviceType)}
+            ${field("Projekt", projectLabel)}
+            ${field("Data utworzenia", formatDate(service.createdAt))}
+          </dl>
+        </section>
+      </div>
     </section>
 
-    ${materialsSectionHtml(materialsNote)}
+    <section class="major-section">
+      <p class="major-label">Zakres prac</p>
+      <div class="scope-stack">
+        <div class="sub-block">
+          <h3 class="subsection-title">${escapeHtml(meta.worksSectionTitle)}</h3>
+          <p class="prose">${escapeHtml(workNote)}</p>
+        </div>
+        ${materialsSectionHtml(materialsNote)}
+      </div>
+    </section>
 
-    ${compareSections.body}
+    <section class="major-section">
+      <p class="major-label">Szczegóły wyceny</p>
+      ${compareSections.body}
+    </section>
 
-    <section class="cost-section">
-      <h2 class="section-title">${escapeHtml(meta.costSectionTitle)}</h2>
-      ${discountBannerHtml(billingDiscounts, billing)}
-      ${
-        meta.showDetailedCosts
-          ? `<table>
-        ${costTableHead}
-        <tbody>
-          ${costTableBody}
-        </tbody>
-      </table>`
-          : `<div class="cost-totals-compact">
-        <table>
-        ${costTableHead}
-        <tbody>
-          ${costTableBody}
-        </tbody>
-      </table>
-      </div>`
-      }
-      ${
-        meta.showDetailedCosts && billing.kilometerZone > 0
-          ? `<p class="footnote">Strefa kilometrowa: ${billing.kilometerZone} · Sugerowane godziny w aucie: ${billing.suggestedCarHoursFromZone}</p>`
-          : ""
-      }
+    <section class="major-section">
+      <p class="major-label">Podsumowanie</p>
+      <div class="cost-section">
+        <h2 class="section-title">${escapeHtml(meta.costSectionTitle)}</h2>
+        ${discountBannerHtml(billingDiscounts, billing)}
+        ${
+          meta.showDetailedCosts
+            ? `<table>
+          ${costTableHead}
+          <tbody>
+            ${costTableBody}
+          </tbody>
+        </table>`
+            : `<div class="cost-totals-compact">
+          <table>
+          ${costTableHead}
+          <tbody>
+            ${costTableBody}
+          </tbody>
+        </table>
+        </div>`
+        }
+        ${
+          meta.showDetailedCosts && billing.kilometerZone > 0
+            ? `<p class="footnote">Strefa kilometrowa: ${billing.kilometerZone} · Sugerowane godziny w aucie: ${billing.suggestedCarHoursFromZone}</p>`
+            : ""
+        }
+      </div>
     </section>
 
     ${comparisonSection}
