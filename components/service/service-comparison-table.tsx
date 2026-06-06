@@ -72,7 +72,7 @@ export function ServiceComparisonTable({
         <thead className="bg-surface-muted text-xs uppercase tracking-wide text-muted">
           <tr>
             <th className="px-3 py-3">Kategoria</th>
-            <th className="px-3 py-3 text-right">Estymacja netto</th>
+            <th className="px-3 py-3 text-right">Przewidywane koszty netto</th>
             <th className="px-3 py-3 text-right">Rzeczywiste netto</th>
             <th className="px-3 py-3 text-right">Różnica</th>
           </tr>

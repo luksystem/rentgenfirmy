@@ -50,10 +50,15 @@ const navGroups = [
 ];
 
 const serwisNav = navGroups[0].items.find((item) => item.href === "/serwis");
-const mobileNavLeft = navGroups[0].items.filter((item) => item.href !== "/serwis").slice(0, 2);
-const mobileNavRight = navGroups[0].items.filter((item) => item.href !== "/serwis").slice(2);
+const klienciNav = navGroups[0].items.find((item) => item.href === "/klienci");
+const mobileMainNav = navGroups[0].items.filter(
+  (item) => item.href !== "/serwis" && item.href !== "/klienci",
+);
+const mobileNavLeft = mobileMainNav.slice(0, 2);
+const mobileNavRight = mobileMainNav.slice(2);
 const secondaryNav = [
   ...(serwisNav ? [serwisNav] : []),
+  ...(klienciNav ? [klienciNav] : []),
   ...navGroups[1].items,
   ...navGroups[2].items,
 ];

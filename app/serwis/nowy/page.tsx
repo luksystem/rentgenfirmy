@@ -14,7 +14,7 @@ export default function NewServicePage() {
       <PageHeader
         eyebrow="Serwis"
         title="Wyceń serwis"
-        description="Uzupełnij dane klienta, stawki, estymację i po wykonaniu koszty rzeczywiste."
+        description="Uzupełnij dane klienta, stawki, przewidywane koszty i po wykonaniu koszty rzeczywiste."
       />
       <ServiceForm initialService={service} />
     </>

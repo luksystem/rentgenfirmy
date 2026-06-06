@@ -27,7 +27,7 @@ import { useAppStore } from "@/store/app-store";
 const STEPS = [
   "Dane klienta i zgłoszenia",
   "Stawki",
-  "Estymacja przed wyjazdem",
+  "Przewidywane koszty przed wyjazdem",
   "Koszty rzeczywiste",
   "Podsumowanie i raport",
 ] as const;
@@ -281,13 +281,13 @@ export function ServiceForm({
                 Rozliczenie szczegółowe (pełny rozbicie kosztów w raporcie)
               </label>
               <ServiceLineItemsForm
-                title="Estymacja przed wyjazdem"
+                title="Przewidywane koszty przed wyjazdem"
                 items={service.estimate}
                 zoneSettings={service.zoneSettings}
                 onChange={(estimate) => setService({ ...service, estimate })}
               />
               <div className="mt-6 grid gap-4">
-                <h3 className="text-sm font-semibold text-foreground">Rabaty estymacji</h3>
+                <h3 className="text-sm font-semibold text-foreground">Rabaty przewidywanych kosztów</h3>
                 <ServiceDiscountsForm
                   discounts={service.estimateDiscounts}
                   onChange={(estimateDiscounts) => setService({ ...service, estimateDiscounts })}
@@ -295,7 +295,7 @@ export function ServiceForm({
               </div>
               <div className="mt-6">
                 <ServiceCostBreakdownPanel
-                  title="Podsumowanie estymacji"
+                  title="Podsumowanie przewidywanych kosztów"
                   breakdown={costs.estimate}
                   discounts={service.estimateDiscounts}
                   kilometerZone={costs.estimate.kilometerZone}
@@ -345,7 +345,7 @@ export function ServiceForm({
             />
             <div className="grid gap-4 lg:grid-cols-2">
               <ServiceCostBreakdownPanel
-                title="Estymacja"
+                title="Przewidywane koszty"
                 breakdown={costs.estimate}
                 discounts={service.estimateDiscounts}
                 kilometerZone={costs.estimate.kilometerZone}

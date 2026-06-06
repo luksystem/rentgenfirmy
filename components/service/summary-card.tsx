@@ -49,7 +49,7 @@ export function SummaryCard({
       </CardHeader>
       <CardContent className="grid gap-4">
         <div className="grid gap-2 rounded-xl border border-border/80 bg-surface-muted/50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Estymacja</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Przewidywane koszty</p>
           <Row label="Netto" value={formatMoney(estimate.netTotal)} />
           <Row label="Brutto" value={formatMoney(estimate.grossTotal)} emphasis />
         </div>

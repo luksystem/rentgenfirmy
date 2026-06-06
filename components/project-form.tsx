@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type Resolver, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
+import { ClientSelectWithCreate } from "@/components/client-select-with-create";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import {
@@ -174,6 +175,7 @@ export function ProjectForm({
 }) {
   const fieldOptions = useAppStore((state) => state.fieldOptions);
   const clients = useAppStore((state) => state.clients);
+  const addClient = useAppStore((state) => state.addClient);
   const schema = useMemo(() => createSchema(fieldOptions), [fieldOptions]);
   const defaultValues = useMemo(
     () => (project ? projectToFormValues(project, fieldOptions) : createDefaultValues(fieldOptions)),
@@ -192,6 +194,7 @@ export function ProjectForm({
   });
 
   const flowStatus = useWatch({ control, name: "flowStatus" });
+  const clientId = useWatch({ control, name: "clientId" });
   const waitingDependsOnUs = useWatch({ control, name: "waitingDependsOnUs" });
   const waitingIncreasesCostLater = useWatch({ control, name: "waitingIncreasesCostLater" });
   const waitingBlocksSettlement = useWatch({ control, name: "waitingBlocksSettlement" });
@@ -280,16 +283,14 @@ export function ProjectForm({
             ))}
           </Select>
         </Field>
-        <Field label="Klient">
-          <Select {...register("clientId")}>
-            <option value="">Bez klienta</option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.fullName}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        <ClientSelectWithCreate
+          clients={clients}
+          value={clientId || null}
+          onChange={(id) => setValue("clientId", id ?? "")}
+          onCreateClient={addClient}
+          emptyLabel="Bez klienta"
+          className="md:col-span-2"
+        />
       </div>
 
       <label className="panel-success flex cursor-pointer items-start gap-3 rounded-xl border p-4">

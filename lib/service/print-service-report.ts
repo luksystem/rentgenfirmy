@@ -6,10 +6,12 @@ import {
   getServiceReportDocumentMeta,
   getServiceReportMaterialsNote,
   getServiceReportWorkNote,
+  getServiceReportWorkTimeSections,
   hasAppliedDiscount,
   isServiceSettled,
+  type ServiceWorkTimeBreakdown,
 } from "@/lib/service/report-document";
-import { formatDate, formatMoney } from "@/lib/utils";
+import { formatDate, formatHours, formatMoney } from "@/lib/utils";
 import type { ServiceCostBreakdown, ServiceDiscounts, ServiceRecord } from "@/lib/service/types";
 
 function escapeHtml(value: string) {
@@ -96,6 +98,99 @@ function discountBannerHtml(
   </div>`;
 }
 
+function workTimeRowsDetailed(breakdown: ServiceWorkTimeBreakdown) {
+  const { lines } = breakdown;
+
+  return `
+    <tr class="work-time-group">
+      <td>Logistyka i nadzór</td>
+      <td class="num">${escapeHtml(formatHours(breakdown.logisticsAndSupervisionTotal))}</td>
+    </tr>
+    <tr class="work-time-detail">
+      <td>Godziny w aucie</td>
+      <td class="num">${escapeHtml(formatHours(lines.logistics.carHours))}</td>
+    </tr>
+    <tr class="work-time-detail">
+      <td>Godziny nadzoru</td>
+      <td class="num">${escapeHtml(formatHours(lines.logistics.supervisionHours))}</td>
+    </tr>
+    <tr class="work-time-group">
+      <td>Godziny pracy</td>
+      <td class="num">${escapeHtml(formatHours(breakdown.workHoursTotal))}</td>
+    </tr>
+    <tr class="work-time-detail">
+      <td>Godziny instalatora</td>
+      <td class="num">${escapeHtml(formatHours(lines.work.installerHours))}</td>
+    </tr>
+    <tr class="work-time-detail">
+      <td>Godziny pomocnika</td>
+      <td class="num">${escapeHtml(formatHours(lines.work.helperHours))}</td>
+    </tr>
+    <tr class="work-time-detail">
+      <td>Godziny programisty</td>
+      <td class="num">${escapeHtml(formatHours(lines.work.programmerHours))}</td>
+    </tr>
+  `;
+}
+
+function workTimeRowsCompact(breakdown: ServiceWorkTimeBreakdown) {
+  return `
+    <tr>
+      <td>Logistyka i nadzór</td>
+      <td class="num">${escapeHtml(formatHours(breakdown.logisticsAndSupervisionTotal))}</td>
+    </tr>
+    <tr>
+      <td>Godziny pracy</td>
+      <td class="num">${escapeHtml(formatHours(breakdown.workHoursTotal))}</td>
+    </tr>
+  `;
+}
+
+function workTimeSectionHtml(
+  title: string,
+  breakdown: ServiceWorkTimeBreakdown,
+  detailed: boolean,
+) {
+  const rows = detailed ? workTimeRowsDetailed(breakdown) : workTimeRowsCompact(breakdown);
+  const tableClass = detailed ? "work-time-table" : "work-time-table work-time-table-compact";
+
+  return `<section class="block work-time-section">
+    <h2 class="section-title">${escapeHtml(title)}</h2>
+    <div class="${detailed ? "" : "work-time-compact-wrap"}">
+      <table class="${tableClass}">
+        <thead>
+          <tr>
+            <th>Pozycja</th>
+            <th>Ilość</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+  </section>`;
+}
+
+function workTimeSectionsHtml(service: ServiceRecord, detailed: boolean) {
+  const sections = getServiceReportWorkTimeSections(service);
+  const parts: string[] = [];
+
+  if (sections.showPredicted) {
+    parts.push(
+      workTimeSectionHtml("Przewidywany czas pracy", sections.predicted, detailed),
+    );
+  }
+
+  if (sections.showActual) {
+    parts.push(
+      workTimeSectionHtml("Rzeczywisty czas pracy", sections.actual, detailed),
+    );
+  }
+
+  return parts.join("");
+}
+
 const PRINT_STYLES = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
   @page { size: A4; margin: 14mm 16mm; }
@@ -151,6 +246,30 @@ const PRINT_STYLES = `
     margin: 8px 0 20px;
   }
   table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+  .cost-totals-compact {
+    margin-left: auto;
+    max-width: 420px;
+  }
+  .work-time-section { break-inside: avoid; }
+  .work-time-table { width: 100%; }
+  .work-time-table-compact {
+    margin-left: auto;
+    max-width: 420px;
+  }
+  .work-time-compact-wrap {
+    display: flex;
+    justify-content: flex-end;
+  }
+  tbody tr.work-time-group td {
+    font-weight: 700;
+    color: #18181b;
+    border-bottom: 1px solid #e4e4e7;
+    padding-top: 12px;
+  }
+  tbody tr.work-time-detail td {
+    color: #52525b;
+    padding-left: 14px;
+  }
   thead th {
     text-align: left;
     font-size: 8pt;
@@ -173,15 +292,15 @@ const PRINT_STYLES = `
     border-bottom: none;
     padding-top: 12px;
   }
-  .discount { color: #be123c; }
+  .discount { color: #047857; }
   .discount-banner {
-    border: 1px solid #fecdd3;
-    background: #fff1f2;
+    border: 1px solid #a7f3d0;
+    background: #ecfdf5;
     border-radius: 6px;
     padding: 12px 14px;
     margin-bottom: 14px;
     font-size: 10pt;
-    color: #881337;
+    color: #065f46;
   }
   .discount-banner.inactive {
     border-color: #e4e4e7;
@@ -197,7 +316,8 @@ const PRINT_STYLES = `
     margin-bottom: 4px;
   }
   tr.discount-row td {
-    background: #fff1f2;
+    background: #ecfdf5;
+    color: #065f46;
     font-weight: 600;
   }
   .muted-cell { color: #a1a1aa; }
@@ -319,10 +439,10 @@ export function buildServiceReportPrintDocument(
 
   const comparisonSection = meta.showComparison
     ? `<section class="block">
-      <h2 class="section-title">Porównanie z estymacją</h2>
+      <h2 class="section-title">Porównanie z przewidywanymi kosztami</h2>
       <div class="comparison">
         <div>
-          <p class="label">Estymacja</p>
+          <p class="label">Przewidywane koszty</p>
           <p class="value">netto ${escapeHtml(formatMoney(costs.estimate.netTotal))}<br />brutto ${escapeHtml(formatMoney(costs.estimate.grossTotal))}</p>
         </div>
         <div>
@@ -398,15 +518,28 @@ export function buildServiceReportPrintDocument(
       }
     </section>
 
+    ${workTimeSectionsHtml(service, meta.showDetailedCosts)}
+
     <section class="cost-section">
       <h2 class="section-title">${escapeHtml(meta.costSectionTitle)}</h2>
       ${discountBannerHtml(billingDiscounts, billing)}
-      <table>
+      ${
+        meta.showDetailedCosts
+          ? `<table>
+        ${costTableHead}
+        <tbody>
+          ${costTableBody}
+        </tbody>
+      </table>`
+          : `<div class="cost-totals-compact">
+        <table>
         ${costTableHead}
         <tbody>
           ${costTableBody}
         </tbody>
       </table>
+      </div>`
+      }
       ${
         meta.showDetailedCosts && billing.kilometerZone > 0
           ? `<p class="footnote">Strefa kilometrowa: ${billing.kilometerZone} · Sugerowane godziny w aucie: ${billing.suggestedCarHoursFromZone}</p>`

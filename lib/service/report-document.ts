@@ -1,5 +1,10 @@
 import { calculateServiceCost } from "@/lib/service/calculate-service-cost";
-import type { ServiceCostBreakdown, ServiceDiscounts, ServiceRecord } from "@/lib/service/types";
+import type {
+  ServiceCostBreakdown,
+  ServiceDiscounts,
+  ServiceLineItems,
+  ServiceRecord,
+} from "@/lib/service/types";
 import { formatMoney } from "@/lib/utils";
 
 export function isServiceSettled(service: ServiceRecord): boolean {
@@ -123,4 +128,50 @@ export function getAppliedDiscountDescription(
   }
 
   return parts.join(" · ");
+}
+
+export type ServiceWorkTimeBreakdown = {
+  logisticsAndSupervisionTotal: number;
+  workHoursTotal: number;
+  lines: {
+    logistics: {
+      carHours: number;
+      supervisionHours: number;
+    };
+    work: {
+      installerHours: number;
+      helperHours: number;
+      programmerHours: number;
+    };
+  };
+};
+
+export function buildServiceWorkTimeBreakdown(
+  items: ServiceLineItems,
+): ServiceWorkTimeBreakdown {
+  const carHours = items.carHours;
+  const supervisionHours = items.supervisionHours;
+  const installerHours = items.installerHours;
+  const helperHours = items.helperHours;
+  const programmerHours = items.programmerHours;
+
+  return {
+    logisticsAndSupervisionTotal: carHours + supervisionHours,
+    workHoursTotal: installerHours + helperHours + programmerHours,
+    lines: {
+      logistics: { carHours, supervisionHours },
+      work: { installerHours, helperHours, programmerHours },
+    },
+  };
+}
+
+export function getServiceReportWorkTimeSections(service: ServiceRecord) {
+  const settled = isServiceSettled(service);
+
+  return {
+    showPredicted: true,
+    showActual: settled,
+    predicted: buildServiceWorkTimeBreakdown(service.estimate),
+    actual: buildServiceWorkTimeBreakdown(service.actual),
+  };
 }

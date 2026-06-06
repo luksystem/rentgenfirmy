@@ -11,10 +11,12 @@ import {
   getServiceReportDocumentMeta,
   getServiceReportMaterialsNote,
   getServiceReportWorkNote,
+  getServiceReportWorkTimeSections,
   hasAppliedDiscount,
   isServiceSettled,
+  type ServiceWorkTimeBreakdown,
 } from "@/lib/service/report-document";
-import { cn, formatDate, formatMoney } from "@/lib/utils";
+import { cn, formatDate, formatHours, formatMoney } from "@/lib/utils";
 import type { ServiceCostBreakdown, ServiceDiscounts, ServiceRecord } from "@/lib/service/types";
 
 function ReportField({ label, value }: { label: string; value: string }) {
@@ -79,11 +81,11 @@ function CostTable({
           </td>
         </tr>
         {percentDiscount > 0 ? (
-          <tr className="border-b border-rose-100 bg-rose-50/80">
-            <td className="py-2.5 pr-4 font-medium text-rose-900">
+          <tr className="border-b border-emerald-100 bg-emerald-50/80">
+            <td className="py-2.5 pr-4 font-medium text-emerald-900">
               Rabat procentowy ({percentDiscount}%)
             </td>
-            <td className="py-2.5 text-right tabular-nums font-semibold text-rose-700">
+            <td className="py-2.5 text-right tabular-nums font-semibold text-emerald-700">
               −{formatMoney(breakdown.percentDiscountAmount)}
             </td>
           </tr>
@@ -94,9 +96,9 @@ function CostTable({
           </tr>
         )}
         {specialDiscountPln > 0 ? (
-          <tr className="border-b border-rose-100 bg-rose-50/80">
-            <td className="py-2.5 pr-4 font-medium text-rose-900">Rabat specjalny</td>
-            <td className="py-2.5 text-right tabular-nums font-semibold text-rose-700">
+          <tr className="border-b border-emerald-100 bg-emerald-50/80">
+            <td className="py-2.5 pr-4 font-medium text-emerald-900">Rabat specjalny</td>
+            <td className="py-2.5 text-right tabular-nums font-semibold text-emerald-700">
               −{formatMoney(specialDiscountPln)}
             </td>
           </tr>
@@ -144,12 +146,12 @@ function DiscountBanner({
       className={cn(
         "mb-4 rounded-lg border px-4 py-3 text-sm",
         active
-          ? "border-rose-200 bg-rose-50 text-rose-950"
+          ? "border-emerald-200 bg-emerald-50 text-emerald-950"
           : "border-zinc-200 bg-zinc-50 text-zinc-700",
       )}
     >
       <p className="text-[11px] font-bold uppercase tracking-wide text-zinc-500">Przyznany rabat</p>
-      <p className={cn("mt-1 font-semibold", active && "text-rose-900")}>{description}</p>
+      <p className={cn("mt-1 font-semibold", active && "text-emerald-900")}>{description}</p>
     </div>
   );
 }
@@ -164,7 +166,7 @@ function CompactCostSummary({
   grossTotalLabel: string;
 }) {
   return (
-    <div className="mx-auto max-w-md rounded-lg border border-zinc-200 bg-white px-4 py-5">
+    <div className="ml-auto max-w-md rounded-lg border border-zinc-200 bg-white px-4 py-5">
       <dl className="grid gap-3 text-sm">
         <div className="flex items-center justify-between gap-4">
           <dt className="text-zinc-600">Suma netto przed rabatem</dt>
@@ -175,16 +177,16 @@ function CompactCostSummary({
         <div
           className={cn(
             "flex items-center justify-between gap-4 rounded-md px-2 py-1.5",
-            discounts.percentDiscount > 0 ? "bg-rose-50" : "",
+            discounts.percentDiscount > 0 ? "bg-emerald-50" : "",
           )}
         >
-          <dt className={discounts.percentDiscount > 0 ? "font-medium text-rose-900" : "text-zinc-600"}>
+          <dt className={discounts.percentDiscount > 0 ? "font-medium text-emerald-900" : "text-zinc-600"}>
             Rabat procentowy ({discounts.percentDiscount}%)
           </dt>
           <dd
             className={cn(
               "tabular-nums font-semibold",
-              discounts.percentDiscount > 0 ? "text-rose-700" : "text-zinc-500",
+              discounts.percentDiscount > 0 ? "text-emerald-700" : "text-zinc-500",
             )}
           >
             {discounts.percentDiscount > 0
@@ -195,12 +197,12 @@ function CompactCostSummary({
         <div
           className={cn(
             "flex items-center justify-between gap-4 rounded-md px-2 py-1.5",
-            discounts.specialDiscountPln > 0 ? "bg-rose-50" : "",
+            discounts.specialDiscountPln > 0 ? "bg-emerald-50" : "",
           )}
         >
           <dt
             className={
-              discounts.specialDiscountPln > 0 ? "font-medium text-rose-900" : "text-zinc-600"
+              discounts.specialDiscountPln > 0 ? "font-medium text-emerald-900" : "text-zinc-600"
             }
           >
             Rabat specjalny
@@ -208,7 +210,7 @@ function CompactCostSummary({
           <dd
             className={cn(
               "tabular-nums font-semibold",
-              discounts.specialDiscountPln > 0 ? "text-rose-700" : "text-zinc-500",
+              discounts.specialDiscountPln > 0 ? "text-emerald-700" : "text-zinc-500",
             )}
           >
             {discounts.specialDiscountPln > 0 ? `−${formatMoney(discounts.specialDiscountPln)}` : "—"}
@@ -235,6 +237,98 @@ function CompactCostSummary({
   );
 }
 
+function WorkTimeSection({
+  title,
+  breakdown,
+  detailed,
+}: {
+  title: string;
+  breakdown: ServiceWorkTimeBreakdown;
+  detailed: boolean;
+}) {
+  const { lines } = breakdown;
+
+  if (detailed) {
+    return (
+      <section className="border-t border-zinc-100 px-6 py-5 sm:px-8">
+        <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-700">{title}</h2>
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b-2 border-zinc-200 text-left text-[11px] uppercase tracking-wide text-zinc-500">
+              <th className="py-2 pr-4 font-semibold">Pozycja</th>
+              <th className="py-2 text-right font-semibold">Ilość</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-zinc-200">
+              <td className="py-2.5 pr-4 font-semibold text-zinc-900">Logistyka i nadzór</td>
+              <td className="py-2.5 text-right tabular-nums font-semibold text-zinc-900">
+                {formatHours(breakdown.logisticsAndSupervisionTotal)}
+              </td>
+            </tr>
+            <tr className="border-b border-zinc-100">
+              <td className="py-2.5 pr-4 pl-4 text-zinc-600">Godziny w aucie</td>
+              <td className="py-2.5 text-right tabular-nums text-zinc-900">
+                {formatHours(lines.logistics.carHours)}
+              </td>
+            </tr>
+            <tr className="border-b border-zinc-100">
+              <td className="py-2.5 pr-4 pl-4 text-zinc-600">Godziny nadzoru</td>
+              <td className="py-2.5 text-right tabular-nums text-zinc-900">
+                {formatHours(lines.logistics.supervisionHours)}
+              </td>
+            </tr>
+            <tr className="border-b border-zinc-200">
+              <td className="py-2.5 pr-4 font-semibold text-zinc-900">Godziny pracy</td>
+              <td className="py-2.5 text-right tabular-nums font-semibold text-zinc-900">
+                {formatHours(breakdown.workHoursTotal)}
+              </td>
+            </tr>
+            <tr className="border-b border-zinc-100">
+              <td className="py-2.5 pr-4 pl-4 text-zinc-600">Godziny instalatora</td>
+              <td className="py-2.5 text-right tabular-nums text-zinc-900">
+                {formatHours(lines.work.installerHours)}
+              </td>
+            </tr>
+            <tr className="border-b border-zinc-100">
+              <td className="py-2.5 pr-4 pl-4 text-zinc-600">Godziny pomocnika</td>
+              <td className="py-2.5 text-right tabular-nums text-zinc-900">
+                {formatHours(lines.work.helperHours)}
+              </td>
+            </tr>
+            <tr>
+              <td className="py-2.5 pr-4 pl-4 text-zinc-600">Godziny programisty</td>
+              <td className="py-2.5 text-right tabular-nums text-zinc-900">
+                {formatHours(lines.work.programmerHours)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    );
+  }
+
+  return (
+    <section className="border-t border-zinc-100 px-6 py-5 sm:px-8">
+      <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-700">{title}</h2>
+      <div className="ml-auto max-w-md rounded-lg border border-zinc-200 bg-white px-4 py-5">
+        <dl className="grid gap-3 text-sm">
+          <div className="flex items-center justify-between gap-4">
+            <dt className="font-medium text-zinc-900">Logistyka i nadzór</dt>
+            <dd className="tabular-nums text-zinc-900">
+              {formatHours(breakdown.logisticsAndSupervisionTotal)}
+            </dd>
+          </div>
+          <div className="flex items-center justify-between gap-4 border-t border-zinc-200 pt-3">
+            <dt className="font-medium text-zinc-900">Godziny pracy</dt>
+            <dd className="tabular-nums text-zinc-900">{formatHours(breakdown.workHoursTotal)}</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+  );
+}
+
 function ComparisonMini({
   estimate,
   actual,
@@ -248,7 +342,7 @@ function ComparisonMini({
   return (
     <div className="grid gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm sm:grid-cols-3">
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Estymacja</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Przewidywane koszty</p>
         <p className="mt-1 tabular-nums text-zinc-900">
           netto {formatMoney(estimate.netTotal)} · brutto {formatMoney(estimate.grossTotal)}
         </p>
@@ -292,6 +386,7 @@ export function ServiceReport({
   const billingDiscounts = getServiceReportBillingDiscounts(service);
   const workNote = getServiceReportWorkNote(service, settled);
   const materialsNote = getServiceReportMaterialsNote(service, settled);
+  const workTimeSections = getServiceReportWorkTimeSections(service);
 
   const handlePrint = useCallback(() => {
     printServiceReport(service, projectName);
@@ -393,6 +488,22 @@ export function ServiceReport({
           ) : null}
         </section>
 
+        {workTimeSections.showPredicted ? (
+          <WorkTimeSection
+            title="Przewidywany czas pracy"
+            breakdown={workTimeSections.predicted}
+            detailed={meta.showDetailedCosts}
+          />
+        ) : null}
+
+        {workTimeSections.showActual ? (
+          <WorkTimeSection
+            title="Rzeczywisty czas pracy"
+            breakdown={workTimeSections.actual}
+            detailed={meta.showDetailedCosts}
+          />
+        ) : null}
+
         <section className="border-t border-zinc-200 bg-zinc-50/80 px-6 py-6 sm:px-8">
           <h2 className="mb-4 text-xs font-bold uppercase tracking-wide text-zinc-700">
             {meta.costSectionTitle}
@@ -425,7 +536,7 @@ export function ServiceReport({
         {meta.showComparison ? (
           <section className="border-t border-zinc-100 px-6 py-5 sm:px-8">
             <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-700">
-              Porównanie z estymacją
+              Porównanie z przewidywanymi kosztami
             </h2>
             <ComparisonMini estimate={costs.estimate} actual={costs.actual} />
           </section>

@@ -30,6 +30,17 @@ export function formatDate(value?: string) {
   }).format(new Date(value));
 }
 
+export function formatHours(value: number) {
+  if (value <= 0) {
+    return "—";
+  }
+
+  return `${new Intl.NumberFormat("pl-PL", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value)} godz.`;
+}
+
 export function formatMinutes(total: number) {
   if (total <= 0) {
     return "—";

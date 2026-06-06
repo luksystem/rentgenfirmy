@@ -54,7 +54,7 @@ export function ServiceList() {
               <th className="px-4 py-3">Projekt</th>
               <th className="px-4 py-3">Typ</th>
               <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Est. netto</th>
+              <th className="px-4 py-3 text-right">Przewidywane netto</th>
               <th className="px-4 py-3 text-right">Rzecz. netto</th>
               <th className="px-4 py-3 text-right">Różnica</th>
               <th className="px-4 py-3 text-right">Brutto</th>

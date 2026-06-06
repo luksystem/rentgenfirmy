@@ -25,7 +25,7 @@ export function validateService(service: ServiceRecord): string[] {
   }
 
   if (!hasBillableLineItem(service.estimate) && !hasBillableLineItem(service.actual)) {
-    errors.push("W estymacji lub kosztach rzeczywistych musi być przynajmniej jedna pozycja do rozliczenia.");
+    errors.push("W przewidywanych kosztach lub kosztach rzeczywistych musi być przynajmniej jedna pozycja do rozliczenia.");
   }
 
   const numbers = [
