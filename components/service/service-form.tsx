@@ -269,17 +269,6 @@ export function ServiceForm({
         {step === 2 ? (
           <Card>
             <CardContent className="py-5">
-              <label className="mb-4 flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={service.detailedSettlement}
-                  onChange={(event) =>
-                    setService({ ...service, detailedSettlement: event.target.checked })
-                  }
-                  className="h-4 w-4 rounded border-border"
-                />
-                Rozliczenie szczegółowe (pełny rozbicie kosztów w raporcie)
-              </label>
               <ServiceLineItemsForm
                 title="Przewidywane koszty przed wyjazdem"
                 items={service.estimate}
@@ -366,7 +355,25 @@ export function ServiceForm({
           <ServiceReport service={service} projectName={projectName} />
         ) : null}
 
-        <div className="flex flex-wrap gap-2">
+        <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-10 -mx-4 space-y-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur-xl sm:-mx-5 sm:px-5 xl:bottom-0 xl:mx-0 xl:px-0">
+          <label className="flex items-start gap-2 rounded-xl border border-border/80 bg-surface-muted/50 px-3 py-2.5 text-sm">
+            <input
+              type="checkbox"
+              checked={service.detailedSettlement}
+              onChange={(event) =>
+                setService({ ...service, detailedSettlement: event.target.checked })
+              }
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-border"
+            />
+            <span>
+              <span className="font-medium text-foreground">Rozliczenie szczegółowe</span>
+              <span className="mt-0.5 block text-xs text-muted">
+                Pełne rozbicie kosztów w raporcie (pokaż szczegóły w rozliczeniu)
+              </span>
+            </span>
+          </label>
+
+          <div className="flex flex-wrap gap-2">
           {step > 0 ? (
             <Button type="button" variant="secondary" onClick={() => goToStep(step - 1)}>
               Wstecz
@@ -386,6 +393,7 @@ export function ServiceForm({
           <Button type="button" variant="outline" onClick={() => setShowReport((value) => !value)}>
             {showReport ? "Ukryj podgląd" : "Pokaż podgląd"}
           </Button>
+          </div>
         </div>
       </div>
 
