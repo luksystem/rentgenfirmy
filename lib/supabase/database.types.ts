@@ -79,6 +79,7 @@ export type ServiceRow = {
   actual_discounts: Record<string, unknown> | null;
   zone_settings: Record<string, unknown>;
   detailed_settlement: boolean;
+  show_estimate_comparison: boolean;
   estimate: Record<string, unknown>;
   actual: Record<string, unknown>;
   client_offer_token?: string | null;
@@ -136,6 +137,7 @@ export type ServiceInsert = {
   actual_discounts?: Record<string, unknown> | null;
   zone_settings: Record<string, unknown>;
   detailed_settlement?: boolean;
+  show_estimate_comparison?: boolean;
   estimate: Record<string, unknown>;
   actual: Record<string, unknown>;
   client_offer_token?: string | null;

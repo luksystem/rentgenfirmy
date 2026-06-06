@@ -3,6 +3,7 @@
 import { useCallback, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { printServiceReport } from "@/lib/service/print-service-report";
+import { resolveProjectLabel } from "@/lib/service/resolve-project-label";
 import {
   buildServiceReportCosts,
   getAppliedDiscountDescription,
@@ -24,6 +25,7 @@ import {
 } from "@/lib/service/report-compare-rows";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
 import type { ServiceCostBreakdown, ServiceDiscounts, ServiceRecord } from "@/lib/service/types";
+import { useAppStore } from "@/store/app-store";
 
 function ReportField({ label, value }: { label: string; value: string }) {
   return (
@@ -396,6 +398,8 @@ export function ServiceReport({
   projectName?: string;
   variant?: "internal" | "client";
 }) {
+  const projects = useAppStore((state) => state.projects);
+  const resolvedProjectName = resolveProjectLabel(service.projectId, projects, projectName);
   const settled = isServiceSettled(service);
   const meta = getServiceReportDocumentMeta(service);
   const costs = buildServiceReportCosts(service);
@@ -423,8 +427,8 @@ export function ServiceReport({
     : "Przewidywany czas pracy";
 
   const handlePrint = useCallback(() => {
-    printServiceReport(service, projectName);
-  }, [service, projectName]);
+    printServiceReport(service, resolvedProjectName);
+  }, [resolvedProjectName, service]);
 
   const detailsTables = (
     <div className="grid gap-8">
@@ -506,10 +510,7 @@ export function ServiceReport({
             <dl className="grid gap-4">
               <ReportField label="Tytuł" value={service.title} />
               <ReportField label="Typ serwisu" value={service.serviceType} />
-              <ReportField
-                label="Projekt"
-                value={projectName ?? (service.projectId ? "—" : "Bez projektu")}
-              />
+              <ReportField label="Projekt" value={resolvedProjectName} />
               <ReportField label="Data utworzenia" value={formatDate(service.createdAt)} />
             </dl>
           </section>

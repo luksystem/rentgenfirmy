@@ -118,6 +118,7 @@ export type ServiceRecord = {
   actualDiscounts: ServiceDiscounts;
   zoneSettings: KilometerZoneSettings;
   detailedSettlement: boolean;
+  showEstimateComparison: boolean;
   estimate: ServiceLineItems;
   actual: ServiceLineItems;
   clientOffer: {

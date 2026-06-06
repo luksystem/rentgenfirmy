@@ -11,6 +11,10 @@ export function isServiceSettled(service: ServiceRecord): boolean {
   return service.status === "Rozliczony";
 }
 
+export function shouldShowEstimateComparison(service: ServiceRecord) {
+  return isServiceSettled(service) && service.showEstimateComparison;
+}
+
 export type ServiceReportDocumentMeta = {
   title: string;
   subtitle: string;
@@ -39,7 +43,7 @@ export function getServiceReportDocumentMeta(
       materialsCostLabel: "Koszt materiałów (rozliczane)",
       emptyCostRowsMessage: "Brak pozycji do rozliczenia",
       grossTotalLabel: "Cena brutto do faktury",
-      showComparison: true,
+      showComparison: shouldShowEstimateComparison(service),
       showDetailedCosts: service.detailedSettlement,
     };
   }
@@ -166,10 +170,10 @@ export function buildServiceWorkTimeBreakdown(
 }
 
 export function getServiceReportWorkTimeSections(service: ServiceRecord) {
-  const settled = isServiceSettled(service);
+  const showComparison = shouldShowEstimateComparison(service);
 
   return {
-    showComparison: settled,
+    showComparison,
     predicted: buildServiceWorkTimeBreakdown(service.estimate),
     actual: buildServiceWorkTimeBreakdown(service.actual),
   };
@@ -188,10 +192,10 @@ export function buildServiceQuantitySummary(items: ServiceLineItems): ServiceQua
 }
 
 export function getServiceReportQuantitySections(service: ServiceRecord) {
-  const settled = isServiceSettled(service);
+  const showComparison = shouldShowEstimateComparison(service);
 
   return {
-    showComparison: settled,
+    showComparison,
     predicted: buildServiceQuantitySummary(service.estimate),
     actual: buildServiceQuantitySummary(service.actual),
   };

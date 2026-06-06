@@ -671,12 +671,14 @@ export function ServiceForm({
 
         {mainTab === "settlement" && step === QUOTE_STEPS.length + 1 ? (
           <div className="grid gap-4">
-            <ServiceComparisonTable
-              estimate={costs.estimate}
-              actual={costs.actual}
-              estimateDiscounts={service.estimateDiscounts}
-              actualDiscounts={service.actualDiscounts}
-            />
+            {service.showEstimateComparison ? (
+              <ServiceComparisonTable
+                estimate={costs.estimate}
+                actual={costs.actual}
+                estimateDiscounts={service.estimateDiscounts}
+                actualDiscounts={service.actualDiscounts}
+              />
+            ) : null}
             <div className="grid gap-4 lg:grid-cols-2">
               <ServiceCostBreakdownPanel
                 title="Przewidywane koszty"
@@ -706,7 +708,7 @@ export function ServiceForm({
         {mainTab === "preview" ? (
           <div className="grid gap-4">
             <Card>
-              <CardContent className="py-4">
+              <CardContent className="grid gap-4 py-4">
                 <label className="flex items-start gap-2 text-sm">
                   <input
                     type="checkbox"
@@ -717,9 +719,29 @@ export function ServiceForm({
                     className="mt-0.5 h-4 w-4 shrink-0 rounded border-border"
                   />
                   <span>
-                    <span className="font-medium text-foreground">Rozliczenie szczegółowe</span>
+                    <span className="font-medium text-foreground">Pokaż szczegóły</span>
                     <span className="mt-0.5 block text-xs text-muted">
-                      Pełne rozbicie kosztów w dokumencie dla klienta (pokaż szczegóły pozycji)
+                      Pełne rozbicie kosztów w dokumencie (pokaż szczegóły pozycji)
+                    </span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={service.showEstimateComparison}
+                    onChange={(event) =>
+                      setService({
+                        ...service,
+                        showEstimateComparison: event.target.checked,
+                      })
+                    }
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-border"
+                  />
+                  <span>
+                    <span className="font-medium text-foreground">Pokaż porównanie z wyceną</span>
+                    <span className="mt-0.5 block text-xs text-muted">
+                      W rozliczeniu pokaż przewidywane koszty obok rzeczywistych. Odznacz przy
+                      rozliczeniu powykonawczym bez wyceny.
                     </span>
                   </span>
                 </label>

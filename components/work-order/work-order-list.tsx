@@ -1,18 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useWorkOrderStore } from "@/store/work-order-store";
 import { useAppStore } from "@/store/app-store";
 import { Button } from "@/components/ui/button";
 import { AcceptedOfferPdfButton } from "@/components/work-order/accepted-offer-pdf-button";
 import { Card } from "@/components/ui/card";
+import { Field, Select } from "@/components/ui/input";
 import {
   WORK_ORDER_SOURCE_LABELS,
+  WORK_ORDER_STATUSES,
   type WorkOrderStatus,
 } from "@/lib/work-order/types";
 import { useListAutoRefresh } from "@/lib/hooks/use-list-auto-refresh";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
+
+const ALL_CLIENTS = "";
+const ALL_STATUSES = "";
 
 function statusRowClass(status: WorkOrderStatus) {
   switch (status) {
@@ -71,6 +76,8 @@ export function WorkOrderList() {
   const refresh = useWorkOrderStore((s) => s.refresh);
   const isSaving = useWorkOrderStore((s) => s.isSaving);
   const projects = useAppStore((s) => s.projects);
+  const [clientFilter, setClientFilter] = useState(ALL_CLIENTS);
+  const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
 
   const refreshList = useCallback(async () => {
     await refresh();
@@ -83,6 +90,25 @@ export function WorkOrderList() {
     [projects],
   );
 
+  const clientOptions = useMemo(() => {
+    const names = new Set(orders.map((order) => order.client.fullName.trim()).filter(Boolean));
+    return [...names].sort((left, right) => left.localeCompare(right, "pl"));
+  }, [orders]);
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      if (clientFilter && order.client.fullName !== clientFilter) {
+        return false;
+      }
+      if (statusFilter && order.status !== statusFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [clientFilter, orders, statusFilter]);
+
+  const hasActiveFilters = clientFilter !== ALL_CLIENTS || statusFilter !== ALL_STATUSES;
+
   if (orders.length === 0) {
     return (
       <Card className="p-8 text-center text-sm text-muted">
@@ -93,8 +119,52 @@ export function WorkOrderList() {
 
   return (
     <>
+      <Card className="mb-4 border-border/80 p-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+          <Field label="Klient">
+            <Select value={clientFilter} onChange={(event) => setClientFilter(event.target.value)}>
+              <option value={ALL_CLIENTS}>Wszyscy klienci</option>
+              {clientOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Status">
+            <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <option value={ALL_STATUSES}>Wszystkie statusy</option>
+              {WORK_ORDER_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="sm:col-span-2 lg:col-span-1"
+              onClick={() => {
+                setClientFilter(ALL_CLIENTS);
+                setStatusFilter(ALL_STATUSES);
+              }}
+            >
+              Wyczyść filtry
+            </Button>
+          ) : null}
+        </div>
+      </Card>
+
+      {filteredOrders.length === 0 ? (
+        <Card className="p-8 text-center text-sm text-muted">
+          Brak zleceń dla wybranych filtrów.
+        </Card>
+      ) : (
+        <>
       <div className="grid gap-3 md:hidden">
-        {orders.map((order) => {
+        {filteredOrders.map((order) => {
           const projectLabel = order.projectId
             ? projectNames.get(order.projectId) ?? "—"
             : "Bez projektu";
@@ -190,7 +260,7 @@ export function WorkOrderList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {orders.map((order) => {
+              {filteredOrders.map((order) => {
                 const projectLabel = order.projectId
                   ? projectNames.get(order.projectId) ?? "—"
                   : "Bez projektu";
@@ -254,6 +324,8 @@ export function WorkOrderList() {
           </table>
         </div>
       </Card>
+        </>
+      )}
     </>
   );
 }

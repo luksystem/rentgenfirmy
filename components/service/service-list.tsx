@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { buildServiceCosts, useServiceStore } from "@/store/service-store";
 import { useAppStore } from "@/store/app-store";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Field, Select } from "@/components/ui/input";
 import {
   getServiceOfferListTone,
   serviceOfferListBadge,
@@ -13,7 +14,11 @@ import {
   serviceOfferListRowClassName,
 } from "@/lib/service/client-offer-history";
 import { useListAutoRefresh } from "@/lib/hooks/use-list-auto-refresh";
+import { SERVICE_STATUSES } from "@/lib/service/types";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
+
+const ALL_CLIENTS = "";
+const ALL_STATUSES = "";
 
 export function ServiceList() {
   const services = useServiceStore((s) => s.services);
@@ -21,6 +26,8 @@ export function ServiceList() {
   const refresh = useServiceStore((s) => s.refresh);
   const isSaving = useServiceStore((s) => s.isSaving);
   const projects = useAppStore((s) => s.projects);
+  const [clientFilter, setClientFilter] = useState(ALL_CLIENTS);
+  const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
 
   const refreshList = useCallback(async () => {
     await refresh();
@@ -33,21 +40,40 @@ export function ServiceList() {
     [projects],
   );
 
-  const rows = services.map((service) => {
-    const costs = buildServiceCosts(service);
-    const diff = costs.actual.netTotal - costs.estimate.netTotal;
+  const clientOptions = useMemo(() => {
+    const names = new Set(services.map((service) => service.client.fullName.trim()).filter(Boolean));
+    return [...names].sort((left, right) => left.localeCompare(right, "pl"));
+  }, [services]);
 
-    return {
-      service,
-      costs,
-      diff,
-      projectLabel: service.projectId
-        ? projectNames.get(service.projectId) ?? "—"
-        : "Bez projektu",
-    };
-  });
+  const rows = useMemo(() => {
+    return services
+      .filter((service) => {
+        if (clientFilter && service.client.fullName !== clientFilter) {
+          return false;
+        }
+        if (statusFilter && service.status !== statusFilter) {
+          return false;
+        }
+        return true;
+      })
+      .map((service) => {
+        const costs = buildServiceCosts(service);
+        const diff = costs.actual.netTotal - costs.estimate.netTotal;
 
-  if (rows.length === 0) {
+        return {
+          service,
+          costs,
+          diff,
+          projectLabel: service.projectId
+            ? projectNames.get(service.projectId) ?? "—"
+            : "Bez projektu",
+        };
+      });
+  }, [clientFilter, projectNames, services, statusFilter]);
+
+  const hasActiveFilters = clientFilter !== ALL_CLIENTS || statusFilter !== ALL_STATUSES;
+
+  if (services.length === 0) {
     return (
       <Card className="p-8 text-center text-sm text-muted">
         Brak ofert. Użyj przycisku „Nowa oferta”, aby dodać pierwszy wpis.
@@ -57,6 +83,50 @@ export function ServiceList() {
 
   return (
     <>
+      <Card className="mb-4 border-border/80 p-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+          <Field label="Klient">
+            <Select value={clientFilter} onChange={(event) => setClientFilter(event.target.value)}>
+              <option value={ALL_CLIENTS}>Wszyscy klienci</option>
+              {clientOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Status">
+            <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <option value={ALL_STATUSES}>Wszystkie statusy</option>
+              {SERVICE_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="sm:col-span-2 lg:col-span-1"
+              onClick={() => {
+                setClientFilter(ALL_CLIENTS);
+                setStatusFilter(ALL_STATUSES);
+              }}
+            >
+              Wyczyść filtry
+            </Button>
+          ) : null}
+        </div>
+      </Card>
+
+      {rows.length === 0 ? (
+        <Card className="p-8 text-center text-sm text-muted">
+          Brak ofert dla wybranych filtrów.
+        </Card>
+      ) : (
+        <>
       <div className="grid gap-3 md:hidden">
         {rows.map(({ service, costs, diff, projectLabel }) => {
           const offerTone = getServiceOfferListTone(service);
@@ -269,6 +339,8 @@ export function ServiceList() {
           </table>
         </div>
       </Card>
+        </>
+      )}
     </>
   );
 }

@@ -194,6 +194,7 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
       actualDiscounts: { ...settings.defaultDiscounts },
       zoneSettings: { ...settings.zoneSettings },
       detailedSettlement: false,
+      showEstimateComparison: true,
       estimate: emptyLineItems(),
       actual: emptyLineItems(),
       clientOffer: {
