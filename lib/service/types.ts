@@ -1,3 +1,5 @@
+import type { ClientOfferStatus } from "@/lib/service/client-offer";
+
 export const SERVICE_TYPES = [
   "Gwarancyjny",
   "Pogwarancyjny",
@@ -9,6 +11,7 @@ export type ServiceType = (typeof SERVICE_TYPES)[number];
 
 export const SERVICE_STATUSES = [
   "Wycena",
+  "Oczekuje na klienta",
   "Zaplanowany",
   "W trakcie",
   "Do rozliczenia",
@@ -115,6 +118,14 @@ export type ServiceRecord = {
   detailedSettlement: boolean;
   estimate: ServiceLineItems;
   actual: ServiceLineItems;
+  clientOffer: {
+    token: string | null;
+    expiresAt: string | null;
+    status: ClientOfferStatus | null;
+    message: string | null;
+    respondedAt: string | null;
+    lastClientMessage: string | null;
+  };
 };
 
 export type ServiceGlobalSettings = {

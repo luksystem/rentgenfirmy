@@ -155,27 +155,13 @@ function compareSectionHtml(
 
 function materialsSectionHtml(
   materialsNote: string,
-  rows: ReportCompareRow[],
-  showComparison: boolean,
   showDetailedCosts: boolean,
   materialsCostLine: string,
 ) {
-  const compactTable = showDetailedCosts
-    ? ""
-    : `<div class="work-time-compact-wrap">
-        <table class="work-time-table work-time-table-compact">
-          ${compareTableHead(showComparison, "Koszt")}
-          <tbody>
-            ${compareTableRows(rows, showComparison)}
-          </tbody>
-        </table>
-      </div>`;
-
   return `<section class="block">
     <h2 class="section-title">Materiały</h2>
     <p>${escapeHtml(materialsNote)}</p>
     ${materialsCostLine}
-    ${compactTable}
   </section>`;
 }
 
@@ -202,6 +188,15 @@ function reportCompareSectionsHtml(service: ServiceRecord, detailed: boolean) {
   const parts: string[] = [];
 
   if (!detailed) {
+    parts.push(
+      compareSectionHtml(
+        "Koszty materiałów",
+        materialsRows,
+        quantitySections.showComparison,
+        "Koszt",
+        true,
+      ),
+    );
     parts.push(
       compareSectionHtml(
         "Noclegi",
@@ -553,13 +548,7 @@ export function buildServiceReportPrintDocument(
       <p>${escapeHtml(workNote)}</p>
     </section>
 
-    ${materialsSectionHtml(
-      materialsNote,
-      compareSections.materialsRows,
-      compareSections.quantityShowComparison,
-      meta.showDetailedCosts,
-      materialsCostLine,
-    )}
+    ${materialsSectionHtml(materialsNote, meta.showDetailedCosts, materialsCostLine)}
 
     ${compareSections.body}
 

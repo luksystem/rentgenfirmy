@@ -39,13 +39,24 @@ const warrantyBillable: BillableFlags = {
 };
 
 function makeService(
-  partial: Omit<ServiceRecord, "id" | "createdAt" | "updatedAt"> & {
+  partial: Omit<ServiceRecord, "id" | "createdAt" | "updatedAt" | "clientOffer"> & {
     id: string;
     createdAt: string;
+    clientOffer?: ServiceRecord["clientOffer"];
   },
 ): ServiceRecord {
+  const emptyOffer: ServiceRecord["clientOffer"] = {
+    token: null,
+    expiresAt: null,
+    status: null,
+    message: null,
+    respondedAt: null,
+    lastClientMessage: null,
+  };
+
   return {
     ...partial,
+    clientOffer: partial.clientOffer ?? emptyOffer,
     updatedAt: partial.createdAt,
   };
 }
@@ -54,7 +65,9 @@ export function createSampleServices(): ServiceRecord[] {
   const base = DEFAULT_SERVICE_SETTINGS;
   const now = new Date();
 
-  const samples: Array<Omit<ServiceRecord, "id" | "createdAt" | "updatedAt">> = [
+  const samples: Array<
+    Omit<ServiceRecord, "id" | "createdAt" | "updatedAt" | "clientOffer">
+  > = [
     {
       status: "Wycena",
       projectId: null,

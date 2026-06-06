@@ -362,9 +362,11 @@ function ComparisonMini({
 export function ServiceReport({
   service,
   projectName,
+  variant = "internal",
 }: {
   service: ServiceRecord;
   projectName?: string;
+  variant?: "internal" | "client";
 }) {
   const settled = isServiceSettled(service);
   const meta = getServiceReportDocumentMeta(service);
@@ -396,23 +398,8 @@ export function ServiceReport({
     printServiceReport(service, projectName);
   }, [service, projectName]);
 
-  return (
-    <div className="rounded-2xl border border-border bg-surface-muted/30 p-4 sm:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">{meta.title}</h2>
-          <p className="text-sm text-muted">{meta.previewDescription}</p>
-        </div>
-        <Button type="button" onClick={handlePrint}>
-          Drukuj / eksportuj PDF
-        </Button>
-        <p className="text-xs text-muted">
-          Otworzy się podgląd raportu w nowej karcie. W oknie druku możesz wyłączyć „Nagłówki i stopki”
-          przeglądarki, jeśli widzisz pustą stronę z samą datą i numerem strony.
-        </p>
-      </div>
-
-      <article className="service-report-document mx-auto max-w-[210mm] overflow-hidden rounded-lg bg-white text-zinc-900 shadow-lg ring-1 ring-zinc-200">
+  const reportDocument = (
+    <article className="service-report-document mx-auto max-w-[210mm] overflow-hidden rounded-lg bg-white text-zinc-900 shadow-lg ring-1 ring-zinc-200">
         <header className="border-b-4 border-blue-600 px-6 py-5 sm:px-8 sm:py-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -490,39 +477,17 @@ export function ServiceReport({
               </span>
             </p>
           ) : null}
-          {!meta.showDetailedCosts ? (
-            <div className="mt-4 ml-auto max-w-lg">
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr className="border-b-2 border-zinc-200 text-left text-[11px] uppercase tracking-wide text-zinc-500">
-                    <th className="py-2 pr-4 font-semibold">Pozycja</th>
-                    <th className="py-2 text-right font-semibold">
-                      {quantitySections.showComparison ? "Przewidywane" : "Koszt"}
-                    </th>
-                    {quantitySections.showComparison ? (
-                      <th className="py-2 pl-4 text-right font-semibold">Rozliczone</th>
-                    ) : null}
-                  </tr>
-                </thead>
-                <tbody>
-                  {materialsRows.map((row) => (
-                    <tr key={row.label} className="border-b border-zinc-200">
-                      <td className="py-2.5 pr-4 font-semibold text-zinc-900">{row.label}</td>
-                      <td className="py-2.5 text-right tabular-nums font-semibold text-zinc-900">
-                        {row.predicted}
-                      </td>
-                      {quantitySections.showComparison ? (
-                        <td className="py-2.5 pl-4 text-right tabular-nums font-semibold text-zinc-900">
-                          {row.settled}
-                        </td>
-                      ) : null}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
         </section>
+
+        {!meta.showDetailedCosts ? (
+          <ReportCompareTable
+            title="Koszty materiałów"
+            rows={materialsRows}
+            showComparison={quantitySections.showComparison}
+            valueHeader="Koszt"
+            compact
+          />
+        ) : null}
 
         {!meta.showDetailedCosts ? (
           <ReportCompareTable
@@ -584,6 +549,28 @@ export function ServiceReport({
           Dokument wygenerowany w module Serwis · Rentgen firmy
         </footer>
       </article>
+  );
+
+  if (variant === "client") {
+    return reportDocument;
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-surface-muted/30 p-4 sm:p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">{meta.title}</h2>
+          <p className="text-sm text-muted">{meta.previewDescription}</p>
+        </div>
+        <Button type="button" onClick={handlePrint}>
+          Drukuj / eksportuj PDF
+        </Button>
+        <p className="text-xs text-muted">
+          Otworzy się podgląd raportu w nowej karcie. W oknie druku możesz wyłączyć „Nagłówki i stopki”
+          przeglądarki, jeśli widzisz pustą stronę z samą datą i numerem strony.
+        </p>
+      </div>
+      {reportDocument}
     </div>
   );
 }

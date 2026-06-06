@@ -165,6 +165,14 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
       detailedSettlement: false,
       estimate: emptyLineItems(),
       actual: emptyLineItems(),
+      clientOffer: {
+        token: null,
+        expiresAt: null,
+        status: null,
+        message: null,
+        respondedAt: null,
+        lastClientMessage: null,
+      },
     };
   },
 }));

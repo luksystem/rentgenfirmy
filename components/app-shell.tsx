@@ -121,6 +121,11 @@ function NavLink({
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  if (pathname.startsWith("/oferta")) {
+    return <>{children}</>;
+  }
+
   const currentPage = allNav.find((item) => isActive(pathname, item.href));
 
   return (

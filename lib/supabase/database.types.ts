@@ -81,6 +81,12 @@ export type ServiceRow = {
   detailed_settlement: boolean;
   estimate: Record<string, unknown>;
   actual: Record<string, unknown>;
+  client_offer_token?: string | null;
+  client_offer_expires_at?: string | null;
+  client_offer_status?: string | null;
+  client_offer_message?: string | null;
+  client_offer_responded_at?: string | null;
+  client_offer_last_client_message?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -130,6 +136,12 @@ export type ServiceInsert = {
   detailed_settlement?: boolean;
   estimate: Record<string, unknown>;
   actual: Record<string, unknown>;
+  client_offer_token?: string | null;
+  client_offer_expires_at?: string | null;
+  client_offer_status?: string | null;
+  client_offer_message?: string | null;
+  client_offer_responded_at?: string | null;
+  client_offer_last_client_message?: string | null;
   created_at?: string;
   updated_at?: string;
 };

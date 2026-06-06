@@ -1,4 +1,8 @@
 import { DEFAULT_SERVICE_SETTINGS } from "@/lib/service/defaults";
+import {
+  CLIENT_OFFER_STATUSES,
+  type ClientOfferStatus,
+} from "@/lib/service/client-offer";
 import type { ServiceRow, ServiceInsert } from "@/lib/supabase/database.types";
 import {
   emptyLineItems,
@@ -122,6 +126,27 @@ export function normalizeServiceGlobalSettings(value: unknown): ServiceGlobalSet
   };
 }
 
+function normalizeClientOfferStatus(value: unknown): ClientOfferStatus | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  return CLIENT_OFFER_STATUSES.includes(value as ClientOfferStatus)
+    ? (value as ClientOfferStatus)
+    : null;
+}
+
+function normalizeClientOffer(row: ServiceRow): ServiceRecord["clientOffer"] {
+  return {
+    token: row.client_offer_token ?? null,
+    expiresAt: row.client_offer_expires_at ?? null,
+    status: normalizeClientOfferStatus(row.client_offer_status),
+    message: row.client_offer_message ?? null,
+    respondedAt: row.client_offer_responded_at ?? null,
+    lastClientMessage: row.client_offer_last_client_message ?? null,
+  };
+}
+
 export function rowToService(row: ServiceRow): ServiceRecord {
   return {
     id: row.id,
@@ -145,6 +170,7 @@ export function rowToService(row: ServiceRow): ServiceRecord {
     detailedSettlement: row.detailed_settlement ?? false,
     estimate: normalizeLineItems(row.estimate),
     actual: normalizeLineItems(row.actual),
+    clientOffer: normalizeClientOffer(row),
   };
 }
 
@@ -168,6 +194,12 @@ export function serviceToInsert(service: ServiceRecord): ServiceInsert {
     detailed_settlement: service.detailedSettlement,
     estimate: service.estimate as Record<string, unknown>,
     actual: service.actual as Record<string, unknown>,
+    client_offer_token: service.clientOffer.token,
+    client_offer_expires_at: service.clientOffer.expiresAt,
+    client_offer_status: service.clientOffer.status,
+    client_offer_message: service.clientOffer.message,
+    client_offer_responded_at: service.clientOffer.respondedAt,
+    client_offer_last_client_message: service.clientOffer.lastClientMessage,
     created_at: service.createdAt,
     updated_at: service.updatedAt,
   };
