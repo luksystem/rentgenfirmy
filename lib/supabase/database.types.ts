@@ -152,6 +152,50 @@ export type ServiceInsert = {
 
 export type ServiceUpdate = Partial<ServiceInsert>;
 
+export type WorkOrderRow = {
+  id: string;
+  source: string;
+  service_id: string | null;
+  project_id: string | null;
+  client_id: string | null;
+  status: string;
+  title: string;
+  service_type: string;
+  client_full_name: string;
+  client_location: string;
+  client_email: string;
+  client_phone: string;
+  notes: string | null;
+  accepted_at: string | null;
+  offer_gross_total: number | null;
+  accepted_offer_document?: unknown;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WorkOrderInsert = {
+  id?: string;
+  source: string;
+  service_id?: string | null;
+  project_id?: string | null;
+  client_id?: string | null;
+  status: string;
+  title: string;
+  service_type: string;
+  client_full_name: string;
+  client_location: string;
+  client_email: string;
+  client_phone: string;
+  notes?: string | null;
+  accepted_at?: string | null;
+  offer_gross_total?: number | null;
+  accepted_offer_document?: unknown;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type WorkOrderUpdate = Partial<WorkOrderInsert>;
+
 export type Database = {
   public: {
     Tables: {
@@ -207,6 +251,34 @@ export type Database = {
         Insert: ClientInsert;
         Update: ClientUpdate;
         Relationships: [];
+      };
+      work_orders: {
+        Row: WorkOrderRow;
+        Insert: WorkOrderInsert;
+        Update: WorkOrderUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_service_id_fkey";
+            columns: ["service_id"];
+            isOneToOne: false;
+            referencedRelation: "services";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "work_orders_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "work_orders_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+        ];
       };
     };
     Views: Record<string, never>;

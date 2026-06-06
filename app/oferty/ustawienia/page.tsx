@@ -9,7 +9,7 @@ import { NumericInput } from "@/components/ui/numeric-input";
 import { VAT_RATES } from "@/lib/service/types";
 import { useServiceStore } from "@/store/service-store";
 
-export default function SerwisSettingsPage() {
+export default function OfertySettingsPage() {
   const settings = useServiceStore((s) => s.settings);
   const updateSettings = useServiceStore((s) => s.updateSettings);
   const isSaving = useServiceStore((s) => s.isSaving);
@@ -18,12 +18,12 @@ export default function SerwisSettingsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Serwis"
-        title="Ustawienia stawek serwisowych"
-        description="Domyślne stawki, strefy kilometrowe i rabaty dla nowych serwisów."
+        eyebrow="Oferty"
+        title="Ustawienia stawek"
+        description="Domyślne stawki, strefy kilometrowe i rabaty dla nowych ofert."
         action={
           <Button variant="secondary" asChild>
-            <Link href="/serwis">Lista serwisów</Link>
+            <Link href="/oferty">Lista ofert</Link>
           </Button>
         }
       />

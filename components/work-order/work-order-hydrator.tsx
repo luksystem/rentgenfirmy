@@ -2,13 +2,13 @@
 
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { useServiceStore } from "@/store/service-store";
+import { useWorkOrderStore } from "@/store/work-order-store";
 
-export function ServiceHydrator({ children }: { children: React.ReactNode }) {
-  const hydrate = useServiceStore((state) => state.hydrate);
-  const hydrated = useServiceStore((state) => state.hydrated);
-  const isLoading = useServiceStore((state) => state.isLoading);
-  const error = useServiceStore((state) => state.error);
+export function WorkOrderHydrator({ children }: { children: React.ReactNode }) {
+  const hydrate = useWorkOrderStore((state) => state.hydrate);
+  const hydrated = useWorkOrderStore((state) => state.hydrated);
+  const isLoading = useWorkOrderStore((state) => state.isLoading);
+  const error = useWorkOrderStore((state) => state.error);
 
   useEffect(() => {
     hydrate();
@@ -17,7 +17,7 @@ export function ServiceHydrator({ children }: { children: React.ReactNode }) {
   if (isLoading && !hydrated) {
     return (
       <div className="flex min-h-[30vh] items-center justify-center text-sm text-muted">
-        Ładowanie modułu ofert...
+        Ładowanie modułu zleceń...
       </div>
     );
   }

@@ -536,7 +536,7 @@ export function ServiceReport({
         ) : null}
 
         <footer className="border-t border-zinc-200 px-6 py-4 text-center text-xs text-zinc-400 sm:px-8">
-          Dokument wygenerowany w module Serwis · Rentgen firmy
+          Dokument wygenerowany w module Oferty · Rentgen firmy
         </footer>
       </article>
   );

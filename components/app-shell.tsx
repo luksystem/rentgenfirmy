@@ -8,6 +8,8 @@ import {
   BarChart3,
   CheckCircle2,
   Clock3,
+  ClipboardList,
+  FileText,
   FolderKanban,
   Home,
   Menu,
@@ -16,7 +18,6 @@ import {
   Plus,
   Settings,
   Users,
-  Wrench,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -29,7 +30,8 @@ const navGroups = [
       { href: "/projekty", label: "Projekty", icon: FolderKanban },
       { href: "/klienci", label: "Klienci", icon: Users },
       { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
-      { href: "/serwis", label: "Serwis", icon: Wrench },
+      { href: "/oferty", label: "Oferty", icon: FileText },
+      { href: "/zlecenia", label: "Zlecenia", icon: ClipboardList },
     ],
   },
   {
@@ -49,15 +51,20 @@ const navGroups = [
   },
 ];
 
-const serwisNav = navGroups[0].items.find((item) => item.href === "/serwis");
+const ofertyNav = navGroups[0].items.find((item) => item.href === "/oferty");
+const zleceniaNav = navGroups[0].items.find((item) => item.href === "/zlecenia");
 const klienciNav = navGroups[0].items.find((item) => item.href === "/klienci");
 const mobileMainNav = navGroups[0].items.filter(
-  (item) => item.href !== "/serwis" && item.href !== "/klienci",
+  (item) =>
+    item.href !== "/oferty" &&
+    item.href !== "/zlecenia" &&
+    item.href !== "/klienci",
 );
 const mobileNavLeft = mobileMainNav.slice(0, 2);
 const mobileNavRight = mobileMainNav.slice(2);
 const secondaryNav = [
-  ...(serwisNav ? [serwisNav] : []),
+  ...(ofertyNav ? [ofertyNav] : []),
+  ...(zleceniaNav ? [zleceniaNav] : []),
   ...(klienciNav ? [klienciNav] : []),
   ...navGroups[1].items,
   ...navGroups[2].items,

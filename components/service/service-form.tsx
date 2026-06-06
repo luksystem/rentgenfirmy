@@ -82,9 +82,9 @@ export function ServiceForm({
 
     try {
       await upsertService(payload);
-      router.push("/serwis");
+      router.push("/oferty");
     } catch {
-      setErrors(["Nie udało się zapisać serwisu. Sprawdź połączenie z Supabase."]);
+      setErrors(["Nie udało się zapisać oferty. Sprawdź połączenie z Supabase."]);
     }
   }
 
@@ -110,7 +110,7 @@ export function ServiceForm({
       setShowReport(true);
       setStep(4);
     } catch {
-      setErrors(["Nie udało się rozliczyć serwisu. Sprawdź połączenie z Supabase."]);
+      setErrors(["Nie udało się rozliczyć oferty. Sprawdź połączenie z Supabase."]);
     }
   }
 
@@ -150,13 +150,13 @@ export function ServiceForm({
         {step === 0 ? (
           <Card>
             <CardContent className="grid gap-4 py-5 sm:grid-cols-2">
-              <Field label="Tytuł serwisu / zgłoszenia" className="sm:col-span-2">
+              <Field label="Tytuł oferty / zgłoszenia" className="sm:col-span-2">
                 <Input
                   value={service.title}
                   onChange={(e) => setService({ ...service, title: e.target.value })}
                 />
               </Field>
-              <Field label="Typ serwisu">
+              <Field label="Typ oferty">
                 <Select
                   value={service.serviceType}
                   onChange={(e) =>
@@ -171,7 +171,7 @@ export function ServiceForm({
                   ))}
                 </Select>
               </Field>
-              <Field label="Status serwisu">
+              <Field label="Status oferty">
                 <Select
                   value={service.status}
                   onChange={(e) =>
@@ -207,7 +207,7 @@ export function ServiceForm({
                     onChange={(e) => setWithoutProject(e.target.checked)}
                     className="h-4 w-4 rounded border-border"
                   />
-                  Serwis bez projektu
+                  Oferta bez projektu
                 </label>
                 {!withoutProject ? (
                   <Field label="Projekt">
@@ -236,8 +236,8 @@ export function ServiceForm({
             <CardContent className="grid gap-4 py-5 sm:grid-cols-2">
               <p className="sm:col-span-2 text-sm text-muted">
                 Stawki i progi stref możesz edytować globalnie w{" "}
-                <Link href="/serwis/ustawienia" className="text-accent underline">
-                  ustawieniach serwisu
+                <Link href="/oferty/ustawienia" className="text-accent underline">
+                  ustawieniach ofert
                 </Link>
                 .
               </p>
@@ -394,7 +394,7 @@ export function ServiceForm({
             {isSaving ? "Zapisywanie…" : "Zapisz"}
           </Button>
           <Button type="button" disabled={isSaving} onClick={() => settle()}>
-            Rozlicz serwis
+            Rozlicz ofertę
           </Button>
           <Button type="button" variant="outline" onClick={() => setShowReport((value) => !value)}>
             {showReport ? "Ukryj podgląd" : "Pokaż podgląd"}

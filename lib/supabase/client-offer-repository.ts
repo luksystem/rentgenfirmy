@@ -11,6 +11,7 @@ import type { ServiceRecord } from "@/lib/service/types";
 import { getSupabase } from "@/lib/supabase/client";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { rowToService, serviceToInsert } from "@/lib/supabase/service-mappers";
+import { createWorkOrderFromAcceptedService } from "@/lib/supabase/work-order-repository";
 
 function isOfferExpired(service: ServiceRecord) {
   if (!service.clientOffer.expiresAt) {
@@ -172,7 +173,13 @@ export async function respondToClientOffer(
     throw new Error(error.message);
   }
 
-  return rowToService(data);
+  const saved = rowToService(data);
+
+  if (action === "accept") {
+    await createWorkOrderFromAcceptedService(saved, now);
+  }
+
+  return saved;
 }
 
 export { getPublicOfferView } from "@/lib/service/client-offer-public-view";

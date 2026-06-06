@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { AcceptedOfferPdfButton } from "@/components/work-order/accepted-offer-pdf-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -19,10 +22,14 @@ import {
   getClientOfferUrl,
   isClientOfferActive,
 } from "@/lib/service/client-offer";
-import { openHtmlDocument } from "@/lib/service/open-html-document";
 import type { ServiceRecord } from "@/lib/service/types";
 import { generateClientOfferForService } from "@/lib/supabase/client-offer-repository";
+import {
+  createWorkOrderFromAcceptedServiceClient,
+  fetchWorkOrderByServiceId,
+} from "@/lib/supabase/work-order-repository";
 import { useServiceStore } from "@/store/service-store";
+import { useWorkOrderStore } from "@/store/work-order-store";
 import { formatDate, formatMoney } from "@/lib/utils";
 
 export function ClientOfferPanel({
@@ -33,14 +40,74 @@ export function ClientOfferPanel({
   onServiceUpdated: (service: ServiceRecord) => void;
 }) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const [linkedOrderId, setLinkedOrderId] = useState<string | null>(null);
+  const [isCheckingOrder, setIsCheckingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [canShare, setCanShare] = useState(false);
+  const router = useRouter();
   const replaceService = useServiceStore((state) => state.replaceService);
+  const replaceOrder = useWorkOrderStore((state) => state.replaceOrder);
+  const getOrderByServiceId = useWorkOrderStore((state) => state.getOrderByServiceId);
+  const hydrateWorkOrders = useWorkOrderStore((state) => state.hydrate);
+
+  const isAccepted = service.clientOffer.status === "accepted";
 
   useEffect(() => {
     setCanShare(canShareClientOffer());
   }, []);
+
+  useEffect(() => {
+    if (!isAccepted) {
+      setLinkedOrderId(null);
+      return;
+    }
+
+    const cached = getOrderByServiceId(service.id);
+    if (cached) {
+      setLinkedOrderId(cached.id);
+      return;
+    }
+
+    let cancelled = false;
+    setIsCheckingOrder(true);
+
+    void (async () => {
+      try {
+        await hydrateWorkOrders();
+        const fromStore = getOrderByServiceId(service.id);
+        if (fromStore) {
+          if (!cancelled) {
+            setLinkedOrderId(fromStore.id);
+          }
+          return;
+        }
+
+        const fromDb = await fetchWorkOrderByServiceId(service.id);
+        if (!cancelled) {
+          if (fromDb) {
+            replaceOrder(fromDb);
+            setLinkedOrderId(fromDb.id);
+          } else {
+            setLinkedOrderId(null);
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setLinkedOrderId(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsCheckingOrder(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getOrderByServiceId, hydrateWorkOrders, isAccepted, replaceOrder, service.id]);
 
   const offerUrl = useMemo(
     () => (service.clientOffer.token ? getClientOfferUrl(service.clientOffer.token) : null),
@@ -77,6 +144,26 @@ export function ClientOfferPanel({
       );
     } finally {
       setIsGenerating(false);
+    }
+  }
+
+  async function handleCreateWorkOrder() {
+    setIsCreatingOrder(true);
+    setError(null);
+
+    try {
+      const order = await createWorkOrderFromAcceptedServiceClient(service);
+      replaceOrder(order);
+      setLinkedOrderId(order.id);
+      router.push(`/zlecenia/${order.id}`);
+    } catch (createError) {
+      setError(
+        createError instanceof Error
+          ? createError.message
+          : "Nie udało się utworzyć zlecenia.",
+      );
+    } finally {
+      setIsCreatingOrder(false);
     }
   }
 
@@ -201,17 +288,21 @@ export function ClientOfferPanel({
             {isGenerating ? "Generowanie…" : getRegenerateOfferLabel(service)}
           </Button>
           {service.clientOfferAcceptedDocument ? (
+            <AcceptedOfferPdfButton document={service.clientOfferAcceptedDocument} />
+          ) : null}
+          {isAccepted && !linkedOrderId && !isCheckingOrder ? (
             <Button
               type="button"
               variant="secondary"
-              onClick={() =>
-                openHtmlDocument(
-                  service.clientOfferAcceptedDocument!.reportHtml,
-                  "Przeglądarka zablokowała podgląd zaakceptowanej wyceny.",
-                )
-              }
+              disabled={isCreatingOrder}
+              onClick={() => void handleCreateWorkOrder()}
             >
-              Zaakceptowana wycena (PDF)
+              {isCreatingOrder ? "Tworzenie…" : "Utwórz zlecenie"}
+            </Button>
+          ) : null}
+          {linkedOrderId ? (
+            <Button type="button" variant="secondary" asChild>
+              <Link href={`/zlecenia/${linkedOrderId}`}>Otwórz zlecenie</Link>
             </Button>
           ) : null}
         </div>
@@ -221,6 +312,11 @@ export function ClientOfferPanel({
             Zaakceptowano {formatDate(service.clientOfferAcceptedDocument.acceptedAt)} · brutto{" "}
             {formatMoney(service.clientOfferAcceptedDocument.grossTotal)} — dokument zamrożony w
             momencie akceptacji przez klienta.
+            {linkedOrderId
+              ? " Kopia PDF jest też dostępna w powiązanym zleceniu."
+              : isAccepted && !isCheckingOrder
+                ? " Możesz utworzyć zlecenie — PDF zostanie do niego dołączony."
+                : ""}
           </p>
         ) : null}
 

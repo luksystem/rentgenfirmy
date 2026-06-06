@@ -573,7 +573,7 @@ export function buildServiceReportPrintDocument(
 
     ${comparisonSection}
 
-    <div class="doc-footer">Dokument wygenerowany w module Serwis · Rentgen firmy</div>
+    <div class="doc-footer">Dokument wygenerowany w module Oferty · Rentgen firmy</div>
   </div>
 </body>
 </html>`;

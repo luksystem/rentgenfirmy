@@ -41,7 +41,7 @@ export function ServiceList() {
   if (rows.length === 0) {
     return (
       <Card className="p-8 text-center text-sm text-muted">
-        Brak serwisów. Użyj przycisku „Wyceń serwis”, aby dodać pierwszy wpis.
+        Brak ofert. Użyj przycisku „Nowa oferta”, aby dodać pierwszy wpis.
       </Card>
     );
   }
@@ -88,21 +88,21 @@ export function ServiceList() {
                 >
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <Button variant="secondary" size="sm" asChild>
-                      <Link href={`/serwis/${service.id}`}>Edytuj</Link>
+                      <Link href={`/oferty/${service.id}`}>Edytuj</Link>
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
                       disabled={isSaving}
                       onClick={async () => {
-                        if (!window.confirm("Usunąć ten serwis?")) {
+                        if (!window.confirm("Usunąć tę ofertę?")) {
                           return;
                         }
 
                         try {
                           await deleteService(service.id);
                         } catch {
-                          window.alert("Nie udało się usunąć serwisu.");
+                          window.alert("Nie udało się usunąć oferty.");
                         }
                       }}
                     >

@@ -5,20 +5,20 @@ import { ServiceList } from "@/components/service/service-list";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 
-export default function SerwisPage() {
+export default function OfertyPage() {
   return (
     <>
       <PageHeader
         eyebrow="Moduł operacyjny"
-        title="Serwis"
-        description="Wycena przed wyjazdem, koszty rzeczywiste po serwisie, porównanie i raport do rozliczenia."
+        title="Oferty"
+        description="Wycena przed wyjazdem, koszty rzeczywiste po realizacji, porównanie i raport do rozliczenia."
         action={
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" asChild>
-              <Link href="/serwis/ustawienia">Ustawienia stawek</Link>
+              <Link href="/oferty/ustawienia">Ustawienia stawek</Link>
             </Button>
             <Button asChild>
-              <Link href="/serwis/nowy">Wyceń serwis</Link>
+              <Link href="/oferty/nowy">Nowa oferta</Link>
             </Button>
           </div>
         }

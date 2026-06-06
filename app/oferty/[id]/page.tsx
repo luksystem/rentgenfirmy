@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { useServiceStore } from "@/store/service-store";
 
-export default function EditServicePage() {
+export default function EditOfferPage() {
   const params = useParams();
   const id = String(params.id);
   const getServiceById = useServiceStore((s) => s.getServiceById);
@@ -16,9 +16,9 @@ export default function EditServicePage() {
   if (!service) {
     return (
       <div className="grid gap-4">
-        <p className="text-muted">Nie znaleziono serwisu.</p>
+        <p className="text-muted">Nie znaleziono oferty.</p>
         <Button asChild>
-          <Link href="/serwis">Wróć do listy</Link>
+          <Link href="/oferty">Wróć do listy</Link>
         </Button>
       </div>
     );
@@ -27,12 +27,12 @@ export default function EditServicePage() {
   return (
     <>
       <PageHeader
-        eyebrow="Serwis"
-        title="Edytuj serwis"
+        eyebrow="Oferty"
+        title="Edytuj ofertę"
         description={service.title}
         action={
           <Button variant="secondary" asChild>
-            <Link href="/serwis">Lista serwisów</Link>
+            <Link href="/oferty">Lista ofert</Link>
           </Button>
         }
       />
