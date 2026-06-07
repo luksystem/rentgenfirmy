@@ -1,0 +1,51 @@
+export const USER_ROLES = [
+  "administrator",
+  "manager",
+  "pracownik",
+  "klient",
+  "gosc",
+] as const;
+
+export type UserRole = (typeof USER_ROLES)[number];
+
+export type UserProfile = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  role: UserRole;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type UserProfileInput = {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  role: UserRole;
+  isActive: boolean;
+};
+
+export const USER_ROLE_LABELS: Record<UserRole, string> = {
+  administrator: "Administrator",
+  manager: "Manager",
+  pracownik: "Pracownik",
+  klient: "Klient",
+  gosc: "Gość",
+};
+
+export function getUserDisplayName(profile: Pick<UserProfile, "firstName" | "lastName" | "email">) {
+  const fullName = `${profile.firstName} ${profile.lastName}`.trim();
+  return fullName || profile.email;
+}
+
+export function isAdministratorRole(role: UserRole) {
+  return role === "administrator";
+}
+
+export function hasFullAppAccess(role: UserRole) {
+  return role === "administrator" || role === "manager";
+}

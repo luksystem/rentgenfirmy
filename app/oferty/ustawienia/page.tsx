@@ -8,6 +8,7 @@ import { Field, Select } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { VAT_RATES } from "@/lib/service/types";
 import { useServiceStore } from "@/store/service-store";
+import { COMMERCIAL_MODULES } from "@/lib/modules/commercial-modules";
 
 export default function OfertySettingsPage() {
   const settings = useServiceStore((s) => s.settings);
@@ -18,7 +19,7 @@ export default function OfertySettingsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Oferty"
+        eyebrow={COMMERCIAL_MODULES.serviceSettlement.eyebrow}
         title="Ustawienia stawek"
         description="Domyślne stawki, strefy kilometrowe i rabaty dla nowych ofert."
         action={

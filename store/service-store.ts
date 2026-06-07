@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { calculateServiceCost } from "@/lib/service/calculate-service-cost";
 import { DEFAULT_SERVICE_SETTINGS } from "@/lib/service/defaults";
+import { defaultClientOfferExpiry } from "@/lib/service/offer-validity";
 import {
   bootstrapServiceModule,
   deleteServiceRecord,
@@ -199,7 +200,7 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
       actual: emptyLineItems(),
       clientOffer: {
         token: null,
-        expiresAt: null,
+        expiresAt: defaultClientOfferExpiry(),
         status: null,
         message: null,
         respondedAt: null,

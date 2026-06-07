@@ -1,17 +1,18 @@
-"use client";
-
 import Link from "next/link";
 import { ServiceList } from "@/components/service/service-list";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { COMMERCIAL_MODULES } from "@/lib/modules/commercial-modules";
+
+const moduleInfo = COMMERCIAL_MODULES.serviceSettlement;
 
 export default function OfertyPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Moduł operacyjny"
-        title="Oferty"
-        description="Wycena przed wyjazdem, koszty rzeczywiste po realizacji, porównanie i raport do rozliczenia."
+        eyebrow={moduleInfo.eyebrow}
+        title={moduleInfo.label}
+        description={moduleInfo.description}
         action={
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" asChild>

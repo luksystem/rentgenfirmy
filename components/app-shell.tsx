@@ -2,27 +2,37 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Activity,
   BarChart3,
   CheckCircle2,
   Clock3,
   ClipboardList,
-  FileText,
   FolderKanban,
   Home,
+  LogOut,
   Menu,
   PauseCircle,
   PhoneCall,
   Plus,
   Settings,
+  Shield,
   Users,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isPublicAppRoute } from "@/lib/auth/routes";
+import { COMMERCIAL_MODULE_LIST } from "@/lib/modules/commercial-modules";
+import { useAuthStore } from "@/store/auth-store";
 
-const navGroups = [
+const commercialNavItems = COMMERCIAL_MODULE_LIST.map((module) => ({
+  href: module.href,
+  label: module.label,
+  icon: module.icon,
+}));
+
+const navGroupsBase = [
   {
     label: "Główne",
     items: [
@@ -30,9 +40,12 @@ const navGroups = [
       { href: "/projekty", label: "Projekty", icon: FolderKanban },
       { href: "/klienci", label: "Klienci", icon: Users },
       { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
-      { href: "/oferty", label: "Oferty", icon: FileText },
       { href: "/zlecenia", label: "Zlecenia", icon: ClipboardList },
     ],
+  },
+  {
+    label: "Oferty",
+    items: commercialNavItems,
   },
   {
     label: "Widoki",
@@ -47,29 +60,20 @@ const navGroups = [
     items: [
       { href: "/raport", label: "Raport", icon: BarChart3 },
       { href: "/ustawienia", label: "Ustawienia", icon: Settings },
+      { href: "/konto/haslo", label: "Zmiana hasła", icon: Settings },
     ],
   },
 ];
 
-const ofertyNav = navGroups[0].items.find((item) => item.href === "/oferty");
-const zleceniaNav = navGroups[0].items.find((item) => item.href === "/zlecenia");
-const klienciNav = navGroups[0].items.find((item) => item.href === "/klienci");
-const mobileMainNav = navGroups[0].items.filter(
-  (item) =>
-    item.href !== "/oferty" &&
-    item.href !== "/zlecenia" &&
-    item.href !== "/klienci",
+const ofertyNav = commercialNavItems.find((item) => item.href === "/oferty");
+const kalkulacjeNav = commercialNavItems.find((item) => item.href === "/kalkulacje");
+const zleceniaNav = navGroupsBase[0].items.find((item) => item.href === "/zlecenia");
+const klienciNav = navGroupsBase[0].items.find((item) => item.href === "/klienci");
+const mobileMainNav = navGroupsBase[0].items.filter(
+  (item) => item.href !== "/zlecenia" && item.href !== "/klienci",
 );
 const mobileNavLeft = mobileMainNav.slice(0, 2);
 const mobileNavRight = mobileMainNav.slice(2);
-const secondaryNav = [
-  ...(ofertyNav ? [ofertyNav] : []),
-  ...(zleceniaNav ? [zleceniaNav] : []),
-  ...(klienciNav ? [klienciNav] : []),
-  ...navGroups[1].items,
-  ...navGroups[2].items,
-];
-const allNav = navGroups.flatMap((group) => group.items);
 
 function isActive(pathname: string, href: string) {
   return pathname === href || (href !== "/" && pathname.startsWith(href));
@@ -128,8 +132,41 @@ function NavLink({
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const isAdministrator = useAuthStore((state) => state.isAdministrator);
+  const displayName = useAuthStore((state) => state.displayName);
+  const signOut = useAuthStore((state) => state.signOut);
 
-  if (pathname.startsWith("/oferta")) {
+  const navGroups = useMemo(() => {
+    const groups = [...navGroupsBase];
+
+    if (isAdministrator) {
+      groups.push({
+        label: "Administracja",
+        items: [{ href: "/admin/uzytkownicy", label: "Użytkownicy", icon: Shield }],
+      });
+    }
+
+    return groups;
+  }, [isAdministrator]);
+
+  const secondaryNav = useMemo(
+    () => [
+      ...(ofertyNav ? [ofertyNav] : []),
+      ...(kalkulacjeNav ? [kalkulacjeNav] : []),
+      ...(zleceniaNav ? [zleceniaNav] : []),
+      ...(klienciNav ? [klienciNav] : []),
+      ...(isAdministrator
+        ? [{ href: "/admin/uzytkownicy", label: "Użytkownicy", icon: Shield }]
+        : []),
+      ...navGroupsBase[2].items,
+      ...navGroupsBase[3].items,
+    ],
+    [isAdministrator],
+  );
+
+  const allNav = useMemo(() => navGroups.flatMap((group) => group.items), [navGroups]);
+
+  if (isPublicAppRoute(pathname)) {
     return <>{children}</>;
   }
 
@@ -166,6 +203,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           ))}
         </nav>
+
+        <div className="mt-4 grid gap-2 border-t border-sidebar-border pt-4">
+          <p className="px-3 text-xs text-sidebar-muted">{displayName || "Użytkownik"}</p>
+          <button
+            type="button"
+            onClick={() => void signOut().then(() => window.location.assign("/logowanie"))}
+            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-sidebar-muted transition hover:bg-white/5 hover:text-sidebar-foreground"
+          >
+            <LogOut className="h-4 w-4" />
+            Wyloguj
+          </button>
+        </div>
 
         <p className="mt-4 px-3 text-xs leading-5 text-sidebar-muted">
           Przepływ projektów bez CRM-owego szumu — status, blokada i następny krok.

@@ -6,6 +6,7 @@ import { ServiceForm } from "@/components/service/service-form";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { useServiceStore } from "@/store/service-store";
+import { COMMERCIAL_MODULES } from "@/lib/modules/commercial-modules";
 
 export default function EditOfferPage() {
   const params = useParams();
@@ -27,7 +28,7 @@ export default function EditOfferPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Oferty"
+        eyebrow={COMMERCIAL_MODULES.serviceSettlement.eyebrow}
         title="Edytuj ofertę"
         description={service.title}
         action={

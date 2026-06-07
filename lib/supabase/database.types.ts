@@ -198,6 +198,32 @@ export type WorkOrderInsert = {
 
 export type WorkOrderUpdate = Partial<WorkOrderInsert>;
 
+export type ProfileRow = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  email: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProfileInsert = {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  email: string;
+  role?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ProfileUpdate = Partial<Omit<ProfileInsert, "id">>;
+
 export type Database = {
   public: {
     Tables: {
@@ -281,6 +307,12 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      profiles: {
+        Row: ProfileRow;
+        Insert: ProfileInsert;
+        Update: ProfileUpdate;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;

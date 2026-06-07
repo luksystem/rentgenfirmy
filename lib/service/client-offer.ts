@@ -1,4 +1,9 @@
 import type { ServiceRecord, ServiceStatus } from "@/lib/service/types";
+import {
+  DEFAULT_OFFER_VALIDITY_DAYS,
+  defaultClientOfferExpiry,
+  isOfferExpired,
+} from "@/lib/service/offer-validity";
 
 export const CLIENT_OFFER_STATUSES = [
   "pending",
@@ -29,7 +34,7 @@ export const CLIENT_OFFER_STATUS_LABELS: Record<ClientOfferStatus, string> = {
 export const CLIENT_OFFER_ACTION_LABELS: Record<ClientOfferAction, string> = {
   accept: "Akceptuję ofertę",
   reject: "Odrzucam ofertę",
-  negotiate: "Chcę negocjować",
+  negotiate: "Potrzebuję konsultacji",
 };
 
 export function canGenerateClientOffer(service: ServiceRecord) {
@@ -53,7 +58,17 @@ export function isClientOfferActive(offer: ClientOfferState) {
     return false;
   }
 
-  return new Date(offer.expiresAt).getTime() > Date.now();
+  return !isOfferExpired(offer.expiresAt);
+}
+
+export function canClientAskAboutOffer(service: Pick<ServiceRecord, "clientOffer">) {
+  const { clientOffer } = service;
+
+  return (
+    Boolean(clientOffer.token) &&
+    clientOffer.status === "pending" &&
+    isOfferExpired(clientOffer.expiresAt)
+  );
 }
 
 export function getClientOfferUrl(token: string, origin?: string) {
@@ -78,8 +93,3 @@ export function offerStatusAfterClientOfferAction(
   return action === "accept" ? "accepted" : action === "reject" ? "rejected" : "negotiation";
 }
 
-export function defaultClientOfferExpiry(days = 30) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString();
-}

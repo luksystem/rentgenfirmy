@@ -239,8 +239,8 @@ export function ClientOfferPanel({
             ) : null}
             {service.clientOffer.expiresAt ? (
               <p className="mt-1 text-xs text-muted">
-                Ważność linku: {formatDate(service.clientOffer.expiresAt)}
-                {offerActive ? "" : " · wygasł — wygeneruj nowy link"}
+                Ważność oferty: {formatDate(service.clientOffer.expiresAt)}
+                {offerActive ? "" : " · wygasła — wygeneruj nowy link lub zmień datę ważności"}
               </p>
             ) : null}
           </div>

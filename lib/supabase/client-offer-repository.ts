@@ -1,9 +1,9 @@
 import {
-  defaultClientOfferExpiry,
   offerStatusAfterClientOfferAction,
   statusAfterClientOfferAction,
   type ClientOfferAction,
 } from "@/lib/service/client-offer";
+import { isOfferExpired, resolveClientOfferExpiresAt } from "@/lib/service/offer-validity";
 import { appendClientOfferHistory } from "@/lib/service/client-offer-history";
 import { getPublicOfferView } from "@/lib/service/client-offer-public-view";
 import { buildAcceptedOfferDocument } from "@/lib/service/client-offer-snapshot";
@@ -13,12 +13,8 @@ import { getSupabaseServer } from "@/lib/supabase/server";
 import { rowToService, serviceToInsert } from "@/lib/supabase/service-mappers";
 import { createWorkOrderFromAcceptedService } from "@/lib/supabase/work-order-repository";
 
-function isOfferExpired(service: ServiceRecord) {
-  if (!service.clientOffer.expiresAt) {
-    return true;
-  }
-
-  return new Date(service.clientOffer.expiresAt).getTime() <= Date.now();
+function isOfferExpiredService(service: ServiceRecord) {
+  return isOfferExpired(service.clientOffer.expiresAt);
 }
 
 export async function regenerateClientOfferForService(
@@ -44,7 +40,7 @@ export async function regenerateClientOfferForService(
     }),
     clientOffer: {
       token,
-      expiresAt: defaultClientOfferExpiry(),
+      expiresAt: resolveClientOfferExpiresAt(service.clientOffer.expiresAt),
       status: "pending",
       message: null,
       respondedAt: null,
@@ -125,8 +121,8 @@ export async function respondToClientOffer(
     throw new Error("Nie znaleziono oferty.");
   }
 
-  if (isOfferExpired(service)) {
-    throw new Error("Link do oferty wygasł.");
+  if (action !== "negotiate" && isOfferExpiredService(service)) {
+    throw new Error("Oferta straciła ważność — akceptacja i odrzucenie nie są już możliwe.");
   }
 
   if (service.clientOffer.status && service.clientOffer.status !== "pending") {
@@ -190,6 +186,14 @@ export function isPublicOfferAvailable(service: ServiceRecord) {
   return (
     Boolean(service.clientOffer.token) &&
     service.clientOffer.status === "pending" &&
-    !isOfferExpired(service)
+    !isOfferExpiredService(service)
+  );
+}
+
+export function isPublicOfferQuestionAvailable(service: ServiceRecord) {
+  return (
+    Boolean(service.clientOffer.token) &&
+    service.clientOffer.status === "pending" &&
+    isOfferExpiredService(service)
   );
 }

@@ -1,23 +1,31 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { isPublicAppRoute } from "@/lib/auth/routes";
 import { useAppStore } from "@/store/app-store";
 import { ProjectEditProvider } from "@/components/project-edit-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const initialize = useAppStore((state) => state.initialize);
   const isLoading = useAppStore((state) => state.isLoading);
   const isInitialized = useAppStore((state) => state.isInitialized);
   const error = useAppStore((state) => state.error);
+  const skipData = isPublicAppRoute(pathname);
 
   useEffect(() => {
-    if (isSupabaseConfigured()) {
+    if (!skipData && isSupabaseConfigured()) {
       void initialize();
     }
-  }, [initialize]);
+  }, [initialize, skipData]);
+
+  if (skipData) {
+    return <>{children}</>;
+  }
 
   if (!isSupabaseConfigured()) {
     return (

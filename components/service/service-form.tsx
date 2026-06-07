@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ClientPicker } from "@/components/client-picker";
 import { ClientOfferPanel } from "@/components/service/client-offer-panel";
 import { ClientOfferHistoryPanel } from "@/components/service/client-offer-history-panel";
+import { OfferValidityField } from "@/components/service/offer-validity-field";
 import { ServiceComparisonTable } from "@/components/service/service-comparison-table";
 import { ServiceCostBreakdownPanel } from "@/components/service/service-cost-breakdown";
 import { ServiceDiscountsForm } from "@/components/service/service-discounts-form";
@@ -700,6 +701,7 @@ export function ServiceForm({
 
         {mainTab === "client" ? (
           <div className="grid gap-4">
+            <OfferValidityField service={service} onChange={setService} />
             <ClientOfferPanel service={service} onServiceUpdated={handleServiceUpdated} />
             <ClientOfferHistoryPanel service={service} />
           </div>

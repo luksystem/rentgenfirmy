@@ -9,6 +9,7 @@ import {
   CLIENT_OFFER_ACTION_LABELS,
   type ClientOfferAction,
 } from "@/lib/service/client-offer";
+import { OfferValidityCountdown } from "@/components/service/offer-validity-countdown";
 import {
   buildServiceReportCosts,
   getServiceReportBillingBreakdown,
@@ -24,6 +25,8 @@ type OfferMeta = {
   respondedAt: string | null;
   expiresAt: string | null;
   canRespond: boolean;
+  canAskQuestion: boolean;
+  isExpired: boolean;
 };
 
 const SECTION_LINKS = [
@@ -98,7 +101,7 @@ export function ClientOfferPage({ token }: { token: string }) {
         throw new Error(payload.error ?? "Nie udało się wysłać decyzji.");
       }
 
-      setOffer(payload.offer as OfferMeta);
+      await loadOffer();
       setSuccess(
         action === "accept"
           ? "Dziękujemy — oferta została zaakceptowana."
@@ -152,9 +155,13 @@ export function ClientOfferPage({ token }: { token: string }) {
                 {service.client.fullName}
                 {service.client.location ? ` · ${service.client.location}` : ""}
               </p>
-              {offer.expiresAt ? (
+              {offer.expiresAt && offer.canRespond ? (
+                <div className="mt-4 max-w-sm">
+                  <OfferValidityCountdown expiresAt={offer.expiresAt} />
+                </div>
+              ) : offer.expiresAt ? (
                 <p className="mt-2 text-xs text-zinc-500">
-                  Link ważny do: {formatDate(offer.expiresAt)}
+                  Oferta ważna była do: {formatDate(offer.expiresAt)}
                 </p>
               ) : null}
             </div>
@@ -240,7 +247,7 @@ export function ClientOfferPage({ token }: { token: string }) {
               </div>
               {showNegotiation ? (
                 <div className="grid gap-3 rounded-xl border border-zinc-700 bg-zinc-950/40 p-4">
-                  <Field label="Wiadomość do negocjacji">
+                  <Field label="Wiadomość do oferty">
                     <Textarea
                       value={negotiationMessage}
                       onChange={(event) => setNegotiationMessage(event.target.value)}
@@ -252,10 +259,40 @@ export function ClientOfferPage({ token }: { token: string }) {
                     disabled={submitting || !negotiationMessage.trim()}
                     onClick={() => void submitAction("negotiate")}
                   >
-                    Wyślij wiadomość negocjacyjną
+                    Wyślij pytanie
                   </Button>
                 </div>
               ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {offer.canAskQuestion ? (
+          <Card className="sticky top-3 z-10 border-amber-500/30 bg-zinc-900 shadow-xl shadow-black/20">
+            <CardContent className="grid gap-4 py-5">
+              <div>
+                <p className="text-sm font-medium text-amber-200">Oferta straciła ważność</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Akceptacja i odrzucenie nie są już dostępne. Możesz wysłać pytanie do zespołu —
+                  skontaktujemy się w sprawie aktualnej wyceny.
+                </p>
+              </div>
+              <div className="grid gap-3 rounded-xl border border-zinc-700 bg-zinc-950/40 p-4">
+                <Field label="Pytanie do oferty">
+                  <Textarea
+                    value={negotiationMessage}
+                    onChange={(event) => setNegotiationMessage(event.target.value)}
+                    placeholder="Napisz, o co chcesz zapytać…"
+                  />
+                </Field>
+                <Button
+                  type="button"
+                  disabled={submitting || !negotiationMessage.trim()}
+                  onClick={() => void submitAction("negotiate")}
+                >
+                  Wyślij pytanie
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : null}

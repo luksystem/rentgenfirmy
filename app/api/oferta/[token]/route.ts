@@ -3,8 +3,10 @@ import {
   fetchServiceByClientOfferToken,
   getPublicOfferView,
   isPublicOfferAvailable,
+  isPublicOfferQuestionAvailable,
   respondToClientOffer,
 } from "@/lib/supabase/client-offer-repository";
+import { isOfferExpired } from "@/lib/service/offer-validity";
 import {
   CLIENT_OFFER_ACTION_LABELS,
   CLIENT_OFFER_STATUS_LABELS,
@@ -33,6 +35,8 @@ export async function GET(
 
     const offer = service.clientOffer;
     const canRespond = isPublicOfferAvailable(service);
+    const canAskQuestion = isPublicOfferQuestionAvailable(service);
+    const expired = isOfferExpired(offer.expiresAt);
 
     return NextResponse.json({
       service: getPublicOfferView(service),
@@ -43,6 +47,8 @@ export async function GET(
         respondedAt: offer.respondedAt,
         expiresAt: offer.expiresAt,
         canRespond,
+        canAskQuestion,
+        isExpired: expired,
       },
     });
   } catch (error) {

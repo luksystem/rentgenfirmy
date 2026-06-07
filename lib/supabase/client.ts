@@ -1,7 +1,7 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 import type { Database } from "@/lib/supabase/database.types";
 
-let client: SupabaseClient<Database> | null = null;
+let client: ReturnType<typeof createBrowserClient<Database>> | null = null;
 
 export function isSupabaseConfigured() {
   return Boolean(
@@ -18,7 +18,7 @@ export function getSupabase() {
   }
 
   if (!client) {
-    client = createClient<Database>(
+    client = createBrowserClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     );
