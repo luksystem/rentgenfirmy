@@ -36,4 +36,11 @@ Na razie **administrator** i **manager** mają pełny dostęp do aplikacji. Role
 - [ ] Ograniczenie tras i akcji API wg roli
 - [ ] Aktualizacja RLS w Supabase (`auth.uid()` zamiast otwartych polityk)
 
+### [ ] Edycja szablonów procesów w UI
+
+Obecnie szablony procesów są seedowane domyślnie (Dom, Sklep, Serwis, Inne). Do wdrożenia później:
+
+- [ ] Edytor etapów, kamieni milowych i elementów w `/procesy/[typ]`
+- [ ] Dodawanie/usuwanie checklist, protokołów odbioru, rozliczeń
+
 <!-- Dodawaj kolejne punkty poniżej -->

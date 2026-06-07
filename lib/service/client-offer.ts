@@ -1,9 +1,7 @@
 import type { ServiceRecord, ServiceStatus } from "@/lib/service/types";
-import {
-  DEFAULT_OFFER_VALIDITY_DAYS,
-  defaultClientOfferExpiry,
-  isOfferExpired,
-} from "@/lib/service/offer-validity";
+import { isOfferExpired } from "@/lib/service/offer-validity";
+
+export { defaultClientOfferExpiry, DEFAULT_OFFER_VALIDITY_DAYS } from "@/lib/service/offer-validity";
 
 export const CLIENT_OFFER_STATUSES = [
   "pending",

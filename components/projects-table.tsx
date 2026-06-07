@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Edit, Plus, Trash2 } from "lucide-react";
 import { MobileField, MobileListCard } from "@/components/mobile-list-card";
+import { ProjectProcessLink } from "@/components/process/project-process-link";
 import { useProjectEdit } from "@/components/project-edit-provider";
 import { ProjectForm } from "@/components/project-form";
 import { ProjectViewFiltersBar } from "@/components/projects-view-filters";
@@ -223,6 +224,11 @@ export function ProjectsTable() {
                     <Edit className="h-3.5 w-3.5" />
                     Edytuj
                   </Button>
+                  <ProjectProcessLink
+                    projectId={project.id}
+                    projectType={project.type}
+                    variant="button"
+                  />
                   <Button
                     variant="destructive"
                     size="sm"
@@ -235,6 +241,10 @@ export function ProjectsTable() {
             >
               <MobileField label="Etap" value={project.stage} />
               <MobileField label="Krok" value={project.nextStepOwner} />
+              <MobileField
+                label="Proces"
+                value={<ProjectProcessLink projectId={project.id} projectType={project.type} />}
+              />
               <MobileField label="Kontakt" value={formatDate(project.nextContactDate)} />
               <MobileField label="Blokada" value={project.blockerReason ?? "-"} />
             </MobileListCard>
@@ -253,6 +263,7 @@ export function ProjectsTable() {
                 <th className="px-4 py-3">Właściciel kroku</th>
                 <th className="px-4 py-3">Następny kontakt</th>
                 <th className="px-4 py-3">Powód blokady</th>
+                <th className="px-4 py-3">Proces</th>
                 <th className="px-4 py-3">Ostatnio zmienił</th>
                 <th className="px-4 py-3">Data zmiany</th>
                 <th className="px-4 py-3">Akcje</th>
@@ -281,10 +292,18 @@ export function ProjectsTable() {
                   <td className="px-4 py-3">{project.nextStepOwner}</td>
                   <td className="px-4 py-3">{formatDate(project.nextContactDate)}</td>
                   <td className="px-4 py-3">{project.blockerReason ?? "-"}</td>
+                  <td className="px-4 py-3">
+                    <ProjectProcessLink projectId={project.id} projectType={project.type} />
+                  </td>
                   <td className="px-4 py-3">{project.lastChangedBy}</td>
                   <td className="px-4 py-3">{formatDate(project.lastChangedAt)}</td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2" onClick={(event) => event.stopPropagation()}>
+                      <ProjectProcessLink
+                        projectId={project.id}
+                        projectType={project.type}
+                        variant="button"
+                      />
                       <Button
                         variant="secondary"
                         size="sm"

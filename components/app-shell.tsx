@@ -10,6 +10,7 @@ import {
   Clock3,
   ClipboardList,
   FolderKanban,
+  GitBranch,
   Home,
   LogOut,
   Menu,
@@ -38,6 +39,7 @@ const navGroupsBase = [
     items: [
       { href: "/", label: "Start", icon: Home },
       { href: "/projekty", label: "Projekty", icon: FolderKanban },
+      { href: "/procesy", label: "Procesy", icon: GitBranch },
       { href: "/klienci", label: "Klienci", icon: Users },
       { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
       { href: "/zlecenia", label: "Zlecenia", icon: ClipboardList },
@@ -67,10 +69,14 @@ const navGroupsBase = [
 
 const ofertyNav = commercialNavItems.find((item) => item.href === "/oferty");
 const kalkulacjeNav = commercialNavItems.find((item) => item.href === "/kalkulacje");
+const procesyNav = navGroupsBase[0].items.find((item) => item.href === "/procesy");
 const zleceniaNav = navGroupsBase[0].items.find((item) => item.href === "/zlecenia");
 const klienciNav = navGroupsBase[0].items.find((item) => item.href === "/klienci");
 const mobileMainNav = navGroupsBase[0].items.filter(
-  (item) => item.href !== "/zlecenia" && item.href !== "/klienci",
+  (item) =>
+    item.href !== "/zlecenia" &&
+    item.href !== "/klienci" &&
+    item.href !== "/procesy",
 );
 const mobileNavLeft = mobileMainNav.slice(0, 2);
 const mobileNavRight = mobileMainNav.slice(2);
@@ -153,6 +159,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     () => [
       ...(ofertyNav ? [ofertyNav] : []),
       ...(kalkulacjeNav ? [kalkulacjeNav] : []),
+      ...(procesyNav ? [procesyNav] : []),
       ...(zleceniaNav ? [zleceniaNav] : []),
       ...(klienciNav ? [klienciNav] : []),
       ...(isAdministrator

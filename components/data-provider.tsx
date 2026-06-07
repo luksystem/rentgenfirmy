@@ -6,6 +6,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { isPublicAppRoute } from "@/lib/auth/routes";
 import { useAppStore } from "@/store/app-store";
 import { ProjectEditProvider } from "@/components/project-edit-provider";
+import { ProcessHydrator } from "@/components/process/process-hydrator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -75,13 +76,15 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=twoj-anon-key`}
   }
 
   return (
-    <>
-      {error ? (
-        <div className="panel-danger mb-4 rounded-xl border px-4 py-3 text-sm text-rose-300">
-          {error}
-        </div>
-      ) : null}
-      <ProjectEditProvider>{children}</ProjectEditProvider>
-    </>
+    <ProcessHydrator>
+      <>
+        {error ? (
+          <div className="panel-danger mb-4 rounded-xl border px-4 py-3 text-sm text-rose-300">
+            {error}
+          </div>
+        ) : null}
+        <ProjectEditProvider>{children}</ProjectEditProvider>
+      </>
+    </ProcessHydrator>
   );
 }

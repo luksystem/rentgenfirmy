@@ -224,6 +224,49 @@ export type ProfileInsert = {
 
 export type ProfileUpdate = Partial<Omit<ProfileInsert, "id">>;
 
+export type ProcessTemplateRow = {
+  id: string;
+  project_type: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProcessStageRow = {
+  id: string;
+  template_id: string;
+  title: string;
+  position: number;
+  created_at: string;
+};
+
+export type ProcessMilestoneRow = {
+  id: string;
+  stage_id: string;
+  title: string;
+  position: number;
+  created_at: string;
+};
+
+export type ProcessItemRow = {
+  id: string;
+  milestone_id: string;
+  kind: string;
+  title: string;
+  position: number;
+  created_at: string;
+};
+
+export type ProjectProcessRow = {
+  id: string;
+  project_id: string;
+  template_id: string;
+  completions: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -312,6 +355,36 @@ export type Database = {
         Row: ProfileRow;
         Insert: ProfileInsert;
         Update: ProfileUpdate;
+        Relationships: [];
+      };
+      process_templates: {
+        Row: ProcessTemplateRow;
+        Insert: Partial<ProcessTemplateRow> & Pick<ProcessTemplateRow, "project_type" | "name">;
+        Update: Partial<ProcessTemplateRow>;
+        Relationships: [];
+      };
+      process_stages: {
+        Row: ProcessStageRow;
+        Insert: Partial<ProcessStageRow> & Pick<ProcessStageRow, "template_id" | "title">;
+        Update: Partial<ProcessStageRow>;
+        Relationships: [];
+      };
+      process_milestones: {
+        Row: ProcessMilestoneRow;
+        Insert: Partial<ProcessMilestoneRow> & Pick<ProcessMilestoneRow, "stage_id" | "title">;
+        Update: Partial<ProcessMilestoneRow>;
+        Relationships: [];
+      };
+      process_items: {
+        Row: ProcessItemRow;
+        Insert: Partial<ProcessItemRow> & Pick<ProcessItemRow, "milestone_id" | "title" | "kind">;
+        Update: Partial<ProcessItemRow>;
+        Relationships: [];
+      };
+      project_processes: {
+        Row: ProjectProcessRow;
+        Insert: Partial<ProjectProcessRow> & Pick<ProjectProcessRow, "project_id" | "template_id">;
+        Update: Partial<ProjectProcessRow>;
         Relationships: [];
       };
     };
