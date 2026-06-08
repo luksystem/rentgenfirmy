@@ -104,22 +104,31 @@ export async function fetchProcessTemplateByProjectType(projectType: string) {
   return templates.find((template) => template.projectType === projectType) ?? null;
 }
 
-async function insertTemplateGraph(template: ProcessTemplate) {
+async function insertTemplateGraph(template: ProcessTemplate, options?: { includeTemplate?: boolean }) {
   const supabase = getSupabase();
   const now = new Date().toISOString();
+  const includeTemplate = options?.includeTemplate ?? true;
 
-  const { error: templateError } = await supabase.from("process_templates").insert({
-    id: template.id,
-    project_type: template.projectType,
-    name: template.name,
-    description: template.description,
-    created_at: now,
-    updated_at: now,
-  });
+  if (includeTemplate) {
+    const { error: templateError } = await supabase.from("process_templates").insert({
+      id: template.id,
+      project_type: template.projectType,
+      name: template.name,
+      description: template.description,
+      created_at: now,
+      updated_at: now,
+    });
 
-  if (templateError) {
-    throw new Error(templateError.message);
+    if (templateError) {
+      throw new Error(templateError.message);
+    }
   }
+
+  await insertTemplateStagesGraph(template);
+}
+
+async function insertTemplateStagesGraph(template: ProcessTemplate) {
+  const supabase = getSupabase();
 
   for (const stage of template.stages) {
     const { error } = await supabase.from("process_stages").insert({
@@ -295,19 +304,33 @@ export async function updateProjectProcessCompletion(
 
 export async function saveProcessTemplate(template: ProcessTemplate) {
   const supabase = getSupabase();
+  const now = new Date().toISOString();
 
-  const { error: deleteError } = await supabase
+  const { error: updateError } = await supabase
     .from("process_templates")
-    .delete()
+    .update({
+      name: template.name,
+      description: template.description,
+      updated_at: now,
+    })
     .eq("id", template.id);
 
-  if (deleteError) {
-    throw new Error(deleteError.message);
+  if (updateError) {
+    throw new Error(updateError.message);
   }
 
-  await insertTemplateGraph({
+  const { error: deleteStagesError } = await supabase
+    .from("process_stages")
+    .delete()
+    .eq("template_id", template.id);
+
+  if (deleteStagesError) {
+    throw new Error(deleteStagesError.message);
+  }
+
+  await insertTemplateStagesGraph({
     ...template,
-    updatedAt: new Date().toISOString(),
+    updatedAt: now,
   });
 
   return fetchProcessTemplateByProjectType(template.projectType);

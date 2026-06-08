@@ -38,9 +38,46 @@ Na razie **administrator** i **manager** mają pełny dostęp do aplikacji. Role
 
 ### [ ] Edycja szablonów procesów w UI
 
-Obecnie szablony procesów są seedowane domyślnie (Dom, Sklep, Serwis, Inne). Do wdrożenia później:
+- [x] Edytor etapów, kamieni milowych i elementów w `/procesy/[typ]` (MVP)
+- [x] Dodawanie checklist, protokołów odbioru, rozliczeń
+- [ ] Przypisanie domyślnej osoby odpowiedzialnej per element szablonu
 
-- [ ] Edytor etapów, kamieni milowych i elementów w `/procesy/[typ]`
-- [ ] Dodawanie/usuwanie checklist, protokołów odbioru, rozliczeń
+### [ ] Proces projektu — pełna realizacja (dane per projekt)
 
-<!-- Dodawaj kolejne punkty poniżej -->
+Obecnie: szablon globalny + w `project_processes.completions` tylko proste odhaczenie (data, kto). Brak treści checklist/protokołów, podpisów i raportu końcowego.
+
+**Cel:** każdy element procesu zapisuje się trwale dla danego projektu; na końcu raport kompletności ze wszystkimi dokumentami.
+
+**Model danych (propozycja):**
+
+| Obszar | Tabele / pola |
+|--------|-----------------|
+| Szablon | `process_items.default_assignee_id` (opcjonalnie) |
+| Instancja elementu | `project_process_items` — `project_id`, `template_item_id`, `assignee_id`, `status`, `payload` (jsonb: punkty checklisty, pola protokołu, załązniki) |
+| Podpis wewnętrzny | `project_process_item_signatures` — `user_id`, `signed_at`, `signature_data` / potwierdzenie |
+| Wymagania klienta | `project_client_requirements` — lista pozycji per projekt |
+| Realizacja wymagań | `project_requirement_completions` — odhaczenie, notatka, status |
+| Podpisy wymagań | `project_requirement_signatures` — strona: `company` \| `client`, token/link dla klienta |
+| Raport końcowy | generowany z powyższych + PDF / widok `/projekty/[id]/proces/raport` |
+
+**Typy elementów (`payload` wg `kind`):**
+
+- **checklist** — lista punktów `{ id, text, checked, checkedAt, checkedBy }`
+- **protocol** — pola formularza, zdjęcia/pliki, podpis odpowiedzialnego + podpis klienta (link publiczny)
+- **settlement** — powiązanie z ofertą serwisową / kosztem, status rozliczenia
+
+**Fazy wdrożenia:**
+
+1. [ ] Migracja + `project_process_items` z checklistą (punkty + zapis per projekt)
+2. [ ] Osoba odpowiedzialna + podpis wewnętrzny przy elemencie
+3. [ ] Protokoły z formularzem i podpisem klienta (link `/proces/...` lub `/odbior/...`)
+4. [ ] Moduł wymagań klienta na projekcie + odhaczenia i notatki
+5. [ ] Podwójne podpisy wymagań (firma + klient)
+6. [ ] Raport kompletności procesu + eksport PDF ze wszystkimi załącznikami
+
+**Uwagi techniczne:**
+
+- Szablon nadal edytowalny globalnie; instancje projektów nie nadpisują szablonu (snapshot przy starcie procesu lub lazy init przy pierwszym wejściu).
+- Po zmianie szablonu projekty w toku zachowują swoje instancje (już naprawione: zapis szablonu nie usuwa rekordu FK).
+- Podpis klienta — wzorować na `/oferta/[token]` (token, ważność, audit log).
+
