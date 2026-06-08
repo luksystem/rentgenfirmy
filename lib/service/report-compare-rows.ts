@@ -104,3 +104,17 @@ export function buildAccommodationsCompareRows(
     },
   ];
 }
+
+export function buildTripCountCompareRows(
+  predictedCount: number,
+  settledCount: number,
+): ReportCompareRow[] {
+  return [
+    {
+      label: "Ilość wyjazdów",
+      predicted: formatCount(predictedCount),
+      settled: formatCount(settledCount),
+      group: true,
+    },
+  ];
+}

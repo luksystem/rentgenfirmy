@@ -182,12 +182,14 @@ export function getServiceReportWorkTimeSections(service: ServiceRecord) {
 export type ServiceQuantitySummary = {
   materialsCost: number;
   accommodations: number;
+  tripCount: number;
 };
 
 export function buildServiceQuantitySummary(items: ServiceLineItems): ServiceQuantitySummary {
   return {
     materialsCost: items.materialsCost,
     accommodations: items.accommodations,
+    tripCount: Math.max(1, items.tripCount || 1),
   };
 }
 

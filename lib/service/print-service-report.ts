@@ -14,6 +14,7 @@ import {
 import {
   buildAccommodationsCompareRows,
   buildMaterialsCompareRows,
+  buildTripCountCompareRows,
   buildWorkTimeCompareRows,
   type ReportCompareRow,
 } from "@/lib/service/report-compare-rows";
@@ -164,11 +165,17 @@ function materialsSectionHtml(materialsNote: string) {
 function reportCompareSectionsHtml(service: ServiceRecord, detailed: boolean) {
   const workTimeSections = getServiceReportWorkTimeSections(service);
   const quantitySections = getServiceReportQuantitySections(service);
-  const workTimeRows = buildWorkTimeCompareRows(
-    workTimeSections.predicted,
-    workTimeSections.actual,
-    detailed,
-  );
+  const workTimeRows = [
+    ...buildTripCountCompareRows(
+      quantitySections.predicted.tripCount,
+      quantitySections.actual.tripCount,
+    ),
+    ...buildWorkTimeCompareRows(
+      workTimeSections.predicted,
+      workTimeSections.actual,
+      detailed,
+    ),
+  ];
   const materialsRows = buildMaterialsCompareRows(
     quantitySections.predicted.materialsCost,
     quantitySections.actual.materialsCost,

@@ -1,5 +1,6 @@
 "use client";
 
+import { Clock3 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   formatOfferCountdown,
@@ -21,25 +22,47 @@ export function OfferValidityCountdown({ expiresAt }: { expiresAt: string }) {
   }, [expiresAt]);
 
   const isUrgent = remainingMs > 0 && remainingMs <= 1000 * 60 * 60 * 24;
+  const expired = remainingMs <= 0;
 
   return (
-    <p className="mt-2 text-xs text-zinc-500">
-      {remainingMs > 0 ? (
-        <>
-          Ważna jeszcze{" "}
-          <span
-            className={cn(
-              "tabular-nums",
-              isUrgent ? "text-amber-500/80" : "text-zinc-400",
-            )}
-          >
-            {formatOfferCountdown(remainingMs)}
-          </span>
-          {" · "}do {formatDate(expiresAt)}
-        </>
-      ) : (
-        <>Oferta wygasła · była ważna do {formatDate(expiresAt)}</>
+    <div
+      className={cn(
+        "mt-3 inline-flex max-w-sm items-start gap-3 rounded-xl border px-3.5 py-3",
+        expired
+          ? "border-zinc-700/80 bg-zinc-800/40"
+          : isUrgent
+            ? "border-amber-500/40 bg-amber-500/10"
+            : "border-zinc-700 bg-zinc-800/60",
       )}
-    </p>
+    >
+      <Clock3
+        className={cn(
+          "mt-0.5 h-4 w-4 shrink-0",
+          expired ? "text-zinc-500" : isUrgent ? "text-amber-400" : "text-zinc-400",
+        )}
+      />
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+          Ważność oferty
+        </p>
+        {expired ? (
+          <p className="mt-1 text-sm text-zinc-400">
+            Oferta wygasła · była ważna do {formatDate(expiresAt)}
+          </p>
+        ) : (
+          <>
+            <p
+              className={cn(
+                "mt-1 text-base font-semibold tabular-nums tracking-tight",
+                isUrgent ? "text-amber-200" : "text-zinc-100",
+              )}
+            >
+              {formatOfferCountdown(remainingMs)}
+            </p>
+            <p className="mt-0.5 text-xs text-zinc-500">Ważna do {formatDate(expiresAt)}</p>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
