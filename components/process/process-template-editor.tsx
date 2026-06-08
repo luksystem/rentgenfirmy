@@ -1,14 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import { ProcessPipeline } from "@/components/process/process-pipeline";
+import { TemplateChecklistLinesEditor } from "@/components/process/template-checklist-lines-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
-import { inputToMilestoneDate, milestoneDateToInput } from "@/lib/process/dates";
+import { templatePayloadFromTitle } from "@/lib/process/item-payload";
+import { moveItem, removeAt, withPositions } from "@/lib/process/template-editor-utils";
 import {
   PROCESS_ITEM_KINDS,
   PROCESS_ITEM_KIND_LABELS,
+  type ChecklistItemPayload,
+  type ProcessItem,
   type ProcessItemKind,
   type ProcessTemplate,
 } from "@/lib/process/types";
@@ -57,7 +62,6 @@ export function ProcessTemplateEditor({
               stageId,
               title: "Kamień milowy",
               position: 0,
-              plannedDate: null,
               items: [],
             },
           ],
@@ -83,7 +87,6 @@ export function ProcessTemplateEditor({
               stageId,
               title: "Nowy kamień milowy",
               position: stage.milestones.length,
-              plannedDate: null,
               items: [],
             },
           ],
@@ -93,6 +96,9 @@ export function ProcessTemplateEditor({
   }
 
   function addItem(stageId: string, milestoneId: string, kind: ProcessItemKind) {
+    const title =
+      kind === "protocol" ? "Protokół odbioru" : kind === "settlement" ? "Rozliczenie" : "Nowa checklista";
+
     setTemplate((current) => ({
       ...current,
       stages: current.stages.map((stage) => {
@@ -114,13 +120,9 @@ export function ProcessTemplateEditor({
                   id: itemId,
                   milestoneId,
                   kind,
-                  title:
-                    kind === "protocol"
-                      ? "Protokół odbioru"
-                      : kind === "settlement"
-                        ? "Rozliczenie"
-                        : "Nowa checklista",
+                  title,
                   position: milestone.items.length,
+                  defaultPayload: templatePayloadFromTitle(title, kind),
                 },
               ],
             };
@@ -128,6 +130,103 @@ export function ProcessTemplateEditor({
         };
       }),
     }));
+  }
+
+  function updateItem(
+    stageId: string,
+    milestoneId: string,
+    itemId: string,
+    patch: Partial<ProcessItem>,
+  ) {
+    setTemplate((current) => ({
+      ...current,
+      stages: current.stages.map((stage) =>
+        stage.id !== stageId
+          ? stage
+          : {
+              ...stage,
+              milestones: stage.milestones.map((milestone) =>
+                milestone.id !== milestoneId
+                  ? milestone
+                  : {
+                      ...milestone,
+                      items: milestone.items.map((item) =>
+                        item.id !== itemId ? item : { ...item, ...patch },
+                      ),
+                    },
+              ),
+            },
+      ),
+    }));
+  }
+
+  function updateItemPayload(
+    stageId: string,
+    milestoneId: string,
+    itemId: string,
+    defaultPayload: ChecklistItemPayload,
+  ) {
+    updateItem(stageId, milestoneId, itemId, { defaultPayload });
+  }
+
+  function moveMilestoneItem(
+    stageId: string,
+    milestoneId: string,
+    itemIndex: number,
+    direction: "up" | "down",
+  ) {
+    setTemplate((current) => ({
+      ...current,
+      stages: current.stages.map((stage) =>
+        stage.id !== stageId
+          ? stage
+          : {
+              ...stage,
+              milestones: stage.milestones.map((milestone) =>
+                milestone.id !== milestoneId
+                  ? milestone
+                  : {
+                      ...milestone,
+                      items: withPositions(moveItem(milestone.items, itemIndex, direction)),
+                    },
+              ),
+            },
+      ),
+    }));
+  }
+
+  function removeMilestoneItem(stageId: string, milestoneId: string, itemIndex: number) {
+    setTemplate((current) => ({
+      ...current,
+      stages: current.stages.map((stage) =>
+        stage.id !== stageId
+          ? stage
+          : {
+              ...stage,
+              milestones: stage.milestones.map((milestone) =>
+                milestone.id !== milestoneId
+                  ? milestone
+                  : {
+                      ...milestone,
+                      items: withPositions(removeAt(milestone.items, itemIndex)),
+                    },
+              ),
+            },
+      ),
+    }));
+  }
+
+  function updateItemKind(
+    stageId: string,
+    milestoneId: string,
+    itemId: string,
+    kind: ProcessItemKind,
+    title: string,
+  ) {
+    updateItem(stageId, milestoneId, itemId, {
+      kind,
+      defaultPayload: templatePayloadFromTitle(title, kind),
+    });
   }
 
   return (
@@ -163,6 +262,9 @@ export function ProcessTemplateEditor({
 
       <Card>
         <CardContent className="grid gap-4 py-5">
+          <p className="text-sm text-muted">
+            Podgląd pipeline — daty kamieni milowych ustawiasz w projekcie, nie w szablonie.
+          </p>
           <ProcessPipeline template={template} />
         </CardContent>
       </Card>
@@ -212,102 +314,92 @@ export function ProcessTemplateEditor({
                   />
                 </Field>
 
-                <Field label="Planowana data">
-                  <Input
-                    type="date"
-                    value={milestoneDateToInput(milestone.plannedDate)}
-                    onChange={(event) =>
-                      setTemplate((current) => ({
-                        ...current,
-                        stages: current.stages.map((stageEntry) =>
-                          stageEntry.id !== stage.id
-                            ? stageEntry
-                            : {
-                                ...stageEntry,
-                                milestones: stageEntry.milestones.map((milestoneEntry) =>
-                                  milestoneEntry.id === milestone.id
-                                    ? {
-                                        ...milestoneEntry,
-                                        plannedDate: inputToMilestoneDate(event.target.value),
-                                      }
-                                    : milestoneEntry,
-                                ),
-                              },
-                        ),
-                      }))
-                    }
-                  />
-                </Field>
+                {milestone.items.map((item, itemIndex) => (
+                  <div
+                    key={item.id}
+                    className="grid gap-3 rounded-xl border border-border/60 bg-surface-muted/20 p-4"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                        Element {itemIndex + 1}
+                      </p>
+                      <div className="flex shrink-0 gap-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          disabled={itemIndex === 0}
+                          onClick={() => moveMilestoneItem(stage.id, milestone.id, itemIndex, "up")}
+                          aria-label="Przesuń element w górę"
+                        >
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          disabled={itemIndex === milestone.items.length - 1}
+                          onClick={() => moveMilestoneItem(stage.id, milestone.id, itemIndex, "down")}
+                          aria-label="Przesuń element w dół"
+                        >
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => removeMilestoneItem(stage.id, milestone.id, itemIndex)}
+                          aria-label="Usuń element"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
 
-                {milestone.items.map((item) => (
-                  <div key={item.id} className="grid gap-2 sm:grid-cols-[1fr_180px]">
-                    <Field label="Element">
-                      <Input
-                        value={item.title}
-                        onChange={(event) =>
-                          setTemplate((current) => ({
-                            ...current,
-                            stages: current.stages.map((stageEntry) =>
-                              stageEntry.id !== stage.id
-                                ? stageEntry
-                                : {
-                                    ...stageEntry,
-                                    milestones: stageEntry.milestones.map((milestoneEntry) =>
-                                      milestoneEntry.id !== milestone.id
-                                        ? milestoneEntry
-                                        : {
-                                            ...milestoneEntry,
-                                            items: milestoneEntry.items.map((itemEntry) =>
-                                              itemEntry.id === item.id
-                                                ? { ...itemEntry, title: event.target.value }
-                                                : itemEntry,
-                                            ),
-                                          },
-                                    ),
-                                  },
-                            ),
-                          }))
+                    <div className="grid gap-2 sm:grid-cols-[1fr_180px]">
+                      <Field label="Nazwa elementu">
+                        <Input
+                          value={item.title}
+                          onChange={(event) =>
+                            updateItem(stage.id, milestone.id, item.id, { title: event.target.value })
+                          }
+                        />
+                      </Field>
+                      <Field label="Typ">
+                        <Select
+                          value={item.kind}
+                          onChange={(event) =>
+                            updateItemKind(
+                              stage.id,
+                              milestone.id,
+                              item.id,
+                              event.target.value as ProcessItemKind,
+                              item.title,
+                            )
+                          }
+                        >
+                          {PROCESS_ITEM_KINDS.map((kind) => (
+                            <option key={kind} value={kind}>
+                              {PROCESS_ITEM_KIND_LABELS[kind]}
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
+                    </div>
+
+                    {item.kind === "checklist" ? (
+                      <TemplateChecklistLinesEditor
+                        payload={item.defaultPayload}
+                        onChange={(defaultPayload) =>
+                          updateItemPayload(stage.id, milestone.id, item.id, defaultPayload)
                         }
                       />
-                    </Field>
-                    <Field label="Typ">
-                      <Select
-                        value={item.kind}
-                        onChange={(event) =>
-                          setTemplate((current) => ({
-                            ...current,
-                            stages: current.stages.map((stageEntry) =>
-                              stageEntry.id !== stage.id
-                                ? stageEntry
-                                : {
-                                    ...stageEntry,
-                                    milestones: stageEntry.milestones.map((milestoneEntry) =>
-                                      milestoneEntry.id !== milestone.id
-                                        ? milestoneEntry
-                                        : {
-                                            ...milestoneEntry,
-                                            items: milestoneEntry.items.map((itemEntry) =>
-                                              itemEntry.id === item.id
-                                                ? {
-                                                    ...itemEntry,
-                                                    kind: event.target.value as ProcessItemKind,
-                                                  }
-                                                : itemEntry,
-                                            ),
-                                          },
-                                    ),
-                                  },
-                            ),
-                          }))
-                        }
-                      >
-                        {PROCESS_ITEM_KINDS.map((kind) => (
-                          <option key={kind} value={kind}>
-                            {PROCESS_ITEM_KIND_LABELS[kind]}
-                          </option>
-                        ))}
-                      </Select>
-                    </Field>
+                    ) : (
+                      <p className="text-xs text-muted">
+                        Wzorzec dla tego typu elementu opiera się na nazwie — szczegóły uzupełnisz w
+                        projekcie.
+                      </p>
+                    )}
                   </div>
                 ))}
 

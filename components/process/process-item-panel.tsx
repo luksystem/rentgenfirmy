@@ -2,6 +2,7 @@
 
 import { CheckCircle2, FileCheck2, Receipt } from "lucide-react";
 import { ProcessChecklistEditor } from "@/components/process/process-checklist-editor";
+import { ProcessItemResponsibleSection } from "@/components/process/process-item-responsible-section";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import type { UserProfile } from "@/lib/auth/types";
 import { checklistProgress } from "@/lib/process/item-payload";
 import {
   PROCESS_ITEM_KIND_LABELS,
@@ -30,10 +32,15 @@ type ProcessItemPanelProps = {
   item: ProcessItem | null;
   instance?: ProjectProcessItem;
   completion?: ProcessItemCompletion;
+  teamProfiles?: UserProfile[];
+  currentUserId?: string;
+  canManageAssignment?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   interactive?: boolean;
   onSaveChecklist?: (payload: ChecklistItemPayload) => Promise<void>;
+  onAssign?: (assigneeId: string | null) => Promise<void>;
+  onSign?: (signatureNote: string) => Promise<void>;
   onToggleComplete?: (completed: boolean) => void;
   actorName?: string;
 };
@@ -42,10 +49,15 @@ export function ProcessItemPanel({
   item,
   instance,
   completion,
+  teamProfiles = [],
+  currentUserId,
+  canManageAssignment = false,
   open,
   onOpenChange,
   interactive = false,
   onSaveChecklist,
+  onAssign,
+  onSign,
   onToggleComplete,
   actorName,
 }: ProcessItemPanelProps) {
@@ -53,7 +65,7 @@ export function ProcessItemPanel({
     return null;
   }
 
-  const completed = Boolean(completion) || instance?.status === "completed";
+  const completed = Boolean(completion) || instance?.status === "completed" || Boolean(instance?.signedAt);
   const Icon = kindIcon[item.kind];
   const checklistPayload = instance?.payload ?? { lines: [] };
   const checklistStats = checklistProgress(checklistPayload);
@@ -70,9 +82,21 @@ export function ProcessItemPanel({
         </DialogHeader>
 
         <div className="grid gap-4">
+          {interactive && instance && onAssign && onSign ? (
+            <ProcessItemResponsibleSection
+              key={`${instance.id}-${instance.updatedAt}`}
+              instance={instance}
+              teamProfiles={teamProfiles}
+              currentUserId={currentUserId}
+              canManageAssignment={canManageAssignment}
+              onAssign={onAssign}
+              onSign={onSign}
+            />
+          ) : null}
+
           {item.kind === "checklist" && interactive && onSaveChecklist ? (
             <ProcessChecklistEditor
-              key={`${item.id}-${instance?.updatedAt ?? "new"}`}
+              key={`${item.id}-${instance?.updatedAt ?? "new"}-checklist`}
               initialPayload={checklistPayload}
               actorName={actorName}
               onSave={onSaveChecklist}
@@ -109,8 +133,10 @@ export function ProcessItemPanel({
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm">
               <p className="font-medium text-emerald-200">Ukończono</p>
               <p className="mt-1 text-muted">
-                {formatDate(completion?.completedAt)}
-                {completion?.completedBy ? ` · ${completion.completedBy}` : ""}
+                {formatDate(completion?.completedAt ?? instance?.signedAt ?? undefined)}
+                {completion?.completedBy || instance?.signedByName
+                  ? ` · ${completion?.completedBy ?? instance?.signedByName}`
+                  : ""}
               </p>
             </div>
           ) : null}

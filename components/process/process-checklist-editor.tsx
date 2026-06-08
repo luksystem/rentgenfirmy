@@ -111,7 +111,7 @@ export function ProcessChecklistEditor({
         <p className="text-sm text-muted">
           {progress.total > 0
             ? `${progress.completed}/${progress.total} punktów ukończonych`
-            : "Dodaj punkty checklisty dla tego projektu."}
+            : "Checklista zostanie wczytana ze szablonu procesu — możesz ją dostosować w projekcie."}
         </p>
         <Button type="button" size="sm" variant="secondary" disabled={disabled || isSaving} onClick={addLine}>
           Dodaj punkt

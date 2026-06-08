@@ -1,4 +1,5 @@
 import {
+  cloneTemplatePayloadForProject,
   deriveProcessItemStatus,
   emptyChecklistPayload,
 } from "@/lib/process/item-payload";
@@ -6,10 +7,32 @@ import type { ChecklistItemPayload, ProcessTemplate } from "@/lib/process/types"
 import { flattenProcessItems } from "@/lib/process/types";
 import { getSupabase } from "@/lib/supabase/client";
 import {
+  projectProcessItemAssigneeUpdate,
+  projectProcessItemSignatureUpdate,
   projectProcessItemToUpdate,
   rowToProjectProcessItem,
 } from "@/lib/supabase/process-item-mappers";
 import { updateProjectProcessCompletion } from "@/lib/supabase/process-repository";
+
+async function getProjectProcessItemRow(projectId: string, templateItemId: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("project_process_items")
+    .select("*")
+    .eq("project_id", projectId)
+    .eq("template_item_id", templateItemId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) {
+    throw new Error("Nie znaleziono instancji elementu procesu.");
+  }
+
+  return data;
+}
 
 export async function fetchProjectProcessItems(projectId: string) {
   const supabase = getSupabase();
@@ -43,7 +66,10 @@ export async function ensureProjectProcessItems(projectId: string, template: Pro
       project_id: projectId,
       template_item_id: item.id,
       kind: item.kind,
-      payload: item.kind === "checklist" ? emptyChecklistPayload() : {},
+      payload:
+        item.kind === "checklist"
+          ? cloneTemplatePayloadForProject(item.defaultPayload)
+          : emptyChecklistPayload(),
       status: "open",
       created_at: now,
       updated_at: now,
@@ -120,6 +146,75 @@ export async function saveProjectProcessItemChecklist(
   );
 
   return rowToProjectProcessItem(row);
+}
+
+export async function assignProjectProcessItem(
+  projectId: string,
+  templateItemId: string,
+  assigneeId: string | null,
+  assigneeName: string | null,
+) {
+  const supabase = getSupabase();
+  await getProjectProcessItemRow(projectId, templateItemId);
+
+  const { data, error } = await supabase
+    .from("project_process_items")
+    .update(projectProcessItemAssigneeUpdate(assigneeId, assigneeName))
+    .eq("project_id", projectId)
+    .eq("template_item_id", templateItemId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToProjectProcessItem(data);
+}
+
+export async function signProjectProcessItem(
+  projectId: string,
+  templateItemId: string,
+  signer: { id: string; name: string },
+  signatureNote?: string,
+) {
+  const supabase = getSupabase();
+  const existing = await getProjectProcessItemRow(projectId, templateItemId);
+  const mapped = rowToProjectProcessItem(existing);
+
+  if (!mapped.assigneeId) {
+    throw new Error("Przypisz osobę odpowiedzialną przed podpisem.");
+  }
+
+  if (mapped.assigneeId !== signer.id) {
+    throw new Error("Podpisać może tylko przypisana osoba odpowiedzialna.");
+  }
+
+  if (mapped.signedAt) {
+    throw new Error("Element został już podpisany.");
+  }
+
+  const { data, error } = await supabase
+    .from("project_process_items")
+    .update(
+      projectProcessItemSignatureUpdate(
+        signer.id,
+        signer.name,
+        signatureNote?.trim() || null,
+      ),
+    )
+    .eq("project_id", projectId)
+    .eq("template_item_id", templateItemId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await updateProjectProcessCompletion(projectId, templateItemId, true, signer.name);
+
+  return rowToProjectProcessItem(data);
 }
 
 export function mapProjectProcessItemsByTemplateId(items: Awaited<ReturnType<typeof fetchProjectProcessItems>>) {

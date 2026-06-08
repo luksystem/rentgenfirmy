@@ -69,7 +69,7 @@ Obecnie: szablon globalny + w `project_processes.completions` tylko proste odhac
 **Fazy wdrożenia:**
 
 1. [x] Migracja + `project_process_items` z checklistą (punkty + zapis per projekt)
-2. [ ] Osoba odpowiedzialna + podpis wewnętrzny przy elemencie
+2. [x] Osoba odpowiedzialna + podpis wewnętrzny przy elemencie
 3. [ ] Protokoły z formularzem i podpisem klienta (link `/proces/...` lub `/odbior/...`)
 4. [ ] Moduł wymagań klienta na projekcie + odhaczenia i notatki
 5. [ ] Podwójne podpisy wymagań (firma + klient)

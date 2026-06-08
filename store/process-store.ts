@@ -1,6 +1,8 @@
 "use client";
 
 import { create } from "zustand";
+import type { UserProfile } from "@/lib/auth/types";
+import { getUserDisplayName } from "@/lib/auth/types";
 import type {
   ChecklistItemPayload,
   ProcessTemplate,
@@ -9,10 +11,13 @@ import type {
 } from "@/lib/process/types";
 import { getProcessProgress } from "@/lib/process/types";
 import {
+  assignProjectProcessItem,
   ensureProjectProcessItems,
   mapProjectProcessItemsByTemplateId,
   saveProjectProcessItemChecklist,
+  signProjectProcessItem,
 } from "@/lib/supabase/process-item-repository";
+import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 import {
   ensureDefaultProcessTemplates,
   ensureProcessTemplateForProjectType,
@@ -22,12 +27,14 @@ import {
   getOrCreateProjectProcess,
   saveProcessTemplate,
   updateProjectProcessCompletion,
+  updateProjectProcessMilestoneDate,
 } from "@/lib/supabase/process-repository";
 
 type ProcessStore = {
   templates: ProcessTemplate[];
   projectProcesses: Record<string, ProjectProcess>;
   projectProcessItems: Record<string, Record<string, ProjectProcessItem>>;
+  teamProfiles: UserProfile[];
   hydrated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -39,6 +46,7 @@ type ProcessStore = {
   getProjectProgress: (projectId: string, projectType: string) => { completed: number; total: number; percent: number } | null;
   ensureProjectProcess: (projectId: string, projectType: string) => Promise<ProjectProcess>;
   ensureProjectProcessItems: (projectId: string, template: ProcessTemplate) => Promise<void>;
+  loadTeamProfiles: () => Promise<void>;
   ensureTemplateForProjectType: (projectType: string) => Promise<ProcessTemplate>;
   saveTemplate: (template: ProcessTemplate) => Promise<void>;
   saveChecklistPayload: (
@@ -47,11 +55,27 @@ type ProcessStore = {
     payload: ChecklistItemPayload,
     actorName?: string,
   ) => Promise<void>;
+  assignProcessItem: (
+    projectId: string,
+    templateItemId: string,
+    assigneeId: string | null,
+  ) => Promise<void>;
+  signProcessItem: (
+    projectId: string,
+    templateItemId: string,
+    signer: { id: string; name: string },
+    signatureNote?: string,
+  ) => Promise<void>;
   toggleItemCompletion: (
     projectId: string,
     itemId: string,
     completed: boolean,
     completedBy?: string,
+  ) => Promise<void>;
+  saveMilestoneDate: (
+    projectId: string,
+    milestoneId: string,
+    plannedDate: string | null,
   ) => Promise<void>;
 };
 
@@ -59,6 +83,7 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
   templates: [],
   projectProcesses: {},
   projectProcessItems: {},
+  teamProfiles: [],
   hydrated: false,
   isLoading: false,
   error: null,
@@ -131,6 +156,11 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
     }));
   },
 
+  loadTeamProfiles: async () => {
+    const teamProfiles = await fetchTeamProfiles();
+    set({ teamProfiles });
+  },
+
   ensureTemplateForProjectType: async (projectType) => {
     const existing = get().getTemplateByProjectType(projectType);
     if (existing) {
@@ -166,6 +196,50 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
       templateItemId,
       payload,
       actorName,
+    );
+    const process = await fetchProjectProcess(projectId);
+
+    set((state) => ({
+      projectProcessItems: {
+        ...state.projectProcessItems,
+        [projectId]: {
+          ...state.projectProcessItems[projectId],
+          [templateItemId]: saved,
+        },
+      },
+      projectProcesses: process
+        ? { ...state.projectProcesses, [projectId]: process }
+        : state.projectProcesses,
+    }));
+  },
+
+  assignProcessItem: async (projectId, templateItemId, assigneeId) => {
+    const profile = get().teamProfiles.find((entry) => entry.id === assigneeId);
+    const assigneeName = profile ? getUserDisplayName(profile) : null;
+    const saved = await assignProjectProcessItem(
+      projectId,
+      templateItemId,
+      assigneeId,
+      assigneeName,
+    );
+
+    set((state) => ({
+      projectProcessItems: {
+        ...state.projectProcessItems,
+        [projectId]: {
+          ...state.projectProcessItems[projectId],
+          [templateItemId]: saved,
+        },
+      },
+    }));
+  },
+
+  signProcessItem: async (projectId, templateItemId, signer, signatureNote) => {
+    const saved = await signProjectProcessItem(
+      projectId,
+      templateItemId,
+      signer,
+      signatureNote,
     );
     const process = await fetchProjectProcess(projectId);
 
@@ -223,6 +297,40 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
       set((state) => ({
         projectProcesses: { ...state.projectProcesses, [projectId]: current },
         error: error instanceof Error ? error.message : "Błąd zapisu postępu procesu.",
+      }));
+      throw error;
+    }
+  },
+
+  saveMilestoneDate: async (projectId, milestoneId, plannedDate) => {
+    const current = get().projectProcesses[projectId];
+    if (!current) {
+      throw new Error("Nie znaleziono procesu projektu.");
+    }
+
+    const optimistic: ProjectProcess = {
+      ...current,
+      milestoneDates: { ...current.milestoneDates, [milestoneId]: plannedDate },
+      updatedAt: new Date().toISOString(),
+    };
+
+    set((state) => ({
+      projectProcesses: { ...state.projectProcesses, [projectId]: optimistic },
+    }));
+
+    try {
+      const updated = await updateProjectProcessMilestoneDate(
+        projectId,
+        milestoneId,
+        plannedDate,
+      );
+      set((state) => ({
+        projectProcesses: { ...state.projectProcesses, [projectId]: updated },
+      }));
+    } catch (error) {
+      set((state) => ({
+        projectProcesses: { ...state.projectProcesses, [projectId]: current },
+        error: error instanceof Error ? error.message : "Błąd zapisu daty kamienia milowego.",
       }));
       throw error;
     }

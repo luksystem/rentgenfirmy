@@ -147,7 +147,6 @@ async function insertTemplateStagesGraph(template: ProcessTemplate) {
         stage_id: milestone.stageId,
         title: milestone.title,
         position: milestone.position,
-        planned_date: milestone.plannedDate,
       });
       if (milestoneError) {
         throw new Error(milestoneError.message);
@@ -161,6 +160,7 @@ async function insertTemplateStagesGraph(template: ProcessTemplate) {
             kind: item.kind,
             title: item.title,
             position: item.position,
+            default_payload: item.defaultPayload,
           })),
         );
         if (itemsError) {
@@ -243,6 +243,7 @@ export async function getOrCreateProjectProcess(projectId: string, projectType: 
     project_id: projectId,
     template_id: template.id,
     completions: {},
+    milestone_dates: {},
     created_at: now,
     updated_at: now,
   };
@@ -284,6 +285,38 @@ export async function updateProjectProcessCompletion(
   const updated: ProjectProcess = {
     ...process,
     completions,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("project_processes")
+    .update(projectProcessToUpdate(updated))
+    .eq("project_id", projectId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToProjectProcess(data);
+}
+
+export async function updateProjectProcessMilestoneDate(
+  projectId: string,
+  milestoneId: string,
+  plannedDate: string | null,
+) {
+  const process = await fetchProjectProcess(projectId);
+  if (!process) {
+    throw new Error("Nie znaleziono procesu projektu.");
+  }
+
+  const milestoneDates = { ...process.milestoneDates, [milestoneId]: plannedDate };
+  const updated: ProjectProcess = {
+    ...process,
+    milestoneDates,
     updatedAt: new Date().toISOString(),
   };
 

@@ -8,6 +8,7 @@ export type ProcessItem = {
   kind: ProcessItemKind;
   title: string;
   position: number;
+  defaultPayload: ChecklistItemPayload;
 };
 
 export type ProcessMilestone = {
@@ -15,7 +16,6 @@ export type ProcessMilestone = {
   stageId: string;
   title: string;
   position: number;
-  plannedDate: string | null;
   items: ProcessItem[];
 };
 
@@ -65,6 +65,12 @@ export type ProjectProcessItem = {
   kind: ProcessItemKind;
   payload: ChecklistItemPayload;
   status: ProjectProcessItemStatus;
+  assigneeId: string | null;
+  assigneeName: string | null;
+  signedAt: string | null;
+  signedBy: string | null;
+  signedByName: string | null;
+  signatureNote: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -74,6 +80,7 @@ export type ProjectProcess = {
   projectId: string;
   templateId: string;
   completions: Record<string, ProcessItemCompletion>;
+  milestoneDates: Record<string, string | null>;
   createdAt: string;
   updatedAt: string;
 };

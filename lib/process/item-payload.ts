@@ -4,6 +4,38 @@ export function emptyChecklistPayload(): ChecklistItemPayload {
   return { lines: [] };
 }
 
+export function checklistPayloadFromTexts(texts: string[]): ChecklistItemPayload {
+  return {
+    lines: texts
+      .map((text) => text.trim())
+      .filter(Boolean)
+      .map((text) => ({
+        id: crypto.randomUUID(),
+        text,
+        checked: false,
+      })),
+  };
+}
+
+export function cloneTemplatePayloadForProject(templatePayload: ChecklistItemPayload): ChecklistItemPayload {
+  return {
+    lines: templatePayload.lines.map((line) => ({
+      id: line.id,
+      text: line.text,
+      checked: false,
+    })),
+  };
+}
+
+export function templatePayloadFromTitle(title: string, kind: ProcessItemKind): ChecklistItemPayload {
+  if (kind !== "checklist") {
+    return emptyChecklistPayload();
+  }
+
+  const text = title.trim();
+  return text ? checklistPayloadFromTexts([text]) : emptyChecklistPayload();
+}
+
 export function normalizeChecklistPayload(value: unknown): ChecklistItemPayload {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return emptyChecklistPayload();

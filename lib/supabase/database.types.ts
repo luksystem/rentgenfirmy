@@ -256,6 +256,7 @@ export type ProcessItemRow = {
   kind: string;
   title: string;
   position: number;
+  default_payload: unknown;
   created_at: string;
 };
 
@@ -264,6 +265,7 @@ export type ProjectProcessRow = {
   project_id: string;
   template_id: string;
   completions: Record<string, unknown>;
+  milestone_dates: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 };
@@ -275,6 +277,12 @@ export type ProjectProcessItemRow = {
   kind: string;
   payload: unknown;
   status: string;
+  assignee_id: string | null;
+  assignee_name: string | null;
+  signed_at: string | null;
+  signed_by: string | null;
+  signed_by_name: string | null;
+  signature_note: string | null;
   created_at: string;
   updated_at: string;
 };

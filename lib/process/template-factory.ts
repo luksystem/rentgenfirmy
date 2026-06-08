@@ -3,6 +3,7 @@ import {
   DEFAULT_PROCESS_TEMPLATE_SEEDS,
   instantiateTemplateFromSeed,
 } from "@/lib/process/default-templates";
+import { templatePayloadFromTitle } from "@/lib/process/item-payload";
 import type { ProcessItemKind, ProcessTemplate } from "@/lib/process/types";
 
 function createIds(count: number) {
@@ -35,7 +36,6 @@ function buildStarterTemplate(projectType: string): ProcessTemplate {
             stageId,
             title: "Start",
             position: 0,
-            plannedDate: null,
             items: [
               {
                 id: itemId,
@@ -43,6 +43,7 @@ function buildStarterTemplate(projectType: string): ProcessTemplate {
                 kind: "checklist" as ProcessItemKind,
                 title: "Pierwszy krok",
                 position: 0,
+                defaultPayload: templatePayloadFromTitle("Pierwszy krok", "checklist"),
               },
             ],
           },

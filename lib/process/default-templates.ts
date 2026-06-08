@@ -1,3 +1,4 @@
+import { templatePayloadFromTitle } from "@/lib/process/item-payload";
 import type { ProcessTemplate } from "@/lib/process/types";
 
 type TemplateSeed = Omit<ProcessTemplate, "id" | "createdAt" | "updatedAt" | "stages"> & {
@@ -273,13 +274,13 @@ export function instantiateTemplateFromSeed(
             stageId,
             title: milestone.title,
             position: milestonePosition,
-            plannedDate: null,
             items: milestone.items.map((item, itemPosition) => ({
               id: ids.itemIds[itemIdx++],
               milestoneId,
               kind: item.kind,
               title: item.title,
               position: itemPosition,
+              defaultPayload: templatePayloadFromTitle(item.title, item.kind),
             })),
           };
         }),

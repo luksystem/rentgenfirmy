@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ProcessMilestoneDatesPanel } from "@/components/process/process-milestone-dates-panel";
 import { ProcessPipeline } from "@/components/process/process-pipeline";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { hasFullAppAccess } from "@/lib/auth/types";
 import { getProcessProgress } from "@/lib/process/types";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
@@ -26,9 +28,16 @@ export default function ProjectProcessPage() {
   const hydrate = useProcessStore((state) => state.hydrate);
   const ensureProjectProcess = useProcessStore((state) => state.ensureProjectProcess);
   const ensureProjectProcessItems = useProcessStore((state) => state.ensureProjectProcessItems);
+  const loadTeamProfiles = useProcessStore((state) => state.loadTeamProfiles);
   const saveChecklistPayload = useProcessStore((state) => state.saveChecklistPayload);
+  const assignProcessItem = useProcessStore((state) => state.assignProcessItem);
+  const signProcessItem = useProcessStore((state) => state.signProcessItem);
   const toggleItemCompletion = useProcessStore((state) => state.toggleItemCompletion);
+  const saveMilestoneDate = useProcessStore((state) => state.saveMilestoneDate);
+
+  const profile = useAuthStore((state) => state.profile);
   const displayName = useAuthStore((state) => state.displayName);
+  const teamProfiles = useProcessStore((state) => state.teamProfiles);
 
   const template = useProcessStore((state) =>
     project ? state.templates.find((entry) => entry.projectType === project.type) : undefined,
@@ -38,6 +47,7 @@ export default function ProjectProcessPage() {
 
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const canManageAssignment = profile ? hasFullAppAccess(profile.role) : false;
 
   useEffect(() => {
     if (!project) {
@@ -47,6 +57,7 @@ export default function ProjectProcessPage() {
     void (async () => {
       try {
         await hydrate(projectTypes);
+        await loadTeamProfiles();
         await ensureProjectProcess(project.id, project.type);
         const loadedTemplate = useProcessStore
           .getState()
@@ -60,7 +71,14 @@ export default function ProjectProcessPage() {
         setReady(true);
       }
     })();
-  }, [ensureProjectProcess, ensureProjectProcessItems, hydrate, project, projectTypes]);
+  }, [
+    ensureProjectProcess,
+    ensureProjectProcessItems,
+    hydrate,
+    loadTeamProfiles,
+    project,
+    projectTypes,
+  ]);
 
   if (!isInitialized) {
     return <p className="text-sm text-muted">Ładowanie projektu…</p>;
@@ -106,12 +124,9 @@ export default function ProjectProcessPage() {
             <p>{loadError ?? processError}</p>
             <p className="text-muted">
               Jeśli to pierwsze uruchomienie modułu, uruchom migracje{" "}
-              <code className="rounded bg-surface-muted px-1 text-foreground">015_processes.sql</code>{" "}
-              i{" "}
-              <code className="rounded bg-surface-muted px-1 text-foreground">016_process_milestone_planned_date.sql</code>{" "}
-              i{" "}
-              <code className="rounded bg-surface-muted px-1 text-foreground">017_project_process_items.sql</code>{" "}
-              w Supabase.
+              <code className="rounded bg-surface-muted px-1 text-foreground">015</code>–
+              <code className="rounded bg-surface-muted px-1 text-foreground">018</code>–
+              <code className="rounded bg-surface-muted px-1 text-foreground">019</code> w Supabase.
             </p>
           </CardContent>
         </Card>
@@ -122,15 +137,35 @@ export default function ProjectProcessPage() {
       ) : (
         <Card>
           <CardContent className="py-5">
+            <ProcessMilestoneDatesPanel
+              template={template}
+              process={process}
+              onSaveDate={(milestoneId, date) => saveMilestoneDate(project.id, milestoneId, date)}
+            />
             <ProcessPipeline
               template={template}
               process={process}
               itemInstances={itemInstances}
+              teamProfiles={teamProfiles}
+              currentUserId={profile?.id}
+              canManageAssignment={canManageAssignment}
               interactive
               actorName={displayName || undefined}
               onSaveChecklist={(itemId, payload) =>
                 saveChecklistPayload(project.id, itemId, payload, displayName || undefined)
               }
+              onAssign={(itemId, assigneeId) => assignProcessItem(project.id, itemId, assigneeId)}
+              onSign={(itemId, signatureNote) => {
+                if (!profile) {
+                  return Promise.reject(new Error("Brak zalogowanego użytkownika."));
+                }
+                return signProcessItem(
+                  project.id,
+                  itemId,
+                  { id: profile.id, name: displayName || profile.email },
+                  signatureNote,
+                );
+              }}
               onToggleItem={(itemId, completed) =>
                 void toggleItemCompletion(project.id, itemId, completed, displayName || undefined)
               }
