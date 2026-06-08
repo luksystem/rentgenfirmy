@@ -15,10 +15,14 @@ import { useProcessStore } from "@/store/process-store";
 export default function ProjectProcessPage() {
   const params = useParams();
   const projectId = String(params.id);
-  const getProjectById = useAppStore((state) => (id: string) =>
-    state.projects.find((project) => project.id === id),
+
+  const project = useAppStore((state) =>
+    state.projects.find((entry) => entry.id === projectId),
   );
+  const isInitialized = useAppStore((state) => state.isInitialized);
   const projectTypes = useAppStore((state) => state.fieldOptions.projectTypes);
+  const processError = useProcessStore((state) => state.error);
+
   const hydrate = useProcessStore((state) => state.hydrate);
   const ensureProjectProcess = useProcessStore((state) => state.ensureProjectProcess);
   const getTemplateByProjectType = useProcessStore((state) => state.getTemplateByProjectType);
@@ -26,9 +30,8 @@ export default function ProjectProcessPage() {
   const toggleItemCompletion = useProcessStore((state) => state.toggleItemCompletion);
   const displayName = useAuthStore((state) => state.displayName);
 
-  const project = getProjectById(projectId);
   const [ready, setReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!project) {
@@ -39,13 +42,17 @@ export default function ProjectProcessPage() {
       try {
         await hydrate(projectTypes);
         await ensureProjectProcess(project.id, project.type);
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Błąd ładowania procesu.");
+      } catch (error) {
+        setLoadError(error instanceof Error ? error.message : "Błąd ładowania procesu.");
       } finally {
         setReady(true);
       }
     })();
   }, [ensureProjectProcess, hydrate, project, projectTypes]);
+
+  if (!isInitialized) {
+    return <p className="text-sm text-muted">Ładowanie projektu…</p>;
+  }
 
   if (!project) {
     return (
@@ -83,9 +90,16 @@ export default function ProjectProcessPage() {
         }
       />
 
-      {error ? (
+      {loadError || processError ? (
         <Card className="mb-4 border-rose-500/30">
-          <CardContent className="py-4 text-sm text-rose-300">{error}</CardContent>
+          <CardContent className="grid gap-2 py-4 text-sm text-rose-300">
+            <p>{loadError ?? processError}</p>
+            <p className="text-muted">
+              Jeśli to pierwsze uruchomienie modułu, uruchom migrację{" "}
+              <code className="rounded bg-surface-muted px-1 text-foreground">015_processes.sql</code>{" "}
+              w Supabase.
+            </p>
+          </CardContent>
         </Card>
       ) : null}
 

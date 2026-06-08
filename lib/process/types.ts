@@ -73,7 +73,7 @@ export function countCompletedItems(template: ProcessTemplate, process: ProjectP
     ),
   );
 
-  return [...itemIds].filter((id) => process.completions[id]).length;
+  return [...itemIds].filter((id) => process.completions?.[id]).length;
 }
 
 export function getProcessProgress(template: ProcessTemplate, process: ProjectProcess) {

@@ -181,51 +181,53 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 flex-col border-r border-sidebar-border bg-sidebar/95 p-5 backdrop-blur-xl xl:flex">
-        <Link href="/" className="mb-8 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-soft">
-            <Activity className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="font-semibold text-sidebar-foreground">Rentgen firmy</p>
-            <p className="text-xs text-sidebar-muted">Smart Home / BMS</p>
-          </div>
-        </Link>
-
-        <nav className="grid flex-1 gap-6">
-          {navGroups.map((group) => (
-            <div key={group.label}>
-              <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-sidebar-muted">
-                {group.label}
-              </p>
-              <div className="grid gap-0.5">
-                {group.items.map((item) => (
-                  <NavLink
-                    key={item.href}
-                    {...item}
-                    active={isActive(pathname, item.href)}
-                  />
-                ))}
-              </div>
+      <aside className="fixed inset-y-0 left-0 z-20 hidden h-screen w-72 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar/95 backdrop-blur-xl xl:flex">
+        <div className="shrink-0 p-5 pb-4">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-soft">
+              <Activity className="h-5 w-5" />
             </div>
-          ))}
-        </nav>
-
-        <div className="mt-4 grid gap-2 border-t border-sidebar-border pt-4">
-          <p className="px-3 text-xs text-sidebar-muted">{displayName || "Użytkownik"}</p>
-          <button
-            type="button"
-            onClick={() => void signOut().then(() => window.location.assign("/logowanie"))}
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-sidebar-muted transition hover:bg-white/5 hover:text-sidebar-foreground"
-          >
-            <LogOut className="h-4 w-4" />
-            Wyloguj
-          </button>
+            <div>
+              <p className="font-semibold text-sidebar-foreground">Rentgen firmy</p>
+              <p className="text-xs text-sidebar-muted">Smart Home / BMS</p>
+            </div>
+          </Link>
         </div>
 
-        <p className="mt-4 px-3 text-xs leading-5 text-sidebar-muted">
-          Przepływ projektów bez CRM-owego szumu — status, blokada i następny krok.
-        </p>
+        <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
+          <div className="grid gap-6">
+            {navGroups.map((group) => (
+              <div key={group.label}>
+                <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-sidebar-muted">
+                  {group.label}
+                </p>
+                <div className="grid gap-0.5">
+                  {group.items.map((item) => (
+                    <NavLink
+                      key={item.href}
+                      {...item}
+                      active={isActive(pathname, item.href)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </nav>
+
+        <div className="shrink-0 border-t border-sidebar-border p-5 pt-4">
+          <div className="grid gap-2">
+            <p className="px-3 text-xs text-sidebar-muted">{displayName || "Użytkownik"}</p>
+            <button
+              type="button"
+              onClick={() => void signOut().then(() => window.location.assign("/logowanie"))}
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-sidebar-muted transition hover:bg-white/5 hover:text-sidebar-foreground"
+            >
+              <LogOut className="h-4 w-4" />
+              Wyloguj
+            </button>
+          </div>
+        </div>
       </aside>
 
       <div className="xl:pl-72">
@@ -356,7 +358,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="grid gap-2">
+              <div className="grid max-h-[min(70vh,520px)] gap-2 overflow-y-auto overscroll-contain">
                 {secondaryNav.map((item) => (
                   <NavLink
                     key={item.href}

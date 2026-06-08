@@ -1,8 +1,4 @@
-import {
-  countSeedIds,
-  DEFAULT_PROCESS_TEMPLATE_SEEDS,
-  instantiateTemplateFromSeed,
-} from "@/lib/process/default-templates";
+import { buildTemplateForProjectType } from "@/lib/process/template-factory";
 import type { ProcessItemCompletion, ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import { getSupabase } from "@/lib/supabase/client";
 import {
@@ -13,10 +9,6 @@ import {
   rowToProcessTemplate,
   rowToProjectProcess,
 } from "@/lib/supabase/process-mappers";
-
-function createIds(count: number) {
-  return Array.from({ length: count }, () => crypto.randomUUID());
-}
 
 async function fetchTemplatesGraph(): Promise<ProcessTemplate[]> {
   const supabase = getSupabase();
@@ -169,25 +161,28 @@ async function insertTemplateGraph(template: ProcessTemplate) {
   }
 }
 
+export async function ensureProcessTemplateForProjectType(projectType: string) {
+  const existing = await fetchProcessTemplateByProjectType(projectType);
+  if (existing) {
+    return existing;
+  }
+
+  const template = buildTemplateForProjectType(projectType);
+  await insertTemplateGraph(template);
+  return fetchProcessTemplateByProjectType(projectType);
+}
+
 export async function ensureDefaultProcessTemplates(projectTypes: string[]) {
   const existing = await fetchTemplatesGraph();
   const existingTypes = new Set(existing.map((template) => template.projectType));
 
-  for (const seed of DEFAULT_PROCESS_TEMPLATE_SEEDS) {
-    if (!projectTypes.includes(seed.projectType) || existingTypes.has(seed.projectType)) {
+  for (const projectType of projectTypes) {
+    if (existingTypes.has(projectType)) {
       continue;
     }
 
-    const counts = countSeedIds(seed);
-    const template = instantiateTemplateFromSeed(seed, {
-      templateId: crypto.randomUUID(),
-      stageIds: createIds(counts.stageCount),
-      milestoneIds: createIds(counts.milestoneCount),
-      itemIds: createIds(counts.itemCount),
-    });
-
-    await insertTemplateGraph(template);
-    existingTypes.add(seed.projectType);
+    await ensureProcessTemplateForProjectType(projectType);
+    existingTypes.add(projectType);
   }
 
   return fetchTemplatesGraph();
@@ -225,10 +220,7 @@ export async function getOrCreateProjectProcess(projectId: string, projectType: 
     return existing;
   }
 
-  const template =
-    (await fetchProcessTemplateByProjectType(projectType)) ??
-    (await fetchProcessTemplates()).find((entry) => entry.projectType === projectType) ??
-    (await fetchProcessTemplates())[0];
+  const template = await ensureProcessTemplateForProjectType(projectType);
 
   if (!template) {
     throw new Error(`Brak szablonu procesu dla typu projektu „${projectType}”.`);

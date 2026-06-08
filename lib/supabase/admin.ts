@@ -1,5 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import {
+  ADMIN_SETUP_ERROR_CODE,
+  getAdminSetupErrorMessage,
+} from "@/lib/auth/admin-setup";
+
+export { ADMIN_SETUP_ERROR_CODE };
 
 export function isSupabaseAdminConfigured() {
   return Boolean(
@@ -13,9 +19,9 @@ export function getSupabaseAdmin() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !serviceRoleKey) {
-    throw new Error(
-      "Brak SUPABASE_SERVICE_ROLE_KEY. Dodaj klucz service role do .env.local (tylko serwer).",
-    );
+    const error = new Error(getAdminSetupErrorMessage()) as Error & { code?: string };
+    error.code = ADMIN_SETUP_ERROR_CODE;
+    throw error;
   }
 
   return createClient<Database>(url, serviceRoleKey, {

@@ -33,7 +33,7 @@ export function ProcessPipeline({
       <div className="flex min-w-max gap-4">
         {template.stages.map((stage, stageIndex) => {
           const stageItems = stage.milestones.flatMap((milestone) => milestone.items);
-          const stageCompleted = stageItems.filter((item) => process?.completions[item.id]).length;
+          const stageCompleted = stageItems.filter((item) => process?.completions?.[item.id]).length;
           const stageTotal = stageItems.length;
 
           return (
@@ -71,8 +71,8 @@ export function ProcessPipeline({
 
                     <div className="mt-3 grid gap-2">
                       {milestone.items.map((item) => {
-                        const completed = Boolean(process?.completions[item.id]);
-                        const Icon = kindIcon[item.kind];
+                        const completed = Boolean(process?.completions?.[item.id]);
+                        const Icon = kindIcon[item.kind] ?? CheckCircle2;
                         const FallbackIcon = completed ? CheckCircle2 : Circle;
 
                         return (

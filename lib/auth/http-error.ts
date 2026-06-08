@@ -13,7 +13,8 @@ export function jsonError(error: unknown) {
   }
 
   if (error instanceof Error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    const code = "code" in error ? (error as Error & { code?: string }).code : undefined;
+    return Response.json({ error: error.message, code }, { status: 500 });
   }
 
   return Response.json({ error: "Nieoczekiwany błąd." }, { status: 500 });

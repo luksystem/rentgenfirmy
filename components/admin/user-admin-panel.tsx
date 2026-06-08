@@ -12,6 +12,7 @@ import {
   type UserProfileInput,
   type UserRole,
 } from "@/lib/auth/types";
+import { ADMIN_SETUP_ERROR_CODE, ADMIN_SETUP_STEPS } from "@/lib/auth/admin-setup";
 
 type UserFormState = UserProfileInput & {
   password: string;
@@ -51,6 +52,7 @@ export function UserAdminPanel() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [setupRequired, setSetupRequired] = useState(false);
 
   const isEditing = selectedId !== null;
   const selectedUser = useMemo(
@@ -61,15 +63,20 @@ export function UserAdminPanel() {
   const loadUsers = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setSetupRequired(false);
 
     try {
       const response = await fetch("/api/admin/users");
       const payload = (await response.json()) as {
         users?: UserProfile[];
         error?: string;
+        code?: string;
       };
 
       if (!response.ok) {
+        if (payload.code === ADMIN_SETUP_ERROR_CODE) {
+          setSetupRequired(true);
+        }
         throw new Error(payload.error ?? "Nie udało się pobrać użytkowników.");
       }
 
@@ -249,6 +256,22 @@ export function UserAdminPanel() {
         <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
           {message}
         </div>
+      ) : null}
+      {setupRequired ? (
+        <Card className="mb-4 border-amber-500/30 bg-amber-500/10">
+          <CardContent className="grid gap-3 py-5 text-sm">
+            <p className="font-medium text-amber-100">Konfiguracja panelu administratora</p>
+            <p className="text-amber-100/90">
+              Panel użytkowników wymaga klucza <code className="rounded bg-black/30 px-1">service_role</code>{" "}
+              z Supabase — tylko po stronie serwera, nigdy w kodzie frontendu.
+            </p>
+            <ol className="grid list-decimal gap-2 pl-5 text-amber-100/90">
+              {ADMIN_SETUP_STEPS.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+          </CardContent>
+        </Card>
       ) : null}
       {error ? (
         <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">

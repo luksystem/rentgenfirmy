@@ -14,11 +14,15 @@ import type {
   ProjectProcessRow,
 } from "@/lib/supabase/database.types";
 
+function isProcessItemKind(value: string): value is ProcessItem["kind"] {
+  return value === "checklist" || value === "protocol" || value === "settlement";
+}
+
 export function rowToProcessItem(row: ProcessItemRow): ProcessItem {
   return {
     id: row.id,
     milestoneId: row.milestone_id,
-    kind: row.kind as ProcessItem["kind"],
+    kind: isProcessItemKind(row.kind) ? row.kind : "checklist",
     title: row.title,
     position: row.position,
   };
@@ -66,11 +70,15 @@ export function rowToProcessTemplate(
 }
 
 export function rowToProjectProcess(row: ProjectProcessRow): ProjectProcess {
+  const completions = row.completions;
   return {
     id: row.id,
     projectId: row.project_id,
     templateId: row.template_id,
-    completions: (row.completions ?? {}) as Record<string, ProcessItemCompletion>,
+    completions:
+      completions && typeof completions === "object" && !Array.isArray(completions)
+        ? (completions as Record<string, ProcessItemCompletion>)
+        : {},
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
