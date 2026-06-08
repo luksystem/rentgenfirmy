@@ -268,6 +268,17 @@ export type ProjectProcessRow = {
   updated_at: string;
 };
 
+export type ProjectProcessItemRow = {
+  id: string;
+  project_id: string;
+  template_item_id: string;
+  kind: string;
+  payload: unknown;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -386,6 +397,13 @@ export type Database = {
         Row: ProjectProcessRow;
         Insert: Partial<ProjectProcessRow> & Pick<ProjectProcessRow, "project_id" | "template_id">;
         Update: Partial<ProjectProcessRow>;
+        Relationships: [];
+      };
+      project_process_items: {
+        Row: ProjectProcessItemRow;
+        Insert: Partial<ProjectProcessItemRow> &
+          Pick<ProjectProcessItemRow, "project_id" | "template_item_id" | "kind">;
+        Update: Partial<ProjectProcessItemRow>;
         Relationships: [];
       };
     };

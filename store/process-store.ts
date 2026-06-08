@@ -1,12 +1,23 @@
 "use client";
 
 import { create } from "zustand";
-import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
+import type {
+  ChecklistItemPayload,
+  ProcessTemplate,
+  ProjectProcess,
+  ProjectProcessItem,
+} from "@/lib/process/types";
 import { getProcessProgress } from "@/lib/process/types";
+import {
+  ensureProjectProcessItems,
+  mapProjectProcessItemsByTemplateId,
+  saveProjectProcessItemChecklist,
+} from "@/lib/supabase/process-item-repository";
 import {
   ensureDefaultProcessTemplates,
   ensureProcessTemplateForProjectType,
   fetchProcessTemplates,
+  fetchProjectProcess,
   fetchProjectProcesses,
   getOrCreateProjectProcess,
   saveProcessTemplate,
@@ -16,6 +27,7 @@ import {
 type ProcessStore = {
   templates: ProcessTemplate[];
   projectProcesses: Record<string, ProjectProcess>;
+  projectProcessItems: Record<string, Record<string, ProjectProcessItem>>;
   hydrated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -23,10 +35,18 @@ type ProcessStore = {
   refresh: (projectTypes: string[]) => Promise<void>;
   getTemplateByProjectType: (projectType: string) => ProcessTemplate | undefined;
   getProjectProcess: (projectId: string) => ProjectProcess | undefined;
+  getProjectProcessItem: (projectId: string, templateItemId: string) => ProjectProcessItem | undefined;
   getProjectProgress: (projectId: string, projectType: string) => { completed: number; total: number; percent: number } | null;
   ensureProjectProcess: (projectId: string, projectType: string) => Promise<ProjectProcess>;
+  ensureProjectProcessItems: (projectId: string, template: ProcessTemplate) => Promise<void>;
   ensureTemplateForProjectType: (projectType: string) => Promise<ProcessTemplate>;
   saveTemplate: (template: ProcessTemplate) => Promise<void>;
+  saveChecklistPayload: (
+    projectId: string,
+    templateItemId: string,
+    payload: ChecklistItemPayload,
+    actorName?: string,
+  ) => Promise<void>;
   toggleItemCompletion: (
     projectId: string,
     itemId: string,
@@ -38,6 +58,7 @@ type ProcessStore = {
 export const useProcessStore = create<ProcessStore>((set, get) => ({
   templates: [],
   projectProcesses: {},
+  projectProcessItems: {},
   hydrated: false,
   isLoading: false,
   error: null,
@@ -73,6 +94,9 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
 
   getProjectProcess: (projectId) => get().projectProcesses[projectId],
 
+  getProjectProcessItem: (projectId, templateItemId) =>
+    get().projectProcessItems[projectId]?.[templateItemId],
+
   getProjectProgress: (projectId, projectType) => {
     const template = get().getTemplateByProjectType(projectType);
     const process = get().getProjectProcess(projectId);
@@ -95,6 +119,16 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
       templates,
     }));
     return created;
+  },
+
+  ensureProjectProcessItems: async (projectId, template) => {
+    const items = await ensureProjectProcessItems(projectId, template);
+    set((state) => ({
+      projectProcessItems: {
+        ...state.projectProcessItems,
+        [projectId]: mapProjectProcessItemsByTemplateId(items),
+      },
+    }));
   },
 
   ensureTemplateForProjectType: async (projectType) => {
@@ -123,6 +157,29 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
       templates: state.templates.map((entry) =>
         entry.projectType === saved.projectType ? saved : entry,
       ),
+    }));
+  },
+
+  saveChecklistPayload: async (projectId, templateItemId, payload, actorName) => {
+    const saved = await saveProjectProcessItemChecklist(
+      projectId,
+      templateItemId,
+      payload,
+      actorName,
+    );
+    const process = await fetchProjectProcess(projectId);
+
+    set((state) => ({
+      projectProcessItems: {
+        ...state.projectProcessItems,
+        [projectId]: {
+          ...state.projectProcessItems[projectId],
+          [templateItemId]: saved,
+        },
+      },
+      projectProcesses: process
+        ? { ...state.projectProcesses, [projectId]: process }
+        : state.projectProcesses,
     }));
   },
 

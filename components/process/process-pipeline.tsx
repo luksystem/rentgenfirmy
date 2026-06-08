@@ -5,12 +5,15 @@ import { CalendarDays, CheckCircle2, ChevronRight, Circle, FileCheck2, Receipt }
 import { ProcessItemPanel } from "@/components/process/process-item-panel";
 import { cn } from "@/lib/utils";
 import { formatMilestoneDate } from "@/lib/process/dates";
+import { checklistProgress } from "@/lib/process/item-payload";
 import {
   PROCESS_ITEM_KIND_LABELS,
+  type ChecklistItemPayload,
   type ProcessItem,
   type ProcessItemKind,
   type ProcessTemplate,
   type ProjectProcess,
+  type ProjectProcessItem,
 } from "@/lib/process/types";
 
 const kindIcon: Record<ProcessItemKind, React.ComponentType<{ className?: string }>> = {
@@ -22,15 +25,21 @@ const kindIcon: Record<ProcessItemKind, React.ComponentType<{ className?: string
 type ProcessPipelineProps = {
   template: ProcessTemplate;
   process?: ProjectProcess | null;
+  itemInstances?: Record<string, ProjectProcessItem>;
   interactive?: boolean;
+  actorName?: string;
   onToggleItem?: (itemId: string, completed: boolean) => void;
+  onSaveChecklist?: (itemId: string, payload: ChecklistItemPayload) => Promise<void>;
 };
 
 export function ProcessPipeline({
   template,
   process,
+  itemInstances,
   interactive = false,
+  actorName,
   onToggleItem,
+  onSaveChecklist,
 }: ProcessPipelineProps) {
   const [activeItem, setActiveItem] = useState<ProcessItem | null>(null);
 
@@ -101,6 +110,15 @@ export function ProcessPipeline({
                             const completed = Boolean(process?.completions?.[item.id]);
                             const Icon = kindIcon[item.kind] ?? CheckCircle2;
                             const FallbackIcon = completed ? CheckCircle2 : Circle;
+                            const instance = itemInstances?.[item.id];
+                            const checklistStats =
+                              item.kind === "checklist" && instance
+                                ? checklistProgress(instance.payload)
+                                : null;
+                            const kindLabel =
+                              checklistStats && checklistStats.total > 0
+                                ? `${PROCESS_ITEM_KIND_LABELS[item.kind]} · ${checklistStats.completed}/${checklistStats.total}`
+                                : PROCESS_ITEM_KIND_LABELS[item.kind];
 
                             if (interactive) {
                               return (
@@ -128,7 +146,7 @@ export function ProcessPipeline({
                                       {item.title}
                                     </span>
                                     <span className="mt-0.5 block text-[11px] text-muted">
-                                      {PROCESS_ITEM_KIND_LABELS[item.kind]}
+                                      {kindLabel}
                                     </span>
                                   </span>
                                   <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
@@ -158,7 +176,7 @@ export function ProcessPipeline({
                                     {item.title}
                                   </span>
                                   <span className="mt-0.5 block text-[11px] text-muted">
-                                    {PROCESS_ITEM_KIND_LABELS[item.kind]}
+                                    {kindLabel}
                                   </span>
                                 </span>
                               </div>
@@ -177,6 +195,7 @@ export function ProcessPipeline({
 
       <ProcessItemPanel
         item={activeItem}
+        instance={activeItem ? itemInstances?.[activeItem.id] : undefined}
         completion={activeItem ? process?.completions?.[activeItem.id] : undefined}
         open={activeItem !== null}
         onOpenChange={(open) => {
@@ -185,6 +204,12 @@ export function ProcessPipeline({
           }
         }}
         interactive={interactive}
+        actorName={actorName}
+        onSaveChecklist={
+          activeItem && onSaveChecklist
+            ? (payload) => onSaveChecklist(activeItem.id, payload)
+            : undefined
+        }
         onToggleComplete={(completed) => {
           if (!activeItem) {
             return;

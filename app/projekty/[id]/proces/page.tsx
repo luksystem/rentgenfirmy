@@ -25,6 +25,8 @@ export default function ProjectProcessPage() {
 
   const hydrate = useProcessStore((state) => state.hydrate);
   const ensureProjectProcess = useProcessStore((state) => state.ensureProjectProcess);
+  const ensureProjectProcessItems = useProcessStore((state) => state.ensureProjectProcessItems);
+  const saveChecklistPayload = useProcessStore((state) => state.saveChecklistPayload);
   const toggleItemCompletion = useProcessStore((state) => state.toggleItemCompletion);
   const displayName = useAuthStore((state) => state.displayName);
 
@@ -32,6 +34,7 @@ export default function ProjectProcessPage() {
     project ? state.templates.find((entry) => entry.projectType === project.type) : undefined,
   );
   const process = useProcessStore((state) => state.projectProcesses[projectId]);
+  const itemInstances = useProcessStore((state) => state.projectProcessItems[projectId]);
 
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -45,13 +48,19 @@ export default function ProjectProcessPage() {
       try {
         await hydrate(projectTypes);
         await ensureProjectProcess(project.id, project.type);
+        const loadedTemplate = useProcessStore
+          .getState()
+          .templates.find((entry) => entry.projectType === project.type);
+        if (loadedTemplate) {
+          await ensureProjectProcessItems(project.id, loadedTemplate);
+        }
       } catch (error) {
         setLoadError(error instanceof Error ? error.message : "Błąd ładowania procesu.");
       } finally {
         setReady(true);
       }
     })();
-  }, [ensureProjectProcess, hydrate, project, projectTypes]);
+  }, [ensureProjectProcess, ensureProjectProcessItems, hydrate, project, projectTypes]);
 
   if (!isInitialized) {
     return <p className="text-sm text-muted">Ładowanie projektu…</p>;
@@ -100,6 +109,8 @@ export default function ProjectProcessPage() {
               <code className="rounded bg-surface-muted px-1 text-foreground">015_processes.sql</code>{" "}
               i{" "}
               <code className="rounded bg-surface-muted px-1 text-foreground">016_process_milestone_planned_date.sql</code>{" "}
+              i{" "}
+              <code className="rounded bg-surface-muted px-1 text-foreground">017_project_process_items.sql</code>{" "}
               w Supabase.
             </p>
           </CardContent>
@@ -114,7 +125,12 @@ export default function ProjectProcessPage() {
             <ProcessPipeline
               template={template}
               process={process}
+              itemInstances={itemInstances}
               interactive
+              actorName={displayName || undefined}
+              onSaveChecklist={(itemId, payload) =>
+                saveChecklistPayload(project.id, itemId, payload, displayName || undefined)
+              }
               onToggleItem={(itemId, completed) =>
                 void toggleItemCompletion(project.id, itemId, completed, displayName || undefined)
               }

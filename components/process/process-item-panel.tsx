@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, FileCheck2, Receipt } from "lucide-react";
+import { ProcessChecklistEditor } from "@/components/process/process-checklist-editor";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,10 +10,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { checklistProgress } from "@/lib/process/item-payload";
 import {
   PROCESS_ITEM_KIND_LABELS,
+  type ChecklistItemPayload,
   type ProcessItem,
   type ProcessItemCompletion,
+  type ProjectProcessItem,
 } from "@/lib/process/types";
 import { cn, formatDate } from "@/lib/utils";
 
@@ -24,27 +28,35 @@ const kindIcon = {
 
 type ProcessItemPanelProps = {
   item: ProcessItem | null;
+  instance?: ProjectProcessItem;
   completion?: ProcessItemCompletion;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   interactive?: boolean;
+  onSaveChecklist?: (payload: ChecklistItemPayload) => Promise<void>;
   onToggleComplete?: (completed: boolean) => void;
+  actorName?: string;
 };
 
 export function ProcessItemPanel({
   item,
+  instance,
   completion,
   open,
   onOpenChange,
   interactive = false,
+  onSaveChecklist,
   onToggleComplete,
+  actorName,
 }: ProcessItemPanelProps) {
   if (!item) {
     return null;
   }
 
-  const completed = Boolean(completion);
+  const completed = Boolean(completion) || instance?.status === "completed";
   const Icon = kindIcon[item.kind];
+  const checklistPayload = instance?.payload ?? { lines: [] };
+  const checklistStats = checklistProgress(checklistPayload);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -58,18 +70,20 @@ export function ProcessItemPanel({
         </DialogHeader>
 
         <div className="grid gap-4">
-          {item.kind === "checklist" ? (
-            <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4">
-              <p className="text-sm font-medium text-foreground">Checklista</p>
-              <p className="mt-2 text-sm text-muted">
-                Tutaj uzupełnisz punkty do odhaczenia. Pełna edycja listy kontrolnej będzie dostępna
-                w kolejnej wersji.
-              </p>
-              <ul className="mt-3 grid gap-2 text-sm text-muted">
-                <li className="rounded-lg border border-dashed border-border/80 px-3 py-2">
-                  + Dodaj punkt checklisty
-                </li>
-              </ul>
+          {item.kind === "checklist" && interactive && onSaveChecklist ? (
+            <ProcessChecklistEditor
+              key={`${item.id}-${instance?.updatedAt ?? "new"}`}
+              initialPayload={checklistPayload}
+              actorName={actorName}
+              onSave={onSaveChecklist}
+            />
+          ) : null}
+
+          {item.kind === "checklist" && !interactive ? (
+            <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4 text-sm text-muted">
+              {checklistStats.total > 0
+                ? `${checklistStats.completed}/${checklistStats.total} punktów ukończonych`
+                : "Brak zapisanych punktów checklisty."}
             </div>
           ) : null}
 
@@ -77,12 +91,8 @@ export function ProcessItemPanel({
             <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4">
               <p className="text-sm font-medium text-foreground">Protokół odbioru</p>
               <p className="mt-2 text-sm text-muted">
-                Formularz protokołu z podpisem klienta będzie dostępny tutaj. Na razie możesz oznaczyć
-                protokół jako ukończony po jego wypełnieniu poza systemem.
+                Formularz protokołu z podpisem klienta będzie dostępny w kolejnej fazie.
               </p>
-              <div className="mt-4 rounded-lg border border-dashed border-border/80 px-4 py-8 text-center text-sm text-muted">
-                Pole podpisu — wkrótce
-              </div>
             </div>
           ) : null}
 
@@ -90,8 +100,7 @@ export function ProcessItemPanel({
             <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4">
               <p className="text-sm font-medium text-foreground">Rozliczenie</p>
               <p className="mt-2 text-sm text-muted">
-                Powiązanie z ofertą serwisową i rozliczeniem kosztów będzie dostępne tutaj. Na razie
-                oznacz element jako ukończony po rozliczeniu.
+                Powiązanie z ofertą serwisową będzie dostępne w kolejnej fazie.
               </p>
             </div>
           ) : null}
@@ -106,7 +115,7 @@ export function ProcessItemPanel({
             </div>
           ) : null}
 
-          {interactive ? (
+          {interactive && item.kind !== "checklist" ? (
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -117,14 +126,11 @@ export function ProcessItemPanel({
               </Button>
             </div>
           ) : (
-            <p
-              className={cn(
-                "text-sm",
-                completed ? "text-emerald-300" : "text-muted",
-              )}
-            >
-              {completed ? "Element ukończony" : "Element oczekuje na realizację"}
-            </p>
+            item.kind !== "checklist" ? (
+              <p className={cn("text-sm", completed ? "text-emerald-300" : "text-muted")}>
+                {completed ? "Element ukończony" : "Element oczekuje na realizację"}
+              </p>
+            ) : null
           )}
         </div>
       </DialogContent>

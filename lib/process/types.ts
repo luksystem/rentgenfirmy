@@ -43,6 +43,32 @@ export type ProcessItemCompletion = {
   note?: string;
 };
 
+export type ChecklistLine = {
+  id: string;
+  text: string;
+  checked: boolean;
+  checkedAt?: string;
+  checkedBy?: string;
+};
+
+export type ChecklistItemPayload = {
+  lines: ChecklistLine[];
+  note?: string;
+};
+
+export type ProjectProcessItemStatus = "open" | "in_progress" | "completed";
+
+export type ProjectProcessItem = {
+  id: string;
+  projectId: string;
+  templateItemId: string;
+  kind: ProcessItemKind;
+  payload: ChecklistItemPayload;
+  status: ProjectProcessItemStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type ProjectProcess = {
   id: string;
   projectId: string;
