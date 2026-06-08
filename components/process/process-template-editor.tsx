@@ -5,6 +5,7 @@ import { ProcessPipeline } from "@/components/process/process-pipeline";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
+import { inputToMilestoneDate, milestoneDateToInput } from "@/lib/process/dates";
 import {
   PROCESS_ITEM_KINDS,
   PROCESS_ITEM_KIND_LABELS,
@@ -56,6 +57,7 @@ export function ProcessTemplateEditor({
               stageId,
               title: "Kamień milowy",
               position: 0,
+              plannedDate: null,
               items: [],
             },
           ],
@@ -81,6 +83,7 @@ export function ProcessTemplateEditor({
               stageId,
               title: "Nowy kamień milowy",
               position: stage.milestones.length,
+              plannedDate: null,
               items: [],
             },
           ],
@@ -200,6 +203,33 @@ export function ProcessTemplateEditor({
                                 milestones: stageEntry.milestones.map((milestoneEntry) =>
                                   milestoneEntry.id === milestone.id
                                     ? { ...milestoneEntry, title: event.target.value }
+                                    : milestoneEntry,
+                                ),
+                              },
+                        ),
+                      }))
+                    }
+                  />
+                </Field>
+
+                <Field label="Planowana data">
+                  <Input
+                    type="date"
+                    value={milestoneDateToInput(milestone.plannedDate)}
+                    onChange={(event) =>
+                      setTemplate((current) => ({
+                        ...current,
+                        stages: current.stages.map((stageEntry) =>
+                          stageEntry.id !== stage.id
+                            ? stageEntry
+                            : {
+                                ...stageEntry,
+                                milestones: stageEntry.milestones.map((milestoneEntry) =>
+                                  milestoneEntry.id === milestone.id
+                                    ? {
+                                        ...milestoneEntry,
+                                        plannedDate: inputToMilestoneDate(event.target.value),
+                                      }
                                     : milestoneEntry,
                                 ),
                               },

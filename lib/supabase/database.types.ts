@@ -246,6 +246,7 @@ export type ProcessMilestoneRow = {
   stage_id: string;
   title: string;
   position: number;
+  planned_date: string | null;
   created_at: string;
 };
 

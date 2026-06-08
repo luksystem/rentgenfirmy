@@ -156,9 +156,7 @@ export function ClientOfferPage({ token }: { token: string }) {
                 {service.client.location ? ` · ${service.client.location}` : ""}
               </p>
               {offer.expiresAt && offer.canRespond ? (
-                <div className="mt-4 max-w-sm">
-                  <OfferValidityCountdown expiresAt={offer.expiresAt} />
-                </div>
+                <OfferValidityCountdown expiresAt={offer.expiresAt} />
               ) : offer.expiresAt ? (
                 <p className="mt-2 text-xs text-zinc-500">
                   Oferta ważna była do: {formatDate(offer.expiresAt)}

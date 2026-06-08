@@ -37,6 +37,7 @@ export function rowToProcessMilestone(
     stageId: row.stage_id,
     title: row.title,
     position: row.position,
+    plannedDate: row.planned_date ?? null,
     items: items.sort((a, b) => a.position - b.position),
   };
 }

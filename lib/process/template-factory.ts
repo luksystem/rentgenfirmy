@@ -35,6 +35,7 @@ function buildStarterTemplate(projectType: string): ProcessTemplate {
             stageId,
             title: "Start",
             position: 0,
+            plannedDate: null,
             items: [
               {
                 id: itemId,

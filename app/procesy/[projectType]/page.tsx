@@ -50,8 +50,8 @@ export default function ProcessTemplatePage() {
         <CardContent className="grid gap-3 py-8">
           <p className="text-sm text-rose-300">{loadError ?? processError}</p>
           <p className="text-sm text-muted">
-            Upewnij się, że uruchomiłeś migrację{" "}
-            <code className="rounded bg-surface-muted px-1">015_processes.sql</code> w Supabase.
+              Jeśli to pierwsze uruchomienie modułu, uruchom migrację{" "}
+              <code className="rounded bg-surface-muted px-1">015_processes.sql</code> w Supabase.
           </p>
           <Button asChild variant="secondary">
             <Link href="/procesy">Wróć do listy procesów</Link>

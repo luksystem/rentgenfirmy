@@ -15,6 +15,7 @@ export type ProcessMilestone = {
   stageId: string;
   title: string;
   position: number;
+  plannedDate: string | null;
   items: ProcessItem[];
 };
 

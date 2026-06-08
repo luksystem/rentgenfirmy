@@ -45,6 +45,7 @@ export type ServiceLineItems = {
   helperHours: number;
   carHours: number;
   kilometersOneWay: number;
+  tripCount: number;
   materialsCost: number;
   materialsNote: string;
   workReportNote: string;
@@ -184,6 +185,7 @@ export function emptyLineItems(billable: BillableFlags = EMPTY_BILLABLE): Servic
     helperHours: 0,
     carHours: 0,
     kilometersOneWay: 0,
+    tripCount: 1,
     materialsCost: 0,
     materialsNote: "",
     workReportNote: "",

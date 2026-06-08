@@ -273,6 +273,7 @@ export function instantiateTemplateFromSeed(
             stageId,
             title: milestone.title,
             position: milestonePosition,
+            plannedDate: null,
             items: milestone.items.map((item, itemPosition) => ({
               id: ids.itemIds[itemIdx++],
               milestoneId,

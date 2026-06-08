@@ -39,6 +39,8 @@ export function ServiceLineItemsForm({
   onChange: (items: ServiceLineItems) => void;
 }) {
   const zone = resolveKilometerZone(items.kilometersOneWay, zoneSettings);
+  const trips = Math.max(1, items.tripCount || 1);
+  const totalKm = items.kilometersOneWay * 2 * trips;
 
   function patch<K extends keyof ServiceLineItems>(key: K, value: ServiceLineItems[K]) {
     onChange({ ...items, [key]: value });
@@ -55,8 +57,15 @@ export function ServiceLineItemsForm({
     <div className="grid gap-4">
       <h3 className="text-lg font-semibold">{title}</h3>
       <p className="text-sm text-muted">
-        Strefa kilometrowa (pomoc): <strong>{zone}</strong> · Sugerowane godziny w aucie:{" "}
+        Strefa kilometrowa (pomoc): <strong>{zone}</strong> · Sugerowane godziny w aucie na wyjazd:{" "}
         <strong>{zone * 2}</strong>
+        {trips > 1 ? (
+          <>
+            {" "}
+            · Łącznie <strong>{totalKm} km</strong> i <strong>{zone * 2 * trips} h</strong> w aucie (
+            {trips} wyjazdy)
+          </>
+        ) : null}
       </p>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -144,6 +153,17 @@ export function ServiceLineItemsForm({
             checked={items.billable.carKilometers}
             onChange={(v) => patchBillable("carKilometers", v)}
           />
+        </Field>
+
+        <Field label="Ilość wyjazdów">
+          <NumericInput
+            decimals={false}
+            value={items.tripCount}
+            onChange={(value) => patch("tripCount", Math.max(1, value))}
+          />
+          <p className="text-xs text-muted">
+            Mnożnik kosztów auta (km i godziny w aucie). Np. 50 km × 10 wyjazdów.
+          </p>
         </Field>
 
         <Field label="Koszt materiałów (PLN)">

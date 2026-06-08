@@ -138,6 +138,7 @@ async function insertTemplateGraph(template: ProcessTemplate) {
         stage_id: milestone.stageId,
         title: milestone.title,
         position: milestone.position,
+        planned_date: milestone.plannedDate,
       });
       if (milestoneError) {
         throw new Error(milestoneError.message);

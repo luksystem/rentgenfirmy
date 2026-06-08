@@ -111,6 +111,7 @@ function normalizeLineItems(value: unknown): ServiceLineItems {
     helperHours: asNumber(data.helperHours),
     carHours: asNumber(data.carHours),
     kilometersOneWay: asNumber(data.kilometersOneWay),
+    tripCount: Math.max(1, asNumber(data.tripCount, 1)),
     materialsCost: asNumber(data.materialsCost),
     materialsNote: typeof data.materialsNote === "string" ? data.materialsNote : "",
     workReportNote: typeof data.workReportNote === "string" ? data.workReportNote : "",

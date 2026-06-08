@@ -25,10 +25,13 @@ export default function ProjectProcessPage() {
 
   const hydrate = useProcessStore((state) => state.hydrate);
   const ensureProjectProcess = useProcessStore((state) => state.ensureProjectProcess);
-  const getTemplateByProjectType = useProcessStore((state) => state.getTemplateByProjectType);
-  const getProjectProcess = useProcessStore((state) => state.getProjectProcess);
   const toggleItemCompletion = useProcessStore((state) => state.toggleItemCompletion);
   const displayName = useAuthStore((state) => state.displayName);
+
+  const template = useProcessStore((state) =>
+    project ? state.templates.find((entry) => entry.projectType === project.type) : undefined,
+  );
+  const process = useProcessStore((state) => state.projectProcesses[projectId]);
 
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -67,8 +70,6 @@ export default function ProjectProcessPage() {
     );
   }
 
-  const template = getTemplateByProjectType(project.type);
-  const process = getProjectProcess(project.id);
   const progress =
     template && process ? getProcessProgress(template, process) : null;
 
@@ -95,8 +96,10 @@ export default function ProjectProcessPage() {
           <CardContent className="grid gap-2 py-4 text-sm text-rose-300">
             <p>{loadError ?? processError}</p>
             <p className="text-muted">
-              Jeśli to pierwsze uruchomienie modułu, uruchom migrację{" "}
+              Jeśli to pierwsze uruchomienie modułu, uruchom migracje{" "}
               <code className="rounded bg-surface-muted px-1 text-foreground">015_processes.sql</code>{" "}
+              i{" "}
+              <code className="rounded bg-surface-muted px-1 text-foreground">016_process_milestone_planned_date.sql</code>{" "}
               w Supabase.
             </p>
           </CardContent>

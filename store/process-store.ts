@@ -127,14 +127,47 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
   },
 
   toggleItemCompletion: async (projectId, itemId, completed, completedBy) => {
-    const updated = await updateProjectProcessCompletion(
-      projectId,
-      itemId,
-      completed,
-      completedBy,
-    );
+    const current = get().projectProcesses[projectId];
+    if (!current) {
+      throw new Error("Nie znaleziono procesu projektu.");
+    }
+
+    const optimisticCompletions = { ...current.completions };
+    if (completed) {
+      optimisticCompletions[itemId] = {
+        completedAt: new Date().toISOString(),
+        completedBy,
+      };
+    } else {
+      delete optimisticCompletions[itemId];
+    }
+
+    const optimistic: ProjectProcess = {
+      ...current,
+      completions: optimisticCompletions,
+      updatedAt: new Date().toISOString(),
+    };
+
     set((state) => ({
-      projectProcesses: { ...state.projectProcesses, [projectId]: updated },
+      projectProcesses: { ...state.projectProcesses, [projectId]: optimistic },
     }));
+
+    try {
+      const updated = await updateProjectProcessCompletion(
+        projectId,
+        itemId,
+        completed,
+        completedBy,
+      );
+      set((state) => ({
+        projectProcesses: { ...state.projectProcesses, [projectId]: updated },
+      }));
+    } catch (error) {
+      set((state) => ({
+        projectProcesses: { ...state.projectProcesses, [projectId]: current },
+        error: error instanceof Error ? error.message : "Błąd zapisu postępu procesu.",
+      }));
+      throw error;
+    }
   },
 }));

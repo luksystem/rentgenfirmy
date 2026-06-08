@@ -19,19 +19,18 @@ function travelCosts(
 ) {
   const zone = resolveKilometerZone(items.kilometersOneWay, zones);
   const suggestedCarHoursFromZone = zone * 2;
+  const trips = Math.max(1, items.tripCount || 1);
 
   let car = 0;
   if (items.billable.carKilometers) {
-    car = items.kilometersOneWay * 2 * rates.carPerKm;
+    car = items.kilometersOneWay * 2 * rates.carPerKm * trips;
   }
 
   let carHours = 0;
   if (items.billable.carHours) {
-    if (items.carHours > 0) {
-      carHours = items.carHours * rates.carHourly;
-    } else {
-      carHours = suggestedCarHoursFromZone * rates.carHourly;
-    }
+    const hoursPerTrip =
+      items.carHours > 0 ? items.carHours : suggestedCarHoursFromZone;
+    carHours = hoursPerTrip * rates.carHourly * trips;
   }
 
   return { car: roundMoney(car), carHours: roundMoney(carHours), zone, suggestedCarHoursFromZone };
@@ -130,8 +129,9 @@ export function hasBillableLineItem(items: ServiceLineItems) {
     (billable.programmerHours && items.programmerHours > 0) ||
     (billable.installerHours && items.installerHours > 0) ||
     (billable.helperHours && items.helperHours > 0) ||
-    (billable.carHours && (items.carHours > 0 || items.kilometersOneWay > 0)) ||
-    (billable.carKilometers && items.kilometersOneWay > 0) ||
+    (billable.carHours &&
+      (items.carHours > 0 || items.kilometersOneWay > 0 || items.tripCount > 1)) ||
+    (billable.carKilometers && (items.kilometersOneWay > 0 || items.tripCount > 1)) ||
     (billable.accommodations && items.accommodations > 0) ||
     (billable.materials && items.materialsCost > 0)
   );
