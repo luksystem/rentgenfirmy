@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useState } from "react";
 import { CalendarDays } from "lucide-react";
 import {
   formatMilestoneDate,
@@ -22,27 +22,24 @@ export function MilestoneDateBadge({
   disabled?: boolean;
   onSave?: (date: string | null) => Promise<void>;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [saving, setSaving] = useState(false);
   const status = getMilestoneDateStatus(date);
   const classes = MILESTONE_DATE_STATUS_CLASSES[status];
   const formatted = formatMilestoneDate(date);
-
-  function openPicker() {
-    if (!editable || disabled) {
-      return;
-    }
-    inputRef.current?.showPicker?.();
-    inputRef.current?.click();
-  }
+  const label = formatted ?? "Ustaw datę";
+  const isDisabled = disabled || saving;
 
   async function handleChange(value: string) {
     if (!onSave) {
       return;
     }
-    await onSave(inputToMilestoneDate(value));
+    setSaving(true);
+    try {
+      await onSave(inputToMilestoneDate(value));
+    } finally {
+      setSaving(false);
+    }
   }
-
-  const label = formatted ?? "Ustaw datę";
 
   if (!editable) {
     if (!formatted) {
@@ -63,30 +60,26 @@ export function MilestoneDateBadge({
   }
 
   return (
-    <>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={openPicker}
-        className={cn(
-          "inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-medium transition",
-          classes.badge,
-          disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
-        )}
-        title="Kliknij, aby ustawić datę kamienia milowego"
-      >
-        <span className={cn("h-1.5 w-1.5 rounded-full", classes.dot)} />
-        <CalendarDays className="h-3 w-3" />
-        {label}
-      </button>
+    <label
+      className={cn(
+        "relative inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-medium transition",
+        classes.badge,
+        isDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:brightness-110",
+      )}
+      title="Kliknij, aby ustawić datę kamienia milowego"
+    >
+      <span className={cn("pointer-events-none h-1.5 w-1.5 rounded-full", classes.dot)} />
+      <CalendarDays className="pointer-events-none h-3 w-3" />
+      <span className="pointer-events-none">{saving ? "Zapisywanie…" : label}</span>
       <input
-        ref={inputRef}
         type="date"
-        className="sr-only"
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
         value={milestoneDateToInput(date)}
-        disabled={disabled}
+        disabled={isDisabled}
+        aria-label="Planowana data kamienia milowego"
         onChange={(event) => void handleChange(event.target.value)}
+        onClick={(event) => event.stopPropagation()}
       />
-    </>
+    </label>
   );
 }
