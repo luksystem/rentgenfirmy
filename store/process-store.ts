@@ -5,6 +5,8 @@ import type { UserProfile } from "@/lib/auth/types";
 import { getUserDisplayName } from "@/lib/auth/types";
 import type {
   ChecklistItemPayload,
+  ProcessElement,
+  ProcessItemKind,
   ProcessTemplate,
   ProjectProcess,
   ProjectProcessItem,
@@ -17,6 +19,12 @@ import {
   saveProjectProcessItemChecklist,
   signProjectProcessItem,
 } from "@/lib/supabase/process-item-repository";
+import {
+  createProcessElement,
+  deleteProcessElement,
+  fetchProcessElements,
+  saveProcessElement,
+} from "@/lib/supabase/process-element-repository";
 import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 import {
   ensureDefaultProcessTemplates,
@@ -32,6 +40,7 @@ import {
 
 type ProcessStore = {
   templates: ProcessTemplate[];
+  elements: ProcessElement[];
   projectProcesses: Record<string, ProjectProcess>;
   projectProcessItems: Record<string, Record<string, ProjectProcessItem>>;
   teamProfiles: UserProfile[];
@@ -77,10 +86,20 @@ type ProcessStore = {
     milestoneId: string,
     plannedDate: string | null,
   ) => Promise<void>;
+  loadElements: () => Promise<void>;
+  createElement: (input: {
+    kind: ProcessItemKind;
+    title: string;
+    description?: string;
+    defaultPayload?: ChecklistItemPayload;
+  }) => Promise<ProcessElement>;
+  saveElement: (element: ProcessElement) => Promise<void>;
+  removeElement: (id: string) => Promise<void>;
 };
 
 export const useProcessStore = create<ProcessStore>((set, get) => ({
   templates: [],
+  elements: [],
   projectProcesses: {},
   projectProcessItems: {},
   teamProfiles: [],
@@ -92,12 +111,14 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       await ensureDefaultProcessTemplates(projectTypes);
-      const [templates, processes] = await Promise.all([
+      const [templates, processes, elements] = await Promise.all([
         fetchProcessTemplates(),
         fetchProjectProcesses(),
+        fetchProcessElements(),
       ]);
       set({
         templates,
+        elements,
         projectProcesses: Object.fromEntries(processes.map((process) => [process.projectId, process])),
         hydrated: true,
         isLoading: false,
@@ -334,5 +355,36 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
       }));
       throw error;
     }
+  },
+
+  loadElements: async () => {
+    const elements = await fetchProcessElements();
+    set({ elements });
+  },
+
+  createElement: async (input) => {
+    const created = await createProcessElement(input);
+    set((state) => ({
+      elements: [...state.elements, created].sort((a, b) => a.title.localeCompare(b.title, "pl")),
+    }));
+    return created;
+  },
+
+  saveElement: async (element) => {
+    const saved = await saveProcessElement(element);
+    set((state) => ({
+      elements: state.elements
+        .map((entry) => (entry.id === saved.id ? saved : entry))
+        .sort((a, b) => a.title.localeCompare(b.title, "pl")),
+    }));
+    const templates = await fetchProcessTemplates();
+    set({ templates });
+  },
+
+  removeElement: async (id) => {
+    await deleteProcessElement(id);
+    set((state) => ({
+      elements: state.elements.filter((entry) => entry.id !== id),
+    }));
   },
 }));

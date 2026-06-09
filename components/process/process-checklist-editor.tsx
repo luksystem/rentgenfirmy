@@ -10,11 +10,13 @@ export function ProcessChecklistEditor({
   initialPayload,
   actorName,
   disabled = false,
+  canCustomizeStructure = false,
   onSave,
 }: {
   initialPayload: ChecklistItemPayload;
   actorName?: string;
   disabled?: boolean;
+  canCustomizeStructure?: boolean;
   onSave: (payload: ChecklistItemPayload) => Promise<void>;
 }) {
   const [payload, setPayload] = useState(initialPayload);
@@ -82,6 +84,10 @@ export function ProcessChecklistEditor({
   }
 
   async function saveLine(lineId: string) {
+    if (!canCustomizeStructure) {
+      return;
+    }
+
     const line = payload.lines.find((entry) => entry.id === lineId);
     if (!line) {
       return;
@@ -111,11 +117,13 @@ export function ProcessChecklistEditor({
         <p className="text-sm text-muted">
           {progress.total > 0
             ? `${progress.completed}/${progress.total} punktów ukończonych`
-            : "Checklista zostanie wczytana ze szablonu procesu — możesz ją dostosować w projekcie."}
+            : "Brak punktów checklisty."}
         </p>
-        <Button type="button" size="sm" variant="secondary" disabled={disabled || isSaving} onClick={addLine}>
-          Dodaj punkt
-        </Button>
+        {canCustomizeStructure ? (
+          <Button type="button" size="sm" variant="secondary" disabled={disabled || isSaving} onClick={addLine}>
+            Dodaj punkt
+          </Button>
+        ) : null}
       </div>
 
       <div className="grid gap-2">
@@ -132,27 +140,33 @@ export function ProcessChecklistEditor({
                 onChange={(event) => void toggleLine(line.id, event.target.checked)}
                 className="mt-2 h-4 w-4 rounded border-border"
               />
-              <Input
-                value={line.text}
-                disabled={disabled || isSaving}
-                placeholder="Opis punktu checklisty"
-                onChange={(event) => updateLineLocal(line.id, { text: event.target.value })}
-                onBlur={() => void saveLine(line.id)}
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                disabled={disabled || isSaving}
-                onClick={() => void removeLine(line.id)}
-              >
-                Usuń
-              </Button>
+              {canCustomizeStructure ? (
+                <Input
+                  value={line.text}
+                  disabled={disabled || isSaving}
+                  placeholder="Opis punktu checklisty"
+                  onChange={(event) => updateLineLocal(line.id, { text: event.target.value })}
+                  onBlur={() => void saveLine(line.id)}
+                />
+              ) : (
+                <p className="py-2 text-sm text-foreground">{line.text}</p>
+              )}
+              {canCustomizeStructure ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={disabled || isSaving}
+                  onClick={() => void removeLine(line.id)}
+                >
+                  Usuń
+                </Button>
+              ) : null}
             </div>
           ))
         ) : (
           <p className="rounded-xl border border-dashed border-border/80 px-3 py-4 text-sm text-muted">
-            Brak punktów — dodaj pierwszy punkt checklisty.
+            Brak punktów checklisty.
           </p>
         )}
       </div>

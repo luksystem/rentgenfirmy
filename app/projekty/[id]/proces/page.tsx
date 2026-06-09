@@ -3,12 +3,11 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ProcessMilestoneDatesPanel } from "@/components/process/process-milestone-dates-panel";
 import { ProcessPipeline } from "@/components/process/process-pipeline";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { hasFullAppAccess } from "@/lib/auth/types";
+import { hasFullAppAccess, isAdministratorRole } from "@/lib/auth/types";
 import { getProcessProgress } from "@/lib/process/types";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
@@ -48,6 +47,7 @@ export default function ProjectProcessPage() {
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const canManageAssignment = profile ? hasFullAppAccess(profile.role) : false;
+  const canCustomizeChecklist = profile ? isAdministratorRole(profile.role) : false;
 
   useEffect(() => {
     if (!project) {
@@ -126,7 +126,8 @@ export default function ProjectProcessPage() {
               Jeśli to pierwsze uruchomienie modułu, uruchom migracje{" "}
               <code className="rounded bg-surface-muted px-1 text-foreground">015</code>–
               <code className="rounded bg-surface-muted px-1 text-foreground">018</code>–
-              <code className="rounded bg-surface-muted px-1 text-foreground">019</code> w Supabase.
+              <code className="rounded bg-surface-muted px-1 text-foreground">019</code>–
+              <code className="rounded bg-surface-muted px-1 text-foreground">020</code> w Supabase.
             </p>
           </CardContent>
         </Card>
@@ -137,11 +138,6 @@ export default function ProjectProcessPage() {
       ) : (
         <Card>
           <CardContent className="py-5">
-            <ProcessMilestoneDatesPanel
-              template={template}
-              process={process}
-              onSaveDate={(milestoneId, date) => saveMilestoneDate(project.id, milestoneId, date)}
-            />
             <ProcessPipeline
               template={template}
               process={process}
@@ -149,8 +145,12 @@ export default function ProjectProcessPage() {
               teamProfiles={teamProfiles}
               currentUserId={profile?.id}
               canManageAssignment={canManageAssignment}
+              canCustomizeChecklist={canCustomizeChecklist}
               interactive
               actorName={displayName || undefined}
+              onSaveMilestoneDate={(milestoneId, date) =>
+                saveMilestoneDate(project.id, milestoneId, date)
+              }
               onSaveChecklist={(itemId, payload) =>
                 saveChecklistPayload(project.id, itemId, payload, displayName || undefined)
               }

@@ -1,6 +1,7 @@
 import { buildTemplateForProjectType } from "@/lib/process/template-factory";
 import type { ProcessItemCompletion, ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import { getSupabase } from "@/lib/supabase/client";
+import { fetchProcessElements } from "@/lib/supabase/process-element-repository";
 import {
   projectProcessToUpdate,
   rowToProcessItem,
@@ -66,9 +67,12 @@ async function fetchTemplatesGraph(): Promise<ProcessTemplate[]> {
     throw new Error(itemsError.message);
   }
 
+  const elements = await fetchProcessElements();
+  const elementsById = new Map(elements.map((element) => [element.id, element]));
+
   const itemsByMilestone = new Map<string, ReturnType<typeof rowToProcessItem>[]>();
   (items ?? []).forEach((row) => {
-    const mapped = rowToProcessItem(row);
+    const mapped = rowToProcessItem(row, elementsById);
     const list = itemsByMilestone.get(row.milestone_id) ?? [];
     list.push(mapped);
     itemsByMilestone.set(row.milestone_id, list);
@@ -127,6 +131,24 @@ async function insertTemplateGraph(template: ProcessTemplate, options?: { includ
   await insertTemplateStagesGraph(template);
 }
 
+async function resolvePlacementElementId(
+  item: ProcessTemplate["stages"][number]["milestones"][number]["items"][number],
+) {
+  if (item.elementId) {
+    return item.elementId;
+  }
+
+  const { findOrCreateProcessElement } = await import(
+    "@/lib/supabase/process-element-repository"
+  );
+  const element = await findOrCreateProcessElement({
+    kind: item.kind,
+    title: item.title,
+    defaultPayload: item.defaultPayload,
+  });
+  return element.id;
+}
+
 async function insertTemplateStagesGraph(template: ProcessTemplate) {
   const supabase = getSupabase();
 
@@ -153,16 +175,19 @@ async function insertTemplateStagesGraph(template: ProcessTemplate) {
       }
 
       if (milestone.items.length) {
-        const { error: itemsError } = await supabase.from("process_items").insert(
-          milestone.items.map((item) => ({
+        const placements = await Promise.all(
+          milestone.items.map(async (item) => ({
             id: item.id,
             milestone_id: item.milestoneId,
+            element_id: await resolvePlacementElementId(item),
             kind: item.kind,
             title: item.title,
             position: item.position,
             default_payload: item.defaultPayload,
           })),
         );
+
+        const { error: itemsError } = await supabase.from("process_items").insert(placements);
         if (itemsError) {
           throw new Error(itemsError.message);
         }

@@ -2,9 +2,20 @@ export const PROCESS_ITEM_KINDS = ["checklist", "protocol", "settlement"] as con
 
 export type ProcessItemKind = (typeof PROCESS_ITEM_KINDS)[number];
 
+export type ProcessElement = {
+  id: string;
+  kind: ProcessItemKind;
+  title: string;
+  description: string;
+  defaultPayload: ChecklistItemPayload;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type ProcessItem = {
   id: string;
   milestoneId: string;
+  elementId: string;
   kind: ProcessItemKind;
   title: string;
   position: number;

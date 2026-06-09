@@ -43,6 +43,7 @@ type ProcessItemPanelProps = {
   onSign?: (signatureNote: string) => Promise<void>;
   onToggleComplete?: (completed: boolean) => void;
   actorName?: string;
+  canCustomizeChecklist?: boolean;
 };
 
 export function ProcessItemPanel({
@@ -60,6 +61,7 @@ export function ProcessItemPanel({
   onSign,
   onToggleComplete,
   actorName,
+  canCustomizeChecklist = false,
 }: ProcessItemPanelProps) {
   if (!item) {
     return null;
@@ -99,6 +101,7 @@ export function ProcessItemPanel({
               key={`${item.id}-${instance?.updatedAt ?? "new"}-checklist`}
               initialPayload={checklistPayload}
               actorName={actorName}
+              canCustomizeStructure={canCustomizeChecklist}
               onSave={onSaveChecklist}
             />
           ) : null}

@@ -277,6 +277,7 @@ export function instantiateTemplateFromSeed(
             items: milestone.items.map((item, itemPosition) => ({
               id: ids.itemIds[itemIdx++],
               milestoneId,
+              elementId: "",
               kind: item.kind,
               title: item.title,
               position: itemPosition,

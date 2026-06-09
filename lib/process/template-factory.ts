@@ -40,6 +40,7 @@ function buildStarterTemplate(projectType: string): ProcessTemplate {
               {
                 id: itemId,
                 milestoneId,
+                elementId: "",
                 kind: "checklist" as ProcessItemKind,
                 title: "Pierwszy krok",
                 position: 0,

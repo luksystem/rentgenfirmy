@@ -250,9 +250,20 @@ export type ProcessMilestoneRow = {
   created_at: string;
 };
 
+export type ProcessElementRow = {
+  id: string;
+  kind: string;
+  title: string;
+  description: string;
+  default_payload: unknown;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ProcessItemRow = {
   id: string;
   milestone_id: string;
+  element_id: string | null;
   kind: string;
   title: string;
   position: number;
@@ -393,6 +404,12 @@ export type Database = {
         Row: ProcessMilestoneRow;
         Insert: Partial<ProcessMilestoneRow> & Pick<ProcessMilestoneRow, "stage_id" | "title">;
         Update: Partial<ProcessMilestoneRow>;
+        Relationships: [];
+      };
+      process_elements: {
+        Row: ProcessElementRow;
+        Insert: Partial<ProcessElementRow> & Pick<ProcessElementRow, "kind" | "title">;
+        Update: Partial<ProcessElementRow>;
         Relationships: [];
       };
       process_items: {

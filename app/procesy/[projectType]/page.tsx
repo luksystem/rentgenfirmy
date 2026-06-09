@@ -21,6 +21,7 @@ export default function ProcessTemplatePage() {
   const ensureTemplateForProjectType = useProcessStore((state) => state.ensureTemplateForProjectType);
   const saveTemplate = useProcessStore((state) => state.saveTemplate);
   const getTemplateByProjectType = useProcessStore((state) => state.getTemplateByProjectType);
+  const elements = useProcessStore((state) => state.elements);
 
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -92,6 +93,7 @@ export default function ProcessTemplatePage() {
       <ProcessTemplateEditor
         key={template.updatedAt}
         initialTemplate={template}
+        elements={elements}
         onSave={saveTemplate}
       />
     </>

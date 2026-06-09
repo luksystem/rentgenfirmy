@@ -39,7 +39,12 @@ export default function ProcesyPage() {
       <PageHeader
         eyebrow="Moduł operacyjny"
         title="Procesy"
-        description="Szablony pipeline per typ projektu — etapy, kamienie milowe, checklisty, protokoły odbioru i rozliczenia."
+        description="Szablony pipeline per typ projektu oraz katalog elementów (checklisty, protokoły, rozliczenia)."
+        action={
+          <Button asChild>
+            <Link href="/procesy/elementy">Elementy procesu</Link>
+          </Button>
+        }
       />
 
       {error ? (

@@ -1,5 +1,6 @@
 import { normalizeChecklistPayload, templatePayloadFromTitle } from "@/lib/process/item-payload";
 import type {
+  ProcessElement,
   ProcessItem,
   ProcessItemCompletion,
   ProcessMilestone,
@@ -19,17 +20,23 @@ function isProcessItemKind(value: string): value is ProcessItem["kind"] {
   return value === "checklist" || value === "protocol" || value === "settlement";
 }
 
-export function rowToProcessItem(row: ProcessItemRow): ProcessItem {
-  const kind = isProcessItemKind(row.kind) ? row.kind : "checklist";
-  const normalized = normalizeChecklistPayload(row.default_payload);
+export function rowToProcessItem(
+  row: ProcessItemRow,
+  elementsById: Map<string, ProcessElement>,
+): ProcessItem {
+  const element = row.element_id ? elementsById.get(row.element_id) : undefined;
+  const kind = element?.kind ?? (isProcessItemKind(row.kind) ? row.kind : "checklist");
+  const title = element?.title ?? row.title;
+  const normalized = normalizeChecklistPayload(element?.defaultPayload ?? row.default_payload);
   const defaultPayload =
-    normalized.lines.length > 0 ? normalized : templatePayloadFromTitle(row.title, kind);
+    normalized.lines.length > 0 ? normalized : templatePayloadFromTitle(title, kind);
 
   return {
     id: row.id,
     milestoneId: row.milestone_id,
+    elementId: row.element_id ?? element?.id ?? "",
     kind,
-    title: row.title,
+    title,
     position: row.position,
     defaultPayload,
   };

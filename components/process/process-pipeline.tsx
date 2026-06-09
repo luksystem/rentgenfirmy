@@ -1,19 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import {
-  CalendarDays,
-  CheckCircle2,
-  ChevronRight,
-  Circle,
-  FileCheck2,
-  Receipt,
-} from "lucide-react";
+import { CheckCircle2, ChevronRight, Circle, FileCheck2, Receipt } from "lucide-react";
+import { MilestoneDateBadge } from "@/components/process/milestone-date-badge";
 import { ProcessItemPanel } from "@/components/process/process-item-panel";
 import { formatAssigneeLabel } from "@/components/process/process-item-responsible-section";
 import { cn } from "@/lib/utils";
 import type { UserProfile } from "@/lib/auth/types";
-import { formatMilestoneDate } from "@/lib/process/dates";
 import { checklistProgress } from "@/lib/process/item-payload";
 import {
   PROCESS_ITEM_KIND_LABELS,
@@ -44,6 +37,8 @@ type ProcessPipelineProps = {
   onSaveChecklist?: (itemId: string, payload: ChecklistItemPayload) => Promise<void>;
   onAssign?: (itemId: string, assigneeId: string | null) => Promise<void>;
   onSign?: (itemId: string, signatureNote: string) => Promise<void>;
+  onSaveMilestoneDate?: (milestoneId: string, date: string | null) => Promise<void>;
+  canCustomizeChecklist?: boolean;
 };
 
 export function ProcessPipeline({
@@ -59,6 +54,8 @@ export function ProcessPipeline({
   onSaveChecklist,
   onAssign,
   onSign,
+  onSaveMilestoneDate,
+  canCustomizeChecklist = false,
 }: ProcessPipelineProps) {
   const [activeItem, setActiveItem] = useState<ProcessItem | null>(null);
 
@@ -128,7 +125,6 @@ export function ProcessPipeline({
                 <div className="grid flex-1 gap-4 pl-2 md:pl-0">
                   {stage.milestones.map((milestone) => {
                     const plannedDate = process?.milestoneDates?.[milestone.id] ?? null;
-                    const plannedLabel = formatMilestoneDate(plannedDate);
 
                     return (
                       <div
@@ -144,17 +140,16 @@ export function ProcessPipeline({
                               {milestone.title}
                             </p>
                           </div>
-                          {plannedLabel ? (
-                            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-accent/20 bg-accent/5 px-2 py-1 text-[11px] font-medium text-accent">
-                              <CalendarDays className="h-3 w-3" />
-                              {plannedLabel}
-                            </span>
-                          ) : null}
+                          {interactive && onSaveMilestoneDate ? (
+                            <MilestoneDateBadge
+                              date={plannedDate}
+                              editable
+                              onSave={(date) => onSaveMilestoneDate(milestone.id, date)}
+                            />
+                          ) : (
+                            <MilestoneDateBadge date={plannedDate} />
+                          )}
                         </div>
-
-                        {!plannedLabel && interactive ? (
-                          <p className="mt-2 text-[11px] text-muted">Brak planowanej daty</p>
-                        ) : null}
 
                         <div className="mt-3 grid gap-2">
                           {milestone.items.map((item) => {
@@ -280,6 +275,7 @@ export function ProcessPipeline({
         onSign={
           activeItem && onSign ? (signatureNote) => onSign(activeItem.id, signatureNote) : undefined
         }
+        canCustomizeChecklist={canCustomizeChecklist}
         onToggleComplete={(completed) => {
           if (!activeItem) {
             return;
