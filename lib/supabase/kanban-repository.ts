@@ -363,15 +363,26 @@ export async function updateKanbanTask(
   patch: Partial<Pick<KanbanTask, "title" | "description" | "priority" | "dueDate">>,
 ) {
   const supabase = getSupabase();
+  const payload: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (patch.title !== undefined) {
+    payload.title = patch.title;
+  }
+  if (patch.description !== undefined) {
+    payload.description = patch.description;
+  }
+  if (patch.priority !== undefined) {
+    payload.priority = patch.priority;
+  }
+  if (patch.dueDate !== undefined) {
+    payload.due_date = patch.dueDate;
+  }
+
   const { data, error } = await supabase
     .from("process_kanban_tasks")
-    .update({
-      title: patch.title,
-      description: patch.description,
-      priority: patch.priority,
-      due_date: patch.dueDate,
-      updated_at: new Date().toISOString(),
-    })
+    .update(payload)
     .eq("id", taskId)
     .select("*")
     .single();
@@ -400,6 +411,15 @@ export async function closeKanbanTask(taskId: string, closed: boolean) {
   }
 
   return rowToTask(data as TaskRow);
+}
+
+export async function deleteKanbanTask(taskId: string) {
+  const supabase = getSupabase();
+  const { error } = await supabase.from("process_kanban_tasks").delete().eq("id", taskId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 export async function addKanbanComment(input: {

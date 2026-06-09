@@ -77,8 +77,8 @@ export function ProcessItemPanel({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent fullscreen={item.kind === "kanban"}>
+        <DialogHeader className={item.kind === "kanban" ? "shrink-0" : undefined}>
           <DialogTitle className="flex items-center gap-2">
             <Icon className="h-5 w-5 shrink-0 text-accent" />
             {item.title}
@@ -86,8 +86,8 @@ export function ProcessItemPanel({
           <DialogDescription>{PROCESS_ITEM_KIND_LABELS[item.kind]}</DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4">
-          {interactive && instance && onAssign && onSign ? (
+        <div className={cn("grid gap-4", item.kind === "kanban" && "flex min-h-0 flex-1 flex-col")}>
+          {interactive && instance && onAssign && onSign && item.kind !== "kanban" ? (
             <ProcessItemResponsibleSection
               key={`${instance.id}-${instance.updatedAt}`}
               instance={instance}
@@ -131,6 +131,18 @@ export function ProcessItemPanel({
             />
           ) : null}
 
+          {item.kind === "kanban" && interactive && instance && completed ? (
+            <div className="shrink-0 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm">
+              <p className="font-medium text-emerald-200">Ukończono</p>
+              <p className="mt-1 text-muted">
+                {formatDate(completion?.completedAt ?? instance?.signedAt ?? undefined)}
+                {completion?.completedBy || instance?.signedByName
+                  ? ` · ${completion?.completedBy ?? instance?.signedByName}`
+                  : ""}
+              </p>
+            </div>
+          ) : null}
+
           {item.kind === "protocol" ? (
             <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4">
               <p className="text-sm font-medium text-foreground">Protokół odbioru</p>
@@ -149,7 +161,7 @@ export function ProcessItemPanel({
             </div>
           ) : null}
 
-          {completed ? (
+          {completed && item.kind !== "kanban" ? (
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm">
               <p className="font-medium text-emerald-200">Ukończono</p>
               <p className="mt-1 text-muted">

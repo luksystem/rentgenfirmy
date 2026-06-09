@@ -77,10 +77,10 @@ export default function PublicKanbanPage() {
   }
 
   return (
-    <div className="mx-auto grid max-w-[1400px] gap-4 p-4 md:p-6">
-      <div>
+    <div className="flex min-h-[calc(100dvh-2rem)] flex-col gap-4 p-4 md:p-6">
+      <div className="shrink-0">
         <h1 className="text-xl font-semibold text-foreground">Tablica optymalizacji Smart Home</h1>
-        <p className="text-sm text-muted">Współpraca z zespołem — dodawaj taski, komentuj i przesuwaj między kolumnami.</p>
+        <p className="text-sm text-muted">Współpraca z zespołem — dodawaj zgłoszenia, komentuj i przesuwaj między kolumnami.</p>
       </div>
       <PublicKanbanBoard token={token} board={board} authorName={authorName.trim()} onRefresh={refresh} />
     </div>

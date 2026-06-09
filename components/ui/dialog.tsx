@@ -11,16 +11,22 @@ export const DialogClose = DialogPrimitive.Close;
 
 export function DialogContent({
   className,
+  fullscreen = false,
   children,
   ...props
-}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>) {
+}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { fullscreen?: boolean }) {
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
       <DialogPrimitive.Content
         className={cn(
-          "fixed z-50 overflow-y-auto border border-border bg-surface-elevated shadow-card",
-          "inset-x-4 top-[max(1rem,env(safe-area-inset-top))] max-h-[calc(100dvh-2rem)] w-auto -translate-x-0 -translate-y-0 rounded-2xl p-5 sm:inset-x-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90vh] sm:w-[min(720px,calc(100vw-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:p-6",
+          "fixed z-50 border border-border bg-surface-elevated shadow-card",
+          fullscreen
+            ? "inset-0 flex max-h-none w-full flex-col overflow-hidden rounded-none p-4 sm:p-5"
+            : cn(
+                "overflow-y-auto",
+                "inset-x-4 top-[max(1rem,env(safe-area-inset-top))] max-h-[calc(100dvh-2rem)] w-auto -translate-x-0 -translate-y-0 rounded-2xl p-5 sm:inset-x-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90vh] sm:w-[min(720px,calc(100vw-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:p-6",
+              ),
           className,
         )}
         {...props}

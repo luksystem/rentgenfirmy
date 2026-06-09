@@ -67,6 +67,14 @@ export async function POST(
         title,
         authorSide: "client",
         authorName,
+        priority:
+          data.priority === "low" ||
+          data.priority === "normal" ||
+          data.priority === "high" ||
+          data.priority === "urgent"
+            ? data.priority
+            : undefined,
+        dueDate: typeof data.dueDate === "string" ? data.dueDate : null,
       });
       return NextResponse.json({ task });
     }
