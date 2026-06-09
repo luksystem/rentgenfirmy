@@ -5,6 +5,8 @@ import type {
   KanbanColumn,
   KanbanPriority,
   KanbanTask,
+  KanbanTaskEvent,
+  KanbanTaskEventType,
   KanbanTemplatePayload,
 } from "@/lib/process/kanban-types";
 import { getSupabase } from "@/lib/supabase/client";
@@ -49,6 +51,19 @@ type CommentRow = {
   body: string;
   created_at: string;
 };
+
+type EventRow = {
+  id: string;
+  task_id: string;
+  event_type: string;
+  author_name: string;
+  author_side: string;
+  created_at: string;
+};
+
+function isKanbanTaskEventType(value: string): value is KanbanTaskEventType {
+  return value === "created" || value === "closed" || value === "reopened";
+}
 
 function isKanbanPriority(value: string): value is KanbanPriority {
   return value === "low" || value === "normal" || value === "high" || value === "urgent";
@@ -95,6 +110,39 @@ function rowToComment(row: CommentRow): KanbanComment {
   };
 }
 
+function rowToEvent(row: EventRow): KanbanTaskEvent {
+  return {
+    id: row.id,
+    taskId: row.task_id,
+    eventType: isKanbanTaskEventType(row.event_type) ? row.event_type : "created",
+    authorName: row.author_name,
+    authorSide: isAuthorSide(row.author_side) ? row.author_side : "team",
+    createdAt: row.created_at,
+  };
+}
+
+async function insertKanbanTaskEvent(input: {
+  taskId: string;
+  eventType: KanbanTaskEventType;
+  authorName: string;
+  authorSide: KanbanAuthorSide;
+  createdAt?: string;
+}) {
+  const supabase = getSupabase();
+  const { error } = await supabase.from("process_kanban_task_events").insert({
+    id: crypto.randomUUID(),
+    task_id: input.taskId,
+    event_type: input.eventType,
+    author_name: input.authorName.trim() || "Nieznany",
+    author_side: input.authorSide,
+    created_at: input.createdAt ?? new Date().toISOString(),
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 async function fetchBoardGraph(boardRow: BoardRow): Promise<KanbanBoard> {
   const supabase = getSupabase();
 
@@ -134,6 +182,18 @@ async function fetchBoardGraph(boardRow: BoardRow): Promise<KanbanBoard> {
     throw new Error(commentsError.message);
   }
 
+  const { data: events, error: eventsError } = taskIds.length
+    ? await supabase
+        .from("process_kanban_task_events")
+        .select("*")
+        .in("task_id", taskIds)
+        .order("created_at", { ascending: true })
+    : { data: [], error: null };
+
+  if (eventsError) {
+    throw new Error(eventsError.message);
+  }
+
   return {
     id: boardRow.id,
     projectProcessItemId: boardRow.project_process_item_id,
@@ -142,6 +202,7 @@ async function fetchBoardGraph(boardRow: BoardRow): Promise<KanbanBoard> {
     columns: (columns ?? []).map((row) => rowToColumn(row as ColumnRow)),
     tasks: (tasks ?? []).map((row) => rowToTask(row as TaskRow)),
     comments: (comments ?? []).map((row) => rowToComment(row as CommentRow)),
+    events: (events ?? []).map((row) => rowToEvent(row as EventRow)),
     createdAt: boardRow.created_at,
     updatedAt: boardRow.updated_at,
   };
@@ -231,6 +292,54 @@ export async function fetchKanbanBoardByToken(token: string) {
   return data ? fetchBoardGraph(data as BoardRow) : null;
 }
 
+export async function fetchKanbanPublicContext(projectProcessItemId: string) {
+  const supabase = getSupabase();
+
+  const { data: item, error: itemError } = await supabase
+    .from("project_process_items")
+    .select("project_id")
+    .eq("id", projectProcessItemId)
+    .maybeSingle();
+
+  if (itemError) {
+    throw new Error(itemError.message);
+  }
+
+  if (!item?.project_id) {
+    return { projectName: "Projekt", clientName: null };
+  }
+
+  const { data: project, error: projectError } = await supabase
+    .from("projects")
+    .select("name, client_id")
+    .eq("id", item.project_id)
+    .maybeSingle();
+
+  if (projectError) {
+    throw new Error(projectError.message);
+  }
+
+  let clientName: string | null = null;
+  if (project?.client_id) {
+    const { data: client, error: clientError } = await supabase
+      .from("clients")
+      .select("full_name")
+      .eq("id", project.client_id)
+      .maybeSingle();
+
+    if (clientError) {
+      throw new Error(clientError.message);
+    }
+
+    clientName = client?.full_name?.trim() || null;
+  }
+
+  return {
+    projectName: project?.name?.trim() || "Projekt",
+    clientName,
+  };
+}
+
 export async function setKanbanPublicEnabled(projectProcessItemId: string, enabled: boolean) {
   const supabase = getSupabase();
   const { data, error } = await supabase
@@ -245,6 +354,20 @@ export async function setKanbanPublicEnabled(projectProcessItemId: string, enabl
   }
 
   return fetchBoardGraph(data as BoardRow);
+}
+
+export async function countOpenKanbanTasks() {
+  const supabase = getSupabase();
+  const { count, error } = await supabase
+    .from("process_kanban_tasks")
+    .select("id", { count: "exact", head: true })
+    .is("closed_at", null);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
 }
 
 export async function countNewKanbanTasksForTeam() {
@@ -335,6 +458,14 @@ export async function createKanbanTask(input: {
     throw new Error(error.message);
   }
 
+  await insertKanbanTaskEvent({
+    taskId: (data as TaskRow).id,
+    eventType: "created",
+    authorName: input.authorName,
+    authorSide: input.authorSide,
+    createdAt: now,
+  });
+
   return rowToTask(data as TaskRow);
 }
 
@@ -394,13 +525,18 @@ export async function updateKanbanTask(
   return rowToTask(data as TaskRow);
 }
 
-export async function closeKanbanTask(taskId: string, closed: boolean) {
+export async function closeKanbanTask(
+  taskId: string,
+  closed: boolean,
+  actor?: { authorName: string; authorSide: KanbanAuthorSide },
+) {
   const supabase = getSupabase();
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("process_kanban_tasks")
     .update({
-      closed_at: closed ? new Date().toISOString() : null,
-      updated_at: new Date().toISOString(),
+      closed_at: closed ? now : null,
+      updated_at: now,
     })
     .eq("id", taskId)
     .select("*")
@@ -408,6 +544,16 @@ export async function closeKanbanTask(taskId: string, closed: boolean) {
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  if (actor) {
+    await insertKanbanTaskEvent({
+      taskId,
+      eventType: closed ? "closed" : "reopened",
+      authorName: actor.authorName,
+      authorSide: actor.authorSide,
+      createdAt: now,
+    });
   }
 
   return rowToTask(data as TaskRow);

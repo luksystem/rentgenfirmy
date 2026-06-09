@@ -11,42 +11,63 @@ import {
   KANBAN_PRIORITY_DOT_CLASSES,
 } from "@/lib/process/kanban-ui";
 import { cn } from "@/lib/utils";
+import { ChevronRight } from "lucide-react";
 
 export function KanbanTaskCardView({
   task,
   isNew,
+  draggable = true,
+  showDueDate = true,
+  showChevron = false,
   onOpen,
   onDragStart,
 }: {
   task: KanbanTask;
   isNew?: boolean;
+  draggable?: boolean;
+  showDueDate?: boolean;
+  showChevron?: boolean;
   onOpen: () => void;
   onDragStart: () => void;
 }) {
+  const isClosed = Boolean(task.closedAt);
+
   return (
     <button
       type="button"
-      draggable
-      onDragStart={onDragStart}
+      draggable={draggable && !isClosed}
+      onDragStart={draggable && !isClosed ? onDragStart : undefined}
       onClick={onOpen}
       className={cn(
-        "relative w-full rounded-xl border px-3 py-2.5 text-left text-sm transition hover:border-accent/40",
-        getKanbanTaskCardClasses(task.dueDate),
-        isNew && "ring-2 ring-rose-500/50",
+        "relative w-full rounded-2xl border px-3.5 py-3 text-left text-sm shadow-sm transition hover:border-accent/40 hover:shadow-md",
+        isClosed
+          ? "border-border/50 bg-surface/30 opacity-60 grayscale"
+          : getKanbanTaskCardClasses(task.dueDate),
+        isNew && !isClosed && "ring-2 ring-rose-500/50",
       )}
     >
       <span
         className={cn(
-          "absolute right-2.5 top-2.5 h-2.5 w-2.5 shrink-0 rounded-full",
+          "absolute right-3 top-3 h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-black/10",
           KANBAN_PRIORITY_DOT_CLASSES[task.priority],
         )}
         title={`Priorytet: ${KANBAN_PRIORITY_LABELS[task.priority]}`}
       />
-      <p className="pr-4 font-medium leading-snug">{task.title}</p>
-      <p className="mt-1.5 text-[11px] opacity-85">
-        {task.dueDate ? formatMilestoneDate(task.dueDate) : "Bez terminu"}
-        {isNew ? " · NOWY" : ""}
+      <p className={cn("font-medium leading-snug", isClosed ? "text-muted line-through" : "text-foreground", showChevron ? "pr-8" : "pr-4")}>
+        {task.title}
       </p>
+      {isClosed ? (
+        <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-muted">Zamknięte</p>
+      ) : showDueDate || isNew ? (
+        <p className="mt-2 text-[11px] font-medium opacity-90">
+          {showDueDate ? (task.dueDate ? formatMilestoneDate(task.dueDate) : "Bez terminu") : null}
+          {showDueDate && isNew ? " · " : null}
+          {isNew ? "NOWY" : null}
+        </p>
+      ) : null}
+      {showChevron ? (
+        <ChevronRight className="absolute bottom-3 right-3 h-4 w-4 text-muted/70" aria-hidden />
+      ) : null}
     </button>
   );
 }

@@ -26,7 +26,7 @@ import {
   fetchProcessElements,
   saveProcessElement,
 } from "@/lib/supabase/process-element-repository";
-import { countNewKanbanTasksForTeam } from "@/lib/supabase/kanban-repository";
+import { countNewKanbanTasksForTeam, countOpenKanbanTasks } from "@/lib/supabase/kanban-repository";
 import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 import {
   ensureDefaultProcessTemplates,
@@ -44,6 +44,7 @@ type ProcessStore = {
   templates: ProcessTemplate[];
   elements: ProcessElement[];
   kanbanNewTaskCount: number;
+  kanbanOpenTaskCount: number;
   projectProcesses: Record<string, ProjectProcess>;
   projectProcessItems: Record<string, Record<string, ProjectProcessItem>>;
   teamProfiles: UserProfile[];
@@ -99,12 +100,14 @@ type ProcessStore = {
   saveElement: (element: ProcessElement) => Promise<void>;
   removeElement: (id: string) => Promise<void>;
   refreshKanbanNewTaskCount: () => Promise<void>;
+  refreshKanbanOpenTaskCount: () => Promise<void>;
 };
 
 export const useProcessStore = create<ProcessStore>((set, get) => ({
   templates: [],
   elements: [],
   kanbanNewTaskCount: 0,
+  kanbanOpenTaskCount: 0,
   projectProcesses: {},
   projectProcessItems: {},
   teamProfiles: [],
@@ -116,16 +119,18 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       await ensureDefaultProcessTemplates(projectTypes);
-      const [templates, processes, elements, kanbanNewTaskCount] = await Promise.all([
+      const [templates, processes, elements, kanbanNewTaskCount, kanbanOpenTaskCount] = await Promise.all([
         fetchProcessTemplates(),
         fetchProjectProcesses(),
         fetchProcessElements(),
         countNewKanbanTasksForTeam().catch(() => 0),
+        countOpenKanbanTasks().catch(() => 0),
       ]);
       set({
         templates,
         elements,
         kanbanNewTaskCount,
+        kanbanOpenTaskCount,
         projectProcesses: Object.fromEntries(processes.map((process) => [process.projectId, process])),
         hydrated: true,
         isLoading: false,
@@ -401,6 +406,15 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
       set({ kanbanNewTaskCount });
     } catch {
       set({ kanbanNewTaskCount: 0 });
+    }
+  },
+
+  refreshKanbanOpenTaskCount: async () => {
+    try {
+      const kanbanOpenTaskCount = await countOpenKanbanTasks();
+      set({ kanbanOpenTaskCount });
+    } catch {
+      set({ kanbanOpenTaskCount: 0 });
     }
   },
 }));

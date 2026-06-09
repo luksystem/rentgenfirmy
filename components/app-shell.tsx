@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isPublicAppRoute } from "@/lib/auth/routes";
-import { useKanbanNewTasksRealtime } from "@/hooks/use-kanban-realtime";
+import { useKanbanNewTasksRealtime, useKanbanOpenTasksRealtime } from "@/hooks/use-kanban-realtime";
 import { COMMERCIAL_MODULE_LIST } from "@/lib/modules/commercial-modules";
 import { useAuthStore } from "@/store/auth-store";
 import { useProcessStore } from "@/store/process-store";
@@ -156,20 +156,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const displayName = useAuthStore((state) => state.displayName);
   const signOut = useAuthStore((state) => state.signOut);
   const kanbanNewTaskCount = useProcessStore((state) => state.kanbanNewTaskCount);
+  const kanbanOpenTaskCount = useProcessStore((state) => state.kanbanOpenTaskCount);
   const refreshKanbanNewTaskCount = useProcessStore((state) => state.refreshKanbanNewTaskCount);
+  const refreshKanbanOpenTaskCount = useProcessStore((state) => state.refreshKanbanOpenTaskCount);
 
-  const handleKanbanCountChange = useCallback(
+  const handleKanbanNewCountChange = useCallback(
     (count: number) => {
       useProcessStore.setState({ kanbanNewTaskCount: count });
     },
     [],
   );
 
+  const handleKanbanOpenCountChange = useCallback(
+    (count: number) => {
+      useProcessStore.setState({ kanbanOpenTaskCount: count });
+    },
+    [],
+  );
+
   useEffect(() => {
     void refreshKanbanNewTaskCount();
-  }, [refreshKanbanNewTaskCount]);
+    void refreshKanbanOpenTaskCount();
+  }, [refreshKanbanNewTaskCount, refreshKanbanOpenTaskCount]);
 
-  useKanbanNewTasksRealtime(handleKanbanCountChange);
+  useKanbanNewTasksRealtime(handleKanbanNewCountChange);
+  useKanbanOpenTasksRealtime(handleKanbanOpenCountChange);
 
   const navGroups = useMemo(() => {
     const groups = [...navGroupsBase];
@@ -236,7 +247,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       key={item.href}
                       {...item}
                       active={isActive(pathname, item.href)}
-                      badgeCount={item.href === "/procesy" ? kanbanNewTaskCount : 0}
+                      badgeCount={
+                        item.href === "/procesy"
+                          ? kanbanNewTaskCount
+                          : item.href === "/projekty"
+                            ? kanbanOpenTaskCount
+                            : 0
+                      }
                     />
                   ))}
                 </div>
@@ -287,6 +304,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {mobileNavLeft.map((item) => {
               const Icon = item.icon;
               const active = isActive(pathname, item.href);
+              const badgeCount = item.href === "/projekty" ? kanbanOpenTaskCount : 0;
 
               return (
                 <Link
@@ -294,11 +312,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   href={item.href}
                   onClick={() => setMenuOpen(false)}
                   className={cn(
-                    "flex flex-col items-center gap-0.5 rounded-2xl px-2 py-2 text-[10px] font-medium transition",
+                    "relative flex flex-col items-center gap-0.5 rounded-2xl px-2 py-2 text-[10px] font-medium transition",
                     active ? "text-sidebar-accent" : "text-sidebar-muted",
                   )}
                 >
-                  <Icon className="h-5 w-5" />
+                  <span className="relative">
+                    <Icon className="h-5 w-5" />
+                    {badgeCount > 0 ? (
+                      <span className="absolute -right-2 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold leading-none text-white">
+                        {badgeCount > 99 ? "99+" : badgeCount}
+                      </span>
+                    ) : null}
+                  </span>
                   {item.label}
                   {active ? (
                     <span className="h-1 w-1 rounded-full bg-sidebar-accent" aria-hidden />

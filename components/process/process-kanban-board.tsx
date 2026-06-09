@@ -7,7 +7,7 @@ import { KanbanTaskDetailModal } from "@/components/process/kanban-task-detail";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { useKanbanRealtime } from "@/hooks/use-kanban-realtime";
-import { KANBAN_DRAG_HINT } from "@/lib/process/kanban-ui";
+import { KANBAN_DRAG_HINT, countOpenKanbanTasks, sortKanbanColumnTasks } from "@/lib/process/kanban-ui";
 import {
   getKanbanPublicUrl,
   type KanbanAuthorSide,
@@ -82,6 +82,7 @@ export function ProcessKanbanBoard({
 
   const activeTask = board?.tasks.find((task) => task.id === activeTaskId) ?? null;
   const activeComments = board?.comments.filter((c) => c.taskId === activeTaskId) ?? [];
+  const activeEvents = board?.events.filter((event) => event.taskId === activeTaskId) ?? [];
 
   async function handleAddTask(columnId: string) {
     const title = newTaskTitles[columnId]?.trim();
@@ -164,9 +165,9 @@ export function ProcessKanbanBoard({
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 md:flex-row md:overflow-hidden">
         {board.columns.map((column) => {
-          const tasks = board.tasks
-            .filter((task) => task.columnId === column.id && !task.closedAt)
-            .sort((a, b) => a.position - b.position);
+          const columnTasks = board.tasks.filter((task) => task.columnId === column.id);
+          const tasks = sortKanbanColumnTasks(columnTasks);
+          const openCount = countOpenKanbanTasks(columnTasks);
 
           return (
             <div
@@ -177,7 +178,7 @@ export function ProcessKanbanBoard({
             >
               <div className="shrink-0 border-b border-border/60 px-3 py-2.5">
                 <p className="text-sm font-semibold text-foreground">{column.title}</p>
-                <p className="text-xs text-muted">{tasks.length} aktywnych</p>
+                <p className="text-xs text-muted">{openCount} aktywnych</p>
               </div>
 
               <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
@@ -234,6 +235,7 @@ export function ProcessKanbanBoard({
         <KanbanTaskDetailModal
           task={activeTask}
           comments={activeComments}
+          events={activeEvents}
           authorName={authorName}
           canDelete={authorSide === "team"}
           commentDraft={commentDraft}
@@ -243,9 +245,8 @@ export function ProcessKanbanBoard({
             await updateKanbanTask(activeTask.id, patch);
             await refresh();
           }}
-          onCloseTask={async () => {
-            await closeKanbanTask(activeTask.id, true);
-            setActiveTaskId(null);
+          onCloseTask={async (closed) => {
+            await closeKanbanTask(activeTask.id, closed, { authorName, authorSide });
             await refresh();
           }}
           onDelete={

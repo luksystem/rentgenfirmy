@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { Plus } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowRightLeft, Plus, Sparkles } from "lucide-react";
 import { KanbanTaskCardView } from "@/components/process/kanban-task-card";
 import { KanbanTaskDetailModal } from "@/components/process/kanban-task-detail";
 import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/input";
-import { KANBAN_DRAG_HINT } from "@/lib/process/kanban-ui";
+import { Input } from "@/components/ui/input";
+import { useKanbanRealtime } from "@/hooks/use-kanban-realtime";
+import { KANBAN_DRAG_HINT, KANBAN_MOBILE_MOVE_HINT, countOpenKanbanTasks, sortKanbanColumnTasks } from "@/lib/process/kanban-ui";
 import type { KanbanBoard, KanbanTask } from "@/lib/process/kanban-types";
+import { cn } from "@/lib/utils";
 
 async function postKanban(token: string, body: Record<string, unknown>) {
   const response = await fetch(`/api/kanban/${encodeURIComponent(token)}`, {
@@ -34,22 +36,80 @@ export function PublicKanbanBoard({
 }) {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [newTaskTitles, setNewTaskTitles] = useState<Record<string, string>>({});
-  const [newTaskDueDates, setNewTaskDueDates] = useState<Record<string, string>>({});
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
   const [commentDraft, setCommentDraft] = useState("");
+  const [isCoarsePointer, setIsCoarsePointer] = useState(true);
+  const [activeColumnId, setActiveColumnId] = useState(board.columns[0]?.id ?? "");
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    const media = window.matchMedia("(pointer: coarse)");
+    const update = () => setIsCoarsePointer(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (!board.columns.some((column) => column.id === activeColumnId)) {
+      setActiveColumnId(board.columns[0]?.id ?? "");
+    }
+  }, [board.columns, activeColumnId]);
+
+  const scrollToColumn = useCallback((columnId: string) => {
+    setActiveColumnId(columnId);
+    columnRefs.current[columnId]?.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+  }, []);
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller || !isCoarsePointer) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        const columnId = visible?.target.getAttribute("data-column-id");
+        if (columnId) {
+          setActiveColumnId(columnId);
+        }
+      },
+      { root: scroller, threshold: [0.55, 0.75] },
+    );
+
+    board.columns.forEach((column) => {
+      const node = columnRefs.current[column.id];
+      if (node) {
+        observer.observe(node);
+      }
+    });
+
+    return () => observer.disconnect();
+  }, [board.columns, isCoarsePointer]);
 
   const activeTask = board.tasks.find((task) => task.id === activeTaskId) ?? null;
   const activeComments = board.comments.filter((comment) => comment.taskId === activeTaskId);
+  const activeEvents = board.events.filter((event) => event.taskId === activeTaskId);
+  const columnOptions = board.columns.map((column) => ({ id: column.id, title: column.title }));
+
+  const stableRefresh = useCallback(() => onRefresh(), [onRefresh]);
+  useKanbanRealtime(board.id, stableRefresh);
 
   async function handleAddTask(columnId: string) {
     const title = newTaskTitles[columnId]?.trim();
     if (!title) {
       return;
     }
-    const dueDate = newTaskDueDates[columnId]?.trim() || null;
-    await postKanban(token, { action: "createTask", columnId, title, dueDate, authorName });
+    await postKanban(token, { action: "createTask", columnId, title, authorName });
     setNewTaskTitles((current) => ({ ...current, [columnId]: "" }));
-    setNewTaskDueDates((current) => ({ ...current, [columnId]: "" }));
     await onRefresh();
   }
 
@@ -57,15 +117,21 @@ export function PublicKanbanBoard({
     if (!dragTaskId) {
       return;
     }
-    const columnTasks = board.tasks.filter((task) => task.columnId === columnId && !task.closedAt);
+    await handleMoveTask(dragTaskId, columnId);
+    setDragTaskId(null);
+  }
+
+  async function handleMoveTask(taskId: string, columnId: string) {
+    const columnTasks = board.tasks.filter(
+      (task) => task.columnId === columnId && !task.closedAt && task.id !== taskId,
+    );
     await postKanban(token, {
       action: "moveTask",
-      taskId: dragTaskId,
+      taskId,
       columnId,
       position: columnTasks.length,
       authorName,
     });
-    setDragTaskId(null);
     await onRefresh();
   }
 
@@ -82,48 +148,110 @@ export function PublicKanbanBoard({
     await onRefresh();
   }
 
-  async function handleCloseTask(taskId: string) {
-    await postKanban(token, { action: "closeTask", taskId, authorName });
-    setActiveTaskId(null);
+  async function handleCloseTask(taskId: string, closed: boolean) {
+    await postKanban(token, {
+      action: closed ? "closeTask" : "reopenTask",
+      taskId,
+      authorName,
+    });
     await onRefresh();
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <p className="shrink-0 text-sm text-muted">{KANBAN_DRAG_HINT}</p>
+    <div className="flex min-h-0 flex-1 flex-col gap-3 md:gap-4">
+      <div className="shrink-0 rounded-xl border border-accent/20 bg-accent/10 px-3.5 py-2.5 md:hidden">
+        <p className="flex items-start gap-2 text-sm leading-snug text-foreground/90">
+          <ArrowRightLeft className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+          {KANBAN_MOBILE_MOVE_HINT}
+        </p>
+      </div>
+      <p className="hidden shrink-0 text-sm text-muted md:block">
+        {KANBAN_DRAG_HINT} Możesz też otworzyć zgłoszenie i zmienić etap z listy.
+      </p>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 md:flex-row md:overflow-hidden">
+      <div className="flex shrink-0 gap-2 overflow-x-auto pb-1 md:hidden">
         {board.columns.map((column) => {
-          const tasks = board.tasks
-            .filter((task) => task.columnId === column.id && !task.closedAt)
-            .sort((a, b) => a.position - b.position);
+          const count = countOpenKanbanTasks(
+            board.tasks.filter((task) => task.columnId === column.id),
+          );
+          const isActive = column.id === activeColumnId;
+
+          return (
+            <button
+              key={column.id}
+              type="button"
+              onClick={() => scrollToColumn(column.id)}
+              className={cn(
+                "shrink-0 rounded-full border px-3.5 py-2 text-xs font-medium transition",
+                isActive
+                  ? "border-accent/50 bg-accent text-accent-foreground shadow-sm"
+                  : "border-border/70 bg-surface/60 text-muted hover:border-accent/30 hover:text-foreground",
+              )}
+            >
+              {column.title}
+              <span className={cn("ml-1.5 tabular-nums", isActive ? "opacity-90" : "opacity-70")}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        ref={scrollerRef}
+        className="flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto overflow-y-hidden pb-2 [-ms-overflow-style:none] [scrollbar-width:none] md:snap-none md:flex-row md:overflow-hidden md:pb-0 [&::-webkit-scrollbar]:hidden"
+      >
+        {board.columns.map((column, index) => {
+          const columnTasks = board.tasks.filter((task) => task.columnId === column.id);
+          const tasks = sortKanbanColumnTasks(columnTasks);
+          const openCount = countOpenKanbanTasks(columnTasks);
 
           return (
             <div
               key={column.id}
-              className="flex min-h-[280px] min-w-0 flex-1 flex-col rounded-2xl border border-border/80 bg-surface-muted/30 md:min-h-0"
+              ref={(node) => {
+                columnRefs.current[column.id] = node;
+              }}
+              data-column-id={column.id}
+              className="flex w-[min(100%,22rem)] shrink-0 snap-center flex-col overflow-hidden rounded-2xl border border-border/80 bg-surface-muted/40 shadow-sm md:min-h-0 md:w-auto md:min-w-0 md:flex-1 md:snap-align-none"
               onDragOver={(event) => event.preventDefault()}
               onDrop={() => void handleDrop(column.id)}
             >
-              <div className="shrink-0 border-b border-border/60 px-3 py-2.5">
-                <p className="text-sm font-semibold text-foreground">{column.title}</p>
-                <p className="text-xs text-muted">{tasks.length} aktywnych</p>
+              <div className="shrink-0 border-b border-border/60 bg-surface/40 px-4 py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-foreground">{column.title}</p>
+                    <p className="text-xs text-muted">{openCount} aktywnych</p>
+                  </div>
+                  <span className="hidden rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted md:inline">
+                    Etap {index + 1}
+                  </span>
+                </div>
               </div>
 
-              <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
-                {tasks.map((task) => (
-                  <KanbanTaskCardView
-                    key={task.id}
-                    task={task}
-                    onOpen={() => setActiveTaskId(task.id)}
-                    onDragStart={() => setDragTaskId(task.id)}
-                  />
-                ))}
+              <div className="flex min-h-[min(52vh,28rem)] flex-1 flex-col gap-2.5 overflow-y-auto p-3 md:min-h-0">
+                {tasks.length ? (
+                  tasks.map((task) => (
+                    <KanbanTaskCardView
+                      key={task.id}
+                      task={task}
+                      draggable={!isCoarsePointer}
+                      showDueDate
+                      showChevron={isCoarsePointer}
+                      onOpen={() => setActiveTaskId(task.id)}
+                      onDragStart={() => setDragTaskId(task.id)}
+                    />
+                  ))
+                ) : (
+                  <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-surface/30 px-4 py-8 text-center">
+                    <Sparkles className="mb-2 h-5 w-5 text-muted" />
+                    <p className="text-sm text-muted">Brak zgłoszeń w tym etapie</p>
+                  </div>
+                )}
 
-                <div className="mt-auto grid gap-2 rounded-xl border border-dashed border-border/70 p-2">
+                <div className="mt-auto grid gap-2 rounded-2xl border border-dashed border-accent/25 bg-accent/5 p-3">
                   <Input
                     value={newTaskTitles[column.id] ?? ""}
-                    placeholder="Nowe zgłoszenie…"
+                    placeholder="Opisz problem lub pomysł…"
+                    className="h-11 border-border/60 bg-surface/80"
                     onChange={(event) =>
                       setNewTaskTitles((current) => ({ ...current, [column.id]: event.target.value }))
                     }
@@ -133,21 +261,14 @@ export function PublicKanbanBoard({
                       }
                     }}
                   />
-                  <Field label="Termin (opcjonalnie)" className="text-xs">
-                    <Input
-                      type="date"
-                      value={newTaskDueDates[column.id] ?? ""}
-                      onChange={(event) =>
-                        setNewTaskDueDates((current) => ({
-                          ...current,
-                          [column.id]: event.target.value,
-                        }))
-                      }
-                    />
-                  </Field>
-                  <Button type="button" size="sm" variant="secondary" onClick={() => void handleAddTask(column.id)}>
-                    <Plus className="mr-1 h-3.5 w-3.5" />
-                    Dodaj
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-10 w-full"
+                    onClick={() => void handleAddTask(column.id)}
+                  >
+                    <Plus className="mr-1.5 h-4 w-4" />
+                    Dodaj zgłoszenie
                   </Button>
                 </div>
               </div>
@@ -160,12 +281,16 @@ export function PublicKanbanBoard({
         <KanbanTaskDetailModal
           task={activeTask}
           comments={activeComments}
+          events={activeEvents}
           authorName={authorName}
+          columns={columnOptions}
+          currentColumnId={activeTask.columnId}
+          onMoveToColumn={(columnId) => handleMoveTask(activeTask.id, columnId)}
           commentDraft={commentDraft}
           onCommentDraftChange={setCommentDraft}
           onClose={() => setActiveTaskId(null)}
           onSave={(patch) => handleSaveTask(activeTask.id, patch)}
-          onCloseTask={() => handleCloseTask(activeTask.id)}
+          onCloseTask={(closed) => handleCloseTask(activeTask.id, closed)}
           onComment={async () => {
             await postKanban(token, {
               action: "addComment",

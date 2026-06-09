@@ -4,6 +4,7 @@ import {
   closeKanbanTask,
   createKanbanTask,
   fetchKanbanBoardByToken,
+  fetchKanbanPublicContext,
   moveKanbanTask,
   updateKanbanTask,
 } from "@/lib/supabase/kanban-repository";
@@ -20,7 +21,9 @@ export async function GET(
       return NextResponse.json({ error: "Nie znaleziono tablicy." }, { status: 404 });
     }
 
-    return NextResponse.json({ board });
+    const context = await fetchKanbanPublicContext(board.projectProcessItemId);
+
+    return NextResponse.json({ board, context });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Błąd pobierania tablicy." },
@@ -130,7 +133,16 @@ export async function POST(
       if (!taskId) {
         return NextResponse.json({ error: "taskId is required" }, { status: 400 });
       }
-      const task = await closeKanbanTask(taskId, true);
+      const task = await closeKanbanTask(taskId, true, { authorName, authorSide: "client" });
+      return NextResponse.json({ task });
+    }
+
+    if (action === "reopenTask") {
+      const taskId = typeof data.taskId === "string" ? data.taskId : null;
+      if (!taskId) {
+        return NextResponse.json({ error: "taskId is required" }, { status: 400 });
+      }
+      const task = await closeKanbanTask(taskId, false, { authorName, authorSide: "client" });
       return NextResponse.json({ task });
     }
 
