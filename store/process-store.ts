@@ -6,6 +6,7 @@ import { getUserDisplayName } from "@/lib/auth/types";
 import type {
   ChecklistItemPayload,
   ProcessElement,
+  ProcessElementPayload,
   ProcessItemKind,
   ProcessTemplate,
   ProjectProcess,
@@ -25,6 +26,7 @@ import {
   fetchProcessElements,
   saveProcessElement,
 } from "@/lib/supabase/process-element-repository";
+import { countNewKanbanTasksForTeam } from "@/lib/supabase/kanban-repository";
 import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 import {
   ensureDefaultProcessTemplates,
@@ -41,6 +43,7 @@ import {
 type ProcessStore = {
   templates: ProcessTemplate[];
   elements: ProcessElement[];
+  kanbanNewTaskCount: number;
   projectProcesses: Record<string, ProjectProcess>;
   projectProcessItems: Record<string, Record<string, ProjectProcessItem>>;
   teamProfiles: UserProfile[];
@@ -91,15 +94,17 @@ type ProcessStore = {
     kind: ProcessItemKind;
     title: string;
     description?: string;
-    defaultPayload?: ChecklistItemPayload;
+    defaultPayload?: ProcessElementPayload;
   }) => Promise<ProcessElement>;
   saveElement: (element: ProcessElement) => Promise<void>;
   removeElement: (id: string) => Promise<void>;
+  refreshKanbanNewTaskCount: () => Promise<void>;
 };
 
 export const useProcessStore = create<ProcessStore>((set, get) => ({
   templates: [],
   elements: [],
+  kanbanNewTaskCount: 0,
   projectProcesses: {},
   projectProcessItems: {},
   teamProfiles: [],
@@ -111,14 +116,16 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       await ensureDefaultProcessTemplates(projectTypes);
-      const [templates, processes, elements] = await Promise.all([
+      const [templates, processes, elements, kanbanNewTaskCount] = await Promise.all([
         fetchProcessTemplates(),
         fetchProjectProcesses(),
         fetchProcessElements(),
+        countNewKanbanTasksForTeam().catch(() => 0),
       ]);
       set({
         templates,
         elements,
+        kanbanNewTaskCount,
         projectProcesses: Object.fromEntries(processes.map((process) => [process.projectId, process])),
         hydrated: true,
         isLoading: false,
@@ -386,5 +393,14 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
     set((state) => ({
       elements: state.elements.filter((entry) => entry.id !== id),
     }));
+  },
+
+  refreshKanbanNewTaskCount: async () => {
+    try {
+      const kanbanNewTaskCount = await countNewKanbanTasksForTeam();
+      set({ kanbanNewTaskCount });
+    } catch {
+      set({ kanbanNewTaskCount: 0 });
+    }
   },
 }));

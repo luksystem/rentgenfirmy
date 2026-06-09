@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import {
   Activity,
   BarChart3,
@@ -24,8 +24,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isPublicAppRoute } from "@/lib/auth/routes";
+import { useKanbanNewTasksRealtime } from "@/hooks/use-kanban-realtime";
 import { COMMERCIAL_MODULE_LIST } from "@/lib/modules/commercial-modules";
 import { useAuthStore } from "@/store/auth-store";
+import { useProcessStore } from "@/store/process-store";
 
 const commercialNavItems = COMMERCIAL_MODULE_LIST.map((module) => ({
   href: module.href,
@@ -92,6 +94,7 @@ function NavLink({
   active,
   onClick,
   variant = "sidebar",
+  badgeCount = 0,
 }: {
   href: string;
   label: string;
@@ -99,6 +102,7 @@ function NavLink({
   active: boolean;
   onClick?: () => void;
   variant?: "sidebar" | "sheet";
+  badgeCount?: number;
 }) {
   if (variant === "sheet") {
     return (
@@ -112,10 +116,15 @@ function NavLink({
             : "border border-border bg-surface-muted text-muted hover:bg-surface-elevated hover:text-foreground",
         )}
       >
-        <Icon className="h-4 w-4" />
-        {label}
-      </Link>
-    );
+      <Icon className="h-4 w-4" />
+      <span className="flex-1">{label}</span>
+      {badgeCount > 0 ? (
+        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white">
+          {badgeCount > 99 ? "99+" : badgeCount}
+        </span>
+      ) : null}
+    </Link>
+  );
   }
 
   return (
@@ -130,7 +139,12 @@ function NavLink({
       )}
     >
       <Icon className={cn("h-4 w-4", active && "text-sidebar-accent")} />
-      {label}
+      <span className="flex-1">{label}</span>
+      {badgeCount > 0 ? (
+        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white">
+          {badgeCount > 99 ? "99+" : badgeCount}
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -141,6 +155,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isAdministrator = useAuthStore((state) => state.isAdministrator);
   const displayName = useAuthStore((state) => state.displayName);
   const signOut = useAuthStore((state) => state.signOut);
+  const kanbanNewTaskCount = useProcessStore((state) => state.kanbanNewTaskCount);
+  const refreshKanbanNewTaskCount = useProcessStore((state) => state.refreshKanbanNewTaskCount);
+
+  const handleKanbanCountChange = useCallback(
+    (count: number) => {
+      useProcessStore.setState({ kanbanNewTaskCount: count });
+    },
+    [],
+  );
+
+  useEffect(() => {
+    void refreshKanbanNewTaskCount();
+  }, [refreshKanbanNewTaskCount]);
+
+  useKanbanNewTasksRealtime(handleKanbanCountChange);
 
   const navGroups = useMemo(() => {
     const groups = [...navGroupsBase];
@@ -207,6 +236,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       key={item.href}
                       {...item}
                       active={isActive(pathname, item.href)}
+                      badgeCount={item.href === "/procesy" ? kanbanNewTaskCount : 0}
                     />
                   ))}
                 </div>

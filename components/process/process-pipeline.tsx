@@ -1,12 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, ChevronRight, Circle, FileCheck2, Receipt } from "lucide-react";
+import { CheckCircle2, ChevronRight, Circle, FileCheck2, LayoutGrid, Receipt } from "lucide-react";
 import { MilestoneDateBadge } from "@/components/process/milestone-date-badge";
 import { ProcessItemPanel } from "@/components/process/process-item-panel";
 import { formatAssigneeLabel } from "@/components/process/process-item-responsible-section";
 import { cn } from "@/lib/utils";
 import type { UserProfile } from "@/lib/auth/types";
+import {
+  getProcessItemVisualState,
+  PROCESS_ITEM_VISUAL_CLASSES,
+} from "@/lib/process/item-completion-state";
 import { checklistProgress } from "@/lib/process/item-payload";
 import {
   PROCESS_ITEM_KIND_LABELS,
@@ -22,6 +26,7 @@ const kindIcon: Record<ProcessItemKind, React.ComponentType<{ className?: string
   checklist: CheckCircle2,
   protocol: FileCheck2,
   settlement: Receipt,
+  kanban: LayoutGrid,
 };
 
 type ProcessPipelineProps = {
@@ -153,20 +158,31 @@ export function ProcessPipeline({
 
                         <div className="mt-3 grid gap-2">
                           {milestone.items.map((item) => {
-                            const completed = Boolean(process?.completions?.[item.id]);
-                            const Icon = kindIcon[item.kind] ?? CheckCircle2;
-                            const FallbackIcon = completed ? CheckCircle2 : Circle;
                             const instance = itemInstances?.[item.id];
+                            const visualState = getProcessItemVisualState(
+                              process?.completions?.[item.id],
+                              instance,
+                            );
+                            const visualClasses = PROCESS_ITEM_VISUAL_CLASSES[visualState];
+                            const Icon = kindIcon[item.kind] ?? CheckCircle2;
+                            const FallbackIcon =
+                              visualState === "signed"
+                                ? CheckCircle2
+                                : visualState === "completed"
+                                  ? CheckCircle2
+                                  : Circle;
                             const checklistStats =
                               item.kind === "checklist" && instance
                                 ? checklistProgress(instance.payload)
-                                : item.kind === "checklist" && !interactive
+                                : item.kind === "checklist" && !interactive && "lines" in item.defaultPayload
                                   ? checklistProgress(item.defaultPayload)
                                   : null;
                             const kindLabel =
-                              checklistStats && checklistStats.total > 0
-                                ? `${PROCESS_ITEM_KIND_LABELS[item.kind]} · ${checklistStats.total} pkt.`
-                                : PROCESS_ITEM_KIND_LABELS[item.kind];
+                              item.kind === "kanban"
+                                ? PROCESS_ITEM_KIND_LABELS.kanban
+                                : checklistStats && checklistStats.total > 0
+                                  ? `${PROCESS_ITEM_KIND_LABELS[item.kind]} · ${checklistStats.total} pkt.`
+                                  : PROCESS_ITEM_KIND_LABELS[item.kind];
                             const assigneeLabel = instance ? formatAssigneeLabel(instance) : null;
 
                             if (interactive) {
@@ -177,17 +193,12 @@ export function ProcessPipeline({
                                   onClick={() => setActiveItem(item)}
                                   className={cn(
                                     "flex w-full items-start gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition",
-                                    completed
-                                      ? "border-emerald-500/30 bg-emerald-500/10"
-                                      : "border-border/70 bg-surface/60",
+                                    visualClasses.card,
                                     "cursor-pointer hover:border-accent/30 hover:bg-surface-elevated/80",
                                   )}
                                 >
                                   <FallbackIcon
-                                    className={cn(
-                                      "mt-0.5 h-4 w-4 shrink-0",
-                                      completed ? "text-emerald-400" : "text-muted",
-                                    )}
+                                    className={cn("mt-0.5 h-4 w-4 shrink-0", visualClasses.icon)}
                                   />
                                   <span className="min-w-0 flex-1">
                                     <span className="flex items-center gap-1.5 font-medium text-foreground">
@@ -212,16 +223,11 @@ export function ProcessPipeline({
                                 key={item.id}
                                 className={cn(
                                   "flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm",
-                                  completed
-                                    ? "border-emerald-500/30 bg-emerald-500/10"
-                                    : "border-border/70 bg-surface/60",
+                                  visualClasses.card,
                                 )}
                               >
                                 <FallbackIcon
-                                  className={cn(
-                                    "mt-0.5 h-4 w-4 shrink-0",
-                                    completed ? "text-emerald-400" : "text-muted",
-                                  )}
+                                  className={cn("mt-0.5 h-4 w-4 shrink-0", visualClasses.icon)}
                                 />
                                 <span className="min-w-0 flex-1">
                                   <span className="flex items-center gap-1.5 font-medium text-foreground">

@@ -7,7 +7,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   const isPublic =
-    isPublicAppRoute(pathname) || pathname.startsWith("/api/oferta/");
+    isPublicAppRoute(pathname) || pathname.startsWith("/api/oferta/") || pathname.startsWith("/api/kanban/");
 
   const {
     data: { user },

@@ -1,4 +1,6 @@
-export const PROCESS_ITEM_KINDS = ["checklist", "protocol", "settlement"] as const;
+import type { KanbanTemplatePayload } from "@/lib/process/kanban-types";
+
+export const PROCESS_ITEM_KINDS = ["checklist", "protocol", "settlement", "kanban"] as const;
 
 export type ProcessItemKind = (typeof PROCESS_ITEM_KINDS)[number];
 
@@ -7,7 +9,7 @@ export type ProcessElement = {
   kind: ProcessItemKind;
   title: string;
   description: string;
-  defaultPayload: ChecklistItemPayload;
+  defaultPayload: ProcessElementPayload;
   createdAt: string;
   updatedAt: string;
 };
@@ -19,7 +21,7 @@ export type ProcessItem = {
   kind: ProcessItemKind;
   title: string;
   position: number;
-  defaultPayload: ChecklistItemPayload;
+  defaultPayload: ProcessElementPayload;
 };
 
 export type ProcessMilestone = {
@@ -67,6 +69,8 @@ export type ChecklistItemPayload = {
   note?: string;
 };
 
+export type ProcessElementPayload = ChecklistItemPayload | KanbanTemplatePayload;
+
 export type ProjectProcessItemStatus = "open" | "in_progress" | "completed";
 
 export type ProjectProcessItem = {
@@ -100,6 +104,7 @@ export const PROCESS_ITEM_KIND_LABELS: Record<ProcessItemKind, string> = {
   checklist: "Checklista",
   protocol: "Protokół odbioru",
   settlement: "Rozliczenie",
+  kanban: "Tablica Kanban",
 };
 
 export function countProcessItems(template: ProcessTemplate) {

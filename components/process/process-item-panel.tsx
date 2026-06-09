@@ -1,6 +1,7 @@
 "use client";
 
-import { CheckCircle2, FileCheck2, Receipt } from "lucide-react";
+import { CheckCircle2, FileCheck2, LayoutGrid, Receipt } from "lucide-react";
+import { ProcessKanbanBoard } from "@/components/process/process-kanban-board";
 import { ProcessChecklistEditor } from "@/components/process/process-checklist-editor";
 import { ProcessItemResponsibleSection } from "@/components/process/process-item-responsible-section";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import type { UserProfile } from "@/lib/auth/types";
 import { checklistProgress } from "@/lib/process/item-payload";
+import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
 import {
   PROCESS_ITEM_KIND_LABELS,
   type ChecklistItemPayload,
@@ -26,6 +28,7 @@ const kindIcon = {
   checklist: CheckCircle2,
   protocol: FileCheck2,
   settlement: Receipt,
+  kanban: LayoutGrid,
 } as const;
 
 type ProcessItemPanelProps = {
@@ -114,6 +117,20 @@ export function ProcessItemPanel({
             </div>
           ) : null}
 
+          {item.kind === "kanban" && interactive && instance ? (
+            <ProcessKanbanBoard
+              projectProcessItemId={instance.id}
+              templatePayload={
+                isKanbanTemplatePayload(item.defaultPayload)
+                  ? item.defaultPayload
+                  : { columns: [] }
+              }
+              authorSide="team"
+              authorName={actorName ?? "Zespół"}
+              showPublicLink
+            />
+          ) : null}
+
           {item.kind === "protocol" ? (
             <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4">
               <p className="text-sm font-medium text-foreground">Protokół odbioru</p>
@@ -144,7 +161,7 @@ export function ProcessItemPanel({
             </div>
           ) : null}
 
-          {interactive && item.kind !== "checklist" ? (
+          {interactive && item.kind !== "checklist" && item.kind !== "kanban" ? (
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -155,7 +172,7 @@ export function ProcessItemPanel({
               </Button>
             </div>
           ) : (
-            item.kind !== "checklist" ? (
+            item.kind !== "checklist" && item.kind !== "kanban" ? (
               <p className={cn("text-sm", completed ? "text-emerald-300" : "text-muted")}>
                 {completed ? "Element ukończony" : "Element oczekuje na realizację"}
               </p>

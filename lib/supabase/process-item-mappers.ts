@@ -11,7 +11,7 @@ import type {
 import type { ProjectProcessItemRow } from "@/lib/supabase/database.types";
 
 function isProcessItemKind(value: string): value is ProcessItemKind {
-  return value === "checklist" || value === "protocol" || value === "settlement";
+  return value === "checklist" || value === "protocol" || value === "settlement" || value === "kanban";
 }
 
 function isProjectProcessItemStatus(value: string): value is ProjectProcessItemStatus {

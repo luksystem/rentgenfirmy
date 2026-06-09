@@ -1,4 +1,4 @@
-const PUBLIC_PATH_PREFIXES = ["/logowanie", "/rejestracja", "/auth", "/oferta"] as const;
+const PUBLIC_PATH_PREFIXES = ["/logowanie", "/rejestracja", "/auth", "/oferta", "/kanban"] as const;
 
 export function isPublicAppRoute(pathname: string) {
   return PUBLIC_PATH_PREFIXES.some(

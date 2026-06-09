@@ -286,9 +286,11 @@ export function ProcessTemplateEditor({
                       <p className="text-sm font-medium text-foreground">{item.title}</p>
                       <p className="text-xs text-muted">
                         {PROCESS_ITEM_KIND_LABELS[item.kind]}
-                        {item.defaultPayload.lines.length
+                        {item.kind === "checklist" && "lines" in item.defaultPayload && item.defaultPayload.lines.length
                           ? ` · ${item.defaultPayload.lines.length} pkt.`
-                          : ""}
+                          : item.kind === "kanban" && "columns" in item.defaultPayload
+                            ? ` · ${item.defaultPayload.columns.length} kolumn`
+                            : ""}
                       </p>
                       {item.elementId ? (
                         <Link

@@ -68,7 +68,9 @@ export async function ensureProjectProcessItems(projectId: string, template: Pro
       kind: item.kind,
       payload:
         item.kind === "checklist"
-          ? cloneTemplatePayloadForProject(item.defaultPayload)
+          ? cloneTemplatePayloadForProject(
+              "lines" in item.defaultPayload ? item.defaultPayload : emptyChecklistPayload(),
+            )
           : emptyChecklistPayload(),
       status: "open",
       created_at: now,

@@ -5,6 +5,9 @@ import { TemplateChecklistLinesEditor } from "@/components/process/template-chec
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
+import { defaultKanbanTemplatePayload } from "@/lib/process/kanban-types";
+import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
+import { KanbanTemplateColumnsEditor } from "@/components/process/kanban-template-columns-editor";
 import { templatePayloadFromTitle } from "@/lib/process/item-payload";
 import {
   PROCESS_ITEM_KINDS,
@@ -61,11 +64,15 @@ export function ProcessElementEditor({
       ...current,
       kind,
       defaultPayload:
-        kind === "checklist"
-          ? current.defaultPayload.lines.length
+        kind === "kanban"
+          ? isKanbanTemplatePayload(current.defaultPayload)
             ? current.defaultPayload
-            : templatePayloadFromTitle(current.title, kind)
-          : templatePayloadFromTitle(current.title, kind),
+            : defaultKanbanTemplatePayload()
+          : kind === "checklist"
+            ? "lines" in current.defaultPayload && current.defaultPayload.lines.length
+              ? current.defaultPayload
+              : templatePayloadFromTitle(current.title, kind)
+            : templatePayloadFromTitle(current.title, kind),
     }));
   }
 
@@ -97,7 +104,16 @@ export function ProcessElementEditor({
         {element.kind === "checklist" ? (
           <TemplateChecklistLinesEditor
             label="Punkty checklisty (wzorzec)"
-            payload={element.defaultPayload}
+            payload={"lines" in element.defaultPayload ? element.defaultPayload : { lines: [] }}
+            onChange={(defaultPayload) => setElement({ ...element, defaultPayload })}
+          />
+        ) : element.kind === "kanban" ? (
+          <KanbanTemplateColumnsEditor
+            payload={
+              isKanbanTemplatePayload(element.defaultPayload)
+                ? element.defaultPayload
+                : defaultKanbanTemplatePayload()
+            }
             onChange={(defaultPayload) => setElement({ ...element, defaultPayload })}
           />
         ) : (

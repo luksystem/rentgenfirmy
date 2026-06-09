@@ -1,16 +1,14 @@
-import { normalizeChecklistPayload, templatePayloadFromTitle } from "@/lib/process/item-payload";
+import { resolveElementDefaultPayload } from "@/lib/process/item-payload";
 import type { ProcessElement, ProcessItemKind } from "@/lib/process/types";
 import type { ProcessElementRow } from "@/lib/supabase/database.types";
 
 function isProcessItemKind(value: string): value is ProcessItemKind {
-  return value === "checklist" || value === "protocol" || value === "settlement";
+  return value === "checklist" || value === "protocol" || value === "settlement" || value === "kanban";
 }
 
 export function rowToProcessElement(row: ProcessElementRow): ProcessElement {
   const kind = isProcessItemKind(row.kind) ? row.kind : "checklist";
-  const normalized = normalizeChecklistPayload(row.default_payload);
-  const defaultPayload =
-    normalized.lines.length > 0 ? normalized : templatePayloadFromTitle(row.title, kind);
+  const defaultPayload = resolveElementDefaultPayload(kind, row.default_payload, row.title);
 
   return {
     id: row.id,

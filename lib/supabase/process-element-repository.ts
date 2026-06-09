@@ -1,5 +1,5 @@
 import { templatePayloadFromTitle } from "@/lib/process/item-payload";
-import type { ChecklistItemPayload, ProcessElement, ProcessItemKind } from "@/lib/process/types";
+import type { ProcessElementPayload, ProcessElement, ProcessItemKind } from "@/lib/process/types";
 import { getSupabase } from "@/lib/supabase/client";
 import {
   processElementToInsert,
@@ -56,7 +56,7 @@ export async function createProcessElement(input: {
   kind: ProcessItemKind;
   title: string;
   description?: string;
-  defaultPayload?: ChecklistItemPayload;
+  defaultPayload?: ProcessElementPayload;
 }) {
   const supabase = getSupabase();
   const now = new Date().toISOString();
@@ -112,7 +112,7 @@ export async function deleteProcessElement(id: string) {
 export async function findOrCreateProcessElement(input: {
   kind: ProcessItemKind;
   title: string;
-  defaultPayload: ChecklistItemPayload;
+  defaultPayload: ProcessElementPayload;
 }) {
   const supabase = getSupabase();
   const title = input.title.trim();

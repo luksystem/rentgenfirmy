@@ -60,8 +60,10 @@ export default function ProcessElementsPage() {
                     <p className="mt-2 text-sm text-muted">{element.description}</p>
                   ) : null}
                 </div>
-                {element.kind === "checklist" ? (
+                {element.kind === "checklist" && "lines" in element.defaultPayload ? (
                   <p className="text-sm text-muted">{element.defaultPayload.lines.length} punktów</p>
+                ) : element.kind === "kanban" && "columns" in element.defaultPayload ? (
+                  <p className="text-sm text-muted">{element.defaultPayload.columns.length} kolumn</p>
                 ) : null}
                 <Button asChild size="sm">
                   <Link href={`/procesy/elementy/${element.id}`}>Edytuj</Link>

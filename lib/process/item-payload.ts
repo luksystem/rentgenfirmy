@@ -1,4 +1,6 @@
-import type { ChecklistItemPayload, ProcessItemKind } from "@/lib/process/types";
+import { normalizeKanbanTemplatePayload } from "@/lib/process/kanban-payload";
+import { defaultKanbanTemplatePayload } from "@/lib/process/kanban-types";
+import type { ChecklistItemPayload, ProcessElementPayload, ProcessItemKind } from "@/lib/process/types";
 
 export function emptyChecklistPayload(): ChecklistItemPayload {
   return { lines: [] };
@@ -27,7 +29,30 @@ export function cloneTemplatePayloadForProject(templatePayload: ChecklistItemPay
   };
 }
 
-export function templatePayloadFromTitle(title: string, kind: ProcessItemKind): ChecklistItemPayload {
+export function resolveElementDefaultPayload(
+  kind: ProcessItemKind,
+  raw: unknown,
+  title: string,
+): ProcessElementPayload {
+  if (kind === "kanban") {
+    const normalized = normalizeKanbanTemplatePayload(raw);
+    return normalized.columns.length ? normalized : defaultKanbanTemplatePayload();
+  }
+
+  const normalized = normalizeChecklistPayload(raw);
+  if (normalized.lines.length > 0) {
+    return normalized;
+  }
+
+  const fallback = templatePayloadFromTitle(title, kind);
+  return "lines" in fallback ? fallback : emptyChecklistPayload();
+}
+
+export function templatePayloadFromTitle(title: string, kind: ProcessItemKind): ProcessElementPayload {
+  if (kind === "kanban") {
+    return defaultKanbanTemplatePayload();
+  }
+
   if (kind !== "checklist") {
     return emptyChecklistPayload();
   }
