@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { parseKanbanSessionValue, KANBAN_PUBLIC_SESSION_COOKIE } from "@/lib/process/kanban-session";
+import { resolveKanbanPublicAuthor } from "@/lib/process/kanban-public-request";
 import {
   addKanbanComment,
   closeKanbanTask,
   createKanbanTask,
-  fetchKanbanBoardByToken,
-  fetchKanbanPublicContext,
   moveKanbanTask,
   updateKanbanTask,
 } from "@/lib/supabase/kanban-repository";
-import { attachSignedUrlsAdmin } from "@/lib/supabase/kanban-attachments-repository";
+import {
+  fetchKanbanPublicMeta,
+  fetchPublicKanbanBoardGraph,
+} from "@/lib/supabase/kanban-public-server";
 
 export async function GET(
   _request: Request,
@@ -17,15 +21,34 @@ export async function GET(
   const { token } = await context.params;
 
   try {
-    const board = await fetchKanbanBoardByToken(token);
+    const meta = await fetchKanbanPublicMeta(token);
+    if (!meta) {
+      return NextResponse.json({ error: "Nie znaleziono tablicy." }, { status: 404 });
+    }
+
+    const cookieStore = await cookies();
+    const session = parseKanbanSessionValue(cookieStore.get(KANBAN_PUBLIC_SESSION_COOKIE)?.value);
+    const sessionValid = session?.token === token;
+
+    if (meta.access.authRequired && !sessionValid) {
+      return NextResponse.json({
+        authRequired: true,
+        access: meta.access,
+        context: meta.context,
+      });
+    }
+
+    const board = await fetchPublicKanbanBoardGraph(token);
     if (!board) {
       return NextResponse.json({ error: "Nie znaleziono tablicy." }, { status: 404 });
     }
 
-    const publicContext = await fetchKanbanPublicContext(board.projectProcessItemId);
-    const attachments = await attachSignedUrlsAdmin(board.attachments);
-
-    return NextResponse.json({ board: { ...board, attachments }, context: publicContext });
+    return NextResponse.json({
+      board,
+      context: meta.context,
+      access: meta.access,
+      authorName: sessionValid ? session.authorName : undefined,
+    });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Błąd pobierania tablicy." },
@@ -51,14 +74,18 @@ export async function POST(
   const action = typeof data.action === "string" ? data.action : null;
 
   try {
-    const board = await fetchKanbanBoardByToken(token);
-    if (!board) {
-      return NextResponse.json({ error: "Nie znaleziono tablicy." }, { status: 404 });
+    const authorResult = await resolveKanbanPublicAuthor(
+      token,
+      typeof data.authorName === "string" ? data.authorName : undefined,
+    );
+    if (!authorResult.ok) {
+      return NextResponse.json({ error: authorResult.error }, { status: authorResult.status });
     }
 
-    const authorName = typeof data.authorName === "string" ? data.authorName.trim() : "Klient";
-    if (!authorName) {
-      return NextResponse.json({ error: "authorName is required" }, { status: 400 });
+    const { authorName } = authorResult;
+    const board = await fetchPublicKanbanBoardGraph(token);
+    if (!board) {
+      return NextResponse.json({ error: "Nie znaleziono tablicy." }, { status: 404 });
     }
 
     if (action === "createTask") {

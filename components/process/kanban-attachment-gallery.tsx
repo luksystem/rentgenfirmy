@@ -11,23 +11,48 @@ import {
 import type { KanbanAttachment } from "@/lib/process/kanban-types";
 import { cn } from "@/lib/utils";
 
+export type KanbanAttachmentUploadOptions = {
+  setAsCardCover?: boolean;
+};
+
 export function KanbanAttachmentGallery({
   attachments,
   allowUpload = false,
+  allowCoverManage = false,
   hasVideo = false,
   uploading = false,
+  coverUpdatingId = null,
   uploadError = null,
   onUpload,
+  onSetCover,
 }: {
   attachments: KanbanAttachment[];
   allowUpload?: boolean;
+  allowCoverManage?: boolean;
   hasVideo?: boolean;
   uploading?: boolean;
+  coverUpdatingId?: string | null;
   uploadError?: string | null;
-  onUpload?: (file: File) => Promise<void>;
+  onUpload?: (file: File, options?: KanbanAttachmentUploadOptions) => Promise<void>;
+  onSetCover?: (attachmentId: string, isCardCover: boolean) => Promise<void>;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [pendingImage, setPendingImage] = useState<File | null>(null);
+  const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
+  const [setAsCardCover, setSetAsCardCover] = useState(false);
+
+  const canManageCover = allowCoverManage && Boolean(onSetCover);
+  const hasCover = attachments.some((entry) => entry.isCardCover && entry.mediaKind === "image");
+
+  function clearPendingImage() {
+    if (pendingPreviewUrl) {
+      URL.revokeObjectURL(pendingPreviewUrl);
+    }
+    setPendingImage(null);
+    setPendingPreviewUrl(null);
+    setSetAsCardCover(false);
+  }
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -48,10 +73,46 @@ export function KanbanAttachmentGallery({
     }
 
     setLocalError(null);
+
+    if (validation.mediaKind === "image") {
+      clearPendingImage();
+      setPendingImage(file);
+      setPendingPreviewUrl(URL.createObjectURL(file));
+      setSetAsCardCover(false);
+      return;
+    }
+
     try {
       await onUpload(file);
     } catch (uploadErr) {
       setLocalError(uploadErr instanceof Error ? uploadErr.message : "Nie udało się przesłać pliku.");
+    }
+  }
+
+  async function handleConfirmImageUpload() {
+    if (!pendingImage || !onUpload) {
+      return;
+    }
+
+    setLocalError(null);
+    try {
+      await onUpload(pendingImage, { setAsCardCover });
+      clearPendingImage();
+    } catch (uploadErr) {
+      setLocalError(uploadErr instanceof Error ? uploadErr.message : "Nie udało się przesłać pliku.");
+    }
+  }
+
+  async function handleCoverChange(attachmentId: string, isCardCover: boolean) {
+    if (!onSetCover) {
+      return;
+    }
+
+    setLocalError(null);
+    try {
+      await onSetCover(attachmentId, isCardCover);
+    } catch (coverErr) {
+      setLocalError(coverErr instanceof Error ? coverErr.message : "Nie udało się zmienić okładki.");
     }
   }
 
@@ -62,12 +123,32 @@ export function KanbanAttachmentGallery({
       {attachments.length ? (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {attachments.map((attachment) => (
-            <KanbanAttachmentTile key={attachment.id} attachment={attachment} />
+            <KanbanAttachmentTile
+              key={attachment.id}
+              attachment={attachment}
+              canManageCover={canManageCover}
+              coverUpdating={coverUpdatingId === attachment.id || coverUpdatingId === "all"}
+              coverActionsDisabled={Boolean(coverUpdatingId)}
+              onSetCover={onSetCover ? (isCardCover) => handleCoverChange(attachment.id, isCardCover) : undefined}
+            />
           ))}
         </div>
       ) : (
         <p className="text-sm text-muted">Brak zdjęć i filmów.</p>
       )}
+
+      {canManageCover && hasCover ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          className="w-fit"
+          disabled={Boolean(coverUpdatingId)}
+          onClick={() => void handleCoverChange("", false)}
+        >
+          {coverUpdatingId === "all" ? "Usuwanie…" : "Usuń okładkę karty"}
+        </Button>
+      ) : null}
 
       {allowUpload && onUpload ? (
         <div className="grid gap-2">
@@ -82,7 +163,7 @@ export function KanbanAttachmentGallery({
             type="button"
             size="sm"
             variant="secondary"
-            disabled={uploading}
+            disabled={uploading || Boolean(pendingImage)}
             onClick={() => inputRef.current?.click()}
           >
             {uploading ? (
@@ -92,6 +173,51 @@ export function KanbanAttachmentGallery({
             )}
             {uploading ? "Przesyłanie…" : "Dodaj zdjęcie lub film"}
           </Button>
+
+          {pendingImage && pendingPreviewUrl ? (
+            <div className="rounded-xl border border-border/70 bg-surface/40 p-3">
+              <div className="flex gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={pendingPreviewUrl}
+                  alt=""
+                  className="h-20 w-28 shrink-0 rounded-lg border border-border/60 object-cover"
+                />
+                <div className="grid min-w-0 flex-1 gap-2">
+                  <p className="truncate text-sm font-medium text-foreground">{pendingImage.name}</p>
+                  <label className="flex cursor-pointer items-start gap-2 text-sm leading-snug text-foreground/90">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      checked={setAsCardCover}
+                      onChange={(event) => setSetAsCardCover(event.target.checked)}
+                    />
+                    <span>Pokaż jako okładkę karty na tablicy</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={uploading}
+                      onClick={() => void handleConfirmImageUpload()}
+                    >
+                      {uploading ? "Przesyłanie…" : "Prześlij zdjęcie"}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={uploading}
+                      onClick={clearPendingImage}
+                    >
+                      Anuluj
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <p className="text-xs text-muted">
             Zdjęcia do {(KANBAN_IMAGE_MAX_BYTES / (1024 * 1024)).toFixed(0)} MB (bez limitu liczby).
             {hasVideo
@@ -106,7 +232,19 @@ export function KanbanAttachmentGallery({
   );
 }
 
-function KanbanAttachmentTile({ attachment }: { attachment: KanbanAttachment }) {
+function KanbanAttachmentTile({
+  attachment,
+  canManageCover,
+  coverUpdating,
+  coverActionsDisabled,
+  onSetCover,
+}: {
+  attachment: KanbanAttachment;
+  canManageCover: boolean;
+  coverUpdating: boolean;
+  coverActionsDisabled: boolean;
+  onSetCover?: (isCardCover: boolean) => Promise<void>;
+}) {
   if (attachment.mediaKind === "video" && attachment.url) {
     return (
       <div className="overflow-hidden rounded-xl border border-border/70 bg-surface/40">
@@ -124,19 +262,44 @@ function KanbanAttachmentTile({ attachment }: { attachment: KanbanAttachment }) 
 
   if (attachment.url) {
     return (
-      <a
-        href={attachment.url}
-        target="_blank"
-        rel="noreferrer"
-        className="block overflow-hidden rounded-xl border border-border/70 bg-surface/40 transition hover:border-accent/40"
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={attachment.url}
-          alt={attachment.fileName}
-          className="aspect-[4/3] w-full object-cover"
-        />
-      </a>
+      <div className="overflow-hidden rounded-xl border border-border/70 bg-surface/40">
+        <a
+          href={attachment.url}
+          target="_blank"
+          rel="noreferrer"
+          className="relative block transition hover:opacity-95"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={attachment.url}
+            alt={attachment.fileName}
+            className="aspect-[4/3] w-full object-cover"
+          />
+          {attachment.isCardCover ? (
+            <span className="absolute left-2 top-2 rounded-md bg-accent px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground shadow-sm">
+              Okładka
+            </span>
+          ) : null}
+        </a>
+        {canManageCover && onSetCover ? (
+          <div className="border-t border-border/60 p-1.5">
+            <Button
+              type="button"
+              size="sm"
+              variant={attachment.isCardCover ? "secondary" : "default"}
+              className="h-8 w-full text-xs"
+              disabled={coverActionsDisabled}
+              onClick={() => void onSetCover(!attachment.isCardCover)}
+            >
+              {coverUpdating
+                ? "Zapisywanie…"
+                : attachment.isCardCover
+                  ? "Usuń okładkę"
+                  : "Ustaw jako okładkę"}
+            </Button>
+          </div>
+        ) : null}
+      </div>
     );
   }
 
@@ -154,30 +317,20 @@ export function KanbanAttachmentPreview({
   attachments: KanbanAttachment[];
   className?: string;
 }) {
-  const cover = attachments.find((entry) => entry.mediaKind === "image" && entry.url) ?? attachments[0];
+  const cover =
+    attachments.find((entry) => entry.isCardCover && entry.mediaKind === "image" && entry.url) ?? null;
   if (!cover?.url) {
     return null;
   }
 
-  if (cover.mediaKind === "video") {
-    return (
-      <div className={cn("mb-2 overflow-hidden rounded-lg border border-border/50", className)}>
-        <div className="flex aspect-video items-center justify-center bg-black/80 text-xs text-white/80">
-          <Film className="mr-1 h-3.5 w-3.5" />
-          Film
-        </div>
-      </div>
-    );
-  }
+  const imageCount = attachments.filter((entry) => entry.mediaKind === "image").length;
 
   return (
     <div className={cn("mb-2 overflow-hidden rounded-lg border border-border/50", className)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={cover.url} alt="" className="aspect-[16/9] w-full object-cover" />
-      {attachments.filter((entry) => entry.mediaKind === "image").length > 1 ? (
-        <p className="bg-surface/60 px-2 py-0.5 text-[10px] text-muted">
-          +{attachments.filter((entry) => entry.mediaKind === "image").length - 1} zdjęć
-        </p>
+      {imageCount > 1 ? (
+        <p className="bg-surface/60 px-2 py-0.5 text-[10px] text-muted">+{imageCount - 1} zdjęć</p>
       ) : null}
     </div>
   );

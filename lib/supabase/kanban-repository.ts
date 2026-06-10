@@ -17,6 +17,9 @@ type BoardRow = {
   project_process_item_id: string;
   public_token: string;
   public_enabled: boolean;
+  public_access_password_hash?: string | null;
+  public_access_username?: string | null;
+  public_author_name?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -202,6 +205,10 @@ async function fetchBoardGraph(boardRow: BoardRow): Promise<KanbanBoard> {
     projectProcessItemId: boardRow.project_process_item_id,
     publicToken: boardRow.public_token,
     publicEnabled: boardRow.public_enabled,
+    publicAccessConfigured: Boolean(boardRow.public_access_password_hash),
+    publicAccessUsernameRequired: Boolean(boardRow.public_access_username?.trim()),
+    publicAccessUsername: boardRow.public_access_username?.trim() || null,
+    publicAuthorName: boardRow.public_author_name?.trim() || "Klient",
     columns: (columns ?? []).map((row) => rowToColumn(row as ColumnRow)),
     tasks: (tasks ?? []).map((row) => rowToTask(row as TaskRow)),
     comments: (comments ?? []).map((row) => rowToComment(row as CommentRow)),
@@ -228,6 +235,8 @@ export async function ensureKanbanBoard(
   }
 
   if (existing) {
+    const { applyKanbanTemplateAccess } = await import("@/lib/supabase/kanban-public-server");
+    await applyKanbanTemplateAccess(existing.id, template, { onlyIfUnset: true });
     return fetchBoardGraph(existing as BoardRow);
   }
 
@@ -261,6 +270,9 @@ export async function ensureKanbanBoard(
   if (columnsError) {
     throw new Error(columnsError.message);
   }
+
+  const { applyKanbanTemplateAccess } = await import("@/lib/supabase/kanban-public-server");
+  await applyKanbanTemplateAccess(boardId, template);
 
   return fetchBoardGraph(board as BoardRow);
 }
@@ -612,4 +624,8 @@ export async function addKanbanComment(input: {
 
 export function getBoardIdFromGraph(board: KanbanBoard) {
   return board.id;
+}
+
+export async function fetchBoardGraphAdmin(boardRow: BoardRow) {
+  return fetchBoardGraph(boardRow);
 }

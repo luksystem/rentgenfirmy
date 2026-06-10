@@ -19,6 +19,7 @@ type AttachmentRow = {
   media_kind: string;
   size_bytes: number;
   position: number;
+  is_card_cover: boolean;
   uploaded_by_side: string;
   uploaded_by_name: string;
   created_at: string;
@@ -42,6 +43,7 @@ function rowToAttachment(row: AttachmentRow): KanbanAttachment {
     mediaKind: isMediaKind(row.media_kind) ? row.media_kind : "image",
     sizeBytes: row.size_bytes,
     position: row.position,
+    isCardCover: Boolean(row.is_card_cover),
     uploadedBySide: isAuthorSide(row.uploaded_by_side) ? row.uploaded_by_side : "client",
     uploadedByName: row.uploaded_by_name,
     createdAt: row.created_at,
@@ -145,6 +147,7 @@ export async function uploadKanbanTaskAttachment(input: {
   file: File;
   authorName: string;
   authorSide: KanbanAuthorSide;
+  setAsCardCover?: boolean;
 }) {
   const validation = validateKanbanAttachmentFile({
     type: input.file.type,
@@ -202,6 +205,21 @@ export async function uploadKanbanTaskAttachment(input: {
     throw new Error(uploadError.message);
   }
 
+  const shouldSetCover = validation.mediaKind === "image" && Boolean(input.setAsCardCover);
+
+  if (shouldSetCover) {
+    const { error: clearCoverError } = await supabase
+      .from("process_kanban_task_attachments")
+      .update({ is_card_cover: false })
+      .eq("task_id", input.taskId)
+      .eq("is_card_cover", true);
+
+    if (clearCoverError) {
+      await supabase.storage.from(KANBAN_ATTACHMENTS_BUCKET).remove([storagePath]);
+      throw new Error(clearCoverError.message);
+    }
+  }
+
   const { data, error } = await supabase
     .from("process_kanban_task_attachments")
     .insert({
@@ -213,6 +231,7 @@ export async function uploadKanbanTaskAttachment(input: {
       media_kind: validation.mediaKind,
       size_bytes: input.file.size,
       position: (typeof lastAttachment?.position === "number" ? lastAttachment.position : -1) + 1,
+      is_card_cover: shouldSetCover,
       uploaded_by_side: input.authorSide,
       uploaded_by_name: input.authorName.trim() || "Klient",
     })
@@ -227,4 +246,87 @@ export async function uploadKanbanTaskAttachment(input: {
   const attachment = rowToAttachment(data as AttachmentRow);
   const [withUrl] = await attachSignedUrlsAdmin([attachment]);
   return withUrl;
+}
+
+async function fetchAttachmentRow(attachmentId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("process_kanban_task_attachments")
+    .select("*")
+    .eq("id", attachmentId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data as AttachmentRow | null) ?? null;
+}
+
+export async function setKanbanTaskAttachmentCover(input: {
+  boardId: string;
+  taskId: string;
+  attachmentId: string;
+  isCardCover: boolean;
+}) {
+  const belongs = await taskBelongsToBoard(input.taskId, input.boardId);
+  if (!belongs) {
+    throw new Error("Nie znaleziono zgłoszenia na tej tablicy.");
+  }
+
+  const row = await fetchAttachmentRow(input.attachmentId);
+  if (!row || row.task_id !== input.taskId) {
+    throw new Error("Nie znaleziono załącznika.");
+  }
+
+  if (row.media_kind !== "image") {
+    throw new Error("Okładką karty może być tylko zdjęcie.");
+  }
+
+  const supabase = getSupabaseAdmin();
+
+  if (input.isCardCover) {
+    const { error: clearError } = await supabase
+      .from("process_kanban_task_attachments")
+      .update({ is_card_cover: false })
+      .eq("task_id", input.taskId)
+      .eq("is_card_cover", true);
+
+    if (clearError) {
+      throw new Error(clearError.message);
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("process_kanban_task_attachments")
+    .update({ is_card_cover: input.isCardCover })
+    .eq("id", input.attachmentId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const attachment = rowToAttachment(data as AttachmentRow);
+  const [withUrl] = await attachSignedUrlsAdmin([attachment]);
+  return withUrl;
+}
+
+export async function clearKanbanTaskAttachmentCover(input: { boardId: string; taskId: string }) {
+  const belongs = await taskBelongsToBoard(input.taskId, input.boardId);
+  if (!belongs) {
+    throw new Error("Nie znaleziono zgłoszenia na tej tablicy.");
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("process_kanban_task_attachments")
+    .update({ is_card_cover: false })
+    .eq("task_id", input.taskId)
+    .eq("is_card_cover", true);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }

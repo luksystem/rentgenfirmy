@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { History, X } from "lucide-react";
 import { KanbanPriorityPicker } from "@/components/process/kanban-task-card";
-import { KanbanAttachmentGallery } from "@/components/process/kanban-attachment-gallery";
+import { KanbanAttachmentGallery, type KanbanAttachmentUploadOptions } from "@/components/process/kanban-attachment-gallery";
 import { Button } from "@/components/ui/button";
 import { Dialog, StackedDialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
@@ -36,6 +36,7 @@ export function KanbanTaskDetailModal({
   onDelete,
   onComment,
   onUploadAttachment,
+  onSetAttachmentCover,
 }: {
   task: KanbanTask;
   comments: KanbanBoard["comments"];
@@ -55,7 +56,8 @@ export function KanbanTaskDetailModal({
   onCloseTask: (closed: boolean) => Promise<void>;
   onDelete?: () => Promise<void>;
   onComment: () => Promise<void>;
-  onUploadAttachment?: (file: File) => Promise<void>;
+  onUploadAttachment?: (file: File, options?: KanbanAttachmentUploadOptions) => Promise<void>;
+  onSetAttachmentCover?: (attachmentId: string, isCardCover: boolean) => Promise<void>;
 }) {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description);
@@ -68,6 +70,7 @@ export function KanbanTaskDetailModal({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [coverUpdatingId, setCoverUpdatingId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -261,16 +264,18 @@ export function KanbanTaskDetailModal({
           <KanbanAttachmentGallery
             attachments={attachments}
             allowUpload={allowAttachmentUpload}
+            allowCoverManage={allowAttachmentUpload}
             hasVideo={hasVideo}
             uploading={isUploadingAttachment}
+            coverUpdatingId={coverUpdatingId}
             uploadError={uploadError}
             onUpload={
               onUploadAttachment
-                ? async (file) => {
+                ? async (file, options) => {
                     setIsUploadingAttachment(true);
                     setUploadError(null);
                     try {
-                      await onUploadAttachment(file);
+                      await onUploadAttachment(file, options);
                     } catch (uploadErr) {
                       setUploadError(
                         uploadErr instanceof Error ? uploadErr.message : "Nie udało się przesłać pliku.",
@@ -278,6 +283,24 @@ export function KanbanTaskDetailModal({
                       throw uploadErr;
                     } finally {
                       setIsUploadingAttachment(false);
+                    }
+                  }
+                : undefined
+            }
+            onSetCover={
+              onSetAttachmentCover
+                ? async (attachmentId, isCardCover) => {
+                    setCoverUpdatingId(attachmentId || "all");
+                    setUploadError(null);
+                    try {
+                      await onSetAttachmentCover(attachmentId, isCardCover);
+                    } catch (coverErr) {
+                      setUploadError(
+                        coverErr instanceof Error ? coverErr.message : "Nie udało się zmienić okładki.",
+                      );
+                      throw coverErr;
+                    } finally {
+                      setCoverUpdatingId(null);
                     }
                   }
                 : undefined

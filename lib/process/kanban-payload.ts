@@ -27,7 +27,26 @@ export function normalizeKanbanTemplatePayload(value: unknown): KanbanTemplatePa
     .filter((column): column is KanbanColumnTemplate => column !== null)
     .sort((a, b) => a.position - b.position);
 
-  return columns.length ? { columns } : defaultKanbanTemplatePayload();
+  const accessFields = {
+    publicAccessPassword:
+      typeof data.publicAccessPassword === "string" && data.publicAccessPassword.trim()
+        ? data.publicAccessPassword
+        : undefined,
+    publicAccessUsername:
+      typeof data.publicAccessUsername === "string" && data.publicAccessUsername.trim()
+        ? data.publicAccessUsername.trim()
+        : undefined,
+    publicAuthorName:
+      typeof data.publicAuthorName === "string" && data.publicAuthorName.trim()
+        ? data.publicAuthorName.trim()
+        : undefined,
+  };
+
+  if (!columns.length) {
+    return { ...defaultKanbanTemplatePayload(), ...accessFields };
+  }
+
+  return { columns, ...accessFields };
 }
 
 export function isKanbanTemplatePayload(value: unknown): value is KanbanTemplatePayload {

@@ -18,6 +18,12 @@ export type KanbanColumnTemplate = {
 
 export type KanbanTemplatePayload = {
   columns: KanbanColumnTemplate[];
+  /** Hasło do publicznego linku (zapisane w szablonie; hash trafia na tablicę przy wdrożeniu). */
+  publicAccessPassword?: string;
+  /** Opcjonalny login — jeśli ustawiony, klient musi go podać razem z hasłem. */
+  publicAccessUsername?: string;
+  /** Nazwa wyświetlana w komentarzach/historii, gdy nie ma osobnego loginu. */
+  publicAuthorName?: string;
 };
 
 export type KanbanColumn = {
@@ -72,6 +78,7 @@ export type KanbanAttachment = {
   mediaKind: "image" | "video";
   sizeBytes: number;
   position: number;
+  isCardCover: boolean;
   uploadedBySide: KanbanAuthorSide;
   uploadedByName: string;
   createdAt: string;
@@ -83,6 +90,12 @@ export type KanbanBoard = {
   projectProcessItemId: string;
   publicToken: string;
   publicEnabled: boolean;
+  /** Czy tablica wymaga hasła na publicznym linku (hash nigdy nie trafia do klienta). */
+  publicAccessConfigured: boolean;
+  /** Czy klient musi podać login oprócz hasła. */
+  publicAccessUsernameRequired: boolean;
+  publicAccessUsername: string | null;
+  publicAuthorName: string;
   columns: KanbanColumn[];
   tasks: KanbanTask[];
   comments: KanbanComment[];
@@ -90,6 +103,13 @@ export type KanbanBoard = {
   attachments: KanbanAttachment[];
   createdAt: string;
   updatedAt: string;
+};
+
+export type KanbanPublicAccessInfo = {
+  authRequired: boolean;
+  legacyNameRequired: boolean;
+  usernameRequired: boolean;
+  authorDisplayName: string;
 };
 
 export type KanbanPublicContext = {

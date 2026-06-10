@@ -15,6 +15,7 @@ export function KanbanTemplateColumnsEditor({
 }) {
   function updateTitle(index: number, title: string) {
     onChange({
+      ...payload,
       columns: payload.columns.map((column, columnIndex) =>
         columnIndex === index ? { ...column, title } : column,
       ),
@@ -23,6 +24,7 @@ export function KanbanTemplateColumnsEditor({
 
   function addColumn() {
     onChange({
+      ...payload,
       columns: [
         ...payload.columns,
         { id: crypto.randomUUID(), title: "", position: payload.columns.length },
@@ -31,15 +33,23 @@ export function KanbanTemplateColumnsEditor({
   }
 
   function removeColumn(index: number) {
-    onChange({ columns: withPositions(removeAt(payload.columns, index)) });
+    onChange({ ...payload, columns: withPositions(removeAt(payload.columns, index)) });
   }
 
   function moveColumn(index: number, direction: "up" | "down") {
-    onChange({ columns: withPositions(moveItem(payload.columns, index, direction)) });
+    onChange({ ...payload, columns: withPositions(moveItem(payload.columns, index, direction)) });
+  }
+
+  function updateAccessField(field: "publicAccessPassword" | "publicAccessUsername" | "publicAuthorName", value: string) {
+    onChange({
+      ...payload,
+      [field]: value.trim() ? value : undefined,
+    });
   }
 
   return (
-    <Field label="Kolumny tablicy Kanban">
+    <div className="grid gap-4">
+      <Field label="Kolumny tablicy Kanban">
       <div className="grid gap-2">
         {payload.columns.map((column, index) => (
           <div
@@ -69,6 +79,41 @@ export function KanbanTemplateColumnsEditor({
           Dodaj kolumnę
         </Button>
       </div>
-    </Field>
+      </Field>
+
+      <div className="rounded-xl border border-border/70 bg-surface/30 p-4">
+        <p className="text-sm font-medium text-foreground">Dostęp do publicznego linku</p>
+        <p className="mt-1 text-xs leading-relaxed text-muted">
+          Hasło trafi na tablicę przy wdrożeniu procesu. Klient wpisze je zamiast podawania imienia.
+          Opcjonalnie możesz wymusić też login.
+        </p>
+        <div className="mt-3 grid gap-3">
+          <Field label="Hasło dostępu">
+            <Input
+              type="password"
+              value={payload.publicAccessPassword ?? ""}
+              placeholder="np. kod z protokołu wdrożenia"
+              autoComplete="new-password"
+              onChange={(event) => updateAccessField("publicAccessPassword", event.target.value)}
+            />
+          </Field>
+          <Field label="Login (opcjonalnie)">
+            <Input
+              value={payload.publicAccessUsername ?? ""}
+              placeholder="np. nazwa klienta lub gospodarstwa"
+              autoComplete="username"
+              onChange={(event) => updateAccessField("publicAccessUsername", event.target.value)}
+            />
+          </Field>
+          <Field label="Nazwa w historii (gdy brak loginu)">
+            <Input
+              value={payload.publicAuthorName ?? ""}
+              placeholder="Domyślnie: Klient"
+              onChange={(event) => updateAccessField("publicAuthorName", event.target.value)}
+            />
+          </Field>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -22,8 +22,10 @@ export function KanbanTaskCardView({
   draggable = true,
   showDueDate = true,
   showChevron = false,
+  isDragging,
   onOpen,
   onDragStart,
+  onDragEnd,
 }: {
   task: KanbanTask;
   attachments?: KanbanAttachment[];
@@ -31,8 +33,10 @@ export function KanbanTaskCardView({
   draggable?: boolean;
   showDueDate?: boolean;
   showChevron?: boolean;
+  isDragging?: boolean;
   onOpen: () => void;
   onDragStart: () => void;
+  onDragEnd?: () => void;
 }) {
   const isClosed = Boolean(task.closedAt);
 
@@ -40,7 +44,16 @@ export function KanbanTaskCardView({
     <button
       type="button"
       draggable={draggable && !isClosed}
-      onDragStart={draggable && !isClosed ? onDragStart : undefined}
+      onDragStart={
+        draggable && !isClosed
+          ? (event) => {
+              event.dataTransfer.effectAllowed = "move";
+              event.dataTransfer.setData("text/plain", task.id);
+              onDragStart();
+            }
+          : undefined
+      }
+      onDragEnd={draggable && !isClosed ? onDragEnd : undefined}
       onClick={onOpen}
       className={cn(
         "relative w-full rounded-2xl border px-3.5 py-3 text-left text-sm shadow-sm transition hover:border-accent/40 hover:shadow-md",
@@ -48,6 +61,7 @@ export function KanbanTaskCardView({
           ? "border-border/50 bg-surface/30 opacity-60 grayscale"
           : getKanbanTaskCardClasses(task.dueDate),
         isNew && !isClosed && "ring-2 ring-rose-500/50",
+        isDragging && "scale-[0.98] opacity-35 ring-2 ring-accent/30",
       )}
     >
       <span

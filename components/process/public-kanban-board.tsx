@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRightLeft, Plus, Sparkles } from "lucide-react";
 import { KanbanTaskCardView } from "@/components/process/kanban-task-card";
+import type { KanbanAttachmentUploadOptions } from "@/components/process/kanban-attachment-gallery";
+import { KanbanDropPlaceholder, getKanbanColumnDropTargetClasses } from "@/components/process/kanban-drop-placeholder";
 import { KanbanTaskDetailModal } from "@/components/process/kanban-task-detail";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +17,7 @@ async function postKanban(token: string, body: Record<string, unknown>) {
   const response = await fetch(`/api/kanban/${encodeURIComponent(token)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify(body),
   });
   if (!response.ok) {
@@ -37,6 +40,8 @@ export function PublicKanbanBoard({
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [newTaskTitles, setNewTaskTitles] = useState<Record<string, string>>({});
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
+  const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
+  const [pendingMove, setPendingMove] = useState<{ taskId: string; columnId: string } | null>(null);
   const [commentDraft, setCommentDraft] = useState("");
   const [isCoarsePointer, setIsCoarsePointer] = useState(true);
   const [activeColumnId, setActiveColumnId] = useState(board.columns[0]?.id ?? "");
@@ -96,6 +101,7 @@ export function PublicKanbanBoard({
   }, [board.columns, isCoarsePointer]);
 
   const activeTask = board.tasks.find((task) => task.id === activeTaskId) ?? null;
+  const dragTask = dragTaskId ? (board.tasks.find((task) => task.id === dragTaskId) ?? null) : null;
   const activeComments = board.comments.filter((comment) => comment.taskId === activeTaskId);
   const activeEvents = board.events.filter((event) => event.taskId === activeTaskId);
   const activeAttachments = board.attachments.filter((entry) => entry.taskId === activeTaskId);
@@ -119,21 +125,40 @@ export function PublicKanbanBoard({
       return;
     }
     await handleMoveTask(dragTaskId, columnId);
+    clearDragState();
+  }
+
+  function clearDragState() {
     setDragTaskId(null);
+    setDragOverColumnId(null);
   }
 
   async function handleMoveTask(taskId: string, columnId: string) {
-    const columnTasks = board.tasks.filter(
-      (task) => task.columnId === columnId && !task.closedAt && task.id !== taskId,
-    );
-    await postKanban(token, {
-      action: "moveTask",
-      taskId,
-      columnId,
-      position: columnTasks.length,
-      authorName,
+    setPendingMove({ taskId, columnId });
+    try {
+      const columnTasks = board.tasks.filter(
+        (task) => task.columnId === columnId && !task.closedAt && task.id !== taskId,
+      );
+      await postKanban(token, {
+        action: "moveTask",
+        taskId,
+        columnId,
+        position: columnTasks.length,
+        authorName,
+      });
+      await onRefresh();
+    } finally {
+      setPendingMove(null);
+    }
+  }
+
+  function getColumnTasks(columnId: string) {
+    return board.tasks.filter((task) => {
+      if (pendingMove?.taskId === task.id) {
+        return pendingMove.columnId === columnId;
+      }
+      return task.columnId === columnId;
     });
-    await onRefresh();
   }
 
   async function handleSaveTask(
@@ -158,19 +183,46 @@ export function PublicKanbanBoard({
     await onRefresh();
   }
 
-  async function handleUploadAttachment(taskId: string, file: File) {
+  async function handleUploadAttachment(
+    taskId: string,
+    file: File,
+    options?: KanbanAttachmentUploadOptions,
+  ) {
     const formData = new FormData();
     formData.append("taskId", taskId);
     formData.append("authorName", authorName);
     formData.append("file", file);
+    if (options?.setAsCardCover) {
+      formData.append("setAsCardCover", "true");
+    }
 
     const response = await fetch(`/api/kanban/${encodeURIComponent(token)}/attachments`, {
       method: "POST",
+      credentials: "include",
       body: formData,
     });
     if (!response.ok) {
       const payload = (await response.json()) as { error?: string };
       throw new Error(payload.error ?? "Nie udało się przesłać pliku.");
+    }
+    await onRefresh();
+  }
+
+  async function handleSetAttachmentCover(taskId: string, attachmentId: string, isCardCover: boolean) {
+    const response = await fetch(`/api/kanban/${encodeURIComponent(token)}/attachments/cover`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        taskId,
+        authorName,
+        ...(attachmentId ? { attachmentId } : {}),
+        isCardCover,
+      }),
+    });
+    if (!response.ok) {
+      const payload = (await response.json()) as { error?: string };
+      throw new Error(payload.error ?? "Nie udało się zmienić okładki.");
     }
     await onRefresh();
   }
@@ -218,9 +270,10 @@ export function PublicKanbanBoard({
         className="flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto overflow-y-hidden pb-2 [-ms-overflow-style:none] [scrollbar-width:none] md:snap-none md:flex-row md:overflow-hidden md:pb-0 [&::-webkit-scrollbar]:hidden"
       >
         {board.columns.map((column, index) => {
-          const columnTasks = board.tasks.filter((task) => task.columnId === column.id);
+          const columnTasks = getColumnTasks(column.id);
           const tasks = sortKanbanColumnTasks(columnTasks);
           const openCount = countOpenKanbanTasks(columnTasks);
+          const isDropTarget = Boolean(dragTaskId && dragOverColumnId === column.id);
 
           return (
             <div
@@ -229,9 +282,35 @@ export function PublicKanbanBoard({
                 columnRefs.current[column.id] = node;
               }}
               data-column-id={column.id}
-              className="flex w-[min(100%,22rem)] shrink-0 snap-center flex-col overflow-hidden rounded-2xl border border-border/80 bg-surface-muted/40 shadow-sm md:min-h-0 md:w-auto md:min-w-0 md:flex-1 md:snap-align-none"
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={() => void handleDrop(column.id)}
+              className={cn(
+                "flex w-[min(100%,22rem)] shrink-0 snap-center flex-col overflow-hidden rounded-2xl border border-border/80 bg-surface-muted/40 shadow-sm md:min-h-0 md:w-auto md:min-w-0 md:flex-1 md:snap-align-none",
+                getKanbanColumnDropTargetClasses(isDropTarget),
+              )}
+              onDragEnter={(event) => {
+                if (!dragTaskId) {
+                  return;
+                }
+                event.preventDefault();
+                setDragOverColumnId(column.id);
+              }}
+              onDragOver={(event) => {
+                if (!dragTaskId) {
+                  return;
+                }
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                setDragOverColumnId(column.id);
+              }}
+              onDragLeave={(event) => {
+                const related = event.relatedTarget as Node | null;
+                if (!event.currentTarget.contains(related)) {
+                  setDragOverColumnId((current) => (current === column.id ? null : current));
+                }
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                void handleDrop(column.id);
+              }}
             >
               <div className="shrink-0 border-b border-border/60 bg-surface/40 px-4 py-3">
                 <div className="flex items-center justify-between gap-2">
@@ -245,7 +324,12 @@ export function PublicKanbanBoard({
                 </div>
               </div>
 
-              <div className="flex min-h-[min(52vh,28rem)] flex-1 flex-col gap-2.5 overflow-y-auto p-3 md:min-h-0">
+              <div
+                className={cn(
+                  "flex min-h-[min(52vh,28rem)] flex-1 flex-col gap-2.5 overflow-y-auto p-3 md:min-h-0",
+                  isDropTarget && "bg-accent/[0.03]",
+                )}
+              >
                 {tasks.length ? (
                   tasks.map((task) => (
                     <KanbanTaskCardView
@@ -255,16 +339,35 @@ export function PublicKanbanBoard({
                       draggable={!isCoarsePointer}
                       showDueDate
                       showChevron={isCoarsePointer}
+                      isDragging={dragTaskId === task.id}
                       onOpen={() => setActiveTaskId(task.id)}
                       onDragStart={() => setDragTaskId(task.id)}
+                      onDragEnd={clearDragState}
                     />
                   ))
                 ) : (
-                  <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-surface/30 px-4 py-8 text-center">
-                    <Sparkles className="mb-2 h-5 w-5 text-muted" />
-                    <p className="text-sm text-muted">Brak zgłoszeń w tym etapie</p>
+                  <div
+                    className={cn(
+                      "flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed px-4 py-8 text-center transition-colors duration-200",
+                      isDropTarget
+                        ? "border-accent/50 bg-accent/10"
+                        : "border-border/60 bg-surface/30",
+                    )}
+                  >
+                    {isDropTarget && dragTask ? (
+                      <KanbanDropPlaceholder title={dragTask.title} className="w-full" />
+                    ) : (
+                      <>
+                        <Sparkles className="mb-2 h-5 w-5 text-muted" />
+                        <p className="text-sm text-muted">Brak zgłoszeń w tym etapie</p>
+                      </>
+                    )}
                   </div>
                 )}
+
+                {isDropTarget && tasks.length > 0 && dragTask ? (
+                  <KanbanDropPlaceholder title={dragTask.title} />
+                ) : null}
 
                 <div className="mt-auto grid gap-2 rounded-2xl border border-dashed border-accent/25 bg-accent/5 p-3">
                   <Input
@@ -312,7 +415,10 @@ export function PublicKanbanBoard({
           onClose={() => setActiveTaskId(null)}
           onSave={(patch) => handleSaveTask(activeTask.id, patch)}
           onCloseTask={(closed) => handleCloseTask(activeTask.id, closed)}
-          onUploadAttachment={(file) => handleUploadAttachment(activeTask.id, file)}
+          onUploadAttachment={(file, options) => handleUploadAttachment(activeTask.id, file, options)}
+          onSetAttachmentCover={(attachmentId, isCardCover) =>
+            handleSetAttachmentCover(activeTask.id, attachmentId, isCardCover)
+          }
           onComment={async () => {
             await postKanban(token, {
               action: "addComment",

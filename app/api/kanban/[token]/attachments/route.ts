@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { resolveKanbanPublicAuthor } from "@/lib/process/kanban-public-request";
 import { uploadKanbanTaskAttachment } from "@/lib/supabase/kanban-attachments-repository";
-import { fetchKanbanBoardByToken } from "@/lib/supabase/kanban-repository";
+import { fetchPublicKanbanBoardGraph } from "@/lib/supabase/kanban-public-server";
 
 export async function POST(
   request: Request,
@@ -18,15 +19,14 @@ export async function POST(
   const taskIdRaw = formData.get("taskId");
   const authorNameRaw = formData.get("authorName");
   const taskId = typeof taskIdRaw === "string" ? taskIdRaw : null;
-  const authorName = typeof authorNameRaw === "string" ? authorNameRaw.trim() : "";
+  const authorNameFallback = typeof authorNameRaw === "string" ? authorNameRaw.trim() : "";
   const file = formData.get("file");
+  const setAsCardCoverRaw = formData.get("setAsCardCover");
+  const setAsCardCover =
+    setAsCardCoverRaw === "true" || setAsCardCoverRaw === "1" || setAsCardCoverRaw === "on";
 
   if (!taskId) {
     return NextResponse.json({ error: "taskId is required" }, { status: 400 });
-  }
-
-  if (!authorName) {
-    return NextResponse.json({ error: "authorName is required" }, { status: 400 });
   }
 
   if (!(file instanceof File) || file.size === 0) {
@@ -34,7 +34,12 @@ export async function POST(
   }
 
   try {
-    const board = await fetchKanbanBoardByToken(token);
+    const authorResult = await resolveKanbanPublicAuthor(token, authorNameFallback);
+    if (!authorResult.ok) {
+      return NextResponse.json({ error: authorResult.error }, { status: authorResult.status });
+    }
+
+    const board = await fetchPublicKanbanBoardGraph(token);
     if (!board) {
       return NextResponse.json({ error: "Nie znaleziono tablicy." }, { status: 404 });
     }
@@ -43,8 +48,9 @@ export async function POST(
       boardId: board.id,
       taskId,
       file,
-      authorName,
+      authorName: authorResult.authorName,
       authorSide: "client",
+      setAsCardCover,
     });
 
     return NextResponse.json({ attachment });
