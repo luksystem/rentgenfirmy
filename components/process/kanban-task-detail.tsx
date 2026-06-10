@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { History, X } from "lucide-react";
 import { KanbanPriorityPicker } from "@/components/process/kanban-task-card";
 import { Button } from "@/components/ui/button";
+import { Dialog, StackedDialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import {
   formatKanbanEventAuthor,
@@ -61,11 +61,6 @@ export function KanbanTaskDetailModal({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     setTitle(task.title);
@@ -138,17 +133,20 @@ export function KanbanTaskDetailModal({
     }
   }
 
-  if (!mounted) {
-    return null;
-  }
-
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4">
-      <div className="grid max-h-[92dvh] w-full max-w-lg gap-4 overflow-y-auto rounded-t-3xl border border-border bg-surface-elevated p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-soft sm:max-h-[90vh] sm:rounded-2xl sm:pb-5">
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+    >
+      <StackedDialogContent aria-describedby={undefined}>
         <div className="mx-auto mb-1 h-1 w-10 rounded-full bg-border/80 sm:hidden" aria-hidden />
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold text-foreground">Szczegóły zgłoszenia</h3>
+            <DialogTitle className="text-lg font-semibold text-foreground">Szczegóły zgłoszenia</DialogTitle>
             {isClosed ? (
               <p className="mt-1 text-xs font-medium uppercase tracking-wide text-muted">Zamknięte</p>
             ) : null}
@@ -290,8 +288,7 @@ export function KanbanTaskDetailModal({
             Dodaj komentarz
           </Button>
         </div>
-      </div>
-    </div>,
-    document.body,
+      </StackedDialogContent>
+    </Dialog>
   );
 }

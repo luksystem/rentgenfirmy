@@ -41,6 +41,30 @@ export function DialogContent({
   );
 }
 
+/** Dialog layered above another open dialog (e.g. Kanban task detail inside process panel). */
+export function StackedDialogContent({
+  className,
+  children,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>) {
+  return (
+    <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm" />
+      <DialogPrimitive.Content
+        className={cn(
+          "fixed z-[100] grid max-h-[92dvh] w-full max-w-lg gap-4 overflow-y-auto border border-border bg-surface-elevated p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-soft",
+          "inset-x-0 bottom-0 top-auto rounded-t-3xl",
+          "sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90vh] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:pb-5",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
+  );
+}
+
 export function DialogHeader({
   className,
   ...props
