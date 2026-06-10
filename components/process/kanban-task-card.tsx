@@ -1,8 +1,11 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
+import { KanbanAttachmentPreview } from "@/components/process/kanban-attachment-gallery";
 import { formatMilestoneDate } from "@/lib/process/dates";
 import {
   KANBAN_PRIORITY_LABELS,
+  type KanbanAttachment,
   type KanbanPriority,
   type KanbanTask,
 } from "@/lib/process/kanban-types";
@@ -11,10 +14,10 @@ import {
   KANBAN_PRIORITY_DOT_CLASSES,
 } from "@/lib/process/kanban-ui";
 import { cn } from "@/lib/utils";
-import { ChevronRight } from "lucide-react";
 
 export function KanbanTaskCardView({
   task,
+  attachments = [],
   isNew,
   draggable = true,
   showDueDate = true,
@@ -23,6 +26,7 @@ export function KanbanTaskCardView({
   onDragStart,
 }: {
   task: KanbanTask;
+  attachments?: KanbanAttachment[];
   isNew?: boolean;
   draggable?: boolean;
   showDueDate?: boolean;
@@ -53,6 +57,7 @@ export function KanbanTaskCardView({
         )}
         title={`Priorytet: ${KANBAN_PRIORITY_LABELS[task.priority]}`}
       />
+      <KanbanAttachmentPreview attachments={attachments} />
       <p className={cn("font-medium leading-snug", isClosed ? "text-muted line-through" : "text-foreground", showChevron ? "pr-8" : "pr-4")}>
         {task.title}
       </p>

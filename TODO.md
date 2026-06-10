@@ -26,6 +26,19 @@ Osobny moduł w grupie **Oferty**, niezależny od szybkiego rozliczania serwisow
 
 ---
 
+### [ ] Tablice wdrożeń (hub Kanban per klient)
+
+Widok skrócony do tablic Kanban — bez przechodzenia przez listę projektów.
+
+- [ ] Trasa `/tablice-wdrozen` — kafelki klientów z liczbą otwartych zgłoszeń
+- [ ] Trasa `/tablice-wdrozen/[clientId]` — tablice wdrożeń danego klienta (per projekt)
+- [ ] Pozycja w menu (np. „Tablice wdrożeń”)
+- [ ] Zapytanie agregujące: `clients` → `projects` → `project_process_items` (kind=kanban) → `process_kanban_boards`
+- [ ] Reużycie `ProcessKanbanBoard` po wejściu w wybraną tablicę
+- [ ] Klient z wieloma projektami — lista projektów na kafelku / ekranie pośrednim
+
+---
+
 ## Inne
 
 ### [ ] Uprawnienia wg ról użytkowników

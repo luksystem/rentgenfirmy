@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { History, X } from "lucide-react";
 import { KanbanPriorityPicker } from "@/components/process/kanban-task-card";
+import { KanbanAttachmentGallery } from "@/components/process/kanban-attachment-gallery";
 import { Button } from "@/components/ui/button";
 import { Dialog, StackedDialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
@@ -13,15 +14,17 @@ import {
   KANBAN_TASK_EVENT_LABELS,
 } from "@/lib/process/kanban-events";
 import { milestoneDateToInput } from "@/lib/process/dates";
-import type { KanbanBoard, KanbanTask, KanbanTaskEvent } from "@/lib/process/kanban-types";
+import type { KanbanAttachment, KanbanBoard, KanbanTask, KanbanTaskEvent } from "@/lib/process/kanban-types";
 
 export function KanbanTaskDetailModal({
   task,
   comments,
   events,
+  attachments,
   authorName,
   canDelete,
   showDueDate = true,
+  allowAttachmentUpload = false,
   columns,
   currentColumnId,
   onMoveToColumn,
@@ -32,13 +35,16 @@ export function KanbanTaskDetailModal({
   onCloseTask,
   onDelete,
   onComment,
+  onUploadAttachment,
 }: {
   task: KanbanTask;
   comments: KanbanBoard["comments"];
   events: KanbanTaskEvent[];
+  attachments: KanbanAttachment[];
   authorName: string;
   canDelete?: boolean;
   showDueDate?: boolean;
+  allowAttachmentUpload?: boolean;
   columns?: { id: string; title: string }[];
   currentColumnId?: string;
   onMoveToColumn?: (columnId: string) => Promise<void>;
@@ -49,6 +55,7 @@ export function KanbanTaskDetailModal({
   onCloseTask: (closed: boolean) => Promise<void>;
   onDelete?: () => Promise<void>;
   onComment: () => Promise<void>;
+  onUploadAttachment?: (file: File) => Promise<void>;
 }) {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description);
@@ -60,6 +67,8 @@ export function KanbanTaskDetailModal({
   const [isReopening, setIsReopening] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -75,6 +84,7 @@ export function KanbanTaskDetailModal({
 
   const isClosed = Boolean(task.closedAt);
   const taskEvents = getKanbanTaskEvents(events, task.id, task.createdAt);
+  const hasVideo = attachments.some((entry) => entry.mediaKind === "video");
 
   async function handleMoveStage(nextColumnId: string) {
     if (!onMoveToColumn || nextColumnId === stageId) {
@@ -244,6 +254,35 @@ export function KanbanTaskDetailModal({
               {isDeleting ? "Usuwanie…" : "Usuń"}
             </Button>
           ) : null}
+        </div>
+
+        <div className="grid gap-2 border-t border-border/60 pt-4">
+          <p className="text-sm font-medium text-foreground">Zdjęcia i film</p>
+          <KanbanAttachmentGallery
+            attachments={attachments}
+            allowUpload={allowAttachmentUpload}
+            hasVideo={hasVideo}
+            uploading={isUploadingAttachment}
+            uploadError={uploadError}
+            onUpload={
+              onUploadAttachment
+                ? async (file) => {
+                    setIsUploadingAttachment(true);
+                    setUploadError(null);
+                    try {
+                      await onUploadAttachment(file);
+                    } catch (uploadErr) {
+                      setUploadError(
+                        uploadErr instanceof Error ? uploadErr.message : "Nie udało się przesłać pliku.",
+                      );
+                      throw uploadErr;
+                    } finally {
+                      setIsUploadingAttachment(false);
+                    }
+                  }
+                : undefined
+            }
+          />
         </div>
 
         <div className="grid gap-2 border-t border-border/60 pt-4">

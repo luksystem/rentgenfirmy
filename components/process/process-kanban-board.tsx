@@ -83,6 +83,7 @@ export function ProcessKanbanBoard({
   const activeTask = board?.tasks.find((task) => task.id === activeTaskId) ?? null;
   const activeComments = board?.comments.filter((c) => c.taskId === activeTaskId) ?? [];
   const activeEvents = board?.events.filter((event) => event.taskId === activeTaskId) ?? [];
+  const activeAttachments = board?.attachments.filter((entry) => entry.taskId === activeTaskId) ?? [];
 
   async function handleAddTask(columnId: string) {
     const title = newTaskTitles[columnId]?.trim();
@@ -186,6 +187,7 @@ export function ProcessKanbanBoard({
                   <KanbanTaskCardView
                     key={task.id}
                     task={task}
+                    attachments={board.attachments.filter((entry) => entry.taskId === task.id)}
                     isNew={task.isNewForTeam && authorSide === "team"}
                     onOpen={() => setActiveTaskId(task.id)}
                     onDragStart={() => setDragTaskId(task.id)}
@@ -236,6 +238,7 @@ export function ProcessKanbanBoard({
           task={activeTask}
           comments={activeComments}
           events={activeEvents}
+          attachments={activeAttachments}
           authorName={authorName}
           canDelete={authorSide === "team"}
           commentDraft={commentDraft}

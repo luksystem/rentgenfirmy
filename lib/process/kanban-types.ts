@@ -63,6 +63,21 @@ export type KanbanTaskEvent = {
   createdAt: string;
 };
 
+export type KanbanAttachment = {
+  id: string;
+  taskId: string;
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  mediaKind: "image" | "video";
+  sizeBytes: number;
+  position: number;
+  uploadedBySide: KanbanAuthorSide;
+  uploadedByName: string;
+  createdAt: string;
+  url: string | null;
+};
+
 export type KanbanBoard = {
   id: string;
   projectProcessItemId: string;
@@ -72,6 +87,7 @@ export type KanbanBoard = {
   tasks: KanbanTask[];
   comments: KanbanComment[];
   events: KanbanTaskEvent[];
+  attachments: KanbanAttachment[];
   createdAt: string;
   updatedAt: string;
 };

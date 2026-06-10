@@ -98,6 +98,7 @@ export function PublicKanbanBoard({
   const activeTask = board.tasks.find((task) => task.id === activeTaskId) ?? null;
   const activeComments = board.comments.filter((comment) => comment.taskId === activeTaskId);
   const activeEvents = board.events.filter((event) => event.taskId === activeTaskId);
+  const activeAttachments = board.attachments.filter((entry) => entry.taskId === activeTaskId);
   const columnOptions = board.columns.map((column) => ({ id: column.id, title: column.title }));
 
   const stableRefresh = useCallback(() => onRefresh(), [onRefresh]);
@@ -154,6 +155,23 @@ export function PublicKanbanBoard({
       taskId,
       authorName,
     });
+    await onRefresh();
+  }
+
+  async function handleUploadAttachment(taskId: string, file: File) {
+    const formData = new FormData();
+    formData.append("taskId", taskId);
+    formData.append("authorName", authorName);
+    formData.append("file", file);
+
+    const response = await fetch(`/api/kanban/${encodeURIComponent(token)}/attachments`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!response.ok) {
+      const payload = (await response.json()) as { error?: string };
+      throw new Error(payload.error ?? "Nie udało się przesłać pliku.");
+    }
     await onRefresh();
   }
 
@@ -233,6 +251,7 @@ export function PublicKanbanBoard({
                     <KanbanTaskCardView
                       key={task.id}
                       task={task}
+                      attachments={board.attachments.filter((entry) => entry.taskId === task.id)}
                       draggable={!isCoarsePointer}
                       showDueDate
                       showChevron={isCoarsePointer}
@@ -282,7 +301,9 @@ export function PublicKanbanBoard({
           task={activeTask}
           comments={activeComments}
           events={activeEvents}
+          attachments={activeAttachments}
           authorName={authorName}
+          allowAttachmentUpload
           columns={columnOptions}
           currentColumnId={activeTask.columnId}
           onMoveToColumn={(columnId) => handleMoveTask(activeTask.id, columnId)}
@@ -291,6 +312,7 @@ export function PublicKanbanBoard({
           onClose={() => setActiveTaskId(null)}
           onSave={(patch) => handleSaveTask(activeTask.id, patch)}
           onCloseTask={(closed) => handleCloseTask(activeTask.id, closed)}
+          onUploadAttachment={(file) => handleUploadAttachment(activeTask.id, file)}
           onComment={async () => {
             await postKanban(token, {
               action: "addComment",

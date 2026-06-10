@@ -10,6 +10,7 @@ import type {
   KanbanTemplatePayload,
 } from "@/lib/process/kanban-types";
 import { getSupabase } from "@/lib/supabase/client";
+import { fetchAttachmentsForTaskIds } from "@/lib/supabase/kanban-attachments-repository";
 
 type BoardRow = {
   id: string;
@@ -169,7 +170,7 @@ async function fetchBoardGraph(boardRow: BoardRow): Promise<KanbanBoard> {
     throw new Error(tasksError.message);
   }
 
-  const taskIds = (tasks ?? []).map((row) => row.id);
+  const taskIds = (tasks ?? []).map((row) => row.id as string);
   const { data: comments, error: commentsError } = taskIds.length
     ? await supabase
         .from("process_kanban_comments")
@@ -194,6 +195,8 @@ async function fetchBoardGraph(boardRow: BoardRow): Promise<KanbanBoard> {
     throw new Error(eventsError.message);
   }
 
+  const attachments = taskIds.length ? await fetchAttachmentsForTaskIds(taskIds) : [];
+
   return {
     id: boardRow.id,
     projectProcessItemId: boardRow.project_process_item_id,
@@ -203,6 +206,7 @@ async function fetchBoardGraph(boardRow: BoardRow): Promise<KanbanBoard> {
     tasks: (tasks ?? []).map((row) => rowToTask(row as TaskRow)),
     comments: (comments ?? []).map((row) => rowToComment(row as CommentRow)),
     events: (events ?? []).map((row) => rowToEvent(row as EventRow)),
+    attachments,
     createdAt: boardRow.created_at,
     updatedAt: boardRow.updated_at,
   };

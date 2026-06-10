@@ -36,6 +36,13 @@ export function useKanbanRealtime(boardId: string | null, onRefresh: () => Promi
           void stableRefresh();
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "process_kanban_task_attachments" },
+        () => {
+          void stableRefresh();
+        },
+      )
       .subscribe();
 
     return () => {

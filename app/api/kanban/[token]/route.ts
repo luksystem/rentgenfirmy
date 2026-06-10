@@ -8,6 +8,7 @@ import {
   moveKanbanTask,
   updateKanbanTask,
 } from "@/lib/supabase/kanban-repository";
+import { attachSignedUrlsAdmin } from "@/lib/supabase/kanban-attachments-repository";
 
 export async function GET(
   _request: Request,
@@ -21,9 +22,10 @@ export async function GET(
       return NextResponse.json({ error: "Nie znaleziono tablicy." }, { status: 404 });
     }
 
-    const context = await fetchKanbanPublicContext(board.projectProcessItemId);
+    const publicContext = await fetchKanbanPublicContext(board.projectProcessItemId);
+    const attachments = await attachSignedUrlsAdmin(board.attachments);
 
-    return NextResponse.json({ board, context });
+    return NextResponse.json({ board: { ...board, attachments }, context: publicContext });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Błąd pobierania tablicy." },
