@@ -34,10 +34,7 @@ export async function POST(
   }
 }
 
-export async function DELETE(
-  _request: Request,
-  _context: { params: Promise<{ token: string }> },
-) {
+export async function DELETE() {
   const response = NextResponse.json({ ok: true });
   response.cookies.set(KANBAN_PUBLIC_SESSION_COOKIE, "", {
     httpOnly: true,

@@ -235,9 +235,10 @@ export async function ensureKanbanBoard(
   }
 
   if (existing) {
+    const existingRow = existing as BoardRow;
     const { applyKanbanTemplateAccess } = await import("@/lib/supabase/kanban-public-server");
-    await applyKanbanTemplateAccess(existing.id, template, { onlyIfUnset: true });
-    return fetchBoardGraph(existing as BoardRow);
+    await applyKanbanTemplateAccess(existingRow.id, template, { onlyIfUnset: true });
+    return fetchBoardGraph(existingRow);
   }
 
   const now = new Date().toISOString();

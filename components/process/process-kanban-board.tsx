@@ -96,7 +96,7 @@ export function ProcessKanbanBoard({
     }
     setAccessUsername(board.publicAccessUsername ?? "");
     setAccessAuthorName(board.publicAuthorName === "Klient" ? "" : board.publicAuthorName);
-  }, [board?.id, board?.publicAccessUsername, board?.publicAuthorName]);
+  }, [board]);
 
   async function handleSaveAccessSettings() {
     setAccessSaving(true);
