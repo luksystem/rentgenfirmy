@@ -120,10 +120,7 @@ export function PublicKanbanBoard({
   const activeEvents = board.events.filter((event) => event.taskId === activeTaskId);
   const activeAttachments = board.attachments.filter((entry) => entry.taskId === activeTaskId);
   const columnOptions = board.columns.map((column) => ({ id: column.id, title: column.title }));
-  const activityMap = useMemo(
-    () => buildKanbanTaskActivityMap(board),
-    [board.tasks, board.comments, board.events],
-  );
+  const activityMap = useMemo(() => buildKanbanTaskActivityMap(board), [board]);
   const filterAssigneeOptions = useMemo(
     () => collectKanbanAssigneeOptions(board.tasks, assigneeOptions),
     [assigneeOptions, board.tasks],

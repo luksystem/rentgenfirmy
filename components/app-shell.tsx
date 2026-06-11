@@ -12,6 +12,7 @@ import {
   FolderKanban,
   GitBranch,
   Home,
+  LayoutGrid,
   LogOut,
   Menu,
   PauseCircle,
@@ -42,6 +43,7 @@ const navGroupsBase = [
       { href: "/", label: "Start", icon: Home },
       { href: "/projekty", label: "Projekty", icon: FolderKanban },
       { href: "/procesy", label: "Procesy", icon: GitBranch },
+      { href: "/tablice-wdrozen", label: "Tablice wdrożeń", icon: LayoutGrid },
       { href: "/klienci", label: "Klienci", icon: Users },
       { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
       { href: "/zlecenia", label: "Zlecenia", icon: ClipboardList },
@@ -252,7 +254,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                           ? kanbanNewTaskCount
                           : item.href === "/projekty"
                             ? kanbanOpenTaskCount
-                            : 0
+                            : item.href === "/tablice-wdrozen"
+                              ? kanbanOpenTaskCount
+                              : 0
                       }
                     />
                   ))}

@@ -177,11 +177,11 @@ export function ProcessKanbanBoard({
   const activeAttachments = board?.attachments.filter((entry) => entry.taskId === activeTaskId) ?? [];
   const activityMap = useMemo(
     () => (board ? buildKanbanTaskActivityMap(board) : new Map()),
-    [board?.tasks, board?.comments, board?.events],
+    [board],
   );
   const assigneeOptions = useMemo(
     () => (board ? collectKanbanAssigneeOptions(board.tasks, fieldOptions.nextStepOwners) : []),
-    [board?.tasks, fieldOptions.nextStepOwners],
+    [board, fieldOptions.nextStepOwners],
   );
 
   async function handleAddTask(columnId: string) {
