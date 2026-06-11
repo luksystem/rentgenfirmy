@@ -1,3 +1,4 @@
+import { DEFAULT_FIELD_OPTIONS, normalizeFieldOptions } from "@/lib/field-options";
 import { hashKanbanPassword, normalizeKanbanLogin, verifyKanbanPassword } from "@/lib/process/kanban-auth";
 import type { KanbanBoard, KanbanPublicAccessInfo, KanbanTemplatePayload } from "@/lib/process/kanban-types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -205,6 +206,22 @@ export async function updateKanbanPublicAccessSettings(input: {
   return data as BoardAccessRow;
 }
 
+export async function fetchPublicKanbanAssigneeOptions() {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("data")
+    .eq("id", "field_options")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const options = normalizeFieldOptions((data?.data as Partial<typeof DEFAULT_FIELD_OPTIONS>) ?? {});
+  return options.nextStepOwners;
+}
+
 export async function fetchKanbanPublicMeta(token: string) {
   const access = await fetchKanbanBoardAccessByToken(token);
   if (!access) {
@@ -212,8 +229,9 @@ export async function fetchKanbanPublicMeta(token: string) {
   }
 
   const context = await fetchKanbanPublicContext(access.projectProcessItemId);
+  const assigneeOptions = await fetchPublicKanbanAssigneeOptions();
   return {
     access: getKanbanPublicAccessInfo(access),
-    context,
+    context: { ...context, assigneeOptions },
   };
 }

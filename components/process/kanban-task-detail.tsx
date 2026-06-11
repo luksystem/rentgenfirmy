@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { History, X } from "lucide-react";
 import { KanbanPriorityPicker } from "@/components/process/kanban-task-card";
+import { KanbanAssigneePicker } from "@/components/process/kanban-board-controls";
 import { KanbanAttachmentGallery, type KanbanAttachmentUploadOptions } from "@/components/process/kanban-attachment-gallery";
 import { Button } from "@/components/ui/button";
 import { Dialog, StackedDialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -28,6 +29,7 @@ export function KanbanTaskDetailModal({
   columns,
   currentColumnId,
   onMoveToColumn,
+  assigneeOptions = [],
   commentDraft,
   onCommentDraftChange,
   onClose,
@@ -49,10 +51,13 @@ export function KanbanTaskDetailModal({
   columns?: { id: string; title: string }[];
   currentColumnId?: string;
   onMoveToColumn?: (columnId: string) => Promise<void>;
+  assigneeOptions?: string[];
   commentDraft: string;
   onCommentDraftChange: (value: string) => void;
   onClose: () => void;
-  onSave: (patch: Partial<Pick<KanbanTask, "title" | "description" | "priority" | "dueDate">>) => Promise<void>;
+  onSave: (
+    patch: Partial<Pick<KanbanTask, "title" | "description" | "priority" | "dueDate" | "assigneeName">>,
+  ) => Promise<void>;
   onCloseTask: (closed: boolean) => Promise<void>;
   onDelete?: () => Promise<void>;
   onComment: () => Promise<void>;
@@ -63,6 +68,7 @@ export function KanbanTaskDetailModal({
   const [description, setDescription] = useState(task.description);
   const [priority, setPriority] = useState(task.priority);
   const [dueDate, setDueDate] = useState(milestoneDateToInput(task.dueDate));
+  const [assigneeName, setAssigneeName] = useState(task.assigneeName ?? "");
   const [stageId, setStageId] = useState(currentColumnId ?? task.columnId);
   const [isSaving, setIsSaving] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -79,6 +85,7 @@ export function KanbanTaskDetailModal({
     setDescription(task.description);
     setPriority(task.priority);
     setDueDate(milestoneDateToInput(task.dueDate));
+    setAssigneeName(task.assigneeName ?? "");
     setStageId(currentColumnId ?? task.columnId);
     setError(null);
     setIsClosing(false);
@@ -113,6 +120,7 @@ export function KanbanTaskDetailModal({
         title: title.trim(),
         description,
         priority,
+        assigneeName: assigneeName.trim() || null,
         ...(showDueDate ? { dueDate: dueDate.trim() || null } : {}),
       });
     } catch (saveError) {
@@ -186,7 +194,18 @@ export function KanbanTaskDetailModal({
           />
         </Field>
 
-        {columns && columns.length > 0 && onMoveToColumn && !isClosed ? (
+        {assigneeOptions.length > 0 ? (
+          <Field label="Odpowiedzialny">
+            <KanbanAssigneePicker
+              value={assigneeName || null}
+              options={assigneeOptions}
+              disabled={isSaving || isMoving}
+              onChange={(value) => setAssigneeName(value ?? "")}
+            />
+          </Field>
+        ) : null}
+
+        {columns && columns.length > 0 && onMoveToColumn ? (
           <Field label="Etap">
             <Select
               value={stageId}

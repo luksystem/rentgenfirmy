@@ -42,6 +42,7 @@ export type KanbanTask = {
   dueDate: string | null;
   position: number;
   closedAt: string | null;
+  assigneeName: string | null;
   createdBySide: KanbanAuthorSide;
   isNewForTeam: boolean;
   createdAt: string;
@@ -88,6 +89,9 @@ export type KanbanAttachment = {
 export type KanbanBoard = {
   id: string;
   projectProcessItemId: string;
+  projectId: string | null;
+  projectName: string;
+  projectType: string | null;
   publicToken: string;
   publicEnabled: boolean;
   /** Czy tablica wymaga hasła na publicznym linku (hash nigdy nie trafia do klienta). */
@@ -113,8 +117,11 @@ export type KanbanPublicAccessInfo = {
 };
 
 export type KanbanPublicContext = {
+  projectId: string | null;
   projectName: string;
+  projectType: string | null;
   clientName: string | null;
+  assigneeOptions: string[];
 };
 
 export function defaultKanbanTemplatePayload(): KanbanTemplatePayload {

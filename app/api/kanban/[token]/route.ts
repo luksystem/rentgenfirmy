@@ -153,6 +153,12 @@ export async function POST(
             ? data.priority
             : undefined,
         dueDate: typeof data.dueDate === "string" ? data.dueDate : data.dueDate === null ? null : undefined,
+        assigneeName:
+          typeof data.assigneeName === "string"
+            ? data.assigneeName
+            : data.assigneeName === null
+              ? null
+              : undefined,
       });
       return NextResponse.json({ task });
     }

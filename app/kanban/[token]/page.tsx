@@ -15,8 +15,11 @@ import type {
 } from "@/lib/process/kanban-types";
 
 const DEFAULT_CONTEXT: KanbanPublicContext = {
+  projectId: null,
   projectName: "Projekt",
+  projectType: null,
   clientName: null,
+  assigneeOptions: [],
 };
 
 const DEFAULT_ACCESS: KanbanPublicAccessInfo = {
@@ -253,7 +256,13 @@ export default function PublicKanbanPage() {
     <div className="flex min-h-dvh flex-col bg-gradient-to-b from-background via-background to-accent/5">
       <div className="flex min-h-0 flex-1 flex-col gap-3 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] sm:gap-4 sm:px-6 sm:py-6">
         <PublicKanbanHeader context={context} compact />
-        <PublicKanbanBoard token={token} board={board} authorName={authorName} onRefresh={refresh} />
+        <PublicKanbanBoard
+          token={token}
+          board={board}
+          authorName={authorName}
+          assigneeOptions={context.assigneeOptions}
+          onRefresh={refresh}
+        />
       </div>
     </div>
   );

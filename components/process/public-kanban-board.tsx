@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRightLeft, Plus, Sparkles } from "lucide-react";
+import { KanbanBoardControls } from "@/components/process/kanban-board-controls";
 import { KanbanTaskCardView } from "@/components/process/kanban-task-card";
 import type { KanbanAttachmentUploadOptions } from "@/components/process/kanban-attachment-gallery";
 import { KanbanDropPlaceholder, getKanbanColumnDropTargetClasses } from "@/components/process/kanban-drop-placeholder";
@@ -10,6 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useKanbanRealtime } from "@/hooks/use-kanban-realtime";
 import { KANBAN_DRAG_HINT, KANBAN_MOBILE_MOVE_HINT, countOpenKanbanTasks, sortKanbanColumnTasks } from "@/lib/process/kanban-ui";
+import {
+  buildKanbanTaskActivityMap,
+  collectKanbanAssigneeOptions,
+  matchesKanbanBoardFilters,
+  type KanbanBoardFilters,
+  type KanbanColumnSortMode,
+} from "@/lib/process/kanban-task-meta";
 import type { KanbanBoard, KanbanTask } from "@/lib/process/kanban-types";
 import { cn } from "@/lib/utils";
 
@@ -30,11 +38,15 @@ export function PublicKanbanBoard({
   token,
   board,
   authorName,
+  assigneeOptions = [],
+  showProjectLabel = false,
   onRefresh,
 }: {
   token: string;
   board: KanbanBoard;
   authorName: string;
+  assigneeOptions?: string[];
+  showProjectLabel?: boolean;
   onRefresh: () => Promise<void>;
 }) {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
@@ -45,6 +57,8 @@ export function PublicKanbanBoard({
   const [commentDraft, setCommentDraft] = useState("");
   const [isCoarsePointer, setIsCoarsePointer] = useState(true);
   const [activeColumnId, setActiveColumnId] = useState(board.columns[0]?.id ?? "");
+  const [filters, setFilters] = useState<KanbanBoardFilters>({ priority: "all", assignee: "all" });
+  const [sortMode, setSortMode] = useState<KanbanColumnSortMode>("position");
   const scrollerRef = useRef<HTMLDivElement>(null);
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -106,6 +120,14 @@ export function PublicKanbanBoard({
   const activeEvents = board.events.filter((event) => event.taskId === activeTaskId);
   const activeAttachments = board.attachments.filter((entry) => entry.taskId === activeTaskId);
   const columnOptions = board.columns.map((column) => ({ id: column.id, title: column.title }));
+  const activityMap = useMemo(
+    () => buildKanbanTaskActivityMap(board),
+    [board.tasks, board.comments, board.events],
+  );
+  const filterAssigneeOptions = useMemo(
+    () => collectKanbanAssigneeOptions(board.tasks, assigneeOptions),
+    [assigneeOptions, board.tasks],
+  );
 
   const stableRefresh = useCallback(() => onRefresh(), [onRefresh]);
   useKanbanRealtime(board.id, stableRefresh);
@@ -137,7 +159,7 @@ export function PublicKanbanBoard({
     setPendingMove({ taskId, columnId });
     try {
       const columnTasks = board.tasks.filter(
-        (task) => task.columnId === columnId && !task.closedAt && task.id !== taskId,
+        (task) => task.columnId === columnId && task.id !== taskId,
       );
       await postKanban(token, {
         action: "moveTask",
@@ -153,17 +175,18 @@ export function PublicKanbanBoard({
   }
 
   function getColumnTasks(columnId: string) {
-    return board.tasks.filter((task) => {
+    const tasks = board.tasks.filter((task) => {
       if (pendingMove?.taskId === task.id) {
         return pendingMove.columnId === columnId;
       }
       return task.columnId === columnId;
     });
+    return tasks.filter((task) => matchesKanbanBoardFilters(task, filters));
   }
 
   async function handleSaveTask(
     taskId: string,
-    patch: Partial<Pick<KanbanTask, "title" | "description" | "priority" | "dueDate">>,
+    patch: Partial<Pick<KanbanTask, "title" | "description" | "priority" | "dueDate" | "assigneeName">>,
   ) {
     await postKanban(token, {
       action: "updateTask",
@@ -239,6 +262,14 @@ export function PublicKanbanBoard({
         {KANBAN_DRAG_HINT} Możesz też otworzyć zgłoszenie i zmienić etap z listy.
       </p>
 
+      <KanbanBoardControls
+        filters={filters}
+        sortMode={sortMode}
+        assigneeOptions={filterAssigneeOptions}
+        onFiltersChange={setFilters}
+        onSortModeChange={setSortMode}
+      />
+
       <div className="flex shrink-0 gap-2 overflow-x-auto pb-1 md:hidden">
         {board.columns.map((column) => {
           const count = countOpenKanbanTasks(
@@ -271,7 +302,7 @@ export function PublicKanbanBoard({
       >
         {board.columns.map((column, index) => {
           const columnTasks = getColumnTasks(column.id);
-          const tasks = sortKanbanColumnTasks(columnTasks);
+          const tasks = sortKanbanColumnTasks(columnTasks, sortMode);
           const openCount = countOpenKanbanTasks(columnTasks);
           const isDropTarget = Boolean(dragTaskId && dragOverColumnId === column.id);
 
@@ -336,8 +367,12 @@ export function PublicKanbanBoard({
                       key={task.id}
                       task={task}
                       attachments={board.attachments.filter((entry) => entry.taskId === task.id)}
+                      activity={activityMap.get(task.id)}
                       draggable={!isCoarsePointer}
                       showDueDate
+                      showAssignee
+                      showProjectLabel={showProjectLabel}
+                      projectName={board.projectName}
                       showChevron={isCoarsePointer}
                       isDragging={dragTaskId === task.id}
                       onOpen={() => setActiveTaskId(task.id)}
@@ -409,6 +444,7 @@ export function PublicKanbanBoard({
           allowAttachmentUpload
           columns={columnOptions}
           currentColumnId={activeTask.columnId}
+          assigneeOptions={filterAssigneeOptions}
           onMoveToColumn={(columnId) => handleMoveTask(activeTask.id, columnId)}
           commentDraft={commentDraft}
           onCommentDraftChange={setCommentDraft}

@@ -41,6 +41,7 @@ type TaskRow = {
   due_date: string | null;
   position: number;
   closed_at: string | null;
+  assignee_name: string | null;
   created_by_side: string;
   is_new_for_team: boolean;
   created_at: string;
@@ -96,6 +97,7 @@ function rowToTask(row: TaskRow): KanbanTask {
     dueDate: row.due_date,
     position: row.position,
     closedAt: row.closed_at,
+    assigneeName: row.assignee_name?.trim() || null,
     createdBySide: isAuthorSide(row.created_by_side) ? row.created_by_side : "team",
     isNewForTeam: row.is_new_for_team,
     createdAt: row.created_at,
@@ -199,10 +201,14 @@ async function fetchBoardGraph(boardRow: BoardRow): Promise<KanbanBoard> {
   }
 
   const attachments = taskIds.length ? await fetchAttachmentsForTaskIds(taskIds) : [];
+  const projectInfo = await fetchBoardProjectInfo(boardRow.project_process_item_id);
 
   return {
     id: boardRow.id,
     projectProcessItemId: boardRow.project_process_item_id,
+    projectId: projectInfo.projectId,
+    projectName: projectInfo.projectName,
+    projectType: projectInfo.projectType,
     publicToken: boardRow.public_token,
     publicEnabled: boardRow.public_enabled,
     publicAccessConfigured: Boolean(boardRow.public_access_password_hash),
@@ -311,6 +317,34 @@ export async function fetchKanbanBoardByToken(token: string) {
 
 export async function fetchKanbanPublicContext(projectProcessItemId: string) {
   const supabase = getSupabase();
+  const projectInfo = await fetchBoardProjectInfo(projectProcessItemId);
+
+  let clientName: string | null = null;
+  if (projectInfo.clientId) {
+    const { data: client, error: clientError } = await supabase
+      .from("clients")
+      .select("full_name")
+      .eq("id", projectInfo.clientId)
+      .maybeSingle();
+
+    if (clientError) {
+      throw new Error(clientError.message);
+    }
+
+    clientName = client?.full_name?.trim() || null;
+  }
+
+  return {
+    projectId: projectInfo.projectId,
+    projectName: projectInfo.projectName,
+    projectType: projectInfo.projectType,
+    clientName,
+    assigneeOptions: [] as string[],
+  };
+}
+
+async function fetchBoardProjectInfo(projectProcessItemId: string) {
+  const supabase = getSupabase();
 
   const { data: item, error: itemError } = await supabase
     .from("project_process_items")
@@ -323,12 +357,17 @@ export async function fetchKanbanPublicContext(projectProcessItemId: string) {
   }
 
   if (!item?.project_id) {
-    return { projectName: "Projekt", clientName: null };
+    return {
+      projectId: null,
+      projectName: "Projekt",
+      projectType: null,
+      clientId: null as string | null,
+    };
   }
 
   const { data: project, error: projectError } = await supabase
     .from("projects")
-    .select("name, client_id")
+    .select("name, type, client_id")
     .eq("id", item.project_id)
     .maybeSingle();
 
@@ -336,24 +375,11 @@ export async function fetchKanbanPublicContext(projectProcessItemId: string) {
     throw new Error(projectError.message);
   }
 
-  let clientName: string | null = null;
-  if (project?.client_id) {
-    const { data: client, error: clientError } = await supabase
-      .from("clients")
-      .select("full_name")
-      .eq("id", project.client_id)
-      .maybeSingle();
-
-    if (clientError) {
-      throw new Error(clientError.message);
-    }
-
-    clientName = client?.full_name?.trim() || null;
-  }
-
   return {
+    projectId: item.project_id,
     projectName: project?.name?.trim() || "Projekt",
-    clientName,
+    projectType: project?.type?.trim() || null,
+    clientId: project?.client_id ?? null,
   };
 }
 
@@ -508,7 +534,7 @@ export async function moveKanbanTask(taskId: string, columnId: string, position:
 
 export async function updateKanbanTask(
   taskId: string,
-  patch: Partial<Pick<KanbanTask, "title" | "description" | "priority" | "dueDate">>,
+  patch: Partial<Pick<KanbanTask, "title" | "description" | "priority" | "dueDate" | "assigneeName">>,
 ) {
   const supabase = getSupabase();
   const payload: Record<string, unknown> = {
@@ -526,6 +552,9 @@ export async function updateKanbanTask(
   }
   if (patch.dueDate !== undefined) {
     payload.due_date = patch.dueDate;
+  }
+  if (patch.assigneeName !== undefined) {
+    payload.assignee_name = patch.assigneeName?.trim() || null;
   }
 
   const { data, error } = await supabase

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Copy, ExternalLink, Plus } from "lucide-react";
+import { KanbanBoardControls } from "@/components/process/kanban-board-controls";
 import { KanbanTaskCardView } from "@/components/process/kanban-task-card";
 import { KanbanDropPlaceholder, getKanbanColumnDropTargetClasses } from "@/components/process/kanban-drop-placeholder";
 import { KanbanTaskDetailModal } from "@/components/process/kanban-task-detail";
@@ -10,6 +11,13 @@ import { Field, Input } from "@/components/ui/input";
 import { useKanbanRealtime } from "@/hooks/use-kanban-realtime";
 import { KANBAN_DRAG_HINT, countOpenKanbanTasks, sortKanbanColumnTasks } from "@/lib/process/kanban-ui";
 import {
+  buildKanbanTaskActivityMap,
+  collectKanbanAssigneeOptions,
+  matchesKanbanBoardFilters,
+  type KanbanBoardFilters,
+  type KanbanColumnSortMode,
+} from "@/lib/process/kanban-task-meta";
+import {
   getKanbanPublicUrl,
   type KanbanAuthorSide,
   type KanbanBoard,
@@ -17,6 +25,7 @@ import {
 } from "@/lib/process/kanban-types";
 import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
 import { cn } from "@/lib/utils";
+import { useAppStore } from "@/store/app-store";
 import {
   addKanbanComment,
   closeKanbanTask,
@@ -60,6 +69,9 @@ export function ProcessKanbanBoard({
   const [accessSaving, setAccessSaving] = useState(false);
   const [accessMessage, setAccessMessage] = useState<string | null>(null);
   const [accessError, setAccessError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<KanbanBoardFilters>({ priority: "all", assignee: "all" });
+  const [sortMode, setSortMode] = useState<KanbanColumnSortMode>("position");
+  const fieldOptions = useAppStore((state) => state.fieldOptions);
 
   const refresh = useCallback(async () => {
     const template = isKanbanTemplatePayload(templatePayload)
@@ -163,6 +175,14 @@ export function ProcessKanbanBoard({
   const activeComments = board?.comments.filter((c) => c.taskId === activeTaskId) ?? [];
   const activeEvents = board?.events.filter((event) => event.taskId === activeTaskId) ?? [];
   const activeAttachments = board?.attachments.filter((entry) => entry.taskId === activeTaskId) ?? [];
+  const activityMap = useMemo(
+    () => (board ? buildKanbanTaskActivityMap(board) : new Map()),
+    [board?.tasks, board?.comments, board?.events],
+  );
+  const assigneeOptions = useMemo(
+    () => (board ? collectKanbanAssigneeOptions(board.tasks, fieldOptions.nextStepOwners) : []),
+    [board?.tasks, fieldOptions.nextStepOwners],
+  );
 
   async function handleAddTask(columnId: string) {
     const title = newTaskTitles[columnId]?.trim();
@@ -185,7 +205,7 @@ export function ProcessKanbanBoard({
     clearDragState();
     try {
       const columnTasks = board.tasks.filter(
-        (task) => task.columnId === columnId && !task.closedAt && task.id !== taskId,
+        (task) => task.columnId === columnId && task.id !== taskId,
       );
       await moveKanbanTask(taskId, columnId, columnTasks.length);
       await refresh();
@@ -207,7 +227,10 @@ export function ProcessKanbanBoard({
       if (pendingMove?.taskId === task.id) {
         return pendingMove.columnId === columnId;
       }
-      return task.columnId === columnId;
+      if (task.columnId !== columnId) {
+        return false;
+      }
+      return matchesKanbanBoardFilters(task, filters);
     });
   }
 
@@ -325,10 +348,18 @@ export function ProcessKanbanBoard({
 
       <p className="shrink-0 text-sm text-muted">{KANBAN_DRAG_HINT}</p>
 
+      <KanbanBoardControls
+        filters={filters}
+        sortMode={sortMode}
+        assigneeOptions={assigneeOptions}
+        onFiltersChange={setFilters}
+        onSortModeChange={setSortMode}
+      />
+
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 md:flex-row md:overflow-hidden">
         {board.columns.map((column) => {
           const columnTasks = getColumnTasks(column.id);
-          const tasks = sortKanbanColumnTasks(columnTasks);
+          const tasks = sortKanbanColumnTasks(columnTasks, sortMode);
           const openCount = countOpenKanbanTasks(columnTasks);
           const isDropTarget = Boolean(dragTaskId && dragOverColumnId === column.id);
 
@@ -381,7 +412,9 @@ export function ProcessKanbanBoard({
                     key={task.id}
                     task={task}
                     attachments={board.attachments.filter((entry) => entry.taskId === task.id)}
+                    activity={activityMap.get(task.id)}
                     isNew={task.isNewForTeam && authorSide === "team"}
+                    showAssignee
                     isDragging={dragTaskId === task.id}
                     onOpen={() => setActiveTaskId(task.id)}
                     onDragStart={() => setDragTaskId(task.id)}
@@ -437,6 +470,7 @@ export function ProcessKanbanBoard({
           events={activeEvents}
           attachments={activeAttachments}
           authorName={authorName}
+          assigneeOptions={assigneeOptions}
           canDelete={authorSide === "team"}
           commentDraft={commentDraft}
           onCommentDraftChange={setCommentDraft}
