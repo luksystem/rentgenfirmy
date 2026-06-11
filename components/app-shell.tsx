@@ -80,7 +80,8 @@ const mobileMainNav = navGroupsBase[0].items.filter(
   (item) =>
     item.href !== "/zlecenia" &&
     item.href !== "/klienci" &&
-    item.href !== "/procesy",
+    item.href !== "/procesy" &&
+    item.href !== "/tablice-wdrozen",
 );
 const mobileNavLeft = mobileMainNav.slice(0, 2);
 const mobileNavRight = mobileMainNav.slice(2);

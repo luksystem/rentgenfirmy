@@ -76,6 +76,7 @@ export function KanbanTaskDetailModal({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
   const [coverUpdatingId, setCoverUpdatingId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -363,10 +364,29 @@ export function KanbanTaskDetailModal({
           <Textarea
             value={commentDraft}
             placeholder={`Komentarz (${authorName})…`}
+            disabled={isCommentSubmitting}
             onChange={(event) => onCommentDraftChange(event.target.value)}
           />
-          <Button type="button" size="sm" variant="secondary" onClick={() => void onComment()}>
-            Dodaj komentarz
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={isCommentSubmitting || !commentDraft.trim()}
+            onClick={() => {
+              if (isCommentSubmitting || !commentDraft.trim()) {
+                return;
+              }
+              void (async () => {
+                setIsCommentSubmitting(true);
+                try {
+                  await onComment();
+                } finally {
+                  setIsCommentSubmitting(false);
+                }
+              })();
+            }}
+          >
+            {isCommentSubmitting ? "Dodawanie…" : "Dodaj komentarz"}
           </Button>
         </div>
       </StackedDialogContent>

@@ -17,6 +17,8 @@ import {
   type ServiceRecord,
 } from "@/lib/service/types";
 
+let servicesRefreshGeneration = 0;
+
 type ServiceStore = {
   services: ServiceRecord[];
   settings: ServiceGlobalSettings;
@@ -85,8 +87,18 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
   },
 
   refresh: async () => {
+    if (get().isSaving) {
+      return;
+    }
+
+    const generation = ++servicesRefreshGeneration;
+
     try {
       const { services, settings } = await bootstrapServiceModule();
+      if (generation !== servicesRefreshGeneration) {
+        return;
+      }
+
       set({
         services,
         settings,
@@ -94,6 +106,10 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
         error: null,
       });
     } catch (error) {
+      if (generation !== servicesRefreshGeneration) {
+        return;
+      }
+
       set({
         error: error instanceof Error ? error.message : "Nie udało się odświeżyć ofert",
       });
@@ -113,6 +129,7 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
           : [saved, ...services];
 
       set({ services: next, isSaving: false });
+      servicesRefreshGeneration += 1;
       return saved;
     } catch (error) {
       set({
@@ -128,6 +145,7 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
 
     try {
       await deleteServiceRecord(id);
+      servicesRefreshGeneration += 1;
       set({
         services: get().services.filter((item) => item.id !== id),
         isSaving: false,

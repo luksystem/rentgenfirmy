@@ -128,6 +128,65 @@ export function sortKanbanColumnTasksWithMode(
   });
 }
 
+export type KanbanBoardStats = {
+  openIdle: number;
+  inProgress: number;
+  closed: number;
+  total: number;
+};
+
+function hasKanbanTaskActivity(
+  task: KanbanTask,
+  comments: KanbanComment[],
+  events: KanbanTaskEvent[],
+) {
+  if (comments.some((comment) => comment.taskId === task.id)) {
+    return true;
+  }
+
+  if (events.some((event) => event.taskId === task.id && event.eventType !== "created")) {
+    return true;
+  }
+
+  if (parseTimestamp(task.updatedAt) > parseTimestamp(task.createdAt) + 60_000) {
+    return true;
+  }
+
+  if (task.assigneeName?.trim() || task.dueDate) {
+    return true;
+  }
+
+  return false;
+}
+
+export function computeKanbanBoardStats(
+  board: Pick<KanbanBoard, "tasks" | "comments" | "events">,
+): KanbanBoardStats {
+  let openIdle = 0;
+  let inProgress = 0;
+  let closed = 0;
+
+  for (const task of board.tasks) {
+    if (task.closedAt) {
+      closed += 1;
+      continue;
+    }
+
+    if (hasKanbanTaskActivity(task, board.comments, board.events)) {
+      inProgress += 1;
+    } else {
+      openIdle += 1;
+    }
+  }
+
+  return {
+    openIdle,
+    inProgress,
+    closed,
+    total: board.tasks.length,
+  };
+}
+
 export function collectKanbanAssigneeOptions(tasks: KanbanTask[], configuredOptions: string[]) {
   const values = new Set<string>();
   for (const option of configuredOptions) {

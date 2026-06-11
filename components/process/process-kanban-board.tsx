@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Copy, ExternalLink, Plus } from "lucide-react";
 import { KanbanBoardControls } from "@/components/process/kanban-board-controls";
+import { KanbanBoardStatsBar } from "@/components/process/kanban-board-stats-bar";
 import { KanbanTaskCardView } from "@/components/process/kanban-task-card";
 import { KanbanDropPlaceholder, getKanbanColumnDropTargetClasses } from "@/components/process/kanban-drop-placeholder";
 import { KanbanTaskDetailModal } from "@/components/process/kanban-task-detail";
@@ -13,6 +14,7 @@ import { KANBAN_DRAG_HINT, countOpenKanbanTasks, sortKanbanColumnTasks } from "@
 import {
   buildKanbanTaskActivityMap,
   collectKanbanAssigneeOptions,
+  computeKanbanBoardStats,
   matchesKanbanBoardFilters,
   type KanbanBoardFilters,
   type KanbanColumnSortMode,
@@ -183,6 +185,10 @@ export function ProcessKanbanBoard({
     () => (board ? collectKanbanAssigneeOptions(board.tasks, fieldOptions.nextStepOwners) : []),
     [board, fieldOptions.nextStepOwners],
   );
+  const boardStats = useMemo(
+    () => (board ? computeKanbanBoardStats(board) : null),
+    [board],
+  );
 
   async function handleAddTask(columnId: string) {
     const title = newTaskTitles[columnId]?.trim();
@@ -345,6 +351,8 @@ export function ProcessKanbanBoard({
           </div>
         </div>
       ) : null}
+
+      {boardStats ? <KanbanBoardStatsBar stats={boardStats} /> : null}
 
       <p className="shrink-0 text-sm text-muted">{KANBAN_DRAG_HINT}</p>
 

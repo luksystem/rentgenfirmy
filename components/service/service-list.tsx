@@ -33,7 +33,7 @@ export function ServiceList() {
     await refresh();
   }, [refresh]);
 
-  useListAutoRefresh(refreshList);
+  useListAutoRefresh(refreshList, 30_000, !isSaving);
 
   const projectNames = useMemo(
     () => new Map(projects.map((project) => [project.id, project.name])),

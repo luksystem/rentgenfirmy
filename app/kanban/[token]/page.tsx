@@ -1,13 +1,14 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { LockKeyhole } from "lucide-react";
 import { PublicKanbanHeader } from "@/components/process/public-kanban-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PublicKanbanBoard } from "@/components/process/public-kanban-board";
+import { computeKanbanBoardStats } from "@/lib/process/kanban-task-meta";
 import type {
   KanbanBoard,
   KanbanPublicAccessInfo,
@@ -89,6 +90,11 @@ export default function PublicKanbanPage() {
     const payload = (await response.json()) as KanbanLoadPayload;
     applyPayload(payload);
   }, [applyPayload, token]);
+
+  const boardStats = useMemo(
+    () => (board ? computeKanbanBoardStats(board) : null),
+    [board],
+  );
 
   useEffect(() => {
     void (async () => {
@@ -255,7 +261,7 @@ export default function PublicKanbanPage() {
   return (
     <div className="flex min-h-dvh flex-col bg-gradient-to-b from-background via-background to-accent/5">
       <div className="flex min-h-0 flex-1 flex-col gap-3 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] sm:gap-4 sm:px-6 sm:py-6">
-        <PublicKanbanHeader context={context} compact />
+        <PublicKanbanHeader context={context} stats={boardStats} compact />
         <PublicKanbanBoard
           token={token}
           board={board}
