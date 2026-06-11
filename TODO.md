@@ -32,7 +32,7 @@ Widok skrócony do tablic Kanban — bez przechodzenia przez listę projektów.
 
 - [x] Trasa `/tablice-wdrozen` — kafelki klientów z liczbą otwartych zgłoszeń
 - [x] Trasa `/tablice-wdrozen/[clientId]` — tablice wdrożeń danego klienta (per projekt)
-- [x] Trasa `/tablice-wdrozen/[clientId]/[itemId]` — pełna tablica Kanban
+- [x] Trasa `/tablice-wdrozen/zbiorcza` — jedna tablica ze wszystkich projektów (kolumny łączone po nazwie, etykieta projektu na karcie)
 - [x] Pozycja w menu (np. „Tablice wdrożeń”)
 - [x] Zapytanie agregujące: `clients` → `projects` → `project_process_items` (kind=kanban) → `process_kanban_boards`
 - [x] Reużycie `ProcessKanbanBoard` po wejściu w wybraną tablicę

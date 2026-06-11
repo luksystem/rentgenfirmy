@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isPublicAppRoute } from "@/lib/auth/routes";
-import { useKanbanNewTasksRealtime, useKanbanOpenTasksRealtime } from "@/hooks/use-kanban-realtime";
+import { useKanbanOpenTasksRealtime } from "@/hooks/use-kanban-realtime";
 import { COMMERCIAL_MODULE_LIST } from "@/lib/modules/commercial-modules";
 import { useAuthStore } from "@/store/auth-store";
 import { useProcessStore } from "@/store/process-store";
@@ -157,17 +157,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isAdministrator = useAuthStore((state) => state.isAdministrator);
   const displayName = useAuthStore((state) => state.displayName);
   const signOut = useAuthStore((state) => state.signOut);
-  const kanbanNewTaskCount = useProcessStore((state) => state.kanbanNewTaskCount);
   const kanbanOpenTaskCount = useProcessStore((state) => state.kanbanOpenTaskCount);
-  const refreshKanbanNewTaskCount = useProcessStore((state) => state.refreshKanbanNewTaskCount);
   const refreshKanbanOpenTaskCount = useProcessStore((state) => state.refreshKanbanOpenTaskCount);
-
-  const handleKanbanNewCountChange = useCallback(
-    (count: number) => {
-      useProcessStore.setState({ kanbanNewTaskCount: count });
-    },
-    [],
-  );
 
   const handleKanbanOpenCountChange = useCallback(
     (count: number) => {
@@ -177,11 +168,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    void refreshKanbanNewTaskCount();
     void refreshKanbanOpenTaskCount();
-  }, [refreshKanbanNewTaskCount, refreshKanbanOpenTaskCount]);
+  }, [refreshKanbanOpenTaskCount]);
 
-  useKanbanNewTasksRealtime(handleKanbanNewCountChange);
   useKanbanOpenTasksRealtime(handleKanbanOpenCountChange);
 
   const navGroups = useMemo(() => {
@@ -249,15 +238,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       key={item.href}
                       {...item}
                       active={isActive(pathname, item.href)}
-                      badgeCount={
-                        item.href === "/procesy"
-                          ? kanbanNewTaskCount
-                          : item.href === "/projekty"
-                            ? kanbanOpenTaskCount
-                            : item.href === "/tablice-wdrozen"
-                              ? kanbanOpenTaskCount
-                              : 0
-                      }
+                      badgeCount={item.href === "/tablice-wdrozen" ? kanbanOpenTaskCount : 0}
                     />
                   ))}
                 </div>
@@ -308,7 +289,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {mobileNavLeft.map((item) => {
               const Icon = item.icon;
               const active = isActive(pathname, item.href);
-              const badgeCount = item.href === "/projekty" ? kanbanOpenTaskCount : 0;
+              const badgeCount = 0;
 
               return (
                 <Link

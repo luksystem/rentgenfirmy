@@ -3,7 +3,9 @@ import {
   type KanbanHubBoardEntry,
   type KanbanHubClientTile,
 } from "@/lib/process/kanban-hub-types";
+import type { KanbanBoard } from "@/lib/process/kanban-types";
 import { getSupabase } from "@/lib/supabase/client";
+import { fetchKanbanBoardByItemId } from "@/lib/supabase/kanban-repository";
 
 type BoardRow = { id: string; project_process_item_id: string };
 type ItemRow = { id: string; project_id: string; template_item_id: string };
@@ -247,4 +249,13 @@ export async function fetchKanbanHubBoardEntry(
 ): Promise<KanbanHubBoardEntry | null> {
   const graph = await loadKanbanHubGraph();
   return buildBoardEntries(graph).find((entry) => entry.projectProcessItemId === projectProcessItemId) ?? null;
+}
+
+export async function fetchAllKanbanBoardGraphs(): Promise<KanbanBoard[]> {
+  const graph = await loadKanbanHubGraph();
+  const entries = buildBoardEntries(graph);
+  const boards = await Promise.all(
+    entries.map((entry) => fetchKanbanBoardByItemId(entry.projectProcessItemId)),
+  );
+  return boards.filter((board): board is KanbanBoard => board !== null);
 }

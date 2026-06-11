@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, Rows3 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchKanbanHubClients } from "@/lib/supabase/kanban-hub-repository";
 import type { KanbanHubClientTile } from "@/lib/process/kanban-hub-types";
@@ -27,12 +28,23 @@ export default function KanbanHubPage() {
     })();
   }, []);
 
+  const totalOpen = clients.reduce((sum, client) => sum + client.openTaskCount, 0);
+
   return (
     <>
       <PageHeader
         eyebrow="Kanban"
         title="Tablice wdrożeń"
-        description="Skrót do tablic optymalizacji Smart Home — per klient, bez przechodzenia przez listę projektów."
+        description="Wszystkie elementy typu Kanban z procesów projektów. Wejdź per klient albo otwórz jedną tablicę zbiorczą ze wszystkich projektów."
+        action={
+          <Button asChild>
+            <Link href="/tablice-wdrozen/zbiorcza">
+              <Rows3 className="mr-2 h-4 w-4" />
+              Tablica zbiorcza
+              {totalOpen > 0 ? ` (${totalOpen})` : ""}
+            </Link>
+          </Button>
+        }
       />
 
       {loading ? (
