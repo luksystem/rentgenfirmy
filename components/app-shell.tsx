@@ -74,6 +74,7 @@ const navGroupsBase = [
 const ofertyNav = commercialNavItems.find((item) => item.href === "/oferty");
 const kalkulacjeNav = commercialNavItems.find((item) => item.href === "/kalkulacje");
 const procesyNav = navGroupsBase[0].items.find((item) => item.href === "/procesy");
+const tabliceWdrozenNav = navGroupsBase[0].items.find((item) => item.href === "/tablice-wdrozen");
 const zleceniaNav = navGroupsBase[0].items.find((item) => item.href === "/zlecenia");
 const klienciNav = navGroupsBase[0].items.find((item) => item.href === "/klienci");
 const mobileMainNav = navGroupsBase[0].items.filter(
@@ -192,6 +193,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ...(ofertyNav ? [ofertyNav] : []),
       ...(kalkulacjeNav ? [kalkulacjeNav] : []),
       ...(procesyNav ? [procesyNav] : []),
+      ...(tabliceWdrozenNav ? [tabliceWdrozenNav] : []),
       ...(zleceniaNav ? [zleceniaNav] : []),
       ...(klienciNav ? [klienciNav] : []),
       ...(isAdministrator
@@ -407,6 +409,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     active={isActive(pathname, item.href)}
                     onClick={() => setMenuOpen(false)}
                     variant="sheet"
+                    badgeCount={item.href === "/tablice-wdrozen" ? kanbanOpenTaskCount : 0}
                   />
                 ))}
               </div>
