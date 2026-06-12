@@ -5,6 +5,7 @@ import type {
   KanbanTask,
   KanbanTaskEvent,
 } from "@/lib/process/kanban-types";
+import { getMilestoneDateStatus } from "@/lib/process/dates";
 
 export const KANBAN_STALE_DAYS = 7;
 
@@ -132,6 +133,7 @@ export type KanbanBoardStats = {
   openIdle: number;
   inProgress: number;
   closed: number;
+  overdue: number;
   total: number;
 };
 
@@ -165,11 +167,16 @@ export function computeKanbanBoardStats(
   let openIdle = 0;
   let inProgress = 0;
   let closed = 0;
+  let overdue = 0;
 
   for (const task of board.tasks) {
     if (task.closedAt) {
       closed += 1;
       continue;
+    }
+
+    if (task.dueDate && getMilestoneDateStatus(task.dueDate) === "overdue") {
+      overdue += 1;
     }
 
     if (hasKanbanTaskActivity(task, board.comments, board.events)) {
@@ -183,6 +190,7 @@ export function computeKanbanBoardStats(
     openIdle,
     inProgress,
     closed,
+    overdue,
     total: board.tasks.length,
   };
 }

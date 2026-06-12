@@ -222,6 +222,9 @@ export function ServiceForm({
   const settlementStepIndex = mainTab === "settlement" ? step - QUOTE_STEPS.length : -1;
 
   function switchMainTab(tab: MainTab) {
+    if (tab === "settlement") {
+      setService((current) => prepareServiceForActualStep(current));
+    }
     setMainTab(tab);
     setStep(stepForMainTab(tab, step));
     setErrors([]);

@@ -1,4 +1,4 @@
-import { CheckCircle2, CircleDot, Sparkles } from "lucide-react";
+import { AlertCircle, CheckCircle2, CircleDot, Sparkles } from "lucide-react";
 import type { KanbanBoardStats } from "@/lib/process/kanban-task-meta";
 import { cn } from "@/lib/utils";
 
@@ -10,13 +10,14 @@ function StatBadge({
 }: {
   label: string;
   value: number;
-  tone?: "default" | "amber" | "emerald";
+  tone?: "default" | "amber" | "emerald" | "rose";
   icon: typeof CircleDot;
 }) {
   const toneClasses = {
     default: "border-border/60 bg-surface/60 text-foreground/90",
     amber: "border-amber-500/30 bg-amber-500/10 text-amber-100",
     emerald: "border-emerald-500/30 bg-emerald-500/10 text-emerald-100",
+    rose: "border-rose-500/40 bg-rose-500/15 text-rose-200",
   } as const;
 
   return (
@@ -54,6 +55,12 @@ export function KanbanBoardStatsBar({
       <div className="mt-2 flex flex-wrap gap-2">
         <StatBadge label="bez działania" value={stats.openIdle} tone="amber" icon={Sparkles} />
         <StatBadge label="w trakcie" value={stats.inProgress} tone="default" icon={CircleDot} />
+        <StatBadge
+          label="po terminie"
+          value={stats.overdue}
+          tone={stats.overdue > 0 ? "rose" : "default"}
+          icon={AlertCircle}
+        />
         <StatBadge label="zamknięte" value={stats.closed} tone="emerald" icon={CheckCircle2} />
       </div>
       <p className="mt-2 text-[11px] leading-relaxed text-muted">
