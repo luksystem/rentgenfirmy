@@ -17,6 +17,8 @@ function emptyInput(): ProjectSpecificationInput {
   };
 }
 
+const EMPTY_SPEC_ITEMS: ProjectSpecificationItem[] = [];
+
 export function ProjectSpecificationPanel({
   projectId,
   readOnly = false,
@@ -27,7 +29,9 @@ export function ProjectSpecificationPanel({
   seedItems?: ProjectSpecificationItem[];
 }) {
   const catalog = useProjectSpecificationStore((state) => state.catalog);
-  const storeItems = useProjectSpecificationStore((state) => state.byProject[projectId] ?? []);
+  const storeItems = useProjectSpecificationStore(
+    (state) => state.byProject[projectId] ?? EMPTY_SPEC_ITEMS,
+  );
   const loading = useProjectSpecificationStore((state) => state.loadingProjects[projectId]);
   const ensureCatalog = useProjectSpecificationStore((state) => state.ensureCatalog);
   const ensureItems = useProjectSpecificationStore((state) => state.ensureItems);
@@ -35,13 +39,13 @@ export function ProjectSpecificationPanel({
   const updateItem = useProjectSpecificationStore((state) => state.updateItem);
   const removeItem = useProjectSpecificationStore((state) => state.removeItem);
 
-  const items = seedItems ?? storeItems;
+  const items = seedItems !== undefined ? seedItems : storeItems;
 
   const [customForm, setCustomForm] = useState<ProjectSpecificationInput>(emptyInput());
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (seedItems) {
+    if (seedItems !== undefined) {
       return;
     }
     if (!readOnly) {
@@ -50,7 +54,7 @@ export function ProjectSpecificationPanel({
     void ensureItems(projectId);
   }, [ensureCatalog, ensureItems, projectId, readOnly, seedItems]);
 
-  const isLoading = seedItems ? false : loading;
+  const isLoading = seedItems !== undefined ? false : loading;
 
   const catalogByCategory = useMemo(() => {
     const map = new Map<string, typeof catalog>();

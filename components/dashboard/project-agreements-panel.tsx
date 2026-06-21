@@ -27,6 +27,8 @@ import { useProjectAgreementStore } from "@/store/project-agreement-store";
 
 type FilterKey = "all" | ProjectAgreementStatus;
 
+const EMPTY_AGREEMENTS: ProjectClientAgreement[] = [];
+
 const filterLabels: Record<FilterKey, string> = {
   all: "Wszystkie",
   draft: "Szkice",
@@ -231,7 +233,9 @@ export function ProjectAgreementsPanel({
   authorName: string;
   seedAgreements?: ProjectClientAgreement[];
 }) {
-  const storeAgreements = useProjectAgreementStore((state) => state.byProject[projectId] ?? []);
+  const storeAgreements = useProjectAgreementStore(
+    (state) => state.byProject[projectId] ?? EMPTY_AGREEMENTS,
+  );
   const loading = useProjectAgreementStore((state) => state.loadingProjects[projectId]);
   const ensureAgreements = useProjectAgreementStore((state) => state.ensureAgreements);
   const createAgreement = useProjectAgreementStore((state) => state.createAgreement);
@@ -240,11 +244,11 @@ export function ProjectAgreementsPanel({
   const cancel = useProjectAgreementStore((state) => state.cancel);
   const removeDraft = useProjectAgreementStore((state) => state.removeDraft);
 
-  const [localAgreements, setLocalAgreements] = useState<ProjectClientAgreement[] | null>(
-    seedAgreements ?? null,
+  const [localAgreements, setLocalAgreements] = useState<ProjectClientAgreement[] | null>(() =>
+    seedAgreements !== undefined ? seedAgreements : null,
   );
 
-  const agreements = localAgreements ?? storeAgreements;
+  const agreements = seedAgreements !== undefined ? (localAgreements ?? seedAgreements) : storeAgreements;
 
   const [filter, setFilter] = useState<FilterKey>(mode === "client" ? "pending_client" : "all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -252,7 +256,7 @@ export function ProjectAgreementsPanel({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (seedAgreements) {
+    if (seedAgreements !== undefined) {
       setLocalAgreements(seedAgreements);
       return;
     }
@@ -284,7 +288,7 @@ export function ProjectAgreementsPanel({
 
   async function handleSubmit(id: string) {
     await submitForClient(projectId, id);
-    if (localAgreements) {
+    if (seedAgreements !== undefined) {
       const updated = await ensureAgreements(projectId, { force: true });
       setLocalAgreements(updated);
     }
@@ -292,7 +296,7 @@ export function ProjectAgreementsPanel({
 
   async function handleCancel(id: string) {
     await cancel(projectId, id);
-    if (localAgreements) {
+    if (seedAgreements !== undefined) {
       const updated = await ensureAgreements(projectId, { force: true });
       setLocalAgreements(updated);
     }
@@ -303,7 +307,7 @@ export function ProjectAgreementsPanel({
     input: { accepted: boolean; clientResponseName: string; clientResponseNote?: string },
   ) {
     await respond(projectId, id, input);
-    if (localAgreements) {
+    if (seedAgreements !== undefined) {
       const updated = await ensureAgreements(projectId, { force: true });
       setLocalAgreements(updated);
     }
@@ -311,12 +315,12 @@ export function ProjectAgreementsPanel({
 
   async function handleDelete(id: string) {
     await removeDraft(projectId, id);
-    if (localAgreements) {
-      setLocalAgreements(localAgreements.filter((entry) => entry.id !== id));
+    if (seedAgreements !== undefined) {
+      setLocalAgreements((current) => (current ?? seedAgreements).filter((entry) => entry.id !== id));
     }
   }
 
-  const isLoading = seedAgreements ? false : loading;
+  const isLoading = seedAgreements !== undefined ? false : loading;
 
   const visibleFilters: FilterKey[] =
     mode === "client"
