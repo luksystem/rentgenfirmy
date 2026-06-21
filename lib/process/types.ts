@@ -108,18 +108,22 @@ export const PROCESS_ITEM_KIND_LABELS: Record<ProcessItemKind, string> = {
 };
 
 export function countProcessItems(template: ProcessTemplate) {
-  return template.stages.reduce(
+  return (template.stages ?? []).reduce(
     (total, stage) =>
-      total + stage.milestones.reduce((mTotal, milestone) => mTotal + milestone.items.length, 0),
+      total +
+      (stage.milestones ?? []).reduce(
+        (mTotal, milestone) => mTotal + (milestone.items ?? []).length,
+        0,
+      ),
     0,
   );
 }
 
 export function countCompletedItems(template: ProcessTemplate, process: ProjectProcess) {
   const itemIds = new Set<string>();
-  template.stages.forEach((stage) =>
-    stage.milestones.forEach((milestone) =>
-      milestone.items.forEach((item) => itemIds.add(item.id)),
+  (template.stages ?? []).forEach((stage) =>
+    (stage.milestones ?? []).forEach((milestone) =>
+      (milestone.items ?? []).forEach((item) => itemIds.add(item.id)),
     ),
   );
 

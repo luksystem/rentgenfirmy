@@ -11,6 +11,8 @@ import { DashboardSectionCard } from "@/components/dashboard/dashboard-section-c
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CLIENT_DASHBOARD_SECTIONS } from "@/lib/dashboard/types";
+import type { ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
+import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
 import { getProcessProgress } from "@/lib/process/types";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import type { Client } from "@/lib/service/types";
@@ -30,28 +32,34 @@ export function ClientDashboardView({
   selectedProjectId,
   onProjectChange,
   clientSpace,
-  process,
-  template,
+  process = null,
+  template = null,
   showPublicLink = true,
   readOnly = false,
   clientAuthorName = "Klient",
   teamAuthorName = "Zespół",
   enableAgreements = true,
   enableSpecification = true,
+  processProgress,
+  seedAgreements,
+  seedSpecificationItems,
 }: {
   client: Client;
   projects: Project[];
   selectedProjectId: string;
   onProjectChange?: (projectId: string) => void;
   clientSpace: DashboardSpace | null;
-  process: ProjectProcess | null;
-  template: ProcessTemplate | null;
+  process?: ProjectProcess | null;
+  template?: ProcessTemplate | null;
   showPublicLink?: boolean;
   readOnly?: boolean;
   clientAuthorName?: string;
   teamAuthorName?: string;
   enableAgreements?: boolean;
   enableSpecification?: boolean;
+  processProgress?: { percent: number; completed: number; total: number } | null;
+  seedAgreements?: ProjectClientAgreement[];
+  seedSpecificationItems?: ProjectSpecificationItem[];
 }) {
   const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? projects[0];
 
@@ -66,11 +74,14 @@ export function ClientDashboardView({
     activeSections.find((section) => section.id === "specification") ?? FALLBACK_SECTION;
 
   const progress = useMemo(() => {
+    if (processProgress !== undefined) {
+      return processProgress;
+    }
     if (!process || !template) {
       return null;
     }
     return getProcessProgress(template, process);
-  }, [process, template]);
+  }, [process, processProgress, template]);
 
   if (!selectedProject) {
     return (
@@ -204,13 +215,18 @@ export function ClientDashboardView({
               projectId={selectedProject.id}
               mode={readOnly ? "client" : "team"}
               authorName={readOnly ? clientAuthorName : teamAuthorName}
+              seedAgreements={seedAgreements}
             />
           </DashboardSectionCard>
         ) : null}
 
         {enableSpecification ? (
           <DashboardSectionCard section={specificationSection}>
-            <ProjectSpecificationPanel projectId={selectedProject.id} readOnly={readOnly} />
+            <ProjectSpecificationPanel
+              projectId={selectedProject.id}
+              readOnly={readOnly}
+              seedItems={seedSpecificationItems}
+            />
           </DashboardSectionCard>
         ) : null}
 

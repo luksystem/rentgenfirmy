@@ -159,6 +159,16 @@ function NavLink({
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+
+  if (isPublicAppRoute(pathname)) {
+    return <>{children}</>;
+  }
+
+  return <AppShellAuthenticated>{children}</AppShellAuthenticated>;
+}
+
+function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const isAdministrator = useAuthStore((state) => state.isAdministrator);
   const displayName = useAuthStore((state) => state.displayName);
@@ -211,10 +221,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   const allNav = useMemo(() => navGroups.flatMap((group) => group.items), [navGroups]);
-
-  if (isPublicAppRoute(pathname)) {
-    return <>{children}</>;
-  }
 
   const currentPage = allNav.find((item) => isActive(pathname, item.href));
 

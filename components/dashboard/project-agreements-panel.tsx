@@ -224,12 +224,14 @@ export function ProjectAgreementsPanel({
   projectId,
   mode,
   authorName,
+  seedAgreements,
 }: {
   projectId: string;
   mode: "team" | "client";
   authorName: string;
+  seedAgreements?: ProjectClientAgreement[];
 }) {
-  const agreements = useProjectAgreementStore((state) => state.byProject[projectId] ?? []);
+  const storeAgreements = useProjectAgreementStore((state) => state.byProject[projectId] ?? []);
   const loading = useProjectAgreementStore((state) => state.loadingProjects[projectId]);
   const ensureAgreements = useProjectAgreementStore((state) => state.ensureAgreements);
   const createAgreement = useProjectAgreementStore((state) => state.createAgreement);
@@ -238,14 +240,24 @@ export function ProjectAgreementsPanel({
   const cancel = useProjectAgreementStore((state) => state.cancel);
   const removeDraft = useProjectAgreementStore((state) => state.removeDraft);
 
+  const [localAgreements, setLocalAgreements] = useState<ProjectClientAgreement[] | null>(
+    seedAgreements ?? null,
+  );
+
+  const agreements = localAgreements ?? storeAgreements;
+
   const [filter, setFilter] = useState<FilterKey>(mode === "client" ? "pending_client" : "all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<ProjectAgreementInput>(emptyInput());
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (seedAgreements) {
+      setLocalAgreements(seedAgreements);
+      return;
+    }
     void ensureAgreements(projectId);
-  }, [ensureAgreements, projectId]);
+  }, [ensureAgreements, projectId, seedAgreements]);
 
   const filtered = useMemo(() => {
     if (filter === "all") {
@@ -269,6 +281,42 @@ export function ProjectAgreementsPanel({
       setSaving(false);
     }
   }
+
+  async function handleSubmit(id: string) {
+    await submitForClient(projectId, id);
+    if (localAgreements) {
+      const updated = await ensureAgreements(projectId, { force: true });
+      setLocalAgreements(updated);
+    }
+  }
+
+  async function handleCancel(id: string) {
+    await cancel(projectId, id);
+    if (localAgreements) {
+      const updated = await ensureAgreements(projectId, { force: true });
+      setLocalAgreements(updated);
+    }
+  }
+
+  async function handleRespond(
+    id: string,
+    input: { accepted: boolean; clientResponseName: string; clientResponseNote?: string },
+  ) {
+    await respond(projectId, id, input);
+    if (localAgreements) {
+      const updated = await ensureAgreements(projectId, { force: true });
+      setLocalAgreements(updated);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    await removeDraft(projectId, id);
+    if (localAgreements) {
+      setLocalAgreements(localAgreements.filter((entry) => entry.id !== id));
+    }
+  }
+
+  const isLoading = seedAgreements ? false : loading;
 
   const visibleFilters: FilterKey[] =
     mode === "client"
@@ -304,11 +352,11 @@ export function ProjectAgreementsPanel({
         ) : null}
       </div>
 
-      {loading && !agreements.length ? (
+      {isLoading && !agreements.length ? (
         <p className="text-sm text-muted">Ładowanie ustaleń…</p>
       ) : null}
 
-      {!loading && filtered.length === 0 ? (
+      {!isLoading && filtered.length === 0 ? (
         <p className="text-sm text-muted">
           {mode === "team"
             ? "Brak ustaleń w tym widoku. Dodaj ustalenie i wyślij je do akceptacji klienta."
@@ -323,10 +371,10 @@ export function ProjectAgreementsPanel({
             agreement={agreement}
             mode={mode}
             authorName={authorName}
-            onSubmit={(id) => submitForClient(projectId, id)}
-            onCancel={(id) => cancel(projectId, id)}
-            onRespond={(id, input) => respond(projectId, id, input)}
-            onDelete={(id) => removeDraft(projectId, id)}
+            onSubmit={(id) => handleSubmit(id)}
+            onCancel={(id) => handleCancel(id)}
+            onRespond={(id, input) => handleRespond(id, input)}
+            onDelete={(id) => handleDelete(id)}
           />
         ))}
       </div>

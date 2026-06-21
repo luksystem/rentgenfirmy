@@ -79,16 +79,27 @@ export function agreementStatusTone(
   }
 }
 
+function formatCostAmount(value: number | string | null | undefined) {
+  if (value == null || value === "") {
+    return null;
+  }
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export function formatAgreementCost(agreement: Pick<
   ProjectClientAgreement,
   "proposedCostNet" | "proposedCostGross" | "costNote"
 >) {
   const parts: string[] = [];
-  if (agreement.proposedCostNet != null) {
-    parts.push(`netto ${agreement.proposedCostNet.toFixed(2)} PLN`);
+  const net = formatCostAmount(agreement.proposedCostNet);
+  const gross = formatCostAmount(agreement.proposedCostGross);
+
+  if (net != null) {
+    parts.push(`netto ${net.toFixed(2)} PLN`);
   }
-  if (agreement.proposedCostGross != null) {
-    parts.push(`brutto ${agreement.proposedCostGross.toFixed(2)} PLN`);
+  if (gross != null) {
+    parts.push(`brutto ${gross.toFixed(2)} PLN`);
   }
   if (!parts.length) {
     return agreement.costNote?.trim() || null;

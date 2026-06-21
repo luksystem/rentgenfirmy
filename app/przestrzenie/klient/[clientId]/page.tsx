@@ -22,7 +22,7 @@ export default function ClientDashboardPage() {
   const projects = useAppStore((state) => state.projects);
   const fieldOptions = useAppStore((state) => state.fieldOptions);
   const hydrateDashboard = useDashboardStore((state) => state.hydrate);
-  const getSpaceByProject = useDashboardStore((state) => state.getSpaceByProject);
+  const spaces = useDashboardStore((state) => state.spaces);
   const hydrateProcess = useProcessStore((state) => state.hydrate);
   const getProjectProcess = useProcessStore((state) => state.getProjectProcess);
   const templates = useProcessStore((state) => state.templates);
@@ -74,9 +74,15 @@ export default function ClientDashboardPage() {
   }
 
   const selectedProject = clientProjects.find((project) => project.id === selectedProjectId);
-  const clientSpace = selectedProjectId
-    ? getSpaceByProject(selectedProjectId, "client")
-    : null;
+  const clientSpace = useMemo(
+    () =>
+      selectedProjectId
+        ? (spaces.find(
+            (space) => space.projectId === selectedProjectId && space.kind === "client",
+          ) ?? null)
+        : null,
+    [selectedProjectId, spaces],
+  );
   const process = selectedProjectId ? getProjectProcess(selectedProjectId) ?? null : null;
   const template = templates.find((entry) => entry.projectType === selectedProject?.type) ?? null;
 

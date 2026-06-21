@@ -8,18 +8,22 @@ import type { DashboardSpace } from "@/lib/dashboard/types";
 import { Button } from "@/components/ui/button";
 import { useDashboardStore } from "@/store/dashboard-store";
 
-export function DashboardPublicLinkPanel({ space }: { space: DashboardSpace }) {
+export function DashboardPublicLinkPanel({ space: spaceProp }: { space: DashboardSpace }) {
   const togglePublicLink = useDashboardStore((state) => state.togglePublicLink);
+  const space = useDashboardStore(
+    (state) => state.spaces.find((entry) => entry.id === spaceProp.id) ?? spaceProp,
+  );
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const publicUrl = getDashboardPublicUrl(space.publicToken);
 
   async function handleToggle() {
+    const nextEnabled = !space.publicEnabled;
     setSaving(true);
     setMessage(null);
     try {
-      await togglePublicLink(space.id, !space.publicEnabled);
-      setMessage(space.publicEnabled ? "Link publiczny wyłączony." : "Link publiczny włączony.");
+      await togglePublicLink(space.id, nextEnabled);
+      setMessage(nextEnabled ? "Link publiczny włączony." : "Link publiczny wyłączony.");
     } finally {
       setSaving(false);
     }
@@ -60,7 +64,7 @@ export function DashboardPublicLinkPanel({ space }: { space: DashboardSpace }) {
             Kopiuj
           </Button>
           <Button variant="outline" size="sm" asChild>
-            <Link href={publicUrl} target="_blank" rel="noopener noreferrer">
+            <Link href={`/przestrzen/${space.publicToken}`} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="mr-2 h-4 w-4" />
               Podgląd
             </Link>

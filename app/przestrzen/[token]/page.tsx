@@ -4,8 +4,9 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ClientDashboardView } from "@/components/dashboard/client-dashboard-view";
 import { Card, CardContent } from "@/components/ui/card";
+import type { ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
+import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
 import type { DashboardSpace } from "@/lib/dashboard/types";
-import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
 
@@ -14,8 +15,9 @@ type PublicDashboardPayload = {
   client: Client;
   projects: Project[];
   initialProjectId: string;
-  process: ProjectProcess | null;
-  template: ProcessTemplate | null;
+  processProgress: { percent: number; completed: number; total: number } | null;
+  agreements: ProjectClientAgreement[];
+  specificationItems: ProjectSpecificationItem[];
   features: {
     agreements: boolean;
     specification: boolean;
@@ -25,7 +27,13 @@ type PublicDashboardPayload = {
 async function fetchPublicDashboard(token: string, projectId?: string) {
   const query = projectId ? `?projectId=${encodeURIComponent(projectId)}` : "";
   const response = await fetch(`/api/przestrzen/${encodeURIComponent(token)}${query}`);
-  const payload = (await response.json()) as PublicDashboardPayload & { error?: string };
+
+  let payload: PublicDashboardPayload & { error?: string };
+  try {
+    payload = (await response.json()) as PublicDashboardPayload & { error?: string };
+  } catch {
+    throw new Error("Nie udało się odczytać odpowiedzi serwera.");
+  }
 
   if (!response.ok) {
     throw new Error(payload.error ?? "Nie udało się załadować dashboardu.");
@@ -36,13 +44,16 @@ async function fetchPublicDashboard(token: string, projectId?: string) {
 
 export default function PublicDashboardPage() {
   const params = useParams();
-  const token = String(params.token);
+  const token = String(params.token ?? "");
   const [space, setSpace] = useState<DashboardSpace | null>(null);
   const [client, setClient] = useState<Client | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [process, setProcess] = useState<ProjectProcess | null>(null);
-  const [template, setTemplate] = useState<ProcessTemplate | null>(null);
-  const [features, setFeatures] = useState({ agreements: true, specification: true });
+  const [processProgress, setProcessProgress] = useState<
+    PublicDashboardPayload["processProgress"] | undefined
+  >(undefined);
+  const [agreements, setAgreements] = useState<ProjectClientAgreement[]>([]);
+  const [specificationItems, setSpecificationItems] = useState<ProjectSpecificationItem[]>([]);
+  const [features, setFeatures] = useState({ agreements: false, specification: false });
   const [loading, setLoading] = useState(true);
   const [switchingProject, setSwitchingProject] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,13 +63,20 @@ export default function PublicDashboardPage() {
     setSpace(payload.space);
     setClient(payload.client);
     setProjects(payload.projects);
-    setProcess(payload.process);
-    setTemplate(payload.template);
+    setProcessProgress(payload.processProgress);
+    setAgreements(payload.agreements);
+    setSpecificationItems(payload.specificationItems);
     setFeatures(payload.features);
     setSelectedProjectId(payload.initialProjectId);
   }, []);
 
   useEffect(() => {
+    if (!token || token === "undefined") {
+      setError("Nieprawidłowy link do dashboardu.");
+      setLoading(false);
+      return;
+    }
+
     void (async () => {
       setLoading(true);
       setError(null);
@@ -136,8 +154,9 @@ export default function PublicDashboardPage() {
           selectedProjectId={selectedProjectId}
           onProjectChange={handleProjectChange}
           clientSpace={space}
-          process={process}
-          template={template}
+          processProgress={processProgress}
+          seedAgreements={features.agreements ? agreements : undefined}
+          seedSpecificationItems={features.specification ? specificationItems : undefined}
           showPublicLink={false}
           readOnly
           clientAuthorName={client.fullName}

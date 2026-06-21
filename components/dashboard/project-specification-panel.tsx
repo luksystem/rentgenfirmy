@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/input";
-import type { ProjectSpecificationInput } from "@/lib/dashboard/specification-types";
+import type { ProjectSpecificationInput, ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
 import { useProjectSpecificationStore } from "@/store/project-specification-store";
 
 function emptyInput(): ProjectSpecificationInput {
@@ -20,12 +20,14 @@ function emptyInput(): ProjectSpecificationInput {
 export function ProjectSpecificationPanel({
   projectId,
   readOnly = false,
+  seedItems,
 }: {
   projectId: string;
   readOnly?: boolean;
+  seedItems?: ProjectSpecificationItem[];
 }) {
   const catalog = useProjectSpecificationStore((state) => state.catalog);
-  const items = useProjectSpecificationStore((state) => state.byProject[projectId] ?? []);
+  const storeItems = useProjectSpecificationStore((state) => state.byProject[projectId] ?? []);
   const loading = useProjectSpecificationStore((state) => state.loadingProjects[projectId]);
   const ensureCatalog = useProjectSpecificationStore((state) => state.ensureCatalog);
   const ensureItems = useProjectSpecificationStore((state) => state.ensureItems);
@@ -33,13 +35,22 @@ export function ProjectSpecificationPanel({
   const updateItem = useProjectSpecificationStore((state) => state.updateItem);
   const removeItem = useProjectSpecificationStore((state) => state.removeItem);
 
+  const items = seedItems ?? storeItems;
+
   const [customForm, setCustomForm] = useState<ProjectSpecificationInput>(emptyInput());
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    void ensureCatalog();
+    if (seedItems) {
+      return;
+    }
+    if (!readOnly) {
+      void ensureCatalog();
+    }
     void ensureItems(projectId);
-  }, [ensureCatalog, ensureItems, projectId]);
+  }, [ensureCatalog, ensureItems, projectId, readOnly, seedItems]);
+
+  const isLoading = seedItems ? false : loading;
 
   const catalogByCategory = useMemo(() => {
     const map = new Map<string, typeof catalog>();
@@ -151,9 +162,9 @@ export function ProjectSpecificationPanel({
         </>
       ) : null}
 
-      {loading && !items.length ? <p className="text-sm text-muted">Ładowanie specyfikacji…</p> : null}
+      {isLoading && !items.length ? <p className="text-sm text-muted">Ładowanie specyfikacji…</p> : null}
 
-      {!loading && items.length === 0 ? (
+      {!isLoading && items.length === 0 ? (
         <p className="text-sm text-muted">
           Brak elementów specyfikacji. Dodaj systemy i integracje obowiązkowe dla tego projektu.
         </p>
