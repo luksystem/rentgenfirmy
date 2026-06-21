@@ -2,10 +2,7 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import {
-  DashboardPlaceholderBody,
-  DashboardSpaceShell,
-} from "@/components/dashboard/dashboard-space-shell";
+import { DashboardSpaceShell } from "@/components/dashboard/dashboard-space-shell";
 import { DashboardSectionCard } from "@/components/dashboard/dashboard-section-card";
 import { TEAM_DASHBOARD_SECTIONS } from "@/lib/dashboard/types";
 import { Card, CardContent } from "@/components/ui/card";
