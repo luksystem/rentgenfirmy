@@ -18,6 +18,12 @@ import type { Project } from "@/lib/types";
 import type { DashboardSpace } from "@/lib/dashboard/types";
 import { cn } from "@/lib/utils";
 
+const FALLBACK_SECTION = {
+  title: "Sekcja",
+  description: "",
+  status: "active" as const,
+};
+
 export function ClientDashboardView({
   client,
   projects,
@@ -30,6 +36,8 @@ export function ClientDashboardView({
   readOnly = false,
   clientAuthorName = "Klient",
   teamAuthorName = "Zespół",
+  enableAgreements = true,
+  enableSpecification = true,
 }: {
   client: Client;
   projects: Project[];
@@ -42,17 +50,27 @@ export function ClientDashboardView({
   readOnly?: boolean;
   clientAuthorName?: string;
   teamAuthorName?: string;
+  enableAgreements?: boolean;
+  enableSpecification?: boolean;
 }) {
   const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? projects[0];
+
+  const activeSections = CLIENT_DASHBOARD_SECTIONS.filter((section) => section.status === "active");
+  const plannedSections = CLIENT_DASHBOARD_SECTIONS.filter((section) => section.status === "planned");
+
+  const projectSection = activeSections.find((section) => section.id === "project") ?? FALLBACK_SECTION;
+  const processSection = activeSections.find((section) => section.id === "process") ?? FALLBACK_SECTION;
+  const agreementsSection =
+    activeSections.find((section) => section.id === "agreements") ?? FALLBACK_SECTION;
+  const specificationSection =
+    activeSections.find((section) => section.id === "specification") ?? FALLBACK_SECTION;
+
   const progress = useMemo(() => {
     if (!process || !template) {
       return null;
     }
     return getProcessProgress(template, process);
   }, [process, template]);
-
-  const activeSections = CLIENT_DASHBOARD_SECTIONS.filter((section) => section.status === "active");
-  const plannedSections = CLIENT_DASHBOARD_SECTIONS.filter((section) => section.status === "planned");
 
   if (!selectedProject) {
     return (
@@ -79,7 +97,6 @@ export function ClientDashboardView({
                 <button
                   key={project.id}
                   type="button"
-                  disabled={readOnly && project.id !== selectedProjectId}
                   onClick={() => onProjectChange(project.id)}
                   className={cn(
                     "rounded-xl border px-3 py-2 text-left text-sm transition",
@@ -104,7 +121,7 @@ export function ClientDashboardView({
       </div>
 
       <div className="grid gap-4">
-        <DashboardSectionCard section={activeSections.find((s) => s.id === "project")!}>
+        <DashboardSectionCard section={projectSection}>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <p className="text-xs uppercase tracking-wide text-muted">Projekt</p>
@@ -138,7 +155,7 @@ export function ClientDashboardView({
           ) : null}
         </DashboardSectionCard>
 
-        <DashboardSectionCard section={activeSections.find((s) => s.id === "process")!}>
+        <DashboardSectionCard section={processSection}>
           {progress ? (
             <div className="grid gap-3">
               <div>
@@ -181,17 +198,21 @@ export function ClientDashboardView({
           )}
         </DashboardSectionCard>
 
-        <DashboardSectionCard section={activeSections.find((s) => s.id === "agreements")!}>
-          <ProjectAgreementsPanel
-            projectId={selectedProject.id}
-            mode={readOnly ? "client" : "team"}
-            authorName={readOnly ? clientAuthorName : teamAuthorName}
-          />
-        </DashboardSectionCard>
+        {enableAgreements ? (
+          <DashboardSectionCard section={agreementsSection}>
+            <ProjectAgreementsPanel
+              projectId={selectedProject.id}
+              mode={readOnly ? "client" : "team"}
+              authorName={readOnly ? clientAuthorName : teamAuthorName}
+            />
+          </DashboardSectionCard>
+        ) : null}
 
-        <DashboardSectionCard section={activeSections.find((s) => s.id === "specification")!}>
-          <ProjectSpecificationPanel projectId={selectedProject.id} readOnly={readOnly} />
-        </DashboardSectionCard>
+        {enableSpecification ? (
+          <DashboardSectionCard section={specificationSection}>
+            <ProjectSpecificationPanel projectId={selectedProject.id} readOnly={readOnly} />
+          </DashboardSectionCard>
+        ) : null}
 
         {plannedSections.map((section) => (
           <DashboardSectionCard key={section.id} section={section} />

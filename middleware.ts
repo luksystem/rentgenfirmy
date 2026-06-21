@@ -7,7 +7,10 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   const isPublic =
-    isPublicAppRoute(pathname) || pathname.startsWith("/api/oferta/") || pathname.startsWith("/api/kanban/");
+    isPublicAppRoute(pathname) ||
+    pathname.startsWith("/api/oferta/") ||
+    pathname.startsWith("/api/kanban/") ||
+    pathname.startsWith("/api/przestrzen/");
 
   const {
     data: { user },

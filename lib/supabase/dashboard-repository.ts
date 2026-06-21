@@ -138,7 +138,7 @@ export async function ensureProjectDashboardSpaces(input: {
   const existingClient = await fetchProjectDashboardSpace(input.projectId, "client");
   const existingTeam = await fetchProjectDashboardSpace(input.projectId, "team");
 
-  const client =
+  let clientSpace =
     existingClient ??
     (await insertSpace({
       kind: "client",
@@ -146,6 +146,22 @@ export async function ensureProjectDashboardSpaces(input: {
       clientId: input.clientId ?? null,
       title: `Dashboard klienta — ${input.projectName}`,
     }));
+
+  if (!clientSpace.clientId && input.clientId) {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from("dashboard_spaces")
+      .update({ client_id: input.clientId, updated_at: new Date().toISOString() })
+      .eq("id", clientSpace.id)
+      .select("*")
+      .single();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    clientSpace = rowToSpace(data as SpaceRow);
+  }
 
   const team =
     existingTeam ??
@@ -155,7 +171,7 @@ export async function ensureProjectDashboardSpaces(input: {
       title: `Dashboard zespołu — ${input.projectName}`,
     }));
 
-  return { client, team };
+  return { client: clientSpace, team };
 }
 
 export async function ensureGlobalDashboardSpaces(): Promise<DashboardSpace[]> {

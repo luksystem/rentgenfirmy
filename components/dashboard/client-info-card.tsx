@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { ExternalLink, Mail, MapPin, Phone } from "lucide-react";
 import { buildClientAddressLine, getClientGoogleMapsUrl } from "@/lib/dashboard/google-maps";
 import type { Client } from "@/lib/service/types";
@@ -49,11 +48,11 @@ export function ClientInfoCard({ client }: { client: Client }) {
 
         {mapsUrl ? (
           <Button variant="outline" size="sm" asChild className="w-fit">
-            <Link href={mapsUrl} target="_blank" rel="noopener noreferrer">
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer">
               <MapPin className="mr-2 h-4 w-4" />
               Otwórz w Google Maps
               <ExternalLink className="ml-2 h-3.5 w-3.5 opacity-60" />
-            </Link>
+            </a>
           </Button>
         ) : null}
 
