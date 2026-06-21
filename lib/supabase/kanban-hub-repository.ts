@@ -5,7 +5,7 @@ import {
 } from "@/lib/process/kanban-hub-types";
 import type { KanbanBoard } from "@/lib/process/kanban-types";
 import { getSupabase } from "@/lib/supabase/client";
-import { fetchKanbanBoardByItemId } from "@/lib/supabase/kanban-repository";
+import { fetchKanbanBoardGraphsBatch, type KanbanBoardRow } from "@/lib/supabase/kanban-repository";
 
 type BoardRow = { id: string; project_process_item_id: string };
 type ItemRow = { id: string; project_id: string; template_item_id: string };
@@ -22,7 +22,20 @@ type HubGraph = {
   boardNewCounts: Map<string, number>;
 };
 
-async function loadKanbanHubGraph(): Promise<HubGraph> {
+export type KanbanHubSnapshot = {
+  clients: KanbanHubClientTile[];
+  entries: KanbanHubBoardEntry[];
+};
+
+let cachedHubGraph: HubGraph | null = null;
+let hubGraphLoadPromise: Promise<HubGraph> | null = null;
+
+export function invalidateKanbanHubCache() {
+  cachedHubGraph = null;
+  hubGraphLoadPromise = null;
+}
+
+async function loadKanbanHubGraphFromDb(): Promise<HubGraph> {
   const supabase = getSupabase();
 
   const { data: boards, error: boardsError } = await supabase
@@ -140,6 +153,29 @@ async function loadKanbanHubGraph(): Promise<HubGraph> {
   };
 }
 
+async function loadKanbanHubGraph(): Promise<HubGraph> {
+  if (cachedHubGraph) {
+    return cachedHubGraph;
+  }
+
+  if (hubGraphLoadPromise) {
+    return hubGraphLoadPromise;
+  }
+
+  hubGraphLoadPromise = loadKanbanHubGraphFromDb()
+    .then((graph) => {
+      cachedHubGraph = graph;
+      hubGraphLoadPromise = null;
+      return graph;
+    })
+    .catch((error) => {
+      hubGraphLoadPromise = null;
+      throw error;
+    });
+
+  return hubGraphLoadPromise;
+}
+
 function resolveClientId(clientId: string | null | undefined) {
   return clientId?.trim() || KANBAN_HUB_NO_CLIENT_ID;
 }
@@ -176,6 +212,7 @@ function buildBoardEntries(graph: HubGraph, clientIdFilter?: string): KanbanHubB
       boardId: board.id,
       projectProcessItemId: item.id,
       projectId: project.id,
+      clientId,
       projectName: project.name?.trim() || "Projekt",
       projectType: project.type?.trim() || "Dom",
       templateItemId: item.template_item_id,
@@ -193,9 +230,7 @@ function buildBoardEntries(graph: HubGraph, clientIdFilter?: string): KanbanHubB
   });
 }
 
-export async function fetchKanbanHubClients(): Promise<KanbanHubClientTile[]> {
-  const graph = await loadKanbanHubGraph();
-  const entries = buildBoardEntries(graph);
+function buildClientTiles(graph: HubGraph, entries: KanbanHubBoardEntry[]): KanbanHubClientTile[] {
   const tiles = new Map<string, KanbanHubClientTile>();
 
   for (const entry of entries) {
@@ -224,10 +259,12 @@ export async function fetchKanbanHubClients(): Promise<KanbanHubClientTile[]> {
 
   for (const tile of tiles.values()) {
     tile.projectCount = new Set(
-      entries.filter((entry) => {
-        const project = graph.projects.find((row) => row.id === entry.projectId);
-        return project && resolveClientId(project.client_id) === tile.clientId;
-      }).map((entry) => entry.projectId),
+      entries
+        .filter((entry) => {
+          const project = graph.projects.find((row) => row.id === entry.projectId);
+          return project && resolveClientId(project.client_id) === tile.clientId;
+        })
+        .map((entry) => entry.projectId),
     ).size;
   }
 
@@ -237,6 +274,20 @@ export async function fetchKanbanHubClients(): Promise<KanbanHubClientTile[]> {
     }
     return a.clientName.localeCompare(b.clientName, "pl");
   });
+}
+
+export async function fetchKanbanHubSnapshot(): Promise<KanbanHubSnapshot> {
+  const graph = await loadKanbanHubGraph();
+  const entries = buildBoardEntries(graph);
+  return {
+    clients: buildClientTiles(graph, entries),
+    entries,
+  };
+}
+
+export async function fetchKanbanHubClients(): Promise<KanbanHubClientTile[]> {
+  const snapshot = await fetchKanbanHubSnapshot();
+  return snapshot.clients;
 }
 
 export async function fetchKanbanHubClientBoards(clientId: string): Promise<KanbanHubBoardEntry[]> {
@@ -254,8 +305,20 @@ export async function fetchKanbanHubBoardEntry(
 export async function fetchAllKanbanBoardGraphs(): Promise<KanbanBoard[]> {
   const graph = await loadKanbanHubGraph();
   const entries = buildBoardEntries(graph);
-  const boards = await Promise.all(
-    entries.map((entry) => fetchKanbanBoardByItemId(entry.projectProcessItemId)),
-  );
-  return boards.filter((board): board is KanbanBoard => board !== null);
+  if (!entries.length) {
+    return [];
+  }
+
+  const supabase = getSupabase();
+  const itemIds = entries.map((entry) => entry.projectProcessItemId);
+  const { data: boardRows, error } = await supabase
+    .from("process_kanban_boards")
+    .select("*")
+    .in("project_process_item_id", itemIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return fetchKanbanBoardGraphsBatch((boardRows ?? []) as KanbanBoardRow[]);
 }

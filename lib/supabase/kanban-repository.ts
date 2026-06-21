@@ -24,6 +24,8 @@ type BoardRow = {
   updated_at: string;
 };
 
+export type KanbanBoardRow = BoardRow;
+
 type ColumnRow = {
   id: string;
   board_id: string;
@@ -149,60 +151,100 @@ async function insertKanbanTaskEvent(input: {
   }
 }
 
-async function fetchBoardGraph(boardRow: BoardRow): Promise<KanbanBoard> {
+type BoardProjectInfo = {
+  projectId: string | null;
+  projectName: string;
+  projectType: string | null;
+  clientId: string | null;
+};
+
+function groupRowsByKey<T>(rows: T[], keyFn: (row: T) => string): Map<string, T[]> {
+  const map = new Map<string, T[]>();
+  for (const row of rows) {
+    const key = keyFn(row);
+    const bucket = map.get(key);
+    if (bucket) {
+      bucket.push(row);
+    } else {
+      map.set(key, [row]);
+    }
+  }
+  return map;
+}
+
+async function fetchBoardProjectInfoBatch(itemIds: string[]): Promise<Map<string, BoardProjectInfo>> {
+  const map = new Map<string, BoardProjectInfo>();
+  if (!itemIds.length) {
+    return map;
+  }
+
   const supabase = getSupabase();
+  const { data: items, error: itemsError } = await supabase
+    .from("project_process_items")
+    .select("id, project_id")
+    .in("id", itemIds);
 
-  const { data: columns, error: columnsError } = await supabase
-    .from("process_kanban_columns")
-    .select("*")
-    .eq("board_id", boardRow.id)
-    .order("position", { ascending: true });
-
-  if (columnsError) {
-    throw new Error(columnsError.message);
+  if (itemsError) {
+    throw new Error(itemsError.message);
   }
 
-  const columnIds = (columns ?? []).map((row) => row.id);
-  const { data: tasks, error: tasksError } = columnIds.length
-    ? await supabase
-        .from("process_kanban_tasks")
-        .select("*")
-        .in("column_id", columnIds)
-        .order("position", { ascending: true })
+  const projectIds = [
+    ...new Set((items ?? []).map((row) => row.project_id as string).filter(Boolean)),
+  ];
+
+  const { data: projects, error: projectsError } = projectIds.length
+    ? await supabase.from("projects").select("id, name, type, client_id").in("id", projectIds)
     : { data: [], error: null };
 
-  if (tasksError) {
-    throw new Error(tasksError.message);
+  if (projectsError) {
+    throw new Error(projectsError.message);
   }
 
-  const taskIds = (tasks ?? []).map((row) => row.id as string);
-  const { data: comments, error: commentsError } = taskIds.length
-    ? await supabase
-        .from("process_kanban_comments")
-        .select("*")
-        .in("task_id", taskIds)
-        .order("created_at", { ascending: true })
-    : { data: [], error: null };
+  const projectById = new Map(
+    (projects ?? []).map((row) => [
+      row.id as string,
+      {
+        name: (row.name as string)?.trim() || "Projekt",
+        type: (row.type as string)?.trim() || null,
+        clientId: (row.client_id as string | null) ?? null,
+      },
+    ]),
+  );
 
-  if (commentsError) {
-    throw new Error(commentsError.message);
+  for (const item of items ?? []) {
+    const itemId = item.id as string;
+    const project = item.project_id ? projectById.get(item.project_id as string) : null;
+    map.set(itemId, {
+      projectId: (item.project_id as string | null) ?? null,
+      projectName: project?.name ?? "Projekt",
+      projectType: project?.type ?? null,
+      clientId: project?.clientId ?? null,
+    });
   }
 
-  const { data: events, error: eventsError } = taskIds.length
-    ? await supabase
-        .from("process_kanban_task_events")
-        .select("*")
-        .in("task_id", taskIds)
-        .order("created_at", { ascending: true })
-    : { data: [], error: null };
-
-  if (eventsError) {
-    throw new Error(eventsError.message);
+  for (const itemId of itemIds) {
+    if (!map.has(itemId)) {
+      map.set(itemId, {
+        projectId: null,
+        projectName: "Projekt",
+        projectType: null,
+        clientId: null,
+      });
+    }
   }
 
-  const attachments = taskIds.length ? await fetchAttachmentsForTaskIds(taskIds) : [];
-  const projectInfo = await fetchBoardProjectInfo(boardRow.project_process_item_id);
+  return map;
+}
 
+function assembleKanbanBoard(
+  boardRow: BoardRow,
+  projectInfo: BoardProjectInfo,
+  columns: ColumnRow[],
+  tasks: TaskRow[],
+  comments: CommentRow[],
+  events: EventRow[],
+  attachments: KanbanBoard["attachments"],
+): KanbanBoard {
   return {
     id: boardRow.id,
     projectProcessItemId: boardRow.project_process_item_id,
@@ -215,14 +257,119 @@ async function fetchBoardGraph(boardRow: BoardRow): Promise<KanbanBoard> {
     publicAccessUsernameRequired: Boolean(boardRow.public_access_username?.trim()),
     publicAccessUsername: boardRow.public_access_username?.trim() || null,
     publicAuthorName: boardRow.public_author_name?.trim() || "Klient",
-    columns: (columns ?? []).map((row) => rowToColumn(row as ColumnRow)),
-    tasks: (tasks ?? []).map((row) => rowToTask(row as TaskRow)),
-    comments: (comments ?? []).map((row) => rowToComment(row as CommentRow)),
-    events: (events ?? []).map((row) => rowToEvent(row as EventRow)),
+    columns: columns.map(rowToColumn),
+    tasks: tasks.map(rowToTask),
+    comments: comments.map(rowToComment),
+    events: events.map(rowToEvent),
     attachments,
     createdAt: boardRow.created_at,
     updatedAt: boardRow.updated_at,
   };
+}
+
+export async function fetchKanbanBoardGraphsBatch(boardRows: BoardRow[]): Promise<KanbanBoard[]> {
+  if (!boardRows.length) {
+    return [];
+  }
+
+  const supabase = getSupabase();
+  const boardIds = boardRows.map((row) => row.id);
+  const itemIds = [...new Set(boardRows.map((row) => row.project_process_item_id))];
+
+  const [columnsResult, projectInfoMap] = await Promise.all([
+    supabase
+      .from("process_kanban_columns")
+      .select("*")
+      .in("board_id", boardIds)
+      .order("position", { ascending: true }),
+    fetchBoardProjectInfoBatch(itemIds),
+  ]);
+
+  if (columnsResult.error) {
+    throw new Error(columnsResult.error.message);
+  }
+
+  const allColumns = (columnsResult.data ?? []) as ColumnRow[];
+  const columnIds = allColumns.map((row) => row.id);
+  const columnsByBoard = groupRowsByKey(allColumns, (row) => row.board_id);
+
+  const tasksResult = columnIds.length
+    ? await supabase
+        .from("process_kanban_tasks")
+        .select("*")
+        .in("column_id", columnIds)
+        .order("position", { ascending: true })
+    : { data: [], error: null };
+
+  if (tasksResult.error) {
+    throw new Error(tasksResult.error.message);
+  }
+
+  const allTasks = (tasksResult.data ?? []) as TaskRow[];
+  const taskIds = allTasks.map((row) => row.id);
+
+  const [commentsResult, eventsResult, attachments] = await Promise.all([
+    taskIds.length
+      ? supabase
+          .from("process_kanban_comments")
+          .select("*")
+          .in("task_id", taskIds)
+          .order("created_at", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    taskIds.length
+      ? supabase
+          .from("process_kanban_task_events")
+          .select("*")
+          .in("task_id", taskIds)
+          .order("created_at", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    taskIds.length ? fetchAttachmentsForTaskIds(taskIds) : Promise.resolve([]),
+  ]);
+
+  if (commentsResult.error) {
+    throw new Error(commentsResult.error.message);
+  }
+  if (eventsResult.error) {
+    throw new Error(eventsResult.error.message);
+  }
+
+  const allComments = (commentsResult.data ?? []) as CommentRow[];
+  const allEvents = (eventsResult.data ?? []) as EventRow[];
+  const taskIdSetForBoard = (boardColumnIds: Set<string>) =>
+    new Set(allTasks.filter((task) => boardColumnIds.has(task.column_id)).map((task) => task.id));
+
+  return boardRows.map((boardRow) => {
+    const boardColumns = columnsByBoard.get(boardRow.id) ?? [];
+    const boardColumnIds = new Set(boardColumns.map((column) => column.id));
+    const boardTasks = allTasks.filter((task) => boardColumnIds.has(task.column_id));
+    const boardTaskIds = taskIdSetForBoard(boardColumnIds);
+    const boardComments = allComments.filter((comment) => boardTaskIds.has(comment.task_id));
+    const boardEvents = allEvents.filter((event) => boardTaskIds.has(event.task_id));
+    const boardAttachments = attachments.filter((entry) => boardTaskIds.has(entry.taskId));
+    const projectInfo =
+      projectInfoMap.get(boardRow.project_process_item_id) ??
+      ({
+        projectId: null,
+        projectName: "Projekt",
+        projectType: null,
+        clientId: null,
+      } satisfies BoardProjectInfo);
+
+    return assembleKanbanBoard(
+      boardRow,
+      projectInfo,
+      boardColumns,
+      boardTasks,
+      boardComments,
+      boardEvents,
+      boardAttachments,
+    );
+  });
+}
+
+async function fetchBoardGraph(boardRow: BoardRow): Promise<KanbanBoard> {
+  const boards = await fetchKanbanBoardGraphsBatch([boardRow]);
+  return boards[0];
 }
 
 export async function ensureKanbanBoard(
@@ -344,43 +491,15 @@ export async function fetchKanbanPublicContext(projectProcessItemId: string) {
 }
 
 async function fetchBoardProjectInfo(projectProcessItemId: string) {
-  const supabase = getSupabase();
-
-  const { data: item, error: itemError } = await supabase
-    .from("project_process_items")
-    .select("project_id")
-    .eq("id", projectProcessItemId)
-    .maybeSingle();
-
-  if (itemError) {
-    throw new Error(itemError.message);
-  }
-
-  if (!item?.project_id) {
-    return {
+  const map = await fetchBoardProjectInfoBatch([projectProcessItemId]);
+  return (
+    map.get(projectProcessItemId) ?? {
       projectId: null,
       projectName: "Projekt",
       projectType: null,
       clientId: null as string | null,
-    };
-  }
-
-  const { data: project, error: projectError } = await supabase
-    .from("projects")
-    .select("name, type, client_id")
-    .eq("id", item.project_id)
-    .maybeSingle();
-
-  if (projectError) {
-    throw new Error(projectError.message);
-  }
-
-  return {
-    projectId: item.project_id,
-    projectName: project?.name?.trim() || "Projekt",
-    projectType: project?.type?.trim() || null,
-    clientId: project?.client_id ?? null,
-  };
+    }
+  );
 }
 
 export async function setKanbanPublicEnabled(projectProcessItemId: string, enabled: boolean) {

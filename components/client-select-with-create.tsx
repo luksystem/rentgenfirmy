@@ -26,6 +26,9 @@ type ClientSelectWithCreateProps = {
 const emptyClientInput = (): ClientInput => ({
   fullName: "",
   location: "",
+  addressStreet: "",
+  addressCity: "",
+  addressPostalCode: "",
   email: "",
   phone: "",
 });

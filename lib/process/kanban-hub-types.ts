@@ -13,6 +13,7 @@ export type KanbanHubBoardEntry = {
   boardId: string;
   projectProcessItemId: string;
   projectId: string;
+  clientId: string;
   projectName: string;
   projectType: string;
   templateItemId: string;

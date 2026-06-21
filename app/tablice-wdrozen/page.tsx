@@ -6,28 +6,28 @@ import { LayoutGrid, Rows3 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchKanbanHubClients } from "@/lib/supabase/kanban-hub-repository";
-import type { KanbanHubClientTile } from "@/lib/process/kanban-hub-types";
+import { useKanbanCacheStore } from "@/store/kanban-cache-store";
 
 export default function KanbanHubPage() {
-  const [clients, setClients] = useState<KanbanHubClientTile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const hubClients = useKanbanCacheStore((state) => state.hubClients);
+  const hubLoading = useKanbanCacheStore((state) => state.hubLoading);
+  const hydrateHub = useKanbanCacheStore((state) => state.hydrateHub);
   const [error, setError] = useState<string | null>(null);
+
+  const loading = hubLoading && !hubClients;
 
   useEffect(() => {
     void (async () => {
-      setLoading(true);
       setError(null);
       try {
-        setClients(await fetchKanbanHubClients());
+        await hydrateHub();
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Błąd ładowania tablic.");
-      } finally {
-        setLoading(false);
       }
     })();
-  }, []);
+  }, [hydrateHub]);
 
+  const clients = hubClients ?? [];
   const totalOpen = clients.reduce((sum, client) => sum + client.openTaskCount, 0);
 
   return (

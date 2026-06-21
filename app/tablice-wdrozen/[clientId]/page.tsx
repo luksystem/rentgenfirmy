@@ -7,17 +7,23 @@ import { ArrowLeft, LayoutGrid } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { fetchKanbanHubClientBoards } from "@/lib/supabase/kanban-hub-repository";
-import type { KanbanHubBoardEntry } from "@/lib/process/kanban-hub-types";
+import { filterHubEntriesByClient, useKanbanCacheStore } from "@/store/kanban-cache-store";
 import { useAppStore } from "@/store/app-store";
 
 export default function KanbanHubClientPage() {
   const params = useParams();
   const clientId = String(params.clientId);
   const clients = useAppStore((state) => state.clients);
-  const [boards, setBoards] = useState<KanbanHubBoardEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const hubEntries = useKanbanCacheStore((state) => state.hubEntries);
+  const hubLoading = useKanbanCacheStore((state) => state.hubLoading);
+  const hydrateHub = useKanbanCacheStore((state) => state.hydrateHub);
   const [error, setError] = useState<string | null>(null);
+
+  const boards = useMemo(
+    () => filterHubEntriesByClient(hubEntries, clientId),
+    [hubEntries, clientId],
+  );
+  const loading = hubLoading && !hubEntries;
 
   const clientName = useMemo(() => {
     if (clientId === "__none__") {
@@ -28,17 +34,14 @@ export default function KanbanHubClientPage() {
 
   useEffect(() => {
     void (async () => {
-      setLoading(true);
       setError(null);
       try {
-        setBoards(await fetchKanbanHubClientBoards(clientId));
+        await hydrateHub();
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Błąd ładowania tablic klienta.");
-      } finally {
-        setLoading(false);
       }
     })();
-  }, [clientId]);
+  }, [hydrateHub]);
 
   return (
     <>

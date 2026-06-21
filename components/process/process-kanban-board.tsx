@@ -28,13 +28,13 @@ import {
 import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
+import { useKanbanCacheStore } from "@/store/kanban-cache-store";
 import {
   addKanbanComment,
   closeKanbanTask,
   createKanbanTask,
   deleteKanbanTask,
   ensureKanbanBoard,
-  fetchKanbanBoardByItemId,
   markKanbanBoardRead,
   moveKanbanTask,
   setKanbanPublicEnabled,
@@ -54,8 +54,12 @@ export function ProcessKanbanBoard({
   authorName: string;
   showPublicLink?: boolean;
 }) {
-  const [board, setBoard] = useState<KanbanBoard | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cachedBoard = useKanbanCacheStore((state) => state.boardsByItemId[projectProcessItemId]);
+  const ensureBoard = useKanbanCacheStore((state) => state.ensureBoard);
+  const setCachedBoard = useKanbanCacheStore((state) => state.setBoard);
+
+  const [board, setBoard] = useState<KanbanBoard | null>(cachedBoard ?? null);
+  const [loading, setLoading] = useState(!cachedBoard);
   const [error, setError] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [newTaskTitles, setNewTaskTitles] = useState<Record<string, string>>({});
@@ -75,34 +79,57 @@ export function ProcessKanbanBoard({
   const [sortMode, setSortMode] = useState<KanbanColumnSortMode>("position");
   const fieldOptions = useAppStore((state) => state.fieldOptions);
 
-  const refresh = useCallback(async () => {
-    const template = isKanbanTemplatePayload(templatePayload)
-      ? templatePayload
-      : { columns: [] };
-    const loaded =
-      (await fetchKanbanBoardByItemId(projectProcessItemId)) ??
-      (await ensureKanbanBoard(projectProcessItemId, template));
-    setBoard(loaded);
-    if (authorSide === "team" && loaded) {
-      await markKanbanBoardRead(loaded.id);
-    }
-  }, [authorSide, projectProcessItemId, templatePayload]);
+  const refresh = useCallback(
+    async (options?: { force?: boolean; showLoading?: boolean }) => {
+      const force = options?.force ?? true;
+      const showLoading = options?.showLoading ?? !useKanbanCacheStore.getState().boardsByItemId[projectProcessItemId];
+      const template = isKanbanTemplatePayload(templatePayload)
+        ? templatePayload
+        : { columns: [] };
+
+      if (showLoading) {
+        setLoading(true);
+      }
+
+      try {
+        const loaded =
+          (await ensureBoard(projectProcessItemId, { force })) ??
+          (await ensureKanbanBoard(projectProcessItemId, template));
+        setBoard(loaded);
+        setCachedBoard(loaded);
+
+        if (authorSide === "team" && loaded) {
+          await markKanbanBoardRead(loaded.id);
+        }
+      } finally {
+        if (showLoading) {
+          setLoading(false);
+        }
+      }
+    },
+    [authorSide, ensureBoard, projectProcessItemId, setCachedBoard, templatePayload],
+  );
 
   useEffect(() => {
     void (async () => {
-      setLoading(true);
       setError(null);
       try {
-        await refresh();
+        await refresh({ force: false, showLoading: !cachedBoard });
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Błąd ładowania tablicy.");
-      } finally {
-        setLoading(false);
       }
     })();
-  }, [refresh]);
+  }, [cachedBoard, refresh]);
 
-  useKanbanRealtime(board?.id ?? null, refresh);
+  useEffect(() => {
+    if (cachedBoard) {
+      setBoard(cachedBoard);
+    }
+  }, [cachedBoard]);
+
+  useKanbanRealtime(board?.id ?? null, async () => {
+    await refresh({ force: true, showLoading: false });
+  });
 
   useEffect(() => {
     if (!board) {
@@ -254,7 +281,7 @@ export function ProcessKanbanBoard({
     setLinkMessage("Link skopiowany.");
   }
 
-  if (loading) {
+  if (loading && !board) {
     return <p className="text-sm text-muted">Ładowanie tablicy Kanban…</p>;
   }
 

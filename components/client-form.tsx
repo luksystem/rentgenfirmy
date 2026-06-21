@@ -18,6 +18,9 @@ export function ClientForm({
   const defaults: ClientInput = {
     fullName: client?.fullName ?? "",
     location: client?.location ?? "",
+    addressStreet: client?.addressStreet ?? "",
+    addressCity: client?.addressCity ?? "",
+    addressPostalCode: client?.addressPostalCode ?? "",
     email: client?.email ?? "",
     phone: client?.phone ?? "",
     notes: client?.notes ?? "",
@@ -31,6 +34,9 @@ export function ClientForm({
     await onSubmit({
       fullName: String(form.get("fullName") ?? ""),
       location: String(form.get("location") ?? ""),
+      addressStreet: String(form.get("addressStreet") ?? ""),
+      addressCity: String(form.get("addressCity") ?? ""),
+      addressPostalCode: String(form.get("addressPostalCode") ?? ""),
       email: String(form.get("email") ?? ""),
       phone: String(form.get("phone") ?? ""),
       notes: String(form.get("notes") ?? ""),
@@ -43,9 +49,20 @@ export function ClientForm({
       <Field label="Imię i nazwisko">
         <Input name="fullName" defaultValue={defaults.fullName} required />
       </Field>
-      <Field label="Obiekt / lokalizacja">
+      <Field label="Obiekt / nazwa lokalizacji">
         <Input name="location" defaultValue={defaults.location} />
       </Field>
+      <Field label="Ulica i numer">
+        <Input name="addressStreet" defaultValue={defaults.addressStreet} />
+      </Field>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Kod pocztowy">
+          <Input name="addressPostalCode" defaultValue={defaults.addressPostalCode} />
+        </Field>
+        <Field label="Miasto">
+          <Input name="addressCity" defaultValue={defaults.addressCity} />
+        </Field>
+      </div>
       <Field label="E-mail">
         <Input name="email" type="email" defaultValue={defaults.email} />
       </Field>

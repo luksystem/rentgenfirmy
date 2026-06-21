@@ -7,6 +7,8 @@ import { isPublicAppRoute } from "@/lib/auth/routes";
 import { useAppStore } from "@/store/app-store";
 import { ProjectEditProvider } from "@/components/project-edit-provider";
 import { ProcessHydrator } from "@/components/process/process-hydrator";
+import { KanbanCacheHydrator } from "@/components/process/kanban-cache-hydrator";
+import { DashboardHydrator } from "@/components/dashboard/dashboard-hydrator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -77,14 +79,18 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=twoj-anon-key`}
 
   return (
     <ProcessHydrator>
-      <>
-        {error ? (
-          <div className="panel-danger mb-4 rounded-xl border px-4 py-3 text-sm text-rose-300">
-            {error}
-          </div>
-        ) : null}
-        <ProjectEditProvider>{children}</ProjectEditProvider>
-      </>
+      <KanbanCacheHydrator>
+        <DashboardHydrator>
+          <>
+            {error ? (
+              <div className="panel-danger mb-4 rounded-xl border px-4 py-3 text-sm text-rose-300">
+                {error}
+              </div>
+            ) : null}
+            <ProjectEditProvider>{children}</ProjectEditProvider>
+          </>
+        </DashboardHydrator>
+      </KanbanCacheHydrator>
     </ProcessHydrator>
   );
 }

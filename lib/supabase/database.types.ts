@@ -98,6 +98,9 @@ export type ClientRow = {
   id: string;
   full_name: string;
   location: string;
+  address_street: string;
+  address_city: string;
+  address_postal_code: string;
   email: string;
   phone: string;
   notes: string | null;
@@ -110,6 +113,9 @@ export type ClientInsert = {
   id?: string;
   full_name: string;
   location?: string;
+  address_street?: string;
+  address_city?: string;
+  address_postal_code?: string;
   email?: string;
   phone?: string;
   notes?: string | null;
@@ -119,6 +125,105 @@ export type ClientInsert = {
 };
 
 export type ClientUpdate = Partial<ClientInsert>;
+
+export type DashboardSpaceRow = {
+  id: string;
+  kind: string;
+  project_id: string | null;
+  client_id: string | null;
+  profile_id: string | null;
+  title: string;
+  public_token: string;
+  public_enabled: boolean;
+  public_access_password_hash: string | null;
+  public_access_username: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DashboardSpaceInsert = {
+  id?: string;
+  kind: string;
+  project_id?: string | null;
+  client_id?: string | null;
+  profile_id?: string | null;
+  title?: string;
+  public_token?: string;
+  public_enabled?: boolean;
+  public_access_password_hash?: string | null;
+  public_access_username?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type DashboardSpaceUpdate = Partial<DashboardSpaceInsert>;
+
+export type ProjectClientAgreementRow = {
+  id: string;
+  project_id: string;
+  title: string;
+  body: string;
+  category: string;
+  status: string;
+  proposed_cost_net: number | string | null;
+  proposed_cost_gross: number | string | null;
+  cost_note: string | null;
+  created_by_name: string;
+  created_by_side: string;
+  submitted_at: string | null;
+  client_responded_at: string | null;
+  client_response_name: string | null;
+  client_response_note: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectClientAgreementInsert = {
+  id?: string;
+  project_id: string;
+  title: string;
+  body?: string;
+  category?: string;
+  status?: string;
+  proposed_cost_net?: number | null;
+  proposed_cost_gross?: number | null;
+  cost_note?: string | null;
+  created_by_name: string;
+  created_by_side?: string;
+  submitted_at?: string | null;
+  client_responded_at?: string | null;
+  client_response_name?: string | null;
+  client_response_note?: string | null;
+  position?: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ProjectClientAgreementUpdate = Partial<ProjectClientAgreementInsert>;
+
+export type SpecificationCatalogItemRow = {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  position: number;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type ProjectSpecificationItemRow = {
+  id: string;
+  project_id: string;
+  catalog_item_id: string | null;
+  title: string;
+  category: string;
+  description: string;
+  notes: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
 
 export type ServiceInsert = {
   id?: string;
@@ -352,6 +457,31 @@ export type Database = {
         Row: ClientRow;
         Insert: ClientInsert;
         Update: ClientUpdate;
+        Relationships: [];
+      };
+      dashboard_spaces: {
+        Row: DashboardSpaceRow;
+        Insert: DashboardSpaceInsert;
+        Update: DashboardSpaceUpdate;
+        Relationships: [];
+      };
+      project_client_agreements: {
+        Row: ProjectClientAgreementRow;
+        Insert: ProjectClientAgreementInsert;
+        Update: ProjectClientAgreementUpdate;
+        Relationships: [];
+      };
+      specification_catalog_items: {
+        Row: SpecificationCatalogItemRow;
+        Insert: Partial<SpecificationCatalogItemRow> & Pick<SpecificationCatalogItemRow, "name">;
+        Update: Partial<SpecificationCatalogItemRow>;
+        Relationships: [];
+      };
+      project_specification_items: {
+        Row: ProjectSpecificationItemRow;
+        Insert: Partial<ProjectSpecificationItemRow> &
+          Pick<ProjectSpecificationItemRow, "project_id" | "title">;
+        Update: Partial<ProjectSpecificationItemRow>;
         Relationships: [];
       };
       work_orders: {

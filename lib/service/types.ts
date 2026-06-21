@@ -85,6 +85,9 @@ export type Client = {
   id: string;
   fullName: string;
   location: string;
+  addressStreet: string;
+  addressCity: string;
+  addressPostalCode: string;
   email: string;
   phone: string;
   notes?: string;

@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { Edit, Plus, Trash2 } from "lucide-react";
+import { Edit, LayoutDashboard, Plus, Trash2 } from "lucide-react";
 import { ClientForm } from "@/components/client-form";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -98,6 +99,11 @@ export function ClientsTable() {
                   <td className="px-4 py-3">{client.externalId || "—"}</td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
+                      <Button type="button" variant="outline" size="sm" asChild>
+                        <Link href={`/przestrzenie/klient/${client.id}`} title="Dashboard klienta">
+                          <LayoutDashboard className="h-3.5 w-3.5" />
+                        </Link>
+                      </Button>
                       <Button
                         type="button"
                         variant="secondary"

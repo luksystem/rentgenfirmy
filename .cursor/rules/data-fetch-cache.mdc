@@ -1,0 +1,62 @@
+---
+description: Wzorzec pobierania danych — batch, cache sesji, store zamiast fetch w komponentach
+alwaysApply: true
+---
+
+# Pobieranie i cache danych
+
+Przy każdej nowej funkcji lub refaktorze modułu z danymi z Supabase stosuj ten wzorzec.
+
+## Warstwy
+
+1. **`lib/supabase/*-repository.ts`** — czyste funkcje fetch/mutate. Bez React, bez cache UI.
+   - Unikaj N+1: batch (`.in(...)`) + `Promise.all` zamiast pętli z `await`.
+   - Wspólna logika składania wyniku (np. `fetchKanbanBoardGraphsBatch`).
+   - Opcjonalny cache modułowy tylko dla drogich metadanych współdzielonych (np. hub graph).
+
+2. **`store/*-store.ts` (Zustand)** — cache sesji aplikacji.
+   - `hydrate()` / `ensureX()` — pierwsze pobranie, potem zwracaj cache.
+   - `force: true` — odświeżenie po mutacji lub realtime (w tle, bez spinnera jeśli cache istnieje).
+   - Deduplikacja równoległych requestów (promise in-flight).
+   - `invalidate()` — pełne wyczyszczenie cache.
+   - `setBoard` / `replaceX` — aktualizacja cache po mutacji.
+
+3. **`components/*-hydrator.tsx`** — prefetch w tle po starcie app (nie blokuj UI).
+
+4. **Strony i komponenty** — **nie** wołają repozytorium w `useEffect`.
+   - Czytaj ze store; wołaj `hydrate` / `ensureX`.
+   - Loading tylko gdy brak cache: `loading = isLoading && !cachedData`.
+   - Realtime: `ensureX({ force: true, showLoading: false })`.
+
+## Wzorce w projekcie
+
+| Moduł | Store | Hydrator |
+|-------|-------|----------|
+| Projekty, klienci | `app-store` | `DataProvider` |
+| Procesy | `process-store` | `ProcessHydrator` |
+| Oferty serwis | `service-store` | `ServiceHydrator` |
+| Tablice Kanban | `kanban-cache-store` | `KanbanCacheHydrator` |
+| Dashboardy / przestrzenie | `dashboard-store` | `DashboardHydrator` |
+| Zlecenia | `work-order-store` | `WorkOrderHydrator` |
+
+## Checklist przy nowym module
+
+- [ ] Batch fetch gdy lista > 1 rekordu
+- [ ] Store z `hydrated` + deduplikacja promise
+- [ ] Komponenty czytają ze store, mutacje aktualizują cache
+- [ ] Paginacja tylko gdy lista UI jest duża (setki+), nie zamiast batch/cache
+
+## Antywzorce (nie rób)
+
+```tsx
+// ❌ fetch w komponencie przy każdym mount
+useEffect(() => { void fetchItems().then(setItems); }, []);
+
+// ❌ N+1 w repozytorium
+for (const id of ids) { await fetchOne(id); }
+
+// ✅ store + ensure
+const items = useMyStore((s) => s.items);
+const ensure = useMyStore((s) => s.ensureItems);
+useEffect(() => { void ensure(); }, [ensure]);
+```

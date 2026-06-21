@@ -1,0 +1,97 @@
+export const PROJECT_AGREEMENT_CATEGORIES = [
+  "integration",
+  "specification",
+  "change",
+  "handover",
+  "other",
+] as const;
+
+export type ProjectAgreementCategory = (typeof PROJECT_AGREEMENT_CATEGORIES)[number];
+
+export const PROJECT_AGREEMENT_STATUSES = [
+  "draft",
+  "pending_client",
+  "accepted",
+  "rejected",
+  "cancelled",
+] as const;
+
+export type ProjectAgreementStatus = (typeof PROJECT_AGREEMENT_STATUSES)[number];
+
+export type ProjectClientAgreement = {
+  id: string;
+  projectId: string;
+  title: string;
+  body: string;
+  category: ProjectAgreementCategory;
+  status: ProjectAgreementStatus;
+  proposedCostNet: number | null;
+  proposedCostGross: number | null;
+  costNote: string | null;
+  createdByName: string;
+  createdBySide: "team" | "client";
+  submittedAt: string | null;
+  clientRespondedAt: string | null;
+  clientResponseName: string | null;
+  clientResponseNote: string | null;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProjectAgreementInput = {
+  title: string;
+  body: string;
+  category: ProjectAgreementCategory;
+  proposedCostNet?: number | null;
+  proposedCostGross?: number | null;
+  costNote?: string | null;
+};
+
+export const PROJECT_AGREEMENT_CATEGORY_LABELS: Record<ProjectAgreementCategory, string> = {
+  integration: "Integracja",
+  specification: "Specyfikacja / urządzenia",
+  change: "Zmiana / element dodatkowy",
+  handover: "Przekazanie / odbiór",
+  other: "Inne",
+};
+
+export const PROJECT_AGREEMENT_STATUS_LABELS: Record<ProjectAgreementStatus, string> = {
+  draft: "Szkic",
+  pending_client: "Oczekuje na klienta",
+  accepted: "Zaakceptowane",
+  rejected: "Odrzucone",
+  cancelled: "Anulowane",
+};
+
+export function agreementStatusTone(
+  status: ProjectAgreementStatus,
+): "neutral" | "warning" | "success" | "danger" {
+  switch (status) {
+    case "pending_client":
+      return "warning";
+    case "accepted":
+      return "success";
+    case "rejected":
+      return "danger";
+    default:
+      return "neutral";
+  }
+}
+
+export function formatAgreementCost(agreement: Pick<
+  ProjectClientAgreement,
+  "proposedCostNet" | "proposedCostGross" | "costNote"
+>) {
+  const parts: string[] = [];
+  if (agreement.proposedCostNet != null) {
+    parts.push(`netto ${agreement.proposedCostNet.toFixed(2)} PLN`);
+  }
+  if (agreement.proposedCostGross != null) {
+    parts.push(`brutto ${agreement.proposedCostGross.toFixed(2)} PLN`);
+  }
+  if (!parts.length) {
+    return agreement.costNote?.trim() || null;
+  }
+  return parts.join(" · ");
+}

@@ -27,6 +27,24 @@ function parseClientBody(body: unknown): ClientInput | null {
   return {
     fullName,
     location: typeof data.location === "string" ? data.location : "",
+    addressStreet:
+      typeof data.addressStreet === "string"
+        ? data.addressStreet
+        : typeof data.address_street === "string"
+          ? data.address_street
+          : "",
+    addressCity:
+      typeof data.addressCity === "string"
+        ? data.addressCity
+        : typeof data.address_city === "string"
+          ? data.address_city
+          : "",
+    addressPostalCode:
+      typeof data.addressPostalCode === "string"
+        ? data.addressPostalCode
+        : typeof data.address_postal_code === "string"
+          ? data.address_postal_code
+          : "",
     email: typeof data.email === "string" ? data.email : "",
     phone: typeof data.phone === "string" ? data.phone : "",
     notes: typeof data.notes === "string" ? data.notes : undefined,

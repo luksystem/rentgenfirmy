@@ -10,11 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
 import { findProcessItemInTemplate } from "@/lib/process/template-lookup";
-import type { KanbanHubBoardEntry } from "@/lib/process/kanban-hub-types";
-import {
-  fetchKanbanHubBoardEntry,
-  fetchKanbanHubClientBoards,
-} from "@/lib/supabase/kanban-hub-repository";
+import { filterHubEntriesByClient, useKanbanCacheStore } from "@/store/kanban-cache-store";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useProcessStore } from "@/store/process-store";
@@ -32,9 +28,15 @@ export default function KanbanHubBoardPage() {
   const templates = useProcessStore((state) => state.templates);
   const processHydrated = useProcessStore((state) => state.hydrated);
 
-  const [boardEntry, setBoardEntry] = useState<KanbanHubBoardEntry | null>(null);
-  const [loading, setLoading] = useState(true);
+  const hubEntries = useKanbanCacheStore((state) => state.hubEntries);
+  const hubLoading = useKanbanCacheStore((state) => state.hubLoading);
+  const hydrateHub = useKanbanCacheStore((state) => state.hydrateHub);
+  const getBoardEntry = useKanbanCacheStore((state) => state.getBoardEntry);
+
   const [error, setError] = useState<string | null>(null);
+
+  const loading = hubLoading && !hubEntries;
+  const boardEntry = getBoardEntry(projectProcessItemId);
 
   const clientName = useMemo(() => {
     if (clientId === "__none__") {
@@ -57,37 +59,30 @@ export default function KanbanHubBoardPage() {
 
   useEffect(() => {
     void (async () => {
-      setLoading(true);
       setError(null);
       try {
-        const [entry, clientBoards] = await Promise.all([
-          fetchKanbanHubBoardEntry(projectProcessItemId),
-          fetchKanbanHubClientBoards(clientId),
-        ]);
-
+        await hydrateHub();
+        const entry = useKanbanCacheStore.getState().getBoardEntry(projectProcessItemId);
         if (!entry) {
           setError("Nie znaleziono tablicy Kanban.");
-          setBoardEntry(null);
           return;
         }
 
+        const clientBoards = filterHubEntriesByClient(
+          useKanbanCacheStore.getState().hubEntries,
+          clientId,
+        );
         const belongsToClient = clientBoards.some(
           (board) => board.projectProcessItemId === projectProcessItemId,
         );
         if (!belongsToClient) {
           setError("Ta tablica nie należy do wybranego klienta.");
-          setBoardEntry(null);
-          return;
         }
-
-        setBoardEntry(entry);
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Błąd ładowania tablicy.");
-      } finally {
-        setLoading(false);
       }
     })();
-  }, [projectProcessItemId, clientId]);
+  }, [projectProcessItemId, clientId, hydrateHub]);
 
   const templatePayload = isKanbanTemplatePayload(templateItem?.defaultPayload)
     ? templateItem.defaultPayload

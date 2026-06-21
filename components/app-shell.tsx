@@ -12,6 +12,7 @@ import {
   FolderKanban,
   GitBranch,
   Home,
+  LayoutDashboard,
   LayoutGrid,
   LogOut,
   Menu,
@@ -44,6 +45,7 @@ const navGroupsBase = [
       { href: "/projekty", label: "Projekty", icon: FolderKanban },
       { href: "/procesy", label: "Procesy", icon: GitBranch },
       { href: "/tablice-wdrozen", label: "Tablice wdrożeń", icon: LayoutGrid },
+      { href: "/przestrzenie", label: "Przestrzenie", icon: LayoutDashboard },
       { href: "/klienci", label: "Klienci", icon: Users },
       { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
       { href: "/zlecenia", label: "Zlecenia", icon: ClipboardList },
@@ -75,6 +77,7 @@ const ofertyNav = commercialNavItems.find((item) => item.href === "/oferty");
 const kalkulacjeNav = commercialNavItems.find((item) => item.href === "/kalkulacje");
 const procesyNav = navGroupsBase[0].items.find((item) => item.href === "/procesy");
 const tabliceWdrozenNav = navGroupsBase[0].items.find((item) => item.href === "/tablice-wdrozen");
+const przestrzenieNav = navGroupsBase[0].items.find((item) => item.href === "/przestrzenie");
 const zleceniaNav = navGroupsBase[0].items.find((item) => item.href === "/zlecenia");
 const klienciNav = navGroupsBase[0].items.find((item) => item.href === "/klienci");
 const mobileMainNav = navGroupsBase[0].items.filter(
@@ -82,7 +85,8 @@ const mobileMainNav = navGroupsBase[0].items.filter(
     item.href !== "/zlecenia" &&
     item.href !== "/klienci" &&
     item.href !== "/procesy" &&
-    item.href !== "/tablice-wdrozen",
+    item.href !== "/tablice-wdrozen" &&
+    item.href !== "/przestrzenie",
 );
 const mobileNavLeft = mobileMainNav.slice(0, 2);
 const mobileNavRight = mobileMainNav.slice(2);
@@ -194,6 +198,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ...(kalkulacjeNav ? [kalkulacjeNav] : []),
       ...(procesyNav ? [procesyNav] : []),
       ...(tabliceWdrozenNav ? [tabliceWdrozenNav] : []),
+      ...(przestrzenieNav ? [przestrzenieNav] : []),
       ...(zleceniaNav ? [zleceniaNav] : []),
       ...(klienciNav ? [klienciNav] : []),
       ...(isAdministrator

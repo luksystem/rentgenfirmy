@@ -33,7 +33,7 @@ import {
   moveKanbanTask,
   updateKanbanTask,
 } from "@/lib/supabase/kanban-repository";
-import { fetchAllKanbanBoardGraphs } from "@/lib/supabase/kanban-hub-repository";
+import { useKanbanCacheStore } from "@/store/kanban-cache-store";
 
 export function AggregatedKanbanBoard({
   authorSide,
@@ -43,8 +43,10 @@ export function AggregatedKanbanBoard({
   authorName: string;
 }) {
   const fieldOptions = useAppStore((state) => state.fieldOptions);
-  const [mergedView, setMergedView] = useState<MergedKanbanView | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cachedMergedView = useKanbanCacheStore((state) => state.mergedView);
+  const ensureAllBoards = useKanbanCacheStore((state) => state.ensureAllBoards);
+  const [mergedView, setMergedView] = useState<MergedKanbanView | null>(cachedMergedView);
+  const [loading, setLoading] = useState(!cachedMergedView);
   const [error, setError] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [commentDraft, setCommentDraft] = useState("");
@@ -56,31 +58,52 @@ export function AggregatedKanbanBoard({
 
   const board = mergedView?.displayBoard ?? null;
 
-  const refresh = useCallback(async () => {
-    const boards = await fetchAllKanbanBoardGraphs();
-    const merged = mergeKanbanBoards(boards);
-    setMergedView(merged);
+  const refresh = useCallback(
+    async (options?: { force?: boolean; showLoading?: boolean }) => {
+      const force = options?.force ?? true;
+      const showLoading = options?.showLoading ?? !useKanbanCacheStore.getState().mergedView;
 
-    if (authorSide === "team") {
-      await Promise.all(boards.map((entry) => markKanbanBoardRead(entry.id)));
-    }
-  }, [authorSide]);
+      if (showLoading) {
+        setLoading(true);
+      }
+
+      try {
+        const boards = await ensureAllBoards({ force });
+        const merged = useKanbanCacheStore.getState().mergedView ?? mergeKanbanBoards(boards);
+        setMergedView(merged);
+
+        if (authorSide === "team") {
+          await Promise.all(boards.map((entry) => markKanbanBoardRead(entry.id)));
+        }
+      } finally {
+        if (showLoading) {
+          setLoading(false);
+        }
+      }
+    },
+    [authorSide, ensureAllBoards],
+  );
 
   useEffect(() => {
     void (async () => {
-      setLoading(true);
       setError(null);
       try {
-        await refresh();
+        await refresh({ force: false, showLoading: !cachedMergedView });
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Błąd ładowania tablicy zbiorczej.");
-      } finally {
-        setLoading(false);
       }
     })();
-  }, [refresh]);
+  }, [cachedMergedView, refresh]);
 
-  useKanbanRealtime("aggregated", refresh);
+  useEffect(() => {
+    if (cachedMergedView) {
+      setMergedView(cachedMergedView);
+    }
+  }, [cachedMergedView]);
+
+  useKanbanRealtime("aggregated", async () => {
+    await refresh({ force: true, showLoading: false });
+  });
 
   const activeTask = board?.tasks.find((task) => task.id === activeTaskId) ?? null;
   const dragTask = dragTaskId ? (board?.tasks.find((task) => task.id === dragTaskId) ?? null) : null;
@@ -154,7 +177,7 @@ export function AggregatedKanbanBoard({
     setDragOverColumnId(null);
   }
 
-  if (loading) {
+  if (loading && !mergedView) {
     return <p className="text-sm text-muted">Ładowanie tablicy zbiorczej…</p>;
   }
 
