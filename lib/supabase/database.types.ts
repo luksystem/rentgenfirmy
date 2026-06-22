@@ -172,6 +172,7 @@ export type ProjectClientAgreementRow = {
   status: string;
   proposed_cost_net: number | string | null;
   proposed_cost_gross: number | string | null;
+  proposed_cost_vat_rate: number | null;
   cost_note: string | null;
   created_by_name: string;
   created_by_side: string;
@@ -194,6 +195,7 @@ export type ProjectClientAgreementInsert = {
   status?: string;
   proposed_cost_net?: number | null;
   proposed_cost_gross?: number | null;
+  proposed_cost_vat_rate?: number | null;
   cost_note?: string | null;
   created_by_name: string;
   created_by_side?: string;

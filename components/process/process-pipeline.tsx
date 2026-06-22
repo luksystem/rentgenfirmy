@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { CheckCircle2, ChevronRight, Circle, FileCheck2, LayoutGrid, Receipt } from "lucide-react";
 import { MilestoneDateBadge } from "@/components/process/milestone-date-badge";
@@ -46,6 +47,8 @@ type ProcessPipelineProps = {
   canCustomizeChecklist?: boolean;
   /** Pionowy układ bez poziomego przewijania — np. wąski panel dashboardu klienta. */
   stacked?: boolean;
+  /** templateItemId → `/kanban/{token}` — linki publicznych tablic w widoku tylko do odczytu. */
+  kanbanPublicLinks?: Record<string, string>;
 };
 
 export function ProcessPipeline({
@@ -64,6 +67,7 @@ export function ProcessPipeline({
   onSaveMilestoneDate,
   canCustomizeChecklist = false,
   stacked = false,
+  kanbanPublicLinks,
 }: ProcessPipelineProps) {
   const [activeItem, setActiveItem] = useState<ProcessItem | null>(null);
 
@@ -198,6 +202,10 @@ export function ProcessPipeline({
                                   ? `${PROCESS_ITEM_KIND_LABELS[item.kind]} · ${checklistStats.total} pkt.`
                                   : PROCESS_ITEM_KIND_LABELS[item.kind];
                             const assigneeLabel = instance ? formatAssigneeLabel(instance) : null;
+                            const kanbanHref =
+                              !interactive && item.kind === "kanban"
+                                ? kanbanPublicLinks?.[item.id]
+                                : undefined;
 
                             if (interactive) {
                               return (
@@ -246,7 +254,16 @@ export function ProcessPipeline({
                                 <span className="min-w-0 flex-1">
                                   <span className="flex items-center gap-1.5 font-medium text-foreground">
                                     <Icon className="h-3.5 w-3.5 shrink-0 text-accent" />
-                                    {item.title}
+                                    {kanbanHref ? (
+                                      <Link
+                                        href={kanbanHref}
+                                        className="text-accent hover:underline"
+                                      >
+                                        {item.title}
+                                      </Link>
+                                    ) : (
+                                      item.title
+                                    )}
                                   </span>
                                   <span className="mt-0.5 block text-[11px] text-muted">
                                     {kindLabel}

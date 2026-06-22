@@ -17,6 +17,7 @@ import type {
 } from "@/lib/dashboard/content-types";
 import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
 import type { DashboardPublicAccessInfo, DashboardSpace } from "@/lib/dashboard/types";
+import { fetchKanbanPublicLinksForProject } from "@/lib/supabase/kanban-public-links";
 import { getProcessProgress } from "@/lib/process/types";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import type { Client } from "@/lib/service/types";
@@ -71,6 +72,7 @@ type AgreementRow = {
   status: string;
   proposed_cost_net: number | string | null;
   proposed_cost_gross: number | string | null;
+  proposed_cost_vat_rate: number | null;
   cost_note: string | null;
   created_by_name: string;
   created_by_side: string;
@@ -132,6 +134,7 @@ function rowToAgreement(row: AgreementRow): ProjectClientAgreement {
     status: isStatus(row.status) ? row.status : "draft",
     proposedCostNet: parseNumber(row.proposed_cost_net),
     proposedCostGross: parseNumber(row.proposed_cost_gross),
+    proposedCostVatRate: parseNumber(row.proposed_cost_vat_rate),
     costNote: row.cost_note,
     createdByName: row.created_by_name,
     createdBySide: row.created_by_side === "client" ? "client" : "team",
@@ -360,6 +363,7 @@ export type PublicDashboardPayload = {
   specificationItems: ProjectSpecificationItem[];
   content: ProjectDashboardContent[];
   pendingAgreementsCount: number;
+  kanbanPublicLinks: Record<string, string>;
   features: {
     agreements: boolean;
     specification: boolean;
@@ -554,8 +558,12 @@ export async function fetchPublicDashboardPayload(
     : [[], [], []];
 
   const pendingAgreementsCount = agreements.filter(
-    (entry) => entry.status === "pending_client" && entry.category !== "warranty",
+    (entry) => entry.status === "pending_client",
   ).length;
+
+  const kanbanPublicLinks = initialProjectId
+    ? await fetchKanbanPublicLinksForProject(getSupabaseAdmin(), initialProjectId)
+    : {};
 
   return {
     space: { ...space, clientId },
@@ -569,6 +577,7 @@ export async function fetchPublicDashboardPayload(
     specificationItems,
     content,
     pendingAgreementsCount,
+    kanbanPublicLinks,
     features: {
       agreements: agreementsEnabled,
       specification: specificationEnabled,

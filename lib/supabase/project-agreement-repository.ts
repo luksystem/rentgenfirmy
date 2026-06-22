@@ -15,6 +15,7 @@ type AgreementRow = {
   status: string;
   proposed_cost_net: number | string | null;
   proposed_cost_gross: number | string | null;
+  proposed_cost_vat_rate: number | null;
   cost_note: string | null;
   created_by_name: string;
   created_by_side: string;
@@ -54,6 +55,7 @@ function rowToAgreement(row: AgreementRow): ProjectClientAgreement {
     status: isStatus(row.status) ? row.status : "draft",
     proposedCostNet: parseNumber(row.proposed_cost_net),
     proposedCostGross: parseNumber(row.proposed_cost_gross),
+    proposedCostVatRate: parseNumber(row.proposed_cost_vat_rate),
     costNote: row.cost_note,
     createdByName: row.created_by_name,
     createdBySide: row.created_by_side === "client" ? "client" : "team",
@@ -112,6 +114,7 @@ export async function createProjectAgreement(
       status: "draft",
       proposed_cost_net: input.proposedCostNet ?? null,
       proposed_cost_gross: input.proposedCostGross ?? null,
+      proposed_cost_vat_rate: input.proposedCostVatRate ?? null,
       cost_note: input.costNote?.trim() || null,
       proposed_warranty_end_date: input.proposedWarrantyEndDate ?? null,
       created_by_name: author.name.trim() || "Zespół",
@@ -143,6 +146,7 @@ export async function updateProjectAgreementDraft(
       category: input.category,
       proposed_cost_net: input.proposedCostNet ?? null,
       proposed_cost_gross: input.proposedCostGross ?? null,
+      proposed_cost_vat_rate: input.proposedCostVatRate ?? null,
       cost_note: input.costNote?.trim() || null,
       proposed_warranty_end_date: input.proposedWarrantyEndDate ?? null,
       updated_at: new Date().toISOString(),

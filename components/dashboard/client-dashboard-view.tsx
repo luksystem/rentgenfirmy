@@ -1,18 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ClipboardCheck,
   FileText,
   FolderOpen,
   GitBranch,
+  LayoutDashboard,
   LayoutGrid,
   Link2,
   UserRound,
 } from "lucide-react";
 import { ProjectAgreementsPanel } from "@/components/dashboard/project-agreements-panel";
 import { ProjectSpecificationPanel } from "@/components/dashboard/project-specification-panel";
+import { ClientDashboardOverview } from "@/components/dashboard/client-dashboard-overview";
 import { ClientInfoCard } from "@/components/dashboard/client-info-card";
 import { ClientProjectSummary } from "@/components/dashboard/client-project-summary";
 import { DashboardPublicLinkPanel } from "@/components/dashboard/dashboard-public-link-panel";
@@ -27,21 +29,57 @@ import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-typ
 import type { DashboardSpace } from "@/lib/dashboard/types";
 import { getProcessProgress } from "@/lib/process/types";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
+import { fetchProjectKanbanPublicLinks } from "@/lib/supabase/kanban-repository";
 import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useProjectAgreementStore } from "@/store/project-agreement-store";
 
-type ClientDashboardTab = "data" | "process" | "agreements" | "specification" | "links";
+type ClientDashboardTab =
+  | "overview"
+  | "data"
+  | "process"
+  | "agreements"
+  | "specification"
+  | "links";
 
-const TAB_CONFIG: Array<{
+const EMPTY_AGREEMENTS: ProjectClientAgreement[] = [];
+
+const CLIENT_TAB_CONFIG: Array<{
   id: ClientDashboardTab;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }> = [
+  { id: "overview", label: "Przegląd", icon: LayoutDashboard },
   { id: "data", label: "Dane", icon: UserRound },
   { id: "process", label: "Proces", icon: GitBranch },
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
+  { id: "links", label: "Linki", icon: Link2 },
+];
+
+const TEAM_MAIN_TAB_CONFIG: Array<{
+  id: ClientDashboardTab;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}> = [
+  { id: "overview", label: "Przegląd", icon: LayoutDashboard },
+  { id: "process", label: "Proces", icon: GitBranch },
+  { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
+  { id: "specification", label: "Specyfikacja", icon: FileText },
+  { id: "links", label: "Linki", icon: Link2 },
+];
+
+const TEAM_MOBILE_TAB_CONFIG: Array<{
+  id: ClientDashboardTab;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}> = [
+  { id: "overview", label: "Przegląd", icon: LayoutDashboard },
+  { id: "data", label: "Dane", icon: UserRound },
+  { id: "process", label: "Proces", icon: GitBranch },
+  { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
+  { id: "specification", label: "Spec.", icon: FileText },
   { id: "links", label: "Linki", icon: Link2 },
 ];
 
@@ -65,6 +103,7 @@ export function ClientDashboardView({
   seedSpecificationItems,
   seedContent,
   pendingAgreementsCount = 0,
+  seedKanbanPublicLinks,
   onProjectPatch,
 }: {
   client: Client;
@@ -86,35 +125,77 @@ export function ClientDashboardView({
   seedSpecificationItems?: ProjectSpecificationItem[];
   seedContent?: ProjectDashboardContent[];
   pendingAgreementsCount?: number;
+  seedKanbanPublicLinks?: Record<string, string>;
   onProjectPatch?: (projectId: string, patch: Partial<Project>) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<ClientDashboardTab>("data");
+  const [activeTab, setActiveTab] = useState<ClientDashboardTab>("overview");
+  const [kanbanPublicLinks, setKanbanPublicLinks] = useState<Record<string, string>>({});
+
+  const storeAgreements = useProjectAgreementStore(
+    (state) => state.byProject[selectedProjectId] ?? EMPTY_AGREEMENTS,
+  );
+  const ensureAgreements = useProjectAgreementStore((state) => state.ensureAgreements);
+  const agreementSource = seedAgreements ?? storeAgreements;
 
   const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? projects[0];
 
-  const nonWarrantyPendingCount = useMemo(() => {
-    if (!seedAgreements) {
+  useEffect(() => {
+    if (seedKanbanPublicLinks !== undefined) {
+      setKanbanPublicLinks(seedKanbanPublicLinks);
+      return;
+    }
+
+    if (!selectedProjectId) {
+      setKanbanPublicLinks({});
+      return;
+    }
+
+    let cancelled = false;
+    void fetchProjectKanbanPublicLinks(selectedProjectId)
+      .then((links) => {
+        if (!cancelled) {
+          setKanbanPublicLinks(links);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setKanbanPublicLinks({});
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [seedKanbanPublicLinks, selectedProjectId]);
+
+  useEffect(() => {
+    if (seedAgreements !== undefined || !enableAgreements || !selectedProjectId) {
+      return;
+    }
+    void ensureAgreements(selectedProjectId);
+  }, [enableAgreements, ensureAgreements, seedAgreements, selectedProjectId]);
+
+  const pendingAcceptanceCount = useMemo(() => {
+    const computed = agreementSource.filter(
+      (entry) =>
+        entry.projectId === selectedProjectId && entry.status === "pending_client",
+    ).length;
+    if (seedAgreements !== undefined && pendingAgreementsCount > computed) {
       return pendingAgreementsCount;
     }
-    return seedAgreements.filter(
-      (entry) =>
-        entry.projectId === selectedProjectId &&
-        entry.category !== "warranty" &&
-        entry.status === "pending_client",
-    ).length;
-  }, [pendingAgreementsCount, seedAgreements, selectedProjectId]);
+    return computed;
+  }, [agreementSource, pendingAgreementsCount, seedAgreements, selectedProjectId]);
 
   const pendingWarrantyCount = useMemo(() => {
-    if (!seedAgreements) {
-      return 0;
-    }
-    return seedAgreements.filter(
+    return agreementSource.filter(
       (entry) =>
         entry.projectId === selectedProjectId &&
         entry.category === "warranty" &&
         entry.status === "pending_client",
     ).length;
-  }, [seedAgreements, selectedProjectId]);
+  }, [agreementSource, selectedProjectId]);
+
+  const pendingOtherAgreementsCount = pendingAcceptanceCount - pendingWarrantyCount;
 
   const progress = useMemo(() => {
     if (processProgress !== undefined) {
@@ -126,7 +207,19 @@ export function ClientDashboardView({
     return getProcessProgress(template, process);
   }, [process, processProgress, template]);
 
-  const visibleTabs = TAB_CONFIG.filter((tab) => {
+  const clientVisibleTabs = CLIENT_TAB_CONFIG.filter((tab) => {
+    if (tab.id === "agreements" && !enableAgreements) return false;
+    if (tab.id === "specification" && !enableSpecification) return false;
+    return true;
+  });
+
+  const teamMainTabs = TEAM_MAIN_TAB_CONFIG.filter((tab) => {
+    if (tab.id === "agreements" && !enableAgreements) return false;
+    if (tab.id === "specification" && !enableSpecification) return false;
+    return true;
+  });
+
+  const teamMobileTabs = TEAM_MOBILE_TAB_CONFIG.filter((tab) => {
     if (tab.id === "agreements" && !enableAgreements) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
     return true;
@@ -239,7 +332,13 @@ export function ClientDashboardView({
         {template && process ? (
           <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
             <h2 className="mb-4 text-base font-semibold text-foreground">Proces wdrożenia</h2>
-            <ProcessPipeline template={template} process={process} interactive={false} stacked />
+            <ProcessPipeline
+              template={template}
+              process={process}
+              interactive={false}
+              stacked
+              kanbanPublicLinks={kanbanPublicLinks}
+            />
           </div>
         ) : (
           <p className="text-sm text-muted">
@@ -314,35 +413,141 @@ export function ClientDashboardView({
     );
   }
 
-  function renderTabContent(tab: ClientDashboardTab) {
+  function renderOverviewSection(onOpenTab?: (tab: ClientDashboardTab) => void) {
+    return (
+      <ClientDashboardOverview
+        project={selectedProject}
+        progress={progress}
+        agreements={agreementSource}
+        pendingAgreementsCount={pendingOtherAgreementsCount}
+        pendingWarrantyCount={pendingWarrantyCount}
+        readOnly={readOnly}
+        onOpenTab={
+          onOpenTab
+            ? (tab) => onOpenTab(tab)
+            : undefined
+        }
+      />
+    );
+  }
+
+  function renderAgreementsPanel() {
+    return (
+      <div className="rounded-2xl border border-border/80 bg-surface p-4">
+        <h2 className="mb-3 text-base font-semibold text-foreground">Ustalenia i akceptacje</h2>
+        <ProjectAgreementsPanel
+          projectId={selectedProject.id}
+          mode={readOnly ? "client" : "team"}
+          authorName={readOnly ? clientAuthorName : teamAuthorName}
+          seedAgreements={seedAgreements}
+          onWarrantyExtensionAccepted={(warrantyEndsAt) =>
+            onProjectPatch?.(selectedProject.id, { warrantyEndsAt })
+          }
+        />
+      </div>
+    );
+  }
+
+  function renderSpecificationPanel() {
+    return (
+      <div className="rounded-2xl border border-border/80 bg-surface p-4">
+        <h2 className="mb-3 text-base font-semibold text-foreground">Konfigurator specyfikacji</h2>
+        <ProjectSpecificationPanel
+          projectId={selectedProject.id}
+          readOnly={readOnly}
+          seedItems={seedSpecificationItems}
+        />
+      </div>
+    );
+  }
+
+  function tabBadgeCount(tabId: ClientDashboardTab) {
+    if (tabId === "agreements" || tabId === "overview") {
+      return pendingAcceptanceCount;
+    }
+    return 0;
+  }
+
+  function renderTabBar(
+    tabs: Array<{
+      id: ClientDashboardTab;
+      label: string;
+      icon: React.ComponentType<{ className?: string }>;
+    }>,
+    variant: "desktop" | "mobile-bottom",
+  ) {
+    return (
+      <div
+        className={cn(
+          variant === "desktop"
+            ? "mb-4 flex flex-wrap gap-2"
+            : "mx-auto grid max-w-lg rounded-2xl border border-border bg-surface-elevated/95 px-1 py-1 shadow-card backdrop-blur-xl",
+        )}
+        style={
+          variant === "mobile-bottom"
+            ? { gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }
+            : undefined
+        }
+      >
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const active = activeTab === tab.id;
+          const badgeCount = tabBadgeCount(tab.id);
+          const showBadge = badgeCount > 0;
+
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                variant === "desktop"
+                  ? cn(
+                      "relative inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition",
+                      active
+                        ? "border-accent/50 bg-accent/10 text-foreground"
+                        : "border-border/70 text-muted hover:border-accent/30 hover:text-foreground",
+                    )
+                  : cn(
+                      "relative flex flex-col items-center gap-0.5 rounded-2xl px-1 py-2 text-[10px] font-medium transition",
+                      active ? "text-accent" : "text-muted",
+                    ),
+              )}
+            >
+              <span className="relative inline-flex items-center gap-1.5">
+                <Icon className={variant === "desktop" ? "h-4 w-4" : "h-5 w-5"} />
+                {variant === "desktop" ? tab.label : null}
+                {showBadge ? (
+                  <span
+                    className={cn(
+                      "flex items-center justify-center rounded-full bg-rose-500 font-bold text-white",
+                      variant === "desktop"
+                        ? "h-4 min-w-4 px-1 text-[9px]"
+                        : "absolute -right-1.5 -top-1 h-4 min-w-4 px-1 text-[9px]",
+                    )}
+                  >
+                    {badgeCount > 9 ? "9+" : badgeCount}
+                  </span>
+                ) : null}
+              </span>
+              {variant === "mobile-bottom" ? tab.label : null}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function renderMainTabContent(tab: ClientDashboardTab) {
     switch (tab) {
-      case "data":
-        return renderDataSection(true);
+      case "overview":
+        return renderOverviewSection((nextTab) => setActiveTab(nextTab));
       case "process":
         return renderProcessSection();
       case "agreements":
-        return enableAgreements ? (
-          <div className="rounded-2xl border border-border/80 bg-surface p-4">
-            <h2 className="mb-3 text-base font-semibold text-foreground">Ustalenia i akceptacje</h2>
-            <ProjectAgreementsPanel
-              projectId={selectedProject.id}
-              mode={readOnly ? "client" : "team"}
-              authorName={readOnly ? clientAuthorName : teamAuthorName}
-              seedAgreements={seedAgreements}
-            />
-          </div>
-        ) : null;
+        return enableAgreements ? renderAgreementsPanel() : null;
       case "specification":
-        return enableSpecification ? (
-          <div className="rounded-2xl border border-border/80 bg-surface p-4">
-            <h2 className="mb-3 text-base font-semibold text-foreground">Konfigurator specyfikacji</h2>
-            <ProjectSpecificationPanel
-              projectId={selectedProject.id}
-              readOnly={readOnly}
-              seedItems={seedSpecificationItems}
-            />
-          </div>
-        ) : null;
+        return enableSpecification ? renderSpecificationPanel() : null;
       case "links":
         return renderLinksSection();
       default:
@@ -352,102 +557,72 @@ export function ClientDashboardView({
 
   return (
     <div className="w-full min-w-0 pb-24 xl:pb-0">
-      {/* Desktop — flex + w-0/flex-1 zapobiega rozpychaniu prawej kolumny pod lewy panel */}
-      <div className="max-xl:hidden w-full">
-        <div className="flex w-full items-start gap-4">
-          <aside className="w-[300px] shrink-0 grow-0">{renderDataSection(false)}</aside>
-          <main className="min-w-0 w-0 flex-1 grow">
-            <div className="flex flex-col gap-4">
-              {renderProcessSection()}
-              {enableAgreements ? (
-                <div className="rounded-2xl border border-border/80 bg-surface p-4">
-                  <h2 className="mb-3 text-base font-semibold text-foreground">Ustalenia i akceptacje</h2>
-                  <ProjectAgreementsPanel
-                    projectId={selectedProject.id}
-                    mode={readOnly ? "client" : "team"}
-                    authorName={readOnly ? clientAuthorName : teamAuthorName}
-                    seedAgreements={seedAgreements}
-                  />
-                </div>
-              ) : null}
-              {enableSpecification ? (
-                <div className="rounded-2xl border border-border/80 bg-surface p-4">
-                  <h2 className="mb-3 text-base font-semibold text-foreground">Konfigurator specyfikacji</h2>
-                  <ProjectSpecificationPanel
-                    projectId={selectedProject.id}
-                    readOnly={readOnly}
-                    seedItems={seedSpecificationItems}
-                  />
-                </div>
-              ) : null}
-              {renderLinksSection()}
+      {readOnly ? (
+        <div className="w-full">
+          {projects.length > 1 && onProjectChange ? (
+            <div className="mb-4 flex gap-2 overflow-x-auto pb-1 xl:hidden">
+              {projects.map((project) => (
+                <button
+                  key={project.id}
+                  type="button"
+                  onClick={() => onProjectChange(project.id)}
+                  className={cn(
+                    "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                    project.id === selectedProjectId
+                      ? "border-accent/50 bg-accent/10 text-foreground"
+                      : "border-border/70 text-muted",
+                  )}
+                >
+                  {project.name}
+                </button>
+              ))}
             </div>
-          </main>
-        </div>
-      </div>
-
-      {/* Mobile */}
-      <div className="xl:hidden">
-        {projects.length > 1 && onProjectChange ? (
-          <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
-            {projects.map((project) => (
-              <button
-                key={project.id}
-                type="button"
-                onClick={() => onProjectChange(project.id)}
-                className={cn(
-                  "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition",
-                  project.id === selectedProjectId
-                    ? "border-accent/50 bg-accent/10 text-foreground"
-                    : "border-border/70 text-muted",
-                )}
-              >
-                {project.name}
-              </button>
-            ))}
+          ) : null}
+          <div className="max-xl:hidden">{renderTabBar(clientVisibleTabs, "desktop")}</div>
+          <div>
+            {activeTab === "data"
+              ? renderDataSection(true)
+              : renderMainTabContent(activeTab)}
           </div>
-        ) : null}
-
-        {renderTabContent(activeTab)}
-      </div>
+        </div>
+      ) : (
+        <>
+          <div className="max-xl:hidden w-full">
+            <div className="flex w-full items-start gap-4">
+              <aside className="w-[300px] shrink-0 grow-0">{renderDataSection(false)}</aside>
+              <main className="min-w-0 w-0 flex-1 grow">
+                {renderTabBar(teamMainTabs, "desktop")}
+                {renderMainTabContent(activeTab)}
+              </main>
+            </div>
+          </div>
+          <div className="xl:hidden">
+            {projects.length > 1 && onProjectChange ? (
+              <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+                {projects.map((project) => (
+                  <button
+                    key={project.id}
+                    type="button"
+                    onClick={() => onProjectChange(project.id)}
+                    className={cn(
+                      "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                      project.id === selectedProjectId
+                        ? "border-accent/50 bg-accent/10 text-foreground"
+                        : "border-border/70 text-muted",
+                    )}
+                  >
+                    {project.name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {activeTab === "data" ? renderDataSection(true) : renderMainTabContent(activeTab)}
+          </div>
+        </>
+      )}
 
       <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 xl:hidden">
-        <div
-          className="mx-auto grid max-w-lg rounded-2xl border border-border bg-surface-elevated/95 px-1 py-1 shadow-card backdrop-blur-xl"
-          style={{ gridTemplateColumns: `repeat(${visibleTabs.length}, minmax(0, 1fr))` }}
-        >
-          {visibleTabs.map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.id;
-            const showBadge =
-              (tab.id === "agreements" && nonWarrantyPendingCount > 0) ||
-              (tab.id === "data" && pendingWarrantyCount > 0);
-            const badgeCount =
-              tab.id === "agreements" ? nonWarrantyPendingCount : pendingWarrantyCount;
-
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "relative flex flex-col items-center gap-0.5 rounded-2xl px-1 py-2 text-[10px] font-medium transition",
-                  active ? "text-accent" : "text-muted",
-                )}
-              >
-                <span className="relative">
-                  <Icon className="h-5 w-5" />
-                  {showBadge ? (
-                    <span className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
-                      {badgeCount > 9 ? "9+" : badgeCount}
-                    </span>
-                  ) : null}
-                </span>
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        {renderTabBar(readOnly ? clientVisibleTabs : teamMobileTabs, "mobile-bottom")}
       </nav>
     </div>
   );

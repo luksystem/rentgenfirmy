@@ -561,6 +561,11 @@ export async function setKanbanPublicEnabled(projectProcessItemId: string, enabl
   return fetchBoardGraph(data as BoardRow);
 }
 
+export async function fetchProjectKanbanPublicLinks(projectId: string) {
+  const { fetchKanbanPublicLinksForProject } = await import("@/lib/supabase/kanban-public-links");
+  return fetchKanbanPublicLinksForProject(getSupabase(), projectId);
+}
+
 export async function countOpenKanbanTasks() {
   const supabase = getSupabase();
   const { count, error } = await supabase

@@ -27,6 +27,7 @@ type PublicDashboardPayload = {
   specificationItems: import("@/lib/dashboard/specification-types").ProjectSpecificationItem[];
   content: ProjectDashboardContent[];
   pendingAgreementsCount: number;
+  kanbanPublicLinks: Record<string, string>;
   features: {
     agreements: boolean;
     specification: boolean;
@@ -82,6 +83,7 @@ export default function PublicDashboardPage() {
   >([]);
   const [content, setContent] = useState<ProjectDashboardContent[]>([]);
   const [pendingAgreementsCount, setPendingAgreementsCount] = useState(0);
+  const [kanbanPublicLinks, setKanbanPublicLinks] = useState<Record<string, string>>({});
   const [features, setFeatures] = useState({ agreements: false, specification: false, content: false });
   const [access, setAccess] = useState<DashboardPublicAccessInfo>(DEFAULT_ACCESS);
   const [contextTitle, setContextTitle] = useState<string | null>(null);
@@ -113,6 +115,7 @@ export default function PublicDashboardPage() {
     setSpecificationItems(payload.specificationItems);
     setContent(payload.content);
     setPendingAgreementsCount(payload.pendingAgreementsCount);
+    setKanbanPublicLinks(payload.kanbanPublicLinks ?? {});
     setFeatures(payload.features);
     setSelectedProjectId(payload.initialProjectId);
     setAuthenticated(true);
@@ -320,6 +323,7 @@ export default function PublicDashboardPage() {
           seedSpecificationItems={features.specification ? specificationItems : undefined}
           seedContent={features.content ? content : undefined}
           pendingAgreementsCount={pendingAgreementsCount}
+          seedKanbanPublicLinks={kanbanPublicLinks}
           showPublicLink={false}
           readOnly
           enableContent={features.content}

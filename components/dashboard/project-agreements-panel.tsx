@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Check, Plus, Send, Trash2, X } from "lucide-react";
+import { AgreementCostFields } from "@/components/dashboard/agreement-cost-fields";
 import { Button } from "@/components/ui/button";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Field, Input, Textarea } from "@/components/ui/input";
@@ -23,7 +24,8 @@ import {
   type ProjectAgreementStatus,
   type ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";
-import { cn } from "@/lib/utils";
+import { DEFAULT_AGREEMENT_VAT_RATE, normalizeAgreementVatRate } from "@/lib/dashboard/agreement-cost";
+import { cn, formatDate } from "@/lib/utils";
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
 
 type FilterKey = "all" | ProjectAgreementStatus;
@@ -53,6 +55,7 @@ function emptyInput(): ProjectAgreementInput {
     category: "other",
     proposedCostNet: null,
     proposedCostGross: null,
+    proposedCostVatRate: DEFAULT_AGREEMENT_VAT_RATE,
     costNote: "",
   };
 }
@@ -109,6 +112,13 @@ function AgreementCard({
           {PROJECT_AGREEMENT_STATUS_LABELS[agreement.status]}
         </span>
       </div>
+
+      {agreement.category === "warranty" && agreement.proposedWarrantyEndDate ? (
+        <p className="mt-3 text-sm text-foreground">
+          Nowa data zakończenia gwarancji:{" "}
+          <span className="font-medium">{formatDate(agreement.proposedWarrantyEndDate)}</span>
+        </p>
+      ) : null}
 
       {agreement.body ? (
         <p className="mt-3 whitespace-pre-wrap text-sm text-muted">{agreement.body}</p>
@@ -228,11 +238,13 @@ export function ProjectAgreementsPanel({
   mode,
   authorName,
   seedAgreements,
+  onWarrantyExtensionAccepted,
 }: {
   projectId: string;
   mode: "team" | "client";
   authorName: string;
   seedAgreements?: ProjectClientAgreement[];
+  onWarrantyExtensionAccepted?: (warrantyEndsAt: string) => void | Promise<void>;
 }) {
   const storeAgreements = useProjectAgreementStore(
     (state) => state.byProject[projectId] ?? EMPTY_AGREEMENTS,
@@ -249,9 +261,7 @@ export function ProjectAgreementsPanel({
     seedAgreements !== undefined ? seedAgreements : null,
   );
 
-  const agreements = (seedAgreements !== undefined ? (localAgreements ?? seedAgreements) : storeAgreements).filter(
-    (entry) => entry.category !== "warranty",
-  );
+  const agreements = seedAgreements !== undefined ? (localAgreements ?? seedAgreements) : storeAgreements;
 
   const [filter, setFilter] = useState<FilterKey>(mode === "client" ? "pending_client" : "all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -309,10 +319,13 @@ export function ProjectAgreementsPanel({
     id: string,
     input: { accepted: boolean; clientResponseName: string; clientResponseNote?: string },
   ) {
-    await respond(projectId, id, input);
+    const updated = await respond(projectId, id, input);
+    if (input.accepted && updated.category === "warranty" && updated.proposedWarrantyEndDate) {
+      await onWarrantyExtensionAccepted?.(updated.proposedWarrantyEndDate);
+    }
     if (seedAgreements !== undefined) {
-      const updated = await ensureAgreements(projectId, { force: true });
-      setLocalAgreements(updated);
+      const refreshed = await ensureAgreements(projectId, { force: true });
+      setLocalAgreements(refreshed);
     }
   }
 
@@ -424,11 +437,13 @@ export function ProjectAgreementsPanel({
                   }))
                 }
               >
-                {PROJECT_AGREEMENT_CATEGORIES.map((category) => (
+                {PROJECT_AGREEMENT_CATEGORIES.filter((category) => category !== "warranty").map(
+                  (category) => (
                   <option key={category} value={category}>
                     {PROJECT_AGREEMENT_CATEGORY_LABELS[category]}
                   </option>
-                ))}
+                  ),
+                )}
               </select>
             </Field>
             <Field label="Opis ustaleń">
@@ -439,36 +454,11 @@ export function ProjectAgreementsPanel({
                 placeholder="Szczegóły: np. sonda hydrostatyczna zamiast pływaka, odpowiedzialność serwisowa…"
               />
             </Field>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Koszt netto (PLN)">
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.proposedCostNet ?? ""}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      proposedCostNet: event.target.value ? Number(event.target.value) : null,
-                    }))
-                  }
-                />
-              </Field>
-              <Field label="Koszt brutto (PLN)">
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.proposedCostGross ?? ""}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      proposedCostGross: event.target.value ? Number(event.target.value) : null,
-                    }))
-                  }
-                />
-              </Field>
-            </div>
+            <AgreementCostFields
+              net={form.proposedCostNet ?? null}
+              vatRate={normalizeAgreementVatRate(form.proposedCostVatRate)}
+              onChange={(cost) => setForm((current) => ({ ...current, ...cost }))}
+            />
             <Field label="Notatka do kosztu">
               <Input
                 value={form.costNote ?? ""}

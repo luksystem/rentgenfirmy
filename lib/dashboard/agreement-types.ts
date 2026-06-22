@@ -28,6 +28,7 @@ export type ProjectClientAgreement = {
   status: ProjectAgreementStatus;
   proposedCostNet: number | null;
   proposedCostGross: number | null;
+  proposedCostVatRate: number | null;
   costNote: string | null;
   createdByName: string;
   createdBySide: "team" | "client";
@@ -47,6 +48,7 @@ export type ProjectAgreementInput = {
   category: ProjectAgreementCategory;
   proposedCostNet?: number | null;
   proposedCostGross?: number | null;
+  proposedCostVatRate?: number | null;
   costNote?: string | null;
   proposedWarrantyEndDate?: string | null;
 };
@@ -93,14 +95,18 @@ function formatCostAmount(value: number | string | null | undefined) {
 
 export function formatAgreementCost(agreement: Pick<
   ProjectClientAgreement,
-  "proposedCostNet" | "proposedCostGross" | "costNote"
+  "proposedCostNet" | "proposedCostGross" | "proposedCostVatRate" | "costNote"
 >) {
   const parts: string[] = [];
   const net = formatCostAmount(agreement.proposedCostNet);
   const gross = formatCostAmount(agreement.proposedCostGross);
+  const vatRate = agreement.proposedCostVatRate;
 
   if (net != null) {
     parts.push(`netto ${net.toFixed(2)} PLN`);
+  }
+  if (vatRate === 0 || vatRate === 8 || vatRate === 23) {
+    parts.push(`VAT ${vatRate}%`);
   }
   if (gross != null) {
     parts.push(`brutto ${gross.toFixed(2)} PLN`);

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarPlus, Check, Plus, Send, Shield, Trash2, X } from "lucide-react";
+import { AgreementCostFields } from "@/components/dashboard/agreement-cost-fields";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import {
@@ -18,6 +19,7 @@ import {
   type ProjectAgreementInput,
   type ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";
+import { DEFAULT_AGREEMENT_VAT_RATE, normalizeAgreementVatRate } from "@/lib/dashboard/agreement-cost";
 import {
   computeWarrantyEndsAt,
   filterWarrantyAgreements,
@@ -58,6 +60,7 @@ function emptyWarrantyInput(project: Project): ProjectAgreementInput {
     category: "warranty",
     proposedCostNet: null,
     proposedCostGross: null,
+    proposedCostVatRate: DEFAULT_AGREEMENT_VAT_RATE,
     costNote: "",
     proposedWarrantyEndDate: computeWarrantyEndsAt(project.systemHandoverAt, project.warrantyDurationMonths) ?? "",
   };
@@ -555,36 +558,12 @@ export function ProjectWarrantyPanel({
                 placeholder="Zakres przedłużenia, warunki serwisu…"
               />
             </Field>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Koszt netto (PLN)">
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.proposedCostNet ?? ""}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      proposedCostNet: event.target.value ? Number(event.target.value) : null,
-                    }))
-                  }
-                />
-              </Field>
-              <Field label="Koszt brutto (PLN)">
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.proposedCostGross ?? ""}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      proposedCostGross: event.target.value ? Number(event.target.value) : null,
-                    }))
-                  }
-                />
-              </Field>
-            </div>
+            <AgreementCostFields
+              net={form.proposedCostNet ?? null}
+              vatRate={normalizeAgreementVatRate(form.proposedCostVatRate)}
+              compact={compact}
+              onChange={(cost) => setForm((current) => ({ ...current, ...cost }))}
+            />
             <Field label="Notatka do kosztu">
               <Input
                 value={form.costNote ?? ""}
