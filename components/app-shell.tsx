@@ -26,9 +26,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isPublicAppRoute } from "@/lib/auth/routes";
-import { useKanbanOpenTasksRealtime } from "@/hooks/use-kanban-realtime";
+import { useKanbanNewTasksRealtime, useKanbanOverdueTasksRealtime } from "@/hooks/use-kanban-realtime";
+import { useNotificationsRealtime } from "@/hooks/use-notifications-realtime";
 import { COMMERCIAL_MODULE_LIST } from "@/lib/modules/commercial-modules";
+import { NotificationBell } from "@/components/notification-bell";
 import { useAuthStore } from "@/store/auth-store";
+import { useNotificationStore } from "@/store/notification-store";
 import { useProcessStore } from "@/store/process-store";
 
 const commercialNavItems = COMMERCIAL_MODULE_LIST.map((module) => ({
@@ -95,6 +98,33 @@ function isActive(pathname: string, href: string) {
   return pathname === href || (href !== "/" && pathname.startsWith(href));
 }
 
+function NavBadges({
+  overdueCount = 0,
+  newCount = 0,
+}: {
+  overdueCount?: number;
+  newCount?: number;
+}) {
+  if (overdueCount <= 0 && newCount <= 0) {
+    return null;
+  }
+
+  return (
+    <span className="flex items-center gap-1">
+      {overdueCount > 0 ? (
+        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white">
+          {overdueCount > 99 ? "99+" : overdueCount}
+        </span>
+      ) : null}
+      {newCount > 0 ? (
+        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-bold text-white">
+          {newCount > 99 ? "99+" : newCount}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 function NavLink({
   href,
   label,
@@ -102,7 +132,8 @@ function NavLink({
   active,
   onClick,
   variant = "sidebar",
-  badgeCount = 0,
+  overdueBadgeCount = 0,
+  newBadgeCount = 0,
 }: {
   href: string;
   label: string;
@@ -110,7 +141,8 @@ function NavLink({
   active: boolean;
   onClick?: () => void;
   variant?: "sidebar" | "sheet";
-  badgeCount?: number;
+  overdueBadgeCount?: number;
+  newBadgeCount?: number;
 }) {
   if (variant === "sheet") {
     return (
@@ -126,11 +158,7 @@ function NavLink({
       >
       <Icon className="h-4 w-4" />
       <span className="flex-1">{label}</span>
-      {badgeCount > 0 ? (
-        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white">
-          {badgeCount > 99 ? "99+" : badgeCount}
-        </span>
-      ) : null}
+      <NavBadges overdueCount={overdueBadgeCount} newCount={newBadgeCount} />
     </Link>
   );
   }
@@ -148,11 +176,7 @@ function NavLink({
     >
       <Icon className={cn("h-4 w-4", active && "text-sidebar-accent")} />
       <span className="flex-1">{label}</span>
-      {badgeCount > 0 ? (
-        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white">
-          {badgeCount > 99 ? "99+" : badgeCount}
-        </span>
-      ) : null}
+      <NavBadges overdueCount={overdueBadgeCount} newCount={newBadgeCount} />
     </Link>
   );
 }
@@ -170,24 +194,52 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const profileId = useAuthStore((state) => state.profile?.id);
   const isAdministrator = useAuthStore((state) => state.isAdministrator);
   const displayName = useAuthStore((state) => state.displayName);
   const signOut = useAuthStore((state) => state.signOut);
-  const kanbanOpenTaskCount = useProcessStore((state) => state.kanbanOpenTaskCount);
-  const refreshKanbanOpenTaskCount = useProcessStore((state) => state.refreshKanbanOpenTaskCount);
+  const kanbanNewTaskCount = useProcessStore((state) => state.kanbanNewTaskCount);
+  const kanbanOverdueTaskCount = useProcessStore((state) => state.kanbanOverdueTaskCount);
+  const refreshKanbanNewTaskCount = useProcessStore((state) => state.refreshKanbanNewTaskCount);
+  const refreshKanbanOverdueTaskCount = useProcessStore((state) => state.refreshKanbanOverdueTaskCount);
+  const refreshUnreadCount = useNotificationStore((state) => state.refreshUnreadCount);
 
-  const handleKanbanOpenCountChange = useCallback(
-    (count: number) => {
-      useProcessStore.setState({ kanbanOpenTaskCount: count });
-    },
-    [],
-  );
+  const handleKanbanOverdueCountChange = useCallback((count: number) => {
+    useProcessStore.setState({ kanbanOverdueTaskCount: count });
+  }, []);
+
+  const handleKanbanNewCountChange = useCallback((count: number) => {
+    useProcessStore.setState({ kanbanNewTaskCount: count });
+  }, []);
+
+  const handleNotificationsRefresh = useCallback(() => {
+    if (profileId) {
+      void refreshUnreadCount(profileId);
+    }
+  }, [profileId, refreshUnreadCount]);
 
   useEffect(() => {
-    void refreshKanbanOpenTaskCount();
-  }, [refreshKanbanOpenTaskCount]);
+    void refreshKanbanOverdueTaskCount();
+    void refreshKanbanNewTaskCount();
+  }, [refreshKanbanNewTaskCount, refreshKanbanOverdueTaskCount]);
 
-  useKanbanOpenTasksRealtime(handleKanbanOpenCountChange);
+  useEffect(() => {
+    if (profileId) {
+      void refreshUnreadCount(profileId);
+    }
+  }, [profileId, refreshUnreadCount]);
+
+  useKanbanOverdueTasksRealtime(handleKanbanOverdueCountChange);
+  useKanbanNewTasksRealtime(handleKanbanNewCountChange);
+  useNotificationsRealtime(profileId, handleNotificationsRefresh);
+
+  const kanbanBadges = useMemo(
+    () => ({
+      overdueBadgeCount: kanbanOverdueTaskCount,
+      newBadgeCount: kanbanNewTaskCount,
+    }),
+    [kanbanNewTaskCount, kanbanOverdueTaskCount],
+  );
 
   const navGroups = useMemo(() => {
     const groups = [...navGroupsBase];
@@ -252,7 +304,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
                       key={item.href}
                       {...item}
                       active={isActive(pathname, item.href)}
-                      badgeCount={item.href === "/tablice-wdrozen" ? kanbanOpenTaskCount : 0}
+                      {...(item.href === "/tablice-wdrozen" ? kanbanBadges : {})}
                     />
                   ))}
                 </div>
@@ -263,7 +315,10 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
 
         <div className="shrink-0 border-t border-sidebar-border p-5 pt-4">
           <div className="grid gap-2">
-            <p className="px-3 text-xs text-sidebar-muted">{displayName || "Użytkownik"}</p>
+            <div className="flex items-center justify-between gap-2 px-3">
+              <p className="text-xs text-sidebar-muted">{displayName || "Użytkownik"}</p>
+              <NotificationBell />
+            </div>
             <button
               type="button"
               onClick={() => void signOut().then(() => window.location.assign("/logowanie"))}
@@ -291,6 +346,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
               </p>
               <p className="truncate text-xs text-muted">Smart Home / BMS</p>
             </div>
+            <NotificationBell />
           </div>
         </header>
 
@@ -376,13 +432,29 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
               type="button"
               onClick={() => setMenuOpen(true)}
               className={cn(
-                "flex flex-col items-center gap-0.5 rounded-2xl px-2 py-2 text-[10px] font-medium transition",
+                "relative flex flex-col items-center gap-0.5 rounded-2xl px-2 py-2 text-[10px] font-medium transition",
                 secondaryNav.some((item) => isActive(pathname, item.href))
                   ? "text-sidebar-accent"
                   : "text-sidebar-muted",
               )}
             >
-              <Menu className="h-5 w-5" />
+              <span className="relative">
+                <Menu className="h-5 w-5" />
+                {kanbanOverdueTaskCount > 0 || kanbanNewTaskCount > 0 ? (
+                  <span className="absolute -right-2 -top-1.5 flex gap-0.5">
+                    {kanbanOverdueTaskCount > 0 ? (
+                      <span className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-bold text-white">
+                        {kanbanOverdueTaskCount > 9 ? "9+" : kanbanOverdueTaskCount}
+                      </span>
+                    ) : null}
+                    {kanbanNewTaskCount > 0 ? (
+                      <span className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-emerald-500 px-0.5 text-[8px] font-bold text-white">
+                        {kanbanNewTaskCount > 9 ? "9+" : kanbanNewTaskCount}
+                      </span>
+                    ) : null}
+                  </span>
+                ) : null}
+              </span>
               Więcej
               {secondaryNav.some((item) => isActive(pathname, item.href)) ? (
                 <span className="h-1 w-1 rounded-full bg-sidebar-accent" aria-hidden />
@@ -420,7 +492,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
                     active={isActive(pathname, item.href)}
                     onClick={() => setMenuOpen(false)}
                     variant="sheet"
-                    badgeCount={item.href === "/tablice-wdrozen" ? kanbanOpenTaskCount : 0}
+                    {...(item.href === "/tablice-wdrozen" ? kanbanBadges : {})}
                   />
                 ))}
               </div>

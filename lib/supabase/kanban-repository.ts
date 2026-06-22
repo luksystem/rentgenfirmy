@@ -7,8 +7,12 @@ import type {
   KanbanTask,
   KanbanTaskEvent,
   KanbanTaskEventType,
+  KanbanTaskReaction,
   KanbanTemplatePayload,
 } from "@/lib/process/kanban-types";
+import { isKanbanReactionEmoji } from "@/lib/process/kanban-reactions";
+import type { MentionCandidate } from "@/lib/notifications/types";
+import { createKanbanMentionNotifications } from "@/lib/notifications/repository";
 import { getSupabase } from "@/lib/supabase/client";
 import { fetchAttachmentsForTaskIds } from "@/lib/supabase/kanban-attachments-repository";
 
@@ -63,6 +67,15 @@ type EventRow = {
   id: string;
   task_id: string;
   event_type: string;
+  author_name: string;
+  author_side: string;
+  created_at: string;
+};
+
+type ReactionRow = {
+  id: string;
+  task_id: string;
+  emoji: string;
   author_name: string;
   author_side: string;
   created_at: string;
@@ -123,6 +136,17 @@ function rowToEvent(row: EventRow): KanbanTaskEvent {
     id: row.id,
     taskId: row.task_id,
     eventType: isKanbanTaskEventType(row.event_type) ? row.event_type : "created",
+    authorName: row.author_name,
+    authorSide: isAuthorSide(row.author_side) ? row.author_side : "team",
+    createdAt: row.created_at,
+  };
+}
+
+function rowToReaction(row: ReactionRow): KanbanTaskReaction {
+  return {
+    id: row.id,
+    taskId: row.task_id,
+    emoji: row.emoji,
     authorName: row.author_name,
     authorSide: isAuthorSide(row.author_side) ? row.author_side : "team",
     createdAt: row.created_at,
@@ -242,6 +266,7 @@ function assembleKanbanBoard(
   columns: ColumnRow[],
   tasks: TaskRow[],
   comments: CommentRow[],
+  reactions: ReactionRow[],
   events: EventRow[],
   attachments: KanbanBoard["attachments"],
 ): KanbanBoard {
@@ -260,6 +285,7 @@ function assembleKanbanBoard(
     columns: columns.map(rowToColumn),
     tasks: tasks.map(rowToTask),
     comments: comments.map(rowToComment),
+    reactions: reactions.map(rowToReaction),
     events: events.map(rowToEvent),
     attachments,
     createdAt: boardRow.created_at,
@@ -308,7 +334,7 @@ export async function fetchKanbanBoardGraphsBatch(boardRows: BoardRow[]): Promis
   const allTasks = (tasksResult.data ?? []) as TaskRow[];
   const taskIds = allTasks.map((row) => row.id);
 
-  const [commentsResult, eventsResult, attachments] = await Promise.all([
+  const [commentsResult, eventsResult, reactionsResult, attachments] = await Promise.all([
     taskIds.length
       ? supabase
           .from("process_kanban_comments")
@@ -323,6 +349,13 @@ export async function fetchKanbanBoardGraphsBatch(boardRows: BoardRow[]): Promis
           .in("task_id", taskIds)
           .order("created_at", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
+    taskIds.length
+      ? supabase
+          .from("process_kanban_task_reactions")
+          .select("*")
+          .in("task_id", taskIds)
+          .order("created_at", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
     taskIds.length ? fetchAttachmentsForTaskIds(taskIds) : Promise.resolve([]),
   ]);
 
@@ -332,9 +365,17 @@ export async function fetchKanbanBoardGraphsBatch(boardRows: BoardRow[]): Promis
   if (eventsResult.error) {
     throw new Error(eventsResult.error.message);
   }
+  if (reactionsResult.error) {
+    if (!reactionsResult.error.message.toLowerCase().includes("does not exist")) {
+      throw new Error(reactionsResult.error.message);
+    }
+  }
 
   const allComments = (commentsResult.data ?? []) as CommentRow[];
   const allEvents = (eventsResult.data ?? []) as EventRow[];
+  const allReactions = reactionsResult.error
+    ? ([] as ReactionRow[])
+    : ((reactionsResult.data ?? []) as ReactionRow[]);
   const taskIdSetForBoard = (boardColumnIds: Set<string>) =>
     new Set(allTasks.filter((task) => boardColumnIds.has(task.column_id)).map((task) => task.id));
 
@@ -344,6 +385,7 @@ export async function fetchKanbanBoardGraphsBatch(boardRows: BoardRow[]): Promis
     const boardTasks = allTasks.filter((task) => boardColumnIds.has(task.column_id));
     const boardTaskIds = taskIdSetForBoard(boardColumnIds);
     const boardComments = allComments.filter((comment) => boardTaskIds.has(comment.task_id));
+    const boardReactions = allReactions.filter((reaction) => boardTaskIds.has(reaction.task_id));
     const boardEvents = allEvents.filter((event) => boardTaskIds.has(event.task_id));
     const boardAttachments = attachments.filter((entry) => boardTaskIds.has(entry.taskId));
     const projectInfo =
@@ -361,6 +403,7 @@ export async function fetchKanbanBoardGraphsBatch(boardRows: BoardRow[]): Promis
       boardColumns,
       boardTasks,
       boardComments,
+      boardReactions,
       boardEvents,
       boardAttachments,
     );
@@ -539,6 +582,23 @@ export async function countNewKanbanTasksForTeam() {
     .select("id", { count: "exact", head: true })
     .eq("is_new_for_team", true)
     .is("closed_at", null);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+}
+
+export async function countOverdueKanbanTasks() {
+  const supabase = getSupabase();
+  const today = new Date().toISOString().slice(0, 10);
+  const { count, error } = await supabase
+    .from("process_kanban_tasks")
+    .select("id", { count: "exact", head: true })
+    .is("closed_at", null)
+    .not("due_date", "is", null)
+    .lt("due_date", today);
 
   if (error) {
     throw new Error(error.message);
@@ -738,6 +798,9 @@ export async function addKanbanComment(input: {
   authorName: string;
   authorSide: KanbanAuthorSide;
   body: string;
+  taskTitle?: string;
+  linkUrl?: string;
+  mentionCandidates?: MentionCandidate[];
 }) {
   const supabase = getSupabase();
   const body = input.body.trim();
@@ -768,7 +831,130 @@ export async function addKanbanComment(input: {
       .eq("id", input.taskId);
   }
 
+  const comment = rowToComment(data as CommentRow);
+
+  if (input.mentionCandidates?.length) {
+    await createKanbanMentionNotifications({
+      commentId: comment.id,
+      taskId: input.taskId,
+      taskTitle: input.taskTitle ?? "Zgłoszenie",
+      body,
+      authorName: input.authorName,
+      candidates: input.mentionCandidates,
+      linkUrl: input.linkUrl,
+    }).catch(() => undefined);
+  }
+
+  return comment;
+}
+
+export async function updateKanbanComment(
+  commentId: string,
+  input: { body: string; authorName: string; authorSide: KanbanAuthorSide },
+) {
+  const supabase = getSupabase();
+  const body = input.body.trim();
+  if (!body) {
+    throw new Error("Komentarz nie może być pusty.");
+  }
+
+  const { data, error } = await supabase
+    .from("process_kanban_comments")
+    .update({ body })
+    .eq("id", commentId)
+    .eq("author_name", input.authorName.trim())
+    .eq("author_side", input.authorSide)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) {
+    throw new Error("Nie można edytować tego komentarza.");
+  }
+
   return rowToComment(data as CommentRow);
+}
+
+export async function deleteKanbanComment(
+  commentId: string,
+  input: { authorName: string; authorSide: KanbanAuthorSide },
+) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("process_kanban_comments")
+    .delete()
+    .eq("id", commentId)
+    .eq("author_name", input.authorName.trim())
+    .eq("author_side", input.authorSide)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) {
+    throw new Error("Nie można usunąć tego komentarza.");
+  }
+}
+
+export async function toggleKanbanTaskReaction(input: {
+  taskId: string;
+  emoji: string;
+  authorName: string;
+  authorSide: KanbanAuthorSide;
+}) {
+  if (!isKanbanReactionEmoji(input.emoji)) {
+    throw new Error("Nieobsługiwana reakcja.");
+  }
+
+  const supabase = getSupabase();
+  const authorName = input.authorName.trim();
+  if (!authorName) {
+    throw new Error("Brak autora reakcji.");
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from("process_kanban_task_reactions")
+    .select("id")
+    .eq("task_id", input.taskId)
+    .eq("emoji", input.emoji)
+    .eq("author_name", authorName)
+    .eq("author_side", input.authorSide)
+    .maybeSingle();
+
+  if (existingError) {
+    if (existingError.message.toLowerCase().includes("does not exist")) {
+      throw new Error("Reakcje nie są jeszcze dostępne. Uruchom migrację bazy danych.");
+    }
+    throw new Error(existingError.message);
+  }
+
+  if (existing) {
+    const { error } = await supabase.from("process_kanban_task_reactions").delete().eq("id", existing.id);
+    if (error) {
+      throw new Error(error.message);
+    }
+    return { added: false };
+  }
+
+  const { error } = await supabase.from("process_kanban_task_reactions").insert({
+    id: crypto.randomUUID(),
+    task_id: input.taskId,
+    emoji: input.emoji,
+    author_name: authorName,
+    author_side: input.authorSide,
+    created_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return { added: true };
 }
 
 export function getBoardIdFromGraph(board: KanbanBoard) {

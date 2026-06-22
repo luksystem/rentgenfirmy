@@ -120,6 +120,7 @@ export const mockProjects: Project[] = projectNames.map((name, index) => {
     notes: `Notatka operacyjna dla projektu ${name}.`,
     lastChangedBy: owners[index % owners.length],
     lastChangedAt: addDays(today, -index).toISOString(),
+    createdAt: addDays(today, -30 - index * 7).toISOString(),
     lastContactDate: toISODate(addDays(today, index % 4 === 0 ? -18 - index : -index)),
     closeBlocker: isClosingStage ? blockers[(index + 3) % blockers.length] : undefined,
     remainingHours: isClosingStage ? 4 + ((index * 3) % 18) : undefined,

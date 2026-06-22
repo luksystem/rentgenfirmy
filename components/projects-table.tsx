@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Edit, Plus, Trash2 } from "lucide-react";
 import { MobileField, MobileListCard } from "@/components/mobile-list-card";
+import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { ProjectProcessLink } from "@/components/process/project-process-link";
 import { useProjectEdit } from "@/components/project-edit-provider";
 import { ProjectForm } from "@/components/project-form";
@@ -20,7 +21,13 @@ import {
 import { Input, Select } from "@/components/ui/input";
 import { flowStatusNames } from "@/lib/field-options";
 import {
+  formatProjectDuration,
+  formatWarrantyEndDate,
+  getWarrantyStatus,
+} from "@/lib/project/warranty";
+import {
   ALL_FILTER,
+  countActiveProjectsViewFilters,
   DEFAULT_PROJECTS_VIEW_FILTERS,
   filterProjectsByView,
   isDefaultProjectsViewFilters,
@@ -89,107 +96,121 @@ export function ProjectsTable() {
     }
   }
 
+  const activeFilterCount = countActiveProjectsViewFilters(projectsViewFilters);
+
+  function renderProjectFilters() {
+    return (
+      <div className="grid gap-3">
+        <Input
+          type="search"
+          value={projectsViewFilters.nameQuery}
+          onChange={(event) => updateViewFilters({ nameQuery: event.target.value })}
+          placeholder="Szukaj po nazwie..."
+          aria-label="Szukaj projektu po nazwie"
+        />
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <Select
+            value={projectsViewFilters.typeFilter}
+            onChange={(event) =>
+              updateViewFilters({
+                typeFilter: event.target.value as ProjectType | typeof ALL_FILTER,
+              })
+            }
+            aria-label="Filtr typu projektu"
+          >
+            <option value={ALL_FILTER}>Typ</option>
+            {fieldOptions.projectTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </Select>
+          <Select
+            value={projectsViewFilters.flowStatusFilter}
+            onChange={(event) =>
+              updateViewFilters({
+                flowStatusFilter: event.target.value as FlowStatus | typeof ALL_FILTER,
+              })
+            }
+            aria-label="Filtr statusu przepływu"
+          >
+            <option value={ALL_FILTER}>Status</option>
+            {flowStatusNames(fieldOptions).map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </Select>
+          <Select
+            value={projectsViewFilters.ownerFilter}
+            onChange={(event) =>
+              updateViewFilters({
+                ownerFilter: event.target.value as NextStepOwner | typeof ALL_FILTER,
+              })
+            }
+            aria-label="Filtr właściciela kolejnego kroku"
+          >
+            <option value={ALL_FILTER}>Właściciel</option>
+            {fieldOptions.nextStepOwners.map((owner) => (
+              <option key={owner} value={owner}>
+                {owner}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <ProjectViewFiltersBar
+          categories={projectsViewFilters.categories}
+          blockerFaults={projectsViewFilters.blockerFaults}
+          onCategoriesChange={(categories: ProjectCategoryFilterId[]) =>
+            updateViewFilters({ categories })
+          }
+          onBlockerFaultsChange={(blockerFaults) => updateViewFilters({ blockerFaults })}
+        />
+      </div>
+    );
+  }
+
   return (
     <>
       <Card className="overflow-hidden">
-        <div className="flex flex-col justify-between gap-3 border-b border-border/80 p-4 md:flex-row md:items-center">
-          <div>
-            <p className="font-semibold text-foreground">Tabela projektów</p>
-            <p className="text-sm text-muted">
-              Kliknij wiersz lub ikonę edycji, aby zmienić wszystkie pola projektu.
-              {isInitialized ? (
-                <span className="mt-1 block text-foreground/80">
-                  Widoczne: {filteredProjects.length} z {projects.length}
-                </span>
-              ) : null}
-            </p>
+        <div className="border-b border-border/80 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-foreground">Tabela projektów</p>
+              <p className="text-sm text-muted">
+                Kliknij wiersz lub ikonę edycji, aby zmienić wszystkie pola projektu.
+                {isInitialized ? (
+                  <span className="mt-1 block text-foreground/80">
+                    Widoczne: {filteredProjects.length} z {projects.length}
+                  </span>
+                ) : null}
+              </p>
+            </div>
+            <Button onClick={openCreate} className="shrink-0">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Dodaj projekt</span>
+            </Button>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
-            <Input
-              type="search"
-              value={projectsViewFilters.nameQuery}
-              onChange={(event) => updateViewFilters({ nameQuery: event.target.value })}
-              placeholder="Szukaj po nazwie..."
-              className="w-full sm:min-w-[200px] sm:flex-1"
-              aria-label="Szukaj projektu po nazwie"
-            />
-            <Select
-              value={projectsViewFilters.typeFilter}
-              onChange={(event) =>
-                updateViewFilters({
-                  typeFilter: event.target.value as ProjectType | typeof ALL_FILTER,
-                })
-              }
-              className="w-full sm:w-44"
-              aria-label="Filtr typu projektu"
+
+          <div className="mt-3 flex flex-wrap items-start gap-2">
+            <MobileFiltersPanel
+              activeCount={activeFilterCount}
+              onClear={resetViewFilters}
+              className="min-w-0 flex-1"
             >
-              <option value={ALL_FILTER}>Typ</option>
-              {fieldOptions.projectTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </Select>
-            <Select
-              value={projectsViewFilters.flowStatusFilter}
-              onChange={(event) =>
-                updateViewFilters({
-                  flowStatusFilter: event.target.value as FlowStatus | typeof ALL_FILTER,
-                })
-              }
-              className="w-full sm:w-56"
-              aria-label="Filtr statusu przepływu"
-            >
-              <option value={ALL_FILTER}>Status</option>
-              {flowStatusNames(fieldOptions).map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </Select>
-            <Select
-              value={projectsViewFilters.ownerFilter}
-              onChange={(event) =>
-                updateViewFilters({
-                  ownerFilter: event.target.value as NextStepOwner | typeof ALL_FILTER,
-                })
-              }
-              className="w-full sm:w-48"
-              aria-label="Filtr właściciela kolejnego kroku"
-            >
-              <option value={ALL_FILTER}>Właściciel</option>
-              {fieldOptions.nextStepOwners.map((owner) => (
-                <option key={owner} value={owner}>
-                  {owner}
-                </option>
-              ))}
-            </Select>
+              {renderProjectFilters()}
+            </MobileFiltersPanel>
             {!isDefaultProjectsViewFilters(projectsViewFilters) ? (
               <Button
                 type="button"
                 variant="secondary"
                 onClick={resetViewFilters}
-                className="w-full sm:w-auto"
+                className="hidden md:inline-flex"
               >
                 Domyślny widok
               </Button>
             ) : null}
-            <Button onClick={openCreate} className="w-full sm:w-auto">
-              <Plus className="h-4 w-4" />
-              Dodaj projekt
-            </Button>
           </div>
-        </div>
-
-        <div className="border-b border-border/80 px-4 pb-4">
-          <ProjectViewFiltersBar
-            categories={projectsViewFilters.categories}
-            blockerFaults={projectsViewFilters.blockerFaults}
-            onCategoriesChange={(categories: ProjectCategoryFilterId[]) =>
-              updateViewFilters({ categories })
-            }
-            onBlockerFaultsChange={(blockerFaults) => updateViewFilters({ blockerFaults })}
-          />
         </div>
 
         <div className="grid gap-3 p-4 md:hidden">
@@ -240,6 +261,11 @@ export function ProjectsTable() {
               }
             >
               <MobileField label="Etap" value={project.stage} />
+              <MobileField label="Czas trwania" value={formatProjectDuration(project)} />
+              <MobileField
+                label="Gwarancja"
+                value={`${getWarrantyStatus(project).label} · ${formatWarrantyEndDate(project)}`}
+              />
               <MobileField label="Krok" value={project.nextStepOwner} />
               <MobileField
                 label="Proces"
@@ -259,6 +285,8 @@ export function ProjectsTable() {
                 <th className="px-4 py-3">Typ</th>
                 <th className="px-4 py-3">Status przepływu</th>
                 <th className="px-4 py-3">Etap realizacji</th>
+                <th className="px-4 py-3">Czas trwania</th>
+                <th className="px-4 py-3">Gwarancja</th>
                 <th className="px-4 py-3">Priorytet</th>
                 <th className="px-4 py-3">Właściciel kroku</th>
                 <th className="px-4 py-3">Następny kontakt</th>
@@ -286,6 +314,13 @@ export function ProjectsTable() {
                     />
                   </td>
                   <td className="px-4 py-3">{project.stage}</td>
+                  <td className="px-4 py-3">{formatProjectDuration(project)}</td>
+                  <td className="px-4 py-3">
+                    <div className="grid gap-0.5">
+                      <span>{getWarrantyStatus(project).label}</span>
+                      <span className="text-xs text-muted">{formatWarrantyEndDate(project)}</span>
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     <PriorityBadge priority={project.priority} />
                   </td>

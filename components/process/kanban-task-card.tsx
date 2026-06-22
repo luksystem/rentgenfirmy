@@ -2,12 +2,14 @@
 
 import { ChevronRight } from "lucide-react";
 import { KanbanAttachmentPreview } from "@/components/process/kanban-attachment-gallery";
+import { KanbanTaskReactionPreview } from "@/components/process/kanban-task-reactions";
 import { formatMilestoneDate } from "@/lib/process/dates";
 import {
   KANBAN_PRIORITY_LABELS,
   type KanbanAttachment,
   type KanbanPriority,
   type KanbanTask,
+  type KanbanTaskReaction,
 } from "@/lib/process/kanban-types";
 import type { KanbanTaskActivity } from "@/lib/process/kanban-task-meta";
 import {
@@ -21,6 +23,7 @@ import { cn } from "@/lib/utils";
 export function KanbanTaskCardView({
   task,
   attachments = [],
+  reactions = [],
   activity,
   isNew,
   draggable = true,
@@ -36,6 +39,7 @@ export function KanbanTaskCardView({
 }: {
   task: KanbanTask;
   attachments?: KanbanAttachment[];
+  reactions?: KanbanTaskReaction[];
   activity?: KanbanTaskActivity;
   isNew?: boolean;
   draggable?: boolean;
@@ -114,6 +118,7 @@ export function KanbanTaskCardView({
           {isNew ? "NOWY" : null}
         </p>
       ) : null}
+      <KanbanTaskReactionPreview taskId={task.id} reactions={reactions} />
       {showChevron ? (
         <ChevronRight className="absolute bottom-3 right-3 h-4 w-4 text-muted/70" aria-hidden />
       ) : null}

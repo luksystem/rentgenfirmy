@@ -43,6 +43,13 @@ export function useKanbanRealtime(boardId: string | null, onRefresh: () => Promi
           void stableRefresh();
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "process_kanban_task_reactions" },
+        () => {
+          void stableRefresh();
+        },
+      )
       .subscribe();
 
     return () => {
@@ -51,15 +58,18 @@ export function useKanbanRealtime(boardId: string | null, onRefresh: () => Promi
   }, [boardId, stableRefresh]);
 }
 
-export function useKanbanOpenTasksRealtime(onCountChange: (count: number) => void) {
+export function useKanbanOverdueTasksRealtime(onCountChange: (count: number) => void) {
   useEffect(() => {
     const supabase = getSupabase();
+    const today = new Date().toISOString().slice(0, 10);
 
     async function refreshCount() {
       const { count, error } = await supabase
         .from("process_kanban_tasks")
         .select("id", { count: "exact", head: true })
-        .is("closed_at", null);
+        .is("closed_at", null)
+        .not("due_date", "is", null)
+        .lt("due_date", today);
 
       if (!error) {
         onCountChange(count ?? 0);
@@ -69,7 +79,7 @@ export function useKanbanOpenTasksRealtime(onCountChange: (count: number) => voi
     void refreshCount();
 
     const channel = supabase
-      .channel("kanban-open-tasks")
+      .channel("kanban-overdue-tasks")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "process_kanban_tasks" },
@@ -85,24 +95,34 @@ export function useKanbanOpenTasksRealtime(onCountChange: (count: number) => voi
   }, [onCountChange]);
 }
 
+/** @deprecated Use useKanbanOverdueTasksRealtime */
+export const useKanbanOpenTasksRealtime = useKanbanOverdueTasksRealtime;
+
 export function useKanbanNewTasksRealtime(onCountChange: (count: number) => void) {
   useEffect(() => {
     const supabase = getSupabase();
+
+    async function refreshCount() {
+      const { count, error } = await supabase
+        .from("process_kanban_tasks")
+        .select("id", { count: "exact", head: true })
+        .eq("is_new_for_team", true)
+        .is("closed_at", null);
+
+      if (!error) {
+        onCountChange(count ?? 0);
+      }
+    }
+
+    void refreshCount();
+
     const channel = supabase
       .channel("kanban-new-tasks")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "process_kanban_tasks" },
-        async () => {
-          const { count, error } = await supabase
-            .from("process_kanban_tasks")
-            .select("id", { count: "exact", head: true })
-            .eq("is_new_for_team", true)
-            .is("closed_at", null);
-
-          if (!error) {
-            onCountChange(count ?? 0);
-          }
+        () => {
+          void refreshCount();
         },
       )
       .subscribe();

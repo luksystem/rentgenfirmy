@@ -59,6 +59,7 @@ export function mergeKanbanBoards(boards: KanbanBoard[]): MergedKanbanView | nul
   const taskSources = new Map<string, KanbanTaskSource>();
   const tasks: KanbanTask[] = [];
   const comments: KanbanBoard["comments"] = [];
+  const reactions: KanbanBoard["reactions"] = [];
   const events: KanbanBoard["events"] = [];
   const attachments: KanbanBoard["attachments"] = [];
 
@@ -89,6 +90,7 @@ export function mergeKanbanBoards(boards: KanbanBoard[]): MergedKanbanView | nul
     }
 
     comments.push(...board.comments);
+    reactions.push(...board.reactions);
     events.push(...board.events);
     attachments.push(...board.attachments);
   }
@@ -108,6 +110,7 @@ export function mergeKanbanBoards(boards: KanbanBoard[]): MergedKanbanView | nul
     columns: mergedColumns,
     tasks,
     comments,
+    reactions,
     events,
     attachments,
     createdAt: "",

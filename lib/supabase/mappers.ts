@@ -41,6 +41,8 @@ export function rowToProject(row: ProjectRow): Project {
     waitingDependsOnUs: row.waiting_depends_on_us,
     waitingIncreasesCostLater: row.waiting_increases_cost_later,
     waitingBlocksSettlement: row.waiting_blocks_settlement,
+    createdAt: row.created_at ?? row.last_changed_at,
+    warrantyEndsAt: row.warranty_ends_at ?? undefined,
   };
 }
 
@@ -69,12 +71,13 @@ export function projectToInsert(
     waiting_depends_on_us: project.waitingDependsOnUs ?? false,
     waiting_increases_cost_later: project.waitingIncreasesCostLater ?? false,
     waiting_blocks_settlement: project.waitingBlocksSettlement ?? false,
+    warranty_ends_at: project.warrantyEndsAt ?? null,
   };
 }
 
 export function inputToProjectPayload(
   input: ProjectInput,
-  audit: Pick<Project, "lastChangedBy" | "lastChangedAt" | "lastContactDate">,
+  audit: Pick<Project, "lastChangedBy" | "lastChangedAt" | "lastContactDate" | "createdAt">,
 ): Omit<Project, "id"> {
   return {
     ...input,

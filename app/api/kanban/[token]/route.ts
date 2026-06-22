@@ -6,9 +6,16 @@ import {
   addKanbanComment,
   closeKanbanTask,
   createKanbanTask,
+  deleteKanbanComment,
   moveKanbanTask,
+  toggleKanbanTaskReaction,
+  updateKanbanComment,
   updateKanbanTask,
 } from "@/lib/supabase/kanban-repository";
+import { buildKanbanMentionCandidates } from "@/lib/kanban/mention-candidates";
+import { createKanbanMentionNotificationsServer } from "@/lib/notifications/server";
+import { collectKanbanAssigneeOptions } from "@/lib/process/kanban-task-meta";
+import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
 import {
   fetchKanbanPublicMeta,
   fetchPublicKanbanBoardGraph,
@@ -128,13 +135,66 @@ export async function POST(
       if (!taskId) {
         return NextResponse.json({ error: "taskId is required" }, { status: 400 });
       }
+      const task = board.tasks.find((entry) => entry.id === taskId);
       const comment = await addKanbanComment({
         taskId,
         authorName,
         authorSide: "client",
         body: commentBody,
       });
+
+      const teamProfiles = await fetchTeamProfilesServer().catch(() => []);
+      const assigneeOptions = collectKanbanAssigneeOptions(board.tasks, []);
+      const mentionCandidates = buildKanbanMentionCandidates(teamProfiles, assigneeOptions);
+      await createKanbanMentionNotificationsServer({
+        commentId: comment.id,
+        taskId,
+        taskTitle: task?.title ?? "Zgłoszenie",
+        body: commentBody,
+        authorName,
+        candidates: mentionCandidates,
+        linkUrl: `/kanban/${token}`,
+      }).catch(() => undefined);
+
       return NextResponse.json({ comment });
+    }
+
+    if (action === "updateComment") {
+      const commentId = typeof data.commentId === "string" ? data.commentId : null;
+      const commentBody = typeof data.body === "string" ? data.body : "";
+      if (!commentId) {
+        return NextResponse.json({ error: "commentId is required" }, { status: 400 });
+      }
+      const comment = await updateKanbanComment(commentId, {
+        body: commentBody,
+        authorName,
+        authorSide: "client",
+      });
+      return NextResponse.json({ comment });
+    }
+
+    if (action === "deleteComment") {
+      const commentId = typeof data.commentId === "string" ? data.commentId : null;
+      if (!commentId) {
+        return NextResponse.json({ error: "commentId is required" }, { status: 400 });
+      }
+      await deleteKanbanComment(commentId, { authorName, authorSide: "client" });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (action === "toggleReaction") {
+      const taskId = typeof data.taskId === "string" ? data.taskId : null;
+      const emoji = typeof data.emoji === "string" ? data.emoji : "";
+      if (!taskId) {
+        return NextResponse.json({ error: "taskId is required" }, { status: 400 });
+      }
+      const result = await toggleKanbanTaskReaction({
+        taskId,
+        emoji,
+        authorName,
+        authorSide: "client",
+      });
+      return NextResponse.json(result);
     }
 
     if (action === "updateTask") {

@@ -1,0 +1,463 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { CalendarPlus, Check, Plus, Send, Shield, Trash2, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Field, Input, Textarea } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  PROJECT_AGREEMENT_STATUS_LABELS,
+  agreementStatusTone,
+  formatAgreementCost,
+  type ProjectAgreementInput,
+  type ProjectClientAgreement,
+} from "@/lib/dashboard/agreement-types";
+import {
+  filterWarrantyAgreements,
+  formatProjectDuration,
+  formatWarrantyEndDate,
+  getWarrantyStatus,
+  hasPendingWarrantyExtension,
+} from "@/lib/project/warranty";
+import type { Project } from "@/lib/types";
+import { cn, formatDate } from "@/lib/utils";
+import { useProjectAgreementStore } from "@/store/project-agreement-store";
+
+const EMPTY_AGREEMENTS: ProjectClientAgreement[] = [];
+
+const statusBadgeClass: Record<ReturnType<typeof agreementStatusTone>, string> = {
+  neutral: "border-border/80 bg-surface-muted/40 text-muted",
+  warning: "border-amber-500/40 bg-amber-500/10 text-amber-200",
+  success: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
+  danger: "border-rose-500/40 bg-rose-500/10 text-rose-200",
+};
+
+const warrantyToneClass: Record<ReturnType<typeof getWarrantyStatus>["tone"], string> = {
+  neutral: "border-border/80 bg-surface-muted/40 text-muted",
+  warning: "border-amber-500/40 bg-amber-500/10 text-amber-200",
+  success: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
+  danger: "border-rose-500/40 bg-rose-500/10 text-rose-200",
+};
+
+function emptyWarrantyInput(project: Project): ProjectAgreementInput {
+  return {
+    title: "Przedłużenie gwarancji",
+    body: "",
+    category: "warranty",
+    proposedCostNet: null,
+    proposedCostGross: null,
+    costNote: "",
+    proposedWarrantyEndDate: project.warrantyEndsAt ?? "",
+  };
+}
+
+function WarrantyProposalCard({
+  agreement,
+  mode,
+  authorName,
+  onSubmit,
+  onCancel,
+  onRespond,
+  onDelete,
+}: {
+  agreement: ProjectClientAgreement;
+  mode: "team" | "client";
+  authorName: string;
+  onSubmit: (id: string) => Promise<void>;
+  onCancel: (id: string) => Promise<void>;
+  onRespond: (
+    id: string,
+    input: { accepted: boolean; clientResponseName: string; clientResponseNote?: string },
+  ) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [responseNote, setResponseNote] = useState("");
+  const tone = agreementStatusTone(agreement.status);
+  const costLabel = formatAgreementCost(agreement);
+
+  async function run(action: () => Promise<void>) {
+    setBusy(true);
+    try {
+      await action();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <article className="rounded-xl border border-border/70 bg-surface-muted/15 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="font-medium text-foreground">{agreement.title}</p>
+          <p className="mt-0.5 text-xs text-muted">{agreement.createdByName}</p>
+        </div>
+        <span
+          className={cn(
+            "rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+            statusBadgeClass[tone],
+          )}
+        >
+          {PROJECT_AGREEMENT_STATUS_LABELS[agreement.status]}
+        </span>
+      </div>
+
+      {agreement.proposedWarrantyEndDate ? (
+        <p className="mt-3 text-sm text-foreground">
+          Nowa data zakończenia gwarancji:{" "}
+          <span className="font-medium">{formatDate(agreement.proposedWarrantyEndDate)}</span>
+        </p>
+      ) : null}
+
+      {agreement.body ? (
+        <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{agreement.body}</p>
+      ) : null}
+
+      {costLabel ? <p className="mt-2 text-sm font-medium text-foreground">Koszt: {costLabel}</p> : null}
+
+      {mode === "team" && agreement.status === "draft" ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button type="button" size="sm" disabled={busy} onClick={() => void run(() => onSubmit(agreement.id))}>
+            <Send className="mr-2 h-3.5 w-3.5" />
+            Wyślij do klienta
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => void run(() => onCancel(agreement.id))}
+          >
+            Anuluj
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="destructive"
+            disabled={busy}
+            onClick={() => void run(() => onDelete(agreement.id))}
+          >
+            <Trash2 className="mr-2 h-3.5 w-3.5" />
+            Usuń szkic
+          </Button>
+        </div>
+      ) : null}
+
+      {mode === "client" && agreement.status === "pending_client" ? (
+        <div className="mt-4 grid gap-3">
+          <Field label="Uwagi (opcjonalnie)">
+            <Textarea
+              value={responseNote}
+              onChange={(event) => setResponseNote(event.target.value)}
+              rows={2}
+              placeholder="Komentarz do propozycji…"
+            />
+          </Field>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              disabled={busy}
+              onClick={() =>
+                void run(() =>
+                  onRespond(agreement.id, {
+                    accepted: true,
+                    clientResponseName: authorName,
+                    clientResponseNote: responseNote,
+                  }),
+                )
+              }
+            >
+              <Check className="mr-2 h-3.5 w-3.5" />
+              Akceptuję przedłużenie
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              disabled={busy}
+              onClick={() =>
+                void run(() =>
+                  onRespond(agreement.id, {
+                    accepted: false,
+                    clientResponseName: authorName,
+                    clientResponseNote: responseNote,
+                  }),
+                )
+              }
+            >
+              <X className="mr-2 h-3.5 w-3.5" />
+              Odrzucam
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+export function ProjectWarrantyPanel({
+  project,
+  mode,
+  authorName,
+  seedAgreements,
+  onWarrantyEndsAtChange,
+}: {
+  project: Project;
+  mode: "team" | "client";
+  authorName: string;
+  seedAgreements?: ProjectClientAgreement[];
+  onWarrantyEndsAtChange?: (warrantyEndsAt: string) => void;
+}) {
+  const storeAgreements = useProjectAgreementStore(
+    (state) => state.byProject[project.id] ?? EMPTY_AGREEMENTS,
+  );
+  const loading = useProjectAgreementStore((state) => state.loadingProjects[project.id]);
+  const ensureAgreements = useProjectAgreementStore((state) => state.ensureAgreements);
+  const createAgreement = useProjectAgreementStore((state) => state.createAgreement);
+  const submitForClient = useProjectAgreementStore((state) => state.submitForClient);
+  const respond = useProjectAgreementStore((state) => state.respond);
+  const cancel = useProjectAgreementStore((state) => state.cancel);
+  const removeDraft = useProjectAgreementStore((state) => state.removeDraft);
+
+  const [localAgreements, setLocalAgreements] = useState<ProjectClientAgreement[] | null>(() =>
+    seedAgreements !== undefined ? seedAgreements : null,
+  );
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState<ProjectAgreementInput>(() => emptyWarrantyInput(project));
+  const [saving, setSaving] = useState(false);
+
+  const agreements = seedAgreements !== undefined ? (localAgreements ?? seedAgreements) : storeAgreements;
+  const warrantyAgreements = useMemo(() => filterWarrantyAgreements(agreements), [agreements]);
+  const warrantyStatus = getWarrantyStatus(project, {
+    hasPendingExtension: hasPendingWarrantyExtension(warrantyAgreements),
+  });
+
+  const visibleProposals = useMemo(() => {
+    if (mode === "client") {
+      return warrantyAgreements.filter((entry) =>
+        ["pending_client", "accepted", "rejected"].includes(entry.status),
+      );
+    }
+    return warrantyAgreements.filter((entry) => entry.status !== "cancelled");
+  }, [mode, warrantyAgreements]);
+
+  useEffect(() => {
+    if (seedAgreements !== undefined) {
+      setLocalAgreements(seedAgreements);
+      return;
+    }
+    void ensureAgreements(project.id);
+  }, [ensureAgreements, project.id, seedAgreements]);
+
+  async function refreshAgreements() {
+    if (seedAgreements === undefined) {
+      return;
+    }
+    const updated = await ensureAgreements(project.id, { force: true });
+    setLocalAgreements(updated);
+  }
+
+  async function handleCreate() {
+    if (!form.title.trim() || !form.proposedWarrantyEndDate) {
+      return;
+    }
+    setSaving(true);
+    try {
+      await createAgreement(project.id, form, { name: authorName, side: mode });
+      setForm(emptyWarrantyInput(project));
+      setDialogOpen(false);
+      await refreshAgreements();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleRespond(
+    id: string,
+    input: { accepted: boolean; clientResponseName: string; clientResponseNote?: string },
+  ) {
+    const updated = await respond(project.id, id, input);
+    if (input.accepted && updated.proposedWarrantyEndDate) {
+      onWarrantyEndsAtChange?.(updated.proposedWarrantyEndDate);
+    }
+    await refreshAgreements();
+  }
+
+  const isLoading = seedAgreements !== undefined ? false : loading;
+
+  return (
+    <div className="grid gap-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-border/70 bg-surface-muted/15 px-3 py-2.5">
+          <p className="text-[10px] uppercase tracking-wide text-muted">Czas trwania</p>
+          <p className="mt-1 text-sm font-medium text-foreground">{formatProjectDuration(project)}</p>
+          <p className="text-xs text-muted">od utworzenia projektu</p>
+        </div>
+        <div className="rounded-xl border border-border/70 bg-surface-muted/15 px-3 py-2.5">
+          <p className="text-[10px] uppercase tracking-wide text-muted">Status gwarancji</p>
+          <span
+            className={cn(
+              "mt-1 inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold",
+              warrantyToneClass[warrantyStatus.tone],
+            )}
+          >
+            {warrantyStatus.label}
+          </span>
+        </div>
+        <div className="rounded-xl border border-border/70 bg-surface-muted/15 px-3 py-2.5">
+          <p className="text-[10px] uppercase tracking-wide text-muted">Koniec gwarancji</p>
+          <p className="mt-1 text-sm font-medium text-foreground">{formatWarrantyEndDate(project)}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm text-muted">
+          <Shield className="h-4 w-4 text-accent" />
+          Propozycje przedłużenia gwarancji
+        </div>
+        {mode === "team" ? (
+          <Button type="button" size="sm" onClick={() => setDialogOpen(true)}>
+            <CalendarPlus className="mr-2 h-4 w-4" />
+            Przedłuż gwarancję
+          </Button>
+        ) : null}
+      </div>
+
+      {isLoading && !warrantyAgreements.length ? (
+        <p className="text-sm text-muted">Ładowanie propozycji gwarancji…</p>
+      ) : null}
+
+      {!isLoading && visibleProposals.length === 0 ? (
+        <p className="text-sm text-muted">
+          {mode === "team"
+            ? "Brak propozycji przedłużenia. Utwórz propozycję i wyślij ją do akceptacji klienta."
+            : "Brak propozycji przedłużenia gwarancji oczekujących na decyzję."}
+        </p>
+      ) : null}
+
+      <div className="grid gap-3">
+        {visibleProposals.map((agreement) => (
+          <WarrantyProposalCard
+            key={agreement.id}
+            agreement={agreement}
+            mode={mode}
+            authorName={authorName}
+            onSubmit={async (id) => {
+              await submitForClient(project.id, id);
+              await refreshAgreements();
+            }}
+            onCancel={async (id) => {
+              await cancel(project.id, id);
+              await refreshAgreements();
+            }}
+            onRespond={(id, input) => handleRespond(id, input)}
+            onDelete={async (id) => {
+              await removeDraft(project.id, id);
+              if (seedAgreements !== undefined) {
+                setLocalAgreements((current) =>
+                  (current ?? seedAgreements).filter((entry) => entry.id !== id),
+                );
+              }
+            }}
+          />
+        ))}
+      </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Przedłużenie gwarancji</DialogTitle>
+            <DialogDescription>
+              Przygotuj propozycję nowej daty zakończenia gwarancji i ewentualnego kosztu. Klient
+              zaakceptuje lub odrzuci propozycję.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <Field label="Tytuł propozycji">
+              <Input
+                value={form.title}
+                onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+              />
+            </Field>
+            <Field label="Nowa data zakończenia gwarancji">
+              <Input
+                type="date"
+                value={form.proposedWarrantyEndDate ?? ""}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    proposedWarrantyEndDate: event.target.value,
+                  }))
+                }
+              />
+            </Field>
+            <Field label="Opis / warunki">
+              <Textarea
+                value={form.body}
+                onChange={(event) => setForm((current) => ({ ...current, body: event.target.value }))}
+                rows={4}
+                placeholder="Zakres przedłużenia, warunki serwisu…"
+              />
+            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Koszt netto (PLN)">
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.proposedCostNet ?? ""}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      proposedCostNet: event.target.value ? Number(event.target.value) : null,
+                    }))
+                  }
+                />
+              </Field>
+              <Field label="Koszt brutto (PLN)">
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.proposedCostGross ?? ""}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      proposedCostGross: event.target.value ? Number(event.target.value) : null,
+                    }))
+                  }
+                />
+              </Field>
+            </div>
+            <Field label="Notatka do kosztu">
+              <Input
+                value={form.costNote ?? ""}
+                onChange={(event) => setForm((current) => ({ ...current, costNote: event.target.value }))}
+              />
+            </Field>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                disabled={saving || !form.proposedWarrantyEndDate}
+                onClick={() => void handleCreate()}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Zapisz szkic
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setDialogOpen(false)}>
+                Anuluj
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

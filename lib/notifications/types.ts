@@ -1,0 +1,20 @@
+export const USER_NOTIFICATION_KINDS = ["kanban_mention", "kanban_new_activity"] as const;
+
+export type UserNotificationKind = (typeof USER_NOTIFICATION_KINDS)[number];
+
+export type UserNotification = {
+  id: string;
+  profileId: string;
+  kind: UserNotificationKind;
+  title: string;
+  body: string;
+  linkUrl: string | null;
+  sourceId: string | null;
+  readAt: string | null;
+  createdAt: string;
+};
+
+export type MentionCandidate = {
+  profileId: string | null;
+  name: string;
+};

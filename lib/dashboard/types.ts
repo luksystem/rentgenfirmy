@@ -21,8 +21,16 @@ export type DashboardSpace = {
   publicEnabled: boolean;
   publicAccessConfigured: boolean;
   publicAccessUsernameRequired: boolean;
+  publicAuthorName: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export type DashboardPublicAccessInfo = {
+  authRequired: boolean;
+  legacyNameRequired: boolean;
+  usernameRequired: boolean;
+  authorDisplayName: string;
 };
 
 export const DASHBOARD_SPACE_LABELS: Record<DashboardSpaceKind, string> = {
@@ -59,6 +67,7 @@ export type ClientDashboardSectionId =
   | "specification"
   | "files"
   | "links"
+  | "instructions"
   | "communication"
   | "handover"
   | "documentation";
@@ -128,13 +137,19 @@ export const CLIENT_DASHBOARD_SECTIONS: ClientDashboardSection[] = [
     id: "files",
     title: "Pliki i zdjęcia",
     description: "Dokumentacja, zdjęcia z obiektu, plany i materiały projektowe.",
-    status: "planned",
+    status: "active",
   },
   {
     id: "links",
     title: "Linki zewnętrzne",
     description: "Dyski chmurowe, narzędzia współpracy i inne zasoby.",
-    status: "planned",
+    status: "active",
+  },
+  {
+    id: "instructions",
+    title: "Instrukcje",
+    description: "Filmiki, poradniki i materiały szkoleniowe dla klienta.",
+    status: "active",
   },
   {
     id: "communication",

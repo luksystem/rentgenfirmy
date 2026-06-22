@@ -50,6 +50,7 @@ type AppState = {
   initialize: () => Promise<void>;
   addProject: (project: ProjectInput) => Promise<void>;
   updateProject: (id: string, project: ProjectInput) => Promise<void>;
+  patchProjectFields: (id: string, patch: Partial<Project>) => void;
   deleteProject: (id: string) => Promise<void>;
   addInterruption: (interruption: Omit<Interruption, "id">) => Promise<void>;
   updateInterruption: (id: string, interruption: Omit<Interruption, "id">) => Promise<void>;
@@ -149,6 +150,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
       throw error;
     }
+  },
+
+  patchProjectFields: (id, patch) => {
+    set((state) => ({
+      projects: state.projects.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    }));
   },
 
   deleteProject: async (id) => {

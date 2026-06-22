@@ -22,6 +22,7 @@ export type ProjectRow = {
   waiting_blocks_settlement: boolean;
   client_id: string | null;
   created_at: string;
+  warranty_ends_at: string | null;
 };
 
 export type ProjectInsert = Omit<ProjectRow, "id" | "created_at"> & {
@@ -137,6 +138,7 @@ export type DashboardSpaceRow = {
   public_enabled: boolean;
   public_access_password_hash: string | null;
   public_access_username: string | null;
+  public_author_name: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -152,6 +154,7 @@ export type DashboardSpaceInsert = {
   public_enabled?: boolean;
   public_access_password_hash?: string | null;
   public_access_username?: string | null;
+  public_author_name?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -174,6 +177,7 @@ export type ProjectClientAgreementRow = {
   client_responded_at: string | null;
   client_response_name: string | null;
   client_response_note: string | null;
+  proposed_warranty_end_date: string | null;
   position: number;
   created_at: string;
   updated_at: string;
@@ -195,12 +199,41 @@ export type ProjectClientAgreementInsert = {
   client_responded_at?: string | null;
   client_response_name?: string | null;
   client_response_note?: string | null;
+  proposed_warranty_end_date?: string | null;
   position?: number;
   created_at?: string;
   updated_at?: string;
 };
 
 export type ProjectClientAgreementUpdate = Partial<ProjectClientAgreementInsert>;
+
+export type ProjectDashboardContentRow = {
+  id: string;
+  project_id: string;
+  section: string;
+  content_type: string;
+  title: string;
+  url: string;
+  description: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectDashboardContentInsert = {
+  id?: string;
+  project_id: string;
+  section: string;
+  content_type?: string;
+  title?: string;
+  url?: string;
+  description?: string;
+  position?: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ProjectDashboardContentUpdate = Partial<ProjectDashboardContentInsert>;
 
 export type SpecificationCatalogItemRow = {
   id: string;
@@ -471,6 +504,12 @@ export type Database = {
         Update: ProjectClientAgreementUpdate;
         Relationships: [];
       };
+      project_dashboard_content: {
+        Row: ProjectDashboardContentRow;
+        Insert: ProjectDashboardContentInsert;
+        Update: ProjectDashboardContentUpdate;
+        Relationships: [];
+      };
       specification_catalog_items: {
         Row: SpecificationCatalogItemRow;
         Insert: Partial<SpecificationCatalogItemRow> & Pick<SpecificationCatalogItemRow, "name">;
@@ -595,6 +634,69 @@ export type Database = {
         Row: Record<string, unknown>;
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      user_notifications: {
+        Row: {
+          id: string;
+          profile_id: string;
+          kind: string;
+          title: string;
+          body: string;
+          link_url: string | null;
+          source_id: string | null;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          kind: string;
+          title: string;
+          body?: string;
+          link_url?: string | null;
+          source_id?: string | null;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          kind?: string;
+          title?: string;
+          body?: string;
+          link_url?: string | null;
+          source_id?: string | null;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      process_kanban_task_reactions: {
+        Row: {
+          id: string;
+          task_id: string;
+          emoji: string;
+          author_name: string;
+          author_side: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          task_id: string;
+          emoji: string;
+          author_name: string;
+          author_side: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          task_id?: string;
+          emoji?: string;
+          author_name?: string;
+          author_side?: string;
+          created_at?: string;
+        };
         Relationships: [];
       };
     };

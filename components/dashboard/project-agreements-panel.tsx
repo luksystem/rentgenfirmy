@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, Plus, Send, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import {
   Dialog,
@@ -248,7 +249,9 @@ export function ProjectAgreementsPanel({
     seedAgreements !== undefined ? seedAgreements : null,
   );
 
-  const agreements = seedAgreements !== undefined ? (localAgreements ?? seedAgreements) : storeAgreements;
+  const agreements = (seedAgreements !== undefined ? (localAgreements ?? seedAgreements) : storeAgreements).filter(
+    (entry) => entry.category !== "warranty",
+  );
 
   const [filter, setFilter] = useState<FilterKey>(mode === "client" ? "pending_client" : "all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -327,27 +330,37 @@ export function ProjectAgreementsPanel({
       ? ["pending_client", "accepted", "rejected", "all"]
       : ["all", "draft", "pending_client", "accepted", "rejected"];
 
+  const defaultFilter: FilterKey = mode === "client" ? "pending_client" : "all";
+  const activeFilterCount = filter !== defaultFilter ? 1 : 0;
+
   return (
     <div className="grid gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-1.5">
-          {visibleFilters.map((key) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setFilter(key)}
-              className={cn(
-                "rounded-full border px-2.5 py-1 text-xs font-medium transition",
-                filter === key
-                  ? "border-accent/50 bg-accent/10 text-foreground"
-                  : "border-border/70 text-muted hover:text-foreground",
-              )}
-            >
-              {filterLabels[key]}
-              {key === "pending_client" && pendingCount > 0 ? ` (${pendingCount})` : ""}
-            </button>
-          ))}
-        </div>
+        <MobileFiltersPanel
+          activeCount={activeFilterCount}
+          onClear={() => setFilter(defaultFilter)}
+          title="Status"
+          className="min-w-0 flex-1"
+        >
+          <div className="flex flex-wrap gap-1.5">
+            {visibleFilters.map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setFilter(key)}
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-xs font-medium transition",
+                  filter === key
+                    ? "border-accent/50 bg-accent/10 text-foreground"
+                    : "border-border/70 text-muted hover:text-foreground",
+                )}
+              >
+                {filterLabels[key]}
+                {key === "pending_client" && pendingCount > 0 ? ` (${pendingCount})` : ""}
+              </button>
+            ))}
+          </div>
+        </MobileFiltersPanel>
         {mode === "team" ? (
           <Button type="button" size="sm" onClick={() => setDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />

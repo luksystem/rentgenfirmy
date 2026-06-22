@@ -13,7 +13,7 @@ const currentUser = "Łukasz";
 function withAudit(
   project: ProjectInput,
   existing?: Project,
-): Pick<Project, "lastChangedBy" | "lastChangedAt" | "lastContactDate"> {
+): Pick<Project, "lastChangedBy" | "lastChangedAt" | "lastContactDate" | "createdAt"> {
   return {
     lastChangedAt: new Date().toISOString(),
     lastChangedBy: currentUser,
@@ -21,6 +21,7 @@ function withAudit(
       project.lastContactDate ??
       existing?.lastContactDate ??
       project.nextContactDate,
+    createdAt: existing?.createdAt ?? new Date().toISOString(),
   };
 }
 

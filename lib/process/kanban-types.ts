@@ -58,6 +58,26 @@ export type KanbanComment = {
   createdAt: string;
 };
 
+export type KanbanTaskReaction = {
+  id: string;
+  taskId: string;
+  emoji: string;
+  authorName: string;
+  authorSide: KanbanAuthorSide;
+  createdAt: string;
+};
+
+export function isOwnKanbanComment(
+  comment: Pick<KanbanComment, "authorName" | "authorSide">,
+  authorName: string,
+  authorSide: KanbanAuthorSide,
+) {
+  return (
+    comment.authorSide === authorSide &&
+    comment.authorName.trim().toLocaleLowerCase("pl") === authorName.trim().toLocaleLowerCase("pl")
+  );
+}
+
 export const KANBAN_TASK_EVENT_TYPES = ["created", "closed", "reopened"] as const;
 export type KanbanTaskEventType = (typeof KANBAN_TASK_EVENT_TYPES)[number];
 
@@ -103,6 +123,7 @@ export type KanbanBoard = {
   columns: KanbanColumn[];
   tasks: KanbanTask[];
   comments: KanbanComment[];
+  reactions: KanbanTaskReaction[];
   events: KanbanTaskEvent[];
   attachments: KanbanAttachment[];
   createdAt: string;

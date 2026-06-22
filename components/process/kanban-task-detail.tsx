@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { History, X } from "lucide-react";
+import { History, Pencil, Trash2, X } from "lucide-react";
 import { KanbanPriorityPicker } from "@/components/process/kanban-task-card";
 import { KanbanAssigneePicker } from "@/components/process/kanban-board-controls";
 import { KanbanAttachmentGallery, type KanbanAttachmentUploadOptions } from "@/components/process/kanban-attachment-gallery";
 import { Button } from "@/components/ui/button";
 import { Dialog, StackedDialogContent, DialogTitle } from "@/components/ui/dialog";
+import { KanbanMentionTextarea } from "@/components/process/kanban-mention-textarea";
+import { KanbanTaskReactions } from "@/components/process/kanban-task-reactions";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import {
   formatKanbanEventAuthor,
@@ -14,15 +16,26 @@ import {
   getKanbanTaskEvents,
   KANBAN_TASK_EVENT_LABELS,
 } from "@/lib/process/kanban-events";
+import type { KanbanReactionEmoji } from "@/lib/process/kanban-reactions";
 import { milestoneDateToInput } from "@/lib/process/dates";
-import type { KanbanAttachment, KanbanBoard, KanbanTask, KanbanTaskEvent } from "@/lib/process/kanban-types";
+import type {
+  KanbanAttachment,
+  KanbanAuthorSide,
+  KanbanBoard,
+  KanbanTask,
+  KanbanTaskEvent,
+  KanbanTaskReaction,
+} from "@/lib/process/kanban-types";
+import { isOwnKanbanComment } from "@/lib/process/kanban-types";
 
 export function KanbanTaskDetailModal({
   task,
   comments,
+  reactions = [],
   events,
   attachments,
   authorName,
+  authorSide,
   canDelete,
   showDueDate = true,
   allowAttachmentUpload = false,
@@ -30,6 +43,7 @@ export function KanbanTaskDetailModal({
   currentColumnId,
   onMoveToColumn,
   assigneeOptions = [],
+  mentionOptions = [],
   commentDraft,
   onCommentDraftChange,
   onClose,
@@ -37,14 +51,19 @@ export function KanbanTaskDetailModal({
   onCloseTask,
   onDelete,
   onComment,
+  onUpdateComment,
+  onDeleteComment,
+  onToggleReaction,
   onUploadAttachment,
   onSetAttachmentCover,
 }: {
   task: KanbanTask;
   comments: KanbanBoard["comments"];
+  reactions?: KanbanTaskReaction[];
   events: KanbanTaskEvent[];
   attachments: KanbanAttachment[];
   authorName: string;
+  authorSide: KanbanAuthorSide;
   canDelete?: boolean;
   showDueDate?: boolean;
   allowAttachmentUpload?: boolean;
@@ -52,6 +71,7 @@ export function KanbanTaskDetailModal({
   currentColumnId?: string;
   onMoveToColumn?: (columnId: string) => Promise<void>;
   assigneeOptions?: string[];
+  mentionOptions?: string[];
   commentDraft: string;
   onCommentDraftChange: (value: string) => void;
   onClose: () => void;
@@ -61,6 +81,9 @@ export function KanbanTaskDetailModal({
   onCloseTask: (closed: boolean) => Promise<void>;
   onDelete?: () => Promise<void>;
   onComment: () => Promise<void>;
+  onUpdateComment?: (commentId: string, body: string) => Promise<void>;
+  onDeleteComment?: (commentId: string) => Promise<void>;
+  onToggleReaction?: (emoji: KanbanReactionEmoji) => Promise<void>;
   onUploadAttachment?: (file: File, options?: KanbanAttachmentUploadOptions) => Promise<void>;
   onSetAttachmentCover?: (attachmentId: string, isCardCover: boolean) => Promise<void>;
 }) {
@@ -77,6 +100,9 @@ export function KanbanTaskDetailModal({
   const [isMoving, setIsMoving] = useState(false);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentBody, setEditingCommentBody] = useState("");
+  const [commentActionId, setCommentActionId] = useState<string | null>(null);
   const [coverUpdatingId, setCoverUpdatingId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -155,6 +181,45 @@ export function KanbanTaskDetailModal({
     }
   }
 
+  async function handleSaveCommentEdit(commentId: string) {
+    if (!onUpdateComment || !editingCommentBody.trim()) {
+      return;
+    }
+    setCommentActionId(commentId);
+    setError(null);
+    try {
+      await onUpdateComment(commentId, editingCommentBody);
+      setEditingCommentId(null);
+      setEditingCommentBody("");
+    } catch (editError) {
+      setError(editError instanceof Error ? editError.message : "Nie udało się zapisać komentarza.");
+    } finally {
+      setCommentActionId(null);
+    }
+  }
+
+  async function handleDeleteComment(commentId: string) {
+    if (!onDeleteComment) {
+      return;
+    }
+    if (!window.confirm("Usunąć ten komentarz?")) {
+      return;
+    }
+    setCommentActionId(commentId);
+    setError(null);
+    try {
+      await onDeleteComment(commentId);
+      if (editingCommentId === commentId) {
+        setEditingCommentId(null);
+        setEditingCommentBody("");
+      }
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Nie udało się usunąć komentarza.");
+    } finally {
+      setCommentActionId(null);
+    }
+  }
+
   return (
     <Dialog
       open
@@ -184,6 +249,20 @@ export function KanbanTaskDetailModal({
         <Field label="Opis">
           <Textarea value={description} onChange={(event) => setDescription(event.target.value)} />
         </Field>
+
+        {onToggleReaction ? (
+          <div className="grid gap-2">
+            <p className="text-sm font-medium text-foreground">Reakcje</p>
+            <KanbanTaskReactions
+              taskId={task.id}
+              reactions={reactions}
+              authorName={authorName}
+              authorSide={authorSide}
+              disabled={isSaving || isMoving || isClosing || isReopening}
+              onToggle={onToggleReaction}
+            />
+          </div>
+        ) : null}
 
         <Field label="Priorytet">
           <KanbanPriorityPicker
@@ -349,24 +428,100 @@ export function KanbanTaskDetailModal({
           <p className="text-sm font-medium text-foreground">Komentarze</p>
           <div className="grid max-h-48 gap-2 overflow-y-auto">
             {comments.length ? (
-              comments.map((comment) => (
-                <div key={comment.id} className="rounded-xl border border-border/60 bg-surface/50 px-3 py-2 text-sm">
-                  <p className="text-xs text-muted">
-                    {comment.authorName} · {comment.authorSide === "client" ? "Klient" : "Zespół"}
-                  </p>
-                  <p className="mt-1 text-foreground">{comment.body}</p>
-                </div>
-              ))
+              comments.map((comment) => {
+                const isOwn = isOwnKanbanComment(comment, authorName, authorSide);
+                const isEditing = editingCommentId === comment.id;
+                const isBusy = commentActionId === comment.id;
+
+                return (
+                  <div key={comment.id} className="rounded-xl border border-border/60 bg-surface/50 px-3 py-2 text-sm">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-xs text-muted">
+                        {comment.authorName} · {comment.authorSide === "client" ? "Klient" : "Zespół"}
+                      </p>
+                      {isOwn && onUpdateComment && onDeleteComment ? (
+                        <div className="flex shrink-0 gap-1">
+                          <button
+                            type="button"
+                            className="rounded-md p-1 text-muted transition hover:bg-surface-muted hover:text-foreground disabled:opacity-50"
+                            disabled={isBusy || isCommentSubmitting}
+                            aria-label="Edytuj komentarz"
+                            onClick={() => {
+                              setEditingCommentId(comment.id);
+                              setEditingCommentBody(comment.body);
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-md p-1 text-muted transition hover:bg-rose-500/10 hover:text-rose-300 disabled:opacity-50"
+                            disabled={isBusy || isCommentSubmitting}
+                            aria-label="Usuń komentarz"
+                            onClick={() => void handleDeleteComment(comment.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                    {isEditing ? (
+                      <div className="mt-2 grid gap-2">
+                        <Textarea
+                          value={editingCommentBody}
+                          disabled={isBusy}
+                          onChange={(event) => setEditingCommentBody(event.target.value)}
+                          rows={3}
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={isBusy || !editingCommentBody.trim()}
+                            onClick={() => void handleSaveCommentEdit(comment.id)}
+                          >
+                            {isBusy ? "Zapisywanie…" : "Zapisz"}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            disabled={isBusy}
+                            onClick={() => {
+                              setEditingCommentId(null);
+                              setEditingCommentBody("");
+                            }}
+                          >
+                            Anuluj
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="mt-1 whitespace-pre-wrap text-foreground">{comment.body}</p>
+                    )}
+                  </div>
+                );
+              })
             ) : (
               <p className="text-sm text-muted">Brak komentarzy.</p>
             )}
           </div>
-          <Textarea
-            value={commentDraft}
-            placeholder={`Komentarz (${authorName})…`}
-            disabled={isCommentSubmitting}
-            onChange={(event) => onCommentDraftChange(event.target.value)}
-          />
+          {mentionOptions.length > 0 ? (
+            <KanbanMentionTextarea
+              value={commentDraft}
+              mentionOptions={mentionOptions}
+              disabled={isCommentSubmitting}
+              placeholder={`Komentarz (${authorName})… użyj @ aby oznaczyć`}
+              onChange={onCommentDraftChange}
+            />
+          ) : (
+            <Textarea
+              value={commentDraft}
+              placeholder={`Komentarz (${authorName})…`}
+              disabled={isCommentSubmitting}
+              onChange={(event) => onCommentDraftChange(event.target.value)}
+            />
+          )}
           <Button
             type="button"
             size="sm"

@@ -19,6 +19,7 @@ import {
   type FieldOptions,
 } from "@/lib/field-options";
 import { priorities, type Project, type ProjectInput } from "@/lib/types";
+import { formatProjectDuration } from "@/lib/project/warranty";
 import { toISODate } from "@/lib/utils";
 import {
   applyWaitingPriority,
@@ -47,6 +48,7 @@ type FormValues = {
   waitingDependsOnUs: boolean;
   waitingIncreasesCostLater: boolean;
   waitingBlocksSettlement: boolean;
+  warrantyEndsAt?: string;
 };
 
 function createSchema(options: FieldOptions) {
@@ -72,10 +74,11 @@ function createSchema(options: FieldOptions) {
       remainingHours: z.number().min(0).optional(),
       nextAction: z.string().optional(),
       closeDeadline: z.string().optional(),
-      waitingDependsOnUs: z.boolean(),
-      waitingIncreasesCostLater: z.boolean(),
-      waitingBlocksSettlement: z.boolean(),
-    })
+  waitingDependsOnUs: z.boolean(),
+  waitingIncreasesCostLater: z.boolean(),
+  waitingBlocksSettlement: z.boolean(),
+  warrantyEndsAt: z.string().optional(),
+})
     .superRefine((value, ctx) => {
       const requiresBlocker =
         isWaitingFlowStatus(value.flowStatus, options) ||
@@ -113,6 +116,7 @@ export function projectToFormValues(project: Project, options: FieldOptions): Fo
     waitingDependsOnUs: project.waitingDependsOnUs ?? false,
     waitingIncreasesCostLater: project.waitingIncreasesCostLater ?? false,
     waitingBlocksSettlement: project.waitingBlocksSettlement ?? false,
+    warrantyEndsAt: project.warrantyEndsAt ?? "",
   };
 }
 
@@ -136,6 +140,7 @@ function createDefaultValues(options: FieldOptions): FormValues {
     waitingDependsOnUs: false,
     waitingIncreasesCostLater: false,
     waitingBlocksSettlement: false,
+    warrantyEndsAt: "",
   };
 }
 
@@ -267,6 +272,7 @@ export function ProjectForm({
       waitingDependsOnUs: waiting ? payload.waitingDependsOnUs : undefined,
       waitingIncreasesCostLater: waiting ? payload.waitingIncreasesCostLater : undefined,
       waitingBlocksSettlement: waiting ? payload.waitingBlocksSettlement : undefined,
+      warrantyEndsAt: values.warrantyEndsAt || undefined,
     });
   }
 
@@ -386,6 +392,24 @@ export function ProjectForm({
       <Field label="Notatki" error={errors.notes?.message}>
         <Textarea {...register("notes")} placeholder="Kontekst, ryzyka, ustalenia..." />
       </Field>
+
+      <div className="rounded-2xl border border-border/80 bg-surface-muted/50 p-4">
+        <p className="mb-3 text-sm font-semibold">Gwarancja i czas trwania</p>
+        <div className="grid gap-4 md:grid-cols-2">
+          {project ? (
+            <Field label="Czas trwania projektu">
+              <Input value={formatProjectDuration(project)} readOnly disabled />
+            </Field>
+          ) : null}
+          <Field label="Data zakończenia gwarancji" error={errors.warrantyEndsAt?.message}>
+            <Input type="date" {...register("warrantyEndsAt")} />
+          </Field>
+        </div>
+        <p className="mt-2 text-xs text-muted">
+          Przedłużenie gwarancji z akceptacją klienta ustawisz w dashboardzie klienta — przycisk
+          „Przedłuż gwarancję”.
+        </p>
+      </div>
 
       <div className="rounded-2xl border border-border/80 bg-surface-muted/50 p-4">
         <p className="mb-3 text-sm font-semibold">Pola dla modułu do zamknięcia</p>

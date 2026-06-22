@@ -25,15 +25,20 @@ import {
 import type { KanbanAuthorSide } from "@/lib/process/kanban-types";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
+import { buildKanbanMentionCandidates, buildKanbanMentionOptionNames } from "@/lib/kanban/mention-candidates";
 import {
   addKanbanComment,
   closeKanbanTask,
+  deleteKanbanComment,
   deleteKanbanTask,
   markKanbanBoardRead,
   moveKanbanTask,
+  toggleKanbanTaskReaction,
+  updateKanbanComment,
   updateKanbanTask,
 } from "@/lib/supabase/kanban-repository";
 import { useKanbanCacheStore } from "@/store/kanban-cache-store";
+import { useProcessStore } from "@/store/process-store";
 
 export function AggregatedKanbanBoard({
   authorSide,
@@ -43,6 +48,14 @@ export function AggregatedKanbanBoard({
   authorName: string;
 }) {
   const fieldOptions = useAppStore((state) => state.fieldOptions);
+  const teamProfiles = useProcessStore((state) => state.teamProfiles);
+  const loadTeamProfiles = useProcessStore((state) => state.loadTeamProfiles);
+
+  useEffect(() => {
+    if (authorSide === "team") {
+      void loadTeamProfiles();
+    }
+  }, [authorSide, loadTeamProfiles]);
   const cachedMergedView = useKanbanCacheStore((state) => state.mergedView);
   const ensureAllBoards = useKanbanCacheStore((state) => state.ensureAllBoards);
   const [mergedView, setMergedView] = useState<MergedKanbanView | null>(cachedMergedView);
@@ -108,6 +121,7 @@ export function AggregatedKanbanBoard({
   const activeTask = board?.tasks.find((task) => task.id === activeTaskId) ?? null;
   const dragTask = dragTaskId ? (board?.tasks.find((task) => task.id === dragTaskId) ?? null) : null;
   const activeComments = board?.comments.filter((comment) => comment.taskId === activeTaskId) ?? [];
+  const activeReactions = board?.reactions ?? [];
   const activeEvents = board?.events.filter((event) => event.taskId === activeTaskId) ?? [];
   const activeAttachments = board?.attachments.filter((entry) => entry.taskId === activeTaskId) ?? [];
   const activityMap = useMemo(
@@ -117,6 +131,14 @@ export function AggregatedKanbanBoard({
   const assigneeOptions = useMemo(
     () => (board ? collectKanbanAssigneeOptions(board.tasks, fieldOptions.nextStepOwners) : []),
     [board, fieldOptions.nextStepOwners],
+  );
+  const mentionCandidates = useMemo(
+    () => buildKanbanMentionCandidates(teamProfiles, assigneeOptions),
+    [assigneeOptions, teamProfiles],
+  );
+  const mentionOptions = useMemo(
+    () => buildKanbanMentionOptionNames(mentionCandidates),
+    [mentionCandidates],
   );
   const boardStats = useMemo(
     () => (board ? computeKanbanBoardStats(board) : null),
@@ -268,6 +290,7 @@ export function AggregatedKanbanBoard({
                     key={task.id}
                     task={task}
                     attachments={board.attachments.filter((entry) => entry.taskId === task.id)}
+                    reactions={board.reactions}
                     activity={activityMap.get(task.id)}
                     isNew={task.isNewForTeam && authorSide === "team"}
                     showAssignee
@@ -291,10 +314,13 @@ export function AggregatedKanbanBoard({
         <KanbanTaskDetailModal
           task={activeTask}
           comments={activeComments}
+          reactions={activeReactions}
           events={activeEvents}
           attachments={activeAttachments}
           authorName={authorName}
+          authorSide={authorSide}
           assigneeOptions={assigneeOptions}
+          mentionOptions={mentionOptions}
           canDelete={authorSide === "team"}
           columns={board.columns.map((column) => ({ id: column.id, title: column.title }))}
           currentColumnId={activeTask.columnId}
@@ -335,8 +361,28 @@ export function AggregatedKanbanBoard({
               authorName,
               authorSide,
               body: commentDraft,
+              taskTitle: activeTask.title,
+              linkUrl: "/tablice-wdrozen/zbiorcza",
+              mentionCandidates,
             });
             setCommentDraft("");
+            await refresh();
+          }}
+          onUpdateComment={async (commentId, body) => {
+            await updateKanbanComment(commentId, { body, authorName, authorSide });
+            await refresh();
+          }}
+          onDeleteComment={async (commentId) => {
+            await deleteKanbanComment(commentId, { authorName, authorSide });
+            await refresh();
+          }}
+          onToggleReaction={async (emoji) => {
+            await toggleKanbanTaskReaction({
+              taskId: activeTask.id,
+              emoji,
+              authorName,
+              authorSide,
+            });
             await refresh();
           }}
         />

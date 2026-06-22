@@ -29,7 +29,7 @@ type ProjectAgreementStore = {
     projectId: string,
     agreementId: string,
     input: { accepted: boolean; clientResponseName: string; clientResponseNote?: string },
-  ) => Promise<void>;
+  ) => Promise<ProjectClientAgreement>;
   cancel: (projectId: string, agreementId: string) => Promise<void>;
   removeDraft: (projectId: string, agreementId: string) => Promise<void>;
   invalidateProject: (projectId: string) => void;
@@ -109,6 +109,7 @@ export const useProjectAgreementStore = create<ProjectAgreementStore>((set, get)
       entry.id === agreementId ? updated : entry,
     );
     setProjectAgreements(projectId, list, set, get);
+    return updated;
   },
 
   cancel: async (projectId, agreementId) => {

@@ -51,6 +51,7 @@ export function PublicKanbanBoard({
 }) {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [newTaskTitles, setNewTaskTitles] = useState<Record<string, string>>({});
+  const [addingTaskColumnId, setAddingTaskColumnId] = useState<string | null>(null);
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
   const [pendingMove, setPendingMove] = useState<{ taskId: string; columnId: string } | null>(null);
@@ -117,6 +118,7 @@ export function PublicKanbanBoard({
   const activeTask = board.tasks.find((task) => task.id === activeTaskId) ?? null;
   const dragTask = dragTaskId ? (board.tasks.find((task) => task.id === dragTaskId) ?? null) : null;
   const activeComments = board.comments.filter((comment) => comment.taskId === activeTaskId);
+  const activeReactions = board.reactions;
   const activeEvents = board.events.filter((event) => event.taskId === activeTaskId);
   const activeAttachments = board.attachments.filter((entry) => entry.taskId === activeTaskId);
   const columnOptions = board.columns.map((column) => ({ id: column.id, title: column.title }));
@@ -130,13 +132,21 @@ export function PublicKanbanBoard({
   useKanbanRealtime(board.id, stableRefresh);
 
   async function handleAddTask(columnId: string) {
+    if (addingTaskColumnId) {
+      return;
+    }
     const title = newTaskTitles[columnId]?.trim();
     if (!title) {
       return;
     }
-    await postKanban(token, { action: "createTask", columnId, title, authorName });
-    setNewTaskTitles((current) => ({ ...current, [columnId]: "" }));
-    await onRefresh();
+    setAddingTaskColumnId(columnId);
+    try {
+      await postKanban(token, { action: "createTask", columnId, title, authorName });
+      setNewTaskTitles((current) => ({ ...current, [columnId]: "" }));
+      await onRefresh();
+    } finally {
+      setAddingTaskColumnId(null);
+    }
   }
 
   async function handleDrop(columnId: string) {
@@ -364,6 +374,7 @@ export function PublicKanbanBoard({
                       key={task.id}
                       task={task}
                       attachments={board.attachments.filter((entry) => entry.taskId === task.id)}
+                      reactions={board.reactions}
                       activity={activityMap.get(task.id)}
                       draggable={!isCoarsePointer}
                       showDueDate
@@ -406,11 +417,12 @@ export function PublicKanbanBoard({
                     value={newTaskTitles[column.id] ?? ""}
                     placeholder="Opisz problem lub pomysł…"
                     className="h-11 border-border/60 bg-surface/80"
+                    disabled={addingTaskColumnId !== null}
                     onChange={(event) =>
                       setNewTaskTitles((current) => ({ ...current, [column.id]: event.target.value }))
                     }
                     onKeyDown={(event) => {
-                      if (event.key === "Enter") {
+                      if (event.key === "Enter" && addingTaskColumnId === null) {
                         void handleAddTask(column.id);
                       }
                     }}
@@ -419,10 +431,11 @@ export function PublicKanbanBoard({
                     type="button"
                     size="sm"
                     className="h-10 w-full"
+                    disabled={addingTaskColumnId !== null || !newTaskTitles[column.id]?.trim()}
                     onClick={() => void handleAddTask(column.id)}
                   >
                     <Plus className="mr-1.5 h-4 w-4" />
-                    Dodaj zgłoszenie
+                    {addingTaskColumnId === column.id ? "Dodawanie…" : "Dodaj zgłoszenie"}
                   </Button>
                 </div>
               </div>
@@ -435,13 +448,16 @@ export function PublicKanbanBoard({
         <KanbanTaskDetailModal
           task={activeTask}
           comments={activeComments}
+          reactions={activeReactions}
           events={activeEvents}
           attachments={activeAttachments}
           authorName={authorName}
+          authorSide="client"
           allowAttachmentUpload
           columns={columnOptions}
           currentColumnId={activeTask.columnId}
           assigneeOptions={filterAssigneeOptions}
+          mentionOptions={filterAssigneeOptions}
           onMoveToColumn={(columnId) => handleMoveTask(activeTask.id, columnId)}
           commentDraft={commentDraft}
           onCommentDraftChange={setCommentDraft}
@@ -460,6 +476,32 @@ export function PublicKanbanBoard({
               authorName,
             });
             setCommentDraft("");
+            await onRefresh();
+          }}
+          onUpdateComment={async (commentId, body) => {
+            await postKanban(token, {
+              action: "updateComment",
+              commentId,
+              body,
+              authorName,
+            });
+            await onRefresh();
+          }}
+          onDeleteComment={async (commentId) => {
+            await postKanban(token, {
+              action: "deleteComment",
+              commentId,
+              authorName,
+            });
+            await onRefresh();
+          }}
+          onToggleReaction={async (emoji) => {
+            await postKanban(token, {
+              action: "toggleReaction",
+              taskId: activeTask.id,
+              emoji,
+              authorName,
+            });
             await onRefresh();
           }}
         />

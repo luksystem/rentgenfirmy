@@ -28,6 +28,7 @@ export default function ClientDashboardPage() {
   const templates = useProcessStore((state) => state.templates);
   const processHydrated = useProcessStore((state) => state.hydrated);
   const displayName = useAuthStore((state) => state.displayName);
+  const patchProjectFields = useAppStore((state) => state.patchProjectFields);
 
   const client = clients.find((entry) => entry.id === clientId) ?? null;
   const clientProjects = useMemo(
@@ -123,6 +124,7 @@ export default function ClientDashboardPage() {
         process={process}
         template={template}
         teamAuthorName={displayName || "Zespół"}
+        onProjectPatch={(projectId, patch) => patchProjectFields(projectId, patch)}
       />
     </DashboardSpaceShell>
   );

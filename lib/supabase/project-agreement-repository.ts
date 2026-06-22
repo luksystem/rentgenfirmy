@@ -22,6 +22,7 @@ type AgreementRow = {
   client_responded_at: string | null;
   client_response_name: string | null;
   client_response_note: string | null;
+  proposed_warranty_end_date: string | null;
   position: number;
   created_at: string;
   updated_at: string;
@@ -36,7 +37,7 @@ function parseNumber(value: number | string | null | undefined) {
 }
 
 function isCategory(value: string): value is ProjectAgreementCategory {
-  return ["integration", "specification", "change", "handover", "other"].includes(value);
+  return ["integration", "specification", "change", "handover", "warranty", "other"].includes(value);
 }
 
 function isStatus(value: string): value is ProjectAgreementStatus {
@@ -60,6 +61,7 @@ function rowToAgreement(row: AgreementRow): ProjectClientAgreement {
     clientRespondedAt: row.client_responded_at,
     clientResponseName: row.client_response_name,
     clientResponseNote: row.client_response_note,
+    proposedWarrantyEndDate: row.proposed_warranty_end_date,
     position: row.position,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -111,6 +113,7 @@ export async function createProjectAgreement(
       proposed_cost_net: input.proposedCostNet ?? null,
       proposed_cost_gross: input.proposedCostGross ?? null,
       cost_note: input.costNote?.trim() || null,
+      proposed_warranty_end_date: input.proposedWarrantyEndDate ?? null,
       created_by_name: author.name.trim() || "Zespół",
       created_by_side: author.side,
       position,
@@ -141,6 +144,7 @@ export async function updateProjectAgreementDraft(
       proposed_cost_net: input.proposedCostNet ?? null,
       proposed_cost_gross: input.proposedCostGross ?? null,
       cost_note: input.costNote?.trim() || null,
+      proposed_warranty_end_date: input.proposedWarrantyEndDate ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", agreementId)
@@ -205,7 +209,24 @@ export async function respondToProjectAgreement(
     throw new Error(error.message);
   }
 
-  return rowToAgreement(data as AgreementRow);
+  const agreement = rowToAgreement(data as AgreementRow);
+
+  if (
+    input.accepted &&
+    agreement.category === "warranty" &&
+    agreement.proposedWarrantyEndDate
+  ) {
+    const { error: projectError } = await supabase
+      .from("projects")
+      .update({ warranty_ends_at: agreement.proposedWarrantyEndDate })
+      .eq("id", agreement.projectId);
+
+    if (projectError) {
+      throw new Error(projectError.message);
+    }
+  }
+
+  return agreement;
 }
 
 export async function cancelProjectAgreement(agreementId: string) {

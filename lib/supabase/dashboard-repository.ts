@@ -45,6 +45,7 @@ function rowToSpace(row: SpaceRow): DashboardSpace {
     publicEnabled: row.public_enabled,
     publicAccessConfigured: Boolean(row.public_access_password_hash),
     publicAccessUsernameRequired: Boolean(row.public_access_username?.trim()),
+    publicAuthorName: (row as { public_author_name?: string | null }).public_author_name?.trim() || "Klient",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

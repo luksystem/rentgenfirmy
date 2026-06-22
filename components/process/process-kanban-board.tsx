@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Copy, ExternalLink, Plus } from "lucide-react";
 import { KanbanBoardControls } from "@/components/process/kanban-board-controls";
 import { KanbanBoardStatsBar } from "@/components/process/kanban-board-stats-bar";
@@ -26,18 +27,23 @@ import {
   type KanbanTemplatePayload,
 } from "@/lib/process/kanban-types";
 import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
+import { buildKanbanMentionCandidates, buildKanbanMentionOptionNames } from "@/lib/kanban/mention-candidates";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 import { useKanbanCacheStore } from "@/store/kanban-cache-store";
+import { useProcessStore } from "@/store/process-store";
 import {
   addKanbanComment,
   closeKanbanTask,
   createKanbanTask,
+  deleteKanbanComment,
   deleteKanbanTask,
   ensureKanbanBoard,
   markKanbanBoardRead,
   moveKanbanTask,
   setKanbanPublicEnabled,
+  toggleKanbanTaskReaction,
+  updateKanbanComment,
   updateKanbanTask,
 } from "@/lib/supabase/kanban-repository";
 
@@ -64,6 +70,7 @@ export function ProcessKanbanBoard({
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [newTaskTitles, setNewTaskTitles] = useState<Record<string, string>>({});
   const [newTaskDueDates, setNewTaskDueDates] = useState<Record<string, string>>({});
+  const [addingTaskColumnId, setAddingTaskColumnId] = useState<string | null>(null);
   const [commentDraft, setCommentDraft] = useState("");
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
@@ -78,6 +85,15 @@ export function ProcessKanbanBoard({
   const [filters, setFilters] = useState<KanbanBoardFilters>({ priority: "all", assignee: "all" });
   const [sortMode, setSortMode] = useState<KanbanColumnSortMode>("position");
   const fieldOptions = useAppStore((state) => state.fieldOptions);
+  const teamProfiles = useProcessStore((state) => state.teamProfiles);
+  const loadTeamProfiles = useProcessStore((state) => state.loadTeamProfiles);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (authorSide === "team") {
+      void loadTeamProfiles();
+    }
+  }, [authorSide, loadTeamProfiles]);
 
   const refresh = useCallback(
     async (options?: { force?: boolean; showLoading?: boolean }) => {
@@ -202,6 +218,7 @@ export function ProcessKanbanBoard({
   const activeTask = board?.tasks.find((task) => task.id === activeTaskId) ?? null;
   const dragTask = dragTaskId ? (board?.tasks.find((task) => task.id === dragTaskId) ?? null) : null;
   const activeComments = board?.comments.filter((c) => c.taskId === activeTaskId) ?? [];
+  const activeReactions = board?.reactions ?? [];
   const activeEvents = board?.events.filter((event) => event.taskId === activeTaskId) ?? [];
   const activeAttachments = board?.attachments.filter((entry) => entry.taskId === activeTaskId) ?? [];
   const activityMap = useMemo(
@@ -212,21 +229,37 @@ export function ProcessKanbanBoard({
     () => (board ? collectKanbanAssigneeOptions(board.tasks, fieldOptions.nextStepOwners) : []),
     [board, fieldOptions.nextStepOwners],
   );
+  const mentionCandidates = useMemo(
+    () => buildKanbanMentionCandidates(teamProfiles, assigneeOptions),
+    [assigneeOptions, teamProfiles],
+  );
+  const mentionOptions = useMemo(
+    () => buildKanbanMentionOptionNames(mentionCandidates),
+    [mentionCandidates],
+  );
   const boardStats = useMemo(
     () => (board ? computeKanbanBoardStats(board) : null),
     [board],
   );
 
   async function handleAddTask(columnId: string) {
+    if (addingTaskColumnId) {
+      return;
+    }
     const title = newTaskTitles[columnId]?.trim();
     if (!title) {
       return;
     }
     const dueDate = newTaskDueDates[columnId]?.trim() || null;
-    await createKanbanTask({ columnId, title, dueDate, authorSide, authorName });
-    setNewTaskTitles((current) => ({ ...current, [columnId]: "" }));
-    setNewTaskDueDates((current) => ({ ...current, [columnId]: "" }));
-    await refresh();
+    setAddingTaskColumnId(columnId);
+    try {
+      await createKanbanTask({ columnId, title, dueDate, authorSide, authorName });
+      setNewTaskTitles((current) => ({ ...current, [columnId]: "" }));
+      setNewTaskDueDates((current) => ({ ...current, [columnId]: "" }));
+      await refresh();
+    } finally {
+      setAddingTaskColumnId(null);
+    }
   }
 
   async function handleDrop(columnId: string) {
@@ -447,6 +480,7 @@ export function ProcessKanbanBoard({
                     key={task.id}
                     task={task}
                     attachments={board.attachments.filter((entry) => entry.taskId === task.id)}
+                    reactions={board.reactions}
                     activity={activityMap.get(task.id)}
                     isNew={task.isNewForTeam && authorSide === "team"}
                     showAssignee
@@ -463,6 +497,7 @@ export function ProcessKanbanBoard({
                   <Input
                     value={newTaskTitles[column.id] ?? ""}
                     placeholder="Nowe zgłoszenie…"
+                    disabled={addingTaskColumnId !== null}
                     onChange={(event) =>
                       setNewTaskTitles((current) => ({
                         ...current,
@@ -470,7 +505,7 @@ export function ProcessKanbanBoard({
                       }))
                     }
                     onKeyDown={(event) => {
-                      if (event.key === "Enter") {
+                      if (event.key === "Enter" && addingTaskColumnId === null) {
                         void handleAddTask(column.id);
                       }
                     }}
@@ -479,6 +514,7 @@ export function ProcessKanbanBoard({
                     <Input
                       type="date"
                       value={newTaskDueDates[column.id] ?? ""}
+                      disabled={addingTaskColumnId !== null}
                       onChange={(event) =>
                         setNewTaskDueDates((current) => ({
                           ...current,
@@ -487,9 +523,15 @@ export function ProcessKanbanBoard({
                       }
                     />
                   </Field>
-                  <Button type="button" size="sm" variant="secondary" onClick={() => void handleAddTask(column.id)}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={addingTaskColumnId !== null || !newTaskTitles[column.id]?.trim()}
+                    onClick={() => void handleAddTask(column.id)}
+                  >
                     <Plus className="mr-1 h-3.5 w-3.5" />
-                    Dodaj
+                    {addingTaskColumnId === column.id ? "Dodawanie…" : "Dodaj"}
                   </Button>
                 </div>
               </div>
@@ -502,10 +544,22 @@ export function ProcessKanbanBoard({
         <KanbanTaskDetailModal
           task={activeTask}
           comments={activeComments}
+          reactions={activeReactions}
           events={activeEvents}
           attachments={activeAttachments}
           authorName={authorName}
+          authorSide={authorSide}
           assigneeOptions={assigneeOptions}
+          mentionOptions={mentionOptions}
+          columns={board.columns.map((column) => ({ id: column.id, title: column.title }))}
+          currentColumnId={activeTask.columnId}
+          onMoveToColumn={async (columnId) => {
+            const columnTasks = board.tasks.filter(
+              (task) => task.columnId === columnId && task.id !== activeTask.id,
+            );
+            await moveKanbanTask(activeTask.id, columnId, columnTasks.length);
+            await refresh();
+          }}
           canDelete={authorSide === "team"}
           commentDraft={commentDraft}
           onCommentDraftChange={setCommentDraft}
@@ -533,8 +587,28 @@ export function ProcessKanbanBoard({
               authorName,
               authorSide,
               body: commentDraft,
+              taskTitle: activeTask.title,
+              linkUrl: pathname,
+              mentionCandidates,
             });
             setCommentDraft("");
+            await refresh();
+          }}
+          onUpdateComment={async (commentId, body) => {
+            await updateKanbanComment(commentId, { body, authorName, authorSide });
+            await refresh();
+          }}
+          onDeleteComment={async (commentId) => {
+            await deleteKanbanComment(commentId, { authorName, authorSide });
+            await refresh();
+          }}
+          onToggleReaction={async (emoji) => {
+            await toggleKanbanTaskReaction({
+              taskId: activeTask.id,
+              emoji,
+              authorName,
+              authorSide,
+            });
             await refresh();
           }}
         />

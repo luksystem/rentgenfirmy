@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { useWorkOrderStore } from "@/store/work-order-store";
 import { useAppStore } from "@/store/app-store";
+import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Button } from "@/components/ui/button";
 import { AcceptedOfferPdfButton } from "@/components/work-order/accepted-offer-pdf-button";
 import { Card } from "@/components/ui/card";
@@ -108,6 +109,13 @@ export function WorkOrderList() {
   }, [clientFilter, orders, statusFilter]);
 
   const hasActiveFilters = clientFilter !== ALL_CLIENTS || statusFilter !== ALL_STATUSES;
+  const activeFilterCount =
+    (clientFilter !== ALL_CLIENTS ? 1 : 0) + (statusFilter !== ALL_STATUSES ? 1 : 0);
+
+  function clearFilters() {
+    setClientFilter(ALL_CLIENTS);
+    setStatusFilter(ALL_STATUSES);
+  }
 
   if (orders.length === 0) {
     return (
@@ -120,41 +128,43 @@ export function WorkOrderList() {
   return (
     <>
       <Card className="mb-4 border-border/80 p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
-          <Field label="Klient">
-            <Select value={clientFilter} onChange={(event) => setClientFilter(event.target.value)}>
-              <option value={ALL_CLIENTS}>Wszyscy klienci</option>
-              {clientOptions.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Status">
-            <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-              <option value={ALL_STATUSES}>Wszystkie statusy</option>
-              {WORK_ORDER_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          {hasActiveFilters ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="sm:col-span-2 lg:col-span-1"
-              onClick={() => {
-                setClientFilter(ALL_CLIENTS);
-                setStatusFilter(ALL_STATUSES);
-              }}
-            >
-              Wyczyść filtry
-            </Button>
-          ) : null}
-        </div>
+        <MobileFiltersPanel
+          activeCount={activeFilterCount}
+          onClear={clearFilters}
+        >
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+            <Field label="Klient">
+              <Select value={clientFilter} onChange={(event) => setClientFilter(event.target.value)}>
+                <option value={ALL_CLIENTS}>Wszyscy klienci</option>
+                {clientOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Status">
+              <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value={ALL_STATUSES}>Wszystkie statusy</option>
+                {WORK_ORDER_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            {hasActiveFilters ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="hidden sm:col-span-2 lg:col-span-1 md:inline-flex"
+                onClick={clearFilters}
+              >
+                Wyczyść filtry
+              </Button>
+            ) : null}
+          </div>
+        </MobileFiltersPanel>
       </Card>
 
       {filteredOrders.length === 0 ? (

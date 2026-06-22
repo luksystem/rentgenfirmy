@@ -188,12 +188,27 @@ export function migrateProjectsViewFiltersFromLocalStorage(): ProjectsViewFilter
 }
 
 export function isDefaultProjectsViewFilters(filters: ProjectsViewFilters) {
-  return (
-    filters.typeFilter === DEFAULT_PROJECTS_VIEW_FILTERS.typeFilter &&
-    filters.flowStatusFilter === DEFAULT_PROJECTS_VIEW_FILTERS.flowStatusFilter &&
-    filters.ownerFilter === DEFAULT_PROJECTS_VIEW_FILTERS.ownerFilter &&
-    filters.nameQuery.trim() === "" &&
-    filters.categories.length === 0 &&
-    filters.blockerFaults.length === 0
-  );
+  return countActiveProjectsViewFilters(filters) === 0;
+}
+
+export function countActiveProjectsViewFilters(filters: ProjectsViewFilters) {
+  let count = 0;
+
+  if (filters.typeFilter !== DEFAULT_PROJECTS_VIEW_FILTERS.typeFilter) {
+    count += 1;
+  }
+  if (filters.flowStatusFilter !== DEFAULT_PROJECTS_VIEW_FILTERS.flowStatusFilter) {
+    count += 1;
+  }
+  if (filters.ownerFilter !== DEFAULT_PROJECTS_VIEW_FILTERS.ownerFilter) {
+    count += 1;
+  }
+  if (filters.nameQuery.trim()) {
+    count += 1;
+  }
+
+  count += filters.categories.length;
+  count += filters.blockerFaults.length;
+
+  return count;
 }

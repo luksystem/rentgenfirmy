@@ -93,7 +93,7 @@ export default function KanbanHubClientPage() {
                 <p className="font-medium text-foreground">
                   {board.openTaskCount} otwartych zgłoszeń
                   {board.newTaskCount > 0 ? (
-                    <span className="ml-2 inline-flex rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                    <span className="ml-2 inline-flex rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white">
                       {board.newTaskCount} nowe
                     </span>
                   ) : null}

@@ -2,15 +2,23 @@ import { rowToClient } from "@/lib/supabase/client-mappers";
 import { rowToProject } from "@/lib/supabase/mappers";
 import { rowToProjectProcess } from "@/lib/supabase/process-mappers";
 import { fetchProcessTemplateByProjectTypeServer } from "@/lib/supabase/process-server";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import type { DashboardSpaceUpdate } from "@/lib/supabase/database.types";
+import { hashKanbanPassword, normalizeKanbanLogin, verifyKanbanPassword } from "@/lib/process/kanban-auth";
 import type {
   ProjectAgreementCategory,
   ProjectAgreementStatus,
   ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";
+import type {
+  DashboardContentSection,
+  DashboardContentType,
+  ProjectDashboardContent,
+} from "@/lib/dashboard/content-types";
 import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
-import type { DashboardSpace } from "@/lib/dashboard/types";
+import type { DashboardPublicAccessInfo, DashboardSpace } from "@/lib/dashboard/types";
 import { getProcessProgress } from "@/lib/process/types";
+import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
 
@@ -25,8 +33,33 @@ type SpaceRow = {
   public_enabled: boolean;
   public_access_password_hash?: string | null;
   public_access_username?: string | null;
+  public_author_name?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type ContentRow = {
+  id: string;
+  project_id: string;
+  section: string;
+  content_type: string;
+  title: string;
+  url: string;
+  description: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DashboardSpaceAccessRecord = {
+  spaceId: string;
+  publicToken: string;
+  publicEnabled: boolean;
+  passwordHash: string | null;
+  accessUsername: string | null;
+  authorName: string;
+  clientId: string | null;
+  projectId: string | null;
 };
 
 type AgreementRow = {
@@ -45,6 +78,7 @@ type AgreementRow = {
   client_responded_at: string | null;
   client_response_name: string | null;
   client_response_note: string | null;
+  proposed_warranty_end_date: string | null;
   position: number;
   created_at: string;
   updated_at: string;
@@ -81,7 +115,7 @@ function parseNumber(value: number | string | null | undefined) {
 }
 
 function isCategory(value: string): value is ProjectAgreementCategory {
-  return ["integration", "specification", "change", "handover", "other"].includes(value);
+  return ["integration", "specification", "change", "handover", "warranty", "other"].includes(value);
 }
 
 function isStatus(value: string): value is ProjectAgreementStatus {
@@ -105,6 +139,7 @@ function rowToAgreement(row: AgreementRow): ProjectClientAgreement {
     clientRespondedAt: row.client_responded_at,
     clientResponseName: row.client_response_name,
     clientResponseNote: row.client_response_note,
+    proposedWarrantyEndDate: row.proposed_warranty_end_date,
     position: row.position,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -123,6 +158,162 @@ function rowToSpec(row: SpecRow): ProjectSpecificationItem {
     position: row.position,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+function isContentSection(value: string): value is DashboardContentSection {
+  return value === "links" || value === "files" || value === "instructions";
+}
+
+function isContentType(value: string): value is DashboardContentType {
+  return ["link", "image", "video", "youtube", "file"].includes(value);
+}
+
+function rowToContent(row: ContentRow): ProjectDashboardContent {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    section: isContentSection(row.section) ? row.section : "links",
+    contentType: isContentType(row.content_type) ? row.content_type : "link",
+    title: row.title,
+    url: row.url,
+    description: row.description,
+    position: row.position,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function rowToSpaceAccess(row: SpaceRow): DashboardSpaceAccessRecord {
+  return {
+    spaceId: row.id,
+    publicToken: row.public_token,
+    publicEnabled: row.public_enabled,
+    passwordHash: row.public_access_password_hash ?? null,
+    accessUsername: row.public_access_username?.trim() || null,
+    authorName: row.public_author_name?.trim() || "Klient",
+    clientId: row.client_id,
+    projectId: row.project_id,
+  };
+}
+
+export function getDashboardPublicAccessInfo(
+  access: DashboardSpaceAccessRecord,
+): DashboardPublicAccessInfo {
+  const hasPassword = Boolean(access.passwordHash);
+  return {
+    authRequired: hasPassword,
+    legacyNameRequired: !hasPassword,
+    usernameRequired: hasPassword && Boolean(access.accessUsername),
+    authorDisplayName: access.accessUsername ?? access.authorName,
+  };
+}
+
+export async function fetchDashboardSpaceAccessByToken(token: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("dashboard_spaces")
+    .select("*")
+    .eq("public_token", token)
+    .eq("public_enabled", true)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data || (data as SpaceRow).kind !== "client") {
+    return null;
+  }
+
+  return rowToSpaceAccess(data as SpaceRow);
+}
+
+export async function verifyDashboardPublicCredentials(
+  token: string,
+  password: string,
+  username?: string,
+) {
+  const access = await fetchDashboardSpaceAccessByToken(token);
+  if (!access?.passwordHash) {
+    throw new Error("Dashboard nie wymaga hasła.");
+  }
+
+  const login = normalizeKanbanLogin(username ?? "");
+  if (access.accessUsername && login !== normalizeKanbanLogin(access.accessUsername)) {
+    throw new Error("Nieprawidłowy login lub hasło.");
+  }
+
+  const valid = await verifyKanbanPassword(password, access.passwordHash);
+  if (!valid) {
+    throw new Error("Nieprawidłowy login lub hasło.");
+  }
+
+  return { authorName: access.authorName, access };
+}
+
+export async function updateDashboardPublicAccessSettings(input: {
+  spaceId: string;
+  password?: string | null;
+  username?: string | null;
+  authorName?: string | null;
+}) {
+  const supabase = getSupabaseAdmin();
+  const payload: DashboardSpaceUpdate = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (input.username !== undefined) {
+    payload.public_access_username = input.username?.trim() || null;
+  }
+
+  if (input.authorName !== undefined) {
+    payload.public_author_name = input.authorName?.trim() || "Klient";
+  }
+
+  if (input.password !== undefined) {
+    const trimmed = input.password?.trim();
+    payload.public_access_password_hash = trimmed ? await hashKanbanPassword(trimmed) : null;
+  }
+
+  const { data, error } = await supabase
+    .from("dashboard_spaces")
+    .update(payload)
+    .eq("id", input.spaceId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToSpace(data as SpaceRow);
+}
+
+export async function fetchDashboardPublicMeta(token: string) {
+  const access = await fetchDashboardSpaceAccessByToken(token);
+  if (!access) {
+    return null;
+  }
+
+  const supabase = getSupabaseAdmin();
+  let clientName: string | null = null;
+
+  if (access.clientId) {
+    const { data } = await supabase
+      .from("clients")
+      .select("full_name")
+      .eq("id", access.clientId)
+      .maybeSingle();
+    clientName = (data?.full_name as string | undefined) ?? null;
+  }
+
+  return {
+    access: getDashboardPublicAccessInfo(access),
+    context: {
+      clientName,
+      spaceTitle: access.authorName,
+    },
   };
 }
 
@@ -151,6 +342,7 @@ function rowToSpace(row: SpaceRow): DashboardSpace {
     publicEnabled: row.public_enabled,
     publicAccessConfigured: Boolean(row.public_access_password_hash),
     publicAccessUsernameRequired: Boolean(row.public_access_username?.trim()),
+    publicAuthorName: row.public_author_name?.trim() || "Klient",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -162,16 +354,23 @@ export type PublicDashboardPayload = {
   projects: Project[];
   initialProjectId: string;
   processProgress: { percent: number; completed: number; total: number } | null;
+  process: ProjectProcess | null;
+  template: ProcessTemplate | null;
   agreements: ProjectClientAgreement[];
   specificationItems: ProjectSpecificationItem[];
+  content: ProjectDashboardContent[];
+  pendingAgreementsCount: number;
   features: {
     agreements: boolean;
     specification: boolean;
+    content: boolean;
   };
 };
 
-async function tableExists(table: "project_client_agreements" | "specification_catalog_items") {
-  const supabase = getSupabaseServer();
+async function tableExists(
+  table: "project_client_agreements" | "specification_catalog_items" | "project_dashboard_content",
+) {
+  const supabase = getSupabaseAdmin();
   const { error } = await supabase.from(table).select("id").limit(1);
   if (!error) {
     return true;
@@ -180,7 +379,7 @@ async function tableExists(table: "project_client_agreements" | "specification_c
 }
 
 async function fetchAgreementsForProject(projectId: string) {
-  const supabase = getSupabaseServer();
+  const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("project_client_agreements")
     .select("*")
@@ -199,7 +398,7 @@ async function fetchAgreementsForProject(projectId: string) {
 }
 
 async function fetchSpecificationItemsForProject(projectId: string) {
-  const supabase = getSupabaseServer();
+  const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("project_specification_items")
     .select("*")
@@ -216,11 +415,30 @@ async function fetchSpecificationItemsForProject(projectId: string) {
   return (data ?? []).map((row) => rowToSpec(row as SpecRow));
 }
 
+async function fetchContentForProject(projectId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("project_dashboard_content")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("section")
+    .order("position", { ascending: true });
+
+  if (error) {
+    if (isMissingTableError(error.message)) {
+      return [];
+    }
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row) => rowToContent(row as ContentRow));
+}
+
 export async function fetchPublicDashboardPayload(
   token: string,
   requestedProjectId?: string,
 ): Promise<PublicDashboardPayload | null> {
-  const supabase = getSupabaseServer();
+  const supabase = getSupabaseAdmin();
 
   const { data: spaceRow, error: spaceError } = await supabase
     .from("dashboard_spaces")
@@ -291,6 +509,8 @@ export async function fetchPublicDashboardPayload(
         : (projects[0]?.id ?? "");
 
   let processProgress: PublicDashboardPayload["processProgress"] = null;
+  let process: ProjectProcess | null = null;
+  let template: ProcessTemplate | null = null;
 
   if (initialProjectId) {
     const selectedProject = projects.find((project) => project.id === initialProjectId);
@@ -310,25 +530,32 @@ export async function fetchPublicDashboardPayload(
       throw new Error(processError.message);
     }
 
-    const process = processRow ? rowToProjectProcess(processRow) : null;
-    if (process && loadedTemplate) {
-      processProgress = getProcessProgress(loadedTemplate, process);
+    process = processRow ? rowToProjectProcess(processRow) : null;
+    template = loadedTemplate;
+    if (process && template) {
+      processProgress = getProcessProgress(template, process);
     }
   }
 
-  const [agreementsEnabled, specificationEnabled] = await Promise.all([
+  const [agreementsEnabled, specificationEnabled, contentEnabled] = await Promise.all([
     tableExists("project_client_agreements"),
     tableExists("specification_catalog_items"),
+    tableExists("project_dashboard_content"),
   ]);
 
-  const [agreements, specificationItems] = initialProjectId
+  const [agreements, specificationItems, content] = initialProjectId
     ? await Promise.all([
         agreementsEnabled ? fetchAgreementsForProject(initialProjectId) : Promise.resolve([]),
         specificationEnabled
           ? fetchSpecificationItemsForProject(initialProjectId)
           : Promise.resolve([]),
+        contentEnabled ? fetchContentForProject(initialProjectId) : Promise.resolve([]),
       ])
-    : [[], []];
+    : [[], [], []];
+
+  const pendingAgreementsCount = agreements.filter(
+    (entry) => entry.status === "pending_client" && entry.category !== "warranty",
+  ).length;
 
   return {
     space: { ...space, clientId },
@@ -336,11 +563,16 @@ export async function fetchPublicDashboardPayload(
     projects,
     initialProjectId,
     processProgress,
+    process,
+    template,
     agreements,
     specificationItems,
+    content,
+    pendingAgreementsCount,
     features: {
       agreements: agreementsEnabled,
       specification: specificationEnabled,
+      content: contentEnabled,
     },
   };
 }

@@ -16,6 +16,22 @@ export type KanbanBoardFilters = {
   assignee: string | "all" | "unassigned";
 };
 
+export const DEFAULT_KANBAN_BOARD_FILTERS: KanbanBoardFilters = {
+  priority: "all",
+  assignee: "all",
+};
+
+export function countActiveKanbanBoardFilters(filters: KanbanBoardFilters) {
+  let count = 0;
+  if (filters.priority !== "all") {
+    count += 1;
+  }
+  if (filters.assignee !== "all") {
+    count += 1;
+  }
+  return count;
+}
+
 export type KanbanTaskActivity = {
   lastActivityAt: string;
   staleDays: number;

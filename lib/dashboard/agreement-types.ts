@@ -3,6 +3,7 @@ export const PROJECT_AGREEMENT_CATEGORIES = [
   "specification",
   "change",
   "handover",
+  "warranty",
   "other",
 ] as const;
 
@@ -34,6 +35,7 @@ export type ProjectClientAgreement = {
   clientRespondedAt: string | null;
   clientResponseName: string | null;
   clientResponseNote: string | null;
+  proposedWarrantyEndDate: string | null;
   position: number;
   createdAt: string;
   updatedAt: string;
@@ -46,6 +48,7 @@ export type ProjectAgreementInput = {
   proposedCostNet?: number | null;
   proposedCostGross?: number | null;
   costNote?: string | null;
+  proposedWarrantyEndDate?: string | null;
 };
 
 export const PROJECT_AGREEMENT_CATEGORY_LABELS: Record<ProjectAgreementCategory, string> = {
@@ -53,6 +56,7 @@ export const PROJECT_AGREEMENT_CATEGORY_LABELS: Record<ProjectAgreementCategory,
   specification: "Specyfikacja / urządzenia",
   change: "Zmiana / element dodatkowy",
   handover: "Przekazanie / odbiór",
+  warranty: "Przedłużenie gwarancji",
   other: "Inne",
 };
 

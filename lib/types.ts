@@ -54,11 +54,13 @@ export type Project = {
   waitingDependsOnUs?: boolean;
   waitingIncreasesCostLater?: boolean;
   waitingBlocksSettlement?: boolean;
+  createdAt: string;
+  warrantyEndsAt?: string;
 };
 
 export type ProjectInput = Omit<
   Project,
-  "id" | "lastChangedBy" | "lastChangedAt" | "lastContactDate"
+  "id" | "lastChangedBy" | "lastChangedAt" | "lastContactDate" | "createdAt"
 > & {
   lastContactDate?: string;
   clientId?: string | null;
