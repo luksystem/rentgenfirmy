@@ -216,7 +216,7 @@ export function ClientDashboardView({
 
   function renderProcessSection() {
     return (
-      <div className="grid gap-4">
+      <div className="grid min-w-0 gap-4">
         {progress ? (
           <div className="rounded-2xl border border-border/80 bg-surface p-4">
             <div className="mb-1 flex items-center justify-between text-sm">
@@ -236,7 +236,7 @@ export function ClientDashboardView({
         ) : null}
 
         {template && process ? (
-          <div className="overflow-x-auto rounded-2xl border border-border/80 bg-surface p-4">
+          <div className="min-w-0 max-w-full overflow-x-auto rounded-2xl border border-border/80 bg-surface p-4">
             <h2 className="mb-4 text-base font-semibold text-foreground">Proces wdrożenia</h2>
             <ProcessPipeline template={template} process={process} interactive={false} />
           </div>
@@ -272,8 +272,8 @@ export function ClientDashboardView({
     }
 
     return (
-      <div className="grid gap-4">
-        <div className="rounded-2xl border border-border/80 bg-surface p-4">
+      <div className="grid min-w-0 gap-4">
+        <div className="min-w-0 overflow-x-auto rounded-2xl border border-border/80 bg-surface p-4">
           <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
             <Link2 className="h-4 w-4 text-accent" />
             Linki zewnętrzne
@@ -286,7 +286,7 @@ export function ClientDashboardView({
             collapsible={false}
           />
         </div>
-        <div className="rounded-2xl border border-border/80 bg-surface p-4">
+        <div className="min-w-0 overflow-x-auto rounded-2xl border border-border/80 bg-surface p-4">
           <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
             <FolderOpen className="h-4 w-4 text-accent" />
             Pliki i zdjęcia
@@ -299,7 +299,7 @@ export function ClientDashboardView({
             collapsible
           />
         </div>
-        <div className="rounded-2xl border border-border/80 bg-surface p-4">
+        <div className="min-w-0 overflow-x-auto rounded-2xl border border-border/80 bg-surface p-4">
           <h2 className="mb-3 text-base font-semibold text-foreground">Instrukcje</h2>
           <ProjectContentPanel
             projectId={selectedProject.id}
@@ -350,14 +350,14 @@ export function ClientDashboardView({
   }
 
   return (
-    <div className="pb-24 xl:pb-0">
+    <div className="w-full min-w-0 pb-24 xl:pb-0">
       {/* Desktop */}
-      <div className="hidden min-w-0 gap-4 xl:grid xl:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
-        <div className="grid min-w-0 gap-4 self-start">{renderDataSection(false)}</div>
-        <div className="grid min-w-0 gap-4">
+      <div className="hidden w-full min-w-0 xl:flex xl:items-start xl:gap-4">
+        <aside className="grid w-[300px] shrink-0 gap-4 self-start">{renderDataSection(false)}</aside>
+        <section className="grid min-w-0 flex-1 gap-4 overflow-hidden">
           {renderProcessSection()}
           {enableAgreements ? (
-            <div className="rounded-2xl border border-border/80 bg-surface p-4">
+            <div className="min-w-0 overflow-x-auto rounded-2xl border border-border/80 bg-surface p-4">
               <h2 className="mb-3 text-base font-semibold text-foreground">Ustalenia i akceptacje</h2>
               <ProjectAgreementsPanel
                 projectId={selectedProject.id}
@@ -368,7 +368,7 @@ export function ClientDashboardView({
             </div>
           ) : null}
           {enableSpecification ? (
-            <div className="rounded-2xl border border-border/80 bg-surface p-4">
+            <div className="min-w-0 overflow-x-auto rounded-2xl border border-border/80 bg-surface p-4">
               <h2 className="mb-3 text-base font-semibold text-foreground">Konfigurator specyfikacji</h2>
               <ProjectSpecificationPanel
                 projectId={selectedProject.id}
@@ -377,8 +377,8 @@ export function ClientDashboardView({
               />
             </div>
           ) : null}
-          {renderLinksSection()}
-        </div>
+          <div className="min-w-0">{renderLinksSection()}</div>
+        </section>
       </div>
 
       {/* Mobile */}
