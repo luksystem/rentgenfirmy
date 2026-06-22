@@ -352,34 +352,38 @@ export function ClientDashboardView({
 
   return (
     <div className="w-full min-w-0 pb-24 xl:pb-0">
-      {/* Desktop */}
-      <div className="hidden w-full min-w-0 xl:grid xl:grid-cols-[300px_minmax(0,1fr)] xl:items-start xl:gap-4">
-        <aside className="relative z-10 grid min-w-0 gap-4 self-start">{renderDataSection(false)}</aside>
-        <section className="relative z-0 flex min-w-0 flex-col gap-4 overflow-hidden">
-          {renderProcessSection()}
-          {enableAgreements ? (
-            <div className="min-w-0 rounded-2xl border border-border/80 bg-surface p-4">
-              <h2 className="mb-3 text-base font-semibold text-foreground">Ustalenia i akceptacje</h2>
-              <ProjectAgreementsPanel
-                projectId={selectedProject.id}
-                mode={readOnly ? "client" : "team"}
-                authorName={readOnly ? clientAuthorName : teamAuthorName}
-                seedAgreements={seedAgreements}
-              />
+      {/* Desktop — flex + w-0/flex-1 zapobiega rozpychaniu prawej kolumny pod lewy panel */}
+      <div className="max-xl:hidden w-full">
+        <div className="flex w-full items-start gap-4">
+          <aside className="w-[300px] shrink-0 grow-0">{renderDataSection(false)}</aside>
+          <main className="min-w-0 w-0 flex-1 grow">
+            <div className="flex flex-col gap-4">
+              {renderProcessSection()}
+              {enableAgreements ? (
+                <div className="rounded-2xl border border-border/80 bg-surface p-4">
+                  <h2 className="mb-3 text-base font-semibold text-foreground">Ustalenia i akceptacje</h2>
+                  <ProjectAgreementsPanel
+                    projectId={selectedProject.id}
+                    mode={readOnly ? "client" : "team"}
+                    authorName={readOnly ? clientAuthorName : teamAuthorName}
+                    seedAgreements={seedAgreements}
+                  />
+                </div>
+              ) : null}
+              {enableSpecification ? (
+                <div className="rounded-2xl border border-border/80 bg-surface p-4">
+                  <h2 className="mb-3 text-base font-semibold text-foreground">Konfigurator specyfikacji</h2>
+                  <ProjectSpecificationPanel
+                    projectId={selectedProject.id}
+                    readOnly={readOnly}
+                    seedItems={seedSpecificationItems}
+                  />
+                </div>
+              ) : null}
+              {renderLinksSection()}
             </div>
-          ) : null}
-          {enableSpecification ? (
-            <div className="min-w-0 rounded-2xl border border-border/80 bg-surface p-4">
-              <h2 className="mb-3 text-base font-semibold text-foreground">Konfigurator specyfikacji</h2>
-              <ProjectSpecificationPanel
-                projectId={selectedProject.id}
-                readOnly={readOnly}
-                seedItems={seedSpecificationItems}
-              />
-            </div>
-          ) : null}
-          <div className="min-w-0">{renderLinksSection()}</div>
-        </section>
+          </main>
+        </div>
       </div>
 
       {/* Mobile */}
