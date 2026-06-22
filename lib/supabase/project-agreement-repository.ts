@@ -103,7 +103,7 @@ export async function updateProjectAgreementDraft(
 export async function updateProjectAgreement(
   agreementId: string,
   input: ProjectAgreementInput,
-  allowedStatuses: ProjectAgreementStatus[] = ["draft", "pending_client"],
+  allowedStatuses: ProjectAgreementStatus[] = ["draft", "pending_client", "rejected"],
 ) {
   const supabase = getSupabase();
   const { data, error } = await supabase

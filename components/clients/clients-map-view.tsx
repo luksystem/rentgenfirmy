@@ -6,8 +6,8 @@ import { LayoutDashboard, LayoutGrid, Loader2, MapPin, FolderKanban } from "luci
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
-import { clientHasGeocodableAddress, formatClientAddress } from "@/lib/clients/client-location";
-import { geocodeClient, isClientGeocodeCached } from "@/lib/clients/geocode-client";
+import { clientHasGeocodableAddress, formatClientAddress, buildClientGeocodeFingerprint } from "@/lib/clients/client-location";
+import { geocodeClientsSequential } from "@/lib/clients/geocode-client";
 import { getSmartHomeMarkerIcon } from "@/lib/clients/smart-home-marker-icon";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -136,10 +136,22 @@ export function ClientsMapView() {
     return map;
   }, [projects]);
 
+  const geocodeFingerprint = useMemo(
+    () => buildClientGeocodeFingerprint(geocodableClients),
+    [geocodableClients],
+  );
+
   useEffect(() => {
     let cancelled = false;
 
     void (async () => {
+      if (!geocodableClients.length) {
+        setPlacedClients([]);
+        setLoading(false);
+        setProgress({ done: 0, total: 0 });
+        return;
+      }
+
       setLoading(true);
       setError(null);
       setPlacedClients([]);
@@ -147,44 +159,36 @@ export function ClientsMapView() {
 
       const placed: PlacedClient[] = [];
 
-      for (let index = 0; index < geocodableClients.length; index += 1) {
-        const client = geocodableClients[index];
-        const cachedBefore = isClientGeocodeCached(client);
-        try {
-          const coords = await geocodeClient(client);
-          if (coords && !cancelled) {
-            placed.push({
-              client,
-              lat: coords.lat,
-              lng: coords.lng,
-              label: coords.label,
-            });
-            setPlacedClients([...placed]);
-          }
-        } catch {
-          if (!cancelled) {
-            setError("Część adresów nie została zlokalizowana na mapie.");
-          }
+      await geocodeClientsSequential(geocodableClients, (client, done, total, coords) => {
+        if (cancelled) {
+          return;
         }
 
-        if (!cancelled) {
-          setProgress({ done: index + 1, total: geocodableClients.length });
+        if (coords) {
+          placed.push({
+            client,
+            lat: coords.lat,
+            lng: coords.lng,
+            label: coords.label,
+          });
+          setPlacedClients([...placed]);
         }
 
-        if (!cachedBefore && index < geocodableClients.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 1100));
-        }
-      }
+        setProgress({ done, total });
+      });
 
       if (!cancelled) {
         setLoading(false);
+        if (placed.length < geocodableClients.length) {
+          setError("Część adresów nie została zlokalizowana — sprawdź listę poniżej mapy.");
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [geocodableClients]);
+  }, [geocodeFingerprint, geocodableClients]);
 
   const mapPoints = useMemo(
     () => placedClients.map((entry) => [entry.lat, entry.lng] as [number, number]),

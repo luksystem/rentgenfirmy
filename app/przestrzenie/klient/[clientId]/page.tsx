@@ -111,6 +111,7 @@ export default function ClientDashboardPage() {
       title={client.fullName}
       description={`Dashboard współpracy z klientem${clientProjects.length > 1 ? " — przełącz projekt w panelu bocznym" : ""}.`}
       backHref="/przestrzenie"
+      compactMobile
     >
       {!processHydrated ? (
         <p className="mb-4 text-sm text-muted">Ładowanie danych procesu…</p>

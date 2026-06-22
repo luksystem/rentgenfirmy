@@ -20,6 +20,9 @@ import {
   PROJECT_AGREEMENT_STATUS_LABELS,
   agreementStatusTone,
   formatAgreementCost,
+  getAgreementStatusLabel,
+  getAgreementStatusTone,
+  isAgreementPendingAttention,
   type ProjectAgreementCategory,
   type ProjectAgreementInput,
   type ProjectAgreementStatus,
@@ -91,6 +94,18 @@ function updateApproverRole(
   return roles.map((role, roleIndex) => (roleIndex === index ? { ...role, ...patch } : role));
 }
 
+function sanitizeApproverRoles(roles: AgreementApproverRoleInput[] | undefined) {
+  return (roles ?? []).filter((role) => role.isClientRole || role.label.trim().length > 0);
+}
+
+function hasIncompleteApproverRole(roles: AgreementApproverRoleInput[] | undefined) {
+  return (roles ?? []).some((role) => !role.isClientRole && !role.label.trim());
+}
+
+function canEditAgreementContent(agreement: ProjectClientAgreement) {
+  return ["draft", "pending_client", "rejected"].includes(agreement.status);
+}
+
 function AgreementCard({
   agreement,
   mode,
@@ -119,7 +134,7 @@ function AgreementCard({
 }) {
   const [busy, setBusy] = useState(false);
   const [responseNote, setResponseNote] = useState("");
-  const tone = agreementStatusTone(agreement.status);
+  const tone = getAgreementStatusTone(agreement);
   const costLabel = formatAgreementCost(agreement);
 
   async function run(action: () => Promise<void>) {
@@ -146,7 +161,7 @@ function AgreementCard({
             statusBadgeClass[tone],
           )}
         >
-          {PROJECT_AGREEMENT_STATUS_LABELS[agreement.status]}
+          {getAgreementStatusLabel(agreement)}
         </span>
       </div>
 
@@ -385,6 +400,7 @@ export function ProjectAgreementsPanel({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ProjectAgreementInput>(emptyInput());
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     void ensureAgreements(projectId);
@@ -394,14 +410,20 @@ export function ProjectAgreementsPanel({
     if (filter === "all") {
       return agreements.filter((entry) => entry.status !== "cancelled" || mode === "team");
     }
+    if (filter === "pending_client") {
+      return agreements.filter((entry) => isAgreementPendingAttention(entry));
+    }
+    if (filter === "draft") {
+      return agreements.filter((entry) => entry.status === "draft" && !entry.discussionOpen);
+    }
     return agreements.filter((entry) => entry.status === filter);
   }, [agreements, filter, mode]);
 
   const filterCounts = useMemo(() => {
     const counts: Partial<Record<FilterKey, number>> = {
       all: agreements.filter((entry) => entry.status !== "cancelled").length,
-      draft: agreements.filter((entry) => entry.status === "draft").length,
-      pending_client: agreements.filter((entry) => entry.status === "pending_client").length,
+      draft: agreements.filter((entry) => entry.status === "draft" && !entry.discussionOpen).length,
+      pending_client: agreements.filter((entry) => isAgreementPendingAttention(entry)).length,
       accepted: agreements.filter((entry) => entry.status === "accepted").length,
       rejected: agreements.filter((entry) => entry.status === "rejected").length,
       cancelled: agreements.filter((entry) => entry.status === "cancelled").length,
@@ -416,12 +438,14 @@ export function ProjectAgreementsPanel({
   function openCreateDialog() {
     setEditingId(null);
     setForm(emptyInput());
+    setSaveError(null);
     setDialogOpen(true);
   }
 
   async function openEditDialog(agreement: ProjectClientAgreement) {
     const roles = await fetchAgreementApproverRoles(agreement.id);
     setEditingId(agreement.id);
+    setSaveError(null);
     setForm({
       ...agreementToInput(agreement),
       approverRoles: roles.map((role) => ({
@@ -437,27 +461,45 @@ export function ProjectAgreementsPanel({
     setDialogOpen(false);
     setEditingId(null);
     setForm(emptyInput());
+    setSaveError(null);
   }
 
   async function handleSave() {
     if (!form.title.trim()) {
+      setSaveError("Podaj tytuł ustalenia.");
       return;
     }
 
+    if (hasIncompleteApproverRole(form.approverRoles)) {
+      setSaveError("Uzupełnij nazwę każdej dodanej roli akceptacji lub usuń pustą rolę.");
+      return;
+    }
+
+    const payload: ProjectAgreementInput = {
+      ...form,
+      approverRoles: sanitizeApproverRoles(form.approverRoles),
+    };
+
     setSaving(true);
+    setSaveError(null);
     try {
       if (editingId) {
         const existing = agreements.find((entry) => entry.id === editingId);
-        if (existing?.status === "draft") {
-          await updateDraft(projectId, editingId, form);
+        if (!existing || !canEditAgreementContent(existing)) {
+          throw new Error("Tego ustalenia nie można edytować w bieżącym stanie.");
+        }
+        if (existing.status === "draft") {
+          await updateDraft(projectId, editingId, payload);
         } else {
-          await updateAgreement(projectId, editingId, form);
+          await updateAgreement(projectId, editingId, payload);
         }
         await refreshLocalAgreements();
       } else {
-        await createAgreement(projectId, form, { name: authorName, side: mode });
+        await createAgreement(projectId, payload, { name: authorName, side: mode });
       }
       closeDialog();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Nie udało się zapisać ustalenia.");
     } finally {
       setSaving(false);
     }
@@ -718,7 +760,7 @@ export function ProjectAgreementsPanel({
             <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/10 p-3">
               <p className="text-sm font-medium text-foreground">Role wymagane do akceptacji</p>
               {(form.approverRoles ?? []).map((role, index) => (
-                <div key={`${role.label}-${index}`} className="flex flex-wrap items-center gap-2">
+                <div key={`approver-role-${index}`} className="flex flex-wrap items-center gap-2">
                   <Input
                     value={role.label}
                     disabled={role.isClientRole}
@@ -778,6 +820,7 @@ export function ProjectAgreementsPanel({
                 Anuluj
               </Button>
             </div>
+            {saveError ? <p className="text-sm text-rose-400">{saveError}</p> : null}
           </div>
         </DialogContent>
       </Dialog>

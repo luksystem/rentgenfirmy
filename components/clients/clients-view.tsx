@@ -23,6 +23,12 @@ type ClientsViewMode = "list" | "map";
 
 export function ClientsView() {
   const [view, setView] = useState<ClientsViewMode>("list");
+  const [mapMounted, setMapMounted] = useState(false);
+
+  function openMapView() {
+    setMapMounted(true);
+    setView("map");
+  }
 
   return (
     <>
@@ -42,14 +48,22 @@ export function ClientsView() {
           size="sm"
           variant={view === "map" ? "default" : "outline"}
           className={cn(view === "map" && "shadow-soft")}
-          onClick={() => setView("map")}
+          onClick={openMapView}
         >
           <MapPin className="mr-2 h-4 w-4" />
           Mapa
         </Button>
       </div>
 
-      {view === "list" ? <ClientsTable /> : <ClientsMapView />}
+      <div className={view === "list" ? undefined : "hidden"}>
+        <ClientsTable />
+      </div>
+
+      {mapMounted ? (
+        <div className={view === "map" ? undefined : "hidden"}>
+          <ClientsMapView />
+        </div>
+      ) : null}
     </>
   );
 }

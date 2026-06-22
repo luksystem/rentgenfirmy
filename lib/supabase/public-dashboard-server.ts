@@ -10,6 +10,7 @@ import type {
   ProjectAgreementStatus,
   ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";
+import { isAgreementPendingAttention } from "@/lib/dashboard/agreement-types";
 import type {
   DashboardContentSection,
   DashboardContentType,
@@ -565,9 +566,7 @@ export async function fetchPublicDashboardPayload(
       ])
     : [[], [], []];
 
-  const pendingAgreementsCount = agreements.filter(
-    (entry) => entry.status === "pending_client",
-  ).length;
+  const pendingAgreementsCount = agreements.filter((entry) => isAgreementPendingAttention(entry)).length;
 
   const kanbanPublicLinks = initialProjectId
     ? await fetchKanbanPublicLinksForProject(getSupabaseAdmin(), initialProjectId)

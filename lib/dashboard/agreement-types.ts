@@ -91,6 +91,42 @@ export function agreementStatusTone(
   }
 }
 
+/** Ustalenie wymaga uwagi na dashboardzie (akceptacja lub otwarta dyskusja). */
+export function isAgreementPendingAttention(
+  agreement: Pick<ProjectClientAgreement, "status" | "discussionOpen">,
+): boolean {
+  if (agreement.status === "accepted" || agreement.status === "cancelled") {
+    return false;
+  }
+  if (agreement.status === "pending_client") {
+    return true;
+  }
+  return agreement.discussionOpen;
+}
+
+export function getAgreementStatusLabel(
+  agreement: Pick<ProjectClientAgreement, "status" | "discussionOpen">,
+): string {
+  if (
+    agreement.discussionOpen &&
+    agreement.status !== "pending_client" &&
+    agreement.status !== "accepted" &&
+    agreement.status !== "cancelled"
+  ) {
+    return "Otwarta dyskusja";
+  }
+  return PROJECT_AGREEMENT_STATUS_LABELS[agreement.status];
+}
+
+export function getAgreementStatusTone(
+  agreement: Pick<ProjectClientAgreement, "status" | "discussionOpen">,
+): "neutral" | "warning" | "success" | "danger" {
+  if (isAgreementPendingAttention(agreement)) {
+    return "warning";
+  }
+  return agreementStatusTone(agreement.status);
+}
+
 function formatCostAmount(value: number | string | null | undefined) {
   if (value == null || value === "") {
     return null;

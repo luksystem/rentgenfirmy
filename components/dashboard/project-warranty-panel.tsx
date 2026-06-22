@@ -219,6 +219,7 @@ export function ProjectWarrantyPanel({
   onWarrantySettingsSave,
   onWarrantyExtensionAccepted,
   compact = false,
+  embedded = false,
 }: {
   project: Project;
   mode: "team" | "client";
@@ -231,6 +232,8 @@ export function ProjectWarrantyPanel({
   onWarrantyExtensionAccepted?: (warrantyEndsAt: string) => void | Promise<void>;
   /** Jedna kolumna — w wąskim panelu bocznym dashboardu. */
   compact?: boolean;
+  /** W rozwijalnej karcie HOME — bez powtórzonego nagłówka statystyk. */
+  embedded?: boolean;
 }) {
   const storeAgreements = useProjectAgreementStore(
     (state) => state.byProject[project.id] ?? EMPTY_AGREEMENTS,
@@ -350,6 +353,7 @@ export function ProjectWarrantyPanel({
 
   return (
     <div className="grid min-w-0 gap-4">
+      {!embedded ? (
       <div
         className={cn(
           "grid gap-3",
@@ -382,6 +386,7 @@ export function ProjectWarrantyPanel({
           <p className="mt-1 text-sm font-medium text-foreground">{formatWarrantyEndDate(project)}</p>
         </div>
       </div>
+      ) : null}
 
       {isWarrantyExpiringSoon(project) ? (
         <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">

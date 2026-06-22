@@ -1,5 +1,5 @@
 import type { Client } from "@/lib/service/types";
-import { buildClientGeocodeQuery } from "@/lib/clients/client-location";
+import { buildClientGeocodeQueries } from "@/lib/clients/client-location";
 
 export type ClientMapCoordinates = {
   lat: number;
@@ -7,22 +7,23 @@ export type ClientMapCoordinates = {
   label: string;
 };
 
-const memoryCache = new Map<string, ClientMapCoordinates | null>();
-const STORAGE_KEY = "rentgen-client-geocode-v1";
+const memoryCache = new Map<string, ClientMapCoordinates>();
+const STORAGE_KEY = "rentgen-client-geocode-v2";
+const REQUEST_GAP_MS = 1200;
 
-function readStorageCache(): Record<string, ClientMapCoordinates | null> {
+function readStorageCache(): Record<string, ClientMapCoordinates> {
   if (typeof window === "undefined") {
     return {};
   }
   try {
     const raw = window.sessionStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, ClientMapCoordinates | null>) : {};
+    return raw ? (JSON.parse(raw) as Record<string, ClientMapCoordinates>) : {};
   } catch {
     return {};
   }
 }
 
-function writeStorageCache(entry: Record<string, ClientMapCoordinates | null>) {
+function writeStorageCache(entry: Record<string, ClientMapCoordinates>) {
   if (typeof window === "undefined") {
     return;
   }
@@ -34,7 +35,7 @@ function writeStorageCache(entry: Record<string, ClientMapCoordinates | null>) {
 }
 
 function cacheKey(client: Client) {
-  return `${client.id}:${buildClientGeocodeQuery(client)}`;
+  return `${client.id}:${buildClientGeocodeQueries(client).join("|")}`;
 }
 
 function getCached(client: Client) {
@@ -43,14 +44,14 @@ function getCached(client: Client) {
     return memoryCache.get(key) ?? null;
   }
   const stored = readStorageCache()[key];
-  if (stored !== undefined) {
+  if (stored) {
     memoryCache.set(key, stored);
     return stored;
   }
-  return undefined;
+  return null;
 }
 
-function setCached(client: Client, value: ClientMapCoordinates | null) {
+function setCached(client: Client, value: ClientMapCoordinates) {
   const key = cacheKey(client);
   memoryCache.set(key, value);
   const stored = readStorageCache();
@@ -63,71 +64,94 @@ function wait(ms: number) {
 }
 
 async function geocodeQuery(query: string): Promise<ClientMapCoordinates | null> {
-  const url = new URL("https://nominatim.openstreetmap.org/search");
-  url.searchParams.set("format", "json");
-  url.searchParams.set("limit", "1");
-  url.searchParams.set("countrycodes", "pl");
-  url.searchParams.set("q", query);
-
-  const response = await fetch(url.toString(), {
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "RentgenFirmy/1.0 (client map)",
-    },
+  const response = await fetch(`/api/clients/geocode?q=${encodeURIComponent(query)}`, {
+    credentials: "include",
   });
 
   if (!response.ok) {
     return null;
   }
 
-  const payload = (await response.json()) as Array<{ lat: string; lon: string; display_name?: string }>;
-  const hit = payload[0];
-  if (!hit) {
-    return null;
-  }
-
-  return {
-    lat: Number(hit.lat),
-    lng: Number(hit.lon),
-    label: hit.display_name ?? query,
+  const payload = (await response.json()) as {
+    result?: ClientMapCoordinates | null;
+    error?: string;
   };
+
+  return payload.result ?? null;
 }
 
 export function isClientGeocodeCached(client: Client) {
-  return getCached(client) !== undefined;
+  return getCached(client) !== null;
 }
 
 export async function geocodeClient(client: Client): Promise<ClientMapCoordinates | null> {
-  const query = buildClientGeocodeQuery(client);
-  if (!query) {
-    return null;
-  }
-
   const cached = getCached(client);
-  if (cached !== undefined) {
+  if (cached) {
     return cached;
   }
 
-  const result = await geocodeQuery(query);
-  setCached(client, result);
-  return result;
+  const queries = buildClientGeocodeQueries(client);
+  if (!queries.length) {
+    return null;
+  }
+
+  for (const query of queries) {
+    const result = await geocodeQuery(query);
+    if (result) {
+      setCached(client, result);
+      return result;
+    }
+    await wait(REQUEST_GAP_MS);
+  }
+
+  return null;
 }
 
-export async function geocodeClientsBatch(
+export async function geocodeClientsSequential(
   clients: Client[],
-  onProgress?: (done: number, total: number) => void,
+  onProgress?: (
+    client: Client,
+    done: number,
+    total: number,
+    coords: ClientMapCoordinates | null,
+  ) => void,
 ) {
   const results = new Map<string, ClientMapCoordinates>();
   let done = 0;
+  let lastNetworkAt = 0;
 
   for (const client of clients) {
-    const coords = await geocodeClient(client);
+    const cached = getCached(client);
+    if (cached) {
+      results.set(client.id, cached);
+      done += 1;
+      onProgress?.(client, done, clients.length, cached);
+      continue;
+    }
+
+    const queries = buildClientGeocodeQueries(client);
+    let coords: ClientMapCoordinates | null = null;
+
+    for (const query of queries) {
+      const elapsed = Date.now() - lastNetworkAt;
+      if (lastNetworkAt > 0 && elapsed < REQUEST_GAP_MS) {
+        await wait(REQUEST_GAP_MS - elapsed);
+      }
+
+      lastNetworkAt = Date.now();
+      coords = await geocodeQuery(query);
+      if (coords) {
+        setCached(client, coords);
+        break;
+      }
+    }
+
     if (coords) {
       results.set(client.id, coords);
     }
+
     done += 1;
-    onProgress?.(done, clients.length);
-    await wait(1100);
+    onProgress?.(client, done, clients.length, coords);
   }
 
   return results;

@@ -18,6 +18,7 @@ export function DashboardSpaceShell({
   backHref = "/przestrzenie",
   backLabel = "Wszystkie przestrzenie",
   action,
+  compactMobile = false,
   children,
 }: {
   kind: DashboardSpaceKind;
@@ -26,14 +27,20 @@ export function DashboardSpaceShell({
   backHref?: string;
   backLabel?: string;
   action?: React.ReactNode;
+  compactMobile?: boolean;
   children: React.ReactNode;
 }) {
+  const resolvedDescription = description ?? DASHBOARD_SPACE_DESCRIPTIONS[kind];
+
   return (
     <>
       <PageHeader
         eyebrow={DASHBOARD_SPACE_LABELS[kind]}
         title={title ?? DASHBOARD_SPACE_LABELS[kind]}
-        description={description ?? DASHBOARD_SPACE_DESCRIPTIONS[kind]}
+        description={resolvedDescription}
+        descriptionClassName={compactMobile ? "hidden sm:block" : undefined}
+        headerClassName={compactMobile ? "mb-4 sm:mb-6" : undefined}
+        titleClassName={compactMobile ? "text-xl sm:text-3xl" : undefined}
         action={
           action ?? (
             <Button variant="outline" size="sm" asChild>

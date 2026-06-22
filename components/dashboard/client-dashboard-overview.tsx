@@ -5,8 +5,9 @@ import { AlertTriangle, ClipboardCheck, GitBranch, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   PROJECT_AGREEMENT_CATEGORY_LABELS,
-  PROJECT_AGREEMENT_STATUS_LABELS,
   formatAgreementCost,
+  getAgreementStatusLabel,
+  isAgreementPendingAttention,
   type ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";
 import { formatWarrantyEndDate, getWarrantyStatus } from "@/lib/project/warranty";
@@ -26,17 +27,21 @@ export function ClientDashboardOverview({
   agreements: ProjectClientAgreement[];
   pendingAgreementsCount: number;
   pendingWarrantyCount: number;
-  onOpenTab?: (tab: "agreements" | "process" | "data") => void;
+  onOpenTab?: (tab: "agreements" | "process" | "home") => void;
   readOnly?: boolean;
 }) {
   const warrantyStatus = getWarrantyStatus(project);
   const pendingAgreements = agreements.filter(
-    (entry) => entry.status === "pending_client" && entry.category !== "warranty",
+    (entry) => entry.category !== "warranty" && isAgreementPendingAttention(entry),
   );
   const pendingWarranty = agreements.filter(
-    (entry) => entry.status === "pending_client" && entry.category === "warranty",
+    (entry) => entry.category === "warranty" && entry.status === "pending_client",
   );
   const totalPending = pendingAgreementsCount + pendingWarrantyCount;
+  const pendingDiscussionCount = pendingAgreements.filter(
+    (entry) => entry.discussionOpen && entry.status !== "pending_client",
+  ).length;
+  const pendingAcceptanceOnlyCount = pendingAgreements.length - pendingDiscussionCount;
 
   return (
     <div className="grid gap-4">
@@ -48,14 +53,22 @@ export function ClientDashboardOverview({
               <p className="font-medium text-amber-100">
                 {readOnly
                   ? "Masz propozycje do zaakceptowania"
-                  : "Oczekuje na akceptację klienta"}
+                  : "Ustalenia wymagające uwagi"}
               </p>
               <p className="mt-1 text-sm text-amber-200/90">
-                {pendingAgreementsCount > 0 ? `${pendingAgreementsCount} ustaleń` : null}
-                {pendingAgreementsCount > 0 && pendingWarrantyCount > 0 ? " · " : null}
-                {pendingWarrantyCount > 0
-                  ? `${pendingWarrantyCount} propozycji gwarancji`
-                  : null}
+                {[
+                  pendingAcceptanceOnlyCount > 0
+                    ? `${pendingAcceptanceOnlyCount} ${readOnly ? "do akceptacji" : "oczekujących"}`
+                    : null,
+                  pendingDiscussionCount > 0
+                    ? `${pendingDiscussionCount} w otwartej dyskusji`
+                    : null,
+                  pendingWarrantyCount > 0
+                    ? `${pendingWarrantyCount} propozycji gwarancji`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
               {onOpenTab ? (
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -74,7 +87,7 @@ export function ClientDashboardOverview({
                       type="button"
                       size="sm"
                       variant="secondary"
-                      onClick={() => onOpenTab("data")}
+                      onClick={() => onOpenTab("home")}
                     >
                       Przejdź do gwarancji
                     </Button>
@@ -100,6 +113,8 @@ export function ClientDashboardOverview({
               >
                 <p className="font-medium text-foreground">{entry.title}</p>
                 <p className="mt-0.5 text-xs text-muted">
+                  {getAgreementStatusLabel(entry)}
+                  {" · "}
                   {PROJECT_AGREEMENT_CATEGORY_LABELS[entry.category]}
                   {formatAgreementCost(entry) ? ` · ${formatAgreementCost(entry)}` : ""}
                 </p>
@@ -168,7 +183,7 @@ export function ClientDashboardOverview({
               size="sm"
               variant="outline"
               className="mt-3"
-              onClick={() => onOpenTab("data")}
+              onClick={() => onOpenTab("home")}
             >
               <Shield className="mr-2 h-4 w-4" />
               Ustawienia gwarancji
@@ -195,7 +210,7 @@ export function ClientDashboardOverview({
                     <div className="min-w-0">
                       <p className="truncate font-medium text-foreground">{entry.title}</p>
                       <p className="text-xs text-muted">
-                        {PROJECT_AGREEMENT_STATUS_LABELS[entry.status]}
+                        {getAgreementStatusLabel(entry)}
                       </p>
                     </div>
                   </div>

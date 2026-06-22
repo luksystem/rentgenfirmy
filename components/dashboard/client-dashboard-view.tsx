@@ -19,11 +19,11 @@ import { ClientDashboardOverview } from "@/components/dashboard/client-dashboard
 import { ClientInfoCard } from "@/components/dashboard/client-info-card";
 import { ClientProjectSummary } from "@/components/dashboard/client-project-summary";
 import { ProjectContentPanel } from "@/components/dashboard/project-content-panel";
-import { ProjectWarrantyPanel } from "@/components/dashboard/project-warranty-panel";
 import { ProcessPipeline } from "@/components/process/process-pipeline";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
+import { isAgreementPendingAttention } from "@/lib/dashboard/agreement-types";
 import type { ProjectDashboardContent } from "@/lib/dashboard/content-types";
 import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
 import type { DashboardSpace } from "@/lib/dashboard/types";
@@ -208,7 +208,7 @@ export function ClientDashboardView({
   const pendingAcceptanceCount = useMemo(() => {
     return agreementSource.filter(
       (entry) =>
-        entry.projectId === selectedProjectId && entry.status === "pending_client",
+        entry.projectId === selectedProjectId && isAgreementPendingAttention(entry),
     ).length;
   }, [agreementSource, selectedProjectId]);
 
@@ -221,7 +221,14 @@ export function ClientDashboardView({
     ).length;
   }, [agreementSource, selectedProjectId]);
 
-  const pendingOtherAgreementsCount = pendingAcceptanceCount - pendingWarrantyCount;
+  const pendingOtherAgreementsCount = useMemo(() => {
+    return agreementSource.filter(
+      (entry) =>
+        entry.projectId === selectedProjectId &&
+        entry.category !== "warranty" &&
+        isAgreementPendingAttention(entry),
+    ).length;
+  }, [agreementSource, selectedProjectId]);
 
   const progress = useMemo(() => {
     if (processProgress !== undefined) {
@@ -302,29 +309,11 @@ export function ClientDashboardView({
         {renderProjectSwitcher()}
         <div className="min-w-0 rounded-2xl border border-border/80 bg-surface p-4">
           <h2 className="mb-3 text-base font-semibold text-foreground">Dane projektu</h2>
-          <ClientProjectSummary project={selectedProject} compact defaultExpanded={!compact} />
-        </div>
-        <div className="min-w-0 rounded-2xl border border-border/80 bg-surface p-4">
-          <h2 className="mb-3 text-base font-semibold text-foreground">Gwarancja</h2>
-          <ProjectWarrantyPanel
+          <ClientProjectSummary
             project={selectedProject}
-            mode={readOnly ? "client" : "team"}
-            authorName={readOnly ? clientAuthorName : teamAuthorName}
-            seedAgreements={seedAgreements}
-            compact={!compact}
-            onWarrantySettingsSave={
-              readOnly
-                ? undefined
-                : async (settings) => {
-                    await onProjectPatch?.(selectedProject.id, {
-                      systemHandoverAt: settings.systemHandoverAt ?? undefined,
-                      warrantyDurationMonths: settings.warrantyDurationMonths ?? undefined,
-                    });
-                  }
-            }
-            onWarrantyExtensionAccepted={(warrantyEndsAt) =>
-              onProjectPatch?.(selectedProject.id, { warrantyEndsAt })
-            }
+            compact
+            defaultExpanded={!compact}
+            excludeWarrantyFields
           />
         </div>
       </div>
@@ -451,6 +440,22 @@ export function ClientDashboardView({
         onOpenTab={(tab) => setActiveTab(tab)}
         clientSpace={clientSpace}
         showPublicLinkPanel={showPublicLink && !readOnly}
+        readOnly={readOnly}
+        authorName={readOnly ? clientAuthorName : teamAuthorName}
+        seedAgreements={seedAgreements}
+        onWarrantySettingsSave={
+          readOnly
+            ? undefined
+            : async (settings) => {
+                await onProjectPatch?.(selectedProject.id, {
+                  systemHandoverAt: settings.systemHandoverAt ?? undefined,
+                  warrantyDurationMonths: settings.warrantyDurationMonths ?? undefined,
+                });
+              }
+        }
+        onWarrantyExtensionAccepted={(warrantyEndsAt) =>
+          onProjectPatch?.(selectedProject.id, { warrantyEndsAt })
+        }
       />
     );
   }
@@ -516,20 +521,52 @@ export function ClientDashboardView({
       label: string;
       icon: React.ComponentType<{ className?: string }>;
     }>,
-    variant: "desktop" | "mobile-bottom",
+    variant: "desktop" | "mobile-top" | "mobile-bottom",
   ) {
+    if (variant === "mobile-top") {
+      return (
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            const badgeCount = tabBadgeCount(tab.id);
+            const showBadge = badgeCount > 0;
+
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "relative inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition",
+                  active
+                    ? "border-accent/50 bg-accent/10 text-foreground"
+                    : "border-border/70 text-muted hover:border-accent/30 hover:text-foreground",
+                )}
+              >
+                <span className="relative inline-flex items-center gap-1.5">
+                  <Icon className="h-4 w-4" />
+                  {tab.label}
+                  {showBadge ? (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
+                      {badgeCount > 9 ? "9+" : badgeCount}
+                    </span>
+                  ) : null}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
     return (
       <div
         className={cn(
           variant === "desktop"
             ? "mb-4 flex flex-wrap gap-2"
-            : "mx-auto grid max-w-lg rounded-2xl border border-border bg-surface-elevated/95 px-1 py-1 shadow-card backdrop-blur-xl",
+            : "mx-auto flex max-w-lg gap-0.5 overflow-x-auto overscroll-x-contain rounded-2xl border border-border bg-surface-elevated/95 px-1 py-1 shadow-card backdrop-blur-xl [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         )}
-        style={
-          variant === "mobile-bottom"
-            ? { gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }
-            : undefined
-        }
       >
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -551,7 +588,7 @@ export function ClientDashboardView({
                         : "border-border/70 text-muted hover:border-accent/30 hover:text-foreground",
                     )
                   : cn(
-                      "relative flex flex-col items-center gap-0.5 rounded-2xl px-1 py-2 text-[10px] font-medium transition",
+                      "relative flex min-w-[4.25rem] shrink-0 flex-col items-center gap-0.5 rounded-2xl px-2 py-2 text-[10px] font-medium transition",
                       active ? "text-accent" : "text-muted",
                     ),
               )}
@@ -636,7 +673,8 @@ export function ClientDashboardView({
               <section className="min-w-0 overflow-x-hidden">{renderMainTabContent(activeTab)}</section>
             </div>
           </div>
-          <div className="xl:hidden">
+          <div className="min-w-0 overflow-x-hidden xl:hidden">
+            {renderTabBar(teamMobileTabs, "mobile-top")}
             {projects.length > 1 && onProjectChange ? (
               <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
                 {projects.map((project) => (
@@ -661,7 +699,7 @@ export function ClientDashboardView({
         </>
       )}
 
-      <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 xl:hidden">
+      <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 xl:hidden">
         {renderTabBar(readOnly ? publicClientTabs : teamMobileTabs, "mobile-bottom")}
       </nav>
     </div>

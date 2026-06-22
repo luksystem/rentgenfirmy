@@ -12,14 +12,15 @@ import { Button } from "@/components/ui/button";
 import { ClientInfoCard } from "@/components/dashboard/client-info-card";
 import { ClientProjectSummary } from "@/components/dashboard/client-project-summary";
 import { DashboardPublicLinkPanel } from "@/components/dashboard/dashboard-public-link-panel";
+import { ProjectWarrantyPanel } from "@/components/dashboard/project-warranty-panel";
 import {
   PROJECT_AGREEMENT_CATEGORY_LABELS,
   formatAgreementCost,
+  getAgreementStatusLabel,
+  isAgreementPendingAttention,
   type ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";
 import {
-  formatSystemHandoverDate,
-  formatWarrantyDurationMonths,
   formatWarrantyEndDate,
   getWarrantyStatus,
   hasPendingWarrantyExtension,
@@ -114,9 +115,22 @@ function ProcessProgressCard({
 function WarrantyHomeCard({
   project,
   agreements,
+  mode,
+  authorName,
+  seedAgreements,
+  onWarrantySettingsSave,
+  onWarrantyExtensionAccepted,
 }: {
   project: Project;
   agreements: ProjectClientAgreement[];
+  mode: "team" | "client";
+  authorName: string;
+  seedAgreements?: ProjectClientAgreement[];
+  onWarrantySettingsSave?: (settings: {
+    systemHandoverAt: string | null;
+    warrantyDurationMonths: number | null;
+  }) => void | Promise<void>;
+  onWarrantyExtensionAccepted?: (warrantyEndsAt: string) => void | Promise<void>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const warrantyStatus = getWarrantyStatus(project, {
@@ -162,25 +176,16 @@ function WarrantyHomeCard({
         />
       </button>
       {expanded ? (
-        <div className="grid gap-2 border-t border-border/50 px-4 py-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-border/60 bg-surface/60 px-3 py-2">
-            <p className="text-[10px] uppercase tracking-wide text-muted">Przekazanie systemu</p>
-            <p className="mt-0.5 text-sm font-medium text-foreground">
-              {formatSystemHandoverDate(project)}
-            </p>
-          </div>
-          <div className="rounded-xl border border-border/60 bg-surface/60 px-3 py-2">
-            <p className="text-[10px] uppercase tracking-wide text-muted">Czas gwarancji</p>
-            <p className="mt-0.5 text-sm font-medium text-foreground">
-              {formatWarrantyDurationMonths(project.warrantyDurationMonths)}
-            </p>
-          </div>
-          <div className="rounded-xl border border-border/60 bg-surface/60 px-3 py-2 sm:col-span-2">
-            <p className="text-[10px] uppercase tracking-wide text-muted">Data zakończenia</p>
-            <p className="mt-0.5 text-sm font-medium text-foreground">
-              {formatWarrantyEndDate(project)}
-            </p>
-          </div>
+        <div className="border-t border-border/50 px-4 py-4">
+          <ProjectWarrantyPanel
+            project={project}
+            mode={mode}
+            authorName={authorName}
+            seedAgreements={seedAgreements}
+            embedded
+            onWarrantySettingsSave={onWarrantySettingsSave}
+            onWarrantyExtensionAccepted={onWarrantyExtensionAccepted}
+          />
         </div>
       ) : null}
     </div>
@@ -200,6 +205,11 @@ export function ClientDashboardHome({
   onOpenTab,
   clientSpace = null,
   showPublicLinkPanel = false,
+  readOnly = false,
+  authorName = "Zespół",
+  seedAgreements,
+  onWarrantySettingsSave,
+  onWarrantyExtensionAccepted,
 }: {
   client: Client;
   project: Project;
@@ -210,18 +220,30 @@ export function ClientDashboardHome({
   agreements: ProjectClientAgreement[];
   pendingAgreementsCount: number;
   pendingWarrantyCount: number;
-  onOpenTab?: (tab: "agreements" | "process") => void;
+  onOpenTab?: (tab: "agreements" | "process" | "home") => void;
   clientSpace?: DashboardSpace | null;
   /** Panel włączania linku publicznego dashboardu — tylko widok zespołu. */
   showPublicLinkPanel?: boolean;
+  readOnly?: boolean;
+  authorName?: string;
+  seedAgreements?: ProjectClientAgreement[];
+  onWarrantySettingsSave?: (settings: {
+    systemHandoverAt: string | null;
+    warrantyDurationMonths: number | null;
+  }) => void | Promise<void>;
+  onWarrantyExtensionAccepted?: (warrantyEndsAt: string) => void | Promise<void>;
 }) {
   const pendingAgreements = agreements.filter(
-    (entry) => entry.status === "pending_client" && entry.category !== "warranty",
+    (entry) => entry.category !== "warranty" && isAgreementPendingAttention(entry),
   );
   const pendingWarranty = agreements.filter(
-    (entry) => entry.status === "pending_client" && entry.category === "warranty",
+    (entry) => entry.category === "warranty" && entry.status === "pending_client",
   );
   const totalPending = pendingAgreementsCount + pendingWarrantyCount;
+  const pendingDiscussionCount = pendingAgreements.filter(
+    (entry) => entry.discussionOpen && entry.status !== "pending_client",
+  ).length;
+  const pendingAcceptanceOnlyCount = pendingAgreements.length - pendingDiscussionCount;
 
   return (
     <div className="grid gap-4">
@@ -230,13 +252,25 @@ export function ClientDashboardHome({
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-amber-100">Masz propozycje do zaakceptowania</p>
+              <p className="font-medium text-amber-100">
+                {readOnly
+                  ? "Masz propozycje do zaakceptowania"
+                  : "Ustalenia wymagające uwagi"}
+              </p>
               <p className="mt-1 text-sm text-amber-200/90">
-                {pendingAgreementsCount > 0 ? `${pendingAgreementsCount} ustaleń` : null}
-                {pendingAgreementsCount > 0 && pendingWarrantyCount > 0 ? " · " : null}
-                {pendingWarrantyCount > 0
-                  ? `${pendingWarrantyCount} propozycji gwarancji`
-                  : null}
+                {[
+                  pendingAcceptanceOnlyCount > 0
+                    ? `${pendingAcceptanceOnlyCount} ${readOnly ? "do akceptacji" : "oczekujących"}`
+                    : null,
+                  pendingDiscussionCount > 0
+                    ? `${pendingDiscussionCount} w otwartej dyskusji`
+                    : null,
+                  pendingWarrantyCount > 0
+                    ? `${pendingWarrantyCount} propozycji gwarancji`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
               {onOpenTab && pendingAgreementsCount > 0 ? (
                 <Button
@@ -268,6 +302,8 @@ export function ClientDashboardHome({
               >
                 <p className="font-medium text-foreground">{entry.title}</p>
                 <p className="mt-0.5 text-xs text-muted">
+                  {getAgreementStatusLabel(entry)}
+                  {" · "}
                   {PROJECT_AGREEMENT_CATEGORY_LABELS[entry.category]}
                   {formatAgreementCost(entry) ? ` · ${formatAgreementCost(entry)}` : ""}
                 </p>
@@ -362,7 +398,15 @@ export function ClientDashboardHome({
         <ClientProjectSummary project={project} compact excludeWarrantyFields />
       </div>
 
-      <WarrantyHomeCard project={project} agreements={agreements} />
+      <WarrantyHomeCard
+        project={project}
+        agreements={agreements}
+        mode={readOnly ? "client" : "team"}
+        authorName={authorName}
+        seedAgreements={seedAgreements}
+        onWarrantySettingsSave={onWarrantySettingsSave}
+        onWarrantyExtensionAccepted={onWarrantyExtensionAccepted}
+      />
 
       {progress ? (
         <ProcessProgressCard
