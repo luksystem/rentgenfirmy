@@ -44,6 +44,8 @@ type ProcessPipelineProps = {
   onSign?: (itemId: string, signatureNote: string) => Promise<void>;
   onSaveMilestoneDate?: (milestoneId: string, date: string | null) => Promise<void>;
   canCustomizeChecklist?: boolean;
+  /** Pionowy układ bez poziomego przewijania — np. wąski panel dashboardu klienta. */
+  stacked?: boolean;
 };
 
 export function ProcessPipeline({
@@ -61,13 +63,19 @@ export function ProcessPipeline({
   onSign,
   onSaveMilestoneDate,
   canCustomizeChecklist = false,
+  stacked = false,
 }: ProcessPipelineProps) {
   const [activeItem, setActiveItem] = useState<ProcessItem | null>(null);
 
   return (
     <>
-      <div className="md:overflow-x-auto md:pb-2">
-        <div className="relative flex flex-col gap-8 md:min-w-max md:flex-row md:gap-0">
+      <div className={cn(!stacked && "md:overflow-x-auto md:pb-2")}>
+        <div
+          className={cn(
+            "relative flex flex-col gap-8",
+            !stacked && "md:min-w-max md:flex-row md:gap-0",
+          )}
+        >
           {template.stages.map((stage, stageIndex) => {
             const stageItems = stage.milestones.flatMap((milestone) => milestone.items);
             const stageCompleted = stageItems.filter((item) => process?.completions?.[item.id]).length;
@@ -78,16 +86,22 @@ export function ProcessPipeline({
             return (
               <div
                 key={stage.id}
-                className="relative flex w-full flex-col md:w-80 md:shrink-0 md:px-3"
+                className={cn(
+                  "relative flex w-full flex-col",
+                  !stacked && "md:w-80 md:shrink-0 md:px-3",
+                )}
               >
                 {!isLastStage ? (
                   <div
-                    className="absolute left-6 top-24 bottom-0 w-0.5 bg-gradient-to-b from-accent/40 to-border md:hidden"
+                    className={cn(
+                      "absolute left-6 top-24 bottom-0 w-0.5 bg-gradient-to-b from-accent/40 to-border",
+                      stacked ? "block" : "md:hidden",
+                    )}
                     aria-hidden
                   />
                 ) : null}
 
-                <div className="relative mb-5 md:mb-6">
+                <div className={cn("relative mb-5", !stacked && "md:mb-6")}>
                   <div className="relative overflow-hidden rounded-2xl border-2 border-accent/25 bg-gradient-to-br from-surface-elevated to-surface-muted/50 px-4 py-4 shadow-soft">
                     <div className="absolute left-0 top-0 h-full w-1 bg-accent" aria-hidden />
                     <div className="flex items-start gap-3 pl-2">
@@ -119,7 +133,7 @@ export function ProcessPipeline({
                       </div>
                     </div>
                   </div>
-                  {!isLastStage ? (
+                  {!isLastStage && !stacked ? (
                     <div
                       className="absolute left-full top-1/2 hidden h-0.5 w-6 -translate-y-1/2 bg-accent/30 md:block"
                       aria-hidden
@@ -127,7 +141,7 @@ export function ProcessPipeline({
                   ) : null}
                 </div>
 
-                <div className="grid flex-1 gap-4 pl-2 md:pl-0">
+                <div className={cn("grid flex-1 gap-4 pl-2", !stacked && "md:pl-0")}>
                   {stage.milestones.map((milestone) => {
                     const plannedDate = process?.milestoneDates?.[milestone.id] ?? null;
 

@@ -183,7 +183,7 @@ export function ClientDashboardView({
         {renderProjectSwitcher()}
         <div className="rounded-2xl border border-border/80 bg-surface p-4">
           <h2 className="mb-3 text-base font-semibold text-foreground">Dane projektu</h2>
-          <ClientProjectSummary project={selectedProject} compact={compact} />
+          <ClientProjectSummary project={selectedProject} compact defaultExpanded={!compact} />
         </div>
         <div className="rounded-2xl border border-border/80 bg-surface p-4">
           <h2 className="mb-3 text-base font-semibold text-foreground">Gwarancja</h2>
@@ -192,6 +192,7 @@ export function ClientDashboardView({
             mode={readOnly ? "client" : "team"}
             authorName={readOnly ? clientAuthorName : teamAuthorName}
             seedAgreements={seedAgreements}
+            compact={!compact}
             onWarrantySettingsSave={
               readOnly
                 ? undefined
@@ -236,9 +237,9 @@ export function ClientDashboardView({
         ) : null}
 
         {template && process ? (
-          <div className="min-w-0 max-w-full overflow-x-auto rounded-2xl border border-border/80 bg-surface p-4">
+          <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
             <h2 className="mb-4 text-base font-semibold text-foreground">Proces wdrożenia</h2>
-            <ProcessPipeline template={template} process={process} interactive={false} />
+            <ProcessPipeline template={template} process={process} interactive={false} stacked />
           </div>
         ) : (
           <p className="text-sm text-muted">
@@ -352,12 +353,12 @@ export function ClientDashboardView({
   return (
     <div className="w-full min-w-0 pb-24 xl:pb-0">
       {/* Desktop */}
-      <div className="hidden w-full min-w-0 xl:flex xl:items-start xl:gap-4">
-        <aside className="grid w-[300px] shrink-0 gap-4 self-start">{renderDataSection(false)}</aside>
-        <section className="grid min-w-0 flex-1 gap-4 overflow-hidden">
+      <div className="hidden w-full min-w-0 xl:grid xl:grid-cols-[300px_minmax(0,1fr)] xl:items-start xl:gap-4">
+        <aside className="relative z-10 grid min-w-0 gap-4 self-start">{renderDataSection(false)}</aside>
+        <section className="relative z-0 flex min-w-0 flex-col gap-4 overflow-hidden">
           {renderProcessSection()}
           {enableAgreements ? (
-            <div className="min-w-0 overflow-x-auto rounded-2xl border border-border/80 bg-surface p-4">
+            <div className="min-w-0 rounded-2xl border border-border/80 bg-surface p-4">
               <h2 className="mb-3 text-base font-semibold text-foreground">Ustalenia i akceptacje</h2>
               <ProjectAgreementsPanel
                 projectId={selectedProject.id}
@@ -368,7 +369,7 @@ export function ClientDashboardView({
             </div>
           ) : null}
           {enableSpecification ? (
-            <div className="min-w-0 overflow-x-auto rounded-2xl border border-border/80 bg-surface p-4">
+            <div className="min-w-0 rounded-2xl border border-border/80 bg-surface p-4">
               <h2 className="mb-3 text-base font-semibold text-foreground">Konfigurator specyfikacji</h2>
               <ProjectSpecificationPanel
                 projectId={selectedProject.id}

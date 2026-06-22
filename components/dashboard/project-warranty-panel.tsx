@@ -215,6 +215,7 @@ export function ProjectWarrantyPanel({
   seedAgreements,
   onWarrantySettingsSave,
   onWarrantyExtensionAccepted,
+  compact = false,
 }: {
   project: Project;
   mode: "team" | "client";
@@ -225,6 +226,8 @@ export function ProjectWarrantyPanel({
     warrantyDurationMonths: number | null;
   }) => void | Promise<void>;
   onWarrantyExtensionAccepted?: (warrantyEndsAt: string) => void | Promise<void>;
+  /** Jedna kolumna — w wąskim panelu bocznym dashboardu. */
+  compact?: boolean;
 }) {
   const storeAgreements = useProjectAgreementStore(
     (state) => state.byProject[project.id] ?? EMPTY_AGREEMENTS,
@@ -353,7 +356,12 @@ export function ProjectWarrantyPanel({
 
   return (
     <div className="grid gap-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div
+        className={cn(
+          "grid gap-3",
+          compact ? "grid-cols-1" : "sm:grid-cols-2 lg:grid-cols-4",
+        )}
+      >
         <div className="rounded-xl border border-border/70 bg-surface-muted/15 px-3 py-2.5">
           <p className="text-[10px] uppercase tracking-wide text-muted">Przekazanie systemu</p>
           <p className="mt-1 text-sm font-medium text-foreground">{formatSystemHandoverDate(project)}</p>
@@ -394,7 +402,7 @@ export function ProjectWarrantyPanel({
             Koniec gwarancji liczony jest od daty przekazania systemu. Projekt trwa{" "}
             {formatProjectDuration(project)} od utworzenia.
           </p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className={cn("mt-3 grid gap-3", compact ? "grid-cols-1" : "sm:grid-cols-2")}>
             <Field label="Data przekazania systemu">
               <Input
                 type="date"
