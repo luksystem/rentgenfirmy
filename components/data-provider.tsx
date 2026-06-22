@@ -4,7 +4,10 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { isPublicAppRoute } from "@/lib/auth/routes";
+import { ensureWarrantyExpiringNotifications } from "@/lib/notifications/warranty-expiry";
 import { useAppStore } from "@/store/app-store";
+import { useAuthStore } from "@/store/auth-store";
+import { useNotificationStore } from "@/store/notification-store";
 import { ProjectEditProvider } from "@/components/project-edit-provider";
 import { ProcessHydrator } from "@/components/process/process-hydrator";
 import { KanbanCacheHydrator } from "@/components/process/kanban-cache-hydrator";
@@ -25,6 +28,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       void initialize();
     }
   }, [initialize, skipData]);
+
+  useEffect(() => {
+    if (!isInitialized || skipData) {
+      return;
+    }
+    const projects = useAppStore.getState().projects;
+    void ensureWarrantyExpiringNotifications(projects)
+      .then(() => {
+        const profileId = useAuthStore.getState().profile?.id;
+        if (profileId) {
+          void useNotificationStore.getState().refreshUnreadCount(profileId);
+        }
+      })
+      .catch(() => undefined);
+  }, [isInitialized, skipData]);
 
   if (skipData) {
     return <>{children}</>;

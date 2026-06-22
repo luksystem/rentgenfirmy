@@ -4,6 +4,8 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import {
   formatProjectDuration,
+  formatSystemHandoverDate,
+  formatWarrantyDurationMonths,
   formatWarrantyEndDate,
   getWarrantyStatus,
 } from "@/lib/project/warranty";
@@ -26,6 +28,8 @@ export function ClientProjectSummary({
     { label: "Projekt", value: project.name },
     { label: "Typ", value: project.type },
     { label: "Czas trwania", value: formatProjectDuration(project) },
+    { label: "Przekazanie systemu", value: formatSystemHandoverDate(project) },
+    { label: "Czas gwarancji", value: formatWarrantyDurationMonths(project.warrantyDurationMonths) },
     { label: "Status gwarancji", value: warrantyStatus.label },
     { label: "Koniec gwarancji", value: formatWarrantyEndDate(project) },
     { label: "Etap", value: project.stage },

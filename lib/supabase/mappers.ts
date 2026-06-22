@@ -42,6 +42,8 @@ export function rowToProject(row: ProjectRow): Project {
     waitingIncreasesCostLater: row.waiting_increases_cost_later,
     waitingBlocksSettlement: row.waiting_blocks_settlement,
     createdAt: row.created_at ?? row.last_changed_at,
+    systemHandoverAt: row.system_handover_at ?? undefined,
+    warrantyDurationMonths: row.warranty_duration_months ?? undefined,
     warrantyEndsAt: row.warranty_ends_at ?? undefined,
   };
 }
@@ -71,6 +73,8 @@ export function projectToInsert(
     waiting_depends_on_us: project.waitingDependsOnUs ?? false,
     waiting_increases_cost_later: project.waitingIncreasesCostLater ?? false,
     waiting_blocks_settlement: project.waitingBlocksSettlement ?? false,
+    system_handover_at: project.systemHandoverAt ?? null,
+    warranty_duration_months: project.warrantyDurationMonths ?? null,
     warranty_ends_at: project.warrantyEndsAt ?? null,
   };
 }
@@ -115,5 +119,32 @@ export function interruptionToInsert(
     is_recurring: interruption.isRecurring,
     duration_minutes: interruption.durationMinutes,
     kind: interruption.kind,
+  };
+}
+
+export function projectToInput(project: Project): ProjectInput {
+  return {
+    name: project.name,
+    clientId: project.clientId,
+    isActive: project.isActive,
+    type: project.type,
+    flowStatus: project.flowStatus,
+    stage: project.stage,
+    priority: project.priority,
+    nextStepOwner: project.nextStepOwner,
+    nextContactDate: project.nextContactDate,
+    lastContactDate: project.lastContactDate,
+    blockerReason: project.blockerReason,
+    notes: project.notes,
+    closeBlocker: project.closeBlocker,
+    remainingHours: project.remainingHours,
+    nextAction: project.nextAction,
+    closeDeadline: project.closeDeadline,
+    waitingDependsOnUs: project.waitingDependsOnUs,
+    waitingIncreasesCostLater: project.waitingIncreasesCostLater,
+    waitingBlocksSettlement: project.waitingBlocksSettlement,
+    systemHandoverAt: project.systemHandoverAt,
+    warrantyDurationMonths: project.warrantyDurationMonths,
+    warrantyEndsAt: project.warrantyEndsAt,
   };
 }

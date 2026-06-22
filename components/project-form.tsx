@@ -19,7 +19,7 @@ import {
   type FieldOptions,
 } from "@/lib/field-options";
 import { priorities, type Project, type ProjectInput } from "@/lib/types";
-import { formatProjectDuration } from "@/lib/project/warranty";
+import { computeWarrantyEndsAt, formatProjectDuration, formatWarrantyEndDate } from "@/lib/project/warranty";
 import { toISODate } from "@/lib/utils";
 import {
   applyWaitingPriority,
@@ -48,7 +48,8 @@ type FormValues = {
   waitingDependsOnUs: boolean;
   waitingIncreasesCostLater: boolean;
   waitingBlocksSettlement: boolean;
-  warrantyEndsAt?: string;
+  systemHandoverAt?: string;
+  warrantyDurationMonths?: number;
 };
 
 function createSchema(options: FieldOptions) {
@@ -77,7 +78,8 @@ function createSchema(options: FieldOptions) {
   waitingDependsOnUs: z.boolean(),
   waitingIncreasesCostLater: z.boolean(),
   waitingBlocksSettlement: z.boolean(),
-  warrantyEndsAt: z.string().optional(),
+  systemHandoverAt: z.string().optional(),
+  warrantyDurationMonths: z.coerce.number().min(0).optional(),
 })
     .superRefine((value, ctx) => {
       const requiresBlocker =
@@ -116,7 +118,8 @@ export function projectToFormValues(project: Project, options: FieldOptions): Fo
     waitingDependsOnUs: project.waitingDependsOnUs ?? false,
     waitingIncreasesCostLater: project.waitingIncreasesCostLater ?? false,
     waitingBlocksSettlement: project.waitingBlocksSettlement ?? false,
-    warrantyEndsAt: project.warrantyEndsAt ?? "",
+    systemHandoverAt: project.systemHandoverAt ?? "",
+    warrantyDurationMonths: project.warrantyDurationMonths ?? 12,
   };
 }
 
@@ -140,7 +143,8 @@ function createDefaultValues(options: FieldOptions): FormValues {
     waitingDependsOnUs: false,
     waitingIncreasesCostLater: false,
     waitingBlocksSettlement: false,
-    warrantyEndsAt: "",
+    systemHandoverAt: "",
+    warrantyDurationMonths: 12,
   };
 }
 
@@ -203,6 +207,8 @@ export function ProjectForm({
   const waitingDependsOnUs = useWatch({ control, name: "waitingDependsOnUs" });
   const waitingIncreasesCostLater = useWatch({ control, name: "waitingIncreasesCostLater" });
   const waitingBlocksSettlement = useWatch({ control, name: "waitingBlocksSettlement" });
+  const systemHandoverAt = useWatch({ control, name: "systemHandoverAt" });
+  const warrantyDurationMonths = useWatch({ control, name: "warrantyDurationMonths" });
 
   const isWaiting = isWaitingFlowStatus(flowStatus, fieldOptions);
   const waitingFlagCount = countWaitingFlags({
@@ -272,7 +278,10 @@ export function ProjectForm({
       waitingDependsOnUs: waiting ? payload.waitingDependsOnUs : undefined,
       waitingIncreasesCostLater: waiting ? payload.waitingIncreasesCostLater : undefined,
       waitingBlocksSettlement: waiting ? payload.waitingBlocksSettlement : undefined,
-      warrantyEndsAt: values.warrantyEndsAt || undefined,
+      systemHandoverAt: values.systemHandoverAt || undefined,
+      warrantyDurationMonths: values.warrantyDurationMonths || undefined,
+      warrantyEndsAt:
+        computeWarrantyEndsAt(values.systemHandoverAt, values.warrantyDurationMonths) || undefined,
     });
   }
 
@@ -394,20 +403,35 @@ export function ProjectForm({
       </Field>
 
       <div className="rounded-2xl border border-border/80 bg-surface-muted/50 p-4">
-        <p className="mb-3 text-sm font-semibold">Gwarancja i czas trwania</p>
+        <p className="mb-3 text-sm font-semibold">Gwarancja</p>
         <div className="grid gap-4 md:grid-cols-2">
           {project ? (
-            <Field label="Czas trwania projektu">
+            <Field label="Czas trwania projektu (od utworzenia)">
               <Input value={formatProjectDuration(project)} readOnly disabled />
             </Field>
           ) : null}
-          <Field label="Data zakończenia gwarancji" error={errors.warrantyEndsAt?.message}>
-            <Input type="date" {...register("warrantyEndsAt")} />
+          <Field label="Data przekazania systemu" error={errors.systemHandoverAt?.message}>
+            <Input type="date" {...register("systemHandoverAt")} />
           </Field>
+          <Field label="Czas trwania gwarancji (miesiące)" error={errors.warrantyDurationMonths?.message}>
+            <Input type="number" min={1} step={1} {...register("warrantyDurationMonths", { valueAsNumber: true })} />
+          </Field>
+          {project ? (
+            <Field label="Obliczony koniec gwarancji">
+              <Input
+                value={formatWarrantyEndDate({
+                  systemHandoverAt,
+                  warrantyDurationMonths,
+                })}
+                readOnly
+                disabled
+              />
+            </Field>
+          ) : null}
         </div>
         <p className="mt-2 text-xs text-muted">
-          Przedłużenie gwarancji z akceptacją klienta ustawisz w dashboardzie klienta — przycisk
-          „Przedłuż gwarancję”.
+          Koniec gwarancji liczony jest od daty przekazania systemu. Przedłużenie z akceptacją klienta
+          ustawisz w dashboardzie klienta.
         </p>
       </div>
 

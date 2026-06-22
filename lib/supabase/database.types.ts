@@ -22,6 +22,8 @@ export type ProjectRow = {
   waiting_blocks_settlement: boolean;
   client_id: string | null;
   created_at: string;
+  system_handover_at: string | null;
+  warranty_duration_months: number | null;
   warranty_ends_at: string | null;
 };
 

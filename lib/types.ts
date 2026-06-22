@@ -55,6 +55,8 @@ export type Project = {
   waitingIncreasesCostLater?: boolean;
   waitingBlocksSettlement?: boolean;
   createdAt: string;
+  systemHandoverAt?: string;
+  warrantyDurationMonths?: number;
   warrantyEndsAt?: string;
 };
 

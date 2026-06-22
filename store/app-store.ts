@@ -20,6 +20,8 @@ import {
   updateInterruptionRecord,
   updateProjectRecord,
 } from "@/lib/supabase/repository";
+import { projectToInput } from "@/lib/supabase/mappers";
+import { computeWarrantyEndsAt } from "@/lib/project/warranty";
 import {
   fetchProjectsViewFilters,
   saveProjectsViewFilters,
@@ -51,6 +53,10 @@ type AppState = {
   addProject: (project: ProjectInput) => Promise<void>;
   updateProject: (id: string, project: ProjectInput) => Promise<void>;
   patchProjectFields: (id: string, patch: Partial<Project>) => void;
+  updateProjectWarrantySettings: (
+    id: string,
+    settings: { systemHandoverAt: string | null; warrantyDurationMonths: number | null },
+  ) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   addInterruption: (interruption: Omit<Interruption, "id">) => Promise<void>;
   updateInterruption: (id: string, interruption: Omit<Interruption, "id">) => Promise<void>;
@@ -156,6 +162,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => ({
       projects: state.projects.map((item) => (item.id === id ? { ...item, ...patch } : item)),
     }));
+  },
+
+  updateProjectWarrantySettings: async (id, settings) => {
+    const existing = get().projects.find((item) => item.id === id);
+    if (!existing) {
+      throw new Error("Projekt nie istnieje");
+    }
+
+    const systemHandoverAt = settings.systemHandoverAt || undefined;
+    const warrantyDurationMonths = settings.warrantyDurationMonths ?? undefined;
+    const warrantyEndsAt =
+      computeWarrantyEndsAt(systemHandoverAt ?? null, warrantyDurationMonths ?? null) || undefined;
+
+    await get().updateProject(id, {
+      ...projectToInput(existing),
+      systemHandoverAt,
+      warrantyDurationMonths,
+      warrantyEndsAt,
+    });
   },
 
   deleteProject: async (id) => {

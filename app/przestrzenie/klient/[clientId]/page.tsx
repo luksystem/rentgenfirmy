@@ -28,6 +28,7 @@ export default function ClientDashboardPage() {
   const templates = useProcessStore((state) => state.templates);
   const processHydrated = useProcessStore((state) => state.hydrated);
   const displayName = useAuthStore((state) => state.displayName);
+  const updateProjectWarrantySettings = useAppStore((state) => state.updateProjectWarrantySettings);
   const patchProjectFields = useAppStore((state) => state.patchProjectFields);
 
   const client = clients.find((entry) => entry.id === clientId) ?? null;
@@ -124,7 +125,27 @@ export default function ClientDashboardPage() {
         process={process}
         template={template}
         teamAuthorName={displayName || "Zespół"}
-        onProjectPatch={(projectId, patch) => patchProjectFields(projectId, patch)}
+        onProjectPatch={(projectId, patch) => {
+          const project = clientProjects.find((entry) => entry.id === projectId);
+          if ("systemHandoverAt" in patch || "warrantyDurationMonths" in patch) {
+            void updateProjectWarrantySettings(projectId, {
+              systemHandoverAt:
+                "systemHandoverAt" in patch
+                  ? (patch.systemHandoverAt ?? null)
+                  : (project?.systemHandoverAt ?? null),
+              warrantyDurationMonths:
+                "warrantyDurationMonths" in patch
+                  ? (patch.warrantyDurationMonths ?? null)
+                  : (project?.warrantyDurationMonths ?? null),
+            });
+            return;
+          }
+          if ("warrantyEndsAt" in patch) {
+            patchProjectFields(projectId, { warrantyEndsAt: patch.warrantyEndsAt });
+            return;
+          }
+          patchProjectFields(projectId, patch);
+        }}
       />
     </DashboardSpaceShell>
   );

@@ -1,4 +1,4 @@
-export const USER_NOTIFICATION_KINDS = ["kanban_mention", "kanban_new_activity"] as const;
+export const USER_NOTIFICATION_KINDS = ["kanban_mention", "kanban_new_activity", "warranty_expiring"] as const;
 
 export type UserNotificationKind = (typeof USER_NOTIFICATION_KINDS)[number];
 

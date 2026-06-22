@@ -97,9 +97,24 @@ export function ClientDashboardView({
       return pendingAgreementsCount;
     }
     return seedAgreements.filter(
-      (entry) => entry.category !== "warranty" && entry.status === "pending_client",
+      (entry) =>
+        entry.projectId === selectedProjectId &&
+        entry.category !== "warranty" &&
+        entry.status === "pending_client",
     ).length;
-  }, [pendingAgreementsCount, seedAgreements]);
+  }, [pendingAgreementsCount, seedAgreements, selectedProjectId]);
+
+  const pendingWarrantyCount = useMemo(() => {
+    if (!seedAgreements) {
+      return 0;
+    }
+    return seedAgreements.filter(
+      (entry) =>
+        entry.projectId === selectedProjectId &&
+        entry.category === "warranty" &&
+        entry.status === "pending_client",
+    ).length;
+  }, [seedAgreements, selectedProjectId]);
 
   const progress = useMemo(() => {
     if (processProgress !== undefined) {
@@ -177,7 +192,17 @@ export function ClientDashboardView({
             mode={readOnly ? "client" : "team"}
             authorName={readOnly ? clientAuthorName : teamAuthorName}
             seedAgreements={seedAgreements}
-            onWarrantyEndsAtChange={(warrantyEndsAt) =>
+            onWarrantySettingsSave={
+              readOnly
+                ? undefined
+                : async (settings) => {
+                    await onProjectPatch?.(selectedProject.id, {
+                      systemHandoverAt: settings.systemHandoverAt ?? undefined,
+                      warrantyDurationMonths: settings.warrantyDurationMonths ?? undefined,
+                    });
+                  }
+            }
+            onWarrantyExtensionAccepted={(warrantyEndsAt) =>
               onProjectPatch?.(selectedProject.id, { warrantyEndsAt })
             }
           />
@@ -211,7 +236,7 @@ export function ClientDashboardView({
         ) : null}
 
         {template && process ? (
-          <div className="rounded-2xl border border-border/80 bg-surface p-4">
+          <div className="overflow-x-auto rounded-2xl border border-border/80 bg-surface p-4">
             <h2 className="mb-4 text-base font-semibold text-foreground">Proces wdrożenia</h2>
             <ProcessPipeline template={template} process={process} interactive={false} />
           </div>
@@ -327,9 +352,9 @@ export function ClientDashboardView({
   return (
     <div className="pb-24 xl:pb-0">
       {/* Desktop */}
-      <div className="hidden gap-4 xl:grid xl:grid-cols-[300px_minmax(0,1fr)]">
-        <div className="grid gap-4 self-start">{renderDataSection(false)}</div>
-        <div className="grid gap-4">
+      <div className="hidden min-w-0 gap-4 xl:grid xl:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
+        <div className="grid min-w-0 gap-4 self-start">{renderDataSection(false)}</div>
+        <div className="grid min-w-0 gap-4">
           {renderProcessSection()}
           {enableAgreements ? (
             <div className="rounded-2xl border border-border/80 bg-surface p-4">
@@ -389,7 +414,11 @@ export function ClientDashboardView({
           {visibleTabs.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
-            const showBadge = tab.id === "agreements" && nonWarrantyPendingCount > 0;
+            const showBadge =
+              (tab.id === "agreements" && nonWarrantyPendingCount > 0) ||
+              (tab.id === "data" && pendingWarrantyCount > 0);
+            const badgeCount =
+              tab.id === "agreements" ? nonWarrantyPendingCount : pendingWarrantyCount;
 
             return (
               <button
@@ -405,7 +434,7 @@ export function ClientDashboardView({
                   <Icon className="h-5 w-5" />
                   {showBadge ? (
                     <span className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
-                      {nonWarrantyPendingCount > 9 ? "9+" : nonWarrantyPendingCount}
+                      {badgeCount > 9 ? "9+" : badgeCount}
                     </span>
                   ) : null}
                 </span>

@@ -15,10 +15,17 @@ type NotificationRow = {
 };
 
 function rowToNotification(row: NotificationRow): UserNotification {
+  const kind: UserNotification["kind"] =
+    row.kind === "kanban_mention"
+      ? "kanban_mention"
+      : row.kind === "warranty_expiring"
+        ? "warranty_expiring"
+        : "kanban_new_activity";
+
   return {
     id: row.id,
     profileId: row.profile_id,
-    kind: row.kind === "kanban_mention" ? "kanban_mention" : "kanban_new_activity",
+    kind,
     title: row.title,
     body: row.body,
     linkUrl: row.link_url,
