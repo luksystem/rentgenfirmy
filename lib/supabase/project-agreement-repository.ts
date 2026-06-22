@@ -1,74 +1,19 @@
 import type {
-  ProjectAgreementCategory,
   ProjectAgreementInput,
   ProjectAgreementStatus,
   ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";
+import {
+  createDefaultClientRole,
+  publishAgreementVersion,
+  respondToAgreementApproval,
+  rowToAgreement,
+  saveAgreementCollaborationSettings,
+  fetchAgreementApproverRoles,
+} from "@/lib/supabase/project-agreement-collaboration-repository";
 import { getSupabase } from "@/lib/supabase/client";
 
-type AgreementRow = {
-  id: string;
-  project_id: string;
-  title: string;
-  body: string;
-  category: string;
-  status: string;
-  proposed_cost_net: number | string | null;
-  proposed_cost_gross: number | string | null;
-  proposed_cost_vat_rate: number | null;
-  cost_note: string | null;
-  created_by_name: string;
-  created_by_side: string;
-  submitted_at: string | null;
-  client_responded_at: string | null;
-  client_response_name: string | null;
-  client_response_note: string | null;
-  proposed_warranty_end_date: string | null;
-  position: number;
-  created_at: string;
-  updated_at: string;
-};
-
-function parseNumber(value: number | string | null | undefined) {
-  if (value == null || value === "") {
-    return null;
-  }
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function isCategory(value: string): value is ProjectAgreementCategory {
-  return ["integration", "specification", "change", "handover", "warranty", "other"].includes(value);
-}
-
-function isStatus(value: string): value is ProjectAgreementStatus {
-  return ["draft", "pending_client", "accepted", "rejected", "cancelled"].includes(value);
-}
-
-function rowToAgreement(row: AgreementRow): ProjectClientAgreement {
-  return {
-    id: row.id,
-    projectId: row.project_id,
-    title: row.title,
-    body: row.body,
-    category: isCategory(row.category) ? row.category : "other",
-    status: isStatus(row.status) ? row.status : "draft",
-    proposedCostNet: parseNumber(row.proposed_cost_net),
-    proposedCostGross: parseNumber(row.proposed_cost_gross),
-    proposedCostVatRate: parseNumber(row.proposed_cost_vat_rate),
-    costNote: row.cost_note,
-    createdByName: row.created_by_name,
-    createdBySide: row.created_by_side === "client" ? "client" : "team",
-    submittedAt: row.submitted_at,
-    clientRespondedAt: row.client_responded_at,
-    clientResponseName: row.client_response_name,
-    clientResponseNote: row.client_response_note,
-    proposedWarrantyEndDate: row.proposed_warranty_end_date,
-    position: row.position,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
+type AgreementRow = Parameters<typeof rowToAgreement>[0];
 
 export async function fetchProjectAgreements(projectId: string): Promise<ProjectClientAgreement[]> {
   const supabase = getSupabase();
@@ -130,12 +75,35 @@ export async function createProjectAgreement(
     throw new Error(error.message);
   }
 
-  return rowToAgreement(data as AgreementRow);
+  const agreement = rowToAgreement(data as AgreementRow);
+  await createDefaultClientRole(agreement.id);
+  if (input.publicEnabled !== undefined || input.approverRoles) {
+    await saveAgreementCollaborationSettings(agreement.id, {
+      publicEnabled: input.publicEnabled,
+      approverRoles: input.approverRoles,
+    });
+  }
+
+  const { data: refreshed } = await supabase
+    .from("project_client_agreements")
+    .select("*")
+    .eq("id", agreement.id)
+    .single();
+
+  return rowToAgreement(refreshed as AgreementRow);
 }
 
 export async function updateProjectAgreementDraft(
   agreementId: string,
   input: ProjectAgreementInput,
+) {
+  return updateProjectAgreement(agreementId, input, ["draft"]);
+}
+
+export async function updateProjectAgreement(
+  agreementId: string,
+  input: ProjectAgreementInput,
+  allowedStatuses: ProjectAgreementStatus[] = ["draft", "pending_client"],
 ) {
   const supabase = getSupabase();
   const { data, error } = await supabase
@@ -152,7 +120,7 @@ export async function updateProjectAgreementDraft(
       updated_at: new Date().toISOString(),
     })
     .eq("id", agreementId)
-    .eq("status", "draft")
+    .in("status", allowedStatuses)
     .select("*")
     .single();
 
@@ -160,32 +128,64 @@ export async function updateProjectAgreementDraft(
     throw new Error(error.message);
   }
 
-  return rowToAgreement(data as AgreementRow);
+  const agreement = rowToAgreement(data as AgreementRow);
+  if (input.publicEnabled !== undefined || input.approverRoles) {
+    await saveAgreementCollaborationSettings(agreementId, {
+      publicEnabled: input.publicEnabled,
+      approverRoles: input.approverRoles,
+    });
+    const { data: refreshed } = await supabase
+      .from("project_client_agreements")
+      .select("*")
+      .eq("id", agreementId)
+      .single();
+    return rowToAgreement(refreshed as AgreementRow);
+  }
+
+  return agreement;
 }
 
-export async function submitProjectAgreementForClient(agreementId: string) {
-  const supabase = getSupabase();
-  const now = new Date().toISOString();
-  const { data, error } = await supabase
-    .from("project_client_agreements")
-    .update({
-      status: "pending_client",
-      submitted_at: now,
-      updated_at: now,
-    })
-    .eq("id", agreementId)
-    .eq("status", "draft")
-    .select("*")
-    .single();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return rowToAgreement(data as AgreementRow);
+export async function submitProjectAgreementForClient(
+  agreementId: string,
+  publishedByName = "Zespół",
+) {
+  const bundle = await publishAgreementVersion(agreementId, publishedByName);
+  return bundle.agreement;
 }
 
 export async function respondToProjectAgreement(
+  agreementId: string,
+  input: {
+    accepted: boolean;
+    clientResponseName: string;
+    clientResponseNote?: string;
+  },
+) {
+  const supabase = getSupabase();
+  const { data: row } = await supabase
+    .from("project_client_agreements")
+    .select("active_version_id")
+    .eq("id", agreementId)
+    .maybeSingle();
+
+  if (row?.active_version_id) {
+    const roles = await fetchAgreementApproverRoles(agreementId);
+    const clientRole = roles.find((role) => role.isClientRole) ?? roles[0];
+    if (!clientRole) {
+      throw new Error("Brak roli akceptacji dla klienta.");
+    }
+    const bundle = await respondToAgreementApproval(agreementId, clientRole.id, {
+      accepted: input.accepted,
+      respondedByName: input.clientResponseName,
+      responseNote: input.clientResponseNote,
+    });
+    return bundle.agreement;
+  }
+
+  return respondToProjectAgreementLegacy(agreementId, input);
+}
+
+async function respondToProjectAgreementLegacy(
   agreementId: string,
   input: {
     accepted: boolean;
@@ -254,12 +254,21 @@ export async function cancelProjectAgreement(agreementId: string) {
 }
 
 export async function deleteProjectAgreementDraft(agreementId: string) {
+  return deleteProjectAgreement(agreementId, ["draft"]);
+}
+
+export async function deleteProjectAgreement(
+  agreementId: string,
+  allowedStatuses?: ProjectAgreementStatus[],
+) {
   const supabase = getSupabase();
-  const { error } = await supabase
-    .from("project_client_agreements")
-    .delete()
-    .eq("id", agreementId)
-    .eq("status", "draft");
+  let query = supabase.from("project_client_agreements").delete().eq("id", agreementId);
+
+  if (allowedStatuses?.length) {
+    query = query.in("status", allowedStatuses);
+  }
+
+  const { error } = await query;
 
   if (error) {
     throw new Error(error.message);

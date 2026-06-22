@@ -82,6 +82,10 @@ type AgreementRow = {
   client_response_note: string | null;
   proposed_warranty_end_date: string | null;
   position: number;
+  public_token?: string;
+  public_enabled?: boolean;
+  discussion_open?: boolean;
+  active_version_id?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -144,6 +148,10 @@ function rowToAgreement(row: AgreementRow): ProjectClientAgreement {
     clientResponseNote: row.client_response_note,
     proposedWarrantyEndDate: row.proposed_warranty_end_date,
     position: row.position,
+    publicToken: row.public_token ?? "",
+    publicEnabled: row.public_enabled ?? false,
+    discussionOpen: row.discussion_open ?? false,
+    activeVersionId: row.active_version_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

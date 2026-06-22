@@ -86,6 +86,51 @@ export function ClientDashboardOverview({
         </div>
       ) : null}
 
+      {pendingAgreements.length > 0 ? (
+        <div className="rounded-2xl border border-border/80 bg-surface p-4">
+          <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
+            <ClipboardCheck className="h-4 w-4 text-accent" />
+            Oczekujące ustalenia
+          </h3>
+          <div className="grid gap-2">
+            {pendingAgreements.slice(0, 5).map((entry) => (
+              <div
+                key={entry.id}
+                className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5"
+              >
+                <p className="font-medium text-foreground">{entry.title}</p>
+                <p className="mt-0.5 text-xs text-muted">
+                  {PROJECT_AGREEMENT_CATEGORY_LABELS[entry.category]}
+                  {formatAgreementCost(entry) ? ` · ${formatAgreementCost(entry)}` : ""}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {pendingWarranty.length > 0 ? (
+        <div className="rounded-2xl border border-border/80 bg-surface p-4">
+          <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
+            <Shield className="h-4 w-4 text-accent" />
+            Propozycje przedłużenia gwarancji
+          </h3>
+          <div className="grid gap-2">
+            {pendingWarranty.map((entry) => (
+              <div
+                key={entry.id}
+                className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5"
+              >
+                <p className="font-medium text-foreground">{entry.title}</p>
+                <p className="mt-0.5 text-xs text-muted">
+                  {formatAgreementCost(entry) ?? "Bez dodatkowego kosztu"}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border border-border/80 bg-surface p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">Proces wdrożenia</p>
@@ -131,51 +176,6 @@ export function ClientDashboardOverview({
           ) : null}
         </div>
       </div>
-
-      {pendingAgreements.length > 0 ? (
-        <div className="rounded-2xl border border-border/80 bg-surface p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
-            <ClipboardCheck className="h-4 w-4 text-accent" />
-            Oczekujące ustalenia
-          </h3>
-          <div className="grid gap-2">
-            {pendingAgreements.slice(0, 5).map((entry) => (
-              <div
-                key={entry.id}
-                className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5"
-              >
-                <p className="font-medium text-foreground">{entry.title}</p>
-                <p className="mt-0.5 text-xs text-muted">
-                  {PROJECT_AGREEMENT_CATEGORY_LABELS[entry.category]}
-                  {formatAgreementCost(entry) ? ` · ${formatAgreementCost(entry)}` : ""}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {pendingWarranty.length > 0 ? (
-        <div className="rounded-2xl border border-border/80 bg-surface p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
-            <Shield className="h-4 w-4 text-accent" />
-            Propozycje przedłużenia gwarancji
-          </h3>
-          <div className="grid gap-2">
-            {pendingWarranty.map((entry) => (
-              <div
-                key={entry.id}
-                className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5"
-              >
-                <p className="font-medium text-foreground">{entry.title}</p>
-                <p className="mt-0.5 text-xs text-muted">
-                  {formatAgreementCost(entry) ?? "Bez dodatkowego kosztu"}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
 
       {!readOnly ? (
         <div className="rounded-2xl border border-border/80 bg-surface p-4">

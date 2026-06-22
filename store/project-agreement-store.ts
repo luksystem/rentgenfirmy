@@ -5,10 +5,12 @@ import type { ProjectAgreementInput, ProjectClientAgreement } from "@/lib/dashbo
 import {
   cancelProjectAgreement,
   createProjectAgreement,
+  deleteProjectAgreement,
   deleteProjectAgreementDraft,
   fetchProjectAgreements,
   respondToProjectAgreement,
   submitProjectAgreementForClient,
+  updateProjectAgreement,
   updateProjectAgreementDraft,
 } from "@/lib/supabase/project-agreement-repository";
 
@@ -24,7 +26,8 @@ type ProjectAgreementStore = {
     author: { name: string; side: "team" | "client" },
   ) => Promise<ProjectClientAgreement>;
   updateDraft: (projectId: string, agreementId: string, input: ProjectAgreementInput) => Promise<void>;
-  submitForClient: (projectId: string, agreementId: string) => Promise<void>;
+  updateAgreement: (projectId: string, agreementId: string, input: ProjectAgreementInput) => Promise<void>;
+  submitForClient: (projectId: string, agreementId: string, publishedByName?: string) => Promise<void>;
   respond: (
     projectId: string,
     agreementId: string,
@@ -32,6 +35,8 @@ type ProjectAgreementStore = {
   ) => Promise<ProjectClientAgreement>;
   cancel: (projectId: string, agreementId: string) => Promise<void>;
   removeDraft: (projectId: string, agreementId: string) => Promise<void>;
+  removeAgreement: (projectId: string, agreementId: string) => Promise<void>;
+  seedProjectAgreements: (projectId: string, agreements: ProjectClientAgreement[]) => void;
   invalidateProject: (projectId: string) => void;
 };
 
@@ -95,8 +100,16 @@ export const useProjectAgreementStore = create<ProjectAgreementStore>((set, get)
     setProjectAgreements(projectId, list, set, get);
   },
 
-  submitForClient: async (projectId, agreementId) => {
-    const updated = await submitProjectAgreementForClient(agreementId);
+  updateAgreement: async (projectId, agreementId, input) => {
+    const updated = await updateProjectAgreement(agreementId, input);
+    const list = (get().byProject[projectId] ?? []).map((entry) =>
+      entry.id === agreementId ? updated : entry,
+    );
+    setProjectAgreements(projectId, list, set, get);
+  },
+
+  submitForClient: async (projectId, agreementId, publishedByName) => {
+    const updated = await submitProjectAgreementForClient(agreementId, publishedByName);
     const list = (get().byProject[projectId] ?? []).map((entry) =>
       entry.id === agreementId ? updated : entry,
     );
@@ -124,6 +137,17 @@ export const useProjectAgreementStore = create<ProjectAgreementStore>((set, get)
     await deleteProjectAgreementDraft(agreementId);
     const list = (get().byProject[projectId] ?? []).filter((entry) => entry.id !== agreementId);
     setProjectAgreements(projectId, list, set, get);
+  },
+
+  removeAgreement: async (projectId, agreementId) => {
+    await deleteProjectAgreement(agreementId);
+    const list = (get().byProject[projectId] ?? []).filter((entry) => entry.id !== agreementId);
+    setProjectAgreements(projectId, list, set, get);
+  },
+
+  seedProjectAgreements: (projectId, agreements) => {
+    loadPromises.delete(projectId);
+    setProjectAgreements(projectId, agreements, set, get);
   },
 
   invalidateProject: (projectId) => {

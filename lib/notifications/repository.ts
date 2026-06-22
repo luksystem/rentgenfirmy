@@ -1,5 +1,12 @@
 import type { MentionCandidate, UserNotification, UserNotificationKind } from "@/lib/notifications/types";
 import { resolveMentionTargets } from "@/lib/notifications/mentions";
+import {
+  NOTIFICATION_BODY_MAX_LENGTH,
+  buildKanbanNewActivityRows,
+  resolveKanbanPublicLinkForColumn,
+  resolveKanbanPublicLinkForTask,
+} from "@/lib/notifications/kanban-activity";
+import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 import { getSupabase } from "@/lib/supabase/client";
 
 type NotificationRow = {
@@ -119,7 +126,7 @@ export async function createKanbanMentionNotifications(input: {
   }
 
   const supabase = getSupabase();
-  const excerpt = input.body.trim().slice(0, 180);
+  const excerpt = input.body.trim().slice(0, NOTIFICATION_BODY_MAX_LENGTH);
   const rows = targets.map((target) => ({
     id: crypto.randomUUID(),
     profile_id: target.profileId!,
@@ -139,6 +146,49 @@ export async function createKanbanMentionNotifications(input: {
     throw new Error(error.message);
   }
 }
+
+export async function createKanbanNewActivityNotifications(input: {
+  sourceId: string;
+  taskTitle: string;
+  authorName: string;
+  body: string;
+  linkUrl?: string;
+  excludeProfileIds?: string[];
+  teamProfileIds?: string[];
+}) {
+  const teamProfileIds =
+    input.teamProfileIds ??
+    (await fetchTeamProfiles().catch(() => [])).map((profile) => profile.id);
+
+  if (!teamProfileIds.length) {
+    return;
+  }
+
+  const rows = buildKanbanNewActivityRows({
+    teamProfileIds,
+    sourceId: input.sourceId,
+    taskTitle: input.taskTitle,
+    authorName: input.authorName,
+    body: input.body,
+    linkUrl: input.linkUrl,
+    excludeProfileIds: input.excludeProfileIds,
+  });
+
+  if (!rows.length) {
+    return;
+  }
+
+  const supabase = getSupabase();
+  const { error } = await supabase.from("user_notifications").insert(rows);
+  if (error) {
+    if (error.message.toLowerCase().includes("does not exist")) {
+      return;
+    }
+    throw new Error(error.message);
+  }
+}
+
+export { resolveKanbanPublicLinkForColumn, resolveKanbanPublicLinkForTask };
 
 function normalizeAuthor(value: string) {
   return value.trim().toLocaleLowerCase("pl");

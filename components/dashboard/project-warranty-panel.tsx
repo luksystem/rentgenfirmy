@@ -243,9 +243,9 @@ export function ProjectWarrantyPanel({
   const cancel = useProjectAgreementStore((state) => state.cancel);
   const removeDraft = useProjectAgreementStore((state) => state.removeDraft);
 
-  const [localAgreements, setLocalAgreements] = useState<ProjectClientAgreement[] | null>(() =>
-    seedAgreements !== undefined ? seedAgreements : null,
-  );
+  const agreements =
+    storeAgreements.length > 0 ? storeAgreements : (seedAgreements ?? storeAgreements);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<ProjectAgreementInput>(() => emptyWarrantyInput(project));
   const [saving, setSaving] = useState(false);
@@ -270,7 +270,6 @@ export function ProjectWarrantyPanel({
     [durationDraft, handoverDraft],
   );
 
-  const agreements = seedAgreements !== undefined ? (localAgreements ?? seedAgreements) : storeAgreements;
   const warrantyAgreements = useMemo(() => filterWarrantyAgreements(agreements), [agreements]);
   const warrantyStatus = getWarrantyStatus(project, {
     hasPendingExtension: hasPendingWarrantyExtension(warrantyAgreements),
@@ -286,19 +285,11 @@ export function ProjectWarrantyPanel({
   }, [mode, warrantyAgreements]);
 
   useEffect(() => {
-    if (seedAgreements !== undefined) {
-      setLocalAgreements(seedAgreements);
-      return;
-    }
     void ensureAgreements(project.id);
-  }, [ensureAgreements, project.id, seedAgreements]);
+  }, [ensureAgreements, project.id]);
 
   async function refreshAgreements() {
-    if (seedAgreements === undefined) {
-      return;
-    }
-    const updated = await ensureAgreements(project.id, { force: true });
-    setLocalAgreements(updated);
+    await ensureAgreements(project.id, { force: true });
   }
 
   async function handleCreate() {
@@ -355,10 +346,10 @@ export function ProjectWarrantyPanel({
     }
   }
 
-  const isLoading = seedAgreements !== undefined ? false : loading;
+  const isLoading = loading && agreements.length === 0;
 
   return (
-    <div className="grid gap-4">
+    <div className="grid min-w-0 gap-4">
       <div
         className={cn(
           "grid gap-3",
@@ -405,7 +396,7 @@ export function ProjectWarrantyPanel({
             Koniec gwarancji liczony jest od daty przekazania systemu. Projekt trwa{" "}
             {formatProjectDuration(project)} od utworzenia.
           </p>
-          <div className={cn("mt-3 grid gap-3", compact ? "grid-cols-1" : "sm:grid-cols-2")}>
+          <div className={cn("mt-3 grid min-w-0 gap-3", compact ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2")}>
             <Field label="Data przekazania systemu">
               <Input
                 type="date"
@@ -512,11 +503,7 @@ export function ProjectWarrantyPanel({
             onRespond={(id, input) => handleRespond(id, input)}
             onDelete={async (id) => {
               await removeDraft(project.id, id);
-              if (seedAgreements !== undefined) {
-                setLocalAgreements((current) =>
-                  (current ?? seedAgreements).filter((entry) => entry.id !== id),
-                );
-              }
+              await refreshAgreements();
             }}
           />
         ))}

@@ -13,7 +13,6 @@ import {
   updateKanbanTask,
 } from "@/lib/supabase/kanban-repository";
 import { buildKanbanMentionCandidates } from "@/lib/kanban/mention-candidates";
-import { createKanbanMentionNotificationsServer } from "@/lib/notifications/server";
 import { collectKanbanAssigneeOptions } from "@/lib/process/kanban-task-meta";
 import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
 import {
@@ -136,25 +135,18 @@ export async function POST(
         return NextResponse.json({ error: "taskId is required" }, { status: 400 });
       }
       const task = board.tasks.find((entry) => entry.id === taskId);
+      const teamProfiles = await fetchTeamProfilesServer().catch(() => []);
+      const assigneeOptions = collectKanbanAssigneeOptions(board.tasks, []);
+      const mentionCandidates = buildKanbanMentionCandidates(teamProfiles, assigneeOptions);
       const comment = await addKanbanComment({
         taskId,
         authorName,
         authorSide: "client",
         body: commentBody,
-      });
-
-      const teamProfiles = await fetchTeamProfilesServer().catch(() => []);
-      const assigneeOptions = collectKanbanAssigneeOptions(board.tasks, []);
-      const mentionCandidates = buildKanbanMentionCandidates(teamProfiles, assigneeOptions);
-      await createKanbanMentionNotificationsServer({
-        commentId: comment.id,
-        taskId,
         taskTitle: task?.title ?? "Zgłoszenie",
-        body: commentBody,
-        authorName,
-        candidates: mentionCandidates,
         linkUrl: `/kanban/${token}`,
-      }).catch(() => undefined);
+        mentionCandidates,
+      });
 
       return NextResponse.json({ comment });
     }

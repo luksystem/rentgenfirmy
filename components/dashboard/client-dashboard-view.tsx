@@ -1,23 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   ClipboardCheck,
   FileText,
   FolderOpen,
   GitBranch,
-  LayoutDashboard,
+  Home,
   LayoutGrid,
   Link2,
   UserRound,
 } from "lucide-react";
 import { ProjectAgreementsPanel } from "@/components/dashboard/project-agreements-panel";
 import { ProjectSpecificationPanel } from "@/components/dashboard/project-specification-panel";
+import { ClientDashboardHome } from "@/components/dashboard/client-dashboard-home";
 import { ClientDashboardOverview } from "@/components/dashboard/client-dashboard-overview";
 import { ClientInfoCard } from "@/components/dashboard/client-info-card";
 import { ClientProjectSummary } from "@/components/dashboard/client-project-summary";
-import { DashboardPublicLinkPanel } from "@/components/dashboard/dashboard-public-link-panel";
 import { ProjectContentPanel } from "@/components/dashboard/project-content-panel";
 import { ProjectWarrantyPanel } from "@/components/dashboard/project-warranty-panel";
 import { ProcessPipeline } from "@/components/process/process-pipeline";
@@ -33,9 +33,11 @@ import { fetchProjectKanbanPublicLinks } from "@/lib/supabase/kanban-repository"
 import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useProjectAgreementsRealtime } from "@/hooks/use-project-agreements-realtime";
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
 
 type ClientDashboardTab =
+  | "home"
   | "overview"
   | "data"
   | "process"
@@ -45,13 +47,12 @@ type ClientDashboardTab =
 
 const EMPTY_AGREEMENTS: ProjectClientAgreement[] = [];
 
-const CLIENT_TAB_CONFIG: Array<{
+const PUBLIC_CLIENT_TAB_CONFIG: Array<{
   id: ClientDashboardTab;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }> = [
-  { id: "overview", label: "Przegląd", icon: LayoutDashboard },
-  { id: "data", label: "Dane", icon: UserRound },
+  { id: "home", label: "HOME", icon: Home },
   { id: "process", label: "Proces", icon: GitBranch },
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
@@ -63,7 +64,7 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }> = [
-  { id: "overview", label: "Przegląd", icon: LayoutDashboard },
+  { id: "home", label: "HOME", icon: Home },
   { id: "process", label: "Proces", icon: GitBranch },
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
@@ -75,7 +76,7 @@ const TEAM_MOBILE_TAB_CONFIG: Array<{
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }> = [
-  { id: "overview", label: "Przegląd", icon: LayoutDashboard },
+  { id: "home", label: "HOME", icon: Home },
   { id: "data", label: "Dane", icon: UserRound },
   { id: "process", label: "Proces", icon: GitBranch },
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
@@ -102,9 +103,9 @@ export function ClientDashboardView({
   seedAgreements,
   seedSpecificationItems,
   seedContent,
-  pendingAgreementsCount = 0,
   seedKanbanPublicLinks,
   onProjectPatch,
+  onAgreementsUpdated,
 }: {
   client: Client;
   projects: Project[];
@@ -124,18 +125,21 @@ export function ClientDashboardView({
   seedAgreements?: ProjectClientAgreement[];
   seedSpecificationItems?: ProjectSpecificationItem[];
   seedContent?: ProjectDashboardContent[];
-  pendingAgreementsCount?: number;
   seedKanbanPublicLinks?: Record<string, string>;
   onProjectPatch?: (projectId: string, patch: Partial<Project>) => void;
+  /** Wywoływane po odświeżeniu ustaleń (realtime / fetch) — np. publiczny dashboard klienta. */
+  onAgreementsUpdated?: (agreements: ProjectClientAgreement[]) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<ClientDashboardTab>("overview");
+  const [activeTab, setActiveTab] = useState<ClientDashboardTab>("home");
   const [kanbanPublicLinks, setKanbanPublicLinks] = useState<Record<string, string>>({});
 
   const storeAgreements = useProjectAgreementStore(
     (state) => state.byProject[selectedProjectId] ?? EMPTY_AGREEMENTS,
   );
   const ensureAgreements = useProjectAgreementStore((state) => state.ensureAgreements);
-  const agreementSource = seedAgreements ?? storeAgreements;
+  const seedProjectAgreements = useProjectAgreementStore((state) => state.seedProjectAgreements);
+  const agreementSource =
+    storeAgreements.length > 0 ? storeAgreements : (seedAgreements ?? storeAgreements);
 
   const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? projects[0];
 
@@ -169,22 +173,44 @@ export function ClientDashboardView({
   }, [seedKanbanPublicLinks, selectedProjectId]);
 
   useEffect(() => {
-    if (seedAgreements !== undefined || !enableAgreements || !selectedProjectId) {
+    if (!enableAgreements || !selectedProjectId || seedAgreements === undefined) {
+      return;
+    }
+    seedProjectAgreements(selectedProjectId, seedAgreements);
+  }, [enableAgreements, seedAgreements, seedProjectAgreements, selectedProjectId]);
+
+  useEffect(() => {
+    if (!enableAgreements || !selectedProjectId) {
       return;
     }
     void ensureAgreements(selectedProjectId);
-  }, [enableAgreements, ensureAgreements, seedAgreements, selectedProjectId]);
+  }, [enableAgreements, ensureAgreements, selectedProjectId]);
+
+  const refreshAgreementsFromServer = useCallback(() => {
+    if (!enableAgreements || !selectedProjectId) {
+      return;
+    }
+    void ensureAgreements(selectedProjectId, { force: true });
+  }, [enableAgreements, ensureAgreements, selectedProjectId]);
+
+  useProjectAgreementsRealtime(
+    enableAgreements ? selectedProjectId : undefined,
+    refreshAgreementsFromServer,
+  );
+
+  useEffect(() => {
+    if (!onAgreementsUpdated || storeAgreements.length === 0) {
+      return;
+    }
+    onAgreementsUpdated(storeAgreements);
+  }, [onAgreementsUpdated, storeAgreements]);
 
   const pendingAcceptanceCount = useMemo(() => {
-    const computed = agreementSource.filter(
+    return agreementSource.filter(
       (entry) =>
         entry.projectId === selectedProjectId && entry.status === "pending_client",
     ).length;
-    if (seedAgreements !== undefined && pendingAgreementsCount > computed) {
-      return pendingAgreementsCount;
-    }
-    return computed;
-  }, [agreementSource, pendingAgreementsCount, seedAgreements, selectedProjectId]);
+  }, [agreementSource, selectedProjectId]);
 
   const pendingWarrantyCount = useMemo(() => {
     return agreementSource.filter(
@@ -207,7 +233,7 @@ export function ClientDashboardView({
     return getProcessProgress(template, process);
   }, [process, processProgress, template]);
 
-  const clientVisibleTabs = CLIENT_TAB_CONFIG.filter((tab) => {
+  const publicClientTabs = PUBLIC_CLIENT_TAB_CONFIG.filter((tab) => {
     if (tab.id === "agreements" && !enableAgreements) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
     return true;
@@ -271,14 +297,14 @@ export function ClientDashboardView({
 
   function renderDataSection(compact = false) {
     return (
-      <div className="grid gap-4">
+      <div className="grid min-w-0 gap-4">
         <ClientInfoCard client={client} />
         {renderProjectSwitcher()}
-        <div className="rounded-2xl border border-border/80 bg-surface p-4">
+        <div className="min-w-0 rounded-2xl border border-border/80 bg-surface p-4">
           <h2 className="mb-3 text-base font-semibold text-foreground">Dane projektu</h2>
           <ClientProjectSummary project={selectedProject} compact defaultExpanded={!compact} />
         </div>
-        <div className="rounded-2xl border border-border/80 bg-surface p-4">
+        <div className="min-w-0 rounded-2xl border border-border/80 bg-surface p-4">
           <h2 className="mb-3 text-base font-semibold text-foreground">Gwarancja</h2>
           <ProjectWarrantyPanel
             project={selectedProject}
@@ -301,9 +327,6 @@ export function ClientDashboardView({
             }
           />
         </div>
-        {showPublicLink && clientSpace && !readOnly ? (
-          <DashboardPublicLinkPanel space={clientSpace} />
-        ) : null}
       </div>
     );
   }
@@ -413,6 +436,25 @@ export function ClientDashboardView({
     );
   }
 
+  function renderHomeSection() {
+    return (
+      <ClientDashboardHome
+        client={client}
+        project={selectedProject}
+        projects={projects}
+        selectedProjectId={selectedProjectId}
+        onProjectChange={onProjectChange}
+        progress={progress}
+        agreements={agreementSource}
+        pendingAgreementsCount={pendingOtherAgreementsCount}
+        pendingWarrantyCount={pendingWarrantyCount}
+        onOpenTab={(tab) => setActiveTab(tab)}
+        clientSpace={clientSpace}
+        showPublicLinkPanel={showPublicLink && !readOnly}
+      />
+    );
+  }
+
   function renderOverviewSection(onOpenTab?: (tab: ClientDashboardTab) => void) {
     return (
       <ClientDashboardOverview
@@ -433,7 +475,7 @@ export function ClientDashboardView({
 
   function renderAgreementsPanel() {
     return (
-      <div className="rounded-2xl border border-border/80 bg-surface p-4">
+      <div className="min-w-0 rounded-2xl border border-border/80 bg-surface p-4">
         <h2 className="mb-3 text-base font-semibold text-foreground">Ustalenia i akceptacje</h2>
         <ProjectAgreementsPanel
           projectId={selectedProject.id}
@@ -462,7 +504,7 @@ export function ClientDashboardView({
   }
 
   function tabBadgeCount(tabId: ClientDashboardTab) {
-    if (tabId === "agreements" || tabId === "overview") {
+    if (tabId === "agreements") {
       return pendingAcceptanceCount;
     }
     return 0;
@@ -540,6 +582,8 @@ export function ClientDashboardView({
 
   function renderMainTabContent(tab: ClientDashboardTab) {
     switch (tab) {
+      case "home":
+        return renderHomeSection();
       case "overview":
         return renderOverviewSection((nextTab) => setActiveTab(nextTab));
       case "process":
@@ -578,22 +622,18 @@ export function ClientDashboardView({
               ))}
             </div>
           ) : null}
-          <div className="max-xl:hidden">{renderTabBar(clientVisibleTabs, "desktop")}</div>
-          <div>
-            {activeTab === "data"
-              ? renderDataSection(true)
-              : renderMainTabContent(activeTab)}
-          </div>
+          <div className="max-xl:hidden">{renderTabBar(publicClientTabs, "desktop")}</div>
+          <div>{renderMainTabContent(activeTab)}</div>
         </div>
       ) : (
         <>
-          <div className="max-xl:hidden w-full">
-            <div className="flex w-full items-start gap-4">
-              <aside className="w-[300px] shrink-0 grow-0">{renderDataSection(false)}</aside>
-              <main className="min-w-0 w-0 flex-1 grow">
-                {renderTabBar(teamMainTabs, "desktop")}
-                {renderMainTabContent(activeTab)}
-              </main>
+          <div className="hidden w-full min-w-0 xl:block">
+            {renderTabBar(teamMainTabs, "desktop")}
+            <div className="mt-4 grid w-full gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+              <aside className="min-w-0 max-w-full self-start overflow-x-hidden">
+                {renderDataSection(false)}
+              </aside>
+              <section className="min-w-0 overflow-x-hidden">{renderMainTabContent(activeTab)}</section>
             </div>
           </div>
           <div className="xl:hidden">
@@ -622,7 +662,7 @@ export function ClientDashboardView({
       )}
 
       <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 xl:hidden">
-        {renderTabBar(readOnly ? clientVisibleTabs : teamMobileTabs, "mobile-bottom")}
+        {renderTabBar(readOnly ? publicClientTabs : teamMobileTabs, "mobile-bottom")}
       </nav>
     </div>
   );

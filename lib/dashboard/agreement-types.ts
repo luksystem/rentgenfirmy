@@ -38,6 +38,10 @@ export type ProjectClientAgreement = {
   clientResponseNote: string | null;
   proposedWarrantyEndDate: string | null;
   position: number;
+  publicToken: string;
+  publicEnabled: boolean;
+  discussionOpen: boolean;
+  activeVersionId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -51,6 +55,8 @@ export type ProjectAgreementInput = {
   proposedCostVatRate?: number | null;
   costNote?: string | null;
   proposedWarrantyEndDate?: string | null;
+  publicEnabled?: boolean;
+  approverRoles?: import("@/lib/dashboard/agreement-collaboration-types").AgreementApproverRoleInput[];
 };
 
 export const PROJECT_AGREEMENT_CATEGORY_LABELS: Record<ProjectAgreementCategory, string> = {

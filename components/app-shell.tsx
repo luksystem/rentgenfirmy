@@ -203,6 +203,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const refreshKanbanNewTaskCount = useProcessStore((state) => state.refreshKanbanNewTaskCount);
   const refreshKanbanOverdueTaskCount = useProcessStore((state) => state.refreshKanbanOverdueTaskCount);
   const refreshUnreadCount = useNotificationStore((state) => state.refreshUnreadCount);
+  const loadNotifications = useNotificationStore((state) => state.loadNotifications);
 
   const handleKanbanOverdueCountChange = useCallback((count: number) => {
     useProcessStore.setState({ kanbanOverdueTaskCount: count });
@@ -215,8 +216,9 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const handleNotificationsRefresh = useCallback(() => {
     if (profileId) {
       void refreshUnreadCount(profileId);
+      void loadNotifications(profileId);
     }
-  }, [profileId, refreshUnreadCount]);
+  }, [loadNotifications, profileId, refreshUnreadCount]);
 
   useEffect(() => {
     void refreshKanbanOverdueTaskCount();

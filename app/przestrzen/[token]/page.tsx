@@ -82,7 +82,6 @@ export default function PublicDashboardPage() {
     PublicDashboardPayload["specificationItems"]
   >([]);
   const [content, setContent] = useState<ProjectDashboardContent[]>([]);
-  const [pendingAgreementsCount, setPendingAgreementsCount] = useState(0);
   const [kanbanPublicLinks, setKanbanPublicLinks] = useState<Record<string, string>>({});
   const [features, setFeatures] = useState({ agreements: false, specification: false, content: false });
   const [access, setAccess] = useState<DashboardPublicAccessInfo>(DEFAULT_ACCESS);
@@ -114,7 +113,6 @@ export default function PublicDashboardPage() {
     setAgreements(payload.agreements);
     setSpecificationItems(payload.specificationItems);
     setContent(payload.content);
-    setPendingAgreementsCount(payload.pendingAgreementsCount);
     setKanbanPublicLinks(payload.kanbanPublicLinks ?? {});
     setFeatures(payload.features);
     setSelectedProjectId(payload.initialProjectId);
@@ -322,7 +320,6 @@ export default function PublicDashboardPage() {
           seedAgreements={features.agreements ? agreements : undefined}
           seedSpecificationItems={features.specification ? specificationItems : undefined}
           seedContent={features.content ? content : undefined}
-          pendingAgreementsCount={pendingAgreementsCount}
           seedKanbanPublicLinks={kanbanPublicLinks}
           showPublicLink={false}
           readOnly
@@ -334,6 +331,9 @@ export default function PublicDashboardPage() {
             setProjects((current) =>
               current.map((entry) => (entry.id === projectId ? { ...entry, ...patch } : entry)),
             );
+          }}
+          onAgreementsUpdated={(updated) => {
+            setAgreements(updated);
           }}
         />
       </div>

@@ -182,6 +182,10 @@ export type ProjectClientAgreementRow = {
   client_response_note: string | null;
   proposed_warranty_end_date: string | null;
   position: number;
+  public_token: string;
+  public_enabled: boolean;
+  discussion_open: boolean;
+  active_version_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -205,11 +209,61 @@ export type ProjectClientAgreementInsert = {
   client_response_note?: string | null;
   proposed_warranty_end_date?: string | null;
   position?: number;
+  public_token?: string;
+  public_enabled?: boolean;
+  discussion_open?: boolean;
+  active_version_id?: string | null;
   created_at?: string;
   updated_at?: string;
 };
 
 export type ProjectClientAgreementUpdate = Partial<ProjectClientAgreementInsert>;
+
+export type ProjectAgreementApproverRoleRow = {
+  id: string;
+  agreement_id: string;
+  label: string;
+  position: number;
+  is_required: boolean;
+  is_client_role: boolean;
+  created_at: string;
+};
+
+export type ProjectAgreementCommentRow = {
+  id: string;
+  agreement_id: string;
+  author_name: string;
+  author_source: string;
+  author_role_label: string | null;
+  body: string;
+  created_at: string;
+};
+
+export type ProjectAgreementVersionRow = {
+  id: string;
+  agreement_id: string;
+  version_number: number;
+  title: string;
+  body: string;
+  category: string;
+  proposed_cost_net: number | string | null;
+  proposed_cost_gross: number | string | null;
+  proposed_cost_vat_rate: number | null;
+  cost_note: string | null;
+  proposed_warranty_end_date: string | null;
+  published_by_name: string;
+  published_at: string;
+};
+
+export type ProjectAgreementApprovalRow = {
+  id: string;
+  version_id: string;
+  role_id: string;
+  status: string;
+  responded_by_name: string | null;
+  response_note: string | null;
+  responded_at: string | null;
+};
 
 export type ProjectDashboardContentRow = {
   id: string;
@@ -506,6 +560,37 @@ export type Database = {
         Row: ProjectClientAgreementRow;
         Insert: ProjectClientAgreementInsert;
         Update: ProjectClientAgreementUpdate;
+        Relationships: [];
+      };
+      project_agreement_approver_roles: {
+        Row: ProjectAgreementApproverRoleRow;
+        Insert: Partial<ProjectAgreementApproverRoleRow> &
+          Pick<ProjectAgreementApproverRoleRow, "agreement_id" | "label">;
+        Update: Partial<ProjectAgreementApproverRoleRow>;
+        Relationships: [];
+      };
+      project_agreement_comments: {
+        Row: ProjectAgreementCommentRow;
+        Insert: Partial<ProjectAgreementCommentRow> &
+          Pick<ProjectAgreementCommentRow, "agreement_id" | "author_name" | "author_source" | "body">;
+        Update: Partial<ProjectAgreementCommentRow>;
+        Relationships: [];
+      };
+      project_agreement_versions: {
+        Row: ProjectAgreementVersionRow;
+        Insert: Partial<ProjectAgreementVersionRow> &
+          Pick<
+            ProjectAgreementVersionRow,
+            "agreement_id" | "version_number" | "title" | "published_by_name"
+          >;
+        Update: Partial<ProjectAgreementVersionRow>;
+        Relationships: [];
+      };
+      project_agreement_approvals: {
+        Row: ProjectAgreementApprovalRow;
+        Insert: Partial<ProjectAgreementApprovalRow> &
+          Pick<ProjectAgreementApprovalRow, "version_id" | "role_id">;
+        Update: Partial<ProjectAgreementApprovalRow>;
         Relationships: [];
       };
       project_dashboard_content: {

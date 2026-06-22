@@ -110,3 +110,36 @@ select option {
   background: var(--info-panel);
 }
 
+.smart-home-marker-wrap {
+  background: transparent;
+  border: 0;
+}
+
+.smart-home-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+}
+
+.leaflet-container {
+  font: inherit;
+  background: #0f172a;
+}
+
+.client-map-popup .leaflet-popup-content-wrapper,
+.client-map-popup .leaflet-popup-tip {
+  background: #fafafa;
+  color: #18181b;
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.28);
+}
+
+.client-map-popup .leaflet-popup-content {
+  margin: 12px 14px;
+}
+
+.client-map-popup .leaflet-popup-close-button {
+  color: #64748b;
+}
+

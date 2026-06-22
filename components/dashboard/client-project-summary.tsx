@@ -16,10 +16,13 @@ export function ClientProjectSummary({
   project,
   defaultExpanded = false,
   compact = false,
+  excludeWarrantyFields = false,
 }: {
   project: Project;
   defaultExpanded?: boolean;
   compact?: boolean;
+  /** Ukrywa pola gwarancji — gdy status gwarancji jest w osobnej sekcji (np. HOME). */
+  excludeWarrantyFields?: boolean;
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded || !compact);
   const warrantyStatus = getWarrantyStatus(project);
@@ -28,10 +31,14 @@ export function ClientProjectSummary({
     { label: "Projekt", value: project.name },
     { label: "Typ", value: project.type },
     { label: "Czas trwania", value: formatProjectDuration(project) },
-    { label: "Przekazanie systemu", value: formatSystemHandoverDate(project) },
-    { label: "Czas gwarancji", value: formatWarrantyDurationMonths(project.warrantyDurationMonths) },
-    { label: "Status gwarancji", value: warrantyStatus.label },
-    { label: "Koniec gwarancji", value: formatWarrantyEndDate(project) },
+    ...(excludeWarrantyFields
+      ? []
+      : [
+          { label: "Przekazanie systemu", value: formatSystemHandoverDate(project) },
+          { label: "Czas gwarancji", value: formatWarrantyDurationMonths(project.warrantyDurationMonths) },
+          { label: "Status gwarancji", value: warrantyStatus.label },
+          { label: "Koniec gwarancji", value: formatWarrantyEndDate(project) },
+        ]),
     { label: "Etap", value: project.stage },
     { label: "Status", value: project.flowStatus },
     { label: "Priorytet", value: project.priority },
@@ -50,7 +57,8 @@ export function ClientProjectSummary({
             <p className="text-xs uppercase tracking-wide text-muted">Projekt</p>
             <p className="truncate font-medium text-foreground">{project.name}</p>
             <p className="text-xs text-muted">
-              {formatProjectDuration(project)} · gwarancja: {warrantyStatus.label}
+              {formatProjectDuration(project)}
+              {!excludeWarrantyFields ? ` · gwarancja: ${warrantyStatus.label}` : ""}
             </p>
           </div>
           <ChevronDown

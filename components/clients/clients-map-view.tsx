@@ -1,0 +1,296 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { LayoutDashboard, LayoutGrid, Loader2, MapPin, FolderKanban } from "lucide-react";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import type { Client } from "@/lib/service/types";
+import type { Project } from "@/lib/types";
+import { clientHasGeocodableAddress, formatClientAddress } from "@/lib/clients/client-location";
+import { geocodeClient, isClientGeocodeCached } from "@/lib/clients/geocode-client";
+import { getSmartHomeMarkerIcon } from "@/lib/clients/smart-home-marker-icon";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useAppStore } from "@/store/app-store";
+import "leaflet/dist/leaflet.css";
+
+type PlacedClient = {
+  client: Client;
+  lat: number;
+  lng: number;
+  label: string;
+};
+
+const POLAND_CENTER: [number, number] = [52.07, 19.48];
+const DEFAULT_ZOOM = 6;
+
+function MapBounds({ points }: { points: Array<[number, number]> }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!points.length) {
+      map.setView(POLAND_CENTER, DEFAULT_ZOOM);
+      return;
+    }
+    if (points.length === 1) {
+      map.setView(points[0], 12);
+      return;
+    }
+    map.fitBounds(points, { padding: [48, 48], maxZoom: 12 });
+  }, [map, points]);
+
+  return null;
+}
+
+function ClientMapPopup({
+  client,
+  projects,
+  address,
+}: {
+  client: Client;
+  projects: Project[];
+  address: string;
+}) {
+  return (
+    <div className="min-w-[220px] max-w-[280px] text-sm text-foreground">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600">Smart Home / BMS</p>
+      <p className="mt-1 text-base font-semibold leading-snug">{client.fullName}</p>
+      {address ? <p className="mt-1 text-xs leading-relaxed text-muted">{address}</p> : null}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button type="button" size="sm" className="h-8" asChild>
+          <Link href={`/przestrzenie/klient/${client.id}`}>
+            <LayoutDashboard className="mr-1.5 h-3.5 w-3.5" />
+            Dashboard
+          </Link>
+        </Button>
+        <Button type="button" size="sm" variant="secondary" className="h-8" asChild>
+          <Link href={`/tablice-wdrozen/${client.id}`}>
+            <LayoutGrid className="mr-1.5 h-3.5 w-3.5" />
+            Tablice
+          </Link>
+        </Button>
+      </div>
+
+      <div className="mt-3 border-t border-border/70 pt-3">
+        <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+          <FolderKanban className="h-3.5 w-3.5" />
+          Projekty klienta
+        </p>
+        {projects.length === 0 ? (
+          <p className="text-xs text-muted">Brak przypisanych projektów.</p>
+        ) : (
+          <ul className="grid gap-1.5">
+            {projects.map((project) => (
+              <li key={project.id}>
+                <Link
+                  href={`/przestrzenie/klient/${client.id}?project=${project.id}`}
+                  className="block rounded-lg border border-border/70 bg-surface-muted/40 px-2.5 py-2 transition hover:border-accent/40 hover:bg-accent/5"
+                >
+                  <p className="font-medium leading-snug">{project.name}</p>
+                  <p className="mt-0.5 text-[11px] text-muted">
+                    {project.type} · {project.stage}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function ClientsMapView() {
+  const clients = useAppStore((state) => state.clients);
+  const projects = useAppStore((state) => state.projects);
+  const [placedClients, setPlacedClients] = useState<PlacedClient[]>([]);
+  const [activeClientId, setActiveClientId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [error, setError] = useState<string | null>(null);
+
+  const geocodableClients = useMemo(
+    () => clients.filter((client) => clientHasGeocodableAddress(client)),
+    [clients],
+  );
+
+  const missingAddressClients = useMemo(
+    () => clients.filter((client) => !clientHasGeocodableAddress(client)),
+    [clients],
+  );
+
+  const projectsByClient = useMemo(() => {
+    const map = new Map<string, Project[]>();
+    for (const project of projects) {
+      if (!project.clientId) {
+        continue;
+      }
+      const list = map.get(project.clientId) ?? [];
+      list.push(project);
+      map.set(project.clientId, list);
+    }
+    for (const list of map.values()) {
+      list.sort((left, right) => left.name.localeCompare(right.name, "pl"));
+    }
+    return map;
+  }, [projects]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      setLoading(true);
+      setError(null);
+      setPlacedClients([]);
+      setProgress({ done: 0, total: geocodableClients.length });
+
+      const placed: PlacedClient[] = [];
+
+      for (let index = 0; index < geocodableClients.length; index += 1) {
+        const client = geocodableClients[index];
+        const cachedBefore = isClientGeocodeCached(client);
+        try {
+          const coords = await geocodeClient(client);
+          if (coords && !cancelled) {
+            placed.push({
+              client,
+              lat: coords.lat,
+              lng: coords.lng,
+              label: coords.label,
+            });
+            setPlacedClients([...placed]);
+          }
+        } catch {
+          if (!cancelled) {
+            setError("Część adresów nie została zlokalizowana na mapie.");
+          }
+        }
+
+        if (!cancelled) {
+          setProgress({ done: index + 1, total: geocodableClients.length });
+        }
+
+        if (!cachedBefore && index < geocodableClients.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1100));
+        }
+      }
+
+      if (!cancelled) {
+        setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [geocodableClients]);
+
+  const mapPoints = useMemo(
+    () => placedClients.map((entry) => [entry.lat, entry.lng] as [number, number]),
+    [placedClients],
+  );
+
+  const notFoundClients = useMemo(() => {
+    const placedIds = new Set(placedClients.map((entry) => entry.client.id));
+    return geocodableClients.filter((client) => !placedIds.has(client.id));
+  }, [geocodableClients, placedClients]);
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 p-4">
+        <div>
+          <p className="font-semibold text-foreground">Mapa instalacji Smart Home</p>
+          <p className="text-sm text-muted">
+            {placedClients.length} lokalizacji na mapie · {clients.length} klientów w bazie
+          </p>
+        </div>
+        {loading ? (
+          <p className="flex items-center gap-2 text-xs text-muted">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Lokalizowanie adresów {progress.done}/{progress.total}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="relative h-[min(70vh,640px)] min-h-[420px] w-full">
+        <MapContainer
+          center={POLAND_CENTER}
+          zoom={DEFAULT_ZOOM}
+          className="h-full w-full"
+          scrollWheelZoom
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <MapBounds points={mapPoints} />
+          {placedClients.map((entry) => (
+            <Marker
+              key={entry.client.id}
+              position={[entry.lat, entry.lng]}
+              icon={getSmartHomeMarkerIcon(activeClientId === entry.client.id)}
+              eventHandlers={{
+                click: () => setActiveClientId(entry.client.id),
+                popupclose: () =>
+                  setActiveClientId((current) => (current === entry.client.id ? null : current)),
+              }}
+            >
+              <Popup className="client-map-popup" minWidth={240}>
+                <ClientMapPopup
+                  client={entry.client}
+                  projects={projectsByClient.get(entry.client.id) ?? []}
+                  address={formatClientAddress(entry.client) || entry.label}
+                />
+              </Popup>
+            </Marker>
+          ))}
+        </MapContainer>
+
+        {loading && placedClients.length === 0 ? (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/55 backdrop-blur-[1px]">
+            <p className="rounded-xl border border-border/80 bg-surface px-4 py-3 text-sm text-muted shadow-card">
+              Przygotowywanie mapy klientów…
+            </p>
+          </div>
+        ) : null}
+      </div>
+
+      {error ? <p className="border-t border-border/70 px-4 py-3 text-sm text-amber-300">{error}</p> : null}
+
+      {(notFoundClients.length > 0 || missingAddressClients.length > 0) && !loading ? (
+        <div className="grid gap-3 border-t border-border/70 p-4 md:grid-cols-2">
+          {notFoundClients.length > 0 ? (
+            <div className="rounded-xl border border-border/70 bg-surface-muted/20 p-3">
+              <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                <MapPin className="h-4 w-4 text-muted" />
+                Nie znaleziono na mapie
+              </p>
+              <ul className="mt-2 grid gap-1 text-xs text-muted">
+                {notFoundClients.map((client) => (
+                  <li key={client.id}>
+                    {client.fullName} — {formatClientAddress(client) || client.location || "brak adresu"}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {missingAddressClients.length > 0 ? (
+            <div className="rounded-xl border border-border/70 bg-surface-muted/20 p-3">
+              <p className="text-sm font-medium text-foreground">Bez adresu do mapy</p>
+              <ul className="mt-2 grid gap-1 text-xs text-muted">
+                {missingAddressClients.map((client) => (
+                  <li key={client.id}>
+                    <Link href={`/przestrzenie/klient/${client.id}`} className="hover:text-foreground">
+                      {client.fullName}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </Card>
+  );
+}

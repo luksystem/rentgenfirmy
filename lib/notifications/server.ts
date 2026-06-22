@@ -1,5 +1,10 @@
 import type { MentionCandidate, UserNotificationKind } from "@/lib/notifications/types";
 import { resolveMentionTargets } from "@/lib/notifications/mentions";
+import {
+  NOTIFICATION_BODY_MAX_LENGTH,
+  buildKanbanNewActivityRows,
+} from "@/lib/notifications/kanban-activity";
+import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export async function createKanbanMentionNotificationsServer(input: {
@@ -20,7 +25,7 @@ export async function createKanbanMentionNotificationsServer(input: {
   }
 
   const supabase = getSupabaseAdmin();
-  const excerpt = input.body.trim().slice(0, 180);
+  const excerpt = input.body.trim().slice(0, NOTIFICATION_BODY_MAX_LENGTH);
   const rows = targets.map((target) => ({
     id: crypto.randomUUID(),
     profile_id: target.profileId!,
@@ -32,6 +37,44 @@ export async function createKanbanMentionNotificationsServer(input: {
     created_at: new Date().toISOString(),
   }));
 
+  const { error } = await supabase.from("user_notifications").insert(rows);
+  if (error && !error.message.toLowerCase().includes("does not exist")) {
+    throw new Error(error.message);
+  }
+}
+
+export async function createKanbanNewActivityNotificationsServer(input: {
+  sourceId: string;
+  taskTitle: string;
+  authorName: string;
+  body: string;
+  linkUrl?: string;
+  excludeProfileIds?: string[];
+  teamProfileIds?: string[];
+}) {
+  const teamProfileIds =
+    input.teamProfileIds ??
+    (await fetchTeamProfilesServer().catch(() => [])).map((profile) => profile.id);
+
+  if (!teamProfileIds.length) {
+    return;
+  }
+
+  const rows = buildKanbanNewActivityRows({
+    teamProfileIds,
+    sourceId: input.sourceId,
+    taskTitle: input.taskTitle,
+    authorName: input.authorName,
+    body: input.body,
+    linkUrl: input.linkUrl,
+    excludeProfileIds: input.excludeProfileIds,
+  });
+
+  if (!rows.length) {
+    return;
+  }
+
+  const supabase = getSupabaseAdmin();
   const { error } = await supabase.from("user_notifications").insert(rows);
   if (error && !error.message.toLowerCase().includes("does not exist")) {
     throw new Error(error.message);

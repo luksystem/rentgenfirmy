@@ -12,7 +12,8 @@ import type {
 } from "@/lib/process/kanban-types";
 import { isKanbanReactionEmoji } from "@/lib/process/kanban-reactions";
 import type { MentionCandidate } from "@/lib/notifications/types";
-import { createKanbanMentionNotifications } from "@/lib/notifications/repository";
+import { createKanbanMentionNotifications, createKanbanNewActivityNotifications, resolveKanbanPublicLinkForColumn, resolveKanbanPublicLinkForTask } from "@/lib/notifications/repository";
+import { resolveMentionTargets } from "@/lib/notifications/mentions";
 import { getSupabase } from "@/lib/supabase/client";
 import { fetchAttachmentsForTaskIds } from "@/lib/supabase/kanban-attachments-repository";
 
@@ -693,7 +694,20 @@ export async function createKanbanTask(input: {
     createdAt: now,
   });
 
-  return rowToTask(data as TaskRow);
+  const task = rowToTask(data as TaskRow);
+
+  if (input.authorSide === "client") {
+    const linkUrl = await resolveKanbanPublicLinkForColumn(supabase, input.columnId);
+    await createKanbanNewActivityNotifications({
+      sourceId: task.id,
+      taskTitle: title,
+      authorName: input.authorName,
+      body: input.description?.trim() || title,
+      linkUrl,
+    }).catch(() => undefined);
+  }
+
+  return task;
 }
 
 export async function moveKanbanTask(taskId: string, columnId: string, position: number) {
@@ -837,6 +851,26 @@ export async function addKanbanComment(input: {
   }
 
   const comment = rowToComment(data as CommentRow);
+
+  if (input.authorSide === "client") {
+    const mentionTargets = input.mentionCandidates?.length
+      ? resolveMentionTargets(body, input.mentionCandidates)
+      : [];
+    const excludeProfileIds = mentionTargets
+      .map((target) => target.profileId)
+      .filter((profileId): profileId is string => Boolean(profileId));
+    const linkUrl =
+      input.linkUrl ?? (await resolveKanbanPublicLinkForTask(supabase, input.taskId));
+
+    await createKanbanNewActivityNotifications({
+      sourceId: comment.id,
+      taskTitle: input.taskTitle ?? "Zgłoszenie",
+      authorName: input.authorName,
+      body,
+      linkUrl,
+      excludeProfileIds,
+    }).catch(() => undefined);
+  }
 
   if (input.mentionCandidates?.length) {
     await createKanbanMentionNotifications({

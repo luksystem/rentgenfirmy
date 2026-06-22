@@ -1,0 +1,383 @@
+"use client";
+
+import { useState } from "react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ClipboardCheck,
+  GitBranch,
+  Shield,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ClientInfoCard } from "@/components/dashboard/client-info-card";
+import { ClientProjectSummary } from "@/components/dashboard/client-project-summary";
+import { DashboardPublicLinkPanel } from "@/components/dashboard/dashboard-public-link-panel";
+import {
+  PROJECT_AGREEMENT_CATEGORY_LABELS,
+  formatAgreementCost,
+  type ProjectClientAgreement,
+} from "@/lib/dashboard/agreement-types";
+import {
+  formatSystemHandoverDate,
+  formatWarrantyDurationMonths,
+  formatWarrantyEndDate,
+  getWarrantyStatus,
+  hasPendingWarrantyExtension,
+} from "@/lib/project/warranty";
+import type { Client } from "@/lib/service/types";
+import type { DashboardSpace } from "@/lib/dashboard/types";
+import type { Project } from "@/lib/types";
+import { cn } from "@/lib/utils";
+
+const warrantyToneClass: Record<ReturnType<typeof getWarrantyStatus>["tone"], string> = {
+  neutral: "border-border/80 bg-surface-muted/40 text-muted",
+  warning: "border-amber-500/40 bg-amber-500/10 text-amber-200",
+  success: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
+  danger: "border-rose-500/40 bg-rose-500/10 text-rose-200",
+};
+
+const warrantyCardToneClass: Record<ReturnType<typeof getWarrantyStatus>["tone"], string> = {
+  neutral: "border-border/80 bg-surface-muted/20",
+  warning: "border-amber-500/35 bg-amber-500/8",
+  success: "border-emerald-500/35 bg-emerald-500/8",
+  danger: "border-rose-500/35 bg-rose-500/8",
+};
+
+function ProcessProgressCard({
+  progress,
+  onOpenProcess,
+}: {
+  progress: { percent: number; completed: number; total: number };
+  onOpenProcess?: () => void;
+}) {
+  const radius = 46;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (progress.percent / 100) * circumference;
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-accent/25 bg-gradient-to-br from-accent/12 via-surface to-surface p-4">
+      <div className="flex items-center gap-4">
+        <div className="relative h-24 w-24 shrink-0">
+          <svg className="h-full w-full -rotate-90" viewBox="0 0 104 104" aria-hidden>
+            <circle
+              cx="52"
+              cy="52"
+              r={radius}
+              fill="none"
+              stroke="currentColor"
+              className="text-surface-muted/80"
+              strokeWidth="8"
+            />
+            <circle
+              cx="52"
+              cy="52"
+              r={radius}
+              fill="none"
+              stroke="currentColor"
+              className="text-accent transition-all duration-500"
+              strokeWidth="8"
+              strokeDasharray={circumference}
+              strokeDashoffset={offset}
+              strokeLinecap="round"
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-xl font-bold text-foreground">{progress.percent}%</span>
+          </div>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+            <GitBranch className="h-3.5 w-3.5 text-accent" />
+            Proces wdrożenia
+          </p>
+          <p className="mt-1 text-sm text-foreground">
+            <span className="font-semibold">{progress.completed}</span>
+            <span className="text-muted"> / {progress.total} elementów ukończonych</span>
+          </p>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-muted">
+            <div
+              className="h-full rounded-full bg-accent transition-all"
+              style={{ width: `${progress.percent}%` }}
+            />
+          </div>
+          {onOpenProcess ? (
+            <Button type="button" size="sm" variant="outline" className="mt-3" onClick={onOpenProcess}>
+              Pełny proces
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WarrantyHomeCard({
+  project,
+  agreements,
+}: {
+  project: Project;
+  agreements: ProjectClientAgreement[];
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const warrantyStatus = getWarrantyStatus(project, {
+    hasPendingExtension: hasPendingWarrantyExtension(agreements),
+  });
+
+  return (
+    <div
+      className={cn(
+        "overflow-hidden rounded-2xl border transition",
+        warrantyCardToneClass[warrantyStatus.tone],
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        className="flex w-full items-center gap-3 px-4 py-3.5 text-left"
+      >
+        <div
+          className={cn(
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border",
+            warrantyToneClass[warrantyStatus.tone],
+          )}
+        >
+          <Shield className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Gwarancja</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <span
+              className={cn(
+                "inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                warrantyToneClass[warrantyStatus.tone],
+              )}
+            >
+              {warrantyStatus.label}
+            </span>
+            <span className="text-sm text-muted">Koniec: {formatWarrantyEndDate(project)}</span>
+          </div>
+        </div>
+        <ChevronDown
+          className={cn("h-4 w-4 shrink-0 text-muted transition", expanded && "rotate-180")}
+        />
+      </button>
+      {expanded ? (
+        <div className="grid gap-2 border-t border-border/50 px-4 py-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-border/60 bg-surface/60 px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-muted">Przekazanie systemu</p>
+            <p className="mt-0.5 text-sm font-medium text-foreground">
+              {formatSystemHandoverDate(project)}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border/60 bg-surface/60 px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-muted">Czas gwarancji</p>
+            <p className="mt-0.5 text-sm font-medium text-foreground">
+              {formatWarrantyDurationMonths(project.warrantyDurationMonths)}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border/60 bg-surface/60 px-3 py-2 sm:col-span-2">
+            <p className="text-[10px] uppercase tracking-wide text-muted">Data zakończenia</p>
+            <p className="mt-0.5 text-sm font-medium text-foreground">
+              {formatWarrantyEndDate(project)}
+            </p>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function ClientDashboardHome({
+  client,
+  project,
+  projects,
+  selectedProjectId,
+  onProjectChange,
+  progress,
+  agreements,
+  pendingAgreementsCount,
+  pendingWarrantyCount,
+  onOpenTab,
+  clientSpace = null,
+  showPublicLinkPanel = false,
+}: {
+  client: Client;
+  project: Project;
+  projects: Project[];
+  selectedProjectId: string;
+  onProjectChange?: (projectId: string) => void;
+  progress: { percent: number; completed: number; total: number } | null;
+  agreements: ProjectClientAgreement[];
+  pendingAgreementsCount: number;
+  pendingWarrantyCount: number;
+  onOpenTab?: (tab: "agreements" | "process") => void;
+  clientSpace?: DashboardSpace | null;
+  /** Panel włączania linku publicznego dashboardu — tylko widok zespołu. */
+  showPublicLinkPanel?: boolean;
+}) {
+  const pendingAgreements = agreements.filter(
+    (entry) => entry.status === "pending_client" && entry.category !== "warranty",
+  );
+  const pendingWarranty = agreements.filter(
+    (entry) => entry.status === "pending_client" && entry.category === "warranty",
+  );
+  const totalPending = pendingAgreementsCount + pendingWarrantyCount;
+
+  return (
+    <div className="grid gap-4">
+      {totalPending > 0 ? (
+        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-amber-100">Masz propozycje do zaakceptowania</p>
+              <p className="mt-1 text-sm text-amber-200/90">
+                {pendingAgreementsCount > 0 ? `${pendingAgreementsCount} ustaleń` : null}
+                {pendingAgreementsCount > 0 && pendingWarrantyCount > 0 ? " · " : null}
+                {pendingWarrantyCount > 0
+                  ? `${pendingWarrantyCount} propozycji gwarancji`
+                  : null}
+              </p>
+              {onOpenTab && pendingAgreementsCount > 0 ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="mt-3"
+                  onClick={() => onOpenTab("agreements")}
+                >
+                  Przejdź do ustaleń
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {pendingAgreements.length > 0 ? (
+        <div className="rounded-2xl border border-border/80 bg-surface p-4">
+          <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
+            <ClipboardCheck className="h-4 w-4 text-accent" />
+            Oczekujące ustalenia
+          </h3>
+          <div className="grid gap-2">
+            {pendingAgreements.slice(0, 5).map((entry) => (
+              <div
+                key={entry.id}
+                className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5"
+              >
+                <p className="font-medium text-foreground">{entry.title}</p>
+                <p className="mt-0.5 text-xs text-muted">
+                  {PROJECT_AGREEMENT_CATEGORY_LABELS[entry.category]}
+                  {formatAgreementCost(entry) ? ` · ${formatAgreementCost(entry)}` : ""}
+                </p>
+              </div>
+            ))}
+          </div>
+          {onOpenTab ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="mt-3"
+              onClick={() => onOpenTab("agreements")}
+            >
+              Wszystkie ustalenia
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {pendingWarranty.length > 0 ? (
+        <div className="rounded-2xl border border-border/80 bg-surface p-4">
+          <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
+            <Shield className="h-4 w-4 text-accent" />
+            Propozycje przedłużenia gwarancji
+          </h3>
+          <div className="grid gap-2">
+            {pendingWarranty.map((entry) => (
+              <div
+                key={entry.id}
+                className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5"
+              >
+                <p className="font-medium text-foreground">{entry.title}</p>
+                <p className="mt-0.5 text-xs text-muted">
+                  {formatAgreementCost(entry) ?? "Bez dodatkowego kosztu"}
+                </p>
+              </div>
+            ))}
+          </div>
+          {onOpenTab ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="mt-3"
+              onClick={() => onOpenTab("agreements")}
+            >
+              Akceptuj w ustaniach
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {showPublicLinkPanel && clientSpace ? (
+        <DashboardPublicLinkPanel space={clientSpace} />
+      ) : showPublicLinkPanel && !clientSpace ? (
+        <div className="rounded-2xl border border-border/80 bg-surface-muted/20 p-4 text-sm text-muted">
+          Link publiczny będzie dostępny po utworzeniu przestrzeni dashboardu dla tego projektu.
+        </div>
+      ) : null}
+
+      <ClientInfoCard client={client} />
+
+      {projects.length > 1 && onProjectChange ? (
+        <div className="rounded-2xl border border-border/80 bg-surface p-4">
+          <h2 className="mb-3 text-base font-semibold text-foreground">Projekty</h2>
+          <div className="grid gap-2">
+            {projects.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                onClick={() => onProjectChange(entry.id)}
+                className={cn(
+                  "rounded-xl border px-3 py-2 text-left text-sm transition",
+                  entry.id === selectedProjectId
+                    ? "border-accent/50 bg-accent/10 text-foreground"
+                    : "border-border/70 bg-surface-muted/20 text-muted hover:border-accent/30 hover:text-foreground",
+                )}
+              >
+                <p className="font-medium">{entry.name}</p>
+                <p className="text-xs text-muted">
+                  {entry.type} · {entry.stage}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="rounded-2xl border border-border/80 bg-surface p-4">
+        <h2 className="mb-3 text-base font-semibold text-foreground">Dane projektu</h2>
+        <ClientProjectSummary project={project} compact excludeWarrantyFields />
+      </div>
+
+      <WarrantyHomeCard project={project} agreements={agreements} />
+
+      {progress ? (
+        <ProcessProgressCard
+          progress={progress}
+          onOpenProcess={onOpenTab ? () => onOpenTab("process") : undefined}
+        />
+      ) : (
+        <div className="rounded-2xl border border-border/80 bg-surface p-4">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+            <GitBranch className="h-3.5 w-3.5 text-accent" />
+            Proces wdrożenia
+          </p>
+          <p className="mt-2 text-sm text-muted">Proces nie został jeszcze uruchomiony.</p>
+        </div>
+      )}
+    </div>
+  );
+}

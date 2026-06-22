@@ -11,7 +11,7 @@ export function ClientInfoCard({ client }: { client: Client }) {
   const mapsUrl = getClientGoogleMapsUrl(client);
 
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Dane klienta</CardTitle>
       </CardHeader>
