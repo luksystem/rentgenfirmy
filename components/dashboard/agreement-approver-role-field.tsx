@@ -29,7 +29,7 @@ export function AgreementApproverRoleField({
   disabled?: boolean;
   onChange: (patch: Partial<AgreementApproverRoleInput>) => void;
 }) {
-  if (role.isClientRole) {
+  if (role.isClientRole || role.isTeamRole) {
     return <Input value={role.label} disabled className="min-w-0 flex-1" />;
   }
 

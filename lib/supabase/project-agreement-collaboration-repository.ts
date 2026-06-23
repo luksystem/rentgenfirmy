@@ -6,6 +6,11 @@ import type {
   AgreementCommentAuthorSource,
   AgreementVersion,
 } from "@/lib/dashboard/agreement-collaboration-types";
+import {
+  TEAM_APPROVER_ROLE_LABEL,
+  buildAgreementApprovalProgressHint,
+  isTeamApproverRole,
+} from "@/lib/dashboard/agreement-collaboration-types";
 import type {
   ProjectAgreementCategory,
   ProjectAgreementInput,
@@ -95,6 +100,7 @@ function rowToRole(row: {
   position: number;
   is_required: boolean;
   is_client_role: boolean;
+  is_team_role?: boolean;
   created_at: string;
 }): AgreementApproverRole {
   return {
@@ -104,6 +110,11 @@ function rowToRole(row: {
     position: row.position,
     isRequired: row.is_required,
     isClientRole: row.is_client_role,
+    isTeamRole: row.is_team_role ?? isTeamApproverRole({
+      label: row.label,
+      isClientRole: row.is_client_role,
+      isTeamRole: row.is_team_role ?? false,
+    }),
     createdAt: row.created_at,
   };
 }
@@ -184,7 +195,10 @@ function normalizeRolesInput(roles: AgreementApproverRoleInput[] | undefined) {
   const source =
     roles?.length ?
       roles
-    : [{ label: "Klient", isRequired: true, isClientRole: true }];
+    : [
+        { label: TEAM_APPROVER_ROLE_LABEL, isRequired: true, isTeamRole: true },
+        { label: "Klient", isRequired: true, isClientRole: true },
+      ];
 
   const normalized = source
     .map((role, index) => ({
@@ -192,19 +206,43 @@ function normalizeRolesInput(roles: AgreementApproverRoleInput[] | undefined) {
       position: index,
       is_required: role.isRequired ?? true,
       is_client_role: role.isClientRole ?? false,
+      is_team_role:
+        role.isTeamRole ??
+        (!role.isClientRole && role.label.trim() === TEAM_APPROVER_ROLE_LABEL),
     }))
     .filter((role) => role.label.length > 0);
 
-  if (!normalized.some((role) => role.is_client_role)) {
+  if (!normalized.some((role) => role.is_team_role)) {
     normalized.unshift({
-      label: "Klient",
+      label: TEAM_APPROVER_ROLE_LABEL,
       position: 0,
       is_required: true,
-      is_client_role: true,
+      is_client_role: false,
+      is_team_role: true,
     });
   }
 
-  return normalized.map((role, index) => ({ ...role, position: index }));
+  if (!normalized.some((role) => role.is_client_role)) {
+    normalized.push({
+      label: "Klient",
+      position: normalized.length,
+      is_required: true,
+      is_client_role: true,
+      is_team_role: false,
+    });
+  }
+
+  return normalized
+    .sort((left, right) => {
+      if (left.is_team_role !== right.is_team_role) {
+        return left.is_team_role ? -1 : 1;
+      }
+      if (left.is_client_role !== right.is_client_role) {
+        return left.is_client_role ? 1 : -1;
+      }
+      return left.position - right.position;
+    })
+    .map((role, index) => ({ ...role, position: index }));
 }
 
 async function replaceApproverRoles(agreementId: string, roles: AgreementApproverRoleInput[] | undefined) {
@@ -227,6 +265,7 @@ async function replaceApproverRoles(agreementId: string, roles: AgreementApprove
       position: role.position,
       is_required: role.is_required,
       is_client_role: role.is_client_role,
+      is_team_role: role.is_team_role,
     })),
   );
 
@@ -235,19 +274,35 @@ async function replaceApproverRoles(agreementId: string, roles: AgreementApprove
   }
 }
 
-async function createDefaultClientRole(agreementId: string) {
+async function createDefaultApproverRoles(agreementId: string) {
   const supabase = getSupabase();
-  const { error } = await supabase.from("project_agreement_approver_roles").insert({
-    agreement_id: agreementId,
-    label: "Klient",
-    position: 0,
-    is_required: true,
-    is_client_role: true,
-  });
+  const { error } = await supabase.from("project_agreement_approver_roles").insert([
+    {
+      agreement_id: agreementId,
+      label: TEAM_APPROVER_ROLE_LABEL,
+      position: 0,
+      is_required: true,
+      is_client_role: false,
+      is_team_role: true,
+    },
+    {
+      agreement_id: agreementId,
+      label: "Klient",
+      position: 1,
+      is_required: true,
+      is_client_role: true,
+      is_team_role: false,
+    },
+  ]);
 
   if (error) {
     throw new Error(error.message);
   }
+}
+
+/** @deprecated Użyj createDefaultApproverRoles */
+async function createDefaultClientRole(agreementId: string) {
+  await createDefaultApproverRoles(agreementId);
 }
 
 export async function fetchAgreementApproverRoles(agreementId: string) {
@@ -560,7 +615,7 @@ export async function publishAgreementVersion(agreementId: string, publishedByNa
   }
 
   if (!roles.length) {
-    await createDefaultClientRole(agreementId);
+    await createDefaultApproverRoles(agreementId);
   }
 
   const refreshedRoles = roles.length ? roles : await fetchAgreementApproverRoles(agreementId);
@@ -694,4 +749,12 @@ export async function saveAgreementCollaborationSettings(
   }
 }
 
-export { replaceApproverRoles, createDefaultClientRole };
+export async function fetchAgreementApprovalProgressHint(agreementId: string) {
+  const bundle = await fetchAgreementCollaboration(agreementId);
+  if (bundle.agreement.status !== "pending_client" || !bundle.activeVersion) {
+    return null;
+  }
+  return buildAgreementApprovalProgressHint(bundle.roles, bundle.approvals);
+}
+
+export { replaceApproverRoles, createDefaultApproverRoles, createDefaultClientRole };

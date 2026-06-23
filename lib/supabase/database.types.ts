@@ -226,6 +226,7 @@ export type ProjectAgreementApproverRoleRow = {
   position: number;
   is_required: boolean;
   is_client_role: boolean;
+  is_team_role: boolean;
   created_at: string;
 };
 

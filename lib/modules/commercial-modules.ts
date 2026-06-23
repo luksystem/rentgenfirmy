@@ -3,7 +3,7 @@ import { Calculator, FileText, type LucideIcon } from "lucide-react";
 export const COMMERCIAL_MODULES = {
   serviceSettlement: {
     id: "service-settlement",
-    label: "Rozliczenia serwis",
+    label: "Rozliczenia serwisu",
     shortLabel: "Rozliczenia",
     eyebrow: "Szybkie rozliczanie",
     description:

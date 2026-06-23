@@ -5,6 +5,8 @@ export type AgreementCommentAuthorSource = "team" | "client" | "external";
 
 export type AgreementApprovalStatus = "pending" | "accepted" | "rejected";
 
+export const TEAM_APPROVER_ROLE_LABEL = "Administrator";
+
 export type AgreementApproverRole = {
   id: string;
   agreementId: string;
@@ -12,6 +14,7 @@ export type AgreementApproverRole = {
   position: number;
   isRequired: boolean;
   isClientRole: boolean;
+  isTeamRole: boolean;
   createdAt: string;
 };
 
@@ -19,7 +22,53 @@ export type AgreementApproverRoleInput = {
   label: string;
   isRequired?: boolean;
   isClientRole?: boolean;
+  isTeamRole?: boolean;
 };
+
+export function isTeamApproverRole(
+  role: Pick<AgreementApproverRole, "isClientRole" | "isTeamRole" | "label">,
+): boolean {
+  return (
+    role.isTeamRole === true ||
+    (!role.isClientRole && role.label === TEAM_APPROVER_ROLE_LABEL)
+  );
+}
+
+const APPROVAL_STATUS_SHORT_LABELS: Record<AgreementApprovalStatus, string> = {
+  pending: "oczekuje",
+  accepted: "zaakceptowano",
+  rejected: "odrzucono",
+};
+
+export function buildAgreementApprovalProgressHint(
+  roles: AgreementApproverRole[],
+  approvals: AgreementApproval[],
+): string | null {
+  if (!roles.length) {
+    return null;
+  }
+
+  const parts = roles.map((role) => {
+    const approval = approvals.find((entry) => entry.roleId === role.id);
+    const status = approval?.status ?? "pending";
+    return `${role.label}: ${APPROVAL_STATUS_SHORT_LABELS[status]}`;
+  });
+
+  return parts.join(" · ");
+}
+
+export function isAgreementPendingTeamApproval(
+  roles: AgreementApproverRole[],
+  approvals: AgreementApproval[],
+): boolean {
+  return roles.some((role) => {
+    if (!isTeamApproverRole(role) || !role.isRequired) {
+      return false;
+    }
+    const approval = approvals.find((entry) => entry.roleId === role.id);
+    return (approval?.status ?? "pending") === "pending";
+  });
+}
 
 export type AgreementComment = {
   id: string;

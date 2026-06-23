@@ -8,6 +8,7 @@ import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import {
   AGREEMENT_WORKFLOW_PHASE_LABELS,
   getAgreementWorkflowPhase,
+  isTeamApproverRole,
   type AgreementCollaborationBundle,
   type AgreementCommentAuthorSource,
 } from "@/lib/dashboard/agreement-collaboration-types";
@@ -156,6 +157,13 @@ export function AgreementCollaborationPanel({
     if (mode === "client") {
       return bundle.approvals.find(
         (entry) => entry.status === "pending" && entry.role?.isClientRole,
+      );
+    }
+    if (mode === "team") {
+      return (
+        bundle.approvals.find(
+          (entry) => entry.status === "pending" && entry.role && isTeamApproverRole(entry.role),
+        ) ?? null
       );
     }
     if (mode === "external" && selectedRoleId) {
@@ -549,7 +557,9 @@ export function AgreementCollaborationPanel({
       {pendingApprovalForViewer ? (
         <div className="grid gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
           <p className="text-sm font-medium text-foreground">
-            Decyzja: {pendingApprovalForViewer.role?.label ?? "Akceptacja"}
+            {mode === "team"
+              ? "Akceptacja wewnętrzna (Administrator)"
+              : `Decyzja: ${pendingApprovalForViewer.role?.label ?? "Akceptacja"}`}
           </p>
           {costLabel ? <p className="text-sm text-muted">Koszt: {costLabel}</p> : null}
           {mode === "external" && !publicToken ? (

@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { LayoutGrid, Rows3 } from "lucide-react";
+import { ClipboardCheck, LayoutGrid, Rows3 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { fetchAgreementHubSnapshot } from "@/lib/supabase/agreement-hub-repository";
 import { useKanbanCacheStore } from "@/store/kanban-cache-store";
 
 export default function KanbanHubPage() {
@@ -13,6 +14,7 @@ export default function KanbanHubPage() {
   const hubLoading = useKanbanCacheStore((state) => state.hubLoading);
   const hydrateHub = useKanbanCacheStore((state) => state.hydrateHub);
   const [error, setError] = useState<string | null>(null);
+  const [pendingAgreementsCount, setPendingAgreementsCount] = useState(0);
 
   const loading = hubLoading && !hubClients;
 
@@ -21,6 +23,8 @@ export default function KanbanHubPage() {
       setError(null);
       try {
         await hydrateHub();
+        const snapshot = await fetchAgreementHubSnapshot();
+        setPendingAgreementsCount(snapshot.countsByStatus.pending_client);
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Błąd ładowania tablic.");
       }
@@ -35,15 +39,24 @@ export default function KanbanHubPage() {
       <PageHeader
         eyebrow="Kanban"
         title="Tablice wdrożeń"
-        description="Wszystkie elementy typu Kanban z procesów projektów. Wejdź per klient albo otwórz jedną tablicę zbiorczą ze wszystkich projektów."
+        description="Tablice Kanban z procesów projektów oraz zbiorczy widok ustaleń u klientów."
         action={
-          <Button asChild>
-            <Link href="/tablice-wdrozen/zbiorcza">
-              <Rows3 className="mr-2 h-4 w-4" />
-              Tablica zbiorcza
-              {totalOpen > 0 ? ` (${totalOpen})` : ""}
-            </Link>
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button asChild variant="outline">
+              <Link href="/tablice-wdrozen/ustalenia">
+                <ClipboardCheck className="mr-2 h-4 w-4" />
+                Tablica ustaleń
+                {pendingAgreementsCount > 0 ? ` (${pendingAgreementsCount})` : ""}
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/tablice-wdrozen/zbiorcza">
+                <Rows3 className="mr-2 h-4 w-4" />
+                Tablica wdrożeń
+                {totalOpen > 0 ? ` (${totalOpen})` : ""}
+              </Link>
+            </Button>
+          </div>
         }
       />
 

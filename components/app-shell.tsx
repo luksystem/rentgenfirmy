@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   LayoutGrid,
   LogOut,
+  Key,
   Menu,
   PauseCircle,
   PhoneCall,
@@ -27,36 +28,66 @@ import {
 import { cn } from "@/lib/utils";
 import { isPublicAppRoute } from "@/lib/auth/routes";
 import { useKanbanNewTasksRealtime, useKanbanOverdueTasksRealtime } from "@/hooks/use-kanban-realtime";
-import { COMMERCIAL_MODULE_LIST } from "@/lib/modules/commercial-modules";
+import { COMMERCIAL_MODULES } from "@/lib/modules/commercial-modules";
 import { NavBadges } from "@/components/nav-badges";
 import { NotificationBell } from "@/components/notification-bell";
 import { NotificationsRealtimeSubscriber } from "@/components/notifications-realtime-subscriber";
 import { useAuthStore } from "@/store/auth-store";
 import { useProcessStore } from "@/store/process-store";
 
-const commercialNavItems = COMMERCIAL_MODULE_LIST.map((module) => ({
-  href: module.href,
-  label: module.label,
-  icon: module.icon,
-}));
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+};
 
-const navGroupsBase = [
+type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
+
+const navGroupsBase: NavGroup[] = [
   {
     label: "Główne",
     items: [
       { href: "/", label: "Start", icon: Home },
-      { href: "/projekty", label: "Projekty", icon: FolderKanban },
-      { href: "/procesy", label: "Procesy", icon: GitBranch },
-      { href: "/tablice-wdrozen", label: "Tablice wdrożeń", icon: LayoutGrid },
-      { href: "/przestrzenie", label: "Przestrzenie", icon: LayoutDashboard },
-      { href: "/klienci", label: "Klienci", icon: Users },
       { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
+    ],
+  },
+  {
+    label: "Sprzedaż",
+    items: [
+      {
+        href: COMMERCIAL_MODULES.serviceSettlement.href,
+        label: "Rozliczenia serwisu",
+        icon: COMMERCIAL_MODULES.serviceSettlement.icon,
+      },
+      {
+        href: COMMERCIAL_MODULES.salesCalculations.href,
+        label: COMMERCIAL_MODULES.salesCalculations.label,
+        icon: COMMERCIAL_MODULES.salesCalculations.icon,
+      },
       { href: "/zlecenia", label: "Zlecenia", icon: ClipboardList },
     ],
   },
   {
-    label: "Oferty",
-    items: commercialNavItems,
+    label: "Projekty",
+    items: [
+      { href: "/procesy", label: "Procesy", icon: GitBranch },
+      { href: "/projekty", label: "Projekty", icon: FolderKanban },
+      { href: "/klienci", label: "Klienci", icon: Users },
+    ],
+  },
+  {
+    label: "Przestrzenie",
+    items: [
+      { href: "/przestrzenie", label: "Przestrzenie", icon: LayoutDashboard },
+      { href: "/tablice-wdrozen", label: "Tablice wdrożeń", icon: LayoutGrid },
+    ],
+  },
+  {
+    label: "Raporty",
+    items: [{ href: "/raport", label: "Raport", icon: BarChart3 }],
   },
   {
     label: "Widoki",
@@ -67,32 +98,24 @@ const navGroupsBase = [
     ],
   },
   {
-    label: "System",
+    label: "Ustawienia",
     items: [
-      { href: "/raport", label: "Raport", icon: BarChart3 },
       { href: "/ustawienia", label: "Ustawienia", icon: Settings },
-      { href: "/konto/haslo", label: "Zmiana hasła", icon: Settings },
+      { href: "/konto/haslo", label: "Zmiana hasła", icon: Key },
     ],
   },
 ];
 
-const ofertyNav = commercialNavItems.find((item) => item.href === "/oferty");
-const kalkulacjeNav = commercialNavItems.find((item) => item.href === "/kalkulacje");
-const procesyNav = navGroupsBase[0].items.find((item) => item.href === "/procesy");
-const tabliceWdrozenNav = navGroupsBase[0].items.find((item) => item.href === "/tablice-wdrozen");
-const przestrzenieNav = navGroupsBase[0].items.find((item) => item.href === "/przestrzenie");
-const zleceniaNav = navGroupsBase[0].items.find((item) => item.href === "/zlecenia");
-const klienciNav = navGroupsBase[0].items.find((item) => item.href === "/klienci");
-const mobileMainNav = navGroupsBase[0].items.filter(
-  (item) =>
-    item.href !== "/zlecenia" &&
-    item.href !== "/klienci" &&
-    item.href !== "/procesy" &&
-    item.href !== "/tablice-wdrozen" &&
-    item.href !== "/przestrzenie",
-);
-const mobileNavLeft = mobileMainNav.slice(0, 2);
-const mobileNavRight = mobileMainNav.slice(2);
+const glowneNav = navGroupsBase.find((group) => group.label === "Główne")?.items ?? [];
+const projektyNav =
+  navGroupsBase.find((group) => group.label === "Projekty")?.items.find((item) => item.href === "/projekty") ??
+  null;
+const mobileBottomNav: NavItem[] = [
+  glowneNav.find((item) => item.href === "/") ?? { href: "/", label: "Start", icon: Home },
+  ...(projektyNav ? [projektyNav] : []),
+];
+const mobileNavLeft = mobileBottomNav.slice(0, 2);
+const mobileNavRight = mobileBottomNav.slice(2);
 
 function isActive(pathname: string, href: string) {
   return pathname === href || (href !== "/" && pathname.startsWith(href));
@@ -212,22 +235,14 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
     return groups;
   }, [isAdministrator]);
 
+  const mobileSheetGroups = useMemo(
+    () => navGroups.filter((group) => group.label !== "Główne"),
+    [navGroups],
+  );
+
   const secondaryNav = useMemo(
-    () => [
-      ...(ofertyNav ? [ofertyNav] : []),
-      ...(kalkulacjeNav ? [kalkulacjeNav] : []),
-      ...(procesyNav ? [procesyNav] : []),
-      ...(tabliceWdrozenNav ? [tabliceWdrozenNav] : []),
-      ...(przestrzenieNav ? [przestrzenieNav] : []),
-      ...(zleceniaNav ? [zleceniaNav] : []),
-      ...(klienciNav ? [klienciNav] : []),
-      ...(isAdministrator
-        ? [{ href: "/admin/uzytkownicy", label: "Użytkownicy", icon: Shield }]
-        : []),
-      ...navGroupsBase[2].items,
-      ...navGroupsBase[3].items,
-    ],
-    [isAdministrator],
+    () => mobileSheetGroups.flatMap((group) => group.items),
+    [mobileSheetGroups],
   );
 
   const allNav = useMemo(() => navGroups.flatMap((group) => group.items), [navGroups]);
@@ -446,16 +461,25 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="grid max-h-[min(70vh,520px)] gap-2 overflow-y-auto overscroll-contain">
-                {secondaryNav.map((item) => (
-                  <NavLink
-                    key={item.href}
-                    {...item}
-                    active={isActive(pathname, item.href)}
-                    onClick={() => setMenuOpen(false)}
-                    variant="sheet"
-                    {...(item.href === "/tablice-wdrozen" ? kanbanBadges : {})}
-                  />
+              <div className="grid max-h-[min(70vh,520px)] gap-5 overflow-y-auto overscroll-contain">
+                {mobileSheetGroups.map((group) => (
+                  <div key={group.label}>
+                    <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                      {group.label}
+                    </p>
+                    <div className="grid gap-2">
+                      {group.items.map((item) => (
+                        <NavLink
+                          key={item.href}
+                          {...item}
+                          active={isActive(pathname, item.href)}
+                          onClick={() => setMenuOpen(false)}
+                          variant="sheet"
+                          {...(item.href === "/tablice-wdrozen" ? kanbanBadges : {})}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>

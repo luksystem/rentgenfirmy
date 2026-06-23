@@ -56,6 +56,20 @@ function ClientDashboardPageContent() {
 
   const projectFromQuery = searchParams.get("project");
   const activeKanbanToken = searchParams.get("kanban");
+  const tabFromQuery = searchParams.get("tab");
+  const agreementFromQuery = searchParams.get("agreement");
+  const initialTab =
+    tabFromQuery === "agreements" ||
+    tabFromQuery === "home" ||
+    tabFromQuery === "overview" ||
+    tabFromQuery === "process" ||
+    tabFromQuery === "specification" ||
+    tabFromQuery === "trades" ||
+    tabFromQuery === "satisfaction" ||
+    tabFromQuery === "credentials" ||
+    tabFromQuery === "links"
+      ? tabFromQuery
+      : undefined;
   const [selectedProjectId, setSelectedProjectId] = useState(
     projectFromQuery && clientProjects.some((project) => project.id === projectFromQuery)
       ? projectFromQuery
@@ -163,6 +177,8 @@ function ClientDashboardPageContent() {
         teamAuthorName={displayName || "Zespół"}
         activeKanbanToken={activeKanbanToken}
         onKanbanTokenChange={handleKanbanTokenChange}
+        initialTab={initialTab}
+        focusAgreementId={agreementFromQuery ?? undefined}
         onProjectPatch={(projectId, patch) => {
           const project = clientProjects.find((entry) => entry.id === projectId);
           if ("systemHandoverAt" in patch || "warrantyDurationMonths" in patch) {

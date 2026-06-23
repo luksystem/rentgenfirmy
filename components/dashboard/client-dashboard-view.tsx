@@ -132,6 +132,8 @@ export function ClientDashboardView({
   activeKanbanToken = null,
   onKanbanTokenChange,
   publicDashboardToken,
+  initialTab,
+  focusAgreementId,
 }: {
   client: Client;
   projects: Project[];
@@ -166,8 +168,10 @@ export function ClientDashboardView({
   onKanbanTokenChange?: (token: string | null) => void;
   /** Token publicznego dashboardu — przekazywany do osadzonej tablicy Kanban. */
   publicDashboardToken?: string;
+  initialTab?: ClientDashboardTab;
+  focusAgreementId?: string;
 }) {
-  const [activeTab, setActiveTab] = useState<ClientDashboardTab>("home");
+  const [activeTab, setActiveTab] = useState<ClientDashboardTab>(initialTab ?? "home");
   const [kanbanPublicLinks, setKanbanPublicLinks] = useState<Record<string, string>>({});
   const agreementsSyncKeyRef = useRef("");
 
@@ -192,6 +196,12 @@ export function ClientDashboardView({
     },
     [onKanbanTokenChange],
   );
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   useEffect(() => {
     if (activeKanbanToken) {
@@ -647,6 +657,7 @@ export function ClientDashboardView({
           authorName={readOnly ? clientAuthorName : teamAuthorName}
           seedAgreements={seedAgreements}
           onAgreementsChanged={notifyAgreementsUpdated}
+          focusAgreementId={focusAgreementId}
           onWarrantyExtensionAccepted={(warrantyEndsAt) =>
             onProjectPatch?.(selectedProject.id, { warrantyEndsAt })
           }

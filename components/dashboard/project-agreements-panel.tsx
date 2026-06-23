@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, Link2, Pencil, Plus, Send, Trash2, X } from "lucide-react";
 import { AgreementCollaborationPanel } from "@/components/dashboard/agreement-collaboration-panel";
 import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-collapsible-shell";
@@ -31,8 +31,10 @@ import {
 import { DEFAULT_AGREEMENT_VAT_RATE, normalizeAgreementVatRate } from "@/lib/dashboard/agreement-cost";
 import {
   getAgreementPublicUrl,
+  TEAM_APPROVER_ROLE_LABEL,
   type AgreementApproverRoleInput,
 } from "@/lib/dashboard/agreement-collaboration-types";
+import { useAgreementApprovalHint } from "@/hooks/use-agreement-approval-hint";
 import { fetchAgreementApproverRoles } from "@/lib/supabase/project-agreement-collaboration-repository";
 import { cn, formatDate } from "@/lib/utils";
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
@@ -63,7 +65,10 @@ function emptyInput(): ProjectAgreementInput {
     proposedCostVatRate: DEFAULT_AGREEMENT_VAT_RATE,
     costNote: "",
     publicEnabled: false,
-    approverRoles: [{ label: "Klient", isRequired: true, isClientRole: true }],
+    approverRoles: [
+      { label: TEAM_APPROVER_ROLE_LABEL, isRequired: true, isTeamRole: true },
+      { label: "Klient", isRequired: true, isClientRole: true },
+    ],
   };
 }
 
@@ -78,7 +83,10 @@ function agreementToInput(agreement: ProjectClientAgreement): ProjectAgreementIn
     costNote: agreement.costNote ?? "",
     proposedWarrantyEndDate: agreement.proposedWarrantyEndDate ?? "",
     publicEnabled: agreement.publicEnabled,
-    approverRoles: [{ label: "Klient", isRequired: true, isClientRole: true }],
+    approverRoles: [
+      { label: TEAM_APPROVER_ROLE_LABEL, isRequired: true, isTeamRole: true },
+      { label: "Klient", isRequired: true, isClientRole: true },
+    ],
   };
 }
 
@@ -91,11 +99,15 @@ function updateApproverRole(
 }
 
 function sanitizeApproverRoles(roles: AgreementApproverRoleInput[] | undefined) {
-  return (roles ?? []).filter((role) => role.isClientRole || role.label.trim().length > 0);
+  return (roles ?? []).filter(
+    (role) => role.isTeamRole || role.isClientRole || role.label.trim().length > 0,
+  );
 }
 
 function hasIncompleteApproverRole(roles: AgreementApproverRoleInput[] | undefined) {
-  return (roles ?? []).some((role) => !role.isClientRole && !role.label.trim());
+  return (roles ?? []).some(
+    (role) => !role.isTeamRole && !role.isClientRole && !role.label.trim(),
+  );
 }
 
 function canEditAgreementContent(agreement: ProjectClientAgreement) {
@@ -113,6 +125,7 @@ function AgreementCard({
   onEdit,
   onRefresh,
   onWarrantyExtensionAccepted,
+  defaultExpanded = false,
 }: {
   agreement: ProjectClientAgreement;
   mode: "team" | "client";
@@ -127,11 +140,21 @@ function AgreementCard({
   onEdit?: (agreement: ProjectClientAgreement) => void;
   onRefresh?: () => void | Promise<void>;
   onWarrantyExtensionAccepted?: (warrantyEndsAt: string) => void | Promise<void>;
+  defaultExpanded?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const [responseNote, setResponseNote] = useState("");
+  const cardRef = useRef<HTMLDivElement | null>(null);
   const meta = buildAgreementCollapsibleMeta(agreement);
+  const approvalHint = useAgreementApprovalHint(agreement);
   const costLabel = formatAgreementCost(agreement);
+
+  useEffect(() => {
+    if (!defaultExpanded || !cardRef.current) {
+      return;
+    }
+    cardRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [defaultExpanded, agreement.id]);
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -143,13 +166,15 @@ function AgreementCard({
   }
 
   return (
-    <AgreementCollapsibleShell
-      title={meta.title}
-      subtitle={meta.subtitle}
-      statusLabel={meta.statusLabel}
-      statusTone={meta.statusTone}
-      hint={meta.hint}
-    >
+    <div ref={cardRef}>
+      <AgreementCollapsibleShell
+        title={meta.title}
+        subtitle={meta.subtitle}
+        statusLabel={meta.statusLabel}
+        statusTone={meta.statusTone}
+        hint={approvalHint ?? meta.hint}
+        defaultExpanded={defaultExpanded}
+      >
       {agreement.category === "warranty" && agreement.proposedWarrantyEndDate ? (
         <p className="text-sm text-foreground">
           Nowa data zakończenia gwarancji:{" "}
@@ -353,6 +378,7 @@ function AgreementCard({
         </p>
       ) : null}
     </AgreementCollapsibleShell>
+    </div>
   );
 }
 
@@ -363,6 +389,7 @@ export function ProjectAgreementsPanel({
   seedAgreements,
   onWarrantyExtensionAccepted,
   onAgreementsChanged,
+  focusAgreementId,
 }: {
   projectId: string;
   mode: "team" | "client";
@@ -370,6 +397,7 @@ export function ProjectAgreementsPanel({
   seedAgreements?: ProjectClientAgreement[];
   onWarrantyExtensionAccepted?: (warrantyEndsAt: string) => void | Promise<void>;
   onAgreementsChanged?: () => void | Promise<void>;
+  focusAgreementId?: string;
 }) {
   const storeAgreements = useProjectAgreementStore(
     (state) => state.byProject[projectId] ?? EMPTY_AGREEMENTS,
@@ -393,7 +421,7 @@ export function ProjectAgreementsPanel({
   const agreements =
     storeAgreements.length > 0 ? storeAgreements : (seedAgreements ?? storeAgreements);
 
-  const [filter, setFilter] = useState<FilterKey>(mode === "client" ? "pending_client" : "all");
+  const [filter, setFilter] = useState<FilterKey>(focusAgreementId ? "all" : mode === "client" ? "pending_client" : "all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ProjectAgreementInput>(emptyInput());
@@ -459,6 +487,7 @@ export function ProjectAgreementsPanel({
         label: role.label,
         isRequired: role.isRequired,
         isClientRole: role.isClientRole,
+        isTeamRole: role.isTeamRole,
       })),
     });
     setDialogOpen(true);
@@ -636,6 +665,7 @@ export function ProjectAgreementsPanel({
             onEdit={mode === "team" ? (entry) => void openEditDialog(entry) : undefined}
             onRefresh={handleRefreshAgreements}
             onWarrantyExtensionAccepted={onWarrantyExtensionAccepted}
+            defaultExpanded={agreement.id === focusAgreementId}
           />
         ))}
       </div>
@@ -767,7 +797,8 @@ export function ProjectAgreementsPanel({
             <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/10 p-3">
               <p className="text-sm font-medium text-foreground">Role wymagane do akceptacji</p>
               <p className="text-xs text-muted">
-                Wybierz branżę z listy projektu lub wpisz rolę ręcznie.
+                Każde ustalenie wymaga akceptacji Administratora (zespół) oraz Klienta. Możesz
+                dodać kolejne role, np. branże projektu.
               </p>
               {(form.approverRoles ?? []).map((role, index) => (
                 <div key={`approver-role-${index}`} className="flex flex-wrap items-start gap-2">
@@ -781,7 +812,7 @@ export function ProjectAgreementsPanel({
                       }))
                     }
                   />
-                  {!role.isClientRole ? (
+                  {!role.isClientRole && !role.isTeamRole ? (
                     <Button
                       type="button"
                       size="sm"

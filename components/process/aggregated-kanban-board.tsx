@@ -104,7 +104,7 @@ export function AggregatedKanbanBoard({
       try {
         await refresh({ force: false, showLoading: !cachedMergedView });
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Błąd ładowania tablicy zbiorczej.");
+        setError(loadError instanceof Error ? loadError.message : "Błąd ładowania tablicy wdrożeń.");
       }
     })();
   }, [cachedMergedView, refresh]);
@@ -201,7 +201,7 @@ export function AggregatedKanbanBoard({
   }
 
   if (loading && !mergedView) {
-    return <p className="text-sm text-muted">Ładowanie tablicy zbiorczej…</p>;
+    return <p className="text-sm text-muted">Ładowanie tablicy wdrożeń…</p>;
   }
 
   if (error) {

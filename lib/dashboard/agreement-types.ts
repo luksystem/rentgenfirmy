@@ -118,12 +118,12 @@ export const AGREEMENT_STATUS_BADGE_CLASS: Record<AgreementStatusBadgeTone, stri
   danger: "border-rose-500/40 bg-rose-500/10 text-rose-200",
 };
 
-/** Krótki opis procesu akceptacji na zwiniętej karcie. */
+/** Krótki opis procesu akceptacji na zwiniętej karcie (bez szczegółów ról). */
 export function getAgreementAcceptanceHint(
   agreement: Pick<ProjectClientAgreement, "status" | "activeVersionId">,
 ): string | null {
   if (agreement.status === "pending_client" && agreement.activeVersionId) {
-    return "Akceptacja wielorolowa w toku";
+    return "Akceptacje w toku";
   }
   return null;
 }

@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { AlertTriangle, ClipboardCheck, GitBranch, Shield } from "lucide-react";
-import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-collapsible-shell";
+import { AgreementSummaryCard } from "@/components/dashboard/agreement-summary-card";
 import { Button } from "@/components/ui/button";
 import {
-  buildAgreementCollapsibleMeta,
   isAgreementPendingAttention,
   type ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";
@@ -105,25 +104,18 @@ export function ClientDashboardOverview({
             Oczekujące ustalenia
           </h3>
           <div className="grid gap-2">
-            {pendingAgreements.slice(0, 5).map((entry) => {
-              const meta = buildAgreementCollapsibleMeta(entry);
-              return (
-                <AgreementCollapsibleShell
-                  key={entry.id}
-                  compact
-                  className="border-amber-500/30 bg-amber-500/5"
-                  title={meta.title}
-                  subtitle={meta.subtitle}
-                  statusLabel={meta.statusLabel}
-                  statusTone={meta.statusTone}
-                  hint={meta.hint}
-                >
-                  {entry.body ? (
-                    <p className="line-clamp-4 text-sm text-muted">{entry.body}</p>
-                  ) : null}
-                </AgreementCollapsibleShell>
-              );
-            })}
+            {pendingAgreements.slice(0, 5).map((entry) => (
+              <AgreementSummaryCard
+                key={entry.id}
+                agreement={entry}
+                compact
+                className="border-amber-500/30 bg-amber-500/5"
+              >
+                {entry.body ? (
+                  <p className="line-clamp-4 text-sm text-muted">{entry.body}</p>
+                ) : null}
+              </AgreementSummaryCard>
+            ))}
           </div>
         </div>
       ) : null}
@@ -135,21 +127,14 @@ export function ClientDashboardOverview({
             Propozycje przedłużenia gwarancji
           </h3>
           <div className="grid gap-2">
-            {pendingWarranty.map((entry) => {
-              const meta = buildAgreementCollapsibleMeta(entry);
-              return (
-                <AgreementCollapsibleShell
-                  key={entry.id}
-                  compact
-                  className="border-amber-500/30 bg-amber-500/5"
-                  title={meta.title}
-                  subtitle={meta.subtitle}
-                  statusLabel={meta.statusLabel}
-                  statusTone={meta.statusTone}
-                  hint={meta.hint}
-                />
-              );
-            })}
+            {pendingWarranty.map((entry) => (
+              <AgreementSummaryCard
+                key={entry.id}
+                agreement={entry}
+                compact
+                className="border-amber-500/30 bg-amber-500/5"
+              />
+            ))}
           </div>
         </div>
       ) : null}
@@ -210,24 +195,13 @@ export function ClientDashboardOverview({
               {agreements
                 .filter((entry) => entry.category !== "warranty")
                 .slice(0, 4)
-                .map((entry) => {
-                  const meta = buildAgreementCollapsibleMeta(entry);
-                  return (
-                    <AgreementCollapsibleShell
-                      key={entry.id}
-                      compact
-                      title={meta.title}
-                      subtitle={meta.subtitle}
-                      statusLabel={meta.statusLabel}
-                      statusTone={meta.statusTone}
-                      hint={meta.hint}
-                    >
-                      {entry.body ? (
-                        <p className="line-clamp-3 text-sm text-muted">{entry.body}</p>
-                      ) : null}
-                    </AgreementCollapsibleShell>
-                  );
-                })}
+                .map((entry) => (
+                  <AgreementSummaryCard key={entry.id} agreement={entry} compact>
+                    {entry.body ? (
+                      <p className="line-clamp-3 text-sm text-muted">{entry.body}</p>
+                    ) : null}
+                  </AgreementSummaryCard>
+                ))}
             </div>
           )}
           {onOpenTab ? (

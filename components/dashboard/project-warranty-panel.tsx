@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useAgreementApprovalHint } from "@/hooks/use-agreement-approval-hint";
 import {
   buildAgreementCollapsibleMeta,
   formatAgreementCost,
@@ -82,6 +83,7 @@ function WarrantyProposalCard({
   const [busy, setBusy] = useState(false);
   const [responseNote, setResponseNote] = useState("");
   const meta = buildAgreementCollapsibleMeta(agreement);
+  const approvalHint = useAgreementApprovalHint(agreement);
   const costLabel = formatAgreementCost(agreement);
 
   async function run(action: () => Promise<void>) {
@@ -99,7 +101,7 @@ function WarrantyProposalCard({
       subtitle={meta.subtitle}
       statusLabel={meta.statusLabel}
       statusTone={meta.statusTone}
-      hint={meta.hint}
+      hint={approvalHint ?? meta.hint}
     >
       {agreement.proposedWarrantyEndDate ? (
         <p className="text-sm text-foreground">

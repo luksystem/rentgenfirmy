@@ -12,7 +12,7 @@ import {
   Star,
   Wrench,
 } from "lucide-react";
-import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-collapsible-shell";
+import { AgreementSummaryCard } from "@/components/dashboard/agreement-summary-card";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,7 +26,6 @@ import { ClientProjectSummary } from "@/components/dashboard/client-project-summ
 import { DashboardPublicLinkPanel } from "@/components/dashboard/dashboard-public-link-panel";
 import { ProjectWarrantyPanel } from "@/components/dashboard/project-warranty-panel";
 import {
-  buildAgreementCollapsibleMeta,
   isAgreementPendingAttention,
   type ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";
@@ -483,25 +482,18 @@ export function ClientDashboardHome({
             Oczekujące ustalenia
           </h3>
           <div className="grid gap-2">
-            {pendingAgreements.slice(0, 5).map((entry) => {
-              const meta = buildAgreementCollapsibleMeta(entry);
-              return (
-                <AgreementCollapsibleShell
-                  key={entry.id}
-                  compact
-                  className="border-amber-500/30 bg-amber-500/5"
-                  title={meta.title}
-                  subtitle={meta.subtitle}
-                  statusLabel={meta.statusLabel}
-                  statusTone={meta.statusTone}
-                  hint={meta.hint}
-                >
-                  {entry.body ? (
-                    <p className="line-clamp-4 whitespace-pre-wrap text-sm text-muted">{entry.body}</p>
-                  ) : null}
-                </AgreementCollapsibleShell>
-              );
-            })}
+            {pendingAgreements.slice(0, 5).map((entry) => (
+              <AgreementSummaryCard
+                key={entry.id}
+                agreement={entry}
+                compact
+                className="border-amber-500/30 bg-amber-500/5"
+              >
+                {entry.body ? (
+                  <p className="line-clamp-4 whitespace-pre-wrap text-sm text-muted">{entry.body}</p>
+                ) : null}
+              </AgreementSummaryCard>
+            ))}
           </div>
           {onOpenTab ? (
             <Button
@@ -524,27 +516,20 @@ export function ClientDashboardHome({
             Propozycje przedłużenia gwarancji
           </h3>
           <div className="grid gap-2">
-            {pendingWarranty.map((entry) => {
-              const meta = buildAgreementCollapsibleMeta(entry);
-              return (
-                <AgreementCollapsibleShell
-                  key={entry.id}
-                  compact
-                  className="border-amber-500/30 bg-amber-500/5"
-                  title={meta.title}
-                  subtitle={meta.subtitle}
-                  statusLabel={meta.statusLabel}
-                  statusTone={meta.statusTone}
-                  hint={meta.hint}
-                >
-                  {entry.proposedWarrantyEndDate ? (
-                    <p className="text-sm text-muted">
-                      Proponowana data gwarancji: {formatDate(entry.proposedWarrantyEndDate)}
-                    </p>
-                  ) : null}
-                </AgreementCollapsibleShell>
-              );
-            })}
+            {pendingWarranty.map((entry) => (
+              <AgreementSummaryCard
+                key={entry.id}
+                agreement={entry}
+                compact
+                className="border-amber-500/30 bg-amber-500/5"
+              >
+                {entry.proposedWarrantyEndDate ? (
+                  <p className="text-sm text-muted">
+                    Proponowana data gwarancji: {formatDate(entry.proposedWarrantyEndDate)}
+                  </p>
+                ) : null}
+              </AgreementSummaryCard>
+            ))}
           </div>
           {onOpenTab ? (
             <Button
