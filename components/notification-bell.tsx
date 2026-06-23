@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, Bell, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn, formatDate } from "@/lib/utils";
-import { useNotificationsRealtime } from "@/hooks/use-notifications-realtime";
 import { useAuthStore } from "@/store/auth-store";
 import { useNotificationStore } from "@/store/notification-store";
 import { useProcessStore } from "@/store/process-store";
@@ -49,7 +48,12 @@ export function NotificationBell() {
     refreshUnreadCount,
   ]);
 
-  useNotificationsRealtime(profileId, refreshBadge);
+  useEffect(() => {
+    if (!profileId) {
+      return;
+    }
+    refreshBadge();
+  }, [profileId, refreshBadge]);
 
   useEffect(() => {
     if (!open || !profileId) {

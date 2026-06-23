@@ -21,8 +21,9 @@ export function useNotificationsRealtime(profileId: string | undefined, onRefres
     refresh();
 
     const supabase = getSupabase();
+    const channelName = `user-notifications-${profileId}-${crypto.randomUUID()}`;
     const channel = supabase
-      .channel(`user-notifications-${profileId}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
         {

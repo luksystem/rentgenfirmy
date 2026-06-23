@@ -29,6 +29,7 @@ import { isPublicAppRoute } from "@/lib/auth/routes";
 import { useKanbanNewTasksRealtime, useKanbanOverdueTasksRealtime } from "@/hooks/use-kanban-realtime";
 import { COMMERCIAL_MODULE_LIST } from "@/lib/modules/commercial-modules";
 import { NotificationBell } from "@/components/notification-bell";
+import { NotificationsRealtimeSubscriber } from "@/components/notifications-realtime-subscriber";
 import { useAuthStore } from "@/store/auth-store";
 import { useProcessStore } from "@/store/process-store";
 
@@ -261,6 +262,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <NotificationsRealtimeSubscriber />
       <aside className="fixed inset-y-0 left-0 z-20 hidden h-screen w-72 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar/95 backdrop-blur-xl xl:flex">
         <div className="shrink-0 p-5 pb-4">
           <Link href="/" className="flex items-center gap-3">

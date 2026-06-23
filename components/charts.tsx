@@ -82,14 +82,15 @@ export function BarPanel({ title, data }: { title: string; data: ChartData }) {
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent className="h-64 min-h-64 sm:h-80 sm:min-h-80">
+      <CardContent className="h-64 min-h-64 w-full min-w-0 sm:h-80 sm:min-h-80">
         {data.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-muted">
             Brak danych
           </div>
         ) : (
           <ClientOnlyChart>
-            <ResponsiveContainer width="100%" height="100%">
+            <div className="h-full w-full min-h-[16rem] min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
               <BarChart data={data} margin={{ left: -24, right: 8, top: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#27272a" />
                 <XAxis
@@ -109,6 +110,7 @@ export function BarPanel({ title, data }: { title: string; data: ChartData }) {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+            </div>
           </ClientOnlyChart>
         )}
       </CardContent>
@@ -122,14 +124,15 @@ export function PiePanel({ title, data }: { title: string; data: ChartData }) {
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent className="h-64 min-h-64 sm:h-80 sm:min-h-80">
+      <CardContent className="h-64 min-h-64 w-full min-w-0 sm:h-80 sm:min-h-80">
         {data.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-muted">
             Brak danych
           </div>
         ) : (
           <ClientOnlyChart>
-            <ResponsiveContainer width="100%" height="100%">
+            <div className="h-full w-full min-h-[16rem] min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
               <PieChart>
                 <Pie
                   data={data}
@@ -153,6 +156,7 @@ export function PiePanel({ title, data }: { title: string; data: ChartData }) {
                 />
               </PieChart>
             </ResponsiveContainer>
+            </div>
           </ClientOnlyChart>
         )}
       </CardContent>
