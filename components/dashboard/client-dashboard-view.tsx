@@ -69,6 +69,7 @@ type ClientDashboardTab =
   | "links";
 
 const EMPTY_AGREEMENTS: ProjectClientAgreement[] = [];
+const EMPTY_SPECIFICATION_ITEMS: ProjectSpecificationItem[] = [];
 
 const PUBLIC_CLIENT_TAB_CONFIG: Array<{
   id: ClientDashboardTab;
@@ -251,7 +252,8 @@ export function ClientDashboardView({
   const seedProjectSatisfaction = useProjectSatisfactionStore((state) => state.seedSatisfaction);
 
   const specificationItems = useProjectSpecificationStore(
-    (state) => state.byProject[selectedProjectId] ?? seedSpecificationItems ?? [],
+    (state) =>
+      state.byProject[selectedProjectId] ?? seedSpecificationItems ?? EMPTY_SPECIFICATION_ITEMS,
   );
   const ensureSpecificationItems = useProjectSpecificationStore((state) => state.ensureItems);
 
@@ -262,7 +264,9 @@ export function ClientDashboardView({
     if (seedSatisfaction !== undefined) {
       seedProjectSatisfaction(selectedProjectId, seedSatisfaction);
     }
-    void ensureSatisfaction(selectedProjectId, { force: seedSatisfaction !== undefined });
+    void ensureSatisfaction(selectedProjectId, { force: seedSatisfaction !== undefined }).catch(
+      () => undefined,
+    );
   }, [
     enableSatisfaction,
     ensureSatisfaction,
@@ -641,7 +645,9 @@ export function ClientDashboardView({
 
   function renderSatisfactionPanel() {
     const specItems =
-      specificationItems.length > 0 ? specificationItems : (seedSpecificationItems ?? []);
+      specificationItems.length > 0
+        ? specificationItems
+        : (seedSpecificationItems ?? EMPTY_SPECIFICATION_ITEMS);
 
     return (
       <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">

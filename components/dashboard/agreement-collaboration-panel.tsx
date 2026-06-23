@@ -87,6 +87,9 @@ export function AgreementCollaborationPanel({
     setResponderName(authorName);
   }, [authorName]);
 
+  const selectedRoleIdRef = useRef(selectedRoleId);
+  selectedRoleIdRef.current = selectedRoleId;
+
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
@@ -103,17 +106,19 @@ export function AgreementCollaborationPanel({
           })
         : await fetchAgreementCollaboration(agreementId);
       setBundle(next);
-      if (!selectedRoleId && next.roles.length && mode !== "external") {
+      if (!selectedRoleIdRef.current && next.roles.length && mode !== "external") {
         const defaultRole =
           mode === "client"
             ? (next.roles.find((role) => role.isClientRole) ?? next.roles[0])
             : next.roles.find((role) => !role.isClientRole) ?? next.roles[0];
-        setSelectedRoleId(defaultRole.id);
+        if (defaultRole?.id) {
+          setSelectedRoleId(defaultRole.id);
+        }
       }
     } finally {
       setLoading(false);
     }
-  }, [agreementId, mode, publicToken, selectedRoleId, setSelectedRoleId]);
+  }, [agreementId, mode, publicToken, setSelectedRoleId]);
 
   useEffect(() => {
     void refresh();

@@ -111,14 +111,18 @@ export function ProjectSatisfactionPanel({
     if (seedBundle) {
       seedSatisfaction(projectId, seedBundle);
     }
-    void ensureSatisfaction(projectId, { force: seedBundle !== undefined });
+    void ensureSatisfaction(projectId, { force: seedBundle !== undefined }).catch(() => undefined);
   }, [ensureSatisfaction, projectId, seedBundle, seedSatisfaction]);
 
   useEffect(() => {
     setExpectationScore(bundle.overview?.expectationScore ?? 0);
     setRealityScore(bundle.overview?.realityScore ?? 0);
     setOverallNote(bundle.overview?.overallNote ?? "");
-  }, [bundle.overview]);
+  }, [
+    bundle.overview?.expectationScore,
+    bundle.overview?.overallNote,
+    bundle.overview?.realityScore,
+  ]);
 
   const reviewableAgreements = useMemo(
     () =>

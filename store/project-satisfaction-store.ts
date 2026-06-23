@@ -87,6 +87,12 @@ export const useProjectSatisfactionStore = create<ProjectSatisfactionStore>((set
         });
         return bundle;
       })
+      .catch((error) => {
+        set({
+          loadingProjects: { ...get().loadingProjects, [projectId]: false },
+        });
+        throw error;
+      })
       .finally(() => {
         loadPromises.delete(projectId);
       });

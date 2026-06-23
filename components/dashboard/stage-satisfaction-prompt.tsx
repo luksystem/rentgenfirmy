@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
-import type { ReviewSide } from "@/lib/dashboard/satisfaction-types";
+import type { ReviewSide, StageSatisfaction } from "@/lib/dashboard/satisfaction-types";
 import { StageSatisfactionDialog } from "@/components/dashboard/stage-satisfaction-dialog";
 import { useProjectSatisfactionStore } from "@/store/project-satisfaction-store";
+
+const EMPTY_STAGE_SATISFACTIONS: StageSatisfaction[] = [];
 
 function getCompletedStages(template: ProcessTemplate, process: ProjectProcess | null | undefined) {
   if (!process) {
@@ -36,7 +38,8 @@ export function StageSatisfactionPrompt({
   enabled?: boolean;
 }) {
   const stageSatisfactions = useProjectSatisfactionStore(
-    (state) => state.byProject[projectId]?.stageSatisfactions ?? [],
+    (state) =>
+      state.byProject[projectId]?.stageSatisfactions ?? EMPTY_STAGE_SATISFACTIONS,
   );
   const ensureSatisfaction = useProjectSatisfactionStore((state) => state.ensureSatisfaction);
 
