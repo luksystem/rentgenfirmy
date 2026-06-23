@@ -17,7 +17,6 @@ import {
 import {
   PROJECT_AGREEMENT_CATEGORIES,
   PROJECT_AGREEMENT_CATEGORY_LABELS,
-  PROJECT_AGREEMENT_STATUS_LABELS,
   agreementStatusTone,
   formatAgreementCost,
   getAgreementStatusLabel,
