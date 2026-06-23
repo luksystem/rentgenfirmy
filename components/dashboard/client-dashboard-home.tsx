@@ -5,10 +5,20 @@ import {
   AlertTriangle,
   ChevronDown,
   ClipboardCheck,
+  ExternalLink,
   GitBranch,
+  LayoutGrid,
   Shield,
+  Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ClientInfoCard } from "@/components/dashboard/client-info-card";
 import { ClientProjectSummary } from "@/components/dashboard/client-project-summary";
 import { DashboardPublicLinkPanel } from "@/components/dashboard/dashboard-public-link-panel";
@@ -29,6 +39,8 @@ import type { Client } from "@/lib/service/types";
 import type { DashboardSpace } from "@/lib/dashboard/types";
 import type { Project } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+const SERVICE_REQUEST_URL = "https://www.serwis.luksystem.pl";
 
 const warrantyToneClass: Record<ReturnType<typeof getWarrantyStatus>["tone"], string> = {
   neutral: "border-border/80 bg-surface-muted/40 text-muted",
@@ -194,6 +206,136 @@ function WarrantyHomeCard({
   );
 }
 
+function ServiceRequestDialog({
+  open,
+  onOpenChange,
+  project,
+  agreements,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  project: Project;
+  agreements: ProjectClientAgreement[];
+}) {
+  const warrantyStatus = getWarrantyStatus(project, {
+    hasPendingExtension: hasPendingWarrantyExtension(agreements),
+  });
+  const endDate = formatWarrantyEndDate(project);
+
+  const statusMessage = (() => {
+    switch (warrantyStatus.status) {
+      case "active":
+        return `Gwarancja jest aktywna do ${endDate}. Przed zgłoszeniem serwisowym warto mieć pod ręką opis usterki i zdjęcia instalacji.`;
+      case "expiring_soon":
+        return `${warrantyStatus.label} (koniec: ${endDate}). Możesz zgłosić usterkę przed wygaśnięciem gwarancji.`;
+      case "expired":
+        return `Gwarancja wygasła ${endDate !== "—" ? `(${endDate})` : ""}. Zgłoszenie może podlegać rozliczeniu poza gwarancją.`;
+      case "pending_extension":
+        return "Oczekuje na akceptację przedłużenia gwarancji. Aktualny status może ulec zmianie po zatwierdzeniu propozycji.";
+      default:
+        return "Brak aktywnej gwarancji na tym projekcie. Zgłoszenie serwisowe może podlegać standardowemu rozliczeniu.";
+    }
+  })();
+
+  function handleContinue() {
+    window.open(SERVICE_REQUEST_URL, "_blank", "noopener,noreferrer");
+    onOpenChange(false);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Zgłoszenie serwisowe</DialogTitle>
+          <DialogDescription>
+            Przed przejściem do formularza zewnętrznego sprawdź status gwarancji projektu.
+          </DialogDescription>
+        </DialogHeader>
+        <div
+          className={cn(
+            "rounded-xl border p-4",
+            warrantyCardToneClass[warrantyStatus.tone],
+          )}
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className={cn(
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border",
+                warrantyToneClass[warrantyStatus.tone],
+              )}
+            >
+              <Shield className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">Status gwarancji</p>
+              <p className="mt-1 text-base font-semibold text-foreground">{warrantyStatus.label}</p>
+              <p className="mt-1 text-sm text-muted">Koniec gwarancji: {endDate}</p>
+              <p className="mt-3 text-sm leading-relaxed text-foreground/90">{statusMessage}</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Anuluj
+          </Button>
+          <Button type="button" onClick={handleContinue}>
+            Przejdź do zgłoszenia
+            <ExternalLink className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PublicHomeQuickActions({
+  kanbanPublicHref,
+  onOpenKanban,
+  onServiceRequest,
+}: {
+  kanbanPublicHref?: string | null;
+  onOpenKanban?: (href: string) => void;
+  onServiceRequest: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-accent/25 bg-gradient-to-br from-accent/10 via-surface to-surface p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">Szybkie akcje</p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {kanbanPublicHref && onOpenKanban ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-auto min-h-11 justify-start gap-2 px-4 py-3 text-left"
+            onClick={() => onOpenKanban(kanbanPublicHref)}
+          >
+            <LayoutGrid className="h-4 w-4 shrink-0 text-accent" />
+            <span>
+              <span className="block font-medium">Tablica wdrożeń</span>
+              <span className="block text-xs font-normal text-muted">Zgłoszenia i postęp prac</span>
+            </span>
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          className={cn(
+            "h-auto min-h-11 justify-start gap-2 px-4 py-3 text-left",
+            kanbanPublicHref && onOpenKanban ? "" : "sm:col-span-2",
+          )}
+          onClick={onServiceRequest}
+        >
+          <Wrench className="h-4 w-4 shrink-0" />
+          <span>
+            <span className="block font-semibold uppercase tracking-wide">Zgłoszenie serwisowe</span>
+            <span className="block text-xs font-normal text-primary-foreground/80">
+              Formularz na serwis.luksystem.pl
+            </span>
+          </span>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function ClientDashboardHome({
   client,
   project,
@@ -212,6 +354,8 @@ export function ClientDashboardHome({
   seedAgreements,
   onWarrantySettingsSave,
   onWarrantyExtensionAccepted,
+  kanbanPublicHref,
+  onOpenKanban,
 }: {
   client: Client;
   project: Project;
@@ -234,7 +378,10 @@ export function ClientDashboardHome({
     warrantyDurationMonths: number | null;
   }) => void | Promise<void>;
   onWarrantyExtensionAccepted?: (warrantyEndsAt: string) => void | Promise<void>;
+  kanbanPublicHref?: string | null;
+  onOpenKanban?: (href: string) => void;
 }) {
+  const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const pendingAgreements = agreements.filter(
     (entry) => entry.category !== "warranty" && isAgreementPendingAttention(entry),
   );
@@ -249,6 +396,22 @@ export function ClientDashboardHome({
 
   return (
     <div className="grid min-w-0 max-w-full gap-4 overflow-x-hidden">
+      {readOnly ? (
+        <>
+          <PublicHomeQuickActions
+            kanbanPublicHref={kanbanPublicHref}
+            onOpenKanban={onOpenKanban}
+            onServiceRequest={() => setServiceDialogOpen(true)}
+          />
+          <ServiceRequestDialog
+            open={serviceDialogOpen}
+            onOpenChange={setServiceDialogOpen}
+            project={project}
+            agreements={agreements}
+          />
+        </>
+      ) : null}
+
       {totalPending > 0 ? (
         <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
           <div className="flex items-start gap-3">

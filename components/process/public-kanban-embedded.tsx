@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { PublicKanbanHeader } from "@/components/process/public-kanban-header";
 import { PublicKanbanBoard } from "@/components/process/public-kanban-board";
@@ -40,10 +40,13 @@ type KanbanLoadPayload = {
 export function PublicKanbanEmbedded({
   token,
   defaultAuthorName = "",
+  dashboardToken,
   onBack,
 }: {
   token: string;
   defaultAuthorName?: string;
+  /** Token publicznego dashboardu — umożliwia otwarcie tablicy bez ponownego logowania. */
+  dashboardToken?: string;
   onBack?: () => void;
 }) {
   const [board, setBoard] = useState<KanbanBoard | null>(null);
@@ -80,18 +83,17 @@ export function PublicKanbanEmbedded({
     if (payload.authorName) {
       setAuthorName(payload.authorName);
       setStarted(true);
-    } else if (
-      defaultAuthorName.trim() &&
-      !payload.access?.authRequired &&
-      !payload.access?.legacyNameRequired
-    ) {
+    } else if (defaultAuthorName.trim() && !payload.access?.authRequired) {
       setAuthorName(defaultAuthorName.trim());
       setStarted(true);
     }
   }, [defaultAuthorName]);
 
   const refresh = useCallback(async () => {
-    const response = await fetch(`/api/kanban/${encodeURIComponent(token)}`, {
+    const query = dashboardToken
+      ? `?dashboardToken=${encodeURIComponent(dashboardToken)}`
+      : "";
+    const response = await fetch(`/api/kanban/${encodeURIComponent(token)}${query}`, {
       credentials: "include",
     });
     if (!response.ok) {
@@ -100,7 +102,10 @@ export function PublicKanbanEmbedded({
     }
     const payload = (await response.json()) as KanbanLoadPayload;
     applyPayload(payload);
-  }, [applyPayload, token]);
+  }, [applyPayload, dashboardToken, token]);
+
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
 
   const boardStats = useMemo(
     () => (board ? computeKanbanBoardStats(board) : null),
@@ -117,14 +122,14 @@ export function PublicKanbanEmbedded({
 
     void (async () => {
       try {
-        await refresh();
+        await refreshRef.current();
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Błąd ładowania tablicy.");
       } finally {
         setReady(true);
       }
     })();
-  }, [defaultAuthorName, refresh, token]);
+  }, [defaultAuthorName, dashboardToken, token]);
 
   async function handleLogin() {
     setIsLoggingIn(true);
@@ -194,7 +199,9 @@ export function PublicKanbanEmbedded({
               <div>
                 <p className="text-sm font-medium text-foreground">Chroniona tablica</p>
                 <p className="mt-1 text-sm leading-relaxed text-muted">
-                  Podaj dane dostępu przekazane przy wdrożeniu.
+                  {dashboardToken
+                    ? "Ta tablica wymaga osobnego hasła. Zaloguj się do niej poniżej lub wróć do procesu."
+                    : "Podaj dane dostępu przekazane przy wdrożeniu."}
                 </p>
               </div>
             </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
   ClipboardCheck,
   FileText,
@@ -10,7 +10,6 @@ import {
   Home,
   LayoutGrid,
   Link2,
-  UserRound,
 } from "lucide-react";
 import { ProjectAgreementsPanel } from "@/components/dashboard/project-agreements-panel";
 import { ProjectSpecificationPanel } from "@/components/dashboard/project-specification-panel";
@@ -41,7 +40,6 @@ import { useProjectAgreementStore } from "@/store/project-agreement-store";
 type ClientDashboardTab =
   | "home"
   | "overview"
-  | "data"
   | "process"
   | "agreements"
   | "specification"
@@ -73,19 +71,6 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "links", label: "Linki", icon: Link2 },
 ];
 
-const TEAM_MOBILE_TAB_CONFIG: Array<{
-  id: ClientDashboardTab;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-}> = [
-  { id: "home", label: "HOME", icon: Home },
-  { id: "data", label: "Dane", icon: UserRound },
-  { id: "process", label: "Proces", icon: GitBranch },
-  { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
-  { id: "specification", label: "Spec.", icon: FileText },
-  { id: "links", label: "Linki", icon: Link2 },
-];
-
 export function ClientDashboardView({
   client,
   projects,
@@ -110,6 +95,7 @@ export function ClientDashboardView({
   onAgreementsUpdated,
   activeKanbanToken = null,
   onKanbanTokenChange,
+  publicDashboardToken,
 }: {
   client: Client;
   projects: Project[];
@@ -136,9 +122,12 @@ export function ClientDashboardView({
   /** Osadzona tablica Kanban w publicznym dashboardzie (token z ?kanban=). */
   activeKanbanToken?: string | null;
   onKanbanTokenChange?: (token: string | null) => void;
+  /** Token publicznego dashboardu — przekazywany do osadzonej tablicy Kanban. */
+  publicDashboardToken?: string;
 }) {
   const [activeTab, setActiveTab] = useState<ClientDashboardTab>("home");
   const [kanbanPublicLinks, setKanbanPublicLinks] = useState<Record<string, string>>({});
+  const agreementsSyncKeyRef = useRef("");
 
   const handleSelectTab = useCallback(
     (tab: ClientDashboardTab) => {
@@ -237,6 +226,13 @@ export function ClientDashboardView({
     if (!onAgreementsUpdated || storeAgreements.length === 0) {
       return;
     }
+    const syncKey = storeAgreements
+      .map((entry) => `${entry.id}:${entry.updatedAt ?? entry.createdAt}:${entry.status}`)
+      .join("|");
+    if (syncKey === agreementsSyncKeyRef.current) {
+      return;
+    }
+    agreementsSyncKeyRef.current = syncKey;
     onAgreementsUpdated(storeAgreements);
   }, [onAgreementsUpdated, storeAgreements]);
 
@@ -282,12 +278,6 @@ export function ClientDashboardView({
   });
 
   const teamMainTabs = TEAM_MAIN_TAB_CONFIG.filter((tab) => {
-    if (tab.id === "agreements" && !enableAgreements) return false;
-    if (tab.id === "specification" && !enableSpecification) return false;
-    return true;
-  });
-
-  const teamMobileTabs = TEAM_MOBILE_TAB_CONFIG.filter((tab) => {
     if (tab.id === "agreements" && !enableAgreements) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
     return true;
@@ -495,6 +485,10 @@ export function ClientDashboardView({
         onWarrantyExtensionAccepted={(warrantyEndsAt) =>
           onProjectPatch?.(selectedProject.id, { warrantyEndsAt })
         }
+        kanbanPublicHref={
+          readOnly ? (Object.values(kanbanPublicLinks)[0] ?? null) : undefined
+        }
+        onOpenKanban={readOnly ? handleKanbanNavigate : undefined}
       />
       </div>
     );
@@ -520,7 +514,7 @@ export function ClientDashboardView({
 
   function renderAgreementsPanel() {
     return (
-      <div className="min-w-0 rounded-2xl border border-border/80 bg-surface p-4">
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
         <h2 className="mb-3 text-base font-semibold text-foreground">Ustalenia i akceptacje</h2>
         <ProjectAgreementsPanel
           projectId={selectedProject.id}
@@ -707,6 +701,7 @@ export function ClientDashboardView({
               <PublicKanbanEmbedded
                 token={activeKanbanToken}
                 defaultAuthorName={clientAuthorName}
+                dashboardToken={publicDashboardToken}
                 onBack={() => onKanbanTokenChange?.(null)}
               />
             ) : (
@@ -725,8 +720,8 @@ export function ClientDashboardView({
               <section className="min-w-0 overflow-x-hidden">{renderMainTabContent(activeTab)}</section>
             </div>
           </div>
-          <div className="min-w-0 max-w-full xl:hidden">
-            {renderTabBar(teamMobileTabs, "mobile-top")}
+          <div className="min-w-0 max-w-full overflow-x-hidden xl:hidden">
+            {renderTabBar(teamMainTabs, "mobile-top")}
             {projects.length > 1 && onProjectChange ? (
               <div className="mb-4 flex w-full min-w-0 max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1">
                 {projects.map((project) => (
@@ -746,8 +741,8 @@ export function ClientDashboardView({
                 ))}
               </div>
             ) : null}
-            <div className="min-w-0 max-w-full">
-              {activeTab === "data" ? renderDataSection(true) : renderMainTabContent(activeTab)}
+            <div className="min-w-0 max-w-full overflow-x-hidden">
+              {renderMainTabContent(activeTab)}
             </div>
           </div>
         </>

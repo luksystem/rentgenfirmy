@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { isPublicAppRoute } from "@/lib/auth/routes";
 import { useKanbanNewTasksRealtime, useKanbanOverdueTasksRealtime } from "@/hooks/use-kanban-realtime";
 import { COMMERCIAL_MODULE_LIST } from "@/lib/modules/commercial-modules";
+import { NavBadges } from "@/components/nav-badges";
 import { NotificationBell } from "@/components/notification-bell";
 import { NotificationsRealtimeSubscriber } from "@/components/notifications-realtime-subscriber";
 import { useAuthStore } from "@/store/auth-store";
@@ -95,33 +96,6 @@ const mobileNavRight = mobileMainNav.slice(2);
 
 function isActive(pathname: string, href: string) {
   return pathname === href || (href !== "/" && pathname.startsWith(href));
-}
-
-function NavBadges({
-  overdueCount = 0,
-  newCount = 0,
-}: {
-  overdueCount?: number;
-  newCount?: number;
-}) {
-  if (overdueCount <= 0 && newCount <= 0) {
-    return null;
-  }
-
-  return (
-    <span className="flex items-center gap-1">
-      {overdueCount > 0 ? (
-        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white">
-          {overdueCount > 99 ? "99+" : overdueCount}
-        </span>
-      ) : null}
-      {newCount > 0 ? (
-        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-bold text-white">
-          {newCount > 99 ? "99+" : newCount}
-        </span>
-      ) : null}
-    </span>
-  );
 }
 
 function NavLink({
@@ -300,10 +274,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
 
         <div className="shrink-0 border-t border-sidebar-border p-5 pt-4">
           <div className="grid gap-2">
-            <div className="flex items-center justify-between gap-2 px-3">
-              <p className="text-xs text-sidebar-muted">{displayName || "Użytkownik"}</p>
-              <NotificationBell />
-            </div>
+            <p className="px-3 text-xs text-sidebar-muted">{displayName || "Użytkownik"}</p>
             <button
               type="button"
               onClick={() => void signOut().then(() => window.location.assign("/logowanie"))}
@@ -317,6 +288,16 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="xl:pl-72">
+        <header className="sticky top-0 z-30 hidden items-center justify-between gap-4 border-b border-border bg-background/80 px-8 py-3 backdrop-blur-xl xl:flex">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {currentPage?.label ?? "Rentgen firmy"}
+            </p>
+            <p className="truncate text-xs text-muted">Smart Home / BMS</p>
+          </div>
+          <NotificationBell />
+        </header>
+
         <header className="sticky top-0 z-20 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-xl xl:hidden">
           <div className="flex items-center gap-3">
             <Link
@@ -427,17 +408,12 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
               <span className="relative">
                 <Menu className="h-5 w-5" />
                 {kanbanOverdueTaskCount > 0 || kanbanNewTaskCount > 0 ? (
-                  <span className="absolute -right-2 -top-1.5 flex gap-0.5">
-                    {kanbanOverdueTaskCount > 0 ? (
-                      <span className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-bold text-white">
-                        {kanbanOverdueTaskCount > 9 ? "9+" : kanbanOverdueTaskCount}
-                      </span>
-                    ) : null}
-                    {kanbanNewTaskCount > 0 ? (
-                      <span className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-emerald-500 px-0.5 text-[8px] font-bold text-white">
-                        {kanbanNewTaskCount > 9 ? "9+" : kanbanNewTaskCount}
-                      </span>
-                    ) : null}
+                  <span className="absolute -right-2 -top-1.5">
+                    <NavBadges
+                      overdueCount={kanbanOverdueTaskCount}
+                      newCount={kanbanNewTaskCount}
+                      size="sm"
+                    />
                   </span>
                 ) : null}
               </span>

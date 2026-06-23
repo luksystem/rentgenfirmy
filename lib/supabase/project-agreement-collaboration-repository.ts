@@ -384,15 +384,42 @@ export async function setAgreementPublicEnabled(agreementId: string, enabled: bo
 
 export async function setAgreementDiscussionOpen(agreementId: string, open: boolean) {
   const supabase = getSupabase();
+
+  if (open) {
+    const { data: existing, error: fetchError } = await supabase
+      .from("project_client_agreements")
+      .select("status")
+      .eq("id", agreementId)
+      .maybeSingle();
+
+    if (fetchError) {
+      throw new Error(fetchError.message);
+    }
+    if (!existing) {
+      throw new Error("Nie znaleziono ustalenia.");
+    }
+    if (existing.status === "cancelled") {
+      throw new Error("Anulowanego ustalenia nie można otworzyć ponownie do dyskusji.");
+    }
+  }
+
   const { data, error } = await supabase
     .from("project_client_agreements")
     .update({
       discussion_open: open,
       updated_at: new Date().toISOString(),
-      ...(open ? { status: "draft" as const, active_version_id: null } : {}),
+      ...(open
+        ? {
+            status: "draft" as const,
+            active_version_id: null,
+            submitted_at: null,
+            client_responded_at: null,
+            client_response_name: null,
+            client_response_note: null,
+          }
+        : {}),
     })
     .eq("id", agreementId)
-    .in("status", ["draft", "rejected", "pending_client"])
     .select("*")
     .single();
 
@@ -569,6 +596,9 @@ export async function publishAgreementVersion(agreementId: string, publishedByNa
       active_version_id: versionId,
       submitted_at: now,
       updated_at: now,
+      client_responded_at: null,
+      client_response_name: null,
+      client_response_note: null,
     })
     .eq("id", agreementId);
 

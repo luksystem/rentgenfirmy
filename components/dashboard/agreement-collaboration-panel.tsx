@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, MessageSquare, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Textarea } from "@/components/ui/input";
+import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import {
   AGREEMENT_WORKFLOW_PHASE_LABELS,
   getAgreementWorkflowPhase,
@@ -29,6 +29,9 @@ export function AgreementCollaborationPanel({
   onChanged,
   onWarrantyExtensionAccepted,
   publicToken,
+  selectedRoleId: controlledRoleId,
+  onSelectedRoleIdChange,
+  onIdentityValidation,
 }: {
   agreementId: string;
   mode: ViewerMode;
@@ -37,17 +40,39 @@ export function AgreementCollaborationPanel({
   onWarrantyExtensionAccepted?: (warrantyEndsAt: string) => void | Promise<void>;
   /** Gdy ustawione — operacje przez API publiczne (bez logowania). */
   publicToken?: string;
+  /** Kontrolowana rola (publiczny link akceptacji). */
+  selectedRoleId?: string;
+  onSelectedRoleIdChange?: (roleId: string) => void;
+  /** Wywoływane przy próbie akcji bez kompletnej tożsamości. */
+  onIdentityValidation?: () => void;
 }) {
   const [bundle, setBundle] = useState<AgreementCollaborationBundle | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [commentBody, setCommentBody] = useState("");
   const [responseNote, setResponseNote] = useState("");
-  const [selectedRoleId, setSelectedRoleId] = useState("");
+  const [internalRoleId, setInternalRoleId] = useState("");
+  const selectedRoleId = controlledRoleId ?? internalRoleId;
+  const setSelectedRoleId = onSelectedRoleIdChange ?? setInternalRoleId;
   const [responderName, setResponderName] = useState(authorName);
   const [formError, setFormError] = useState<string | null>(null);
 
   const effectiveAuthorName = publicToken ? authorName.trim() : responderName.trim() || authorName.trim();
+  const identityReady =
+    Boolean(effectiveAuthorName) && (mode !== "external" || Boolean(selectedRoleId));
+
+  function requireIdentity(): boolean {
+    if (identityReady) {
+      return true;
+    }
+    onIdentityValidation?.();
+    if (!effectiveAuthorName) {
+      setFormError("Podaj imię lub firmę przed kontynuacją.");
+    } else if (mode === "external" && !selectedRoleId) {
+      setFormError("Wybierz swoją rolę w procesie przed kontynuacją.");
+    }
+    return false;
+  }
 
   useEffect(() => {
     setResponderName(authorName);
@@ -69,19 +94,17 @@ export function AgreementCollaborationPanel({
           })
         : await fetchAgreementCollaboration(agreementId);
       setBundle(next);
-      if (!selectedRoleId && next.roles.length) {
+      if (!selectedRoleId && next.roles.length && mode !== "external") {
         const defaultRole =
-          mode === "client" ?
-            (next.roles.find((role) => role.isClientRole) ?? next.roles[0])
-          : mode === "external" ?
-            next.roles[0]
-          : next.roles.find((role) => !role.isClientRole) ?? next.roles[0];
+          mode === "client"
+            ? (next.roles.find((role) => role.isClientRole) ?? next.roles[0])
+            : next.roles.find((role) => !role.isClientRole) ?? next.roles[0];
         setSelectedRoleId(defaultRole.id);
       }
     } finally {
       setLoading(false);
     }
-  }, [agreementId, mode, publicToken, selectedRoleId]);
+  }, [agreementId, mode, publicToken, selectedRoleId, setSelectedRoleId]);
 
   useEffect(() => {
     void refresh();
@@ -126,8 +149,7 @@ export function AgreementCollaborationPanel({
   async function handleAddComment() {
     setFormError(null);
 
-    if (!effectiveAuthorName) {
-      setFormError("Podaj imię lub firmę przed dodaniem komentarza.");
+    if (!requireIdentity()) {
       return;
     }
     if (!commentBody.trim()) {
@@ -167,8 +189,7 @@ export function AgreementCollaborationPanel({
   async function handleRespond(accepted: boolean) {
     setFormError(null);
 
-    if (!effectiveAuthorName) {
-      setFormError("Podaj imię lub firmę przed zapisaniem decyzji.");
+    if (!requireIdentity()) {
       return;
     }
     if (!pendingApprovalForViewer?.roleId) {
@@ -226,15 +247,23 @@ export function AgreementCollaborationPanel({
 
   const displayAgreement = bundle.activeVersion ?? bundle.agreement;
   const costLabel = formatAgreementCost(displayAgreement);
+  const agreementStatus = bundle.agreement.status;
+  const canOpenDiscussion =
+    !bundle.agreement.discussionOpen && agreementStatus !== "cancelled";
+  const isReopenDiscussion =
+    agreementStatus === "accepted" ||
+    agreementStatus === "rejected" ||
+    agreementStatus === "pending_client" ||
+    Boolean(bundle.agreement.activeVersionId);
 
   return (
-    <div className="mt-4 grid gap-4 border-t border-border/60 pt-4">
+    <div className="mt-4 grid min-w-0 max-w-full gap-4 overflow-x-hidden border-t border-border/60 pt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+        <p className="min-w-0 break-words text-xs font-semibold uppercase tracking-wide text-muted">
           Proces: {AGREEMENT_WORKFLOW_PHASE_LABELS[phase]}
         </p>
         {bundle.activeVersion ? (
-          <p className="text-xs text-muted">
+          <p className="shrink-0 text-xs text-muted">
             Wersja {bundle.activeVersion.versionNumber} ·{" "}
             {formatDate(bundle.activeVersion.publishedAt)}
           </p>
@@ -242,26 +271,26 @@ export function AgreementCollaborationPanel({
       </div>
 
       {mode === "team" ? (
-        <div className="flex flex-wrap gap-2">
-          {!bundle.agreement.discussionOpen &&
-          (phase === "draft" || phase === "rejected") ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          {canOpenDiscussion ? (
             <Button
               type="button"
               size="sm"
               variant="outline"
+              className="w-full sm:w-auto"
               disabled={busy}
               onClick={() => void run(() => setAgreementDiscussionOpen(agreementId, true).then())}
             >
               <MessageSquare className="mr-2 h-3.5 w-3.5" />
-              Otwórz dyskusję
+              {isReopenDiscussion ? "Otwórz ponownie dyskusję" : "Otwórz dyskusję"}
             </Button>
           ) : null}
-          {(phase === "draft" || phase === "discussion" || phase === "rejected") &&
-          bundle.agreement.discussionOpen ? (
+          {bundle.agreement.discussionOpen ? (
             <Button
               type="button"
               size="sm"
               variant="outline"
+              className="w-full sm:w-auto"
               disabled={busy}
               onClick={() =>
                 void run(async () => {
@@ -273,10 +302,12 @@ export function AgreementCollaborationPanel({
               Opublikuj wersję do akceptacji
             </Button>
           ) : null}
-          {(phase === "draft" || phase === "rejected") && !bundle.agreement.discussionOpen ? (
+          {!bundle.agreement.discussionOpen &&
+          (phase === "draft" || phase === "rejected") ? (
             <Button
               type="button"
               size="sm"
+              className="w-full sm:w-auto"
               disabled={busy}
               onClick={() =>
                 void run(async () => {
@@ -303,9 +334,11 @@ export function AgreementCollaborationPanel({
               return (
                 <div
                   key={role.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-surface-muted/10 px-3 py-2 text-sm"
+                  className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-surface-muted/10 px-3 py-2 text-sm"
                 >
-                  <span className="font-medium text-foreground">{role.label}</span>
+                  <span className="min-w-0 flex-1 break-words font-medium text-foreground">
+                    {role.label}
+                  </span>
                   <span
                     className={cn(
                       "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase",
@@ -339,9 +372,13 @@ export function AgreementCollaborationPanel({
                 key={comment.id}
                 className="rounded-lg border border-border/60 bg-surface-muted/10 px-3 py-2"
               >
-                <p className="text-xs text-muted">
-                  {comment.authorName}
-                  {comment.authorRoleLabel ? ` · ${comment.authorRoleLabel}` : ""} ·{" "}
+                <p className="text-sm font-medium text-foreground">{comment.authorName}</p>
+                {comment.authorRoleLabel ? (
+                  <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+                    Rola w procesie: {comment.authorRoleLabel}
+                  </p>
+                ) : null}
+                <p className="mt-1 text-xs text-muted">
                   {new Date(comment.createdAt).toLocaleString("pl-PL")}
                 </p>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{comment.body}</p>
@@ -359,34 +396,22 @@ export function AgreementCollaborationPanel({
                 <Input value={responderName} onChange={(event) => setResponderName(event.target.value)} />
               </Field>
               <Field label="Rola w procesie">
-                <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                <Select
                   value={selectedRoleId}
                   onChange={(event) => setSelectedRoleId(event.target.value)}
+                  className={!selectedRoleId ? "text-muted" : undefined}
                 >
+                  <option value="" disabled>
+                    — Wybierz swoją rolę —
+                  </option>
                   {bundle.roles.map((role) => (
                     <option key={role.id} value={role.id}>
                       {role.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
             </>
-          ) : null}
-          {mode === "external" && publicToken && bundle.roles.length ? (
-            <Field label="Rola w procesie">
-              <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-                value={selectedRoleId}
-                onChange={(event) => setSelectedRoleId(event.target.value)}
-              >
-                {bundle.roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
           ) : null}
           <Field label="Dodaj komentarz">
             <Textarea
@@ -401,7 +426,7 @@ export function AgreementCollaborationPanel({
             type="button"
             size="sm"
             variant="outline"
-            disabled={busy || !commentBody.trim() || !effectiveAuthorName}
+            disabled={busy || !commentBody.trim() || !identityReady}
             onClick={() => void run(handleAddComment)}
           >
             Wyślij komentarz
@@ -432,7 +457,7 @@ export function AgreementCollaborationPanel({
             <Button
               type="button"
               size="sm"
-              disabled={busy || !effectiveAuthorName}
+              disabled={busy || !identityReady}
               onClick={() => void run(() => handleRespond(true))}
             >
               <Check className="mr-2 h-3.5 w-3.5" />
@@ -442,7 +467,7 @@ export function AgreementCollaborationPanel({
               type="button"
               size="sm"
               variant="destructive"
-              disabled={busy || !effectiveAuthorName}
+              disabled={busy || !identityReady}
               onClick={() => void run(() => handleRespond(false))}
             >
               <X className="mr-2 h-3.5 w-3.5" />

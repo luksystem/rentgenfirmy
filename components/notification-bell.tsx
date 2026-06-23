@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, Bell, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NavBadges } from "@/components/nav-badges";
 import { cn, formatDate } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import { useNotificationStore } from "@/store/notification-store";
@@ -26,8 +27,10 @@ export function NotificationBell() {
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   const kanbanAlertCount = kanbanNewTaskCount + kanbanOverdueTaskCount;
-  const badgeCount = unreadCount + kanbanAlertCount;
+  const newBadgeCount = kanbanNewTaskCount + unreadCount;
+  const overdueBadgeCount = kanbanOverdueTaskCount;
   const hasKanbanAlerts = kanbanAlertCount > 0;
+  const hasBadges = newBadgeCount > 0 || overdueBadgeCount > 0;
 
   const refreshBadge = useCallback(() => {
     if (!profileId) {
@@ -84,20 +87,29 @@ export function NotificationBell() {
         type="button"
         size="sm"
         variant="secondary"
-        className="relative"
+        className="relative shrink-0"
         onClick={() => setOpen((value) => !value)}
         aria-label="Powiadomienia"
       >
         <Bell className="h-4 w-4" />
-        {badgeCount > 0 ? (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
-            {badgeCount > 9 ? "9+" : badgeCount}
+        {hasBadges ? (
+          <span className="absolute -right-2 -top-1.5">
+            <NavBadges
+              overdueCount={overdueBadgeCount}
+              newCount={newBadgeCount}
+              size="sm"
+            />
           </span>
         ) : null}
       </Button>
 
       {open ? (
-        <div className="absolute right-0 top-full z-50 mt-2 w-[min(26rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-border bg-surface-elevated shadow-card">
+        <div
+          className={cn(
+            "absolute right-0 z-50 mt-2 w-[min(26rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-border bg-surface-elevated shadow-card",
+            "top-full",
+          )}
+        >
           <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
             <p className="text-sm font-semibold text-foreground">Powiadomienia</p>
             {unreadCount > 0 ? (
@@ -126,7 +138,10 @@ export function NotificationBell() {
                       <Sparkles className="h-4 w-4" />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground">Nowe zgłoszenia klienta</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-foreground">Nowe zgłoszenia klienta</p>
+                        <NavBadges newCount={kanbanNewTaskCount} size="sm" />
+                      </div>
                       <p className="mt-1 break-words text-xs leading-relaxed text-muted">
                         {kanbanNewTaskCount === 1
                           ? "1 task oczekuje na przejrzenie przez zespół."
@@ -145,7 +160,10 @@ export function NotificationBell() {
                       <AlertTriangle className="h-4 w-4" />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground">Przeterminowane taski</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-foreground">Przeterminowane taski</p>
+                        <NavBadges overdueCount={kanbanOverdueTaskCount} size="sm" />
+                      </div>
                       <p className="mt-1 break-words text-xs leading-relaxed text-muted">
                         {kanbanOverdueTaskCount === 1
                           ? "1 task ma przekroczony termin realizacji."
@@ -164,7 +182,16 @@ export function NotificationBell() {
             ) : items.length === 0 ? (
               <p className="px-4 py-4 text-xs text-muted">Brak innych powiadomień.</p>
             ) : (
-              items.map((item) => (
+              <>
+                {unreadCount > 0 ? (
+                  <div className="flex items-center justify-between border-b border-border/60 bg-surface-muted/20 px-4 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+                      Inne powiadomienia
+                    </p>
+                    <NavBadges newCount={unreadCount} size="sm" />
+                  </div>
+                ) : null}
+                {items.map((item) => (
                 <Link
                   key={item.id}
                   href={item.linkUrl ?? "/tablice-wdrozen"}
@@ -187,7 +214,8 @@ export function NotificationBell() {
                   ) : null}
                   <p className="mt-1.5 text-[10px] text-muted">{formatDate(item.createdAt)}</p>
                 </Link>
-              ))
+              ))}
+              </>
             )}
           </div>
         </div>

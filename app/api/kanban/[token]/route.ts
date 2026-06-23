@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { parseKanbanSessionValue, KANBAN_PUBLIC_SESSION_COOKIE } from "@/lib/process/kanban-session";
-import { resolveKanbanPublicAuthor } from "@/lib/process/kanban-public-request";
+import {
+  buildKanbanSessionCookie,
+  resolveKanbanPublicAuthor,
+} from "@/lib/process/kanban-public-request";
+import { resolveKanbanAuthorFromDashboardSession } from "@/lib/process/kanban-dashboard-bridge";
 import {
   addKanbanComment,
   closeKanbanTask,
@@ -21,10 +25,11 @@ import {
 } from "@/lib/supabase/kanban-public-server";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ token: string }> },
 ) {
   const { token } = await context.params;
+  const dashboardToken = new URL(request.url).searchParams.get("dashboardToken");
 
   try {
     const meta = await fetchKanbanPublicMeta(token);
@@ -34,7 +39,16 @@ export async function GET(
 
     const cookieStore = await cookies();
     const session = parseKanbanSessionValue(cookieStore.get(KANBAN_PUBLIC_SESSION_COOKIE)?.value);
-    const sessionValid = session?.token === token;
+    let sessionValid = session?.token === token;
+    let authorName = sessionValid && session ? session.authorName : undefined;
+
+    if (meta.access.authRequired && !sessionValid && dashboardToken) {
+      const dashboardAuthor = await resolveKanbanAuthorFromDashboardSession(token, dashboardToken);
+      if (dashboardAuthor) {
+        sessionValid = true;
+        authorName = dashboardAuthor;
+      }
+    }
 
     if (meta.access.authRequired && !sessionValid) {
       return NextResponse.json({
@@ -49,12 +63,19 @@ export async function GET(
       return NextResponse.json({ error: "Nie znaleziono tablicy." }, { status: 404 });
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       board,
       context: meta.context,
       access: meta.access,
-      authorName: sessionValid ? session.authorName : undefined,
+      authorName,
     });
+
+    if (authorName) {
+      const cookie = buildKanbanSessionCookie(token, authorName);
+      response.cookies.set(cookie.name, cookie.value, cookie.options);
+    }
+
+    return response;
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Błąd pobierania tablicy." },

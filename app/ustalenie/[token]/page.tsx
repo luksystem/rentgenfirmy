@@ -2,8 +2,10 @@
 
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { AlertCircle, UserRound } from "lucide-react";
 import { AgreementCollaborationPanel } from "@/components/dashboard/agreement-collaboration-panel";
 import { Card, CardContent } from "@/components/ui/card";
+import { Field, Input, Select } from "@/components/ui/input";
 import {
   AGREEMENT_WORKFLOW_PHASE_LABELS,
   getAgreementWorkflowPhase,
@@ -14,13 +16,16 @@ import {
   PROJECT_AGREEMENT_STATUS_LABELS,
   formatAgreementCost,
 } from "@/lib/dashboard/agreement-types";
+import { cn } from "@/lib/utils";
 
 export default function PublicAgreementPage() {
   const params = useParams();
   const token = String(params.token ?? "");
   const [bundle, setBundle] = useState<AgreementCollaborationBundle | null>(null);
   const [authorName, setAuthorName] = useState("");
+  const [selectedRoleId, setSelectedRoleId] = useState("");
   const [nameTouched, setNameTouched] = useState(false);
+  const [roleTouched, setRoleTouched] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,6 +81,8 @@ export default function PublicAgreementPage() {
   const agreement = bundle.activeVersion ?? bundle.agreement;
   const phase = getAgreementWorkflowPhase(bundle.agreement);
   const costLabel = formatAgreementCost(agreement);
+  const selectedRole = bundle.roles.find((role) => role.id === selectedRoleId);
+  const identityIncomplete = !authorName.trim() || !selectedRoleId;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-accent/5">
@@ -105,26 +112,121 @@ export default function PublicAgreementPage() {
               </p>
             </div>
 
-            <label className="grid gap-1.5 text-sm">
-              <span className="text-muted">Twoje imię / firma (do komentarzy i akceptacji)</span>
-              <input
-                className="rounded-xl border border-border bg-surface px-3 py-2"
-                value={authorName}
-                onChange={(event) => setAuthorName(event.target.value)}
-                onBlur={() => setNameTouched(true)}
-                placeholder="np. Jan Kowalski / Firma XYZ"
-                required
-              />
-              {nameTouched && !authorName.trim() ? (
-                <span className="text-xs text-rose-300">Imię lub firma jest wymagane.</span>
-              ) : null}
-            </label>
+            <div
+              className={cn(
+                "rounded-2xl border-2 p-4 sm:p-5",
+                identityIncomplete
+                  ? "border-amber-500/50 bg-amber-500/10"
+                  : "border-emerald-500/40 bg-emerald-500/8",
+              )}
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border",
+                    identityIncomplete
+                      ? "border-amber-500/40 bg-amber-500/15 text-amber-200"
+                      : "border-emerald-500/40 bg-emerald-500/15 text-emerald-200",
+                  )}
+                >
+                  {identityIncomplete ? (
+                    <AlertCircle className="h-5 w-5" />
+                  ) : (
+                    <UserRound className="h-5 w-5" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-foreground">
+                    {identityIncomplete
+                      ? "Wymagane: imię i rola w procesie"
+                      : "Tożsamość potwierdzona"}
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-muted">
+                    Zanim zaakceptujesz ustalenie lub dodasz komentarz, wpisz swoje imię lub firmę
+                    i wybierz rolę, którą reprezentujesz w tym procesie. Rola nie jest
+                    wybierana automatycznie — upewnij się, że wskazujesz właściwą.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-4">
+                <Field
+                  label="1. Twoje imię lub firma"
+                  error={nameTouched && !authorName.trim() ? "Imię lub firma jest wymagane." : undefined}
+                >
+                  <Input
+                    value={authorName}
+                    onChange={(event) => setAuthorName(event.target.value)}
+                    onBlur={() => setNameTouched(true)}
+                    placeholder="np. Jan Kowalski / Firma XYZ"
+                    required
+                    className={cn(
+                      nameTouched && !authorName.trim() && "border-rose-500/50 focus:border-rose-500/50",
+                    )}
+                  />
+                </Field>
+
+                {bundle.roles.length > 0 ? (
+                  <div className="grid gap-1.5">
+                    <Field
+                      label="2. Twoja rola w procesie"
+                      error={
+                        roleTouched && !selectedRoleId
+                          ? "Wybierz rolę, którą reprezentujesz."
+                          : undefined
+                      }
+                    >
+                      <Select
+                        value={selectedRoleId}
+                        onChange={(event) => {
+                          setSelectedRoleId(event.target.value);
+                          setRoleTouched(true);
+                        }}
+                        onBlur={() => setRoleTouched(true)}
+                        className={cn(
+                          !selectedRoleId && "text-muted",
+                          roleTouched && !selectedRoleId && "border-rose-500/50",
+                        )}
+                      >
+                        <option value="" disabled>
+                          — Wybierz swoją rolę —
+                        </option>
+                        {bundle.roles.map((role) => (
+                          <option key={role.id} value={role.id}>
+                            {role.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                    {selectedRole ? (
+                      <p className="rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-foreground">
+                        <span className="font-medium">{authorName.trim() || "…"}</span>
+                        <span className="mt-0.5 block text-xs font-semibold uppercase tracking-wide text-accent">
+                          Rola w procesie: {selectedRole.label}
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="text-xs text-amber-200/90">
+                        Lista ról pochodzi z procesu akceptacji tego ustalenia — wybierz tę, która
+                        dotyczy Ciebie.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </div>
 
             <AgreementCollaborationPanel
               agreementId={bundle.agreement.id}
               mode="external"
               authorName={authorName}
               publicToken={token}
+              selectedRoleId={selectedRoleId}
+              onSelectedRoleIdChange={setSelectedRoleId}
+              onIdentityValidation={() => {
+                setNameTouched(true);
+                setRoleTouched(true);
+              }}
               onChanged={refresh}
             />
           </CardContent>

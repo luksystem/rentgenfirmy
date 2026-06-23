@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { History, Pencil, Trash2, X } from "lucide-react";
 import { KanbanPriorityPicker } from "@/components/process/kanban-task-card";
 import { KanbanAssigneePicker } from "@/components/process/kanban-board-controls";
@@ -106,8 +106,85 @@ export function KanbanTaskDetailModal({
   const [coverUpdatingId, setCoverUpdatingId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isClosingModal, setIsClosingModal] = useState(false);
+  const isFlushingRef = useRef(false);
 
   const taskSyncKey = useMemo(() => `${task.id}:${task.updatedAt}`, [task.id, task.updatedAt]);
+
+  const getTaskSavePayload = useCallback(
+    () => ({
+      title: title.trim(),
+      description,
+      priority,
+      assigneeName: assigneeName.trim() || null,
+      ...(showDueDate ? { dueDate: dueDate.trim() || null } : {}),
+    }),
+    [assigneeName, description, dueDate, priority, showDueDate, title],
+  );
+
+  const hasUnsavedTaskChanges = useCallback(() => {
+    const payload = getTaskSavePayload();
+    const currentDueDate = milestoneDateToInput(task.dueDate);
+    return (
+      payload.title !== task.title ||
+      payload.description !== task.description ||
+      payload.priority !== task.priority ||
+      payload.assigneeName !== (task.assigneeName ?? null) ||
+      (showDueDate && (payload.dueDate ?? null) !== (currentDueDate || null))
+    );
+  }, [getTaskSavePayload, showDueDate, task]);
+
+  const flushPendingChanges = useCallback(async () => {
+    if (isFlushingRef.current) {
+      return;
+    }
+    isFlushingRef.current = true;
+    try {
+      if (hasUnsavedTaskChanges()) {
+        await onSave(getTaskSavePayload());
+      }
+
+      if (editingCommentId && onUpdateComment && editingCommentBody.trim()) {
+        const originalBody = comments.find((entry) => entry.id === editingCommentId)?.body;
+        if (editingCommentBody !== originalBody) {
+          await onUpdateComment(editingCommentId, editingCommentBody);
+        }
+        setEditingCommentId(null);
+        setEditingCommentBody("");
+      }
+
+      if (commentDraft.trim()) {
+        await onComment();
+      }
+    } finally {
+      isFlushingRef.current = false;
+    }
+  }, [
+    commentDraft,
+    comments,
+    editingCommentBody,
+    editingCommentId,
+    getTaskSavePayload,
+    hasUnsavedTaskChanges,
+    onComment,
+    onSave,
+    onUpdateComment,
+  ]);
+
+  const handleClose = useCallback(async () => {
+    if (isClosingModal || isFlushingRef.current) {
+      return;
+    }
+    setIsClosingModal(true);
+    setError(null);
+    try {
+      await flushPendingChanges();
+      onClose();
+    } catch (closeError) {
+      setError(closeError instanceof Error ? closeError.message : "Nie udało się zapisać zmian.");
+      setIsClosingModal(false);
+    }
+  }, [flushPendingChanges, isClosingModal, onClose]);
 
   useEffect(() => {
     setTitle(task.title);
@@ -142,16 +219,13 @@ export function KanbanTaskDetailModal({
   }
 
   async function handleSave() {
+    if (!hasUnsavedTaskChanges()) {
+      return;
+    }
     setIsSaving(true);
     setError(null);
     try {
-      await onSave({
-        title: title.trim(),
-        description,
-        priority,
-        assigneeName: assigneeName.trim() || null,
-        ...(showDueDate ? { dueDate: dueDate.trim() || null } : {}),
-      });
+      await onSave(getTaskSavePayload());
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Nie udało się zapisać.");
     } finally {
@@ -179,6 +253,7 @@ export function KanbanTaskDetailModal({
     setIsClosing(true);
     setError(null);
     try {
+      await flushPendingChanges();
       await onCloseTask(true);
     } catch (closeError) {
       setError(closeError instanceof Error ? closeError.message : "Nie udało się zamknąć zgłoszenia.");
@@ -191,6 +266,7 @@ export function KanbanTaskDetailModal({
     setIsReopening(true);
     setError(null);
     try {
+      await flushPendingChanges();
       await onCloseTask(false);
     } catch (reopenError) {
       setError(reopenError instanceof Error ? reopenError.message : "Nie udało się ponownie otworzyć zgłoszenia.");
@@ -243,7 +319,7 @@ export function KanbanTaskDetailModal({
       open
       onOpenChange={(open) => {
         if (!open) {
-          onClose();
+          void handleClose();
         }
       }}
     >
@@ -256,7 +332,13 @@ export function KanbanTaskDetailModal({
               <p className="mt-1 text-xs font-medium uppercase tracking-wide text-muted">Zamknięte</p>
             ) : null}
           </div>
-          <Button type="button" size="sm" variant="secondary" onClick={onClose}>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={isClosingModal || isSaving}
+            onClick={() => void handleClose()}
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -349,7 +431,12 @@ export function KanbanTaskDetailModal({
         {error ? <p className="text-sm text-rose-400">{error}</p> : null}
 
         <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" disabled={isSaving || isClosing || isReopening} onClick={() => void handleSave()}>
+          <Button
+            type="button"
+            size="sm"
+            disabled={isSaving || isClosing || isReopening || isClosingModal || !hasUnsavedTaskChanges()}
+            onClick={() => void handleSave()}
+          >
             {isSaving ? "Zapisywanie…" : "Zapisz"}
           </Button>
           {!isClosed ? (
@@ -386,10 +473,15 @@ export function KanbanTaskDetailModal({
                 }
                 setIsDeleting(true);
                 setError(null);
-                void onDelete().catch((deleteError) => {
-                  setError(deleteError instanceof Error ? deleteError.message : "Nie udało się usunąć.");
-                  setIsDeleting(false);
-                });
+                void (async () => {
+                  try {
+                    await flushPendingChanges();
+                    await onDelete();
+                  } catch (deleteError) {
+                    setError(deleteError instanceof Error ? deleteError.message : "Nie udało się usunąć.");
+                    setIsDeleting(false);
+                  }
+                })();
               }}
             >
               {isDeleting ? "Usuwanie…" : "Usuń"}

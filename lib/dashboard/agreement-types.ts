@@ -125,12 +125,7 @@ export function isAgreementPendingAttention(
 export function getAgreementStatusLabel(
   agreement: Pick<ProjectClientAgreement, "status" | "discussionOpen">,
 ): string {
-  if (
-    agreement.discussionOpen &&
-    agreement.status !== "pending_client" &&
-    agreement.status !== "accepted" &&
-    agreement.status !== "cancelled"
-  ) {
+  if (agreement.discussionOpen && agreement.status !== "pending_client" && agreement.status !== "cancelled") {
     return "Otwarta dyskusja";
   }
   return PROJECT_AGREEMENT_STATUS_LABELS[agreement.status];

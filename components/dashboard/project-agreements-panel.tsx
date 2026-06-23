@@ -147,17 +147,17 @@ function AgreementCard({
   }
 
   return (
-    <article className="rounded-xl border border-border/70 bg-surface-muted/15 p-4">
+    <article className="min-w-0 max-w-full overflow-hidden rounded-xl border border-border/70 bg-surface-muted/15 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="font-medium text-foreground">{agreement.title}</p>
-          <p className="mt-0.5 text-xs text-muted">
+        <div className="min-w-0 flex-1">
+          <p className="break-words font-medium text-foreground">{agreement.title}</p>
+          <p className="mt-0.5 break-words text-xs text-muted">
             {PROJECT_AGREEMENT_CATEGORY_LABELS[agreement.category]} · {agreement.createdByName}
           </p>
         </div>
         <span
           className={cn(
-            "rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+            "shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
             statusBadgeClass[tone],
           )}
         >
@@ -173,7 +173,7 @@ function AgreementCard({
       ) : null}
 
       {agreement.body ? (
-        <p className="mt-3 whitespace-pre-wrap text-sm text-muted">{agreement.body}</p>
+        <p className="mt-3 break-words whitespace-pre-wrap text-sm text-muted">{agreement.body}</p>
       ) : null}
 
       {costLabel ? <p className="mt-2 text-sm font-medium text-foreground">Koszt: {costLabel}</p> : null}
@@ -196,10 +196,11 @@ function AgreementCard({
       ) : null}
 
       {mode === "team" && agreement.status === "draft" ? (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Button
             type="button"
             size="sm"
+            className="w-full sm:w-auto"
             disabled={busy}
             onClick={() => void run(() => onSubmit(agreement.id))}
           >
@@ -211,6 +212,7 @@ function AgreementCard({
               type="button"
               size="sm"
               variant="outline"
+              className="w-full sm:w-auto"
               disabled={busy}
               onClick={() => onEdit(agreement)}
             >
@@ -222,6 +224,7 @@ function AgreementCard({
             type="button"
             size="sm"
             variant="destructive"
+            className="w-full sm:w-auto"
             disabled={busy}
             onClick={() => void run(() => onDelete(agreement.id))}
           >
@@ -232,12 +235,13 @@ function AgreementCard({
       ) : null}
 
       {mode === "team" && agreement.status === "pending_client" ? (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           {onEdit ? (
             <Button
               type="button"
               size="sm"
               variant="outline"
+              className="w-full sm:w-auto"
               disabled={busy}
               onClick={() => onEdit(agreement)}
             >
@@ -249,6 +253,7 @@ function AgreementCard({
             type="button"
             size="sm"
             variant="secondary"
+            className="w-full sm:w-auto"
             disabled={busy}
             onClick={() => void run(() => onCancel(agreement.id))}
           >
@@ -258,6 +263,7 @@ function AgreementCard({
             type="button"
             size="sm"
             variant="destructive"
+            className="w-full sm:w-auto"
             disabled={busy}
             onClick={() => void run(() => onDelete(agreement.id))}
           >
@@ -269,11 +275,12 @@ function AgreementCard({
 
       {mode === "team" &&
       !["draft", "pending_client"].includes(agreement.status) ? (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Button
             type="button"
             size="sm"
             variant="destructive"
+            className="w-full sm:w-auto"
             disabled={busy}
             onClick={() => void run(() => onDelete(agreement.id))}
           >
@@ -334,10 +341,10 @@ function AgreementCard({
       ) : null}
 
       {agreement.status !== "cancelled" &&
-      (agreement.discussionOpen ||
+      (mode === "team" ||
+        agreement.discussionOpen ||
         agreement.status === "pending_client" ||
-        agreement.activeVersionId ||
-        (mode === "team" && ["draft", "rejected"].includes(agreement.status))) ? (
+        agreement.activeVersionId) ? (
         <AgreementCollaborationPanel
           agreementId={agreement.id}
           mode={mode}
@@ -348,14 +355,16 @@ function AgreementCard({
       ) : null}
 
       {mode === "team" && agreement.publicEnabled && agreement.publicToken ? (
-        <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">
-          <Link2 className="h-3.5 w-3.5 text-accent" />
-          Link publiczny:
+        <p className="mt-3 grid gap-1 text-xs text-muted">
+          <span className="flex items-center gap-2">
+            <Link2 className="h-3.5 w-3.5 shrink-0 text-accent" />
+            Link publiczny:
+          </span>
           <a
             href={getAgreementPublicUrl(agreement.publicToken)}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-accent hover:underline"
+            className="break-all text-accent hover:underline"
           >
             {getAgreementPublicUrl(agreement.publicToken)}
           </a>
@@ -572,13 +581,13 @@ export function ProjectAgreementsPanel({
         : `Brak ustaleń ze statusem „${filterLabels[filter]}”.`;
 
   return (
-    <div className="grid gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="grid min-w-0 max-w-full gap-3 overflow-x-hidden">
+      <div className="grid min-w-0 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
         <MobileFiltersPanel
           activeCount={activeFilterCount}
           onClear={() => setFilter(defaultFilter)}
           title="Status"
-          className="min-w-0 flex-1"
+          className="min-w-0"
           alwaysVisible={mode === "client"}
         >
           <div className="flex flex-wrap gap-1.5">
@@ -600,7 +609,7 @@ export function ProjectAgreementsPanel({
           </div>
         </MobileFiltersPanel>
         {mode === "team" ? (
-          <Button type="button" size="sm" onClick={openCreateDialog}>
+          <Button type="button" size="sm" className="w-full shrink-0 sm:w-auto" onClick={openCreateDialog}>
             <Plus className="mr-2 h-4 w-4" />
             Nowe ustalenie
           </Button>
@@ -773,7 +782,7 @@ export function ProjectAgreementsPanel({
                       }))
                     }
                     placeholder="np. Firma od klimatyzacji"
-                    className="min-w-[180px] flex-1"
+                    className="min-w-0 flex-1"
                   />
                   {!role.isClientRole ? (
                     <Button
@@ -812,11 +821,11 @@ export function ProjectAgreementsPanel({
               </Button>
             </div>
 
-            <div className="flex gap-2">
-              <Button type="button" disabled={saving} onClick={() => void handleSave()}>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button type="button" className="w-full sm:w-auto" disabled={saving} onClick={() => void handleSave()}>
                 {editingId ? "Zapisz zmiany" : "Zapisz szkic"}
               </Button>
-              <Button type="button" variant="secondary" onClick={closeDialog}>
+              <Button type="button" className="w-full sm:w-auto" variant="secondary" onClick={closeDialog}>
                 Anuluj
               </Button>
             </div>

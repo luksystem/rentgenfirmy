@@ -242,6 +242,16 @@ function PublicDashboardPageContent() {
     }
   }
 
+  const handleAgreementsUpdated = useCallback((updated: ProjectClientAgreement[]) => {
+    setAgreements(updated);
+  }, []);
+
+  const handleProjectPatch = useCallback((projectId: string, patch: Partial<Project>) => {
+    setProjects((current) =>
+      current.map((entry) => (entry.id === projectId ? { ...entry, ...patch } : entry)),
+    );
+  }, []);
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-background to-accent/5 p-6">
@@ -376,16 +386,11 @@ function PublicDashboardPageContent() {
           clientAuthorName={client.fullName}
           enableAgreements={features.agreements}
           enableSpecification={features.specification}
-          onProjectPatch={(projectId, patch) => {
-            setProjects((current) =>
-              current.map((entry) => (entry.id === projectId ? { ...entry, ...patch } : entry)),
-            );
-          }}
-          onAgreementsUpdated={(updated) => {
-            setAgreements(updated);
-          }}
+          onProjectPatch={handleProjectPatch}
+          onAgreementsUpdated={handleAgreementsUpdated}
           activeKanbanToken={activeKanbanToken}
           onKanbanTokenChange={handleKanbanTokenChange}
+          publicDashboardToken={token}
         />
       </div>
     </div>
