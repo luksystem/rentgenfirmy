@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, MessageSquare, Send, X } from "lucide-react";
+import { AgreementAttachmentGallery } from "@/components/dashboard/agreement-attachment-gallery";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import {
@@ -18,6 +19,10 @@ import {
   respondToAgreementApproval,
   setAgreementDiscussionOpen,
 } from "@/lib/supabase/project-agreement-collaboration-repository";
+import {
+  deleteAgreementAttachment,
+  uploadAgreementAttachment,
+} from "@/lib/supabase/project-agreement-attachments-repository";
 import { cn, formatDate } from "@/lib/utils";
 
 type ViewerMode = "team" | "client" | "external";
@@ -32,6 +37,7 @@ export function AgreementCollaborationPanel({
   selectedRoleId: controlledRoleId,
   onSelectedRoleIdChange,
   onIdentityValidation,
+  syncRevision,
 }: {
   agreementId: string;
   mode: ViewerMode;
@@ -45,6 +51,8 @@ export function AgreementCollaborationPanel({
   onSelectedRoleIdChange?: (roleId: string) => void;
   /** Wywoływane przy próbie akcji bez kompletnej tożsamości. */
   onIdentityValidation?: () => void;
+  /** Zmiana wersji/statusu ustalenia — odśwież panel współpracy (realtime). */
+  syncRevision?: string;
 }) {
   const [bundle, setBundle] = useState<AgreementCollaborationBundle | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,6 +64,7 @@ export function AgreementCollaborationPanel({
   const setSelectedRoleId = onSelectedRoleIdChange ?? setInternalRoleId;
   const [responderName, setResponderName] = useState(authorName);
   const [formError, setFormError] = useState<string | null>(null);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
 
   const effectiveAuthorName = publicToken ? authorName.trim() : responderName.trim() || authorName.trim();
   const identityReady =
@@ -110,6 +119,25 @@ export function AgreementCollaborationPanel({
     void refresh();
   }, [refresh]);
 
+  const lastSyncRevisionRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    lastSyncRevisionRef.current = undefined;
+  }, [agreementId]);
+
+  useEffect(() => {
+    if (!syncRevision) {
+      return;
+    }
+    if (lastSyncRevisionRef.current === syncRevision) {
+      return;
+    }
+    if (lastSyncRevisionRef.current !== undefined) {
+      void refresh();
+    }
+    lastSyncRevisionRef.current = syncRevision;
+  }, [refresh, syncRevision]);
+
   const phase = bundle ? getAgreementWorkflowPhase(bundle.agreement) : "draft";
   const canComment =
     bundle &&
@@ -117,6 +145,8 @@ export function AgreementCollaborationPanel({
       phase === "draft" ||
       phase === "awaiting_approvals" ||
       bundle.agreement.discussionOpen);
+
+  const canManageAttachments = bundle && bundle.agreement.status !== "cancelled";
 
   const pendingApprovalForViewer = useMemo(() => {
     if (!bundle || phase !== "awaiting_approvals") {
@@ -237,6 +267,53 @@ export function AgreementCollaborationPanel({
     setResponseNote("");
   }
 
+  async function handleUploadAttachment(file: File) {
+    setFormError(null);
+    if (!requireIdentity()) {
+      throw new Error("Podaj tożsamość przed dodaniem załącznika.");
+    }
+
+    setUploadingAttachment(true);
+    try {
+      const authorSource: AgreementCommentAuthorSource =
+        mode === "team" ? "team" : mode === "client" ? "client" : "external";
+
+      if (publicToken) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("authorName", effectiveAuthorName);
+        const response = await fetch(
+          `/api/ustalenie/${encodeURIComponent(publicToken)}/attachments`,
+          { method: "POST", body: formData },
+        );
+        if (!response.ok) {
+          const payload = (await response.json()) as { error?: string };
+          throw new Error(payload.error ?? "Nie udało się przesłać pliku.");
+        }
+      } else {
+        await uploadAgreementAttachment({
+          agreementId,
+          file,
+          authorName: effectiveAuthorName,
+          authorSource,
+        });
+      }
+      await refresh();
+      await onChanged?.();
+    } finally {
+      setUploadingAttachment(false);
+    }
+  }
+
+  async function handleDeleteAttachment(attachmentId: string) {
+    if (mode !== "team") {
+      return;
+    }
+    await deleteAgreementAttachment(attachmentId);
+    await refresh();
+    await onChanged?.();
+  }
+
   if (loading && !bundle) {
     return <p className="text-sm text-muted">Ładowanie procesu ustaleń…</p>;
   }
@@ -257,7 +334,7 @@ export function AgreementCollaborationPanel({
     Boolean(bundle.agreement.activeVersionId);
 
   return (
-    <div className="mt-4 grid min-w-0 max-w-full gap-4 overflow-x-hidden border-t border-border/60 pt-4">
+    <div className="grid min-w-0 max-w-full gap-4 overflow-x-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="min-w-0 break-words text-xs font-semibold uppercase tracking-wide text-muted">
           Proces: {AGREEMENT_WORKFLOW_PHASE_LABELS[phase]}
@@ -362,6 +439,25 @@ export function AgreementCollaborationPanel({
           </div>
         </div>
       ) : null}
+
+      <div className="grid gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">Załączniki</p>
+        <AgreementAttachmentGallery
+          attachments={bundle.attachments ?? []}
+          allowUpload={Boolean(canManageAttachments && identityReady)}
+          allowDelete={mode === "team"}
+          uploading={uploadingAttachment}
+          onUpload={canManageAttachments ? handleUploadAttachment : undefined}
+          onDelete={mode === "team" ? handleDeleteAttachment : undefined}
+        />
+        {canManageAttachments && !identityReady ? (
+          <p className="text-xs text-muted">
+            {mode === "external"
+              ? "Podaj imię i wybierz rolę, aby dodać zdjęcie lub plik."
+              : "Podaj imię, aby dodać załącznik."}
+          </p>
+        ) : null}
+      </div>
 
       {bundle.comments.length ? (
         <div className="grid gap-2">

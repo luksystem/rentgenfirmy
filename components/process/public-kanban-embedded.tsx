@@ -42,12 +42,15 @@ export function PublicKanbanEmbedded({
   defaultAuthorName = "",
   dashboardToken,
   onBack,
+  embedded = false,
 }: {
   token: string;
   defaultAuthorName?: string;
   /** Token publicznego dashboardu — umożliwia otwarcie tablicy bez ponownego logowania. */
   dashboardToken?: string;
   onBack?: () => void;
+  /** Osadzenie w dashboardzie — lepszy layout na mobile (min-height, flex). */
+  embedded?: boolean;
 }) {
   const [board, setBoard] = useState<KanbanBoard | null>(null);
   const [context, setContext] = useState<KanbanPublicContext>(DEFAULT_CONTEXT);
@@ -279,9 +282,15 @@ export function PublicKanbanEmbedded({
   }
 
   return (
-    <div className="grid min-w-0 max-w-full gap-3">
+    <div
+      className={
+        embedded
+          ? "flex min-h-0 min-w-0 max-w-full flex-1 flex-col gap-3"
+          : "grid min-w-0 max-w-full gap-3"
+      }
+    >
       {onBack ? (
-        <Button type="button" size="sm" variant="outline" className="w-fit" onClick={onBack}>
+        <Button type="button" size="sm" variant="outline" className="w-fit shrink-0" onClick={onBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Wróć do procesu
         </Button>

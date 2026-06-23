@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, Copy, Link2, Pencil, Plus, Send, Trash2, X } from "lucide-react";
 import { AgreementCollaborationPanel } from "@/components/dashboard/agreement-collaboration-panel";
+import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-collapsible-shell";
+import { AgreementApproverRoleField } from "@/components/dashboard/agreement-approver-role-field";
 import { AgreementCostFields } from "@/components/dashboard/agreement-cost-fields";
 import { Button } from "@/components/ui/button";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
@@ -17,10 +19,9 @@ import {
 import {
   PROJECT_AGREEMENT_CATEGORIES,
   PROJECT_AGREEMENT_CATEGORY_LABELS,
-  agreementStatusTone,
+  buildAgreementCollapsibleMeta,
   formatAgreementCost,
   getAgreementStatusLabel,
-  getAgreementStatusTone,
   isAgreementPendingAttention,
   normalizeProjectAgreementInput,
   type ProjectAgreementCategory,
@@ -36,6 +37,9 @@ import {
 import { fetchAgreementApproverRoles } from "@/lib/supabase/project-agreement-collaboration-repository";
 import { cn, formatDate } from "@/lib/utils";
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
+import { useProjectTradeStore } from "@/store/project-trade-store";
+
+const EMPTY_TRADES: import("@/lib/dashboard/trade-types").ProjectTrade[] = [];
 
 type FilterKey = "all" | ProjectAgreementStatus;
 
@@ -48,13 +52,6 @@ const filterLabels: Record<FilterKey, string> = {
   accepted: "Zaakceptowane",
   rejected: "Odrzucone",
   cancelled: "Anulowane",
-};
-
-const statusBadgeClass: Record<ReturnType<typeof agreementStatusTone>, string> = {
-  neutral: "border-border/80 bg-surface-muted/40 text-muted",
-  warning: "border-amber-500/40 bg-amber-500/10 text-amber-200",
-  success: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
-  danger: "border-rose-500/40 bg-rose-500/10 text-rose-200",
 };
 
 function emptyInput(): ProjectAgreementInput {
@@ -134,7 +131,7 @@ function AgreementCard({
 }) {
   const [busy, setBusy] = useState(false);
   const [responseNote, setResponseNote] = useState("");
-  const tone = getAgreementStatusTone(agreement);
+  const meta = buildAgreementCollapsibleMeta(agreement);
   const costLabel = formatAgreementCost(agreement);
 
   async function run(action: () => Promise<void>) {
@@ -147,48 +144,37 @@ function AgreementCard({
   }
 
   return (
-    <article className="min-w-0 max-w-full overflow-hidden rounded-xl border border-border/70 bg-surface-muted/15 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <p className="break-words font-medium text-foreground">{agreement.title}</p>
-          <p className="mt-0.5 break-words text-xs text-muted">
-            {PROJECT_AGREEMENT_CATEGORY_LABELS[agreement.category]} · {agreement.createdByName}
-          </p>
-        </div>
-        <span
-          className={cn(
-            "shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-            statusBadgeClass[tone],
-          )}
-        >
-          {getAgreementStatusLabel(agreement)}
-        </span>
-      </div>
-
+    <AgreementCollapsibleShell
+      title={meta.title}
+      subtitle={meta.subtitle}
+      statusLabel={meta.statusLabel}
+      statusTone={meta.statusTone}
+      hint={meta.hint}
+    >
       {agreement.category === "warranty" && agreement.proposedWarrantyEndDate ? (
-        <p className="mt-3 text-sm text-foreground">
+        <p className="text-sm text-foreground">
           Nowa data zakończenia gwarancji:{" "}
           <span className="font-medium">{formatDate(agreement.proposedWarrantyEndDate)}</span>
         </p>
       ) : null}
 
       {agreement.body ? (
-        <p className="mt-3 break-words whitespace-pre-wrap text-sm text-muted">{agreement.body}</p>
+        <p className="break-words whitespace-pre-wrap text-sm text-muted">{agreement.body}</p>
       ) : null}
 
-      {costLabel ? <p className="mt-2 text-sm font-medium text-foreground">Koszt: {costLabel}</p> : null}
+      {costLabel ? <p className="text-sm font-medium text-foreground">Koszt: {costLabel}</p> : null}
       {agreement.costNote && costLabel !== agreement.costNote ? (
-        <p className="mt-1 text-xs text-muted">{agreement.costNote}</p>
+        <p className="text-xs text-muted">{agreement.costNote}</p>
       ) : null}
 
       {agreement.submittedAt ? (
-        <p className="mt-2 text-xs text-muted">
+        <p className="text-xs text-muted">
           Wysłano do klienta: {new Date(agreement.submittedAt).toLocaleString("pl-PL")}
         </p>
       ) : null}
 
       {agreement.clientRespondedAt ? (
-        <p className="mt-1 text-xs text-muted">
+        <p className="text-xs text-muted">
           Odpowiedź ({agreement.clientResponseName}):{" "}
           {new Date(agreement.clientRespondedAt).toLocaleString("pl-PL")}
           {agreement.clientResponseNote ? ` — ${agreement.clientResponseNote}` : ""}
@@ -196,7 +182,7 @@ function AgreementCard({
       ) : null}
 
       {mode === "team" && agreement.status === "draft" ? (
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Button
             type="button"
             size="sm"
@@ -235,7 +221,7 @@ function AgreementCard({
       ) : null}
 
       {mode === "team" && agreement.status === "pending_client" ? (
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           {onEdit ? (
             <Button
               type="button"
@@ -275,7 +261,7 @@ function AgreementCard({
 
       {mode === "team" &&
       !["draft", "pending_client"].includes(agreement.status) ? (
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Button
             type="button"
             size="sm"
@@ -291,7 +277,7 @@ function AgreementCard({
       ) : null}
 
       {mode === "client" && agreement.status === "pending_client" && !agreement.activeVersionId ? (
-        <div className="mt-3 grid gap-2">
+        <div className="grid gap-2">
           <Field label="Uwagi (opcjonalnie)">
             <Textarea
               value={responseNote}
@@ -340,22 +326,19 @@ function AgreementCard({
         </div>
       ) : null}
 
-      {agreement.status !== "cancelled" &&
-      (mode === "team" ||
-        agreement.discussionOpen ||
-        agreement.status === "pending_client" ||
-        agreement.activeVersionId) ? (
+      {agreement.status !== "cancelled" ? (
         <AgreementCollaborationPanel
           agreementId={agreement.id}
           mode={mode}
           authorName={authorName}
           onChanged={onRefresh}
           onWarrantyExtensionAccepted={onWarrantyExtensionAccepted}
+          syncRevision={`${agreement.status}:${agreement.updatedAt}:${agreement.activeVersionId ?? ""}`}
         />
       ) : null}
 
       {mode === "team" && agreement.publicEnabled && agreement.publicToken ? (
-        <p className="mt-3 grid gap-1 text-xs text-muted">
+        <p className="grid gap-1 text-xs text-muted">
           <span className="flex items-center gap-2">
             <Link2 className="h-3.5 w-3.5 shrink-0 text-accent" />
             Link publiczny:
@@ -370,7 +353,7 @@ function AgreementCard({
           </a>
         </p>
       ) : null}
-    </article>
+    </AgreementCollapsibleShell>
   );
 }
 
@@ -401,6 +384,11 @@ export function ProjectAgreementsPanel({
   const updateAgreement = useProjectAgreementStore((state) => state.updateAgreement);
   const updateDraft = useProjectAgreementStore((state) => state.updateDraft);
 
+  const projectTrades = useProjectTradeStore(
+    (state) => state.byProject[projectId] ?? EMPTY_TRADES,
+  );
+  const ensureTrades = useProjectTradeStore((state) => state.ensureTrades);
+
   const agreements =
     storeAgreements.length > 0 ? storeAgreements : (seedAgreements ?? storeAgreements);
 
@@ -414,6 +402,10 @@ export function ProjectAgreementsPanel({
   useEffect(() => {
     void ensureAgreements(projectId);
   }, [ensureAgreements, projectId]);
+
+  useEffect(() => {
+    void ensureTrades(projectId);
+  }, [ensureTrades, projectId]);
 
   const filtered = useMemo(() => {
     if (filter === "all") {
@@ -768,27 +760,27 @@ export function ProjectAgreementsPanel({
 
             <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/10 p-3">
               <p className="text-sm font-medium text-foreground">Role wymagane do akceptacji</p>
+              <p className="text-xs text-muted">
+                Wybierz branżę z listy projektu lub wpisz rolę ręcznie.
+              </p>
               {(form.approverRoles ?? []).map((role, index) => (
-                <div key={`approver-role-${index}`} className="flex flex-wrap items-center gap-2">
-                  <Input
-                    value={role.label}
-                    disabled={role.isClientRole}
-                    onChange={(event) =>
+                <div key={`approver-role-${index}`} className="flex flex-wrap items-start gap-2">
+                  <AgreementApproverRoleField
+                    role={role}
+                    trades={projectTrades}
+                    onChange={(patch) =>
                       setForm((current) => ({
                         ...current,
-                        approverRoles: updateApproverRole(current.approverRoles ?? [], index, {
-                          label: event.target.value,
-                        }),
+                        approverRoles: updateApproverRole(current.approverRoles ?? [], index, patch),
                       }))
                     }
-                    placeholder="np. Firma od klimatyzacji"
-                    className="min-w-0 flex-1"
                   />
                   {!role.isClientRole ? (
                     <Button
                       type="button"
                       size="sm"
                       variant="ghost"
+                      className="shrink-0"
                       onClick={() =>
                         setForm((current) => ({
                           ...current,

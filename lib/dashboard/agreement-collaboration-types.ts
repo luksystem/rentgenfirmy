@@ -1,4 +1,5 @@
 import type { ProjectAgreementCategory, ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
+import type { AgreementAttachment } from "@/lib/dashboard/agreement-attachment-types";
 
 export type AgreementCommentAuthorSource = "team" | "client" | "external";
 
@@ -61,6 +62,7 @@ export type AgreementCollaborationBundle = {
   agreement: ProjectClientAgreement;
   roles: AgreementApproverRole[];
   comments: AgreementComment[];
+  attachments: AgreementAttachment[];
   activeVersion: AgreementVersion | null;
   approvals: AgreementApproval[];
   versions: AgreementVersion[];

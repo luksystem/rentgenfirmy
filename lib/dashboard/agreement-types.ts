@@ -109,6 +109,42 @@ export function agreementStatusTone(
   }
 }
 
+export type AgreementStatusBadgeTone = ReturnType<typeof agreementStatusTone>;
+
+export const AGREEMENT_STATUS_BADGE_CLASS: Record<AgreementStatusBadgeTone, string> = {
+  neutral: "border-border/80 bg-surface-muted/40 text-muted",
+  warning: "border-amber-500/40 bg-amber-500/10 text-amber-200",
+  success: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
+  danger: "border-rose-500/40 bg-rose-500/10 text-rose-200",
+};
+
+/** Krótki opis procesu akceptacji na zwiniętej karcie. */
+export function getAgreementAcceptanceHint(
+  agreement: Pick<ProjectClientAgreement, "status" | "activeVersionId">,
+): string | null {
+  if (agreement.status === "pending_client" && agreement.activeVersionId) {
+    return "Akceptacja wielorolowa w toku";
+  }
+  return null;
+}
+
+export function buildAgreementCollapsibleMeta(agreement: ProjectClientAgreement) {
+  const costLabel = formatAgreementCost(agreement);
+  return {
+    title: agreement.title,
+    subtitle: [
+      PROJECT_AGREEMENT_CATEGORY_LABELS[agreement.category],
+      agreement.createdByName,
+      costLabel,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    statusLabel: getAgreementStatusLabel(agreement),
+    statusTone: getAgreementStatusTone(agreement),
+    hint: getAgreementAcceptanceHint(agreement),
+  };
+}
+
 /** Ustalenie wymaga uwagi na dashboardzie (akceptacja lub otwarta dyskusja). */
 export function isAgreementPendingAttention(
   agreement: Pick<ProjectClientAgreement, "status" | "discussionOpen">,

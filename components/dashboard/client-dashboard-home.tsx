@@ -9,8 +9,10 @@ import {
   GitBranch,
   LayoutGrid,
   Shield,
+  Star,
   Wrench,
 } from "lucide-react";
+import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-collapsible-shell";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,6 +27,7 @@ import { DashboardPublicLinkPanel } from "@/components/dashboard/dashboard-publi
 import { ProjectWarrantyPanel } from "@/components/dashboard/project-warranty-panel";
 import {
   PROJECT_AGREEMENT_CATEGORY_LABELS,
+  buildAgreementCollapsibleMeta,
   formatAgreementCost,
   getAgreementStatusLabel,
   isAgreementPendingAttention,
@@ -38,7 +41,7 @@ import {
 import type { Client } from "@/lib/service/types";
 import type { DashboardSpace } from "@/lib/dashboard/types";
 import type { Project } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 
 const SERVICE_REQUEST_URL = "https://www.serwis.luksystem.pl";
 
@@ -292,10 +295,12 @@ function PublicHomeQuickActions({
   kanbanPublicHref,
   onOpenKanban,
   onServiceRequest,
+  onOpenSatisfaction,
 }: {
   kanbanPublicHref?: string | null;
   onOpenKanban?: (href: string) => void;
   onServiceRequest: () => void;
+  onOpenSatisfaction?: () => void;
 }) {
   return (
     <div className="rounded-2xl border border-accent/25 bg-gradient-to-br from-accent/10 via-surface to-surface p-4">
@@ -315,11 +320,25 @@ function PublicHomeQuickActions({
             </span>
           </Button>
         ) : null}
+        {onOpenSatisfaction ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-auto min-h-11 justify-start gap-2 px-4 py-3 text-left"
+            onClick={onOpenSatisfaction}
+          >
+            <Star className="h-4 w-4 shrink-0 text-accent" />
+            <span>
+              <span className="block font-medium">Ocena ustaleń</span>
+              <span className="block text-xs font-normal text-muted">Weryfikacja przy przekazaniu</span>
+            </span>
+          </Button>
+        ) : null}
         <Button
           type="button"
           className={cn(
             "h-auto min-h-11 justify-start gap-2 px-4 py-3 text-left",
-            kanbanPublicHref && onOpenKanban ? "" : "sm:col-span-2",
+            kanbanPublicHref && onOpenKanban && onOpenSatisfaction ? "" : "sm:col-span-2",
           )}
           onClick={onServiceRequest}
         >
@@ -356,6 +375,7 @@ export function ClientDashboardHome({
   onWarrantyExtensionAccepted,
   kanbanPublicHref,
   onOpenKanban,
+  enableSatisfactionReview = true,
 }: {
   client: Client;
   project: Project;
@@ -366,7 +386,7 @@ export function ClientDashboardHome({
   agreements: ProjectClientAgreement[];
   pendingAgreementsCount: number;
   pendingWarrantyCount: number;
-  onOpenTab?: (tab: "agreements" | "process" | "home") => void;
+  onOpenTab?: (tab: "agreements" | "process" | "home" | "satisfaction") => void;
   clientSpace?: DashboardSpace | null;
   /** Panel włączania linku publicznego dashboardu — tylko widok zespołu. */
   showPublicLinkPanel?: boolean;
@@ -380,6 +400,7 @@ export function ClientDashboardHome({
   onWarrantyExtensionAccepted?: (warrantyEndsAt: string) => void | Promise<void>;
   kanbanPublicHref?: string | null;
   onOpenKanban?: (href: string) => void;
+  enableSatisfactionReview?: boolean;
 }) {
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const pendingAgreements = agreements.filter(
@@ -402,6 +423,11 @@ export function ClientDashboardHome({
             kanbanPublicHref={kanbanPublicHref}
             onOpenKanban={onOpenKanban}
             onServiceRequest={() => setServiceDialogOpen(true)}
+            onOpenSatisfaction={
+              enableSatisfactionReview && onOpenTab
+                ? () => onOpenTab("satisfaction")
+                : undefined
+            }
           />
           <ServiceRequestDialog
             open={serviceDialogOpen}
@@ -460,20 +486,25 @@ export function ClientDashboardHome({
             Oczekujące ustalenia
           </h3>
           <div className="grid gap-2">
-            {pendingAgreements.slice(0, 5).map((entry) => (
-              <div
-                key={entry.id}
-                className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5"
-              >
-                <p className="break-words font-medium text-foreground">{entry.title}</p>
-                <p className="mt-0.5 break-words text-xs text-muted">
-                  {getAgreementStatusLabel(entry)}
-                  {" · "}
-                  {PROJECT_AGREEMENT_CATEGORY_LABELS[entry.category]}
-                  {formatAgreementCost(entry) ? ` · ${formatAgreementCost(entry)}` : ""}
-                </p>
-              </div>
-            ))}
+            {pendingAgreements.slice(0, 5).map((entry) => {
+              const meta = buildAgreementCollapsibleMeta(entry);
+              return (
+                <AgreementCollapsibleShell
+                  key={entry.id}
+                  compact
+                  className="border-amber-500/30 bg-amber-500/5"
+                  title={meta.title}
+                  subtitle={meta.subtitle}
+                  statusLabel={meta.statusLabel}
+                  statusTone={meta.statusTone}
+                  hint={meta.hint}
+                >
+                  {entry.body ? (
+                    <p className="line-clamp-4 whitespace-pre-wrap text-sm text-muted">{entry.body}</p>
+                  ) : null}
+                </AgreementCollapsibleShell>
+              );
+            })}
           </div>
           {onOpenTab ? (
             <Button
@@ -496,17 +527,27 @@ export function ClientDashboardHome({
             Propozycje przedłużenia gwarancji
           </h3>
           <div className="grid gap-2">
-            {pendingWarranty.map((entry) => (
-              <div
-                key={entry.id}
-                className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5"
-              >
-                <p className="break-words font-medium text-foreground">{entry.title}</p>
-                <p className="mt-0.5 break-words text-xs text-muted">
-                  {formatAgreementCost(entry) ?? "Bez dodatkowego kosztu"}
-                </p>
-              </div>
-            ))}
+            {pendingWarranty.map((entry) => {
+              const meta = buildAgreementCollapsibleMeta(entry);
+              return (
+                <AgreementCollapsibleShell
+                  key={entry.id}
+                  compact
+                  className="border-amber-500/30 bg-amber-500/5"
+                  title={meta.title}
+                  subtitle={meta.subtitle}
+                  statusLabel={meta.statusLabel}
+                  statusTone={meta.statusTone}
+                  hint={meta.hint}
+                >
+                  {entry.proposedWarrantyEndDate ? (
+                    <p className="text-sm text-muted">
+                      Proponowana data gwarancji: {formatDate(entry.proposedWarrantyEndDate)}
+                    </p>
+                  ) : null}
+                </AgreementCollapsibleShell>
+              );
+            })}
           </div>
           {onOpenTab ? (
             <Button

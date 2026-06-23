@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarPlus, Check, Plus, Send, Shield, Trash2, X } from "lucide-react";
+import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-collapsible-shell";
 import { AgreementCostFields } from "@/components/dashboard/agreement-cost-fields";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/input";
@@ -13,8 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  PROJECT_AGREEMENT_STATUS_LABELS,
-  agreementStatusTone,
+  buildAgreementCollapsibleMeta,
   formatAgreementCost,
   type ProjectAgreementInput,
   type ProjectClientAgreement,
@@ -38,13 +38,6 @@ import { cn, formatDate } from "@/lib/utils";
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
 
 const EMPTY_AGREEMENTS: ProjectClientAgreement[] = [];
-
-const statusBadgeClass: Record<ReturnType<typeof agreementStatusTone>, string> = {
-  neutral: "border-border/80 bg-surface-muted/40 text-muted",
-  warning: "border-amber-500/40 bg-amber-500/10 text-amber-200",
-  success: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
-  danger: "border-rose-500/40 bg-rose-500/10 text-rose-200",
-};
 
 const warrantyToneClass: Record<ReturnType<typeof getWarrantyStatus>["tone"], string> = {
   neutral: "border-border/80 bg-surface-muted/40 text-muted",
@@ -88,7 +81,7 @@ function WarrantyProposalCard({
 }) {
   const [busy, setBusy] = useState(false);
   const [responseNote, setResponseNote] = useState("");
-  const tone = agreementStatusTone(agreement.status);
+  const meta = buildAgreementCollapsibleMeta(agreement);
   const costLabel = formatAgreementCost(agreement);
 
   async function run(action: () => Promise<void>) {
@@ -101,37 +94,28 @@ function WarrantyProposalCard({
   }
 
   return (
-    <article className="rounded-xl border border-border/70 bg-surface-muted/15 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="font-medium text-foreground">{agreement.title}</p>
-          <p className="mt-0.5 text-xs text-muted">{agreement.createdByName}</p>
-        </div>
-        <span
-          className={cn(
-            "rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-            statusBadgeClass[tone],
-          )}
-        >
-          {PROJECT_AGREEMENT_STATUS_LABELS[agreement.status]}
-        </span>
-      </div>
-
+    <AgreementCollapsibleShell
+      title={meta.title}
+      subtitle={meta.subtitle}
+      statusLabel={meta.statusLabel}
+      statusTone={meta.statusTone}
+      hint={meta.hint}
+    >
       {agreement.proposedWarrantyEndDate ? (
-        <p className="mt-3 text-sm text-foreground">
+        <p className="text-sm text-foreground">
           Nowa data zakończenia gwarancji:{" "}
           <span className="font-medium">{formatDate(agreement.proposedWarrantyEndDate)}</span>
         </p>
       ) : null}
 
       {agreement.body ? (
-        <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{agreement.body}</p>
+        <p className="whitespace-pre-wrap text-sm text-muted">{agreement.body}</p>
       ) : null}
 
-      {costLabel ? <p className="mt-2 text-sm font-medium text-foreground">Koszt: {costLabel}</p> : null}
+      {costLabel ? <p className="text-sm font-medium text-foreground">Koszt: {costLabel}</p> : null}
 
       {mode === "team" && agreement.status === "draft" ? (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" disabled={busy} onClick={() => void run(() => onSubmit(agreement.id))}>
             <Send className="mr-2 h-3.5 w-3.5" />
             Wyślij do klienta
@@ -159,7 +143,7 @@ function WarrantyProposalCard({
       ) : null}
 
       {mode === "client" && agreement.status === "pending_client" ? (
-        <div className="mt-4 grid gap-3">
+        <div className="grid gap-3">
           <Field label="Uwagi (opcjonalnie)">
             <Textarea
               value={responseNote}
@@ -207,7 +191,7 @@ function WarrantyProposalCard({
           </div>
         </div>
       ) : null}
-    </article>
+    </AgreementCollapsibleShell>
   );
 }
 

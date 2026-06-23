@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ClientDashboardView } from "@/components/dashboard/client-dashboard-view";
@@ -55,6 +55,7 @@ function ClientDashboardPageContent() {
   );
 
   const projectFromQuery = searchParams.get("project");
+  const activeKanbanToken = searchParams.get("kanban");
   const [selectedProjectId, setSelectedProjectId] = useState(
     projectFromQuery && clientProjects.some((project) => project.id === projectFromQuery)
       ? projectFromQuery
@@ -88,6 +89,26 @@ function ClientDashboardPageContent() {
     setSelectedProjectId(projectId);
     router.replace(`/przestrzenie/klient/${clientId}?project=${projectId}`, { scroll: false });
   }
+
+  const handleKanbanTokenChange = useCallback(
+    (kanbanToken: string | null) => {
+      const nextParams = new URLSearchParams(searchParams.toString());
+      if (kanbanToken) {
+        nextParams.set("kanban", kanbanToken);
+      } else {
+        nextParams.delete("kanban");
+      }
+      if (selectedProjectId) {
+        nextParams.set("project", selectedProjectId);
+      }
+      const query = nextParams.toString();
+      router.replace(
+        query ? `/przestrzenie/klient/${clientId}?${query}` : `/przestrzenie/klient/${clientId}`,
+        { scroll: false },
+      );
+    },
+    [clientId, router, searchParams, selectedProjectId],
+  );
 
   const selectedProject = clientProjects.find((project) => project.id === selectedProjectId);
   const clientSpace = useMemo(
@@ -140,6 +161,8 @@ function ClientDashboardPageContent() {
         process={process}
         template={template}
         teamAuthorName={displayName || "Zespół"}
+        activeKanbanToken={activeKanbanToken}
+        onKanbanTokenChange={handleKanbanTokenChange}
         onProjectPatch={(projectId, patch) => {
           const project = clientProjects.find((entry) => entry.id === projectId);
           if ("systemHandoverAt" in patch || "warrantyDurationMonths" in patch) {

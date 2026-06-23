@@ -25,12 +25,16 @@ type PublicDashboardPayload = {
   template: ProcessTemplate | null;
   agreements: ProjectClientAgreement[];
   specificationItems: import("@/lib/dashboard/specification-types").ProjectSpecificationItem[];
+  trades: import("@/lib/dashboard/trade-types").ProjectTrade[];
+  satisfaction: import("@/lib/dashboard/satisfaction-types").ProjectSatisfactionBundle | null;
   content: ProjectDashboardContent[];
   pendingAgreementsCount: number;
   kanbanPublicLinks: Record<string, string>;
   features: {
     agreements: boolean;
     specification: boolean;
+    trades: boolean;
+    satisfaction: boolean;
     content: boolean;
   };
   authRequired?: boolean;
@@ -99,9 +103,17 @@ function PublicDashboardPageContent() {
   const [specificationItems, setSpecificationItems] = useState<
     PublicDashboardPayload["specificationItems"]
   >([]);
+  const [trades, setTrades] = useState<PublicDashboardPayload["trades"]>([]);
+  const [satisfaction, setSatisfaction] = useState<PublicDashboardPayload["satisfaction"]>(null);
   const [content, setContent] = useState<ProjectDashboardContent[]>([]);
   const [kanbanPublicLinks, setKanbanPublicLinks] = useState<Record<string, string>>({});
-  const [features, setFeatures] = useState({ agreements: false, specification: false, content: false });
+  const [features, setFeatures] = useState({
+    agreements: false,
+    specification: false,
+    trades: false,
+    satisfaction: false,
+    content: false,
+  });
   const [access, setAccess] = useState<DashboardPublicAccessInfo>(DEFAULT_ACCESS);
   const [contextTitle, setContextTitle] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,6 +142,8 @@ function PublicDashboardPageContent() {
     setProcessProgress(payload.processProgress);
     setAgreements(payload.agreements);
     setSpecificationItems(payload.specificationItems);
+    setTrades(payload.trades);
+    setSatisfaction(payload.satisfaction);
     setContent(payload.content);
     setKanbanPublicLinks(payload.kanbanPublicLinks ?? {});
     setFeatures(payload.features);
@@ -378,6 +392,8 @@ function PublicDashboardPageContent() {
           processProgress={processProgress}
           seedAgreements={features.agreements ? agreements : undefined}
           seedSpecificationItems={features.specification ? specificationItems : undefined}
+          seedTrades={features.trades ? trades : undefined}
+          seedSatisfaction={features.satisfaction ? (satisfaction ?? undefined) : undefined}
           seedContent={features.content ? content : undefined}
           seedKanbanPublicLinks={kanbanPublicLinks}
           showPublicLink={false}
@@ -386,6 +402,8 @@ function PublicDashboardPageContent() {
           clientAuthorName={client.fullName}
           enableAgreements={features.agreements}
           enableSpecification={features.specification}
+          enableTrades={features.trades}
+          enableSatisfaction={features.satisfaction}
           onProjectPatch={handleProjectPatch}
           onAgreementsUpdated={handleAgreementsUpdated}
           activeKanbanToken={activeKanbanToken}

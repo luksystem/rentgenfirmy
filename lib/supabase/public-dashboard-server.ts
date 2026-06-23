@@ -17,8 +17,14 @@ import type {
   ProjectDashboardContent,
 } from "@/lib/dashboard/content-types";
 import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
+import type { ProjectTrade } from "@/lib/dashboard/trade-types";
+import type { ProjectSatisfactionBundle } from "@/lib/dashboard/satisfaction-types";
 import type { DashboardPublicAccessInfo, DashboardSpace } from "@/lib/dashboard/types";
 import { fetchKanbanPublicLinksForProject } from "@/lib/supabase/kanban-public-links";
+import {
+  fetchProjectSatisfactionBundleServer,
+  satisfactionTablesExist,
+} from "@/lib/supabase/project-satisfaction-server";
 import { getProcessProgress } from "@/lib/process/types";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import type { Client } from "@/lib/service/types";
@@ -104,6 +110,20 @@ type SpecRow = {
   updated_at: string;
 };
 
+type TradeRow = {
+  id: string;
+  project_id: string;
+  name: string;
+  company: string;
+  contact_name: string;
+  email: string;
+  phone: string;
+  description: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
 function isMissingTableError(message: string) {
   const normalized = message.toLowerCase();
   return (
@@ -167,6 +187,22 @@ function rowToSpec(row: SpecRow): ProjectSpecificationItem {
     category: row.category,
     description: row.description,
     notes: row.notes,
+    position: row.position,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function rowToTrade(row: TradeRow): ProjectTrade {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    name: row.name,
+    company: row.company,
+    contactName: row.contact_name,
+    email: row.email,
+    phone: row.phone,
+    description: row.description,
     position: row.position,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -370,18 +406,26 @@ export type PublicDashboardPayload = {
   template: ProcessTemplate | null;
   agreements: ProjectClientAgreement[];
   specificationItems: ProjectSpecificationItem[];
+  trades: ProjectTrade[];
+  satisfaction: ProjectSatisfactionBundle | null;
   content: ProjectDashboardContent[];
   pendingAgreementsCount: number;
   kanbanPublicLinks: Record<string, string>;
   features: {
     agreements: boolean;
     specification: boolean;
+    trades: boolean;
+    satisfaction: boolean;
     content: boolean;
   };
 };
 
 async function tableExists(
-  table: "project_client_agreements" | "specification_catalog_items" | "project_dashboard_content",
+  table:
+    | "project_client_agreements"
+    | "specification_catalog_items"
+    | "project_dashboard_content"
+    | "project_trades",
 ) {
   const supabase = getSupabaseAdmin();
   const { error } = await supabase.from(table).select("id").limit(1);
@@ -426,6 +470,24 @@ async function fetchSpecificationItemsForProject(projectId: string) {
   }
 
   return (data ?? []).map((row) => rowToSpec(row as SpecRow));
+}
+
+async function fetchTradesForProject(projectId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("project_trades")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("position", { ascending: true });
+
+  if (error) {
+    if (isMissingTableError(error.message)) {
+      return [];
+    }
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row) => rowToTrade(row as TradeRow));
 }
 
 async function fetchContentForProject(projectId: string) {
@@ -550,21 +612,28 @@ export async function fetchPublicDashboardPayload(
     }
   }
 
-  const [agreementsEnabled, specificationEnabled, contentEnabled] = await Promise.all([
-    tableExists("project_client_agreements"),
-    tableExists("specification_catalog_items"),
-    tableExists("project_dashboard_content"),
-  ]);
+  const [agreementsEnabled, specificationEnabled, tradesEnabled, satisfactionEnabled, contentEnabled] =
+    await Promise.all([
+      tableExists("project_client_agreements"),
+      tableExists("specification_catalog_items"),
+      tableExists("project_trades"),
+      satisfactionTablesExist(),
+      tableExists("project_dashboard_content"),
+    ]);
 
-  const [agreements, specificationItems, content] = initialProjectId
+  const [agreements, specificationItems, trades, satisfaction, content] = initialProjectId
     ? await Promise.all([
         agreementsEnabled ? fetchAgreementsForProject(initialProjectId) : Promise.resolve([]),
         specificationEnabled
           ? fetchSpecificationItemsForProject(initialProjectId)
           : Promise.resolve([]),
+        tradesEnabled ? fetchTradesForProject(initialProjectId) : Promise.resolve([]),
+        satisfactionEnabled
+          ? fetchProjectSatisfactionBundleServer(initialProjectId)
+          : Promise.resolve(null),
         contentEnabled ? fetchContentForProject(initialProjectId) : Promise.resolve([]),
       ])
-    : [[], [], []];
+    : [[], [], [], null, []];
 
   const pendingAgreementsCount = agreements.filter((entry) => isAgreementPendingAttention(entry)).length;
 
@@ -582,12 +651,16 @@ export async function fetchPublicDashboardPayload(
     template,
     agreements,
     specificationItems,
+    trades,
+    satisfaction,
     content,
     pendingAgreementsCount,
     kanbanPublicLinks,
     features: {
       agreements: agreementsEnabled,
       specification: specificationEnabled,
+      trades: tradesEnabled,
+      satisfaction: satisfactionEnabled,
       content: contentEnabled,
     },
   };

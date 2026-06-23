@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { AlertCircle, UserRound } from "lucide-react";
 import { AgreementCollaborationPanel } from "@/components/dashboard/agreement-collaboration-panel";
+import { CollapsibleSection } from "@/components/dashboard/agreement-collapsible-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
 import {
@@ -97,21 +98,36 @@ export default function PublicAgreementPage() {
         </p>
 
         <Card className="mt-5">
-          <CardContent className="grid gap-4 py-6">
-            <div className="rounded-xl border border-border/70 bg-surface-muted/10 p-4">
+          <CardContent className="grid gap-3 py-6">
+            <CollapsibleSection
+              title="Treść ustalenia"
+              summary={
+                agreement.body
+                  ? agreement.body.slice(0, 120) + (agreement.body.length > 120 ? "…" : "")
+                  : "Brak opisu"
+              }
+            >
               {agreement.body ? (
                 <p className="whitespace-pre-wrap text-sm text-foreground">{agreement.body}</p>
               ) : (
                 <p className="text-sm text-muted">Brak opisu w tej wersji.</p>
               )}
               {costLabel ? (
-                <p className="mt-3 text-sm font-medium text-foreground">Koszt: {costLabel}</p>
+                <p className="text-sm font-medium text-foreground">Koszt: {costLabel}</p>
               ) : null}
-              <p className="mt-2 text-xs text-muted">
+              <p className="text-xs text-muted">
                 Status: {PROJECT_AGREEMENT_STATUS_LABELS[bundle.agreement.status]}
               </p>
-            </div>
+            </CollapsibleSection>
 
+            <CollapsibleSection
+              title="Twoja tożsamość w procesie"
+              summary={
+                identityIncomplete
+                  ? "Wymagane: imię i rola"
+                  : `${authorName.trim()} · ${selectedRole?.label ?? "Rola wybrana"}`
+              }
+            >
             <div
               className={cn(
                 "rounded-2xl border-2 p-4 sm:p-5",
@@ -215,7 +231,12 @@ export default function PublicAgreementPage() {
                 ) : null}
               </div>
             </div>
+            </CollapsibleSection>
 
+            <CollapsibleSection
+              title="Proces akceptacji i komentarze"
+              summary={AGREEMENT_WORKFLOW_PHASE_LABELS[phase]}
+            >
             <AgreementCollaborationPanel
               agreementId={bundle.agreement.id}
               mode="external"
@@ -228,7 +249,9 @@ export default function PublicAgreementPage() {
                 setRoleTouched(true);
               }}
               onChanged={refresh}
+              syncRevision={`${bundle.agreement.status}:${bundle.agreement.updatedAt}:${bundle.agreement.activeVersionId ?? ""}`}
             />
+            </CollapsibleSection>
           </CardContent>
         </Card>
       </div>

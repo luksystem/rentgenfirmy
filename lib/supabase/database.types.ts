@@ -239,6 +239,20 @@ export type ProjectAgreementCommentRow = {
   created_at: string;
 };
 
+export type ProjectAgreementAttachmentRow = {
+  id: string;
+  agreement_id: string;
+  storage_path: string;
+  file_name: string;
+  mime_type: string;
+  media_kind: string;
+  size_bytes: number;
+  position: number;
+  uploaded_by_name: string;
+  uploaded_by_source: string;
+  created_at: string;
+};
+
 export type ProjectAgreementVersionRow = {
   id: string;
   agreement_id: string;
@@ -312,6 +326,73 @@ export type ProjectSpecificationItemRow = {
   description: string;
   notes: string;
   position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectTradeRow = {
+  id: string;
+  project_id: string;
+  name: string;
+  company: string;
+  contact_name: string;
+  email: string;
+  phone: string;
+  description: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectAgreementFulfillmentRow = {
+  id: string;
+  project_id: string;
+  agreement_id: string;
+  status: string;
+  note: string;
+  reviewed_by_name: string;
+  reviewed_by_side: string;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectSpecificationFulfillmentRow = {
+  id: string;
+  project_id: string;
+  specification_item_id: string;
+  status: string;
+  note: string;
+  reviewed_by_name: string;
+  reviewed_by_side: string;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectStageSatisfactionRow = {
+  id: string;
+  project_id: string;
+  stage_id: string;
+  stage_title: string;
+  score: number;
+  best_aspect: string;
+  worst_aspect: string;
+  comment: string;
+  author_name: string;
+  author_side: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectSatisfactionOverviewRow = {
+  project_id: string;
+  expectation_score: number | null;
+  reality_score: number | null;
+  overall_note: string;
+  reviewed_by_name: string;
+  reviewed_by_side: string;
+  reviewed_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -576,6 +657,23 @@ export type Database = {
         Update: Partial<ProjectAgreementCommentRow>;
         Relationships: [];
       };
+      project_agreement_attachments: {
+        Row: ProjectAgreementAttachmentRow;
+        Insert: Partial<ProjectAgreementAttachmentRow> &
+          Pick<
+            ProjectAgreementAttachmentRow,
+            | "agreement_id"
+            | "storage_path"
+            | "file_name"
+            | "mime_type"
+            | "media_kind"
+            | "size_bytes"
+            | "uploaded_by_name"
+            | "uploaded_by_source"
+          >;
+        Update: Partial<ProjectAgreementAttachmentRow>;
+        Relationships: [];
+      };
       project_agreement_versions: {
         Row: ProjectAgreementVersionRow;
         Insert: Partial<ProjectAgreementVersionRow> &
@@ -610,6 +708,39 @@ export type Database = {
         Insert: Partial<ProjectSpecificationItemRow> &
           Pick<ProjectSpecificationItemRow, "project_id" | "title">;
         Update: Partial<ProjectSpecificationItemRow>;
+        Relationships: [];
+      };
+      project_trades: {
+        Row: ProjectTradeRow;
+        Insert: Partial<ProjectTradeRow> & Pick<ProjectTradeRow, "project_id" | "name">;
+        Update: Partial<ProjectTradeRow>;
+        Relationships: [];
+      };
+      project_agreement_fulfillments: {
+        Row: ProjectAgreementFulfillmentRow;
+        Insert: Partial<ProjectAgreementFulfillmentRow> &
+          Pick<ProjectAgreementFulfillmentRow, "project_id" | "agreement_id">;
+        Update: Partial<ProjectAgreementFulfillmentRow>;
+        Relationships: [];
+      };
+      project_specification_fulfillments: {
+        Row: ProjectSpecificationFulfillmentRow;
+        Insert: Partial<ProjectSpecificationFulfillmentRow> &
+          Pick<ProjectSpecificationFulfillmentRow, "project_id" | "specification_item_id">;
+        Update: Partial<ProjectSpecificationFulfillmentRow>;
+        Relationships: [];
+      };
+      project_stage_satisfactions: {
+        Row: ProjectStageSatisfactionRow;
+        Insert: Partial<ProjectStageSatisfactionRow> &
+          Pick<ProjectStageSatisfactionRow, "project_id" | "stage_id">;
+        Update: Partial<ProjectStageSatisfactionRow>;
+        Relationships: [];
+      };
+      project_satisfaction_overviews: {
+        Row: ProjectSatisfactionOverviewRow;
+        Insert: Partial<ProjectSatisfactionOverviewRow> & Pick<ProjectSatisfactionOverviewRow, "project_id">;
+        Update: Partial<ProjectSatisfactionOverviewRow>;
         Relationships: [];
       };
       work_orders: {

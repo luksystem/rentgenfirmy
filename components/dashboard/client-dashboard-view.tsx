@@ -7,12 +7,18 @@ import {
   FileText,
   FolderOpen,
   GitBranch,
+  HardHat,
   Home,
   LayoutGrid,
   Link2,
+  Star,
 } from "lucide-react";
 import { ProjectAgreementsPanel } from "@/components/dashboard/project-agreements-panel";
+import { ProjectSatisfactionPanel } from "@/components/dashboard/project-satisfaction-panel";
+import { ProjectSatisfactionSummaryCard } from "@/components/dashboard/project-satisfaction-summary-card";
 import { ProjectSpecificationPanel } from "@/components/dashboard/project-specification-panel";
+import { ProjectTradesPanel } from "@/components/dashboard/project-trades-panel";
+import { StageSatisfactionPrompt } from "@/components/dashboard/stage-satisfaction-prompt";
 import { ClientDashboardHome } from "@/components/dashboard/client-dashboard-home";
 import { ClientDashboardOverview } from "@/components/dashboard/client-dashboard-overview";
 import { ClientInfoCard } from "@/components/dashboard/client-info-card";
@@ -26,6 +32,8 @@ import type { ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
 import { isAgreementPendingAttention } from "@/lib/dashboard/agreement-types";
 import type { ProjectDashboardContent } from "@/lib/dashboard/content-types";
 import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
+import type { ProjectTrade } from "@/lib/dashboard/trade-types";
+import type { ProjectSatisfactionBundle } from "@/lib/dashboard/satisfaction-types";
 import type { DashboardSpace } from "@/lib/dashboard/types";
 import { getProcessProgress } from "@/lib/process/types";
 import { extractKanbanTokenFromPublicPath } from "@/lib/process/kanban-public-path";
@@ -36,6 +44,15 @@ import type { Project } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useProjectAgreementsRealtime } from "@/hooks/use-project-agreements-realtime";
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
+import { useProjectSatisfactionStore } from "@/store/project-satisfaction-store";
+import { useProjectSpecificationStore } from "@/store/project-specification-store";
+
+const EMPTY_SATISFACTION: ProjectSatisfactionBundle = {
+  agreementFulfillments: [],
+  specificationFulfillments: [],
+  stageSatisfactions: [],
+  overview: null,
+};
 
 type ClientDashboardTab =
   | "home"
@@ -43,6 +60,8 @@ type ClientDashboardTab =
   | "process"
   | "agreements"
   | "specification"
+  | "trades"
+  | "satisfaction"
   | "links";
 
 const EMPTY_AGREEMENTS: ProjectClientAgreement[] = [];
@@ -56,6 +75,8 @@ const PUBLIC_CLIENT_TAB_CONFIG: Array<{
   { id: "process", label: "Proces", icon: GitBranch },
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
+  { id: "trades", label: "Branże", icon: HardHat },
+  { id: "satisfaction", label: "Ocena", icon: Star },
   { id: "links", label: "Linki", icon: Link2 },
 ];
 
@@ -68,6 +89,8 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "process", label: "Proces", icon: GitBranch },
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
+  { id: "trades", label: "Branże", icon: HardHat },
+  { id: "satisfaction", label: "Ocena", icon: Star },
   { id: "links", label: "Linki", icon: Link2 },
 ];
 
@@ -85,10 +108,14 @@ export function ClientDashboardView({
   teamAuthorName = "Zespół",
   enableAgreements = true,
   enableSpecification = true,
+  enableTrades = true,
+  enableSatisfaction = true,
   enableContent = true,
   processProgress,
   seedAgreements,
   seedSpecificationItems,
+  seedTrades,
+  seedSatisfaction,
   seedContent,
   seedKanbanPublicLinks,
   onProjectPatch,
@@ -110,10 +137,14 @@ export function ClientDashboardView({
   teamAuthorName?: string;
   enableAgreements?: boolean;
   enableSpecification?: boolean;
+  enableTrades?: boolean;
+  enableSatisfaction?: boolean;
   enableContent?: boolean;
   processProgress?: { percent: number; completed: number; total: number } | null;
   seedAgreements?: ProjectClientAgreement[];
   seedSpecificationItems?: ProjectSpecificationItem[];
+  seedTrades?: ProjectTrade[];
+  seedSatisfaction?: ProjectSatisfactionBundle;
   seedContent?: ProjectDashboardContent[];
   seedKanbanPublicLinks?: Record<string, string>;
   onProjectPatch?: (projectId: string, patch: Partial<Project>) => void;
@@ -203,12 +234,46 @@ export function ClientDashboardView({
     seedProjectAgreements(selectedProjectId, seedAgreements);
   }, [enableAgreements, seedAgreements, seedProjectAgreements, selectedProjectId]);
 
+  const satisfactionBundle = useProjectSatisfactionStore(
+    (state) => state.byProject[selectedProjectId] ?? seedSatisfaction ?? EMPTY_SATISFACTION,
+  );
+  const ensureSatisfaction = useProjectSatisfactionStore((state) => state.ensureSatisfaction);
+  const seedProjectSatisfaction = useProjectSatisfactionStore((state) => state.seedSatisfaction);
+
+  const specificationItems = useProjectSpecificationStore(
+    (state) => state.byProject[selectedProjectId] ?? seedSpecificationItems ?? [],
+  );
+  const ensureSpecificationItems = useProjectSpecificationStore((state) => state.ensureItems);
+
   useEffect(() => {
-    if (!enableAgreements || !selectedProjectId || readOnly) {
+    if (!enableSatisfaction || !selectedProjectId) {
+      return;
+    }
+    if (seedSatisfaction !== undefined) {
+      seedProjectSatisfaction(selectedProjectId, seedSatisfaction);
+    }
+    void ensureSatisfaction(selectedProjectId, { force: seedSatisfaction !== undefined });
+  }, [
+    enableSatisfaction,
+    ensureSatisfaction,
+    seedProjectSatisfaction,
+    seedSatisfaction,
+    selectedProjectId,
+  ]);
+
+  useEffect(() => {
+    if (!enableSpecification || !selectedProjectId || seedSpecificationItems !== undefined) {
+      return;
+    }
+    void ensureSpecificationItems(selectedProjectId);
+  }, [enableSpecification, ensureSpecificationItems, seedSpecificationItems, selectedProjectId]);
+
+  useEffect(() => {
+    if (!enableAgreements || !selectedProjectId) {
       return;
     }
     void ensureAgreements(selectedProjectId);
-  }, [enableAgreements, ensureAgreements, readOnly, selectedProjectId]);
+  }, [enableAgreements, ensureAgreements, selectedProjectId]);
 
   const refreshAgreementsFromServer = useCallback(() => {
     if (!enableAgreements || !selectedProjectId) {
@@ -217,10 +282,9 @@ export function ClientDashboardView({
     void ensureAgreements(selectedProjectId, { force: true });
   }, [enableAgreements, ensureAgreements, selectedProjectId]);
 
-  useProjectAgreementsRealtime(
-    enableAgreements && !readOnly ? selectedProjectId : undefined,
-    refreshAgreementsFromServer,
-  );
+  useProjectAgreementsRealtime(selectedProjectId, refreshAgreementsFromServer, {
+    enabled: enableAgreements,
+  });
 
   useEffect(() => {
     if (!onAgreementsUpdated || storeAgreements.length === 0) {
@@ -274,12 +338,16 @@ export function ClientDashboardView({
   const publicClientTabs = PUBLIC_CLIENT_TAB_CONFIG.filter((tab) => {
     if (tab.id === "agreements" && !enableAgreements) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
+    if (tab.id === "trades" && !enableTrades) return false;
+    if (tab.id === "satisfaction" && !enableSatisfaction) return false;
     return true;
   });
 
   const teamMainTabs = TEAM_MAIN_TAB_CONFIG.filter((tab) => {
     if (tab.id === "agreements" && !enableAgreements) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
+    if (tab.id === "trades" && !enableTrades) return false;
+    if (tab.id === "satisfaction" && !enableSatisfaction) return false;
     return true;
   });
 
@@ -341,6 +409,9 @@ export function ClientDashboardView({
             excludeWarrantyFields
           />
         </div>
+        {enableSatisfaction ? (
+          <ProjectSatisfactionSummaryCard bundle={satisfactionBundle} compact />
+        ) : null}
       </div>
     );
   }
@@ -375,9 +446,7 @@ export function ClientDashboardView({
               interactive={false}
               stacked
               kanbanPublicLinks={kanbanPublicLinks}
-              onKanbanNavigate={
-                readOnly && onKanbanTokenChange ? handleKanbanNavigate : undefined
-              }
+              onKanbanNavigate={onKanbanTokenChange ? handleKanbanNavigate : undefined}
             />
           </div>
         ) : (
@@ -455,7 +524,10 @@ export function ClientDashboardView({
 
   function renderHomeSection() {
     return (
-      <div className="min-w-0 max-w-full">
+      <div className="min-w-0 max-w-full grid gap-4">
+        {enableSatisfaction ? (
+          <ProjectSatisfactionSummaryCard bundle={satisfactionBundle} compact />
+        ) : null}
         <ClientDashboardHome
         client={client}
         project={selectedProject}
@@ -488,7 +560,8 @@ export function ClientDashboardView({
         kanbanPublicHref={
           readOnly ? (Object.values(kanbanPublicLinks)[0] ?? null) : undefined
         }
-        onOpenKanban={readOnly ? handleKanbanNavigate : undefined}
+        onOpenKanban={onKanbanTokenChange ? handleKanbanNavigate : undefined}
+        enableSatisfactionReview={enableSatisfaction}
       />
       </div>
     );
@@ -537,6 +610,40 @@ export function ClientDashboardView({
           projectId={selectedProject.id}
           readOnly={readOnly}
           seedItems={seedSpecificationItems}
+        />
+      </div>
+    );
+  }
+
+  function renderTradesPanel() {
+    return (
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
+        <h2 className="mb-3 text-base font-semibold text-foreground">Branże i wykonawcy</h2>
+        <p className="mb-4 text-sm text-muted">
+          Dodaj branże projektu — będą dostępne przy wyborze roli akceptacji w ustaleniach.
+        </p>
+        <ProjectTradesPanel projectId={selectedProject.id} seedTrades={seedTrades} />
+      </div>
+    );
+  }
+
+  function renderSatisfactionPanel() {
+    const specItems =
+      specificationItems.length > 0 ? specificationItems : (seedSpecificationItems ?? []);
+
+    return (
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
+        <h2 className="mb-3 text-base font-semibold text-foreground">Ocena spełnienia i zadowolenia</h2>
+        <p className="mb-4 text-sm text-muted">
+          Przy przekazaniu instalacji zweryfikuj ustalenia i specyfikację oraz oceń projekt.
+        </p>
+        <ProjectSatisfactionPanel
+          projectId={selectedProject.id}
+          agreements={agreementSource}
+          specificationItems={specItems}
+          authorName={readOnly ? clientAuthorName : teamAuthorName}
+          authorSide={readOnly ? "client" : "team"}
+          seedBundle={seedSatisfaction}
         />
       </div>
     );
@@ -653,6 +760,24 @@ export function ClientDashboardView({
     );
   }
 
+  function renderEmbeddedKanban() {
+    if (!activeKanbanToken) {
+      return null;
+    }
+
+    return (
+      <div className="flex min-h-[min(70dvh,100svh-12rem)] min-w-0 flex-col">
+        <PublicKanbanEmbedded
+          token={activeKanbanToken}
+          defaultAuthorName={readOnly ? clientAuthorName : teamAuthorName}
+          dashboardToken={readOnly ? publicDashboardToken : undefined}
+          onBack={() => onKanbanTokenChange?.(null)}
+          embedded
+        />
+      </div>
+    );
+  }
+
   function renderMainTabContent(tab: ClientDashboardTab) {
     switch (tab) {
       case "home":
@@ -665,6 +790,10 @@ export function ClientDashboardView({
         return enableAgreements ? renderAgreementsPanel() : null;
       case "specification":
         return enableSpecification ? renderSpecificationPanel() : null;
+      case "trades":
+        return enableTrades ? renderTradesPanel() : null;
+      case "satisfaction":
+        return enableSatisfaction ? renderSatisfactionPanel() : null;
       case "links":
         return renderLinksSection();
       default:
@@ -672,11 +801,18 @@ export function ClientDashboardView({
     }
   }
 
+  function renderMainArea() {
+    if (activeKanbanToken) {
+      return renderEmbeddedKanban();
+    }
+    return renderMainTabContent(activeTab);
+  }
+
   return (
-    <div className={cn("w-full min-w-0", readOnly ? "pb-24 xl:pb-0" : "xl:pb-0")}>
+    <div className={cn("w-full min-w-0", readOnly && !activeKanbanToken ? "pb-24 xl:pb-0" : "xl:pb-0")}>
       {readOnly ? (
         <div className="w-full">
-          {projects.length > 1 && onProjectChange ? (
+          {projects.length > 1 && onProjectChange && !activeKanbanToken ? (
             <div className="mb-4 flex gap-2 overflow-x-auto pb-1 xl:hidden">
               {projects.map((project) => (
                 <button
@@ -695,34 +831,34 @@ export function ClientDashboardView({
               ))}
             </div>
           ) : null}
-          <div className="max-xl:hidden">{renderTabBar(publicClientTabs, "desktop")}</div>
-          <div className="min-w-0 max-w-full">
-            {activeKanbanToken ? (
-              <PublicKanbanEmbedded
-                token={activeKanbanToken}
-                defaultAuthorName={clientAuthorName}
-                dashboardToken={publicDashboardToken}
-                onBack={() => onKanbanTokenChange?.(null)}
-              />
-            ) : (
-              renderMainTabContent(activeTab)
-            )}
-          </div>
+          {!activeKanbanToken ? (
+            <div className="max-xl:hidden">{renderTabBar(publicClientTabs, "desktop")}</div>
+          ) : (
+            <div className="mb-4 xl:hidden">{renderTabBar(publicClientTabs, "mobile-top")}</div>
+          )}
+          <div className="min-w-0 max-w-full">{renderMainArea()}</div>
         </div>
       ) : (
         <>
           <div className="hidden w-full min-w-0 xl:block">
-            {renderTabBar(teamMainTabs, "desktop")}
-            <div className="mt-4 grid w-full gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
-              <aside className="min-w-0 max-w-full self-start overflow-x-hidden">
-                {renderDataSection(false)}
-              </aside>
-              <section className="min-w-0 overflow-x-hidden">{renderMainTabContent(activeTab)}</section>
+            {!activeKanbanToken ? renderTabBar(teamMainTabs, "desktop") : null}
+            <div
+              className={cn(
+                "grid w-full gap-4",
+                activeKanbanToken ? "mt-0" : "mt-4 xl:grid-cols-[280px_minmax(0,1fr)]",
+              )}
+            >
+              {!activeKanbanToken ? (
+                <aside className="min-w-0 max-w-full self-start overflow-x-hidden">
+                  {renderDataSection(false)}
+                </aside>
+              ) : null}
+              <section className="min-w-0 overflow-x-hidden">{renderMainArea()}</section>
             </div>
           </div>
           <div className="min-w-0 max-w-full overflow-x-hidden xl:hidden">
-            {renderTabBar(teamMainTabs, "mobile-top")}
-            {projects.length > 1 && onProjectChange ? (
+            {!activeKanbanToken ? renderTabBar(teamMainTabs, "mobile-top") : null}
+            {projects.length > 1 && onProjectChange && !activeKanbanToken ? (
               <div className="mb-4 flex w-full min-w-0 max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1">
                 {projects.map((project) => (
                   <button
@@ -741,17 +877,26 @@ export function ClientDashboardView({
                 ))}
               </div>
             ) : null}
-            <div className="min-w-0 max-w-full overflow-x-hidden">
-              {renderMainTabContent(activeTab)}
-            </div>
+            <div className="min-w-0 max-w-full overflow-x-hidden">{renderMainArea()}</div>
           </div>
         </>
       )}
 
-      {readOnly ? (
+      {readOnly && !activeKanbanToken ? (
         <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 xl:hidden">
           {renderTabBar(publicClientTabs, "mobile-bottom")}
         </nav>
+      ) : null}
+
+      {readOnly && enableSatisfaction && template && process ? (
+        <StageSatisfactionPrompt
+          projectId={selectedProject.id}
+          template={template}
+          process={process}
+          authorName={clientAuthorName}
+          authorSide="client"
+          enabled
+        />
       ) : null}
     </div>
   );

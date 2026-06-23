@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { AlertTriangle, ClipboardCheck, GitBranch, Shield } from "lucide-react";
+import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-collapsible-shell";
 import { Button } from "@/components/ui/button";
 import {
   PROJECT_AGREEMENT_CATEGORY_LABELS,
+  buildAgreementCollapsibleMeta,
   formatAgreementCost,
   getAgreementStatusLabel,
   isAgreementPendingAttention,
@@ -106,20 +108,25 @@ export function ClientDashboardOverview({
             Oczekujące ustalenia
           </h3>
           <div className="grid gap-2">
-            {pendingAgreements.slice(0, 5).map((entry) => (
-              <div
-                key={entry.id}
-                className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5"
-              >
-                <p className="font-medium text-foreground">{entry.title}</p>
-                <p className="mt-0.5 text-xs text-muted">
-                  {getAgreementStatusLabel(entry)}
-                  {" · "}
-                  {PROJECT_AGREEMENT_CATEGORY_LABELS[entry.category]}
-                  {formatAgreementCost(entry) ? ` · ${formatAgreementCost(entry)}` : ""}
-                </p>
-              </div>
-            ))}
+            {pendingAgreements.slice(0, 5).map((entry) => {
+              const meta = buildAgreementCollapsibleMeta(entry);
+              return (
+                <AgreementCollapsibleShell
+                  key={entry.id}
+                  compact
+                  className="border-amber-500/30 bg-amber-500/5"
+                  title={meta.title}
+                  subtitle={meta.subtitle}
+                  statusLabel={meta.statusLabel}
+                  statusTone={meta.statusTone}
+                  hint={meta.hint}
+                >
+                  {entry.body ? (
+                    <p className="line-clamp-4 text-sm text-muted">{entry.body}</p>
+                  ) : null}
+                </AgreementCollapsibleShell>
+              );
+            })}
           </div>
         </div>
       ) : null}
@@ -131,17 +138,21 @@ export function ClientDashboardOverview({
             Propozycje przedłużenia gwarancji
           </h3>
           <div className="grid gap-2">
-            {pendingWarranty.map((entry) => (
-              <div
-                key={entry.id}
-                className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5"
-              >
-                <p className="font-medium text-foreground">{entry.title}</p>
-                <p className="mt-0.5 text-xs text-muted">
-                  {formatAgreementCost(entry) ?? "Bez dodatkowego kosztu"}
-                </p>
-              </div>
-            ))}
+            {pendingWarranty.map((entry) => {
+              const meta = buildAgreementCollapsibleMeta(entry);
+              return (
+                <AgreementCollapsibleShell
+                  key={entry.id}
+                  compact
+                  className="border-amber-500/30 bg-amber-500/5"
+                  title={meta.title}
+                  subtitle={meta.subtitle}
+                  statusLabel={meta.statusLabel}
+                  statusTone={meta.statusTone}
+                  hint={meta.hint}
+                />
+              );
+            })}
           </div>
         </div>
       ) : null}
@@ -202,19 +213,24 @@ export function ClientDashboardOverview({
               {agreements
                 .filter((entry) => entry.category !== "warranty")
                 .slice(0, 4)
-                .map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/70 bg-surface-muted/15 px-3 py-2"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-foreground">{entry.title}</p>
-                      <p className="text-xs text-muted">
-                        {getAgreementStatusLabel(entry)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                .map((entry) => {
+                  const meta = buildAgreementCollapsibleMeta(entry);
+                  return (
+                    <AgreementCollapsibleShell
+                      key={entry.id}
+                      compact
+                      title={meta.title}
+                      subtitle={meta.subtitle}
+                      statusLabel={meta.statusLabel}
+                      statusTone={meta.statusTone}
+                      hint={meta.hint}
+                    >
+                      {entry.body ? (
+                        <p className="line-clamp-3 text-sm text-muted">{entry.body}</p>
+                      ) : null}
+                    </AgreementCollapsibleShell>
+                  );
+                })}
             </div>
           )}
           {onOpenTab ? (

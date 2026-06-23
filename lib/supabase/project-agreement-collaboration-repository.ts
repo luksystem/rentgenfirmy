@@ -14,6 +14,7 @@ import type {
 } from "@/lib/dashboard/agreement-types";
 import { normalizeAgreementOptionalDate } from "@/lib/dashboard/agreement-types";
 import { getSupabase } from "@/lib/supabase/client";
+import { fetchAgreementAttachments } from "@/lib/supabase/project-agreement-attachments-repository";
 
 type AgreementRow = {
   id: string;
@@ -328,10 +329,11 @@ export async function fetchAgreementCollaboration(agreementId: string) {
   }
 
   const agreement = rowToAgreement(agreementRow as AgreementRow);
-  const [roles, comments, versions] = await Promise.all([
+  const [roles, comments, versions, attachments] = await Promise.all([
     fetchAgreementApproverRoles(agreementId),
     fetchAgreementComments(agreementId),
     fetchAgreementVersions(agreementId),
+    fetchAgreementAttachments(agreementId).catch(() => []),
   ]);
 
   const activeVersion =
@@ -344,7 +346,7 @@ export async function fetchAgreementCollaboration(agreementId: string) {
       await fetchAgreementApprovalsForVersion(activeVersion.id, roles)
     : [];
 
-  return { agreement, roles, comments, activeVersion, approvals, versions };
+  return { agreement, roles, comments, attachments, activeVersion, approvals, versions };
 }
 
 export async function fetchAgreementCollaborationByToken(token: string) {
@@ -652,6 +654,11 @@ export async function respondToAgreementApproval(
         client_response_note: input.responseNote?.trim() || null,
         updated_at: now,
       })
+      .eq("id", agreementId);
+  } else {
+    await supabase
+      .from("project_client_agreements")
+      .update({ updated_at: now })
       .eq("id", agreementId);
   }
 
