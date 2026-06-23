@@ -362,12 +362,14 @@ export function ProjectAgreementsPanel({
   authorName,
   seedAgreements,
   onWarrantyExtensionAccepted,
+  onAgreementsChanged,
 }: {
   projectId: string;
   mode: "team" | "client";
   authorName: string;
   seedAgreements?: ProjectClientAgreement[];
   onWarrantyExtensionAccepted?: (warrantyEndsAt: string) => void | Promise<void>;
+  onAgreementsChanged?: () => void | Promise<void>;
 }) {
   const storeAgreements = useProjectAgreementStore(
     (state) => state.byProject[projectId] ?? EMPTY_AGREEMENTS,
@@ -433,6 +435,11 @@ export function ProjectAgreementsPanel({
 
   async function refreshLocalAgreements() {
     await ensureAgreements(projectId, { force: true });
+  }
+
+  async function handleCollaborationChanged() {
+    await refreshLocalAgreements();
+    await onAgreementsChanged?.();
   }
 
   function openCreateDialog() {
@@ -511,7 +518,7 @@ export function ProjectAgreementsPanel({
   }
 
   async function handleRefreshAgreements() {
-    await ensureAgreements(projectId, { force: true });
+    await handleCollaborationChanged();
   }
 
   async function handleCancel(id: string) {

@@ -463,7 +463,23 @@ export async function addAgreementComment(
     throw new Error(error.message);
   }
 
+  await touchAgreementActivity(agreementId, supabase);
+
   return rowToComment(data);
+}
+
+export async function touchAgreementActivity(
+  agreementId: string,
+  supabase = getSupabase(),
+) {
+  const { error } = await supabase
+    .from("project_client_agreements")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", agreementId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 async function applyWarrantyIfAccepted(agreement: ProjectClientAgreement) {

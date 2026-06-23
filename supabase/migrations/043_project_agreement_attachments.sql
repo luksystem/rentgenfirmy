@@ -24,7 +24,7 @@ create policy "project_agreement_attachments_all"
 
 insert into storage.buckets (id, name, public, file_size_limit)
 values ('agreement-attachments', 'agreement-attachments', false, 15728640)
-on conflict (id) do nothing;
+on conflict (id) do update set file_size_limit = excluded.file_size_limit;
 
 drop policy if exists "agreement_attachments_select" on storage.objects;
 drop policy if exists "agreement_attachments_insert" on storage.objects;

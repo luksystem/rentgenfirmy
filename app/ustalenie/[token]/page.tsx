@@ -101,6 +101,7 @@ export default function PublicAgreementPage() {
           <CardContent className="grid gap-3 py-6">
             <CollapsibleSection
               title="Treść ustalenia"
+              defaultExpanded
               summary={
                 agreement.body
                   ? agreement.body.slice(0, 120) + (agreement.body.length > 120 ? "…" : "")
@@ -122,6 +123,7 @@ export default function PublicAgreementPage() {
 
             <CollapsibleSection
               title="Twoja tożsamość w procesie"
+              defaultExpanded
               summary={
                 identityIncomplete
                   ? "Wymagane: imię i rola"
@@ -235,6 +237,7 @@ export default function PublicAgreementPage() {
 
             <CollapsibleSection
               title="Proces akceptacji i komentarze"
+              defaultExpanded
               summary={AGREEMENT_WORKFLOW_PHASE_LABELS[phase]}
             >
             <AgreementCollaborationPanel

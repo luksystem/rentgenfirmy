@@ -80,6 +80,7 @@ export function ProjectSatisfactionPanel({
   authorName,
   authorSide,
   seedBundle,
+  hideSummary = false,
 }: {
   projectId: string;
   agreements: ProjectClientAgreement[];
@@ -87,6 +88,7 @@ export function ProjectSatisfactionPanel({
   authorName: string;
   authorSide: ReviewSide;
   seedBundle?: ProjectSatisfactionBundle;
+  hideSummary?: boolean;
 }) {
   const bundle = useProjectSatisfactionStore(
     (state) => state.byProject[projectId] ?? seedBundle ?? EMPTY_BUNDLE,
@@ -209,13 +211,15 @@ export function ProjectSatisfactionPanel({
     }
   }
 
+  const ratingSize = authorSide === "client" ? "xs" : "md";
+
   if (loading && !bundle.agreementFulfillments.length && !bundle.stageSatisfactions.length) {
     return <p className="text-sm text-muted">Ładowanie ocen…</p>;
   }
 
   return (
     <div className="grid min-w-0 gap-6">
-      <ProjectSatisfactionSummaryCard bundle={bundle} />
+      {!hideSummary ? <ProjectSatisfactionSummaryCard bundle={bundle} /> : null}
 
       <section className="grid gap-3">
         <div>
@@ -344,7 +348,14 @@ export function ProjectSatisfactionPanel({
         )}
       </section>
 
-      <section className="grid gap-3 rounded-xl border border-accent/25 bg-accent/5 p-4">
+      <section
+        className={cn(
+          "grid gap-3 rounded-xl border p-4",
+          authorSide === "client"
+            ? "border-border/60 bg-surface-muted/10"
+            : "border-accent/25 bg-accent/5",
+        )}
+      >
         <div>
           <h3 className="text-sm font-semibold text-foreground">Ocena projektu: oczekiwania vs rzeczywistość</h3>
           <p className="text-xs text-muted">
@@ -353,11 +364,21 @@ export function ProjectSatisfactionPanel({
         </div>
 
         <Field label="Oczekiwania przed projektem (0–10)">
-          <StarRatingInput value={expectationScore} onChange={setExpectationScore} disabled={overviewSaving} />
+          <StarRatingInput
+            value={expectationScore}
+            onChange={setExpectationScore}
+            disabled={overviewSaving}
+            size={ratingSize}
+          />
         </Field>
 
         <Field label="Rzeczywistość po wdrożeniu (0–10)">
-          <StarRatingInput value={realityScore} onChange={setRealityScore} disabled={overviewSaving} />
+          <StarRatingInput
+            value={realityScore}
+            onChange={setRealityScore}
+            disabled={overviewSaving}
+            size={ratingSize}
+          />
         </Field>
 
         <Field label="Podsumowanie (opcjonalnie)">

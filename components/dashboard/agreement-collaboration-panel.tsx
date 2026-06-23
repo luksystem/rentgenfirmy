@@ -19,10 +19,6 @@ import {
   respondToAgreementApproval,
   setAgreementDiscussionOpen,
 } from "@/lib/supabase/project-agreement-collaboration-repository";
-import {
-  deleteAgreementAttachment,
-  uploadAgreementAttachment,
-} from "@/lib/supabase/project-agreement-attachments-repository";
 import { cn, formatDate } from "@/lib/utils";
 
 type ViewerMode = "team" | "client" | "external";
@@ -170,12 +166,16 @@ export function AgreementCollaborationPanel({
     return null;
   }, [bundle, mode, phase, selectedRoleId]);
 
+  const notifyChanged = useCallback(async () => {
+    await refresh();
+    await onChanged?.();
+  }, [onChanged, refresh]);
+
   async function run(action: () => Promise<void>) {
     setBusy(true);
     try {
       await action();
-      await refresh();
-      await onChanged?.();
+      await notifyChanged();
     } finally {
       setBusy(false);
     }
@@ -296,15 +296,20 @@ export function AgreementCollaborationPanel({
           throw new Error(payload.error ?? "Nie udało się przesłać pliku.");
         }
       } else {
-        await uploadAgreementAttachment({
-          agreementId,
-          file,
-          authorName: effectiveAuthorName,
-          authorSource,
-        });
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("authorName", effectiveAuthorName);
+        formData.append("authorSource", authorSource);
+        const response = await fetch(
+          `/api/project-agreement-attachments/${encodeURIComponent(agreementId)}`,
+          { method: "POST", body: formData, credentials: "include" },
+        );
+        if (!response.ok) {
+          const payload = (await response.json()) as { error?: string };
+          throw new Error(payload.error ?? "Nie udało się przesłać pliku.");
+        }
       }
-      await refresh();
-      await onChanged?.();
+      await notifyChanged();
     } finally {
       setUploadingAttachment(false);
     }
@@ -314,9 +319,15 @@ export function AgreementCollaborationPanel({
     if (mode !== "team") {
       return;
     }
-    await deleteAgreementAttachment(attachmentId);
-    await refresh();
-    await onChanged?.();
+    const response = await fetch(
+      `/api/project-agreement-attachments/item/${encodeURIComponent(attachmentId)}`,
+      { method: "DELETE", credentials: "include" },
+    );
+    if (!response.ok) {
+      const payload = (await response.json()) as { error?: string };
+      throw new Error(payload.error ?? "Nie udało się usunąć załącznika.");
+    }
+    await notifyChanged();
   }
 
   if (loading && !bundle) {

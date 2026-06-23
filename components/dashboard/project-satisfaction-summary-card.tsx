@@ -8,20 +8,26 @@ import { cn } from "@/lib/utils";
 export function ProjectSatisfactionSummaryCard({
   bundle,
   compact = false,
+  variant = "card",
   className,
 }: {
   bundle: ProjectSatisfactionBundle;
   compact?: boolean;
+  variant?: "card" | "inline";
   className?: string;
 }) {
   const summary = computeSatisfactionSummary(bundle);
-
-  if (
+  const isEmpty =
     summary.stageCount === 0 &&
     summary.fulfillmentTotal === 0 &&
     summary.expectationScore == null &&
-    summary.realityScore == null
-  ) {
+    summary.realityScore == null;
+
+  if (isEmpty) {
+    if (variant === "inline") {
+      return null;
+    }
+
     return (
       <div
         className={cn(
@@ -30,6 +36,64 @@ export function ProjectSatisfactionSummaryCard({
         )}
       >
         Brak ocen — pojawią się po zakończeniu etapów procesu i weryfikacji ustaleń.
+      </div>
+    );
+  }
+
+  if (variant === "inline") {
+    return (
+      <div
+        className={cn(
+          "flex min-w-0 max-w-full flex-wrap items-center gap-x-2.5 gap-y-1 sm:gap-x-3",
+          className,
+        )}
+      >
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted/80 sm:text-[11px]">
+          Zadowolenie
+        </span>
+
+        {summary.avgStageScore != null ? (
+          <span className="inline-flex min-w-0 items-center gap-1">
+            <span className="text-[10px] text-muted sm:text-[11px]">Etapy</span>
+            <StarRatingDisplay
+              value={Math.round(summary.avgStageScore)}
+              size="xs"
+              subtle
+            />
+          </span>
+        ) : null}
+
+        {summary.fulfillmentPercent != null ? (
+          <span className="text-[10px] text-muted sm:text-[11px]">
+            Spełnienie{" "}
+            <span className="font-medium text-foreground/90">{summary.fulfillmentPercent}%</span>
+          </span>
+        ) : null}
+
+        {summary.expectationScore != null ? (
+          <span className="text-[10px] text-muted sm:text-[11px]">
+            Przed{" "}
+            <span className="font-medium text-foreground/90">{summary.expectationScore}/10</span>
+          </span>
+        ) : null}
+
+        {summary.realityScore != null ? (
+          <span className="text-[10px] text-muted sm:text-[11px]">
+            Po{" "}
+            <span className="font-medium text-foreground/90">{summary.realityScore}/10</span>
+            {summary.expectationGap != null ? (
+              <span
+                className={cn(
+                  "ml-1",
+                  summary.expectationGap >= 0 ? "text-emerald-400/80" : "text-rose-400/80",
+                )}
+              >
+                ({summary.expectationGap >= 0 ? "+" : ""}
+                {summary.expectationGap})
+              </span>
+            ) : null}
+          </span>
+        ) : null}
       </div>
     );
   }

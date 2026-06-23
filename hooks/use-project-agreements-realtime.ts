@@ -8,6 +8,7 @@ const REALTIME_TABLES = [
   "project_agreement_approvals",
   "project_agreement_comments",
   "project_agreement_versions",
+  "project_agreement_attachments",
 ] as const;
 
 export function useProjectAgreementsRealtime(

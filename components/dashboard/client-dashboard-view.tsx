@@ -296,6 +296,16 @@ export function ClientDashboardView({
     void ensureAgreements(selectedProjectId, { force: true });
   }, [enableAgreements, ensureAgreements, selectedProjectId]);
 
+  const notifyAgreementsUpdated = useCallback(() => {
+    if (!onAgreementsUpdated || !selectedProjectId) {
+      return;
+    }
+    const agreements = useProjectAgreementStore.getState().byProject[selectedProjectId];
+    if (agreements?.length) {
+      onAgreementsUpdated(agreements);
+    }
+  }, [onAgreementsUpdated, selectedProjectId]);
+
   useProjectAgreementsRealtime(selectedProjectId, refreshAgreementsFromServer, {
     enabled: enableAgreements,
   });
@@ -538,10 +548,36 @@ export function ClientDashboardView({
     );
   }
 
+  function renderPublicProjectHeader() {
+    if (!readOnly || activeKanbanToken) {
+      return null;
+    }
+
+    return (
+      <div className="mb-3 flex min-w-0 flex-col gap-1.5 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-x-4 sm:gap-y-2">
+        <div className="min-w-0">
+          <h2 className="truncate text-base font-semibold leading-tight text-foreground sm:text-lg">
+            {selectedProject.name}
+          </h2>
+          <p className="text-[11px] text-muted sm:text-xs">
+            {selectedProject.type} · {selectedProject.stage}
+          </p>
+        </div>
+        {enableSatisfaction ? (
+          <ProjectSatisfactionSummaryCard
+            bundle={satisfactionBundle}
+            variant="inline"
+            className="sm:max-w-[55%] sm:justify-end"
+          />
+        ) : null}
+      </div>
+    );
+  }
+
   function renderHomeSection() {
     return (
       <div className="min-w-0 max-w-full grid gap-4">
-        {enableSatisfaction ? (
+        {!readOnly && enableSatisfaction ? (
           <ProjectSatisfactionSummaryCard bundle={satisfactionBundle} compact />
         ) : null}
         <ClientDashboardHome
@@ -610,6 +646,7 @@ export function ClientDashboardView({
           mode={readOnly ? "client" : "team"}
           authorName={readOnly ? clientAuthorName : teamAuthorName}
           seedAgreements={seedAgreements}
+          onAgreementsChanged={notifyAgreementsUpdated}
           onWarrantyExtensionAccepted={(warrantyEndsAt) =>
             onProjectPatch?.(selectedProject.id, { warrantyEndsAt })
           }
@@ -662,6 +699,7 @@ export function ClientDashboardView({
           authorName={readOnly ? clientAuthorName : teamAuthorName}
           authorSide={readOnly ? "client" : "team"}
           seedBundle={seedSatisfaction}
+          hideSummary={readOnly}
         />
       </div>
     );
@@ -805,7 +843,7 @@ export function ClientDashboardView({
     }
 
     return (
-      <div className="flex min-h-[min(70dvh,100svh-12rem)] min-w-0 flex-col">
+      <div className="flex min-h-[min(60dvh,calc(100svh-14rem))] min-w-0 flex-col">
         <PublicKanbanEmbedded
           token={activeKanbanToken}
           defaultAuthorName={readOnly ? clientAuthorName : teamAuthorName}
@@ -850,7 +888,7 @@ export function ClientDashboardView({
   }
 
   return (
-    <div className={cn("w-full min-w-0", readOnly && !activeKanbanToken ? "pb-24 xl:pb-0" : "xl:pb-0")}>
+    <div className={cn("w-full min-w-0", readOnly ? "pb-24 xl:pb-0" : "xl:pb-0")}>
       {readOnly ? (
         <div className="w-full">
           {projects.length > 1 && onProjectChange && !activeKanbanToken ? (
@@ -872,12 +910,11 @@ export function ClientDashboardView({
               ))}
             </div>
           ) : null}
-          {!activeKanbanToken ? (
-            <div className="max-xl:hidden">{renderTabBar(publicClientTabs, "desktop")}</div>
-          ) : (
-            <div className="mb-4 xl:hidden">{renderTabBar(publicClientTabs, "mobile-top")}</div>
-          )}
-          <div className="min-w-0 max-w-full">{renderMainArea()}</div>
+          <div className="max-xl:hidden">{renderTabBar(publicClientTabs, "desktop")}</div>
+          <div className="min-w-0 max-w-full">
+            {renderPublicProjectHeader()}
+            {renderMainArea()}
+          </div>
         </div>
       ) : (
         <>
@@ -923,7 +960,7 @@ export function ClientDashboardView({
         </>
       )}
 
-      {readOnly && !activeKanbanToken ? (
+      {readOnly ? (
         <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 xl:hidden">
           {renderTabBar(publicClientTabs, "mobile-bottom")}
         </nav>
