@@ -20,6 +20,7 @@ import { ClientInfoCard } from "@/components/dashboard/client-info-card";
 import { ClientProjectSummary } from "@/components/dashboard/client-project-summary";
 import { ProjectContentPanel } from "@/components/dashboard/project-content-panel";
 import { ProcessPipeline } from "@/components/process/process-pipeline";
+import { PublicKanbanEmbedded } from "@/components/process/public-kanban-embedded";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
@@ -28,6 +29,7 @@ import type { ProjectDashboardContent } from "@/lib/dashboard/content-types";
 import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
 import type { DashboardSpace } from "@/lib/dashboard/types";
 import { getProcessProgress } from "@/lib/process/types";
+import { extractKanbanTokenFromPublicPath } from "@/lib/process/kanban-public-path";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import { fetchProjectKanbanPublicLinks } from "@/lib/supabase/kanban-repository";
 import type { Client } from "@/lib/service/types";
@@ -106,6 +108,8 @@ export function ClientDashboardView({
   seedKanbanPublicLinks,
   onProjectPatch,
   onAgreementsUpdated,
+  activeKanbanToken = null,
+  onKanbanTokenChange,
 }: {
   client: Client;
   projects: Project[];
@@ -129,9 +133,40 @@ export function ClientDashboardView({
   onProjectPatch?: (projectId: string, patch: Partial<Project>) => void;
   /** Wywoływane po odświeżeniu ustaleń (realtime / fetch) — np. publiczny dashboard klienta. */
   onAgreementsUpdated?: (agreements: ProjectClientAgreement[]) => void;
+  /** Osadzona tablica Kanban w publicznym dashboardzie (token z ?kanban=). */
+  activeKanbanToken?: string | null;
+  onKanbanTokenChange?: (token: string | null) => void;
 }) {
   const [activeTab, setActiveTab] = useState<ClientDashboardTab>("home");
   const [kanbanPublicLinks, setKanbanPublicLinks] = useState<Record<string, string>>({});
+
+  const handleSelectTab = useCallback(
+    (tab: ClientDashboardTab) => {
+      if (activeKanbanToken) {
+        onKanbanTokenChange?.(null);
+      }
+      setActiveTab(tab);
+    },
+    [activeKanbanToken, onKanbanTokenChange],
+  );
+
+  const handleKanbanNavigate = useCallback(
+    (kanbanHref: string) => {
+      const kanbanToken = extractKanbanTokenFromPublicPath(kanbanHref);
+      if (!kanbanToken) {
+        return;
+      }
+      setActiveTab("process");
+      onKanbanTokenChange?.(kanbanToken);
+    },
+    [onKanbanTokenChange],
+  );
+
+  useEffect(() => {
+    if (activeKanbanToken) {
+      setActiveTab("process");
+    }
+  }, [activeKanbanToken]);
 
   const storeAgreements = useProjectAgreementStore(
     (state) => state.byProject[selectedProjectId] ?? EMPTY_AGREEMENTS,
@@ -350,6 +385,9 @@ export function ClientDashboardView({
               interactive={false}
               stacked
               kanbanPublicLinks={kanbanPublicLinks}
+              onKanbanNavigate={
+                readOnly && onKanbanTokenChange ? handleKanbanNavigate : undefined
+              }
             />
           </div>
         ) : (
@@ -427,7 +465,8 @@ export function ClientDashboardView({
 
   function renderHomeSection() {
     return (
-      <ClientDashboardHome
+      <div className="min-w-0 max-w-full">
+        <ClientDashboardHome
         client={client}
         project={selectedProject}
         projects={projects}
@@ -437,7 +476,7 @@ export function ClientDashboardView({
         agreements={agreementSource}
         pendingAgreementsCount={pendingOtherAgreementsCount}
         pendingWarrantyCount={pendingWarrantyCount}
-        onOpenTab={(tab) => setActiveTab(tab)}
+        onOpenTab={(tab) => handleSelectTab(tab)}
         clientSpace={clientSpace}
         showPublicLinkPanel={showPublicLink && !readOnly}
         readOnly={readOnly}
@@ -457,6 +496,7 @@ export function ClientDashboardView({
           onProjectPatch?.(selectedProject.id, { warrantyEndsAt })
         }
       />
+      </div>
     );
   }
 
@@ -525,7 +565,8 @@ export function ClientDashboardView({
   ) {
     if (variant === "mobile-top") {
       return (
-        <div className="mb-4 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="mb-4 w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-max min-w-full gap-2 pr-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -536,7 +577,7 @@ export function ClientDashboardView({
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleSelectTab(tab.id)}
                 className={cn(
                   "relative inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition",
                   active
@@ -556,6 +597,7 @@ export function ClientDashboardView({
               </button>
             );
           })}
+          </div>
         </div>
       );
     }
@@ -578,7 +620,7 @@ export function ClientDashboardView({
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleSelectTab(tab.id)}
               className={cn(
                 variant === "desktop"
                   ? cn(
@@ -622,7 +664,7 @@ export function ClientDashboardView({
       case "home":
         return renderHomeSection();
       case "overview":
-        return renderOverviewSection((nextTab) => setActiveTab(nextTab));
+        return renderOverviewSection((nextTab) => handleSelectTab(nextTab));
       case "process":
         return renderProcessSection();
       case "agreements":
@@ -637,7 +679,7 @@ export function ClientDashboardView({
   }
 
   return (
-    <div className="w-full min-w-0 pb-24 xl:pb-0">
+    <div className={cn("w-full min-w-0", readOnly ? "pb-24 xl:pb-0" : "xl:pb-0")}>
       {readOnly ? (
         <div className="w-full">
           {projects.length > 1 && onProjectChange ? (
@@ -660,7 +702,17 @@ export function ClientDashboardView({
             </div>
           ) : null}
           <div className="max-xl:hidden">{renderTabBar(publicClientTabs, "desktop")}</div>
-          <div>{renderMainTabContent(activeTab)}</div>
+          <div className="min-w-0 max-w-full">
+            {activeKanbanToken ? (
+              <PublicKanbanEmbedded
+                token={activeKanbanToken}
+                defaultAuthorName={clientAuthorName}
+                onBack={() => onKanbanTokenChange?.(null)}
+              />
+            ) : (
+              renderMainTabContent(activeTab)
+            )}
+          </div>
         </div>
       ) : (
         <>
@@ -673,10 +725,10 @@ export function ClientDashboardView({
               <section className="min-w-0 overflow-x-hidden">{renderMainTabContent(activeTab)}</section>
             </div>
           </div>
-          <div className="min-w-0 overflow-x-hidden xl:hidden">
+          <div className="min-w-0 max-w-full xl:hidden">
             {renderTabBar(teamMobileTabs, "mobile-top")}
             {projects.length > 1 && onProjectChange ? (
-              <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+              <div className="mb-4 flex w-full min-w-0 max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1">
                 {projects.map((project) => (
                   <button
                     key={project.id}
@@ -694,14 +746,18 @@ export function ClientDashboardView({
                 ))}
               </div>
             ) : null}
-            {activeTab === "data" ? renderDataSection(true) : renderMainTabContent(activeTab)}
+            <div className="min-w-0 max-w-full">
+              {activeTab === "data" ? renderDataSection(true) : renderMainTabContent(activeTab)}
+            </div>
           </div>
         </>
       )}
 
-      <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 xl:hidden">
-        {renderTabBar(readOnly ? publicClientTabs : teamMobileTabs, "mobile-bottom")}
-      </nav>
+      {readOnly ? (
+        <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 xl:hidden">
+          {renderTabBar(publicClientTabs, "mobile-bottom")}
+        </nav>
+      ) : null}
     </div>
   );
 }

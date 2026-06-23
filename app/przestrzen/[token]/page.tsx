@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { LockKeyhole } from "lucide-react";
 import { ClientDashboardView } from "@/components/dashboard/client-dashboard-view";
@@ -68,7 +68,11 @@ async function fetchPublicDashboard(token: string, projectId?: string) {
 
 export default function PublicDashboardPage() {
   const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const token = String(params.token ?? "");
+  const activeKanbanToken = searchParams.get("kanban");
+  const projectIdFromUrl = searchParams.get("projectId");
   const [space, setSpace] = useState<DashboardSpace | null>(null);
   const [client, setClient] = useState<Client | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -120,9 +124,31 @@ export default function PublicDashboardPage() {
   }, []);
 
   const refresh = useCallback(async () => {
-    const payload = await fetchPublicDashboard(token, selectedProjectId || undefined);
+    const payload = await fetchPublicDashboard(
+      token,
+      selectedProjectId || projectIdFromUrl || undefined,
+    );
     applyPayload(payload);
-  }, [applyPayload, selectedProjectId, token]);
+  }, [applyPayload, projectIdFromUrl, selectedProjectId, token]);
+
+  const handleKanbanTokenChange = useCallback(
+    (kanbanToken: string | null) => {
+      const nextParams = new URLSearchParams(searchParams.toString());
+      if (kanbanToken) {
+        nextParams.set("kanban", kanbanToken);
+      } else {
+        nextParams.delete("kanban");
+      }
+      if (selectedProjectId) {
+        nextParams.set("projectId", selectedProjectId);
+      }
+      const query = nextParams.toString();
+      router.push(query ? `/przestrzen/${token}?${query}` : `/przestrzen/${token}`, {
+        scroll: false,
+      });
+    },
+    [router, searchParams, selectedProjectId, token],
+  );
 
   useEffect(() => {
     if (!token || token === "undefined") {
@@ -135,14 +161,16 @@ export default function PublicDashboardPage() {
       setLoading(true);
       setError(null);
       try {
-        applyPayload(await fetchPublicDashboard(token));
+        applyPayload(
+          await fetchPublicDashboard(token, projectIdFromUrl ?? undefined),
+        );
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Błąd ładowania dashboardu.");
       } finally {
         setLoading(false);
       }
     })();
-  }, [applyPayload, token]);
+  }, [applyPayload, projectIdFromUrl, token]);
 
   const handleProjectChange = useCallback(
     (projectId: string) => {
@@ -155,6 +183,13 @@ export default function PublicDashboardPage() {
         setError(null);
         try {
           applyPayload(await fetchPublicDashboard(token, projectId));
+          const nextParams = new URLSearchParams(searchParams.toString());
+          nextParams.set("projectId", projectId);
+          nextParams.delete("kanban");
+          const query = nextParams.toString();
+          router.replace(query ? `/przestrzen/${token}?${query}` : `/przestrzen/${token}`, {
+            scroll: false,
+          });
         } catch (loadError) {
           setError(loadError instanceof Error ? loadError.message : "Błąd ładowania projektu.");
         } finally {
@@ -162,7 +197,7 @@ export default function PublicDashboardPage() {
         }
       })();
     },
-    [applyPayload, selectedProjectId, token],
+    [applyPayload, router, searchParams, selectedProjectId, token],
   );
 
   async function handleLogin() {
@@ -335,6 +370,8 @@ export default function PublicDashboardPage() {
           onAgreementsUpdated={(updated) => {
             setAgreements(updated);
           }}
+          activeKanbanToken={activeKanbanToken}
+          onKanbanTokenChange={handleKanbanTokenChange}
         />
       </div>
     </div>

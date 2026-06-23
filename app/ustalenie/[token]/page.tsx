@@ -20,6 +20,7 @@ export default function PublicAgreementPage() {
   const token = String(params.token ?? "");
   const [bundle, setBundle] = useState<AgreementCollaborationBundle | null>(null);
   const [authorName, setAuthorName] = useState("");
+  const [nameTouched, setNameTouched] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -110,14 +111,19 @@ export default function PublicAgreementPage() {
                 className="rounded-xl border border-border bg-surface px-3 py-2"
                 value={authorName}
                 onChange={(event) => setAuthorName(event.target.value)}
+                onBlur={() => setNameTouched(true)}
                 placeholder="np. Jan Kowalski / Firma XYZ"
+                required
               />
+              {nameTouched && !authorName.trim() ? (
+                <span className="text-xs text-rose-300">Imię lub firma jest wymagane.</span>
+              ) : null}
             </label>
 
             <AgreementCollaborationPanel
               agreementId={bundle.agreement.id}
               mode="external"
-              authorName={authorName || "Gość"}
+              authorName={authorName}
               publicToken={token}
               onChanged={refresh}
             />

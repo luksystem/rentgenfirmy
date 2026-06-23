@@ -36,8 +36,11 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   loadNotifications: async (profileId) => {
     set({ loading: true });
     try {
-      const items = await fetchUserNotifications(profileId);
-      set({ items, loading: false });
+      const [items, unreadCount] = await Promise.all([
+        fetchUserNotifications(profileId),
+        fetchUnreadNotificationCount(profileId),
+      ]);
+      set({ items, unreadCount, loading: false });
     } catch {
       set({ items: [], loading: false });
     }

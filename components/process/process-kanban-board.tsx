@@ -511,17 +511,42 @@ export function ProcessKanbanBoard({
                     }}
                   />
                   <Field label="Termin (opcjonalnie)" className="text-xs">
-                    <Input
-                      type="date"
-                      value={newTaskDueDates[column.id] ?? ""}
-                      disabled={addingTaskColumnId !== null}
-                      onChange={(event) =>
-                        setNewTaskDueDates((current) => ({
-                          ...current,
-                          [column.id]: event.target.value,
-                        }))
-                      }
-                    />
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="date"
+                        className="min-w-0 flex-1"
+                        value={newTaskDueDates[column.id] ?? ""}
+                        disabled={addingTaskColumnId !== null}
+                        onChange={(event) =>
+                          setNewTaskDueDates((current) => ({
+                            ...current,
+                            [column.id]: event.target.value,
+                          }))
+                        }
+                        onInput={(event) =>
+                          setNewTaskDueDates((current) => ({
+                            ...current,
+                            [column.id]: event.currentTarget.value,
+                          }))
+                        }
+                      />
+                      {newTaskDueDates[column.id] ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={addingTaskColumnId !== null}
+                          onClick={() =>
+                            setNewTaskDueDates((current) => ({
+                              ...current,
+                              [column.id]: "",
+                            }))
+                          }
+                        >
+                          Usuń
+                        </Button>
+                      ) : null}
+                    </div>
                   </Field>
                   <Button
                     type="button"
@@ -565,8 +590,18 @@ export function ProcessKanbanBoard({
           onCommentDraftChange={setCommentDraft}
           onClose={() => setActiveTaskId(null)}
           onSave={async (patch) => {
-            await updateKanbanTask(activeTask.id, patch);
-            await refresh();
+            const updated = await updateKanbanTask(activeTask.id, patch);
+            setBoard((current) => {
+              if (!current) {
+                return current;
+              }
+              const nextBoard = {
+                ...current,
+                tasks: current.tasks.map((entry) => (entry.id === updated.id ? updated : entry)),
+              };
+              setCachedBoard(nextBoard);
+              return nextBoard;
+            });
           }}
           onCloseTask={async (closed) => {
             await closeKanbanTask(activeTask.id, closed, { authorName, authorSide });

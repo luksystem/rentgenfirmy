@@ -15,32 +15,32 @@ export function ClientInfoCard({ client }: { client: Client }) {
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Dane klienta</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-3 text-sm">
-        <div>
-          <p className="font-medium text-foreground">{client.fullName}</p>
-          {client.location ? <p className="text-muted">Obiekt: {client.location}</p> : null}
+      <CardContent className="grid min-w-0 gap-3 text-sm">
+        <div className="min-w-0">
+          <p className="break-words font-medium text-foreground">{client.fullName}</p>
+          {client.location ? <p className="break-words text-muted">Obiekt: {client.location}</p> : null}
         </div>
 
         {addressLine ? (
-          <div className="flex items-start gap-2 text-muted">
+          <div className="flex min-w-0 items-start gap-2 text-muted">
             <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-            <span>{addressLine}</span>
+            <span className="min-w-0 break-words">{addressLine}</span>
           </div>
         ) : null}
 
         {client.email ? (
-          <div className="flex items-center gap-2 text-muted">
+          <div className="flex min-w-0 items-center gap-2 text-muted">
             <Mail className="h-4 w-4 shrink-0 text-accent" />
-            <a href={`mailto:${client.email}`} className="hover:text-foreground">
+            <a href={`mailto:${client.email}`} className="min-w-0 break-all hover:text-foreground">
               {client.email}
             </a>
           </div>
         ) : null}
 
         {client.phone ? (
-          <div className="flex items-center gap-2 text-muted">
+          <div className="flex min-w-0 items-center gap-2 text-muted">
             <Phone className="h-4 w-4 shrink-0 text-accent" />
-            <a href={`tel:${client.phone}`} className="hover:text-foreground">
+            <a href={`tel:${client.phone}`} className="min-w-0 break-all hover:text-foreground">
               {client.phone}
             </a>
           </div>

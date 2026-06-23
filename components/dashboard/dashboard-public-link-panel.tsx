@@ -107,9 +107,9 @@ export function DashboardPublicLinkPanel({ space: spaceProp }: { space: Dashboar
   }
 
   return (
-    <div className="rounded-2xl border border-border/80 bg-surface-muted/20 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+    <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface-muted/20 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <p className="text-sm font-medium text-foreground">Link publiczny</p>
           <p className="mt-1 text-xs text-muted">
             Udostępnij dashboard klientowi — zabezpiecz hasłem jak tablicę Kanban.
@@ -120,6 +120,7 @@ export function DashboardPublicLinkPanel({ space: spaceProp }: { space: Dashboar
           variant={space.publicEnabled ? "secondary" : "default"}
           size="sm"
           disabled={saving}
+          className="w-full shrink-0 sm:w-auto"
           onClick={() => void handleToggle()}
         >
           {space.publicEnabled ? "Wyłącz link" : "Włącz link"}
@@ -127,10 +128,11 @@ export function DashboardPublicLinkPanel({ space: spaceProp }: { space: Dashboar
       </div>
 
       {space.publicEnabled ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <code className="max-w-full truncate rounded-lg border border-border/60 bg-black/30 px-2 py-1 text-xs">
+        <div className="mt-3 grid min-w-0 gap-2">
+          <code className="block w-full min-w-0 break-all rounded-lg border border-border/60 bg-black/30 px-2 py-1 text-xs">
             {publicUrl}
           </code>
+          <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" size="sm" onClick={() => void handleCopy()}>
             <Copy className="mr-2 h-4 w-4" />
             Kopiuj
@@ -141,6 +143,7 @@ export function DashboardPublicLinkPanel({ space: spaceProp }: { space: Dashboar
               Podgląd
             </Link>
           </Button>
+          </div>
         </div>
       ) : null}
 

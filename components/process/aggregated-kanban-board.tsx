@@ -58,6 +58,7 @@ export function AggregatedKanbanBoard({
   }, [authorSide, loadTeamProfiles]);
   const cachedMergedView = useKanbanCacheStore((state) => state.mergedView);
   const ensureAllBoards = useKanbanCacheStore((state) => state.ensureAllBoards);
+  const setCachedBoard = useKanbanCacheStore((state) => state.setBoard);
   const [mergedView, setMergedView] = useState<MergedKanbanView | null>(cachedMergedView);
   const [loading, setLoading] = useState(!cachedMergedView);
   const [error, setError] = useState<string | null>(null);
@@ -339,8 +340,20 @@ export function AggregatedKanbanBoard({
           onCommentDraftChange={setCommentDraft}
           onClose={() => setActiveTaskId(null)}
           onSave={async (patch) => {
-            await updateKanbanTask(activeTask.id, patch);
-            await refresh();
+            const updated = await updateKanbanTask(activeTask.id, patch);
+            const sourceBoard = Object.values(useKanbanCacheStore.getState().boardsByItemId).find((entry) =>
+              entry.tasks.some((task) => task.id === updated.id),
+            );
+            if (sourceBoard) {
+              const nextBoard = {
+                ...sourceBoard,
+                tasks: sourceBoard.tasks.map((entry) => (entry.id === updated.id ? updated : entry)),
+              };
+              setCachedBoard(nextBoard);
+              setMergedView(useKanbanCacheStore.getState().mergedView);
+            } else {
+              await refresh();
+            }
           }}
           onCloseTask={async (closed) => {
             await closeKanbanTask(activeTask.id, closed, { authorName, authorSide });

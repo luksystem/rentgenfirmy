@@ -48,11 +48,21 @@ export async function POST(
     };
 
     if (body.action === "comment") {
+      const authorName = body.authorName?.trim();
+      const commentBody = body.commentBody?.trim();
+
+      if (!authorName) {
+        return NextResponse.json({ error: "Podaj imię lub firmę." }, { status: 400 });
+      }
+      if (!commentBody) {
+        return NextResponse.json({ error: "Wpisz treść komentarza." }, { status: 400 });
+      }
+
       const comment = await addAgreementComment(bundle.agreement.id, {
-        authorName: body.authorName?.trim() || "Gość",
+        authorName,
         authorSource: "external",
         authorRoleLabel: body.authorRoleLabel,
-        body: body.commentBody ?? "",
+        body: commentBody,
       });
       return NextResponse.json({ comment });
     }
@@ -61,9 +71,17 @@ export async function POST(
       if (!body.roleId) {
         return NextResponse.json({ error: "Wybierz rolę akceptacji." }, { status: 400 });
       }
+      const authorName = body.authorName?.trim();
+      if (!authorName) {
+        return NextResponse.json({ error: "Podaj imię lub firmę." }, { status: 400 });
+      }
+      const roleExists = bundle.roles.some((role) => role.id === body.roleId);
+      if (!roleExists) {
+        return NextResponse.json({ error: "Wybrana rola nie jest dostępna w tym ustaleniu." }, { status: 400 });
+      }
       const next = await respondToAgreementApproval(bundle.agreement.id, body.roleId, {
         accepted: Boolean(body.accepted),
-        respondedByName: body.authorName?.trim() || "Gość",
+        respondedByName: authorName,
         responseNote: body.responseNote,
       });
       return NextResponse.json(next);

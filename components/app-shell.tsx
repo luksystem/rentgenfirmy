@@ -27,11 +27,9 @@ import {
 import { cn } from "@/lib/utils";
 import { isPublicAppRoute } from "@/lib/auth/routes";
 import { useKanbanNewTasksRealtime, useKanbanOverdueTasksRealtime } from "@/hooks/use-kanban-realtime";
-import { useNotificationsRealtime } from "@/hooks/use-notifications-realtime";
 import { COMMERCIAL_MODULE_LIST } from "@/lib/modules/commercial-modules";
 import { NotificationBell } from "@/components/notification-bell";
 import { useAuthStore } from "@/store/auth-store";
-import { useNotificationStore } from "@/store/notification-store";
 import { useProcessStore } from "@/store/process-store";
 
 const commercialNavItems = COMMERCIAL_MODULE_LIST.map((module) => ({
@@ -194,7 +192,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const profileId = useAuthStore((state) => state.profile?.id);
   const isAdministrator = useAuthStore((state) => state.isAdministrator);
   const displayName = useAuthStore((state) => state.displayName);
   const signOut = useAuthStore((state) => state.signOut);
@@ -202,8 +199,6 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const kanbanOverdueTaskCount = useProcessStore((state) => state.kanbanOverdueTaskCount);
   const refreshKanbanNewTaskCount = useProcessStore((state) => state.refreshKanbanNewTaskCount);
   const refreshKanbanOverdueTaskCount = useProcessStore((state) => state.refreshKanbanOverdueTaskCount);
-  const refreshUnreadCount = useNotificationStore((state) => state.refreshUnreadCount);
-  const loadNotifications = useNotificationStore((state) => state.loadNotifications);
 
   const handleKanbanOverdueCountChange = useCallback((count: number) => {
     useProcessStore.setState({ kanbanOverdueTaskCount: count });
@@ -213,27 +208,13 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
     useProcessStore.setState({ kanbanNewTaskCount: count });
   }, []);
 
-  const handleNotificationsRefresh = useCallback(() => {
-    if (profileId) {
-      void refreshUnreadCount(profileId);
-      void loadNotifications(profileId);
-    }
-  }, [loadNotifications, profileId, refreshUnreadCount]);
-
   useEffect(() => {
     void refreshKanbanOverdueTaskCount();
     void refreshKanbanNewTaskCount();
   }, [refreshKanbanNewTaskCount, refreshKanbanOverdueTaskCount]);
 
-  useEffect(() => {
-    if (profileId) {
-      void refreshUnreadCount(profileId);
-    }
-  }, [profileId, refreshUnreadCount]);
-
   useKanbanOverdueTasksRealtime(handleKanbanOverdueCountChange);
   useKanbanNewTasksRealtime(handleKanbanNewCountChange);
-  useNotificationsRealtime(profileId, handleNotificationsRefresh);
 
   const kanbanBadges = useMemo(
     () => ({
@@ -277,7 +258,6 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const allNav = useMemo(() => navGroups.flatMap((group) => group.items), [navGroups]);
 
   const currentPage = allNav.find((item) => isActive(pathname, item.href));
-  const immersiveClientDashboardMobile = pathname.startsWith("/przestrzenie/klient/");
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -353,16 +333,10 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main
-          className={cn(
-            "mx-auto w-full min-w-0 max-w-[1500px] px-4 py-4 sm:px-5 sm:py-6 xl:px-8",
-            immersiveClientDashboardMobile ? "pb-4 sm:pb-6" : "pb-28 sm:pb-28 xl:pb-6",
-          )}
-        >
+        <main className="mx-auto w-full min-w-0 max-w-[1500px] px-4 py-4 pb-28 sm:px-5 sm:py-6 sm:pb-28 xl:px-8 xl:pb-6">
           {children}
         </main>
 
-        {!immersiveClientDashboardMobile ? (
         <>
         <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 xl:hidden">
           <div className="mx-auto grid max-w-lg grid-cols-5 rounded-2xl border border-border bg-surface-elevated/95 px-1 py-1 shadow-card backdrop-blur-xl">
@@ -510,7 +484,6 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
           </div>
         ) : null}
         </>
-        ) : null}
       </div>
     </div>
   );

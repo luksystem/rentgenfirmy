@@ -22,6 +22,7 @@ import {
   getAgreementStatusLabel,
   getAgreementStatusTone,
   isAgreementPendingAttention,
+  normalizeProjectAgreementInput,
   type ProjectAgreementCategory,
   type ProjectAgreementInput,
   type ProjectAgreementStatus,
@@ -474,10 +475,10 @@ export function ProjectAgreementsPanel({
       return;
     }
 
-    const payload: ProjectAgreementInput = {
+    const payload = normalizeProjectAgreementInput({
       ...form,
       approverRoles: sanitizeApproverRoles(form.approverRoles),
-    };
+    });
 
     setSaving(true);
     setSaveError(null);

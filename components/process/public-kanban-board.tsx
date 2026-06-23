@@ -32,6 +32,7 @@ async function postKanban(token: string, body: Record<string, unknown>) {
     const payload = (await response.json()) as { error?: string };
     throw new Error(payload.error ?? "Operacja nie powiodła się.");
   }
+  return response.json() as Promise<Record<string, unknown>>;
 }
 
 export function PublicKanbanBoard({

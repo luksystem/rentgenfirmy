@@ -56,8 +56,8 @@ function ProcessProgressCard({
   const offset = circumference - (progress.percent / 100) * circumference;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-accent/25 bg-gradient-to-br from-accent/12 via-surface to-surface p-4">
-      <div className="flex items-center gap-4">
+    <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-accent/25 bg-gradient-to-br from-accent/12 via-surface to-surface p-4">
+      <div className="flex min-w-0 items-center gap-4">
         <div className="relative h-24 w-24 shrink-0">
           <svg className="h-full w-full -rotate-90" viewBox="0 0 104 104" aria-hidden>
             <circle
@@ -159,16 +159,18 @@ function WarrantyHomeCard({
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">Gwarancja</p>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
             <span
               className={cn(
-                "inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                "inline-flex shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold",
                 warrantyToneClass[warrantyStatus.tone],
               )}
             >
               {warrantyStatus.label}
             </span>
-            <span className="text-sm text-muted">Koniec: {formatWarrantyEndDate(project)}</span>
+            <span className="min-w-0 break-words text-sm text-muted">
+              Koniec: {formatWarrantyEndDate(project)}
+            </span>
           </div>
         </div>
         <ChevronDown
@@ -246,7 +248,7 @@ export function ClientDashboardHome({
   const pendingAcceptanceOnlyCount = pendingAgreements.length - pendingDiscussionCount;
 
   return (
-    <div className="grid gap-4">
+    <div className="grid min-w-0 max-w-full gap-4 overflow-x-hidden">
       {totalPending > 0 ? (
         <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
           <div className="flex items-start gap-3">
@@ -300,8 +302,8 @@ export function ClientDashboardHome({
                 key={entry.id}
                 className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5"
               >
-                <p className="font-medium text-foreground">{entry.title}</p>
-                <p className="mt-0.5 text-xs text-muted">
+                <p className="break-words font-medium text-foreground">{entry.title}</p>
+                <p className="mt-0.5 break-words text-xs text-muted">
                   {getAgreementStatusLabel(entry)}
                   {" · "}
                   {PROJECT_AGREEMENT_CATEGORY_LABELS[entry.category]}
@@ -336,8 +338,8 @@ export function ClientDashboardHome({
                 key={entry.id}
                 className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5"
               >
-                <p className="font-medium text-foreground">{entry.title}</p>
-                <p className="mt-0.5 text-xs text-muted">
+                <p className="break-words font-medium text-foreground">{entry.title}</p>
+                <p className="mt-0.5 break-words text-xs text-muted">
                   {formatAgreementCost(entry) ?? "Bez dodatkowego kosztu"}
                 </p>
               </div>
@@ -358,9 +360,11 @@ export function ClientDashboardHome({
       ) : null}
 
       {showPublicLinkPanel && clientSpace ? (
-        <DashboardPublicLinkPanel space={clientSpace} />
+        <div className="min-w-0 max-w-full">
+          <DashboardPublicLinkPanel space={clientSpace} />
+        </div>
       ) : showPublicLinkPanel && !clientSpace ? (
-        <div className="rounded-2xl border border-border/80 bg-surface-muted/20 p-4 text-sm text-muted">
+        <div className="min-w-0 rounded-2xl border border-border/80 bg-surface-muted/20 p-4 text-sm text-muted">
           Link publiczny będzie dostępny po utworzeniu przestrzeni dashboardu dla tego projektu.
         </div>
       ) : null}
@@ -393,7 +397,7 @@ export function ClientDashboardHome({
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-border/80 bg-surface p-4">
+      <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
         <h2 className="mb-3 text-base font-semibold text-foreground">Dane projektu</h2>
         <ClientProjectSummary project={project} compact excludeWarrantyFields />
       </div>

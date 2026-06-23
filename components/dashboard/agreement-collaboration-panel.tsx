@@ -45,6 +45,13 @@ export function AgreementCollaborationPanel({
   const [responseNote, setResponseNote] = useState("");
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [responderName, setResponderName] = useState(authorName);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const effectiveAuthorName = publicToken ? authorName.trim() : responderName.trim() || authorName.trim();
+
+  useEffect(() => {
+    setResponderName(authorName);
+  }, [authorName]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -66,6 +73,8 @@ export function AgreementCollaborationPanel({
         const defaultRole =
           mode === "client" ?
             (next.roles.find((role) => role.isClientRole) ?? next.roles[0])
+          : mode === "external" ?
+            next.roles[0]
           : next.roles.find((role) => !role.isClientRole) ?? next.roles[0];
         setSelectedRoleId(defaultRole.id);
       }
@@ -115,7 +124,14 @@ export function AgreementCollaborationPanel({
   }
 
   async function handleAddComment() {
+    setFormError(null);
+
+    if (!effectiveAuthorName) {
+      setFormError("Podaj imię lub firmę przed dodaniem komentarza.");
+      return;
+    }
     if (!commentBody.trim()) {
+      setFormError("Wpisz treść komentarza.");
       return;
     }
     const authorSource: AgreementCommentAuthorSource =
@@ -128,7 +144,7 @@ export function AgreementCollaborationPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "comment",
-          authorName: authorName.trim() || responderName.trim() || "Użytkownik",
+          authorName: effectiveAuthorName,
           authorRoleLabel: mode === "external" ? roleLabel : mode === "client" ? "Klient" : null,
           commentBody,
         }),
@@ -139,7 +155,7 @@ export function AgreementCollaborationPanel({
       }
     } else {
       await addAgreementComment(agreementId, {
-        authorName: authorName.trim() || responderName.trim() || "Użytkownik",
+        authorName: effectiveAuthorName,
         authorSource,
         authorRoleLabel: mode === "external" ? roleLabel : mode === "client" ? "Klient" : null,
         body: commentBody,
@@ -149,6 +165,12 @@ export function AgreementCollaborationPanel({
   }
 
   async function handleRespond(accepted: boolean) {
+    setFormError(null);
+
+    if (!effectiveAuthorName) {
+      setFormError("Podaj imię lub firmę przed zapisaniem decyzji.");
+      return;
+    }
     if (!pendingApprovalForViewer?.roleId) {
       return;
     }
@@ -161,7 +183,7 @@ export function AgreementCollaborationPanel({
           action: "respond",
           roleId: pendingApprovalForViewer.roleId,
           accepted,
-          authorName: responderName.trim() || authorName.trim() || "Użytkownik",
+          authorName: effectiveAuthorName,
           responseNote,
         }),
       });
@@ -180,7 +202,7 @@ export function AgreementCollaborationPanel({
     } else {
       const next = await respondToAgreementApproval(agreementId, pendingApprovalForViewer.roleId, {
         accepted,
-        respondedByName: responderName.trim() || authorName.trim() || "Użytkownik",
+        respondedByName: effectiveAuthorName,
         responseNote: responseNote,
       });
       if (
@@ -331,7 +353,7 @@ export function AgreementCollaborationPanel({
 
       {canComment ? (
         <div className="grid gap-2">
-          {mode === "external" ? (
+          {mode === "external" && !publicToken ? (
             <>
               <Field label="Twoje imię / firma">
                 <Input value={responderName} onChange={(event) => setResponderName(event.target.value)} />
@@ -342,16 +364,29 @@ export function AgreementCollaborationPanel({
                   value={selectedRoleId}
                   onChange={(event) => setSelectedRoleId(event.target.value)}
                 >
-                  {bundle.roles
-                    .filter((role) => !role.isClientRole)
-                    .map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {role.label}
-                      </option>
-                    ))}
+                  {bundle.roles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.label}
+                    </option>
+                  ))}
                 </select>
               </Field>
             </>
+          ) : null}
+          {mode === "external" && publicToken && bundle.roles.length ? (
+            <Field label="Rola w procesie">
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={selectedRoleId}
+                onChange={(event) => setSelectedRoleId(event.target.value)}
+              >
+                {bundle.roles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
           ) : null}
           <Field label="Dodaj komentarz">
             <Textarea
@@ -361,11 +396,12 @@ export function AgreementCollaborationPanel({
               placeholder="Uwagi, pytania, propozycje zmian…"
             />
           </Field>
+          {formError ? <p className="text-xs text-rose-300">{formError}</p> : null}
           <Button
             type="button"
             size="sm"
             variant="outline"
-            disabled={busy || !commentBody.trim()}
+            disabled={busy || !commentBody.trim() || !effectiveAuthorName}
             onClick={() => void run(handleAddComment)}
           >
             Wyślij komentarz
@@ -379,11 +415,12 @@ export function AgreementCollaborationPanel({
             Decyzja: {pendingApprovalForViewer.role?.label ?? "Akceptacja"}
           </p>
           {costLabel ? <p className="text-sm text-muted">Koszt: {costLabel}</p> : null}
-          {mode === "external" ? (
+          {mode === "external" && !publicToken ? (
             <Field label="Podpisujesz jako">
               <Input value={responderName} onChange={(event) => setResponderName(event.target.value)} />
             </Field>
           ) : null}
+          {formError ? <p className="text-xs text-rose-300">{formError}</p> : null}
           <Field label="Uwagi (opcjonalnie)">
             <Textarea
               value={responseNote}
@@ -395,7 +432,7 @@ export function AgreementCollaborationPanel({
             <Button
               type="button"
               size="sm"
-              disabled={busy}
+              disabled={busy || !effectiveAuthorName}
               onClick={() => void run(() => handleRespond(true))}
             >
               <Check className="mr-2 h-3.5 w-3.5" />
@@ -405,7 +442,7 @@ export function AgreementCollaborationPanel({
               type="button"
               size="sm"
               variant="destructive"
-              disabled={busy}
+              disabled={busy || !effectiveAuthorName}
               onClick={() => void run(() => handleRespond(false))}
             >
               <X className="mr-2 h-3.5 w-3.5" />

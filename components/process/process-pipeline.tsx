@@ -49,6 +49,8 @@ type ProcessPipelineProps = {
   stacked?: boolean;
   /** templateItemId → `/kanban/{token}` — linki publicznych tablic w widoku tylko do odczytu. */
   kanbanPublicLinks?: Record<string, string>;
+  /** Zamiast nawigacji na osobną stronę `/kanban/...` (np. osadzenie w publicznym dashboardzie). */
+  onKanbanNavigate?: (kanbanHref: string) => void;
 };
 
 export function ProcessPipeline({
@@ -68,6 +70,7 @@ export function ProcessPipeline({
   canCustomizeChecklist = false,
   stacked = false,
   kanbanPublicLinks,
+  onKanbanNavigate,
 }: ProcessPipelineProps) {
   const [activeItem, setActiveItem] = useState<ProcessItem | null>(null);
 
@@ -255,12 +258,22 @@ export function ProcessPipeline({
                                   <span className="flex items-center gap-1.5 font-medium text-foreground">
                                     <Icon className="h-3.5 w-3.5 shrink-0 text-accent" />
                                     {kanbanHref ? (
-                                      <Link
-                                        href={kanbanHref}
-                                        className="text-accent hover:underline"
-                                      >
-                                        {item.title}
-                                      </Link>
+                                      onKanbanNavigate ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => onKanbanNavigate(kanbanHref)}
+                                          className="text-left text-accent hover:underline"
+                                        >
+                                          {item.title}
+                                        </button>
+                                      ) : (
+                                        <Link
+                                          href={kanbanHref}
+                                          className="text-accent hover:underline"
+                                        >
+                                          {item.title}
+                                        </Link>
+                                      )
                                     ) : (
                                       item.title
                                     )}

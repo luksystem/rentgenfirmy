@@ -59,6 +59,24 @@ export type ProjectAgreementInput = {
   approverRoles?: import("@/lib/dashboard/agreement-collaboration-types").AgreementApproverRoleInput[];
 };
 
+export function normalizeAgreementOptionalDate(value: string | null | undefined): string | null {
+  if (value == null) {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+export function normalizeProjectAgreementInput(input: ProjectAgreementInput): ProjectAgreementInput {
+  return {
+    ...input,
+    title: input.title.trim(),
+    body: input.body.trim(),
+    costNote: input.costNote?.trim() || undefined,
+    proposedWarrantyEndDate: normalizeAgreementOptionalDate(input.proposedWarrantyEndDate),
+  };
+}
+
 export const PROJECT_AGREEMENT_CATEGORY_LABELS: Record<ProjectAgreementCategory, string> = {
   integration: "Integracja",
   specification: "Specyfikacja / urządzenia",

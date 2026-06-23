@@ -47,7 +47,7 @@ export function ClientProjectSummary({
 
   if (compact) {
     return (
-      <div className="rounded-2xl border border-border/80 bg-surface">
+      <div className="min-w-0 rounded-2xl border border-border/80 bg-surface">
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
@@ -68,9 +68,9 @@ export function ClientProjectSummary({
         {expanded ? (
           <div className="grid grid-cols-1 gap-2 border-t border-border/60 px-4 py-3">
             {rows.slice(2).map((row) => (
-              <div key={row.label}>
+              <div key={row.label} className="min-w-0">
                 <p className="text-[10px] uppercase tracking-wide text-muted">{row.label}</p>
-                <p className="text-sm text-foreground">{row.value}</p>
+                <p className="break-words text-sm text-foreground">{row.value}</p>
               </div>
             ))}
             {project.notes ? (

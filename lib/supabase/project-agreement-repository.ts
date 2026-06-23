@@ -3,6 +3,7 @@ import type {
   ProjectAgreementStatus,
   ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";
+import { normalizeProjectAgreementInput } from "@/lib/dashboard/agreement-types";
 import {
   createDefaultClientRole,
   publishAgreementVersion,
@@ -36,6 +37,7 @@ export async function createProjectAgreement(
   input: ProjectAgreementInput,
   author: { name: string; side: "team" | "client" },
 ) {
+  const normalized = normalizeProjectAgreementInput(input);
   const supabase = getSupabase();
   const now = new Date().toISOString();
   const { data: lastRow } = await supabase
@@ -53,15 +55,15 @@ export async function createProjectAgreement(
     .insert({
       id: crypto.randomUUID(),
       project_id: projectId,
-      title: input.title.trim(),
-      body: input.body.trim(),
-      category: input.category,
+      title: normalized.title,
+      body: normalized.body,
+      category: normalized.category,
       status: "draft",
-      proposed_cost_net: input.proposedCostNet ?? null,
-      proposed_cost_gross: input.proposedCostGross ?? null,
-      proposed_cost_vat_rate: input.proposedCostVatRate ?? null,
-      cost_note: input.costNote?.trim() || null,
-      proposed_warranty_end_date: input.proposedWarrantyEndDate ?? null,
+      proposed_cost_net: normalized.proposedCostNet ?? null,
+      proposed_cost_gross: normalized.proposedCostGross ?? null,
+      proposed_cost_vat_rate: normalized.proposedCostVatRate ?? null,
+      cost_note: normalized.costNote?.trim() || null,
+      proposed_warranty_end_date: normalized.proposedWarrantyEndDate,
       created_by_name: author.name.trim() || "Zespół",
       created_by_side: author.side,
       position,
@@ -77,10 +79,10 @@ export async function createProjectAgreement(
 
   const agreement = rowToAgreement(data as AgreementRow);
   await createDefaultClientRole(agreement.id);
-  if (input.publicEnabled !== undefined || input.approverRoles) {
+  if (normalized.publicEnabled !== undefined || normalized.approverRoles) {
     await saveAgreementCollaborationSettings(agreement.id, {
-      publicEnabled: input.publicEnabled,
-      approverRoles: input.approverRoles,
+      publicEnabled: normalized.publicEnabled,
+      approverRoles: normalized.approverRoles,
     });
   }
 
@@ -105,18 +107,19 @@ export async function updateProjectAgreement(
   input: ProjectAgreementInput,
   allowedStatuses: ProjectAgreementStatus[] = ["draft", "pending_client", "rejected"],
 ) {
+  const normalized = normalizeProjectAgreementInput(input);
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("project_client_agreements")
     .update({
-      title: input.title.trim(),
-      body: input.body.trim(),
-      category: input.category,
-      proposed_cost_net: input.proposedCostNet ?? null,
-      proposed_cost_gross: input.proposedCostGross ?? null,
-      proposed_cost_vat_rate: input.proposedCostVatRate ?? null,
-      cost_note: input.costNote?.trim() || null,
-      proposed_warranty_end_date: input.proposedWarrantyEndDate ?? null,
+      title: normalized.title,
+      body: normalized.body,
+      category: normalized.category,
+      proposed_cost_net: normalized.proposedCostNet ?? null,
+      proposed_cost_gross: normalized.proposedCostGross ?? null,
+      proposed_cost_vat_rate: normalized.proposedCostVatRate ?? null,
+      cost_note: normalized.costNote?.trim() || null,
+      proposed_warranty_end_date: normalized.proposedWarrantyEndDate,
       updated_at: new Date().toISOString(),
     })
     .eq("id", agreementId)
@@ -129,10 +132,10 @@ export async function updateProjectAgreement(
   }
 
   const agreement = rowToAgreement(data as AgreementRow);
-  if (input.publicEnabled !== undefined || input.approverRoles) {
+  if (normalized.publicEnabled !== undefined || normalized.approverRoles) {
     await saveAgreementCollaborationSettings(agreementId, {
-      publicEnabled: input.publicEnabled,
-      approverRoles: input.approverRoles,
+      publicEnabled: normalized.publicEnabled,
+      approverRoles: normalized.approverRoles,
     });
     const { data: refreshed } = await supabase
       .from("project_client_agreements")

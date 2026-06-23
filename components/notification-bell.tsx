@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, Bell, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn, formatDate } from "@/lib/utils";
+import { useNotificationsRealtime } from "@/hooks/use-notifications-realtime";
 import { useAuthStore } from "@/store/auth-store";
 import { useNotificationStore } from "@/store/notification-store";
 import { useProcessStore } from "@/store/process-store";
@@ -20,6 +21,8 @@ export function NotificationBell() {
   const markAllRead = useNotificationStore((state) => state.markAllRead);
   const kanbanNewTaskCount = useProcessStore((state) => state.kanbanNewTaskCount);
   const kanbanOverdueTaskCount = useProcessStore((state) => state.kanbanOverdueTaskCount);
+  const refreshKanbanNewTaskCount = useProcessStore((state) => state.refreshKanbanNewTaskCount);
+  const refreshKanbanOverdueTaskCount = useProcessStore((state) => state.refreshKanbanOverdueTaskCount);
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
@@ -27,12 +30,26 @@ export function NotificationBell() {
   const badgeCount = unreadCount + kanbanAlertCount;
   const hasKanbanAlerts = kanbanAlertCount > 0;
 
-  useEffect(() => {
+  const refreshBadge = useCallback(() => {
     if (!profileId) {
       return;
     }
     void refreshUnreadCount(profileId);
-  }, [profileId, refreshUnreadCount]);
+    void refreshKanbanNewTaskCount();
+    void refreshKanbanOverdueTaskCount();
+    if (open) {
+      void loadNotifications(profileId);
+    }
+  }, [
+    loadNotifications,
+    open,
+    profileId,
+    refreshKanbanNewTaskCount,
+    refreshKanbanOverdueTaskCount,
+    refreshUnreadCount,
+  ]);
+
+  useNotificationsRealtime(profileId, refreshBadge);
 
   useEffect(() => {
     if (!open || !profileId) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { History, Pencil, Trash2, X } from "lucide-react";
 import { KanbanPriorityPicker } from "@/components/process/kanban-task-card";
 import { KanbanAssigneePicker } from "@/components/process/kanban-board-controls";
@@ -107,6 +107,8 @@ export function KanbanTaskDetailModal({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const taskSyncKey = useMemo(() => `${task.id}:${task.updatedAt}`, [task.id, task.updatedAt]);
+
   useEffect(() => {
     setTitle(task.title);
     setDescription(task.description);
@@ -117,7 +119,7 @@ export function KanbanTaskDetailModal({
     setError(null);
     setIsClosing(false);
     setIsReopening(false);
-  }, [task, currentColumnId]);
+  }, [taskSyncKey, task, currentColumnId]);
 
   const isClosed = Boolean(task.closedAt);
   const taskEvents = getKanbanTaskEvents(events, task.id, task.createdAt);
@@ -152,6 +154,22 @@ export function KanbanTaskDetailModal({
       });
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Nie udało się zapisać.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleClearDueDate() {
+    if (!showDueDate) {
+      return;
+    }
+    setDueDate("");
+    setIsSaving(true);
+    setError(null);
+    try {
+      await onSave({ dueDate: null });
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Nie udało się usunąć terminu.");
     } finally {
       setIsSaving(false);
     }
@@ -303,7 +321,28 @@ export function KanbanTaskDetailModal({
 
         {showDueDate ? (
           <Field label="Termin">
-            <Input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                type="date"
+                className="min-w-[11rem] flex-1"
+                value={dueDate}
+                disabled={isSaving}
+                onChange={(event) => setDueDate(event.target.value)}
+                onInput={(event) => setDueDate(event.currentTarget.value)}
+              />
+              {dueDate || task.dueDate ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isSaving}
+                  onClick={() => void handleClearDueDate()}
+                >
+                  Usuń termin
+                </Button>
+              ) : null}
+            </div>
+            <p className="text-xs font-normal text-muted">Zadanie może pozostać bez terminu.</p>
           </Field>
         ) : null}
 

@@ -12,6 +12,7 @@ import type {
   ProjectAgreementStatus,
   ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";
+import { normalizeAgreementOptionalDate } from "@/lib/dashboard/agreement-types";
 import { getSupabase } from "@/lib/supabase/client";
 
 type AgreementRow = {
@@ -533,7 +534,7 @@ export async function publishAgreementVersion(agreementId: string, publishedByNa
     proposed_cost_gross: agreement.proposedCostGross,
     proposed_cost_vat_rate: agreement.proposedCostVatRate,
     cost_note: agreement.costNote,
-    proposed_warranty_end_date: agreement.proposedWarrantyEndDate,
+    proposed_warranty_end_date: normalizeAgreementOptionalDate(agreement.proposedWarrantyEndDate),
     published_by_name: publishedByName.trim() || "Zespół",
     published_at: now,
   });
