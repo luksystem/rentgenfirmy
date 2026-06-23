@@ -28,6 +28,7 @@ type PublicDashboardPayload = {
   trades: import("@/lib/dashboard/trade-types").ProjectTrade[];
   satisfaction: import("@/lib/dashboard/satisfaction-types").ProjectSatisfactionBundle | null;
   content: ProjectDashboardContent[];
+  credentials: import("@/lib/dashboard/system-credentials-types").SystemCredentialMeta[];
   pendingAgreementsCount: number;
   kanbanPublicLinks: Record<string, string>;
   features: {
@@ -36,6 +37,7 @@ type PublicDashboardPayload = {
     trades: boolean;
     satisfaction: boolean;
     content: boolean;
+    credentials: boolean;
   };
   authRequired?: boolean;
   access?: DashboardPublicAccessInfo;
@@ -106,6 +108,9 @@ function PublicDashboardPageContent() {
   const [trades, setTrades] = useState<PublicDashboardPayload["trades"]>([]);
   const [satisfaction, setSatisfaction] = useState<PublicDashboardPayload["satisfaction"]>(null);
   const [content, setContent] = useState<ProjectDashboardContent[]>([]);
+  const [credentials, setCredentials] = useState<
+    import("@/lib/dashboard/system-credentials-types").SystemCredentialMeta[]
+  >([]);
   const [kanbanPublicLinks, setKanbanPublicLinks] = useState<Record<string, string>>({});
   const [features, setFeatures] = useState({
     agreements: false,
@@ -113,6 +118,7 @@ function PublicDashboardPageContent() {
     trades: false,
     satisfaction: false,
     content: false,
+    credentials: false,
   });
   const [access, setAccess] = useState<DashboardPublicAccessInfo>(DEFAULT_ACCESS);
   const [contextTitle, setContextTitle] = useState<string | null>(null);
@@ -145,6 +151,7 @@ function PublicDashboardPageContent() {
     setTrades(payload.trades);
     setSatisfaction(payload.satisfaction);
     setContent(payload.content);
+    setCredentials(payload.credentials ?? []);
     setKanbanPublicLinks(payload.kanbanPublicLinks ?? {});
     setFeatures(payload.features);
     setSelectedProjectId(payload.initialProjectId);
@@ -395,6 +402,7 @@ function PublicDashboardPageContent() {
           seedTrades={features.trades ? trades : undefined}
           seedSatisfaction={features.satisfaction ? (satisfaction ?? undefined) : undefined}
           seedContent={features.content ? content : undefined}
+          seedCredentials={features.credentials ? credentials : undefined}
           seedKanbanPublicLinks={kanbanPublicLinks}
           showPublicLink={false}
           readOnly
@@ -404,6 +412,7 @@ function PublicDashboardPageContent() {
           enableSpecification={features.specification}
           enableTrades={features.trades}
           enableSatisfaction={features.satisfaction}
+          enableCredentials={features.credentials}
           onProjectPatch={handleProjectPatch}
           onAgreementsUpdated={handleAgreementsUpdated}
           activeKanbanToken={activeKanbanToken}

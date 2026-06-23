@@ -19,12 +19,17 @@ import type {
 import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
 import type { ProjectTrade } from "@/lib/dashboard/trade-types";
 import type { ProjectSatisfactionBundle } from "@/lib/dashboard/satisfaction-types";
+import type { SystemCredentialMeta } from "@/lib/dashboard/system-credentials-types";
 import type { DashboardPublicAccessInfo, DashboardSpace } from "@/lib/dashboard/types";
 import { fetchKanbanPublicLinksForProject } from "@/lib/supabase/kanban-public-links";
 import {
   fetchProjectSatisfactionBundleServer,
   satisfactionTablesExist,
 } from "@/lib/supabase/project-satisfaction-server";
+import {
+  listProjectSystemCredentials,
+  systemCredentialsTableExists,
+} from "@/lib/supabase/project-system-credentials-server";
 import { getProcessProgress } from "@/lib/process/types";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import type { Client } from "@/lib/service/types";
@@ -409,6 +414,7 @@ export type PublicDashboardPayload = {
   trades: ProjectTrade[];
   satisfaction: ProjectSatisfactionBundle | null;
   content: ProjectDashboardContent[];
+  credentials: SystemCredentialMeta[];
   pendingAgreementsCount: number;
   kanbanPublicLinks: Record<string, string>;
   features: {
@@ -417,6 +423,7 @@ export type PublicDashboardPayload = {
     trades: boolean;
     satisfaction: boolean;
     content: boolean;
+    credentials: boolean;
   };
 };
 
@@ -612,16 +619,17 @@ export async function fetchPublicDashboardPayload(
     }
   }
 
-  const [agreementsEnabled, specificationEnabled, tradesEnabled, satisfactionEnabled, contentEnabled] =
+  const [agreementsEnabled, specificationEnabled, tradesEnabled, satisfactionEnabled, contentEnabled, credentialsEnabled] =
     await Promise.all([
       tableExists("project_client_agreements"),
       tableExists("specification_catalog_items"),
       tableExists("project_trades"),
       satisfactionTablesExist(),
       tableExists("project_dashboard_content"),
+      systemCredentialsTableExists(),
     ]);
 
-  const [agreements, specificationItems, trades, satisfaction, content] = initialProjectId
+  const [agreements, specificationItems, trades, satisfaction, content, credentials] = initialProjectId
     ? await Promise.all([
         agreementsEnabled ? fetchAgreementsForProject(initialProjectId) : Promise.resolve([]),
         specificationEnabled
@@ -632,8 +640,11 @@ export async function fetchPublicDashboardPayload(
           ? fetchProjectSatisfactionBundleServer(initialProjectId)
           : Promise.resolve(null),
         contentEnabled ? fetchContentForProject(initialProjectId) : Promise.resolve([]),
+        credentialsEnabled
+          ? listProjectSystemCredentials(initialProjectId, { clientVisibleOnly: true })
+          : Promise.resolve([]),
       ])
-    : [[], [], [], null, []];
+    : [[], [], [], null, [], []];
 
   const pendingAgreementsCount = agreements.filter((entry) => isAgreementPendingAttention(entry)).length;
 
@@ -654,6 +665,7 @@ export async function fetchPublicDashboardPayload(
     trades,
     satisfaction,
     content,
+    credentials,
     pendingAgreementsCount,
     kanbanPublicLinks,
     features: {
@@ -662,6 +674,7 @@ export async function fetchPublicDashboardPayload(
       trades: tradesEnabled,
       satisfaction: satisfactionEnabled,
       content: contentEnabled,
+      credentials: credentialsEnabled,
     },
   };
 }

@@ -9,6 +9,7 @@ import {
   GitBranch,
   HardHat,
   Home,
+  KeyRound,
   LayoutGrid,
   Link2,
   Star,
@@ -16,6 +17,7 @@ import {
 import { ProjectAgreementsPanel } from "@/components/dashboard/project-agreements-panel";
 import { ProjectSatisfactionPanel } from "@/components/dashboard/project-satisfaction-panel";
 import { ProjectSatisfactionSummaryCard } from "@/components/dashboard/project-satisfaction-summary-card";
+import { ProjectSystemCredentialsPanel } from "@/components/dashboard/project-system-credentials-panel";
 import { ProjectSpecificationPanel } from "@/components/dashboard/project-specification-panel";
 import { ProjectTradesPanel } from "@/components/dashboard/project-trades-panel";
 import { StageSatisfactionPrompt } from "@/components/dashboard/stage-satisfaction-prompt";
@@ -34,6 +36,7 @@ import type { ProjectDashboardContent } from "@/lib/dashboard/content-types";
 import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
 import type { ProjectTrade } from "@/lib/dashboard/trade-types";
 import type { ProjectSatisfactionBundle } from "@/lib/dashboard/satisfaction-types";
+import type { SystemCredentialMeta } from "@/lib/dashboard/system-credentials-types";
 import type { DashboardSpace } from "@/lib/dashboard/types";
 import { getProcessProgress } from "@/lib/process/types";
 import { extractKanbanTokenFromPublicPath } from "@/lib/process/kanban-public-path";
@@ -62,6 +65,7 @@ type ClientDashboardTab =
   | "specification"
   | "trades"
   | "satisfaction"
+  | "credentials"
   | "links";
 
 const EMPTY_AGREEMENTS: ProjectClientAgreement[] = [];
@@ -77,6 +81,7 @@ const PUBLIC_CLIENT_TAB_CONFIG: Array<{
   { id: "specification", label: "Specyfikacja", icon: FileText },
   { id: "trades", label: "Branże", icon: HardHat },
   { id: "satisfaction", label: "Ocena", icon: Star },
+  { id: "credentials", label: "Hasła", icon: KeyRound },
   { id: "links", label: "Linki", icon: Link2 },
 ];
 
@@ -91,6 +96,7 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "specification", label: "Specyfikacja", icon: FileText },
   { id: "trades", label: "Branże", icon: HardHat },
   { id: "satisfaction", label: "Ocena", icon: Star },
+  { id: "credentials", label: "Hasła", icon: KeyRound },
   { id: "links", label: "Linki", icon: Link2 },
 ];
 
@@ -110,12 +116,14 @@ export function ClientDashboardView({
   enableSpecification = true,
   enableTrades = true,
   enableSatisfaction = true,
+  enableCredentials = true,
   enableContent = true,
   processProgress,
   seedAgreements,
   seedSpecificationItems,
   seedTrades,
   seedSatisfaction,
+  seedCredentials,
   seedContent,
   seedKanbanPublicLinks,
   onProjectPatch,
@@ -139,12 +147,14 @@ export function ClientDashboardView({
   enableSpecification?: boolean;
   enableTrades?: boolean;
   enableSatisfaction?: boolean;
+  enableCredentials?: boolean;
   enableContent?: boolean;
   processProgress?: { percent: number; completed: number; total: number } | null;
   seedAgreements?: ProjectClientAgreement[];
   seedSpecificationItems?: ProjectSpecificationItem[];
   seedTrades?: ProjectTrade[];
   seedSatisfaction?: ProjectSatisfactionBundle;
+  seedCredentials?: SystemCredentialMeta[];
   seedContent?: ProjectDashboardContent[];
   seedKanbanPublicLinks?: Record<string, string>;
   onProjectPatch?: (projectId: string, patch: Partial<Project>) => void;
@@ -340,6 +350,7 @@ export function ClientDashboardView({
     if (tab.id === "specification" && !enableSpecification) return false;
     if (tab.id === "trades" && !enableTrades) return false;
     if (tab.id === "satisfaction" && !enableSatisfaction) return false;
+    if (tab.id === "credentials" && !enableCredentials) return false;
     return true;
   });
 
@@ -348,6 +359,7 @@ export function ClientDashboardView({
     if (tab.id === "specification" && !enableSpecification) return false;
     if (tab.id === "trades" && !enableTrades) return false;
     if (tab.id === "satisfaction" && !enableSatisfaction) return false;
+    if (tab.id === "credentials" && !enableCredentials) return false;
     return true;
   });
 
@@ -649,6 +661,27 @@ export function ClientDashboardView({
     );
   }
 
+  function renderCredentialsPanel() {
+    if (!enableCredentials) {
+      return (
+        <p className="text-sm text-muted">
+          Moduł haseł do systemów będzie dostępny po aktualizacji bazy danych.
+        </p>
+      );
+    }
+
+    return (
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
+        <ProjectSystemCredentialsPanel
+          projectId={selectedProject.id}
+          readOnly={readOnly}
+          publicToken={readOnly ? publicDashboardToken : undefined}
+          seedCredentials={seedCredentials}
+        />
+      </div>
+    );
+  }
+
   function tabBadgeCount(tabId: ClientDashboardTab) {
     if (tabId === "agreements") {
       return pendingAcceptanceCount;
@@ -794,6 +827,8 @@ export function ClientDashboardView({
         return enableTrades ? renderTradesPanel() : null;
       case "satisfaction":
         return enableSatisfaction ? renderSatisfactionPanel() : null;
+      case "credentials":
+        return renderCredentialsPanel();
       case "links":
         return renderLinksSection();
       default:

@@ -253,6 +253,23 @@ export type ProjectAgreementAttachmentRow = {
   created_at: string;
 };
 
+export type ProjectSystemCredentialRow = {
+  id: string;
+  project_id: string;
+  label: string;
+  system_url: string | null;
+  login_username: string | null;
+  password_ciphertext: string;
+  password_iv: string;
+  password_tag: string;
+  notes: string | null;
+  visible_to_client: boolean;
+  position: number;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ProjectAgreementVersionRow = {
   id: string;
   agreement_id: string;
@@ -672,6 +689,21 @@ export type Database = {
             | "uploaded_by_source"
           >;
         Update: Partial<ProjectAgreementAttachmentRow>;
+        Relationships: [];
+      };
+      project_system_credentials: {
+        Row: ProjectSystemCredentialRow;
+        Insert: Partial<ProjectSystemCredentialRow> &
+          Pick<
+            ProjectSystemCredentialRow,
+            | "project_id"
+            | "label"
+            | "password_ciphertext"
+            | "password_iv"
+            | "password_tag"
+            | "created_by_name"
+          >;
+        Update: Partial<ProjectSystemCredentialRow>;
         Relationships: [];
       };
       project_agreement_versions: {
