@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { getSupabase } from "@/lib/supabase/client";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -10,7 +10,7 @@ export function useNotificationsRealtime(profileId: string | undefined, onRefres
   onRefreshRef.current = onRefresh;
 
   useEffect(() => {
-    if (!profileId) {
+    if (!profileId || !isSupabaseConfigured()) {
       return;
     }
 

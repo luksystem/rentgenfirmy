@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getSupabase } from "@/lib/supabase/client";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { KanbanBoard } from "@/lib/process/kanban-types";
 
 export function useKanbanRealtime(boardId: string | null, onRefresh: () => Promise<void>) {
   const stableRefresh = useCallback(onRefresh, [onRefresh]);
 
   useEffect(() => {
-    if (!boardId) {
+    if (!boardId || !isSupabaseConfigured()) {
       return;
     }
 
@@ -60,6 +60,10 @@ export function useKanbanRealtime(boardId: string | null, onRefresh: () => Promi
 
 export function useKanbanOverdueTasksRealtime(onCountChange: (count: number) => void) {
   useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      return;
+    }
+
     const supabase = getSupabase();
     const today = new Date().toISOString().slice(0, 10);
 
@@ -100,6 +104,10 @@ export const useKanbanOpenTasksRealtime = useKanbanOverdueTasksRealtime;
 
 export function useKanbanNewTasksRealtime(onCountChange: (count: number) => void) {
   useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      return;
+    }
+
     const supabase = getSupabase();
 
     async function refreshCount() {

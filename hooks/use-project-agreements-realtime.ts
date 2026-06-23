@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { getSupabase } from "@/lib/supabase/client";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export function useProjectAgreementsRealtime(
   projectId: string | undefined,
   onRefresh: () => void,
 ) {
   useEffect(() => {
-    if (!projectId) {
+    if (!projectId || !isSupabaseConfigured()) {
       return;
     }
 

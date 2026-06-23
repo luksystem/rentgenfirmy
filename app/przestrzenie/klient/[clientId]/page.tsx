@@ -1,7 +1,7 @@
 "use client";
 
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ClientDashboardView } from "@/components/dashboard/client-dashboard-view";
 import { DashboardSpaceShell } from "@/components/dashboard/dashboard-space-shell";
@@ -13,6 +13,20 @@ import { useDashboardStore } from "@/store/dashboard-store";
 import { useProcessStore } from "@/store/process-store";
 
 export default function ClientDashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <DashboardSpaceShell kind="client" title="Dashboard klienta">
+          <p className="text-sm text-muted">Ładowanie dashboardu klienta…</p>
+        </DashboardSpaceShell>
+      }
+    >
+      <ClientDashboardPageContent />
+    </Suspense>
+  );
+}
+
+function ClientDashboardPageContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();

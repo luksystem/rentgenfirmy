@@ -1,7 +1,7 @@
 "use client";
 
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
 import { LockKeyhole } from "lucide-react";
 import { ClientDashboardView } from "@/components/dashboard/client-dashboard-view";
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,20 @@ async function fetchPublicDashboard(token: string, projectId?: string) {
 }
 
 export default function PublicDashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-background to-accent/5 p-6">
+          <p className="text-sm text-muted">Ładowanie dashboardu…</p>
+        </div>
+      }
+    >
+      <PublicDashboardPageContent />
+    </Suspense>
+  );
+}
+
+function PublicDashboardPageContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();

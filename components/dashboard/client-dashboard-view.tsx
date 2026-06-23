@@ -215,11 +215,11 @@ export function ClientDashboardView({
   }, [enableAgreements, seedAgreements, seedProjectAgreements, selectedProjectId]);
 
   useEffect(() => {
-    if (!enableAgreements || !selectedProjectId) {
+    if (!enableAgreements || !selectedProjectId || readOnly) {
       return;
     }
     void ensureAgreements(selectedProjectId);
-  }, [enableAgreements, ensureAgreements, selectedProjectId]);
+  }, [enableAgreements, ensureAgreements, readOnly, selectedProjectId]);
 
   const refreshAgreementsFromServer = useCallback(() => {
     if (!enableAgreements || !selectedProjectId) {
@@ -229,7 +229,7 @@ export function ClientDashboardView({
   }, [enableAgreements, ensureAgreements, selectedProjectId]);
 
   useProjectAgreementsRealtime(
-    enableAgreements ? selectedProjectId : undefined,
+    enableAgreements && !readOnly ? selectedProjectId : undefined,
     refreshAgreementsFromServer,
   );
 
