@@ -38,11 +38,11 @@ function interruptionToFormValues(
   };
 }
 
-function emptyFormValues(fieldOptions: FieldOptions): FormValues {
+function emptyFormValues(fieldOptions: FieldOptions, defaultKind: InterruptionKind = "interruption"): FormValues {
   return {
     date: toISODate(new Date()),
     person: defaultNextStepOwner(fieldOptions),
-    kind: "interruption",
+    kind: defaultKind,
     type: defaultInterruptionTypeName(fieldOptions),
     projectId: null,
     description: "",
@@ -111,6 +111,7 @@ export function InterruptionForm({
   onCancel,
   layout = "stacked",
   className,
+  defaultKind = "interruption",
 }: {
   projects: Array<{ id: string; name: string }>;
   interruption?: Interruption;
@@ -119,6 +120,7 @@ export function InterruptionForm({
   onCancel?: () => void;
   layout?: "stacked" | "inline";
   className?: string;
+  defaultKind?: InterruptionKind;
 }) {
   const fieldOptions = useAppStore((state) => state.fieldOptions);
   const defaultType = defaultInterruptionTypeName(fieldOptions);
@@ -128,7 +130,7 @@ export function InterruptionForm({
   const { register, handleSubmit, reset, watch, setValue } = useForm<FormValues>({
     defaultValues: interruption
       ? interruptionToFormValues(interruption, fieldOptions)
-      : emptyFormValues(fieldOptions),
+      : emptyFormValues(fieldOptions, defaultKind),
   });
 
   const kind = watch("kind");
@@ -140,8 +142,8 @@ export function InterruptionForm({
       return;
     }
 
-    reset(emptyFormValues(fieldOptions));
-  }, [interruption, fieldOptions, defaultType, defaultOwner, reset]);
+    reset(emptyFormValues(fieldOptions, defaultKind));
+  }, [interruption, fieldOptions, defaultType, defaultOwner, defaultKind, reset]);
 
   return (
     <form

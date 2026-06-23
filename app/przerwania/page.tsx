@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Edit, Trash2 } from "lucide-react";
 import { BarPanel } from "@/components/charts";
 import { InterruptionForm } from "@/components/interruption-form";
@@ -26,7 +27,7 @@ import {
   sumDurationMinutes,
   topInterruptionProjects,
 } from "@/lib/domain";
-import type { Interruption } from "@/lib/types";
+import type { Interruption, InterruptionKind } from "@/lib/types";
 import { useAppStore } from "@/store/app-store";
 
 function scrollToInterruptionForm() {
@@ -63,7 +64,13 @@ function formatFlag(value: boolean) {
   return value ? "Tak" : "Nie";
 }
 
-export default function InterruptionsPage() {
+function parseDefaultKind(value: string | null): InterruptionKind {
+  return value === "focus" ? "focus" : "interruption";
+}
+
+function InterruptionsPageContent() {
+  const searchParams = useSearchParams();
+  const defaultKind = parseDefaultKind(searchParams.get("kind"));
   const { interruptions, projects, addInterruption, updateInterruption, deleteInterruption, isSaving } =
     useAppStore();
   const projectNames = new Map(projects.map((project) => [project.id, project.name]));
@@ -176,10 +183,12 @@ export default function InterruptionsPage() {
         className="mt-4 scroll-mt-24 sm:mt-6"
       >
         <InterruptionForm
+          key={defaultKind}
           projects={projectOptions}
           isSaving={isSaving}
           onSubmit={addInterruption}
           layout="inline"
+          defaultKind={defaultKind}
         />
       </section>
 
@@ -278,5 +287,13 @@ export default function InterruptionsPage() {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+export default function InterruptionsPage() {
+  return (
+    <Suspense fallback={null}>
+      <InterruptionsPageContent />
+    </Suspense>
   );
 }

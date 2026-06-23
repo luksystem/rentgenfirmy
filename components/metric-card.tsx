@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -7,6 +8,7 @@ type MetricCardProps = {
   helper?: string;
   tone?: "default" | "green" | "amber" | "red" | "slate";
   size?: "default" | "hero" | "compact";
+  href?: string;
 };
 
 const accentBar = {
@@ -23,13 +25,16 @@ export function MetricCard({
   helper,
   tone = "default",
   size = "default",
+  href,
 }: MetricCardProps) {
-  return (
+  const card = (
     <Card
       className={cn(
         "overflow-hidden rounded-xl sm:rounded-2xl",
         size === "compact" && "min-w-[96px] shrink-0 sm:min-w-[140px]",
         size === "hero" && "border-accent/20 bg-surface-elevated",
+        href &&
+          "cursor-pointer transition hover:border-accent/35 hover:bg-surface-muted/20 hover:shadow-md",
       )}
     >
       <div className={cn("h-0.5 w-full sm:h-1", accentBar[tone])} aria-hidden />
@@ -73,5 +78,15 @@ export function MetricCard({
         </div>
       </CardContent>
     </Card>
+  );
+
+  if (!href) {
+    return card;
+  }
+
+  return (
+    <Link href={href} className="block min-w-0">
+      {card}
+    </Link>
   );
 }

@@ -3,24 +3,35 @@
 import { create } from "zustand";
 import type { AgreementHubSnapshot } from "@/lib/dashboard/agreement-hub-types";
 import {
+  EMPTY_AGREEMENT_ACTION_PENDING_COUNTS,
+  type AgreementActionPendingCounts,
+} from "@/lib/dashboard/agreement-hub-types";
+import {
+  fetchAgreementActionPendingCounts,
   fetchAgreementHubSnapshot,
   invalidateAgreementHubCache,
 } from "@/lib/supabase/agreement-hub-repository";
 
 let loadPromise: Promise<AgreementHubSnapshot> | null = null;
+let pendingCountsPromise: Promise<AgreementActionPendingCounts> | null = null;
 
 type AgreementHubStore = {
   snapshot: AgreementHubSnapshot | null;
+  pendingCounts: AgreementActionPendingCounts;
   loading: boolean;
+  pendingCountsLoading: boolean;
   hydrated: boolean;
   error: string | null;
   ensureSnapshot: (options?: { force?: boolean }) => Promise<AgreementHubSnapshot>;
+  refreshPendingCounts: (options?: { force?: boolean }) => Promise<AgreementActionPendingCounts>;
   invalidate: () => void;
 };
 
 export const useAgreementHubStore = create<AgreementHubStore>((set, get) => ({
   snapshot: null,
+  pendingCounts: EMPTY_AGREEMENT_ACTION_PENDING_COUNTS,
   loading: false,
+  pendingCountsLoading: false,
   hydrated: false,
   error: null,
 
@@ -70,9 +81,49 @@ export const useAgreementHubStore = create<AgreementHubStore>((set, get) => ({
     }
   },
 
+  refreshPendingCounts: async (options) => {
+    const force = options?.force ?? false;
+
+    if (pendingCountsPromise && !force) {
+      return pendingCountsPromise;
+    }
+
+    if (force) {
+      pendingCountsPromise = null;
+    }
+
+    set({ pendingCountsLoading: true });
+
+    const promise = fetchAgreementActionPendingCounts({ force }).then(
+      (counts) => {
+        set({ pendingCounts: counts, pendingCountsLoading: false });
+        return counts;
+      },
+      (error: unknown) => {
+        set({ pendingCountsLoading: false });
+        throw error;
+      },
+    );
+
+    pendingCountsPromise = promise;
+    try {
+      return await promise;
+    } finally {
+      if (pendingCountsPromise === promise) {
+        pendingCountsPromise = null;
+      }
+    }
+  },
+
   invalidate: () => {
     invalidateAgreementHubCache();
     loadPromise = null;
-    set({ snapshot: null, hydrated: false, error: null });
+    pendingCountsPromise = null;
+    set({
+      snapshot: null,
+      hydrated: false,
+      error: null,
+      pendingCounts: EMPTY_AGREEMENT_ACTION_PENDING_COUNTS,
+    });
   },
 }));

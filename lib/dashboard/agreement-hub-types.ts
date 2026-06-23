@@ -8,6 +8,24 @@ export type AgreementHubEntry = {
   clientName: string;
 };
 
+export type AgreementActionPendingCounts = {
+  /** Ustalenia w statusie oczekującym na akceptacje. */
+  pendingAgreements: number;
+  /** Wymagana akceptacja roli Administrator (zespół). */
+  pendingTeamApproval: number;
+  /** Wymagana akceptacja roli Klient. */
+  pendingClientApproval: number;
+  /** Wymagana akceptacja innych ról (np. branże). */
+  pendingOtherApproval: number;
+};
+
+export const EMPTY_AGREEMENT_ACTION_PENDING_COUNTS: AgreementActionPendingCounts = {
+  pendingAgreements: 0,
+  pendingTeamApproval: 0,
+  pendingClientApproval: 0,
+  pendingOtherApproval: 0,
+};
+
 export type AgreementHubSnapshot = {
   entries: AgreementHubEntry[];
   countsByStatus: Record<ProjectAgreementStatus, number>;

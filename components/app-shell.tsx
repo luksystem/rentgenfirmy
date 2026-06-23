@@ -6,9 +6,11 @@ import { useMemo, useState, useCallback, useEffect } from "react";
 import {
   Activity,
   BarChart3,
+  Calculator,
   CheckCircle2,
   Clock3,
   ClipboardList,
+  FileText,
   FolderKanban,
   GitBranch,
   Home,
@@ -22,6 +24,7 @@ import {
   Plus,
   Settings,
   Shield,
+  Target,
   Users,
   X,
 } from "lucide-react";
@@ -49,10 +52,7 @@ type NavGroup = {
 const navGroupsBase: NavGroup[] = [
   {
     label: "Główne",
-    items: [
-      { href: "/", label: "Start", icon: Home },
-      { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
-    ],
+    items: [{ href: "/", label: "Start", icon: Home }],
   },
   {
     label: "Sprzedaż",
@@ -83,6 +83,7 @@ const navGroupsBase: NavGroup[] = [
     items: [
       { href: "/przestrzenie", label: "Przestrzenie", icon: LayoutDashboard },
       { href: "/tablice-wdrozen", label: "Tablice wdrożeń", icon: LayoutGrid },
+      { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
     ],
   },
   {
@@ -110,12 +111,19 @@ const glowneNav = navGroupsBase.find((group) => group.label === "Główne")?.ite
 const projektyNav =
   navGroupsBase.find((group) => group.label === "Projekty")?.items.find((item) => item.href === "/projekty") ??
   null;
+const klienciNav =
+  navGroupsBase.find((group) => group.label === "Projekty")?.items.find((item) => item.href === "/klienci") ??
+  null;
 const mobileBottomNav: NavItem[] = [
   glowneNav.find((item) => item.href === "/") ?? { href: "/", label: "Start", icon: Home },
   ...(projektyNav ? [projektyNav] : []),
 ];
 const mobileNavLeft = mobileBottomNav.slice(0, 2);
-const mobileNavRight = mobileBottomNav.slice(2);
+const mobileNavRight = klienciNav ? [klienciNav] : [];
+const mobilePrimaryHrefs = new Set([
+  ...mobileNavLeft.map((item) => item.href),
+  ...mobileNavRight.map((item) => item.href),
+]);
 
 function isActive(pathname: string, href: string) {
   return pathname === href || (href !== "/" && pathname.startsWith(href));
@@ -190,6 +198,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
   const isAdministrator = useAuthStore((state) => state.isAdministrator);
   const displayName = useAuthStore((state) => state.displayName);
   const signOut = useAuthStore((state) => state.signOut);
@@ -372,17 +381,21 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
             })}
 
             <div className="flex justify-center">
-              <Link
-                href="/przerwania#dodaj-przerwanie"
-                onClick={() => setMenuOpen(false)}
-                aria-label="Dodaj przerwanie"
+              <button
+                type="button"
+                aria-label="Dodaj wpis"
+                aria-expanded={addMenuOpen}
+                onClick={() => {
+                  setMenuOpen(false);
+                  setAddMenuOpen(true);
+                }}
                 className="-mt-7 flex flex-col items-center gap-1"
               >
                 <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-card ring-4 ring-background">
                   <Plus className="h-6 w-6" />
                 </span>
                 <span className="text-[10px] font-medium text-sidebar-muted">Dodaj</span>
-              </Link>
+              </button>
             </div>
 
             {mobileNavRight.map((item) => {
@@ -415,7 +428,9 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
               onClick={() => setMenuOpen(true)}
               className={cn(
                 "relative flex flex-col items-center gap-0.5 rounded-2xl px-2 py-2 text-[10px] font-medium transition",
-                secondaryNav.some((item) => isActive(pathname, item.href))
+                secondaryNav.some(
+                  (item) => isActive(pathname, item.href) && !mobilePrimaryHrefs.has(item.href),
+                )
                   ? "text-sidebar-accent"
                   : "text-sidebar-muted",
               )}
@@ -433,7 +448,9 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
                 ) : null}
               </span>
               Więcej
-              {secondaryNav.some((item) => isActive(pathname, item.href)) ? (
+              {secondaryNav.some(
+                (item) => isActive(pathname, item.href) && !mobilePrimaryHrefs.has(item.href),
+              ) ? (
                 <span className="h-1 w-1 rounded-full bg-sidebar-accent" aria-hidden />
               ) : (
                 <span className="h-1 w-1" aria-hidden />
@@ -441,6 +458,75 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </nav>
+
+        {addMenuOpen ? (
+          <div className="fixed inset-0 z-40 xl:hidden">
+            <button
+              type="button"
+              aria-label="Zamknij menu dodawania"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={() => setAddMenuOpen(false)}
+            />
+            <div className="absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-border bg-surface-elevated p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-card">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="font-semibold text-foreground">Co chcesz dodać?</p>
+                <button
+                  type="button"
+                  onClick={() => setAddMenuOpen(false)}
+                  className="rounded-xl p-2 text-muted hover:bg-surface-muted"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="grid gap-2">
+                {[
+                  {
+                    href: "/przerwania#dodaj-przerwanie",
+                    label: "Przerwanie",
+                    description: "Szybki wpis przerwania operacyjnego",
+                    icon: PhoneCall,
+                  },
+                  {
+                    href: "/przerwania?kind=focus#dodaj-przerwanie",
+                    label: "Skupienie",
+                    description: "Blok czasu na skupioną pracę",
+                    icon: Target,
+                  },
+                  {
+                    href: COMMERCIAL_MODULES.serviceSettlement.href + "/nowy",
+                    label: "Rozliczenie serwisu",
+                    description: "Nowe rozliczenie / oferta serwisowa",
+                    icon: FileText,
+                  },
+                  {
+                    href: COMMERCIAL_MODULES.salesCalculations.href,
+                    label: "Kalkulacja sprzedażowa",
+                    description: "Nowa kalkulacja Smart Home",
+                    icon: Calculator,
+                  },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setAddMenuOpen(false)}
+                      className="flex items-start gap-3 rounded-2xl border border-border bg-surface-muted/20 px-4 py-3 transition hover:border-accent/30 hover:bg-surface-muted/40"
+                    >
+                      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-surface text-accent">
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">{item.label}</p>
+                        <p className="mt-0.5 text-xs text-muted">{item.description}</p>
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {menuOpen ? (
           <div className="fixed inset-0 z-40 xl:hidden">

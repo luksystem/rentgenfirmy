@@ -20,6 +20,7 @@ import type {
 import { normalizeAgreementOptionalDate } from "@/lib/dashboard/agreement-types";
 import { getSupabase } from "@/lib/supabase/client";
 import { fetchAgreementAttachments } from "@/lib/supabase/project-agreement-attachments-repository";
+import { invalidateAgreementHubCache } from "@/lib/supabase/agreement-hub-repository";
 
 type AgreementRow = {
   id: string;
@@ -553,16 +554,79 @@ async function applyWarrantyIfAccepted(agreement: ProjectClientAgreement) {
   }
 }
 
+async function ensureVersionApprovalRows(
+  versionId: string,
+  roles: AgreementApproverRole[],
+  supabase = getSupabase(),
+) {
+  const requiredRoles = roles.filter((role) => role.isRequired);
+  if (!requiredRoles.length) {
+    return;
+  }
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("project_agreement_approvals")
+    .select("role_id")
+    .eq("version_id", versionId);
+
+  if (fetchError) {
+    throw new Error(fetchError.message);
+  }
+
+  const existingRoleIds = new Set((existing ?? []).map((row) => row.role_id as string));
+  const missingRoles = requiredRoles.filter((role) => !existingRoleIds.has(role.id));
+
+  if (!missingRoles.length) {
+    return;
+  }
+
+  const { error: insertError } = await supabase.from("project_agreement_approvals").insert(
+    missingRoles.map((role) => ({
+      version_id: versionId,
+      role_id: role.id,
+      status: "pending",
+    })),
+  );
+
+  if (insertError) {
+    throw new Error(insertError.message);
+  }
+}
+
+function getRequiredRoleApprovalStatuses(
+  roles: AgreementApproverRole[],
+  approvals: AgreementApproval[],
+) {
+  const approvalByRoleId = new Map(approvals.map((entry) => [entry.roleId, entry.status]));
+  return roles
+    .filter((role) => role.isRequired)
+    .map((role) => ({
+      role,
+      status: approvalByRoleId.get(role.id) ?? ("pending" as AgreementApproval["status"]),
+    }));
+}
+
 async function finalizeAgreementApprovals(agreementId: string) {
   const supabase = getSupabase();
   const bundle = await fetchAgreementCollaboration(agreementId);
-  const required = bundle.approvals.filter((entry) => entry.role?.isRequired !== false);
+  const versionId = bundle.activeVersion?.id;
 
-  if (!required.length) {
+  if (!versionId || bundle.agreement.status !== "pending_client") {
     return bundle.agreement;
   }
 
-  if (required.some((entry) => entry.status === "rejected")) {
+  await ensureVersionApprovalRows(versionId, bundle.roles, supabase);
+  const refreshedBundle = await fetchAgreementCollaboration(agreementId);
+  const requiredStatuses = getRequiredRoleApprovalStatuses(
+    refreshedBundle.roles,
+    refreshedBundle.approvals,
+  );
+
+  if (!requiredStatuses.length) {
+    return refreshedBundle.agreement;
+  }
+
+  if (requiredStatuses.some((entry) => entry.status === "rejected")) {
     const { data, error } = await supabase
       .from("project_client_agreements")
       .update({
@@ -580,7 +644,7 @@ async function finalizeAgreementApprovals(agreementId: string) {
     return rowToAgreement(data as AgreementRow);
   }
 
-  if (required.every((entry) => entry.status === "accepted")) {
+  if (requiredStatuses.every((entry) => entry.status === "accepted")) {
     const now = new Date().toISOString();
     const { data, error } = await supabase
       .from("project_client_agreements")
@@ -602,7 +666,7 @@ async function finalizeAgreementApprovals(agreementId: string) {
     return agreement;
   }
 
-  return bundle.agreement;
+  return refreshedBundle.agreement;
 }
 
 export async function publishAgreementVersion(agreementId: string, publishedByName: string) {
@@ -660,6 +724,8 @@ export async function publishAgreementVersion(agreementId: string, publishedByNa
       throw new Error(approvalsError.message);
     }
   }
+
+  await ensureVersionApprovalRows(versionId, refreshedRoles, supabase);
 
   const { error } = await supabase
     .from("project_client_agreements")
@@ -734,6 +800,7 @@ export async function respondToAgreementApproval(
   }
 
   await finalizeAgreementApprovals(agreementId);
+  invalidateAgreementHubCache();
   return fetchAgreementCollaboration(agreementId);
 }
 

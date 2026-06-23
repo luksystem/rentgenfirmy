@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Bell, Sparkles } from "lucide-react";
+import { AlertTriangle, Bell, ClipboardCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavBadges } from "@/components/nav-badges";
 import { cn, formatDate } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
+import { useAgreementHubStore } from "@/store/agreement-hub-store";
 import { useNotificationStore } from "@/store/notification-store";
 import { useProcessStore } from "@/store/process-store";
 
@@ -23,13 +24,20 @@ export function NotificationBell() {
   const kanbanOverdueTaskCount = useProcessStore((state) => state.kanbanOverdueTaskCount);
   const refreshKanbanNewTaskCount = useProcessStore((state) => state.refreshKanbanNewTaskCount);
   const refreshKanbanOverdueTaskCount = useProcessStore((state) => state.refreshKanbanOverdueTaskCount);
+  const agreementPendingCounts = useAgreementHubStore((state) => state.pendingCounts);
+  const refreshAgreementPendingCounts = useAgreementHubStore((state) => state.refreshPendingCounts);
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   const kanbanAlertCount = kanbanNewTaskCount + kanbanOverdueTaskCount;
-  const newBadgeCount = kanbanNewTaskCount + unreadCount;
+  const agreementAlertCount =
+    agreementPendingCounts.pendingTeamApproval +
+    agreementPendingCounts.pendingClientApproval +
+    agreementPendingCounts.pendingOtherApproval;
+  const newBadgeCount = kanbanNewTaskCount + unreadCount + agreementPendingCounts.pendingTeamApproval;
   const overdueBadgeCount = kanbanOverdueTaskCount;
   const hasKanbanAlerts = kanbanAlertCount > 0;
+  const hasAgreementAlerts = agreementAlertCount > 0;
   const hasBadges = newBadgeCount > 0 || overdueBadgeCount > 0;
 
   const refreshBadge = useCallback(() => {
@@ -39,6 +47,7 @@ export function NotificationBell() {
     void refreshUnreadCount(profileId);
     void refreshKanbanNewTaskCount();
     void refreshKanbanOverdueTaskCount();
+    void refreshAgreementPendingCounts({ force: true });
     if (open) {
       void loadNotifications(profileId);
     }
@@ -46,6 +55,7 @@ export function NotificationBell() {
     loadNotifications,
     open,
     profileId,
+    refreshAgreementPendingCounts,
     refreshKanbanNewTaskCount,
     refreshKanbanOverdueTaskCount,
     refreshUnreadCount,
@@ -123,6 +133,82 @@ export function NotificationBell() {
             ) : null}
           </div>
           <div className="max-h-[min(28rem,70vh)] overflow-y-auto overscroll-contain">
+            {hasAgreementAlerts ? (
+              <div className="border-b border-border/60 bg-surface-muted/20">
+                <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                  Ustalenia
+                </p>
+                {agreementPendingCounts.pendingTeamApproval > 0 ? (
+                  <Link
+                    href="/tablice-wdrozen/ustalenia"
+                    onClick={() => setOpen(false)}
+                    className="flex items-start gap-3 px-4 py-3 transition hover:bg-surface-muted/30"
+                  >
+                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-amber-500/35 bg-amber-500/10 text-amber-200">
+                      <ClipboardCheck className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-foreground">
+                          Do Twojej akceptacji (Administrator)
+                        </p>
+                        <NavBadges newCount={agreementPendingCounts.pendingTeamApproval} size="sm" />
+                      </div>
+                      <p className="mt-1 break-words text-xs leading-relaxed text-muted">
+                        {agreementPendingCounts.pendingTeamApproval === 1
+                          ? "1 ustalenie czeka na akceptację zespołu."
+                          : `${agreementPendingCounts.pendingTeamApproval} ustaleń czeka na akceptację zespołu.`}
+                      </p>
+                    </span>
+                  </Link>
+                ) : null}
+                {agreementPendingCounts.pendingClientApproval > 0 ? (
+                  <Link
+                    href="/tablice-wdrozen/ustalenia"
+                    onClick={() => setOpen(false)}
+                    className="flex items-start gap-3 px-4 py-3 transition hover:bg-surface-muted/30"
+                  >
+                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-sky-500/35 bg-sky-500/10 text-sky-200">
+                      <ClipboardCheck className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-foreground">Oczekuje na klienta</p>
+                        <NavBadges newCount={agreementPendingCounts.pendingClientApproval} size="sm" />
+                      </div>
+                      <p className="mt-1 break-words text-xs leading-relaxed text-muted">
+                        {agreementPendingCounts.pendingClientApproval === 1
+                          ? "1 ustalenie czeka na akceptację klienta."
+                          : `${agreementPendingCounts.pendingClientApproval} ustaleń czeka na akceptację klienta.`}
+                      </p>
+                    </span>
+                  </Link>
+                ) : null}
+                {agreementPendingCounts.pendingOtherApproval > 0 ? (
+                  <Link
+                    href="/tablice-wdrozen/ustalenia"
+                    onClick={() => setOpen(false)}
+                    className="flex items-start gap-3 px-4 py-3 transition hover:bg-surface-muted/30"
+                  >
+                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-violet-500/35 bg-violet-500/10 text-violet-200">
+                      <ClipboardCheck className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-foreground">Inne role w procesie</p>
+                        <NavBadges newCount={agreementPendingCounts.pendingOtherApproval} size="sm" />
+                      </div>
+                      <p className="mt-1 break-words text-xs leading-relaxed text-muted">
+                        {agreementPendingCounts.pendingOtherApproval === 1
+                          ? "1 ustalenie czeka na akceptację dodatkowej roli."
+                          : `${agreementPendingCounts.pendingOtherApproval} ustaleń czeka na akceptację dodatkowych ról.`}
+                      </p>
+                    </span>
+                  </Link>
+                ) : null}
+              </div>
+            ) : null}
+
             {hasKanbanAlerts ? (
               <div className="border-b border-border/60 bg-surface-muted/20">
                 <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wide text-muted">
@@ -177,7 +263,7 @@ export function NotificationBell() {
 
             {loading ? (
               <p className="px-4 py-6 text-sm text-muted">Ładowanie…</p>
-            ) : items.length === 0 && !hasKanbanAlerts ? (
+            ) : items.length === 0 && !hasKanbanAlerts && !hasAgreementAlerts ? (
               <p className="px-4 py-6 text-sm text-muted">Brak powiadomień.</p>
             ) : items.length === 0 ? (
               <p className="px-4 py-4 text-xs text-muted">Brak innych powiadomień.</p>

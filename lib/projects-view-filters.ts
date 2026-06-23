@@ -7,6 +7,7 @@ import {
   isProjectInProgress,
   isProjectWaiting,
 } from "@/lib/field-options";
+import { isWithoutContact } from "@/lib/domain";
 import type { FlowStatus, NextStepOwner, Project, ProjectType } from "@/lib/types";
 
 export const ALL_FILTER = "Wszystkie" as const;
@@ -17,6 +18,9 @@ export const PROJECT_CATEGORY_FILTERS = [
   { id: "waiting", label: "Oczekujące" },
   { id: "closed", label: "Zamknięte" },
   { id: "forClosing", label: "Do zamknięcia" },
+  { id: "inactive", label: "Nieaktywne" },
+  { id: "critical", label: "Krytyczne" },
+  { id: "noContact", label: "Bez kontaktu" },
 ] as const;
 
 export type ProjectCategoryFilterId = (typeof PROJECT_CATEGORY_FILTERS)[number]["id"];
@@ -86,6 +90,12 @@ export function matchesProjectCategory(
       return isProjectClosed(project, options);
     case "forClosing":
       return isProjectForClosing(project, options);
+    case "inactive":
+      return !project.isActive;
+    case "critical":
+      return project.priority === "Krytyczny";
+    case "noContact":
+      return isWithoutContact(project, options);
     default:
       return false;
   }
