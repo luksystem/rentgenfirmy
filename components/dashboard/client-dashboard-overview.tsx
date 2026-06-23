@@ -5,10 +5,7 @@ import { AlertTriangle, ClipboardCheck, GitBranch, Shield } from "lucide-react";
 import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-collapsible-shell";
 import { Button } from "@/components/ui/button";
 import {
-  PROJECT_AGREEMENT_CATEGORY_LABELS,
   buildAgreementCollapsibleMeta,
-  formatAgreementCost,
-  getAgreementStatusLabel,
   isAgreementPendingAttention,
   type ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";

@@ -65,7 +65,7 @@ export function StageSatisfactionPrompt({
         return !rated;
       }) ?? null
     );
-  }, [authorSide, dismissedStageIds, enabled, process, stageSatisfactions, template.stages]);
+  }, [authorSide, dismissedStageIds, enabled, process, stageSatisfactions, template]);
 
   useEffect(() => {
     if (pendingStage && !activeStageId) {

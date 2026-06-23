@@ -26,10 +26,7 @@ import { ClientProjectSummary } from "@/components/dashboard/client-project-summ
 import { DashboardPublicLinkPanel } from "@/components/dashboard/dashboard-public-link-panel";
 import { ProjectWarrantyPanel } from "@/components/dashboard/project-warranty-panel";
 import {
-  PROJECT_AGREEMENT_CATEGORY_LABELS,
   buildAgreementCollapsibleMeta,
-  formatAgreementCost,
-  getAgreementStatusLabel,
   isAgreementPendingAttention,
   type ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";

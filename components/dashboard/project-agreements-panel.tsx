@@ -21,7 +21,6 @@ import {
   PROJECT_AGREEMENT_CATEGORY_LABELS,
   buildAgreementCollapsibleMeta,
   formatAgreementCost,
-  getAgreementStatusLabel,
   isAgreementPendingAttention,
   normalizeProjectAgreementInput,
   type ProjectAgreementCategory,
