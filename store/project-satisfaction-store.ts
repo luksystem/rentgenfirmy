@@ -1,11 +1,22 @@
 "use client";
 
 import { create } from "zustand";
+import {
+  fetchPublicSatisfactionBundle,
+  savePublicAgreementFulfillment,
+  savePublicSatisfactionOverview,
+  savePublicSpecificationFulfillment,
+  savePublicStageSatisfaction,
+} from "@/lib/dashboard/public-satisfaction-client";
 import type {
+  AgreementFulfillment,
   AgreementFulfillmentInput,
   ProjectSatisfactionBundle,
+  ProjectSatisfactionOverview,
   ProjectSatisfactionOverviewInput,
+  SpecificationFulfillment,
   SpecificationFulfillmentInput,
+  StageSatisfaction,
   StageSatisfactionInput,
 } from "@/lib/dashboard/satisfaction-types";
 import {
@@ -28,6 +39,8 @@ const loadPromises = new Map<string, Promise<ProjectSatisfactionBundle>>();
 type ProjectSatisfactionStore = {
   byProject: Record<string, ProjectSatisfactionBundle>;
   loadingProjects: Record<string, boolean>;
+  publicDashboardToken: string | null;
+  setPublicDashboardToken: (token: string | null) => void;
   ensureSatisfaction: (
     projectId: string,
     options?: { force?: boolean },
@@ -52,9 +65,18 @@ function mergeFulfillment<T extends { id: string }>(list: T[], entry: T) {
   return next;
 }
 
+function loadKey(projectId: string, publicToken: string | null) {
+  return publicToken ? `${publicToken}:${projectId}` : projectId;
+}
+
 export const useProjectSatisfactionStore = create<ProjectSatisfactionStore>((set, get) => ({
   byProject: {},
   loadingProjects: {},
+  publicDashboardToken: null,
+
+  setPublicDashboardToken: (token) => {
+    set({ publicDashboardToken: token });
+  },
 
   seedSatisfaction: (projectId, bundle) => {
     set({
@@ -65,12 +87,14 @@ export const useProjectSatisfactionStore = create<ProjectSatisfactionStore>((set
 
   ensureSatisfaction: async (projectId, options) => {
     const force = options?.force ?? false;
+    const publicToken = get().publicDashboardToken;
     const cached = get().byProject[projectId];
     if (cached && !force) {
       return cached;
     }
 
-    const inFlight = loadPromises.get(projectId);
+    const promiseKey = loadKey(projectId, publicToken);
+    const inFlight = loadPromises.get(promiseKey);
     if (inFlight && !force) {
       return inFlight;
     }
@@ -79,7 +103,10 @@ export const useProjectSatisfactionStore = create<ProjectSatisfactionStore>((set
       loadingProjects: { ...get().loadingProjects, [projectId]: !cached },
     });
 
-    const promise = fetchProjectSatisfactionBundle(projectId)
+    const promise = (publicToken
+      ? fetchPublicSatisfactionBundle(publicToken, projectId)
+      : fetchProjectSatisfactionBundle(projectId)
+    )
       .then((bundle) => {
         set({
           byProject: { ...get().byProject, [projectId]: bundle },
@@ -94,15 +121,21 @@ export const useProjectSatisfactionStore = create<ProjectSatisfactionStore>((set
         throw error;
       })
       .finally(() => {
-        loadPromises.delete(projectId);
+        loadPromises.delete(promiseKey);
       });
 
-    loadPromises.set(projectId, promise);
+    loadPromises.set(promiseKey, promise);
     return promise;
   },
 
   saveAgreementFulfillment: async (projectId, input) => {
-    const saved = await upsertAgreementFulfillment(projectId, input);
+    const publicToken = get().publicDashboardToken;
+    let saved: AgreementFulfillment;
+    if (publicToken) {
+      saved = await savePublicAgreementFulfillment(publicToken, projectId, input);
+    } else {
+      saved = await upsertAgreementFulfillment(projectId, input);
+    }
     const current = get().byProject[projectId] ?? EMPTY_BUNDLE;
     set({
       byProject: {
@@ -119,7 +152,13 @@ export const useProjectSatisfactionStore = create<ProjectSatisfactionStore>((set
   },
 
   saveSpecificationFulfillment: async (projectId, input) => {
-    const saved = await upsertSpecificationFulfillment(projectId, input);
+    const publicToken = get().publicDashboardToken;
+    let saved: SpecificationFulfillment;
+    if (publicToken) {
+      saved = await savePublicSpecificationFulfillment(publicToken, projectId, input);
+    } else {
+      saved = await upsertSpecificationFulfillment(projectId, input);
+    }
     const current = get().byProject[projectId] ?? EMPTY_BUNDLE;
     set({
       byProject: {
@@ -138,7 +177,13 @@ export const useProjectSatisfactionStore = create<ProjectSatisfactionStore>((set
   },
 
   saveStageSatisfaction: async (projectId, input) => {
-    const saved = await upsertStageSatisfaction(projectId, input);
+    const publicToken = get().publicDashboardToken;
+    let saved: StageSatisfaction;
+    if (publicToken) {
+      saved = await savePublicStageSatisfaction(publicToken, projectId, input);
+    } else {
+      saved = await upsertStageSatisfaction(projectId, input);
+    }
     const current = get().byProject[projectId] ?? EMPTY_BUNDLE;
     set({
       byProject: {
@@ -157,7 +202,13 @@ export const useProjectSatisfactionStore = create<ProjectSatisfactionStore>((set
   },
 
   saveOverview: async (projectId, input) => {
-    const saved = await upsertProjectSatisfactionOverview(projectId, input);
+    const publicToken = get().publicDashboardToken;
+    let saved: ProjectSatisfactionOverview;
+    if (publicToken) {
+      saved = await savePublicSatisfactionOverview(publicToken, projectId, input);
+    } else {
+      saved = await upsertProjectSatisfactionOverview(projectId, input);
+    }
     const current = get().byProject[projectId] ?? EMPTY_BUNDLE;
     set({
       byProject: {

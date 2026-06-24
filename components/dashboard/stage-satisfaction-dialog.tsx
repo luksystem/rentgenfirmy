@@ -95,7 +95,13 @@ export function StageSatisfactionDialog({
 
         <div className="grid gap-4">
           <Field label="Poziom zadowolenia (0–10)">
-            <StarRatingInput value={score} onChange={setScore} disabled={saving} size="sm" />
+            <StarRatingInput
+              value={score}
+              onChange={setScore}
+              disabled={saving}
+              size="sm"
+              subtle={authorSide === "client"}
+            />
           </Field>
 
           <Field label="Co było najlepsze w tym etapie?">

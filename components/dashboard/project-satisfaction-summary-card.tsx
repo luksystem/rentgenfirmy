@@ -10,11 +10,13 @@ export function ProjectSatisfactionSummaryCard({
   compact = false,
   variant = "card",
   className,
+  subtleStars = false,
 }: {
   bundle: ProjectSatisfactionBundle;
   compact?: boolean;
   variant?: "card" | "inline";
   className?: string;
+  subtleStars?: boolean;
 }) {
   const summary = computeSatisfactionSummary(bundle);
   const isEmpty =
@@ -114,7 +116,11 @@ export function ProjectSatisfactionSummaryCard({
           <div className="rounded-xl border border-border/70 bg-surface-muted/20 p-3">
             <p className="text-xs text-muted">Średnia z etapów</p>
             <div className="mt-1">
-              <StarRatingDisplay value={Math.round(summary.avgStageScore)} size="sm" />
+              <StarRatingDisplay
+                value={Math.round(summary.avgStageScore)}
+                size="sm"
+                subtle={subtleStars}
+              />
             </div>
             <p className="mt-1 text-[11px] text-muted">{summary.stageCount} etap(ów) ocenionych</p>
           </div>
@@ -134,7 +140,11 @@ export function ProjectSatisfactionSummaryCard({
           <div className="rounded-xl border border-border/70 bg-surface-muted/20 p-3">
             <p className="text-xs text-muted">Oczekiwania (przed)</p>
             <div className="mt-1">
-              <StarRatingDisplay value={summary.expectationScore} size="sm" />
+              <StarRatingDisplay
+                value={summary.expectationScore}
+                size="sm"
+                subtle={subtleStars}
+              />
             </div>
           </div>
         ) : null}
@@ -143,7 +153,7 @@ export function ProjectSatisfactionSummaryCard({
           <div className="rounded-xl border border-border/70 bg-surface-muted/20 p-3">
             <p className="text-xs text-muted">Rzeczywistość (po)</p>
             <div className="mt-1">
-              <StarRatingDisplay value={summary.realityScore} size="sm" />
+              <StarRatingDisplay value={summary.realityScore} size="sm" subtle={subtleStars} />
             </div>
             {summary.expectationGap != null ? (
               <p

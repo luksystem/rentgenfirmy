@@ -22,12 +22,14 @@ export function StarRatingInput({
   max = 10,
   disabled,
   size = "sm",
+  subtle = false,
 }: {
   value: number;
   onChange: (score: number) => void;
   max?: number;
   disabled?: boolean;
   size?: "xs" | "sm" | "md";
+  subtle?: boolean;
 }) {
   const iconClass = INPUT_ICON_CLASS[size];
   const scoreClass =
@@ -51,11 +53,20 @@ export function StarRatingInput({
             title={`${score}/${max}`}
             className={cn(
               "rounded-md p-0.5 transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50",
-              active ? "text-amber-400" : "text-muted/40 hover:text-amber-300/70",
+              active
+                ? subtle
+                  ? "text-amber-400/75"
+                  : "text-amber-400"
+                : "text-muted/40 hover:text-amber-300/70",
             )}
             onClick={() => onChange(score === value ? 0 : score)}
           >
-            <Star className={cn(iconClass, active && "fill-current")} />
+            <Star
+              className={cn(
+                iconClass,
+                active && (subtle ? "fill-amber-400/70" : "fill-current"),
+              )}
+            />
           </button>
         );
       })}

@@ -260,6 +260,12 @@ export function ClientDashboardView({
   );
   const ensureSatisfaction = useProjectSatisfactionStore((state) => state.ensureSatisfaction);
   const seedProjectSatisfaction = useProjectSatisfactionStore((state) => state.seedSatisfaction);
+  const setPublicDashboardToken = useProjectSatisfactionStore((state) => state.setPublicDashboardToken);
+
+  useEffect(() => {
+    setPublicDashboardToken(readOnly ? publicDashboardToken ?? null : null);
+    return () => setPublicDashboardToken(null);
+  }, [publicDashboardToken, readOnly, setPublicDashboardToken]);
 
   const specificationItems = useProjectSpecificationStore(
     (state) =>
@@ -274,12 +280,17 @@ export function ClientDashboardView({
     if (seedSatisfaction !== undefined) {
       seedProjectSatisfaction(selectedProjectId, seedSatisfaction);
     }
+    if (readOnly && publicDashboardToken) {
+      return;
+    }
     void ensureSatisfaction(selectedProjectId, { force: seedSatisfaction !== undefined }).catch(
       () => undefined,
     );
   }, [
     enableSatisfaction,
     ensureSatisfaction,
+    publicDashboardToken,
+    readOnly,
     seedProjectSatisfaction,
     seedSatisfaction,
     selectedProjectId,
@@ -577,6 +588,7 @@ export function ClientDashboardView({
           <ProjectSatisfactionSummaryCard
             bundle={satisfactionBundle}
             variant="inline"
+            subtleStars
             className="sm:max-w-[55%] sm:justify-end"
           />
         ) : null}

@@ -5,7 +5,7 @@ import { Check, Minus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/input";
 import { ProjectSatisfactionSummaryCard } from "@/components/dashboard/project-satisfaction-summary-card";
-import { StarRatingInput } from "@/components/dashboard/star-rating-input";
+import { StarRatingInput, StarRatingDisplay } from "@/components/dashboard/star-rating-input";
 import type { ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
 import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
 import {
@@ -113,7 +113,9 @@ export function ProjectSatisfactionPanel({
     if (seedBundle) {
       seedSatisfaction(projectId, seedBundle);
     }
-    void ensureSatisfaction(projectId, { force: seedBundle !== undefined }).catch(() => undefined);
+    void ensureSatisfaction(projectId, {
+      force: seedBundle !== undefined && !useProjectSatisfactionStore.getState().publicDashboardToken,
+    }).catch(() => undefined);
   }, [ensureSatisfaction, projectId, seedBundle, seedSatisfaction]);
 
   useEffect(() => {
@@ -212,6 +214,7 @@ export function ProjectSatisfactionPanel({
   }
 
   const ratingSize = "sm" as const;
+  const subtleStars = authorSide === "client";
 
   if (loading && !bundle.agreementFulfillments.length && !bundle.stageSatisfactions.length) {
     return <p className="text-sm text-muted">Ładowanie ocen…</p>;
@@ -369,6 +372,7 @@ export function ProjectSatisfactionPanel({
             onChange={setExpectationScore}
             disabled={overviewSaving}
             size={ratingSize}
+            subtle={subtleStars}
           />
         </Field>
 
@@ -378,6 +382,7 @@ export function ProjectSatisfactionPanel({
             onChange={setRealityScore}
             disabled={overviewSaving}
             size={ratingSize}
+            subtle={subtleStars}
           />
         </Field>
 
@@ -411,7 +416,12 @@ export function ProjectSatisfactionPanel({
                 key={entry.id}
                 className="rounded-xl border border-border/70 bg-surface-muted/10 px-3 py-2 text-sm"
               >
-                <p className="font-medium text-foreground">{entry.stageTitle}</p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-medium text-foreground">{entry.stageTitle}</p>
+                  {entry.score > 0 ? (
+                    <StarRatingDisplay value={entry.score} size="sm" subtle={subtleStars} />
+                  ) : null}
+                </div>
                 <p className="mt-1 text-xs text-muted">
                   Ocena: {entry.score}/10
                   {entry.bestAspect ? ` · Najlepsze: ${entry.bestAspect}` : ""}
