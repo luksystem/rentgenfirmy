@@ -114,7 +114,7 @@ export function ProjectSatisfactionSummaryCard({
           <div className="rounded-xl border border-border/70 bg-surface-muted/20 p-3">
             <p className="text-xs text-muted">Średnia z etapów</p>
             <div className="mt-1">
-              <StarRatingDisplay value={Math.round(summary.avgStageScore)} />
+              <StarRatingDisplay value={Math.round(summary.avgStageScore)} size="sm" />
             </div>
             <p className="mt-1 text-[11px] text-muted">{summary.stageCount} etap(ów) ocenionych</p>
           </div>
@@ -134,7 +134,7 @@ export function ProjectSatisfactionSummaryCard({
           <div className="rounded-xl border border-border/70 bg-surface-muted/20 p-3">
             <p className="text-xs text-muted">Oczekiwania (przed)</p>
             <div className="mt-1">
-              <StarRatingDisplay value={summary.expectationScore} />
+              <StarRatingDisplay value={summary.expectationScore} size="sm" />
             </div>
           </div>
         ) : null}
@@ -143,7 +143,7 @@ export function ProjectSatisfactionSummaryCard({
           <div className="rounded-xl border border-border/70 bg-surface-muted/20 p-3">
             <p className="text-xs text-muted">Rzeczywistość (po)</p>
             <div className="mt-1">
-              <StarRatingDisplay value={summary.realityScore} />
+              <StarRatingDisplay value={summary.realityScore} size="sm" />
             </div>
             {summary.expectationGap != null ? (
               <p

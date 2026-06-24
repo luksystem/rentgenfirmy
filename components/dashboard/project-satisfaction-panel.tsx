@@ -211,7 +211,7 @@ export function ProjectSatisfactionPanel({
     }
   }
 
-  const ratingSize = authorSide === "client" ? "xs" : "md";
+  const ratingSize = "sm" as const;
 
   if (loading && !bundle.agreementFulfillments.length && !bundle.stageSatisfactions.length) {
     return <p className="text-sm text-muted">Ładowanie ocen…</p>;

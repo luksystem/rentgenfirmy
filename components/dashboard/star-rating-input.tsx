@@ -3,12 +3,25 @@
 import { Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/** xs = dashboard (najmniejsze), sm = standard UI, md = rzadko — większe akcenty */
+const INPUT_ICON_CLASS = {
+  xs: "h-3 w-3 sm:h-3.5 sm:w-3.5",
+  sm: "h-3.5 w-3.5 sm:h-4 sm:w-4",
+  md: "h-5 w-5",
+} as const;
+
+const DISPLAY_ICON_CLASS = {
+  xs: "h-2 w-2 sm:h-2.5 sm:w-2.5",
+  sm: "h-3 w-3 sm:h-3.5 sm:w-3.5",
+  md: "h-4 w-4",
+} as const;
+
 export function StarRatingInput({
   value,
   onChange,
   max = 10,
   disabled,
-  size = "md",
+  size = "sm",
 }: {
   value: number;
   onChange: (score: number) => void;
@@ -16,16 +29,16 @@ export function StarRatingInput({
   disabled?: boolean;
   size?: "xs" | "sm" | "md";
 }) {
-  const iconClass =
+  const iconClass = INPUT_ICON_CLASS[size];
+  const scoreClass =
     size === "xs"
-      ? "h-3 w-3 sm:h-3.5 sm:w-3.5"
+      ? "ml-1.5 text-xs text-muted"
       : size === "sm"
-        ? "h-4 w-4"
-        : "h-6 w-6";
-  const scoreClass = size === "xs" ? "ml-1.5 text-xs text-muted" : "ml-2 text-sm font-medium text-foreground";
+        ? "ml-1.5 text-xs font-medium text-foreground sm:text-sm"
+        : "ml-2 text-sm font-medium text-foreground";
 
   return (
-    <div className={cn("flex flex-wrap items-center", size === "xs" ? "gap-0.5" : "gap-1")}>
+    <div className={cn("flex flex-wrap items-center", size === "xs" ? "gap-0.5" : "gap-0.5 sm:gap-1")}>
       {Array.from({ length: max }, (_, index) => {
         const score = index + 1;
         const active = score <= value;
@@ -37,7 +50,7 @@ export function StarRatingInput({
             disabled={disabled}
             title={`${score}/${max}`}
             className={cn(
-              "rounded-md p-0.5 transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50",
+              "rounded-md p-0.5 transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50",
               active ? "text-amber-400" : "text-muted/40 hover:text-amber-300/70",
             )}
             onClick={() => onChange(score === value ? 0 : score)}
@@ -46,9 +59,7 @@ export function StarRatingInput({
           </button>
         );
       })}
-      <span className={scoreClass}>
-        {value > 0 ? `${value}/${max}` : "—"}
-      </span>
+      <span className={scoreClass}>{value > 0 ? `${value}/${max}` : "—"}</span>
     </div>
   );
 }
@@ -66,14 +77,9 @@ export function StarRatingDisplay({
   subtle?: boolean;
   showScore?: boolean;
 }) {
-  const iconClass =
-    size === "xs"
-      ? "h-2 w-2 sm:h-2.5 sm:w-2.5"
-      : size === "sm"
-        ? "h-3.5 w-3.5"
-        : "h-5 w-5";
+  const iconClass = DISPLAY_ICON_CLASS[size];
   const scoreClass =
-    size === "xs" ? "ml-1 text-[10px] sm:text-[11px]" : "ml-1.5 text-xs";
+    size === "xs" ? "ml-1 text-[10px] sm:text-[11px]" : "ml-1.5 text-[11px] sm:text-xs";
 
   return (
     <div className="inline-flex items-center gap-px sm:gap-0.5">

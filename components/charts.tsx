@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -39,11 +39,34 @@ function colorForIndex(index: number) {
 }
 
 function ClientOnlyChart({ children }: { children: React.ReactNode }) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!mounted) {
+      return;
+    }
+
+    const node = containerRef.current;
+    if (!node) {
+      return;
+    }
+
+    const update = () => {
+      const { width, height } = node.getBoundingClientRect();
+      setReady(width > 0 && height > 0);
+    };
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [mounted]);
 
   if (!mounted) {
     return (
@@ -53,7 +76,17 @@ function ClientOnlyChart({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return children;
+  return (
+    <div ref={containerRef} className="h-full w-full min-h-[16rem] min-w-0">
+      {ready ? (
+        children
+      ) : (
+        <div className="flex h-full items-center justify-center rounded-xl bg-surface-muted text-sm text-muted">
+          Ładowanie wykresu...
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ChartTooltip({
@@ -89,8 +122,7 @@ export function BarPanel({ title, data }: { title: string; data: ChartData }) {
           </div>
         ) : (
           <ClientOnlyChart>
-            <div className="h-full w-full min-h-[16rem] min-w-0">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
               <BarChart data={data} margin={{ left: -24, right: 8, top: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#27272a" />
                 <XAxis
@@ -110,7 +142,6 @@ export function BarPanel({ title, data }: { title: string; data: ChartData }) {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-            </div>
           </ClientOnlyChart>
         )}
       </CardContent>
@@ -131,8 +162,7 @@ export function PiePanel({ title, data }: { title: string; data: ChartData }) {
           </div>
         ) : (
           <ClientOnlyChart>
-            <div className="h-full w-full min-h-[16rem] min-w-0">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
               <PieChart>
                 <Pie
                   data={data}
@@ -156,7 +186,6 @@ export function PiePanel({ title, data }: { title: string; data: ChartData }) {
                 />
               </PieChart>
             </ResponsiveContainer>
-            </div>
           </ClientOnlyChart>
         )}
       </CardContent>
