@@ -29,6 +29,7 @@ export type ProjectRow = {
 
 export type ProjectInsert = Omit<ProjectRow, "id" | "created_at"> & {
   id?: string;
+  created_at?: string;
 };
 
 export type ProjectUpdate = Partial<ProjectInsert>;

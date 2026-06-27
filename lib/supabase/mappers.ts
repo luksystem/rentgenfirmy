@@ -41,7 +41,7 @@ export function rowToProject(row: ProjectRow): Project {
     waitingDependsOnUs: row.waiting_depends_on_us,
     waitingIncreasesCostLater: row.waiting_increases_cost_later,
     waitingBlocksSettlement: row.waiting_blocks_settlement,
-    createdAt: row.created_at ?? row.last_changed_at,
+    createdAt: row.created_at || row.last_changed_at,
     systemHandoverAt: row.system_handover_at ?? undefined,
     warrantyDurationMonths: row.warranty_duration_months ?? undefined,
     warrantyEndsAt: row.warranty_ends_at ?? undefined,
@@ -76,6 +76,13 @@ export function projectToInsert(
     system_handover_at: project.systemHandoverAt ?? null,
     warranty_duration_months: project.warrantyDurationMonths ?? null,
     warranty_ends_at: project.warrantyEndsAt ?? null,
+  };
+}
+
+export function projectToCreateInsert(project: Omit<Project, "id">): ProjectInsert {
+  return {
+    ...projectToInsert(project),
+    created_at: project.createdAt,
   };
 }
 

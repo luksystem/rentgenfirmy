@@ -1,6 +1,7 @@
 import { getSupabase } from "@/lib/supabase/client";
 import {
   inputToProjectPayload,
+  projectToCreateInsert,
   projectToInsert,
   interruptionToInsert,
   rowToInterruption,
@@ -58,7 +59,7 @@ export async function createProject(input: ProjectInput): Promise<Project> {
   const payload = inputToProjectPayload(input, withAudit(input));
   const { data, error } = await supabase
     .from("projects")
-    .insert(projectToInsert(payload))
+    .insert(projectToCreateInsert(payload))
     .select("*")
     .single();
 

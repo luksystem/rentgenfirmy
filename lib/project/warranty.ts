@@ -74,17 +74,30 @@ export function isWarrantyExpiringSoon(project: ProjectWarrantyFields, withinDay
 }
 
 export function getProjectDurationDays(project: Pick<Project, "createdAt">, referenceDate = new Date()) {
-  const createdRaw = project.createdAt?.slice(0, 10);
-  if (!createdRaw) {
+  const createdIso = project.createdAt?.trim();
+  if (!createdIso) {
     return 0;
   }
-  const created = startOfDay(new Date(`${createdRaw}T12:00:00`));
-  const today = startOfDay(referenceDate);
-  const diffMs = today.getTime() - created.getTime();
-  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+
+  const created = new Date(createdIso);
+  if (Number.isNaN(created.getTime())) {
+    return 0;
+  }
+
+  const diffMs = referenceDate.getTime() - created.getTime();
+  if (diffMs < 0) {
+    return 0;
+  }
+
+  const dayMs = 1000 * 60 * 60 * 24;
+  return Math.max(1, Math.ceil(diffMs / dayMs));
 }
 
 export function formatProjectDuration(project: Pick<Project, "createdAt">) {
+  if (!project.createdAt?.trim()) {
+    return "—";
+  }
+
   const days = getProjectDurationDays(project);
   if (days === 1) {
     return "1 dzień";
