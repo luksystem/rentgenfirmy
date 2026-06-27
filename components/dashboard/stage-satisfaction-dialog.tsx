@@ -99,7 +99,7 @@ export function StageSatisfactionDialog({
               value={score}
               onChange={setScore}
               disabled={saving}
-              size="sm"
+              size={authorSide === "client" ? "xs" : "sm"}
               subtle={authorSide === "client"}
             />
           </Field>

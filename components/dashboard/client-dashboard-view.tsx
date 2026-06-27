@@ -109,7 +109,7 @@ const TEAM_PROJECT_TAB = {
   icon: Briefcase,
 };
 
-const teamMobileTabs = [
+const teamTabsWithProject = [
   TEAM_MAIN_TAB_CONFIG[0],
   TEAM_PROJECT_TAB,
   ...TEAM_MAIN_TAB_CONFIG.slice(1),
@@ -403,7 +403,7 @@ export function ClientDashboardView({
     return true;
   });
 
-  const teamMainTabs = TEAM_MAIN_TAB_CONFIG.filter((tab) => {
+  const teamMainTabs = teamTabsWithProject.filter((tab) => {
     if (tab.id === "agreements" && !enableAgreements) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
     if (tab.id === "trades" && !enableTrades) return false;
@@ -461,12 +461,8 @@ export function ClientDashboardView({
       <div className="grid min-w-0 gap-4">
         <ClientInfoCard client={client} />
         {renderProjectSwitcher()}
-        <div className="hidden min-w-0 max-h-[min(85vh,960px)] overflow-y-auto rounded-2xl border border-border/80 bg-surface p-4 xl:block">
-          <h2 className="mb-3 text-base font-semibold text-foreground">Ustawienia projektu</h2>
-          <ClientProjectSettingsPanel project={selectedProject} />
-        </div>
         {enableSatisfaction ? (
-          <ProjectSatisfactionSummaryCard bundle={satisfactionBundle} compact />
+          <ProjectSatisfactionSummaryCard bundle={satisfactionBundle} compact subtleStars />
         ) : null}
       </div>
     );
@@ -474,7 +470,7 @@ export function ClientDashboardView({
 
   function renderProjectSettingsSection() {
     return (
-      <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4 xl:hidden">
+      <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
         <h2 className="mb-3 text-base font-semibold text-foreground">Ustawienia projektu</h2>
         <ClientProjectSettingsPanel project={selectedProject} />
       </div>
@@ -979,7 +975,7 @@ export function ClientDashboardView({
             </div>
           </div>
           <div className="min-w-0 max-w-full overflow-x-hidden xl:hidden">
-            {!activeKanbanToken ? renderTabBar(teamMobileTabs, "mobile-top") : null}
+            {!activeKanbanToken ? renderTabBar(teamMainTabs, "mobile-top") : null}
             {projects.length > 1 && onProjectChange && !activeKanbanToken ? (
               <div className="mb-4 flex w-full min-w-0 max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1">
                 {projects.map((project) => (

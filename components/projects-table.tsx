@@ -50,6 +50,7 @@ export function ProjectsTable() {
     fieldOptions,
     projectsViewFilters,
     updateProjectsViewFilters,
+    isInitialized,
   } = useAppStore();
   const { openProjectEdit } = useProjectEdit();
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
@@ -197,6 +198,15 @@ export function ProjectsTable() {
               <span className="hidden sm:inline">Dodaj projekt</span>
             </Button>
           </div>
+
+          {isInitialized ? (
+            <p className="mt-2 text-sm text-muted">
+              Widoczne:{" "}
+              <span className="font-medium text-foreground/80">
+                {filteredProjects.length} z {projects.length}
+              </span>
+            </p>
+          ) : null}
 
           <div className="mt-3 flex flex-wrap items-start gap-2">
             <MobileFiltersPanel

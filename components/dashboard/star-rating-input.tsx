@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 /** xs = dashboard (najmniejsze), sm = standard UI, md = rzadko — większe akcenty */
 const INPUT_ICON_CLASS = {
-  xs: "h-3 w-3 sm:h-3.5 sm:w-3.5",
+  xs: "h-2.5 w-2.5 sm:h-3 sm:w-3",
   sm: "h-3.5 w-3.5 sm:h-4 sm:w-4",
   md: "h-5 w-5",
 } as const;
@@ -40,7 +40,7 @@ export function StarRatingInput({
         : "ml-2 text-sm font-medium text-foreground";
 
   return (
-    <div className={cn("flex flex-wrap items-center", size === "xs" ? "gap-0.5" : "gap-0.5 sm:gap-1")}>
+    <div className={cn("flex flex-wrap items-center", size === "xs" ? "gap-px" : "gap-0.5 sm:gap-1")}>
       {Array.from({ length: max }, (_, index) => {
         const score = index + 1;
         const active = score <= value;

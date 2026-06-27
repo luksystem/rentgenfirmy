@@ -19,6 +19,7 @@ export function ProjectSatisfactionSummaryCard({
   subtleStars?: boolean;
 }) {
   const summary = computeSatisfactionSummary(bundle);
+  const starSize = subtleStars ? "xs" : "sm";
   const isEmpty =
     summary.stageCount === 0 &&
     summary.fulfillmentTotal === 0 &&
@@ -118,7 +119,7 @@ export function ProjectSatisfactionSummaryCard({
             <div className="mt-1">
               <StarRatingDisplay
                 value={Math.round(summary.avgStageScore)}
-                size="sm"
+                size={starSize}
                 subtle={subtleStars}
               />
             </div>
@@ -142,7 +143,7 @@ export function ProjectSatisfactionSummaryCard({
             <div className="mt-1">
               <StarRatingDisplay
                 value={summary.expectationScore}
-                size="sm"
+                size={starSize}
                 subtle={subtleStars}
               />
             </div>
@@ -153,7 +154,7 @@ export function ProjectSatisfactionSummaryCard({
           <div className="rounded-xl border border-border/70 bg-surface-muted/20 p-3">
             <p className="text-xs text-muted">Rzeczywistość (po)</p>
             <div className="mt-1">
-              <StarRatingDisplay value={summary.realityScore} size="sm" subtle={subtleStars} />
+              <StarRatingDisplay value={summary.realityScore} size={starSize} subtle={subtleStars} />
             </div>
             {summary.expectationGap != null ? (
               <p

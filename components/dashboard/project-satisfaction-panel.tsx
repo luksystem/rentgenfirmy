@@ -213,7 +213,7 @@ export function ProjectSatisfactionPanel({
     }
   }
 
-  const ratingSize = "sm" as const;
+  const ratingSize = authorSide === "client" ? ("xs" as const) : ("sm" as const);
   const subtleStars = authorSide === "client";
 
   if (loading && !bundle.agreementFulfillments.length && !bundle.stageSatisfactions.length) {
@@ -222,7 +222,9 @@ export function ProjectSatisfactionPanel({
 
   return (
     <div className="grid min-w-0 gap-6">
-      {!hideSummary ? <ProjectSatisfactionSummaryCard bundle={bundle} /> : null}
+      {!hideSummary ? (
+        <ProjectSatisfactionSummaryCard bundle={bundle} subtleStars={subtleStars} />
+      ) : null}
 
       <section className="grid gap-3">
         <div>
@@ -419,7 +421,7 @@ export function ProjectSatisfactionPanel({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-medium text-foreground">{entry.stageTitle}</p>
                   {entry.score > 0 ? (
-                    <StarRatingDisplay value={entry.score} size="sm" subtle={subtleStars} />
+                    <StarRatingDisplay value={entry.score} size={ratingSize} subtle={subtleStars} />
                   ) : null}
                 </div>
                 <p className="mt-1 text-xs text-muted">
