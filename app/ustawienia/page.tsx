@@ -18,7 +18,6 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  DEFAULT_FIELD_OPTIONS,
   PROJECT_STRING_FIELD_OPTION_KEYS,
   type FieldOptions,
   type StringListFieldOptionKey,

@@ -6,7 +6,6 @@ import { stageNames, type FieldOptions } from "@/lib/field-options";
 import type { Project } from "@/lib/types";
 import { ClickableProjectCard } from "@/components/project-edit-provider";
 import { filterProjectsByView, type ProjectsViewFilters } from "@/lib/projects-view-filters";
-import { cn } from "@/lib/utils";
 
 export function ProjectsStageKanban({
   projects,

@@ -1,6 +1,6 @@
 "use client";
 
-import { Field, Textarea } from "@/components/ui/input";
+import { Field } from "@/components/ui/input";
 import { RichTextarea } from "@/components/ui/rich-textarea";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { resolveKilometerZone } from "@/lib/service/kilometer-zone";
