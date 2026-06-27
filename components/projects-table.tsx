@@ -50,7 +50,6 @@ export function ProjectsTable() {
     fieldOptions,
     projectsViewFilters,
     updateProjectsViewFilters,
-    isInitialized,
   } = useAppStore();
   const { openProjectEdit } = useProjectEdit();
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
@@ -176,44 +175,27 @@ export function ProjectsTable() {
     <>
       <Card className="overflow-hidden">
         <div className="border-b border-border/80 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-foreground">
-                {viewMode === "table" ? "Tabela projektów" : "Kanban etapów projektów"}
-              </p>
-              <p className="text-sm text-muted">
-                {viewMode === "table"
-                  ? "Kliknij wiersz lub ikonę edycji, aby zmienić wszystkie pola projektu."
-                  : "Projekty pogrupowane według etapu realizacji. Kliknij kartę, aby edytować."}
-                {isInitialized ? (
-                  <span className="mt-1 block text-foreground/80">
-                    Widoczne: {filteredProjects.length} z {projects.length}
-                  </span>
-                ) : null}
-              </p>
-            </div>
-            <div className="flex shrink-0 flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={viewMode === "table" ? "default" : "secondary"}
-                onClick={() => setViewMode("table")}
-              >
-                Tabela
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={viewMode === "kanban" ? "default" : "secondary"}
-                onClick={() => setViewMode("kanban")}
-              >
-                Kanban etapów
-              </Button>
-              <Button onClick={openCreate} className="shrink-0">
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Dodaj projekt</span>
-              </Button>
-            </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={viewMode === "table" ? "default" : "secondary"}
+              onClick={() => setViewMode("table")}
+            >
+              Tabela
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={viewMode === "kanban" ? "default" : "secondary"}
+              onClick={() => setViewMode("kanban")}
+            >
+              Kanban etapów
+            </Button>
+            <Button onClick={openCreate} size="sm" className="ml-auto shrink-0">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Dodaj projekt</span>
+            </Button>
           </div>
 
           <div className="mt-3 flex flex-wrap items-start gap-2">

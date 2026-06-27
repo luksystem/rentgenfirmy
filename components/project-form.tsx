@@ -176,12 +176,17 @@ export function ProjectForm({
   isSaving = false,
   onSubmit,
   onCancel,
+  variant = "full",
+  hideCancel = false,
 }: {
   project?: Project;
   isSaving?: boolean;
   onSubmit: (project: ProjectInput) => void | Promise<void>;
   onCancel: () => void;
+  variant?: "full" | "client-dashboard";
+  hideCancel?: boolean;
 }) {
+  const isClientDashboard = variant === "client-dashboard";
   const fieldOptions = useAppStore((state) => state.fieldOptions);
   const clients = useAppStore((state) => state.clients);
   const addClient = useAppStore((state) => state.addClient);
@@ -265,7 +270,7 @@ export function ProjectForm({
 
     void onSubmit({
       name: payload.name,
-      clientId: values.clientId || null,
+      clientId: isClientDashboard ? (project?.clientId ?? null) : values.clientId || null,
       isActive: payload.isActive,
       type: payload.type,
       flowStatus: payload.flowStatus,
@@ -282,20 +287,24 @@ export function ProjectForm({
       waitingDependsOnUs: waiting ? payload.waitingDependsOnUs : undefined,
       waitingIncreasesCostLater: waiting ? payload.waitingIncreasesCostLater : undefined,
       waitingBlocksSettlement: waiting ? payload.waitingBlocksSettlement : undefined,
-      systemHandoverAt: values.systemHandoverAt || undefined,
-      warrantyDurationMonths:
-        typeof values.warrantyDurationMonths === "number" &&
-        Number.isFinite(values.warrantyDurationMonths)
-          ? values.warrantyDurationMonths
-          : undefined,
-      warrantyEndsAt:
-        computeWarrantyEndsAt(
-          values.systemHandoverAt,
-          typeof values.warrantyDurationMonths === "number" &&
-            Number.isFinite(values.warrantyDurationMonths)
-            ? values.warrantyDurationMonths
-            : undefined,
-        ) || undefined,
+      ...(isClientDashboard
+        ? {}
+        : {
+            systemHandoverAt: values.systemHandoverAt || undefined,
+            warrantyDurationMonths:
+              typeof values.warrantyDurationMonths === "number" &&
+              Number.isFinite(values.warrantyDurationMonths)
+                ? values.warrantyDurationMonths
+                : undefined,
+            warrantyEndsAt:
+              computeWarrantyEndsAt(
+                values.systemHandoverAt,
+                typeof values.warrantyDurationMonths === "number" &&
+                  Number.isFinite(values.warrantyDurationMonths)
+                  ? values.warrantyDurationMonths
+                  : undefined,
+              ) || undefined,
+          }),
     });
   }
 
@@ -312,14 +321,16 @@ export function ProjectForm({
             ))}
           </Select>
         </Field>
-        <ClientSelectWithCreate
-          clients={clients}
-          value={clientId || null}
-          onChange={(id) => setValue("clientId", id ?? "")}
-          onCreateClient={addClient}
-          emptyLabel="Bez klienta"
-          className="md:col-span-2"
-        />
+        {!isClientDashboard ? (
+          <ClientSelectWithCreate
+            clients={clients}
+            value={clientId || null}
+            onChange={(id) => setValue("clientId", id ?? "")}
+            onCreateClient={addClient}
+            emptyLabel="Bez klienta"
+            className="md:col-span-2"
+          />
+        ) : null}
       </div>
 
       <label className="panel-success flex cursor-pointer items-start gap-3 rounded-xl border p-4">
@@ -416,6 +427,7 @@ export function ProjectForm({
         <Textarea {...register("notes")} placeholder="Kontekst, ryzyka, ustalenia..." />
       </Field>
 
+      {!isClientDashboard ? (
       <div className="rounded-2xl border border-border/80 bg-surface-muted/50 p-4">
         <p className="mb-3 text-sm font-semibold">Gwarancja</p>
         <div className="grid gap-4 md:grid-cols-2">
@@ -448,6 +460,7 @@ export function ProjectForm({
           ustawisz w dashboardzie klienta.
         </p>
       </div>
+      ) : null}
 
       <div className="rounded-2xl border border-border/80 bg-surface-muted/50 p-4">
         <p className="mb-3 text-sm font-semibold">Pola dla modułu do zamknięcia</p>
@@ -468,11 +481,13 @@ export function ProjectForm({
       </div>
 
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}>
-          Anuluj
-        </Button>
+        {!hideCancel ? (
+          <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}>
+            Anuluj
+          </Button>
+        ) : null}
         <Button type="submit" disabled={isSaving}>
-          {isSaving ? "Zapisywanie..." : "Zapisz projekt"}
+          {isSaving ? "Zapisywanie..." : isClientDashboard ? "Zapisz" : "Zapisz projekt"}
         </Button>
       </div>
     </form>

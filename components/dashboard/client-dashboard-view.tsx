@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
+  Briefcase,
   ClipboardCheck,
   FileText,
   FolderOpen,
@@ -21,10 +22,10 @@ import { ProjectSystemCredentialsPanel } from "@/components/dashboard/project-sy
 import { ProjectSpecificationPanel } from "@/components/dashboard/project-specification-panel";
 import { ProjectTradesPanel } from "@/components/dashboard/project-trades-panel";
 import { StageSatisfactionPrompt } from "@/components/dashboard/stage-satisfaction-prompt";
+import { ClientProjectSettingsPanel } from "@/components/dashboard/client-project-settings-panel";
 import { ClientDashboardHome } from "@/components/dashboard/client-dashboard-home";
 import { ClientDashboardOverview } from "@/components/dashboard/client-dashboard-overview";
 import { ClientInfoCard } from "@/components/dashboard/client-info-card";
-import { ClientProjectSummary } from "@/components/dashboard/client-project-summary";
 import { ProjectContentPanel } from "@/components/dashboard/project-content-panel";
 import { ProcessPipeline } from "@/components/process/process-pipeline";
 import { PublicKanbanEmbedded } from "@/components/process/public-kanban-embedded";
@@ -59,6 +60,7 @@ const EMPTY_SATISFACTION: ProjectSatisfactionBundle = {
 
 type ClientDashboardTab =
   | "home"
+  | "project"
   | "overview"
   | "process"
   | "agreements"
@@ -99,6 +101,18 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "satisfaction", label: "Ocena", icon: Star },
   { id: "credentials", label: "Hasła", icon: KeyRound },
   { id: "links", label: "Linki", icon: Link2 },
+];
+
+const TEAM_PROJECT_TAB = {
+  id: "project" as const,
+  label: "Projekt",
+  icon: Briefcase,
+};
+
+const teamMobileTabs = [
+  TEAM_MAIN_TAB_CONFIG[0],
+  TEAM_PROJECT_TAB,
+  ...TEAM_MAIN_TAB_CONFIG.slice(1),
 ];
 
 export function ClientDashboardView({
@@ -442,23 +456,27 @@ export function ClientDashboardView({
     );
   }
 
-  function renderDataSection(compact = false) {
+  function renderDataSection() {
     return (
       <div className="grid min-w-0 gap-4">
         <ClientInfoCard client={client} />
         {renderProjectSwitcher()}
-        <div className="min-w-0 rounded-2xl border border-border/80 bg-surface p-4">
-          <h2 className="mb-3 text-base font-semibold text-foreground">Dane projektu</h2>
-          <ClientProjectSummary
-            project={selectedProject}
-            compact
-            defaultExpanded={!compact}
-            excludeWarrantyFields
-          />
+        <div className="hidden min-w-0 max-h-[min(85vh,960px)] overflow-y-auto rounded-2xl border border-border/80 bg-surface p-4 xl:block">
+          <h2 className="mb-3 text-base font-semibold text-foreground">Ustawienia projektu</h2>
+          <ClientProjectSettingsPanel project={selectedProject} />
         </div>
         {enableSatisfaction ? (
           <ProjectSatisfactionSummaryCard bundle={satisfactionBundle} compact />
         ) : null}
+      </div>
+    );
+  }
+
+  function renderProjectSettingsSection() {
+    return (
+      <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4 xl:hidden">
+        <h2 className="mb-3 text-base font-semibold text-foreground">Ustawienia projektu</h2>
+        <ClientProjectSettingsPanel project={selectedProject} />
       </div>
     );
   }
@@ -883,6 +901,8 @@ export function ClientDashboardView({
     switch (tab) {
       case "home":
         return renderHomeSection();
+      case "project":
+        return renderProjectSettingsSection();
       case "overview":
         return renderOverviewSection((nextTab) => handleSelectTab(nextTab));
       case "process":
@@ -952,14 +972,14 @@ export function ClientDashboardView({
             >
               {!activeKanbanToken ? (
                 <aside className="min-w-0 max-w-full self-start overflow-x-hidden">
-                  {renderDataSection(false)}
+                  {renderDataSection()}
                 </aside>
               ) : null}
               <section className="min-w-0 overflow-x-hidden">{renderMainArea()}</section>
             </div>
           </div>
           <div className="min-w-0 max-w-full overflow-x-hidden xl:hidden">
-            {!activeKanbanToken ? renderTabBar(teamMainTabs, "mobile-top") : null}
+            {!activeKanbanToken ? renderTabBar(teamMobileTabs, "mobile-top") : null}
             {projects.length > 1 && onProjectChange && !activeKanbanToken ? (
               <div className="mb-4 flex w-full min-w-0 max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1">
                 {projects.map((project) => (

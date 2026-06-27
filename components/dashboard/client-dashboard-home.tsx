@@ -583,10 +583,12 @@ export function ClientDashboardHome({
         </div>
       ) : null}
 
+      {readOnly ? (
       <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
         <h2 className="mb-3 text-base font-semibold text-foreground">Dane projektu</h2>
         <ClientProjectSummary project={project} compact excludeWarrantyFields />
       </div>
+      ) : null}
 
       <WarrantyHomeCard
         project={project}

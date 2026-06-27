@@ -1,11 +1,54 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
-import { stageNames, type FieldOptions } from "@/lib/field-options";
-import type { Project } from "@/lib/types";
+import {
+  ActiveBadge,
+  PriorityBadge,
+  ProjectStatusBadge,
+} from "@/components/project-status-badge";
+import { Badge } from "@/components/ui/badge";
 import { ClickableProjectCard } from "@/components/project-edit-provider";
+import { isWithoutContact } from "@/lib/domain";
+import {
+  isProjectForClosing,
+  isProjectWaiting,
+  stageNames,
+  type FieldOptions,
+} from "@/lib/field-options";
 import { filterProjectsByView, type ProjectsViewFilters } from "@/lib/projects-view-filters";
+import type { Project } from "@/lib/types";
+
+function ProjectKanbanHighlights({
+  project,
+  fieldOptions,
+}: {
+  project: Project;
+  fieldOptions: FieldOptions;
+}) {
+  const waiting = isProjectWaiting(project, fieldOptions);
+  const forClosing = isProjectForClosing(project, fieldOptions);
+  const noContact = isWithoutContact(project, fieldOptions);
+  const critical = project.priority === "Krytyczny";
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1">
+      <ProjectStatusBadge
+        status={project.flowStatus}
+        priority={project.priority}
+        isActive={project.isActive}
+      />
+      {project.isActive ? <ActiveBadge /> : <Badge tone="neutral">Nieaktywny</Badge>}
+      {critical ? <PriorityBadge priority={project.priority} /> : null}
+      {forClosing ? <Badge tone="blue">Do zamknięcia</Badge> : null}
+      {noContact ? <Badge tone="waiting">Bez kontaktu</Badge> : null}
+      {waiting && project.blockerReason ? (
+        <Badge tone="waiting" className="max-w-full">
+          <span className="truncate">Blokada: {project.blockerReason}</span>
+        </Badge>
+      ) : null}
+    </div>
+  );
+}
 
 export function ProjectsStageKanban({
   projects,
@@ -60,16 +103,14 @@ export function ProjectsStageKanban({
                     project={project}
                     className="rounded-xl border border-border/70 bg-surface p-3 transition hover:border-accent/30"
                   >
-                    <p className="font-medium text-foreground">{project.name}</p>
-                    <p className="mt-1 text-xs text-muted">{project.flowStatus}</p>
-                    <p className="mt-1 text-xs text-muted">{project.nextStepOwner}</p>
-                    <Link
-                      href={`/projekty/${project.id}`}
-                      className="mt-2 inline-block text-xs text-accent hover:underline"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      Otwórz projekt
-                    </Link>
+                    <p className="font-medium leading-snug text-foreground">{project.name}</p>
+                    {project.nextStepOwner ? (
+                      <p className="mt-1 text-xs text-muted">
+                        <span className="font-medium text-foreground/80">Odpowiedzialny:</span>{" "}
+                        {project.nextStepOwner}
+                      </p>
+                    ) : null}
+                    <ProjectKanbanHighlights project={project} fieldOptions={fieldOptions} />
                   </ClickableProjectCard>
                 ))
               )}
