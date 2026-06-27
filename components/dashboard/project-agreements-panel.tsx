@@ -34,6 +34,7 @@ import {
   TEAM_APPROVER_ROLE_LABEL,
   type AgreementApproverRoleInput,
 } from "@/lib/dashboard/agreement-collaboration-types";
+import { createPublicClientAgreement } from "@/lib/dashboard/public-agreement-client";
 import { useAgreementApprovalHint } from "@/hooks/use-agreement-approval-hint";
 import { fetchAgreementApproverRoles } from "@/lib/supabase/project-agreement-collaboration-repository";
 import { cn, formatDate } from "@/lib/utils";
@@ -377,6 +378,29 @@ function AgreementCard({
           </a>
         </p>
       ) : null}
+
+      {mode === "client" && agreement.publicEnabled && agreement.publicToken ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-surface-muted/20 p-3 text-xs">
+          <Link2 className="h-3.5 w-3.5 shrink-0 text-accent" />
+          <a
+            href={getAgreementPublicUrl(agreement.publicToken)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="break-all text-accent hover:underline"
+          >
+            Link do udostępnienia
+          </a>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => void navigator.clipboard.writeText(getAgreementPublicUrl(agreement.publicToken!))}
+          >
+            <Copy className="mr-1 h-3 w-3" />
+            Kopiuj link
+          </Button>
+        </div>
+      ) : null}
     </AgreementCollapsibleShell>
     </div>
   );
@@ -390,6 +414,7 @@ export function ProjectAgreementsPanel({
   onWarrantyExtensionAccepted,
   onAgreementsChanged,
   focusAgreementId,
+  publicDashboardToken,
 }: {
   projectId: string;
   mode: "team" | "client";
@@ -398,6 +423,7 @@ export function ProjectAgreementsPanel({
   onWarrantyExtensionAccepted?: (warrantyEndsAt: string) => void | Promise<void>;
   onAgreementsChanged?: () => void | Promise<void>;
   focusAgreementId?: string;
+  publicDashboardToken?: string;
 }) {
   const storeAgreements = useProjectAgreementStore(
     (state) => state.byProject[projectId] ?? EMPTY_AGREEMENTS,
@@ -530,6 +556,18 @@ export function ProjectAgreementsPanel({
           await updateAgreement(projectId, editingId, payload);
         }
         await refreshLocalAgreements();
+      } else if (publicDashboardToken) {
+        const created = await createPublicClientAgreement(
+          publicDashboardToken,
+          projectId,
+          payload,
+          authorName,
+        );
+        useProjectAgreementStore.getState().seedProjectAgreements(projectId, [
+          ...(useProjectAgreementStore.getState().byProject[projectId] ?? []),
+          created.agreement,
+        ]);
+        await onAgreementsChanged?.();
       } else {
         await createAgreement(projectId, payload, { name: authorName, side: mode });
       }
@@ -635,7 +673,7 @@ export function ProjectAgreementsPanel({
             ))}
           </div>
         </MobileFiltersPanel>
-        {mode === "team" ? (
+        {mode === "team" || publicDashboardToken ? (
           <Button type="button" size="sm" className="w-full shrink-0 sm:w-auto" onClick={openCreateDialog}>
             <Plus className="mr-2 h-4 w-4" />
             Nowe ustalenie

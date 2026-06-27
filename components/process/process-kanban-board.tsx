@@ -53,12 +53,14 @@ export function ProcessKanbanBoard({
   authorSide,
   authorName,
   showPublicLink = false,
+  embedded = false,
 }: {
   projectProcessItemId: string;
   templatePayload: KanbanTemplatePayload | unknown;
   authorSide: KanbanAuthorSide;
   authorName: string;
   showPublicLink?: boolean;
+  embedded?: boolean;
 }) {
   const cachedBoard = useKanbanCacheStore((state) => state.boardsByItemId[projectProcessItemId]);
   const ensureBoard = useKanbanCacheStore((state) => state.ensureBoard);
@@ -82,6 +84,7 @@ export function ProcessKanbanBoard({
   const [accessSaving, setAccessSaving] = useState(false);
   const [accessMessage, setAccessMessage] = useState<string | null>(null);
   const [accessError, setAccessError] = useState<string | null>(null);
+  const [publicLinkOpen, setPublicLinkOpen] = useState(!embedded);
   const [filters, setFilters] = useState<KanbanBoardFilters>({ priority: "all", assignee: "all" });
   const [sortMode, setSortMode] = useState<KanbanColumnSortMode>("position");
   const fieldOptions = useAppStore((state) => state.fieldOptions);
@@ -250,13 +253,18 @@ export function ProcessKanbanBoard({
     if (!title) {
       return;
     }
-    const dueDate = newTaskDueDates[columnId]?.trim() || null;
+    const dueDateRaw = newTaskDueDates[columnId]?.trim();
+    const dueDate =
+      dueDateRaw && /^\d{4}-\d{2}-\d{2}$/.test(dueDateRaw) ? dueDateRaw : null;
     setAddingTaskColumnId(columnId);
+    setError(null);
     try {
       await createKanbanTask({ columnId, title, dueDate, authorSide, authorName });
       setNewTaskTitles((current) => ({ ...current, [columnId]: "" }));
       setNewTaskDueDates((current) => ({ ...current, [columnId]: "" }));
       await refresh();
+    } catch (addError) {
+      setError(addError instanceof Error ? addError.message : "Nie udało się dodać taska.");
     } finally {
       setAddingTaskColumnId(null);
     }
@@ -325,7 +333,17 @@ export function ProcessKanbanBoard({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       {showPublicLink ? (
-        <div className="grid shrink-0 gap-3 rounded-xl border border-border/70 bg-surface-muted/30 p-3">
+        <div className="grid shrink-0 gap-2 rounded-xl border border-border/70 bg-surface-muted/30 p-3">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between text-left text-sm font-medium text-foreground"
+            onClick={() => setPublicLinkOpen((value) => !value)}
+          >
+            Link publiczny i dostęp klienta
+            <span className="text-xs text-muted">{publicLinkOpen ? "Zwiń" : "Rozwiń"}</span>
+          </button>
+          {publicLinkOpen ? (
+          <div className="grid gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
@@ -409,6 +427,8 @@ export function ProcessKanbanBoard({
             {accessMessage ? <p className="text-xs text-emerald-400">{accessMessage}</p> : null}
             {accessError ? <p className="text-xs text-rose-400">{accessError}</p> : null}
           </div>
+          </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -424,7 +444,14 @@ export function ProcessKanbanBoard({
         onSortModeChange={setSortMode}
       />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 md:flex-row md:overflow-hidden">
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 gap-3 pb-1",
+          embedded
+            ? "flex-row overflow-x-auto overscroll-x-contain"
+            : "flex-col overflow-y-auto md:flex-row md:overflow-hidden",
+        )}
+      >
         {board.columns.map((column) => {
           const columnTasks = getColumnTasks(column.id);
           const tasks = sortKanbanColumnTasks(columnTasks, sortMode);
@@ -435,7 +462,8 @@ export function ProcessKanbanBoard({
             <div
               key={column.id}
               className={cn(
-                "flex min-h-[280px] min-w-0 flex-1 flex-col rounded-2xl border border-border/80 bg-surface-muted/30 md:min-h-0",
+                "flex min-h-[280px] min-w-0 flex-col rounded-2xl border border-border/80 bg-surface-muted/30 md:min-h-0",
+                embedded ? "w-[min(88vw,320px)] shrink-0" : "flex-1",
                 getKanbanColumnDropTargetClasses(isDropTarget),
               )}
               onDragEnter={(event) => {

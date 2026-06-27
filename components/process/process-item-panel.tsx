@@ -118,6 +118,7 @@ export function ProcessItemPanel({
           ) : null}
 
           {item.kind === "kanban" && interactive && instance ? (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <ProcessKanbanBoard
               projectProcessItemId={instance.id}
               templatePayload={
@@ -128,7 +129,9 @@ export function ProcessItemPanel({
               authorSide="team"
               authorName={actorName ?? "Zespół"}
               showPublicLink
+              embedded
             />
+            </div>
           ) : null}
 
           {item.kind === "kanban" && interactive && instance && completed ? (

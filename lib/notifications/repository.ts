@@ -27,7 +27,9 @@ function rowToNotification(row: NotificationRow): UserNotification {
       ? "kanban_mention"
       : row.kind === "warranty_expiring"
         ? "warranty_expiring"
-        : "kanban_new_activity";
+        : row.kind === "agreement_client_created"
+          ? "agreement_client_created"
+          : "kanban_new_activity";
 
   return {
     id: row.id,

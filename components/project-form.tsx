@@ -209,6 +209,10 @@ export function ProjectForm({
   const waitingBlocksSettlement = useWatch({ control, name: "waitingBlocksSettlement" });
   const systemHandoverAt = useWatch({ control, name: "systemHandoverAt" });
   const warrantyDurationMonths = useWatch({ control, name: "warrantyDurationMonths" });
+  const safeWarrantyMonths =
+    typeof warrantyDurationMonths === "number" && Number.isFinite(warrantyDurationMonths)
+      ? warrantyDurationMonths
+      : undefined;
 
   const isWaiting = isWaitingFlowStatus(flowStatus, fieldOptions);
   const waitingFlagCount = countWaitingFlags({
@@ -279,9 +283,19 @@ export function ProjectForm({
       waitingIncreasesCostLater: waiting ? payload.waitingIncreasesCostLater : undefined,
       waitingBlocksSettlement: waiting ? payload.waitingBlocksSettlement : undefined,
       systemHandoverAt: values.systemHandoverAt || undefined,
-      warrantyDurationMonths: values.warrantyDurationMonths || undefined,
+      warrantyDurationMonths:
+        typeof values.warrantyDurationMonths === "number" &&
+        Number.isFinite(values.warrantyDurationMonths)
+          ? values.warrantyDurationMonths
+          : undefined,
       warrantyEndsAt:
-        computeWarrantyEndsAt(values.systemHandoverAt, values.warrantyDurationMonths) || undefined,
+        computeWarrantyEndsAt(
+          values.systemHandoverAt,
+          typeof values.warrantyDurationMonths === "number" &&
+            Number.isFinite(values.warrantyDurationMonths)
+            ? values.warrantyDurationMonths
+            : undefined,
+        ) || undefined,
     });
   }
 
@@ -421,7 +435,7 @@ export function ProjectForm({
               <Input
                 value={formatWarrantyEndDate({
                   systemHandoverAt,
-                  warrantyDurationMonths,
+                  warrantyDurationMonths: safeWarrantyMonths,
                 })}
                 readOnly
                 disabled

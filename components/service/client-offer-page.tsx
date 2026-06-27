@@ -41,6 +41,7 @@ export function ClientOfferPage({ token }: { token: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [negotiationMessage, setNegotiationMessage] = useState("");
+  const [responseNote, setResponseNote] = useState("");
   const [showNegotiation, setShowNegotiation] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
@@ -92,7 +93,7 @@ export function ClientOfferPage({ token }: { token: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action,
-          message: action === "negotiate" ? negotiationMessage : undefined,
+          message: action === "negotiate" ? negotiationMessage : responseNote.trim() || undefined,
         }),
       });
       const payload = await response.json();
@@ -243,6 +244,14 @@ export function ClientOfferPage({ token }: { token: string }) {
                   {CLIENT_OFFER_ACTION_LABELS.reject}
                 </Button>
               </div>
+              <Field label="Notatka (opcjonalnie)">
+                <Textarea
+                  value={responseNote}
+                  onChange={(event) => setResponseNote(event.target.value)}
+                  placeholder="Krótka uwaga przy akceptacji lub odrzuceniu…"
+                  rows={2}
+                />
+              </Field>
               {showNegotiation ? (
                 <div className="grid gap-3 rounded-xl border border-zinc-700 bg-zinc-950/40 p-4">
                   <Field label="Wiadomość do oferty">

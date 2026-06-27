@@ -135,7 +135,7 @@ export async function respondToClientOffer(
 
   const now = new Date().toISOString();
   const offerStatus = offerStatusAfterClientOfferAction(action);
-  const clientMessage = action === "negotiate" ? message?.trim() ?? null : null;
+  const clientMessage = message?.trim() || null;
 
   const updated: ServiceRecord = {
     ...service,
@@ -152,8 +152,7 @@ export async function respondToClientOffer(
       status: offerStatus,
       message: clientMessage,
       respondedAt: now,
-      lastClientMessage:
-        action === "negotiate" ? clientMessage : service.clientOffer.lastClientMessage,
+      lastClientMessage: clientMessage ?? service.clientOffer.lastClientMessage,
     },
     clientOfferAcceptedDocument:
       action === "accept"

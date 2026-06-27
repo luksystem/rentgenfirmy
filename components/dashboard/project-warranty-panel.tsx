@@ -250,14 +250,13 @@ export function ProjectWarrantyPanel({
     setDurationDraft(project.warrantyDurationMonths ? String(project.warrantyDurationMonths) : "");
   }, [project.id, project.systemHandoverAt, project.warrantyDurationMonths]);
 
-  const computedWarrantyEnd = useMemo(
-    () =>
-      computeWarrantyEndsAt(
-        handoverDraft || null,
-        durationDraft ? Number(durationDraft) : null,
-      ),
-    [durationDraft, handoverDraft],
-  );
+  const computedWarrantyEnd = useMemo(() => {
+    const months = durationDraft.trim() ? Number(durationDraft) : null;
+    if (months !== null && !Number.isFinite(months)) {
+      return null;
+    }
+    return computeWarrantyEndsAt(handoverDraft || null, months);
+  }, [durationDraft, handoverDraft]);
 
   const warrantyAgreements = useMemo(() => filterWarrantyAgreements(agreements), [agreements]);
   const warrantyStatus = getWarrantyStatus(project, {

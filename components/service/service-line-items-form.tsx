@@ -1,6 +1,7 @@
 "use client";
 
 import { Field, Textarea } from "@/components/ui/input";
+import { RichTextarea } from "@/components/ui/rich-textarea";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { resolveKilometerZone } from "@/lib/service/kilometer-zone";
 import type { BillableFlags, KilometerZoneSettings, ServiceLineItems } from "@/lib/service/types";
@@ -180,14 +181,14 @@ export function ServiceLineItemsForm({
       </div>
 
       <Field label="Notatka do użytych materiałów">
-        <Textarea
+        <RichTextarea
           value={items.materialsNote}
-          onChange={(e) => patch("materialsNote", e.target.value)}
+          onChange={(value) => patch("materialsNote", value)}
         />
       </Field>
 
       <Field label="Notatka do raportu z prac">
-        <Textarea value={items.workReportNote} onChange={(e) => patch("workReportNote", e.target.value)} />
+        <RichTextarea value={items.workReportNote} onChange={(value) => patch("workReportNote", value)} />
       </Field>
     </div>
   );

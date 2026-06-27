@@ -40,7 +40,7 @@ export function computeWarrantyEndsAt(
 ) {
   const handover = systemHandoverAt?.trim();
   const months = warrantyDurationMonths ?? 0;
-  if (!handover || months <= 0) {
+  if (!handover || !Number.isFinite(months) || months <= 0) {
     return null;
   }
   return addMonthsToDate(handover, months);
@@ -74,7 +74,11 @@ export function isWarrantyExpiringSoon(project: ProjectWarrantyFields, withinDay
 }
 
 export function getProjectDurationDays(project: Pick<Project, "createdAt">, referenceDate = new Date()) {
-  const created = startOfDay(new Date(project.createdAt));
+  const createdRaw = project.createdAt?.slice(0, 10);
+  if (!createdRaw) {
+    return 0;
+  }
+  const created = startOfDay(new Date(`${createdRaw}T12:00:00`));
   const today = startOfDay(referenceDate);
   const diffMs = today.getTime() - created.getTime();
   return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
@@ -82,9 +86,6 @@ export function getProjectDurationDays(project: Pick<Project, "createdAt">, refe
 
 export function formatProjectDuration(project: Pick<Project, "createdAt">) {
   const days = getProjectDurationDays(project);
-  if (days === 0) {
-    return "dzisiaj";
-  }
   if (days === 1) {
     return "1 dzień";
   }

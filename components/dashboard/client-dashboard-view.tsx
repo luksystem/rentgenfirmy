@@ -600,7 +600,7 @@ export function ClientDashboardView({
     return (
       <div className="min-w-0 max-w-full grid gap-4">
         {!readOnly && enableSatisfaction ? (
-          <ProjectSatisfactionSummaryCard bundle={satisfactionBundle} compact />
+          <ProjectSatisfactionSummaryCard bundle={satisfactionBundle} compact subtleStars />
         ) : null}
         <ClientDashboardHome
         client={client}
@@ -670,6 +670,7 @@ export function ClientDashboardView({
           seedAgreements={seedAgreements}
           onAgreementsChanged={notifyAgreementsUpdated}
           focusAgreementId={focusAgreementId}
+          publicDashboardToken={readOnly ? publicDashboardToken : undefined}
           onWarrantyExtensionAccepted={(warrantyEndsAt) =>
             onProjectPatch?.(selectedProject.id, { warrantyEndsAt })
           }

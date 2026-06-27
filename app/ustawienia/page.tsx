@@ -145,10 +145,6 @@ export default function SettingsPage() {
     setSaved(true);
   }
 
-  function handleResetAll() {
-    setDraft(DEFAULT_FIELD_OPTIONS);
-    setSaved(false);
-  }
 
   return (
     <>
@@ -157,14 +153,9 @@ export default function SettingsPage() {
         title="Ustawienia pól"
         description="Edytuj listy rozwijane używane w projektach i przerwaniach. Zmiany zapisują się w Supabase i obowiązują dla całego zespołu."
         action={
-          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-            <Button variant="secondary" onClick={handleResetAll} disabled={isSaving}>
-              Przywróć wszystkie domyślne
-            </Button>
-            <Button onClick={() => void handleSave()} disabled={isSaving}>
-              {isSaving ? "Zapisywanie..." : "Zapisz ustawienia"}
-            </Button>
-          </div>
+          <Button onClick={() => void handleSave()} disabled={isSaving}>
+            {isSaving ? "Zapisywanie..." : "Zapisz ustawienia"}
+          </Button>
         }
       />
 
