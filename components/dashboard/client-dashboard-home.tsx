@@ -12,6 +12,8 @@ import {
   Star,
   Wrench,
 } from "lucide-react";
+import type { ProjectSatisfactionBundle } from "@/lib/dashboard/satisfaction-types";
+import { ProjectSatisfactionSummaryCard } from "@/components/dashboard/project-satisfaction-summary-card";
 import { AgreementSummaryCard } from "@/components/dashboard/agreement-summary-card";
 import { Button } from "@/components/ui/button";
 import {
@@ -372,6 +374,8 @@ export function ClientDashboardHome({
   kanbanPublicHref,
   onOpenKanban,
   enableSatisfactionReview = true,
+  satisfactionBundle = null,
+  showTeamSatisfactionSummary = false,
 }: {
   client: Client;
   project: Project;
@@ -397,6 +401,9 @@ export function ClientDashboardHome({
   kanbanPublicHref?: string | null;
   onOpenKanban?: (href: string) => void;
   enableSatisfactionReview?: boolean;
+  satisfactionBundle?: ProjectSatisfactionBundle | null;
+  /** Kompaktowe podsumowanie ocen na mobile (widok zespołu). */
+  showTeamSatisfactionSummary?: boolean;
 }) {
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const pendingAgreements = agreements.filter(
@@ -432,6 +439,49 @@ export function ClientDashboardHome({
             agreements={agreements}
           />
         </>
+      ) : null}
+
+      <div className={cn("grid gap-3", readOnly ? "xl:order-last" : "order-first xl:order-last")}>
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent xl:hidden">
+          Proces wdrożenia i gwarancja
+        </p>
+        <div className="grid gap-4">
+          <WarrantyHomeCard
+            project={project}
+            agreements={agreements}
+            mode={readOnly ? "client" : "team"}
+            authorName={authorName}
+            seedAgreements={seedAgreements}
+            onWarrantySettingsSave={onWarrantySettingsSave}
+            onWarrantyExtensionAccepted={onWarrantyExtensionAccepted}
+          />
+
+          {progress ? (
+            <ProcessProgressCard
+              progress={progress}
+              onOpenProcess={onOpenTab ? () => onOpenTab("process") : undefined}
+            />
+          ) : (
+            <div className="rounded-2xl border border-border/80 bg-surface p-4">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                <GitBranch className="h-3.5 w-3.5 text-accent" />
+                Proces wdrożenia
+              </p>
+              <p className="mt-2 text-sm text-muted">Proces nie został jeszcze uruchomiony.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {showTeamSatisfactionSummary && satisfactionBundle ? (
+        <div className="xl:hidden">
+          <ProjectSatisfactionSummaryCard
+            bundle={satisfactionBundle}
+            variant="inline"
+            subtleStars
+            className="rounded-2xl border border-border/80 bg-surface-muted/20 px-3 py-2.5"
+          />
+        </div>
       ) : null}
 
       {totalPending > 0 ? (
@@ -590,30 +640,6 @@ export function ClientDashboardHome({
       </div>
       ) : null}
 
-      <WarrantyHomeCard
-        project={project}
-        agreements={agreements}
-        mode={readOnly ? "client" : "team"}
-        authorName={authorName}
-        seedAgreements={seedAgreements}
-        onWarrantySettingsSave={onWarrantySettingsSave}
-        onWarrantyExtensionAccepted={onWarrantyExtensionAccepted}
-      />
-
-      {progress ? (
-        <ProcessProgressCard
-          progress={progress}
-          onOpenProcess={onOpenTab ? () => onOpenTab("process") : undefined}
-        />
-      ) : (
-        <div className="rounded-2xl border border-border/80 bg-surface p-4">
-          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-            <GitBranch className="h-3.5 w-3.5 text-accent" />
-            Proces wdrożenia
-          </p>
-          <p className="mt-2 text-sm text-muted">Proces nie został jeszcze uruchomiony.</p>
-        </div>
-      )}
     </div>
   );
 }

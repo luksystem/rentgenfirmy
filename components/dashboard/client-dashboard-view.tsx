@@ -462,7 +462,12 @@ export function ClientDashboardView({
         <ClientInfoCard client={client} />
         {renderProjectSwitcher()}
         {enableSatisfaction ? (
-          <ProjectSatisfactionSummaryCard bundle={satisfactionBundle} compact subtleStars />
+          <ProjectSatisfactionSummaryCard
+            bundle={satisfactionBundle}
+            compact
+            sidebar
+            subtleStars
+          />
         ) : null}
       </div>
     );
@@ -613,9 +618,6 @@ export function ClientDashboardView({
   function renderHomeSection() {
     return (
       <div className="min-w-0 max-w-full grid gap-4">
-        {!readOnly && enableSatisfaction ? (
-          <ProjectSatisfactionSummaryCard bundle={satisfactionBundle} compact subtleStars />
-        ) : null}
         <ClientDashboardHome
         client={client}
         project={selectedProject}
@@ -650,6 +652,8 @@ export function ClientDashboardView({
         }
         onOpenKanban={onKanbanTokenChange ? handleKanbanNavigate : undefined}
         enableSatisfactionReview={enableSatisfaction}
+        satisfactionBundle={satisfactionBundle}
+        showTeamSatisfactionSummary={!readOnly && enableSatisfaction}
       />
       </div>
     );
@@ -959,24 +963,16 @@ export function ClientDashboardView({
       ) : (
         <>
           <div className="hidden w-full min-w-0 xl:block">
-            {!activeKanbanToken ? renderTabBar(teamMainTabs, "desktop") : null}
-            <div
-              className={cn(
-                "grid w-full gap-4",
-                activeKanbanToken ? "mt-0" : "mt-4 xl:grid-cols-[280px_minmax(0,1fr)]",
-              )}
-            >
-              {!activeKanbanToken ? (
-                <aside className="min-w-0 max-w-full self-start overflow-x-hidden">
-                  {renderDataSection()}
-                </aside>
-              ) : null}
+            {renderTabBar(teamMainTabs, "desktop")}
+            <div className="mt-4 grid w-full gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+              <aside className="min-w-0 max-w-full self-start overflow-x-hidden">
+                {renderDataSection()}
+              </aside>
               <section className="min-w-0 overflow-x-hidden">{renderMainArea()}</section>
             </div>
           </div>
           <div className="min-w-0 max-w-full overflow-x-hidden xl:hidden">
-            {!activeKanbanToken ? renderTabBar(teamMainTabs, "mobile-top") : null}
-            {projects.length > 1 && onProjectChange && !activeKanbanToken ? (
+            {projects.length > 1 && onProjectChange ? (
               <div className="mb-4 flex w-full min-w-0 max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1">
                 {projects.map((project) => (
                   <button
@@ -987,7 +983,7 @@ export function ClientDashboardView({
                       "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition",
                       project.id === selectedProjectId
                         ? "border-accent/50 bg-accent/10 text-foreground"
-                        : "border-border/70 text-muted",
+                        : "border-border/70 text-muted hover:border-accent/30 hover:text-foreground",
                     )}
                   >
                     {project.name}
@@ -995,7 +991,10 @@ export function ClientDashboardView({
                 ))}
               </div>
             ) : null}
-            <div className="min-w-0 max-w-full overflow-x-hidden">{renderMainArea()}</div>
+            <div className="min-w-0 max-w-full overflow-x-hidden pb-24">{renderMainArea()}</div>
+            <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40">
+              {renderTabBar(teamMainTabs, "mobile-bottom")}
+            </nav>
           </div>
         </>
       )}
