@@ -6,6 +6,7 @@ import type {
   InternalAcceptanceState,
 } from "@/lib/internal-acceptance/types";
 import { INTERNAL_ACCEPTANCE_RULE_LIBRARY } from "@/lib/internal-acceptance/rule-library";
+import { resolveRulePackItems } from "@/lib/internal-acceptance/rule-pack-resolver";
 import { computeInternalAcceptanceSummary } from "@/lib/internal-acceptance/quality-gate";
 import type { InternalAcceptanceTemplateConfig } from "@/lib/internal-acceptance/template-config";
 
@@ -63,20 +64,31 @@ function generateFromRuleLibrary(
   input: InternalAcceptanceGenerationInput,
   ruleSets: InternalAcceptanceSourceRuleSet[],
   startSortOrder: number,
+  templateConfig?: InternalAcceptanceTemplateConfig | null,
 ): InternalAcceptanceGeneratedItem[] {
   const items: InternalAcceptanceGeneratedItem[] = [];
   const seenKeys = new Set<string>();
   let sortOrder = startSortOrder;
 
   for (const ruleSet of ruleSets) {
+    const packItems = resolveRulePackItems(
+      ruleSet.id,
+      templateConfig?.rulePackCustomizations?.[ruleSet.id],
+    );
+
     if (ruleSet.sourceType === "company_standard") {
-      for (const template of ruleSet.items) {
+      for (const template of packItems) {
         appendUnique(
           items,
           seenKeys,
           {
-            ...template,
-            itemKey: buildItemKey(ruleSet.id, template.id),
+            id: template.id,
+            name: template.name,
+            description: template.description,
+            category: template.category,
+            priority: template.priority,
+            mandatory: template.mandatory,
+            itemKey: buildItemKey(ruleSet.id, template.resolvedId),
             source: { type: "company_standard", refLabel: "Standardy firmy" },
           },
           sortOrder,
@@ -89,13 +101,18 @@ function generateFromRuleLibrary(
     if (ruleSet.sourceType === "specification") {
       for (const spec of input.specificationItems) {
         if (!matchesRuleSet(ruleSet, spec.title, spec.category)) continue;
-        for (const template of ruleSet.items) {
+        for (const template of packItems) {
           appendUnique(
             items,
             seenKeys,
             {
-              ...template,
-              itemKey: buildItemKey(ruleSet.id, template.id, spec.id),
+              id: template.id,
+              name: template.name,
+              description: template.description,
+              category: template.category,
+              priority: template.priority,
+              mandatory: template.mandatory,
+              itemKey: buildItemKey(ruleSet.id, template.resolvedId, spec.id),
               source: {
                 type: "specification",
                 refId: spec.id,
@@ -114,13 +131,18 @@ function generateFromRuleLibrary(
       for (const agreement of input.agreements) {
         const haystack = `${agreement.title} ${agreement.body ?? ""}`;
         if (!matchesRuleSet(ruleSet, haystack, agreement.category)) continue;
-        for (const template of ruleSet.items) {
+        for (const template of packItems) {
           appendUnique(
             items,
             seenKeys,
             {
-              ...template,
-              itemKey: buildItemKey(ruleSet.id, template.id, agreement.id),
+              id: template.id,
+              name: template.name,
+              description: template.description,
+              category: template.category,
+              priority: template.priority,
+              mandatory: template.mandatory,
+              itemKey: buildItemKey(ruleSet.id, template.resolvedId, agreement.id),
               source: {
                 type: "agreement",
                 refId: agreement.id,
@@ -204,7 +226,7 @@ function generateFromTemplateConfig(
       return true;
     });
 
-  const ruleItems = generateFromRuleLibrary(input, enabledRuleSets, 2000);
+  const ruleItems = generateFromRuleLibrary(input, enabledRuleSets, 2000, config);
   for (const item of ruleItems) {
     appendUnique(items, seenKeys, item, item.sortOrder ?? 9999);
   }

@@ -248,3 +248,7 @@ function tabletItems(): InternalAcceptanceRuleTemplate[] {
     rule("tablet-connection", "Połączenie z systemem", "Stałe połączenie z BMS.", "Aplikacja", "critical", true),
   ];
 }
+
+export function getInternalAcceptanceRuleSetById(id: string) {
+  return INTERNAL_ACCEPTANCE_RULE_LIBRARY.find((entry) => entry.id === id) ?? null;
+}

@@ -1,13 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { InternalAcceptanceRulePackEditor } from "@/components/process/internal-acceptance-rule-pack-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { INTERNAL_ACCEPTANCE_CATEGORIES } from "@/lib/internal-acceptance/types";
 import { getRulePacksBySourceType } from "@/lib/internal-acceptance/rule-pack-meta";
+import { packCustomizationItemCount } from "@/lib/internal-acceptance/rule-pack-resolver";
 import {
+  getRulePackCustomization,
   withStaticItemPositions,
   type InternalAcceptanceTemplateConfig,
   type InternalAcceptanceTemplateStaticItem,
@@ -46,6 +49,7 @@ export function InternalAcceptanceTemplateEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expandedPackId, setExpandedPackId] = useState<string | null>(null);
 
   const companyPacks = useMemo(() => getRulePacksBySourceType("company_standard"), []);
   const specificationPacks = useMemo(() => getRulePacksBySourceType("specification"), []);
@@ -118,9 +122,19 @@ export function InternalAcceptanceTemplateEditor({
     setMessage(null);
     setError(null);
     try {
+      const normalizedRulePackCustomizations = Object.fromEntries(
+        Object.entries(config.rulePackCustomizations).map(([packId, customization]) => [
+          packId,
+          {
+            ...customization,
+            extraItems: withStaticItemPositions(customization.extraItems),
+          },
+        ]),
+      );
       const normalized = {
         ...config,
         staticItems: withStaticItemPositions(config.staticItems),
+        rulePackCustomizations: normalizedRulePackCustomizations,
       };
       await onSave(normalized);
       setConfig(normalized);
@@ -145,47 +159,79 @@ export function InternalAcceptanceTemplateEditor({
         {packs.map((pack) => {
           const enabled = config.enabledRulePackIds.includes(pack.id);
           const orderIndex = config.enabledRulePackIds.indexOf(pack.id);
+          const customization = getRulePackCustomization(config, pack.id);
+          const activeItemCount = packCustomizationItemCount(pack.id, customization);
+          const expanded = expandedPackId === pack.id;
           return (
             <div
               key={pack.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-surface-muted/20 px-3 py-2.5"
+              className="rounded-xl border border-border/70 bg-surface-muted/20 px-3 py-2.5"
             >
-              <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-3">
-                <input
-                  type="checkbox"
-                  className="mt-1"
-                  checked={enabled}
-                  disabled={disabled}
-                  onChange={(event) => toggleRulePack(pack.id, event.target.checked)}
-                />
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium text-foreground">{pack.label}</span>
-                  <span className="block text-xs text-muted">{pack.itemCount} punktów w pakiecie</span>
-                </span>
-              </label>
-              {enabled ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={enabled}
+                    disabled={disabled}
+                    onChange={(event) => toggleRulePack(pack.id, event.target.checked)}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-foreground">{pack.label}</span>
+                    <span className="block text-xs text-muted">
+                      {activeItemCount} aktywnych punktów
+                      {customization.extraItems.length
+                        ? ` · ${customization.extraItems.length} własnych`
+                        : ""}
+                    </span>
+                  </span>
+                </label>
                 <div className="flex shrink-0 gap-1">
                   <Button
                     type="button"
                     size="sm"
                     variant="secondary"
-                    disabled={orderIndex <= 0}
-                    onClick={() => moveRulePack(pack.id, "up")}
-                    aria-label="Przesuń pakiet w górę"
+                    onClick={() => setExpandedPackId(expanded ? null : pack.id)}
                   >
-                    <ArrowUp className="h-3.5 w-3.5" />
+                    {expanded ? (
+                      <ChevronDown className="mr-1 h-3.5 w-3.5" />
+                    ) : (
+                      <ChevronRight className="mr-1 h-3.5 w-3.5" />
+                    )}
+                    Edytuj punkty
                   </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={orderIndex >= config.enabledRulePackIds.length - 1}
-                    onClick={() => moveRulePack(pack.id, "down")}
-                    aria-label="Przesuń pakiet w dół"
-                  >
-                    <ArrowDown className="h-3.5 w-3.5" />
-                  </Button>
+                  {enabled ? (
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={orderIndex <= 0}
+                        onClick={() => moveRulePack(pack.id, "up")}
+                        aria-label="Przesuń pakiet w górę"
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={orderIndex >= config.enabledRulePackIds.length - 1}
+                        onClick={() => moveRulePack(pack.id, "down")}
+                        aria-label="Przesuń pakiet w dół"
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </Button>
+                    </>
+                  ) : null}
                 </div>
+              </div>
+              {expanded ? (
+                <InternalAcceptanceRulePackEditor
+                  packId={pack.id}
+                  config={config}
+                  onChange={setConfig}
+                />
               ) : null}
             </div>
           );
@@ -400,7 +446,7 @@ export function InternalAcceptanceTemplateEditor({
           <div>
             <h2 className="text-lg font-semibold text-foreground">Pakiety reguł firmy</h2>
             <p className="mt-1 text-sm text-muted">
-              Standardowe zestawy QA — zawsze dostępne niezależnie od specyfikacji projektu.
+              Standardowe zestawy QA — edytuj punkty w pakiecie, dodawaj własne lub wyłączaj zbędne.
             </p>
           </div>
           {renderRulePackList(companyPacks, false)}
