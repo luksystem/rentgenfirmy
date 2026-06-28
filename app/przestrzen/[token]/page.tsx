@@ -30,6 +30,8 @@ type PublicDashboardPayload = {
   content: ProjectDashboardContent[];
   credentials: import("@/lib/dashboard/system-credentials-types").SystemCredentialMeta[];
   pendingAgreementsCount: number;
+  pendingOffersCount: number;
+  offers: import("@/lib/dashboard/client-offer-summary").ClientOfferSummary[];
   kanbanPublicLinks: Record<string, string>;
   features: {
     agreements: boolean;
@@ -38,6 +40,7 @@ type PublicDashboardPayload = {
     satisfaction: boolean;
     content: boolean;
     credentials: boolean;
+    offers: boolean;
   };
   authRequired?: boolean;
   access?: DashboardPublicAccessInfo;
@@ -112,6 +115,8 @@ function PublicDashboardPageContent() {
     import("@/lib/dashboard/system-credentials-types").SystemCredentialMeta[]
   >([]);
   const [kanbanPublicLinks, setKanbanPublicLinks] = useState<Record<string, string>>({});
+  const [offers, setOffers] = useState<PublicDashboardPayload["offers"]>([]);
+  const [pendingOffersCount, setPendingOffersCount] = useState(0);
   const [features, setFeatures] = useState({
     agreements: false,
     specification: false,
@@ -119,6 +124,7 @@ function PublicDashboardPageContent() {
     satisfaction: false,
     content: false,
     credentials: false,
+    offers: false,
   });
   const [access, setAccess] = useState<DashboardPublicAccessInfo>(DEFAULT_ACCESS);
   const [contextTitle, setContextTitle] = useState<string | null>(null);
@@ -153,6 +159,8 @@ function PublicDashboardPageContent() {
     setContent(payload.content);
     setCredentials(payload.credentials ?? []);
     setKanbanPublicLinks(payload.kanbanPublicLinks ?? {});
+    setOffers(payload.offers ?? []);
+    setPendingOffersCount(payload.pendingOffersCount ?? 0);
     setFeatures(payload.features);
     setSelectedProjectId(payload.initialProjectId);
     setAuthenticated(true);
@@ -398,6 +406,8 @@ function PublicDashboardPageContent() {
           template={template}
           processProgress={processProgress}
           seedAgreements={features.agreements ? agreements : undefined}
+          seedOffers={features.offers ? offers : undefined}
+          pendingOffersCount={pendingOffersCount}
           seedSpecificationItems={features.specification ? specificationItems : undefined}
           seedTrades={features.trades ? trades : undefined}
           seedSatisfaction={features.satisfaction ? (satisfaction ?? undefined) : undefined}
@@ -409,6 +419,7 @@ function PublicDashboardPageContent() {
           enableContent={features.content}
           clientAuthorName={client.fullName}
           enableAgreements={features.agreements}
+          enableOffers={features.offers}
           enableSpecification={features.specification}
           enableTrades={features.trades}
           enableSatisfaction={features.satisfaction}

@@ -25,6 +25,19 @@ export function buildGoogleMapsSearchUrl(address: string) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
+export function buildGoogleMapsDirectionsUrl(address: string) {
+  const query = address.trim();
+  if (!query) {
+    return null;
+  }
+
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
+}
+
+export function buildGoogleMapsDirectionsUrlFromCoords(lat: number, lng: number) {
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+}
+
 export function getClientGoogleMapsUrl(client: Pick<
   Client,
   "addressStreet" | "addressCity" | "addressPostalCode" | "location"

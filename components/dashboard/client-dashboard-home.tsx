@@ -8,6 +8,7 @@ import {
   ExternalLink,
   GitBranch,
   LayoutGrid,
+  Receipt,
   Shield,
   Star,
   Wrench,
@@ -33,6 +34,7 @@ import {
 } from "@/lib/dashboard/agreement-types";
 import {
   formatWarrantyEndDate,
+  formatProjectDuration,
   getWarrantyStatus,
   hasPendingWarrantyExtension,
 } from "@/lib/project/warranty";
@@ -59,11 +61,14 @@ const warrantyCardToneClass: Record<ReturnType<typeof getWarrantyStatus>["tone"]
 
 function ProcessProgressCard({
   progress,
+  project,
   onOpenProcess,
 }: {
   progress: { percent: number; completed: number; total: number };
+  project: Project;
   onOpenProcess?: () => void;
 }) {
+  const durationLabel = formatProjectDuration(project);
   const radius = 46;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (progress.percent / 100) * circumference;
@@ -108,6 +113,12 @@ function ProcessProgressCard({
             <span className="font-semibold">{progress.completed}</span>
             <span className="text-muted"> / {progress.total} elementów ukończonych</span>
           </p>
+          {durationLabel !== "—" ? (
+            <p className="mt-1 text-xs text-muted">
+              Czas trwania projektu:{" "}
+              <span className="font-medium text-foreground/90">{durationLabel}</span>
+            </p>
+          ) : null}
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-muted">
             <div
               className="h-full rounded-full bg-accent transition-all"
@@ -362,6 +373,7 @@ export function ClientDashboardHome({
   progress,
   agreements,
   pendingAgreementsCount,
+  pendingOffersCount = 0,
   pendingWarrantyCount,
   onOpenTab,
   clientSpace = null,
@@ -385,8 +397,9 @@ export function ClientDashboardHome({
   progress: { percent: number; completed: number; total: number } | null;
   agreements: ProjectClientAgreement[];
   pendingAgreementsCount: number;
+  pendingOffersCount?: number;
   pendingWarrantyCount: number;
-  onOpenTab?: (tab: "agreements" | "process" | "home" | "satisfaction") => void;
+  onOpenTab?: (tab: "agreements" | "offers" | "process" | "home" | "satisfaction") => void;
   clientSpace?: DashboardSpace | null;
   /** Panel włączania linku publicznego dashboardu — tylko widok zespołu. */
   showPublicLinkPanel?: boolean;
@@ -459,6 +472,7 @@ export function ClientDashboardHome({
           {progress ? (
             <ProcessProgressCard
               progress={progress}
+              project={project}
               onOpenProcess={onOpenTab ? () => onOpenTab("process") : undefined}
             />
           ) : (
@@ -481,6 +495,33 @@ export function ClientDashboardHome({
             subtleStars
             className="rounded-2xl border border-border/80 bg-surface-muted/20 px-3 py-2.5"
           />
+        </div>
+      ) : null}
+
+      {readOnly && pendingOffersCount > 0 ? (
+        <div className="rounded-2xl border border-sky-500/40 bg-sky-500/10 p-4">
+          <div className="flex items-start gap-3">
+            <Receipt className="mt-0.5 h-5 w-5 shrink-0 text-sky-200" />
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-sky-100">Nowa oferta do akceptacji</p>
+              <p className="mt-1 text-sm text-sky-200/90">
+                {pendingOffersCount === 1
+                  ? "Przygotowano 1 ofertę serwisową — sprawdź szczegóły i zaakceptuj lub odrzuć."
+                  : `Przygotowano ${pendingOffersCount} oferty serwisowe — sprawdź szczegóły i zaakceptuj lub odrzuć.`}
+              </p>
+              {onOpenTab ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="mt-3"
+                  onClick={() => onOpenTab("offers")}
+                >
+                  Przejdź do ofert
+                </Button>
+              ) : null}
+            </div>
+          </div>
         </div>
       ) : null}
 
@@ -633,12 +674,10 @@ export function ClientDashboardHome({
         </div>
       ) : null}
 
-      {readOnly ? (
       <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
         <h2 className="mb-3 text-base font-semibold text-foreground">Dane projektu</h2>
         <ClientProjectSummary project={project} compact excludeWarrantyFields />
       </div>
-      ) : null}
 
     </div>
   );

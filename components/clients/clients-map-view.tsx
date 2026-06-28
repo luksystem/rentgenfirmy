@@ -2,13 +2,26 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { LayoutDashboard, LayoutGrid, Loader2, MapPin, FolderKanban } from "lucide-react";
+import {
+  LayoutDashboard,
+  LayoutGrid,
+  Loader2,
+  Mail,
+  MapPin,
+  Navigation,
+  Phone,
+  FolderKanban,
+} from "lucide-react";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
 import { clientHasGeocodableAddress, formatClientAddress, buildClientGeocodeFingerprint } from "@/lib/clients/client-location";
 import { geocodeClientsSequential } from "@/lib/clients/geocode-client";
 import { getSmartHomeMarkerIcon } from "@/lib/clients/smart-home-marker-icon";
+import {
+  buildGoogleMapsDirectionsUrl,
+  buildGoogleMapsDirectionsUrlFromCoords,
+} from "@/lib/dashboard/google-maps";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAppStore } from "@/store/app-store";
@@ -46,18 +59,57 @@ function ClientMapPopup({
   client,
   projects,
   address,
+  lat,
+  lng,
 }: {
   client: Client;
   projects: Project[];
   address: string;
+  lat: number;
+  lng: number;
 }) {
+  const directionsUrl =
+    buildGoogleMapsDirectionsUrlFromCoords(lat, lng) ??
+    buildGoogleMapsDirectionsUrl(address);
+
   return (
     <div className="min-w-[220px] max-w-[280px] text-sm text-foreground">
       <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600">Smart Home / BMS</p>
       <p className="mt-1 text-base font-semibold leading-snug">{client.fullName}</p>
       {address ? <p className="mt-1 text-xs leading-relaxed text-muted">{address}</p> : null}
 
+      {client.phone || client.email ? (
+        <div className="mt-3 grid gap-2">
+          {client.phone ? (
+            <a
+              href={`tel:${client.phone}`}
+              className="flex items-center gap-2 rounded-lg border border-border/70 bg-surface-muted/40 px-2.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40 hover:bg-accent/5"
+            >
+              <Phone className="h-4 w-4 shrink-0 text-accent" />
+              <span className="min-w-0 break-all">{client.phone}</span>
+            </a>
+          ) : null}
+          {client.email ? (
+            <a
+              href={`mailto:${client.email}`}
+              className="flex items-center gap-2 rounded-lg border border-border/70 bg-surface-muted/40 px-2.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40 hover:bg-accent/5"
+            >
+              <Mail className="h-4 w-4 shrink-0 text-accent" />
+              <span className="min-w-0 break-all">{client.email}</span>
+            </a>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="mt-3 flex flex-wrap gap-2">
+        {directionsUrl ? (
+          <Button type="button" size="sm" variant="outline" className="h-8" asChild>
+            <a href={directionsUrl} target="_blank" rel="noopener noreferrer">
+              <Navigation className="mr-1.5 h-3.5 w-3.5" />
+              Wyznacz trasę
+            </a>
+          </Button>
+        ) : null}
         <Button type="button" size="sm" className="h-8" asChild>
           <Link href={`/przestrzenie/klient/${client.id}`}>
             <LayoutDashboard className="mr-1.5 h-3.5 w-3.5" />
@@ -101,8 +153,7 @@ function ClientMapPopup({
   );
 }
 
-export function ClientsMapView() {
-  const clients = useAppStore((state) => state.clients);
+export function ClientsMapView({ clients }: { clients: Client[] }) {
   const projects = useAppStore((state) => state.projects);
   const [placedClients, setPlacedClients] = useState<PlacedClient[]>([]);
   const [activeClientId, setActiveClientId] = useState<string | null>(null);
@@ -245,6 +296,8 @@ export function ClientsMapView() {
                   client={entry.client}
                   projects={projectsByClient.get(entry.client.id) ?? []}
                   address={formatClientAddress(entry.client) || entry.label}
+                  lat={entry.lat}
+                  lng={entry.lng}
                 />
               </Popup>
             </Marker>

@@ -36,6 +36,21 @@ export async function fetchServices(): Promise<ServiceRecord[]> {
   return (data ?? []).map(rowToService);
 }
 
+export async function fetchServicesByClientId(clientId: string): Promise<ServiceRecord[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("services")
+    .select("*")
+    .eq("client_id", clientId)
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map(rowToService);
+}
+
 export async function fetchServiceSettings(): Promise<ServiceGlobalSettings> {
   const supabase = getSupabase();
   const { data, error } = await supabase

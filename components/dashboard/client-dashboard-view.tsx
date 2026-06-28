@@ -13,6 +13,7 @@ import {
   KeyRound,
   LayoutGrid,
   Link2,
+  Receipt,
   Star,
 } from "lucide-react";
 import { ProjectAgreementsPanel } from "@/components/dashboard/project-agreements-panel";
@@ -23,6 +24,7 @@ import { ProjectSpecificationPanel } from "@/components/dashboard/project-specif
 import { ProjectTradesPanel } from "@/components/dashboard/project-trades-panel";
 import { StageSatisfactionPrompt } from "@/components/dashboard/stage-satisfaction-prompt";
 import { ClientProjectSettingsPanel } from "@/components/dashboard/client-project-settings-panel";
+import { ClientOffersPanel } from "@/components/dashboard/client-offers-panel";
 import { ClientDashboardHome } from "@/components/dashboard/client-dashboard-home";
 import { ClientDashboardOverview } from "@/components/dashboard/client-dashboard-overview";
 import { ClientInfoCard } from "@/components/dashboard/client-info-card";
@@ -31,6 +33,8 @@ import { ProcessPipeline } from "@/components/process/process-pipeline";
 import { PublicKanbanEmbedded } from "@/components/process/public-kanban-embedded";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ClientProjectSummary } from "@/components/dashboard/client-project-summary";
+import type { ClientOfferSummary } from "@/lib/dashboard/client-offer-summary";
 import type { ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
 import { isAgreementPendingAttention } from "@/lib/dashboard/agreement-types";
 import type { ProjectDashboardContent } from "@/lib/dashboard/content-types";
@@ -40,6 +44,7 @@ import type { ProjectSatisfactionBundle } from "@/lib/dashboard/satisfaction-typ
 import type { SystemCredentialMeta } from "@/lib/dashboard/system-credentials-types";
 import type { DashboardSpace } from "@/lib/dashboard/types";
 import { getProcessProgress } from "@/lib/process/types";
+import { formatProjectDuration } from "@/lib/project/warranty";
 import { extractKanbanTokenFromPublicPath } from "@/lib/process/kanban-public-path";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import { fetchProjectKanbanPublicLinks } from "@/lib/supabase/kanban-repository";
@@ -64,6 +69,7 @@ type ClientDashboardTab =
   | "overview"
   | "process"
   | "agreements"
+  | "offers"
   | "specification"
   | "trades"
   | "satisfaction"
@@ -81,6 +87,7 @@ const PUBLIC_CLIENT_TAB_CONFIG: Array<{
   { id: "home", label: "HOME", icon: Home },
   { id: "process", label: "Proces", icon: GitBranch },
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
+  { id: "offers", label: "Oferty", icon: Receipt },
   { id: "specification", label: "Specyfikacja", icon: FileText },
   { id: "trades", label: "Branże", icon: HardHat },
   { id: "satisfaction", label: "Ocena", icon: Star },
@@ -96,6 +103,7 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "home", label: "HOME", icon: Home },
   { id: "process", label: "Proces", icon: GitBranch },
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
+  { id: "offers", label: "Oferty", icon: Receipt },
   { id: "specification", label: "Specyfikacja", icon: FileText },
   { id: "trades", label: "Branże", icon: HardHat },
   { id: "satisfaction", label: "Ocena", icon: Star },
@@ -128,6 +136,7 @@ export function ClientDashboardView({
   clientAuthorName = "Klient",
   teamAuthorName = "Zespół",
   enableAgreements = true,
+  enableOffers = true,
   enableSpecification = true,
   enableTrades = true,
   enableSatisfaction = true,
@@ -135,6 +144,7 @@ export function ClientDashboardView({
   enableContent = true,
   processProgress,
   seedAgreements,
+  seedOffers,
   seedSpecificationItems,
   seedTrades,
   seedSatisfaction,
@@ -148,6 +158,7 @@ export function ClientDashboardView({
   publicDashboardToken,
   initialTab,
   focusAgreementId,
+  pendingOffersCount = 0,
 }: {
   client: Client;
   projects: Project[];
@@ -161,6 +172,7 @@ export function ClientDashboardView({
   clientAuthorName?: string;
   teamAuthorName?: string;
   enableAgreements?: boolean;
+  enableOffers?: boolean;
   enableSpecification?: boolean;
   enableTrades?: boolean;
   enableSatisfaction?: boolean;
@@ -168,6 +180,8 @@ export function ClientDashboardView({
   enableContent?: boolean;
   processProgress?: { percent: number; completed: number; total: number } | null;
   seedAgreements?: ProjectClientAgreement[];
+  seedOffers?: ClientOfferSummary[];
+  pendingOffersCount?: number;
   seedSpecificationItems?: ProjectSpecificationItem[];
   seedTrades?: ProjectTrade[];
   seedSatisfaction?: ProjectSatisfactionBundle;
@@ -396,6 +410,7 @@ export function ClientDashboardView({
 
   const publicClientTabs = PUBLIC_CLIENT_TAB_CONFIG.filter((tab) => {
     if (tab.id === "agreements" && !enableAgreements) return false;
+    if (tab.id === "offers" && !enableOffers) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
     if (tab.id === "trades" && !enableTrades) return false;
     if (tab.id === "satisfaction" && !enableSatisfaction) return false;
@@ -405,6 +420,7 @@ export function ClientDashboardView({
 
   const teamMainTabs = teamTabsWithProject.filter((tab) => {
     if (tab.id === "agreements" && !enableAgreements) return false;
+    if (tab.id === "offers" && !enableOffers) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
     if (tab.id === "trades" && !enableTrades) return false;
     if (tab.id === "satisfaction" && !enableSatisfaction) return false;
@@ -460,6 +476,14 @@ export function ClientDashboardView({
     return (
       <div className="grid min-w-0 gap-4">
         <ClientInfoCard client={client} />
+        <Card className="min-w-0">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Aktywny projekt</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ClientProjectSummary project={selectedProject} compact excludeWarrantyFields />
+          </CardContent>
+        </Card>
         {renderProjectSwitcher()}
         {enableSatisfaction ? (
           <ProjectSatisfactionSummaryCard
@@ -500,6 +524,14 @@ export function ClientDashboardView({
             <p className="mt-1 text-xs text-muted">
               {progress.completed} / {progress.total} elementów ukończonych
             </p>
+            {formatProjectDuration(selectedProject) !== "—" ? (
+              <p className="mt-1 text-xs text-muted">
+                Czas trwania projektu:{" "}
+                <span className="font-medium text-foreground/90">
+                  {formatProjectDuration(selectedProject)}
+                </span>
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -627,6 +659,7 @@ export function ClientDashboardView({
         progress={progress}
         agreements={agreementSource}
         pendingAgreementsCount={pendingOtherAgreementsCount}
+        pendingOffersCount={pendingOffersCount}
         pendingWarrantyCount={pendingWarrantyCount}
         onOpenTab={(tab) => handleSelectTab(tab)}
         clientSpace={clientSpace}
@@ -674,6 +707,19 @@ export function ClientDashboardView({
             : undefined
         }
       />
+    );
+  }
+
+  function renderOffersPanel() {
+    return (
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
+        <ClientOffersPanel
+          clientId={client.id}
+          projectId={selectedProject.id}
+          mode={readOnly ? "client" : "team"}
+          seedOffers={seedOffers}
+        />
+      </div>
     );
   }
 
@@ -771,6 +817,9 @@ export function ClientDashboardView({
   function tabBadgeCount(tabId: ClientDashboardTab) {
     if (tabId === "agreements") {
       return pendingAcceptanceCount;
+    }
+    if (tabId === "offers") {
+      return pendingOffersCount ?? 0;
     }
     return 0;
   }
@@ -909,6 +958,8 @@ export function ClientDashboardView({
         return renderProcessSection();
       case "agreements":
         return enableAgreements ? renderAgreementsPanel() : null;
+      case "offers":
+        return enableOffers ? renderOffersPanel() : null;
       case "specification":
         return enableSpecification ? renderSpecificationPanel() : null;
       case "trades":

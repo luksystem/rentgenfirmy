@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Edit, LayoutDashboard, Plus, Trash2 } from "lucide-react";
 import { ClientForm } from "@/components/client-form";
@@ -18,8 +19,9 @@ import { useAppStore } from "@/store/app-store";
 
 type DialogMode = "create" | "edit" | null;
 
-export function ClientsTable() {
-  const { clients, addClient, updateClient, deleteClient, isSaving } = useAppStore();
+export function ClientsTable({ clients }: { clients: Client[] }) {
+  const router = useRouter();
+  const { addClient, updateClient, deleteClient, isSaving } = useAppStore();
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
@@ -63,13 +65,17 @@ export function ClientsTable() {
     }
   }
 
+  function openClientSpace(clientId: string) {
+    router.push(`/przestrzenie/klient/${clientId}`);
+  }
+
   return (
     <>
       <Card className="overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 p-4">
           <div>
             <p className="font-semibold text-foreground">Lista klientów</p>
-            <p className="text-sm text-muted">{clients.length} klientów w bazie</p>
+            <p className="text-sm text-muted">{clients.length} klientów w widoku</p>
           </div>
           <Button type="button" onClick={openCreate}>
             <Plus className="mr-2 h-4 w-4" />
@@ -89,41 +95,53 @@ export function ClientsTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {clients.map((client) => (
-                <tr key={client.id} className="hover:bg-surface-muted/60">
-                  <td className="px-4 py-3 font-medium">{client.fullName || "—"}</td>
-                  <td className="px-4 py-3">{client.location || "—"}</td>
-                  <td className="px-4 py-3">
-                    {[client.email, client.phone].filter(Boolean).join(" · ") || "—"}
-                  </td>
-                  <td className="px-4 py-3">{client.externalId || "—"}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <Button type="button" variant="outline" size="sm" asChild>
-                        <Link href={`/przestrzenie/klient/${client.id}`} title="Dashboard klienta">
-                          <LayoutDashboard className="h-3.5 w-3.5" />
-                        </Link>
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => openEdit(client)}
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => void handleDelete(client.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+              {clients.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-muted">
+                    Brak klientów pasujących do filtrów.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                clients.map((client) => (
+                  <tr
+                    key={client.id}
+                    className="cursor-pointer hover:bg-surface-muted/60"
+                    onClick={() => openClientSpace(client.id)}
+                  >
+                    <td className="px-4 py-3 font-medium">{client.fullName || "—"}</td>
+                    <td className="px-4 py-3">{client.location || "—"}</td>
+                    <td className="px-4 py-3">
+                      {[client.email, client.phone].filter(Boolean).join(" · ") || "—"}
+                    </td>
+                    <td className="px-4 py-3">{client.externalId || "—"}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2" onClick={(event) => event.stopPropagation()}>
+                        <Button type="button" variant="outline" size="sm" asChild>
+                          <Link href={`/przestrzenie/klient/${client.id}`} title="Dashboard klienta">
+                            <LayoutDashboard className="h-3.5 w-3.5" />
+                          </Link>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => openEdit(client)}
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => void handleDelete(client.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

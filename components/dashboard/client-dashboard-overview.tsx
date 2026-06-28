@@ -8,7 +8,7 @@ import {
   isAgreementPendingAttention,
   type ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";
-import { formatWarrantyEndDate, getWarrantyStatus } from "@/lib/project/warranty";
+import { formatProjectDuration, formatWarrantyEndDate, getWarrantyStatus } from "@/lib/project/warranty";
 import type { Project } from "@/lib/types";
 
 export function ClientDashboardOverview({
@@ -29,6 +29,7 @@ export function ClientDashboardOverview({
   readOnly?: boolean;
 }) {
   const warrantyStatus = getWarrantyStatus(project);
+  const projectDurationLabel = formatProjectDuration(project);
   const pendingAgreements = agreements.filter(
     (entry) => entry.category !== "warranty" && isAgreementPendingAttention(entry),
   );
@@ -148,6 +149,12 @@ export function ClientDashboardOverview({
               <p className="mt-1 text-sm text-muted">
                 {progress.completed} / {progress.total} elementów ukończonych
               </p>
+              {projectDurationLabel !== "—" ? (
+                <p className="mt-1 text-sm text-muted">
+                  Czas trwania projektu:{" "}
+                  <span className="font-medium text-foreground/90">{projectDurationLabel}</span>
+                </p>
+              ) : null}
             </>
           ) : (
             <p className="mt-2 text-sm text-muted">Brak uruchomionego procesu</p>

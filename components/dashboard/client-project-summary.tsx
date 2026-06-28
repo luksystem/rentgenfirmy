@@ -10,7 +10,7 @@ import {
   getWarrantyStatus,
 } from "@/lib/project/warranty";
 import type { Project } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 
 export function ClientProjectSummary({
   project,
@@ -30,6 +30,7 @@ export function ClientProjectSummary({
   const rows = [
     { label: "Projekt", value: project.name },
     { label: "Typ", value: project.type },
+    { label: "Data rozpoczęcia", value: formatDate(project.createdAt) },
     { label: "Czas trwania", value: formatProjectDuration(project) },
     ...(excludeWarrantyFields
       ? []
@@ -67,7 +68,7 @@ export function ClientProjectSummary({
         </button>
         {expanded ? (
           <div className="grid grid-cols-1 gap-2 border-t border-border/60 px-4 py-3">
-            {rows.slice(2).map((row) => (
+            {rows.slice(3).map((row) => (
               <div key={row.label} className="min-w-0">
                 <p className="text-[10px] uppercase tracking-wide text-muted">{row.label}</p>
                 <p className="break-words text-sm text-foreground">{row.value}</p>

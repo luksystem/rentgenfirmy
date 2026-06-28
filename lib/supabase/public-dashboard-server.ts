@@ -10,6 +10,11 @@ import type {
   ProjectAgreementStatus,
   ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";
+import {
+  buildClientOfferSummaries,
+  countPendingClientOffers,
+  type ClientOfferSummary,
+} from "@/lib/dashboard/client-offer-summary";
 import { isAgreementPendingAttention } from "@/lib/dashboard/agreement-types";
 import type {
   DashboardContentSection,
@@ -30,6 +35,10 @@ import {
   listProjectSystemCredentials,
   systemCredentialsTableExists,
 } from "@/lib/supabase/project-system-credentials-server";
+import {
+  fetchServicesByClientIdServer,
+  servicesTableExists,
+} from "@/lib/supabase/service-repository-server";
 import { getProcessProgress } from "@/lib/process/types";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import type { Client } from "@/lib/service/types";
@@ -416,6 +425,8 @@ export type PublicDashboardPayload = {
   content: ProjectDashboardContent[];
   credentials: SystemCredentialMeta[];
   pendingAgreementsCount: number;
+  pendingOffersCount: number;
+  offers: ClientOfferSummary[];
   kanbanPublicLinks: Record<string, string>;
   features: {
     agreements: boolean;
@@ -424,6 +435,7 @@ export type PublicDashboardPayload = {
     satisfaction: boolean;
     content: boolean;
     credentials: boolean;
+    offers: boolean;
   };
 };
 
@@ -619,7 +631,7 @@ export async function fetchPublicDashboardPayload(
     }
   }
 
-  const [agreementsEnabled, specificationEnabled, tradesEnabled, satisfactionEnabled, contentEnabled, credentialsEnabled] =
+  const [agreementsEnabled, specificationEnabled, tradesEnabled, satisfactionEnabled, contentEnabled, credentialsEnabled, offersEnabled] =
     await Promise.all([
       tableExists("project_client_agreements"),
       tableExists("specification_catalog_items"),
@@ -627,6 +639,7 @@ export async function fetchPublicDashboardPayload(
       satisfactionTablesExist(),
       tableExists("project_dashboard_content"),
       systemCredentialsTableExists(),
+      servicesTableExists(),
     ]);
 
   const [agreements, specificationItems, trades, satisfaction, content, credentials] = initialProjectId
@@ -648,6 +661,14 @@ export async function fetchPublicDashboardPayload(
 
   const pendingAgreementsCount = agreements.filter((entry) => isAgreementPendingAttention(entry)).length;
 
+  const projectNames = new Map(projects.map((project) => [project.id, project.name]));
+  const clientServices = offersEnabled ? await fetchServicesByClientIdServer(clientId) : [];
+  const offers = buildClientOfferSummaries(clientServices, projectNames, {
+    projectId: initialProjectId || undefined,
+    publicOnly: true,
+  });
+  const pendingOffersCount = countPendingClientOffers(offers);
+
   const kanbanPublicLinks = initialProjectId
     ? await fetchKanbanPublicLinksForProject(getSupabaseAdmin(), initialProjectId)
     : {};
@@ -667,6 +688,8 @@ export async function fetchPublicDashboardPayload(
     content,
     credentials,
     pendingAgreementsCount,
+    pendingOffersCount,
+    offers,
     kanbanPublicLinks,
     features: {
       agreements: agreementsEnabled,
@@ -675,6 +698,7 @@ export async function fetchPublicDashboardPayload(
       satisfaction: satisfactionEnabled,
       content: contentEnabled,
       credentials: credentialsEnabled,
+      offers: offersEnabled,
     },
   };
 }
