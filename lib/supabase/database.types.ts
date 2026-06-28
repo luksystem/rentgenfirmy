@@ -598,6 +598,15 @@ export type ProjectProcessItemRow = {
   updated_at: string;
 };
 
+export type ProcessInternalAcceptanceConfigRow = {
+  id: string;
+  process_item_id: string;
+  template_id: string;
+  config: unknown;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ProcessElementKindMetaRow = {
   kind: string;
   label: string;
@@ -880,6 +889,13 @@ export type Database = {
         Insert: Partial<ProjectProcessItemRow> &
           Pick<ProjectProcessItemRow, "project_id" | "template_item_id" | "kind">;
         Update: Partial<ProjectProcessItemRow>;
+        Relationships: [];
+      };
+      process_internal_acceptance_configs: {
+        Row: ProcessInternalAcceptanceConfigRow;
+        Insert: Partial<ProcessInternalAcceptanceConfigRow> &
+          Pick<ProcessInternalAcceptanceConfigRow, "process_item_id" | "template_id" | "config">;
+        Update: Partial<ProcessInternalAcceptanceConfigRow>;
         Relationships: [];
       };
       process_element_kind_meta: {

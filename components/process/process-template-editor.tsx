@@ -286,14 +286,28 @@ export function ProcessTemplateEditor({
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-foreground">{item.title}</p>
                       <p className="text-xs text-muted">
-                        {PROCESS_ITEM_KIND_LABELS[item.kind]}
-                        {item.kind === "checklist" && "lines" in item.defaultPayload && item.defaultPayload.lines.length
+                        {item.isInternalAcceptance
+                          ? "Odbiór wewnętrzny (Quality Gate)"
+                          : PROCESS_ITEM_KIND_LABELS[item.kind]}
+                        {!item.isInternalAcceptance &&
+                        item.kind === "checklist" &&
+                        "lines" in item.defaultPayload &&
+                        item.defaultPayload.lines.length
                           ? ` · ${item.defaultPayload.lines.length} pkt.`
-                          : item.kind === "kanban" && "columns" in item.defaultPayload
+                          : !item.isInternalAcceptance &&
+                              item.kind === "kanban" &&
+                              "columns" in item.defaultPayload
                             ? ` · ${item.defaultPayload.columns.length} kolumn`
                             : ""}
                       </p>
-                      {item.elementId ? (
+                      {item.isInternalAcceptance ? (
+                        <Link
+                          href={`/procesy/${encodeURIComponent(template.projectType)}/odbior/${item.id}`}
+                          className="mt-1 inline-block text-xs text-accent hover:underline"
+                        >
+                          Konfiguruj checklistę odbioru
+                        </Link>
+                      ) : item.elementId ? (
                         <Link
                           href={`/procesy/elementy/${item.elementId}`}
                           className="mt-1 inline-block text-xs text-accent hover:underline"

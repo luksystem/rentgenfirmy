@@ -70,6 +70,8 @@ export type InternalAcceptanceGeneratedItem = InternalAcceptanceRuleTemplate & {
   source: InternalAcceptanceItemSource;
   /** Stabilny klucz punktu w instancji projektu */
   itemKey: string;
+  /** Kolejność generowania — nie zapisywana w stanie projektu. */
+  sortOrder?: number;
 };
 
 export type InternalAcceptanceItemState = InternalAcceptanceGeneratedItem & {
@@ -106,8 +108,9 @@ export type InternalAcceptanceState = {
 };
 
 export type InternalAcceptanceGenerationInput = {
-  specificationItems: Array<{ id: string; title: string; category: string }>;
+  specificationItems: Array<{ id: string; title: string; category: string; description?: string }>;
   agreements: Array<{ id: string; title: string; category: string; body?: string }>;
+  templateConfig?: import("@/lib/internal-acceptance/template-config").InternalAcceptanceTemplateConfig | null;
 };
 
 export const INTERNAL_ACCEPTANCE_STATUS_LABELS: Record<InternalAcceptanceStatus, string> = {

@@ -4,15 +4,20 @@ import type {
   InternalAcceptanceItemState,
   InternalAcceptanceState,
 } from "@/lib/internal-acceptance/types";
+import { fetchInternalAcceptanceTemplateConfigOrDefault } from "@/lib/supabase/internal-acceptance-config-repository";
 import { getSupabase } from "@/lib/supabase/client";
 import { fetchProjectAgreements } from "@/lib/supabase/project-agreement-repository";
 import { fetchProjectSpecificationItems } from "@/lib/supabase/project-specification-repository";
 import { rowToProjectProcessItem } from "@/lib/supabase/process-item-mappers";
 
-export async function loadInternalAcceptanceGenerationInput(projectId: string) {
-  const [specificationItems, agreements] = await Promise.all([
+export async function loadInternalAcceptanceGenerationInput(
+  projectId: string,
+  templateItemId: string,
+) {
+  const [specificationItems, agreements, templateConfig] = await Promise.all([
     fetchProjectSpecificationItems(projectId),
     fetchProjectAgreements(projectId),
+    fetchInternalAcceptanceTemplateConfigOrDefault(templateItemId),
   ]);
 
   return {
@@ -20,6 +25,7 @@ export async function loadInternalAcceptanceGenerationInput(projectId: string) {
       id: item.id,
       title: item.title,
       category: item.category,
+      description: item.description,
     })),
     agreements: agreements
       .filter((item) => item.status === "accepted" || item.status === "pending_client")
@@ -29,6 +35,7 @@ export async function loadInternalAcceptanceGenerationInput(projectId: string) {
         category: item.category,
         body: item.body,
       })),
+    templateConfig,
   };
 }
 
@@ -53,7 +60,7 @@ export async function ensureInternalAcceptanceState(
   }
 
   const instance = rowToProjectProcessItem(data);
-  const input = await loadInternalAcceptanceGenerationInput(projectId);
+  const input = await loadInternalAcceptanceGenerationInput(projectId, templateItemId);
   const state = buildInternalAcceptanceState(input, instance.internalAcceptanceState);
 
   const { error: updateError } = await supabase

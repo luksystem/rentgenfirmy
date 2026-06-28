@@ -133,8 +133,9 @@ export function ProcessElementEditor({
           />
         ) : element.kind === "checklist" && element.isInternalAcceptance ? (
           <p className="rounded-xl border border-accent/30 bg-accent/5 p-3 text-sm text-muted">
-            Punkty kontroli jakości zostaną wygenerowane automatycznie po uruchomieniu odbioru w projekcie
-            (specyfikacja + ustalenia + standardy firmy).
+            Punkty kontroli konfigurujesz w szablonie procesu — po dodaniu elementu do procesu
+            użyj linku „Konfiguruj checklistę odbioru”. W projekcie checklista generuje się ze
+            specyfikacji, ustaleń i zdefiniowanych punktów szablonu.
           </p>
         ) : element.kind === "kanban" ? (
           <KanbanTemplateColumnsEditor
