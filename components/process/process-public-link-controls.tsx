@@ -65,10 +65,19 @@ export function ProcessPublicLinkControls({
   async function handleTogglePublic(enabled: boolean) {
     setError(null);
     try {
-      const { setProcessPublicEnabled } = await import("@/lib/supabase/process-public-access-repository");
-      const { getSupabase } = await import("@/lib/supabase/client");
-      const record = await setProcessPublicEnabled(getSupabase(), projectProcessItemId, enabled);
-      setAccess(record);
+      const response = await fetch("/api/process/public-access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectProcessItemId,
+          enabled,
+        }),
+      });
+      const payload = (await response.json()) as { access?: ProcessPublicAccessRecord; error?: string };
+      if (!response.ok || !payload.access) {
+        throw new Error(payload.error ?? "Nie udało się zmienić dostępu.");
+      }
+      setAccess(payload.access);
     } catch (toggleError) {
       setError(toggleError instanceof Error ? toggleError.message : "Nie udało się zmienić dostępu.");
     }

@@ -26,6 +26,15 @@ create table if not exists public.project_process_item_public_access (
 create index if not exists project_process_item_public_access_token_idx
   on public.project_process_item_public_access (public_token);
 
+alter table public.project_process_item_public_access enable row level security;
+
+drop policy if exists project_process_item_public_access_all on public.project_process_item_public_access;
+create policy project_process_item_public_access_all
+  on public.project_process_item_public_access
+  for all
+  using (true)
+  with check (true);
+
 -- Backfill pozycji szablonu z katalogu elementów.
 update public.process_items pi
 set is_internal_acceptance = coalesce(pe.is_internal_acceptance, false)

@@ -3,6 +3,7 @@ import { requireAuthenticatedProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
 import {
   ensureProcessPublicAccess,
+  setProcessPublicEnabled,
   updateProcessPublicAccessSettings,
 } from "@/lib/supabase/process-public-access-repository";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -30,6 +31,15 @@ export async function POST(request: Request) {
   }
 
   try {
+    if (typeof data.enabled === "boolean") {
+      const access = await setProcessPublicEnabled(
+        getSupabaseAdmin(),
+        projectProcessItemId,
+        data.enabled,
+      );
+      return NextResponse.json({ access });
+    }
+
     const access = await updateProcessPublicAccessSettings({
       projectProcessItemId,
       password:
