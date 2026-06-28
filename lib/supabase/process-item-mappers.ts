@@ -2,6 +2,7 @@ import {
   deriveProcessItemStatus,
   normalizeChecklistPayload,
 } from "@/lib/process/item-payload";
+import type { InternalAcceptanceState } from "@/lib/internal-acceptance/types";
 import type {
   ChecklistItemPayload,
   ProcessItemKind,
@@ -9,6 +10,17 @@ import type {
   ProjectProcessItemStatus,
 } from "@/lib/process/types";
 import type { ProjectProcessItemRow } from "@/lib/supabase/database.types";
+
+function parseInternalAcceptanceState(value: unknown): InternalAcceptanceState | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const candidate = value as InternalAcceptanceState;
+  if (!Array.isArray(candidate.items) || !candidate.summary) {
+    return null;
+  }
+  return candidate;
+}
 
 function isProcessItemKind(value: string): value is ProcessItemKind {
   return value === "checklist" || value === "protocol" || value === "settlement" || value === "kanban";
@@ -34,6 +46,8 @@ export function rowToProjectProcessItem(row: ProjectProcessItemRow): ProjectProc
     kind,
     payload,
     status,
+    isInternalAcceptance: Boolean(row.is_internal_acceptance),
+    internalAcceptanceState: parseInternalAcceptanceState(row.internal_acceptance_state),
     assigneeId: row.assignee_id ?? null,
     assigneeName: row.assignee_name ?? null,
     signedAt: row.signed_at ?? null,

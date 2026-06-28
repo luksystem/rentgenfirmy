@@ -141,6 +141,7 @@ export default function ProjectProcessPage() {
             <ProcessPipeline
               template={template}
               process={process}
+              projectId={project.id}
               itemInstances={itemInstances}
               teamProfiles={teamProfiles}
               currentUserId={profile?.id}

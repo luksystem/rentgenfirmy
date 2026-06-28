@@ -184,6 +184,7 @@ async function insertTemplateStagesGraph(template: ProcessTemplate) {
             title: item.title,
             position: item.position,
             default_payload: item.defaultPayload,
+            is_internal_acceptance: item.isInternalAcceptance ?? false,
           })),
         );
 

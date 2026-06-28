@@ -552,6 +552,7 @@ export type ProcessElementRow = {
   title: string;
   description: string;
   default_payload: unknown;
+  is_internal_acceptance: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -564,6 +565,7 @@ export type ProcessItemRow = {
   title: string;
   position: number;
   default_payload: unknown;
+  is_internal_acceptance: boolean;
   created_at: string;
 };
 
@@ -584,12 +586,38 @@ export type ProjectProcessItemRow = {
   kind: string;
   payload: unknown;
   status: string;
+  is_internal_acceptance: boolean;
+  internal_acceptance_state: unknown;
   assignee_id: string | null;
   assignee_name: string | null;
   signed_at: string | null;
   signed_by: string | null;
   signed_by_name: string | null;
   signature_note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProcessElementKindMetaRow = {
+  kind: string;
+  label: string;
+  description: string;
+  icon: string;
+  supports_public_link: boolean;
+  supports_internal_acceptance: boolean;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectProcessItemPublicAccessRow = {
+  project_process_item_id: string;
+  public_token: string;
+  public_enabled: boolean;
+  public_access_password_hash: string | null;
+  public_access_username: string | null;
+  public_author_name: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -852,6 +880,19 @@ export type Database = {
         Insert: Partial<ProjectProcessItemRow> &
           Pick<ProjectProcessItemRow, "project_id" | "template_item_id" | "kind">;
         Update: Partial<ProjectProcessItemRow>;
+        Relationships: [];
+      };
+      process_element_kind_meta: {
+        Row: ProcessElementKindMetaRow;
+        Insert: Partial<ProcessElementKindMetaRow> & Pick<ProcessElementKindMetaRow, "kind" | "label">;
+        Update: Partial<ProcessElementKindMetaRow>;
+        Relationships: [];
+      };
+      project_process_item_public_access: {
+        Row: ProjectProcessItemPublicAccessRow;
+        Insert: Partial<ProjectProcessItemPublicAccessRow> &
+          Pick<ProjectProcessItemPublicAccessRow, "project_process_item_id">;
+        Update: Partial<ProjectProcessItemPublicAccessRow>;
         Relationships: [];
       };
       process_kanban_boards: {

@@ -10,6 +10,8 @@ export async function middleware(request: NextRequest) {
     isPublicAppRoute(pathname) ||
     pathname.startsWith("/api/oferta/") ||
     pathname.startsWith("/api/kanban/") ||
+    pathname.startsWith("/api/odbior/") ||
+    pathname.startsWith("/api/element/") ||
     pathname.startsWith("/api/przestrzen/") ||
     pathname.startsWith("/api/ustalenie/");
 

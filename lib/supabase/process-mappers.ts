@@ -41,6 +41,7 @@ export function rowToProcessItem(
     title,
     position: row.position,
     defaultPayload,
+    isInternalAcceptance: Boolean(row.is_internal_acceptance ?? element?.isInternalAcceptance),
   };
 }
 

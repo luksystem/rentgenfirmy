@@ -94,6 +94,30 @@ export function ProcessElementEditor({
             ))}
           </Select>
         </Field>
+
+        {element.kind === "checklist" ? (
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/70 bg-surface-muted/30 p-3">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={Boolean(element.isInternalAcceptance)}
+              onChange={(event) =>
+                setElement({
+                  ...element,
+                  isInternalAcceptance: event.target.checked,
+                })
+              }
+            />
+            <span>
+              <span className="block text-sm font-medium text-foreground">Odbiór wewnętrzny (Quality Gate)</span>
+              <span className="mt-1 block text-xs text-muted">
+                Dynamiczna tablica odbiorowa generowana ze specyfikacji projektu, ustaleń i standardów firmy.
+                Punkty checklisty poniżej są ignorowane — służą tylko zwykłym checklistom.
+              </span>
+            </span>
+          </label>
+        ) : null}
+
         <Field label="Opis">
           <Input
             value={element.description}
@@ -101,12 +125,17 @@ export function ProcessElementEditor({
           />
         </Field>
 
-        {element.kind === "checklist" ? (
+        {element.kind === "checklist" && !element.isInternalAcceptance ? (
           <TemplateChecklistLinesEditor
             label="Punkty checklisty (wzorzec)"
             payload={"lines" in element.defaultPayload ? element.defaultPayload : { lines: [] }}
             onChange={(defaultPayload) => setElement({ ...element, defaultPayload })}
           />
+        ) : element.kind === "checklist" && element.isInternalAcceptance ? (
+          <p className="rounded-xl border border-accent/30 bg-accent/5 p-3 text-sm text-muted">
+            Punkty kontroli jakości zostaną wygenerowane automatycznie po uruchomieniu odbioru w projekcie
+            (specyfikacja + ustalenia + standardy firmy).
+          </p>
         ) : element.kind === "kanban" ? (
           <KanbanTemplateColumnsEditor
             payload={

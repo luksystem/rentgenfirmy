@@ -58,6 +58,7 @@ export function ClientProjectSummary({
             <p className="text-xs uppercase tracking-wide text-muted">Projekt</p>
             <p className="truncate font-medium text-foreground">{project.name}</p>
             <p className="text-xs text-muted">
+              {formatDate(project.createdAt) !== "—" ? `${formatDate(project.createdAt)} · ` : ""}
               {formatProjectDuration(project)}
               {!excludeWarrantyFields ? ` · gwarancja: ${warrantyStatus.label}` : ""}
             </p>

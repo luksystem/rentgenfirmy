@@ -16,6 +16,7 @@ export function rowToProcessElement(row: ProcessElementRow): ProcessElement {
     title: row.title,
     description: row.description,
     defaultPayload,
+    isInternalAcceptance: Boolean(row.is_internal_acceptance),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -28,6 +29,7 @@ export function processElementToInsert(element: ProcessElement) {
     title: element.title,
     description: element.description,
     default_payload: element.defaultPayload,
+    is_internal_acceptance: element.isInternalAcceptance ?? false,
     created_at: element.createdAt,
     updated_at: element.updatedAt,
   };
@@ -39,6 +41,7 @@ export function processElementToUpdate(element: ProcessElement) {
     title: element.title,
     description: element.description,
     default_payload: element.defaultPayload,
+    is_internal_acceptance: element.isInternalAcceptance ?? false,
     updated_at: element.updatedAt,
   };
 }

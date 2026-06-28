@@ -62,10 +62,11 @@ export async function ensureProjectProcessItems(projectId: string, template: Pro
   const supabase = getSupabase();
   const now = new Date().toISOString();
   const { error } = await supabase.from("project_process_items").insert(
-    missing.map((item) => ({
+        missing.map((item) => ({
       project_id: projectId,
       template_item_id: item.id,
       kind: item.kind,
+      is_internal_acceptance: item.isInternalAcceptance ?? false,
       payload:
         item.kind === "checklist"
           ? cloneTemplatePayloadForProject(

@@ -53,6 +53,7 @@ export function ProcessTemplateEditor({
       title: element.title,
       position,
       defaultPayload: element.defaultPayload,
+      isInternalAcceptance: element.isInternalAcceptance,
     };
   }
 

@@ -1,9 +1,11 @@
 "use client";
 
-import { CheckCircle2, FileCheck2, LayoutGrid, Receipt } from "lucide-react";
+import { CheckCircle2, FileCheck2, LayoutGrid, Receipt, ShieldCheck } from "lucide-react";
+import { ProcessInternalAcceptanceBoard } from "@/components/process/process-internal-acceptance-board";
 import { ProcessKanbanBoard } from "@/components/process/process-kanban-board";
 import { ProcessChecklistEditor } from "@/components/process/process-checklist-editor";
 import { ProcessItemResponsibleSection } from "@/components/process/process-item-responsible-section";
+import { ProcessPublicLinkControls } from "@/components/process/process-public-link-controls";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,6 +37,7 @@ type ProcessItemPanelProps = {
   item: ProcessItem | null;
   instance?: ProjectProcessItem;
   completion?: ProcessItemCompletion;
+  projectId?: string;
   teamProfiles?: UserProfile[];
   currentUserId?: string;
   canManageAssignment?: boolean;
@@ -53,6 +56,7 @@ export function ProcessItemPanel({
   item,
   instance,
   completion,
+  projectId,
   teamProfiles = [],
   currentUserId,
   canManageAssignment = false,
@@ -70,24 +74,28 @@ export function ProcessItemPanel({
     return null;
   }
 
+  const isInternalAcceptance = Boolean(item.isInternalAcceptance ?? instance?.isInternalAcceptance);
   const completed = Boolean(completion) || instance?.status === "completed" || Boolean(instance?.signedAt);
-  const Icon = kindIcon[item.kind];
+  const Icon = isInternalAcceptance ? ShieldCheck : kindIcon[item.kind];
   const checklistPayload = instance?.payload ?? { lines: [] };
   const checklistStats = checklistProgress(checklistPayload);
+  const isFullscreen = item.kind === "kanban" || isInternalAcceptance;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent fullscreen={item.kind === "kanban"}>
-        <DialogHeader className={item.kind === "kanban" ? "shrink-0" : undefined}>
+      <DialogContent fullscreen={isFullscreen}>
+        <DialogHeader className={isFullscreen ? "shrink-0" : undefined}>
           <DialogTitle className="flex items-center gap-2">
             <Icon className="h-5 w-5 shrink-0 text-accent" />
             {item.title}
           </DialogTitle>
-          <DialogDescription>{PROCESS_ITEM_KIND_LABELS[item.kind]}</DialogDescription>
+          <DialogDescription>
+            {isInternalAcceptance ? "Odbiór wewnętrzny (Quality Gate)" : PROCESS_ITEM_KIND_LABELS[item.kind]}
+          </DialogDescription>
         </DialogHeader>
 
-        <div className={cn("grid gap-4", item.kind === "kanban" && "flex min-h-0 flex-1 flex-col")}>
-          {interactive && instance && onAssign && onSign && item.kind !== "kanban" ? (
+        <div className={cn("grid gap-4", isFullscreen && "flex min-h-0 flex-1 flex-col")}>
+          {interactive && instance && onAssign && onSign && item.kind !== "kanban" && !isInternalAcceptance ? (
             <ProcessItemResponsibleSection
               key={`${instance.id}-${instance.updatedAt}`}
               instance={instance}
@@ -99,7 +107,18 @@ export function ProcessItemPanel({
             />
           ) : null}
 
-          {item.kind === "checklist" && interactive && onSaveChecklist ? (
+          {isInternalAcceptance && projectId && instance ? (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <ProcessInternalAcceptanceBoard
+                projectId={projectId}
+                templateItemId={item.id}
+                initialState={instance.internalAcceptanceState}
+                actorName={actorName}
+              />
+            </div>
+          ) : null}
+
+          {item.kind === "checklist" && !isInternalAcceptance && interactive && onSaveChecklist ? (
             <ProcessChecklistEditor
               key={`${item.id}-${instance?.updatedAt ?? "new"}-checklist`}
               initialPayload={checklistPayload}
@@ -109,7 +128,7 @@ export function ProcessItemPanel({
             />
           ) : null}
 
-          {item.kind === "checklist" && !interactive ? (
+          {item.kind === "checklist" && !isInternalAcceptance && !interactive ? (
             <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4 text-sm text-muted">
               {checklistStats.total > 0
                 ? `${checklistStats.completed}/${checklistStats.total} punktów ukończonych`
@@ -119,19 +138,26 @@ export function ProcessItemPanel({
 
           {item.kind === "kanban" && interactive && instance ? (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <ProcessKanbanBoard
-              projectProcessItemId={instance.id}
-              templatePayload={
-                isKanbanTemplatePayload(item.defaultPayload)
-                  ? item.defaultPayload
-                  : { columns: [] }
-              }
-              authorSide="team"
-              authorName={actorName ?? "Zespół"}
-              showPublicLink
-              embedded
-            />
+              <ProcessKanbanBoard
+                projectProcessItemId={instance.id}
+                templatePayload={
+                  isKanbanTemplatePayload(item.defaultPayload) ? item.defaultPayload : { columns: [] }
+                }
+                authorSide="team"
+                authorName={actorName ?? "Zespół"}
+                showPublicLink
+                embedded
+              />
             </div>
+          ) : null}
+
+          {interactive && instance && item.kind !== "kanban" ? (
+            <ProcessPublicLinkControls
+              projectProcessItemId={instance.id}
+              kind={item.kind}
+              isInternalAcceptance={isInternalAcceptance}
+              title={isInternalAcceptance ? "Link publiczny odbioru" : "Link publiczny elementu"}
+            />
           ) : null}
 
           {item.kind === "kanban" && interactive && instance && completed ? (
@@ -164,7 +190,7 @@ export function ProcessItemPanel({
             </div>
           ) : null}
 
-          {completed && item.kind !== "kanban" ? (
+          {completed && item.kind !== "kanban" && !isInternalAcceptance ? (
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm">
               <p className="font-medium text-emerald-200">Ukończono</p>
               <p className="mt-1 text-muted">
@@ -176,7 +202,7 @@ export function ProcessItemPanel({
             </div>
           ) : null}
 
-          {interactive && item.kind !== "checklist" && item.kind !== "kanban" ? (
+          {interactive && item.kind !== "checklist" && item.kind !== "kanban" && !isInternalAcceptance ? (
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -186,13 +212,11 @@ export function ProcessItemPanel({
                 {completed ? "Cofnij ukończenie" : "Oznacz jako ukończone"}
               </Button>
             </div>
-          ) : (
-            item.kind !== "checklist" && item.kind !== "kanban" ? (
-              <p className={cn("text-sm", completed ? "text-emerald-300" : "text-muted")}>
-                {completed ? "Element ukończony" : "Element oczekuje na realizację"}
-              </p>
-            ) : null
-          )}
+          ) : item.kind !== "checklist" && item.kind !== "kanban" && !isInternalAcceptance ? (
+            <p className={cn("text-sm", completed ? "text-emerald-300" : "text-muted")}>
+              {completed ? "Element ukończony" : "Element oczekuje na realizację"}
+            </p>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

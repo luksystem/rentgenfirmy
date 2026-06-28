@@ -54,6 +54,7 @@ export default function ProcessElementsPage() {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
                     {PROCESS_ITEM_KIND_LABELS[element.kind]}
+                    {element.isInternalAcceptance ? " · Odbiór wewnętrzny" : ""}
                   </p>
                   <h2 className="mt-1 text-lg font-semibold text-foreground">{element.title}</h2>
                   {element.description ? (

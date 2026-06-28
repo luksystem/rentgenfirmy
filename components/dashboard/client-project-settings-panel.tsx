@@ -15,6 +15,7 @@ export function ClientProjectSettingsPanel({ project }: { project: Project }) {
       ...input,
       clientId: project.clientId ?? null,
       lastContactDate: project.lastContactDate,
+      createdAt: input.createdAt ?? project.createdAt,
       systemHandoverAt: project.systemHandoverAt,
       warrantyDurationMonths: project.warrantyDurationMonths,
       warrantyEndsAt: project.warrantyEndsAt,

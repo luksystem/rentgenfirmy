@@ -297,7 +297,9 @@ export function ProjectForm({
       waitingIncreasesCostLater: waiting ? payload.waitingIncreasesCostLater : undefined,
       waitingBlocksSettlement: waiting ? payload.waitingBlocksSettlement : undefined,
       ...(isClientDashboard
-        ? {}
+        ? {
+            createdAt: values.createdAt || undefined,
+          }
         : {
             systemHandoverAt: values.systemHandoverAt || undefined,
             warrantyDurationMonths:
@@ -436,6 +438,24 @@ export function ProjectForm({
       <Field label="Notatki" error={errors.notes?.message}>
         <Textarea {...register("notes")} placeholder="Kontekst, ryzyka, ustalenia..." />
       </Field>
+
+      {isClientDashboard ? (
+        <div className="rounded-2xl border border-border/80 bg-surface-muted/50 p-4">
+          <p className="mb-3 text-sm font-semibold">Czas trwania projektu</p>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Data utworzenia projektu" error={errors.createdAt?.message}>
+              <Input type="date" {...register("createdAt")} />
+            </Field>
+            <Field label="Czas trwania (od utworzenia)">
+              <Input value={durationPreview} readOnly disabled />
+            </Field>
+          </div>
+          <p className="mt-2 text-xs text-muted">
+            Liczba dni kalendarzowych od daty utworzenia projektu do dziś. Gwarancję ustawisz w
+            sekcji HOME.
+          </p>
+        </div>
+      ) : null}
 
       {!isClientDashboard ? (
       <div className="rounded-2xl border border-border/80 bg-surface-muted/50 p-4">

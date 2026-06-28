@@ -563,8 +563,11 @@ export async function setKanbanPublicEnabled(projectProcessItemId: string, enabl
 }
 
 export async function fetchProjectKanbanPublicLinks(projectId: string) {
-  const { fetchKanbanPublicLinksForProject } = await import("@/lib/supabase/kanban-public-links");
-  return fetchKanbanPublicLinksForProject(getSupabase(), projectId);
+  const { fetchProcessPublicLinksForProject, mapProcessPublicLinksToPaths } = await import(
+    "@/lib/supabase/process-public-access-repository"
+  );
+  const links = await fetchProcessPublicLinksForProject(getSupabase(), projectId);
+  return mapProcessPublicLinksToPaths(links);
 }
 
 export async function countOpenKanbanTasks() {

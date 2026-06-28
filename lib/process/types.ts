@@ -10,6 +10,8 @@ export type ProcessElement = {
   title: string;
   description: string;
   defaultPayload: ProcessElementPayload;
+  /** Dynamiczna tablica odbiorowa QA — generowana ze specyfikacji i ustaleń. */
+  isInternalAcceptance?: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -22,6 +24,7 @@ export type ProcessItem = {
   title: string;
   position: number;
   defaultPayload: ProcessElementPayload;
+  isInternalAcceptance?: boolean;
 };
 
 export type ProcessMilestone = {
@@ -80,6 +83,8 @@ export type ProjectProcessItem = {
   kind: ProcessItemKind;
   payload: ChecklistItemPayload;
   status: ProjectProcessItemStatus;
+  isInternalAcceptance?: boolean;
+  internalAcceptanceState?: import("@/lib/internal-acceptance/types").InternalAcceptanceState | null;
   assigneeId: string | null;
   assigneeName: string | null;
   signedAt: string | null;

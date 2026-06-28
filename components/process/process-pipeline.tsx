@@ -33,6 +33,7 @@ const kindIcon: Record<ProcessItemKind, React.ComponentType<{ className?: string
 type ProcessPipelineProps = {
   template: ProcessTemplate;
   process?: ProjectProcess | null;
+  projectId?: string;
   itemInstances?: Record<string, ProjectProcessItem>;
   teamProfiles?: UserProfile[];
   currentUserId?: string;
@@ -56,6 +57,7 @@ type ProcessPipelineProps = {
 export function ProcessPipeline({
   template,
   process,
+  projectId,
   itemInstances,
   teamProfiles,
   currentUserId,
@@ -198,17 +200,16 @@ export function ProcessPipeline({
                                 : item.kind === "checklist" && !interactive && "lines" in item.defaultPayload
                                   ? checklistProgress(item.defaultPayload)
                                   : null;
-                            const kindLabel =
-                              item.kind === "kanban"
+                            const kindLabel = item.isInternalAcceptance
+                              ? "Odbiór wewnętrzny"
+                              : item.kind === "kanban"
                                 ? PROCESS_ITEM_KIND_LABELS.kanban
                                 : checklistStats && checklistStats.total > 0
                                   ? `${PROCESS_ITEM_KIND_LABELS[item.kind]} · ${checklistStats.total} pkt.`
                                   : PROCESS_ITEM_KIND_LABELS[item.kind];
                             const assigneeLabel = instance ? formatAssigneeLabel(instance) : null;
-                            const kanbanHref =
-                              !interactive && item.kind === "kanban"
-                                ? kanbanPublicLinks?.[item.id]
-                                : undefined;
+                            const publicHref =
+                              !interactive ? kanbanPublicLinks?.[item.id] : undefined;
 
                             if (interactive) {
                               return (
@@ -257,20 +258,17 @@ export function ProcessPipeline({
                                 <span className="min-w-0 flex-1">
                                   <span className="flex items-center gap-1.5 font-medium text-foreground">
                                     <Icon className="h-3.5 w-3.5 shrink-0 text-accent" />
-                                    {kanbanHref ? (
+                                    {publicHref ? (
                                       onKanbanNavigate ? (
                                         <button
                                           type="button"
-                                          onClick={() => onKanbanNavigate(kanbanHref)}
+                                          onClick={() => onKanbanNavigate(publicHref)}
                                           className="text-left text-accent hover:underline"
                                         >
                                           {item.title}
                                         </button>
                                       ) : (
-                                        <Link
-                                          href={kanbanHref}
-                                          className="text-accent hover:underline"
-                                        >
+                                        <Link href={publicHref} className="text-accent hover:underline">
                                           {item.title}
                                         </Link>
                                       )
@@ -299,6 +297,7 @@ export function ProcessPipeline({
 
       <ProcessItemPanel
         item={activeItem}
+        projectId={projectId}
         instance={activeItem ? itemInstances?.[activeItem.id] : undefined}
         completion={activeItem ? process?.completions?.[activeItem.id] : undefined}
         open={activeItem !== null}

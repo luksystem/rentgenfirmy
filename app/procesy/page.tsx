@@ -39,11 +39,16 @@ export default function ProcesyPage() {
       <PageHeader
         eyebrow="Moduł operacyjny"
         title="Procesy"
-        description="Szablony pipeline per typ projektu oraz katalog elementów (checklisty, protokoły, rozliczenia)."
+        description="Szablony pipeline per typ projektu, katalog elementów oraz typy (checklisty, protokoły, rozliczenia, Kanban)."
         action={
-          <Button asChild>
-            <Link href="/procesy/elementy">Elementy procesu</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" asChild>
+              <Link href="/procesy/typy">Typy elementów</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/procesy/elementy">Elementy procesu</Link>
+            </Button>
+          </div>
         }
       />
 

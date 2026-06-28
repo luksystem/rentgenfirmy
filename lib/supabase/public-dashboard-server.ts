@@ -26,7 +26,10 @@ import type { ProjectTrade } from "@/lib/dashboard/trade-types";
 import type { ProjectSatisfactionBundle } from "@/lib/dashboard/satisfaction-types";
 import type { SystemCredentialMeta } from "@/lib/dashboard/system-credentials-types";
 import type { DashboardPublicAccessInfo, DashboardSpace } from "@/lib/dashboard/types";
-import { fetchKanbanPublicLinksForProject } from "@/lib/supabase/kanban-public-links";
+import {
+  fetchProcessPublicLinksForProject,
+  mapProcessPublicLinksToPaths,
+} from "@/lib/supabase/process-public-access-repository";
 import {
   fetchProjectSatisfactionBundleServer,
   satisfactionTablesExist,
@@ -670,7 +673,9 @@ export async function fetchPublicDashboardPayload(
   const pendingOffersCount = countPendingClientOffers(offers);
 
   const kanbanPublicLinks = initialProjectId
-    ? await fetchKanbanPublicLinksForProject(getSupabaseAdmin(), initialProjectId)
+    ? mapProcessPublicLinksToPaths(
+        await fetchProcessPublicLinksForProject(getSupabaseAdmin(), initialProjectId),
+      )
     : {};
 
   return {
