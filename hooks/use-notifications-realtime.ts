@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 
-const POLL_INTERVAL_MS = 30_000;
+const POLL_INTERVAL_MS = 10_000;
 
 export function useNotificationsRealtime(profileId: string | undefined, onRefresh: () => void) {
   const onRefreshRef = useRef(onRefresh);

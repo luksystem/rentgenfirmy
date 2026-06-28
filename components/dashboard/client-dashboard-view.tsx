@@ -972,6 +972,7 @@ export function ClientDashboardView({
             </div>
           </div>
           <div className="min-w-0 max-w-full overflow-x-hidden xl:hidden">
+            {renderTabBar(teamMainTabs, "mobile-top")}
             {projects.length > 1 && onProjectChange ? (
               <div className="mb-4 flex w-full min-w-0 max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1">
                 {projects.map((project) => (
@@ -991,10 +992,7 @@ export function ClientDashboardView({
                 ))}
               </div>
             ) : null}
-            <div className="min-w-0 max-w-full overflow-x-hidden pb-24">{renderMainArea()}</div>
-            <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40">
-              {renderTabBar(teamMainTabs, "mobile-bottom")}
-            </nav>
+            <div className="min-w-0 max-w-full overflow-x-hidden">{renderMainArea()}</div>
           </div>
         </>
       )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,14 +12,7 @@ import type {
   StageOption,
   StringListFieldOptionKey,
 } from "@/lib/field-options";
-import {
-  FIELD_OPTION_LABELS,
-  getDefaultBlockerReasonOptions,
-  getDefaultFlowStatusOptions,
-  getDefaultInterruptionTypeOptions,
-  getDefaultOptionsForKey,
-  getDefaultStageOptions,
-} from "@/lib/field-options";
+import { FIELD_OPTION_LABELS } from "@/lib/field-options";
 
 function OptionsListEditor({
   label,
@@ -707,43 +700,21 @@ export function FieldOptionsEditor({
   values,
   keys,
   onChange,
-  onResetSection,
 }: {
   values: Record<StringListFieldOptionKey, string[]>;
   keys: StringListFieldOptionKey[];
   onChange: (key: StringListFieldOptionKey, items: string[]) => void;
-  onResetSection: (key: StringListFieldOptionKey) => void;
 }) {
   return (
     <div className="grid gap-4">
       {keys.map((key) => (
-        <div key={key} className="grid gap-2">
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onResetSection(key)}
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              Przywróć domyślne
-            </Button>
-          </div>
-          <OptionsListEditor
-            label={FIELD_OPTION_LABELS[key]}
-            items={values[key]}
-            onChange={(items) => onChange(key, items)}
-          />
-        </div>
+        <OptionsListEditor
+          key={key}
+          label={FIELD_OPTION_LABELS[key]}
+          items={values[key]}
+          onChange={(items) => onChange(key, items)}
+        />
       ))}
     </div>
   );
 }
-
-export {
-  getDefaultBlockerReasonOptions,
-  getDefaultFlowStatusOptions,
-  getDefaultInterruptionTypeOptions,
-  getDefaultOptionsForKey,
-  getDefaultStageOptions,
-};

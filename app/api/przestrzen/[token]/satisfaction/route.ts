@@ -14,6 +14,7 @@ import {
   fetchDashboardPublicMeta,
   fetchPublicDashboardPayload,
 } from "@/lib/supabase/public-dashboard-server";
+import { notifyTeamAboutClientStageRating } from "@/lib/notifications/stage-rating";
 import {
   fetchProjectSatisfactionBundleServer,
   upsertAgreementFulfillmentServer,
@@ -147,6 +148,16 @@ export async function POST(
           ...input,
           authorSide: "client",
         });
+        if (entry.score > 0) {
+          await notifyTeamAboutClientStageRating({
+            projectId: resolvedProjectId,
+            stageId: entry.stageId,
+            stageTitle: entry.stageTitle,
+            score: entry.score,
+            authorName: entry.authorName,
+            satisfactionId: entry.id,
+          }).catch(() => undefined);
+        }
         return NextResponse.json({ kind: "stage", entry });
       }
       case "overview": {

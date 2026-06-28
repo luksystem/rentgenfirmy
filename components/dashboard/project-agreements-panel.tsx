@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, Link2, Pencil, Plus, Send, Trash2, X } from "lucide-react";
 import { AgreementCollaborationPanel } from "@/components/dashboard/agreement-collaboration-panel";
+import { AgreementApprovalResponses } from "@/components/dashboard/agreement-approval-responses";
 import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-collapsible-shell";
 import { AgreementApproverRoleField } from "@/components/dashboard/agreement-approver-role-field";
 import { AgreementCostFields } from "@/components/dashboard/agreement-cost-fields";
@@ -175,7 +176,10 @@ function AgreementCard({
         statusTone={meta.statusTone}
         hint={approvalHint ?? meta.hint}
         defaultExpanded={defaultExpanded}
+        preview={<AgreementApprovalResponses agreement={agreement} compact title="" />}
       >
+      <AgreementApprovalResponses agreement={agreement} title="Notatki z akceptacji" />
+
       {agreement.category === "warranty" && agreement.proposedWarrantyEndDate ? (
         <p className="text-sm text-foreground">
           Nowa data zakończenia gwarancji:{" "}
@@ -195,14 +199,6 @@ function AgreementCard({
       {agreement.submittedAt ? (
         <p className="text-xs text-muted">
           Wysłano do klienta: {new Date(agreement.submittedAt).toLocaleString("pl-PL")}
-        </p>
-      ) : null}
-
-      {agreement.clientRespondedAt ? (
-        <p className="text-xs text-muted">
-          Odpowiedź ({agreement.clientResponseName}):{" "}
-          {new Date(agreement.clientRespondedAt).toLocaleString("pl-PL")}
-          {agreement.clientResponseNote ? ` — ${agreement.clientResponseNote}` : ""}
         </p>
       ) : null}
 
@@ -359,6 +355,7 @@ function AgreementCard({
           onChanged={onRefresh}
           onWarrantyExtensionAccepted={onWarrantyExtensionAccepted}
           syncRevision={`${agreement.status}:${agreement.updatedAt}:${agreement.activeVersionId ?? ""}`}
+          showApprovalResponses={false}
         />
       ) : null}
 

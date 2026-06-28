@@ -14,6 +14,7 @@ export function AgreementCollapsibleShell({
   statusLabel,
   statusTone,
   hint,
+  preview,
   defaultExpanded = false,
   compact = false,
   children,
@@ -24,6 +25,8 @@ export function AgreementCollapsibleShell({
   statusLabel: string;
   statusTone: AgreementStatusBadgeTone;
   hint?: string | null;
+  /** Zawsze widoczne pod nagłówkiem (np. skrót notatek akceptacji). */
+  preview?: React.ReactNode;
   defaultExpanded?: boolean;
   compact?: boolean;
   children?: React.ReactNode;
@@ -79,6 +82,10 @@ export function AgreementCollapsibleShell({
           ) : null}
         </div>
       </button>
+
+      {preview && !expanded ? (
+        <div className={cn(hasDetails ? "mt-2 pl-6" : "mt-2")}>{preview}</div>
+      ) : null}
 
       {hasDetails && expanded ? (
         <div className={cn("grid gap-3 border-t border-border/60 pt-3", compact ? "mt-2" : "mt-3")}>

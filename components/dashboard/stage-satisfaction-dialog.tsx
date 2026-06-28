@@ -21,7 +21,7 @@ export function StageSatisfactionDialog({
   stageTitle,
   authorName,
   authorSide,
-  onClose,
+  onDismiss,
   onSaved,
 }: {
   open: boolean;
@@ -30,7 +30,7 @@ export function StageSatisfactionDialog({
   stageTitle: string;
   authorName: string;
   authorSide: ReviewSide;
-  onClose: () => void;
+  onDismiss: () => void;
   onSaved?: () => void;
 }) {
   const saveStageSatisfaction = useProjectSatisfactionStore((state) => state.saveStageSatisfaction);
@@ -75,7 +75,6 @@ export function StageSatisfactionDialog({
         authorSide,
       });
       onSaved?.();
-      onClose();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Nie udało się zapisać oceny.");
     } finally {
@@ -84,7 +83,7 @@ export function StageSatisfactionDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+    <Dialog open={open} onOpenChange={(next) => !next && onDismiss()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Oceń etap: {stageTitle}</DialogTitle>
@@ -134,7 +133,7 @@ export function StageSatisfactionDialog({
           {error ? <p className="text-sm text-rose-400">{error}</p> : null}
 
           <div className="flex flex-wrap justify-end gap-2">
-            <Button type="button" variant="ghost" disabled={saving} onClick={onClose}>
+            <Button type="button" variant="ghost" disabled={saving} onClick={onDismiss}>
               Później
             </Button>
             <Button type="button" disabled={saving} onClick={() => void handleSave()}>

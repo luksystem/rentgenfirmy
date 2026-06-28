@@ -20,6 +20,7 @@ import {
 } from "@/lib/field-options";
 import { priorities, type Project, type ProjectInput } from "@/lib/types";
 import { computeWarrantyEndsAt, formatProjectDuration, formatWarrantyEndDate } from "@/lib/project/warranty";
+import { projectCreatedAtToDateInput } from "@/lib/supabase/mappers";
 import { toISODate } from "@/lib/utils";
 import {
   applyWaitingPriority,
@@ -50,6 +51,7 @@ type FormValues = {
   waitingBlocksSettlement: boolean;
   systemHandoverAt?: string;
   warrantyDurationMonths?: number;
+  createdAt: string;
 };
 
 function createSchema(options: FieldOptions) {
@@ -80,6 +82,7 @@ function createSchema(options: FieldOptions) {
   waitingBlocksSettlement: z.boolean(),
   systemHandoverAt: z.string().optional(),
   warrantyDurationMonths: z.coerce.number().min(0).optional(),
+  createdAt: z.string().min(1, "Podaj datę utworzenia projektu"),
 })
     .superRefine((value, ctx) => {
       const requiresBlocker =
@@ -120,6 +123,7 @@ export function projectToFormValues(project: Project, options: FieldOptions): Fo
     waitingBlocksSettlement: project.waitingBlocksSettlement ?? false,
     systemHandoverAt: project.systemHandoverAt ?? "",
     warrantyDurationMonths: project.warrantyDurationMonths ?? 12,
+    createdAt: projectCreatedAtToDateInput(project.createdAt),
   };
 }
 
@@ -145,6 +149,7 @@ function createDefaultValues(options: FieldOptions): FormValues {
     waitingBlocksSettlement: false,
     systemHandoverAt: "",
     warrantyDurationMonths: 12,
+    createdAt: toISODate(new Date()),
   };
 }
 
@@ -214,6 +219,10 @@ export function ProjectForm({
   const waitingBlocksSettlement = useWatch({ control, name: "waitingBlocksSettlement" });
   const systemHandoverAt = useWatch({ control, name: "systemHandoverAt" });
   const warrantyDurationMonths = useWatch({ control, name: "warrantyDurationMonths" });
+  const createdAt = useWatch({ control, name: "createdAt" });
+  const durationPreview = formatProjectDuration({
+    createdAt: createdAt ? `${createdAt.slice(0, 10)}T12:00:00.000Z` : "",
+  });
   const safeWarrantyMonths =
     typeof warrantyDurationMonths === "number" && Number.isFinite(warrantyDurationMonths)
       ? warrantyDurationMonths
@@ -304,6 +313,7 @@ export function ProjectForm({
                   ? values.warrantyDurationMonths
                   : undefined,
               ) || undefined,
+            createdAt: values.createdAt || undefined,
           }),
     });
   }
@@ -431,11 +441,12 @@ export function ProjectForm({
       <div className="rounded-2xl border border-border/80 bg-surface-muted/50 p-4">
         <p className="mb-3 text-sm font-semibold">Gwarancja</p>
         <div className="grid gap-4 md:grid-cols-2">
-          {project ? (
-            <Field label="Czas trwania projektu (od utworzenia)">
-              <Input value={formatProjectDuration(project)} readOnly disabled />
-            </Field>
-          ) : null}
+          <Field label="Data utworzenia projektu" error={errors.createdAt?.message}>
+            <Input type="date" {...register("createdAt")} />
+          </Field>
+          <Field label="Czas trwania projektu">
+            <Input value={durationPreview} readOnly disabled />
+          </Field>
           <Field label="Data przekazania systemu" error={errors.systemHandoverAt?.message}>
             <Input type="date" {...register("systemHandoverAt")} />
           </Field>
@@ -456,6 +467,7 @@ export function ProjectForm({
           ) : null}
         </div>
         <p className="mt-2 text-xs text-muted">
+          Czas trwania liczony jest w dniach kalendarzowych od daty utworzenia projektu do dziś.
           Koniec gwarancji liczony jest od daty przekazania systemu. Przedłużenie z akceptacją klienta
           ustawisz w dashboardzie klienta.
         </p>

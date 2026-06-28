@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, MessageSquare, Send, X } from "lucide-react";
+import { AgreementApprovalResponsesList } from "@/components/dashboard/agreement-approval-responses";
 import { AgreementAttachmentGallery } from "@/components/dashboard/agreement-attachment-gallery";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
@@ -20,7 +21,8 @@ import {
   respondToAgreementApproval,
   setAgreementDiscussionOpen,
 } from "@/lib/supabase/project-agreement-collaboration-repository";
-import { cn, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+import { buildAgreementApprovalResponsesFromBundle } from "@/hooks/use-agreement-approval-responses";
 
 type ViewerMode = "team" | "client" | "external";
 
@@ -35,6 +37,7 @@ export function AgreementCollaborationPanel({
   onSelectedRoleIdChange,
   onIdentityValidation,
   syncRevision,
+  showApprovalResponses = true,
 }: {
   agreementId: string;
   mode: ViewerMode;
@@ -50,6 +53,8 @@ export function AgreementCollaborationPanel({
   onIdentityValidation?: () => void;
   /** Zmiana wersji/statusu ustalenia — odśwież panel współpracy (realtime). */
   syncRevision?: string;
+  /** Ukryj listę akceptacji, gdy jest już pokazana wyżej w karcie ustalenia. */
+  showApprovalResponses?: boolean;
 }) {
   const [bundle, setBundle] = useState<AgreementCollaborationBundle | null>(null);
   const [loading, setLoading] = useState(true);
@@ -149,6 +154,12 @@ export function AgreementCollaborationPanel({
       bundle.agreement.discussionOpen);
 
   const canManageAttachments = bundle && bundle.agreement.status !== "cancelled";
+
+  const approvalResponses = useMemo(
+    () =>
+      bundle ? buildAgreementApprovalResponsesFromBundle(bundle, { includePending: true }) : [],
+    [bundle],
+  );
 
   const pendingApprovalForViewer = useMemo(() => {
     if (!bundle || phase !== "awaiting_approvals") {
@@ -423,45 +434,11 @@ export function AgreementCollaborationPanel({
         </div>
       ) : null}
 
-      {bundle.roles.length ? (
-        <div className="grid gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Wymagane akceptacje
-          </p>
-          <div className="grid gap-1.5">
-            {bundle.roles.map((role) => {
-              const approval = bundle.approvals.find((entry) => entry.roleId === role.id);
-              const status = approval?.status ?? (phase === "awaiting_approvals" ? "pending" : "—");
-              return (
-                <div
-                  key={role.id}
-                  className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-surface-muted/10 px-3 py-2 text-sm"
-                >
-                  <span className="min-w-0 flex-1 break-words font-medium text-foreground">
-                    {role.label}
-                  </span>
-                  <span
-                    className={cn(
-                      "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase",
-                      status === "accepted" && "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
-                      status === "rejected" && "border-rose-500/40 bg-rose-500/10 text-rose-200",
-                      status === "pending" && "border-amber-500/40 bg-amber-500/10 text-amber-200",
-                      status === "—" && "border-border/70 text-muted",
-                    )}
-                  >
-                    {status === "accepted"
-                      ? "Zaakceptowano"
-                      : status === "rejected"
-                        ? "Odrzucono"
-                        : status === "pending"
-                          ? "Oczekuje"
-                          : "—"}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      {showApprovalResponses && bundle.roles.length ? (
+        <AgreementApprovalResponsesList
+          responses={approvalResponses}
+          title="Wymagane akceptacje"
+        />
       ) : null}
 
       <div className="grid gap-2">

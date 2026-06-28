@@ -1,6 +1,7 @@
 import { getSupabase } from "@/lib/supabase/client";
 import {
   inputToProjectPayload,
+  normalizeProjectCreatedAt,
   projectToCreateInsert,
   projectToInsert,
   interruptionToInsert,
@@ -22,7 +23,7 @@ function withAudit(
       project.lastContactDate ??
       existing?.lastContactDate ??
       project.nextContactDate,
-    createdAt: existing?.createdAt ?? new Date().toISOString(),
+    createdAt: normalizeProjectCreatedAt(project.createdAt, existing?.createdAt),
   };
 }
 

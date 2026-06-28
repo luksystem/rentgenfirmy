@@ -16,6 +16,28 @@ import type {
   ProjectInput,
   ProjectType,
 } from "@/lib/types";
+import { toISODate } from "@/lib/utils";
+
+export function normalizeProjectCreatedAt(value: string | undefined, fallback?: string): string {
+  if (value?.trim()) {
+    return `${value.trim().slice(0, 10)}T12:00:00.000Z`;
+  }
+  if (fallback?.trim()) {
+    return fallback;
+  }
+  return new Date().toISOString();
+}
+
+export function projectCreatedAtToDateInput(createdAt: string | undefined): string {
+  if (!createdAt?.trim()) {
+    return toISODate(new Date());
+  }
+  const parsed = new Date(createdAt);
+  if (Number.isNaN(parsed.getTime())) {
+    return createdAt.slice(0, 10);
+  }
+  return toISODate(parsed);
+}
 
 export function rowToProject(row: ProjectRow): Project {
   return {
@@ -76,6 +98,7 @@ export function projectToInsert(
     system_handover_at: project.systemHandoverAt ?? null,
     warranty_duration_months: project.warrantyDurationMonths ?? null,
     warranty_ends_at: project.warrantyEndsAt ?? null,
+    created_at: project.createdAt,
   };
 }
 
@@ -153,5 +176,6 @@ export function projectToInput(project: Project): ProjectInput {
     systemHandoverAt: project.systemHandoverAt,
     warrantyDurationMonths: project.warrantyDurationMonths,
     warrantyEndsAt: project.warrantyEndsAt,
+    createdAt: project.createdAt,
   };
 }

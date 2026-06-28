@@ -79,18 +79,18 @@ export function getProjectDurationDays(project: Pick<Project, "createdAt">, refe
     return 0;
   }
 
-  const created = new Date(createdIso);
+  const created = startOfDay(new Date(`${createdIso.slice(0, 10)}T12:00:00`));
   if (Number.isNaN(created.getTime())) {
     return 0;
   }
 
-  const diffMs = referenceDate.getTime() - created.getTime();
+  const today = startOfDay(referenceDate);
+  const diffMs = today.getTime() - created.getTime();
   if (diffMs < 0) {
     return 0;
   }
 
-  const dayMs = 1000 * 60 * 60 * 24;
-  return Math.max(1, Math.ceil(diffMs / dayMs));
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
 
 export function formatProjectDuration(project: Pick<Project, "createdAt">) {
@@ -99,6 +99,9 @@ export function formatProjectDuration(project: Pick<Project, "createdAt">) {
   }
 
   const days = getProjectDurationDays(project);
+  if (days === 0) {
+    return "0 dni";
+  }
   if (days === 1) {
     return "1 dzień";
   }

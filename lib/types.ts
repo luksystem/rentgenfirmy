@@ -66,6 +66,8 @@ export type ProjectInput = Omit<
 > & {
   lastContactDate?: string;
   clientId?: string | null;
+  /** Data utworzenia projektu (YYYY-MM-DD lub pełne ISO). */
+  createdAt?: string;
 };
 
 export type InterruptionKind = "interruption" | "focus";

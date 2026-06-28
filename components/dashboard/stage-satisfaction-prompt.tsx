@@ -8,6 +8,23 @@ import { useProjectSatisfactionStore } from "@/store/project-satisfaction-store"
 
 const EMPTY_STAGE_SATISFACTIONS: StageSatisfaction[] = [];
 
+function dismissedStorageKey(projectId: string) {
+  return `stage-rating-dismissed:${projectId}`;
+}
+
+function readDismissedStageIds(projectId: string) {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  try {
+    const raw = window.localStorage.getItem(dismissedStorageKey(projectId));
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    return Array.isArray(parsed) ? parsed.filter((entry) => typeof entry === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 function getCompletedStages(template: ProcessTemplate, process: ProjectProcess | null | undefined) {
   if (!process) {
     return [];
@@ -44,7 +61,24 @@ export function StageSatisfactionPrompt({
   const ensureSatisfaction = useProjectSatisfactionStore((state) => state.ensureSatisfaction);
 
   const [activeStageId, setActiveStageId] = useState<string | null>(null);
-  const [dismissedStageIds, setDismissedStageIds] = useState<string[]>([]);
+  const [dismissedStageIds, setDismissedStageIds] = useState<string[]>(() =>
+    readDismissedStageIds(projectId),
+  );
+
+  useEffect(() => {
+    setDismissedStageIds(readDismissedStageIds(projectId));
+    setActiveStageId(null);
+  }, [projectId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(
+      dismissedStorageKey(projectId),
+      JSON.stringify(dismissedStageIds),
+    );
+  }, [dismissedStageIds, projectId]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -74,6 +108,9 @@ export function StageSatisfactionPrompt({
     if (pendingStage && !activeStageId) {
       setActiveStageId(pendingStage.id);
     }
+    if (!pendingStage) {
+      setActiveStageId(null);
+    }
   }, [activeStageId, pendingStage]);
 
   const activeStage = template.stages.find((stage) => stage.id === activeStageId) ?? pendingStage;
@@ -90,8 +127,10 @@ export function StageSatisfactionPrompt({
       stageTitle={activeStage.title}
       authorName={authorName}
       authorSide={authorSide}
-      onClose={() => {
-        setDismissedStageIds((current) => [...current, activeStage.id]);
+      onDismiss={() => {
+        setDismissedStageIds((current) =>
+          current.includes(activeStage.id) ? current : [...current, activeStage.id],
+        );
         setActiveStageId(null);
       }}
       onSaved={() => {

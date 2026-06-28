@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Bell, ClipboardCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, Bell, ClipboardCheck, Sparkles, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavBadges } from "@/components/nav-badges";
 import { cn, formatDate } from "@/lib/utils";
@@ -17,9 +17,11 @@ export function NotificationBell() {
   const items = useNotificationStore((state) => state.items);
   const loading = useNotificationStore((state) => state.loading);
   const refreshUnreadCount = useNotificationStore((state) => state.refreshUnreadCount);
+  const refreshFromRealtime = useNotificationStore((state) => state.refreshFromRealtime);
   const loadNotifications = useNotificationStore((state) => state.loadNotifications);
   const markRead = useNotificationStore((state) => state.markRead);
   const markAllRead = useNotificationStore((state) => state.markAllRead);
+  const setPanelOpen = useNotificationStore((state) => state.setPanelOpen);
   const kanbanNewTaskCount = useProcessStore((state) => state.kanbanNewTaskCount);
   const kanbanOverdueTaskCount = useProcessStore((state) => state.kanbanOverdueTaskCount);
   const refreshKanbanNewTaskCount = useProcessStore((state) => state.refreshKanbanNewTaskCount);
@@ -44,7 +46,11 @@ export function NotificationBell() {
     if (!profileId) {
       return;
     }
-    void refreshUnreadCount(profileId);
+    if (open) {
+      void refreshFromRealtime(profileId);
+    } else {
+      void refreshUnreadCount(profileId);
+    }
     void refreshKanbanNewTaskCount();
     void refreshKanbanOverdueTaskCount();
     void refreshAgreementPendingCounts({ force: true });
@@ -56,6 +62,7 @@ export function NotificationBell() {
     open,
     profileId,
     refreshAgreementPendingCounts,
+    refreshFromRealtime,
     refreshKanbanNewTaskCount,
     refreshKanbanOverdueTaskCount,
     refreshUnreadCount,
@@ -79,13 +86,14 @@ export function NotificationBell() {
     function handleClickOutside(event: MouseEvent) {
       if (!panelRef.current?.contains(event.target as Node)) {
         setOpen(false);
+        setPanelOpen(false);
       }
     }
     if (open) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
+  }, [open, setPanelOpen]);
 
   if (!profileId) {
     return null;
@@ -98,7 +106,13 @@ export function NotificationBell() {
         size="sm"
         variant="secondary"
         className="relative shrink-0"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          setOpen((value) => {
+            const next = !value;
+            setPanelOpen(next);
+            return next;
+          });
+        }}
         aria-label="Powiadomienia"
       >
         <Bell className="h-4 w-4" />
@@ -282,23 +296,28 @@ export function NotificationBell() {
                   key={item.id}
                   href={item.linkUrl ?? "/tablice-wdrozen"}
                   onClick={() => {
-                    if (!item.readAt) {
-                      void markRead(profileId, item.id);
-                    }
+                    void markRead(profileId, item.id);
                     setOpen(false);
+                    setPanelOpen(false);
                   }}
-                  className={cn(
-                    "block border-b border-border/50 px-4 py-3 transition hover:bg-surface-muted/30",
-                    !item.readAt && "bg-accent/5",
-                  )}
+                  className="block border-b border-border/50 bg-accent/5 px-4 py-3 transition hover:bg-surface-muted/30"
                 >
-                  <p className="break-words text-sm font-medium leading-snug text-foreground">{item.title}</p>
-                  {item.body ? (
-                    <p className="mt-1.5 whitespace-pre-wrap break-words text-xs leading-relaxed text-muted">
-                      {item.body}
-                    </p>
-                  ) : null}
-                  <p className="mt-1.5 text-[10px] text-muted">{formatDate(item.createdAt)}</p>
+                  <div className="flex items-start gap-3">
+                    {item.kind === "client_stage_rating" ? (
+                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-amber-500/35 bg-amber-500/10 text-amber-200">
+                        <Star className="h-4 w-4" />
+                      </span>
+                    ) : null}
+                    <span className="min-w-0 flex-1">
+                      <p className="break-words text-sm font-medium leading-snug text-foreground">{item.title}</p>
+                      {item.body ? (
+                        <p className="mt-1.5 whitespace-pre-wrap break-words text-xs leading-relaxed text-muted">
+                          {item.body}
+                        </p>
+                      ) : null}
+                      <p className="mt-1.5 text-[10px] text-muted">{formatDate(item.createdAt)}</p>
+                    </span>
+                  </div>
                 </Link>
               ))}
               </>

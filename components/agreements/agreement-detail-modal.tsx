@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { AgreementCollaborationPanel } from "@/components/dashboard/agreement-collaboration-panel";
+import { AgreementApprovalResponses } from "@/components/dashboard/agreement-approval-responses";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -62,12 +63,15 @@ function AgreementDetailModalBody({
         <p className="whitespace-pre-wrap text-sm text-muted">{agreement.body}</p>
       ) : null}
 
+      <AgreementApprovalResponses agreement={agreement} title="Notatki z akceptacji" />
+
       <AgreementCollaborationPanel
         agreementId={agreement.id}
         mode="team"
         authorName={authorName}
         onChanged={onChanged}
         syncRevision={`${agreement.status}:${agreement.updatedAt}:${agreement.activeVersionId ?? ""}`}
+        showApprovalResponses={false}
       />
 
       {dashboardHref ? (

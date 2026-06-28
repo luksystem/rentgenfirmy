@@ -1,5 +1,6 @@
 "use client";
 
+import { AgreementApprovalResponses } from "@/components/dashboard/agreement-approval-responses";
 import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-collapsible-shell";
 import { useAgreementApprovalHint } from "@/hooks/use-agreement-approval-hint";
 import {
@@ -12,11 +13,13 @@ export function AgreementSummaryCard({
   agreement,
   compact = false,
   className,
+  showApprovalResponses = true,
   children,
 }: {
   agreement: ProjectClientAgreement;
   compact?: boolean;
   className?: string;
+  showApprovalResponses?: boolean;
   children?: React.ReactNode;
 }) {
   const meta = buildAgreementCollapsibleMeta(agreement);
@@ -31,7 +34,13 @@ export function AgreementSummaryCard({
       statusLabel={meta.statusLabel}
       statusTone={meta.statusTone}
       hint={approvalHint ?? meta.hint}
+      preview={
+        showApprovalResponses ? (
+          <AgreementApprovalResponses agreement={agreement} compact title="" />
+        ) : null
+      }
     >
+      <AgreementApprovalResponses agreement={agreement} title="Notatki z akceptacji" />
       {children}
     </AgreementCollapsibleShell>
   );

@@ -3,6 +3,7 @@ export const USER_NOTIFICATION_KINDS = [
   "kanban_new_activity",
   "warranty_expiring",
   "agreement_client_created",
+  "client_stage_rating",
 ] as const;
 
 export type UserNotificationKind = (typeof USER_NOTIFICATION_KINDS)[number];

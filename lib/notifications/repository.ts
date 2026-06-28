@@ -29,7 +29,9 @@ function rowToNotification(row: NotificationRow): UserNotification {
         ? "warranty_expiring"
         : row.kind === "agreement_client_created"
           ? "agreement_client_created"
-          : "kanban_new_activity";
+          : row.kind === "client_stage_rating"
+            ? "client_stage_rating"
+            : "kanban_new_activity";
 
   return {
     id: row.id,
@@ -62,14 +64,20 @@ export async function fetchUnreadNotificationCount(profileId: string) {
   return count ?? 0;
 }
 
-export async function fetchUserNotifications(profileId: string, limit = 30) {
+export async function fetchUserNotifications(profileId: string, limit = 30, unreadOnly = false) {
   const supabase = getSupabase();
-  const { data, error } = await supabase
+  let query = supabase
     .from("user_notifications")
     .select("*")
     .eq("profile_id", profileId)
     .order("created_at", { ascending: false })
     .limit(limit);
+
+  if (unreadOnly) {
+    query = query.is("read_at", null);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     if (error.message.toLowerCase().includes("does not exist")) {

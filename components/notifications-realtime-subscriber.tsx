@@ -11,7 +11,7 @@ import { useProcessStore } from "@/store/process-store";
 /** Jedna subskrypcja realtime na całą aplikację (unika konfliktu przy dwóch dzwonkach w shellu). */
 export function NotificationsRealtimeSubscriber() {
   const profileId = useAuthStore((state) => state.profile?.id);
-  const refreshUnreadCount = useNotificationStore((state) => state.refreshUnreadCount);
+  const refreshFromRealtime = useNotificationStore((state) => state.refreshFromRealtime);
   const refreshKanbanNewTaskCount = useProcessStore((state) => state.refreshKanbanNewTaskCount);
   const refreshKanbanOverdueTaskCount = useProcessStore((state) => state.refreshKanbanOverdueTaskCount);
   const refreshAgreementPendingCounts = useAgreementHubStore((state) => state.refreshPendingCounts);
@@ -20,16 +20,16 @@ export function NotificationsRealtimeSubscriber() {
     if (!profileId) {
       return;
     }
-    void refreshUnreadCount(profileId);
+    void refreshFromRealtime(profileId);
     void refreshKanbanNewTaskCount();
     void refreshKanbanOverdueTaskCount();
     void refreshAgreementPendingCounts({ force: true });
   }, [
     profileId,
     refreshAgreementPendingCounts,
+    refreshFromRealtime,
     refreshKanbanNewTaskCount,
     refreshKanbanOverdueTaskCount,
-    refreshUnreadCount,
   ]);
 
   useNotificationsRealtime(profileId, refresh);

@@ -13,8 +13,11 @@ type NotificationStore = {
   unreadCount: number;
   items: UserNotification[];
   loading: boolean;
+  panelOpen: boolean;
+  setPanelOpen: (open: boolean) => void;
   refreshUnreadCount: (profileId: string) => Promise<void>;
   loadNotifications: (profileId: string) => Promise<void>;
+  refreshFromRealtime: (profileId: string) => Promise<void>;
   markRead: (profileId: string, notificationId: string) => Promise<void>;
   markAllRead: (profileId: string) => Promise<void>;
 };
@@ -23,6 +26,11 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   unreadCount: 0,
   items: [],
   loading: false,
+  panelOpen: false,
+
+  setPanelOpen: (open) => {
+    set({ panelOpen: open });
+  },
 
   refreshUnreadCount: async (profileId) => {
     try {
@@ -37,7 +45,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     set({ loading: true });
     try {
       const [items, unreadCount] = await Promise.all([
-        fetchUserNotifications(profileId),
+        fetchUserNotifications(profileId, 30, true),
         fetchUnreadNotificationCount(profileId),
       ]);
       set({ items, unreadCount, loading: false });
@@ -46,22 +54,32 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     }
   },
 
+  refreshFromRealtime: async (profileId) => {
+    try {
+      const unreadCount = await fetchUnreadNotificationCount(profileId);
+      set({ unreadCount });
+      if (get().panelOpen) {
+        const items = await fetchUserNotifications(profileId, 30, true);
+        set({ items, unreadCount });
+      }
+    } catch {
+      set({ unreadCount: 0 });
+    }
+  },
+
   markRead: async (profileId, notificationId) => {
     await markNotificationRead(notificationId, profileId);
     set((state) => ({
       unreadCount: Math.max(0, state.unreadCount - 1),
-      items: state.items.map((item) =>
-        item.id === notificationId ? { ...item, readAt: new Date().toISOString() } : item,
-      ),
+      items: state.items.filter((item) => item.id !== notificationId),
     }));
   },
 
   markAllRead: async (profileId) => {
     await markAllNotificationsRead(profileId);
-    const now = new Date().toISOString();
-    set((state) => ({
+    set({
       unreadCount: 0,
-      items: state.items.map((item) => ({ ...item, readAt: item.readAt ?? now })),
-    }));
+      items: [],
+    });
   },
 }));

@@ -20,6 +20,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const initialize = useAppStore((state) => state.initialize);
   const isLoading = useAppStore((state) => state.isLoading);
   const isInitialized = useAppStore((state) => state.isInitialized);
+  const projects = useAppStore((state) => state.projects);
   const error = useAppStore((state) => state.error);
   const skipData = isPublicAppRoute(pathname);
 
@@ -33,16 +34,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (!isInitialized || skipData) {
       return;
     }
-    const projects = useAppStore.getState().projects;
     void ensureWarrantyExpiringNotifications(projects)
       .then(() => {
         const profileId = useAuthStore.getState().profile?.id;
         if (profileId) {
-          void useNotificationStore.getState().refreshUnreadCount(profileId);
+          void useNotificationStore.getState().refreshFromRealtime(profileId);
         }
       })
       .catch(() => undefined);
-  }, [isInitialized, skipData]);
+  }, [isInitialized, projects, skipData]);
 
   if (skipData) {
     return <>{children}</>;

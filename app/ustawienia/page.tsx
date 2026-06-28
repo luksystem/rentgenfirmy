@@ -1,18 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RotateCcw } from "lucide-react";
 import {
   BlockerReasonsOptionsEditor,
   FieldOptionsEditor,
   FlowStatusesOptionsEditor,
   InterruptionTypesOptionsEditor,
   StagesOptionsEditor,
-  getDefaultBlockerReasonOptions,
-  getDefaultFlowStatusOptions,
-  getDefaultInterruptionTypeOptions,
-  getDefaultOptionsForKey,
-  getDefaultStageOptions,
 } from "@/components/field-options-editor";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -86,14 +80,6 @@ export default function SettingsPage() {
     setSaved(false);
   }
 
-  function resetBlockerReasons() {
-    setDraft((current) => ({
-      ...current,
-      blockerReasons: getDefaultBlockerReasonOptions(),
-    }));
-    setSaved(false);
-  }
-
   function updateInterruptionTypes(types: FieldOptions["interruptionTypes"]) {
     setDraft((current) => ({
       ...current,
@@ -103,38 +89,6 @@ export default function SettingsPage() {
           suggestion: item.suggestion.trim(),
         }))
         .filter((item) => item.name),
-    }));
-    setSaved(false);
-  }
-
-  function resetInterruptionTypes() {
-    setDraft((current) => ({
-      ...current,
-      interruptionTypes: getDefaultInterruptionTypeOptions(),
-    }));
-    setSaved(false);
-  }
-
-  function resetSection(key: StringListFieldOptionKey) {
-    setDraft((current) => ({
-      ...current,
-      [key]: getDefaultOptionsForKey(key),
-    }));
-    setSaved(false);
-  }
-
-  function resetFlowStatuses() {
-    setDraft((current) => ({
-      ...current,
-      flowStatuses: getDefaultFlowStatusOptions(),
-    }));
-    setSaved(false);
-  }
-
-  function resetStages() {
-    setDraft((current) => ({
-      ...current,
-      implementationStages: getDefaultStageOptions(),
     }));
     setSaved(false);
   }
@@ -200,65 +154,32 @@ export default function SettingsPage() {
             values={draft}
             keys={PROJECT_STRING_FIELD_OPTION_KEYS}
             onChange={updateList}
-            onResetSection={resetSection}
           />
 
           <div className="mt-4 grid gap-4">
-            <div className="grid gap-2">
-              <div className="flex justify-end">
-                <Button type="button" variant="ghost" size="sm" onClick={resetBlockerReasons}>
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  Przywróć domyślne powody blokady
-                </Button>
-              </div>
-              <BlockerReasonsOptionsEditor
-                items={draft.blockerReasons}
-                onChange={updateBlockerReasons}
-              />
-            </div>
+            <BlockerReasonsOptionsEditor
+              items={draft.blockerReasons}
+              onChange={updateBlockerReasons}
+            />
 
-            <div className="grid gap-2">
-              <div className="flex justify-end">
-                <Button type="button" variant="ghost" size="sm" onClick={resetFlowStatuses}>
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  Przywróć domyślne statusy
-                </Button>
-              </div>
-              <FlowStatusesOptionsEditor
-                items={draft.flowStatuses}
-                onChange={updateFlowStatuses}
-              />
-            </div>
+            <FlowStatusesOptionsEditor
+              items={draft.flowStatuses}
+              onChange={updateFlowStatuses}
+            />
 
-            <div className="grid gap-2">
-              <div className="flex justify-end">
-                <Button type="button" variant="ghost" size="sm" onClick={resetStages}>
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  Przywróć domyślne etapy
-                </Button>
-              </div>
-              <StagesOptionsEditor
-                items={draft.implementationStages}
-                onChange={updateStages}
-              />
-            </div>
+            <StagesOptionsEditor
+              items={draft.implementationStages}
+              onChange={updateStages}
+            />
           </div>
         </div>
 
         <div>
           <h2 className="mb-4 text-lg font-semibold">Przerwania</h2>
-          <div className="grid gap-2">
-            <div className="flex justify-end">
-              <Button type="button" variant="ghost" size="sm" onClick={resetInterruptionTypes}>
-                <RotateCcw className="h-3.5 w-3.5" />
-                Przywróć domyślne typy
-              </Button>
-            </div>
-            <InterruptionTypesOptionsEditor
-              items={draft.interruptionTypes}
-              onChange={updateInterruptionTypes}
-            />
-          </div>
+          <InterruptionTypesOptionsEditor
+            items={draft.interruptionTypes}
+            onChange={updateInterruptionTypes}
+          />
         </div>
       </section>
     </>

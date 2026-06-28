@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronRight } from "lucide-react";
+import { AgreementApprovalResponses } from "@/components/dashboard/agreement-approval-responses";
 import {
   AGREEMENT_STATUS_BADGE_CLASS,
   PROJECT_AGREEMENT_CATEGORY_LABELS,
@@ -54,6 +55,7 @@ export function AgreementKanbanCard({
       </div>
 
       {approvalHint ? <p className="mt-2 text-xs font-medium text-accent/90">{approvalHint}</p> : null}
+      <AgreementApprovalResponses agreement={agreement} compact title="" className="mt-2" />
       {costLabel ? <p className="mt-1 text-xs text-muted">Koszt: {costLabel}</p> : null}
     </button>
   );
