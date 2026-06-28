@@ -91,6 +91,49 @@ export async function setProcessPublicEnabled(
   return rowToAccess(data as AccessRow);
 }
 
+export async function updateProcessPublicAccessSettings(input: {
+  projectProcessItemId: string;
+  password?: string | null;
+  username?: string | null;
+  authorName?: string | null;
+}) {
+  const { getSupabaseAdmin } = await import("@/lib/supabase/admin");
+  const { hashKanbanPassword } = await import("@/lib/process/kanban-auth");
+  const supabase = getSupabaseAdmin();
+
+  await ensureProcessPublicAccess(supabase, input.projectProcessItemId);
+
+  const payload: Partial<import("@/lib/supabase/database.types").ProjectProcessItemPublicAccessRow> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (input.username !== undefined) {
+    payload.public_access_username = input.username?.trim() || null;
+  }
+
+  if (input.authorName !== undefined) {
+    payload.public_author_name = input.authorName?.trim() || "Gość";
+  }
+
+  if (input.password !== undefined) {
+    const trimmed = input.password?.trim();
+    payload.public_access_password_hash = trimmed ? await hashKanbanPassword(trimmed) : null;
+  }
+
+  const { data, error } = await supabase
+    .from("project_process_item_public_access")
+    .update(payload)
+    .eq("project_process_item_id", input.projectProcessItemId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToAccess(data as AccessRow);
+}
+
 export async function fetchProcessPublicAccessByToken(
   supabase: SupabaseClient,
   token: string,

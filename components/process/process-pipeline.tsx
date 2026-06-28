@@ -13,6 +13,7 @@ import {
   PROCESS_ITEM_VISUAL_CLASSES,
 } from "@/lib/process/item-completion-state";
 import { checklistProgress } from "@/lib/process/item-payload";
+import { canOpenProcessItem } from "@/lib/process/item-access";
 import {
   PROCESS_ITEM_KIND_LABELS,
   type ChecklistItemPayload,
@@ -22,6 +23,7 @@ import {
   type ProjectProcess,
   type ProjectProcessItem,
 } from "@/lib/process/types";
+import { useProcessStore } from "@/store/process-store";
 
 const kindIcon: Record<ProcessItemKind, React.ComponentType<{ className?: string }>> = {
   checklist: CheckCircle2,
@@ -75,6 +77,14 @@ export function ProcessPipeline({
   onKanbanNavigate,
 }: ProcessPipelineProps) {
   const [activeItem, setActiveItem] = useState<ProcessItem | null>(null);
+  const ensureProjectProcessItems = useProcessStore((state) => state.ensureProjectProcessItems);
+
+  async function handleOpenItem(item: ProcessItem) {
+    if (interactive && projectId && !itemInstances?.[item.id]) {
+      await ensureProjectProcessItems(projectId, template);
+    }
+    setActiveItem(item);
+  }
 
   return (
     <>
@@ -210,17 +220,25 @@ export function ProcessPipeline({
                             const assigneeLabel = instance ? formatAssigneeLabel(instance) : null;
                             const publicHref =
                               !interactive ? kanbanPublicLinks?.[item.id] : undefined;
+                            const canOpen = canOpenProcessItem(item, {
+                              stageIndex,
+                              template,
+                              process,
+                            });
 
                             if (interactive) {
                               return (
                                 <button
                                   key={item.id}
                                   type="button"
-                                  onClick={() => setActiveItem(item)}
+                                  disabled={!canOpen}
+                                  onClick={() => void handleOpenItem(item)}
                                   className={cn(
                                     "flex w-full items-start gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition",
                                     visualClasses.card,
-                                    "cursor-pointer hover:border-accent/30 hover:bg-surface-elevated/80",
+                                    canOpen
+                                      ? "cursor-pointer hover:border-accent/30 hover:bg-surface-elevated/80"
+                                      : "cursor-not-allowed opacity-60",
                                   )}
                                 >
                                   <FallbackIcon

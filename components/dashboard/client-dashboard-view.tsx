@@ -30,6 +30,7 @@ import { ClientDashboardOverview } from "@/components/dashboard/client-dashboard
 import { ClientInfoCard } from "@/components/dashboard/client-info-card";
 import { ProjectContentPanel } from "@/components/dashboard/project-content-panel";
 import { ProcessPipeline } from "@/components/process/process-pipeline";
+import { ProjectProcessPipelineSection } from "@/components/process/project-process-pipeline-section";
 import { PublicKanbanEmbedded } from "@/components/process/public-kanban-embedded";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,7 +45,6 @@ import type { ProjectSatisfactionBundle } from "@/lib/dashboard/satisfaction-typ
 import type { SystemCredentialMeta } from "@/lib/dashboard/system-credentials-types";
 import type { DashboardSpace } from "@/lib/dashboard/types";
 import { getProcessProgress } from "@/lib/process/types";
-import { formatProjectDuration } from "@/lib/project/warranty";
 import { extractKanbanTokenFromPublicPath } from "@/lib/process/kanban-public-path";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import { fetchProjectKanbanPublicLinks } from "@/lib/supabase/kanban-repository";
@@ -509,43 +509,26 @@ export function ClientDashboardView({
   function renderProcessSection() {
     return (
       <div className="grid min-w-0 gap-4">
-        {progress ? (
-          <div className="rounded-2xl border border-border/80 bg-surface p-4">
-            <div className="mb-1 flex items-center justify-between text-sm">
-              <span className="text-muted">Postęp procesu wdrożenia</span>
-              <span className="font-medium text-foreground">{progress.percent}%</span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-surface-muted">
-              <div
-                className="h-full rounded-full bg-accent transition-all"
-                style={{ width: `${progress.percent}%` }}
-              />
-            </div>
-            <p className="mt-1 text-xs text-muted">
-              {progress.completed} / {progress.total} elementów ukończonych
-            </p>
-            {formatProjectDuration(selectedProject) !== "—" ? (
-              <p className="mt-1 text-xs text-muted">
-                Czas trwania projektu:{" "}
-                <span className="font-medium text-foreground/90">
-                  {formatProjectDuration(selectedProject)}
-                </span>
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-
         {template && process ? (
           <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
             <h2 className="mb-4 text-base font-semibold text-foreground">Proces wdrożenia</h2>
-            <ProcessPipeline
-              template={template}
-              process={process}
-              interactive={false}
-              stacked
-              kanbanPublicLinks={kanbanPublicLinks}
-              onKanbanNavigate={onKanbanTokenChange ? handleKanbanNavigate : undefined}
-            />
+            {readOnly ? (
+              <ProcessPipeline
+                template={template}
+                process={process}
+                interactive={false}
+                stacked
+                kanbanPublicLinks={kanbanPublicLinks}
+                onKanbanNavigate={onKanbanTokenChange ? handleKanbanNavigate : undefined}
+              />
+            ) : (
+              <ProjectProcessPipelineSection
+                projectId={selectedProject.id}
+                template={template}
+                process={process}
+                actorName={teamAuthorName}
+              />
+            )}
           </div>
         ) : (
           <p className="text-sm text-muted">
@@ -558,7 +541,7 @@ export function ClientDashboardView({
             <Button variant="outline" size="sm" asChild>
               <Link href={`/projekty/${selectedProject.id}/proces`}>
                 <GitBranch className="mr-2 h-4 w-4" />
-                Otwórz proces (zespół)
+                Pełny ekran procesu
               </Link>
             </Button>
             <Button variant="outline" size="sm" asChild>

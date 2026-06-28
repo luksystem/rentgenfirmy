@@ -25,6 +25,7 @@ import {
   type ProjectProcessItem,
 } from "@/lib/process/types";
 import { cn, formatDate } from "@/lib/utils";
+import { useProcessStore } from "@/store/process-store";
 
 const kindIcon = {
   checklist: CheckCircle2,
@@ -74,10 +75,16 @@ export function ProcessItemPanel({
     return null;
   }
 
-  const isInternalAcceptance = Boolean(item.isInternalAcceptance ?? instance?.isInternalAcceptance);
-  const completed = Boolean(completion) || instance?.status === "completed" || Boolean(instance?.signedAt);
+  const storeInstance =
+    projectId && item ? useProcessStore.getState().projectProcessItems[projectId]?.[item.id] : undefined;
+  const resolvedInstance = instance ?? storeInstance;
+  const isInternalAcceptance = Boolean(item.isInternalAcceptance ?? resolvedInstance?.isInternalAcceptance);
+  const completed =
+    Boolean(completion) ||
+    resolvedInstance?.status === "completed" ||
+    Boolean(resolvedInstance?.signedAt);
   const Icon = isInternalAcceptance ? ShieldCheck : kindIcon[item.kind];
-  const checklistPayload = instance?.payload ?? { lines: [] };
+  const checklistPayload = resolvedInstance?.payload ?? { lines: [] };
   const checklistStats = checklistProgress(checklistPayload);
   const isFullscreen = item.kind === "kanban" || isInternalAcceptance;
 
@@ -95,10 +102,18 @@ export function ProcessItemPanel({
         </DialogHeader>
 
         <div className={cn("grid gap-4", isFullscreen && "flex min-h-0 flex-1 flex-col")}>
-          {interactive && instance && onAssign && onSign && item.kind !== "kanban" && !isInternalAcceptance ? (
+          {interactive && resolvedInstance && item.kind !== "kanban" ? (
+            <ProcessPublicLinkControls
+              projectProcessItemId={resolvedInstance.id}
+              kind={item.kind}
+              isInternalAcceptance={isInternalAcceptance}
+            />
+          ) : null}
+
+          {interactive && resolvedInstance && onAssign && onSign && item.kind !== "kanban" && !isInternalAcceptance ? (
             <ProcessItemResponsibleSection
-              key={`${instance.id}-${instance.updatedAt}`}
-              instance={instance}
+              key={`${resolvedInstance.id}-${resolvedInstance.updatedAt}`}
+              instance={resolvedInstance}
               teamProfiles={teamProfiles}
               currentUserId={currentUserId}
               canManageAssignment={canManageAssignment}
@@ -107,12 +122,12 @@ export function ProcessItemPanel({
             />
           ) : null}
 
-          {isInternalAcceptance && projectId && instance ? (
+          {isInternalAcceptance && projectId ? (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               <ProcessInternalAcceptanceBoard
                 projectId={projectId}
                 templateItemId={item.id}
-                initialState={instance.internalAcceptanceState}
+                initialState={resolvedInstance?.internalAcceptanceState}
                 actorName={actorName}
               />
             </div>
@@ -120,7 +135,7 @@ export function ProcessItemPanel({
 
           {item.kind === "checklist" && !isInternalAcceptance && interactive && onSaveChecklist ? (
             <ProcessChecklistEditor
-              key={`${item.id}-${instance?.updatedAt ?? "new"}-checklist`}
+              key={`${item.id}-${resolvedInstance?.updatedAt ?? "new"}-checklist`}
               initialPayload={checklistPayload}
               actorName={actorName}
               canCustomizeStructure={canCustomizeChecklist}
@@ -136,10 +151,10 @@ export function ProcessItemPanel({
             </div>
           ) : null}
 
-          {item.kind === "kanban" && interactive && instance ? (
+          {item.kind === "kanban" && interactive && resolvedInstance ? (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               <ProcessKanbanBoard
-                projectProcessItemId={instance.id}
+                projectProcessItemId={resolvedInstance.id}
                 templatePayload={
                   isKanbanTemplatePayload(item.defaultPayload) ? item.defaultPayload : { columns: [] }
                 }
@@ -151,22 +166,13 @@ export function ProcessItemPanel({
             </div>
           ) : null}
 
-          {interactive && instance && item.kind !== "kanban" ? (
-            <ProcessPublicLinkControls
-              projectProcessItemId={instance.id}
-              kind={item.kind}
-              isInternalAcceptance={isInternalAcceptance}
-              title={isInternalAcceptance ? "Link publiczny odbioru" : "Link publiczny elementu"}
-            />
-          ) : null}
-
-          {item.kind === "kanban" && interactive && instance && completed ? (
+          {item.kind === "kanban" && interactive && resolvedInstance && completed ? (
             <div className="shrink-0 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm">
               <p className="font-medium text-emerald-200">Ukończono</p>
               <p className="mt-1 text-muted">
-                {formatDate(completion?.completedAt ?? instance?.signedAt ?? undefined)}
-                {completion?.completedBy || instance?.signedByName
-                  ? ` · ${completion?.completedBy ?? instance?.signedByName}`
+                {formatDate(completion?.completedAt ?? resolvedInstance?.signedAt ?? undefined)}
+                {completion?.completedBy || resolvedInstance?.signedByName
+                  ? ` · ${completion?.completedBy ?? resolvedInstance?.signedByName}`
                   : ""}
               </p>
             </div>
@@ -194,9 +200,9 @@ export function ProcessItemPanel({
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm">
               <p className="font-medium text-emerald-200">Ukończono</p>
               <p className="mt-1 text-muted">
-                {formatDate(completion?.completedAt ?? instance?.signedAt ?? undefined)}
-                {completion?.completedBy || instance?.signedByName
-                  ? ` · ${completion?.completedBy ?? instance?.signedByName}`
+                {formatDate(completion?.completedAt ?? resolvedInstance?.signedAt ?? undefined)}
+                {completion?.completedBy || resolvedInstance?.signedByName
+                  ? ` · ${completion?.completedBy ?? resolvedInstance?.signedByName}`
                   : ""}
               </p>
             </div>

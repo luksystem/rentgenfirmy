@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ProcessPipeline } from "@/components/process/process-pipeline";
+import { ProjectProcessPipelineSection } from "@/components/process/project-process-pipeline-section";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { hasFullAppAccess, isAdministratorRole } from "@/lib/auth/types";
 import { getProcessProgress } from "@/lib/process/types";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
@@ -26,28 +25,16 @@ export default function ProjectProcessPage() {
 
   const hydrate = useProcessStore((state) => state.hydrate);
   const ensureProjectProcess = useProcessStore((state) => state.ensureProjectProcess);
-  const ensureProjectProcessItems = useProcessStore((state) => state.ensureProjectProcessItems);
   const loadTeamProfiles = useProcessStore((state) => state.loadTeamProfiles);
-  const saveChecklistPayload = useProcessStore((state) => state.saveChecklistPayload);
-  const assignProcessItem = useProcessStore((state) => state.assignProcessItem);
-  const signProcessItem = useProcessStore((state) => state.signProcessItem);
-  const toggleItemCompletion = useProcessStore((state) => state.toggleItemCompletion);
-  const saveMilestoneDate = useProcessStore((state) => state.saveMilestoneDate);
-
-  const profile = useAuthStore((state) => state.profile);
-  const displayName = useAuthStore((state) => state.displayName);
-  const teamProfiles = useProcessStore((state) => state.teamProfiles);
 
   const template = useProcessStore((state) =>
     project ? state.templates.find((entry) => entry.projectType === project.type) : undefined,
   );
   const process = useProcessStore((state) => state.projectProcesses[projectId]);
-  const itemInstances = useProcessStore((state) => state.projectProcessItems[projectId]);
+  const displayName = useAuthStore((state) => state.displayName);
 
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const canManageAssignment = profile ? hasFullAppAccess(profile.role) : false;
-  const canCustomizeChecklist = profile ? isAdministratorRole(profile.role) : false;
 
   useEffect(() => {
     if (!project) {
@@ -59,12 +46,6 @@ export default function ProjectProcessPage() {
         await hydrate(projectTypes);
         await loadTeamProfiles();
         await ensureProjectProcess(project.id, project.type);
-        const loadedTemplate = useProcessStore
-          .getState()
-          .templates.find((entry) => entry.projectType === project.type);
-        if (loadedTemplate) {
-          await ensureProjectProcessItems(project.id, loadedTemplate);
-        }
       } catch (error) {
         setLoadError(error instanceof Error ? error.message : "Błąd ładowania procesu.");
       } finally {
@@ -73,7 +54,6 @@ export default function ProjectProcessPage() {
     })();
   }, [
     ensureProjectProcess,
-    ensureProjectProcessItems,
     hydrate,
     loadTeamProfiles,
     project,
@@ -138,38 +118,11 @@ export default function ProjectProcessPage() {
       ) : (
         <Card>
           <CardContent className="py-5">
-            <ProcessPipeline
+            <ProjectProcessPipelineSection
+              projectId={project.id}
               template={template}
               process={process}
-              projectId={project.id}
-              itemInstances={itemInstances}
-              teamProfiles={teamProfiles}
-              currentUserId={profile?.id}
-              canManageAssignment={canManageAssignment}
-              canCustomizeChecklist={canCustomizeChecklist}
-              interactive
               actorName={displayName || undefined}
-              onSaveMilestoneDate={(milestoneId, date) =>
-                saveMilestoneDate(project.id, milestoneId, date)
-              }
-              onSaveChecklist={(itemId, payload) =>
-                saveChecklistPayload(project.id, itemId, payload, displayName || undefined)
-              }
-              onAssign={(itemId, assigneeId) => assignProcessItem(project.id, itemId, assigneeId)}
-              onSign={(itemId, signatureNote) => {
-                if (!profile) {
-                  return Promise.reject(new Error("Brak zalogowanego użytkownika."));
-                }
-                return signProcessItem(
-                  project.id,
-                  itemId,
-                  { id: profile.id, name: displayName || profile.email },
-                  signatureNote,
-                );
-              }}
-              onToggleItem={(itemId, completed) =>
-                void toggleItemCompletion(project.id, itemId, completed, displayName || undefined)
-              }
             />
           </CardContent>
         </Card>

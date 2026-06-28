@@ -191,6 +191,9 @@ export function ProcessInternalAcceptanceBoard({
           <p className="text-sm font-medium text-emerald-300">Projekt gotowy do odbioru klienta</p>
         ) : summary.blockers.length ? (
           <ul className="list-inside list-disc text-xs text-amber-200/90">
+            <li className="list-none text-muted before:content-none">
+              Wskazówki przed odbiorem klienta (nie blokują pracy nad checklistą):
+            </li>
             {summary.blockers.slice(0, 5).map((blocker) => (
               <li key={blocker}>{blocker}</li>
             ))}

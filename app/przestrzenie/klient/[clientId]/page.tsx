@@ -38,7 +38,8 @@ function ClientDashboardPageContent() {
   const hydrateDashboard = useDashboardStore((state) => state.hydrate);
   const spaces = useDashboardStore((state) => state.spaces);
   const hydrateProcess = useProcessStore((state) => state.hydrate);
-  const getProjectProcess = useProcessStore((state) => state.getProjectProcess);
+  const ensureProjectProcess = useProcessStore((state) => state.ensureProjectProcess);
+  const projectProcesses = useProcessStore((state) => state.projectProcesses);
   const templates = useProcessStore((state) => state.templates);
   const processHydrated = useProcessStore((state) => state.hydrated);
   const displayName = useAuthStore((state) => state.displayName);
@@ -78,9 +79,18 @@ function ClientDashboardPageContent() {
       : (clientProjects[0]?.id ?? ""),
   );
 
+  const selectedProject = clientProjects.find((project) => project.id === selectedProjectId);
+
   useEffect(() => {
     void hydrateProcess(fieldOptions.projectTypes);
   }, [fieldOptions.projectTypes, hydrateProcess]);
+
+  useEffect(() => {
+    if (!selectedProject?.type || !selectedProjectId) {
+      return;
+    }
+    void ensureProjectProcess(selectedProjectId, selectedProject.type).catch(() => undefined);
+  }, [ensureProjectProcess, selectedProject?.type, selectedProjectId]);
 
   useEffect(() => {
     if (!clientProjects.length) {
@@ -126,7 +136,6 @@ function ClientDashboardPageContent() {
     [clientId, router, searchParams, selectedProjectId],
   );
 
-  const selectedProject = clientProjects.find((project) => project.id === selectedProjectId);
   const clientSpace = useMemo(
     () =>
       selectedProjectId
@@ -136,7 +145,7 @@ function ClientDashboardPageContent() {
         : null,
     [selectedProjectId, spaces],
   );
-  const process = selectedProjectId ? getProjectProcess(selectedProjectId) ?? null : null;
+  const process = selectedProjectId ? projectProcesses[selectedProjectId] ?? null : null;
   const template = templates.find((entry) => entry.projectType === selectedProject?.type) ?? null;
 
   if (!client) {
