@@ -333,6 +333,7 @@ export type SpecificationCatalogItemRow = {
   description: string;
   position: number;
   is_active: boolean;
+  internal_acceptance_items: unknown;
   created_at: string;
 };
 

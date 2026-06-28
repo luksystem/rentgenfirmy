@@ -1,3 +1,4 @@
+import { applyInternalAcceptanceItemPatch } from "@/lib/internal-acceptance/item-history";
 import { buildInternalAcceptanceState } from "@/lib/internal-acceptance/generator";
 import { computeInternalAcceptanceSummary } from "@/lib/internal-acceptance/quality-gate";
 import type {
@@ -7,18 +8,23 @@ import type {
 import { fetchInternalAcceptanceTemplateConfigOrDefault } from "@/lib/supabase/internal-acceptance-config-repository";
 import { getSupabase } from "@/lib/supabase/client";
 import { fetchProjectAgreements } from "@/lib/supabase/project-agreement-repository";
-import { fetchProjectSpecificationItems } from "@/lib/supabase/project-specification-repository";
+import {
+  fetchProjectSpecificationItems,
+  fetchSpecificationCatalogAcceptanceMap,
+} from "@/lib/supabase/project-specification-repository";
 import { rowToProjectProcessItem } from "@/lib/supabase/process-item-mappers";
 
 export async function loadInternalAcceptanceGenerationInput(
   projectId: string,
   templateItemId: string,
 ) {
-  const [specificationItems, agreements, templateConfig] = await Promise.all([
-    fetchProjectSpecificationItems(projectId),
-    fetchProjectAgreements(projectId),
-    fetchInternalAcceptanceTemplateConfigOrDefault(templateItemId),
-  ]);
+  const [specificationItems, agreements, templateConfig, catalogAcceptanceByCatalogId] =
+    await Promise.all([
+      fetchProjectSpecificationItems(projectId),
+      fetchProjectAgreements(projectId),
+      fetchInternalAcceptanceTemplateConfigOrDefault(templateItemId),
+      fetchSpecificationCatalogAcceptanceMap(),
+    ]);
 
   return {
     specificationItems: specificationItems.map((item) => ({
@@ -26,6 +32,7 @@ export async function loadInternalAcceptanceGenerationInput(
       title: item.title,
       category: item.category,
       description: item.description,
+      catalogItemId: item.catalogItemId,
     })),
     agreements: agreements
       .filter((item) => item.status === "accepted" || item.status === "pending_client")
@@ -36,6 +43,7 @@ export async function loadInternalAcceptanceGenerationInput(
         body: item.body,
       })),
     templateConfig,
+    catalogAcceptanceByCatalogId,
   };
 }
 
@@ -111,6 +119,7 @@ export async function updateInternalAcceptanceItem(
   templateItemId: string,
   itemKey: string,
   patch: Partial<InternalAcceptanceItemState>,
+  actor?: { id?: string; name: string },
 ) {
   const supabase = getSupabase();
   const { data, error } = await supabase
@@ -134,21 +143,16 @@ export async function updateInternalAcceptanceItem(
     throw new Error("Brak wygenerowanej checklisty odbioru.");
   }
 
+  const resolvedActor = {
+    id: actor?.id,
+    name: actor?.name?.trim() || patch.assigneeName?.trim() || "Zespół",
+  };
+
   const items = current.items.map((item) => {
     if (item.itemKey !== itemKey) {
       return item;
     }
-    const nextStatus = patch.status ?? item.status;
-    return {
-      ...item,
-      ...patch,
-      status: nextStatus,
-      completedAt:
-        patch.completedAt ??
-        (nextStatus === "PASSED" || nextStatus === "NOT_APPLICABLE"
-          ? new Date().toISOString()
-          : item.completedAt),
-    };
+    return applyInternalAcceptanceItemPatch(item, patch, resolvedActor);
   });
 
   return saveInternalAcceptanceState(projectId, templateItemId, {

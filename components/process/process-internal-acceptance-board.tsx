@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { RefreshCw, ShieldCheck } from "lucide-react";
+import { InternalAcceptanceItemDialog } from "@/components/process/internal-acceptance-item-dialog";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import {
   INTERNAL_ACCEPTANCE_STATUS_LABELS,
   type InternalAcceptanceItemState,
@@ -14,13 +14,14 @@ import {
   ensureInternalAcceptanceState,
   updateInternalAcceptanceItem,
 } from "@/lib/supabase/internal-acceptance-repository";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 
 export function ProcessInternalAcceptanceBoard({
   projectId,
   templateItemId,
   initialState,
   readOnly = false,
+  actorId,
   actorName = "Zespół",
   onStateChange,
 }: {
@@ -28,6 +29,7 @@ export function ProcessInternalAcceptanceBoard({
   templateItemId: string;
   initialState?: InternalAcceptanceState | null;
   readOnly?: boolean;
+  actorId?: string;
   actorName?: string;
   onStateChange?: (state: InternalAcceptanceState) => void;
 }) {
@@ -35,7 +37,13 @@ export function ProcessInternalAcceptanceBoard({
   const [loading, setLoading] = useState(!initialState);
   const [regenerating, setRegenerating] = useState(false);
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const actor = useMemo(
+    () => ({ id: actorId, name: actorName.trim() || "Zespół" }),
+    [actorId, actorName],
+  );
 
   useEffect(() => {
     if (initialState) {
@@ -99,41 +107,43 @@ export function ProcessInternalAcceptanceBoard({
     }
   }
 
-  async function handleStatusChange(itemKey: string, status: InternalAcceptanceStatus) {
+  async function persistItemPatch(itemKey: string, patch: Partial<InternalAcceptanceItemState>) {
     if (readOnly) {
       return;
     }
+    setSavingKey(itemKey);
     setError(null);
     try {
-      const updated = await updateInternalAcceptanceItem(projectId, templateItemId, itemKey, {
-        status,
-        assigneeName: actorName,
-      });
+      const updated = await updateInternalAcceptanceItem(
+        projectId,
+        templateItemId,
+        itemKey,
+        patch,
+        actor,
+      );
       const next = updated.internalAcceptanceState;
       if (next) {
         setState(next);
         onStateChange?.(next);
       }
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Błąd zapisu statusu.");
+      setError(saveError instanceof Error ? saveError.message : "Błąd zapisu.");
+    } finally {
+      setSavingKey(null);
     }
   }
 
-  async function handleFailureDetails(itemKey: string, patch: Partial<InternalAcceptanceItemState>) {
-    if (readOnly) {
-      return;
-    }
-    setError(null);
-    try {
-      const updated = await updateInternalAcceptanceItem(projectId, templateItemId, itemKey, patch);
-      const next = updated.internalAcceptanceState;
-      if (next) {
-        setState(next);
-        onStateChange?.(next);
-      }
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Błąd zapisu uwag.");
-    }
+  function handleLocalFieldChange(itemKey: string, patch: Partial<InternalAcceptanceItemState>) {
+    setState((current) =>
+      current
+        ? {
+            ...current,
+            items: current.items.map((entry) =>
+              entry.itemKey === itemKey ? { ...entry, ...patch } : entry,
+            ),
+          }
+        : current,
+    );
   }
 
   if (loading) {
@@ -201,7 +211,7 @@ export function ProcessInternalAcceptanceBoard({
         ) : null}
       </div>
 
-      <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="grid gap-4">
           {grouped.map(([category, items]) => (
             <section key={category} className="rounded-xl border border-border/70 bg-surface/40 p-3">
@@ -224,133 +234,46 @@ export function ProcessInternalAcceptanceBoard({
                       <StatusBadge status={item.status} />
                     </div>
                     <p className="mt-1 text-xs text-muted">{item.source.refLabel}</p>
+                    {item.lastUpdatedAt || item.completedAt ? (
+                      <p className="mt-1 text-[11px] text-muted/80">
+                        {item.lastUpdatedByName ?? item.assigneeName ?? "—"} ·{" "}
+                        {formatDateTime(item.lastUpdatedAt ?? item.completedAt)}
+                      </p>
+                    ) : null}
                   </button>
                 ))}
               </div>
             </section>
           ))}
         </div>
-
-        <aside className="rounded-xl border border-border/70 bg-surface-muted/20 p-3">
-          {activeItem ? (
-            <div className="grid gap-3">
-              <div>
-                <p className="text-sm font-semibold text-foreground">{activeItem.name}</p>
-                <p className="mt-1 text-xs text-muted">{activeItem.description}</p>
-                <p className="mt-2 text-[11px] uppercase tracking-wide text-muted">{activeItem.source.refLabel}</p>
-              </div>
-              {!readOnly ? (
-                <>
-                  <Field label="Status">
-                    <Select
-                      value={activeItem.status}
-                      onChange={(event) =>
-                        void handleStatusChange(activeItem.itemKey, event.target.value as InternalAcceptanceStatus)
-                      }
-                    >
-                      {Object.entries(INTERNAL_ACCEPTANCE_STATUS_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                  {activeItem.status === "FAILED" ? (
-                    <>
-                      <Field label="Opis problemu">
-                        <Textarea
-                          value={activeItem.failureReason ?? ""}
-                          onChange={(event) =>
-                            setState((current) =>
-                              current
-                                ? {
-                                    ...current,
-                                    items: current.items.map((entry) =>
-                                      entry.itemKey === activeItem.itemKey
-                                        ? { ...entry, failureReason: event.target.value }
-                                        : entry,
-                                    ),
-                                  }
-                                : current,
-                            )
-                          }
-                          onBlur={() =>
-                            void handleFailureDetails(activeItem.itemKey, {
-                              failureReason: activeItem.failureReason,
-                            })
-                          }
-                        />
-                      </Field>
-                      <Field label="Osoba odpowiedzialna za poprawkę">
-                        <Input
-                          value={activeItem.fixAssignee ?? ""}
-                          onChange={(event) =>
-                            setState((current) =>
-                              current
-                                ? {
-                                    ...current,
-                                    items: current.items.map((entry) =>
-                                      entry.itemKey === activeItem.itemKey
-                                        ? { ...entry, fixAssignee: event.target.value }
-                                        : entry,
-                                    ),
-                                  }
-                                : current,
-                            )
-                          }
-                          onBlur={() =>
-                            void handleFailureDetails(activeItem.itemKey, {
-                              fixAssignee: activeItem.fixAssignee,
-                            })
-                          }
-                        />
-                      </Field>
-                      <Field label="Termin poprawki">
-                        <Input
-                          type="date"
-                          value={activeItem.fixDeadline?.slice(0, 10) ?? ""}
-                          onChange={(event) =>
-                            void handleFailureDetails(activeItem.itemKey, {
-                              fixDeadline: event.target.value || undefined,
-                            })
-                          }
-                        />
-                      </Field>
-                    </>
-                  ) : (
-                    <Field label="Uwagi">
-                      <Textarea
-                        value={activeItem.notes ?? ""}
-                        onChange={(event) =>
-                          setState((current) =>
-                            current
-                              ? {
-                                  ...current,
-                                  items: current.items.map((entry) =>
-                                    entry.itemKey === activeItem.itemKey
-                                      ? { ...entry, notes: event.target.value }
-                                      : entry,
-                                  ),
-                                }
-                              : current,
-                          )
-                        }
-                        onBlur={() =>
-                          void handleFailureDetails(activeItem.itemKey, { notes: activeItem.notes })
-                        }
-                      />
-                    </Field>
-                  )}
-                </>
-              ) : (
-                <p className="text-sm text-muted">{INTERNAL_ACCEPTANCE_STATUS_LABELS[activeItem.status]}</p>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-muted">Wybierz punkt kontroli, aby zobaczyć szczegóły.</p>
-          )}
-        </aside>
       </div>
+
+      <InternalAcceptanceItemDialog
+        item={activeItem}
+        open={activeKey !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setActiveKey(null);
+          }
+        }}
+        readOnly={readOnly}
+        saving={activeKey !== null && savingKey === activeKey}
+        onStatusChange={(status) => {
+          if (activeKey) {
+            void persistItemPatch(activeKey, { status });
+          }
+        }}
+        onFieldChange={(patch) => {
+          if (activeKey) {
+            void persistItemPatch(activeKey, patch);
+          }
+        }}
+        onLocalFieldChange={(patch) => {
+          if (activeKey) {
+            handleLocalFieldChange(activeKey, patch);
+          }
+        }}
+      />
 
       {error ? <p className="text-sm text-rose-400">{error}</p> : null}
     </div>

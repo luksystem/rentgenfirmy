@@ -66,6 +66,23 @@ export type InternalAcceptanceItemSource = {
   refLabel: string;
 };
 
+export type InternalAcceptanceHistoryAction =
+  | "status_change"
+  | "note_updated"
+  | "failure_details_updated"
+  | "assignee_updated";
+
+export type InternalAcceptanceHistoryEntry = {
+  id: string;
+  at: string;
+  actorId?: string;
+  actorName: string;
+  action: InternalAcceptanceHistoryAction;
+  status?: InternalAcceptanceStatus;
+  previousStatus?: InternalAcceptanceStatus;
+  message: string;
+};
+
 export type InternalAcceptanceGeneratedItem = InternalAcceptanceRuleTemplate & {
   source: InternalAcceptanceItemSource;
   /** Stabilny klucz punktu w instancji projektu */
@@ -83,6 +100,10 @@ export type InternalAcceptanceItemState = InternalAcceptanceGeneratedItem & {
   failureReason?: string;
   fixDeadline?: string;
   fixAssignee?: string;
+  lastUpdatedAt?: string;
+  lastUpdatedById?: string;
+  lastUpdatedByName?: string;
+  history?: InternalAcceptanceHistoryEntry[];
 };
 
 export type InternalAcceptanceQualitySummary = {
@@ -108,8 +129,18 @@ export type InternalAcceptanceState = {
 };
 
 export type InternalAcceptanceGenerationInput = {
-  specificationItems: Array<{ id: string; title: string; category: string; description?: string }>;
+  specificationItems: Array<{
+    id: string;
+    title: string;
+    category: string;
+    description?: string;
+    catalogItemId?: string | null;
+  }>;
   agreements: Array<{ id: string; title: string; category: string; body?: string }>;
+  catalogAcceptanceByCatalogId?: Record<
+    string,
+    import("@/lib/internal-acceptance/template-config").InternalAcceptanceTemplateStaticItem[]
+  >;
   templateConfig?: import("@/lib/internal-acceptance/template-config").InternalAcceptanceTemplateConfig | null;
 };
 

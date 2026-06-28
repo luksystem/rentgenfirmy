@@ -41,6 +41,34 @@ export function DialogContent({
   );
 }
 
+/** Dialog anchored to the top — for overlays inside fullscreen process panels. */
+export function TopAnchoredDialogContent({
+  className,
+  children,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>) {
+  return (
+    <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm" />
+      <DialogPrimitive.Content
+        className={cn(
+          "fixed z-[100] flex max-h-[min(85dvh,calc(100dvh-env(safe-area-inset-top)-1rem))] w-full flex-col overflow-hidden border border-border bg-surface-elevated shadow-soft",
+          "inset-x-0 top-[max(0.5rem,env(safe-area-inset-top))] rounded-b-2xl",
+          "sm:inset-x-auto sm:left-1/2 sm:top-[max(1rem,env(safe-area-inset-top))] sm:max-w-2xl sm:-translate-x-1/2 sm:rounded-2xl",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+        <DialogPrimitive.Close className="absolute right-4 top-4 z-10 rounded-lg p-1.5 text-muted transition hover:bg-surface-muted hover:text-foreground">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Zamknij</span>
+        </DialogPrimitive.Close>
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
+  );
+}
+
 /** Dialog layered above another open dialog (e.g. Kanban task detail inside process panel). */
 export function StackedDialogContent({
   className,

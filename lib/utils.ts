@@ -30,6 +30,20 @@ export function formatDate(value?: string) {
   }).format(new Date(value));
 }
 
+export function formatDateTime(value?: string) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("pl-PL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
 export function formatHours(value: number) {
   if (value <= 0) {
     return "—";

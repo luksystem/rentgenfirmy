@@ -1,8 +1,10 @@
 import type {
   ProjectSpecificationInput,
   ProjectSpecificationItem,
+  SpecificationCatalogInput,
   SpecificationCatalogItem,
 } from "@/lib/dashboard/specification-types";
+import { normalizeCatalogAcceptanceItems } from "@/lib/internal-acceptance/catalog-seeds";
 import { getSupabase } from "@/lib/supabase/client";
 
 type CatalogRow = {
@@ -12,6 +14,7 @@ type CatalogRow = {
   description: string;
   position: number;
   is_active: boolean;
+  internal_acceptance_items?: unknown;
   created_at: string;
 };
 
@@ -36,6 +39,7 @@ function rowToCatalog(row: CatalogRow): SpecificationCatalogItem {
     description: row.description,
     position: row.position,
     isActive: row.is_active,
+    internalAcceptanceItems: normalizeCatalogAcceptanceItems(row.internal_acceptance_items),
     createdAt: row.created_at,
   };
 }
@@ -172,4 +176,107 @@ export async function deleteProjectSpecificationItem(itemId: string) {
 
 export function invalidateSpecificationCatalogCache() {
   catalogCache = null;
+}
+
+export async function createSpecificationCatalogItem(input: SpecificationCatalogInput) {
+  const supabase = getSupabase();
+
+  const { data: lastRow } = await supabase
+    .from("specification_catalog_items")
+    .select("position")
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const position = input.position ?? ((lastRow as { position?: number } | null)?.position ?? 0) + 10;
+
+  const { data, error } = await supabase
+    .from("specification_catalog_items")
+    .insert({
+      id: crypto.randomUUID(),
+      name: input.name.trim() || "Nowa pozycja",
+      category: input.category.trim() || "Ogólne",
+      description: input.description.trim(),
+      position,
+      is_active: true,
+      internal_acceptance_items: [],
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  invalidateSpecificationCatalogCache();
+  return rowToCatalog(data as CatalogRow);
+}
+
+export async function deleteSpecificationCatalogItem(id: string) {
+  const supabase = getSupabase();
+  const { error } = await supabase
+    .from("specification_catalog_items")
+    .update({ is_active: false })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  invalidateSpecificationCatalogCache();
+}
+
+export async function updateSpecificationCatalogItem(
+  id: string,
+  input: Pick<SpecificationCatalogItem, "name" | "category" | "description" | "position" | "isActive">,
+) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("specification_catalog_items")
+    .update({
+      name: input.name.trim(),
+      category: input.category.trim() || "Ogólne",
+      description: input.description.trim(),
+      position: input.position,
+      is_active: input.isActive,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  invalidateSpecificationCatalogCache();
+  return rowToCatalog(data as CatalogRow);
+}
+
+export async function saveSpecificationCatalogAcceptanceItems(
+  id: string,
+  items: SpecificationCatalogItem["internalAcceptanceItems"],
+) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("specification_catalog_items")
+    .update({
+      internal_acceptance_items: items,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  invalidateSpecificationCatalogCache();
+  return rowToCatalog(data as CatalogRow);
+}
+
+export async function fetchSpecificationCatalogAcceptanceMap(): Promise<
+  Record<string, SpecificationCatalogItem["internalAcceptanceItems"]>
+> {
+  const catalog = await fetchSpecificationCatalog(true);
+  return Object.fromEntries(catalog.map((entry) => [entry.id, entry.internalAcceptanceItems]));
 }

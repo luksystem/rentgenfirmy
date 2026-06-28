@@ -187,6 +187,36 @@ function generateFromTemplateConfig(
     sortOrder += 1;
   }
 
+  if (config.sources.specificationCatalogItems) {
+    input.specificationItems.forEach((spec, specIndex) => {
+      if (!spec.catalogItemId) {
+        return;
+      }
+      const catalogItems = input.catalogAcceptanceByCatalogId?.[spec.catalogItemId] ?? [];
+      catalogItems.forEach((catalogItem, itemIndex) => {
+        appendUnique(
+          items,
+          seenKeys,
+          {
+            id: catalogItem.id,
+            name: catalogItem.name,
+            description: catalogItem.description,
+            category: catalogItem.category,
+            priority: catalogItem.priority,
+            mandatory: catalogItem.mandatory,
+            itemKey: buildItemKey("catalog", spec.id, catalogItem.id),
+            source: {
+              type: "specification",
+              refId: spec.id,
+              refLabel: `Specyfikacja: ${spec.title}`,
+            },
+          },
+          1500 + specIndex * 100 + itemIndex,
+        );
+      });
+    });
+  }
+
   if (config.sources.specificationItems) {
     input.specificationItems.forEach((spec, index) => {
       appendUnique(
@@ -281,6 +311,10 @@ export function mergeInternalAcceptanceState(
       failureReason: saved?.failureReason,
       fixDeadline: saved?.fixDeadline,
       fixAssignee: saved?.fixAssignee,
+      lastUpdatedAt: saved?.lastUpdatedAt,
+      lastUpdatedById: saved?.lastUpdatedById,
+      lastUpdatedByName: saved?.lastUpdatedByName,
+      history: saved?.history ?? [],
     };
   });
 

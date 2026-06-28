@@ -128,6 +128,7 @@ export function ProcessItemPanel({
                 projectId={projectId}
                 templateItemId={item.id}
                 initialState={resolvedInstance?.internalAcceptanceState}
+                actorId={currentUserId}
                 actorName={actorName}
               />
             </div>

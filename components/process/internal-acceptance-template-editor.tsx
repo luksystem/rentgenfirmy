@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { InternalAcceptanceRulePackEditor } from "@/components/process/internal-acceptance-rule-pack-editor";
@@ -251,6 +252,32 @@ export function InternalAcceptanceTemplateEditor({
             </p>
           </div>
 
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-accent/30 bg-accent/5 p-3">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={config.sources.specificationCatalogItems}
+              onChange={(event) =>
+                setConfig((current) => ({
+                  ...current,
+                  sources: { ...current.sources, specificationCatalogItems: event.target.checked },
+                }))
+              }
+            />
+            <span>
+              <span className="block text-sm font-medium text-foreground">
+                Checklisty z katalogu specyfikacji
+              </span>
+              <span className="mt-1 block text-xs text-muted">
+                Gdy w projekcie jest np. Oświetlenie, do odbioru trafi lista punktów zdefiniowana przy tej
+                pozycji katalogu.{" "}
+                <Link href="/ustawienia/specyfikacja" className="text-accent hover:underline">
+                  Edytuj katalog specyfikacji
+                </Link>
+              </span>
+            </span>
+          </label>
+
           <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/70 bg-surface-muted/20 p-3">
             <input
               type="checkbox"
@@ -265,10 +292,11 @@ export function InternalAcceptanceTemplateEditor({
             />
             <span>
               <span className="block text-sm font-medium text-foreground">
-                Pozycje aktualnej specyfikacji projektu
+                Jeden ogólny punkt na pozycję specyfikacji (legacy)
               </span>
               <span className="mt-1 block text-xs text-muted">
-                Każda pozycja z aktywnej specyfikacji projektu stanie się osobnym punktem kontroli.
+                Każda pozycja specyfikacji projektu staje się pojedynczym punktem kontroli bez rozbicia na
+                checklistę katalogu.
               </span>
             </span>
           </label>
@@ -287,10 +315,10 @@ export function InternalAcceptanceTemplateEditor({
             />
             <span>
               <span className="block text-sm font-medium text-foreground">
-                Reguły dopasowane do specyfikacji
+                Reguły specyfikacji po słowach kluczowych (legacy)
               </span>
               <span className="mt-1 block text-xs text-muted">
-                Pakiety punktów włączane, gdy tytuł/kategoria pozycji specyfikacji pasuje (np. oświetlenie, KNX).
+                Starszy mechanizm pakietów (oświetlenie, KNX…) — preferuj checklisty z katalogu specyfikacji.
               </span>
             </span>
           </label>

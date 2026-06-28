@@ -3,9 +3,11 @@ import { INTERNAL_ACCEPTANCE_RULE_LIBRARY } from "@/lib/internal-acceptance/rule
 import { EMPTY_RULE_PACK_CUSTOMIZATION } from "@/lib/internal-acceptance/rule-pack-resolver";
 
 export type InternalAcceptanceTemplateConfigSources = {
-  /** Każda pozycja aktualnej specyfikacji projektu → osobny punkt kontroli. */
+  /** Punkty odbioru zdefiniowane przy pozycji katalogu specyfikacji (gdy projekt ma np. Oświetlenie). */
+  specificationCatalogItems: boolean;
+  /** Każda pozycja specyfikacji projektu → jeden ogólny punkt kontroli (legacy). */
   specificationItems: boolean;
-  /** Pakiety reguł dopasowywane do pozycji specyfikacji (słowa kluczowe). */
+  /** Pakiety reguł dopasowywane do pozycji specyfikacji po słowach kluczowych (legacy). */
   specificationRulePacks: boolean;
   /** Pakiety reguł dopasowywane do ustaleń z klientem. */
   agreementRulePacks: boolean;
@@ -51,8 +53,9 @@ export type InternalAcceptanceTemplateConfig = {
 };
 
 export const DEFAULT_INTERNAL_ACCEPTANCE_SOURCES: InternalAcceptanceTemplateConfigSources = {
+  specificationCatalogItems: true,
   specificationItems: false,
-  specificationRulePacks: true,
+  specificationRulePacks: false,
   agreementRulePacks: true,
 };
 
@@ -151,6 +154,10 @@ export function normalizeInternalAcceptanceTemplateConfig(
 
   return {
     sources: {
+      specificationCatalogItems:
+        sources.specificationCatalogItems !== undefined
+          ? Boolean(sources.specificationCatalogItems)
+          : defaults.sources.specificationCatalogItems,
       specificationItems: Boolean(sources.specificationItems),
       specificationRulePacks:
         sources.specificationRulePacks !== undefined

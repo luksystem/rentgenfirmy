@@ -5,6 +5,7 @@ export type SpecificationCatalogItem = {
   description: string;
   position: number;
   isActive: boolean;
+  internalAcceptanceItems: import("@/lib/internal-acceptance/template-config").InternalAcceptanceTemplateStaticItem[];
   createdAt: string;
 };
 
@@ -27,4 +28,11 @@ export type ProjectSpecificationInput = {
   category: string;
   description: string;
   notes?: string;
+};
+
+export type SpecificationCatalogInput = {
+  name: string;
+  category: string;
+  description: string;
+  position?: number;
 };

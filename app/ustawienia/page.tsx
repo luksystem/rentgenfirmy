@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   BlockerReasonsOptionsEditor,
@@ -119,6 +120,20 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      <Card className="mb-6 border border-border/80">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+          <div>
+            <p className="font-medium text-foreground">Katalog specyfikacji i odbiór wewnętrzny</p>
+            <p className="mt-1 text-sm text-muted">
+              Edytuj pozycje konfiguratora specyfikacji (Oświetlenie, HVAC…) i przypisane checklisty QA.
+            </p>
+          </div>
+          <Button variant="secondary" asChild>
+            <Link href="/ustawienia/specyfikacja">Otwórz katalog</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card className="mb-6 border border-border bg-surface-muted">
         <CardContent className="grid gap-3 py-4 text-sm text-muted">
