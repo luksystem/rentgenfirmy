@@ -8,7 +8,7 @@ import { Field, Input, Select } from "@/components/ui/input";
 import { defaultKanbanTemplatePayload } from "@/lib/process/kanban-types";
 import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
 import { KanbanTemplateColumnsEditor } from "@/components/process/kanban-template-columns-editor";
-import { templatePayloadFromTitle } from "@/lib/process/item-payload";
+import { flattenChecklistLines, normalizeChecklistPayload, templatePayloadFromTitle } from "@/lib/process/item-payload";
 import {
   PROCESS_ITEM_KINDS,
   PROCESS_ITEM_KIND_LABELS,
@@ -69,7 +69,7 @@ export function ProcessElementEditor({
             ? current.defaultPayload
             : defaultKanbanTemplatePayload()
           : kind === "checklist"
-            ? "lines" in current.defaultPayload && current.defaultPayload.lines.length
+            ? flattenChecklistLines(normalizeChecklistPayload(current.defaultPayload)).length
               ? current.defaultPayload
               : templatePayloadFromTitle(current.title, kind)
             : templatePayloadFromTitle(current.title, kind),
@@ -128,7 +128,7 @@ export function ProcessElementEditor({
         {element.kind === "checklist" && !element.isInternalAcceptance ? (
           <TemplateChecklistLinesEditor
             label="Punkty checklisty (wzorzec)"
-            payload={"lines" in element.defaultPayload ? element.defaultPayload : { lines: [] }}
+            payload={normalizeChecklistPayload(element.defaultPayload)}
             onChange={(defaultPayload) => setElement({ ...element, defaultPayload })}
           />
         ) : element.kind === "checklist" && element.isInternalAcceptance ? (

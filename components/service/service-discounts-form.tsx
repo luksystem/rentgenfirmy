@@ -10,14 +10,25 @@ export function ServiceDiscountsForm({
   onChange: (discounts: ServiceDiscounts) => void;
 }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      <Field label="Rabat procentowy %">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <Field label="Rabat % praca i logistyka">
         <NumericInput
           value={discounts.percentDiscount}
           onChange={(value) =>
             onChange({
               ...discounts,
               percentDiscount: Math.min(100, value),
+            })
+          }
+        />
+      </Field>
+      <Field label="Rabat % sprzęt / materiały">
+        <NumericInput
+          value={discounts.materialsPercentDiscount}
+          onChange={(value) =>
+            onChange({
+              ...discounts,
+              materialsPercentDiscount: Math.min(100, value),
             })
           }
         />

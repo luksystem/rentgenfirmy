@@ -55,8 +55,10 @@ export function validateService(service: ServiceRecord): string[] {
     service.rates.carHourly,
     service.rates.accommodationCost,
     service.estimateDiscounts.percentDiscount,
+    service.estimateDiscounts.materialsPercentDiscount,
     service.estimateDiscounts.specialDiscountPln,
     service.actualDiscounts.percentDiscount,
+    service.actualDiscounts.materialsPercentDiscount,
     service.actualDiscounts.specialDiscountPln,
   ];
 

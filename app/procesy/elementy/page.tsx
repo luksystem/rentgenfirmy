@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { flattenChecklistLines, normalizeChecklistPayload } from "@/lib/process/item-payload";
 import { PROCESS_ITEM_KIND_LABELS } from "@/lib/process/types";
 import { useAppStore } from "@/store/app-store";
 import { useProcessStore } from "@/store/process-store";
@@ -61,8 +62,15 @@ export default function ProcessElementsPage() {
                     <p className="mt-2 text-sm text-muted">{element.description}</p>
                   ) : null}
                 </div>
-                {element.kind === "checklist" && "lines" in element.defaultPayload ? (
-                  <p className="text-sm text-muted">{element.defaultPayload.lines.length} punktów</p>
+                {element.kind === "checklist" ? (
+                  <p className="text-sm text-muted">
+                    {flattenChecklistLines(
+                      element.kind === "checklist"
+                        ? normalizeChecklistPayload(element.defaultPayload)
+                        : { sections: [] },
+                    ).length}{" "}
+                    punktów
+                  </p>
                 ) : element.kind === "kanban" && "columns" in element.defaultPayload ? (
                   <p className="text-sm text-muted">{element.defaultPayload.columns.length} kolumn</p>
                 ) : null}

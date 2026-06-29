@@ -108,7 +108,11 @@ export function getServiceReportMaterialsNote(service: ServiceRecord, settled: b
 }
 
 export function hasAppliedDiscount(discounts: ServiceDiscounts) {
-  return discounts.percentDiscount > 0 || discounts.specialDiscountPln > 0;
+  return (
+    discounts.percentDiscount > 0 ||
+    discounts.materialsPercentDiscount > 0 ||
+    discounts.specialDiscountPln > 0
+  );
 }
 
 export function getAppliedDiscountDescription(
@@ -123,12 +127,24 @@ export function getAppliedDiscountDescription(
 
   if (discounts.percentDiscount > 0) {
     parts.push(
-      `rabat ${discounts.percentDiscount}% (−${formatMoney(breakdown.percentDiscountAmount)} netto)`,
+      `rabat praca/logistyka ${discounts.percentDiscount}% (−${formatMoney(breakdown.percentDiscountAmount)} netto)`,
+    );
+  }
+
+  if (discounts.materialsPercentDiscount > 0) {
+    parts.push(
+      `rabat sprzęt/materiały ${discounts.materialsPercentDiscount}% (−${formatMoney(breakdown.materialsPercentDiscountAmount)} netto)`,
     );
   }
 
   if (discounts.specialDiscountPln > 0) {
     parts.push(`rabat specjalny −${formatMoney(discounts.specialDiscountPln)} netto`);
+  }
+
+  if (breakdown.totalDiscountAmount > 0) {
+    parts.push(
+      `łącznie −${formatMoney(breakdown.totalDiscountAmount)} (${breakdown.totalDiscountPercentOfSubtotal}% zlecenia)`,
+    );
   }
 
   return parts.join(" · ");

@@ -98,13 +98,26 @@ export function calculateServiceCost(
       categories.accommodations,
   );
 
-  const percentDiscountAmount = roundMoney(
-    (subtotalBeforeDiscount * Math.max(0, discounts.percentDiscount)) / 100,
+  const nonMaterialsSubtotal = roundMoney(
+    categories.car + categories.carHours + categories.labor + categories.accommodations,
   );
+  const materialsSubtotal = categories.materials;
 
-  const netTotal = roundMoney(
-    Math.max(0, subtotalBeforeDiscount - percentDiscountAmount - discounts.specialDiscountPln),
+  const percentDiscountAmount = roundMoney(
+    (nonMaterialsSubtotal * Math.max(0, discounts.percentDiscount)) / 100,
   );
+  const materialsPercentDiscountAmount = roundMoney(
+    (materialsSubtotal * Math.max(0, discounts.materialsPercentDiscount)) / 100,
+  );
+  const totalDiscountAmount = roundMoney(
+    percentDiscountAmount + materialsPercentDiscountAmount + Math.max(0, discounts.specialDiscountPln),
+  );
+  const totalDiscountPercentOfSubtotal =
+    subtotalBeforeDiscount > 0
+      ? roundMoney((totalDiscountAmount / subtotalBeforeDiscount) * 100)
+      : 0;
+
+  const netTotal = roundMoney(Math.max(0, subtotalBeforeDiscount - totalDiscountAmount));
 
   const vatAmount = roundMoney((netTotal * discounts.vatRate) / 100);
   const grossTotal = roundMoney(netTotal + vatAmount);
@@ -115,6 +128,9 @@ export function calculateServiceCost(
     categories,
     subtotalBeforeDiscount,
     percentDiscountAmount,
+    materialsPercentDiscountAmount,
+    totalDiscountAmount,
+    totalDiscountPercentOfSubtotal,
     netTotal,
     vatAmount,
     grossTotal,

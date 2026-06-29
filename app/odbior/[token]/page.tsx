@@ -53,7 +53,7 @@ export default function PublicInternalAcceptancePage({
     );
   }
 
-  if (!item) {
+  if (!item || !token) {
     return (
       <main className="mx-auto max-w-5xl px-4 py-10">
         <p className="text-sm text-muted">Ładowanie tablicy odbioru…</p>
@@ -63,7 +63,7 @@ export default function PublicInternalAcceptancePage({
 
   return (
     <main className="mx-auto flex min-h-svh max-w-6xl flex-col px-4 py-6">
-      <header className="mb-4">
+      <header className="mb-4 shrink-0">
         <p className="text-xs uppercase tracking-wide text-muted">Odbiór wewnętrzny</p>
         <h1 className="text-2xl font-semibold text-foreground">{item.title}</h1>
       </header>
@@ -71,7 +71,8 @@ export default function PublicInternalAcceptancePage({
         projectId={item.projectId}
         templateItemId={item.templateItemId}
         initialState={item.internalAcceptance ?? undefined}
-        readOnly
+        actorName="Gość"
+        publicToken={token}
       />
     </main>
   );

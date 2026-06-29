@@ -59,16 +59,35 @@ export type ProcessItemCompletion = {
   note?: string;
 };
 
+import type { InternalAcceptanceStatus } from "@/lib/internal-acceptance/types";
+
+export type ChecklistLineStatus = InternalAcceptanceStatus;
+
 export type ChecklistLine = {
   id: string;
   text: string;
   checked: boolean;
   checkedAt?: string;
   checkedBy?: string;
+  status?: ChecklistLineStatus;
+  notes?: string;
+  failureReason?: string;
+  assigneeName?: string;
+  assigneeId?: string;
+  fixDeadline?: string;
+};
+
+export type ChecklistSection = {
+  id: string;
+  name: string;
+  position: number;
+  lines: ChecklistLine[];
 };
 
 export type ChecklistItemPayload = {
-  lines: ChecklistLine[];
+  sections: ChecklistSection[];
+  /** @deprecated migracja — używaj sections */
+  lines?: ChecklistLine[];
   note?: string;
 };
 

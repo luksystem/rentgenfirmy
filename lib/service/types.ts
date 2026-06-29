@@ -63,7 +63,10 @@ export type ServiceRates = {
 };
 
 export type ServiceDiscounts = {
+  /** Rabat % na pracę, logistykę i pozycje poza materiałami. */
   percentDiscount: number;
+  /** Rabat % na koszty sprzętu / materiałów. */
+  materialsPercentDiscount: number;
   specialDiscountPln: number;
   vatRate: VatRate;
 };
@@ -158,6 +161,9 @@ export type ServiceCostBreakdown = {
   categories: CategoryAmounts;
   subtotalBeforeDiscount: number;
   percentDiscountAmount: number;
+  materialsPercentDiscountAmount: number;
+  totalDiscountAmount: number;
+  totalDiscountPercentOfSubtotal: number;
   netTotal: number;
   vatAmount: number;
   grossTotal: number;

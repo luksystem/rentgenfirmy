@@ -32,6 +32,7 @@ type ServiceStore = {
   deleteService: (id: string) => Promise<void>;
   getServiceById: (id: string) => ServiceRecord | undefined;
   replaceService: (service: ServiceRecord) => void;
+  duplicateServiceForClient: (sourceId: string, client: ServiceRecord["client"]) => Promise<ServiceRecord>;
   updateSettings: (settings: ServiceGlobalSettings) => Promise<void>;
   createEmptyService: () => ServiceRecord;
 };
@@ -160,6 +161,38 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
   },
 
   getServiceById: (id) => get().services.find((item) => item.id === id),
+
+  duplicateServiceForClient: async (sourceId, client) => {
+    const source = get().getServiceById(sourceId);
+    if (!source) {
+      throw new Error("Nie znaleziono rozliczenia do skopiowania.");
+    }
+
+    const now = new Date().toISOString();
+    const clone: ServiceRecord = {
+      ...source,
+      id: ensureServiceUuid(crypto.randomUUID()),
+      createdAt: now,
+      updatedAt: now,
+      client,
+      clientId: null,
+      projectId: null,
+      title: source.title.trim() ? `${source.title.trim()} (kopia)` : "Rozliczenie (kopia)",
+      status: source.status === "Rozliczony" ? "Do rozliczenia" : "Wycena",
+      clientOffer: {
+        token: null,
+        expiresAt: defaultClientOfferExpiry(),
+        status: null,
+        message: null,
+        respondedAt: null,
+        lastClientMessage: null,
+      },
+      clientOfferHistory: [],
+      clientOfferAcceptedDocument: null,
+    };
+
+    return get().upsertService(clone);
+  },
 
   replaceService: (service) => {
     const services = get().services;

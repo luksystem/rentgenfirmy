@@ -45,14 +45,30 @@ export function ServiceCostBreakdownPanel({
           <span className="text-muted">Suma bez rabatu</span>
           <span className="font-medium">{formatMoney(breakdown.subtotalBeforeDiscount)}</span>
         </div>
-        <div className="flex justify-between gap-2">
-          <span className="text-muted">Rabat {discounts.percentDiscount}%</span>
-          <span className="font-medium">−{formatMoney(breakdown.percentDiscountAmount)}</span>
-        </div>
-        <div className="flex justify-between gap-2">
-          <span className="text-muted">Rabat specjalny</span>
-          <span className="font-medium">−{formatMoney(discounts.specialDiscountPln)}</span>
-        </div>
+        {discounts.percentDiscount > 0 ? (
+          <div className="flex justify-between gap-2">
+            <span className="text-muted">Rabat praca/logistyka {discounts.percentDiscount}%</span>
+            <span className="font-medium">−{formatMoney(breakdown.percentDiscountAmount)}</span>
+          </div>
+        ) : null}
+        {discounts.materialsPercentDiscount > 0 ? (
+          <div className="flex justify-between gap-2">
+            <span className="text-muted">Rabat sprzęt/materiały {discounts.materialsPercentDiscount}%</span>
+            <span className="font-medium">−{formatMoney(breakdown.materialsPercentDiscountAmount)}</span>
+          </div>
+        ) : null}
+        {discounts.specialDiscountPln > 0 ? (
+          <div className="flex justify-between gap-2">
+            <span className="text-muted">Rabat specjalny</span>
+            <span className="font-medium">−{formatMoney(discounts.specialDiscountPln)}</span>
+          </div>
+        ) : null}
+        {breakdown.totalDiscountAmount > 0 ? (
+          <div className="flex justify-between gap-2 font-medium text-emerald-300/90">
+            <span>Łączny rabat ({breakdown.totalDiscountPercentOfSubtotal}% zlecenia)</span>
+            <span>−{formatMoney(breakdown.totalDiscountAmount)}</span>
+          </div>
+        ) : null}
         <div className="flex justify-between gap-2 font-semibold">
           <span>Cena netto</span>
           <span>{formatMoney(breakdown.netTotal)}</span>

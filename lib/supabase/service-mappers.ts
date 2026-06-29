@@ -69,6 +69,7 @@ function normalizeDiscounts(value: unknown): ServiceDiscounts {
 
   return {
     percentDiscount: asNumber(data.percentDiscount),
+    materialsPercentDiscount: asNumber(data.materialsPercentDiscount),
     specialDiscountPln: asNumber(data.specialDiscountPln),
     vatRate: vat === 0 || vat === 8 || vat === 23 ? vat : 23,
   };

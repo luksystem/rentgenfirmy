@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
 import { moveItem, removeAt, withPositions } from "@/lib/process/template-editor-utils";
+import { flattenChecklistLines, normalizeChecklistPayload } from "@/lib/process/item-payload";
 import {
   PROCESS_ITEM_KIND_LABELS,
   type ProcessElement,
@@ -290,10 +291,8 @@ export function ProcessTemplateEditor({
                           ? "Odbiór wewnętrzny (Quality Gate)"
                           : PROCESS_ITEM_KIND_LABELS[item.kind]}
                         {!item.isInternalAcceptance &&
-                        item.kind === "checklist" &&
-                        "lines" in item.defaultPayload &&
-                        item.defaultPayload.lines.length
-                          ? ` · ${item.defaultPayload.lines.length} pkt.`
+                        item.kind === "checklist"
+                          ? ` · ${flattenChecklistLines(normalizeChecklistPayload(item.defaultPayload)).length} pkt.`
                           : !item.isInternalAcceptance &&
                               item.kind === "kanban" &&
                               "columns" in item.defaultPayload

@@ -26,6 +26,7 @@ export function ProcessInternalAcceptanceBoard({
   actorId,
   actorName = "Zespół",
   teamProfiles = [],
+  publicToken,
   onStateChange,
 }: {
   projectId: string;
@@ -35,6 +36,7 @@ export function ProcessInternalAcceptanceBoard({
   actorId?: string;
   actorName?: string;
   teamProfiles?: UserProfile[];
+  publicToken?: string;
   onStateChange?: (state: InternalAcceptanceState) => void;
 }) {
   const [state, setState] = useState<InternalAcceptanceState | null>(initialState ?? null);
@@ -118,6 +120,24 @@ export function ProcessInternalAcceptanceBoard({
     setSavingKey(itemKey);
     setError(null);
     try {
+      if (publicToken) {
+        const response = await fetch(`/api/odbior/${publicToken}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ itemKey, patch, actorName: actor.name }),
+        });
+        if (!response.ok) {
+          const body = (await response.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(body?.error ?? "Błąd zapisu.");
+        }
+        const body = (await response.json()) as { internalAcceptance: InternalAcceptanceState };
+        if (body.internalAcceptance) {
+          setState(body.internalAcceptance);
+          onStateChange?.(body.internalAcceptance);
+        }
+        return;
+      }
+
       const updated = await updateInternalAcceptanceItem(
         projectId,
         templateItemId,

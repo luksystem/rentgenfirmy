@@ -10,9 +10,9 @@ import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { INTERNAL_ACCEPTANCE_CATEGORIES } from "@/lib/internal-acceptance/types";
 import { getRulePacksBySourceType } from "@/lib/internal-acceptance/rule-pack-meta";
 import { packCustomizationItemCount } from "@/lib/internal-acceptance/rule-pack-resolver";
-import {
-  getRulePackCustomization,
+import { getRulePackCustomization,
   withStaticItemPositions,
+  type InternalAcceptanceConfigSectionKey,
   type InternalAcceptanceTemplateConfig,
   type InternalAcceptanceTemplateStaticItem,
 } from "@/lib/internal-acceptance/template-config";
@@ -147,6 +147,72 @@ export function InternalAcceptanceTemplateEditor({
     }
   }
 
+  function moveConfigSection(sectionKey: InternalAcceptanceConfigSectionKey, direction: "up" | "down") {
+    setConfig((current) => {
+      const order = [...current.sectionOrder];
+      const index = order.indexOf(sectionKey);
+      if (index < 0) return current;
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= order.length) return current;
+      [order[index], order[targetIndex]] = [order[targetIndex], order[index]];
+      return { ...current, sectionOrder: order };
+    });
+  }
+
+  function updateSectionLabel(sectionKey: InternalAcceptanceConfigSectionKey, label: string) {
+    setConfig((current) => ({
+      ...current,
+      sectionLabels: { ...current.sectionLabels, [sectionKey]: label },
+    }));
+  }
+
+  function updatePackLabel(packId: string, label: string) {
+    setConfig((current) => ({
+      ...current,
+      packLabels: { ...current.packLabels, [packId]: label.trim() },
+    }));
+  }
+
+  function renderSectionHeader(
+    sectionKey: InternalAcceptanceConfigSectionKey,
+    description: string,
+  ) {
+    const orderIndex = config.sectionOrder.indexOf(sectionKey);
+    return (
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="grid min-w-0 flex-1 gap-2">
+          <Field label="Nazwa listy w konfiguracji">
+            <Input
+              value={config.sectionLabels[sectionKey]}
+              onChange={(event) => updateSectionLabel(sectionKey, event.target.value)}
+            />
+          </Field>
+          <p className="text-sm text-muted">{description}</p>
+        </div>
+        <div className="flex shrink-0 gap-1">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={orderIndex <= 0}
+            onClick={() => moveConfigSection(sectionKey, "up")}
+          >
+            <ArrowUp className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={orderIndex >= config.sectionOrder.length - 1}
+            onClick={() => moveConfigSection(sectionKey, "down")}
+          >
+            <ArrowDown className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   function renderRulePackList(
     packs: ReturnType<typeof getRulePacksBySourceType>,
     disabled: boolean,
@@ -178,8 +244,13 @@ export function InternalAcceptanceTemplateEditor({
                     onChange={(event) => toggleRulePack(pack.id, event.target.checked)}
                   />
                   <span className="min-w-0">
-                    <span className="block text-sm font-medium text-foreground">{pack.label}</span>
-                    <span className="block text-xs text-muted">
+                    <Field label="Nazwa pakietu">
+                      <Input
+                        value={config.packLabels[pack.id] ?? pack.label}
+                        onChange={(event) => updatePackLabel(pack.id, event.target.value)}
+                      />
+                    </Field>
+                    <span className="mt-1 block text-xs text-muted">
                       {activeItemCount} aktywnych punktów
                       {customization.extraItems.length
                         ? ` · ${customization.extraItems.length} własnych`
@@ -347,12 +418,10 @@ export function InternalAcceptanceTemplateEditor({
 
       <Card>
         <CardContent className="grid gap-4 py-5">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">Stałe punkty szablonu</h2>
-            <p className="mt-1 text-sm text-muted">
-              Ręcznie zdefiniowane kategorie i punkty — zawsze trafiają do checklisty w tej kolejności.
-            </p>
-          </div>
+          {renderSectionHeader(
+            "static",
+            "Ręcznie zdefiniowane kategorie i punkty — zawsze trafiają do checklisty w tej kolejności.",
+          )}
 
           {config.staticItems.length === 0 ? (
             <p className="text-sm text-muted">Brak własnych punktów. Dodaj pierwszy poniżej.</p>
@@ -471,36 +540,30 @@ export function InternalAcceptanceTemplateEditor({
 
       <Card>
         <CardContent className="grid gap-4 py-5">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">Pakiety reguł firmy</h2>
-            <p className="mt-1 text-sm text-muted">
-              Standardowe zestawy QA — edytuj punkty w pakiecie, dodawaj własne lub wyłączaj zbędne.
-            </p>
-          </div>
+          {renderSectionHeader(
+            "company",
+            "Standardowe zestawy QA — edytuj punkty w pakiecie, dodawaj własne lub wyłączaj zbędne.",
+          )}
           {renderRulePackList(companyPacks, false)}
         </CardContent>
       </Card>
 
       <Card>
         <CardContent className="grid gap-4 py-5">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">Pakiety specyfikacji</h2>
-            <p className="mt-1 text-sm text-muted">
-              Włączane tylko gdy zaznaczono „Reguły dopasowane do specyfikacji” powyżej.
-            </p>
-          </div>
+          {renderSectionHeader(
+            "specification",
+            "Włączane tylko gdy zaznaczono „Reguły specyfikacji po słowach kluczowych (legacy)” powyżej.",
+          )}
           {renderRulePackList(specificationPacks, !config.sources.specificationRulePacks)}
         </CardContent>
       </Card>
 
       <Card>
         <CardContent className="grid gap-4 py-5">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">Pakiety ustaleń</h2>
-            <p className="mt-1 text-sm text-muted">
-              Włączane tylko gdy zaznaczono „Reguły dopasowane do ustaleń” powyżej.
-            </p>
-          </div>
+          {renderSectionHeader(
+            "agreement",
+            "Włączane tylko gdy zaznaczono „Reguły dopasowane do ustaleń” powyżej.",
+          )}
           {renderRulePackList(agreementPacks, !config.sources.agreementRulePacks)}
         </CardContent>
       </Card>

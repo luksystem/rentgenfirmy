@@ -2,6 +2,7 @@
 
 import { useCallback, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { RichHtml } from "@/components/ui/rich-html";
 import { printServiceReport } from "@/lib/service/print-service-report";
 import { resolveProjectLabel } from "@/lib/service/resolve-project-label";
 import {
@@ -530,14 +531,14 @@ export function ServiceReport({
       >
         <div className="grid gap-8">
           <ReportSubsection title={meta.worksSectionTitle}>
-            <p className="whitespace-pre-wrap text-sm leading-7 text-zinc-800">
-              {workNote || "Brak opisu prac."}
-            </p>
+            <RichHtml html={workNote} fallback="Brak opisu prac." className="text-zinc-800" />
           </ReportSubsection>
           <ReportSubsection title="Materiały">
-            <p className="whitespace-pre-wrap text-sm leading-7 text-zinc-800">
-              {materialsNote || "Brak informacji o materiałach."}
-            </p>
+            <RichHtml
+              html={materialsNote}
+              fallback="Brak informacji o materiałach."
+              className="text-zinc-800"
+            />
           </ReportSubsection>
         </div>
       </ReportMajorSection>

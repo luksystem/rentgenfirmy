@@ -24,6 +24,7 @@ const ALL_STATUSES = "";
 export function ServiceList() {
   const services = useServiceStore((s) => s.services);
   const deleteService = useServiceStore((s) => s.deleteService);
+  const duplicateServiceForClient = useServiceStore((s) => s.duplicateServiceForClient);
   const refresh = useServiceStore((s) => s.refresh);
   const isSaving = useServiceStore((s) => s.isSaving);
   const projects = useAppStore((s) => s.projects);
@@ -79,6 +80,40 @@ export function ServiceList() {
   function clearFilters() {
     setClientFilter(ALL_CLIENTS);
     setStatusFilter(ALL_STATUSES);
+  }
+
+  async function handleDuplicate(service: (typeof rows)[number]["service"]) {
+    const isSettlement =
+      service.status === "Rozliczony" || service.status === "Do rozliczenia";
+    if (!isSettlement) {
+      window.alert("Duplikowanie dostępne dla rozliczeń serwisowych.");
+      return;
+    }
+
+    const targetName = window.prompt(
+      "Dla jakiego klienta utworzyć kopię rozliczenia?",
+      "",
+    );
+    if (!targetName?.trim()) {
+      return;
+    }
+
+    const existing = services.find((entry) => entry.client.fullName === targetName.trim());
+    const client = existing
+      ? { ...existing.client }
+      : {
+          fullName: targetName.trim(),
+          location: "",
+          email: "",
+          phone: "",
+        };
+
+    try {
+      const cloned = await duplicateServiceForClient(service.id, client);
+      window.location.href = `/oferty/${cloned.id}`;
+    } catch {
+      window.alert("Nie udało się zduplikować rozliczenia.");
+    }
   }
 
   if (services.length === 0) {
@@ -214,6 +249,17 @@ export function ServiceList() {
                 <Button variant="secondary" size="sm" asChild className="flex-1 sm:flex-none">
                   <Link href={`/oferty/${service.id}`}>Edytuj</Link>
                 </Button>
+                {service.status === "Rozliczony" || service.status === "Do rozliczenia" ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1 sm:flex-none"
+                    disabled={isSaving}
+                    onClick={() => void handleDuplicate(service)}
+                  >
+                    Duplikuj
+                  </Button>
+                ) : null}
                 <Button
                   variant="destructive"
                   size="sm"
@@ -282,6 +328,16 @@ export function ServiceList() {
                         <Button variant="secondary" size="sm" asChild>
                           <Link href={`/oferty/${service.id}`}>Edytuj</Link>
                         </Button>
+                        {service.status === "Rozliczony" || service.status === "Do rozliczenia" ? (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            disabled={isSaving}
+                            onClick={() => void handleDuplicate(service)}
+                          >
+                            Duplikuj
+                          </Button>
+                        ) : null}
                         <Button
                           variant="destructive"
                           size="sm"

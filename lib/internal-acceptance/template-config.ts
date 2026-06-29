@@ -2,6 +2,29 @@ import type { InternalAcceptancePriority } from "@/lib/internal-acceptance/types
 import { INTERNAL_ACCEPTANCE_RULE_LIBRARY } from "@/lib/internal-acceptance/rule-library";
 import { EMPTY_RULE_PACK_CUSTOMIZATION } from "@/lib/internal-acceptance/rule-pack-resolver";
 
+export type InternalAcceptanceConfigSectionKey =
+  | "static"
+  | "company"
+  | "specification"
+  | "agreement";
+
+export const DEFAULT_INTERNAL_ACCEPTANCE_SECTION_ORDER: InternalAcceptanceConfigSectionKey[] = [
+  "static",
+  "company",
+  "specification",
+  "agreement",
+];
+
+export const DEFAULT_INTERNAL_ACCEPTANCE_SECTION_LABELS: Record<
+  InternalAcceptanceConfigSectionKey,
+  string
+> = {
+  static: "Stałe punkty szablonu",
+  company: "Pakiety reguł firmy",
+  specification: "Pakiety specyfikacji",
+  agreement: "Pakiety ustaleń",
+};
+
 export type InternalAcceptanceTemplateConfigSources = {
   /** Punkty odbioru zdefiniowane przy pozycji katalogu specyfikacji (gdy projekt ma np. Oświetlenie). */
   specificationCatalogItems: boolean;
@@ -50,6 +73,12 @@ export type InternalAcceptanceTemplateConfig = {
   staticItems: InternalAcceptanceTemplateStaticItem[];
   /** Personalizacja pakietów reguł per szablon. */
   rulePackCustomizations: Record<string, InternalAcceptanceRulePackCustomization>;
+  /** Etykiety sekcji w edytorze i grupowaniu. */
+  sectionLabels: Record<InternalAcceptanceConfigSectionKey, string>;
+  /** Kolejność sekcji w konfiguracji. */
+  sectionOrder: InternalAcceptanceConfigSectionKey[];
+  /** Nadpisane nazwy pakietów reguł (klucz = id pakietu). */
+  packLabels: Record<string, string>;
 };
 
 export const DEFAULT_INTERNAL_ACCEPTANCE_SOURCES: InternalAcceptanceTemplateConfigSources = {
@@ -65,6 +94,9 @@ export function createDefaultInternalAcceptanceTemplateConfig(): InternalAccepta
     enabledRulePackIds: INTERNAL_ACCEPTANCE_RULE_LIBRARY.map((entry) => entry.id),
     staticItems: [],
     rulePackCustomizations: {},
+    sectionLabels: { ...DEFAULT_INTERNAL_ACCEPTANCE_SECTION_LABELS },
+    sectionOrder: [...DEFAULT_INTERNAL_ACCEPTANCE_SECTION_ORDER],
+    packLabels: {},
   };
 }
 
@@ -173,6 +205,38 @@ export function normalizeInternalAcceptanceTemplateConfig(
       : defaults.enabledRulePackIds,
     staticItems: normalizeStaticItems(raw.staticItems),
     rulePackCustomizations,
+    sectionLabels: {
+      ...DEFAULT_INTERNAL_ACCEPTANCE_SECTION_LABELS,
+      ...(raw.sectionLabels && typeof raw.sectionLabels === "object"
+        ? Object.fromEntries(
+            Object.entries(raw.sectionLabels).filter(
+              ([key, value]) =>
+                (key === "static" ||
+                  key === "company" ||
+                  key === "specification" ||
+                  key === "agreement") &&
+                typeof value === "string",
+            ),
+          )
+        : {}),
+    },
+    sectionOrder: Array.isArray(raw.sectionOrder)
+      ? raw.sectionOrder.filter(
+          (entry): entry is InternalAcceptanceConfigSectionKey =>
+            entry === "static" ||
+            entry === "company" ||
+            entry === "specification" ||
+            entry === "agreement",
+        )
+      : defaults.sectionOrder,
+    packLabels:
+      raw.packLabels && typeof raw.packLabels === "object"
+        ? Object.fromEntries(
+            Object.entries(raw.packLabels).filter(
+              ([, value]) => typeof value === "string",
+            ),
+          )
+        : {},
   };
 }
 

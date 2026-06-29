@@ -158,7 +158,7 @@ function compareSectionHtml(
 function materialsSectionHtml(materialsNote: string) {
   return `<div class="sub-block">
     <h3 class="subsection-title">Materiały</h3>
-    <p class="prose">${escapeHtml(materialsNote)}</p>
+    <div class="prose">${materialsNote.trim() || "Brak informacji o materiałach."}</div>
   </div>`;
 }
 
@@ -590,7 +590,7 @@ export function buildServiceReportPrintDocument(
       <div class="scope-stack">
         <div class="sub-block">
           <h3 class="subsection-title">${escapeHtml(meta.worksSectionTitle)}</h3>
-          <p class="prose">${escapeHtml(workNote)}</p>
+          <div class="prose">${workNote.trim() || "Brak opisu prac."}</div>
         </div>
         ${materialsSectionHtml(materialsNote)}
       </div>

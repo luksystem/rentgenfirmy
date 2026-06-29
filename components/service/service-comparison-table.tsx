@@ -87,9 +87,14 @@ export function ServiceComparisonTable({
             actual={actual.subtotalBeforeDiscount}
           />
           <ComparisonRow
-            label={`Rabat ${estimateDiscounts.percentDiscount}%`}
+            label={`Rabat praca/logistyka ${estimateDiscounts.percentDiscount}%`}
             estimate={-estimate.percentDiscountAmount}
             actual={-actual.percentDiscountAmount}
+          />
+          <ComparisonRow
+            label={`Rabat sprzęt/materiały ${estimateDiscounts.materialsPercentDiscount}%`}
+            estimate={-estimate.materialsPercentDiscountAmount}
+            actual={-actual.materialsPercentDiscountAmount}
           />
           <ComparisonRow
             label="Rabat specjalny"

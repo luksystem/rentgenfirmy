@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ProcessChecklistEditor } from "@/components/process/process-checklist-editor";
+import { ProcessChecklistBoard } from "@/components/process/process-checklist-board";
+import { normalizeChecklistPayload } from "@/lib/process/item-payload";
 import type { PublicProcessItemPayload } from "@/lib/supabase/process-public-server";
 
 export default function PublicProcessElementPage({
@@ -53,7 +54,7 @@ export default function PublicProcessElementPage({
     );
   }
 
-  if (!item) {
+  if (!item || !token) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-10">
         <p className="text-sm text-muted">Ładowanie elementu…</p>
@@ -62,19 +63,16 @@ export default function PublicProcessElementPage({
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
-      <header className="mb-4">
-        <p className="text-xs uppercase tracking-wide text-muted">Element procesu — podgląd publiczny</p>
+    <main className="mx-auto flex min-h-svh max-w-3xl flex-col px-4 py-6">
+      <header className="mb-4 shrink-0">
+        <p className="text-xs uppercase tracking-wide text-muted">Checklista — podgląd publiczny</p>
         <h1 className="text-2xl font-semibold text-foreground">{item.title}</h1>
       </header>
       {item.kind === "checklist" && item.checklist ? (
-        <ProcessChecklistEditor
-          initialPayload={item.checklist}
+        <ProcessChecklistBoard
+          initialPayload={normalizeChecklistPayload(item.checklist)}
           actorName="Gość"
-          canCustomizeStructure={false}
-          onSave={async () => {
-            /* zapis publiczny — kolejna faza */
-          }}
+          publicToken={token}
         />
       ) : (
         <p className="text-sm text-muted">Ten typ elementu nie ma jeszcze publicznego widoku interaktywnego.</p>

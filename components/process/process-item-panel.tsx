@@ -1,9 +1,9 @@
 "use client";
 
 import { CheckCircle2, FileCheck2, LayoutGrid, Receipt, ShieldCheck } from "lucide-react";
+import { ProcessChecklistBoard } from "@/components/process/process-checklist-board";
 import { ProcessInternalAcceptanceBoard } from "@/components/process/process-internal-acceptance-board";
 import { ProcessKanbanBoard } from "@/components/process/process-kanban-board";
-import { ProcessChecklistEditor } from "@/components/process/process-checklist-editor";
 import { ProcessItemResponsibleSection } from "@/components/process/process-item-responsible-section";
 import { ProcessPublicLinkControls } from "@/components/process/process-public-link-controls";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { UserProfile } from "@/lib/auth/types";
-import { checklistProgress } from "@/lib/process/item-payload";
 import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
 import {
   PROCESS_ITEM_KIND_LABELS,
@@ -69,7 +68,6 @@ export function ProcessItemPanel({
   onSign,
   onToggleComplete,
   actorName,
-  canCustomizeChecklist = false,
 }: ProcessItemPanelProps) {
   if (!item) {
     return null;
@@ -84,8 +82,7 @@ export function ProcessItemPanel({
     resolvedInstance?.status === "completed" ||
     Boolean(resolvedInstance?.signedAt);
   const Icon = isInternalAcceptance ? ShieldCheck : kindIcon[item.kind];
-  const checklistPayload = resolvedInstance?.payload ?? { lines: [] };
-  const checklistStats = checklistProgress(checklistPayload);
+  const checklistPayload = resolvedInstance?.payload ?? { sections: [] };
   const isFullscreen = item.kind === "kanban" || isInternalAcceptance;
 
   return (
@@ -141,21 +138,18 @@ export function ProcessItemPanel({
           ) : null}
 
           {item.kind === "checklist" && !isInternalAcceptance && interactive && onSaveChecklist ? (
-            <ProcessChecklistEditor
+            <ProcessChecklistBoard
               key={`${item.id}-${resolvedInstance?.updatedAt ?? "new"}-checklist`}
               initialPayload={checklistPayload}
+              actorId={currentUserId}
               actorName={actorName}
-              canCustomizeStructure={canCustomizeChecklist}
+              teamProfiles={teamProfiles}
               onSave={onSaveChecklist}
             />
           ) : null}
 
           {item.kind === "checklist" && !isInternalAcceptance && !interactive ? (
-            <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4 text-sm text-muted">
-              {checklistStats.total > 0
-                ? `${checklistStats.completed}/${checklistStats.total} punktów ukończonych`
-                : "Brak zapisanych punktów checklisty."}
-            </div>
+            <ProcessChecklistBoard initialPayload={checklistPayload} readOnly />
           ) : null}
 
           {item.kind === "kanban" && interactive && resolvedInstance ? (
