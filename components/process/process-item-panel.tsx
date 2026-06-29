@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { CheckCircle2, FileCheck2, LayoutGrid, Receipt, ShieldCheck } from "lucide-react";
 import { ProcessChecklistBoard } from "@/components/process/process-checklist-board";
 import { ProcessInternalAcceptanceBoard } from "@/components/process/process-internal-acceptance-board";
@@ -14,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useProcessItemRemoteSync } from "@/hooks/use-process-item-remote-sync";
 import type { UserProfile } from "@/lib/auth/types";
 import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
 import {
@@ -69,12 +71,32 @@ export function ProcessItemPanel({
   onToggleComplete,
   actorName,
 }: ProcessItemPanelProps) {
+  const replaceProjectProcessItem = useProcessStore((state) => state.replaceProjectProcessItem);
+  const storeInstance = useProcessStore((state) =>
+    projectId && item ? state.projectProcessItems[projectId]?.[item.id] : undefined,
+  );
+
+  const handleRemoteUpdate = useCallback(
+    (remote: ProjectProcessItem) => {
+      if (projectId) {
+        replaceProjectProcessItem(projectId, remote);
+      }
+    },
+    [projectId, replaceProjectProcessItem],
+  );
+
+  useProcessItemRemoteSync({
+    enabled: open && interactive && Boolean(projectId && item),
+    projectId,
+    templateItemId: item?.id,
+    localUpdatedAt: (instance ?? storeInstance)?.updatedAt,
+    onRemoteUpdate: handleRemoteUpdate,
+  });
+
   if (!item) {
     return null;
   }
 
-  const storeInstance =
-    projectId && item ? useProcessStore.getState().projectProcessItems[projectId]?.[item.id] : undefined;
   const resolvedInstance = instance ?? storeInstance;
   const isInternalAcceptance = Boolean(item.isInternalAcceptance ?? resolvedInstance?.isInternalAcceptance);
   const completed =
@@ -83,7 +105,10 @@ export function ProcessItemPanel({
     Boolean(resolvedInstance?.signedAt);
   const Icon = isInternalAcceptance ? ShieldCheck : kindIcon[item.kind];
   const checklistPayload = resolvedInstance?.payload ?? { sections: [] };
-  const isFullscreen = item.kind === "kanban" || isInternalAcceptance;
+  const isBoardItem =
+    item.kind === "checklist" || isInternalAcceptance;
+  const isFullscreen = item.kind === "kanban" || (interactive && isBoardItem);
+  const showMobileNavPadding = interactive && isBoardItem;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -99,10 +124,11 @@ export function ProcessItemPanel({
         </DialogHeader>
 
         <div
+          data-process-scroll-root
           className={cn(
             "grid gap-4",
-            isFullscreen && !isInternalAcceptance && "flex min-h-0 flex-1 flex-col",
-            isInternalAcceptance && "min-h-0 flex-1 overflow-y-auto",
+            isFullscreen && "min-h-0 flex-1 overflow-y-auto",
+            showMobileNavPadding && "pb-24",
           )}
         >
           {interactive && resolvedInstance && item.kind !== "kanban" ? (
@@ -110,7 +136,7 @@ export function ProcessItemPanel({
               projectProcessItemId={resolvedInstance.id}
               kind={item.kind}
               isInternalAcceptance={isInternalAcceptance}
-              defaultOpen={!isInternalAcceptance}
+              defaultOpen={false}
             />
           ) : null}
 
@@ -128,6 +154,7 @@ export function ProcessItemPanel({
 
           {isInternalAcceptance && projectId ? (
             <ProcessInternalAcceptanceBoard
+              key={`${item.id}-${resolvedInstance?.updatedAt ?? "new"}-acceptance`}
               projectId={projectId}
               templateItemId={item.id}
               initialState={resolvedInstance?.internalAcceptanceState}

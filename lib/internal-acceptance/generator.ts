@@ -217,6 +217,31 @@ function generateFromTemplateConfig(
     });
   }
 
+  if (config.sources.agreementRulePacks) {
+    input.agreements.forEach((agreement, index) => {
+      appendUnique(
+        items,
+        seenKeys,
+        {
+          id: `agreement-item-${agreement.id}`,
+          name: agreement.title,
+          description:
+            agreement.body?.trim() || `Weryfikacja ustalenia: ${agreement.title}`,
+          category: agreement.category?.trim() || "Ustalenia",
+          priority: "normal",
+          mandatory: true,
+          itemKey: buildItemKey("agreement-item", agreement.id),
+          source: {
+            type: "agreement",
+            refId: agreement.id,
+            refLabel: `Ustalenie: ${agreement.title}`,
+          },
+        },
+        1700 + index,
+      );
+    });
+  }
+
   if (config.sources.specificationItems) {
     input.specificationItems.forEach((spec, index) => {
       appendUnique(

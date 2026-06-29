@@ -14,6 +14,11 @@ import {
 } from "@/lib/supabase/process-item-mappers";
 import { updateProjectProcessCompletion } from "@/lib/supabase/process-repository";
 
+export async function fetchProjectProcessItem(projectId: string, templateItemId: string) {
+  const row = await getProjectProcessItemRow(projectId, templateItemId);
+  return rowToProjectProcessItem(row);
+}
+
 async function getProjectProcessItemRow(projectId: string, templateItemId: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase

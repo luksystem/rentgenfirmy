@@ -17,6 +17,8 @@ import { getRulePackCustomization,
   type InternalAcceptanceTemplateStaticItem,
 } from "@/lib/internal-acceptance/template-config";
 
+type RulePackListEntry = ReturnType<typeof getRulePacksBySourceType>[number];
+
 type InternalAcceptanceTemplateEditorProps = {
   initialConfig: InternalAcceptanceTemplateConfig;
   onSave: (config: InternalAcceptanceTemplateConfig) => Promise<void>;
@@ -40,6 +42,26 @@ function moveStaticItem(
   const next = [...items];
   [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
   return withStaticItemPositions(next);
+}
+
+function sortRulePacksByEnabledOrder(
+  packs: RulePackListEntry[],
+  enabledRulePackIds: string[],
+) {
+  return [...packs].sort((left, right) => {
+    const leftIndex = enabledRulePackIds.indexOf(left.id);
+    const rightIndex = enabledRulePackIds.indexOf(right.id);
+    if (leftIndex === -1 && rightIndex === -1) {
+      return 0;
+    }
+    if (leftIndex === -1) {
+      return 1;
+    }
+    if (rightIndex === -1) {
+      return -1;
+    }
+    return leftIndex - rightIndex;
+  });
 }
 
 export function InternalAcceptanceTemplateEditor({
@@ -214,16 +236,18 @@ export function InternalAcceptanceTemplateEditor({
   }
 
   function renderRulePackList(
-    packs: ReturnType<typeof getRulePacksBySourceType>,
+    packs: RulePackListEntry[],
     disabled: boolean,
   ) {
     if (!packs.length) {
       return <p className="text-sm text-muted">Brak pakietów w tej kategorii.</p>;
     }
 
+    const orderedPacks = sortRulePacksByEnabledOrder(packs, config.enabledRulePackIds);
+
     return (
       <div className="grid gap-2">
-        {packs.map((pack) => {
+        {orderedPacks.map((pack) => {
           const enabled = config.enabledRulePackIds.includes(pack.id);
           const orderIndex = config.enabledRulePackIds.indexOf(pack.id);
           const customization = getRulePackCustomization(config, pack.id);
@@ -312,6 +336,174 @@ export function InternalAcceptanceTemplateEditor({
     );
   }
 
+  function renderConfigSection(sectionKey: InternalAcceptanceConfigSectionKey) {
+    if (sectionKey === "static") {
+      return (
+        <Card key={sectionKey}>
+          <CardContent className="grid gap-4 py-5">
+            {renderSectionHeader(
+              "static",
+              "Ręcznie zdefiniowane kategorie i punkty — zawsze trafiają do checklisty w tej kolejności.",
+            )}
+
+            {config.staticItems.length === 0 ? (
+              <p className="text-sm text-muted">Brak własnych punktów. Dodaj pierwszy poniżej.</p>
+            ) : null}
+
+            {config.staticItems.map((item, index) => (
+              <div key={item.id} className="grid gap-3 rounded-xl border border-border/70 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <p className="text-sm font-medium text-foreground">Punkt {index + 1}</p>
+                  <div className="flex shrink-0 gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={index === 0}
+                      onClick={() =>
+                        setConfig((current) => ({
+                          ...current,
+                          staticItems: moveStaticItem(current.staticItems, index, "up"),
+                        }))
+                      }
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={index === config.staticItems.length - 1}
+                      onClick={() =>
+                        setConfig((current) => ({
+                          ...current,
+                          staticItems: moveStaticItem(current.staticItems, index, "down"),
+                        }))
+                      }
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => removeStaticItem(item.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Field label="Nazwa punktu">
+                    <Input
+                      value={item.name}
+                      onChange={(event) => updateStaticItem(item.id, { name: event.target.value })}
+                    />
+                  </Field>
+                  <Field label="Kategoria">
+                    <Input
+                      value={item.category}
+                      list={`ia-categories-${item.id}`}
+                      onChange={(event) => updateStaticItem(item.id, { category: event.target.value })}
+                    />
+                    <datalist id={`ia-categories-${item.id}`}>
+                      {INTERNAL_ACCEPTANCE_CATEGORIES.map((category) => (
+                        <option key={category} value={category} />
+                      ))}
+                    </datalist>
+                  </Field>
+                </div>
+
+                <Field label="Opis / kryterium">
+                  <Textarea
+                    value={item.description}
+                    onChange={(event) => updateStaticItem(item.id, { description: event.target.value })}
+                    rows={2}
+                  />
+                </Field>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Field label="Priorytet">
+                    <Select
+                      value={item.priority}
+                      onChange={(event) =>
+                        updateStaticItem(item.id, {
+                          priority: event.target.value as InternalAcceptanceTemplateStaticItem["priority"],
+                        })
+                      }
+                    >
+                      {PRIORITY_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <label className="flex items-center gap-2 self-end rounded-xl border border-border/70 px-3 py-2.5 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={item.mandatory}
+                      onChange={(event) =>
+                        updateStaticItem(item.id, { mandatory: event.target.checked })
+                      }
+                    />
+                    Obowiązkowy punkt
+                  </label>
+                </div>
+              </div>
+            ))}
+
+            <Button type="button" variant="secondary" onClick={addStaticItem}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Dodaj punkt ręcznie
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (sectionKey === "company") {
+      return (
+        <Card key={sectionKey}>
+          <CardContent className="grid gap-4 py-5">
+            {renderSectionHeader(
+              "company",
+              "Standardowe zestawy QA — edytuj punkty w pakiecie, dodawaj własne lub wyłączaj zbędne.",
+            )}
+            {renderRulePackList(companyPacks, false)}
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (sectionKey === "specification") {
+      return (
+        <Card key={sectionKey}>
+          <CardContent className="grid gap-4 py-5">
+            {renderSectionHeader(
+              "specification",
+              "Włączane tylko gdy zaznaczono „Reguły specyfikacji po słowach kluczowych (legacy)” powyżej.",
+            )}
+            {renderRulePackList(specificationPacks, !config.sources.specificationRulePacks)}
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <Card key={sectionKey}>
+        <CardContent className="grid gap-4 py-5">
+          {renderSectionHeader(
+            "agreement",
+            "Opcjonalne pakiety rozbijające ustalenia na szczegółowe punkty — tylko gdy tytuł/treść ustalenia zawiera słowa kluczowe pakietu (np. VPN, tablet).",
+          )}
+          {renderRulePackList(agreementPacks, !config.sources.agreementRulePacks)}
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="grid gap-6">
       <Card>
@@ -340,11 +532,14 @@ export function InternalAcceptanceTemplateEditor({
                 Checklisty z katalogu specyfikacji
               </span>
               <span className="mt-1 block text-xs text-muted">
-                Gdy w projekcie jest np. Oświetlenie, do odbioru trafi lista punktów zdefiniowana przy tej
-                pozycji katalogu.{" "}
+                Dla każdej pozycji specyfikacji projektu powiązanej z katalogiem do odbioru trafiają
+                punkty zdefiniowane przy tej pozycji katalogu. Pojawiają się na tablicy odbioru
+                wewnętrznego w grupach według kategorii punktu (np. Oświetlenie, Rolety). Wymaga
+                powiązania pozycji projektu z katalogiem oraz zdefiniowanych punktów w{" "}
                 <Link href="/ustawienia/specyfikacja" className="text-accent hover:underline">
-                  Edytuj katalog specyfikacji
+                  katalogu specyfikacji
                 </Link>
+                . Po zmianach kliknij „Odśwież” na tablicy odbioru w projekcie.
               </span>
             </span>
           </label>
@@ -407,166 +602,18 @@ export function InternalAcceptanceTemplateEditor({
               }
             />
             <span>
-              <span className="block text-sm font-medium text-foreground">Reguły dopasowane do ustaleń</span>
+              <span className="block text-sm font-medium text-foreground">Ustalenia z projektu</span>
               <span className="mt-1 block text-xs text-muted">
-                Pakiety punktów włączane na podstawie ustaleń z klientem (zaakceptowanych i oczekujących).
+                Każde ustalenie zaakceptowane lub oczekujące na klienta staje się osobnym punktem
+                odbioru (kategoria „Ustalenia” lub kategoria ustalenia). Bez słów kluczowych. Dodatkowe
+                pakiety punktów poniżej działają opcjonalnie po dopasowaniu słów kluczowych.
               </span>
             </span>
           </label>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="grid gap-4 py-5">
-          {renderSectionHeader(
-            "static",
-            "Ręcznie zdefiniowane kategorie i punkty — zawsze trafiają do checklisty w tej kolejności.",
-          )}
-
-          {config.staticItems.length === 0 ? (
-            <p className="text-sm text-muted">Brak własnych punktów. Dodaj pierwszy poniżej.</p>
-          ) : null}
-
-          {config.staticItems.map((item, index) => (
-            <div key={item.id} className="grid gap-3 rounded-xl border border-border/70 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <p className="text-sm font-medium text-foreground">Punkt {index + 1}</p>
-                <div className="flex shrink-0 gap-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={index === 0}
-                    onClick={() =>
-                      setConfig((current) => ({
-                        ...current,
-                        staticItems: moveStaticItem(current.staticItems, index, "up"),
-                      }))
-                    }
-                  >
-                    <ArrowUp className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={index === config.staticItems.length - 1}
-                    onClick={() =>
-                      setConfig((current) => ({
-                        ...current,
-                        staticItems: moveStaticItem(current.staticItems, index, "down"),
-                      }))
-                    }
-                  >
-                    <ArrowDown className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => removeStaticItem(item.id)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <Field label="Nazwa punktu">
-                  <Input
-                    value={item.name}
-                    onChange={(event) => updateStaticItem(item.id, { name: event.target.value })}
-                  />
-                </Field>
-                <Field label="Kategoria">
-                  <Input
-                    value={item.category}
-                    list={`ia-categories-${item.id}`}
-                    onChange={(event) => updateStaticItem(item.id, { category: event.target.value })}
-                  />
-                  <datalist id={`ia-categories-${item.id}`}>
-                    {INTERNAL_ACCEPTANCE_CATEGORIES.map((category) => (
-                      <option key={category} value={category} />
-                    ))}
-                  </datalist>
-                </Field>
-              </div>
-
-              <Field label="Opis / kryterium">
-                <Textarea
-                  value={item.description}
-                  onChange={(event) => updateStaticItem(item.id, { description: event.target.value })}
-                  rows={2}
-                />
-              </Field>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <Field label="Priorytet">
-                  <Select
-                    value={item.priority}
-                    onChange={(event) =>
-                      updateStaticItem(item.id, {
-                        priority: event.target.value as InternalAcceptanceTemplateStaticItem["priority"],
-                      })
-                    }
-                  >
-                    {PRIORITY_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-                <label className="flex items-center gap-2 self-end rounded-xl border border-border/70 px-3 py-2.5 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={item.mandatory}
-                    onChange={(event) =>
-                      updateStaticItem(item.id, { mandatory: event.target.checked })
-                    }
-                  />
-                  Obowiązkowy punkt
-                </label>
-              </div>
-            </div>
-          ))}
-
-          <Button type="button" variant="secondary" onClick={addStaticItem}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            Dodaj punkt ręcznie
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="grid gap-4 py-5">
-          {renderSectionHeader(
-            "company",
-            "Standardowe zestawy QA — edytuj punkty w pakiecie, dodawaj własne lub wyłączaj zbędne.",
-          )}
-          {renderRulePackList(companyPacks, false)}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="grid gap-4 py-5">
-          {renderSectionHeader(
-            "specification",
-            "Włączane tylko gdy zaznaczono „Reguły specyfikacji po słowach kluczowych (legacy)” powyżej.",
-          )}
-          {renderRulePackList(specificationPacks, !config.sources.specificationRulePacks)}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="grid gap-4 py-5">
-          {renderSectionHeader(
-            "agreement",
-            "Włączane tylko gdy zaznaczono „Reguły dopasowane do ustaleń” powyżej.",
-          )}
-          {renderRulePackList(agreementPacks, !config.sources.agreementRulePacks)}
-        </CardContent>
-      </Card>
+      {config.sectionOrder.map((sectionKey) => renderConfigSection(sectionKey))}
 
       <div className="flex flex-wrap items-center gap-3">
         <Button type="button" disabled={isSaving} onClick={() => void handleSave()}>

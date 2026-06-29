@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { RefreshCw, ShieldCheck } from "lucide-react";
+import { BoardCategoryMobileNav } from "@/components/process/board-category-mobile-nav";
 import { InternalAcceptanceItemDialog } from "@/components/process/internal-acceptance-item-dialog";
 import { Button } from "@/components/ui/button";
 import type { UserProfile } from "@/lib/auth/types";
+import { internalAcceptanceCategorySummary } from "@/lib/internal-acceptance/category-summary";
 import { INTERNAL_ACCEPTANCE_STATUS_STYLES } from "@/lib/internal-acceptance/status-styles";
 import {
   INTERNAL_ACCEPTANCE_STATUS_LABELS,
@@ -16,6 +18,7 @@ import {
   ensureInternalAcceptanceState,
   updateInternalAcceptanceItem,
 } from "@/lib/supabase/internal-acceptance-repository";
+import { boardSectionDomId, scrollToBoardSection } from "@/lib/board-scroll";
 import { cn, formatDateTime } from "@/lib/utils";
 
 export function ProcessInternalAcceptanceBoard({
@@ -45,6 +48,7 @@ export function ProcessInternalAcceptanceBoard({
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [navCategoryId, setNavCategoryId] = useState<string | null>(null);
 
   const actor = useMemo(
     () => ({ id: actorId, name: actorName.trim() || "Zespół" }),
@@ -98,6 +102,31 @@ export function ProcessInternalAcceptanceBoard({
     }
     return [...map.entries()];
   }, [state]);
+
+  const navCategories = useMemo(
+    () =>
+      grouped.map(([category, items]) => {
+        const summary = internalAcceptanceCategorySummary(items);
+        let subtitle: string | undefined;
+        if (summary.tone === "failed") {
+          subtitle = `${summary.failed} problemów`;
+        } else if (summary.tone === "complete") {
+          subtitle = "ukończone";
+        } else if (summary.tone === "progress") {
+          subtitle = "w toku";
+        }
+
+        return {
+          id: category,
+          name: category,
+          tone: summary.tone,
+          subtitle,
+        };
+      }),
+    [grouped],
+  );
+
+  const showMobileNav = navCategories.length > 1;
 
   async function handleRegenerate() {
     setRegenerating(true);
@@ -192,7 +221,7 @@ export function ProcessInternalAcceptanceBoard({
   const activeItem = state.items.find((item) => item.itemKey === activeKey) ?? null;
 
   return (
-    <div className="grid gap-4 pb-2">
+    <div className={cn("grid gap-4 pb-2", showMobileNav && "pb-24 md:pb-2")}>
       <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/25 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -232,7 +261,11 @@ export function ProcessInternalAcceptanceBoard({
 
       <div className="grid gap-4">
         {grouped.map(([category, items]) => (
-          <section key={category} className="rounded-xl border border-border/70 bg-surface/40 p-3">
+          <section
+            key={category}
+            id={boardSectionDomId("acceptance-category", category)}
+            className="rounded-xl border border-border/70 bg-surface/40 p-3 scroll-mt-3"
+          >
             <h3 className="mb-2 text-sm font-semibold text-foreground">{category}</h3>
             <div className="grid gap-2">
               {items.map((item) => {
@@ -298,6 +331,15 @@ export function ProcessInternalAcceptanceBoard({
           if (activeKey) {
             handleLocalFieldChange(activeKey, patch);
           }
+        }}
+      />
+
+      <BoardCategoryMobileNav
+        categories={navCategories}
+        activeCategoryId={navCategoryId}
+        onSelect={(categoryId) => {
+          setNavCategoryId(categoryId);
+          scrollToBoardSection(boardSectionDomId("acceptance-category", categoryId));
         }}
       />
 

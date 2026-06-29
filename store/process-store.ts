@@ -101,6 +101,7 @@ type ProcessStore = {
   removeElement: (id: string) => Promise<void>;
   refreshKanbanNewTaskCount: () => Promise<void>;
   refreshKanbanOverdueTaskCount: () => Promise<void>;
+  replaceProjectProcessItem: (projectId: string, item: ProjectProcessItem) => void;
 };
 
 export const useProcessStore = create<ProcessStore>((set, get) => ({
@@ -416,5 +417,17 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
     } catch {
       set({ kanbanOverdueTaskCount: 0 });
     }
+  },
+
+  replaceProjectProcessItem: (projectId, item) => {
+    set((state) => ({
+      projectProcessItems: {
+        ...state.projectProcessItems,
+        [projectId]: {
+          ...state.projectProcessItems[projectId],
+          [item.templateItemId]: item,
+        },
+      },
+    }));
   },
 }));

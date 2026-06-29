@@ -6,6 +6,7 @@ import { ChecklistItemDialog } from "@/components/process/checklist-item-dialog"
 import { ChecklistMobileNav } from "@/components/process/checklist-mobile-nav";
 import { Field, Textarea } from "@/components/ui/input";
 import type { UserProfile } from "@/lib/auth/types";
+import { boardSectionDomId, scrollToBoardSection } from "@/lib/board-scroll";
 import { INTERNAL_ACCEPTANCE_STATUS_STYLES } from "@/lib/internal-acceptance/status-styles";
 import {
   INTERNAL_ACCEPTANCE_STATUS_LABELS,
@@ -146,13 +147,10 @@ export function ProcessChecklistBoard({
     setPayload((current) => applyLinePatch(current, sectionId, lineId, patch, actor.name));
   }
 
-  const visibleSections =
-    navSectionId && sections.some((section) => section.id === navSectionId)
-      ? sections.filter((section) => section.id === navSectionId)
-      : sections;
+  const showMobileNav = sections.length > 1;
 
   return (
-    <div className={cn("grid gap-4", publicToken && sections.length > 1 && "pb-24")}>
+    <div className={cn("grid gap-4", showMobileNav && "pb-24 md:pb-0")}>
       <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/25 p-3">
         <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
           <CheckCircle2 className="h-4 w-4 text-accent" />
@@ -170,11 +168,11 @@ export function ProcessChecklistBoard({
       </div>
 
       <div className="grid gap-4">
-        {visibleSections.map((section) => (
+        {sections.map((section) => (
           <section
             key={section.id}
-            id={`checklist-section-${section.id}`}
-            className="rounded-xl border border-border/70 bg-surface/40 p-3"
+            id={boardSectionDomId("checklist-section", section.id)}
+            className="rounded-xl border border-border/70 bg-surface/40 p-3 scroll-mt-3"
           >
             <h3 className="mb-2 text-sm font-semibold text-foreground">{section.name}</h3>
             <div className="grid gap-2">
@@ -274,7 +272,7 @@ export function ProcessChecklistBoard({
         activeSectionId={navSectionId}
         onSelect={(sectionId) => {
           setNavSectionId(sectionId);
-          document.getElementById(`checklist-section-${sectionId}`)?.scrollIntoView({ behavior: "smooth" });
+          scrollToBoardSection(boardSectionDomId("checklist-section", sectionId));
         }}
       />
 
