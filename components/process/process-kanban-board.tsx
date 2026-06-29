@@ -336,7 +336,12 @@ export function ProcessKanbanBoard({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
+    <div
+      className={cn(
+        "flex flex-col gap-3",
+        embedded ? "min-h-0" : "min-h-0 flex-1 max-md:flex-none",
+      )}
+    >
       {showPublicLink ? (
         <div className="grid shrink-0 gap-2 rounded-xl border border-border/70 bg-surface-muted/30 p-3">
           <button
@@ -461,10 +466,10 @@ export function ProcessKanbanBoard({
 
       <div
         className={cn(
-          "flex min-h-0 flex-1 gap-3 pb-1",
+          "flex gap-3 pb-1",
           embedded
-            ? "flex-row overflow-x-auto overscroll-x-contain"
-            : "flex-col overflow-y-auto md:flex-row md:overflow-hidden",
+            ? "min-h-[min(52vh,440px)] flex-row overflow-x-auto overscroll-x-contain"
+            : "min-h-[min(50vh,400px)] flex-col overflow-y-auto overscroll-y-contain max-md:flex-none md:min-h-0 md:flex-1 md:flex-row md:overflow-hidden",
         )}
       >
         {board.columns.map((column) => {

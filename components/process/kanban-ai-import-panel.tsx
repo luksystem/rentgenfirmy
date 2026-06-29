@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/input";
@@ -47,6 +47,7 @@ export function KanbanAiImportPanel({
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const draftsPreviewRef = useRef<HTMLDivElement | null>(null);
 
   const selectedCount = useMemo(
     () => drafts.filter((task) => task.selected && task.title.trim()).length,
@@ -83,6 +84,13 @@ export function KanbanAiImportPanel({
       setGenerating(false);
     }
   }
+
+  useEffect(() => {
+    if (!drafts.length) {
+      return;
+    }
+    draftsPreviewRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [drafts.length]);
 
   function updateDraft(draftId: string, patch: Partial<DraftTask>) {
     setDrafts((current) =>
@@ -184,7 +192,10 @@ export function KanbanAiImportPanel({
           </div>
 
           {drafts.length ? (
-            <div className="grid gap-2">
+            <div
+              ref={draftsPreviewRef}
+              className="grid max-h-[min(55vh,520px)] gap-2 overflow-y-auto overscroll-y-contain pr-1"
+            >
               {drafts.map((task) => (
                 <div
                   key={task.draftId}

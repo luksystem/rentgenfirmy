@@ -152,7 +152,7 @@ export function ProcessItemPanel({
           data-process-scroll-root
           className={cn(
             "grid gap-4",
-            isFullscreen && "min-h-0 flex-1 overflow-y-auto",
+            isFullscreen && "min-h-0 flex-1 overflow-y-auto overscroll-y-contain",
             showMobileNavPadding && "pb-24",
           )}
         >
@@ -235,18 +235,16 @@ export function ProcessItemPanel({
           ) : null}
 
           {item.kind === "kanban" && interactive && resolvedInstance ? (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <ProcessKanbanBoard
-                projectProcessItemId={resolvedInstance.id}
-                templatePayload={
-                  isKanbanTemplatePayload(item.defaultPayload) ? item.defaultPayload : { columns: [] }
-                }
-                authorSide="team"
-                authorName={actorName ?? "Zespół"}
-                showPublicLink
-                embedded
-              />
-            </div>
+            <ProcessKanbanBoard
+              projectProcessItemId={resolvedInstance.id}
+              templatePayload={
+                isKanbanTemplatePayload(item.defaultPayload) ? item.defaultPayload : { columns: [] }
+              }
+              authorSide="team"
+              authorName={actorName ?? "Zespół"}
+              showPublicLink
+              embedded
+            />
           ) : null}
 
           {item.kind === "kanban" && interactive && resolvedInstance && completed ? (
