@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Copy, ExternalLink, Plus } from "lucide-react";
+import { KanbanAiImportPanel } from "@/components/process/kanban-ai-import-panel";
 import { KanbanBoardControls } from "@/components/process/kanban-board-controls";
 import { KanbanBoardStatsBar } from "@/components/process/kanban-board-stats-bar";
 import { KanbanTaskCardView } from "@/components/process/kanban-task-card";
@@ -244,6 +245,10 @@ export function ProcessKanbanBoard({
     () => (board ? computeKanbanBoardStats(board) : null),
     [board],
   );
+  const firstColumn = useMemo(
+    () => [...(board?.columns ?? [])].sort((left, right) => left.position - right.position)[0] ?? null,
+    [board?.columns],
+  );
 
   async function handleAddTask(columnId: string) {
     if (addingTaskColumnId) {
@@ -433,6 +438,16 @@ export function ProcessKanbanBoard({
       ) : null}
 
       {boardStats ? <KanbanBoardStatsBar stats={boardStats} /> : null}
+
+      {authorSide === "team" && firstColumn ? (
+        <KanbanAiImportPanel
+          firstColumnId={firstColumn.id}
+          firstColumnTitle={firstColumn.title}
+          authorSide={authorSide}
+          authorName={authorName}
+          onCreated={() => refresh({ force: true, showLoading: false })}
+        />
+      ) : null}
 
       <p className="shrink-0 text-sm text-muted">{KANBAN_DRAG_HINT}</p>
 
