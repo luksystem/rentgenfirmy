@@ -152,8 +152,9 @@ export function KanbanAiImportPanel({
       {open ? (
         <div className="grid gap-3">
           <p className="text-xs text-muted">
-            Wklej mail, SMS lub notatkę od klienta. ChatGPT rozłoży to na zadania z terminami
-            (domyślnie za 14 dni, jeśli brak daty) i doda je do pierwszej kolumny:{" "}
+            Wklej całą wiadomość od klienta — AI utworzy wpis na każdy fragment (także pytania i
+            uwagi), z pełnym opisem ze źródła, bez dopisywania od siebie. Termin domyślnie za 14
+            dni, jeśli klient nie poda daty. Wpisy trafią do pierwszej kolumny:{" "}
             <span className="font-medium text-foreground">{firstColumnTitle}</span>.
           </p>
 
@@ -232,8 +233,8 @@ export function KanbanAiImportPanel({
                     onChange={(event) =>
                       updateDraft(task.draftId, { description: event.target.value })
                     }
-                    rows={2}
-                    placeholder="Opis (opcjonalnie)"
+                    rows={4}
+                    placeholder="Opis — szczegóły z wiadomości klienta"
                     className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40"
                   />
                   <div className="grid gap-2 sm:grid-cols-2">

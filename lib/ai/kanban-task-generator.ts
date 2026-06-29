@@ -2,7 +2,7 @@ import { KANBAN_PRIORITIES, type KanbanPriority } from "@/lib/process/kanban-typ
 
 export const KANBAN_AI_DEFAULT_DAYS_OFFSET = 14;
 export const KANBAN_AI_MAX_INPUT_CHARS = 12_000;
-export const KANBAN_AI_MAX_TASKS = 20;
+export const KANBAN_AI_MAX_TASKS = 40;
 
 export type KanbanAiGeneratedTask = {
   title: string;
@@ -53,19 +53,22 @@ function normalizeGeneratedTask(
 
 function buildPrompt(clientText: string, referenceDate: Date, defaultDueDate: string) {
   const today = referenceDate.toISOString().slice(0, 10);
-  return `Jesteś asystentem firmy instalacji Smart Home. Na podstawie wiadomości od klienta wyodrębnij konkretne zadania do tablicy Kanban zespołu technicznego.
+  return `Jesteś asystentem firmy instalacji Smart Home. Na podstawie wiadomości od klienta utwórz wpisy do tablicy Kanban zespołu technicznego.
 
 Dzisiejsza data: ${today}
 Domyślny termin (gdy klient nie podaje daty): ${defaultDueDate}
 
-Zasady:
-- Zwróć od 1 do ${KANBAN_AI_MAX_TASKS} zadań, każde jednoznaczne i wykonalne.
-- Tytuł: krótki, po polsku, max 120 znaków.
-- Opis: opcjonalny kontekst z wiadomości klienta, max 500 znaków.
-- dueDate: format YYYY-MM-DD. Interpretuj wyrażenia względne (np. "za 2 tygodnie", "na przyszły tydzień", "jutro").
-- Gdy brak wskazówki czasowej — użyj domyślnego terminu ${defaultDueDate}.
+Zasady bezwzględne:
+- OBEJMIJ CAŁY wklejony tekst — nic nie pomijaj. Każdy fragment wiadomości musi trafić do co najmniej jednego wpisu (zadanie, pytanie do wyjaśnienia, ustalenie do potwierdzenia, informacja do odnotowania).
+- Nawet jeśli coś NIE brzmi jak prośba o pracę (np. pytanie, wątpliwość, komentarz, „czy można…?”, „proszę o info”), i tak utwórz osobny wpis — np. tytuł „Pytanie klienta: …” lub „Do ustalenia z klientem: …”.
+- Opieraj się WYŁĄCZNIE na wklejonym tekście. NIE dopisuj, NIE zgaduj, NIE uzupełniaj braków wiedzą ogólną ani typowymi praktykami. Jeśli czegoś nie ma w tekście — nie dodawaj tego.
+- W polu description przepisz jak najwięcej szczegółów ze źródła: cytaty, numery, nazwy urządzeń/pomieszczeń, daty wspomniane przez klienta, kontekst zdania. Im pełniejszy opis, tym lepiej (do ok. 2000 znaków na wpis).
+- Tytuł: krótki, po polsku, max 120 znaków — streszczenie sensu fragmentu, nie ogólnik.
+- dueDate: format YYYY-MM-DD. Interpretuj wyrażenia względne (np. „za 2 tygodnie”, „na przyszły tydzień”, „jutro”) względem daty ${today}.
+- Gdy klient nie podaje terminu dla danego fragmentu — użyj ${defaultDueDate}.
 - priority: jedna z wartości low | normal | high | urgent. Pilne/szybko/ASAP → urgent lub high.
-- Nie wymyślaj rzeczy, których nie ma w tekście. Łącz powtarzające się prośby w jedno zadanie.
+- Nie łącz w jedno zadanie różnych tematów tylko po to, by zmniejszyć liczbę wpisów. Osobny fragment = osobny wpis (chyba że to dosłownie ta sama prośba powtórzona).
+- Możesz zwrócić do ${KANBAN_AI_MAX_TASKS} wpisów, jeśli tekst tego wymaga.
 
 Odpowiedz WYŁĄCZNIE poprawnym JSON:
 {
@@ -114,13 +117,15 @@ export async function generateKanbanTasksFromClientText(
     },
     body: JSON.stringify({
       model,
-      temperature: 0.2,
+      temperature: 0.1,
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
           content:
-            "Zwracasz wyłącznie JSON zgodny ze schematem. Zadania po polsku, dla zespołu technicznego Smart Home.",
+            "Zwracasz wyłącznie JSON zgodny ze schematem. Wpisy po polsku dla zespołu Smart Home. " +
+            "Nie pomijasz żadnego fragmentu wiadomości klienta. Nie wymyślasz faktów spoza tekstu. " +
+            "Opisy mają być maksymalnie szczegółowe i oparte na cytowanym materiale źródłowym.",
         },
         {
           role: "user",
