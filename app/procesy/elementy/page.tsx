@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Field, Input } from "@/components/ui/input";
 import { flattenChecklistLines, normalizeChecklistPayload } from "@/lib/process/item-payload";
 import { PROCESS_ITEM_KIND_LABELS } from "@/lib/process/types";
 import { useAppStore } from "@/store/app-store";
@@ -16,10 +17,22 @@ export default function ProcessElementsPage() {
   const isLoading = useProcessStore((state) => state.isLoading);
   const error = useProcessStore((state) => state.error);
   const hydrate = useProcessStore((state) => state.hydrate);
+  const [nameFilter, setNameFilter] = useState("");
 
   useEffect(() => {
     void hydrate(projectTypes);
   }, [hydrate, projectTypes]);
+
+  const filteredElements = useMemo(() => {
+    const query = nameFilter.trim().toLocaleLowerCase("pl");
+    if (!query) {
+      return elements;
+    }
+    return elements.filter((element) => {
+      const haystack = `${element.title} ${element.description ?? ""}`.toLocaleLowerCase("pl");
+      return haystack.includes(query);
+    });
+  }, [elements, nameFilter]);
 
   return (
     <>
@@ -45,11 +58,23 @@ export default function ProcessElementsPage() {
         </Card>
       ) : null}
 
+      {!isLoading && elements.length > 0 ? (
+        <div className="mb-4 max-w-md">
+          <Field label="Filtruj po nazwie">
+            <Input
+              value={nameFilter}
+              onChange={(event) => setNameFilter(event.target.value)}
+              placeholder="Szukaj elementu…"
+            />
+          </Field>
+        </div>
+      ) : null}
+
       {isLoading ? (
         <p className="text-sm text-muted">Ładowanie elementów…</p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {elements.map((element) => (
+          {filteredElements.map((element) => (
             <Card key={element.id}>
               <CardContent className="grid gap-3 py-5">
                 <div>
@@ -80,10 +105,14 @@ export default function ProcessElementsPage() {
               </CardContent>
             </Card>
           ))}
-          {!elements.length ? (
+          {!filteredElements.length ? (
             <Card className="md:col-span-2 xl:col-span-3">
               <CardContent className="grid gap-3 py-8 text-center">
-                <p className="text-sm text-muted">Brak elementów procesu — utwórz pierwszą checklistę lub protokół.</p>
+                <p className="text-sm text-muted">
+                  {elements.length && nameFilter.trim()
+                    ? "Brak elementów pasujących do filtra."
+                    : "Brak elementów procesu — utwórz pierwszą checklistę lub protokół."}
+                </p>
                 <Button asChild className="mx-auto w-fit">
                   <Link href="/procesy/elementy/nowy">Utwórz element</Link>
                 </Button>

@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { CheckCircle2, FileCheck2, LayoutGrid, Receipt, ShieldCheck } from "lucide-react";
 import { ProcessChecklistBoard } from "@/components/process/process-checklist-board";
 import { ProcessInternalAcceptanceBoard } from "@/components/process/process-internal-acceptance-board";
 import { ProcessKanbanBoard } from "@/components/process/process-kanban-board";
+import { ProcessSettlementPanel } from "@/components/process/process-settlement-panel";
 import { ProcessItemResponsibleSection } from "@/components/process/process-item-responsible-section";
 import { ProcessPublicLinkControls } from "@/components/process/process-public-link-controls";
+import { TemplateChecklistLinesEditor } from "@/components/process/template-checklist-lines-editor";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,6 +28,7 @@ import {
   type ProjectProcessItem,
 } from "@/lib/process/types";
 import { cn, formatDate } from "@/lib/utils";
+import { normalizeChecklistPayload } from "@/lib/process/item-payload";
 import { useProcessStore } from "@/store/process-store";
 
 const kindIcon = {
@@ -71,6 +74,9 @@ export function ProcessItemPanel({
   onToggleComplete,
   actorName,
 }: ProcessItemPanelProps) {
+  const [structureDraft, setStructureDraft] = useState<ChecklistItemPayload | null>(null);
+  const [structureOpen, setStructureOpen] = useState(false);
+  const [structureSaving, setStructureSaving] = useState(false);
   const replaceProjectProcessItem = useProcessStore((state) => state.replaceProjectProcessItem);
   const storeInstance = useProcessStore((state) =>
     projectId && item ? state.projectProcessItems[projectId]?.[item.id] : undefined,
@@ -93,20 +99,39 @@ export function ProcessItemPanel({
     onRemoteUpdate: handleRemoteUpdate,
   });
 
+  const resolvedInstance = item ? instance ?? storeInstance : undefined;
+  const checklistPayload = resolvedInstance?.payload ?? { sections: [] };
+  const structurePayload = normalizeChecklistPayload(structureDraft ?? checklistPayload);
+
+  const handleSaveStructure = useCallback(async () => {
+    if (!onSaveChecklist || !item) {
+      return;
+    }
+    setStructureSaving(true);
+    try {
+      await onSaveChecklist(normalizeChecklistPayload(structureDraft ?? checklistPayload));
+      setStructureDraft(null);
+    } finally {
+      setStructureSaving(false);
+    }
+  }, [checklistPayload, item, onSaveChecklist, structureDraft]);
+
   if (!item) {
     return null;
   }
 
-  const resolvedInstance = instance ?? storeInstance;
   const isInternalAcceptance = Boolean(item.isInternalAcceptance ?? resolvedInstance?.isInternalAcceptance);
   const completed =
     Boolean(completion) ||
     resolvedInstance?.status === "completed" ||
     Boolean(resolvedInstance?.signedAt);
   const Icon = isInternalAcceptance ? ShieldCheck : kindIcon[item.kind];
-  const checklistPayload = resolvedInstance?.payload ?? { sections: [] };
-  const isBoardItem =
-    item.kind === "checklist" || isInternalAcceptance;
+  const canEditChecklistStructure =
+    interactive &&
+    !isInternalAcceptance &&
+    item.kind === "checklist" &&
+    Boolean(onSaveChecklist);
+  const isBoardItem = item.kind === "checklist" || isInternalAcceptance;
   const isFullscreen = item.kind === "kanban" || (interactive && isBoardItem);
   const showMobileNavPadding = interactive && isBoardItem;
 
@@ -164,14 +189,45 @@ export function ProcessItemPanel({
           ) : null}
 
           {item.kind === "checklist" && !isInternalAcceptance && interactive && onSaveChecklist ? (
-            <ProcessChecklistBoard
-              key={`${item.id}-${resolvedInstance?.updatedAt ?? "new"}-checklist`}
-              initialPayload={checklistPayload}
-              actorId={currentUserId}
-              actorName={actorName}
-              teamProfiles={teamProfiles}
-              onSave={onSaveChecklist}
-            />
+            <>
+              {canEditChecklistStructure ? (
+                <div className="rounded-xl border border-border/70 bg-surface-muted/25 p-3">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between text-left text-sm font-medium text-foreground"
+                    onClick={() => setStructureOpen((value) => !value)}
+                  >
+                    Edytuj listy i dodaj punkty
+                    <span className="text-xs text-muted">{structureOpen ? "Zwiń" : "Rozwiń"}</span>
+                  </button>
+                  {structureOpen ? (
+                    <div className="mt-3 grid gap-3">
+                      <TemplateChecklistLinesEditor
+                        payload={structurePayload}
+                        label="Struktura checklisty w projekcie"
+                        onChange={(next) => setStructureDraft(next)}
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={structureSaving}
+                        onClick={() => void handleSaveStructure()}
+                      >
+                        {structureSaving ? "Zapisywanie…" : "Zapisz strukturę checklisty"}
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+              <ProcessChecklistBoard
+                key={`${item.id}-${resolvedInstance?.updatedAt ?? "new"}-checklist`}
+                initialPayload={checklistPayload}
+                actorId={currentUserId}
+                actorName={actorName}
+                teamProfiles={teamProfiles}
+                onSave={onSaveChecklist}
+              />
+            </>
           ) : null}
 
           {item.kind === "checklist" && !isInternalAcceptance && !interactive ? (
@@ -205,20 +261,22 @@ export function ProcessItemPanel({
             </div>
           ) : null}
 
+          {item.kind === "settlement" && projectId && interactive ? (
+            <ProcessSettlementPanel projectId={projectId} />
+          ) : item.kind === "settlement" ? (
+            <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4">
+              <p className="text-sm font-medium text-foreground">Rozliczenie</p>
+              <p className="mt-2 text-sm text-muted">
+                Powiązanie z ofertą serwisową będzie dostępne w kolejnej fazie.
+              </p>
+            </div>
+          ) : null}
+
           {item.kind === "protocol" ? (
             <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4">
               <p className="text-sm font-medium text-foreground">Protokół odbioru</p>
               <p className="mt-2 text-sm text-muted">
                 Formularz protokołu z podpisem klienta będzie dostępny w kolejnej fazie.
-              </p>
-            </div>
-          ) : null}
-
-          {item.kind === "settlement" ? (
-            <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4">
-              <p className="text-sm font-medium text-foreground">Rozliczenie</p>
-              <p className="mt-2 text-sm text-muted">
-                Powiązanie z ofertą serwisową będzie dostępne w kolejnej fazie.
               </p>
             </div>
           ) : null}

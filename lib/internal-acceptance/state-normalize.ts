@@ -1,10 +1,14 @@
+import { PROJECT_AGREEMENT_CATEGORIES } from "@/lib/dashboard/agreement-types";
 import { computeInternalAcceptanceSummary } from "@/lib/internal-acceptance/quality-gate";
 import { INTERNAL_ACCEPTANCE_STATUS_STYLES } from "@/lib/internal-acceptance/status-styles";
-import type {
-  InternalAcceptanceItemState,
-  InternalAcceptanceState,
-  InternalAcceptanceStatus,
+import {
+  INTERNAL_ACCEPTANCE_AGREEMENTS_BOARD_CATEGORY,
+  type InternalAcceptanceItemState,
+  type InternalAcceptanceState,
+  type InternalAcceptanceStatus,
 } from "@/lib/internal-acceptance/types";
+
+const AGREEMENT_CATEGORY_CODES = new Set<string>(PROJECT_AGREEMENT_CATEGORIES);
 
 const VALID_STATUSES = new Set<InternalAcceptanceStatus>(
   Object.keys(INTERNAL_ACCEPTANCE_STATUS_STYLES) as InternalAcceptanceStatus[],
@@ -16,9 +20,21 @@ function normalizeItemStatus(status: unknown): InternalAcceptanceStatus {
     : "NOT_STARTED";
 }
 
+function normalizeBoardCategory(item: InternalAcceptanceItemState): string {
+  if (
+    item.source?.type === "agreement" ||
+    AGREEMENT_CATEGORY_CODES.has(item.category) ||
+    item.category === "Ustalenia"
+  ) {
+    return INTERNAL_ACCEPTANCE_AGREEMENTS_BOARD_CATEGORY;
+  }
+  return item.category;
+}
+
 function normalizeItem(item: InternalAcceptanceItemState): InternalAcceptanceItemState {
   return {
     ...item,
+    category: normalizeBoardCategory(item),
     status: normalizeItemStatus(item.status),
     history: Array.isArray(item.history) ? item.history : [],
     source: item.source ?? { type: "company_standard", refLabel: "Punkt kontroli" },

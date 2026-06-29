@@ -171,8 +171,11 @@ export function ProcessInternalAcceptanceBoard({
         }
         const body = (await response.json()) as { internalAcceptance: InternalAcceptanceState };
         if (body.internalAcceptance) {
-          setState(body.internalAcceptance);
-          onStateChange?.(body.internalAcceptance);
+          const normalized = normalizeInternalAcceptanceState(body.internalAcceptance);
+          setState(normalized);
+          if (normalized) {
+            onStateChange?.(normalized);
+          }
         }
         return;
       }
@@ -184,7 +187,7 @@ export function ProcessInternalAcceptanceBoard({
         patch,
         actor,
       );
-      const next = updated.internalAcceptanceState;
+      const next = normalizeInternalAcceptanceState(updated.internalAcceptanceState);
       if (next) {
         setState(next);
         onStateChange?.(next);

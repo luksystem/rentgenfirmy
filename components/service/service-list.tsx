@@ -249,17 +249,15 @@ export function ServiceList() {
                 <Button variant="secondary" size="sm" asChild className="flex-1 sm:flex-none">
                   <Link href={`/oferty/${service.id}`}>Edytuj</Link>
                 </Button>
-                {service.status === "Rozliczony" || service.status === "Do rozliczenia" ? (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="flex-1 sm:flex-none"
-                    disabled={isSaving}
-                    onClick={() => void handleDuplicate(service)}
-                  >
-                    Duplikuj
-                  </Button>
-                ) : null}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1 sm:flex-none"
+                  disabled={isSaving}
+                  onClick={() => void handleDuplicate(service)}
+                >
+                  Duplikuj
+                </Button>
                 <Button
                   variant="destructive"
                   size="sm"
@@ -328,16 +326,14 @@ export function ServiceList() {
                         <Button variant="secondary" size="sm" asChild>
                           <Link href={`/oferty/${service.id}`}>Edytuj</Link>
                         </Button>
-                        {service.status === "Rozliczony" || service.status === "Do rozliczenia" ? (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            disabled={isSaving}
-                            onClick={() => void handleDuplicate(service)}
-                          >
-                            Duplikuj
-                          </Button>
-                        ) : null}
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={isSaving}
+                          onClick={() => void handleDuplicate(service)}
+                        >
+                          Duplikuj
+                        </Button>
                         <Button
                           variant="destructive"
                           size="sm"

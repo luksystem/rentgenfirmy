@@ -140,7 +140,7 @@ function generateFromRuleLibrary(
               id: template.id,
               name: template.name,
               description: template.description,
-              category: template.category,
+              category: INTERNAL_ACCEPTANCE_AGREEMENTS_BOARD_CATEGORY,
               priority: template.priority,
               mandatory: template.mandatory,
               itemKey: buildItemKey(ruleSet.id, template.resolvedId, agreement.id),
