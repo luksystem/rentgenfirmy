@@ -605,7 +605,7 @@ export function InternalAcceptanceTemplateEditor({
               <span className="block text-sm font-medium text-foreground">Ustalenia z projektu</span>
               <span className="mt-1 block text-xs text-muted">
                 Każde ustalenie zaakceptowane lub oczekujące na klienta staje się osobnym punktem
-                odbioru (kategoria „Ustalenia” lub kategoria ustalenia). Bez słów kluczowych. Dodatkowe
+                odbioru w grupie „Ustalenia i Akceptacje”. Bez słów kluczowych. Dodatkowe
                 pakiety punktów poniżej działają opcjonalnie po dopasowaniu słów kluczowych.
               </span>
             </span>

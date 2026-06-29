@@ -1,9 +1,10 @@
-import type {
-  InternalAcceptanceGeneratedItem,
-  InternalAcceptanceGenerationInput,
-  InternalAcceptanceItemState,
-  InternalAcceptanceSourceRuleSet,
-  InternalAcceptanceState,
+import {
+  INTERNAL_ACCEPTANCE_AGREEMENTS_BOARD_CATEGORY,
+  type InternalAcceptanceGeneratedItem,
+  type InternalAcceptanceGenerationInput,
+  type InternalAcceptanceItemState,
+  type InternalAcceptanceSourceRuleSet,
+  type InternalAcceptanceState,
 } from "@/lib/internal-acceptance/types";
 import { INTERNAL_ACCEPTANCE_RULE_LIBRARY } from "@/lib/internal-acceptance/rule-library";
 import { resolveRulePackItems } from "@/lib/internal-acceptance/rule-pack-resolver";
@@ -227,7 +228,7 @@ function generateFromTemplateConfig(
           name: agreement.title,
           description:
             agreement.body?.trim() || `Weryfikacja ustalenia: ${agreement.title}`,
-          category: agreement.category?.trim() || "Ustalenia",
+          category: INTERNAL_ACCEPTANCE_AGREEMENTS_BOARD_CATEGORY,
           priority: "normal",
           mandatory: true,
           itemKey: buildItemKey("agreement-item", agreement.id),

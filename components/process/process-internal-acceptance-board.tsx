@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { RefreshCw, ShieldCheck } from "lucide-react";
 import { BoardCategoryMobileNav } from "@/components/process/board-category-mobile-nav";
 import { InternalAcceptanceItemDialog } from "@/components/process/internal-acceptance-item-dialog";
+import { InternalAcceptanceAgreementDialog } from "@/components/process/internal-acceptance-agreement-dialog";
 import { Button } from "@/components/ui/button";
 import type { UserProfile } from "@/lib/auth/types";
+import { getInternalAcceptanceAgreementId } from "@/lib/internal-acceptance/agreement-ref";
 import { internalAcceptanceCategorySummary } from "@/lib/internal-acceptance/category-summary";
 import { INTERNAL_ACCEPTANCE_STATUS_STYLES } from "@/lib/internal-acceptance/status-styles";
 import {
@@ -49,6 +51,7 @@ export function ProcessInternalAcceptanceBoard({
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [navCategoryId, setNavCategoryId] = useState<string | null>(null);
+  const [agreementPreviewId, setAgreementPreviewId] = useState<string | null>(null);
 
   const actor = useMemo(
     () => ({ id: actorId, name: actorName.trim() || "Zespół" }),
@@ -270,6 +273,8 @@ export function ProcessInternalAcceptanceBoard({
             <div className="grid gap-2">
               {items.map((item) => {
                 const styles = INTERNAL_ACCEPTANCE_STATUS_STYLES[item.status];
+                const agreementId = getInternalAcceptanceAgreementId(item);
+                const showAgreementLink = !publicToken && Boolean(agreementId);
                 return (
                   <button
                     key={item.itemKey}
@@ -288,7 +293,24 @@ export function ProcessInternalAcceptanceBoard({
                       </div>
                       <StatusBadge status={item.status} />
                     </div>
-                    <p className="mt-1 pl-4 text-xs text-muted">{item.source.refLabel}</p>
+                    <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 pl-4 text-xs text-muted">
+                      <span>{item.source.refLabel}</span>
+                      {showAgreementLink ? (
+                        <>
+                          <span aria-hidden>·</span>
+                          <button
+                            type="button"
+                            className="text-accent hover:underline"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setAgreementPreviewId(agreementId);
+                            }}
+                          >
+                            Opis i komentarze
+                          </button>
+                        </>
+                      ) : null}
+                    </p>
                     {item.assigneeName || item.lastUpdatedAt || item.completedAt ? (
                       <p className="mt-1 pl-4 text-[11px] text-muted/80">
                         {item.assigneeName ? `Odp.: ${item.assigneeName}` : null}
@@ -310,6 +332,11 @@ export function ProcessInternalAcceptanceBoard({
         item={activeItem}
         open={activeKey !== null}
         teamProfiles={teamProfiles}
+        onOpenAgreement={
+          !publicToken && activeItem && getInternalAcceptanceAgreementId(activeItem)
+            ? () => setAgreementPreviewId(getInternalAcceptanceAgreementId(activeItem)!)
+            : undefined
+        }
         onOpenChange={(open) => {
           if (!open) {
             setActiveKey(null);
@@ -333,6 +360,20 @@ export function ProcessInternalAcceptanceBoard({
           }
         }}
       />
+
+      {!publicToken ? (
+        <InternalAcceptanceAgreementDialog
+          projectId={projectId}
+          agreementId={agreementPreviewId}
+          authorName={actor.name}
+          open={agreementPreviewId !== null}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAgreementPreviewId(null);
+            }
+          }}
+        />
+      ) : null}
 
       <BoardCategoryMobileNav
         categories={navCategories}

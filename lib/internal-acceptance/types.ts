@@ -31,6 +31,9 @@ export const INTERNAL_ACCEPTANCE_CATEGORIES = [
   "Gotowość do odbioru",
 ] as const;
 
+/** Nazwa grupy na tablicy odbioru wewnętrznego dla punktów wygenerowanych z ustaleń projektu. */
+export const INTERNAL_ACCEPTANCE_AGREEMENTS_BOARD_CATEGORY = "Ustalenia i Akceptacje";
+
 export type InternalAcceptanceCategory = (typeof INTERNAL_ACCEPTANCE_CATEGORIES)[number] | string;
 
 export type InternalAcceptanceSourceType =

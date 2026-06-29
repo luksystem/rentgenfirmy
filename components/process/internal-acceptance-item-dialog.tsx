@@ -40,6 +40,7 @@ export function InternalAcceptanceItemDialog({
   readOnly,
   saving,
   teamProfiles = [],
+  onOpenAgreement,
   onStatusChange,
   onFieldChange,
   onLocalFieldChange,
@@ -50,6 +51,7 @@ export function InternalAcceptanceItemDialog({
   readOnly?: boolean;
   saving?: boolean;
   teamProfiles?: UserProfile[];
+  onOpenAgreement?: () => void;
   onStatusChange: (status: InternalAcceptanceStatus) => void;
   onFieldChange: (patch: Partial<InternalAcceptanceItemState>) => void;
   onLocalFieldChange: (patch: Partial<InternalAcceptanceItemState>) => void;
@@ -83,6 +85,15 @@ export function InternalAcceptanceItemDialog({
               </span>
             </div>
             <p className="mt-2 text-[11px] uppercase tracking-wide text-muted">{item.source.refLabel}</p>
+            {onOpenAgreement ? (
+              <button
+                type="button"
+                className="mt-1 text-xs text-accent hover:underline"
+                onClick={onOpenAgreement}
+              >
+                Zobacz ustalenie — opis i komentarze
+              </button>
+            ) : null}
             {lastMarker ? (
               <p className="mt-2 text-xs text-muted">
                 Ostatnia zmiana: {lastActor ?? "—"} · {formatDateTime(lastMarker)}
