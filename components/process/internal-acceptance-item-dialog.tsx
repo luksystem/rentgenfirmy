@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Clock, History, MinusCircle, XCircle } from "lucide-react";
+import { Check, Clock, History, MinusCircle, UserRound, XCircle } from "lucide-react";
+import { TeamProfileSelect } from "@/components/process/team-profile-select";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +11,9 @@ import {
   TopAnchoredDialogContent,
 } from "@/components/ui/dialog";
 import { Field, Input, Textarea } from "@/components/ui/input";
+import type { UserProfile } from "@/lib/auth/types";
+import { getUserDisplayName } from "@/lib/auth/types";
+import { INTERNAL_ACCEPTANCE_STATUS_STYLES } from "@/lib/internal-acceptance/status-styles";
 import {
   INTERNAL_ACCEPTANCE_STATUS_LABELS,
   type InternalAcceptanceHistoryEntry,
@@ -22,12 +26,11 @@ const QUICK_STATUSES: {
   status: InternalAcceptanceStatus;
   label: string;
   icon: typeof Check;
-  tone: string;
 }[] = [
-  { status: "PASSED", label: "Spełnia", icon: Check, tone: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20" },
-  { status: "NOT_APPLICABLE", label: "Nie dotyczy", icon: MinusCircle, tone: "border-border/60 bg-surface-muted/40 text-muted hover:bg-surface-muted/60" },
-  { status: "IN_PROGRESS", label: "W toku", icon: Clock, tone: "border-amber-500/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20" },
-  { status: "FAILED", label: "Nie spełnia", icon: XCircle, tone: "border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20" },
+  { status: "PASSED", label: "Spełnia", icon: Check },
+  { status: "NOT_APPLICABLE", label: "Nie dotyczy", icon: MinusCircle },
+  { status: "IN_PROGRESS", label: "W toku", icon: Clock },
+  { status: "FAILED", label: "Nie spełnia", icon: XCircle },
 ];
 
 export function InternalAcceptanceItemDialog({
@@ -36,6 +39,7 @@ export function InternalAcceptanceItemDialog({
   onOpenChange,
   readOnly,
   saving,
+  teamProfiles = [],
   onStatusChange,
   onFieldChange,
   onLocalFieldChange,
@@ -45,6 +49,7 @@ export function InternalAcceptanceItemDialog({
   onOpenChange: (open: boolean) => void;
   readOnly?: boolean;
   saving?: boolean;
+  teamProfiles?: UserProfile[];
   onStatusChange: (status: InternalAcceptanceStatus) => void;
   onFieldChange: (patch: Partial<InternalAcceptanceItemState>) => void;
   onLocalFieldChange: (patch: Partial<InternalAcceptanceItemState>) => void;
@@ -55,14 +60,28 @@ export function InternalAcceptanceItemDialog({
 
   const lastMarker = item.lastUpdatedAt ?? item.completedAt;
   const lastActor = item.lastUpdatedByName ?? item.assigneeName;
+  const currentStyles = INTERNAL_ACCEPTANCE_STATUS_STYLES[item.status];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <TopAnchoredDialogContent className="p-0">
         <div className="flex max-h-[inherit] flex-col">
           <DialogHeader className="shrink-0 border-b border-border/60 px-5 pb-4 pt-5 pr-12">
-            <DialogTitle className="text-base leading-snug">{item.name}</DialogTitle>
-            <DialogDescription className="line-clamp-2">{item.description}</DialogDescription>
+            <div className="flex flex-wrap items-start gap-2">
+              <span className={cn("mt-1 h-2.5 w-2.5 shrink-0 rounded-full", currentStyles.dot)} />
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="text-base leading-snug">{item.name}</DialogTitle>
+                <DialogDescription className="line-clamp-2">{item.description}</DialogDescription>
+              </div>
+              <span
+                className={cn(
+                  "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                  currentStyles.badge,
+                )}
+              >
+                {INTERNAL_ACCEPTANCE_STATUS_LABELS[item.status]}
+              </span>
+            </div>
             <p className="mt-2 text-[11px] uppercase tracking-wide text-muted">{item.source.refLabel}</p>
             {lastMarker ? (
               <p className="mt-2 text-xs text-muted">
@@ -76,37 +95,56 @@ export function InternalAcceptanceItemDialog({
               <div className="grid gap-2">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted">Oznacz punkt</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {QUICK_STATUSES.map(({ status, label, icon: Icon, tone }) => (
-                    <Button
-                      key={status}
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      disabled={saving || item.status === status}
-                      onClick={() => onStatusChange(status)}
-                      className={cn(
-                        "h-auto flex-col gap-1 border py-2.5 text-xs",
-                        item.status === status ? tone : "border-border/60",
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {label}
-                    </Button>
-                  ))}
+                  {QUICK_STATUSES.map(({ status, label, icon: Icon }) => {
+                    const styles = INTERNAL_ACCEPTANCE_STATUS_STYLES[status];
+                    const selected = item.status === status;
+                    return (
+                      <Button
+                        key={status}
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={saving || selected}
+                        onClick={() => onStatusChange(status)}
+                        className={cn(
+                          "h-auto flex-col gap-1.5 border py-3 text-xs font-semibold",
+                          selected ? styles.badge : "border-border/60 opacity-80 hover:opacity-100",
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {label}
+                      </Button>
+                    );
+                  })}
                 </div>
-                <p className="text-xs text-muted">
-                  Aktualny status:{" "}
-                  <span className="font-medium text-foreground">
-                    {INTERNAL_ACCEPTANCE_STATUS_LABELS[item.status]}
-                  </span>
-                </p>
               </div>
             ) : (
               <p className="text-sm text-muted">{INTERNAL_ACCEPTANCE_STATUS_LABELS[item.status]}</p>
             )}
 
+            {!readOnly ? (
+              <Field label="Osoba odpowiedzialna">
+                <TeamProfileSelect
+                  value={item.assigneeId ?? ""}
+                  teamProfiles={teamProfiles}
+                  disabled={saving}
+                  onChange={(profileId, profile) => {
+                    onFieldChange({
+                      assigneeId: profileId || undefined,
+                      assigneeName: profile ? getUserDisplayName(profile) : undefined,
+                    });
+                  }}
+                />
+              </Field>
+            ) : item.assigneeName ? (
+              <p className="flex items-center gap-1.5 text-sm text-muted">
+                <UserRound className="h-3.5 w-3.5" />
+                Odpowiedzialny: <span className="text-foreground">{item.assigneeName}</span>
+              </p>
+            ) : null}
+
             {!readOnly && item.status === "FAILED" ? (
-              <div className="grid gap-3 rounded-xl border border-rose-500/20 bg-rose-500/5 p-3">
+              <div className="grid gap-3 rounded-xl border border-rose-500/25 bg-rose-500/8 p-3">
                 <Field label="Opis problemu">
                   <Textarea
                     value={item.failureReason ?? ""}
@@ -116,11 +154,16 @@ export function InternalAcceptanceItemDialog({
                   />
                 </Field>
                 <Field label="Osoba odpowiedzialna za poprawkę">
-                  <Input
-                    value={item.fixAssignee ?? ""}
+                  <TeamProfileSelect
+                    value={item.fixAssigneeId ?? ""}
+                    teamProfiles={teamProfiles}
                     disabled={saving}
-                    onChange={(event) => onLocalFieldChange({ fixAssignee: event.target.value })}
-                    onBlur={() => onFieldChange({ fixAssignee: item.fixAssignee })}
+                    onChange={(profileId, profile) => {
+                      onFieldChange({
+                        fixAssigneeId: profileId || undefined,
+                        fixAssignee: profile ? getUserDisplayName(profile) : undefined,
+                      });
+                    }}
                   />
                 </Field>
                 <Field label="Termin poprawki">

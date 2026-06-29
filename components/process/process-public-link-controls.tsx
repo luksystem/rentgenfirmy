@@ -12,14 +12,16 @@ export function ProcessPublicLinkControls({
   projectProcessItemId,
   kind,
   isInternalAcceptance = false,
+  defaultOpen = true,
 }: {
   projectProcessItemId: string;
   kind: ProcessItemKind;
   isInternalAcceptance?: boolean;
+  defaultOpen?: boolean;
 }) {
   const [access, setAccess] = useState<ProcessPublicAccessRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(defaultOpen);
   const [linkMessage, setLinkMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [accessPasswordDraft, setAccessPasswordDraft] = useState("");

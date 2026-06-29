@@ -91,14 +91,18 @@ export function applyInternalAcceptanceItemPatch(
   if (
     patch.failureReason !== undefined ||
     patch.fixAssignee !== undefined ||
+    patch.fixAssigneeId !== undefined ||
     patch.fixDeadline !== undefined
   ) {
     const parts: string[] = [];
     if (patch.failureReason !== undefined && patch.failureReason !== item.failureReason) {
       parts.push(`Opis problemu: ${patch.failureReason.trim() || "—"}`);
     }
-    if (patch.fixAssignee !== undefined && patch.fixAssignee !== item.fixAssignee) {
-      parts.push(`Osoba: ${patch.fixAssignee.trim() || "—"}`);
+    if (
+      (patch.fixAssignee !== undefined && patch.fixAssignee !== item.fixAssignee) ||
+      (patch.fixAssigneeId !== undefined && patch.fixAssigneeId !== item.fixAssigneeId)
+    ) {
+      parts.push(`Osoba: ${patch.fixAssignee?.trim() || item.fixAssignee?.trim() || "—"}`);
     }
     if (patch.fixDeadline !== undefined && patch.fixDeadline !== item.fixDeadline) {
       parts.push(`Termin: ${patch.fixDeadline || "—"}`);
@@ -117,14 +121,18 @@ export function applyInternalAcceptanceItemPatch(
     }
   }
 
-  if (patch.assigneeName && patch.assigneeName !== item.assigneeName && !patch.status) {
+  if (
+    (patch.assigneeName !== undefined || patch.assigneeId !== undefined) &&
+    !patch.status &&
+    (patch.assigneeId !== item.assigneeId || patch.assigneeName !== item.assigneeName)
+  ) {
     next = appendItemHistory(
       next,
       createHistoryEntry({
         actorId: actor.id,
         actorName: actor.name,
         action: "assignee_updated",
-        message: `Przypisano: ${patch.assigneeName}`,
+        message: `Przypisano: ${patch.assigneeName?.trim() || item.assigneeName?.trim() || "—"}`,
       }),
     );
   }

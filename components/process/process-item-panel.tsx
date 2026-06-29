@@ -91,22 +91,29 @@ export function ProcessItemPanel({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent fullscreen={isFullscreen}>
-        <DialogHeader className={isFullscreen ? "shrink-0" : undefined}>
+        <DialogHeader className={isFullscreen ? "shrink-0 pb-2" : undefined}>
           <DialogTitle className="flex items-center gap-2">
             <Icon className="h-5 w-5 shrink-0 text-accent" />
             {item.title}
           </DialogTitle>
-          <DialogDescription>
-            {isInternalAcceptance ? "Odbiór wewnętrzny (Quality Gate)" : PROCESS_ITEM_KIND_LABELS[item.kind]}
-          </DialogDescription>
+          {!isInternalAcceptance ? (
+            <DialogDescription>{PROCESS_ITEM_KIND_LABELS[item.kind]}</DialogDescription>
+          ) : null}
         </DialogHeader>
 
-        <div className={cn("grid gap-4", isFullscreen && "flex min-h-0 flex-1 flex-col")}>
+        <div
+          className={cn(
+            "grid gap-4",
+            isFullscreen && !isInternalAcceptance && "flex min-h-0 flex-1 flex-col",
+            isInternalAcceptance && "min-h-0 flex-1 overflow-y-auto",
+          )}
+        >
           {interactive && resolvedInstance && item.kind !== "kanban" ? (
             <ProcessPublicLinkControls
               projectProcessItemId={resolvedInstance.id}
               kind={item.kind}
               isInternalAcceptance={isInternalAcceptance}
+              defaultOpen={!isInternalAcceptance}
             />
           ) : null}
 
@@ -123,15 +130,14 @@ export function ProcessItemPanel({
           ) : null}
 
           {isInternalAcceptance && projectId ? (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <ProcessInternalAcceptanceBoard
-                projectId={projectId}
-                templateItemId={item.id}
-                initialState={resolvedInstance?.internalAcceptanceState}
-                actorId={currentUserId}
-                actorName={actorName}
-              />
-            </div>
+            <ProcessInternalAcceptanceBoard
+              projectId={projectId}
+              templateItemId={item.id}
+              initialState={resolvedInstance?.internalAcceptanceState}
+              actorId={currentUserId}
+              actorName={actorName}
+              teamProfiles={teamProfiles}
+            />
           ) : null}
 
           {item.kind === "checklist" && !isInternalAcceptance && interactive && onSaveChecklist ? (

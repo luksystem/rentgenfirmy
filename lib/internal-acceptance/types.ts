@@ -96,10 +96,12 @@ export type InternalAcceptanceItemState = InternalAcceptanceGeneratedItem & {
   notes?: string;
   photoUrls?: string[];
   assigneeName?: string;
+  assigneeId?: string;
   completedAt?: string;
   failureReason?: string;
   fixDeadline?: string;
   fixAssignee?: string;
+  fixAssigneeId?: string;
   lastUpdatedAt?: string;
   lastUpdatedById?: string;
   lastUpdatedByName?: string;
