@@ -49,6 +49,7 @@ export function useProcessItemRemoteSync({
         }
 
         if (remote.updatedAt !== localUpdatedAtRef.current) {
+          localUpdatedAtRef.current = remote.updatedAt;
           onRemoteUpdateRef.current(remote);
         }
       } catch {

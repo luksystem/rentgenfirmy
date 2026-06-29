@@ -5,10 +5,10 @@ import { AgreementApprovalResponses } from "@/components/dashboard/agreement-app
 import { AgreementCollaborationPanel } from "@/components/dashboard/agreement-collaboration-panel";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  StackedDialogContent,
 } from "@/components/ui/dialog";
 import { useAgreementApprovalHint } from "@/hooks/use-agreement-approval-hint";
 import {
@@ -101,7 +101,7 @@ export function InternalAcceptanceAgreementDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[min(92vh,900px)] max-w-2xl overflow-y-auto">
+      <StackedDialogContent className="max-h-[min(92vh,900px)] max-w-2xl overflow-y-auto">
         {loading && !agreement ? (
           <p className="py-6 text-sm text-muted">Ładowanie ustalenia…</p>
         ) : !agreement ? (
@@ -113,7 +113,7 @@ export function InternalAcceptanceAgreementDialog({
             authorName={authorName}
           />
         )}
-      </DialogContent>
+      </StackedDialogContent>
     </Dialog>
   );
 }

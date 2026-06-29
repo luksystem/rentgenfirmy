@@ -3,6 +3,7 @@ import {
   normalizeChecklistPayload,
 } from "@/lib/process/item-payload";
 import type { InternalAcceptanceState } from "@/lib/internal-acceptance/types";
+import { normalizeInternalAcceptanceState } from "@/lib/internal-acceptance/state-normalize";
 import type {
   ChecklistItemPayload,
   ProcessItemKind,
@@ -15,11 +16,7 @@ function parseInternalAcceptanceState(value: unknown): InternalAcceptanceState |
   if (!value || typeof value !== "object") {
     return null;
   }
-  const candidate = value as InternalAcceptanceState;
-  if (!Array.isArray(candidate.items) || !candidate.summary) {
-    return null;
-  }
-  return candidate;
+  return normalizeInternalAcceptanceState(value as InternalAcceptanceState);
 }
 
 function isProcessItemKind(value: string): value is ProcessItemKind {

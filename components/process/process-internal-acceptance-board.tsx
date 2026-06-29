@@ -9,7 +9,10 @@ import { Button } from "@/components/ui/button";
 import type { UserProfile } from "@/lib/auth/types";
 import { getInternalAcceptanceAgreementId } from "@/lib/internal-acceptance/agreement-ref";
 import { internalAcceptanceCategorySummary } from "@/lib/internal-acceptance/category-summary";
-import { INTERNAL_ACCEPTANCE_STATUS_STYLES } from "@/lib/internal-acceptance/status-styles";
+import {
+  getInternalAcceptanceStatusStyles,
+  normalizeInternalAcceptanceState,
+} from "@/lib/internal-acceptance/state-normalize";
 import {
   INTERNAL_ACCEPTANCE_STATUS_LABELS,
   type InternalAcceptanceItemState,
@@ -44,7 +47,9 @@ export function ProcessInternalAcceptanceBoard({
   publicToken?: string;
   onStateChange?: (state: InternalAcceptanceState) => void;
 }) {
-  const [state, setState] = useState<InternalAcceptanceState | null>(initialState ?? null);
+  const [state, setState] = useState<InternalAcceptanceState | null>(() =>
+    normalizeInternalAcceptanceState(initialState ?? null),
+  );
   const [loading, setLoading] = useState(!initialState);
   const [regenerating, setRegenerating] = useState(false);
   const [activeKey, setActiveKey] = useState<string | null>(null);
@@ -60,7 +65,7 @@ export function ProcessInternalAcceptanceBoard({
 
   useEffect(() => {
     if (initialState) {
-      setState(initialState);
+      setState(normalizeInternalAcceptanceState(initialState));
       setLoading(false);
     }
   }, [initialState]);
@@ -73,8 +78,9 @@ export function ProcessInternalAcceptanceBoard({
     void ensureInternalAcceptanceState(projectId, templateItemId)
       .then((generated) => {
         if (!cancelled) {
-          setState(generated);
-          onStateChange?.(generated);
+          const normalized = normalizeInternalAcceptanceState(generated);
+          setState(normalized);
+          onStateChange?.(normalized ?? generated);
         }
       })
       .catch((loadError) => {
@@ -136,8 +142,9 @@ export function ProcessInternalAcceptanceBoard({
     setError(null);
     try {
       const generated = await ensureInternalAcceptanceState(projectId, templateItemId);
-      setState(generated);
-      onStateChange?.(generated);
+      const normalized = normalizeInternalAcceptanceState(generated);
+      setState(normalized);
+      onStateChange?.(normalized ?? generated);
     } catch (regenError) {
       setError(regenError instanceof Error ? regenError.message : "Błąd odświeżania checklisty.");
     } finally {
@@ -255,7 +262,7 @@ export function ProcessInternalAcceptanceBoard({
         </div>
         {summary.readyForClientHandover ? (
           <p className="text-xs font-medium text-emerald-300">Gotowe do odbioru klienta</p>
-        ) : summary.blockers.length ? (
+        ) : summary.blockers?.length ? (
           <p className="text-xs text-amber-200/90">
             Wskazówki: {summary.blockers.slice(0, 3).join(" · ")}
           </p>
@@ -272,16 +279,23 @@ export function ProcessInternalAcceptanceBoard({
             <h3 className="mb-2 text-sm font-semibold text-foreground">{category}</h3>
             <div className="grid gap-2">
               {items.map((item) => {
-                const styles = INTERNAL_ACCEPTANCE_STATUS_STYLES[item.status];
+                const styles = getInternalAcceptanceStatusStyles(item.status);
                 const agreementId = getInternalAcceptanceAgreementId(item);
                 const showAgreementLink = !publicToken && Boolean(agreementId);
                 return (
-                  <button
+                  <div
                     key={item.itemKey}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setActiveKey(item.itemKey)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setActiveKey(item.itemKey);
+                      }
+                    }}
                     className={cn(
-                      "rounded-lg border border-l-4 px-3 py-2.5 text-left text-sm transition",
+                      "cursor-pointer rounded-lg border border-l-4 px-3 py-2.5 text-left text-sm transition",
                       styles.row,
                       activeKey === item.itemKey && styles.rowActive,
                     )}
@@ -320,7 +334,7 @@ export function ProcessInternalAcceptanceBoard({
                           : null}
                       </p>
                     ) : null}
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -361,12 +375,12 @@ export function ProcessInternalAcceptanceBoard({
         }}
       />
 
-      {!publicToken ? (
+      {agreementPreviewId && !publicToken ? (
         <InternalAcceptanceAgreementDialog
           projectId={projectId}
           agreementId={agreementPreviewId}
           authorName={actor.name}
-          open={agreementPreviewId !== null}
+          open
           onOpenChange={(open) => {
             if (!open) {
               setAgreementPreviewId(null);
@@ -390,7 +404,7 @@ export function ProcessInternalAcceptanceBoard({
 }
 
 function StatusBadge({ status }: { status: InternalAcceptanceStatus }) {
-  const styles = INTERNAL_ACCEPTANCE_STATUS_STYLES[status];
+  const styles = getInternalAcceptanceStatusStyles(status);
 
   return (
     <span

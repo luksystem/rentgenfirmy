@@ -154,7 +154,6 @@ export function ProcessItemPanel({
 
           {isInternalAcceptance && projectId ? (
             <ProcessInternalAcceptanceBoard
-              key={`${item.id}-${resolvedInstance?.updatedAt ?? "new"}-acceptance`}
               projectId={projectId}
               templateItemId={item.id}
               initialState={resolvedInstance?.internalAcceptanceState}
