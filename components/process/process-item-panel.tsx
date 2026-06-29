@@ -28,7 +28,7 @@ import {
   type ProjectProcessItem,
 } from "@/lib/process/types";
 import { cn, formatDate } from "@/lib/utils";
-import { normalizeChecklistPayload } from "@/lib/process/item-payload";
+import { normalizeChecklistPayload, prepareChecklistPayloadForSave } from "@/lib/process/item-payload";
 import { useProcessStore } from "@/store/process-store";
 
 const kindIcon = {
@@ -109,7 +109,7 @@ export function ProcessItemPanel({
     }
     setStructureSaving(true);
     try {
-      await onSaveChecklist(normalizeChecklistPayload(structureDraft ?? checklistPayload));
+      await onSaveChecklist(prepareChecklistPayloadForSave(structureDraft ?? checklistPayload));
       setStructureDraft(null);
     } finally {
       setStructureSaving(false);

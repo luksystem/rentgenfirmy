@@ -127,9 +127,14 @@ function normalizeChecklistLine(entry: unknown): ChecklistLine | null {
     return null;
   }
   const raw = entry as Record<string, unknown>;
-  const text = typeof raw.text === "string" ? raw.text.trim() : "";
-  if (!text) {
-    return null;
+  const text = typeof raw.text === "string" ? raw.text : "";
+  if (!text.trim()) {
+    return {
+      id: typeof raw.id === "string" ? raw.id : crypto.randomUUID(),
+      text: "",
+      checked: false,
+      status: "NOT_STARTED" as const,
+    };
   }
   const checked = Boolean(raw.checked);
   const status =
@@ -177,6 +182,21 @@ function normalizeChecklistSection(entry: unknown, index: number): ChecklistSect
     name: typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : `Lista ${index + 1}`,
     position: typeof raw.position === "number" ? raw.position : index,
     lines,
+  };
+}
+
+export function prepareChecklistPayloadForSave(value: unknown): ChecklistItemPayload {
+  const normalized = normalizeChecklistPayload(value);
+  const sections = getChecklistSections(normalized)
+    .map((section) => ({
+      ...section,
+      lines: section.lines.filter((line) => line.text.trim()),
+    }))
+    .filter((section) => section.lines.length > 0);
+
+  return {
+    sections: withChecklistSectionPositions(sections),
+    note: normalized.note,
   };
 }
 

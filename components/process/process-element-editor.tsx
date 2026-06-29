@@ -8,7 +8,12 @@ import { Field, Input, Select } from "@/components/ui/input";
 import { defaultKanbanTemplatePayload } from "@/lib/process/kanban-types";
 import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
 import { KanbanTemplateColumnsEditor } from "@/components/process/kanban-template-columns-editor";
-import { flattenChecklistLines, normalizeChecklistPayload, templatePayloadFromTitle } from "@/lib/process/item-payload";
+import {
+  flattenChecklistLines,
+  normalizeChecklistPayload,
+  prepareChecklistPayloadForSave,
+  templatePayloadFromTitle,
+} from "@/lib/process/item-payload";
 import {
   PROCESS_ITEM_KINDS,
   PROCESS_ITEM_KIND_LABELS,
@@ -36,7 +41,11 @@ export function ProcessElementEditor({
     setError(null);
     setMessage(null);
     try {
-      await onSave({ ...element, updatedAt: new Date().toISOString() });
+      const defaultPayload =
+        element.kind === "checklist" && !element.isInternalAcceptance
+          ? prepareChecklistPayloadForSave(element.defaultPayload)
+          : element.defaultPayload;
+      await onSave({ ...element, defaultPayload, updatedAt: new Date().toISOString() });
       setMessage("Element zapisany.");
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Błąd zapisu elementu.");
