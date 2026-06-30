@@ -44,6 +44,8 @@ export type InternalAcceptanceTemplateStaticItem = {
   priority: InternalAcceptancePriority;
   mandatory: boolean;
   position: number;
+  requireDocumentation?: boolean;
+  documentationHint?: string;
 };
 
 export type InternalAcceptanceRulePackItemOverride = {
@@ -122,6 +124,9 @@ function normalizeStaticItems(value: unknown): InternalAcceptanceTemplateStaticI
       priority: entry.priority ?? "normal",
       mandatory: entry.mandatory !== false,
       position: typeof entry.position === "number" ? entry.position : index,
+      requireDocumentation: Boolean(entry.requireDocumentation),
+      documentationHint:
+        typeof entry.documentationHint === "string" ? entry.documentationHint : undefined,
     }))
     .sort((a, b) => a.position - b.position);
 }

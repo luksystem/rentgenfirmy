@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, ShieldCheck } from "lucide-react";
+import { Paperclip, RefreshCw, ShieldCheck } from "lucide-react";
 import { BoardCategoryMobileNav } from "@/components/process/board-category-mobile-nav";
 import { InternalAcceptanceItemDialog } from "@/components/process/internal-acceptance-item-dialog";
 import { InternalAcceptanceAgreementDialog } from "@/components/process/internal-acceptance-agreement-dialog";
 import { Button } from "@/components/ui/button";
 import type { UserProfile } from "@/lib/auth/types";
 import { getInternalAcceptanceAgreementId } from "@/lib/internal-acceptance/agreement-ref";
+import { getInternalAcceptanceDocumentationBlockReason } from "@/lib/internal-acceptance/documentation";
 import { internalAcceptanceCategorySummary } from "@/lib/internal-acceptance/category-summary";
 import {
   getInternalAcceptanceStatusStyles,
@@ -29,6 +30,7 @@ import { cn, formatDateTime } from "@/lib/utils";
 export function ProcessInternalAcceptanceBoard({
   projectId,
   templateItemId,
+  projectProcessItemId: projectProcessItemIdProp,
   initialState,
   readOnly = false,
   actorId,
@@ -39,6 +41,7 @@ export function ProcessInternalAcceptanceBoard({
 }: {
   projectId: string;
   templateItemId: string;
+  projectProcessItemId?: string;
   initialState?: InternalAcceptanceState | null;
   readOnly?: boolean;
   actorId?: string;
@@ -57,11 +60,18 @@ export function ProcessInternalAcceptanceBoard({
   const [error, setError] = useState<string | null>(null);
   const [navCategoryId, setNavCategoryId] = useState<string | null>(null);
   const [agreementPreviewId, setAgreementPreviewId] = useState<string | null>(null);
+  const [projectProcessItemId, setProjectProcessItemId] = useState<string | undefined>(
+    projectProcessItemIdProp,
+  );
 
   const actor = useMemo(
     () => ({ id: actorId, name: actorName.trim() || "Zespół" }),
     [actorId, actorName],
   );
+
+  useEffect(() => {
+    setProjectProcessItemId(projectProcessItemIdProp);
+  }, [projectProcessItemIdProp]);
 
   useEffect(() => {
     if (initialState) {
@@ -76,10 +86,11 @@ export function ProcessInternalAcceptanceBoard({
     }
     let cancelled = false;
     void ensureInternalAcceptanceState(projectId, templateItemId)
-      .then((generated) => {
+      .then(({ state: generated, projectProcessItemId: instanceId }) => {
         if (!cancelled) {
           const normalized = normalizeInternalAcceptanceState(generated);
           setState(normalized);
+          setProjectProcessItemId(instanceId);
           onStateChange?.(normalized ?? generated);
         }
       })
@@ -137,13 +148,34 @@ export function ProcessInternalAcceptanceBoard({
 
   const showMobileNav = navCategories.length > 1;
 
+  const documentationUploadContext = useMemo(() => {
+    if (readOnly) {
+      return undefined;
+    }
+    if (publicToken) {
+      return { mode: "acceptance-public" as const, publicToken, actorName: actor.name };
+    }
+    if (projectProcessItemId) {
+      return {
+        mode: "acceptance-team" as const,
+        projectProcessItemId,
+        actorName: actor.name,
+      };
+    }
+    return undefined;
+  }, [actor.name, projectProcessItemId, publicToken, readOnly]);
+
   async function handleRegenerate() {
     setRegenerating(true);
     setError(null);
     try {
-      const generated = await ensureInternalAcceptanceState(projectId, templateItemId);
+      const { state: generated, projectProcessItemId: instanceId } = await ensureInternalAcceptanceState(
+        projectId,
+        templateItemId,
+      );
       const normalized = normalizeInternalAcceptanceState(generated);
       setState(normalized);
+      setProjectProcessItemId(instanceId);
       onStateChange?.(normalized ?? generated);
     } catch (regenError) {
       setError(regenError instanceof Error ? regenError.message : "Błąd odświeżania checklisty.");
@@ -156,6 +188,19 @@ export function ProcessInternalAcceptanceBoard({
     if (readOnly) {
       return;
     }
+
+    const currentItem = state?.items.find((entry) => entry.itemKey === itemKey);
+    if (currentItem) {
+      const merged = { ...currentItem, ...patch };
+      if (merged.status === "PASSED" || patch.status === "PASSED") {
+        const reason = getInternalAcceptanceDocumentationBlockReason(merged, "PASSED");
+        if (reason) {
+          setError(reason);
+          return;
+        }
+      }
+    }
+
     setSavingKey(itemKey);
     setError(null);
     try {
@@ -307,6 +352,9 @@ export function ProcessInternalAcceptanceBoard({
                       <div className="flex min-w-0 items-start gap-2">
                         <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", styles.dot)} />
                         <span className="font-medium text-foreground">{item.name}</span>
+                        {item.requireDocumentation || item.attachments?.length ? (
+                          <Paperclip className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-300" aria-hidden />
+                        ) : null}
                       </div>
                       <StatusBadge status={item.status} />
                     </div>
@@ -361,6 +409,7 @@ export function ProcessInternalAcceptanceBoard({
         }}
         readOnly={readOnly}
         saving={activeKey !== null && savingKey === activeKey}
+        documentationUploadContext={documentationUploadContext}
         onStatusChange={(status) => {
           if (activeKey) {
             void persistItemPatch(activeKey, { status });

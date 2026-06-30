@@ -133,6 +133,56 @@ export async function uploadChecklistLineAttachmentAdmin(input: {
   return withUrl;
 }
 
+export async function uploadInternalAcceptanceAttachmentAdmin(input: {
+  projectProcessItemId: string;
+  itemKey: string;
+  file: File;
+  uploadedBy: string;
+}): Promise<ChecklistLineAttachment> {
+  const validation = validateAgreementAttachmentFile({
+    type: input.file.type,
+    size: input.file.size,
+  });
+
+  if (!validation.ok) {
+    throw new Error(validation.error);
+  }
+
+  await ensureChecklistAttachmentsBucket();
+
+  const supabase = getSupabaseAdmin();
+  const attachmentId = crypto.randomUUID();
+  const extension = extensionForAgreementMimeType(input.file.type);
+  const safeItemKey = input.itemKey.replace(/[^a-zA-Z0-9_-]+/g, "_");
+  const storagePath = `internal-acceptance/${input.projectProcessItemId}/${safeItemKey}/${attachmentId}.${extension}`;
+  const fileBuffer = await input.file.arrayBuffer();
+
+  const { error: uploadError } = await supabase.storage
+    .from(CHECKLIST_ATTACHMENTS_BUCKET)
+    .upload(storagePath, fileBuffer, {
+      contentType: input.file.type,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  const attachment: ChecklistLineAttachment = {
+    id: attachmentId,
+    storagePath,
+    fileName: input.file.name.trim() || `zalacznik.${extension}`,
+    mimeType: input.file.type,
+    mediaKind: validation.mediaKind,
+    uploadedAt: new Date().toISOString(),
+    uploadedBy: input.uploadedBy.trim() || "Użytkownik",
+    url: null,
+  };
+
+  const [withUrl] = await attachSignedUrlsToChecklistAttachmentsAdmin([attachment]);
+  return withUrl;
+}
+
 export async function deleteChecklistLineAttachmentAdmin(storagePath: string) {
   await ensureChecklistAttachmentsBucket();
   const supabase = getSupabaseAdmin();

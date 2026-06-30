@@ -1,6 +1,10 @@
 "use client";
 
 import { Check, Clock, History, MinusCircle, UserRound, XCircle } from "lucide-react";
+import {
+  ChecklistLineDocumentationPanel,
+  type InternalAcceptanceDocumentationUploadContext,
+} from "@/components/process/checklist-line-documentation-panel";
 import { TeamProfileSelect } from "@/components/process/team-profile-select";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +17,7 @@ import {
 import { Field, Input, Textarea } from "@/components/ui/input";
 import type { UserProfile } from "@/lib/auth/types";
 import { getUserDisplayName } from "@/lib/auth/types";
+import { getInternalAcceptanceDocumentationBlockReason } from "@/lib/internal-acceptance/documentation";
 import { INTERNAL_ACCEPTANCE_STATUS_STYLES } from "@/lib/internal-acceptance/status-styles";
 import {
   INTERNAL_ACCEPTANCE_STATUS_LABELS,
@@ -44,6 +49,7 @@ export function InternalAcceptanceItemDialog({
   onStatusChange,
   onFieldChange,
   onLocalFieldChange,
+  documentationUploadContext,
 }: {
   item: InternalAcceptanceItemState | null;
   open: boolean;
@@ -55,6 +61,7 @@ export function InternalAcceptanceItemDialog({
   onStatusChange: (status: InternalAcceptanceStatus) => void;
   onFieldChange: (patch: Partial<InternalAcceptanceItemState>) => void;
   onLocalFieldChange: (patch: Partial<InternalAcceptanceItemState>) => void;
+  documentationUploadContext?: InternalAcceptanceDocumentationUploadContext;
 }) {
   if (!item) {
     return null;
@@ -63,6 +70,7 @@ export function InternalAcceptanceItemDialog({
   const lastMarker = item.lastUpdatedAt ?? item.completedAt;
   const lastActor = item.lastUpdatedByName ?? item.assigneeName;
   const currentStyles = INTERNAL_ACCEPTANCE_STATUS_STYLES[item.status];
+  const passedBlockedReason = getInternalAcceptanceDocumentationBlockReason(item, "PASSED");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -102,6 +110,21 @@ export function InternalAcceptanceItemDialog({
           </DialogHeader>
 
           <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-5 py-4">
+            {item.requireDocumentation || item.attachments?.length ? (
+              <ChecklistLineDocumentationPanel
+                requirement={{
+                  requireDocumentation: item.requireDocumentation,
+                  documentationHint: item.documentationHint,
+                  attachments: item.attachments,
+                }}
+                targetId={item.itemKey}
+                readOnly={readOnly}
+                saving={saving}
+                uploadContext={documentationUploadContext}
+                onAttachmentsChange={(attachments) => onFieldChange({ attachments })}
+              />
+            ) : null}
+
             {!readOnly ? (
               <div className="grid gap-2">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted">Oznacz punkt</p>
@@ -109,13 +132,16 @@ export function InternalAcceptanceItemDialog({
                   {QUICK_STATUSES.map(({ status, label, icon: Icon }) => {
                     const styles = INTERNAL_ACCEPTANCE_STATUS_STYLES[status];
                     const selected = item.status === status;
+                    const blocked =
+                      status === "PASSED" && Boolean(passedBlockedReason) && !selected;
                     return (
                       <Button
                         key={status}
                         type="button"
                         size="sm"
                         variant="secondary"
-                        disabled={saving || selected}
+                        disabled={saving || selected || blocked}
+                        title={blocked ? (passedBlockedReason ?? undefined) : undefined}
                         onClick={() => onStatusChange(status)}
                         className={cn(
                           "h-auto flex-col gap-1.5 border py-3 text-xs font-semibold",

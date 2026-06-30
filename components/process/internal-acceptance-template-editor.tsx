@@ -451,6 +451,30 @@ export function InternalAcceptanceTemplateEditor({
                     Obowiązkowy punkt
                   </label>
                 </div>
+
+                <label className="flex items-center gap-2 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    className="rounded border-border"
+                    checked={Boolean(item.requireDocumentation)}
+                    onChange={(event) =>
+                      updateStaticItem(item.id, {
+                        requireDocumentation: event.target.checked,
+                        documentationHint: event.target.checked ? item.documentationHint : undefined,
+                      })
+                    }
+                  />
+                  Wymagaj dokumentacji przy Spełnia
+                </label>
+                {item.requireDocumentation ? (
+                  <Input
+                    value={item.documentationHint ?? ""}
+                    placeholder="Opis wymaganej dokumentacji (np. zdjęcie szafy rack)"
+                    onChange={(event) =>
+                      updateStaticItem(item.id, { documentationHint: event.target.value })
+                    }
+                  />
+                ) : null}
               </div>
             ))}
 

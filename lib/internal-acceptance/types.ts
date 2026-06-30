@@ -1,3 +1,5 @@
+import type { ChecklistLineAttachment } from "@/lib/process/types";
+
 export const INTERNAL_ACCEPTANCE_STATUSES = [
   "NOT_STARTED",
   "IN_PROGRESS",
@@ -51,6 +53,8 @@ export type InternalAcceptanceRuleTemplate = {
   category: InternalAcceptanceCategory;
   priority: InternalAcceptancePriority;
   mandatory: boolean;
+  requireDocumentation?: boolean;
+  documentationHint?: string;
 };
 
 export type InternalAcceptanceSourceRuleSet = {
@@ -97,7 +101,9 @@ export type InternalAcceptanceGeneratedItem = InternalAcceptanceRuleTemplate & {
 export type InternalAcceptanceItemState = InternalAcceptanceGeneratedItem & {
   status: InternalAcceptanceStatus;
   notes?: string;
+  /** @deprecated używaj attachments */
   photoUrls?: string[];
+  attachments?: ChecklistLineAttachment[];
   assigneeName?: string;
   assigneeId?: string;
   completedAt?: string;

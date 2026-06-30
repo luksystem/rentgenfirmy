@@ -426,6 +426,34 @@ export function SpecificationCatalogSettings() {
                                 Obowiązkowy
                               </label>
                             </div>
+
+                            <label className="flex items-center gap-2 text-sm text-foreground">
+                              <input
+                                type="checkbox"
+                                className="rounded border-border"
+                                checked={Boolean(item.requireDocumentation)}
+                                onChange={(event) =>
+                                  updateAcceptanceItem(entry.id, item.id, {
+                                    requireDocumentation: event.target.checked,
+                                    documentationHint: event.target.checked
+                                      ? item.documentationHint
+                                      : undefined,
+                                  })
+                                }
+                              />
+                              Wymagaj dokumentacji przy Spełnia
+                            </label>
+                            {item.requireDocumentation ? (
+                              <Input
+                                value={item.documentationHint ?? ""}
+                                placeholder="Opis wymaganej dokumentacji (np. zdjęcie okablowania)"
+                                onChange={(event) =>
+                                  updateAcceptanceItem(entry.id, item.id, {
+                                    documentationHint: event.target.value,
+                                  })
+                                }
+                              />
+                            ) : null}
                           </div>
                         ))}
                         <Button type="button" size="sm" variant="secondary" onClick={() => addAcceptanceItem(entry.id)}>

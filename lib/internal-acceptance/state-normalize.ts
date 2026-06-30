@@ -31,6 +31,36 @@ function normalizeBoardCategory(item: InternalAcceptanceItemState): string {
   return item.category;
 }
 
+import type { ChecklistLineAttachment } from "@/lib/process/types";
+
+function normalizeAttachments(value: unknown): ChecklistLineAttachment[] | undefined {
+  if (!Array.isArray(value) || !value.length) {
+    return undefined;
+  }
+
+  const attachments = value
+    .filter(
+      (entry): entry is ChecklistLineAttachment =>
+        Boolean(entry) &&
+        typeof entry === "object" &&
+        typeof (entry as ChecklistLineAttachment).id === "string" &&
+        typeof (entry as ChecklistLineAttachment).storagePath === "string" &&
+        typeof (entry as ChecklistLineAttachment).fileName === "string",
+    )
+    .map((entry) => ({
+      id: entry.id,
+      storagePath: entry.storagePath,
+      fileName: entry.fileName,
+      mimeType: entry.mimeType ?? "application/octet-stream",
+      mediaKind: (entry.mediaKind === "image" ? "image" : "file") as "image" | "file",
+      uploadedAt: entry.uploadedAt ?? new Date().toISOString(),
+      uploadedBy: entry.uploadedBy,
+      url: entry.url ?? null,
+    }));
+
+  return attachments.length ? attachments : undefined;
+}
+
 function normalizeItem(item: InternalAcceptanceItemState): InternalAcceptanceItemState {
   return {
     ...item,
@@ -38,6 +68,10 @@ function normalizeItem(item: InternalAcceptanceItemState): InternalAcceptanceIte
     status: normalizeItemStatus(item.status),
     history: Array.isArray(item.history) ? item.history : [],
     source: item.source ?? { type: "company_standard", refLabel: "Punkt kontroli" },
+    requireDocumentation: Boolean(item.requireDocumentation),
+    documentationHint:
+      typeof item.documentationHint === "string" ? item.documentationHint : undefined,
+    attachments: normalizeAttachments(item.attachments),
   };
 }
 

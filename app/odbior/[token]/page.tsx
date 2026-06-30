@@ -70,6 +70,7 @@ export default function PublicInternalAcceptancePage({
       <ProcessInternalAcceptanceBoard
         projectId={item.projectId}
         templateItemId={item.templateItemId}
+        projectProcessItemId={item.projectProcessItemId}
         initialState={item.internalAcceptance ?? undefined}
         actorName="Gość"
         publicToken={token}

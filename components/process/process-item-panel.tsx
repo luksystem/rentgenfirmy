@@ -183,6 +183,7 @@ export function ProcessItemPanel({
             <ProcessInternalAcceptanceBoard
               projectId={projectId}
               templateItemId={item.id}
+              projectProcessItemId={resolvedInstance?.id}
               initialState={resolvedInstance?.internalAcceptanceState}
               actorId={currentUserId}
               actorName={actorName}

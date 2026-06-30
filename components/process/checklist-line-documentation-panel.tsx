@@ -7,33 +7,69 @@ import { attachSignedUrlsToChecklistAttachments } from "@/lib/supabase/checklist
 import type { ChecklistLine, ChecklistLineAttachment } from "@/lib/process/types";
 import { cn } from "@/lib/utils";
 
+export type DocumentationRequirement = {
+  requireDocumentation?: boolean;
+  documentationHint?: string;
+  attachments?: ChecklistLineAttachment[];
+};
+
 export type ChecklistDocumentationUploadContext =
   | { mode: "team"; projectProcessItemId: string; actorName: string }
   | { mode: "public"; publicToken: string; actorName: string };
 
+export type InternalAcceptanceDocumentationUploadContext =
+  | { mode: "acceptance-team"; projectProcessItemId: string; actorName: string }
+  | { mode: "acceptance-public"; publicToken: string; actorName: string };
+
+export type ProcessDocumentationUploadContext =
+  | ChecklistDocumentationUploadContext
+  | InternalAcceptanceDocumentationUploadContext;
+
+function resolveRequirement(
+  line: ChecklistLine | undefined,
+  requirement: DocumentationRequirement | undefined,
+): DocumentationRequirement {
+  if (requirement) {
+    return requirement;
+  }
+  return {
+    requireDocumentation: line?.requireDocumentation,
+    documentationHint: line?.documentationHint,
+    attachments: line?.attachments,
+  };
+}
+
 export function ChecklistLineDocumentationPanel({
   line,
+  requirement,
+  targetId,
   lineId,
   readOnly = false,
   saving = false,
   uploadContext,
   onAttachmentsChange,
 }: {
-  line: ChecklistLine;
-  lineId: string;
+  line?: ChecklistLine;
+  requirement?: DocumentationRequirement;
+  /** Id punktu checklisty lub itemKey odbioru wewnętrznego */
+  targetId?: string;
+  /** @deprecated użyj targetId */
+  lineId?: string;
   readOnly?: boolean;
   saving?: boolean;
-  uploadContext?: ChecklistDocumentationUploadContext;
+  uploadContext?: ProcessDocumentationUploadContext;
   onAttachmentsChange: (attachments: ChecklistLineAttachment[]) => void;
 }) {
+  const resolvedTargetId = targetId ?? lineId ?? line?.id ?? "";
+  const resolvedRequirement = resolveRequirement(line, requirement);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const [attachments, setAttachments] = useState(line.attachments ?? []);
+  const [attachments, setAttachments] = useState(resolvedRequirement.attachments ?? []);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const source = line.attachments ?? [];
+    const source = resolvedRequirement.attachments ?? [];
     setAttachments(source);
     if (!source.length) {
       return;
@@ -49,15 +85,20 @@ export function ChecklistLineDocumentationPanel({
     return () => {
       cancelled = true;
     };
-  }, [line.attachments, lineId]);
+  }, [resolvedRequirement.attachments, resolvedTargetId]);
 
-  if (!line.requireDocumentation && !attachments.length) {
+  if (!resolvedRequirement.requireDocumentation && !attachments.length) {
     return null;
   }
 
   async function uploadFile(file: File) {
     if (!uploadContext) {
-      setError("Brak kontekstu zapisu — odśwież widok checklisty.");
+      setError("Brak kontekstu zapisu — odśwież widok.");
+      return;
+    }
+
+    if (!resolvedTargetId) {
+      setError("Brak identyfikatora punktu.");
       return;
     }
 
@@ -66,20 +107,29 @@ export function ChecklistLineDocumentationPanel({
 
     try {
       const formData = new FormData();
-      formData.append("lineId", lineId);
       formData.append("file", file);
+
+      let endpoint: string;
 
       if (uploadContext.mode === "team") {
         formData.append("projectProcessItemId", uploadContext.projectProcessItemId);
+        formData.append("lineId", resolvedTargetId);
         formData.append("authorName", uploadContext.actorName);
-      } else {
+        endpoint = "/api/process/checklist/attachments";
+      } else if (uploadContext.mode === "public") {
+        formData.append("lineId", resolvedTargetId);
         formData.append("actorName", uploadContext.actorName);
+        endpoint = `/api/element/${encodeURIComponent(uploadContext.publicToken)}/attachments`;
+      } else if (uploadContext.mode === "acceptance-team") {
+        formData.append("projectProcessItemId", uploadContext.projectProcessItemId);
+        formData.append("itemKey", resolvedTargetId);
+        formData.append("authorName", uploadContext.actorName);
+        endpoint = "/api/process/internal-acceptance/attachments";
+      } else {
+        formData.append("itemKey", resolvedTargetId);
+        formData.append("actorName", uploadContext.actorName);
+        endpoint = `/api/odbior/${encodeURIComponent(uploadContext.publicToken)}/attachments`;
       }
-
-      const endpoint =
-        uploadContext.mode === "team"
-          ? "/api/process/checklist/attachments"
-          : `/api/element/${encodeURIComponent(uploadContext.publicToken)}/attachments`;
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -114,7 +164,7 @@ export function ChecklistLineDocumentationPanel({
     onAttachmentsChange(nextAttachments);
   }
 
-  const needsDocumentation = line.requireDocumentation && !attachments.length;
+  const needsDocumentation = resolvedRequirement.requireDocumentation && !attachments.length;
 
   return (
     <div
@@ -129,8 +179,10 @@ export function ChecklistLineDocumentationPanel({
         <Paperclip className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
         <div className="min-w-0">
           <p className="text-sm font-medium text-foreground">Dokumentacja wymagana</p>
-          {line.documentationHint?.trim() ? (
-            <p className="mt-1 text-sm leading-relaxed text-muted">{line.documentationHint.trim()}</p>
+          {resolvedRequirement.documentationHint?.trim() ? (
+            <p className="mt-1 text-sm leading-relaxed text-muted">
+              {resolvedRequirement.documentationHint.trim()}
+            </p>
           ) : (
             <p className="mt-1 text-sm text-muted">
               Dodaj zdjęcie lub plik przed oznaczeniem punktu jako Spełnia.

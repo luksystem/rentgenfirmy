@@ -86,6 +86,9 @@ export function normalizeCatalogAcceptanceItems(value: unknown): InternalAccepta
         priority: entry.priority ?? "normal",
         mandatory: entry.mandatory !== false,
         position: typeof entry.position === "number" ? entry.position : index,
+        requireDocumentation: Boolean(entry.requireDocumentation),
+        documentationHint:
+          typeof entry.documentationHint === "string" ? entry.documentationHint : undefined,
       })),
   );
 }

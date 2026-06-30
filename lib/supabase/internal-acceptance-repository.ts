@@ -1,4 +1,5 @@
 import { applyInternalAcceptanceItemPatch } from "@/lib/internal-acceptance/item-history";
+import { getInternalAcceptanceDocumentationBlockReason } from "@/lib/internal-acceptance/documentation";
 import { buildInternalAcceptanceState } from "@/lib/internal-acceptance/generator";
 import { computeInternalAcceptanceSummary } from "@/lib/internal-acceptance/quality-gate";
 import type {
@@ -50,7 +51,7 @@ export async function loadInternalAcceptanceGenerationInput(
 export async function ensureInternalAcceptanceState(
   projectId: string,
   templateItemId: string,
-): Promise<InternalAcceptanceState> {
+): Promise<{ state: InternalAcceptanceState; projectProcessItemId: string }> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("project_process_items")
@@ -83,7 +84,7 @@ export async function ensureInternalAcceptanceState(
     throw new Error(updateError.message);
   }
 
-  return state;
+  return { state, projectProcessItemId: instance.id };
 }
 
 export async function saveInternalAcceptanceState(
@@ -152,7 +153,14 @@ export async function updateInternalAcceptanceItem(
     if (item.itemKey !== itemKey) {
       return item;
     }
-    return applyInternalAcceptanceItemPatch(item, patch, resolvedActor);
+    const nextItem = applyInternalAcceptanceItemPatch(item, patch, resolvedActor);
+    if (nextItem.status === "PASSED") {
+      const reason = getInternalAcceptanceDocumentationBlockReason(nextItem);
+      if (reason) {
+        throw new Error(reason);
+      }
+    }
+    return nextItem;
   });
 
   return saveInternalAcceptanceState(projectId, templateItemId, {

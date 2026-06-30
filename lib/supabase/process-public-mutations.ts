@@ -1,4 +1,5 @@
 import { applyInternalAcceptanceItemPatch } from "@/lib/internal-acceptance/item-history";
+import { getInternalAcceptanceDocumentationBlockReason } from "@/lib/internal-acceptance/documentation";
 import { computeInternalAcceptanceSummary } from "@/lib/internal-acceptance/quality-gate";
 import type {
   InternalAcceptanceItemState,
@@ -94,7 +95,14 @@ export async function savePublicInternalAcceptanceItemPatch(
     if (item.itemKey !== itemKey) {
       return item;
     }
-    return applyInternalAcceptanceItemPatch(item, patch, resolvedActor);
+    const nextItem = applyInternalAcceptanceItemPatch(item, patch, resolvedActor);
+    if (nextItem.status === "PASSED") {
+      const reason = getInternalAcceptanceDocumentationBlockReason(nextItem);
+      if (reason) {
+        throw new Error(reason);
+      }
+    }
+    return nextItem;
   });
 
   const nextState: InternalAcceptanceState = {
