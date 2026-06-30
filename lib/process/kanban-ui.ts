@@ -54,6 +54,15 @@ export const KANBAN_DRAG_HINT =
 export const KANBAN_MOBILE_MOVE_HINT =
   "Otwórz zgłoszenie i wybierz etap, aby przenieść je na kolejny krok procesu.";
 
+export const KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS =
+  "flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto overflow-y-hidden pb-2 [-ms-overflow-style:none] [scrollbar-width:none] md:snap-none md:flex-row md:overflow-hidden md:pb-0 [&::-webkit-scrollbar]:hidden";
+
+export const KANBAN_MOBILE_COLUMN_SHELL_CLASS =
+  "flex w-[min(100%,22rem)] shrink-0 snap-center flex-col overflow-hidden rounded-2xl border border-border/80 bg-surface-muted/40 shadow-sm md:min-h-0 md:w-auto md:min-w-0 md:flex-1 md:snap-align-none";
+
+export const KANBAN_MOBILE_COLUMN_BODY_CLASS =
+  "flex min-h-[min(52vh,28rem)] flex-1 flex-col gap-2.5 overflow-y-auto p-3 md:min-h-0";
+
 export function sortKanbanColumnTasks(tasks: KanbanTask[], sortMode: KanbanColumnSortMode = "position") {
   return sortKanbanColumnTasksWithMode(tasks, sortMode);
 }

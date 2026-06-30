@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
+import { KanbanMobileColumnNav } from "@/components/process/kanban-mobile-column-nav";
 import { KanbanBoardControls } from "@/components/process/kanban-board-controls";
 import { KanbanBoardStatsBar } from "@/components/process/kanban-board-stats-bar";
 import { KanbanTaskCardView } from "@/components/process/kanban-task-card";
@@ -9,8 +10,16 @@ import { KanbanDropPlaceholder, getKanbanColumnDropTargetClasses } from "@/compo
 import { KanbanTaskDetailModal } from "@/components/process/kanban-task-detail";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/input";
+import { useKanbanMobileColumns } from "@/hooks/use-kanban-mobile-columns";
 import { useKanbanRealtime } from "@/hooks/use-kanban-realtime";
-import { KANBAN_DRAG_HINT, countOpenKanbanTasks, sortKanbanColumnTasks } from "@/lib/process/kanban-ui";
+import {
+  KANBAN_DRAG_HINT,
+  KANBAN_MOBILE_COLUMN_BODY_CLASS,
+  KANBAN_MOBILE_COLUMN_SHELL_CLASS,
+  KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS,
+  countOpenKanbanTasks,
+  sortKanbanColumnTasks,
+} from "@/lib/process/kanban-ui";
 import {
   buildKanbanTaskActivityMap,
   collectKanbanAssigneeOptions,
@@ -172,6 +181,8 @@ export function AggregatedKanbanBoard({
     () => (mergedView ? listKanbanProjectsFromBoards(mergedView.boards) : []),
     [mergedView],
   );
+  const { activeColumnId, isCoarsePointer, scrollerRef, scrollToColumn, setColumnRef } =
+    useKanbanMobileColumns(board?.columns ?? []);
 
   function defaultProjectKeyForColumn(columnId: string) {
     if (filters.projectId && filters.projectId !== "all") {
@@ -298,7 +309,7 @@ export function AggregatedKanbanBoard({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <p className="shrink-0 text-sm text-muted">
+      <p className="hidden shrink-0 text-sm text-muted md:block">
         {KANBAN_DRAG_HINT} Kolumny łączone po nazwie — na karcie widać projekt źródłowy. Przenosisz zadanie tylko do
         kolumny o tej samej nazwie w tablicy projektu źródłowego. Nowe zgłoszenia dodajesz poniżej w kolumnie — wybierz
         projekt z listy tablic wdrożeniowych.
@@ -315,7 +326,16 @@ export function AggregatedKanbanBoard({
         onSortModeChange={setSortMode}
       />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 max-md:flex-row max-md:overflow-x-auto max-md:overscroll-x-contain md:flex-row md:overflow-hidden">
+      <KanbanMobileColumnNav
+        columns={board.columns}
+        activeColumnId={activeColumnId}
+        onSelect={scrollToColumn}
+        openCountForColumn={(columnId) =>
+          countOpenKanbanTasks(board.tasks.filter((task) => task.columnId === columnId))
+        }
+      />
+
+      <div ref={scrollerRef} className={KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS}>
         {board.columns.map((column) => {
           const columnTasks = getColumnTasks(column.id);
           const tasks = sortKanbanColumnTasks(columnTasks, sortMode);
@@ -327,9 +347,10 @@ export function AggregatedKanbanBoard({
           return (
             <div
               key={column.id}
+              ref={(node) => setColumnRef(column.id, node)}
+              data-column-id={column.id}
               className={cn(
-                "flex min-h-[280px] min-w-0 flex-col rounded-2xl border border-border/80 bg-surface-muted/30",
-                "w-[min(88vw,320px)] shrink-0 max-md:min-h-[min(52vh,440px)] md:min-h-0 md:w-auto md:flex-1",
+                KANBAN_MOBILE_COLUMN_SHELL_CLASS,
                 getKanbanColumnDropTargetClasses(isDropTarget),
               )}
               onDragEnter={(event) => {
@@ -365,7 +386,7 @@ export function AggregatedKanbanBoard({
 
               <div
                 className={cn(
-                  "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2",
+                  KANBAN_MOBILE_COLUMN_BODY_CLASS,
                   isDropTarget && "bg-accent/[0.03]",
                 )}
               >
@@ -380,6 +401,8 @@ export function AggregatedKanbanBoard({
                     showAssignee
                     showProjectLabel
                     projectName={mergedView.taskSources.get(task.id)?.projectName}
+                    draggable={!isCoarsePointer}
+                    showChevron={isCoarsePointer}
                     isDragging={dragTaskId === task.id}
                     onOpen={() => setActiveTaskId(task.id)}
                     onDragStart={() => setDragTaskId(task.id)}

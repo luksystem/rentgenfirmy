@@ -26,7 +26,7 @@ export default function AggregatedKanbanHubPage() {
         }
       />
 
-      <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-border bg-surface p-4">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-surface p-4">
         <AggregatedKanbanBoard authorSide="team" authorName={displayName || "Zespół"} />
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Copy, ExternalLink, Plus } from "lucide-react";
 import { KanbanAiImportPanel } from "@/components/process/kanban-ai-import-panel";
+import { KanbanMobileColumnNav } from "@/components/process/kanban-mobile-column-nav";
 import { KanbanBoardControls } from "@/components/process/kanban-board-controls";
 import { KanbanBoardStatsBar } from "@/components/process/kanban-board-stats-bar";
 import { KanbanTaskCardView } from "@/components/process/kanban-task-card";
@@ -11,8 +12,16 @@ import { KanbanDropPlaceholder, getKanbanColumnDropTargetClasses } from "@/compo
 import { KanbanTaskDetailModal } from "@/components/process/kanban-task-detail";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
+import { useKanbanMobileColumns } from "@/hooks/use-kanban-mobile-columns";
 import { useKanbanRealtime } from "@/hooks/use-kanban-realtime";
-import { KANBAN_DRAG_HINT, countOpenKanbanTasks, sortKanbanColumnTasks } from "@/lib/process/kanban-ui";
+import {
+  KANBAN_DRAG_HINT,
+  KANBAN_MOBILE_COLUMN_BODY_CLASS,
+  KANBAN_MOBILE_COLUMN_SHELL_CLASS,
+  KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS,
+  countOpenKanbanTasks,
+  sortKanbanColumnTasks,
+} from "@/lib/process/kanban-ui";
 import {
   buildKanbanTaskActivityMap,
   collectKanbanAssigneeOptions,
@@ -249,6 +258,8 @@ export function ProcessKanbanBoard({
     () => [...(board?.columns ?? [])].sort((left, right) => left.position - right.position)[0] ?? null,
     [board?.columns],
   );
+  const { activeColumnId, isCoarsePointer, scrollerRef, scrollToColumn, setColumnRef } =
+    useKanbanMobileColumns(board?.columns ?? []);
 
   async function handleAddTask(columnId: string) {
     if (addingTaskColumnId) {
@@ -336,12 +347,7 @@ export function ProcessKanbanBoard({
   }
 
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-3",
-        embedded ? "min-h-0" : "min-h-0 flex-1 max-md:flex-none",
-      )}
-    >
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       {showPublicLink ? (
         <div className="grid shrink-0 gap-2 rounded-xl border border-border/70 bg-surface-muted/30 p-3">
           <button
@@ -454,7 +460,7 @@ export function ProcessKanbanBoard({
         />
       ) : null}
 
-      <p className="shrink-0 text-sm text-muted">{KANBAN_DRAG_HINT}</p>
+      <p className="hidden shrink-0 text-sm text-muted md:block">{KANBAN_DRAG_HINT}</p>
 
       <KanbanBoardControls
         filters={filters}
@@ -464,13 +470,16 @@ export function ProcessKanbanBoard({
         onSortModeChange={setSortMode}
       />
 
-      <div
-        className={cn(
-          "flex gap-3 pb-1",
-          "min-h-[min(52vh,440px)] flex-row overflow-x-auto overscroll-x-contain",
-          !embedded && "md:min-h-0 md:flex-1 md:overflow-hidden",
-        )}
-      >
+      <KanbanMobileColumnNav
+        columns={board.columns}
+        activeColumnId={activeColumnId}
+        onSelect={scrollToColumn}
+        openCountForColumn={(columnId) =>
+          countOpenKanbanTasks(board.tasks.filter((task) => task.columnId === columnId))
+        }
+      />
+
+      <div ref={scrollerRef} className={KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS}>
         {board.columns.map((column) => {
           const columnTasks = getColumnTasks(column.id);
           const tasks = sortKanbanColumnTasks(columnTasks, sortMode);
@@ -480,10 +489,10 @@ export function ProcessKanbanBoard({
           return (
             <div
               key={column.id}
+              ref={(node) => setColumnRef(column.id, node)}
+              data-column-id={column.id}
               className={cn(
-                "flex min-h-[280px] min-w-0 flex-col rounded-2xl border border-border/80 bg-surface-muted/30",
-                "w-[min(88vw,320px)] shrink-0 md:min-h-0 md:w-auto",
-                embedded ? "md:shrink-0" : "md:flex-1",
+                KANBAN_MOBILE_COLUMN_SHELL_CLASS,
                 getKanbanColumnDropTargetClasses(isDropTarget),
               )}
               onDragEnter={(event) => {
@@ -519,7 +528,7 @@ export function ProcessKanbanBoard({
 
               <div
                 className={cn(
-                  "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2",
+                  KANBAN_MOBILE_COLUMN_BODY_CLASS,
                   isDropTarget && "bg-accent/[0.03]",
                 )}
               >
@@ -532,6 +541,8 @@ export function ProcessKanbanBoard({
                     activity={activityMap.get(task.id)}
                     isNew={task.isNewForTeam && authorSide === "team"}
                     showAssignee
+                    draggable={!isCoarsePointer}
+                    showChevron={isCoarsePointer}
                     isDragging={dragTaskId === task.id}
                     onOpen={() => setActiveTaskId(task.id)}
                     onDragStart={() => setDragTaskId(task.id)}
