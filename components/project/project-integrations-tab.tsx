@@ -268,7 +268,7 @@ function IntegrationFormFields({
           checked={form.isActive ?? true}
           onChange={(event) => onChange({ ...form, isActive: event.target.checked })}
         />
-        Integracja aktywna (cykliczny odczyt raz dziennie)
+        Integracja aktywna (cykliczny odczyt co 5 min)
       </label>
     </div>
   );
@@ -582,8 +582,8 @@ export function ProjectIntegrationsTab({ projectId }: { projectId: string }) {
             Połączenia techniczne
           </p>
           <p className="mt-1 text-xs text-muted">
-            Loxone: odczyt Virtual Input (cyfrowe 0/1; analogowe — temperatura — wkrótce). Cron raz
-            dziennie. Hasła nie są zwracane do
+            Loxone: odczyt Virtual Input (cyfrowe 0/1; analogowe — temperatura — wkrótce). Odczyt co
+            5 minut (Supabase cron). Hasła nie są zwracane do
             przeglądarki po zapisie.
           </p>
         </div>
