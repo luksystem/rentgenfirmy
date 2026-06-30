@@ -14,11 +14,14 @@ export type KanbanColumnSortMode = "position" | "priority" | "dueDate";
 export type KanbanBoardFilters = {
   priority: KanbanPriority | "all";
   assignee: string | "all" | "unassigned";
+  /** Id projektu lub `name:…` gdy brak id — tylko tablica zbiorcza. */
+  projectId?: string | "all";
 };
 
 export const DEFAULT_KANBAN_BOARD_FILTERS: KanbanBoardFilters = {
   priority: "all",
   assignee: "all",
+  projectId: "all",
 };
 
 export function countActiveKanbanBoardFilters(filters: KanbanBoardFilters) {
@@ -27,6 +30,9 @@ export function countActiveKanbanBoardFilters(filters: KanbanBoardFilters) {
     count += 1;
   }
   if (filters.assignee !== "all") {
+    count += 1;
+  }
+  if (filters.projectId && filters.projectId !== "all") {
     count += 1;
   }
   return count;

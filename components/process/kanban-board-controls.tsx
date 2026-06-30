@@ -2,6 +2,7 @@
 
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Field, Select } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import {
   countActiveKanbanBoardFilters,
   DEFAULT_KANBAN_BOARD_FILTERS,
@@ -17,16 +18,19 @@ export function KanbanBoardControls({
   filters,
   sortMode,
   assigneeOptions,
+  projectOptions = [],
   onFiltersChange,
   onSortModeChange,
 }: {
   filters: KanbanBoardFilters;
   sortMode: KanbanColumnSortMode;
   assigneeOptions: string[];
+  projectOptions?: Array<{ id: string; name: string }>;
   onFiltersChange: (filters: KanbanBoardFilters) => void;
   onSortModeChange: (sortMode: KanbanColumnSortMode) => void;
 }) {
   const activeCount = countActiveKanbanBoardFilters(filters);
+  const showProjectFilter = projectOptions.length > 0;
 
   return (
     <MobileFiltersPanel
@@ -35,7 +39,32 @@ export function KanbanBoardControls({
       className="shrink-0"
       panelClassName="rounded-xl border border-border/70 bg-surface/40 p-3"
     >
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div
+        className={cn(
+          "grid gap-2",
+          showProjectFilter ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3",
+        )}
+      >
+        {showProjectFilter ? (
+          <Field label="Projekt">
+            <Select
+              value={filters.projectId ?? "all"}
+              onChange={(event) =>
+                onFiltersChange({
+                  ...filters,
+                  projectId: event.target.value,
+                })
+              }
+            >
+              <option value="all">Wszystkie projekty</option>
+              {projectOptions.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        ) : null}
         <Field label="Priorytet">
           <Select
             value={filters.priority}

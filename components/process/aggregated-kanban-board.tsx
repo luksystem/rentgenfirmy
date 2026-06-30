@@ -1,11 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus } from "lucide-react";
 import { KanbanBoardControls } from "@/components/process/kanban-board-controls";
 import { KanbanBoardStatsBar } from "@/components/process/kanban-board-stats-bar";
 import { KanbanTaskCardView } from "@/components/process/kanban-task-card";
 import { KanbanDropPlaceholder, getKanbanColumnDropTargetClasses } from "@/components/process/kanban-drop-placeholder";
 import { KanbanTaskDetailModal } from "@/components/process/kanban-task-detail";
+import { Button } from "@/components/ui/button";
+import { Field, Input, Select } from "@/components/ui/input";
 import { useKanbanRealtime } from "@/hooks/use-kanban-realtime";
 import { KANBAN_DRAG_HINT, countOpenKanbanTasks, sortKanbanColumnTasks } from "@/lib/process/kanban-ui";
 import {
@@ -18,7 +21,10 @@ import {
 } from "@/lib/process/kanban-task-meta";
 import {
   canMoveTaskToMergedColumn,
+  getKanbanTaskProjectKey,
+  listKanbanProjectsFromBoards,
   mergeKanbanBoards,
+  resolveSourceColumnIdForMergedColumn,
   resolveTargetColumnId,
   type MergedKanbanView,
 } from "@/lib/process/kanban-merge";
@@ -29,6 +35,7 @@ import { buildKanbanMentionCandidates, buildKanbanMentionOptionNames } from "@/l
 import {
   addKanbanComment,
   closeKanbanTask,
+  createKanbanTask,
   deleteKanbanComment,
   deleteKanbanTask,
   markKanbanBoardRead,
@@ -67,8 +74,15 @@ export function AggregatedKanbanBoard({
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
   const [pendingMove, setPendingMove] = useState<{ taskId: string; columnId: string } | null>(null);
-  const [filters, setFilters] = useState<KanbanBoardFilters>({ priority: "all", assignee: "all" });
+  const [filters, setFilters] = useState<KanbanBoardFilters>({
+    priority: "all",
+    assignee: "all",
+    projectId: "all",
+  });
   const [sortMode, setSortMode] = useState<KanbanColumnSortMode>("position");
+  const [newTaskTitles, setNewTaskTitles] = useState<Record<string, string>>({});
+  const [newTaskProjectKeys, setNewTaskProjectKeys] = useState<Record<string, string>>({});
+  const [addingTaskColumnId, setAddingTaskColumnId] = useState<string | null>(null);
 
   const board = mergedView?.displayBoard ?? null;
 
@@ -145,6 +159,69 @@ export function AggregatedKanbanBoard({
     () => (board ? computeKanbanBoardStats(board) : null),
     [board],
   );
+  const projectOptions = useMemo(() => {
+    if (!mergedView) {
+      return [];
+    }
+    return listKanbanProjectsFromBoards(mergedView.boards).map((project) => ({
+      id: project.key,
+      name: project.name,
+    }));
+  }, [mergedView]);
+  const kanbanProjects = useMemo(
+    () => (mergedView ? listKanbanProjectsFromBoards(mergedView.boards) : []),
+    [mergedView],
+  );
+
+  function defaultProjectKeyForColumn(columnId: string) {
+    if (filters.projectId && filters.projectId !== "all") {
+      return filters.projectId;
+    }
+    return newTaskProjectKeys[columnId] ?? kanbanProjects[0]?.key ?? "";
+  }
+
+  async function handleAddTask(mergedColumnId: string) {
+    if (!mergedView || addingTaskColumnId) {
+      return;
+    }
+    const title = newTaskTitles[mergedColumnId]?.trim();
+    const projectKey = defaultProjectKeyForColumn(mergedColumnId);
+    const project = kanbanProjects.find((entry) => entry.key === projectKey);
+    const mergedColumn = board?.columns.find((column) => column.id === mergedColumnId);
+    if (!title || !project || !mergedColumn) {
+      return;
+    }
+
+    const sourceColumnId = resolveSourceColumnIdForMergedColumn(project.board, mergedColumn.title);
+    if (!sourceColumnId) {
+      return;
+    }
+
+    setAddingTaskColumnId(mergedColumnId);
+    try {
+      await createKanbanTask({
+        columnId: sourceColumnId,
+        title,
+        authorSide,
+        authorName,
+      });
+      setNewTaskTitles((current) => ({ ...current, [mergedColumnId]: "" }));
+      await refresh();
+    } finally {
+      setAddingTaskColumnId(null);
+    }
+  }
+
+  function matchesProjectFilter(taskId: string) {
+    if (!filters.projectId || filters.projectId === "all" || !mergedView) {
+      return true;
+    }
+    const source = mergedView.taskSources.get(taskId);
+    if (!source) {
+      return false;
+    }
+    return getKanbanTaskProjectKey(source) === filters.projectId;
+  }
 
   function getColumnTasks(columnId: string) {
     if (!board) {
@@ -156,6 +233,9 @@ export function AggregatedKanbanBoard({
         return pendingMove.columnId === columnId;
       }
       if (task.columnId !== columnId) {
+        return false;
+      }
+      if (!matchesProjectFilter(task.id)) {
         return false;
       }
       return matchesKanbanBoardFilters(task, filters);
@@ -220,7 +300,8 @@ export function AggregatedKanbanBoard({
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <p className="shrink-0 text-sm text-muted">
         {KANBAN_DRAG_HINT} Kolumny łączone po nazwie — na karcie widać projekt źródłowy. Przenosisz zadanie tylko do
-        kolumny o tej samej nazwie w tablicy projektu źródłowego. Nowe zgłoszenia dodawaj w tablicy konkretnego projektu.
+        kolumny o tej samej nazwie w tablicy projektu źródłowego. Nowe zgłoszenia dodajesz poniżej w kolumnie — wybierz
+        projekt z listy tablic wdrożeniowych.
       </p>
 
       {boardStats ? <KanbanBoardStatsBar stats={boardStats} /> : null}
@@ -229,11 +310,12 @@ export function AggregatedKanbanBoard({
         filters={filters}
         sortMode={sortMode}
         assigneeOptions={assigneeOptions}
+        projectOptions={projectOptions}
         onFiltersChange={setFilters}
         onSortModeChange={setSortMode}
       />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 md:flex-row md:overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 max-md:flex-row max-md:overflow-x-auto max-md:overscroll-x-contain md:flex-row md:overflow-hidden">
         {board.columns.map((column) => {
           const columnTasks = getColumnTasks(column.id);
           const tasks = sortKanbanColumnTasks(columnTasks, sortMode);
@@ -246,7 +328,8 @@ export function AggregatedKanbanBoard({
             <div
               key={column.id}
               className={cn(
-                "flex min-h-[280px] min-w-0 flex-1 flex-col rounded-2xl border border-border/80 bg-surface-muted/30 md:min-h-0",
+                "flex min-h-[280px] min-w-0 flex-col rounded-2xl border border-border/80 bg-surface-muted/30",
+                "w-[min(88vw,320px)] shrink-0 max-md:min-h-[min(52vh,440px)] md:min-h-0 md:w-auto md:flex-1",
                 getKanbanColumnDropTargetClasses(isDropTarget),
               )}
               onDragEnter={(event) => {
@@ -305,6 +388,59 @@ export function AggregatedKanbanBoard({
                 ))}
 
                 {isDropTarget && dragTask ? <KanbanDropPlaceholder title={dragTask.title} /> : null}
+
+                {authorSide === "team" && kanbanProjects.length ? (
+                  <div className="mt-auto grid gap-2 rounded-xl border border-dashed border-border/70 p-2">
+                    <Field label="Projekt" className="text-xs">
+                      <Select
+                        value={defaultProjectKeyForColumn(column.id)}
+                        disabled={addingTaskColumnId !== null}
+                        onChange={(event) =>
+                          setNewTaskProjectKeys((current) => ({
+                            ...current,
+                            [column.id]: event.target.value,
+                          }))
+                        }
+                      >
+                        {kanbanProjects.map((project) => (
+                          <option key={project.key} value={project.key}>
+                            {project.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                    <Input
+                      value={newTaskTitles[column.id] ?? ""}
+                      placeholder="Nowe zgłoszenie…"
+                      disabled={addingTaskColumnId !== null}
+                      onChange={(event) =>
+                        setNewTaskTitles((current) => ({
+                          ...current,
+                          [column.id]: event.target.value,
+                        }))
+                      }
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && addingTaskColumnId === null) {
+                          void handleAddTask(column.id);
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={
+                        addingTaskColumnId !== null ||
+                        !newTaskTitles[column.id]?.trim() ||
+                        !defaultProjectKeyForColumn(column.id)
+                      }
+                      onClick={() => void handleAddTask(column.id)}
+                    >
+                      <Plus className="mr-1 h-3.5 w-3.5" />
+                      {addingTaskColumnId === column.id ? "Dodawanie…" : "Dodaj"}
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             </div>
           );

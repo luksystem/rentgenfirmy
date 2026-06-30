@@ -10,6 +10,42 @@ export type KanbanTaskSource = {
   sourceColumnTitle: string;
 };
 
+export function getKanbanTaskProjectKey(source: Pick<KanbanTaskSource, "projectId" | "projectName">) {
+  return source.projectId ?? `name:${source.projectName.trim() || "Bez projektu"}`;
+}
+
+export type KanbanProjectOption = {
+  key: string;
+  name: string;
+  board: KanbanBoard;
+};
+
+export function listKanbanProjectsFromBoards(boards: KanbanBoard[]): KanbanProjectOption[] {
+  const projects = new Map<string, KanbanProjectOption>();
+  for (const board of boards) {
+    const key = getKanbanTaskProjectKey(board);
+    if (!projects.has(key)) {
+      projects.set(key, { key, name: board.projectName, board });
+    }
+  }
+  return [...projects.values()].sort((left, right) => left.name.localeCompare(right.name, "pl"));
+}
+
+export function resolveSourceColumnIdForMergedColumn(
+  projectBoard: KanbanBoard,
+  mergedColumnTitle: string,
+): string | null {
+  const normalized = normalizeColumnTitle(mergedColumnTitle);
+  const matched = projectBoard.columns.find(
+    (column) => normalizeColumnTitle(column.title) === normalized,
+  );
+  if (matched) {
+    return matched.id;
+  }
+  const sorted = [...projectBoard.columns].sort((left, right) => left.position - right.position);
+  return sorted[0]?.id ?? null;
+}
+
 export type MergedKanbanView = {
   boards: KanbanBoard[];
   taskSources: Map<string, KanbanTaskSource>;

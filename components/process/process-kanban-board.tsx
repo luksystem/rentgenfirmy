@@ -467,9 +467,8 @@ export function ProcessKanbanBoard({
       <div
         className={cn(
           "flex gap-3 pb-1",
-          embedded
-            ? "min-h-[min(52vh,440px)] flex-row overflow-x-auto overscroll-x-contain"
-            : "min-h-[min(50vh,400px)] flex-col overflow-y-auto overscroll-y-contain max-md:flex-none md:min-h-0 md:flex-1 md:flex-row md:overflow-hidden",
+          "min-h-[min(52vh,440px)] flex-row overflow-x-auto overscroll-x-contain",
+          !embedded && "md:min-h-0 md:flex-1 md:overflow-hidden",
         )}
       >
         {board.columns.map((column) => {
@@ -482,8 +481,9 @@ export function ProcessKanbanBoard({
             <div
               key={column.id}
               className={cn(
-                "flex min-h-[280px] min-w-0 flex-col rounded-2xl border border-border/80 bg-surface-muted/30 md:min-h-0",
-                embedded ? "w-[min(88vw,320px)] shrink-0" : "flex-1",
+                "flex min-h-[280px] min-w-0 flex-col rounded-2xl border border-border/80 bg-surface-muted/30",
+                "w-[min(88vw,320px)] shrink-0 md:min-h-0 md:w-auto",
+                embedded ? "md:shrink-0" : "md:flex-1",
                 getKanbanColumnDropTargetClasses(isDropTarget),
               )}
               onDragEnter={(event) => {
