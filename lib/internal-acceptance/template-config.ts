@@ -54,6 +54,8 @@ export type InternalAcceptanceRulePackItemOverride = {
   category?: string;
   priority?: InternalAcceptancePriority;
   mandatory?: boolean;
+  requireDocumentation?: boolean;
+  documentationHint?: string;
 };
 
 export type InternalAcceptanceRulePackCustomization = {
@@ -155,6 +157,12 @@ function normalizeRulePackCustomization(value: unknown): InternalAcceptanceRuleP
             ? override.priority
             : undefined,
         mandatory: typeof override.mandatory === "boolean" ? override.mandatory : undefined,
+        requireDocumentation:
+          typeof override.requireDocumentation === "boolean"
+            ? override.requireDocumentation
+            : undefined,
+        documentationHint:
+          typeof override.documentationHint === "string" ? override.documentationHint : undefined,
       };
     }
   }

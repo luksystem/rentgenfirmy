@@ -1,8 +1,8 @@
 "use client";
 
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { InternalAcceptanceStaticItemFields } from "@/components/process/internal-acceptance-static-item-fields";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { getInternalAcceptanceRuleSetById } from "@/lib/internal-acceptance/rule-library";
 import {
   getEffectivePackItemOrder,
@@ -10,7 +10,6 @@ import {
   packCustomizationItemCount,
   withExtraItemPositions,
 } from "@/lib/internal-acceptance/rule-pack-resolver";
-import { INTERNAL_ACCEPTANCE_CATEGORIES } from "@/lib/internal-acceptance/types";
 import {
   ensureRulePackCustomization,
   getRulePackCustomization,
@@ -19,91 +18,6 @@ import {
   type InternalAcceptanceTemplateConfig,
   type InternalAcceptanceTemplateStaticItem,
 } from "@/lib/internal-acceptance/template-config";
-
-const PRIORITY_OPTIONS = [
-  { value: "critical", label: "Krytyczny" },
-  { value: "normal", label: "Normalny" },
-  { value: "optional", label: "Opcjonalny" },
-] as const;
-
-function ItemFields({
-  name,
-  description,
-  category,
-  priority,
-  mandatory,
-  categoryListId,
-  onChange,
-}: {
-  name: string;
-  description: string;
-  category: string;
-  priority: InternalAcceptanceTemplateStaticItem["priority"];
-  mandatory: boolean;
-  categoryListId: string;
-  onChange: (patch: {
-    name?: string;
-    description?: string;
-    category?: string;
-    priority?: InternalAcceptanceTemplateStaticItem["priority"];
-    mandatory?: boolean;
-  }) => void;
-}) {
-  return (
-    <>
-      <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Nazwa punktu">
-          <Input value={name} onChange={(event) => onChange({ name: event.target.value })} />
-        </Field>
-        <Field label="Kategoria">
-          <Input
-            value={category}
-            list={categoryListId}
-            onChange={(event) => onChange({ category: event.target.value })}
-          />
-          <datalist id={categoryListId}>
-            {INTERNAL_ACCEPTANCE_CATEGORIES.map((entry) => (
-              <option key={entry} value={entry} />
-            ))}
-          </datalist>
-        </Field>
-      </div>
-      <Field label="Opis / kryterium">
-        <Textarea
-          value={description}
-          onChange={(event) => onChange({ description: event.target.value })}
-          rows={2}
-        />
-      </Field>
-      <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Priorytet">
-          <Select
-            value={priority}
-            onChange={(event) =>
-              onChange({
-                priority: event.target.value as InternalAcceptanceTemplateStaticItem["priority"],
-              })
-            }
-          >
-            {PRIORITY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <label className="flex items-center gap-2 self-end rounded-xl border border-border/70 px-3 py-2.5 text-sm">
-          <input
-            type="checkbox"
-            checked={mandatory}
-            onChange={(event) => onChange({ mandatory: event.target.checked })}
-          />
-          Obowiązkowy punkt
-        </label>
-      </div>
-    </>
-  );
-}
 
 export function InternalAcceptanceRulePackEditor({
   packId,
@@ -118,6 +32,7 @@ export function InternalAcceptanceRulePackEditor({
   const customization = getRulePackCustomization(config, packId);
   const itemOrder = getEffectivePackItemOrder(packId, customization);
   const activeCount = packCustomizationItemCount(packId, customization);
+  const showDocumentation = ruleSet?.sourceType !== "agreement";
 
   function patchCustomization(
     updater: (current: InternalAcceptanceRulePackCustomization) => InternalAcceptanceRulePackCustomization,
@@ -270,6 +185,8 @@ export function InternalAcceptanceRulePackEditor({
             category: entry.override.category ?? entry.libraryItem.category,
             priority: entry.override.priority ?? entry.libraryItem.priority,
             mandatory: entry.override.mandatory ?? entry.libraryItem.mandatory,
+            requireDocumentation: entry.override.requireDocumentation,
+            documentationHint: entry.override.documentationHint,
           };
 
           return (
@@ -305,9 +222,10 @@ export function InternalAcceptanceRulePackEditor({
                   </Button>
                 </div>
               </div>
-              <ItemFields
-                {...merged}
+              <InternalAcceptanceStaticItemFields
+                item={merged}
                 categoryListId={`ia-pack-${packId}-${entry.id}`}
+                showDocumentation={showDocumentation}
                 onChange={(patch) => updateLibraryOverride(entry.id, patch)}
               />
             </div>
@@ -347,13 +265,10 @@ export function InternalAcceptanceRulePackEditor({
                 </Button>
               </div>
             </div>
-            <ItemFields
-              name={entry.extra.name}
-              description={entry.extra.description}
-              category={entry.extra.category}
-              priority={entry.extra.priority}
-              mandatory={entry.extra.mandatory}
+            <InternalAcceptanceStaticItemFields
+              item={entry.extra}
               categoryListId={`ia-pack-extra-${packId}-${entry.extra.id}`}
+              showDocumentation={showDocumentation}
               onChange={(patch) => updateExtraItem(entry.extra.id, patch)}
             />
           </div>

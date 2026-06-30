@@ -1,0 +1,26 @@
+services:
+  loxone-swagger:
+    build: .
+    container_name: loxone-swagger
+    ports:
+      - "8077:8077"
+    environment:
+      # Miniserver target
+      LOX_HOST: "192.168.1.77"
+      LOX_PORT: "80"
+      # Set to "1" + LOX_PORT 443 for Gen2 HTTPS
+      LOX_TLS: "0"
+      # Set to "1" to skip cert verification (local IP + CloudDNS cert mismatch)
+      LOX_TLS_INSECURE: "0"
+      # Basic auth injected server-side (omit to authorize per-request in Swagger UI)
+      LOX_USER: "admin"
+      LOX_PASS: "changeme"
+    restart: unless-stopped
+    networks:
+      - default
+
+# Uncomment to attach to an existing stack network (e.g. Node-RED / Mosquitto stack):
+# networks:
+#   default:
+#     external: true
+#     name: homey-stack_default

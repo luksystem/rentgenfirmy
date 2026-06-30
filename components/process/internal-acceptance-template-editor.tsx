@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { InternalAcceptanceRulePackEditor } from "@/components/process/internal-acceptance-rule-pack-editor";
+import { InternalAcceptanceStaticItemFields } from "@/components/process/internal-acceptance-static-item-fields";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Field, Input, Select, Textarea } from "@/components/ui/input";
-import { INTERNAL_ACCEPTANCE_CATEGORIES } from "@/lib/internal-acceptance/types";
+import { Field, Input } from "@/components/ui/input";
 import { getRulePacksBySourceType } from "@/lib/internal-acceptance/rule-pack-meta";
 import { packCustomizationItemCount } from "@/lib/internal-acceptance/rule-pack-resolver";
 import { getRulePackCustomization,
@@ -23,12 +23,6 @@ type InternalAcceptanceTemplateEditorProps = {
   initialConfig: InternalAcceptanceTemplateConfig;
   onSave: (config: InternalAcceptanceTemplateConfig) => Promise<void>;
 };
-
-const PRIORITY_OPTIONS = [
-  { value: "critical", label: "Krytyczny" },
-  { value: "normal", label: "Normalny" },
-  { value: "optional", label: "Opcjonalny" },
-] as const;
 
 function moveStaticItem(
   items: InternalAcceptanceTemplateStaticItem[],
@@ -343,7 +337,7 @@ export function InternalAcceptanceTemplateEditor({
           <CardContent className="grid gap-4 py-5">
             {renderSectionHeader(
               "static",
-              "Ręcznie zdefiniowane kategorie i punkty — zawsze trafiają do checklisty w tej kolejności.",
+              "Ręcznie zdefiniowane kategorie i punkty — zawsze trafiają do checklisty w tej kolejności. Przy każdym punkcie możesz wymagać dokumentacji (zdjęcie/plik) przed Spełnia.",
             )}
 
             {config.staticItems.length === 0 ? (
@@ -394,87 +388,11 @@ export function InternalAcceptanceTemplateEditor({
                   </div>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Field label="Nazwa punktu">
-                    <Input
-                      value={item.name}
-                      onChange={(event) => updateStaticItem(item.id, { name: event.target.value })}
-                    />
-                  </Field>
-                  <Field label="Kategoria">
-                    <Input
-                      value={item.category}
-                      list={`ia-categories-${item.id}`}
-                      onChange={(event) => updateStaticItem(item.id, { category: event.target.value })}
-                    />
-                    <datalist id={`ia-categories-${item.id}`}>
-                      {INTERNAL_ACCEPTANCE_CATEGORIES.map((category) => (
-                        <option key={category} value={category} />
-                      ))}
-                    </datalist>
-                  </Field>
-                </div>
-
-                <Field label="Opis / kryterium">
-                  <Textarea
-                    value={item.description}
-                    onChange={(event) => updateStaticItem(item.id, { description: event.target.value })}
-                    rows={2}
-                  />
-                </Field>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Field label="Priorytet">
-                    <Select
-                      value={item.priority}
-                      onChange={(event) =>
-                        updateStaticItem(item.id, {
-                          priority: event.target.value as InternalAcceptanceTemplateStaticItem["priority"],
-                        })
-                      }
-                    >
-                      {PRIORITY_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                  <label className="flex items-center gap-2 self-end rounded-xl border border-border/70 px-3 py-2.5 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={item.mandatory}
-                      onChange={(event) =>
-                        updateStaticItem(item.id, { mandatory: event.target.checked })
-                      }
-                    />
-                    Obowiązkowy punkt
-                  </label>
-                </div>
-
-                <label className="flex items-center gap-2 text-sm text-foreground">
-                  <input
-                    type="checkbox"
-                    className="rounded border-border"
-                    checked={Boolean(item.requireDocumentation)}
-                    onChange={(event) =>
-                      updateStaticItem(item.id, {
-                        requireDocumentation: event.target.checked,
-                        documentationHint: event.target.checked ? item.documentationHint : undefined,
-                      })
-                    }
-                  />
-                  Wymagaj dokumentacji przy Spełnia
-                </label>
-                {item.requireDocumentation ? (
-                  <Input
-                    value={item.documentationHint ?? ""}
-                    placeholder="Opis wymaganej dokumentacji (np. zdjęcie szafy rack)"
-                    onChange={(event) =>
-                      updateStaticItem(item.id, { documentationHint: event.target.value })
-                    }
-                  />
-                ) : null}
+                <InternalAcceptanceStaticItemFields
+                  item={item}
+                  categoryListId={`ia-categories-${item.id}`}
+                  onChange={(patch) => updateStaticItem(item.id, patch)}
+                />
               </div>
             ))}
 

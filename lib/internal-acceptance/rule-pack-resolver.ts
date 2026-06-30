@@ -45,6 +45,8 @@ export function resolveRulePackItems(
     category: extra.category,
     priority: extra.priority,
     mandatory: extra.mandatory,
+    requireDocumentation: extra.requireDocumentation,
+    documentationHint: extra.documentationHint,
     resolvedId: `extra-${extra.id}`,
     isExtra: true,
   }));
@@ -95,6 +97,8 @@ function applyOverride(
     category: override.category ?? item.category,
     priority: override.priority ?? item.priority,
     mandatory: override.mandatory ?? item.mandatory,
+    requireDocumentation: override.requireDocumentation ?? item.requireDocumentation,
+    documentationHint: override.documentationHint ?? item.documentationHint,
     resolvedId,
     isExtra,
   };

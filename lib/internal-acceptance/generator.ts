@@ -89,6 +89,8 @@ function generateFromRuleLibrary(
             category: template.category,
             priority: template.priority,
             mandatory: template.mandatory,
+            requireDocumentation: template.requireDocumentation,
+            documentationHint: template.documentationHint,
             itemKey: buildItemKey(ruleSet.id, template.resolvedId),
             source: { type: "company_standard", refLabel: "Standardy firmy" },
           },
@@ -113,6 +115,8 @@ function generateFromRuleLibrary(
               category: template.category,
               priority: template.priority,
               mandatory: template.mandatory,
+              requireDocumentation: template.requireDocumentation,
+              documentationHint: template.documentationHint,
               itemKey: buildItemKey(ruleSet.id, template.resolvedId, spec.id),
               source: {
                 type: "specification",

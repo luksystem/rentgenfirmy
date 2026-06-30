@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Loxone Miniserver API — Swagger UI</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.18.2/swagger-ui.min.css" />
+  <style>
+    :root {
+      --lox-green:  #69be28;
+      --lox-dark:   #1a2329;
+      --lox-light:  #f4f6f8;
+      --lox-border: #d4dde4;
+    }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:var(--lox-light); }
+    .topbar { display:none!important; }
+    #custom-header {
+      background:var(--lox-dark); color:#fff;
+      padding:14px 24px; display:flex; align-items:center; gap:16px;
+      border-bottom:3px solid var(--lox-green);
+      position:sticky; top:0; z-index:1000;
+    }
+    #custom-header .logo-box {
+      width:42px;height:42px; background:var(--lox-green); border-radius:8px;
+      display:flex;align-items:center;justify-content:center;
+      font-weight:800;font-size:18px;color:#fff;letter-spacing:-1px; flex-shrink:0;
+    }
+    #custom-header h1 { margin:0;font-size:19px;font-weight:700; }
+    #custom-header p { margin:2px 0 0;font-size:12px;color:#8fa8b8; }
+    .badge {
+      margin-left:auto; background:var(--lox-green); color:#fff;
+      font-size:11px;font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap;
+    }
+    #proxy-status {
+      font-size:11px; color:#8fa8b8; margin-left:12px; white-space:nowrap;
+    }
+    #proxy-status .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#666; margin-right:5px; }
+    #proxy-status.ok .dot { background:var(--lox-green); }
+    #proxy-status.err .dot { background:#e74c3c; }
+    .hint {
+      background:#e8f5e0; border:1px solid var(--lox-green); border-radius:6px;
+      padding:10px 16px; margin:14px 20px 4px; font-size:13px; color:#2c4a1a;
+    }
+    code { background:#f0f0f0; padding:1px 5px; border-radius:3px; font-size:12px; }
+
+    #swagger-ui .info {
+      background:#fff; border-radius:8px; padding:20px 24px!important;
+      margin:20px 0 12px!important; border:1px solid var(--lox-border);
+    }
+    #swagger-ui .info .title { color:var(--lox-dark)!important; font-size:24px!important; }
+    .swagger-ui .opblock { border-radius:6px!important; border:1px solid var(--lox-border)!important; margin-bottom:8px!important; }
+    .swagger-ui .opblock.opblock-get .opblock-summary-method { background:var(--lox-green)!important; }
+    .swagger-ui .opblock.opblock-get { border-left:4px solid var(--lox-green)!important; background:rgba(105,190,40,0.02)!important; }
+    .swagger-ui .opblock-tag { color:var(--lox-dark)!important; font-size:17px!important; border-bottom:2px solid var(--lox-green)!important; }
+    .swagger-ui .btn.execute { background:var(--lox-green)!important; border-color:var(--lox-green)!important; }
+    .swagger-ui .btn.authorize { color:var(--lox-green)!important; border-color:var(--lox-green)!important; }
+    .swagger-ui .btn.authorize svg { fill:var(--lox-green)!important; }
+    .swagger-ui .scheme-container {
+      background:#fff!important; border:1px solid var(--lox-border)!important;
+      border-radius:6px!important; padding:12px 20px!important; margin-bottom:12px!important;
+    }
+    .swagger-ui .wrapper { padding:0 20px!important; }
+    #footer { text-align:center; padding:24px; font-size:12px; color:#8fa8b8; }
+    #footer a { color:var(--lox-green); }
+  </style>
+</head>
+<body>
+
+<div id="custom-header">
+  <div class="logo-box">LX</div>
+  <div>
+    <h1>Loxone Miniserver API</h1>
+    <p>Interactive reference + live proxy — official docs V17.0</p>
+  </div>
+  <span id="proxy-status"><span class="dot"></span><span id="proxy-target">checking…</span></span>
+  <span class="badge">V17.0 &middot; 2026</span>
+</div>
+
+<div class="hint">
+  <strong>&#9889; Try It Out działa:</strong> wybierz server <strong><code>/lox</code></strong> (Built-in proxy) w dropdownie
+  i klikaj Execute — żądania idą przez wbudowane proxy z autoryzacją server-side. Zero CORS.
+  Endpointy WS-only (<code>enablebinstatusupdate</code>, <code>keyexchange</code>) wymagają WebSocket — użyj
+  <code>node-red-contrib-loxone</code>.
+</div>
+
+<div id="swagger-ui"></div>
+
+<div id="footer">
+  Loxone API V17.0 (31.03.2026) &middot; Taftek standalone server &middot;
+  <a href="/spec.yaml">spec.yaml</a> &middot;
+  <a href="/health">health</a> &middot;
+  <a href="https://www.loxone.com/enen/kb/api/" target="_blank">loxone.com/kb/api</a>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.18.2/swagger-ui-bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.18.2/swagger-ui-standalone-preset.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+
+<script>
+(async () => {
+  // Proxy health indicator
+  const statusEl = document.getElementById('proxy-status');
+  const targetEl = document.getElementById('proxy-target');
+  try {
+    const h = await (await fetch('/health')).json();
+    targetEl.textContent = 'proxy → ' + h.proxy_target.replace(/^https?:\/\//, '');
+    statusEl.classList.add('ok');
+  } catch (e) {
+    targetEl.textContent = 'proxy offline';
+    statusEl.classList.add('err');
+  }
+
+  // Load spec, inject proxy server entry
+  const yamlText = await (await fetch('/spec.yaml')).text();
+  const spec = jsyaml.load(yamlText);
+
+  spec.servers = spec.servers || [];
+  spec.servers.unshift({
+    url: '/lox',
+    description: '⚡ Built-in proxy → Miniserver (CORS-free, auth injected)'
+  });
+
+  SwaggerUIBundle({
+    spec,
+    dom_id: '#swagger-ui',
+    deepLinking: true,
+    presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+    plugins: [SwaggerUIBundle.plugins.DownloadUrl],
+    layout: 'StandaloneLayout',
+    defaultModelsExpandDepth: 1,
+    defaultModelExpandDepth: 2,
+    docExpansion: 'list',
+    tryItOutEnabled: true,
+    persistAuthorization: true,
+    validatorUrl: null
+  });
+})();
+</script>
+</body>
+</html>

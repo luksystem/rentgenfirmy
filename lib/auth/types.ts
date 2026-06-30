@@ -49,3 +49,7 @@ export function isAdministratorRole(role: UserRole) {
 export function hasFullAppAccess(role: UserRole) {
   return role === "administrator" || role === "manager";
 }
+
+export function isIntegrationOperator(role: UserRole) {
+  return role === "administrator" || role === "manager" || role === "pracownik";
+}

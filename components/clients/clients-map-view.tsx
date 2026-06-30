@@ -11,8 +11,10 @@ import {
   Navigation,
   Phone,
   FolderKanban,
+  Thermometer,
 } from "lucide-react";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import type { ProjectTelemetrySnapshot } from "@/lib/integrations/types";
 import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
 import { clientHasGeocodableAddress, formatClientAddress, buildClientGeocodeFingerprint } from "@/lib/clients/client-location";
@@ -55,18 +57,33 @@ function MapBounds({ points }: { points: Array<[number, number]> }) {
   return null;
 }
 
+function formatTelemetryTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString("pl-PL", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function ClientMapPopup({
   client,
   projects,
   address,
   lat,
   lng,
+  telemetryByProject,
 }: {
   client: Client;
   projects: Project[];
   address: string;
   lat: number;
   lng: number;
+  telemetryByProject: Map<string, ProjectTelemetrySnapshot[]>;
 }) {
   const directionsUrl =
     buildGoogleMapsDirectionsUrlFromCoords(lat, lng) ??
@@ -133,7 +150,9 @@ function ClientMapPopup({
           <p className="text-xs text-muted">Brak przypisanych projektów.</p>
         ) : (
           <ul className="grid gap-1.5">
-            {projects.map((project) => (
+            {projects.map((project) => {
+              const telemetry = telemetryByProject.get(project.id) ?? [];
+              return (
               <li key={project.id}>
                 <Link
                   href={`/przestrzenie/klient/${client.id}?project=${project.id}`}
@@ -143,9 +162,32 @@ function ClientMapPopup({
                   <p className="mt-0.5 text-[11px] text-muted">
                     {project.type} · {project.stage}
                   </p>
+                  {telemetry.length > 0 ? (
+                    <ul className="mt-2 grid gap-1 border-t border-border/60 pt-2">
+                      {telemetry.map((entry) => (
+                        <li
+                          key={entry.id}
+                          className="flex items-start gap-1.5 text-[11px] text-foreground/90"
+                        >
+                          <Thermometer className="mt-0.5 h-3 w-3 shrink-0 text-indigo-400" />
+                          <span>
+                            <span className="font-medium">
+                              {entry.sourceName ?? entry.integrationName}:
+                            </span>{" "}
+                            {entry.temperature != null ? `${entry.temperature.toFixed(1)}°C` : "—"}
+                            {" · "}
+                            {entry.onlineStatus ? "online" : "offline"}
+                            {" · "}
+                            {formatTelemetryTime(entry.measuredAt)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </Link>
               </li>
-            ))}
+            );
+            })}
           </ul>
         )}
       </div>
@@ -160,6 +202,9 @@ export function ClientsMapView({ clients }: { clients: Client[] }) {
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
+  const [telemetryByProject, setTelemetryByProject] = useState<Map<string, ProjectTelemetrySnapshot[]>>(
+    new Map(),
+  );
 
   const geocodableClients = useMemo(
     () => clients.filter((client) => clientHasGeocodableAddress(client)),
@@ -241,6 +286,42 @@ export function ClientsMapView({ clients }: { clients: Client[] }) {
     };
   }, [geocodeFingerprint, geocodableClients]);
 
+  const projectIds = useMemo(() => projects.map((project) => project.id), [projects]);
+
+  useEffect(() => {
+    if (projectIds.length === 0) {
+      setTelemetryByProject(new Map());
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/map/telemetry?projectIds=${encodeURIComponent(projectIds.join(","))}`,
+          { credentials: "include" },
+        );
+        if (!response.ok || cancelled) {
+          return;
+        }
+        const payload = (await response.json()) as {
+          byProjectId?: Record<string, ProjectTelemetrySnapshot[]>;
+        };
+        if (cancelled) {
+          return;
+        }
+        setTelemetryByProject(new Map(Object.entries(payload.byProjectId ?? {})));
+      } catch {
+        // Telemetria na mapie jest opcjonalna — brak danych nie blokuje mapy.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectIds.join(",")]);
+
   const mapPoints = useMemo(
     () => placedClients.map((entry) => [entry.lat, entry.lng] as [number, number]),
     [placedClients],
@@ -298,6 +379,7 @@ export function ClientsMapView({ clients }: { clients: Client[] }) {
                   address={formatClientAddress(entry.client) || entry.label}
                   lat={entry.lat}
                   lng={entry.lng}
+                  telemetryByProject={telemetryByProject}
                 />
               </Popup>
             </Marker>

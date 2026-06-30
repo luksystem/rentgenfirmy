@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { ProjectForm } from "@/components/project-form";
+import { ProjectIntegrationsTab } from "@/components/project/project-integrations-tab";
 import {
   Dialog,
   DialogContent,
@@ -16,9 +17,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { isIntegrationOperator } from "@/lib/auth/types";
 import type { Project, ProjectInput } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
+import { useAuthStore } from "@/store/auth-store";
+
+type ProjectEditTab = "details" | "integrations";
 
 type ProjectEditContextValue = {
   openProjectEdit: (project: Project | string) => void;
@@ -103,7 +108,11 @@ export function ProjectEditProvider({ children }: { children: ReactNode }) {
   const projects = useAppStore((state) => state.projects);
   const updateProject = useAppStore((state) => state.updateProject);
   const isSaving = useAppStore((state) => state.isSaving);
+  const profile = useAuthStore((state) => state.profile);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<ProjectEditTab>("details");
+
+  const showIntegrationsTab = profile ? isIntegrationOperator(profile.role) : false;
 
   const editingProject = editingProjectId
     ? projects.find((project) => project.id === editingProjectId)
@@ -114,6 +123,7 @@ export function ProjectEditProvider({ children }: { children: ReactNode }) {
       const id = typeof projectOrId === "string" ? projectOrId : projectOrId.id;
       const exists = projects.some((project) => project.id === id);
       if (exists) {
+        setActiveTab("details");
         setEditingProjectId(id);
       }
     },
@@ -122,6 +132,7 @@ export function ProjectEditProvider({ children }: { children: ReactNode }) {
 
   function closeDialog() {
     setEditingProjectId(null);
+    setActiveTab("details");
   }
 
   async function handleSubmit(project: ProjectInput) {
@@ -144,16 +155,46 @@ export function ProjectEditProvider({ children }: { children: ReactNode }) {
         open={editingProjectId !== null && Boolean(editingProject)}
         onOpenChange={(open) => !open && closeDialog()}
       >
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edytuj projekt</DialogTitle>
             <DialogDescription>
-              Zmień dowolne pole projektu. Po zapisie zaktualizowane zostaną data i autor
-              ostatniej zmiany.
+              {activeTab === "details"
+                ? "Zmień dowolne pole projektu. Po zapisie zaktualizowane zostaną data i autor ostatniej zmiany."
+                : "Połączenia z systemami BMS — odczyt temperatury i status online."}
             </DialogDescription>
           </DialogHeader>
 
-          {editingProject ? (
+          {showIntegrationsTab ? (
+            <div className="flex gap-2 border-b border-border/70 pb-3">
+              <button
+                type="button"
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-sm font-medium transition",
+                  activeTab === "details"
+                    ? "bg-accent/15 text-foreground"
+                    : "text-muted hover:bg-surface-muted/80",
+                )}
+                onClick={() => setActiveTab("details")}
+              >
+                Dane projektu
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-sm font-medium transition",
+                  activeTab === "integrations"
+                    ? "bg-accent/15 text-foreground"
+                    : "text-muted hover:bg-surface-muted/80",
+                )}
+                onClick={() => setActiveTab("integrations")}
+              >
+                Integracje
+              </button>
+            </div>
+          ) : null}
+
+          {editingProject && activeTab === "details" ? (
             <ProjectForm
               key={editingProject.id}
               project={editingProject}
@@ -161,6 +202,10 @@ export function ProjectEditProvider({ children }: { children: ReactNode }) {
               onSubmit={handleSubmit}
               onCancel={closeDialog}
             />
+          ) : null}
+
+          {editingProject && activeTab === "integrations" && showIntegrationsTab ? (
+            <ProjectIntegrationsTab key={`${editingProject.id}-integrations`} projectId={editingProject.id} />
           ) : null}
         </DialogContent>
       </Dialog>

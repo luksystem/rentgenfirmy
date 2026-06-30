@@ -1,0 +1,1067 @@
+openapi: 3.0.3
+info:
+  title: Loxone Miniserver API
+  description: |
+    HTTP/WebSocket API for communicating with the Loxone Miniserver smart home controller.
+
+    Based on official Loxone documentation **V17.0 (31.03.2026)**.
+
+    ## Transport
+
+    | Protocol | Usage |
+    |---|---|
+    | HTTP / HTTPS | Commands, token acquisition, file downloads |
+    | WS / WSS | Real-time state updates, control commands |
+
+    HTTPS/WSS is supported on **Miniserver Gen 2+** only.
+
+    ## Command prefix
+
+    - `jdev/` → JSON response ✅ (recommended)
+    - `dev/` → XML response ❌ (deprecated)
+
+    Note: responses always echo `dev/` in the `control` field even when `jdev/` was used.
+
+    ## Authentication flow
+
+    1. `GET /jdev/cfg/apiKey` — verify reachability
+    2. `GET /jdev/sys/getPublicKey` — get RSA public key
+    3. `GET /jdev/sys/getkey2/{user}` — get HMAC key + salt
+    4. Hash: `pwHash = SHA256("{password}:{userSalt}").toUpperCase()`
+    5. Hash: `hash = HMAC-SHA256("{user}:{pwHash}", key)`
+    6. `GET /jdev/sys/enc/{enc(getjwt/...)}?sk={encSessionKey}` — acquire JWT (must be encrypted)
+    7. Subsequent HTTP requests: append `?autht={tokenHash}&user={user}`
+
+    ## WebSocket endpoint
+
+    `ws://{host}:{port}/ws/rfc6455` with `Sec-WebSocket-Protocol: remotecontrol`
+
+    After WebSocket auth, send `jdev/sps/enablebinstatusupdate` to receive live state events.
+
+  version: "17.0"
+  contact:
+    url: https://www.loxone.com/enen/kb/api/
+
+servers:
+  - url: http://{host}:{port}
+    description: Miniserver HTTP (Gen 1 & Gen 2)
+    variables:
+      host:
+        default: "192.168.1.77"
+        description: Miniserver local IP or hostname
+      port:
+        default: "80"
+        description: HTTP port (default 80)
+  - url: https://{hostname}:{port}
+    description: Miniserver HTTPS (Gen 2+ with CloudDNS certificate)
+    variables:
+      hostname:
+        default: "192-168-1-77.{serialNumber}.dyndns.loxonecloud.com"
+        description: |
+          CloudDNS hostname for TLS. Construct as:
+          {cleaned-ip}.{snr}.dyndns.loxonecloud.com
+          where cleaned-ip replaces dots with dashes.
+      port:
+        default: "443"
+        description: HTTPS port
+
+tags:
+  - name: Connectivity
+    description: Reachability checks and API info
+  - name: Security
+    description: Certificate retrieval, key exchange, command encryption
+  - name: Authentication
+    description: JWT token lifecycle — acquire, refresh, verify, kill
+  - name: Controls
+    description: Send commands to controls/function blocks via UUID
+  - name: Structure
+    description: Structure file download and version check
+  - name: System
+    description: Visualization passwords, system-level operations
+
+paths:
+
+  # ─── CONNECTIVITY ────────────────────────────────────────────────────────────
+
+  /jdev/cfg/apiKey:
+    get:
+      operationId: getApiKey
+      summary: Reachability Check & API Info
+      description: |
+        First call in any connection sequence. No authentication required.
+        Returns serial number, firmware version, HTTPS support status, local flag,
+        and WebSocket event slot availability.
+
+        Since v12.1: response contains `local` attribute indicating whether the
+        Miniserver considers this connection local (affects access restrictions).
+
+        Since v17.0: response contains `hasEventSlots` (max 31 concurrent WS clients).
+      tags: [Connectivity]
+      security: []
+      responses:
+        '200':
+          description: Miniserver is reachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyResponse'
+              example:
+                LL:
+                  control: "dev/cfg/apiKey"
+                  value:
+                    snr: "504F94A1B2C3"
+                    version: "17.0.12.11"
+                    httpsStatus: 1
+                    local: true
+                    hasEventSlots: true
+                  Code: "200"
+
+  /jdev/cfg/api:
+    get:
+      operationId: getApiInfo
+      summary: Extended API Info
+      description: Extended version of apiKey with additional Miniserver metadata.
+      tags: [Connectivity]
+      security: []
+      responses:
+        '200':
+          description: Extended Miniserver info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyResponse'
+
+  # ─── SECURITY ────────────────────────────────────────────────────────────────
+
+  /jdev/sys/getcertificate:
+    get:
+      operationId: getCertificate
+      summary: Get Miniserver TLS Certificate Chain
+      description: |
+        Returns the full TLS certificate chain in PEM format.
+
+        Verify the chain against the stored **Loxone Root Certificate** stored on the client.
+        The root certificate is always the first in the chain.
+
+        Extract the public key from the **last certificate** for WebSocket AES session key exchange.
+        Required for establishing WSS connections.
+      tags: [Security]
+      security: []
+      responses:
+        '200':
+          description: PEM-encoded certificate chain
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: PEM certificate chain (multiple -----BEGIN CERTIFICATE----- blocks)
+
+  /jdev/sys/getPublicKey:
+    get:
+      operationId: getPublicKey
+      summary: Get RSA Public Key
+      description: |
+        Returns the Miniserver RSA public key for AES session key exchange and command encryption.
+
+        Format: **X.509 / ANS.1** PEM encoding.
+
+        Use this key to RSA-encrypt your AES session key before sending it to the Miniserver.
+        Encryption parameters: RSA/ECB/PKCS1, result Base64-encoded with no line wraps.
+      tags: [Security]
+      security: []
+      responses:
+        '200':
+          description: RSA public key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLResponse'
+              example:
+                LL:
+                  control: "dev/sys/getPublicKey"
+                  value: "-----BEGIN CERTIFICATE-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A..."
+                  Code: "200"
+
+  /jdev/sys/keyexchange/{encryptedSessionKey}:
+    get:
+      operationId: keyExchange
+      summary: Exchange AES Session Key (WebSocket Setup)
+      description: |
+        Deliver the RSA-encrypted AES session key and IV to the Miniserver during WebSocket setup.
+
+        **Step sequence (WebSocket connection):**
+        1. Generate AES256 key → `{key}` (hex)
+        2. Generate random 16-byte AES IV → `{iv}` (hex)
+        3. RSA-encrypt `"{key}:{iv}"` with Miniserver public key → Base64
+        4. Send this endpoint over the WebSocket
+
+        After this, encrypt all sensitive WebSocket commands using the negotiated AES key.
+      tags: [Security]
+      parameters:
+        - name: encryptedSessionKey
+          in: path
+          required: true
+          description: |
+            RSA-encrypted session key. Payload: `"{aesKey}:{aesIV}"` both hex.
+            Encryption: RSA/ECB/PKCS1. Encoding: Base64 no-wrap.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Key exchange acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLResponse'
+
+  /jdev/sys/enc/{encryptedCommand}:
+    get:
+      operationId: sendEncryptedCommand
+      summary: Send Encrypted Command (Plaintext Response)
+      description: |
+        Wrap any command in AES256-CBC encryption. Miniserver decrypts and executes the inner command.
+        Response is the normal plaintext/JSON result of the inner command.
+
+        **Encryption steps (HTTP):**
+        1. Prepare inner command: `{cmd}` (e.g. `jdev/sps/io/{uuid}/On`)
+        2. Prepend salt: `"salt/{salt}/{cmd}"` → plaintext
+        3. AES256-CBC encrypt (key + IV from session) → Base64 (no wrap)
+        4. URI-component-encode → `{encryptedCommand}`
+        5. RSA-encrypt `"{key}:{iv}"` → Base64 → URI-encode → `{encSessionKey}`
+        6. Append `?sk={encSessionKey}` to URL
+
+        **Over WebSocket:** use key/IV negotiated via `keyexchange`. No `?sk=` needed.
+
+        **Commands that cannot be encrypted:**
+        - Icons/images (`.svg`, `.png`, `camimage`)
+        - Files (`LoxAPP3.json`, `fsget`, `fslist`) — except `enc` is supported for LoxAPP3.json
+        - Statistic files and data
+      tags: [Security]
+      parameters:
+        - name: encryptedCommand
+          in: path
+          required: true
+          description: AES256-CBC encrypted inner command, Base64, URI-encoded
+          schema:
+            type: string
+        - name: sk
+          in: query
+          description: RSA-encrypted AES session key (Base64, URI-encoded). Required for HTTP; omit on WebSocket.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Result of the decrypted inner command
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLResponse'
+        '401':
+          description: Decryption failed — invalid key or unexpected salt
+
+  /jdev/sys/fenc/{encryptedCommand}:
+    get:
+      operationId: sendFullyEncryptedCommand
+      summary: Send Encrypted Command (Encrypted Response)
+      description: |
+        Like `/jdev/sys/enc/` but the Miniserver **also AES-encrypts the response**.
+        Decrypt the Base64 response body using your AES session key and IV.
+
+        The MIME type of the inner response is preserved after decryption.
+        Useful for sensitive reads where the response should not be visible in transit.
+      tags: [Security]
+      parameters:
+        - name: encryptedCommand
+          in: path
+          required: true
+          description: AES256-CBC encrypted inner command, Base64, URI-encoded
+          schema:
+            type: string
+        - name: sk
+          in: query
+          description: RSA-encrypted AES session key (HTTP only)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: AES-encrypted response (Base64). Decrypt with your session key + IV.
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Base64-encoded AES-CBC ciphertext of the inner response
+
+  /jdev/sys/getvisusalt/{user}:
+    get:
+      operationId: getVisuSalt
+      summary: Get Visualization Password Salt
+      description: |
+        Retrieve the key, salt, and hash algorithm needed to hash a visualization password.
+        Required before sending a secured control command via `/jdev/sps/ios/`.
+
+        **Visu password hash creation:**
+        1. `visuPwHash = {hashAlg}("{visuPw}:{salt}").toUpperCase()`
+        2. `visuHash = HMAC-{hashAlg}(visuPwHash, key)` → hex
+      tags: [Security]
+      parameters:
+        - name: user
+          in: path
+          required: true
+          description: Username whose visualization password is being used
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Salt, key, and hash algorithm
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLResponse'
+              example:
+                LL:
+                  control: "dev/sys/getvisusalt/admin"
+                  value:
+                    key: "ab12cd3e..."
+                    salt: "ef34gh"
+                    hashAlg: "SHA256"
+                  Code: "200"
+
+  /jdev/sps/checkuservisupwd/{hash}:
+    get:
+      operationId: checkUserVisuPwd
+      summary: Verify Visualization Password
+      description: |
+        Verify a visualization password hash without triggering any control function.
+        Returns 200 if correct, 500 if incorrect.
+
+        Use the same hash construction as for `/jdev/sps/ios/`.
+      tags: [Security]
+      parameters:
+        - name: hash
+          in: path
+          required: true
+          description: HMAC hash of the visualization password (see getvisusalt)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Visualization password is correct
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLResponse'
+        '500':
+          description: Incorrect visualization password
+
+  # ─── AUTHENTICATION ───────────────────────────────────────────────────────────
+
+  /jdev/sys/getkey:
+    get:
+      operationId: getKey
+      summary: Get HMAC Key (legacy)
+      description: |
+        Get the one-time HMAC key used for token authentication hashes.
+        Prefer `getkey2` for new token acquisition; use this only for `authwithtoken` hashes.
+
+        The returned hex key may need to be decoded to ASCII before HMAC use.
+      tags: [Authentication]
+      security: []
+      responses:
+        '200':
+          description: HMAC key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLResponse'
+              example:
+                LL:
+                  control: "dev/sys/getkey"
+                  value: "3a4f5e6b7c..."
+                  Code: "200"
+
+  /jdev/sys/getkey2/{user}:
+    get:
+      operationId: getKey2
+      summary: Get Key + Salt for Token Acquisition
+      description: |
+        Returns key, userSalt, and hash algorithm for hashing credentials prior to JWT acquisition.
+
+        **Password hash creation:**
+        1. `pwHash = {hashAlg}("{password}:{userSalt}").toUpperCase()`
+        2. `hash = HMAC-{hashAlg}("{user}:{pwHash}", key)` — leave as-is (no case conversion)
+
+        Use the `hash` in `getjwt`.
+      tags: [Authentication]
+      security: []
+      parameters:
+        - name: user
+          in: path
+          required: true
+          description: Username for whom the token will be acquired
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Key, userSalt, and hash algorithm
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLResponse'
+              example:
+                LL:
+                  control: "dev/sys/getkey2/admin"
+                  value:
+                    key: "3a4f5e6b7c..."
+                    salt: "ab12cd"
+                    hashAlg: "SHA256"
+                  Code: "200"
+
+  /jdev/sys/getjwt/{hash}/{user}/{permission}/{uuid}/{info}:
+    get:
+      operationId: getJwt
+      summary: Acquire JWT Token
+      description: |
+        Acquire a JSON Web Token. **This request MUST be sent via `/jdev/sys/enc/`** (AES encrypted).
+        Unencrypted `getjwt` requests are rejected with HTTP 400.
+
+        **Token lifespan by permission:**
+        | Permission | Value | Lifespan |
+        |---|---|---|
+        | Web | 2 | Short (hours) |
+        | App | 4 | Long (weeks) |
+
+        Since v12.2: you may use an existing token hash instead of a password hash.
+        Append `?authHash=True` to the command when using a token hash as `{hash}`.
+      tags: [Authentication]
+      parameters:
+        - name: hash
+          in: path
+          required: true
+          description: |
+            HMAC of `"{user}:{pwHash}"` using key from getkey2.
+            Or token hash (v12.2+) with `?authHash=True`.
+          schema:
+            type: string
+        - name: user
+          in: path
+          required: true
+          description: Username
+          schema:
+            type: string
+        - name: permission
+          in: path
+          required: true
+          description: Permission bitmask. Use 2 for Web (short-lived) or 4 for App (long-lived).
+          schema:
+            type: integer
+            enum: [2, 4]
+            example: 4
+        - name: uuid
+          in: path
+          required: true
+          description: |
+            Client UUID identifying the requesting device/app. Format: `xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx`.
+            Generate once per device and persist. Used for token tracking on the Miniserver.
+          schema:
+            type: string
+            example: "098802e1-02b4-603c-ffffeee000d80cfd"
+        - name: info
+          in: path
+          required: true
+          description: URL-encoded human-readable client description (e.g. `MyApp%20v1.0`)
+          schema:
+            type: string
+            example: "TaftekApp%20v1.0"
+        - name: authHash
+          in: query
+          description: Set to `True` when using a token hash instead of a password hash (v12.2+)
+          schema:
+            type: string
+            enum: ["True"]
+        - name: tokenHash
+          in: query
+          description: Set to `true` to receive a hashed token in the response (v12.2.10.6+)
+          schema:
+            type: string
+            enum: ["true"]
+      responses:
+        '200':
+          description: JWT token acquired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLResponse'
+              example:
+                LL:
+                  control: "dev/sys/getjwt/..."
+                  value:
+                    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    validUntil: 2345678901
+                    tokenRights: 6
+                    unsecurePass: false
+                    key: "3a4f5e6b7c..."
+                  Code: "200"
+        '400':
+          description: Bad request — unencrypted getjwt rejected
+
+  /jdev/sys/refreshjwt/{tokenHash}/{user}:
+    get:
+      operationId: refreshJwt
+      summary: Refresh JWT Token
+      description: |
+        Extend the lifespan of an existing valid JWT token.
+        Returns a new token with identical permissions and updated `validUntil`.
+
+        When passing a legacy token, a proper JWT is returned.
+
+        Since v11.2: `tokenHash` can be the plaintext token instead of an HMAC hash.
+
+        **tokenHash creation (< v11.2):**
+        `tokenHash = HMAC-SHA256(token, key-from-getkey)` → hex
+      tags: [Authentication]
+      parameters:
+        - name: tokenHash
+          in: path
+          required: true
+          description: HMAC hash of the token, or plaintext token (v11.2+)
+          schema:
+            type: string
+        - name: user
+          in: path
+          required: true
+          description: Username whose token is being refreshed
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLResponse'
+              example:
+                LL:
+                  control: "dev/sys/refreshjwt/..."
+                  value:
+                    token: "eyJhbGci..."
+                    validUntil: 2356789012
+                    unsecurePass: false
+                  Code: "200"
+        '401':
+          description: Token invalid or expired
+
+  /jdev/sys/checktoken/{tokenHash}/{user}:
+    get:
+      operationId: checkToken
+      summary: Check Token Validity
+      description: |
+        Verify a token is still valid without refreshing it.
+        Returns `validUntil` and `unsecurePass` flag.
+        Returns 401 if the token has expired or is invalid.
+
+        Since v11.2: `tokenHash` can be the plaintext token.
+      tags: [Authentication]
+      parameters:
+        - name: tokenHash
+          in: path
+          required: true
+          description: HMAC hash of the token, or plaintext token (v11.2+)
+          schema:
+            type: string
+        - name: user
+          in: path
+          required: true
+          description: Username
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLResponse'
+              example:
+                LL:
+                  control: "dev/sys/checktoken/..."
+                  value:
+                    validUntil: 2345678901
+                    unsecurePass: false
+                  Code: "200"
+        '401':
+          description: Token invalid or expired
+
+  /jdev/sys/killtoken/{tokenHash}/{user}:
+    get:
+      operationId: killToken
+      summary: Invalidate Token
+      description: |
+        Explicitly invalidate a token. The token immediately becomes unusable.
+        **Recommended:** kill tokens when they are no longer needed to keep the Miniserver's
+        token storage clean.
+
+        Since v11.2: `tokenHash` can be the plaintext token.
+      tags: [Authentication]
+      parameters:
+        - name: tokenHash
+          in: path
+          required: true
+          description: HMAC hash of the token, or plaintext token (v11.2+)
+          schema:
+            type: string
+        - name: user
+          in: path
+          required: true
+          description: Username
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Token killed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLResponse'
+
+  # ─── CONTROLS ────────────────────────────────────────────────────────────────
+
+  /jdev/sps/io/{uuid}/{command}:
+    get:
+      operationId: sendControlCommand
+      summary: Send Control Command
+      description: |
+        Send a command to any control (function block) identified by its UUID.
+        The UUID is obtained from the structure file (`LoxAPP3.json` → `controls[x].uuidAction`).
+
+        **Common commands by control type:**
+
+        | Control Type | Commands |
+        |---|---|
+        | Switch / Digital output | `On`, `Off`, `Pulse` |
+        | Dimmer | `0`–`100` (percent), `+`, `-` |
+        | Jalousie / Blinds | `FullUp`, `FullDown`, `Up`, `Down`, `Stop` |
+        | Analog output | `0.0`–`1.0` float value |
+        | IRoomController | `setOperatingMode/{mode}`, `setTemperature/{temp}` |
+        | Timer | `On/{duration_sec}` |
+
+        **HTTP authentication:** append `?autht={tokenHash}&user={user}` to the URL.
+
+        Note: the response value reflects the state after command execution,
+        but is not fully reliable — rely on WebSocket state updates instead.
+      tags: [Controls]
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          description: Control UUID (uuidAction from LoxAPP3.json)
+          schema:
+            type: string
+            example: "0f58e6de-0110-b5ba-ffff-d7c9d24d0000"
+        - name: command
+          in: path
+          required: true
+          description: Command string to send
+          schema:
+            type: string
+            example: "On"
+        - name: autht
+          in: query
+          description: Token hash for HTTP authentication
+          schema:
+            type: string
+        - name: user
+          in: query
+          description: Username for HTTP authentication
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Command acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLResponse'
+              example:
+                LL:
+                  control: "dev/sps/io/0f58e6de-0110-b5ba-ffff-d7c9d24d0000/On"
+                  value: "1"
+                  Code: "200"
+        '401':
+          description: Unauthorized
+        '403':
+          description: Insufficient permissions
+        '404':
+          description: UUID not found or unrecognized command
+
+  /jdev/sps/ios/{visuHash}/{uuid}/{command}:
+    get:
+      operationId: sendSecuredControlCommand
+      summary: Send Secured Control Command (Visualization Password)
+      description: |
+        Send a command to a control protected by a **visualization password**.
+
+        **visuHash construction:**
+        1. `GET /jdev/sys/getvisusalt/{user}` → key, salt, hashAlg
+        2. `visuPwHash = {hashAlg}("{visuPw}:{salt}").toUpperCase()`
+        3. `visuHash = HMAC-{hashAlg}(visuPwHash, key)` → hex
+
+        Returns 200 if password correct and command executed. Returns 500 if password wrong.
+      tags: [Controls]
+      parameters:
+        - name: visuHash
+          in: path
+          required: true
+          description: HMAC hash of the visualization password
+          schema:
+            type: string
+        - name: uuid
+          in: path
+          required: true
+          description: Control UUID
+          schema:
+            type: string
+        - name: command
+          in: path
+          required: true
+          description: Command string
+          schema:
+            type: string
+        - name: autht
+          in: query
+          description: Token hash for HTTP authentication
+          schema:
+            type: string
+        - name: user
+          in: query
+          description: Username for HTTP authentication
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Command executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLResponse'
+        '500':
+          description: Incorrect visualization password
+
+  # ─── STRUCTURE ───────────────────────────────────────────────────────────────
+
+  /jdev/sps/LoxAPPversion3:
+    get:
+      operationId: getLoxAppVersion3
+      summary: Check Structure File Version
+      description: |
+        Returns the `lastModified` timestamp of the current Miniserver configuration.
+
+        Compare with the `lastModified` field of your cached `LoxAPP3.json`.
+        If they differ, re-download the structure file.
+
+        Call this **immediately after connecting** (WebSocket or HTTP) to validate your cache.
+      tags: [Structure]
+      responses:
+        '200':
+          description: Structure file version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLResponse'
+              example:
+                LL:
+                  control: "dev/sps/LoxAPPversion3"
+                  value: "2024-11-20 14:32:01"
+                  Code: "200"
+
+  /data/LoxAPP3.json:
+    get:
+      operationId: downloadStructureFile
+      summary: Download Structure File
+      description: |
+        Download the complete structure file describing the entire Miniserver configuration.
+
+        The structure file contains:
+        - `msInfo` — Miniserver metadata (name, serial, firmware)
+        - `rooms` — room definitions with UUIDs
+        - `cats` — categories with UUIDs
+        - `controls` — all function blocks with their UUIDs, states, and sub-controls
+        - `lastModified` — ISO timestamp to detect config changes
+
+        **Caching:** cache locally and validate with `/jdev/sps/LoxAPPversion3` before each session.
+        The file can be several MB for large installations.
+
+        **This is the primary reference** for mapping control names to UUIDs.
+      tags: [Structure]
+      responses:
+        '200':
+          description: Full structure file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoxAPP3'
+
+  # ─── SYSTEM ──────────────────────────────────────────────────────────────────
+
+  /jdev/sps/enablebinstatusupdate:
+    get:
+      operationId: enableBinStatusUpdate
+      summary: Enable Binary State Updates (WebSocket Only)
+      description: |
+        Subscribe to real-time state updates on the WebSocket connection.
+
+        After sending this command, the Miniserver sends **large initial Event-Tables**
+        containing all current states (Value, Text, Daytimer, Weather).
+
+        Subsequently, the Miniserver sends incremental updates only when states change.
+        Each update contains a UUID + value pair — use `LoxAPP3.json` to resolve UUIDs to controls.
+
+        **Up to 31 concurrent WebSocket clients** can receive state updates.
+        Check `hasEventSlots` in `jdev/cfg/apiKey` before attempting.
+
+        This command is **WebSocket only** — not available over plain HTTP.
+      tags: [System]
+      responses:
+        '200':
+          description: Binary state updates enabled. Initial Event-Tables follow.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLResponse'
+
+components:
+  schemas:
+
+    LLResponse:
+      type: object
+      description: Standard Loxone JSON envelope. All responses use this wrapper.
+      properties:
+        LL:
+          type: object
+          required: [control, value, Code]
+          properties:
+            control:
+              type: string
+              description: Echo of the received command path (uses `dev/` not `jdev/`)
+              example: "dev/sps/io/0f58e6de.../On"
+            value:
+              description: Response payload — string, number, or object depending on endpoint
+            Code:
+              type: string
+              description: HTTP-style status code as string
+              enum: ["200", "400", "401", "403", "404", "406", "409", "423", "429", "500", "503", "901"]
+
+    ApiKeyResponse:
+      type: object
+      description: Response from /jdev/cfg/apiKey
+      properties:
+        LL:
+          type: object
+          properties:
+            control:
+              type: string
+            value:
+              type: object
+              properties:
+                snr:
+                  type: string
+                  description: Miniserver serial number (MAC-based)
+                  example: "504F94A1B2C3"
+                version:
+                  type: string
+                  description: Firmware version string
+                  example: "17.0.12.11"
+                httpsStatus:
+                  type: integer
+                  description: "`1` = HTTPS available; `2` = certificate expired; absent = HTTP only"
+                  enum: [1, 2]
+                local:
+                  type: boolean
+                  description: "True if the Miniserver considers this a local connection (since v12.1)"
+                hasEventSlots:
+                  type: boolean
+                  description: "True if WebSocket event slots are available (max 31 concurrent)"
+            Code:
+              type: string
+
+    LoxAPP3:
+      type: object
+      description: |
+        Loxone Miniserver structure file. The central reference for all integrations.
+        Map control names ↔ UUIDs using `controls[x].uuidAction`.
+      properties:
+        lastModified:
+          type: string
+          description: ISO 8601 timestamp of the last configuration change
+          example: "2024-11-20 14:32:01"
+        msInfo:
+          type: object
+          description: Miniserver metadata
+          properties:
+            serialNr:
+              type: string
+            msName:
+              type: string
+            projectName:
+              type: string
+            localUrl:
+              type: string
+            remoteUrl:
+              type: string
+            tempUnit:
+              type: integer
+              description: "0 = Celsius, 1 = Fahrenheit"
+            currency:
+              type: string
+            squareMeasure:
+              type: string
+            location:
+              type: string
+            languageCode:
+              type: string
+            heatPeriodStart:
+              type: string
+            heatPeriodEnd:
+              type: string
+            coolPeriodStart:
+              type: string
+            coolPeriodEnd:
+              type: string
+            catTitle:
+              type: string
+            roomTitle:
+              type: string
+        rooms:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Room'
+          description: Map of room UUID → room definition
+        cats:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Category'
+          description: Map of category UUID → category definition
+        controls:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Control'
+          description: Map of control UUID → control definition
+
+    Room:
+      type: object
+      properties:
+        uuid:
+          type: string
+          example: "0a3cc5e4-0110-b5ba-ffff-d7c9d24d0000"
+        name:
+          type: string
+          example: "Living Room"
+        image:
+          type: string
+          example: "00000000-0000-0032-2000000000000000"
+        defaultRating:
+          type: integer
+
+    Category:
+      type: object
+      properties:
+        uuid:
+          type: string
+        name:
+          type: string
+          example: "Lighting"
+        image:
+          type: string
+        type:
+          type: string
+          example: "lights"
+
+    Control:
+      type: object
+      description: A Loxone control / function block
+      properties:
+        name:
+          type: string
+          example: "Ceiling Light"
+        type:
+          type: string
+          description: |
+            Control type name. Common types:
+            `Switch`, `Dimmer`, `Jalousie`, `Gate`, `Alarm`,
+            `IRoomControllerV2`, `TimedSwitch`, `Pushbutton`,
+            `UpDownDigital`, `InfoOnlyAnalog`, `InfoOnlyDigital`,
+            `Meter`, `IRCV2Daytimer`, `AalSmartAlarm`
+          example: "Switch"
+        uuidAction:
+          type: string
+          description: UUID for sending commands to this control (use in `/jdev/sps/io/{uuid}/`)
+          example: "0f58e6de-0110-b5ba-ffff-d7c9d24d0000"
+        room:
+          type: string
+          description: UUID of the room this control belongs to
+        cat:
+          type: string
+          description: UUID of the category
+        defaultRating:
+          type: integer
+        isFavorite:
+          type: boolean
+        isSecured:
+          type: boolean
+          description: True if visualization password is required
+        states:
+          type: object
+          additionalProperties:
+            type: string
+          description: |
+            Map of state name → UUID.
+            These UUIDs appear in WebSocket Event-Table updates.
+            Example: `{"active": "0f58e6de-0110-b5ba-0000-d7c9d24d0000"}`
+        subControls:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Control'
+          description: Child controls (e.g. individual outputs of a multi-channel control)
+
+  securitySchemes:
+    TokenAuth:
+      type: apiKey
+      in: query
+      name: autht
+      description: |
+        JWT token hash for HTTP request authentication.
+        Must be used together with the `user` query parameter.
+
+        `tokenHash = HMAC-SHA256(jwtToken, key-from-getkey)` → hex
+        or plaintext token (Miniserver v11.2+).
+
+        ## Permission Bitmask Reference
+
+        | Hex | Name | Description |
+        |-----|------|-------------|
+        | 0x00000001 | Admin | Administrative rights |
+        | 0x00000002 | Web | Short-lived web token |
+        | 0x00000004 | App | Long-lived app token |
+        | 0x00000008 | Config | Loxone Config login |
+        | 0x00000010 | FTP | FTP access |
+        | 0x00000020 | EditUser | Change own password / NFC / codes |
+        | 0x00000040 | ExpertMode | Expert mode |
+        | 0x00000080 | OpModes | Change operating mode schedule |
+        | 0x00000100 | SysWS | System-level web services (e.g. reboot) |
+        | 0x00000200 | AD | Automatic designer rules/scenes |
+        | 0x00000400 | AdoptUI | Edit non-logic properties |
+        | 0x00000800 | UserMgmt | Add/remove/edit users |
+        | 0x00001000 | DeviceMgmt | Air/Tree device search |
+        | 0x00002000 | PluginMgmt | Manage Miniserver plugins (e.g. HomeKit) |
+        | 0x00004000 | TrustJwtAuth | Login via JWT on trusted Miniserver (v14.5+) |
+        | 0x00008000 | TriggerUpdate | Trigger firmware update |
+        | 0x00010000 | TriggerBackup | Trigger backup |
+
+    UserParam:
+      type: apiKey
+      in: query
+      name: user
+      description: Username (always pair with `autht`)
+
+security:
+  - TokenAuth: []
+    UserParam: []

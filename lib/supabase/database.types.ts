@@ -272,6 +272,64 @@ export type ProjectSystemCredentialRow = {
   updated_at: string;
 };
 
+export type ProjectIntegrationRow = {
+  id: string;
+  project_id: string;
+  integration_type: string;
+  name: string;
+  connection_method: string;
+  api_url: string | null;
+  port: number | null;
+  login_username: string | null;
+  is_active: boolean;
+  technical_notes: string | null;
+  config_json: Record<string, unknown>;
+  last_sync_at: string | null;
+  last_error: string | null;
+  last_error_at: string | null;
+  created_by_user_id: string | null;
+  created_by_name: string;
+  updated_by_user_id: string | null;
+  updated_by_name: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectIntegrationSecretRow = {
+  integration_id: string;
+  password_ciphertext: string;
+  password_iv: string;
+  password_tag: string;
+  updated_at: string;
+};
+
+export type ProjectTelemetryRow = {
+  id: string;
+  project_id: string;
+  integration_id: string;
+  temperature: number | null;
+  humidity: number | null;
+  setpoint: number | null;
+  alarm_status: string | null;
+  online_status: boolean;
+  source_name: string | null;
+  measured_at: string;
+  raw_payload_json: Record<string, unknown>;
+  created_at: string;
+};
+
+export type ProjectIntegrationAuditLogRow = {
+  id: string;
+  integration_id: string | null;
+  project_id: string;
+  action: string;
+  actor_user_id: string | null;
+  actor_name: string;
+  changes_json: Record<string, unknown>;
+  metadata_json: Record<string, unknown>;
+  created_at: string;
+};
+
 export type ProjectAgreementVersionRow = {
   id: string;
   agreement_id: string;
@@ -744,6 +802,43 @@ export type Database = {
             | "created_by_name"
           >;
         Update: Partial<ProjectSystemCredentialRow>;
+        Relationships: [];
+      };
+      project_integrations: {
+        Row: ProjectIntegrationRow;
+        Insert: Partial<ProjectIntegrationRow> &
+          Pick<
+            ProjectIntegrationRow,
+            "project_id" | "integration_type" | "name" | "connection_method" | "created_by_name"
+          >;
+        Update: Partial<ProjectIntegrationRow>;
+        Relationships: [];
+      };
+      project_integration_secrets: {
+        Row: ProjectIntegrationSecretRow;
+        Insert: Partial<ProjectIntegrationSecretRow> &
+          Pick<
+            ProjectIntegrationSecretRow,
+            "integration_id" | "password_ciphertext" | "password_iv" | "password_tag"
+          >;
+        Update: Partial<ProjectIntegrationSecretRow>;
+        Relationships: [];
+      };
+      project_telemetry: {
+        Row: ProjectTelemetryRow;
+        Insert: Partial<ProjectTelemetryRow> &
+          Pick<ProjectTelemetryRow, "project_id" | "integration_id" | "online_status">;
+        Update: Partial<ProjectTelemetryRow>;
+        Relationships: [];
+      };
+      project_integration_audit_log: {
+        Row: ProjectIntegrationAuditLogRow;
+        Insert: Partial<ProjectIntegrationAuditLogRow> &
+          Pick<
+            ProjectIntegrationAuditLogRow,
+            "project_id" | "action" | "actor_name"
+          >;
+        Update: Partial<ProjectIntegrationAuditLogRow>;
         Relationships: [];
       };
       project_agreement_versions: {

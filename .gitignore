@@ -37,6 +37,9 @@ yarn-error.log*
 # local instructions (not for repo)
 /instrukcje-zapier-klient.txt
 
+# nested clone (referencja OpenAPI Loxone)
+/LoxoneSwagger/.git/
+
 # vercel
 .vercel
 
