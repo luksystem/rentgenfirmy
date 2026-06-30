@@ -517,16 +517,16 @@ export function ProjectIntegrationsTab({ projectId }: { projectId: string }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canManage = isAdministrator;
-  const canTest = profile ? isIntegrationOperator(profile.role) : false;
+  const canManage = profile ? isIntegrationOperator(profile.role) : false;
+  const canTest = canManage;
 
   const refresh = useCallback(async () => {
-    await ensureProjectIntegrations(projectId, { force: true, includeAudit: canManage });
-  }, [canManage, ensureProjectIntegrations, projectId]);
+    await ensureProjectIntegrations(projectId, { force: true, includeAudit: isAdministrator });
+  }, [ensureProjectIntegrations, isAdministrator, projectId]);
 
   useEffect(() => {
-    void ensureProjectIntegrations(projectId, { includeAudit: canManage });
-  }, [canManage, ensureProjectIntegrations, projectId]);
+    void ensureProjectIntegrations(projectId, { includeAudit: isAdministrator });
+  }, [ensureProjectIntegrations, isAdministrator, projectId]);
 
   const telemetryByIntegration = useMemo(() => {
     const map = new Map<string, ProjectTelemetrySnapshot>();
