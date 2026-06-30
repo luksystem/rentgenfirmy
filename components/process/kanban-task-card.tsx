@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, type PointerEvent as ReactPointerEvent } from "react";
 import { ChevronRight } from "lucide-react";
 import { KanbanAttachmentPreview } from "@/components/process/kanban-attachment-gallery";
 import { KanbanTaskReactionPreview } from "@/components/process/kanban-task-reactions";
@@ -20,6 +21,13 @@ import {
 } from "@/lib/process/kanban-ui";
 import { cn } from "@/lib/utils";
 
+const TOUCH_DRAG_THRESHOLD_PX = 8;
+
+function resolveKanbanColumnId(clientX: number, clientY: number) {
+  const target = document.elementFromPoint(clientX, clientY);
+  return target?.closest("[data-column-id]")?.getAttribute("data-column-id") ?? null;
+}
+
 export function KanbanTaskCardView({
   task,
   attachments = [],
@@ -36,6 +44,8 @@ export function KanbanTaskCardView({
   onOpen,
   onDragStart,
   onDragEnd,
+  onDragHover,
+  onDragDrop,
 }: {
   task: KanbanTask;
   attachments?: KanbanAttachment[];
@@ -52,9 +62,84 @@ export function KanbanTaskCardView({
   onOpen: () => void;
   onDragStart: () => void;
   onDragEnd?: () => void;
+  onDragHover?: (columnId: string | null) => void;
+  onDragDrop?: (columnId: string) => void;
 }) {
   const isClosed = Boolean(task.closedAt);
   const canDrag = draggable;
+  const pointerDragRef = useRef<{
+    pointerId: number;
+    started: boolean;
+    startX: number;
+    startY: number;
+  } | null>(null);
+  const suppressClickRef = useRef(false);
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (!canDrag || event.pointerType === "mouse" || event.button !== 0) {
+      return;
+    }
+
+    pointerDragRef.current = {
+      pointerId: event.pointerId,
+      started: false,
+      startX: event.clientX,
+      startY: event.clientY,
+    };
+  }
+
+  function handlePointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
+    const dragState = pointerDragRef.current;
+    if (!canDrag || !dragState || event.pointerId !== dragState.pointerId) {
+      return;
+    }
+
+    const distance = Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY);
+    if (!dragState.started) {
+      if (distance < TOUCH_DRAG_THRESHOLD_PX) {
+        return;
+      }
+      dragState.started = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      suppressClickRef.current = true;
+      onDragStart();
+    }
+
+    event.preventDefault();
+    onDragHover?.(resolveKanbanColumnId(event.clientX, event.clientY));
+  }
+
+  function finishPointerDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    const dragState = pointerDragRef.current;
+    if (!dragState || event.pointerId !== dragState.pointerId) {
+      return;
+    }
+
+    if (dragState.started) {
+      const columnId = resolveKanbanColumnId(event.clientX, event.clientY);
+      if (columnId) {
+        onDragDrop?.(columnId);
+      }
+      onDragEnd?.();
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    pointerDragRef.current = null;
+  }
+
+  function handleClick(event: React.MouseEvent<HTMLButtonElement>) {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    onOpen();
+  }
 
   return (
     <button
@@ -70,9 +155,14 @@ export function KanbanTaskCardView({
           : undefined
       }
       onDragEnd={canDrag ? onDragEnd : undefined}
-      onClick={onOpen}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={finishPointerDrag}
+      onPointerCancel={finishPointerDrag}
+      onClick={handleClick}
       className={cn(
         "relative w-full rounded-2xl border px-3.5 py-3 text-left text-sm shadow-sm transition hover:shadow-md",
+        canDrag && "touch-manipulation",
         isClosed ? getKanbanClosedTaskClasses() : getKanbanTaskAgingClasses(activity),
         isNew && !isClosed && "ring-2 ring-rose-500/50",
         isDragging && "scale-[0.98] opacity-35 ring-2 ring-accent/30",

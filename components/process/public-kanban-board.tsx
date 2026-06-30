@@ -59,6 +59,7 @@ export function PublicKanbanBoard({
   const [commentDraft, setCommentDraft] = useState("");
   const [isCoarsePointer, setIsCoarsePointer] = useState(true);
   const [activeColumnId, setActiveColumnId] = useState(board.columns[0]?.id ?? "");
+  const dragTaskIdRef = useRef<string | null>(null);
   const [filters, setFilters] = useState<KanbanBoardFilters>({ priority: "all", assignee: "all" });
   const [sortMode, setSortMode] = useState<KanbanColumnSortMode>("position");
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -150,15 +151,22 @@ export function PublicKanbanBoard({
     }
   }
 
-  async function handleDrop(columnId: string) {
-    if (!dragTaskId) {
+  async function handleDrop(columnId: string, taskIdOverride?: string) {
+    const taskId = taskIdOverride ?? dragTaskIdRef.current ?? dragTaskId;
+    if (!taskId) {
       return;
     }
-    await handleMoveTask(dragTaskId, columnId);
+    await handleMoveTask(taskId, columnId);
     clearDragState();
   }
 
+  function beginDrag(taskId: string) {
+    dragTaskIdRef.current = taskId;
+    setDragTaskId(taskId);
+  }
+
   function clearDragState() {
+    dragTaskIdRef.current = null;
     setDragTaskId(null);
     setDragOverColumnId(null);
   }
@@ -377,16 +385,16 @@ export function PublicKanbanBoard({
                       attachments={board.attachments.filter((entry) => entry.taskId === task.id)}
                       reactions={board.reactions}
                       activity={activityMap.get(task.id)}
-                      draggable={!isCoarsePointer}
                       showDueDate
                       showAssignee
                       showProjectLabel={showProjectLabel}
                       projectName={board.projectName}
-                      showChevron={isCoarsePointer}
                       isDragging={dragTaskId === task.id}
                       onOpen={() => setActiveTaskId(task.id)}
-                      onDragStart={() => setDragTaskId(task.id)}
+                      onDragStart={() => beginDrag(task.id)}
                       onDragEnd={clearDragState}
+                      onDragHover={(columnId) => setDragOverColumnId(columnId)}
+                      onDragDrop={(columnId) => void handleDrop(columnId, task.id)}
                     />
                   ))
                 ) : (

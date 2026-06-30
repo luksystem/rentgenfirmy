@@ -52,7 +52,7 @@ export const KANBAN_DRAG_HINT =
   "Przesuń zgłoszenie na kolejny etap metodą drag and drop.";
 
 export const KANBAN_MOBILE_MOVE_HINT =
-  "Otwórz zgłoszenie i wybierz etap, aby przenieść je na kolejny krok procesu.";
+  "Przeciągnij zgłoszenie między kolumnami lub otwórz je i wybierz etap, aby przenieść na kolejny krok.";
 
 export const KANBAN_BOARD_ROOT_CLASS =
   "flex min-w-0 w-full max-w-full flex-col gap-3 max-md:overflow-x-hidden md:min-h-0 md:flex-1 md:overflow-hidden";

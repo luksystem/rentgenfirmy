@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { KanbanMobileColumnNav } from "@/components/process/kanban-mobile-column-nav";
 import { KanbanBoardControls } from "@/components/process/kanban-board-controls";
@@ -94,6 +94,7 @@ export function AggregatedKanbanBoard({
   const [newTaskTitles, setNewTaskTitles] = useState<Record<string, string>>({});
   const [newTaskProjectKeys, setNewTaskProjectKeys] = useState<Record<string, string>>({});
   const [addingTaskColumnId, setAddingTaskColumnId] = useState<string | null>(null);
+  const dragTaskIdRef = useRef<string | null>(null);
 
   const board = mergedView?.displayBoard ?? null;
 
@@ -183,7 +184,7 @@ export function AggregatedKanbanBoard({
     () => (mergedView ? listKanbanProjectsFromBoards(mergedView.boards) : []),
     [mergedView],
   );
-  const { activeColumnId, isCoarsePointer, scrollerRef, scrollToColumn, setColumnRef } =
+  const { activeColumnId, scrollerRef, scrollToColumn, setColumnRef } =
     useKanbanMobileColumns(board?.columns ?? []);
 
   function defaultProjectKeyForColumn(columnId: string) {
@@ -255,19 +256,19 @@ export function AggregatedKanbanBoard({
     });
   }
 
-  function isDropTargetAllowed(columnId: string) {
-    if (!dragTaskId || !mergedView) {
+  function isDropTargetAllowed(columnId: string, taskIdOverride?: string) {
+    const taskId = taskIdOverride ?? dragTaskIdRef.current ?? dragTaskId;
+    if (!taskId || !mergedView) {
       return false;
     }
-    return canMoveTaskToMergedColumn(dragTaskId, columnId, mergedView);
+    return canMoveTaskToMergedColumn(taskId, columnId, mergedView);
   }
 
-  async function handleDrop(columnId: string) {
-    if (!dragTaskId || !mergedView || !board) {
+  async function handleDrop(columnId: string, taskIdOverride?: string) {
+    const taskId = taskIdOverride ?? dragTaskIdRef.current ?? dragTaskId;
+    if (!taskId || !mergedView || !board) {
       return;
     }
-
-    const taskId = dragTaskId;
     const targetColumnId = resolveTargetColumnId(taskId, columnId, mergedView);
     if (!targetColumnId) {
       clearDragState();
@@ -288,7 +289,13 @@ export function AggregatedKanbanBoard({
     }
   }
 
+  function beginDrag(taskId: string) {
+    dragTaskIdRef.current = taskId;
+    setDragTaskId(taskId);
+  }
+
   function clearDragState() {
+    dragTaskIdRef.current = null;
     setDragTaskId(null);
     setDragOverColumnId(null);
   }
@@ -405,12 +412,24 @@ export function AggregatedKanbanBoard({
                     showAssignee
                     showProjectLabel
                     projectName={mergedView.taskSources.get(task.id)?.projectName}
-                    draggable={!isCoarsePointer}
-                    showChevron={isCoarsePointer}
                     isDragging={dragTaskId === task.id}
                     onOpen={() => setActiveTaskId(task.id)}
-                    onDragStart={() => setDragTaskId(task.id)}
+                    onDragStart={() => beginDrag(task.id)}
                     onDragEnd={clearDragState}
+                    onDragHover={(columnId) => {
+                      if (!columnId || isDropTargetAllowed(columnId, dragTaskIdRef.current ?? undefined)) {
+                        setDragOverColumnId(columnId);
+                        return;
+                      }
+                      setDragOverColumnId(null);
+                    }}
+                    onDragDrop={(columnId) => {
+                      if (isDropTargetAllowed(columnId, task.id)) {
+                        void handleDrop(columnId, task.id);
+                      } else {
+                        clearDragState();
+                      }
+                    }}
                   />
                 ))}
 

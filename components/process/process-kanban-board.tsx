@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Copy, ExternalLink, Plus } from "lucide-react";
 import { KanbanAiImportPanel } from "@/components/process/kanban-ai-import-panel";
@@ -99,6 +99,7 @@ export function ProcessKanbanBoard({
   const [publicLinkOpen, setPublicLinkOpen] = useState(!embedded);
   const [filters, setFilters] = useState<KanbanBoardFilters>({ priority: "all", assignee: "all" });
   const [sortMode, setSortMode] = useState<KanbanColumnSortMode>("position");
+  const dragTaskIdRef = useRef<string | null>(null);
   const fieldOptions = useAppStore((state) => state.fieldOptions);
   const teamProfiles = useProcessStore((state) => state.teamProfiles);
   const loadTeamProfiles = useProcessStore((state) => state.loadTeamProfiles);
@@ -260,7 +261,7 @@ export function ProcessKanbanBoard({
     () => [...(board?.columns ?? [])].sort((left, right) => left.position - right.position)[0] ?? null,
     [board?.columns],
   );
-  const { activeColumnId, isCoarsePointer, scrollerRef, scrollToColumn, setColumnRef } =
+  const { activeColumnId, scrollerRef, scrollToColumn, setColumnRef } =
     useKanbanMobileColumns(board?.columns ?? []);
 
   async function handleAddTask(columnId: string) {
@@ -288,11 +289,11 @@ export function ProcessKanbanBoard({
     }
   }
 
-  async function handleDrop(columnId: string) {
-    if (!dragTaskId || !board) {
+  async function handleDrop(columnId: string, taskIdOverride?: string) {
+    const taskId = taskIdOverride ?? dragTaskIdRef.current ?? dragTaskId;
+    if (!taskId || !board) {
       return;
     }
-    const taskId = dragTaskId;
     setPendingMove({ taskId, columnId });
     clearDragState();
     try {
@@ -306,7 +307,13 @@ export function ProcessKanbanBoard({
     }
   }
 
+  function beginDrag(taskId: string) {
+    dragTaskIdRef.current = taskId;
+    setDragTaskId(taskId);
+  }
+
   function clearDragState() {
+    dragTaskIdRef.current = null;
     setDragTaskId(null);
     setDragOverColumnId(null);
   }
@@ -545,12 +552,12 @@ export function ProcessKanbanBoard({
                     activity={activityMap.get(task.id)}
                     isNew={task.isNewForTeam && authorSide === "team"}
                     showAssignee
-                    draggable={!isCoarsePointer}
-                    showChevron={isCoarsePointer}
                     isDragging={dragTaskId === task.id}
                     onOpen={() => setActiveTaskId(task.id)}
-                    onDragStart={() => setDragTaskId(task.id)}
+                    onDragStart={() => beginDrag(task.id)}
                     onDragEnd={clearDragState}
+                    onDragHover={(columnId) => setDragOverColumnId(columnId)}
+                    onDragDrop={(columnId) => void handleDrop(columnId, task.id)}
                   />
                 ))}
 
