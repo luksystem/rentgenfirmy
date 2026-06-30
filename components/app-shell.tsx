@@ -10,10 +10,12 @@ import {
   CheckCircle2,
   Clock3,
   ClipboardList,
+  ExternalLink,
   FileText,
   FolderKanban,
   GitBranch,
   Home,
+  Inbox,
   LayoutDashboard,
   LayoutGrid,
   LogOut,
@@ -42,6 +44,7 @@ type NavItem = {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  external?: boolean;
 };
 
 type NavGroup = {
@@ -58,16 +61,28 @@ const navGroupsBase: NavGroup[] = [
     label: "Sprzedaż",
     items: [
       {
-        href: COMMERCIAL_MODULES.serviceSettlement.href,
-        label: "Rozliczenia serwisu",
-        icon: COMMERCIAL_MODULES.serviceSettlement.icon,
-      },
-      {
         href: COMMERCIAL_MODULES.salesCalculations.href,
         label: COMMERCIAL_MODULES.salesCalculations.label,
         icon: COMMERCIAL_MODULES.salesCalculations.icon,
       },
+    ],
+  },
+  {
+    label: "Serwisy",
+    items: [
+      { href: "/oferty/zgloszenia", label: "Zgłoszenia", icon: Inbox },
+      {
+        href: COMMERCIAL_MODULES.serviceSettlement.href,
+        label: "Rozliczenia",
+        icon: COMMERCIAL_MODULES.serviceSettlement.icon,
+      },
       { href: "/zlecenia", label: "Zlecenia", icon: ClipboardList },
+      {
+        href: "/zgloszenie",
+        label: "Formularz klienta",
+        icon: ExternalLink,
+        external: true,
+      },
     ],
   },
   {
@@ -138,6 +153,7 @@ function NavLink({
   variant = "sidebar",
   overdueBadgeCount = 0,
   newBadgeCount = 0,
+  external = false,
 }: {
   href: string;
   label: string;
@@ -147,11 +163,14 @@ function NavLink({
   variant?: "sidebar" | "sheet";
   overdueBadgeCount?: number;
   newBadgeCount?: number;
+  external?: boolean;
 }) {
   if (variant === "sheet") {
     return (
       <Link
         href={href}
+        target={external ? "_blank" : undefined}
+        rel={external ? "noreferrer" : undefined}
         onClick={onClick}
         className={cn(
           "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition",
@@ -170,6 +189,8 @@ function NavLink({
   return (
     <Link
       href={href}
+      target={external ? "_blank" : undefined}
+      rel={external ? "noreferrer" : undefined}
       onClick={onClick}
       className={cn(
         "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
@@ -491,6 +512,12 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
                     label: "Skupienie",
                     description: "Blok czasu na skupioną pracę",
                     icon: Target,
+                  },
+                  {
+                    href: "/oferty/zgloszenia",
+                    label: "Zgłoszenie serwisowe",
+                    description: "Nowe zgłoszenia z formularza publicznego",
+                    icon: Inbox,
                   },
                   {
                     href: COMMERCIAL_MODULES.serviceSettlement.href + "/nowy",
