@@ -58,6 +58,39 @@ export function InternalAcceptanceStaticItemFields({
         />
       </Field>
 
+      {showDocumentation ? (
+        <div className="grid gap-3 rounded-xl border border-amber-500/30 bg-amber-500/8 p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-amber-200/90">
+            Dokumentacja przy odbiorze
+          </p>
+          <p className="text-xs leading-relaxed text-muted">
+            Zdjęcia i pliki dodaje zespół na tablicy odbioru w projekcie. Tutaj włączasz tylko wymaganie
+            przed oznaczeniem punktu jako Spełnia.
+          </p>
+          <label className="flex items-center gap-2 text-sm text-foreground">
+            <input
+              type="checkbox"
+              className="rounded border-border"
+              checked={Boolean(item.requireDocumentation)}
+              onChange={(event) =>
+                onChange({
+                  requireDocumentation: event.target.checked,
+                  documentationHint: event.target.checked ? item.documentationHint : undefined,
+                })
+              }
+            />
+            Wymagaj zdjęcia lub pliku przy Spełnia
+          </label>
+          {item.requireDocumentation ? (
+            <Input
+              value={item.documentationHint ?? ""}
+              placeholder="Co należy dołączyć? (np. zdjęcie kopii zapasowej na NAS)"
+              onChange={(event) => onChange({ documentationHint: event.target.value })}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="grid gap-3 md:grid-cols-2">
         <Field label="Priorytet">
           <Select
@@ -84,32 +117,6 @@ export function InternalAcceptanceStaticItemFields({
           Obowiązkowy punkt
         </label>
       </div>
-
-      {showDocumentation ? (
-        <div className="grid gap-3 rounded-xl border border-border/60 bg-surface-muted/15 p-3">
-          <label className="flex items-center gap-2 text-sm text-foreground">
-            <input
-              type="checkbox"
-              className="rounded border-border"
-              checked={Boolean(item.requireDocumentation)}
-              onChange={(event) =>
-                onChange({
-                  requireDocumentation: event.target.checked,
-                  documentationHint: event.target.checked ? item.documentationHint : undefined,
-                })
-              }
-            />
-            Wymagaj dokumentacji przy Spełnia
-          </label>
-          {item.requireDocumentation ? (
-            <Input
-              value={item.documentationHint ?? ""}
-              placeholder="Opis wymaganej dokumentacji (np. zdjęcie szafy rack)"
-              onChange={(event) => onChange({ documentationHint: event.target.value })}
-            />
-          ) : null}
-        </div>
-      ) : null}
     </>
   );
 }
