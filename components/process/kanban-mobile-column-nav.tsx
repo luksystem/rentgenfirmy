@@ -16,15 +16,15 @@ export function KanbanMobileColumnNav({
   openCountForColumn: (columnId: string) => number;
 }) {
   return (
-    <>
-      <div className="shrink-0 rounded-xl border border-accent/20 bg-accent/10 px-3.5 py-2.5 md:hidden">
+    <div className="min-w-0 max-w-full md:hidden">
+      <div className="shrink-0 rounded-xl border border-accent/20 bg-accent/10 px-3.5 py-2.5">
         <p className="flex items-start gap-2 text-sm leading-snug text-foreground/90">
           <ArrowRightLeft className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
           {KANBAN_MOBILE_MOVE_HINT}
         </p>
       </div>
 
-      <div className="flex shrink-0 gap-2 overflow-x-auto pb-1 md:hidden">
+      <div className="mt-3 flex w-full min-w-0 max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {columns.map((column) => {
           const count = openCountForColumn(column.id);
           const isActive = column.id === activeColumnId;
@@ -49,6 +49,6 @@ export function KanbanMobileColumnNav({
           );
         })}
       </div>
-    </>
+    </div>
   );
 }

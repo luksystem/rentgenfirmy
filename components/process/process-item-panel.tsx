@@ -138,7 +138,7 @@ export function ProcessItemPanel({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent fullscreen={isFullscreen}>
-        <DialogHeader className={isFullscreen ? "shrink-0 pb-2" : undefined}>
+        <DialogHeader className={isFullscreen ? "min-w-0 shrink-0 pb-2" : undefined}>
           <DialogTitle className="flex items-center gap-2">
             <Icon className="h-5 w-5 shrink-0 text-accent" />
             {item.title}
@@ -151,7 +151,9 @@ export function ProcessItemPanel({
         <div
           data-process-scroll-root
           className={cn(
-            item.kind === "kanban" ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "grid gap-4",
+            item.kind === "kanban"
+              ? "flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col overflow-hidden"
+              : "grid gap-4",
             isFullscreen && item.kind !== "kanban" && "min-h-0 flex-1 overflow-y-auto overscroll-y-contain",
             showMobileNavPadding && "pb-24",
           )}
@@ -235,7 +237,7 @@ export function ProcessItemPanel({
           ) : null}
 
           {item.kind === "kanban" && interactive && resolvedInstance ? (
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div className="flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col overflow-hidden">
               <ProcessKanbanBoard
                 projectProcessItemId={resolvedInstance.id}
                 templatePayload={

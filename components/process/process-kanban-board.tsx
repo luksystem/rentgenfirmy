@@ -15,6 +15,8 @@ import { Field, Input } from "@/components/ui/input";
 import { useKanbanMobileColumns } from "@/hooks/use-kanban-mobile-columns";
 import { useKanbanRealtime } from "@/hooks/use-kanban-realtime";
 import {
+  KANBAN_BOARD_HEADER_CLASS,
+  KANBAN_BOARD_ROOT_CLASS,
   KANBAN_DRAG_HINT,
   KANBAN_MOBILE_COLUMN_BODY_CLASS,
   KANBAN_MOBILE_COLUMN_SHELL_CLASS,
@@ -347,7 +349,8 @@ export function ProcessKanbanBoard({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
+    <div className={KANBAN_BOARD_ROOT_CLASS}>
+      <div className={KANBAN_BOARD_HEADER_CLASS}>
       {showPublicLink ? (
         <div className="grid shrink-0 gap-2 rounded-xl border border-border/70 bg-surface-muted/30 p-3">
           <button
@@ -478,6 +481,7 @@ export function ProcessKanbanBoard({
           countOpenKanbanTasks(board.tasks.filter((task) => task.columnId === columnId))
         }
       />
+      </div>
 
       <div ref={scrollerRef} className={KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS}>
         {board.columns.map((column) => {

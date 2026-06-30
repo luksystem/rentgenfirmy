@@ -45,8 +45,8 @@ export function KanbanBoardStatsBar({
 }) {
   return (
     <div
-      className={cn(
-        "shrink-0 rounded-xl border border-border/70 bg-surface-muted/30 p-3",
+        className={cn(
+        "shrink-0 min-w-0 w-full max-w-full rounded-xl border border-border/70 bg-surface-muted/30 p-3",
         compact && "p-2.5",
         className,
       )}

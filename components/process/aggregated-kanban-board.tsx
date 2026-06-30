@@ -13,6 +13,8 @@ import { Field, Input, Select } from "@/components/ui/input";
 import { useKanbanMobileColumns } from "@/hooks/use-kanban-mobile-columns";
 import { useKanbanRealtime } from "@/hooks/use-kanban-realtime";
 import {
+  KANBAN_BOARD_HEADER_CLASS,
+  KANBAN_BOARD_ROOT_CLASS,
   KANBAN_DRAG_HINT,
   KANBAN_MOBILE_COLUMN_BODY_CLASS,
   KANBAN_MOBILE_COLUMN_SHELL_CLASS,
@@ -308,7 +310,8 @@ export function AggregatedKanbanBoard({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
+    <div className={KANBAN_BOARD_ROOT_CLASS}>
+      <div className={KANBAN_BOARD_HEADER_CLASS}>
       <p className="hidden shrink-0 text-sm text-muted md:block">
         {KANBAN_DRAG_HINT} Kolumny łączone po nazwie — na karcie widać projekt źródłowy. Przenosisz zadanie tylko do
         kolumny o tej samej nazwie w tablicy projektu źródłowego. Nowe zgłoszenia dodajesz poniżej w kolumnie — wybierz
@@ -334,6 +337,7 @@ export function AggregatedKanbanBoard({
           countOpenKanbanTasks(board.tasks.filter((task) => task.columnId === columnId))
         }
       />
+      </div>
 
       <div ref={scrollerRef} className={KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS}>
         {board.columns.map((column) => {

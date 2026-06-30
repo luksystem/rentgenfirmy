@@ -11,7 +11,7 @@ export default function AggregatedKanbanHubPage() {
   const displayName = useAuthStore((state) => state.displayName);
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-4">
+    <div className="flex min-h-[calc(100vh-8rem)] min-w-0 flex-col gap-4 overflow-x-hidden">
       <PageHeader
         eyebrow="Tablice wdrożeń"
         title="Tablica wdrożeń"
@@ -26,7 +26,7 @@ export default function AggregatedKanbanHubPage() {
         }
       />
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-surface p-4">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-surface p-4">
         <AggregatedKanbanBoard authorSide="team" authorName={displayName || "Zespół"} />
       </div>
     </div>

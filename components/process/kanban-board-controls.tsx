@@ -36,7 +36,7 @@ export function KanbanBoardControls({
     <MobileFiltersPanel
       activeCount={activeCount}
       onClear={() => onFiltersChange(DEFAULT_KANBAN_BOARD_FILTERS)}
-      className="shrink-0"
+      className="shrink-0 min-w-0 w-full max-w-full"
       panelClassName="rounded-xl border border-border/70 bg-surface/40 p-3"
     >
       <div

@@ -89,7 +89,7 @@ export default function KanbanHubBoardPage() {
     : { columns: [] };
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-4">
+    <div className="flex min-h-[calc(100vh-8rem)] min-w-0 flex-col gap-4 overflow-x-hidden">
       <PageHeader
         eyebrow={clientName}
         title={boardEntry?.projectName ?? "Tablica Kanban"}
@@ -113,7 +113,7 @@ export default function KanbanHubBoardPage() {
       ) : null}
 
       {!loading && !error && boardEntry && processHydrated && templateItem ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-surface p-4">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-surface p-4">
           <ProcessKanbanBoard
             projectProcessItemId={boardEntry.projectProcessItemId}
             templatePayload={templatePayload}

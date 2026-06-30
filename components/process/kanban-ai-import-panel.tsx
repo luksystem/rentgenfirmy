@@ -136,7 +136,7 @@ export function KanbanAiImportPanel({
   }
 
   return (
-    <div className="grid shrink-0 gap-2 rounded-xl border border-accent/30 bg-accent/5 p-3">
+    <div className="grid min-w-0 max-w-full shrink-0 gap-2 rounded-xl border border-accent/30 bg-accent/5 p-3">
       <button
         type="button"
         className="flex w-full items-center justify-between text-left text-sm font-medium text-foreground"
