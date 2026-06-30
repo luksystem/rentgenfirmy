@@ -16,6 +16,9 @@ export default function OfertyPage() {
         action={
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" asChild>
+              <Link href="/oferty/zgloszenia">Zgłoszenia serwisowe</Link>
+            </Button>
+            <Button variant="secondary" asChild>
               <Link href="/oferty/ustawienia">Ustawienia stawek</Link>
             </Button>
             <Button asChild>

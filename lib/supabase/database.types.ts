@@ -330,6 +330,28 @@ export type ProjectIntegrationAuditLogRow = {
   created_at: string;
 };
 
+export type ServiceIntakeRequestRow = {
+  id: string;
+  reference_number: string;
+  status: string;
+  client_id: string | null;
+  project_id: string | null;
+  service_id: string | null;
+  contact_email: string;
+  contact_full_name: string;
+  contact_phone: string | null;
+  warranty_status: string | null;
+  service_type_hint: string;
+  priority: string;
+  description: string;
+  accepted_paid_terms: boolean;
+  accepted_paid_terms_at: string | null;
+  tracking_token: string;
+  metadata_json: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ProjectAgreementVersionRow = {
   id: string;
   agreement_id: string;
@@ -839,6 +861,21 @@ export type Database = {
             "project_id" | "action" | "actor_name"
           >;
         Update: Partial<ProjectIntegrationAuditLogRow>;
+        Relationships: [];
+      };
+      service_intake_requests: {
+        Row: ServiceIntakeRequestRow;
+        Insert: Partial<ServiceIntakeRequestRow> &
+          Pick<
+            ServiceIntakeRequestRow,
+            | "reference_number"
+            | "contact_email"
+            | "contact_full_name"
+            | "service_type_hint"
+            | "priority"
+            | "description"
+          >;
+        Update: Partial<ServiceIntakeRequestRow>;
         Relationships: [];
       };
       project_agreement_versions: {

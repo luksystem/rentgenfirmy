@@ -1,0 +1,108 @@
+import { createHmac, timingSafeEqual } from "crypto";
+
+type IntakeSessionPayload = {
+  kind: "session";
+  email: string;
+  exp: number;
+};
+
+type IntakeVerifiedPayload = {
+  kind: "verified";
+  email: string;
+  clientId: string;
+  fullName: string;
+  exp: number;
+};
+
+function getSecret() {
+  return (
+    process.env.CLIENTS_API_SECRET?.trim() ||
+    process.env.CRON_SECRET?.trim() ||
+    (process.env.NODE_ENV === "production" ? "" : "dev-service-intake-secret")
+  );
+}
+
+function signPayload(payload: IntakeSessionPayload | IntakeVerifiedPayload) {
+  const secret = getSecret();
+  if (!secret) {
+    throw new Error("Brak sekretu do podpisywania sesji zgłoszenia.");
+  }
+
+  const body = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+  const signature = createHmac("sha256", secret).update(body).digest("base64url");
+  return `${body}.${signature}`;
+}
+
+function readPayload<T extends IntakeSessionPayload | IntakeVerifiedPayload>(token: string): T | null {
+  const secret = getSecret();
+  if (!secret) {
+    return null;
+  }
+
+  const [body, signature] = token.split(".");
+  if (!body || !signature) {
+    return null;
+  }
+
+  const expected = createHmac("sha256", secret).update(body).digest("base64url");
+  const expectedBuffer = Buffer.from(expected);
+  const signatureBuffer = Buffer.from(signature);
+
+  if (
+    expectedBuffer.length !== signatureBuffer.length ||
+    !timingSafeEqual(expectedBuffer, signatureBuffer)
+  ) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as T;
+    if (!payload?.exp || payload.exp < Date.now()) {
+      return null;
+    }
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+const SESSION_TTL_MS = 30 * 60 * 1000;
+const VERIFIED_TTL_MS = 45 * 60 * 1000;
+
+export function createIntakeSessionToken(email: string) {
+  return signPayload({
+    kind: "session",
+    email: email.trim().toLowerCase(),
+    exp: Date.now() + SESSION_TTL_MS,
+  });
+}
+
+export function readIntakeSessionToken(token: string) {
+  const payload = readPayload<IntakeSessionPayload>(token);
+  if (!payload || payload.kind !== "session") {
+    return null;
+  }
+  return payload;
+}
+
+export function createIntakeVerifiedToken(input: {
+  email: string;
+  clientId: string;
+  fullName: string;
+}) {
+  return signPayload({
+    kind: "verified",
+    email: input.email.trim().toLowerCase(),
+    clientId: input.clientId,
+    fullName: input.fullName.trim(),
+    exp: Date.now() + VERIFIED_TTL_MS,
+  });
+}
+
+export function readIntakeVerifiedToken(token: string) {
+  const payload = readPayload<IntakeVerifiedPayload>(token);
+  if (!payload || payload.kind !== "verified") {
+    return null;
+  }
+  return payload;
+}
