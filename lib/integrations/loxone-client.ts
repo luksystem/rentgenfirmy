@@ -41,8 +41,63 @@ function buildHostUrl(
   return `${scheme}://${trimmed}:${resolvedPort}`;
 }
 
+function buildDyndnsUrlFromIp(snr: string, ipField: string, useTls: boolean): string {
+  const [ip, portFromField] = ipField.split(":");
+  const hostIp = ip.replace(/\./g, "-");
+  const port = portFromField ?? (useTls ? "443" : "80");
+  const scheme = useTls ? "https" : "http";
+  return `${scheme}://${hostIp}.${snr.toLowerCase()}.dyndns.loxonecloud.com:${port}`;
+}
+
+function parseCloudDnsGetIpResponse(
+  raw: string,
+  snr: string,
+  useTls: boolean,
+): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.startsWith("{")) {
+    const payload = JSON.parse(trimmed) as {
+      Code?: number;
+      url?: string;
+      IPHTTPS?: string;
+      IP?: string;
+    };
+    if (payload.url?.trim()) {
+      return payload.url.replace(/\/+$/, "");
+    }
+    if (payload.Code && payload.Code !== 200) {
+      throw new Error(
+        `CloudDNS kod ${payload.Code}. Sprawdź Remote Connect i numer seryjny.`,
+      );
+    }
+    const ipField = useTls ? payload.IPHTTPS ?? payload.IP : payload.IP ?? payload.IPHTTPS;
+    return ipField ? buildDyndnsUrlFromIp(snr, ipField, useTls) : null;
+  }
+
+  if (trimmed.startsWith("<")) {
+    const codeMatch = trimmed.match(/\bCode="(\d+)"/);
+    if (codeMatch && codeMatch[1] !== "200") {
+      throw new Error(
+        `CloudDNS kod ${codeMatch[1]}. Sprawdź Remote Connect i numer seryjny.`,
+      );
+    }
+    const ipHttpsMatch = trimmed.match(/\bIPHTTPS="([^"]+)"/);
+    const ipMatch = trimmed.match(/\bIP="([^"]+)"/);
+    const ipField = useTls
+      ? ipHttpsMatch?.[1] ?? ipMatch?.[1]
+      : ipMatch?.[1] ?? ipHttpsMatch?.[1];
+    return ipField ? buildDyndnsUrlFromIp(snr, ipField, useTls) : null;
+  }
+
+  return null;
+}
+
 export async function resolveLoxoneBaseUrl(params: LoxoneFetchParams): Promise<string> {
-  const useTls = params.config.useTls ?? false;
+  const useTls = params.config.useTls ?? true;
   const needsCloudResolve =
     params.connectionMethod === "remote_connect" || params.connectionMethod === "cloud";
 
@@ -53,7 +108,7 @@ export async function resolveLoxoneBaseUrl(params: LoxoneFetchParams): Promise<s
     }
 
     const response = await fetch(
-      `https://connect.loxonecloud.com/getip?snr=${encodeURIComponent(snr)}`,
+      `https://connect.loxonecloud.com/getip?snr=${encodeURIComponent(snr)}&json=true`,
       { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) },
     );
 
@@ -64,16 +119,19 @@ export async function resolveLoxoneBaseUrl(params: LoxoneFetchParams): Promise<s
     }
 
     const raw = await response.text();
-    let payload: { url?: string } = {};
     try {
-      payload = raw ? (JSON.parse(raw) as { url?: string }) : {};
-    } catch {
+      const resolved = parseCloudDnsGetIpResponse(raw, snr, true);
+      if (resolved) {
+        return resolved;
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("CloudDNS kod")) {
+        throw error;
+      }
       throw new Error("CloudDNS zwrócił nieoczekiwany format odpowiedzi. Sprawdź numer seryjny.");
     }
-    if (!payload.url?.trim()) {
-      throw new Error("CloudDNS nie zwrócił adresu Miniservera.");
-    }
-    return payload.url.replace(/\/+$/, "");
+
+    throw new Error("CloudDNS nie zwrócił adresu Miniservera. Sprawdź numer seryjny i Remote Connect.");
   }
 
   const host = params.apiUrl?.trim();
