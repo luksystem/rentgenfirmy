@@ -1,0 +1,262 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { Camera, FileText, Loader2, Paperclip, Trash2, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { attachSignedUrlsToChecklistAttachments } from "@/lib/supabase/checklist-attachments-repository";
+import type { ChecklistLine, ChecklistLineAttachment } from "@/lib/process/types";
+import { cn } from "@/lib/utils";
+
+export type ChecklistDocumentationUploadContext =
+  | { mode: "team"; projectProcessItemId: string; actorName: string }
+  | { mode: "public"; publicToken: string; actorName: string };
+
+export function ChecklistLineDocumentationPanel({
+  line,
+  lineId,
+  readOnly = false,
+  saving = false,
+  uploadContext,
+  onAttachmentsChange,
+}: {
+  line: ChecklistLine;
+  lineId: string;
+  readOnly?: boolean;
+  saving?: boolean;
+  uploadContext?: ChecklistDocumentationUploadContext;
+  onAttachmentsChange: (attachments: ChecklistLineAttachment[]) => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [attachments, setAttachments] = useState(line.attachments ?? []);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const source = line.attachments ?? [];
+    setAttachments(source);
+    if (!source.length) {
+      return;
+    }
+
+    let cancelled = false;
+    void attachSignedUrlsToChecklistAttachments(source).then((next) => {
+      if (!cancelled) {
+        setAttachments(next);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [line.attachments, lineId]);
+
+  if (!line.requireDocumentation && !attachments.length) {
+    return null;
+  }
+
+  async function uploadFile(file: File) {
+    if (!uploadContext) {
+      setError("Brak kontekstu zapisu — odśwież widok checklisty.");
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("lineId", lineId);
+      formData.append("file", file);
+
+      if (uploadContext.mode === "team") {
+        formData.append("projectProcessItemId", uploadContext.projectProcessItemId);
+        formData.append("authorName", uploadContext.actorName);
+      } else {
+        formData.append("actorName", uploadContext.actorName);
+      }
+
+      const endpoint =
+        uploadContext.mode === "team"
+          ? "/api/process/checklist/attachments"
+          : `/api/element/${encodeURIComponent(uploadContext.publicToken)}/attachments`;
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Nie udało się przesłać pliku.");
+      }
+
+      const payload = (await response.json()) as { attachment: ChecklistLineAttachment };
+      const nextAttachments = [...attachments, payload.attachment];
+      setAttachments(nextAttachments);
+      onAttachmentsChange(nextAttachments);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Błąd przesyłania.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = "";
+      }
+    }
+  }
+
+  function handleRemove(attachmentId: string) {
+    const nextAttachments = attachments.filter((entry) => entry.id !== attachmentId);
+    setAttachments(nextAttachments);
+    onAttachmentsChange(nextAttachments);
+  }
+
+  const needsDocumentation = line.requireDocumentation && !attachments.length;
+
+  return (
+    <div
+      className={cn(
+        "grid gap-3 rounded-xl border p-3",
+        needsDocumentation
+          ? "border-amber-500/35 bg-amber-500/8"
+          : "border-border/70 bg-surface-muted/20",
+      )}
+    >
+      <div className="flex items-start gap-2">
+        <Paperclip className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground">Dokumentacja wymagana</p>
+          {line.documentationHint?.trim() ? (
+            <p className="mt-1 text-sm leading-relaxed text-muted">{line.documentationHint.trim()}</p>
+          ) : (
+            <p className="mt-1 text-sm text-muted">
+              Dodaj zdjęcie lub plik przed oznaczeniem punktu jako Spełnia.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {attachments.length ? (
+        <ul className="grid gap-2">
+          {attachments.map((attachment) => (
+            <li
+              key={attachment.id}
+              className="flex items-center gap-3 rounded-lg border border-border/60 bg-surface/50 p-2"
+            >
+              {attachment.mediaKind === "image" && attachment.url ? (
+                <a href={attachment.url} target="_blank" rel="noreferrer" className="shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={attachment.url}
+                    alt={attachment.fileName}
+                    className="h-14 w-14 rounded-md object-cover"
+                  />
+                </a>
+              ) : (
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-surface-muted">
+                  <FileText className="h-5 w-5 text-muted" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                {attachment.url ? (
+                  <a
+                    href={attachment.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="truncate text-sm font-medium text-accent hover:underline"
+                  >
+                    {attachment.fileName}
+                  </a>
+                ) : (
+                  <p className="truncate text-sm font-medium text-foreground">{attachment.fileName}</p>
+                )}
+                {attachment.uploadedBy ? (
+                  <p className="text-[11px] text-muted">{attachment.uploadedBy}</p>
+                ) : null}
+              </div>
+              {!readOnly ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={saving || uploading}
+                  onClick={() => handleRemove(attachment.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {!readOnly && uploadContext ? (
+        <div className="flex flex-wrap gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
+            disabled={saving || uploading}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) {
+                void uploadFile(file);
+              }
+            }}
+          />
+          <input
+            ref={cameraInputRef}
+            type="file"
+            className="hidden"
+            accept="image/*"
+            capture="environment"
+            disabled={saving || uploading}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) {
+                void uploadFile(file);
+              }
+            }}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={saving || uploading}
+            onClick={() => cameraInputRef.current?.click()}
+          >
+            {uploading ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Camera className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            Zrób zdjęcie
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={saving || uploading}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {uploading ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Upload className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            Dodaj plik
+          </Button>
+        </div>
+      ) : null}
+
+      {error ? <p className="text-xs text-rose-400">{error}</p> : null}
+      {needsDocumentation && !readOnly ? (
+        <p className="text-xs text-amber-200">Bez załącznika nie oznaczysz punktu jako Spełnia.</p>
+      ) : null}
+    </div>
+  );
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Clock, MinusCircle, XCircle } from "lucide-react";
+import { ChecklistLineDocumentationPanel, type ChecklistDocumentationUploadContext } from "@/components/process/checklist-line-documentation-panel";
 import { TeamProfileSelect } from "@/components/process/team-profile-select";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +14,7 @@ import {
 import { Field, Input, Textarea } from "@/components/ui/input";
 import type { UserProfile } from "@/lib/auth/types";
 import { getUserDisplayName } from "@/lib/auth/types";
-import { checklistLineStatus } from "@/lib/process/item-payload";
+import { getChecklistDocumentationBlockReason, checklistLineStatus } from "@/lib/process/item-payload";
 import { INTERNAL_ACCEPTANCE_STATUS_STYLES } from "@/lib/internal-acceptance/status-styles";
 import {
   INTERNAL_ACCEPTANCE_STATUS_LABELS,
@@ -43,6 +44,8 @@ export function ChecklistItemDialog({
   onStatusChange,
   onFieldChange,
   onLocalFieldChange,
+  documentationUploadContext,
+  documentationBlockReason,
 }: {
   line: ChecklistLine | null;
   open: boolean;
@@ -53,6 +56,8 @@ export function ChecklistItemDialog({
   onStatusChange: (status: InternalAcceptanceStatus) => void;
   onFieldChange: (patch: Partial<ChecklistLine>) => void;
   onLocalFieldChange: (patch: Partial<ChecklistLine>) => void;
+  documentationUploadContext?: ChecklistDocumentationUploadContext;
+  documentationBlockReason?: string | null;
 }) {
   if (!line) {
     return null;
@@ -60,6 +65,8 @@ export function ChecklistItemDialog({
 
   const status = checklistLineStatus(line);
   const currentStyles = INTERNAL_ACCEPTANCE_STATUS_STYLES[status];
+  const passedBlockedReason =
+    documentationBlockReason ?? getChecklistDocumentationBlockReason(line, "PASSED");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -89,18 +96,32 @@ export function ChecklistItemDialog({
           </DialogHeader>
 
           <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-5 py-4">
+            {line.requireDocumentation || line.attachments?.length ? (
+              <ChecklistLineDocumentationPanel
+                line={line}
+                lineId={line.id}
+                readOnly={readOnly}
+                saving={saving}
+                uploadContext={documentationUploadContext}
+                onAttachmentsChange={(attachments) => onFieldChange({ attachments })}
+              />
+            ) : null}
+
             {!readOnly ? (
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {QUICK_STATUSES.map(({ status: nextStatus, label, icon: Icon }) => {
                   const styles = INTERNAL_ACCEPTANCE_STATUS_STYLES[nextStatus];
                   const selected = status === nextStatus;
+                  const blocked =
+                    nextStatus === "PASSED" && Boolean(passedBlockedReason) && !selected;
                   return (
                     <Button
                       key={nextStatus}
                       type="button"
                       size="sm"
                       variant="secondary"
-                      disabled={saving || selected}
+                      disabled={saving || selected || blocked}
+                      title={blocked ? (passedBlockedReason ?? undefined) : undefined}
                       onClick={() => onStatusChange(nextStatus)}
                       className={cn(
                         "h-auto flex-col gap-1.5 border py-3 text-xs font-semibold",
@@ -113,6 +134,10 @@ export function ChecklistItemDialog({
                   );
                 })}
               </div>
+            ) : null}
+
+            {passedBlockedReason && !readOnly && status !== "PASSED" ? (
+              <p className="text-xs text-amber-200">{passedBlockedReason}</p>
             ) : null}
 
             {!readOnly ? (

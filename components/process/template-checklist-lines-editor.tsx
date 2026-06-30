@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { moveItem, removeAt } from "@/lib/process/template-editor-utils";
 import { withChecklistSectionPositions } from "@/lib/process/item-payload";
-import type { ChecklistItemPayload, ChecklistSection } from "@/lib/process/types";
+import type { ChecklistItemPayload, ChecklistLine, ChecklistSection } from "@/lib/process/types";
 
 export function TemplateChecklistLinesEditor({
   payload,
@@ -40,19 +40,27 @@ export function TemplateChecklistLinesEditor({
     updateSections(sections.map((section) => (section.id === sectionId ? { ...section, name } : section)));
   }
 
-  function updateLine(sectionId: string, lineIndex: number, text: string) {
+  function updateLineFields(
+    sectionId: string,
+    lineIndex: number,
+    patch: Partial<ChecklistLine>,
+  ) {
     updateSections(
       sections.map((section) =>
         section.id === sectionId
           ? {
               ...section,
               lines: section.lines.map((line, index) =>
-                index === lineIndex ? { ...line, text } : line,
+                index === lineIndex ? { ...line, ...patch } : line,
               ),
             }
           : section,
       ),
     );
+  }
+
+  function updateLineText(sectionId: string, lineIndex: number, text: string) {
+    updateLineFields(sectionId, lineIndex, { text });
   }
 
   function addSection() {
@@ -158,41 +166,68 @@ export function TemplateChecklistLinesEditor({
             {section.lines.map((line, lineIndex) => (
               <div
                 key={line.id}
-                className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-surface-muted/20 p-2"
+                className="grid gap-2 rounded-lg border border-border/60 bg-surface-muted/20 p-2"
               >
-                <Input
-                  value={line.text}
-                  placeholder={`Punkt ${lineIndex + 1}`}
-                  onChange={(event) => updateLine(section.id, lineIndex, event.target.value)}
-                />
-                <div className="flex shrink-0 gap-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={lineIndex === 0}
-                    onClick={() => moveLine(section.id, lineIndex, "up")}
-                  >
-                    <ArrowUp className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={lineIndex === section.lines.length - 1}
-                    onClick={() => moveLine(section.id, lineIndex, "down")}
-                  >
-                    <ArrowDown className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => removeLine(section.id, lineIndex)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    value={line.text}
+                    placeholder={`Punkt ${lineIndex + 1}`}
+                    onChange={(event) => updateLineText(section.id, lineIndex, event.target.value)}
+                  />
+                  <div className="flex shrink-0 gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={lineIndex === 0}
+                      onClick={() => moveLine(section.id, lineIndex, "up")}
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={lineIndex === section.lines.length - 1}
+                      onClick={() => moveLine(section.id, lineIndex, "down")}
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => removeLine(section.id, lineIndex)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
+                <label className="flex items-center gap-2 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    className="rounded border-border"
+                    checked={Boolean(line.requireDocumentation)}
+                    onChange={(event) =>
+                      updateLineFields(section.id, lineIndex, {
+                        requireDocumentation: event.target.checked,
+                        documentationHint: event.target.checked ? line.documentationHint : undefined,
+                      })
+                    }
+                  />
+                  Wymagaj dokumentacji przy Spełnia
+                </label>
+                {line.requireDocumentation ? (
+                  <Input
+                    value={line.documentationHint ?? ""}
+                    placeholder="Opis wymaganej dokumentacji (np. dodaj zdjęcie szafy rack)"
+                    onChange={(event) =>
+                      updateLineFields(section.id, lineIndex, {
+                        documentationHint: event.target.value,
+                      })
+                    }
+                  />
+                ) : null}
               </div>
             ))}
 

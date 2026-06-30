@@ -71,6 +71,7 @@ export default function PublicProcessElementPage({
       {item.kind === "checklist" && item.checklist ? (
         <ProcessChecklistBoard
           initialPayload={normalizeChecklistPayload(item.checklist)}
+          projectProcessItemId={item.projectProcessItemId}
           actorName="Gość"
           publicToken={token}
         />

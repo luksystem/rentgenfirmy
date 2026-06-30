@@ -2,6 +2,8 @@ import {
   cloneTemplatePayloadForProject,
   deriveProcessItemStatus,
   emptyChecklistPayload,
+  normalizeChecklistPayload,
+  validateChecklistDocumentationRules,
 } from "@/lib/process/item-payload";
 import type { ChecklistItemPayload, ProcessTemplate } from "@/lib/process/types";
 import { flattenProcessItems } from "@/lib/process/types";
@@ -97,7 +99,12 @@ export async function saveProjectProcessItemChecklist(
   payload: ChecklistItemPayload,
   actorName?: string,
 ) {
-  const status = deriveProcessItemStatus("checklist", payload, "open");
+  const normalized = normalizeChecklistPayload(payload);
+  const documentationError = validateChecklistDocumentationRules(normalized);
+  if (documentationError) {
+    throw new Error(documentationError);
+  }
+  const status = deriveProcessItemStatus("checklist", normalized, "open");
   const supabase = getSupabase();
 
   const { data: existing, error: existingError } = await supabase
@@ -115,7 +122,7 @@ export async function saveProjectProcessItemChecklist(
   if (existing) {
     const { data, error } = await supabase
       .from("project_process_items")
-      .update(projectProcessItemToUpdate(payload, status))
+      .update(projectProcessItemToUpdate(normalized, status))
       .eq("id", existing.id)
       .select("*")
       .single();
@@ -132,7 +139,7 @@ export async function saveProjectProcessItemChecklist(
         project_id: projectId,
         template_item_id: templateItemId,
         kind: "checklist",
-        payload,
+        payload: normalized,
         status,
         created_at: now,
         updated_at: now,

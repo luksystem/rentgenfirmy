@@ -63,6 +63,17 @@ import type { InternalAcceptanceStatus } from "@/lib/internal-acceptance/types";
 
 export type ChecklistLineStatus = InternalAcceptanceStatus;
 
+export type ChecklistLineAttachment = {
+  id: string;
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  mediaKind: "image" | "file";
+  uploadedAt: string;
+  uploadedBy?: string;
+  url?: string | null;
+};
+
 export type ChecklistLine = {
   id: string;
   text: string;
@@ -75,6 +86,11 @@ export type ChecklistLine = {
   assigneeName?: string;
   assigneeId?: string;
   fixDeadline?: string;
+  /** Wymaga zdjęcia/pliku przed oznaczeniem jako Spełnia. */
+  requireDocumentation?: boolean;
+  /** Podpowiedź przy realizacji (np. „dodaj zdjęcie szafy rack”). */
+  documentationHint?: string;
+  attachments?: ChecklistLineAttachment[];
 };
 
 export type ChecklistSection = {

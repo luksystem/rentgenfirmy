@@ -4,7 +4,7 @@ import type {
   InternalAcceptanceItemState,
   InternalAcceptanceState,
 } from "@/lib/internal-acceptance/types";
-import { deriveProcessItemStatus, normalizeChecklistPayload } from "@/lib/process/item-payload";
+import { deriveProcessItemStatus, normalizeChecklistPayload, validateChecklistDocumentationRules } from "@/lib/process/item-payload";
 import type { ChecklistItemPayload } from "@/lib/process/types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { rowToProjectProcessItem } from "@/lib/supabase/process-item-mappers";
@@ -44,6 +44,10 @@ export async function savePublicChecklistPayload(
   }
 
   const normalized = normalizeChecklistPayload(payload);
+  const documentationError = validateChecklistDocumentationRules(normalized);
+  if (documentationError) {
+    throw new Error(documentationError);
+  }
   const status = deriveProcessItemStatus("checklist", normalized, resolved.instance.status);
   const now = new Date().toISOString();
 

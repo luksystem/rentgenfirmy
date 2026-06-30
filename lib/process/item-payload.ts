@@ -3,6 +3,7 @@ import { defaultKanbanTemplatePayload } from "@/lib/process/kanban-types";
 import type {
   ChecklistItemPayload,
   ChecklistLine,
+  ChecklistLineAttachment,
   ChecklistLineStatus,
   ChecklistSection,
   ProcessElementPayload,
@@ -85,6 +86,8 @@ export function cloneTemplatePayloadForProject(templatePayload: ChecklistItemPay
         text: line.text,
         checked: false,
         status: "NOT_STARTED" as const,
+        requireDocumentation: line.requireDocumentation,
+        documentationHint: line.documentationHint,
       })),
     })),
   };
@@ -122,6 +125,29 @@ export function templatePayloadFromTitle(title: string, kind: ProcessItemKind): 
   return text ? checklistPayloadFromTexts([text]) : emptyChecklistPayload();
 }
 
+function normalizeChecklistLineAttachment(entry: unknown): ChecklistLineAttachment | null {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+    return null;
+  }
+  const raw = entry as Record<string, unknown>;
+  const storagePath = typeof raw.storagePath === "string" ? raw.storagePath : "";
+  const fileName = typeof raw.fileName === "string" ? raw.fileName : "";
+  if (!storagePath || !fileName) {
+    return null;
+  }
+
+  return {
+    id: typeof raw.id === "string" ? raw.id : crypto.randomUUID(),
+    storagePath,
+    fileName,
+    mimeType: typeof raw.mimeType === "string" ? raw.mimeType : "application/octet-stream",
+    mediaKind: raw.mediaKind === "image" ? "image" : "file",
+    uploadedAt: typeof raw.uploadedAt === "string" ? raw.uploadedAt : new Date().toISOString(),
+    uploadedBy: typeof raw.uploadedBy === "string" ? raw.uploadedBy : undefined,
+    url: typeof raw.url === "string" ? raw.url : null,
+  };
+}
+
 function normalizeChecklistLine(entry: unknown): ChecklistLine | null {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     return null;
@@ -134,6 +160,9 @@ function normalizeChecklistLine(entry: unknown): ChecklistLine | null {
       text: "",
       checked: false,
       status: "NOT_STARTED" as const,
+      requireDocumentation: Boolean(raw.requireDocumentation),
+      documentationHint:
+        typeof raw.documentationHint === "string" ? raw.documentationHint : undefined,
     };
   }
   const checked = Boolean(raw.checked);
@@ -160,6 +189,14 @@ function normalizeChecklistLine(entry: unknown): ChecklistLine | null {
     assigneeName: typeof raw.assigneeName === "string" ? raw.assigneeName : undefined,
     assigneeId: typeof raw.assigneeId === "string" ? raw.assigneeId : undefined,
     fixDeadline: typeof raw.fixDeadline === "string" ? raw.fixDeadline : undefined,
+    requireDocumentation: Boolean(raw.requireDocumentation),
+    documentationHint:
+      typeof raw.documentationHint === "string" ? raw.documentationHint : undefined,
+    attachments: Array.isArray(raw.attachments)
+      ? raw.attachments
+          .map((attachment) => normalizeChecklistLineAttachment(attachment))
+          .filter((attachment): attachment is ChecklistLineAttachment => attachment !== null)
+      : undefined,
   };
 }
 
@@ -231,6 +268,34 @@ export function normalizeChecklistPayload(value: unknown): ChecklistItemPayload 
     sections: withChecklistSectionPositions(sections),
     note: typeof data.note === "string" ? data.note : undefined,
   };
+}
+
+export function getChecklistDocumentationBlockReason(
+  line: ChecklistLine,
+  nextStatus?: ChecklistLineStatus,
+): string | null {
+  const status = nextStatus ?? checklistLineStatus(line);
+  if (!line.requireDocumentation || status !== "PASSED") {
+    return null;
+  }
+  if (line.attachments?.length) {
+    return null;
+  }
+  if (line.documentationHint?.trim()) {
+    return `Dodaj dokumentację: ${line.documentationHint.trim()}`;
+  }
+  return "Ten punkt wymaga dokumentacji (zdjęcie lub plik) przed oznaczeniem jako Spełnia.";
+}
+
+export function validateChecklistDocumentationRules(payload: ChecklistItemPayload): string | null {
+  for (const line of flattenChecklistLines(payload)) {
+    const reason = getChecklistDocumentationBlockReason(line);
+    if (reason) {
+      const label = line.text.trim() ? `„${line.text.trim()}”` : "Punkt checklisty";
+      return `${label}: ${reason}`;
+    }
+  }
+  return null;
 }
 
 export function isChecklistPayloadComplete(payload: ChecklistItemPayload) {

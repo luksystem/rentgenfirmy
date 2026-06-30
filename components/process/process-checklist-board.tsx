@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Paperclip } from "lucide-react";
+import type { ChecklistDocumentationUploadContext } from "@/components/process/checklist-line-documentation-panel";
 import { ChecklistItemDialog } from "@/components/process/checklist-item-dialog";
 import { ChecklistMobileNav } from "@/components/process/checklist-mobile-nav";
 import { Field, Textarea } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import {
 import {
   checklistLineStatus,
   checklistProgress,
+  getChecklistDocumentationBlockReason,
   getChecklistSections,
   isChecklistLineComplete,
   normalizeChecklistPayload,
@@ -69,6 +71,7 @@ export function ProcessChecklistBoard({
   actorName = "Zespół",
   teamProfiles = [],
   publicToken,
+  projectProcessItemId,
   onSave,
 }: {
   initialPayload: ChecklistItemPayload;
@@ -77,6 +80,7 @@ export function ProcessChecklistBoard({
   actorName?: string;
   teamProfiles?: UserProfile[];
   publicToken?: string;
+  projectProcessItemId?: string;
   onSave?: (payload: ChecklistItemPayload) => Promise<void>;
 }) {
   const [payload, setPayload] = useState(() => normalizeChecklistPayload(initialPayload));
@@ -90,6 +94,19 @@ export function ProcessChecklistBoard({
     () => ({ id: actorId, name: actorName.trim() || "Zespół" }),
     [actorId, actorName],
   );
+
+  const documentationUploadContext = useMemo((): ChecklistDocumentationUploadContext | undefined => {
+    if (readOnly) {
+      return undefined;
+    }
+    if (publicToken) {
+      return { mode: "public", publicToken, actorName: actor.name };
+    }
+    if (projectProcessItemId) {
+      return { mode: "team", projectProcessItemId, actorName: actor.name };
+    }
+    return undefined;
+  }, [actor.name, projectProcessItemId, publicToken, readOnly]);
 
   useEffect(() => {
     setPayload(normalizeChecklistPayload(initialPayload));
@@ -196,7 +213,15 @@ export function ProcessChecklistBoard({
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex min-w-0 items-start gap-2">
                         <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", styles.dot)} />
-                        <span className="font-medium text-foreground">{line.text}</span>
+                        <span className="font-medium text-foreground">
+                          {line.text}
+                          {line.requireDocumentation ? (
+                            <Paperclip
+                              className="ml-1.5 inline h-3.5 w-3.5 align-text-bottom text-amber-300/90"
+                              aria-label="Wymaga dokumentacji"
+                            />
+                          ) : null}
+                        </span>
                       </div>
                       <span
                         className={cn(
@@ -251,7 +276,12 @@ export function ProcessChecklistBoard({
         readOnly={readOnly}
         saving={activeLineId !== null && savingLineId === activeLineId}
         onStatusChange={(status: InternalAcceptanceStatus) => {
-          if (activeSectionId && activeLineId) {
+          if (activeSectionId && activeLineId && activeEntry) {
+            const blockReason = getChecklistDocumentationBlockReason(activeEntry.line, status);
+            if (blockReason) {
+              setError(blockReason);
+              return;
+            }
             void persistLinePatch(activeSectionId, activeLineId, { status });
           }
         }}
@@ -265,6 +295,7 @@ export function ProcessChecklistBoard({
             handleLocalLinePatch(activeSectionId, activeLineId, patch);
           }
         }}
+        documentationUploadContext={documentationUploadContext}
       />
 
       <ChecklistMobileNav
