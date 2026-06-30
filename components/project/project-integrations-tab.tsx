@@ -347,11 +347,18 @@ function IntegrationCard({
         `/api/integrations/${encodeURIComponent(integration.id)}/test`,
         { method: "POST", credentials: "include" },
       );
-      const payload = (await response.json()) as { message?: string; error?: string; ok?: boolean };
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Test połączenia nie powiódł się.");
-      }
-      setTestMessage(payload.message ?? (payload.ok ? "Połączenie OK." : "Błąd połączenia."));
+      const payload = (await response.json()) as {
+      message?: string;
+      error?: string;
+      ok?: boolean;
+    };
+    if (!response.ok) {
+      throw new Error(payload.error ?? "Test połączenia nie powiódł się.");
+    }
+    if (payload.ok === false) {
+      throw new Error(payload.message ?? "Test połączenia nie powiódł się.");
+    }
+    setTestMessage(payload.message ?? "Połączenie OK.");
       await onChanged();
     } catch (testError) {
       setError(testError instanceof Error ? testError.message : "Błąd testu.");
@@ -517,8 +524,8 @@ export function ProjectIntegrationsTab({ projectId }: { projectId: string }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canManage = profile ? isIntegrationOperator(profile.role) : false;
-  const canTest = canManage;
+  const canManage = isAdministrator;
+  const canTest = profile ? isIntegrationOperator(profile.role) : false;
 
   const refresh = useCallback(async () => {
     await ensureProjectIntegrations(projectId, { force: true, includeAudit: isAdministrator });

@@ -63,7 +63,13 @@ export async function resolveLoxoneBaseUrl(params: LoxoneFetchParams): Promise<s
       );
     }
 
-    const payload = (await response.json()) as { url?: string };
+    const raw = await response.text();
+    let payload: { url?: string } = {};
+    try {
+      payload = raw ? (JSON.parse(raw) as { url?: string }) : {};
+    } catch {
+      throw new Error("CloudDNS zwrócił nieoczekiwany format odpowiedzi. Sprawdź numer seryjny.");
+    }
     if (!payload.url?.trim()) {
       throw new Error("CloudDNS nie zwrócił adresu Miniservera.");
     }
@@ -82,6 +88,45 @@ function buildAuthHeader(loginUsername: string | null, password: string) {
   const user = loginUsername?.trim() || "admin";
   const token = Buffer.from(`${user}:${password}`, "utf8").toString("base64");
   return `Basic ${token}`;
+}
+
+function parseLoxoneXml(text: string): LoxoneLLResponse {
+  const codeMatch = text.match(/\bCode="([^"]+)"/);
+  const controlMatch = text.match(/\bcontrol="([^"]*)"/);
+  const valueMatch = text.match(/\bvalue="([^"]*)"/);
+
+  let value: unknown = valueMatch?.[1];
+  if (typeof value === "string") {
+    const numeric = Number.parseFloat(value.replace(",", "."));
+    if (!Number.isNaN(numeric) && /^-?\d/.test(value.trim())) {
+      value = numeric;
+    }
+  }
+
+  return {
+    LL: {
+      Code: codeMatch?.[1],
+      control: controlMatch?.[1],
+      value,
+    },
+  };
+}
+
+function parseLoxoneResponse(text: string): LoxoneLLResponse {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return {};
+  }
+
+  if (trimmed.startsWith("{")) {
+    return JSON.parse(trimmed) as LoxoneLLResponse;
+  }
+
+  if (trimmed.startsWith("<")) {
+    return parseLoxoneXml(trimmed);
+  }
+
+  throw new Error("Nierozpoznany format odpowiedzi Miniservera.");
 }
 
 export async function loxoneRequest(
@@ -110,9 +155,14 @@ export async function loxoneRequest(
 
   let data: LoxoneLLResponse = {};
   try {
-    data = text ? (JSON.parse(text) as LoxoneLLResponse) : {};
-  } catch {
-    throw new Error(`Nieprawidłowa odpowiedź Miniservera (HTTP ${response.status}).`);
+    data = text ? parseLoxoneResponse(text) : {};
+  } catch (error) {
+    const preview = text.trim().slice(0, 120).replace(/\s+/g, " ");
+    throw new Error(
+      error instanceof Error
+        ? `${error.message} (HTTP ${response.status}${preview ? `: ${preview}` : ""})`
+        : `Nieprawidłowa odpowiedź Miniservera (HTTP ${response.status}).`,
+    );
   }
 
   if (!response.ok) {
