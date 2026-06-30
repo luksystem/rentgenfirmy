@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
   Briefcase,
+  Cable,
   ClipboardCheck,
   FileText,
   FolderOpen,
@@ -23,6 +24,7 @@ import { ProjectSystemCredentialsPanel } from "@/components/dashboard/project-sy
 import { ProjectSpecificationPanel } from "@/components/dashboard/project-specification-panel";
 import { ProjectTradesPanel } from "@/components/dashboard/project-trades-panel";
 import { StageSatisfactionPrompt } from "@/components/dashboard/stage-satisfaction-prompt";
+import { ProjectIntegrationsTab } from "@/components/project/project-integrations-tab";
 import { ClientProjectSettingsPanel } from "@/components/dashboard/client-project-settings-panel";
 import { ClientOffersPanel } from "@/components/dashboard/client-offers-panel";
 import { ClientDashboardHome } from "@/components/dashboard/client-dashboard-home";
@@ -51,6 +53,8 @@ import { fetchProjectKanbanPublicLinks } from "@/lib/supabase/kanban-repository"
 import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { isIntegrationOperator } from "@/lib/auth/types";
+import { useAuthStore } from "@/store/auth-store";
 import { useProjectAgreementsRealtime } from "@/hooks/use-project-agreements-realtime";
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
 import { useProjectSatisfactionStore } from "@/store/project-satisfaction-store";
@@ -66,6 +70,7 @@ const EMPTY_SATISFACTION: ProjectSatisfactionBundle = {
 type ClientDashboardTab =
   | "home"
   | "project"
+  | "integrations"
   | "overview"
   | "process"
   | "agreements"
@@ -117,9 +122,16 @@ const TEAM_PROJECT_TAB = {
   icon: Briefcase,
 };
 
+const TEAM_INTEGRATIONS_TAB = {
+  id: "integrations" as const,
+  label: "Integracje",
+  icon: Cable,
+};
+
 const teamTabsWithProject = [
   TEAM_MAIN_TAB_CONFIG[0],
   TEAM_PROJECT_TAB,
+  TEAM_INTEGRATIONS_TAB,
   ...TEAM_MAIN_TAB_CONFIG.slice(1),
 ];
 
@@ -246,6 +258,10 @@ export function ClientDashboardView({
     storeAgreements.length > 0 ? storeAgreements : (seedAgreements ?? storeAgreements);
 
   const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? projects[0];
+  const profile = useAuthStore((state) => state.profile);
+  const isAdministrator = useAuthStore((state) => state.isAdministrator);
+  const canViewIntegrations =
+    !readOnly && (isAdministrator || (profile ? isIntegrationOperator(profile.role) : false));
 
   useEffect(() => {
     if (seedKanbanPublicLinks !== undefined) {
@@ -419,6 +435,7 @@ export function ClientDashboardView({
   });
 
   const teamMainTabs = teamTabsWithProject.filter((tab) => {
+    if (tab.id === "integrations" && !canViewIntegrations) return false;
     if (tab.id === "agreements" && !enableAgreements) return false;
     if (tab.id === "offers" && !enableOffers) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
@@ -493,6 +510,14 @@ export function ClientDashboardView({
             subtleStars
           />
         ) : null}
+      </div>
+    );
+  }
+
+  function renderIntegrationsSection() {
+    return (
+      <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
+        <ProjectIntegrationsTab projectId={selectedProject.id} />
       </div>
     );
   }
@@ -935,6 +960,8 @@ export function ClientDashboardView({
         return renderHomeSection();
       case "project":
         return renderProjectSettingsSection();
+      case "integrations":
+        return canViewIntegrations ? renderIntegrationsSection() : null;
       case "overview":
         return renderOverviewSection((nextTab) => handleSelectTab(nextTab));
       case "process":

@@ -268,7 +268,7 @@ function IntegrationFormFields({
           checked={form.isActive ?? true}
           onChange={(event) => onChange({ ...form, isActive: event.target.checked })}
         />
-        Integracja aktywna (cykliczny odczyt co 5 min)
+        Integracja aktywna (cykliczny odczyt raz dziennie)
       </label>
     </div>
   );
@@ -297,7 +297,11 @@ function TelemetryBadge({ snapshot }: { snapshot: ProjectTelemetrySnapshot | und
         {snapshot.onlineStatus ? "Online" : "Offline"}
       </span>
       {snapshot.temperature != null ? (
-        <span className="font-semibold text-foreground">{snapshot.temperature.toFixed(1)}°C</span>
+        snapshot.temperature === 0 || snapshot.temperature === 1 ? (
+          <span className="font-semibold text-foreground">Stan: {snapshot.temperature}</span>
+        ) : (
+          <span className="font-semibold text-foreground">{snapshot.temperature.toFixed(1)}°C</span>
+        )
       ) : null}
       <span className="text-muted">{formatMeasuredAt(snapshot.measuredAt)}</span>
     </div>
@@ -578,7 +582,8 @@ export function ProjectIntegrationsTab({ projectId }: { projectId: string }) {
             Połączenia techniczne
           </p>
           <p className="mt-1 text-xs text-muted">
-            Loxone: odczyt temperatury z Virtual Input co 5 minut. Hasła nie są zwracane do
+            Loxone: odczyt Virtual Input (cyfrowe 0/1; analogowe — temperatura — wkrótce). Cron raz
+            dziennie. Hasła nie są zwracane do
             przeglądarki po zapisie.
           </p>
         </div>

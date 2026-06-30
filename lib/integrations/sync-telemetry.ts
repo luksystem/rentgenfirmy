@@ -44,13 +44,39 @@ export async function testIntegrationConnection(
   const started = Date.now();
 
   try {
-    const result = await testLoxoneConnection(toLoxoneParams(integration, password));
+    const params = toLoxoneParams(integration, password);
+    const connection = await testLoxoneConnection(params);
+    const config = integration.configJson as LoxoneIntegrationConfig;
+    const reading = await readLoxoneVirtualInputState(params);
+    const measuredAt = new Date().toISOString();
+    const value = reading.temperature;
+
+    await insertProjectTelemetry({
+      projectId: integration.projectId,
+      integrationId: integration.id,
+      temperature: value,
+      onlineStatus: true,
+      sourceName: config.locationLabel?.trim() || integration.name,
+      measuredAt,
+      rawPayloadJson: reading.rawPayload as Record<string, unknown>,
+    });
+
+    await markIntegrationSyncResult(integrationId, { ok: true });
+
+    const valueLabel =
+      value === 0 || value === 1 ? `stan ${value}` : `${value.toFixed(1)}°C`;
+
     const payload: IntegrationTestResult = {
       ok: true,
-      latencyMs: result.latencyMs,
+      latencyMs: connection.latencyMs + reading.latencyMs,
       online: true,
-      message: result.message,
-      details: result.details,
+      message: `Połączenie działa. Odczyt: ${valueLabel}.`,
+      details: {
+        ...connection.details,
+        value,
+        rawValue: reading.rawValue,
+        baseUrl: reading.baseUrl,
+      },
     };
 
     await appendIntegrationAuditLog({
@@ -59,7 +85,7 @@ export async function testIntegrationConnection(
       action: "test_connection",
       actorUserId: actor?.userId ?? null,
       actorName: actor?.name ?? "System",
-      metadataJson: { ok: true, latencyMs: result.latencyMs },
+      metadataJson: { ok: true, latencyMs: payload.latencyMs, value },
     });
 
     return payload;

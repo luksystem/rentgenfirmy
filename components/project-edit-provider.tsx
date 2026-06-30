@@ -109,10 +109,12 @@ export function ProjectEditProvider({ children }: { children: ReactNode }) {
   const updateProject = useAppStore((state) => state.updateProject);
   const isSaving = useAppStore((state) => state.isSaving);
   const profile = useAuthStore((state) => state.profile);
+  const isAdministrator = useAuthStore((state) => state.isAdministrator);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ProjectEditTab>("details");
 
-  const showIntegrationsTab = profile ? isIntegrationOperator(profile.role) : false;
+  const showIntegrationsTab =
+    isAdministrator || (profile ? isIntegrationOperator(profile.role) : false);
 
   const editingProject = editingProjectId
     ? projects.find((project) => project.id === editingProjectId)

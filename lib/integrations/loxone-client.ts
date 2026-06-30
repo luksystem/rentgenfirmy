@@ -282,7 +282,7 @@ export async function readLoxoneVirtualInputState(params: LoxoneFetchParams) {
 
   if (Number.isNaN(numeric)) {
     throw new Error(
-      `Nie udało się odczytać temperatury z punktu „${pointName}” (wartość: ${String(rawValue)}).`,
+      `Nie udało się odczytać wartości z punktu „${pointName}” (odpowiedź: ${String(rawValue)}).`,
     );
   }
 
