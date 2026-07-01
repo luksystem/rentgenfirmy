@@ -64,6 +64,7 @@ export async function createProjectAgreement(
       proposed_cost_vat_rate: normalized.proposedCostVatRate ?? null,
       cost_note: normalized.costNote?.trim() || null,
       proposed_warranty_end_date: normalized.proposedWarrantyEndDate,
+      communication_protocols: normalized.communicationProtocols ?? [],
       created_by_name: author.name.trim() || "Zespół",
       created_by_side: author.side,
       position,
@@ -120,6 +121,7 @@ export async function updateProjectAgreement(
       proposed_cost_vat_rate: normalized.proposedCostVatRate ?? null,
       cost_note: normalized.costNote?.trim() || null,
       proposed_warranty_end_date: normalized.proposedWarrantyEndDate,
+      communication_protocols: normalized.communicationProtocols ?? [],
       updated_at: new Date().toISOString(),
     })
     .eq("id", agreementId)

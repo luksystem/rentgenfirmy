@@ -16,6 +16,7 @@ import {
   Link2,
   Receipt,
   Star,
+  StickyNote,
 } from "lucide-react";
 import { ProjectAgreementsPanel } from "@/components/dashboard/project-agreements-panel";
 import { ProjectSatisfactionPanel } from "@/components/dashboard/project-satisfaction-panel";
@@ -24,6 +25,7 @@ import { ProjectSystemCredentialsPanel } from "@/components/dashboard/project-sy
 import { ProjectSpecificationPanel } from "@/components/dashboard/project-specification-panel";
 import { ProjectTradesPanel } from "@/components/dashboard/project-trades-panel";
 import { StageSatisfactionPrompt } from "@/components/dashboard/stage-satisfaction-prompt";
+import { ProjectMeetingNotesPanel } from "@/components/dashboard/project-meeting-notes-panel";
 import { ProjectIntegrationsTab } from "@/components/project/project-integrations-tab";
 import { ClientProjectSettingsPanel } from "@/components/dashboard/client-project-settings-panel";
 import { ClientOffersPanel } from "@/components/dashboard/client-offers-panel";
@@ -43,6 +45,8 @@ import { isAgreementPendingAttention } from "@/lib/dashboard/agreement-types";
 import { mergeAgreementsById } from "@/lib/dashboard/merge-agreements";
 import type { ProjectDashboardContent } from "@/lib/dashboard/content-types";
 import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
+import type { ProjectMeetingNote } from "@/lib/dashboard/meeting-note-types";
+import { fetchProjectMeetingNotes } from "@/lib/supabase/project-meeting-note-repository";
 import type { ProjectTrade } from "@/lib/dashboard/trade-types";
 import type { ProjectSatisfactionBundle } from "@/lib/dashboard/satisfaction-types";
 import type { SystemCredentialMeta } from "@/lib/dashboard/system-credentials-types";
@@ -80,6 +84,7 @@ type ClientDashboardTab =
   | "specification"
   | "trades"
   | "satisfaction"
+  | "notes"
   | "credentials"
   | "links";
 
@@ -97,6 +102,7 @@ const PUBLIC_CLIENT_TAB_CONFIG: Array<{
   { id: "offers", label: "Oferty", icon: Receipt },
   { id: "specification", label: "Specyfikacja", icon: FileText },
   { id: "trades", label: "Branże", icon: HardHat },
+  { id: "notes", label: "Notatki", icon: StickyNote },
   { id: "satisfaction", label: "Ocena", icon: Star },
   { id: "credentials", label: "Hasła", icon: KeyRound },
   { id: "links", label: "Linki", icon: Link2 },
@@ -113,6 +119,7 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "offers", label: "Oferty", icon: Receipt },
   { id: "specification", label: "Specyfikacja", icon: FileText },
   { id: "trades", label: "Branże", icon: HardHat },
+  { id: "notes", label: "Notatki", icon: StickyNote },
   { id: "satisfaction", label: "Ocena", icon: Star },
   { id: "credentials", label: "Hasła", icon: KeyRound },
   { id: "links", label: "Linki", icon: Link2 },
@@ -154,6 +161,7 @@ export function ClientDashboardView({
   enableSpecification = true,
   enableTrades = true,
   enableSatisfaction = true,
+  enableMeetingNotes = true,
   enableCredentials = true,
   enableContent = true,
   processProgress,
@@ -161,6 +169,7 @@ export function ClientDashboardView({
   seedOffers,
   seedSpecificationItems,
   seedTrades,
+  seedMeetingNotes,
   seedSatisfaction,
   seedCredentials,
   seedContent,
@@ -190,6 +199,7 @@ export function ClientDashboardView({
   enableSpecification?: boolean;
   enableTrades?: boolean;
   enableSatisfaction?: boolean;
+  enableMeetingNotes?: boolean;
   enableCredentials?: boolean;
   enableContent?: boolean;
   processProgress?: { percent: number; completed: number; total: number } | null;
@@ -198,6 +208,7 @@ export function ClientDashboardView({
   pendingOffersCount?: number;
   seedSpecificationItems?: ProjectSpecificationItem[];
   seedTrades?: ProjectTrade[];
+  seedMeetingNotes?: ProjectMeetingNote[];
   seedSatisfaction?: ProjectSatisfactionBundle;
   seedCredentials?: SystemCredentialMeta[];
   seedContent?: ProjectDashboardContent[];
@@ -215,6 +226,7 @@ export function ClientDashboardView({
 }) {
   const [activeTab, setActiveTab] = useState<ClientDashboardTab>(initialTab ?? "home");
   const [kanbanPublicLinks, setKanbanPublicLinks] = useState<Record<string, string>>({});
+  const [meetingNotes, setMeetingNotes] = useState<ProjectMeetingNote[]>(seedMeetingNotes ?? []);
   const agreementsSyncKeyRef = useRef("");
 
   const handleSelectTab = useCallback(
@@ -304,6 +316,35 @@ export function ClientDashboardView({
       cancelled = true;
     };
   }, [seedKanbanPublicLinks, selectedProjectId]);
+
+  useEffect(() => {
+    if (seedMeetingNotes !== undefined) {
+      setMeetingNotes(seedMeetingNotes);
+      return;
+    }
+
+    if (!selectedProjectId || !enableMeetingNotes) {
+      setMeetingNotes([]);
+      return;
+    }
+
+    let cancelled = false;
+    void fetchProjectMeetingNotes(selectedProjectId, { publishedOnly: readOnly })
+      .then((loaded) => {
+        if (!cancelled) {
+          setMeetingNotes(loaded);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMeetingNotes([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [enableMeetingNotes, readOnly, seedMeetingNotes, selectedProjectId]);
 
   useEffect(() => {
     if (!enableAgreements || !selectedProjectId || seedAgreements === undefined) {
@@ -442,6 +483,7 @@ export function ClientDashboardView({
     if (tab.id === "offers" && !enableOffers) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
     if (tab.id === "trades" && !enableTrades) return false;
+    if (tab.id === "notes" && !enableMeetingNotes) return false;
     if (tab.id === "satisfaction" && !enableSatisfaction) return false;
     if (tab.id === "credentials" && !enableCredentials) return false;
     return true;
@@ -453,6 +495,7 @@ export function ClientDashboardView({
     if (tab.id === "offers" && !enableOffers) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
     if (tab.id === "trades" && !enableTrades) return false;
+    if (tab.id === "notes" && !enableMeetingNotes) return false;
     if (tab.id === "satisfaction" && !enableSatisfaction) return false;
     if (tab.id === "credentials" && !enableCredentials) return false;
     return true;
@@ -710,6 +753,7 @@ export function ClientDashboardView({
         showTeamSatisfactionSummary={!readOnly && enableSatisfaction}
         onUpdateClient={readOnly ? undefined : handleUpdateClient}
         isSavingClient={isSavingClient}
+        meetingNotes={meetingNotes}
       />
       </div>
     );
@@ -787,6 +831,20 @@ export function ClientDashboardView({
           Dodaj branże projektu — będą dostępne przy wyborze roli akceptacji w ustaleniach.
         </p>
         <ProjectTradesPanel projectId={selectedProject.id} seedTrades={seedTrades} />
+      </div>
+    );
+  }
+
+  function renderMeetingNotesPanel() {
+    return (
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
+        <h2 className="mb-3 text-base font-semibold text-foreground">Notatki ze spotkań</h2>
+        <ProjectMeetingNotesPanel
+          projectId={selectedProject.id}
+          mode={readOnly ? "client" : "team"}
+          authorName={readOnly ? clientAuthorName : teamAuthorName}
+          seedNotes={seedMeetingNotes}
+        />
       </div>
     );
   }
@@ -989,6 +1047,8 @@ export function ClientDashboardView({
         return enableSpecification ? renderSpecificationPanel() : null;
       case "trades":
         return enableTrades ? renderTradesPanel() : null;
+      case "notes":
+        return enableMeetingNotes ? renderMeetingNotesPanel() : null;
       case "satisfaction":
         return enableSatisfaction ? renderSatisfactionPanel() : null;
       case "credentials":

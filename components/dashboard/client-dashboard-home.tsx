@@ -8,6 +8,7 @@ import {
   ExternalLink,
   GitBranch,
   LayoutGrid,
+  NotebookPen,
   Receipt,
   Shield,
   Star,
@@ -33,6 +34,10 @@ import {
   isAgreementPendingAttention,
   type ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";
+import {
+  isRecentPublishedMeetingNote,
+  type ProjectMeetingNote,
+} from "@/lib/dashboard/meeting-note-types";
 import {
   formatWarrantyEndDate,
   formatProjectDuration,
@@ -391,6 +396,7 @@ export function ClientDashboardHome({
   showTeamSatisfactionSummary = false,
   onUpdateClient,
   isSavingClient = false,
+  meetingNotes = [],
 }: {
   client: Client;
   project: Project;
@@ -402,7 +408,7 @@ export function ClientDashboardHome({
   pendingAgreementsCount: number;
   pendingOffersCount?: number;
   pendingWarrantyCount: number;
-  onOpenTab?: (tab: "agreements" | "offers" | "process" | "home" | "satisfaction") => void;
+  onOpenTab?: (tab: "agreements" | "offers" | "process" | "home" | "satisfaction" | "notes") => void;
   clientSpace?: DashboardSpace | null;
   /** Panel włączania linku publicznego dashboardu — tylko widok zespołu. */
   showPublicLinkPanel?: boolean;
@@ -422,6 +428,7 @@ export function ClientDashboardHome({
   showTeamSatisfactionSummary?: boolean;
   onUpdateClient?: (input: ClientInput) => Promise<void>;
   isSavingClient?: boolean;
+  meetingNotes?: ProjectMeetingNote[];
 }) {
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const pendingAgreements = agreements.filter(
@@ -435,6 +442,7 @@ export function ClientDashboardHome({
     (entry) => entry.discussionOpen && entry.status !== "pending_client",
   ).length;
   const pendingAcceptanceOnlyCount = pendingAgreements.length - pendingDiscussionCount;
+  const recentMeetingNotes = meetingNotes.filter((note) => isRecentPublishedMeetingNote(note));
 
   return (
     <div className="grid min-w-0 max-w-full gap-4 overflow-x-hidden">
@@ -500,6 +508,35 @@ export function ClientDashboardHome({
             subtleStars
             className="rounded-2xl border border-border/80 bg-surface-muted/20 px-3 py-2.5"
           />
+        </div>
+      ) : null}
+
+      {recentMeetingNotes.length > 0 ? (
+        <div className="rounded-2xl border border-sky-500/40 bg-sky-500/10 p-4">
+          <div className="flex items-start gap-3">
+            <NotebookPen className="mt-0.5 h-5 w-5 shrink-0 text-sky-200" />
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-sky-100">
+                {readOnly ? "Nowa notatka ze spotkania" : "Opublikowane notatki ze spotkań"}
+              </p>
+              <p className="mt-1 text-sm text-sky-200/90">
+                {recentMeetingNotes.length === 1
+                  ? `„${recentMeetingNotes[0]?.title || "Notatka ze spotkania"}” — opublikowana w ostatnich 14 dniach.`
+                  : `${recentMeetingNotes.length} notatki opublikowane w ostatnich 14 dniach.`}
+              </p>
+              {onOpenTab ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="mt-3"
+                  onClick={() => onOpenTab("notes")}
+                >
+                  Przejdź do notatek
+                </Button>
+              ) : null}
+            </div>
+          </div>
         </div>
       ) : null}
 

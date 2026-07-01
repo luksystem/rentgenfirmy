@@ -45,6 +45,7 @@ type AgreementRow = {
   public_enabled: boolean;
   discussion_open: boolean;
   active_version_id: string | null;
+  communication_protocols?: string[] | null;
   created_at: string;
   updated_at: string;
 };
@@ -89,6 +90,9 @@ export function rowToAgreement(row: AgreementRow): ProjectClientAgreement {
     publicEnabled: row.public_enabled ?? false,
     discussionOpen: row.discussion_open ?? false,
     activeVersionId: row.active_version_id ?? null,
+    communicationProtocols: Array.isArray(row.communication_protocols)
+      ? row.communication_protocols.filter(Boolean)
+      : [],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

@@ -42,6 +42,7 @@ import { fetchAgreementApproverRoles } from "@/lib/supabase/project-agreement-co
 import { cn, formatDate } from "@/lib/utils";
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
 import { useProjectTradeStore } from "@/store/project-trade-store";
+import { useAppStore } from "@/store/app-store";
 
 const EMPTY_TRADES: import("@/lib/dashboard/trade-types").ProjectTrade[] = [];
 
@@ -68,6 +69,7 @@ function emptyInput(): ProjectAgreementInput {
     proposedCostVatRate: DEFAULT_AGREEMENT_VAT_RATE,
     costNote: "",
     publicEnabled: false,
+    communicationProtocols: [],
     approverRoles: [
       { label: TEAM_APPROVER_ROLE_LABEL, isRequired: true, isTeamRole: true },
       { label: "Klient", isRequired: true, isClientRole: true },
@@ -86,6 +88,7 @@ function agreementToInput(agreement: ProjectClientAgreement): ProjectAgreementIn
     costNote: agreement.costNote ?? "",
     proposedWarrantyEndDate: agreement.proposedWarrantyEndDate ?? "",
     publicEnabled: agreement.publicEnabled,
+    communicationProtocols: agreement.communicationProtocols ?? [],
     approverRoles: [
       { label: TEAM_APPROVER_ROLE_LABEL, isRequired: true, isTeamRole: true },
       { label: "Klient", isRequired: true, isClientRole: true },
@@ -190,6 +193,13 @@ function AgreementCard({
 
       {agreement.body ? (
         <p className="break-words whitespace-pre-wrap text-sm text-muted">{agreement.body}</p>
+      ) : null}
+
+      {agreement.communicationProtocols?.length ? (
+        <p className="text-sm text-foreground">
+          Protokoły:{" "}
+          <span className="font-medium">{agreement.communicationProtocols.join(", ")}</span>
+        </p>
       ) : null}
 
       {costLabel ? <p className="text-sm font-medium text-foreground">Koszt: {costLabel}</p> : null}
@@ -441,6 +451,9 @@ export function ProjectAgreementsPanel({
     (state) => state.byProject[projectId] ?? EMPTY_TRADES,
   );
   const ensureTrades = useProjectTradeStore((state) => state.ensureTrades);
+  const communicationProtocolOptions = useAppStore(
+    (state) => state.fieldOptions.communicationProtocols,
+  );
 
   const agreements = useMemo(
     () => mergeAgreementsById(storeAgreements, seedAgreements),
@@ -789,6 +802,49 @@ export function ProjectAgreementsPanel({
                 placeholder="np. wycena orientacyjna, do potwierdzenia po pomiarach"
               />
             </Field>
+
+            {communicationProtocolOptions.length > 0 ? (
+              <div className="rounded-xl border border-border/70 bg-surface-muted/10 p-3">
+                <p className="text-sm font-medium text-foreground">Protokoły komunikacyjne (opcjonalnie)</p>
+                <p className="mb-2 text-xs text-muted">
+                  Zaznacz protokoły, których dotyczy to ustalenie — lista w Ustawienia → Katalogi.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {communicationProtocolOptions.map((protocol) => {
+                    const selected = (form.communicationProtocols ?? []).includes(protocol);
+                    return (
+                      <label
+                        key={protocol}
+                        className={cn(
+                          "inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                          selected
+                            ? "border-accent/50 bg-accent/10 text-foreground"
+                            : "border-border/70 text-muted hover:border-accent/30",
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={selected}
+                          onChange={() =>
+                            setForm((current) => {
+                              const currentProtocols = current.communicationProtocols ?? [];
+                              return {
+                                ...current,
+                                communicationProtocols: selected
+                                  ? currentProtocols.filter((item) => item !== protocol)
+                                  : [...currentProtocols, protocol],
+                              };
+                            })
+                          }
+                        />
+                        {protocol}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
 
             <div className="rounded-xl border border-border/70 bg-surface-muted/10 p-3">
               <label className="flex items-center gap-2 text-sm text-foreground">

@@ -42,6 +42,7 @@ export type ProjectClientAgreement = {
   publicEnabled: boolean;
   discussionOpen: boolean;
   activeVersionId: string | null;
+  communicationProtocols: string[];
   createdAt: string;
   updatedAt: string;
 };
@@ -56,6 +57,7 @@ export type ProjectAgreementInput = {
   costNote?: string | null;
   proposedWarrantyEndDate?: string | null;
   publicEnabled?: boolean;
+  communicationProtocols?: string[];
   approverRoles?: import("@/lib/dashboard/agreement-collaboration-types").AgreementApproverRoleInput[];
 };
 
@@ -74,6 +76,7 @@ export function normalizeProjectAgreementInput(input: ProjectAgreementInput): Pr
     body: input.body.trim(),
     costNote: input.costNote?.trim() || undefined,
     proposedWarrantyEndDate: normalizeAgreementOptionalDate(input.proposedWarrantyEndDate),
+    communicationProtocols: [...new Set((input.communicationProtocols ?? []).map((item) => item.trim()).filter(Boolean))],
   };
 }
 

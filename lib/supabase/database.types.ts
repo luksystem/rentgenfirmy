@@ -187,6 +187,7 @@ export type ProjectClientAgreementRow = {
   public_enabled: boolean;
   discussion_open: boolean;
   active_version_id: string | null;
+  communication_protocols: string[] | null;
   created_at: string;
   updated_at: string;
 };
@@ -214,6 +215,7 @@ export type ProjectClientAgreementInsert = {
   public_enabled?: boolean;
   discussion_open?: boolean;
   active_version_id?: string | null;
+  communication_protocols?: string[] | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -439,6 +441,20 @@ export type ProjectTradeRow = {
   email: string;
   phone: string;
   description: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectMeetingNoteRow = {
+  id: string;
+  project_id: string;
+  title: string;
+  body: string;
+  meeting_at: string | null;
+  author_name: string;
+  status: string;
+  published_at: string | null;
   position: number;
   created_at: string;
   updated_at: string;
@@ -918,6 +934,12 @@ export type Database = {
         Row: ProjectTradeRow;
         Insert: Partial<ProjectTradeRow> & Pick<ProjectTradeRow, "project_id" | "name">;
         Update: Partial<ProjectTradeRow>;
+        Relationships: [];
+      };
+      project_meeting_notes: {
+        Row: ProjectMeetingNoteRow;
+        Insert: Partial<ProjectMeetingNoteRow> & Pick<ProjectMeetingNoteRow, "project_id">;
+        Update: Partial<ProjectMeetingNoteRow>;
         Relationships: [];
       };
       project_agreement_fulfillments: {
