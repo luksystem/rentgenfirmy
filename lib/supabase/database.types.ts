@@ -483,6 +483,23 @@ export type ProjectInvoiceRow = {
   updated_at: string;
 };
 
+export type ProjectDocumentRow = {
+  id: string;
+  project_id: string | null;
+  client_id: string | null;
+  category: string;
+  title: string;
+  description: string;
+  storage_path: string | null;
+  file_name: string | null;
+  mime_type: string | null;
+  size_bytes: number | null;
+  source: string;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ProjectAgreementFulfillmentRow = {
   id: string;
   project_id: string;
@@ -969,6 +986,12 @@ export type Database = {
         Row: ProjectInvoiceRow;
         Insert: Partial<ProjectInvoiceRow> & Pick<ProjectInvoiceRow, "title">;
         Update: Partial<ProjectInvoiceRow>;
+        Relationships: [];
+      };
+      project_documents: {
+        Row: ProjectDocumentRow;
+        Insert: Partial<ProjectDocumentRow> & Pick<ProjectDocumentRow, "title">;
+        Update: Partial<ProjectDocumentRow>;
         Relationships: [];
       };
       project_agreement_fulfillments: {

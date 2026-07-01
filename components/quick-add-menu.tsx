@@ -59,9 +59,9 @@ export const QUICK_ADD_MENU_ITEMS: QuickAddMenuItem[] = [
     icon: Receipt,
   },
   {
-    href: "/dokumenty",
+    href: "/dokumenty/nowy",
     label: "Dokument",
-    description: "Zajawka — zdjęcie, skan lub PDF (wkrótce)",
+    description: "Zdjęcie, skan lub PDF powiązany z klientem lub projektem",
     icon: FileUp,
   },
   {

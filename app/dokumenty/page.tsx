@@ -1,5 +1,8 @@
+import Link from "next/link";
+import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent } from "@/components/ui/card";
+import { ProjectDocumentList } from "@/components/documents/project-document-list";
+import { Button } from "@/components/ui/button";
 
 export default function DokumentyPage() {
   return (
@@ -7,14 +10,17 @@ export default function DokumentyPage() {
       <PageHeader
         eyebrow="Dokumentacja"
         title="Dokumenty"
-        description="Moduł w przygotowaniu — zdjęcia, skany i pliki PDF powiązane z klientem lub projektem."
+        description="Zdjęcia, skany, plany i pliki PDF powiązane z klientem lub projektem."
+        action={
+          <Button asChild>
+            <Link href="/dokumenty/nowy">
+              <Plus className="h-4 w-4" />
+              Dodaj dokument
+            </Link>
+          </Button>
+        }
       />
-      <Card>
-        <CardContent className="py-6 text-sm text-muted">
-          Wkrótce: upload z telefonu, kategoryzacja i szybkie dodawanie z tablicy wdrożeń do
-          dokumentacji projektu.
-        </CardContent>
-      </Card>
+      <ProjectDocumentList />
     </>
   );
 }
