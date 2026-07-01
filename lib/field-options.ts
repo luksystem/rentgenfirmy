@@ -26,6 +26,15 @@ export type TradeCatalogItem = {
   name: string;
   communicationProtocols: string[];
   description: string;
+  company?: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  addressStreet?: string;
+  addressCity?: string;
+  addressPostalCode?: string;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 export type FieldOptions = {
@@ -367,7 +376,7 @@ function normalizeTradeCatalogItems(input?: unknown): TradeCatalogItem[] {
   const seen = new Set<string>();
 
   return input
-    .map((value) => {
+    .map((value): TradeCatalogItem | null => {
       if (!value || typeof value !== "object" || !("name" in value)) {
         return null;
       }
@@ -388,6 +397,23 @@ function normalizeTradeCatalogItems(input?: unknown): TradeCatalogItem[] {
         name,
         communicationProtocols: [...new Set(protocols)],
         description: String((value as TradeCatalogItem).description ?? "").trim(),
+        company: String((value as TradeCatalogItem).company ?? "").trim(),
+        contactName: String((value as TradeCatalogItem).contactName ?? "").trim(),
+        email: String((value as TradeCatalogItem).email ?? "").trim(),
+        phone: String((value as TradeCatalogItem).phone ?? "").trim(),
+        addressStreet: String((value as TradeCatalogItem).addressStreet ?? "").trim(),
+        addressCity: String((value as TradeCatalogItem).addressCity ?? "").trim(),
+        addressPostalCode: String((value as TradeCatalogItem).addressPostalCode ?? "").trim(),
+        lat:
+          typeof (value as TradeCatalogItem).lat === "number" &&
+          Number.isFinite((value as TradeCatalogItem).lat)
+            ? Number((value as TradeCatalogItem).lat)
+            : null,
+        lng:
+          typeof (value as TradeCatalogItem).lng === "number" &&
+          Number.isFinite((value as TradeCatalogItem).lng)
+            ? Number((value as TradeCatalogItem).lng)
+            : null,
       };
     })
     .filter((item): item is TradeCatalogItem => item !== null);

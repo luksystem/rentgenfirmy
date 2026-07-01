@@ -24,6 +24,7 @@ import { ProjectSatisfactionSummaryCard } from "@/components/dashboard/project-s
 import { ProjectSystemCredentialsPanel } from "@/components/dashboard/project-system-credentials-panel";
 import { ProjectSpecificationPanel } from "@/components/dashboard/project-specification-panel";
 import { ProjectTradesPanel } from "@/components/dashboard/project-trades-panel";
+import { TradeCatalogView } from "@/components/trades/trade-catalog-view";
 import { StageSatisfactionPrompt } from "@/components/dashboard/stage-satisfaction-prompt";
 import { ProjectMeetingNotesPanel } from "@/components/dashboard/project-meeting-notes-panel";
 import { ProjectDocumentsPanel } from "@/components/dashboard/project-documents-panel";
@@ -865,12 +866,22 @@ export function ClientDashboardView({
 
   function renderTradesPanel() {
     return (
-      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
-        <h2 className="mb-3 text-base font-semibold text-foreground">Branże i wykonawcy</h2>
-        <p className="mb-4 text-sm text-muted">
-          Dodaj branże projektu — będą dostępne przy wyborze roli akceptacji w ustaleniach.
-        </p>
-        <ProjectTradesPanel projectId={selectedProject.id} seedTrades={seedTrades} />
+      <div className="grid min-w-0 max-w-full gap-4 overflow-x-hidden">
+        <div className="rounded-2xl border border-border/80 bg-surface p-4">
+          <h2 className="mb-1 text-base font-semibold text-foreground">Katalog branż</h2>
+          <p className="mb-4 text-sm text-muted">
+            Standardowe branże z mapą lokalizacji wykonawców — podpowiadają się przy dodawaniu branży
+            poniżej.
+          </p>
+          <TradeCatalogView />
+        </div>
+        <div className="rounded-2xl border border-border/80 bg-surface p-4">
+          <h2 className="mb-3 text-base font-semibold text-foreground">Branże w tym projekcie</h2>
+          <p className="mb-4 text-sm text-muted">
+            Dodaj branże projektu — będą dostępne przy wyborze roli akceptacji w ustaleniach.
+          </p>
+          <ProjectTradesPanel projectId={selectedProject.id} seedTrades={seedTrades} />
+        </div>
       </div>
     );
   }

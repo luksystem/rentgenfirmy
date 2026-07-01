@@ -5,8 +5,11 @@ import {
   readIntakeVerifiedToken,
 } from "@/lib/service-intake/tokens";
 import type {
+  ServiceIntakePostWarrantyAction,
+  ServiceIntakePriority,
   ServiceIntakeProjectOption,
   ServiceIntakeRecord,
+  ServiceIntakeRequestType,
   ServiceIntakeStatus,
   ServiceIntakeVerifyResult,
 } from "@/lib/service-intake/types";
@@ -122,7 +125,11 @@ function rowToIntakeRecord(
     contactPhone: row.contact_phone ? String(row.contact_phone) : null,
     warrantyStatus: row.warranty_status ? String(row.warranty_status) : null,
     serviceTypeHint: row.service_type_hint as ServiceIntakeRecord["serviceTypeHint"],
-    priority: row.priority as ServiceIntakeRecord["priority"],
+    requestType: (row.request_type as ServiceIntakeRequestType) ?? "service",
+    priority: row.priority ? (row.priority as ServiceIntakePriority) : null,
+    postWarrantyAction: row.post_warranty_action
+      ? (row.post_warranty_action as ServiceIntakePostWarrantyAction)
+      : null,
     description: String(row.description),
     acceptedPaidTerms: Boolean(row.accepted_paid_terms),
     acceptedPaidTermsAt: row.accepted_paid_terms_at ? String(row.accepted_paid_terms_at) : null,
@@ -170,7 +177,9 @@ export async function verifyServiceIntakeIdentity(input: {
 export async function submitServiceIntakeRequest(input: {
   verificationToken: string;
   projectId: string;
-  priority: ServiceIntakeRecord["priority"];
+  requestType: ServiceIntakeRequestType;
+  priority: ServiceIntakePriority | null;
+  postWarrantyAction: ServiceIntakePostWarrantyAction | null;
   description: string;
   contactPhone?: string | null;
   acceptedPaidTerms: boolean;
@@ -189,9 +198,26 @@ export async function submitServiceIntakeRequest(input: {
   const warranty = getWarrantyStatus(project);
   const isWarrantyActive = warranty.status === "active" || warranty.status === "expiring_soon";
   const serviceTypeHint = isWarrantyActive ? "Gwarancyjny" : "Pogwarancyjny";
+  const isServiceRequest = input.requestType === "service";
 
-  if (!isWarrantyActive && !input.acceptedPaidTerms) {
-    throw new Error("Zaakceptuj warunki usług płatnych, aby wysłać zgłoszenie.");
+  if (isServiceRequest && !input.priority) {
+    throw new Error("Wybierz priorytet problemu w systemie CAFE.");
+  }
+
+  if (!isServiceRequest && input.priority) {
+    throw new Error("Priorytet CAFE dotyczy tylko zgłoszeń serwisowych.");
+  }
+
+  if (!isWarrantyActive && isServiceRequest && !input.postWarrantyAction) {
+    throw new Error("Wybierz, w jaki sposób mamy zadziałać.");
+  }
+
+  if (!isWarrantyActive && isServiceRequest) {
+    const requiresPaidAcceptance =
+      input.postWarrantyAction === "on_site" || input.postWarrantyAction === "remote";
+    if (requiresPaidAcceptance && !input.acceptedPaidTerms) {
+      throw new Error("Zaakceptuj stawki serwisowe, aby wysłać zgłoszenie.");
+    }
   }
 
   const description = input.description.trim();
@@ -202,6 +228,12 @@ export async function submitServiceIntakeRequest(input: {
   const supabase = getSupabaseAdmin();
   const referenceNumber = await nextReferenceNumber();
   const now = new Date().toISOString();
+  const acceptedPaidTerms =
+    !isWarrantyActive &&
+    isServiceRequest &&
+    (input.postWarrantyAction === "on_site" ||
+      input.postWarrantyAction === "remote" ||
+      input.acceptedPaidTerms);
 
   const { data, error } = await supabase
     .from("service_intake_requests")
@@ -215,13 +247,18 @@ export async function submitServiceIntakeRequest(input: {
       contact_phone: input.contactPhone?.trim() || null,
       warranty_status: warranty.status,
       service_type_hint: serviceTypeHint,
-      priority: input.priority,
+      request_type: input.requestType,
+      priority: isServiceRequest ? input.priority : null,
+      post_warranty_action:
+        !isWarrantyActive && isServiceRequest ? input.postWarrantyAction : null,
       description,
-      accepted_paid_terms: !isWarrantyActive ? input.acceptedPaidTerms : false,
-      accepted_paid_terms_at: !isWarrantyActive && input.acceptedPaidTerms ? now : null,
+      accepted_paid_terms: acceptedPaidTerms,
+      accepted_paid_terms_at: acceptedPaidTerms ? now : null,
       metadata_json: {
         projectName: project.name,
         warrantyLabel: warranty.label,
+        requestType: input.requestType,
+        postWarrantyAction: input.postWarrantyAction,
       },
     })
     .select("*")

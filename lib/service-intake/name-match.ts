@@ -12,6 +12,25 @@ function nameTokens(value: string) {
   return normalizePersonName(value).split(" ").filter(Boolean);
 }
 
+function tokensOverlap(expectedTokens: string[], providedTokens: string[]) {
+  for (const providedToken of providedTokens) {
+    if (providedToken.length < 2) {
+      continue;
+    }
+    for (const expectedToken of expectedTokens) {
+      if (
+        expectedToken === providedToken ||
+        expectedToken.includes(providedToken) ||
+        providedToken.includes(expectedToken)
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/** Wystarczy częściowe dopasowanie imienia, nazwiska lub fragmentu. */
 export function namesMatch(expected: string, provided: string) {
   const expectedNorm = normalizePersonName(expected);
   const providedNorm = normalizePersonName(provided);
@@ -24,6 +43,14 @@ export function namesMatch(expected: string, provided: string) {
     return true;
   }
 
+  if (providedNorm.length >= 2 && expectedNorm.includes(providedNorm)) {
+    return true;
+  }
+
+  if (expectedNorm.length >= 2 && providedNorm.includes(expectedNorm)) {
+    return true;
+  }
+
   const expectedTokens = nameTokens(expected);
   const providedTokens = nameTokens(provided);
 
@@ -31,8 +58,5 @@ export function namesMatch(expected: string, provided: string) {
     return false;
   }
 
-  const providedSet = new Set(providedTokens);
-  const matched = expectedTokens.filter((token) => providedSet.has(token));
-
-  return matched.length >= Math.min(2, expectedTokens.length);
+  return tokensOverlap(expectedTokens, providedTokens);
 }

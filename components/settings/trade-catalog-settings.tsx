@@ -1,18 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import dynamic from "next/dynamic";
+import { ArrowDown, ArrowUp, Loader2, MapPin, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import type { FieldOptions, TradeCatalogItem } from "@/lib/field-options";
+import { formatTradeCatalogAddress, geocodeTradeCatalogItem } from "@/lib/trades/catalog-location";
 import { useAppStore } from "@/store/app-store";
+
+const TradeCatalogMapView = dynamic(
+  () => import("@/components/trades/trade-catalog-map-view").then((module) => module.TradeCatalogMapView),
+  { ssr: false, loading: () => <p className="text-sm text-muted">Ładowanie mapy…</p> },
+);
 
 function emptyItem(): TradeCatalogItem {
   return {
     name: "",
     communicationProtocols: [],
     description: "",
+    company: "",
+    contactName: "",
+    email: "",
+    phone: "",
+    addressStreet: "",
+    addressCity: "",
+    addressPostalCode: "",
+    lat: null,
+    lng: null,
   };
 }
 
@@ -23,6 +39,7 @@ export function TradeCatalogSettings() {
   const [items, setItems] = useState<TradeCatalogItem[]>(fieldOptions.tradeCatalogItems);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [geocodingIndex, setGeocodingIndex] = useState<number | null>(null);
 
   useEffect(() => {
     setItems(fieldOptions.tradeCatalogItems);
@@ -53,6 +70,26 @@ export function TradeCatalogSettings() {
     setSaved(false);
   }
 
+  async function geocodeItem(index: number) {
+    const item = items[index];
+    if (!formatTradeCatalogAddress(item) && !item.company?.trim()) {
+      setError("Podaj adres lub nazwę firmy przed geokodowaniem.");
+      return;
+    }
+    setGeocodingIndex(index);
+    setError(null);
+    try {
+      const result = await geocodeTradeCatalogItem(item);
+      if (!result) {
+        setError(`Nie znaleziono lokalizacji dla: ${item.name || "branża"}.`);
+        return;
+      }
+      updateItem(index, { lat: result.lat, lng: result.lng });
+    } finally {
+      setGeocodingIndex(null);
+    }
+  }
+
   function addItem() {
     setItems((current) => [...current, emptyItem()]);
     setSaved(false);
@@ -80,8 +117,19 @@ export function TradeCatalogSettings() {
     const normalized = items
       .map((item) => ({
         name: item.name.trim(),
-        communicationProtocols: [...new Set(item.communicationProtocols.map((entry) => entry.trim()).filter(Boolean))],
-        description: item.description.trim(),
+        communicationProtocols: [
+          ...new Set(item.communicationProtocols.map((entry) => entry.trim()).filter(Boolean)),
+        ],
+        description: item.description?.trim() ?? "",
+        company: item.company?.trim() ?? "",
+        contactName: item.contactName?.trim() ?? "",
+        email: item.email?.trim() ?? "",
+        phone: item.phone?.trim() ?? "",
+        addressStreet: item.addressStreet?.trim() ?? "",
+        addressCity: item.addressCity?.trim() ?? "",
+        addressPostalCode: item.addressPostalCode?.trim() ?? "",
+        lat: item.lat ?? null,
+        lng: item.lng ?? null,
       }))
       .filter((item) => item.name);
 
@@ -113,9 +161,15 @@ export function TradeCatalogSettings() {
       ) : null}
 
       <p className="text-sm text-muted">
-        Każda branża może mieć przypisane protokoły komunikacyjne — przy tworzeniu ustaleń protokoły
-        uzupełnią się automatycznie po wyborze branży jako roli akceptacji.
+        Katalog jest wspólny dla całego zespołu. Branże podpowiadają się w projekcie klienta, a lokalizacje
+        widać na mapie w module{" "}
+        <a href="/branze" className="text-accent hover:underline">
+          Katalog branż
+        </a>
+        .
       </p>
+
+      <TradeCatalogMapView items={items.filter((item) => item.name.trim())} />
 
       {items.map((item, index) => (
         <Card key={`trade-catalog-${index}`}>
@@ -147,14 +201,85 @@ export function TradeCatalogSettings() {
               </div>
             </div>
 
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Domyślna firma wykonawcy">
+                <Input
+                  value={item.company ?? ""}
+                  onChange={(event) => updateItem(index, { company: event.target.value })}
+                />
+              </Field>
+              <Field label="Osoba kontaktowa">
+                <Input
+                  value={item.contactName ?? ""}
+                  onChange={(event) => updateItem(index, { contactName: event.target.value })}
+                />
+              </Field>
+              <Field label="E-mail">
+                <Input
+                  type="email"
+                  value={item.email ?? ""}
+                  onChange={(event) => updateItem(index, { email: event.target.value })}
+                />
+              </Field>
+              <Field label="Telefon">
+                <Input
+                  value={item.phone ?? ""}
+                  onChange={(event) => updateItem(index, { phone: event.target.value })}
+                />
+              </Field>
+            </div>
+
             <Field label="Domyślny opis / zakres">
               <Textarea
                 rows={2}
-                value={item.description}
+                value={item.description ?? ""}
                 onChange={(event) => updateItem(index, { description: event.target.value })}
                 placeholder="Krótki opis zakresu branży w projekcie"
               />
             </Field>
+
+            <div className="grid gap-3 rounded-xl border border-border/70 bg-surface-muted/15 p-3 sm:grid-cols-3">
+              <Field label="Ulica">
+                <Input
+                  value={item.addressStreet ?? ""}
+                  onChange={(event) => updateItem(index, { addressStreet: event.target.value })}
+                />
+              </Field>
+              <Field label="Kod pocztowy">
+                <Input
+                  value={item.addressPostalCode ?? ""}
+                  onChange={(event) => updateItem(index, { addressPostalCode: event.target.value })}
+                />
+              </Field>
+              <Field label="Miasto">
+                <Input
+                  value={item.addressCity ?? ""}
+                  onChange={(event) => updateItem(index, { addressCity: event.target.value })}
+                />
+              </Field>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={geocodingIndex === index}
+                onClick={() => void geocodeItem(index)}
+              >
+                {geocodingIndex === index ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <MapPin className="mr-2 h-4 w-4" />
+                )}
+                Ustal lokalizację na mapie
+              </Button>
+              {item.lat != null && item.lng != null ? (
+                <span className="text-xs text-muted">
+                  Współrzędne: {item.lat.toFixed(5)}, {item.lng.toFixed(5)}
+                </span>
+              ) : null}
+            </div>
 
             <div className="grid gap-2">
               <p className="text-sm font-medium text-foreground">Mapa protokołów komunikacyjnych</p>

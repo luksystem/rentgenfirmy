@@ -7,45 +7,63 @@ import {
   CheckCircle2,
   ClipboardList,
   Loader2,
+  Phone,
   ShieldCheck,
   Wrench,
 } from "lucide-react";
-import { TurnstileWidget } from "@/components/service-intake/turnstile-widget";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import {
+  CAFE_PRIORITY_OPTIONS,
+  getDoneScreenContent,
+  SERVICE_INTAKE_REQUEST_TYPE_OPTIONS,
+  WARRANTY_EMERGENCY_PHONE,
+} from "@/lib/service-intake/cafe-priorities";
+import {
+  SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS,
   SERVICE_INTAKE_PRIORITY_LABELS,
+  SERVICE_INTAKE_REQUEST_TYPE_LABELS,
+  type ServiceIntakePostWarrantyAction,
   type ServiceIntakePriority,
   type ServiceIntakeProjectOption,
+  type ServiceIntakeRequestType,
   type ServiceIntakeVerifyResult,
 } from "@/lib/service-intake/types";
 import { cn, formatMoney } from "@/lib/utils";
 
-type WizardStep = "email" | "verify" | "project" | "details" | "summary" | "done";
+type WizardStep =
+  | "email"
+  | "verify"
+  | "project"
+  | "requestType"
+  | "details"
+  | "action"
+  | "summary"
+  | "done";
 
 const STEP_LABELS: Record<Exclude<WizardStep, "done">, string> = {
   email: "E-mail",
   verify: "Tożsamość",
   project: "Obiekt",
+  requestType: "Rodzaj",
   details: "Zgłoszenie",
+  action: "Działanie",
   summary: "Podsumowanie",
 };
 
-const STEP_ORDER: Exclude<WizardStep, "done">[] = [
-  "email",
-  "verify",
-  "project",
-  "details",
-  "summary",
-];
-
-function StepIndicator({ current }: { current: Exclude<WizardStep, "done"> }) {
-  const currentIndex = STEP_ORDER.indexOf(current);
+function StepIndicator({
+  steps,
+  current,
+}: {
+  steps: Exclude<WizardStep, "done">[];
+  current: Exclude<WizardStep, "done">;
+}) {
+  const currentIndex = steps.indexOf(current);
 
   return (
     <ol className="flex flex-wrap gap-2">
-      {STEP_ORDER.map((step, index) => {
+      {steps.map((step, index) => {
         const active = index === currentIndex;
         const done = index < currentIndex;
         return (
@@ -82,6 +100,34 @@ function WarrantyBadge({ project }: { project: ServiceIntakeProjectOption }) {
   );
 }
 
+function CafePriorityLegend() {
+  return (
+    <div className="grid gap-3 rounded-2xl border border-border/70 bg-surface-muted/15 p-4 text-sm">
+      <p className="font-medium text-foreground">
+        W LUKSYSTEM INTELIGENTNE INSTALACJE zgłoszenia serwisowe rozpatrujemy w systemie CAFE:
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {CAFE_PRIORITY_OPTIONS.map((option) => (
+          <div key={option.id} className={cn("rounded-xl border p-3", option.toneClass)}>
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-md text-sm font-bold",
+                  option.letterClass,
+                )}
+              >
+                {option.letter}
+              </span>
+              <span className="font-medium text-foreground">{option.title}</span>
+            </div>
+            <p className="mt-2 text-xs text-muted">{option.deadlineHint}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ServiceIntakeWizard() {
   const [step, setStep] = useState<WizardStep>("email");
   const [email, setEmail] = useState("");
@@ -89,11 +135,13 @@ export function ServiceIntakeWizard() {
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [verification, setVerification] = useState<ServiceIntakeVerifyResult | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [priority, setPriority] = useState<ServiceIntakePriority>("standard");
+  const [requestType, setRequestType] = useState<ServiceIntakeRequestType>("service");
+  const [priority, setPriority] = useState<ServiceIntakePriority>("f");
+  const [postWarrantyAction, setPostWarrantyAction] = useState<ServiceIntakePostWarrantyAction | null>(
+    null,
+  );
   const [description, setDescription] = useState("");
   const [contactPhone, setContactPhone] = useState("");
-  const [acceptedPaidTerms, setAcceptedPaidTerms] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [referenceNumber, setReferenceNumber] = useState<string | null>(null);
@@ -103,7 +151,49 @@ export function ServiceIntakeWizard() {
     [verification?.projects, selectedProjectId],
   );
 
-  const requiresPaidAcceptance = selectedProject ? !selectedProject.isWarrantyActive : false;
+  const isServiceRequest = requestType === "service";
+  const requiresActionStep = isServiceRequest && selectedProject ? !selectedProject.isWarrantyActive : false;
+
+  const visibleSteps = useMemo(() => {
+    const steps: Exclude<WizardStep, "done">[] = [
+      "email",
+      "verify",
+      "project",
+      "requestType",
+      "details",
+    ];
+    if (requiresActionStep) {
+      steps.push("action");
+    }
+    steps.push("summary");
+    return steps;
+  }, [requiresActionStep]);
+
+  const doneContent = useMemo(
+    () =>
+      getDoneScreenContent({
+        requestType,
+        isWarrantyActive: selectedProject?.isWarrantyActive ?? false,
+        priority: isServiceRequest ? priority : null,
+      }),
+    [isServiceRequest, priority, requestType, selectedProject?.isWarrantyActive],
+  );
+
+  function goNext(from: Exclude<WizardStep, "done">) {
+    const index = visibleSteps.indexOf(from);
+    const next = visibleSteps[index + 1];
+    if (next) {
+      setStep(next);
+    }
+  }
+
+  function goBack(from: Exclude<WizardStep, "done">) {
+    const index = visibleSteps.indexOf(from);
+    const previous = visibleSteps[index - 1];
+    if (previous) {
+      setStep(previous);
+    }
+  }
 
   async function handleStart() {
     setLoading(true);
@@ -112,14 +202,13 @@ export function ServiceIntakeWizard() {
       const response = await fetch("/api/zgloszenie/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, captchaToken }),
+        body: JSON.stringify({ email }),
       });
       const payload = await response.json();
       if (!response.ok) {
         throw new Error(payload.error ?? "Nie udało się rozpocząć.");
       }
       setSessionToken(payload.sessionToken);
-      setCaptchaToken(null);
       setStep("verify");
     } catch (startError) {
       setError(startError instanceof Error ? startError.message : "Błąd.");
@@ -139,7 +228,7 @@ export function ServiceIntakeWizard() {
       const response = await fetch("/api/zgloszenie/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionToken, email, fullName, captchaToken }),
+        body: JSON.stringify({ sessionToken, email, fullName }),
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -147,7 +236,6 @@ export function ServiceIntakeWizard() {
       }
       setVerification(payload as ServiceIntakeVerifyResult);
       setSelectedProjectId(payload.projects[0]?.id ?? null);
-      setCaptchaToken(null);
       setStep("project");
     } catch (verifyError) {
       setError(verifyError instanceof Error ? verifyError.message : "Błąd.");
@@ -170,10 +258,14 @@ export function ServiceIntakeWizard() {
         body: JSON.stringify({
           verificationToken: verification.verificationToken,
           projectId: selectedProjectId,
-          priority,
+          requestType,
+          priority: isServiceRequest ? priority : null,
+          postWarrantyAction: requiresActionStep ? postWarrantyAction : null,
           description,
           contactPhone,
-          acceptedPaidTerms: requiresPaidAcceptance ? acceptedPaidTerms : false,
+          acceptedPaidTerms:
+            requiresActionStep &&
+            (postWarrantyAction === "on_site" || postWarrantyAction === "remote"),
         }),
       });
       const payload = await response.json();
@@ -189,6 +281,9 @@ export function ServiceIntakeWizard() {
     }
   }
 
+  const installerRate = verification?.rates.installerHourly ?? 250;
+  const carPerKm = verification?.rates.carPerKm ?? 1;
+
   return (
     <div className="mx-auto w-full max-w-2xl">
       <div className="mb-6 flex items-center gap-3">
@@ -203,7 +298,7 @@ export function ServiceIntakeWizard() {
 
       {step !== "done" ? (
         <div className="mb-6">
-          <StepIndicator current={step as Exclude<WizardStep, "done">} />
+          <StepIndicator steps={visibleSteps} current={step as Exclude<WizardStep, "done">} />
         </div>
       ) : null}
 
@@ -228,13 +323,12 @@ export function ServiceIntakeWizard() {
                   placeholder="jan@firma.pl"
                 />
               </Field>
-              <TurnstileWidget onToken={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
-              <Button
-                type="button"
-                disabled={loading || !email.trim()}
-                onClick={() => void handleStart()}
-              >
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
+              <Button type="button" disabled={loading || !email.trim()} onClick={() => void handleStart()}>
+                {loading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowRight className="mr-2 h-4 w-4" />
+                )}
                 Dalej
               </Button>
             </>
@@ -245,7 +339,8 @@ export function ServiceIntakeWizard() {
               <div>
                 <h2 className="text-lg font-semibold text-foreground">Potwierdź tożsamość</h2>
                 <p className="mt-1 text-sm text-muted">
-                  Podaj imię i nazwisko tak jak w umowie / bazie klientów ({email}).
+                  Podaj imię i nazwisko ({email}). Wystarczy częściowe dopasowanie do danych w naszej
+                  bazie klientów.
                 </p>
               </div>
               <Field label="Imię i nazwisko">
@@ -255,7 +350,6 @@ export function ServiceIntakeWizard() {
                   placeholder="Jan Kowalski"
                 />
               </Field>
-              <TurnstileWidget onToken={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" onClick={() => setStep("email")}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
@@ -266,7 +360,11 @@ export function ServiceIntakeWizard() {
                   disabled={loading || !fullName.trim()}
                   onClick={() => void handleVerify()}
                 >
-                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
+                  {loading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <ShieldCheck className="mr-2 h-4 w-4" />
+                  )}
                   Zweryfikuj
                 </Button>
               </div>
@@ -304,32 +402,56 @@ export function ServiceIntakeWizard() {
                   </button>
                 ))}
               </div>
-
-              {selectedProject && !selectedProject.isWarrantyActive ? (
-                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
-                  <p className="font-medium text-amber-100">Usługa pogwarancyjna — stawki orientacyjne</p>
-                  <ul className="mt-2 grid gap-1 text-amber-50/90">
-                    <li>Serwis: {formatMoney(verification.rates.installerHourly)}/h</li>
-                    <li>Programowanie: {formatMoney(verification.rates.programmerHourly)}/h</li>
-                    <li>Dojazd: {formatMoney(verification.rates.carPerKm)}/km</li>
-                    <li>VAT: {verification.rates.vatRate}%</li>
-                  </ul>
-                  <p className="mt-2 text-xs text-amber-100/80">
-                    Końcowa wycena zależy od zakresu prac. Akceptację warunków potwierdzisz przed wysłaniem.
-                  </p>
-                </div>
-              ) : null}
-
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" onClick={() => setStep("verify")}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Wstecz
                 </Button>
-                <Button
-                  type="button"
-                  disabled={!selectedProjectId}
-                  onClick={() => setStep("details")}
-                >
+                <Button type="button" disabled={!selectedProjectId} onClick={() => goNext("project")}>
+                  Dalej
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          ) : null}
+
+          {step === "requestType" ? (
+            <>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Wybierz rodzaj zgłoszenia</h2>
+                <p className="mt-1 text-sm text-muted">W czym możemy pomóc?</p>
+              </div>
+              <div className="grid gap-3">
+                {SERVICE_INTAKE_REQUEST_TYPE_OPTIONS.map((option) => (
+                  <label
+                    key={option.id}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-3 transition",
+                      requestType === option.id
+                        ? "border-accent bg-accent/10"
+                        : "border-border bg-surface-muted/20 hover:border-accent/40",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="requestType"
+                      checked={requestType === option.id}
+                      onChange={() => setRequestType(option.id)}
+                      className="mt-1"
+                    />
+                    <span>
+                      <span className="block font-medium text-foreground">{option.label}</span>
+                      <span className="mt-0.5 block text-sm text-muted">{option.description}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={() => goBack("requestType")}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Wstecz
+                </Button>
+                <Button type="button" onClick={() => goNext("requestType")}>
                   Dalej
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -340,29 +462,55 @@ export function ServiceIntakeWizard() {
           {step === "details" ? (
             <>
               <div>
-                <h2 className="text-lg font-semibold text-foreground">Opisz problem</h2>
-                <p className="mt-1 text-sm text-muted">Im więcej szczegółów, tym szybciej zaplanujemy wizytę.</p>
+                <h2 className="text-lg font-semibold text-foreground">
+                  {isServiceRequest ? "Opisz problem" : "Opisz zgłoszenie"}
+                </h2>
+                <p className="mt-1 text-sm text-muted">
+                  Im więcej szczegółów, tym szybciej zaplanujemy działania.
+                </p>
               </div>
-              <Field label="Priorytet">
-                <div className="flex flex-wrap gap-2">
-                  {(Object.keys(SERVICE_INTAKE_PRIORITY_LABELS) as ServiceIntakePriority[]).map((entry) => (
-                    <button
-                      key={entry}
-                      type="button"
-                      onClick={() => setPriority(entry)}
-                      className={cn(
-                        "rounded-full px-3 py-1.5 text-sm",
-                        priority === entry
-                          ? "bg-accent text-white"
-                          : "border border-border bg-surface-muted text-muted",
-                      )}
-                    >
-                      {SERVICE_INTAKE_PRIORITY_LABELS[entry]}
-                    </button>
-                  ))}
-                </div>
-              </Field>
-              <Field label="Opis usterki / zgłoszenia">
+
+              {isServiceRequest ? (
+                <>
+                  <CafePriorityLegend />
+                  <Field label="Priorytet problemu *">
+                    <div className="grid gap-2">
+                      {CAFE_PRIORITY_OPTIONS.map((option) => (
+                        <label
+                          key={option.id}
+                          className={cn(
+                            "flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-3 transition",
+                            priority === option.id
+                              ? "border-accent bg-accent/10"
+                              : "border-border bg-surface-muted/20 hover:border-accent/40",
+                          )}
+                        >
+                          <input
+                            type="radio"
+                            name="cafePriority"
+                            checked={priority === option.id}
+                            onChange={() => setPriority(option.id)}
+                            className="mt-1"
+                          />
+                          <span className="flex items-start gap-2">
+                            <span
+                              className={cn(
+                                "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-bold",
+                                option.letterClass,
+                              )}
+                            >
+                              {option.letter}
+                            </span>
+                            <span className="text-sm text-foreground">{option.clientLabel}</span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </Field>
+                </>
+              ) : null}
+
+              <Field label="Opis problemu / zgłoszenia *">
                 <Textarea
                   rows={5}
                   value={description}
@@ -377,30 +525,106 @@ export function ServiceIntakeWizard() {
                   placeholder="+48 ..."
                 />
               </Field>
-              {requiresPaidAcceptance ? (
-                <label className="flex items-start gap-3 rounded-2xl border border-border px-4 py-3 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={acceptedPaidTerms}
-                    onChange={(event) => setAcceptedPaidTerms(event.target.checked)}
-                    className="mt-1"
-                  />
-                  <span>
-                    Akceptuję, że usługa jest pogwarancyjna i może być rozliczana według obowiązujących stawek
-                    serwisowych.
-                  </span>
-                </label>
-              ) : null}
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" onClick={() => setStep("project")}>
+                <Button type="button" variant="outline" onClick={() => goBack("details")}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Wstecz
                 </Button>
                 <Button
                   type="button"
-                  disabled={description.trim().length < 10 || (requiresPaidAcceptance && !acceptedPaidTerms)}
-                  onClick={() => setStep("summary")}
+                  disabled={description.trim().length < 10 || (isServiceRequest && !priority)}
+                  onClick={() => goNext("details")}
                 >
+                  Dalej
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          ) : null}
+
+          {step === "action" && verification && selectedProject ? (
+            <>
+              <div className="rounded-2xl border border-border/80 bg-surface-muted/20 p-4 text-sm">
+                <p className="font-medium text-foreground">Dziękujemy za zgłoszenie — proszę czekać na nasz kontakt</p>
+                <p className="mt-2 text-muted">
+                  Będziemy starać się pomóc jak najszybciej. Maksymalnie skontaktujemy się w ciągu 7 dni
+                  roboczych.
+                </p>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">W jaki sposób mamy zadziałać?</h2>
+                <p className="mt-1 text-sm text-muted">
+                  Obiekt jest pogwarancyjny — wybierz preferowany sposób obsługi zgłoszenia.
+                </p>
+              </div>
+              <div className="grid gap-3">
+                <label
+                  className={cn(
+                    "flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-3",
+                    postWarrantyAction === "offer"
+                      ? "border-accent bg-accent/10"
+                      : "border-border bg-surface-muted/20",
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="postWarrantyAction"
+                    checked={postWarrantyAction === "offer"}
+                    onChange={() => setPostWarrantyAction("offer")}
+                    className="mt-1"
+                  />
+                  <span className="text-sm text-foreground">
+                    Poproszę o przygotowanie oferty — po jej akceptacji przeze mnie podejmiemy działania
+                  </span>
+                </label>
+                <label
+                  className={cn(
+                    "flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-3",
+                    postWarrantyAction === "on_site"
+                      ? "border-accent bg-accent/10"
+                      : "border-border bg-surface-muted/20",
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="postWarrantyAction"
+                    checked={postWarrantyAction === "on_site"}
+                    onChange={() => setPostWarrantyAction("on_site")}
+                    className="mt-1"
+                  />
+                  <span className="text-sm text-foreground">
+                    Poproszę o jak najszybsze działanie PRZYJAZD — akceptuję stawkę serwisową{" "}
+                    {formatMoney(installerRate)}/h pracy serwisanta łącznie z dojazdem i{" "}
+                    {formatMoney(carPerKm)}/km dojazdu
+                  </span>
+                </label>
+                <label
+                  className={cn(
+                    "flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-3",
+                    postWarrantyAction === "remote"
+                      ? "border-accent bg-accent/10"
+                      : "border-border bg-surface-muted/20",
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="postWarrantyAction"
+                    checked={postWarrantyAction === "remote"}
+                    onChange={() => setPostWarrantyAction("remote")}
+                    className="mt-1"
+                  />
+                  <span className="text-sm text-foreground">
+                    Poproszę o jak najszybsze działanie SERWIS ZDALNY — akceptuję stawkę serwisową{" "}
+                    {formatMoney(installerRate)}/h pracy serwisanta
+                  </span>
+                </label>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={() => goBack("action")}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Wstecz
+                </Button>
+                <Button type="button" disabled={!postWarrantyAction} onClick={() => goNext("action")}>
                   Podsumowanie
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -429,14 +653,27 @@ export function ServiceIntakeWizard() {
                   <WarrantyBadge project={selectedProject} />
                 </p>
                 <p>
-                  <span className="text-muted">Priorytet:</span> {SERVICE_INTAKE_PRIORITY_LABELS[priority]}
+                  <span className="text-muted">Rodzaj:</span>{" "}
+                  {SERVICE_INTAKE_REQUEST_TYPE_LABELS[requestType]}
                 </p>
+                {isServiceRequest ? (
+                  <p>
+                    <span className="text-muted">Priorytet CAFE:</span>{" "}
+                    {SERVICE_INTAKE_PRIORITY_LABELS[priority]}
+                  </p>
+                ) : null}
+                {postWarrantyAction ? (
+                  <p>
+                    <span className="text-muted">Sposób działania:</span>{" "}
+                    {SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS[postWarrantyAction]}
+                  </p>
+                ) : null}
                 <p>
                   <span className="text-muted">Opis:</span> {description}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" onClick={() => setStep("details")}>
+                <Button type="button" variant="outline" onClick={() => goBack("summary")}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Wstecz
                 </Button>
@@ -453,19 +690,34 @@ export function ServiceIntakeWizard() {
           ) : null}
 
           {step === "done" ? (
-            <div className="grid gap-4 text-center">
+            <div className="grid gap-4">
               <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-400" />
-              <div>
-                <h2 className="text-xl font-semibold text-foreground">Zgłoszenie wysłane</h2>
-                {referenceNumber ? (
-                  <p className="mt-2 text-sm text-muted">
-                    Numer referencyjny:{" "}
-                    <span className="font-semibold text-foreground">{referenceNumber}</span>
-                  </p>
-                ) : null}
-                <p className="mt-2 text-sm text-muted">
-                  Skontaktujemy się wkrótce w sprawie dalszych kroków.
-                </p>
+              <div className="overflow-hidden rounded-2xl border border-border/80">
+                <div className="bg-foreground px-4 py-3 text-center text-sm font-semibold text-background">
+                  {doneContent.title}
+                </div>
+                <div className="grid gap-3 p-4 text-sm text-foreground">
+                  {referenceNumber ? (
+                    <p className="text-center text-muted">
+                      Numer referencyjny:{" "}
+                      <span className="font-semibold text-foreground">{referenceNumber}</span>
+                    </p>
+                  ) : null}
+                  {doneContent.paragraphs.map((paragraph) => (
+                    <p key={paragraph} className="text-muted">
+                      {paragraph}
+                    </p>
+                  ))}
+                  {doneContent.showEmergencyPhone ? (
+                    <p className="flex items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 font-medium text-amber-100">
+                      <Phone className="h-4 w-4 shrink-0" />
+                      <a href={`tel:${WARRANTY_EMERGENCY_PHONE.replace(/\s/g, "")}`}>
+                        {WARRANTY_EMERGENCY_PHONE}
+                      </a>
+                      <span className="text-xs font-normal text-amber-100/80">(24/7 — gwarancja)</span>
+                    </p>
+                  ) : null}
+                </div>
               </div>
             </div>
           ) : null}

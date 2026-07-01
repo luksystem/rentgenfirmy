@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,7 +13,9 @@ import {
 } from "@/components/ui/dialog";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import type { ProjectTrade, ProjectTradeInput } from "@/lib/dashboard/trade-types";
-import { findTradeCatalogItem, tradeCatalogNames } from "@/lib/field-options";
+import type { TradeCatalogItem } from "@/lib/field-options";
+import { findTradeCatalogItem } from "@/lib/field-options";
+import { tradeCatalogItemToProjectTradeInput } from "@/lib/trades/catalog-location";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 import { useProjectTradeStore } from "@/store/project-trade-store";
@@ -30,43 +33,112 @@ function emptyTradeInput(): ProjectTradeInput {
   };
 }
 
+function applyCatalogItem(form: ProjectTradeInput, item: TradeCatalogItem): ProjectTradeInput {
+  const fromCatalog = tradeCatalogItemToProjectTradeInput(item);
+  return {
+    ...form,
+    ...fromCatalog,
+    company: form.company?.trim() ? form.company : fromCatalog.company,
+    contactName: form.contactName?.trim() ? form.contactName : fromCatalog.contactName,
+    email: form.email?.trim() ? form.email : fromCatalog.email,
+    phone: form.phone?.trim() ? form.phone : fromCatalog.phone,
+    description: form.description?.trim() ? form.description : fromCatalog.description,
+  };
+}
+
 function TradeFormFields({
   form,
   onChange,
-  catalogNames = [],
+  catalogItems = [],
 }: {
   form: ProjectTradeInput;
   onChange: (next: ProjectTradeInput) => void;
-  catalogNames?: string[];
+  catalogItems?: TradeCatalogItem[];
 }) {
+  const nameQuery = form.name.trim().toLowerCase();
+  const suggestions = useMemo(() => {
+    if (!nameQuery) {
+      return catalogItems;
+    }
+    return catalogItems.filter(
+      (item) =>
+        item.name.toLowerCase().includes(nameQuery) ||
+        item.company?.toLowerCase().includes(nameQuery),
+    );
+  }, [catalogItems, nameQuery]);
+
   return (
     <div className="grid gap-3">
-      {catalogNames.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
-          {catalogNames.map((name) => (
-            <button
-              key={name}
-              type="button"
-              className={cn(
-                "rounded-full border px-2.5 py-1 text-xs font-medium transition",
-                form.name === name
-                  ? "border-accent/50 bg-accent/10 text-foreground"
-                  : "border-border/70 text-muted hover:border-accent/30 hover:text-foreground",
-              )}
-              onClick={() => onChange({ ...form, name })}
-            >
-              {name}
-            </button>
-          ))}
+      {catalogItems.length > 0 ? (
+        <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/10 p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">Katalog branż</p>
+          <div className="flex flex-wrap gap-1.5">
+            {catalogItems.map((item) => (
+              <button
+                key={item.name}
+                type="button"
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-xs font-medium transition",
+                  form.name === item.name
+                    ? "border-accent/50 bg-accent/10 text-foreground"
+                    : "border-border/70 text-muted hover:border-accent/30 hover:text-foreground",
+                )}
+                onClick={() => onChange(applyCatalogItem(form, item))}
+                title={item.description || item.company || undefined}
+              >
+                {item.name}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted">
+            Wybierz branżę z katalogu — uzupełnimy firmę, kontakt i opis. Pełna lista i mapa:{" "}
+            <Link href="/branze" className="text-accent hover:underline">
+              Katalog branż
+            </Link>
+            .
+          </p>
         </div>
       ) : null}
       <Field label="Branża *">
         <Input
           value={form.name}
           placeholder="np. Klimatyzacja, Elektryka, Smart Home"
-          onChange={(event) => onChange({ ...form, name: event.target.value })}
+          list="trade-catalog-suggestions"
+          onChange={(event) => {
+            const nextName = event.target.value;
+            const catalogItem = catalogItems.find(
+              (item) => item.name.toLowerCase() === nextName.trim().toLowerCase(),
+            );
+            if (catalogItem) {
+              onChange(applyCatalogItem({ ...form, name: nextName }, catalogItem));
+              return;
+            }
+            onChange({ ...form, name: nextName });
+          }}
         />
+        {catalogItems.length > 0 ? (
+          <datalist id="trade-catalog-suggestions">
+            {catalogItems.map((item) => (
+              <option key={item.name} value={item.name} />
+            ))}
+          </datalist>
+        ) : null}
       </Field>
+      {nameQuery && suggestions.length > 0 && suggestions.length <= 6 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {suggestions.map((item) => (
+            <button
+              key={`suggestion-${item.name}`}
+              type="button"
+              className="rounded-lg border border-border/70 px-2 py-1 text-left text-xs text-muted hover:border-accent/30 hover:text-foreground"
+              onClick={() => onChange(applyCatalogItem(form, item))}
+            >
+              <span className="font-medium text-foreground">{item.name}</span>
+              {item.company ? <span className="text-muted"> · {item.company}</span> : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <Field label="Firma">
         <Input
           value={form.company ?? ""}
@@ -124,12 +196,12 @@ export function ProjectTradesPanel({
   const updateTrade = useProjectTradeStore((state) => state.updateTrade);
   const removeTrade = useProjectTradeStore((state) => state.removeTrade);
   const fieldOptions = useAppStore((state) => state.fieldOptions);
-  const tradeCatalog = useMemo(() => tradeCatalogNames(fieldOptions), [fieldOptions]);
+  const catalogItems = useMemo(() => fieldOptions.tradeCatalogItems, [fieldOptions.tradeCatalogItems]);
   const trades = storeTrades;
 
-  const availableCatalogNames = useMemo(
-    () => tradeCatalog.filter((name) => !trades.some((trade) => trade.name === name)),
-    [tradeCatalog, trades],
+  const availableCatalogItems = useMemo(
+    () => catalogItems.filter((item) => !trades.some((trade) => trade.name === item.name)),
+    [catalogItems, trades],
   );
   const isLoading = loading && trades.length === 0;
 
@@ -146,9 +218,9 @@ export function ProjectTradesPanel({
     void ensureTrades(projectId, { force: seedTrades !== undefined });
   }, [ensureTrades, projectId, seedProjectTrades, seedTrades]);
 
-  function openCreate() {
+  function openCreate(prefill?: TradeCatalogItem) {
     setEditingId(null);
-    setForm(emptyTradeInput());
+    setForm(prefill ? tradeCatalogItemToProjectTradeInput(prefill) : emptyTradeInput());
     setError(null);
     setDialogOpen(true);
   }
@@ -188,6 +260,14 @@ export function ProjectTradesPanel({
     }
   }
 
+  async function addFromCatalog(item: TradeCatalogItem) {
+    try {
+      await addTrade(projectId, tradeCatalogItemToProjectTradeInput(item));
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Nie udało się dodać branży.");
+    }
+  }
+
   return (
     <div className="grid min-w-0 max-w-full gap-4 overflow-x-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -195,34 +275,40 @@ export function ProjectTradesPanel({
           Wykonawcy i branże w projekcie — wykorzystasz je przy rolach akceptacji w ustaleniach.
         </p>
         <div className="flex flex-wrap gap-2">
-          {availableCatalogNames.slice(0, 4).map((name) => (
-            <Button
-              key={name}
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                const catalogItem = findTradeCatalogItem(name, fieldOptions);
-                void addTrade(projectId, {
-                  name,
-                  company: "",
-                  contactName: "",
-                  email: "",
-                  phone: "",
-                  description: catalogItem?.description ?? "",
-                });
-              }}
-            >
-              <Plus className="mr-1 h-3.5 w-3.5" />
-              {name}
-            </Button>
-          ))}
-          <Button type="button" size="sm" className="shrink-0" onClick={openCreate}>
+          <Button type="button" size="sm" variant="outline" asChild>
+            <Link href="/branze">
+              <ExternalLink className="mr-1 h-3.5 w-3.5" />
+              Katalog branż
+            </Link>
+          </Button>
+          <Button type="button" size="sm" className="shrink-0" onClick={() => openCreate()}>
             <Plus className="mr-2 h-4 w-4" />
             Dodaj branżę
           </Button>
         </div>
       </div>
+
+      {availableCatalogItems.length > 0 ? (
+        <div className="grid gap-2 rounded-xl border border-dashed border-border/70 bg-surface-muted/10 p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">Szybkie dodanie z katalogu</p>
+          <div className="flex flex-wrap gap-2">
+            {availableCatalogItems.map((item) => (
+              <Button
+                key={item.name}
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void addFromCatalog(item)}
+              >
+                <Plus className="mr-1 h-3.5 w-3.5" />
+                {item.name}
+              </Button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {error && !dialogOpen ? <p className="text-sm text-rose-400">{error}</p> : null}
 
       {isLoading && !trades.length ? (
         <p className="text-sm text-muted">Ładowanie branż…</p>
@@ -230,8 +316,8 @@ export function ProjectTradesPanel({
 
       {!isLoading && trades.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border/70 bg-surface-muted/10 p-4 text-sm text-muted">
-          Brak branż. Dodaj wykonawców (np. klimatyzacja, elektryka), aby móc przypisywać im role w
-          procesie ustaleń.
+          Brak branż. Dodaj wykonawców z katalogu (np. klimatyzacja, elektryka) lub ręcznie — będą dostępne
+          przy rolach akceptacji w ustaleniach.
         </p>
       ) : null}
 
@@ -300,14 +386,15 @@ export function ProjectTradesPanel({
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? "Edytuj branżę" : "Nowa branża"}</DialogTitle>
             <DialogDescription>
-              Dane wykonawcy będą dostępne przy tworzeniu ról akceptacji w ustaleniach.
+              Wybierz branżę z katalogu lub wpisz ręcznie — dane wykonawcy będą dostępne przy rolach
+              akceptacji w ustaleniach.
             </DialogDescription>
           </DialogHeader>
-          <TradeFormFields form={form} onChange={setForm} catalogNames={tradeCatalog} />
+          <TradeFormFields form={form} onChange={setForm} catalogItems={catalogItems} />
           {error ? <p className="text-sm text-rose-400">{error}</p> : null}
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button type="button" disabled={saving} onClick={() => void handleSave()}>

@@ -344,7 +344,9 @@ export type ServiceIntakeRequestRow = {
   contact_phone: string | null;
   warranty_status: string | null;
   service_type_hint: string;
-  priority: string;
+  request_type: string;
+  priority: string | null;
+  post_warranty_action: string | null;
   description: string;
   accepted_paid_terms: boolean;
   accepted_paid_terms_at: string | null;

@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { Check, Plus, Send, Trash2, X } from "lucide-react";
+import { Check, Send, Trash2, X } from "lucide-react";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -224,20 +223,11 @@ export function RequisitionList() {
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm text-muted">
-          {loading ? "Ładowanie…" : `${filtered.length} zapotrzebowań`}
-        </div>
-        <Button asChild>
-          <Link href="/zapotrzebowania/nowy">
-            <Plus className="h-4 w-4" />
-            Nowe zapotrzebowanie
-          </Link>
-        </Button>
+      <div className="text-sm text-muted">
+        {loading ? "Ładowanie…" : `${filtered.length} zapotrzebowań`}
       </div>
 
       <MobileFiltersPanel title="Filtry">{filters}</MobileFiltersPanel>
-      <div className="hidden sm:block">{filters}</div>
 
       {loading ? (
         <Card>

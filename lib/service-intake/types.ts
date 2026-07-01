@@ -8,9 +8,18 @@ export const SERVICE_INTAKE_STATUSES = [
 
 export type ServiceIntakeStatus = (typeof SERVICE_INTAKE_STATUSES)[number];
 
-export const SERVICE_INTAKE_PRIORITIES = ["low", "standard", "urgent"] as const;
+/** System priorytetów CAFE: Critical, Asap, Freetime, Easy */
+export const SERVICE_INTAKE_PRIORITIES = ["c", "a", "f", "e"] as const;
 
 export type ServiceIntakePriority = (typeof SERVICE_INTAKE_PRIORITIES)[number];
+
+export const SERVICE_INTAKE_REQUEST_TYPES = ["service", "new_feature", "offer_request"] as const;
+
+export type ServiceIntakeRequestType = (typeof SERVICE_INTAKE_REQUEST_TYPES)[number];
+
+export const SERVICE_INTAKE_POST_WARRANTY_ACTIONS = ["offer", "on_site", "remote"] as const;
+
+export type ServiceIntakePostWarrantyAction = (typeof SERVICE_INTAKE_POST_WARRANTY_ACTIONS)[number];
 
 export const SERVICE_INTAKE_STATUS_LABELS: Record<ServiceIntakeStatus, string> = {
   new: "Nowe",
@@ -21,9 +30,25 @@ export const SERVICE_INTAKE_STATUS_LABELS: Record<ServiceIntakeStatus, string> =
 };
 
 export const SERVICE_INTAKE_PRIORITY_LABELS: Record<ServiceIntakePriority, string> = {
-  low: "Niski",
-  standard: "Standardowy",
-  urgent: "Pilny",
+  c: "C — Krytyczny",
+  a: "A — Asap",
+  f: "F — Freetime",
+  e: "E — Easy",
+};
+
+export const SERVICE_INTAKE_REQUEST_TYPE_LABELS: Record<ServiceIntakeRequestType, string> = {
+  service: "Zgłoszenie serwisowe",
+  new_feature: "Nowa funkcjonalność",
+  offer_request: "Prośba o ofertę",
+};
+
+export const SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS: Record<
+  ServiceIntakePostWarrantyAction,
+  string
+> = {
+  offer: "Przygotowanie oferty",
+  on_site: "Przyjazd serwisanta",
+  remote: "Serwis zdalny",
 };
 
 export type ServiceIntakeProjectOption = {
@@ -63,7 +88,9 @@ export type ServiceIntakeRecord = {
   contactPhone: string | null;
   warrantyStatus: string | null;
   serviceTypeHint: "Gwarancyjny" | "Pogwarancyjny";
-  priority: ServiceIntakePriority;
+  requestType: ServiceIntakeRequestType;
+  priority: ServiceIntakePriority | null;
+  postWarrantyAction: ServiceIntakePostWarrantyAction | null;
   description: string;
   acceptedPaidTerms: boolean;
   acceptedPaidTermsAt: string | null;

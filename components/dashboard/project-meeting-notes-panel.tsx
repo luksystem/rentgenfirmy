@@ -96,12 +96,14 @@ export function ProjectMeetingNotesPanel({
     [mode, notes],
   );
 
+  const shouldCollapseNotes = mode === "client" || collapseNotes;
+
   useEffect(() => {
-    if (!collapseNotes || visibleNotes.length === 0) {
+    if (!shouldCollapseNotes || visibleNotes.length === 0) {
       return;
     }
     onNotesViewed?.(visibleNotes.map((note) => note.id));
-  }, [collapseNotes, onNotesViewed, visibleNotes]);
+  }, [onNotesViewed, shouldCollapseNotes, visibleNotes]);
 
   function openCreate() {
     setEditingId(null);
@@ -188,7 +190,14 @@ export function ProjectMeetingNotesPanel({
   }
 
   function renderNoteBody(note: ProjectMeetingNote) {
-    return <RichHtml html={note.body} className="text-foreground/90" fallback="Brak treści" />;
+    return (
+      <RichHtml
+        html={note.body}
+        variant="document"
+        className="text-foreground/90"
+        fallback="Brak treści"
+      />
+    );
   }
 
   function renderNoteCard(note: ProjectMeetingNote) {
@@ -200,7 +209,7 @@ export function ProjectMeetingNotesPanel({
       .filter(Boolean)
       .join(" · ");
 
-    if (collapseNotes) {
+    if (shouldCollapseNotes) {
       return (
         <CollapsibleSection
           key={note.id}
@@ -293,8 +302,8 @@ export function ProjectMeetingNotesPanel({
             <DialogHeader>
               <DialogTitle>{editingId ? "Edytuj notatkę" : "Nowa notatka ze spotkania"}</DialogTitle>
               <DialogDescription>
-                Wklej surowe zapiski i użyj AI, aby uporządkować treść. Opublikowana notatka będzie
-                widoczna na dashboardzie klienta.
+                Wklej surowe zapiski i użyj AI — powstanie czytelna treść z nagłówkami, listami i
+                pogrubieniami. Opublikowana notatka będzie zwinięta na dashboardzie klienta.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-3">
@@ -322,6 +331,14 @@ export function ProjectMeetingNotesPanel({
                   placeholder="Wklej notatki ze spotkania…"
                 />
               </Field>
+              {form.body.trim() && !isRichTextEmpty(form.body) ? (
+                <div className="rounded-xl border border-border/70 bg-surface-muted/10 p-4">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
+                    Podgląd dla klienta
+                  </p>
+                  <RichHtml html={form.body} variant="document" fallback="Brak treści" />
+                </div>
+              ) : null}
               <Button
                 type="button"
                 variant="outline"

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   SERVICE_INTAKE_PRIORITY_LABELS,
+  SERVICE_INTAKE_REQUEST_TYPE_LABELS,
   SERVICE_INTAKE_STATUS_LABELS,
   type ServiceIntakeRecord,
   type ServiceIntakeStatus,
@@ -122,7 +123,8 @@ export function ServiceIntakeListPanel() {
                     {item.clientName ?? item.contactFullName} · {item.contactEmail}
                   </p>
                   <p className="mt-1 text-xs text-muted">
-                    {formatDate(item.createdAt)} · {SERVICE_INTAKE_PRIORITY_LABELS[item.priority]} ·{" "}
+                    {formatDate(item.createdAt)} · {SERVICE_INTAKE_REQUEST_TYPE_LABELS[item.requestType]}
+                    {item.priority ? ` · ${SERVICE_INTAKE_PRIORITY_LABELS[item.priority]}` : ""} ·{" "}
                     {item.serviceTypeHint}
                   </p>
                 </div>

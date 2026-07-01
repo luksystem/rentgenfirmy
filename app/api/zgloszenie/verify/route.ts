@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { verifyServiceIntakeIdentity } from "@/lib/supabase/service-intake-server";
-import { verifyTurnstileToken } from "@/lib/security/turnstile";
 
 export async function POST(request: Request) {
   try {
@@ -8,7 +7,6 @@ export async function POST(request: Request) {
       sessionToken?: string;
       email?: string;
       fullName?: string;
-      captchaToken?: string;
     };
 
     const email = body.email?.trim().toLowerCase() ?? "";
@@ -17,15 +15,6 @@ export async function POST(request: Request) {
 
     if (!sessionToken || !email || !fullName) {
       return NextResponse.json({ error: "Uzupełnij wszystkie pola." }, { status: 400 });
-    }
-
-    const captchaOk = await verifyTurnstileToken(
-      body.captchaToken,
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(),
-    );
-
-    if (!captchaOk) {
-      return NextResponse.json({ error: "Potwierdź zabezpieczenie antyspamowe." }, { status: 400 });
     }
 
     const result = await verifyServiceIntakeIdentity({ sessionToken, email, fullName });

@@ -13,6 +13,7 @@ import {
   FileUp,
   FolderKanban,
   GitBranch,
+  HardHat,
   Home,
   Inbox,
   LayoutDashboard,
@@ -95,6 +96,7 @@ const navGroupsBase: NavGroup[] = [
       { href: "/projekty", label: "Projekty", icon: FolderKanban },
       { href: "/klienci", label: "Klienci", icon: Users },
       { href: "/dokumenty", label: "Dokumenty", icon: FileUp },
+      { href: "/branze", label: "Katalog branż", icon: HardHat },
     ],
   },
   {

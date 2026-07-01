@@ -1,14 +1,35 @@
 export const MEETING_NOTE_AI_MAX_INPUT_CHARS = 16_000;
 
+function stripHtmlToPlainText(html: string) {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+}
+
 function buildPrompt(rawNotes: string) {
   return `Jesteś asystentem firmy Smart Home / BMS. Sformatuj surowe notatki ze spotkania z klientem lub wykonawcą.
 
-Zasady:
-- Odpowiedz po polsku w HTML (tagi: p, b, i, u, ul, li, br — bez markdown).
-- Użyj sekcji: Uczestnicy, Omówione tematy, Ustalenia, Dalsze kroki (pomiń puste sekcje).
+Zasady formatowania (HTML):
+- Odpowiedz po polsku wyłącznie w HTML — dozwolone tagi: h3, h4, p, strong, b, em, i, ul, ol, li, br.
+- NIE używaj markdown ani bloków \`\`\`.
+- Każda sekcja zaczyna się od <h3> z nazwą sekcji.
+- Możliwe sekcje (pomiń puste): Uczestnicy, Omówione tematy, Ustalenia, Dalsze kroki, Uwagi.
+- Pod nagłówkiem daj odstęp — treść w akapitach <p> lub listach <ul>/<ol><li>.
+- Ważne terminy, daty, urządzenia, kwoty i decyzje oznacz <strong>.
+- Między sekcjami zostaw wyraźny podział (nagłówek h3, potem treść).
 - Nie wymyślaj faktów — opieraj się wyłącznie na wklejonym tekście.
-- Popraw interpunkcję i podziel na logiczne akapity / listy punktowane.
-- Zachowaj nazwy urządzeń, protokoły, daty i kwoty ze źródła.
+- Popraw interpunkcję i literówki oczywiste ze źródła.
+
+Przykład struktury:
+<h3>Uczestnicy</h3>
+<p>...</p>
+<h3>Ustalenia</h3>
+<ul><li><strong>...</strong> — ...</li></ul>
 
 Surowe notatki:
 """
@@ -16,12 +37,26 @@ ${rawNotes}
 """`;
 }
 
+export function normalizeMeetingNoteHtml(content: string) {
+  let html = content.trim();
+  html = html.replace(/^```(?:html)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  if (!html.includes("<") && html.includes("\n")) {
+    html = html
+      .split(/\n{2,}/)
+      .map((block) => block.trim())
+      .filter(Boolean)
+      .map((block) => `<p>${block.replace(/\n/g, "<br>")}</p>`)
+      .join("");
+  }
+  return html;
+}
+
 export async function formatMeetingNoteWithAi(rawNotes: string): Promise<string> {
-  const trimmed = rawNotes.trim();
-  if (!trimmed) {
+  const plain = stripHtmlToPlainText(rawNotes);
+  if (!plain) {
     throw new Error("Wklej treść notatek do sformatowania.");
   }
-  if (trimmed.length > MEETING_NOTE_AI_MAX_INPUT_CHARS) {
+  if (plain.length > MEETING_NOTE_AI_MAX_INPUT_CHARS) {
     throw new Error(`Notatki są zbyt długie (max ${MEETING_NOTE_AI_MAX_INPUT_CHARS} znaków).`);
   }
 
@@ -44,9 +79,10 @@ export async function formatMeetingNoteWithAi(rawNotes: string): Promise<string>
       messages: [
         {
           role: "system",
-          content: "Formatuj notatki ze spotkań technicznych. Zwracaj wyłącznie fragment HTML (bez markdown, bez ```).",
+          content:
+            "Formatuj notatki ze spotkań technicznych. Zwracaj wyłącznie fragment HTML z nagłówkami h3, akapitami p i listami ul/li. Bez markdown, bez ```.",
         },
-        { role: "user", content: buildPrompt(trimmed) },
+        { role: "user", content: buildPrompt(plain) },
       ],
     }),
   });
@@ -68,5 +104,5 @@ export async function formatMeetingNoteWithAi(rawNotes: string): Promise<string>
     throw new Error("OpenAI nie zwróciło sformatowanej treści.");
   }
 
-  return content;
+  return normalizeMeetingNoteHtml(content);
 }
