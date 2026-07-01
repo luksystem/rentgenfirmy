@@ -53,9 +53,9 @@ export const QUICK_ADD_MENU_ITEMS: QuickAddMenuItem[] = [
     icon: Calculator,
   },
   {
-    href: "/faktury",
+    href: "/faktury/nowy",
     label: "Faktura / koszt",
-    description: "Zajawka — rejestr kosztów i faktur (wkrótce)",
+    description: "Nowy wpis w rejestrze faktur i kosztów projektowych",
     icon: Receipt,
   },
   {

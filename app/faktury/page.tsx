@@ -1,5 +1,8 @@
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent } from "@/components/ui/card";
+import { ProjectInvoiceList } from "@/components/invoices/project-invoice-list";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 export default function FakturyPage() {
   return (
@@ -7,14 +10,17 @@ export default function FakturyPage() {
       <PageHeader
         eyebrow="Sprzedaż"
         title="Faktury i koszty"
-        description="Moduł w przygotowaniu — rejestr faktur, kosztów projektowych i dokumentów księgowych z podglądem PDF."
+        description="Rejestr faktur i kosztów projektowych z załącznikami PDF oraz przypisaniem do klienta i projektu."
+        action={
+          <Button asChild>
+            <Link href="/faktury/nowy">
+              <Plus className="h-4 w-4" />
+              Dodaj wpis
+            </Link>
+          </Button>
+        }
       />
-      <Card>
-        <CardContent className="py-6 text-sm text-muted">
-          Wkrótce: dodawanie faktury/kosztu z załącznikiem, przypisanie do projektu i klienta oraz
-          podsumowanie kosztów w dashboardzie.
-        </CardContent>
-      </Card>
+      <ProjectInvoiceList />
     </>
   );
 }

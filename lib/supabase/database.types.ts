@@ -460,6 +460,29 @@ export type ProjectMeetingNoteRow = {
   updated_at: string;
 };
 
+export type ProjectInvoiceRow = {
+  id: string;
+  project_id: string | null;
+  client_id: string | null;
+  kind: string;
+  title: string;
+  vendor_name: string;
+  invoice_number: string;
+  amount_net: number | null;
+  amount_gross: number | null;
+  vat_rate: number | null;
+  currency: string;
+  issue_date: string | null;
+  notes: string;
+  storage_path: string | null;
+  file_name: string | null;
+  mime_type: string | null;
+  size_bytes: number | null;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ProjectAgreementFulfillmentRow = {
   id: string;
   project_id: string;
@@ -940,6 +963,12 @@ export type Database = {
         Row: ProjectMeetingNoteRow;
         Insert: Partial<ProjectMeetingNoteRow> & Pick<ProjectMeetingNoteRow, "project_id">;
         Update: Partial<ProjectMeetingNoteRow>;
+        Relationships: [];
+      };
+      project_invoices: {
+        Row: ProjectInvoiceRow;
+        Insert: Partial<ProjectInvoiceRow> & Pick<ProjectInvoiceRow, "title">;
+        Update: Partial<ProjectInvoiceRow>;
         Relationships: [];
       };
       project_agreement_fulfillments: {
