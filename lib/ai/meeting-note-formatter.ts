@@ -4,8 +4,8 @@ function buildPrompt(rawNotes: string) {
   return `Jesteś asystentem firmy Smart Home / BMS. Sformatuj surowe notatki ze spotkania z klientem lub wykonawcą.
 
 Zasady:
-- Odpowiedz po polsku w formacie Markdown.
-- Użyj sekcji: ## Uczestnicy, ## Omówione tematy, ## Ustalenia, ## Dalsze kroki (pomiń puste sekcje).
+- Odpowiedz po polsku w HTML (tagi: p, b, i, u, ul, li, br — bez markdown).
+- Użyj sekcji: Uczestnicy, Omówione tematy, Ustalenia, Dalsze kroki (pomiń puste sekcje).
 - Nie wymyślaj faktów — opieraj się wyłącznie na wklejonym tekście.
 - Popraw interpunkcję i podziel na logiczne akapity / listy punktowane.
 - Zachowaj nazwy urządzeń, protokoły, daty i kwoty ze źródła.
@@ -44,7 +44,7 @@ export async function formatMeetingNoteWithAi(rawNotes: string): Promise<string>
       messages: [
         {
           role: "system",
-          content: "Formatuj notatki ze spotkań technicznych. Zwracaj wyłącznie sformatowany Markdown.",
+          content: "Formatuj notatki ze spotkań technicznych. Zwracaj wyłącznie fragment HTML (bez markdown, bez ```).",
         },
         { role: "user", content: buildPrompt(trimmed) },
       ],

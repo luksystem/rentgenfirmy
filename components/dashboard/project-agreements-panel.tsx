@@ -180,7 +180,19 @@ function AgreementCard({
         statusTone={meta.statusTone}
         hint={approvalHint ?? meta.hint}
         defaultExpanded={defaultExpanded}
-        preview={<AgreementApprovalResponses agreement={agreement} compact title="" />}
+        preview={
+          <>
+            {agreement.communicationProtocols?.length ? (
+              <p className="text-xs text-muted">
+                Protokoły:{" "}
+                <span className="font-medium text-foreground/90">
+                  {agreement.communicationProtocols.join(", ")}
+                </span>
+              </p>
+            ) : null}
+            <AgreementApprovalResponses agreement={agreement} compact title="" />
+          </>
+        }
       >
       <AgreementApprovalResponses agreement={agreement} title="Notatki z akceptacji" />
 

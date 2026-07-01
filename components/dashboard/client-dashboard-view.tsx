@@ -46,6 +46,10 @@ import { mergeAgreementsById } from "@/lib/dashboard/merge-agreements";
 import type { ProjectDashboardContent } from "@/lib/dashboard/content-types";
 import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
 import type { ProjectMeetingNote } from "@/lib/dashboard/meeting-note-types";
+import {
+  getReadMeetingNoteIds,
+  markMeetingNotesRead,
+} from "@/lib/dashboard/meeting-notes-read";
 import { fetchProjectMeetingNotes } from "@/lib/supabase/project-meeting-note-repository";
 import type { ProjectTrade } from "@/lib/dashboard/trade-types";
 import type { ProjectSatisfactionBundle } from "@/lib/dashboard/satisfaction-types";
@@ -227,6 +231,7 @@ export function ClientDashboardView({
   const [activeTab, setActiveTab] = useState<ClientDashboardTab>(initialTab ?? "home");
   const [kanbanPublicLinks, setKanbanPublicLinks] = useState<Record<string, string>>({});
   const [meetingNotes, setMeetingNotes] = useState<ProjectMeetingNote[]>(seedMeetingNotes ?? []);
+  const [readMeetingNoteIds, setReadMeetingNoteIds] = useState<Set<string>>(() => new Set());
   const agreementsSyncKeyRef = useRef("");
 
   const handleSelectTab = useCallback(
@@ -234,9 +239,16 @@ export function ClientDashboardView({
       if (activeKanbanToken) {
         onKanbanTokenChange?.(null);
       }
+      if (readOnly && tab === "notes" && selectedProjectId) {
+        const publishedIds = meetingNotes
+          .filter((note) => note.status === "published")
+          .map((note) => note.id);
+        markMeetingNotesRead(selectedProjectId, publishedIds);
+        setReadMeetingNoteIds(getReadMeetingNoteIds(selectedProjectId));
+      }
       setActiveTab(tab);
     },
-    [activeKanbanToken, onKanbanTokenChange],
+    [activeKanbanToken, meetingNotes, onKanbanTokenChange, readOnly, selectedProjectId],
   );
 
   const handleKanbanNavigate = useCallback(
@@ -345,6 +357,25 @@ export function ClientDashboardView({
       cancelled = true;
     };
   }, [enableMeetingNotes, readOnly, seedMeetingNotes, selectedProjectId]);
+
+  useEffect(() => {
+    if (!readOnly || !selectedProjectId) {
+      setReadMeetingNoteIds(new Set());
+      return;
+    }
+    setReadMeetingNoteIds(getReadMeetingNoteIds(selectedProjectId));
+  }, [meetingNotes, readOnly, selectedProjectId]);
+
+  useEffect(() => {
+    if (!readOnly || activeTab !== "notes" || !selectedProjectId) {
+      return;
+    }
+    const publishedIds = meetingNotes
+      .filter((note) => note.status === "published")
+      .map((note) => note.id);
+    markMeetingNotesRead(selectedProjectId, publishedIds);
+    setReadMeetingNoteIds(getReadMeetingNoteIds(selectedProjectId));
+  }, [activeTab, meetingNotes, readOnly, selectedProjectId]);
 
   useEffect(() => {
     if (!enableAgreements || !selectedProjectId || seedAgreements === undefined) {
@@ -844,6 +875,14 @@ export function ClientDashboardView({
           mode={readOnly ? "client" : "team"}
           authorName={readOnly ? clientAuthorName : teamAuthorName}
           seedNotes={seedMeetingNotes}
+          collapseNotes={readOnly}
+          onNotesViewed={(noteIds) => {
+            if (!readOnly || !selectedProjectId) {
+              return;
+            }
+            markMeetingNotesRead(selectedProjectId, noteIds);
+            setReadMeetingNoteIds(getReadMeetingNoteIds(selectedProjectId));
+          }}
         />
       </div>
     );
@@ -901,6 +940,11 @@ export function ClientDashboardView({
     }
     if (tabId === "offers") {
       return pendingOffersCount ?? 0;
+    }
+    if (tabId === "notes" && readOnly) {
+      return meetingNotes.filter(
+        (note) => note.status === "published" && !readMeetingNoteIds.has(note.id),
+      ).length;
     }
     return 0;
   }

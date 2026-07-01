@@ -138,6 +138,9 @@ export function buildAgreementCollapsibleMeta(agreement: ProjectClientAgreement)
     subtitle: [
       PROJECT_AGREEMENT_CATEGORY_LABELS[agreement.category],
       agreement.createdByName,
+      agreement.communicationProtocols?.length
+        ? `Protokoły: ${agreement.communicationProtocols.join(", ")}`
+        : null,
       costLabel,
     ]
       .filter(Boolean)

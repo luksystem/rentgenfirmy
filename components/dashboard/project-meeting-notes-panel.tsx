@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Pencil, Sparkles, Trash2 } from "lucide-react";
+import { CollapsibleSection } from "@/components/dashboard/agreement-collapsible-shell";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,7 +11,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, Input, Textarea } from "@/components/ui/input";
+import { Field, Input } from "@/components/ui/input";
+import { RichHtml } from "@/components/ui/rich-html";
+import { RichTextarea } from "@/components/ui/rich-textarea";
+import { isRichTextEmpty } from "@/lib/dashboard/meeting-notes-read";
 import type { ProjectMeetingNote, ProjectMeetingNoteInput } from "@/lib/dashboard/meeting-note-types";
 import {
   createProjectMeetingNote,
@@ -39,12 +43,12 @@ function noteToInput(note: ProjectMeetingNote): ProjectMeetingNoteInput {
   };
 }
 
-function MarkdownBody({ body }: { body: string }) {
-  return (
-    <div className="prose prose-invert max-w-none whitespace-pre-wrap text-sm text-foreground/90">
-      {body}
-    </div>
-  );
+function noteSummary(note: ProjectMeetingNote) {
+  const plain = note.body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  if (!plain) {
+    return "Brak treści";
+  }
+  return plain.length > 140 ? `${plain.slice(0, 140)}…` : plain;
 }
 
 export function ProjectMeetingNotesPanel({
@@ -52,11 +56,15 @@ export function ProjectMeetingNotesPanel({
   mode,
   authorName,
   seedNotes,
+  collapseNotes = false,
+  onNotesViewed,
 }: {
   projectId: string;
   mode: "team" | "client";
   authorName: string;
   seedNotes?: ProjectMeetingNote[];
+  collapseNotes?: boolean;
+  onNotesViewed?: (noteIds: string[]) => void;
 }) {
   const [notes, setNotes] = useState<ProjectMeetingNote[]>(seedNotes ?? []);
   const [loading, setLoading] = useState(seedNotes === undefined);
@@ -88,6 +96,13 @@ export function ProjectMeetingNotesPanel({
     [mode, notes],
   );
 
+  useEffect(() => {
+    if (!collapseNotes || visibleNotes.length === 0) {
+      return;
+    }
+    onNotesViewed?.(visibleNotes.map((note) => note.id));
+  }, [collapseNotes, onNotesViewed, visibleNotes]);
+
   function openCreate() {
     setEditingId(null);
     setForm(emptyInput());
@@ -103,7 +118,7 @@ export function ProjectMeetingNotesPanel({
   }
 
   async function handleFormatWithAi() {
-    if (!form.body.trim()) {
+    if (isRichTextEmpty(form.body)) {
       setError("Wklej surowe notatki przed formatowaniem AI.");
       return;
     }
@@ -131,7 +146,7 @@ export function ProjectMeetingNotesPanel({
   }
 
   async function handleSave(publish = false) {
-    if (!form.body.trim()) {
+    if (isRichTextEmpty(form.body)) {
       setError("Treść notatki jest wymagana.");
       return;
     }
@@ -172,6 +187,79 @@ export function ProjectMeetingNotesPanel({
     setNotes((current) => current.filter((note) => note.id !== noteId));
   }
 
+  function renderNoteBody(note: ProjectMeetingNote) {
+    return <RichHtml html={note.body} className="text-foreground/90" fallback="Brak treści" />;
+  }
+
+  function renderNoteCard(note: ProjectMeetingNote) {
+    const meta = [
+      note.authorName,
+      note.meetingAt ? `spotkanie ${formatDate(note.meetingAt)}` : null,
+      note.publishedAt ? `opublikowano ${formatDate(note.publishedAt.slice(0, 10))}` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+    if (collapseNotes) {
+      return (
+        <CollapsibleSection
+          key={note.id}
+          title={note.title || "Notatka ze spotkania"}
+          summary={[meta, noteSummary(note)].filter(Boolean).join(" · ")}
+          defaultExpanded={false}
+        >
+          {renderNoteBody(note)}
+        </CollapsibleSection>
+      );
+    }
+
+    return (
+      <article
+        key={note.id}
+        className="min-w-0 overflow-hidden rounded-xl border border-border/70 bg-surface-muted/15 p-4"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="break-words font-medium text-foreground">
+                {note.title || "Notatka ze spotkania"}
+              </p>
+              {mode === "team" ? (
+                <span
+                  className={cn(
+                    "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                    note.status === "published"
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+                      : "border-border/70 bg-surface-muted/40 text-muted",
+                  )}
+                >
+                  {note.status === "published" ? "Opublikowana" : "Szkic"}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-1 text-xs text-muted">{meta}</p>
+          </div>
+          {mode === "team" ? (
+            <div className="flex shrink-0 flex-wrap gap-1">
+              {note.status === "draft" ? (
+                <Button type="button" size="sm" variant="secondary" onClick={() => void handlePublish(note.id)}>
+                  Opublikuj
+                </Button>
+              ) : null}
+              <Button type="button" size="sm" variant="outline" onClick={() => openEdit(note)}>
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button type="button" size="sm" variant="destructive" onClick={() => void handleDelete(note.id)}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ) : null}
+        </div>
+        <div className="mt-3">{renderNoteBody(note)}</div>
+      </article>
+    );
+  }
+
   return (
     <div className="grid min-w-0 max-w-full gap-4 overflow-x-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -197,59 +285,7 @@ export function ProjectMeetingNotesPanel({
         </p>
       ) : null}
 
-      <div className="grid gap-3">
-        {visibleNotes.map((note) => (
-          <article
-            key={note.id}
-            className="min-w-0 overflow-hidden rounded-xl border border-border/70 bg-surface-muted/15 p-4"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="break-words font-medium text-foreground">
-                    {note.title || "Notatka ze spotkania"}
-                  </p>
-                  {mode === "team" ? (
-                    <span
-                      className={cn(
-                        "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                        note.status === "published"
-                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
-                          : "border-border/70 bg-surface-muted/40 text-muted",
-                      )}
-                    >
-                      {note.status === "published" ? "Opublikowana" : "Szkic"}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-1 text-xs text-muted">
-                  {note.authorName}
-                  {note.meetingAt ? ` · spotkanie ${formatDate(note.meetingAt)}` : ""}
-                  {note.publishedAt ? ` · opublikowano ${formatDate(note.publishedAt.slice(0, 10))}` : ""}
-                </p>
-              </div>
-              {mode === "team" ? (
-                <div className="flex shrink-0 flex-wrap gap-1">
-                  {note.status === "draft" ? (
-                    <Button type="button" size="sm" variant="secondary" onClick={() => void handlePublish(note.id)}>
-                      Opublikuj
-                    </Button>
-                  ) : null}
-                  <Button type="button" size="sm" variant="outline" onClick={() => openEdit(note)}>
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button type="button" size="sm" variant="destructive" onClick={() => void handleDelete(note.id)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              ) : null}
-            </div>
-            <div className="mt-3">
-              <MarkdownBody body={note.body} />
-            </div>
-          </article>
-        ))}
-      </div>
+      <div className="grid gap-3">{visibleNotes.map((note) => renderNoteCard(note))}</div>
 
       {mode === "team" ? (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -278,10 +314,10 @@ export function ProjectMeetingNotesPanel({
                   }
                 />
               </Field>
-              <Field label="Treść (Markdown)">
-                <Textarea
+              <Field label="Treść">
+                <RichTextarea
                   value={form.body}
-                  onChange={(event) => setForm((current) => ({ ...current, body: event.target.value }))}
+                  onChange={(body) => setForm((current) => ({ ...current, body }))}
                   rows={12}
                   placeholder="Wklej notatki ze spotkania…"
                 />
@@ -289,7 +325,7 @@ export function ProjectMeetingNotesPanel({
               <Button
                 type="button"
                 variant="outline"
-                disabled={formatting || !form.body.trim()}
+                disabled={formatting || isRichTextEmpty(form.body)}
                 onClick={() => void handleFormatWithAi()}
               >
                 <Sparkles className="mr-2 h-4 w-4" />

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type {
   BlockerReasonOption,
@@ -13,6 +13,44 @@ import type {
   StringListFieldOptionKey,
 } from "@/lib/field-options";
 import { FIELD_OPTION_LABELS } from "@/lib/field-options";
+import { cn } from "@/lib/utils";
+
+function CollapsibleCard({
+  title,
+  summary,
+  defaultExpanded = false,
+  children,
+}: {
+  title: string;
+  summary?: string;
+  defaultExpanded?: boolean;
+  children: React.ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+
+  return (
+    <Card>
+      <button
+        type="button"
+        className="flex w-full items-start gap-2 px-6 py-4 text-left"
+        onClick={() => setExpanded((current) => !current)}
+        aria-expanded={expanded}
+      >
+        <ChevronDown
+          className={cn(
+            "mt-1 h-4 w-4 shrink-0 text-muted transition-transform",
+            expanded && "rotate-180",
+          )}
+        />
+        <div className="min-w-0 flex-1">
+          <CardTitle className="text-base">{title}</CardTitle>
+          {!expanded && summary ? <p className="mt-1 text-sm text-muted">{summary}</p> : null}
+        </div>
+      </button>
+      {expanded ? <CardContent className="grid gap-3 pt-0">{children}</CardContent> : null}
+    </Card>
+  );
+}
 
 function OptionsListEditor({
   label,
@@ -55,11 +93,7 @@ function OptionsListEditor({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{label}</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-3">
+    <CollapsibleCard title={label} summary={`${items.length} pozycji — kliknij, aby rozwinąć`}>
         {items.map((item, index) => (
           <div key={`${item}-${index}`} className="flex gap-2">
             <Input
@@ -114,8 +148,7 @@ function OptionsListEditor({
             <Plus className="h-4 w-4" />
           </Button>
         </div>
-      </CardContent>
-    </Card>
+    </CollapsibleCard>
   );
 }
 
@@ -170,11 +203,10 @@ export function BlockerReasonsOptionsEditor({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{FIELD_OPTION_LABELS.blockerReasons}</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-4">
+    <CollapsibleCard
+      title={FIELD_OPTION_LABELS.blockerReasons}
+      summary={`${items.length} powodów blokady — kliknij, aby rozwinąć`}
+    >
         <p className="text-sm text-muted">
           Oznacz, czy blokada leży po stronie firmy (nasza) czy klienta / innej strony (zewnętrzna).
           Liczniki na dashboardzie i w raporcie zliczają oczekujące projekty według tych flag.
@@ -261,8 +293,7 @@ export function BlockerReasonsOptionsEditor({
             <Plus className="h-4 w-4" />
           </Button>
         </div>
-      </CardContent>
-    </Card>
+    </CollapsibleCard>
   );
 }
 
@@ -311,11 +342,10 @@ export function InterruptionTypesOptionsEditor({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{FIELD_OPTION_LABELS.interruptionTypes}</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-4">
+    <CollapsibleCard
+      title={FIELD_OPTION_LABELS.interruptionTypes}
+      summary={`${items.length} typów przerwań — kliknij, aby rozwinąć`}
+    >
         <p className="text-sm text-muted">
           Przy każdym typie przerwania możesz wpisać sugestię quick win — pojawi się w raporcie,
           gdy ten typ dominuje w przerwaniach.
@@ -389,8 +419,7 @@ export function InterruptionTypesOptionsEditor({
             <Plus className="h-4 w-4" />
           </Button>
         </div>
-      </CardContent>
-    </Card>
+    </CollapsibleCard>
   );
 }
 
@@ -471,11 +500,10 @@ export function FlowStatusesOptionsEditor({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{FIELD_OPTION_LABELS.flowStatuses}</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-3">
+    <CollapsibleCard
+      title={FIELD_OPTION_LABELS.flowStatuses}
+      summary={`${items.length} statusów przepływu — kliknij, aby rozwinąć`}
+    >
         <p className="text-sm text-muted">
           Każdy status ma jedną kategorię przepływu: <strong>W trakcie</strong>,{" "}
           <strong>Oczekujące</strong> lub <strong>Zamknięty</strong>. Do widoku Do zamknięcia
@@ -565,8 +593,7 @@ export function FlowStatusesOptionsEditor({
             <Plus className="h-4 w-4" />
           </Button>
         </div>
-      </CardContent>
-    </Card>
+    </CollapsibleCard>
   );
 }
 
@@ -617,11 +644,10 @@ export function StagesOptionsEditor({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{FIELD_OPTION_LABELS.implementationStages}</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-3">
+    <CollapsibleCard
+      title={FIELD_OPTION_LABELS.implementationStages}
+      summary={`${items.length} etapów — kliknij, aby rozwinąć`}
+    >
         <p className="text-sm text-muted">
           Zaznacz „Do zamknięcia” przy etapach finalizacji. Do widoku trafia projekt ze statusem W
           trakcie lub Oczekujące na takim etapie.
@@ -691,8 +717,7 @@ export function StagesOptionsEditor({
             <Plus className="h-4 w-4" />
           </Button>
         </div>
-      </CardContent>
-    </Card>
+    </CollapsibleCard>
   );
 }
 
