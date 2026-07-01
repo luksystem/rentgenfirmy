@@ -22,6 +22,12 @@ export type BlockerReasonOption = {
   isExternal: boolean;
 };
 
+export type TradeCatalogItem = {
+  name: string;
+  communicationProtocols: string[];
+  description: string;
+};
+
 export type FieldOptions = {
   projectTypes: string[];
   flowStatuses: FlowStatusOption[];
@@ -29,7 +35,7 @@ export type FieldOptions = {
   nextStepOwners: string[];
   blockerReasons: BlockerReasonOption[];
   interruptionTypes: InterruptionTypeOption[];
-  tradeCatalog: string[];
+  tradeCatalogItems: TradeCatalogItem[];
   communicationProtocols: string[];
 };
 
@@ -37,7 +43,7 @@ export type FieldOptionKey = keyof FieldOptions;
 
 export type StringListFieldOptionKey = Exclude<
   FieldOptionKey,
-  "implementationStages" | "flowStatuses" | "interruptionTypes" | "blockerReasons"
+  "implementationStages" | "flowStatuses" | "interruptionTypes" | "blockerReasons" | "tradeCatalogItems"
 >;
 
 const DEFAULT_STAGE_OPTIONS: StageOption[] = [
@@ -147,15 +153,15 @@ export const DEFAULT_FIELD_OPTIONS: FieldOptions = {
     { name: "Inne", isInternal: false, isExternal: false },
   ],
   interruptionTypes: DEFAULT_INTERRUPTION_TYPE_OPTIONS,
-  tradeCatalog: [
-    "Elektryka",
-    "HVAC",
-    "Klimatyzacja",
-    "Smart Home",
-    "Instalacje sanitarne",
-    "Tynki",
-    "Stolarka",
-    "Wentylacja",
+  tradeCatalogItems: [
+    { name: "Elektryka", communicationProtocols: ["Modbus"], description: "Instalacje elektryczne i rozdzielnie." },
+    { name: "HVAC", communicationProtocols: ["Modbus", "BACnet"], description: "Ogrzewanie, wentylacja, rekuperacja." },
+    { name: "Klimatyzacja", communicationProtocols: ["Modbus", "BACnet"], description: "Systemy klimatyzacji i chłodzenia." },
+    { name: "Smart Home", communicationProtocols: ["KNX", "MQTT", "Loxone"], description: "Automatyka budynkowa i integracje." },
+    { name: "Instalacje sanitarne", communicationProtocols: [], description: "Wod-kan, ogrzewanie podłogowe." },
+    { name: "Tynki", communicationProtocols: [], description: "Prace wykończeniowe — tynki." },
+    { name: "Stolarka", communicationProtocols: [], description: "Okna, drzwi, stolarka." },
+    { name: "Wentylacja", communicationProtocols: ["Modbus", "BACnet"], description: "Wentylacja mechaniczna." },
   ],
   communicationProtocols: ["KNX", "Modbus", "BACnet", "MQTT", "Loxone", "Crestron", "Control4"],
 };
@@ -167,7 +173,7 @@ export const FIELD_OPTION_LABELS: Record<FieldOptionKey, string> = {
   nextStepOwners: "Właściciel kolejnego kroku",
   blockerReasons: "Powód blokady",
   interruptionTypes: "Typ przerwania",
-  tradeCatalog: "Katalog branż (standardowe)",
+  tradeCatalogItems: "Katalog branż",
   communicationProtocols: "Protokoły komunikacyjne",
 };
 
@@ -176,10 +182,7 @@ export const PROJECT_STRING_FIELD_OPTION_KEYS: StringListFieldOptionKey[] = [
   "nextStepOwners",
 ];
 
-export const CATALOG_FIELD_OPTION_KEYS: StringListFieldOptionKey[] = [
-  "tradeCatalog",
-  "communicationProtocols",
-];
+export const CATALOG_FIELD_OPTION_KEYS: StringListFieldOptionKey[] = ["communicationProtocols"];
 
 export const PROJECT_FIELD_OPTION_KEYS: FieldOptionKey[] = [
   ...PROJECT_STRING_FIELD_OPTION_KEYS,
@@ -334,6 +337,62 @@ function normalizeFlowStatusOptions(input?: unknown): FlowStatusOption[] {
     .filter((status): status is FlowStatusOption => status !== null);
 }
 
+function normalizeTradeCatalogItems(input?: unknown): TradeCatalogItem[] {
+  if (!Array.isArray(input) || input.length === 0) {
+    return DEFAULT_FIELD_OPTIONS.tradeCatalogItems.map((item) => ({
+      ...item,
+      communicationProtocols: [...item.communicationProtocols],
+    }));
+  }
+
+  if (typeof input[0] === "string") {
+    return input
+      .map((value) => {
+        const name = String(value).trim();
+        if (!name) {
+          return null;
+        }
+        const fromDefault = DEFAULT_FIELD_OPTIONS.tradeCatalogItems.find((item) => item.name === name);
+        return (
+          fromDefault ?? {
+            name,
+            communicationProtocols: [],
+            description: "",
+          }
+        );
+      })
+      .filter((item): item is TradeCatalogItem => item !== null);
+  }
+
+  const seen = new Set<string>();
+
+  return input
+    .map((value) => {
+      if (!value || typeof value !== "object" || !("name" in value)) {
+        return null;
+      }
+
+      const name = String((value as TradeCatalogItem).name).trim();
+      if (!name || seen.has(name)) {
+        return null;
+      }
+
+      seen.add(name);
+      const protocols = Array.isArray((value as TradeCatalogItem).communicationProtocols)
+        ? (value as TradeCatalogItem).communicationProtocols
+            .map((entry) => String(entry).trim())
+            .filter(Boolean)
+        : [];
+
+      return {
+        name,
+        communicationProtocols: [...new Set(protocols)],
+        description: String((value as TradeCatalogItem).description ?? "").trim(),
+      };
+    })
+    .filter((item): item is TradeCatalogItem => item !== null);
+}
+
 function normalizeBlockerReasonOptions(input?: unknown): BlockerReasonOption[] {
   if (!Array.isArray(input) || input.length === 0) {
     return DEFAULT_FIELD_OPTIONS.blockerReasons.map((item) => ({ ...item }));
@@ -402,9 +461,24 @@ export function normalizeFieldOptions(input?: Partial<FieldOptions> | null): Fie
     nextStepOwners: merge("nextStepOwners"),
     blockerReasons: normalizeBlockerReasonOptions(input?.blockerReasons),
     interruptionTypes: normalizeInterruptionTypeOptions(input?.interruptionTypes),
-    tradeCatalog: merge("tradeCatalog"),
+    tradeCatalogItems: normalizeTradeCatalogItems(
+      input && "tradeCatalogItems" in input
+        ? input.tradeCatalogItems
+        : input && "tradeCatalog" in input
+          ? (input as { tradeCatalog?: string[] }).tradeCatalog
+          : undefined,
+    ),
     communicationProtocols: merge("communicationProtocols"),
   };
+}
+
+export function tradeCatalogNames(options: FieldOptions): string[] {
+  return options.tradeCatalogItems.map((item) => item.name);
+}
+
+export function findTradeCatalogItem(name: string, options: FieldOptions): TradeCatalogItem | undefined {
+  const normalized = name.trim();
+  return options.tradeCatalogItems.find((item) => item.name === normalized);
 }
 
 export function blockerReasonNames(options: FieldOptions): string[] {

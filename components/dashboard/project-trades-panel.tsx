@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import type { ProjectTrade, ProjectTradeInput } from "@/lib/dashboard/trade-types";
+import { findTradeCatalogItem, tradeCatalogNames } from "@/lib/field-options";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 import { useProjectTradeStore } from "@/store/project-trade-store";
@@ -122,7 +123,8 @@ export function ProjectTradesPanel({
   const addTrade = useProjectTradeStore((state) => state.addTrade);
   const updateTrade = useProjectTradeStore((state) => state.updateTrade);
   const removeTrade = useProjectTradeStore((state) => state.removeTrade);
-  const tradeCatalog = useAppStore((state) => state.fieldOptions.tradeCatalog);
+  const fieldOptions = useAppStore((state) => state.fieldOptions);
+  const tradeCatalog = useMemo(() => tradeCatalogNames(fieldOptions), [fieldOptions]);
   const trades = storeTrades;
 
   const availableCatalogNames = useMemo(
@@ -199,7 +201,17 @@ export function ProjectTradesPanel({
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => void addTrade(projectId, { name, company: "", contactName: "", email: "", phone: "", description: "" })}
+              onClick={() => {
+                const catalogItem = findTradeCatalogItem(name, fieldOptions);
+                void addTrade(projectId, {
+                  name,
+                  company: "",
+                  contactName: "",
+                  email: "",
+                  phone: "",
+                  description: catalogItem?.description ?? "",
+                });
+              }}
             >
               <Plus className="mr-1 h-3.5 w-3.5" />
               {name}
@@ -269,6 +281,20 @@ export function ProjectTradesPanel({
                 {trade.description}
               </p>
             ) : null}
+            {(() => {
+              const catalogItem = findTradeCatalogItem(trade.name, fieldOptions);
+              if (!catalogItem?.communicationProtocols.length) {
+                return null;
+              }
+              return (
+                <p className="mt-2 text-xs text-muted">
+                  Protokoły (katalog):{" "}
+                  <span className="font-medium text-foreground/90">
+                    {catalogItem.communicationProtocols.join(", ")}
+                  </span>
+                </p>
+              );
+            })()}
           </article>
         ))}
       </div>

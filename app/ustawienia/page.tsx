@@ -125,6 +125,20 @@ export default function SettingsPage() {
       <Card className="mb-6 border border-border/80">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
           <div>
+            <p className="font-medium text-foreground">Katalog branż</p>
+            <p className="mt-1 text-sm text-muted">
+              Standardowe branże z mapą protokołów komunikacyjnych i domyślnym opisem zakresu.
+            </p>
+          </div>
+          <Button variant="secondary" asChild>
+            <Link href="/ustawienia/branze">Otwórz katalog branż</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-6 border border-border/80">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+          <div>
             <p className="font-medium text-foreground">Katalog specyfikacji i odbiór wewnętrzny</p>
             <p className="mt-1 text-sm text-muted">
               Edytuj pozycje konfiguratora specyfikacji (Oświetlenie, HVAC…) i przypisane checklisty QA.
@@ -191,7 +205,7 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <h2 className="mb-4 text-lg font-semibold">Katalogi (branże, protokoły)</h2>
+          <h2 className="mb-4 text-lg font-semibold">Katalogi (protokoły)</h2>
           <FieldOptionsEditor
             values={draft}
             keys={CATALOG_FIELD_OPTION_KEYS}

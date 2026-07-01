@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, Link2, Pencil, Plus, Send, Trash2, X } from "lucide-react";
 import { AgreementCollaborationPanel } from "@/components/dashboard/agreement-collaboration-panel";
+import { AgreementDeliveryActions } from "@/components/dashboard/agreement-delivery-actions";
 import { AgreementApprovalResponses } from "@/components/dashboard/agreement-approval-responses";
 import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-collapsible-shell";
 import { AgreementApproverRoleField } from "@/components/dashboard/agreement-approver-role-field";
@@ -36,6 +37,7 @@ import {
   type AgreementApproverRoleInput,
 } from "@/lib/dashboard/agreement-collaboration-types";
 import { mergeAgreementsById } from "@/lib/dashboard/merge-agreements";
+import { findTradeCatalogItem } from "@/lib/field-options";
 import { createPublicClientAgreement } from "@/lib/dashboard/public-agreement-client";
 import { useAgreementApprovalHint } from "@/hooks/use-agreement-approval-hint";
 import { fetchAgreementApproverRoles } from "@/lib/supabase/project-agreement-collaboration-repository";
@@ -124,6 +126,9 @@ function AgreementCard({
   agreement,
   mode,
   authorName,
+  projectTrades,
+  clientEmail,
+  clientName,
   onSubmit,
   onCancel,
   onRespond,
@@ -136,6 +141,9 @@ function AgreementCard({
   agreement: ProjectClientAgreement;
   mode: "team" | "client";
   authorName: string;
+  projectTrades: import("@/lib/dashboard/trade-types").ProjectTrade[];
+  clientEmail?: string | null;
+  clientName?: string | null;
   onSubmit: (id: string) => Promise<void>;
   onCancel: (id: string) => Promise<void>;
   onRespond: (
@@ -223,6 +231,15 @@ function AgreementCard({
         <p className="text-xs text-muted">
           Wysłano do klienta: {new Date(agreement.submittedAt).toLocaleString("pl-PL")}
         </p>
+      ) : null}
+
+      {mode === "team" ? (
+        <AgreementDeliveryActions
+          agreement={agreement}
+          trades={projectTrades}
+          clientEmail={clientEmail}
+          clientName={clientName}
+        />
       ) : null}
 
       {mode === "team" && agreement.status === "draft" ? (
@@ -466,6 +483,21 @@ export function ProjectAgreementsPanel({
   const communicationProtocolOptions = useAppStore(
     (state) => state.fieldOptions.communicationProtocols,
   );
+  const fieldOptions = useAppStore((state) => state.fieldOptions);
+  const projects = useAppStore((state) => state.projects);
+  const clients = useAppStore((state) => state.clients);
+
+  const projectClient = useMemo(() => {
+    const project = projects.find((entry) => entry.id === projectId);
+    if (!project?.clientId) {
+      return null;
+    }
+    const client = clients.find((entry) => entry.id === project.clientId);
+    if (!client) {
+      return null;
+    }
+    return client;
+  }, [clients, projectId, projects]);
 
   const agreements = useMemo(
     () => mergeAgreementsById(storeAgreements, seedAgreements),
@@ -717,6 +749,9 @@ export function ProjectAgreementsPanel({
             agreement={agreement}
             mode={mode}
             authorName={authorName}
+            projectTrades={projectTrades}
+            clientEmail={projectClient?.email}
+            clientName={projectClient?.fullName}
             onSubmit={(id) => handleSubmit(id)}
             onCancel={(id) => handleCancel(id)}
             onRespond={(id, input) => handleRespond(id, input)}
@@ -913,6 +948,21 @@ export function ProjectAgreementsPanel({
                         approverRoles: updateApproverRole(current.approverRoles ?? [], index, patch),
                       }))
                     }
+                    onTradeSelected={(trade) => {
+                      const catalogItem = findTradeCatalogItem(trade.name, fieldOptions);
+                      if (!catalogItem?.communicationProtocols.length) {
+                        return;
+                      }
+                      setForm((current) => ({
+                        ...current,
+                        communicationProtocols: [
+                          ...new Set([
+                            ...(current.communicationProtocols ?? []),
+                            ...catalogItem.communicationProtocols,
+                          ]),
+                        ],
+                      }));
+                    }}
                   />
                   {!role.isClientRole && !role.isTeamRole ? (
                     <Button

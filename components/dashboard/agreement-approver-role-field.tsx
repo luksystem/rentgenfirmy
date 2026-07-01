@@ -23,11 +23,13 @@ export function AgreementApproverRoleField({
   trades,
   disabled,
   onChange,
+  onTradeSelected,
 }: {
   role: AgreementApproverRoleInput;
   trades: ProjectTrade[];
   disabled?: boolean;
   onChange: (patch: Partial<AgreementApproverRoleInput>) => void;
+  onTradeSelected?: (trade: ProjectTrade) => void;
 }) {
   if (role.isClientRole || role.isTeamRole) {
     return <Input value={role.label} disabled className="min-w-0 flex-1" />;
@@ -51,6 +53,7 @@ export function AgreementApproverRoleField({
           const trade = trades.find((entry) => entry.id === nextSource);
           if (trade) {
             onChange({ label: formatProjectTradeRoleLabel(trade) });
+            onTradeSelected?.(trade);
           }
         }}
       >
