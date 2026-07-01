@@ -25,7 +25,9 @@ import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-typ
 import type { ProjectTrade } from "@/lib/dashboard/trade-types";
 import type { ProjectMeetingNote } from "@/lib/dashboard/meeting-note-types";
 import type { ProjectSatisfactionBundle } from "@/lib/dashboard/satisfaction-types";
+import type { ProjectDocument } from "@/lib/documents/types";
 import { rowToMeetingNote } from "@/lib/supabase/project-meeting-note-repository";
+import { rowToProjectDocument } from "@/lib/supabase/project-document-repository";
 import type { SystemCredentialMeta } from "@/lib/dashboard/system-credentials-types";
 import type { DashboardPublicAccessInfo, DashboardSpace } from "@/lib/dashboard/types";
 import {
@@ -438,6 +440,7 @@ export type PublicDashboardPayload = {
   offers: ClientOfferSummary[];
   kanbanPublicLinks: Record<string, string>;
   meetingNotes: ProjectMeetingNote[];
+  documents: ProjectDocument[];
   features: {
     agreements: boolean;
     specification: boolean;
@@ -447,6 +450,7 @@ export type PublicDashboardPayload = {
     credentials: boolean;
     offers: boolean;
     meetingNotes: boolean;
+    documents: boolean;
   };
 };
 
@@ -456,7 +460,8 @@ async function tableExists(
     | "specification_catalog_items"
     | "project_dashboard_content"
     | "project_trades"
-    | "project_meeting_notes",
+    | "project_meeting_notes"
+    | "project_documents",
 ) {
   const supabase = getSupabaseAdmin();
   const { error } = await supabase.from(table).select("id").limit(1);
@@ -558,6 +563,24 @@ async function fetchMeetingNotesForProject(projectId: string) {
   }
 
   return (data ?? []).map((row) => rowToMeetingNote(row as Parameters<typeof rowToMeetingNote>[0]));
+}
+
+async function fetchDocumentsForProject(projectId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("project_documents")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (isMissingTableError(error.message)) {
+      return [];
+    }
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row) => rowToProjectDocument(row as Parameters<typeof rowToProjectDocument>[0]));
 }
 
 export async function fetchPublicDashboardPayload(
@@ -663,7 +686,7 @@ export async function fetchPublicDashboardPayload(
     }
   }
 
-  const [agreementsEnabled, specificationEnabled, tradesEnabled, satisfactionEnabled, contentEnabled, credentialsEnabled, offersEnabled, meetingNotesEnabled] =
+  const [agreementsEnabled, specificationEnabled, tradesEnabled, satisfactionEnabled, contentEnabled, credentialsEnabled, offersEnabled, meetingNotesEnabled, documentsEnabled] =
     await Promise.all([
       tableExists("project_client_agreements"),
       tableExists("specification_catalog_items"),
@@ -673,9 +696,10 @@ export async function fetchPublicDashboardPayload(
       systemCredentialsTableExists(),
       servicesTableExists(),
       tableExists("project_meeting_notes"),
+      tableExists("project_documents"),
     ]);
 
-  const [agreements, specificationItems, trades, satisfaction, content, credentials, meetingNotes] = initialProjectId
+  const [agreements, specificationItems, trades, satisfaction, content, credentials, meetingNotes, documents] = initialProjectId
     ? await Promise.all([
         agreementsEnabled ? fetchAgreementsForProject(initialProjectId) : Promise.resolve([]),
         specificationEnabled
@@ -690,8 +714,9 @@ export async function fetchPublicDashboardPayload(
           ? listProjectSystemCredentials(initialProjectId, { clientVisibleOnly: true })
           : Promise.resolve([]),
         meetingNotesEnabled ? fetchMeetingNotesForProject(initialProjectId) : Promise.resolve([]),
+        documentsEnabled ? fetchDocumentsForProject(initialProjectId) : Promise.resolve([]),
       ])
-    : [[], [], [], null, [], [], []];
+    : [[], [], [], null, [], [], [], []];
 
   const pendingAgreementsCount = agreements.filter((entry) => isAgreementPendingAttention(entry)).length;
 
@@ -728,6 +753,7 @@ export async function fetchPublicDashboardPayload(
     offers,
     kanbanPublicLinks,
     meetingNotes,
+    documents,
     features: {
       agreements: agreementsEnabled,
       specification: specificationEnabled,
@@ -737,6 +763,7 @@ export async function fetchPublicDashboardPayload(
       credentials: credentialsEnabled,
       offers: offersEnabled,
       meetingNotes: meetingNotesEnabled,
+      documents: documentsEnabled,
     },
   };
 }

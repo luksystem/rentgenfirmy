@@ -10,6 +10,7 @@ import {
   Clock3,
   ClipboardList,
   ExternalLink,
+  FileUp,
   FolderKanban,
   GitBranch,
   Home,
@@ -93,6 +94,7 @@ const navGroupsBase: NavGroup[] = [
       { href: "/procesy", label: "Procesy", icon: GitBranch },
       { href: "/projekty", label: "Projekty", icon: FolderKanban },
       { href: "/klienci", label: "Klienci", icon: Users },
+      { href: "/dokumenty", label: "Dokumenty", icon: FileUp },
     ],
   },
   {

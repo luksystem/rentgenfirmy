@@ -16,6 +16,7 @@ import {
 } from "@/lib/documents/types";
 import { createProjectDocument } from "@/lib/supabase/project-document-repository";
 import { useAppStore } from "@/store/app-store";
+import { useAuthStore } from "@/store/auth-store";
 
 function emptyInput(): ProjectDocumentInput {
   return {
@@ -43,6 +44,7 @@ export function ProjectDocumentForm({
   const projects = useAppStore((state) => state.projects);
   const clients = useAppStore((state) => state.clients);
   const addClient = useAppStore((state) => state.addClient);
+  const displayName = useAuthStore((state) => state.displayName);
   const [form, setForm] = useState<ProjectDocumentInput>(() => ({
     ...emptyInput(),
     clientId: initialClientId ?? null,
@@ -75,7 +77,7 @@ export function ProjectDocumentForm({
     setError(null);
 
     try {
-      await createProjectDocument(normalized, "Zespół", file);
+      await createProjectDocument(normalized, displayName || "Zespół", file);
       router.push("/dokumenty");
       router.refresh();
     } catch (saveError) {
@@ -146,9 +148,15 @@ export function ProjectDocumentForm({
           <Field label="Projekt">
             <Select
               value={form.projectId ?? ""}
-              onChange={(event) =>
-                setForm({ ...form, projectId: event.target.value || null })
-              }
+              onChange={(event) => {
+                const projectId = event.target.value || null;
+                const project = projects.find((entry) => entry.id === projectId);
+                setForm({
+                  ...form,
+                  projectId,
+                  clientId: project?.clientId ?? form.clientId,
+                });
+              }}
             >
               <option value="">Bez projektu</option>
               {filteredProjects.map((project) => (

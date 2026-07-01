@@ -27,6 +27,7 @@ import {
   updateRequisitionStatus,
 } from "@/lib/supabase/requisition-repository";
 import { useAppStore } from "@/store/app-store";
+import { useAuthStore } from "@/store/auth-store";
 import { cn, formatDateTime } from "@/lib/utils";
 
 const ALL = "";
@@ -41,6 +42,7 @@ const STATUS_BADGE_CLASS = {
 export function RequisitionList() {
   const projects = useAppStore((state) => state.projects);
   const clients = useAppStore((state) => state.clients);
+  const displayName = useAuthStore((state) => state.displayName);
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -89,7 +91,12 @@ export function RequisitionList() {
   ) {
     setBusyId(requisitionId);
     try {
-      const updated = await updateRequisitionStatus(requisitionId, status, "Zespół", reviewNote);
+      const updated = await updateRequisitionStatus(
+        requisitionId,
+        status,
+        displayName || "Zespół",
+        reviewNote,
+      );
       setRequisitions((current) =>
         current.map((entry) => (entry.id === requisitionId ? updated : entry)),
       );
@@ -252,8 +259,9 @@ export function RequisitionList() {
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
                       <p className="font-medium text-foreground">{entry.title}</p>
-                      <p className="mt-0.5 text-xs text-muted">
-                        {formatDateTime(entry.createdAt)} · {entry.requestedByName}
+                      <p className="mt-0.5 text-xs text-muted">{formatDateTime(entry.createdAt)}</p>
+                      <p className="mt-1 text-xs font-medium text-foreground/90">
+                        Zgłosił: {entry.requestedByName}
                       </p>
                     </div>
                     <span

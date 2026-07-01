@@ -22,6 +22,7 @@ import {
   updateRequisitionStatus,
 } from "@/lib/supabase/requisition-repository";
 import { useAppStore } from "@/store/app-store";
+import { useAuthStore } from "@/store/auth-store";
 
 function emptyInput(): RequisitionInput {
   return {
@@ -51,6 +52,7 @@ export function RequisitionForm({
   const projects = useAppStore((state) => state.projects);
   const clients = useAppStore((state) => state.clients);
   const addClient = useAppStore((state) => state.addClient);
+  const displayName = useAuthStore((state) => state.displayName);
   const [form, setForm] = useState<RequisitionInput>(() => ({
     ...emptyInput(),
     clientId: initialClientId ?? null,
@@ -80,9 +82,9 @@ export function RequisitionForm({
     setError(null);
 
     try {
-      const created = await createRequisition(normalized, "Zespół");
+      const created = await createRequisition(normalized, displayName || "Zespół");
       if (submitImmediately) {
-        await updateRequisitionStatus(created.id, "submitted", "Zespół");
+        await updateRequisitionStatus(created.id, "submitted", displayName || "Zespół");
       }
       router.push("/zapotrzebowania");
       router.refresh();

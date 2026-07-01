@@ -34,6 +34,7 @@ type PublicDashboardPayload = {
   offers: import("@/lib/dashboard/client-offer-summary").ClientOfferSummary[];
   kanbanPublicLinks: Record<string, string>;
   meetingNotes: import("@/lib/dashboard/meeting-note-types").ProjectMeetingNote[];
+  documents: import("@/lib/documents/types").ProjectDocument[];
   features: {
     agreements: boolean;
     specification: boolean;
@@ -43,6 +44,7 @@ type PublicDashboardPayload = {
     credentials: boolean;
     offers: boolean;
     meetingNotes: boolean;
+    documents: boolean;
   };
   authRequired?: boolean;
   access?: DashboardPublicAccessInfo;
@@ -119,6 +121,7 @@ function PublicDashboardPageContent() {
   const [kanbanPublicLinks, setKanbanPublicLinks] = useState<Record<string, string>>({});
   const [offers, setOffers] = useState<PublicDashboardPayload["offers"]>([]);
   const [meetingNotes, setMeetingNotes] = useState<PublicDashboardPayload["meetingNotes"]>([]);
+  const [documents, setDocuments] = useState<PublicDashboardPayload["documents"]>([]);
   const [pendingOffersCount, setPendingOffersCount] = useState(0);
   const [features, setFeatures] = useState({
     agreements: false,
@@ -129,6 +132,7 @@ function PublicDashboardPageContent() {
     credentials: false,
     offers: false,
     meetingNotes: false,
+    documents: false,
   });
   const [access, setAccess] = useState<DashboardPublicAccessInfo>(DEFAULT_ACCESS);
   const [contextTitle, setContextTitle] = useState<string | null>(null);
@@ -165,6 +169,7 @@ function PublicDashboardPageContent() {
     setKanbanPublicLinks(payload.kanbanPublicLinks ?? {});
     setOffers(payload.offers ?? []);
     setMeetingNotes(payload.meetingNotes ?? []);
+    setDocuments(payload.documents ?? []);
     setPendingOffersCount(payload.pendingOffersCount ?? 0);
     setFeatures(payload.features);
     setSelectedProjectId(payload.initialProjectId);
@@ -416,6 +421,7 @@ function PublicDashboardPageContent() {
           seedSpecificationItems={features.specification ? specificationItems : undefined}
           seedTrades={features.trades ? trades : undefined}
           seedMeetingNotes={features.meetingNotes ? meetingNotes : undefined}
+          seedDocuments={features.documents ? documents : undefined}
           seedSatisfaction={features.satisfaction ? (satisfaction ?? undefined) : undefined}
           seedContent={features.content ? content : undefined}
           seedCredentials={features.credentials ? credentials : undefined}
@@ -429,6 +435,7 @@ function PublicDashboardPageContent() {
           enableSpecification={features.specification}
           enableTrades={features.trades}
           enableMeetingNotes={features.meetingNotes}
+          enableDocuments={features.documents}
           enableSatisfaction={features.satisfaction}
           enableCredentials={features.credentials}
           onProjectPatch={handleProjectPatch}

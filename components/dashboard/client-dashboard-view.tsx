@@ -26,6 +26,7 @@ import { ProjectSpecificationPanel } from "@/components/dashboard/project-specif
 import { ProjectTradesPanel } from "@/components/dashboard/project-trades-panel";
 import { StageSatisfactionPrompt } from "@/components/dashboard/stage-satisfaction-prompt";
 import { ProjectMeetingNotesPanel } from "@/components/dashboard/project-meeting-notes-panel";
+import { ProjectDocumentsPanel } from "@/components/dashboard/project-documents-panel";
 import { ProjectIntegrationsTab } from "@/components/project/project-integrations-tab";
 import { ClientProjectSettingsPanel } from "@/components/dashboard/client-project-settings-panel";
 import { ClientOffersPanel } from "@/components/dashboard/client-offers-panel";
@@ -46,6 +47,7 @@ import { mergeAgreementsById } from "@/lib/dashboard/merge-agreements";
 import type { ProjectDashboardContent } from "@/lib/dashboard/content-types";
 import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
 import type { ProjectMeetingNote } from "@/lib/dashboard/meeting-note-types";
+import type { ProjectDocument } from "@/lib/documents/types";
 import {
   getReadMeetingNoteIds,
   markMeetingNotesRead,
@@ -89,6 +91,7 @@ type ClientDashboardTab =
   | "trades"
   | "satisfaction"
   | "notes"
+  | "documentation"
   | "credentials"
   | "links";
 
@@ -107,6 +110,7 @@ const PUBLIC_CLIENT_TAB_CONFIG: Array<{
   { id: "specification", label: "Specyfikacja", icon: FileText },
   { id: "trades", label: "Branże", icon: HardHat },
   { id: "notes", label: "Notatki", icon: StickyNote },
+  { id: "documentation", label: "Dokumentacja", icon: FolderOpen },
   { id: "satisfaction", label: "Ocena", icon: Star },
   { id: "credentials", label: "Hasła", icon: KeyRound },
   { id: "links", label: "Linki", icon: Link2 },
@@ -124,6 +128,7 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "specification", label: "Specyfikacja", icon: FileText },
   { id: "trades", label: "Branże", icon: HardHat },
   { id: "notes", label: "Notatki", icon: StickyNote },
+  { id: "documentation", label: "Dokumentacja", icon: FolderOpen },
   { id: "satisfaction", label: "Ocena", icon: Star },
   { id: "credentials", label: "Hasła", icon: KeyRound },
   { id: "links", label: "Linki", icon: Link2 },
@@ -166,6 +171,7 @@ export function ClientDashboardView({
   enableTrades = true,
   enableSatisfaction = true,
   enableMeetingNotes = true,
+  enableDocuments = true,
   enableCredentials = true,
   enableContent = true,
   processProgress,
@@ -174,6 +180,7 @@ export function ClientDashboardView({
   seedSpecificationItems,
   seedTrades,
   seedMeetingNotes,
+  seedDocuments,
   seedSatisfaction,
   seedCredentials,
   seedContent,
@@ -204,6 +211,7 @@ export function ClientDashboardView({
   enableTrades?: boolean;
   enableSatisfaction?: boolean;
   enableMeetingNotes?: boolean;
+  enableDocuments?: boolean;
   enableCredentials?: boolean;
   enableContent?: boolean;
   processProgress?: { percent: number; completed: number; total: number } | null;
@@ -213,6 +221,7 @@ export function ClientDashboardView({
   seedSpecificationItems?: ProjectSpecificationItem[];
   seedTrades?: ProjectTrade[];
   seedMeetingNotes?: ProjectMeetingNote[];
+  seedDocuments?: ProjectDocument[];
   seedSatisfaction?: ProjectSatisfactionBundle;
   seedCredentials?: SystemCredentialMeta[];
   seedContent?: ProjectDashboardContent[];
@@ -866,6 +875,20 @@ export function ClientDashboardView({
     );
   }
 
+  function renderDocumentationPanel() {
+    return (
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
+        <h2 className="mb-3 text-base font-semibold text-foreground">Dokumentacja projektu</h2>
+        <ProjectDocumentsPanel
+          projectId={selectedProject.id}
+          clientId={client.id}
+          mode={readOnly ? "client" : "team"}
+          seedDocuments={seedDocuments}
+        />
+      </div>
+    );
+  }
+
   function renderMeetingNotesPanel() {
     return (
       <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
@@ -1093,6 +1116,8 @@ export function ClientDashboardView({
         return enableTrades ? renderTradesPanel() : null;
       case "notes":
         return enableMeetingNotes ? renderMeetingNotesPanel() : null;
+      case "documentation":
+        return enableDocuments ? renderDocumentationPanel() : null;
       case "satisfaction":
         return enableSatisfaction ? renderSatisfactionPanel() : null;
       case "credentials":
