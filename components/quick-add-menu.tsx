@@ -65,9 +65,9 @@ export const QUICK_ADD_MENU_ITEMS: QuickAddMenuItem[] = [
     icon: FileUp,
   },
   {
-    href: "/zapotrzebowania",
+    href: "/zapotrzebowania/nowy",
     label: "Zgłoś zapotrzebowanie",
-    description: "Zajawka — ubrania, narzędzia, sprzęt (wkrótce)",
+    description: "Ubrania, narzędzia lub sprzęt — workflow akceptacji",
     icon: Package,
   },
   {

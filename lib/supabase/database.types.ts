@@ -500,6 +500,23 @@ export type ProjectDocumentRow = {
   updated_at: string;
 };
 
+export type RequisitionRow = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  scope: string;
+  status: string;
+  project_id: string | null;
+  client_id: string | null;
+  requested_by_name: string;
+  reviewed_by_name: string | null;
+  reviewed_at: string | null;
+  review_note: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ProjectAgreementFulfillmentRow = {
   id: string;
   project_id: string;
@@ -992,6 +1009,12 @@ export type Database = {
         Row: ProjectDocumentRow;
         Insert: Partial<ProjectDocumentRow> & Pick<ProjectDocumentRow, "title">;
         Update: Partial<ProjectDocumentRow>;
+        Relationships: [];
+      };
+      requisitions: {
+        Row: RequisitionRow;
+        Insert: Partial<RequisitionRow> & Pick<RequisitionRow, "title">;
+        Update: Partial<RequisitionRow>;
         Relationships: [];
       };
       project_agreement_fulfillments: {

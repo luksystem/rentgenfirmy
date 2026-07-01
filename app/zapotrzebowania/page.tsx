@@ -1,5 +1,8 @@
+import Link from "next/link";
+import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent } from "@/components/ui/card";
+import { RequisitionList } from "@/components/requisitions/requisition-list";
+import { Button } from "@/components/ui/button";
 
 export default function ZapotrzebowaniaPage() {
   return (
@@ -7,13 +10,17 @@ export default function ZapotrzebowaniaPage() {
       <PageHeader
         eyebrow="Operacje"
         title="Zapotrzebowania"
-        description="Moduł w przygotowaniu — zgłoszenia na ubrania, narzędzia i sprzęt z workflow akceptacji."
+        description="Zgłoszenia na ubrania, narzędzia i sprzęt z workflow akceptacji."
+        action={
+          <Button asChild>
+            <Link href="/zapotrzebowania/nowy">
+              <Plus className="h-4 w-4" />
+              Nowe zapotrzebowanie
+            </Link>
+          </Button>
+        }
       />
-      <Card>
-        <CardContent className="py-6 text-sm text-muted">
-          Wkrótce: formularz zapotrzebowania, status akceptacji i powiązanie z kosztami / fakturami.
-        </CardContent>
-      </Card>
+      <RequisitionList />
     </>
   );
 }

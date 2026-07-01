@@ -19,6 +19,7 @@ import {
   LogOut,
   Key,
   Menu,
+  Package,
   PauseCircle,
   PhoneCall,
   Plus,
@@ -77,6 +78,7 @@ const navGroupsBase: NavGroup[] = [
         icon: COMMERCIAL_MODULES.serviceSettlement.icon,
       },
       { href: "/zlecenia", label: "Zlecenia", icon: ClipboardList },
+      { href: "/zapotrzebowania", label: "Zapotrzebowania", icon: Package },
       {
         href: "/zgloszenie",
         label: "Formularz klienta",
