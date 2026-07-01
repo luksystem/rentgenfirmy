@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   PROJECT_STRING_FIELD_OPTION_KEYS,
+  CATALOG_FIELD_OPTION_KEYS,
   type FieldOptions,
   type StringListFieldOptionKey,
 } from "@/lib/field-options";
@@ -187,6 +188,15 @@ export default function SettingsPage() {
               onChange={updateStages}
             />
           </div>
+        </div>
+
+        <div>
+          <h2 className="mb-4 text-lg font-semibold">Katalogi (branże, protokoły)</h2>
+          <FieldOptionsEditor
+            values={draft}
+            keys={CATALOG_FIELD_OPTION_KEYS}
+            onChange={updateList}
+          />
         </div>
 
         <div>

@@ -40,6 +40,7 @@ import { ClientProjectSummary } from "@/components/dashboard/client-project-summ
 import type { ClientOfferSummary } from "@/lib/dashboard/client-offer-summary";
 import type { ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
 import { isAgreementPendingAttention } from "@/lib/dashboard/agreement-types";
+import { mergeAgreementsById } from "@/lib/dashboard/merge-agreements";
 import type { ProjectDashboardContent } from "@/lib/dashboard/content-types";
 import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
 import type { ProjectTrade } from "@/lib/dashboard/trade-types";
@@ -50,7 +51,7 @@ import { getProcessProgress } from "@/lib/process/types";
 import { extractKanbanTokenFromPublicPath } from "@/lib/process/kanban-public-path";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import { fetchProjectKanbanPublicLinks } from "@/lib/supabase/kanban-repository";
-import type { Client } from "@/lib/service/types";
+import type { Client, ClientInput } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { isIntegrationOperator } from "@/lib/auth/types";
@@ -59,6 +60,7 @@ import { useProjectAgreementsRealtime } from "@/hooks/use-project-agreements-rea
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
 import { useProjectSatisfactionStore } from "@/store/project-satisfaction-store";
 import { useProjectSpecificationStore } from "@/store/project-specification-store";
+import { useAppStore } from "@/store/app-store";
 
 const EMPTY_SATISFACTION: ProjectSatisfactionBundle = {
   agreementFulfillments: [],
@@ -254,12 +256,23 @@ export function ClientDashboardView({
   );
   const ensureAgreements = useProjectAgreementStore((state) => state.ensureAgreements);
   const seedProjectAgreements = useProjectAgreementStore((state) => state.seedProjectAgreements);
-  const agreementSource =
-    storeAgreements.length > 0 ? storeAgreements : (seedAgreements ?? storeAgreements);
+  const agreementSource = useMemo(
+    () => mergeAgreementsById(storeAgreements, seedAgreements),
+    [storeAgreements, seedAgreements],
+  );
 
   const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? projects[0];
   const profile = useAuthStore((state) => state.profile);
   const isAdministrator = useAuthStore((state) => state.isAdministrator);
+  const updateClient = useAppStore((state) => state.updateClient);
+  const isSavingClient = useAppStore((state) => state.isSaving);
+
+  const handleUpdateClient = useCallback(
+    async (input: ClientInput) => {
+      await updateClient(client.id, input);
+    },
+    [client.id, updateClient],
+  );
   const canViewIntegrations =
     !readOnly && (isAdministrator || (profile ? isIntegrationOperator(profile.role) : false));
 
@@ -695,6 +708,8 @@ export function ClientDashboardView({
         enableSatisfactionReview={enableSatisfaction}
         satisfactionBundle={satisfactionBundle}
         showTeamSatisfactionSummary={!readOnly && enableSatisfaction}
+        onUpdateClient={readOnly ? undefined : handleUpdateClient}
+        isSavingClient={isSavingClient}
       />
       </div>
     );

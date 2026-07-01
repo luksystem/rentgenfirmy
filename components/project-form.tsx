@@ -178,6 +178,7 @@ function WaitingCheckbox({
 
 export function ProjectForm({
   project,
+  defaultClientId,
   isSaving = false,
   onSubmit,
   onCancel,
@@ -185,6 +186,7 @@ export function ProjectForm({
   hideCancel = false,
 }: {
   project?: Project;
+  defaultClientId?: string;
   isSaving?: boolean;
   onSubmit: (project: ProjectInput) => void | Promise<void>;
   onCancel: () => void;
@@ -196,10 +198,15 @@ export function ProjectForm({
   const clients = useAppStore((state) => state.clients);
   const addClient = useAppStore((state) => state.addClient);
   const schema = useMemo(() => createSchema(fieldOptions), [fieldOptions]);
-  const defaultValues = useMemo(
-    () => (project ? projectToFormValues(project, fieldOptions) : createDefaultValues(fieldOptions)),
-    [project, fieldOptions],
-  );
+  const defaultValues = useMemo(() => {
+    const base = project
+      ? projectToFormValues(project, fieldOptions)
+      : createDefaultValues(fieldOptions);
+    if (!project && defaultClientId) {
+      return { ...base, clientId: defaultClientId };
+    }
+    return base;
+  }, [project, fieldOptions, defaultClientId]);
 
   const {
     register,

@@ -35,6 +35,7 @@ import {
   TEAM_APPROVER_ROLE_LABEL,
   type AgreementApproverRoleInput,
 } from "@/lib/dashboard/agreement-collaboration-types";
+import { mergeAgreementsById } from "@/lib/dashboard/merge-agreements";
 import { createPublicClientAgreement } from "@/lib/dashboard/public-agreement-client";
 import { useAgreementApprovalHint } from "@/hooks/use-agreement-approval-hint";
 import { fetchAgreementApproverRoles } from "@/lib/supabase/project-agreement-collaboration-repository";
@@ -441,8 +442,10 @@ export function ProjectAgreementsPanel({
   );
   const ensureTrades = useProjectTradeStore((state) => state.ensureTrades);
 
-  const agreements =
-    storeAgreements.length > 0 ? storeAgreements : (seedAgreements ?? storeAgreements);
+  const agreements = useMemo(
+    () => mergeAgreementsById(storeAgreements, seedAgreements),
+    [storeAgreements, seedAgreements],
+  );
 
   const [filter, setFilter] = useState<FilterKey>(focusAgreementId ? "all" : mode === "client" ? "pending_client" : "all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -524,6 +527,10 @@ export function ProjectAgreementsPanel({
   }
 
   async function handleSave() {
+    if (saving) {
+      return;
+    }
+
     if (!form.title.trim()) {
       setSaveError("Podaj tytuł ustalenia.");
       return;
@@ -554,16 +561,8 @@ export function ProjectAgreementsPanel({
         }
         await refreshLocalAgreements();
       } else if (publicDashboardToken) {
-        const created = await createPublicClientAgreement(
-          publicDashboardToken,
-          projectId,
-          payload,
-          authorName,
-        );
-        useProjectAgreementStore.getState().seedProjectAgreements(projectId, [
-          ...(useProjectAgreementStore.getState().byProject[projectId] ?? []),
-          created.agreement,
-        ]);
+        await createPublicClientAgreement(publicDashboardToken, projectId, payload, authorName);
+        await refreshLocalAgreements();
         await onAgreementsChanged?.();
       } else {
         await createAgreement(projectId, payload, { name: authorName, side: mode });

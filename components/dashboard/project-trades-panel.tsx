@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import type { ProjectTrade, ProjectTradeInput } from "@/lib/dashboard/trade-types";
+import { cn } from "@/lib/utils";
+import { useAppStore } from "@/store/app-store";
 import { useProjectTradeStore } from "@/store/project-trade-store";
 
 const EMPTY_TRADES: ProjectTrade[] = [];
@@ -30,12 +32,33 @@ function emptyTradeInput(): ProjectTradeInput {
 function TradeFormFields({
   form,
   onChange,
+  catalogNames = [],
 }: {
   form: ProjectTradeInput;
   onChange: (next: ProjectTradeInput) => void;
+  catalogNames?: string[];
 }) {
   return (
     <div className="grid gap-3">
+      {catalogNames.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {catalogNames.map((name) => (
+            <button
+              key={name}
+              type="button"
+              className={cn(
+                "rounded-full border px-2.5 py-1 text-xs font-medium transition",
+                form.name === name
+                  ? "border-accent/50 bg-accent/10 text-foreground"
+                  : "border-border/70 text-muted hover:border-accent/30 hover:text-foreground",
+              )}
+              onClick={() => onChange({ ...form, name })}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <Field label="Branża *">
         <Input
           value={form.name}
@@ -99,8 +122,13 @@ export function ProjectTradesPanel({
   const addTrade = useProjectTradeStore((state) => state.addTrade);
   const updateTrade = useProjectTradeStore((state) => state.updateTrade);
   const removeTrade = useProjectTradeStore((state) => state.removeTrade);
-
+  const tradeCatalog = useAppStore((state) => state.fieldOptions.tradeCatalog);
   const trades = storeTrades;
+
+  const availableCatalogNames = useMemo(
+    () => tradeCatalog.filter((name) => !trades.some((trade) => trade.name === name)),
+    [tradeCatalog, trades],
+  );
   const isLoading = loading && trades.length === 0;
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -164,10 +192,24 @@ export function ProjectTradesPanel({
         <p className="text-sm text-muted">
           Wykonawcy i branże w projekcie — wykorzystasz je przy rolach akceptacji w ustaleniach.
         </p>
-        <Button type="button" size="sm" className="shrink-0" onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Dodaj branżę
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {availableCatalogNames.slice(0, 4).map((name) => (
+            <Button
+              key={name}
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void addTrade(projectId, { name, company: "", contactName: "", email: "", phone: "", description: "" })}
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              {name}
+            </Button>
+          ))}
+          <Button type="button" size="sm" className="shrink-0" onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Dodaj branżę
+          </Button>
+        </div>
       </div>
 
       {isLoading && !trades.length ? (
@@ -189,10 +231,19 @@ export function ProjectTradesPanel({
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
-                <p className="break-words font-medium text-foreground">{trade.name}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="break-words font-medium text-foreground">{trade.name}</p>
+                  {!trade.company?.trim() ? (
+                    <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200">
+                      Nieaktywna
+                    </span>
+                  ) : null}
+                </div>
                 {trade.company ? (
                   <p className="mt-0.5 break-words text-sm text-muted">{trade.company}</p>
-                ) : null}
+                ) : (
+                  <p className="mt-0.5 text-sm text-muted">Brak przypisanej firmy wykonawcy</p>
+                )}
               </div>
               <div className="flex shrink-0 gap-1">
                 <Button type="button" size="sm" variant="outline" onClick={() => openEdit(trade)}>
@@ -230,7 +281,7 @@ export function ProjectTradesPanel({
               Dane wykonawcy będą dostępne przy tworzeniu ról akceptacji w ustaleniach.
             </DialogDescription>
           </DialogHeader>
-          <TradeFormFields form={form} onChange={setForm} />
+          <TradeFormFields form={form} onChange={setForm} catalogNames={tradeCatalog} />
           {error ? <p className="text-sm text-rose-400">{error}</p> : null}
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button type="button" disabled={saving} onClick={() => void handleSave()}>

@@ -29,6 +29,8 @@ export type FieldOptions = {
   nextStepOwners: string[];
   blockerReasons: BlockerReasonOption[];
   interruptionTypes: InterruptionTypeOption[];
+  tradeCatalog: string[];
+  communicationProtocols: string[];
 };
 
 export type FieldOptionKey = keyof FieldOptions;
@@ -145,6 +147,17 @@ export const DEFAULT_FIELD_OPTIONS: FieldOptions = {
     { name: "Inne", isInternal: false, isExternal: false },
   ],
   interruptionTypes: DEFAULT_INTERRUPTION_TYPE_OPTIONS,
+  tradeCatalog: [
+    "Elektryka",
+    "HVAC",
+    "Klimatyzacja",
+    "Smart Home",
+    "Instalacje sanitarne",
+    "Tynki",
+    "Stolarka",
+    "Wentylacja",
+  ],
+  communicationProtocols: ["KNX", "Modbus", "BACnet", "MQTT", "Loxone", "Crestron", "Control4"],
 };
 
 export const FIELD_OPTION_LABELS: Record<FieldOptionKey, string> = {
@@ -154,11 +167,18 @@ export const FIELD_OPTION_LABELS: Record<FieldOptionKey, string> = {
   nextStepOwners: "Właściciel kolejnego kroku",
   blockerReasons: "Powód blokady",
   interruptionTypes: "Typ przerwania",
+  tradeCatalog: "Katalog branż (standardowe)",
+  communicationProtocols: "Protokoły komunikacyjne",
 };
 
 export const PROJECT_STRING_FIELD_OPTION_KEYS: StringListFieldOptionKey[] = [
   "projectTypes",
   "nextStepOwners",
+];
+
+export const CATALOG_FIELD_OPTION_KEYS: StringListFieldOptionKey[] = [
+  "tradeCatalog",
+  "communicationProtocols",
 ];
 
 export const PROJECT_FIELD_OPTION_KEYS: FieldOptionKey[] = [
@@ -382,6 +402,8 @@ export function normalizeFieldOptions(input?: Partial<FieldOptions> | null): Fie
     nextStepOwners: merge("nextStepOwners"),
     blockerReasons: normalizeBlockerReasonOptions(input?.blockerReasons),
     interruptionTypes: normalizeInterruptionTypeOptions(input?.interruptionTypes),
+    tradeCatalog: merge("tradeCatalog"),
+    communicationProtocols: merge("communicationProtocols"),
   };
 }
 

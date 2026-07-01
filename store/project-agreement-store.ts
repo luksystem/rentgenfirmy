@@ -87,8 +87,7 @@ export const useProjectAgreementStore = create<ProjectAgreementStore>((set, get)
 
   createAgreement: async (projectId, input, author) => {
     const created = await createProjectAgreement(projectId, input, author);
-    const list = [...(get().byProject[projectId] ?? []), created];
-    setProjectAgreements(projectId, list, set, get);
+    await get().ensureAgreements(projectId, { force: true });
     return created;
   },
 

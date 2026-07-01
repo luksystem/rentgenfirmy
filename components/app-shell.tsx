@@ -6,12 +6,10 @@ import { useMemo, useState, useCallback, useEffect } from "react";
 import {
   Activity,
   BarChart3,
-  Calculator,
   CheckCircle2,
   Clock3,
   ClipboardList,
   ExternalLink,
-  FileText,
   FolderKanban,
   GitBranch,
   Home,
@@ -24,9 +22,9 @@ import {
   PauseCircle,
   PhoneCall,
   Plus,
+  Receipt,
   Settings,
   Shield,
-  Target,
   Users,
   X,
 } from "lucide-react";
@@ -37,6 +35,7 @@ import { COMMERCIAL_MODULES } from "@/lib/modules/commercial-modules";
 import { NavBadges } from "@/components/nav-badges";
 import { NotificationBell } from "@/components/notification-bell";
 import { NotificationsRealtimeSubscriber } from "@/components/notifications-realtime-subscriber";
+import { QuickAddMenuList } from "@/components/quick-add-menu";
 import { useAuthStore } from "@/store/auth-store";
 import { useProcessStore } from "@/store/process-store";
 
@@ -65,6 +64,7 @@ const navGroupsBase: NavGroup[] = [
         label: COMMERCIAL_MODULES.salesCalculations.label,
         icon: COMMERCIAL_MODULES.salesCalculations.icon,
       },
+      { href: "/faktury", label: "Faktury", icon: Receipt },
     ],
   },
   {
@@ -481,16 +481,16 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
         </nav>
 
         {addMenuOpen ? (
-          <div className="fixed inset-0 z-40 xl:hidden">
+          <div className="fixed inset-0 z-40">
             <button
               type="button"
               aria-label="Zamknij menu dodawania"
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
               onClick={() => setAddMenuOpen(false)}
             />
-            <div className="absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-border bg-surface-elevated p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-card">
-              <div className="mb-4 flex items-center justify-between">
-                <p className="font-semibold text-foreground">Co chcesz dodać?</p>
+            <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-border bg-surface-elevated p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-card xl:inset-auto xl:bottom-6 xl:right-6 xl:w-[min(24rem,calc(100vw-2rem))] xl:rounded-2xl xl:border xl:pb-4">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground">Co chcesz dodać?</p>
                 <button
                   type="button"
                   onClick={() => setAddMenuOpen(false)}
@@ -499,61 +499,23 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="grid gap-2">
-                {[
-                  {
-                    href: "/przerwania#dodaj-przerwanie",
-                    label: "Przerwanie",
-                    description: "Szybki wpis przerwania operacyjnego",
-                    icon: PhoneCall,
-                  },
-                  {
-                    href: "/przerwania?kind=focus#dodaj-przerwanie",
-                    label: "Skupienie",
-                    description: "Blok czasu na skupioną pracę",
-                    icon: Target,
-                  },
-                  {
-                    href: "/oferty/zgloszenia",
-                    label: "Zgłoszenie serwisowe",
-                    description: "Nowe zgłoszenia z formularza publicznego",
-                    icon: Inbox,
-                  },
-                  {
-                    href: COMMERCIAL_MODULES.serviceSettlement.href + "/nowy",
-                    label: "Rozliczenie serwisu",
-                    description: "Nowe rozliczenie / oferta serwisowa",
-                    icon: FileText,
-                  },
-                  {
-                    href: COMMERCIAL_MODULES.salesCalculations.href,
-                    label: "Kalkulacja sprzedażowa",
-                    description: "Nowa kalkulacja Smart Home",
-                    icon: Calculator,
-                  },
-                ].map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setAddMenuOpen(false)}
-                      className="flex items-start gap-3 rounded-2xl border border-border bg-surface-muted/20 px-4 py-3 transition hover:border-accent/30 hover:bg-surface-muted/40"
-                    >
-                      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-surface text-accent">
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <span className="min-w-0">
-                        <p className="text-sm font-medium text-foreground">{item.label}</p>
-                        <p className="mt-0.5 text-xs text-muted">{item.description}</p>
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
+              <QuickAddMenuList compact onNavigate={() => setAddMenuOpen(false)} />
             </div>
           </div>
         ) : null}
+
+        <button
+          type="button"
+          aria-label="Dodaj wpis"
+          aria-expanded={addMenuOpen}
+          onClick={() => {
+            setMenuOpen(false);
+            setAddMenuOpen(true);
+          }}
+          className="fixed bottom-6 right-6 z-30 hidden h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-card ring-4 ring-background xl:flex"
+        >
+          <Plus className="h-6 w-6" />
+        </button>
 
         {menuOpen ? (
           <div className="fixed inset-0 z-40 xl:hidden">

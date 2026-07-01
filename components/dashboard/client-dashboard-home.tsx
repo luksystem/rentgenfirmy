@@ -25,6 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ClientInfoCard } from "@/components/dashboard/client-info-card";
+import { ClientProjectsPanel } from "@/components/dashboard/client-projects-panel";
 import { ClientProjectSummary } from "@/components/dashboard/client-project-summary";
 import { DashboardPublicLinkPanel } from "@/components/dashboard/dashboard-public-link-panel";
 import { ProjectWarrantyPanel } from "@/components/dashboard/project-warranty-panel";
@@ -38,7 +39,7 @@ import {
   getWarrantyStatus,
   hasPendingWarrantyExtension,
 } from "@/lib/project/warranty";
-import type { Client } from "@/lib/service/types";
+import type { Client, ClientInput } from "@/lib/service/types";
 import type { DashboardSpace } from "@/lib/dashboard/types";
 import type { Project } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
@@ -388,6 +389,8 @@ export function ClientDashboardHome({
   enableSatisfactionReview = true,
   satisfactionBundle = null,
   showTeamSatisfactionSummary = false,
+  onUpdateClient,
+  isSavingClient = false,
 }: {
   client: Client;
   project: Project;
@@ -417,6 +420,8 @@ export function ClientDashboardHome({
   satisfactionBundle?: ProjectSatisfactionBundle | null;
   /** Kompaktowe podsumowanie ocen na mobile (widok zespołu). */
   showTeamSatisfactionSummary?: boolean;
+  onUpdateClient?: (input: ClientInput) => Promise<void>;
+  isSavingClient?: boolean;
 }) {
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const pendingAgreements = agreements.filter(
@@ -646,9 +651,22 @@ export function ClientDashboardHome({
         </div>
       ) : null}
 
-      <ClientInfoCard client={client} />
+      <ClientInfoCard
+        client={client}
+        editable={!readOnly}
+        isSaving={isSavingClient}
+        onUpdateClient={onUpdateClient}
+      />
 
-      {projects.length > 1 && onProjectChange ? (
+      {!readOnly && onProjectChange ? (
+        <ClientProjectsPanel
+          client={client}
+          projects={projects}
+          selectedProjectId={selectedProjectId}
+          onProjectChange={onProjectChange}
+          teamSpaceHref={(projectId) => `/przestrzenie/zespol/${projectId}`}
+        />
+      ) : projects.length > 1 && onProjectChange ? (
         <div className="rounded-2xl border border-border/80 bg-surface p-4">
           <h2 className="mb-3 text-base font-semibold text-foreground">Projekty</h2>
           <div className="grid gap-2">
