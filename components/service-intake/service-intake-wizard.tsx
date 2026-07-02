@@ -6,6 +6,7 @@ import {
   ArrowRight,
   CheckCircle2,
   ClipboardList,
+  Coffee,
   Loader2,
   Phone,
   ShieldCheck,
@@ -104,6 +105,7 @@ function CafePriorityLegend() {
   return (
     <div className="grid gap-3 rounded-2xl border border-border/70 bg-surface-muted/15 p-4 text-sm">
       <p className="font-medium text-foreground">
+        <Coffee className="mr-1 inline h-4 w-4" />
         W LUKSYSTEM INTELIGENTNE INSTALACJE zgłoszenia serwisowe rozpatrujemy w systemie CAFE:
       </p>
       <div className="grid gap-2 sm:grid-cols-2">
@@ -118,7 +120,10 @@ function CafePriorityLegend() {
               >
                 {option.letter}
               </span>
-              <span className="font-medium text-foreground">{option.title}</span>
+              <span className="font-medium text-foreground">
+                {option.title}
+                <Coffee className="ml-1 inline h-3.5 w-3.5 opacity-70" />
+              </span>
             </div>
             <p className="mt-2 text-xs text-muted">{option.deadlineHint}</p>
           </div>
@@ -143,6 +148,10 @@ export function ServiceIntakeWizard() {
   const [description, setDescription] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [attachmentLinks, setAttachmentLinks] = useState("");
+  const [uploadedAttachments, setUploadedAttachments] = useState<
+    Array<{ kind: "image" | "video" | "link"; url: string; label?: string | null }>
+  >([]);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [referenceNumber, setReferenceNumber] = useState<string | null>(null);
@@ -245,6 +254,35 @@ export function ServiceIntakeWizard() {
     }
   }
 
+  async function handleAttachmentUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file || !verification?.verificationToken) {
+      return;
+    }
+
+    setUploadingAttachment(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("verificationToken", verification.verificationToken);
+      formData.append("file", file);
+      const response = await fetch("/api/zgloszenie/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się przesłać pliku.");
+      }
+      setUploadedAttachments((current) => [...current, payload.attachment]);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Błąd uploadu.");
+    } finally {
+      setUploadingAttachment(false);
+      event.target.value = "";
+    }
+  }
+
   async function handleSubmit() {
     if (!verification || !selectedProjectId) {
       return;
@@ -267,18 +305,21 @@ export function ServiceIntakeWizard() {
           acceptedPaidTerms:
             requiresActionStep &&
             (postWarrantyAction === "on_site" || postWarrantyAction === "remote"),
-          attachments: attachmentLinks
-            .split(/\n|,/)
-            .map((entry) => entry.trim())
-            .filter(Boolean)
-            .map((url) => ({
-              kind: /\.(mp4|mov|webm)(\?|$)/i.test(url)
-                ? ("video" as const)
-                : /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url)
-                  ? ("image" as const)
-                  : ("link" as const),
-              url,
-            })),
+          attachments: [
+            ...uploadedAttachments,
+            ...attachmentLinks
+              .split(/\n|,/)
+              .map((entry) => entry.trim())
+              .filter(Boolean)
+              .map((url) => ({
+                kind: /\.(mp4|mov|webm)(\?|$)/i.test(url)
+                  ? ("video" as const)
+                  : /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url)
+                    ? ("image" as const)
+                    : ("link" as const),
+                url,
+              })),
+          ],
         }),
       });
       const payload = await response.json();
@@ -304,8 +345,13 @@ export function ServiceIntakeWizard() {
           <Wrench className="h-6 w-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Zgłoszenie serwisowe</h1>
-          <p className="text-sm text-muted">Szybki kreator — krok po kroku</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Zgłoszenie serwisowe CAFE
+          </h1>
+          <p className="flex items-center gap-1 text-sm text-muted">
+            <Coffee className="h-4 w-4" />
+            Szybki kreator — krok po kroku
+          </p>
         </div>
       </div>
 
@@ -538,7 +584,32 @@ export function ServiceIntakeWizard() {
                   placeholder="+48 ..."
                 />
               </Field>
-              <Field label="Linki do zdjęć, filmów lub dokumentów (opcjonalnie)">
+              <Field label="Zdjęcia i filmy (opcjonalnie)">
+                <div className="grid gap-2">
+                  <Input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                    disabled={uploadingAttachment || !verification}
+                    onChange={(event) => void handleAttachmentUpload(event)}
+                  />
+                  {uploadingAttachment ? (
+                    <p className="flex items-center gap-2 text-xs text-muted">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Przesyłanie pliku…
+                    </p>
+                  ) : null}
+                  {uploadedAttachments.length > 0 ? (
+                    <ul className="grid gap-1 text-xs text-muted">
+                      {uploadedAttachments.map((attachment, index) => (
+                        <li key={`${attachment.url}-${index}`}>
+                          ✓ {attachment.label ?? attachment.kind} — przesłano
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              </Field>
+              <Field label="Linki do dokumentów (opcjonalnie)">
                 <Textarea
                   rows={3}
                   value={attachmentLinks}

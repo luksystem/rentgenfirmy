@@ -24,13 +24,13 @@ import { ProjectSatisfactionSummaryCard } from "@/components/dashboard/project-s
 import { ProjectSystemCredentialsPanel } from "@/components/dashboard/project-system-credentials-panel";
 import { ProjectSpecificationPanel } from "@/components/dashboard/project-specification-panel";
 import { ProjectTradesPanel } from "@/components/dashboard/project-trades-panel";
-import { TradeCatalogView } from "@/components/trades/trade-catalog-view";
 import { StageSatisfactionPrompt } from "@/components/dashboard/stage-satisfaction-prompt";
 import { ProjectMeetingNotesPanel } from "@/components/dashboard/project-meeting-notes-panel";
 import { ProjectDocumentsPanel } from "@/components/dashboard/project-documents-panel";
 import { ProjectIntegrationsTab } from "@/components/project/project-integrations-tab";
 import { ClientProjectSettingsPanel } from "@/components/dashboard/client-project-settings-panel";
 import { ClientOffersPanel } from "@/components/dashboard/client-offers-panel";
+import { ProjectServiceIntakeHistoryPanel } from "@/components/dashboard/project-service-intake-history-panel";
 import { ClientDashboardHome } from "@/components/dashboard/client-dashboard-home";
 import { ClientDashboardOverview } from "@/components/dashboard/client-dashboard-overview";
 import { ClientInfoCard } from "@/components/dashboard/client-info-card";
@@ -62,6 +62,7 @@ import { getProcessProgress } from "@/lib/process/types";
 import { extractKanbanTokenFromPublicPath } from "@/lib/process/kanban-public-path";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import { fetchProjectKanbanPublicLinks } from "@/lib/supabase/kanban-repository";
+import type { ServiceIntakeRecord } from "@/lib/service-intake/types";
 import type { Client, ClientInput } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -178,6 +179,7 @@ export function ClientDashboardView({
   processProgress,
   seedAgreements,
   seedOffers,
+  seedServiceIntakes,
   seedSpecificationItems,
   seedTrades,
   seedMeetingNotes,
@@ -218,6 +220,7 @@ export function ClientDashboardView({
   processProgress?: { percent: number; completed: number; total: number } | null;
   seedAgreements?: ProjectClientAgreement[];
   seedOffers?: ClientOfferSummary[];
+  seedServiceIntakes?: ServiceIntakeRecord[];
   pendingOffersCount?: number;
   seedSpecificationItems?: ProjectSpecificationItem[];
   seedTrades?: ProjectTrade[];
@@ -820,13 +823,23 @@ export function ClientDashboardView({
 
   function renderOffersPanel() {
     return (
-      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
-        <ClientOffersPanel
-          clientId={client.id}
-          projectId={selectedProject.id}
-          mode={readOnly ? "client" : "team"}
-          seedOffers={seedOffers}
-        />
+      <div className="grid min-w-0 max-w-full gap-4 overflow-x-hidden">
+        <div className="rounded-2xl border border-border/80 bg-surface p-4">
+          <ClientOffersPanel
+            clientId={client.id}
+            projectId={selectedProject.id}
+            mode={readOnly ? "client" : "team"}
+            seedOffers={seedOffers}
+          />
+        </div>
+        <div className="rounded-2xl border border-border/80 bg-surface p-4">
+          <h2 className="mb-3 text-base font-semibold text-foreground">Historia zgłoszeń serwisowych</h2>
+          <ProjectServiceIntakeHistoryPanel
+            projectId={selectedProject.id}
+            readOnly={readOnly}
+            seedIntakes={seedServiceIntakes}
+          />
+        </div>
       </div>
     );
   }
@@ -866,22 +879,13 @@ export function ClientDashboardView({
 
   function renderTradesPanel() {
     return (
-      <div className="grid min-w-0 max-w-full gap-4 overflow-x-hidden">
-        <div className="rounded-2xl border border-border/80 bg-surface p-4">
-          <h2 className="mb-1 text-base font-semibold text-foreground">Katalog branż</h2>
-          <p className="mb-4 text-sm text-muted">
-            Standardowe branże z mapą lokalizacji wykonawców — podpowiadają się przy dodawaniu branży
-            poniżej.
-          </p>
-          <TradeCatalogView />
-        </div>
-        <div className="rounded-2xl border border-border/80 bg-surface p-4">
-          <h2 className="mb-3 text-base font-semibold text-foreground">Branże w tym projekcie</h2>
-          <p className="mb-4 text-sm text-muted">
-            Dodaj branże projektu — będą dostępne przy wyborze roli akceptacji w ustaleniach.
-          </p>
-          <ProjectTradesPanel projectId={selectedProject.id} seedTrades={seedTrades} />
-        </div>
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
+        <h2 className="mb-3 text-base font-semibold text-foreground">Branże w tym projekcie</h2>
+        <p className="mb-4 text-sm text-muted">
+          Wykonawcy przypisani do projektu — wykorzystasz ich przy rolach akceptacji w ustaleniach.
+          Firmy dodane tutaj automatycznie trafiają do katalogu branż.
+        </p>
+        <ProjectTradesPanel projectId={selectedProject.id} seedTrades={seedTrades} />
       </div>
     );
   }

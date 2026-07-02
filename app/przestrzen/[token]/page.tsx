@@ -32,6 +32,7 @@ type PublicDashboardPayload = {
   pendingAgreementsCount: number;
   pendingOffersCount: number;
   offers: import("@/lib/dashboard/client-offer-summary").ClientOfferSummary[];
+  serviceIntakes: import("@/lib/service-intake/types").ServiceIntakeRecord[];
   kanbanPublicLinks: Record<string, string>;
   meetingNotes: import("@/lib/dashboard/meeting-note-types").ProjectMeetingNote[];
   documents: import("@/lib/documents/types").ProjectDocument[];
@@ -120,6 +121,7 @@ function PublicDashboardPageContent() {
   >([]);
   const [kanbanPublicLinks, setKanbanPublicLinks] = useState<Record<string, string>>({});
   const [offers, setOffers] = useState<PublicDashboardPayload["offers"]>([]);
+  const [serviceIntakes, setServiceIntakes] = useState<PublicDashboardPayload["serviceIntakes"]>([]);
   const [meetingNotes, setMeetingNotes] = useState<PublicDashboardPayload["meetingNotes"]>([]);
   const [documents, setDocuments] = useState<PublicDashboardPayload["documents"]>([]);
   const [pendingOffersCount, setPendingOffersCount] = useState(0);
@@ -168,6 +170,7 @@ function PublicDashboardPageContent() {
     setCredentials(payload.credentials ?? []);
     setKanbanPublicLinks(payload.kanbanPublicLinks ?? {});
     setOffers(payload.offers ?? []);
+    setServiceIntakes(payload.serviceIntakes ?? []);
     setMeetingNotes(payload.meetingNotes ?? []);
     setDocuments(payload.documents ?? []);
     setPendingOffersCount(payload.pendingOffersCount ?? 0);
@@ -417,6 +420,7 @@ function PublicDashboardPageContent() {
           processProgress={processProgress}
           seedAgreements={features.agreements ? agreements : undefined}
           seedOffers={features.offers ? offers : undefined}
+          seedServiceIntakes={features.offers ? serviceIntakes : undefined}
           pendingOffersCount={pendingOffersCount}
           seedSpecificationItems={features.specification ? specificationItems : undefined}
           seedTrades={features.trades ? trades : undefined}

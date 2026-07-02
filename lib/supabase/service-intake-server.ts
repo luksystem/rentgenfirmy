@@ -511,6 +511,88 @@ export async function addServiceIntakeComment(input: {
   return rowToComment(data);
 }
 
+export async function getServiceIntakeThreadById(id: string): Promise<ServiceIntakeThread | null> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("service_intake_requests")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  if (!data) {
+    return null;
+  }
+
+  const intake = rowToIntakeRecord(data);
+  const [{ data: attachments }, { data: comments }, clientResult, projectResult] = await Promise.all([
+    supabase
+      .from("service_intake_attachments")
+      .select("*")
+      .eq("intake_id", intake.id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("service_intake_comments")
+      .select("*")
+      .eq("intake_id", intake.id)
+      .order("created_at", { ascending: true }),
+    intake.clientId
+      ? supabase.from("clients").select("full_name").eq("id", intake.clientId).maybeSingle()
+      : Promise.resolve({ data: null }),
+    intake.projectId
+      ? supabase.from("projects").select("name").eq("id", intake.projectId).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  return {
+    intake: {
+      ...intake,
+      clientName: clientResult.data?.full_name ?? intake.clientName ?? null,
+      projectName: projectResult.data?.name ?? intake.projectName ?? null,
+    },
+    attachments: (attachments ?? []).map((row) => rowToAttachment(row)),
+    comments: (comments ?? []).map((row) => rowToComment(row)),
+  };
+}
+
+export async function listServiceIntakeByProject(projectId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("service_intake_requests")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row) => rowToIntakeRecord(row));
+}
+
+export async function addServiceIntakeTeamComment(input: {
+  intakeId: string;
+  authorName: string;
+  body: string;
+}) {
+  const thread = await getServiceIntakeThreadById(input.intakeId);
+  if (!thread) {
+    throw new Error("Nie znaleziono zgłoszenia.");
+  }
+  if (thread.intake.status === "closed" || thread.intake.status === "rejected") {
+    throw new Error("Zgłoszenie jest zamknięte.");
+  }
+
+  return addServiceIntakeComment({
+    trackingToken: thread.intake.trackingToken,
+    authorName: input.authorName,
+    authorSide: "team",
+    body: input.body,
+  });
+}
+
 export async function countServiceIntakeAlerts() {
   const items = await listServiceIntakeRequests();
   const newCount = items.filter((item) => item.status === "new").length;

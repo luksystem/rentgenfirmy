@@ -26,6 +26,7 @@ import type { ProjectTrade } from "@/lib/dashboard/trade-types";
 import type { ProjectMeetingNote } from "@/lib/dashboard/meeting-note-types";
 import type { ProjectSatisfactionBundle } from "@/lib/dashboard/satisfaction-types";
 import type { ProjectDocument } from "@/lib/documents/types";
+import type { ServiceIntakeRecord } from "@/lib/service-intake/types";
 import { rowToMeetingNote } from "@/lib/supabase/project-meeting-note-repository";
 import { rowToProjectDocument } from "@/lib/supabase/project-document-repository";
 import type { SystemCredentialMeta } from "@/lib/dashboard/system-credentials-types";
@@ -46,6 +47,7 @@ import {
   fetchServicesByClientIdServer,
   servicesTableExists,
 } from "@/lib/supabase/service-repository-server";
+import { listServiceIntakeByProject } from "@/lib/supabase/service-intake-server";
 import { getProcessProgress } from "@/lib/process/types";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import type { Client } from "@/lib/service/types";
@@ -438,6 +440,7 @@ export type PublicDashboardPayload = {
   pendingAgreementsCount: number;
   pendingOffersCount: number;
   offers: ClientOfferSummary[];
+  serviceIntakes: ServiceIntakeRecord[];
   kanbanPublicLinks: Record<string, string>;
   meetingNotes: ProjectMeetingNote[];
   documents: ProjectDocument[];
@@ -728,6 +731,15 @@ export async function fetchPublicDashboardPayload(
   });
   const pendingOffersCount = countPendingClientOffers(offers);
 
+  let serviceIntakes: ServiceIntakeRecord[] = [];
+  if (initialProjectId && offersEnabled) {
+    try {
+      serviceIntakes = await listServiceIntakeByProject(initialProjectId);
+    } catch {
+      serviceIntakes = [];
+    }
+  }
+
   const kanbanPublicLinks = initialProjectId
     ? mapProcessPublicLinksToPaths(
         await fetchProcessPublicLinksForProject(getSupabaseAdmin(), initialProjectId),
@@ -751,6 +763,7 @@ export async function fetchPublicDashboardPayload(
     pendingAgreementsCount,
     pendingOffersCount,
     offers,
+    serviceIntakes,
     kanbanPublicLinks,
     meetingNotes,
     documents,

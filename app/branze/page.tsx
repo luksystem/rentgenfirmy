@@ -10,7 +10,7 @@ export default function BranzePage() {
       <PageHeader
         eyebrow="Projekty"
         title="Katalog firm wykonawców"
-        description="Firmy pogrupowane według branż — ta sama branża może mieć wielu wykonawców. Podpowiadają się przy dodawaniu branży w projekcie klienta."
+        description="Firmy pogrupowane według branż. Firmy dodane w projektach klientów automatycznie trafiają do katalogu (branża + firma)."
         action={
           <Button variant="secondary" asChild>
             <Link href="/ustawienia/branze">

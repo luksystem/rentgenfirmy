@@ -4,15 +4,33 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Calendar,
-  ChevronRight,
+  Coffee,
   ExternalLink,
   Loader2,
   MessageSquare,
   Phone,
+  RefreshCw,
   User,
 } from "lucide-react";
+import { KanbanMobileColumnNav } from "@/components/process/kanban-mobile-column-nav";
+import { ServiceIntakeDetailModal } from "@/components/service-intake/service-intake-detail-modal";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { useKanbanMobileColumns } from "@/hooks/use-kanban-mobile-columns";
+import { CAFE_PRIORITY_OPTIONS } from "@/lib/service-intake/cafe-priorities";
+import {
+  KANBAN_BOARD_ROOT_CLASS,
+  KANBAN_MOBILE_COLUMN_BODY_CLASS,
+  KANBAN_MOBILE_COLUMN_SHELL_CLASS,
+  KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS,
+} from "@/lib/process/kanban-ui";
+import {
+  isServiceIntakeOverdue,
+  SERVICE_INTAKE_KANBAN_COLUMNS,
+  SERVICE_INTAKE_STATUS_BADGE_CLASS,
+  SERVICE_INTAKE_STATUS_TONE,
+  serviceIntakeDueAt,
+  serviceIntakePriorityRank,
+} from "@/lib/service-intake/sla";
 import {
   SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS,
   SERVICE_INTAKE_PRIORITY_LABELS,
@@ -21,23 +39,13 @@ import {
   type ServiceIntakeRecord,
   type ServiceIntakeStatus,
 } from "@/lib/service-intake/types";
-import { CAFE_PRIORITY_OPTIONS } from "@/lib/service-intake/cafe-priorities";
-import {
-  isServiceIntakeOverdue,
-  SERVICE_INTAKE_KANBAN_COLUMNS,
-  SERVICE_INTAKE_PRIORITY_BADGE_CLASS,
-  SERVICE_INTAKE_STATUS_BADGE_CLASS,
-  SERVICE_INTAKE_STATUS_TONE,
-  serviceIntakeDueAt,
-  serviceIntakePriorityRank,
-} from "@/lib/service-intake/sla";
 import { cn, formatDate, formatDateTime } from "@/lib/utils";
 
-function priorityLetter(priority: ServiceIntakeRecord["priority"]) {
+function cafeOption(priority: ServiceIntakeRecord["priority"]) {
   if (!priority) {
     return null;
   }
-  return CAFE_PRIORITY_OPTIONS.find((entry) => entry.id === priority)?.letter ?? priority.toUpperCase();
+  return CAFE_PRIORITY_OPTIONS.find((entry) => entry.id === priority) ?? null;
 }
 
 function ServiceIntakeCard({
@@ -54,33 +62,37 @@ function ServiceIntakeCard({
   const overdue = isServiceIntakeOverdue(item);
   const dueAt = serviceIntakeDueAt(item.createdAt, item.priority);
   const statusTone = SERVICE_INTAKE_STATUS_TONE[item.status];
-  const letter = priorityLetter(item.priority);
+  const cafe = cafeOption(item.priority);
 
   return (
     <article
       className={cn(
-        "grid gap-2 rounded-xl border bg-surface-muted/20 p-3 shadow-sm transition hover:border-accent/30",
-        overdue ? "border-rose-500/50" : "border-border/70",
+        "grid gap-2 rounded-xl border p-3 shadow-sm transition hover:border-accent/30",
+        cafe ? cafe.toneClass : "border-border/70 bg-surface-muted/20",
+        overdue ? "ring-1 ring-rose-500/40" : undefined,
         item.status === "closed" || item.status === "rejected" ? "opacity-80" : undefined,
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <button type="button" className="text-left" onClick={onOpen}>
-            <p className="font-semibold text-foreground">{item.referenceNumber}</p>
-            <p className="mt-0.5 line-clamp-2 text-sm text-foreground/90">{item.description}</p>
-          </button>
-        </div>
-        {letter ? (
+      {cafe ? (
+        <div className="flex items-center justify-between gap-2">
           <span
             className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm font-bold",
-              item.priority ? SERVICE_INTAKE_PRIORITY_BADGE_CLASS[item.priority] : undefined,
+              "inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-bold uppercase tracking-wide",
+              cafe.letterClass,
             )}
           >
-            {letter}
+            <Coffee className="h-3.5 w-3.5" />
+            {cafe.letter} · {cafe.title}
           </span>
-        ) : null}
+          <span className="text-[10px] font-medium text-muted">CAFE</span>
+        </div>
+      ) : null}
+
+      <div className="min-w-0">
+        <button type="button" className="w-full text-left" onClick={onOpen}>
+          <p className="font-semibold text-foreground">{item.referenceNumber}</p>
+          <p className="mt-0.5 line-clamp-3 text-sm text-foreground/90">{item.description}</p>
+        </button>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
@@ -94,9 +106,6 @@ function ServiceIntakeCard({
         </span>
         <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] text-muted">
           {SERVICE_INTAKE_REQUEST_TYPE_LABELS[item.requestType]}
-        </span>
-        <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] text-muted">
-          {item.serviceTypeHint}
         </span>
         {overdue ? (
           <span className="rounded-full border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-200">
@@ -113,18 +122,16 @@ function ServiceIntakeCard({
         <p>{item.projectName ?? "Obiekt"}</p>
         <p className="flex items-center gap-1">
           <Calendar className="h-3 w-3" />
-          Zgłoszono: {formatDateTime(item.createdAt)}
+          {formatDateTime(item.createdAt)}
         </p>
-        {dueAt ? <p>Termin reakcji: {formatDate(dueAt.slice(0, 10))}</p> : null}
+        {dueAt ? <p>Termin: {formatDate(dueAt.slice(0, 10))}</p> : null}
         {item.contactPhone ? (
           <p className="flex items-center gap-1">
             <Phone className="h-3 w-3" />
             {item.contactPhone}
           </p>
         ) : null}
-        {item.priority ? (
-          <p>{SERVICE_INTAKE_PRIORITY_LABELS[item.priority]}</p>
-        ) : null}
+        {item.priority ? <p>{SERVICE_INTAKE_PRIORITY_LABELS[item.priority]}</p> : null}
         {item.postWarrantyAction ? (
           <p>{SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS[item.postWarrantyAction]}</p>
         ) : null}
@@ -133,15 +140,10 @@ function ServiceIntakeCard({
       <div className="flex flex-wrap gap-1.5 pt-1">
         <Button type="button" size="sm" variant="outline" onClick={onOpen}>
           <MessageSquare className="mr-1 h-3.5 w-3.5" />
-          Wątek
+          Szczegóły
         </Button>
         {item.status === "new" ? (
-          <Button
-            type="button"
-            size="sm"
-            disabled={busy}
-            onClick={() => onStatusChange("in_review")}
-          >
+          <Button type="button" size="sm" disabled={busy} onClick={() => onStatusChange("in_review")}>
             Przyjmij
           </Button>
         ) : null}
@@ -156,28 +158,6 @@ function ServiceIntakeCard({
             Przekształć
           </Button>
         ) : null}
-        {item.status !== "closed" && item.status !== "rejected" ? (
-          <>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={busy}
-              onClick={() => onStatusChange("closed")}
-            >
-              Zamknij
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="destructive"
-              disabled={busy}
-              onClick={() => onStatusChange("rejected")}
-            >
-              Odrzuć
-            </Button>
-          </>
-        ) : null}
         <Button size="sm" variant="ghost" asChild>
           <Link href={`/zgloszenie/watek/${item.trackingToken}`} target="_blank" rel="noreferrer">
             <ExternalLink className="h-3.5 w-3.5" />
@@ -188,15 +168,32 @@ function ServiceIntakeCard({
   );
 }
 
-export function ServiceIntakeKanban() {
+export function ServiceIntakeKanban({ authorName = "Zespół" }: { authorName?: string }) {
   const [items, setItems] = useState<ServiceIntakeRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<ServiceIntakeRecord | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const loadItems = useCallback(async () => {
-    setLoading(true);
+  const columns = useMemo(
+    () =>
+      SERVICE_INTAKE_KANBAN_COLUMNS.map((status) => ({
+        id: status,
+        title: SERVICE_INTAKE_STATUS_LABELS[status],
+      })),
+    [],
+  );
+
+  const { activeColumnId, scrollerRef, scrollToColumn, setColumnRef } = useKanbanMobileColumns(columns);
+
+  const loadItems = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     try {
       const response = await fetch("/api/service-intake", { credentials: "include" });
@@ -209,11 +206,26 @@ export function ServiceIntakeKanban() {
       setError(loadError instanceof Error ? loadError.message : "Błąd.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
     void loadItems();
+  }, [loadItems]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void loadItems({ silent: true });
+      }
+    }, 30000);
+    const onFocus = () => void loadItems({ silent: true });
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
   }, [loadItems]);
 
   const grouped = useMemo(() => {
@@ -242,8 +254,17 @@ export function ServiceIntakeKanban() {
     return map;
   }, [items]);
 
+  const maxColumnCount = useMemo(
+    () => Math.max(1, ...SERVICE_INTAKE_KANBAN_COLUMNS.map((status) => grouped.get(status)?.length ?? 0)),
+    [grouped],
+  );
+
   async function changeStatus(id: string, status: ServiceIntakeStatus) {
     setBusyId(id);
+    const snapshot = items;
+    setItems((current) =>
+      current.map((entry) => (entry.id === id ? { ...entry, status } : entry)),
+    );
     try {
       const response = await fetch(`/api/service-intake/${encodeURIComponent(id)}`, {
         method: "PATCH",
@@ -255,15 +276,34 @@ export function ServiceIntakeKanban() {
       if (!response.ok) {
         throw new Error(payload.error ?? "Nie udało się zaktualizować statusu.");
       }
-      await loadItems();
-      if (selected?.id === id) {
-        setSelected(payload.item ?? null);
-      }
+      setItems((current) =>
+        current.map((entry) =>
+          entry.id === id
+            ? {
+                ...entry,
+                ...(payload.item as ServiceIntakeRecord),
+                clientName: entry.clientName,
+                projectName: entry.projectName,
+              }
+            : entry,
+        ),
+      );
     } catch (updateError) {
+      setItems(snapshot);
       setError(updateError instanceof Error ? updateError.message : "Błąd.");
     } finally {
       setBusyId(null);
     }
+  }
+
+  function handleItemUpdated(updated: ServiceIntakeRecord) {
+    setItems((current) =>
+      current.map((entry) =>
+        entry.id === updated.id
+          ? { ...entry, ...updated, clientName: entry.clientName, projectName: entry.projectName }
+          : entry,
+      ),
+    );
   }
 
   if (loading) {
@@ -276,17 +316,39 @@ export function ServiceIntakeKanban() {
   }
 
   return (
-    <div className="grid gap-4">
-      {error ? <p className="text-sm text-rose-400">{error}</p> : null}
+    <div className={cn(KANBAN_BOARD_ROOT_CLASS, "md:min-h-[calc(100vh-8rem)]")}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {error ? <p className="text-sm text-rose-400">{error}</p> : <span />}
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={refreshing}
+          onClick={() => void loadItems({ silent: true })}
+        >
+          <RefreshCw className={cn("mr-1 h-3.5 w-3.5", refreshing ? "animate-spin" : undefined)} />
+          Odśwież
+        </Button>
+      </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      <KanbanMobileColumnNav
+        columns={columns}
+        activeColumnId={activeColumnId}
+        onSelect={scrollToColumn}
+        openCountForColumn={(columnId) => grouped.get(columnId as ServiceIntakeStatus)?.length ?? 0}
+      />
+
+      <div ref={scrollerRef} className={KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS}>
         {SERVICE_INTAKE_KANBAN_COLUMNS.map((status) => {
           const columnItems = grouped.get(status) ?? [];
           const tone = SERVICE_INTAKE_STATUS_TONE[status];
           return (
             <section
               key={status}
-              className="flex w-[min(100%,320px)] shrink-0 flex-col rounded-2xl border border-border/80 bg-surface/40"
+              ref={(node) => setColumnRef(status, node as HTMLDivElement | null)}
+              data-column-id={status}
+              className={KANBAN_MOBILE_COLUMN_SHELL_CLASS}
+              style={{ minHeight: `${Math.max(220, maxColumnCount * 168)}px` }}
             >
               <header className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-3">
                 <div>
@@ -304,7 +366,7 @@ export function ServiceIntakeKanban() {
                   {columnItems.length}
                 </span>
               </header>
-              <div className="grid max-h-[70vh] gap-2 overflow-y-auto p-3">
+              <div className={KANBAN_MOBILE_COLUMN_BODY_CLASS}>
                 {columnItems.length === 0 ? (
                   <p className="py-6 text-center text-xs text-muted">Brak zgłoszeń</p>
                 ) : (
@@ -313,7 +375,7 @@ export function ServiceIntakeKanban() {
                       key={item.id}
                       item={item}
                       busy={busyId === item.id}
-                      onOpen={() => setSelected(item)}
+                      onOpen={() => setSelectedId(item.id)}
                       onStatusChange={(nextStatus) => void changeStatus(item.id, nextStatus)}
                     />
                   ))
@@ -324,35 +386,17 @@ export function ServiceIntakeKanban() {
         })}
       </div>
 
-      {selected ? (
-        <Card>
-          <CardContent className="grid gap-3 py-5">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <p className="text-lg font-semibold text-foreground">{selected.referenceNumber}</p>
-                <p className="text-sm text-muted">
-                  {selected.clientName} · {selected.projectName} · {formatDateTime(selected.createdAt)}
-                </p>
-              </div>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setSelected(null)}>
-                Zamknij podgląd
-              </Button>
-            </div>
-            <p className="whitespace-pre-wrap text-sm text-foreground">{selected.description}</p>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild variant="secondary">
-                <Link href={`/zgloszenie/watek/${selected.trackingToken}`} target="_blank" rel="noreferrer">
-                  Otwórz wątek publiczny
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href="/oferty/nowy">Utwórz ofertę</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
+      <ServiceIntakeDetailModal
+        intakeId={selectedId}
+        authorName={authorName}
+        open={selectedId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedId(null);
+          }
+        }}
+        onUpdated={handleItemUpdated}
+      />
     </div>
   );
 }

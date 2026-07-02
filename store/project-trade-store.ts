@@ -2,14 +2,37 @@
 
 import { create } from "zustand";
 import type { ProjectTrade, ProjectTradeInput } from "@/lib/dashboard/trade-types";
+import { mergeTradeIntoCatalogItems, tradeCatalogEntryKey } from "@/lib/trades/catalog-utils";
 import {
   addProjectTrade,
   deleteProjectTrade,
   fetchProjectTrades,
   updateProjectTrade,
 } from "@/lib/supabase/project-trade-repository";
+import { useAppStore } from "@/store/app-store";
 
 const loadPromises = new Map<string, Promise<ProjectTrade[]>>();
+
+async function syncTradeToCatalog(input: ProjectTradeInput) {
+  const { fieldOptions, updateFieldOptions } = useAppStore.getState();
+  const merged = mergeTradeIntoCatalogItems(fieldOptions.tradeCatalogItems, input);
+  const changed =
+    merged.length !== fieldOptions.tradeCatalogItems.length ||
+    merged.some((item, index) => {
+      const existing = fieldOptions.tradeCatalogItems[index];
+      if (!existing) {
+        return true;
+      }
+      return (
+        tradeCatalogEntryKey(item) === tradeCatalogEntryKey(existing) &&
+        JSON.stringify(item) !== JSON.stringify(existing)
+      );
+    });
+
+  if (changed) {
+    await updateFieldOptions({ ...fieldOptions, tradeCatalogItems: merged });
+  }
+}
 
 type ProjectTradeStore = {
   byProject: Record<string, ProjectTrade[]>;
@@ -68,6 +91,7 @@ export const useProjectTradeStore = create<ProjectTradeStore>((set, get) => ({
     const created = await addProjectTrade(projectId, input);
     const list = [...(get().byProject[projectId] ?? []), created];
     set({ byProject: { ...get().byProject, [projectId]: list } });
+    await syncTradeToCatalog(input);
   },
 
   updateTrade: async (projectId, tradeId, input) => {
@@ -76,6 +100,7 @@ export const useProjectTradeStore = create<ProjectTradeStore>((set, get) => ({
       entry.id === tradeId ? updated : entry,
     );
     set({ byProject: { ...get().byProject, [projectId]: list } });
+    await syncTradeToCatalog(input);
   },
 
   removeTrade: async (projectId, tradeId) => {

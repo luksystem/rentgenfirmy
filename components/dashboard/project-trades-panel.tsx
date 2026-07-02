@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Settings, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -256,18 +256,6 @@ export function ProjectTradesPanel({
   const fieldOptions = useAppStore((state) => state.fieldOptions);
   const catalogItems = useMemo(() => fieldOptions.tradeCatalogItems, [fieldOptions.tradeCatalogItems]);
   const trades = storeTrades;
-
-  const availableCatalogItems = useMemo(
-    () =>
-      catalogItems.filter(
-        (item) =>
-          !trades.some(
-            (trade) =>
-              trade.name === item.name && (trade.company ?? "") === (item.company ?? ""),
-          ),
-      ),
-    [catalogItems, trades],
-  );
   const isLoading = loading && trades.length === 0;
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -325,25 +313,17 @@ export function ProjectTradesPanel({
     }
   }
 
-  async function addFromCatalog(item: TradeCatalogItem) {
-    try {
-      await addTrade(projectId, tradeCatalogItemToProjectTradeInput(item));
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Nie udało się dodać branży.");
-    }
-  }
-
   return (
     <div className="grid min-w-0 max-w-full gap-4 overflow-x-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted">
-          Wykonawcy i branże w projekcie — wykorzystasz je przy rolach akceptacji w ustaleniach.
+          Firmy z projektu synchronizują się z katalogiem branż (branża + firma).
         </p>
         <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" variant="outline" asChild>
-            <Link href="/branze">
-              <ExternalLink className="mr-1 h-3.5 w-3.5" />
-              Katalog branż
+            <Link href="/ustawienia/branze">
+              <Settings className="mr-1 h-3.5 w-3.5" />
+              Ustawienia katalogu branż
             </Link>
           </Button>
           <Button type="button" size="sm" className="shrink-0" onClick={() => openCreate()}>
@@ -352,27 +332,6 @@ export function ProjectTradesPanel({
           </Button>
         </div>
       </div>
-
-      {availableCatalogItems.length > 0 ? (
-        <div className="grid gap-2 rounded-xl border border-dashed border-border/70 bg-surface-muted/10 p-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">Szybkie dodanie z katalogu</p>
-          <div className="flex flex-wrap gap-2">
-            {availableCatalogItems.map((item) => (
-              <Button
-                key={tradeCatalogEntryKey(item)}
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => void addFromCatalog(item)}
-              >
-                <Plus className="mr-1 h-3.5 w-3.5" />
-                {item.name}
-                {item.company ? ` · ${item.company}` : ""}
-              </Button>
-            ))}
-          </div>
-        </div>
-      ) : null}
 
       {error && !dialogOpen ? <p className="text-sm text-rose-400">{error}</p> : null}
 
