@@ -26,6 +26,7 @@ export type TradeCatalogItem = {
   name: string;
   communicationProtocols: string[];
   description: string;
+  /** @deprecated Firmy są w tradeCompanies — pole zostaje tylko dla migracji / mapy. */
   company?: string;
   contactName?: string;
   email?: string;
@@ -37,6 +38,15 @@ export type TradeCatalogItem = {
   lng?: number | null;
 };
 
+export type { TradeCompanyItem } from "@/lib/trades/company-types";
+
+import {
+  mergeTradeCompanyPools,
+  normalizeTradeCompanyItems,
+  tradeCatalogItemToCompanyItem,
+} from "@/lib/trades/company-pool";
+import type { TradeCompanyItem } from "@/lib/trades/company-types";
+
 export type FieldOptions = {
   projectTypes: string[];
   flowStatuses: FlowStatusOption[];
@@ -45,6 +55,7 @@ export type FieldOptions = {
   blockerReasons: BlockerReasonOption[];
   interruptionTypes: InterruptionTypeOption[];
   tradeCatalogItems: TradeCatalogItem[];
+  tradeCompanies: TradeCompanyItem[];
   communicationProtocols: string[];
 };
 
@@ -52,7 +63,12 @@ export type FieldOptionKey = keyof FieldOptions;
 
 export type StringListFieldOptionKey = Exclude<
   FieldOptionKey,
-  "implementationStages" | "flowStatuses" | "interruptionTypes" | "blockerReasons" | "tradeCatalogItems"
+  | "implementationStages"
+  | "flowStatuses"
+  | "interruptionTypes"
+  | "blockerReasons"
+  | "tradeCatalogItems"
+  | "tradeCompanies"
 >;
 
 const DEFAULT_STAGE_OPTIONS: StageOption[] = [
@@ -172,6 +188,7 @@ export const DEFAULT_FIELD_OPTIONS: FieldOptions = {
     { name: "Stolarka", communicationProtocols: [], description: "Okna, drzwi, stolarka." },
     { name: "Wentylacja", communicationProtocols: ["Modbus", "BACnet"], description: "Wentylacja mechaniczna." },
   ],
+  tradeCompanies: [],
   communicationProtocols: ["KNX", "Modbus", "BACnet", "MQTT", "Loxone", "Crestron", "Control4"],
 };
 
@@ -183,6 +200,7 @@ export const FIELD_OPTION_LABELS: Record<FieldOptionKey, string> = {
   blockerReasons: "Powód blokady",
   interruptionTypes: "Typ przerwania",
   tradeCatalogItems: "Katalog branż",
+  tradeCompanies: "Baza firm w branżach",
   communicationProtocols: "Protokoły komunikacyjne",
 };
 
@@ -346,7 +364,45 @@ function normalizeFlowStatusOptions(input?: unknown): FlowStatusOption[] {
     .filter((status): status is FlowStatusOption => status !== null);
 }
 
-function normalizeTradeCatalogItems(input?: unknown): TradeCatalogItem[] {
+function normalizeTradeCategoryItems(input?: unknown): TradeCatalogItem[] {
+  const rows = parseTradeCatalogRows(input);
+  const categoryMap = new Map<string, TradeCatalogItem>();
+
+  for (const row of rows) {
+    const name = row.name.trim();
+    if (!name) {
+      continue;
+    }
+    const key = name.toLowerCase();
+    const existing = categoryMap.get(key);
+    if (!existing) {
+      categoryMap.set(key, {
+        name,
+        communicationProtocols: [...row.communicationProtocols],
+        description: row.description ?? "",
+      });
+      continue;
+    }
+    categoryMap.set(key, {
+      ...existing,
+      communicationProtocols: [
+        ...new Set([...existing.communicationProtocols, ...row.communicationProtocols]),
+      ],
+      description: existing.description?.trim() || row.description || "",
+    });
+  }
+
+  if (categoryMap.size === 0) {
+    return DEFAULT_FIELD_OPTIONS.tradeCatalogItems.map((item) => ({
+      ...item,
+      communicationProtocols: [...item.communicationProtocols],
+    }));
+  }
+
+  return [...categoryMap.values()].sort((left, right) => left.name.localeCompare(right.name, "pl"));
+}
+
+function parseTradeCatalogRows(input?: unknown): TradeCatalogItem[] {
   if (!Array.isArray(input) || input.length === 0) {
     return DEFAULT_FIELD_OPTIONS.tradeCatalogItems.map((item) => ({
       ...item,
@@ -477,6 +533,14 @@ function normalizeBlockerReasonOptions(input?: unknown): BlockerReasonOption[] {
     .filter((item): item is BlockerReasonOption => item !== null);
 }
 
+function extractCompaniesFromCatalogRows(rows: TradeCatalogItem[]): TradeCompanyItem[] {
+  return mergeTradeCompanyPools(
+    rows
+      .map((row) => tradeCatalogItemToCompanyItem(row))
+      .filter((item): item is TradeCompanyItem => item !== null),
+  );
+}
+
 export function normalizeFieldOptions(input?: Partial<FieldOptions> | null): FieldOptions {
   const merge = (key: StringListFieldOptionKey) => {
     const values = input?.[key]
@@ -486,6 +550,20 @@ export function normalizeFieldOptions(input?: Partial<FieldOptions> | null): Fie
     return values && values.length > 0 ? [...new Set(values)] : [...DEFAULT_FIELD_OPTIONS[key]];
   };
 
+  const catalogRows = parseTradeCatalogRows(
+    input && "tradeCatalogItems" in input
+      ? input.tradeCatalogItems
+      : input && "tradeCatalog" in input
+        ? (input as { tradeCatalog?: string[] }).tradeCatalog
+        : undefined,
+  );
+
+  const tradeCatalogItems = normalizeTradeCategoryItems(catalogRows);
+  const tradeCompanies = mergeTradeCompanyPools(
+    normalizeTradeCompanyItems(input?.tradeCompanies),
+    extractCompaniesFromCatalogRows(catalogRows),
+  );
+
   return {
     projectTypes: merge("projectTypes"),
     flowStatuses: normalizeFlowStatusOptions(input?.flowStatuses),
@@ -493,13 +571,8 @@ export function normalizeFieldOptions(input?: Partial<FieldOptions> | null): Fie
     nextStepOwners: merge("nextStepOwners"),
     blockerReasons: normalizeBlockerReasonOptions(input?.blockerReasons),
     interruptionTypes: normalizeInterruptionTypeOptions(input?.interruptionTypes),
-    tradeCatalogItems: normalizeTradeCatalogItems(
-      input && "tradeCatalogItems" in input
-        ? input.tradeCatalogItems
-        : input && "tradeCatalog" in input
-          ? (input as { tradeCatalog?: string[] }).tradeCatalog
-          : undefined,
-    ),
+    tradeCatalogItems,
+    tradeCompanies,
     communicationProtocols: merge("communicationProtocols"),
   };
 }
@@ -509,8 +582,10 @@ export function tradeCatalogNames(options: FieldOptions): string[] {
 }
 
 export function findTradeCatalogItem(name: string, options: FieldOptions): TradeCatalogItem | undefined {
-  const normalized = name.trim();
-  return options.tradeCatalogItems.find((item) => item.name === normalized);
+  const normalized = name.trim().toLowerCase();
+  return options.tradeCatalogItems.find(
+    (item) => item.name.trim().toLowerCase() === normalized,
+  );
 }
 
 export function blockerReasonNames(options: FieldOptions): string[] {

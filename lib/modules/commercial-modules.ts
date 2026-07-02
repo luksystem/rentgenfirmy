@@ -4,7 +4,7 @@ export const COMMERCIAL_MODULES = {
   serviceSettlement: {
     id: "service-settlement",
     label: "Rozliczenia serwisu",
-    shortLabel: "Rozliczenia",
+    shortLabel: "Szybkie Oferty",
     eyebrow: "Szybkie rozliczanie",
     description:
       "Wycena przed wyjazdem, koszty po realizacji, link dla klienta i raport do rozliczenia.",

@@ -9,11 +9,13 @@ export function KanbanMobileColumnNav({
   activeColumnId,
   onSelect,
   openCountForColumn,
+  badgeToneForColumn,
 }: {
   columns: Array<{ id: string; title: string }>;
   activeColumnId: string;
   onSelect: (columnId: string) => void;
   openCountForColumn: (columnId: string) => number;
+  badgeToneForColumn?: (columnId: string) => "empty" | "ok" | "overdue";
 }) {
   return (
     <div className="min-w-0 max-w-full md:hidden">
@@ -28,6 +30,7 @@ export function KanbanMobileColumnNav({
         {columns.map((column) => {
           const count = openCountForColumn(column.id);
           const isActive = column.id === activeColumnId;
+          const tone = badgeToneForColumn?.(column.id) ?? (count > 0 ? "ok" : "empty");
 
           return (
             <button
@@ -42,7 +45,17 @@ export function KanbanMobileColumnNav({
               )}
             >
               {column.title}
-              <span className={cn("ml-1.5 tabular-nums", isActive ? "opacity-90" : "opacity-70")}>
+              <span
+                className={cn(
+                  "ml-1.5 inline-flex min-w-[1.1rem] items-center justify-center rounded-full px-1 tabular-nums",
+                  isActive ? "opacity-90" : "opacity-100",
+                  tone === "overdue"
+                    ? "bg-rose-500/20 font-semibold text-rose-200"
+                    : tone === "ok"
+                      ? "bg-emerald-500/20 font-semibold text-emerald-200"
+                      : "opacity-70",
+                )}
+              >
                 {count}
               </span>
             </button>

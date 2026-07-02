@@ -33,6 +33,8 @@ export function AgreementCollaborationPanel({
   onChanged,
   onWarrantyExtensionAccepted,
   publicToken,
+  publicDashboardToken,
+  projectId,
   selectedRoleId: controlledRoleId,
   onSelectedRoleIdChange,
   onIdentityValidation,
@@ -46,6 +48,9 @@ export function AgreementCollaborationPanel({
   onWarrantyExtensionAccepted?: (warrantyEndsAt: string) => void | Promise<void>;
   /** Gdy ustawione — operacje przez API publiczne (bez logowania). */
   publicToken?: string;
+  /** Dashboard klienta (/przestrzen) — akceptacja bez logowania Supabase. */
+  publicDashboardToken?: string;
+  projectId?: string;
   /** Kontrolowana rola (publiczny link akceptacji). */
   selectedRoleId?: string;
   onSelectedRoleIdChange?: (roleId: string) => void;
@@ -96,7 +101,20 @@ export function AgreementCollaborationPanel({
     setLoading(true);
     try {
       const next =
-        publicToken ?
+        publicDashboardToken && projectId ?
+          await fetch(
+            `/api/przestrzen/${encodeURIComponent(publicDashboardToken)}/agreements/${encodeURIComponent(agreementId)}?projectId=${encodeURIComponent(projectId)}`,
+            { credentials: "include" },
+          ).then(async (response) => {
+            const payload = (await response.json()) as AgreementCollaborationBundle & {
+              error?: string;
+            };
+            if (!response.ok) {
+              throw new Error(payload.error ?? "Błąd pobierania ustalenia.");
+            }
+            return payload;
+          })
+        : publicToken ?
           await fetch(`/api/ustalenie/${encodeURIComponent(publicToken)}`).then(async (response) => {
             const payload = (await response.json()) as AgreementCollaborationBundle & {
               error?: string;
@@ -120,7 +138,7 @@ export function AgreementCollaborationPanel({
     } finally {
       setLoading(false);
     }
-  }, [agreementId, mode, publicToken, setSelectedRoleId]);
+  }, [agreementId, mode, projectId, publicDashboardToken, publicToken, setSelectedRoleId]);
 
   useEffect(() => {
     void refresh();
@@ -214,7 +232,25 @@ export function AgreementCollaborationPanel({
       mode === "team" ? "team" : mode === "client" ? "client" : "external";
     const roleLabel = bundle?.roles.find((role) => role.id === selectedRoleId)?.label;
 
-    if (publicToken) {
+    if (publicDashboardToken && projectId) {
+      const response = await fetch(
+        `/api/przestrzen/${encodeURIComponent(publicDashboardToken)}/agreements/${encodeURIComponent(agreementId)}?projectId=${encodeURIComponent(projectId)}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "comment",
+            authorName: effectiveAuthorName,
+            commentBody,
+          }),
+        },
+      );
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
+        throw new Error(payload.error ?? "Nie udało się dodać komentarza.");
+      }
+    } else if (publicToken) {
       const response = await fetch(`/api/ustalenie/${encodeURIComponent(publicToken)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -250,7 +286,35 @@ export function AgreementCollaborationPanel({
       return;
     }
 
-    if (publicToken) {
+    if (publicDashboardToken && projectId) {
+      const response = await fetch(
+        `/api/przestrzen/${encodeURIComponent(publicDashboardToken)}/agreements/${encodeURIComponent(agreementId)}?projectId=${encodeURIComponent(projectId)}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "respond",
+            roleId: pendingApprovalForViewer.roleId,
+            accepted,
+            authorName: effectiveAuthorName,
+            responseNote,
+          }),
+        },
+      );
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
+        throw new Error(payload.error ?? "Nie udało się zapisać decyzji.");
+      }
+      const next = (await response.json()) as AgreementCollaborationBundle;
+      if (
+        accepted &&
+        next.agreement.category === "warranty" &&
+        next.agreement.proposedWarrantyEndDate
+      ) {
+        await onWarrantyExtensionAccepted?.(next.agreement.proposedWarrantyEndDate);
+      }
+    } else if (publicToken) {
       const response = await fetch(`/api/ustalenie/${encodeURIComponent(publicToken)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

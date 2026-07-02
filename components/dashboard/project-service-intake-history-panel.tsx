@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { CAFE_PRIORITY_OPTIONS } from "@/lib/service-intake/cafe-priorities";
 import {
+  resolveServiceIntakeDueAt,
   SERVICE_INTAKE_STATUS_BADGE_CLASS,
   SERVICE_INTAKE_STATUS_TONE,
 } from "@/lib/service-intake/sla";
@@ -14,7 +15,7 @@ import {
   SERVICE_INTAKE_STATUS_LABELS,
   type ServiceIntakeRecord,
 } from "@/lib/service-intake/types";
-import { cn, formatDateTime } from "@/lib/utils";
+import { cn, formatDate, formatDateTime } from "@/lib/utils";
 
 export function ProjectServiceIntakeHistoryPanel({
   projectId,
@@ -77,6 +78,7 @@ export function ProjectServiceIntakeHistoryPanel({
           ? CAFE_PRIORITY_OPTIONS.find((entry) => entry.id === intake.priority)
           : null;
         const tone = SERVICE_INTAKE_STATUS_TONE[intake.status];
+        const dueAt = resolveServiceIntakeDueAt(intake);
 
         return (
           <article
@@ -90,6 +92,9 @@ export function ProjectServiceIntakeHistoryPanel({
               <div>
                 <p className="font-semibold text-foreground">{intake.referenceNumber}</p>
                 <p className="mt-1 text-sm text-muted">{formatDateTime(intake.createdAt)}</p>
+                {dueAt ? (
+                  <p className="mt-0.5 text-sm text-muted">Wykonać do: {formatDate(dueAt.slice(0, 10))}</p>
+                ) : null}
               </div>
               <span
                 className={cn(

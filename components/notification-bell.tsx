@@ -64,7 +64,11 @@ export function NotificationBell() {
         if (!response.ok) {
           return;
         }
-        const payload = (await response.json()) as { newCount?: number; overdueCount?: number };
+        const payload = (await response.json()) as {
+          activeCount?: number;
+          newCount?: number;
+          overdueCount?: number;
+        };
         setServiceNewCount(payload.newCount ?? 0);
         setServiceOverdueCount(payload.overdueCount ?? 0);
       })

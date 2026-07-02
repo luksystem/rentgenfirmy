@@ -24,7 +24,7 @@ export type ServiceIntakePostWarrantyAction = (typeof SERVICE_INTAKE_POST_WARRAN
 export const SERVICE_INTAKE_STATUS_LABELS: Record<ServiceIntakeStatus, string> = {
   new: "Nowe",
   in_review: "W trakcie",
-  converted: "Przekształcone",
+  converted: "Rozliczanie",
   closed: "Zamknięte",
   rejected: "Odrzucone",
 };
@@ -99,6 +99,9 @@ export type ServiceIntakeRecord = {
   createdAt: string;
   updatedAt: string;
   closedAt: string | null;
+  dueAt: string | null;
+  assigneeId: string | null;
+  assigneeName: string | null;
   clientName?: string | null;
   projectName?: string | null;
 };

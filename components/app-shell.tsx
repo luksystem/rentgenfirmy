@@ -8,6 +8,7 @@ import {
   BarChart3,
   CheckCircle2,
   Clock3,
+  Contact,
   ClipboardList,
   ExternalLink,
   FileUp,
@@ -21,7 +22,6 @@ import {
   LogOut,
   Key,
   Menu,
-  Package,
   PauseCircle,
   PhoneCall,
   Plus,
@@ -47,6 +47,8 @@ type NavItem = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   external?: boolean;
+  disabled?: boolean;
+  activeExcludePrefixes?: string[];
 };
 
 type NavGroup = {
@@ -62,6 +64,13 @@ const navGroupsBase: NavGroup[] = [
   {
     label: "Sprzedaż",
     items: [
+      { href: "#", label: "Kontakty", icon: Contact, disabled: true },
+      {
+        href: COMMERCIAL_MODULES.serviceSettlement.href,
+        label: "Szybkie Oferty",
+        icon: COMMERCIAL_MODULES.serviceSettlement.icon,
+        activeExcludePrefixes: ["/oferty/zgloszenia"],
+      },
       {
         href: COMMERCIAL_MODULES.salesCalculations.href,
         label: COMMERCIAL_MODULES.salesCalculations.label,
@@ -71,32 +80,26 @@ const navGroupsBase: NavGroup[] = [
     ],
   },
   {
+    label: "Projekty",
+    items: [
+      { href: "/klienci", label: "Klienci", icon: Users },
+      { href: "/procesy", label: "Procesy", icon: GitBranch },
+      { href: "/projekty", label: "Projekty", icon: FolderKanban },
+      { href: "/zlecenia", label: "Zlecenia", icon: ClipboardList },
+      { href: "/dokumenty", label: "Dokumenty", icon: FileUp },
+      { href: "/branze", label: "Katalog Branż", icon: HardHat },
+    ],
+  },
+  {
     label: "Serwisy",
     items: [
       { href: "/oferty/zgloszenia", label: "Zgłoszenia", icon: Inbox },
-      {
-        href: COMMERCIAL_MODULES.serviceSettlement.href,
-        label: "Rozliczenia",
-        icon: COMMERCIAL_MODULES.serviceSettlement.icon,
-      },
-      { href: "/zlecenia", label: "Zlecenia", icon: ClipboardList },
-      { href: "/zapotrzebowania", label: "Zapotrzebowania", icon: Package },
       {
         href: "/zgloszenie",
         label: "Formularz klienta",
         icon: ExternalLink,
         external: true,
       },
-    ],
-  },
-  {
-    label: "Projekty",
-    items: [
-      { href: "/procesy", label: "Procesy", icon: GitBranch },
-      { href: "/projekty", label: "Projekty", icon: FolderKanban },
-      { href: "/klienci", label: "Klienci", icon: Users },
-      { href: "/dokumenty", label: "Dokumenty", icon: FileUp },
-      { href: "/branze", label: "Katalog branż", icon: HardHat },
     ],
   },
   {
@@ -146,7 +149,18 @@ const mobilePrimaryHrefs = new Set([
   ...mobileNavRight.map((item) => item.href),
 ]);
 
-function isActive(pathname: string, href: string) {
+function isNavItemActive(pathname: string, item: NavItem) {
+  if (item.disabled) {
+    return false;
+  }
+  const { href, activeExcludePrefixes = [] } = item;
+  if (
+    activeExcludePrefixes.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    )
+  ) {
+    return false;
+  }
   return pathname === href || (href !== "/" && pathname.startsWith(href));
 }
 
@@ -160,6 +174,7 @@ function NavLink({
   overdueBadgeCount = 0,
   newBadgeCount = 0,
   external = false,
+  disabled = false,
 }: {
   href: string;
   label: string;
@@ -170,7 +185,27 @@ function NavLink({
   overdueBadgeCount?: number;
   newBadgeCount?: number;
   external?: boolean;
+  disabled?: boolean;
 }) {
+  if (disabled) {
+    return (
+      <div
+        aria-disabled="true"
+        title="Moduł w przygotowaniu — leady"
+        className={cn(
+          "flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium opacity-45",
+          variant === "sheet" && "rounded-2xl border border-border/50 bg-surface-muted/40 px-4 py-3",
+        )}
+      >
+        <Icon className="h-4 w-4" />
+        <span className="flex-1">{label}</span>
+        <span className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] font-medium text-muted">
+          Wkrótce
+        </span>
+      </div>
+    );
+  }
+
   if (variant === "sheet") {
     return (
       <Link
@@ -233,6 +268,30 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const kanbanOverdueTaskCount = useProcessStore((state) => state.kanbanOverdueTaskCount);
   const refreshKanbanNewTaskCount = useProcessStore((state) => state.refreshKanbanNewTaskCount);
   const refreshKanbanOverdueTaskCount = useProcessStore((state) => state.refreshKanbanOverdueTaskCount);
+  const [serviceIntakeOverdueCount, setServiceIntakeOverdueCount] = useState(0);
+  const [serviceIntakeActiveCount, setServiceIntakeActiveCount] = useState(0);
+
+  const refreshServiceIntakeCounts = useCallback(() => {
+    void fetch("/api/service-intake/counts", { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) {
+          return;
+        }
+        const payload = (await response.json()) as {
+          activeCount?: number;
+          overdueCount?: number;
+          newCount?: number;
+        };
+        setServiceIntakeOverdueCount(payload.overdueCount ?? 0);
+        setServiceIntakeActiveCount(
+          payload.activeCount ?? (payload.newCount ?? 0) + (payload.overdueCount ?? 0),
+        );
+      })
+      .catch(() => {
+        setServiceIntakeOverdueCount(0);
+        setServiceIntakeActiveCount(0);
+      });
+  }, []);
 
   const handleKanbanOverdueCountChange = useCallback((count: number) => {
     useProcessStore.setState({ kanbanOverdueTaskCount: count });
@@ -245,7 +304,15 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     void refreshKanbanOverdueTaskCount();
     void refreshKanbanNewTaskCount();
-  }, [refreshKanbanNewTaskCount, refreshKanbanOverdueTaskCount]);
+    refreshServiceIntakeCounts();
+    const interval = window.setInterval(refreshServiceIntakeCounts, 30000);
+    const onFocus = () => refreshServiceIntakeCounts();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [refreshKanbanNewTaskCount, refreshKanbanOverdueTaskCount, refreshServiceIntakeCounts]);
 
   useKanbanOverdueTasksRealtime(handleKanbanOverdueCountChange);
   useKanbanNewTasksRealtime(handleKanbanNewCountChange);
@@ -257,6 +324,24 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
     }),
     [kanbanNewTaskCount, kanbanOverdueTaskCount],
   );
+
+  const serviceIntakeBadges = useMemo(
+    () => ({
+      overdueBadgeCount: serviceIntakeOverdueCount,
+      newBadgeCount: Math.max(0, serviceIntakeActiveCount - serviceIntakeOverdueCount),
+    }),
+    [serviceIntakeActiveCount, serviceIntakeOverdueCount],
+  );
+
+  function navBadgesForItem(href: string) {
+    if (href === "/tablice-wdrozen") {
+      return kanbanBadges;
+    }
+    if (href === "/oferty/zgloszenia") {
+      return serviceIntakeBadges;
+    }
+    return {};
+  }
 
   const navGroups = useMemo(() => {
     const groups = [...navGroupsBase];
@@ -283,7 +368,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
 
   const allNav = useMemo(() => navGroups.flatMap((group) => group.items), [navGroups]);
 
-  const currentPage = allNav.find((item) => isActive(pathname, item.href));
+  const currentPage = allNav.find((item) => isNavItemActive(pathname, item));
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -313,8 +398,9 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
                     <NavLink
                       key={item.href}
                       {...item}
-                      active={isActive(pathname, item.href)}
-                      {...(item.href === "/tablice-wdrozen" ? kanbanBadges : {})}
+                      active={isNavItemActive(pathname, item)}
+                      disabled={item.disabled}
+                      {...navBadgesForItem(item.href)}
                     />
                   ))}
                 </div>
@@ -376,7 +462,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
           <div className="mx-auto grid max-w-lg grid-cols-5 rounded-2xl border border-border bg-surface-elevated/95 px-1 py-1 shadow-card backdrop-blur-xl">
             {mobileNavLeft.map((item) => {
               const Icon = item.icon;
-              const active = isActive(pathname, item.href);
+              const active = isNavItemActive(pathname, item);
               const badgeCount = 0;
 
               return (
@@ -427,7 +513,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
 
             {mobileNavRight.map((item) => {
               const Icon = item.icon;
-              const active = isActive(pathname, item.href);
+              const active = isNavItemActive(pathname, item);
 
               return (
                 <Link
@@ -456,7 +542,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
               className={cn(
                 "relative flex flex-col items-center gap-0.5 rounded-2xl px-2 py-2 text-[10px] font-medium transition",
                 secondaryNav.some(
-                  (item) => isActive(pathname, item.href) && !mobilePrimaryHrefs.has(item.href),
+                  (item) => isNavItemActive(pathname, item) && !mobilePrimaryHrefs.has(item.href),
                 )
                   ? "text-sidebar-accent"
                   : "text-sidebar-muted",
@@ -476,7 +562,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
               </span>
               Więcej
               {secondaryNav.some(
-                (item) => isActive(pathname, item.href) && !mobilePrimaryHrefs.has(item.href),
+                (item) => isNavItemActive(pathname, item) && !mobilePrimaryHrefs.has(item.href),
               ) ? (
                 <span className="h-1 w-1 rounded-full bg-sidebar-accent" aria-hidden />
               ) : (
@@ -553,10 +639,11 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
                         <NavLink
                           key={item.href}
                           {...item}
-                          active={isActive(pathname, item.href)}
+                          active={isNavItemActive(pathname, item)}
+                      disabled={item.disabled}
                           onClick={() => setMenuOpen(false)}
                           variant="sheet"
-                          {...(item.href === "/tablice-wdrozen" ? kanbanBadges : {})}
+                          {...navBadgesForItem(item.href)}
                         />
                       ))}
                     </div>

@@ -355,6 +355,9 @@ export type ServiceIntakeRequestRow = {
   created_at: string;
   updated_at: string;
   closed_at: string | null;
+  due_at: string | null;
+  assignee_id: string | null;
+  assignee_name: string | null;
 };
 
 export type ServiceIntakeAttachmentRow = {

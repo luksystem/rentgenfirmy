@@ -2,17 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Coffee, ExternalLink, Loader2, X } from "lucide-react";
+import { Coffee, ExternalLink, Loader2, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogTitle, StackedDialogContent } from "@/components/ui/dialog";
-import { Field, Select, Textarea } from "@/components/ui/input";
+import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { confirmServiceIntakeStatusChange } from "@/lib/service-intake/confirm-status-change";
+import type { UserProfile } from "@/lib/auth/types";
+import { profileToOptionLabel } from "@/lib/supabase/profile-repository";
 import { CAFE_PRIORITY_OPTIONS } from "@/lib/service-intake/cafe-priorities";
 import {
   SERVICE_INTAKE_KANBAN_COLUMNS,
   SERVICE_INTAKE_STATUS_BADGE_CLASS,
   SERVICE_INTAKE_STATUS_TONE,
   isServiceIntakeOverdue,
-  serviceIntakeDueAt,
+  resolveServiceIntakeDueAt,
 } from "@/lib/service-intake/sla";
 import {
   SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS,
@@ -25,7 +28,26 @@ import {
   type ServiceIntakeStatus,
   type ServiceIntakeThread,
 } from "@/lib/service-intake/types";
+import { serviceIntakeAttachmentLabel } from "@/lib/service-intake/attachment-display";
 import { cn, formatDate, formatDateTime } from "@/lib/utils";
+
+function dueAtToDateInputValue(dueAt: string | null) {
+  if (!dueAt) {
+    return "";
+  }
+  return dueAt.slice(0, 10);
+}
+
+function dateInputValueToDueAt(value: string) {
+  if (!value) {
+    return null;
+  }
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) {
+    return null;
+  }
+  return new Date(year, month - 1, day, 23, 59, 59).toISOString();
+}
 
 function cafeOption(priority: ServiceIntakeRecord["priority"]) {
   if (!priority) {
@@ -40,19 +62,19 @@ function AttachmentList({ attachments }: { attachments: ServiceIntakeAttachment[
   }
 
   return (
-    <div className="grid gap-2 sm:grid-cols-2">
+    <div className="grid min-w-0 gap-2 sm:grid-cols-2">
       {attachments.map((attachment) => (
         <a
           key={attachment.id}
           href={attachment.url}
           target="_blank"
           rel="noreferrer"
-          className="rounded-xl border border-border/70 bg-surface-muted/15 p-3 text-sm hover:border-accent/30"
+          className="min-w-0 overflow-hidden rounded-xl border border-border/70 bg-surface-muted/15 p-3 text-sm hover:border-accent/30"
         >
-          <p className="font-medium text-foreground">
-            {attachment.label ?? attachment.kind.toUpperCase()}
+          <p className="truncate font-medium text-foreground">
+            {serviceIntakeAttachmentLabel(attachment)}
           </p>
-          <p className="mt-1 truncate text-xs text-muted">{attachment.url}</p>
+          <p className="mt-1 text-xs text-muted">Otwórz w nowej karcie</p>
         </a>
       ))}
     </div>
@@ -79,7 +101,7 @@ function CommentThread({ comments }: { comments: ServiceIntakeComment[] }) {
           <p className="text-xs text-muted">
             {comment.authorName} · {formatDateTime(comment.createdAt)}
           </p>
-          <p className="mt-1 whitespace-pre-wrap text-foreground">{comment.body}</p>
+          <p className="mt-1 break-words whitespace-pre-wrap text-foreground">{comment.body}</p>
         </article>
       ))}
     </div>
@@ -89,12 +111,14 @@ function CommentThread({ comments }: { comments: ServiceIntakeComment[] }) {
 export function ServiceIntakeDetailModal({
   intakeId,
   authorName,
+  teamProfiles,
   open,
   onOpenChange,
   onUpdated,
 }: {
   intakeId: string | null;
   authorName: string;
+  teamProfiles: UserProfile[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdated?: (item: ServiceIntakeRecord) => void;
@@ -105,6 +129,8 @@ export function ServiceIntakeDetailModal({
   const [error, setError] = useState<string | null>(null);
   const [commentDraft, setCommentDraft] = useState("");
   const [statusDraft, setStatusDraft] = useState<ServiceIntakeStatus>("new");
+  const [dueAtDraft, setDueAtDraft] = useState("");
+  const [assigneeIdDraft, setAssigneeIdDraft] = useState("");
 
   const loadThread = useCallback(async () => {
     if (!intakeId) {
@@ -121,7 +147,10 @@ export function ServiceIntakeDetailModal({
         throw new Error(payload.error ?? "Nie udało się wczytać zgłoszenia.");
       }
       setThread(payload as ServiceIntakeThread);
-      setStatusDraft((payload as ServiceIntakeThread).intake.status);
+      const loaded = payload as ServiceIntakeThread;
+      setStatusDraft(loaded.intake.status);
+      setDueAtDraft(dueAtToDateInputValue(resolveServiceIntakeDueAt(loaded.intake)));
+      setAssigneeIdDraft(loaded.intake.assigneeId ?? "");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Błąd.");
     } finally {
@@ -142,10 +171,84 @@ export function ServiceIntakeDetailModal({
   const intake = thread?.intake ?? null;
   const cafe = useMemo(() => cafeOption(intake?.priority ?? null), [intake?.priority]);
   const overdue = intake ? isServiceIntakeOverdue(intake) : false;
-  const dueAt = intake ? serviceIntakeDueAt(intake.createdAt, intake.priority) : null;
+  const dueAt = intake ? resolveServiceIntakeDueAt(intake) : null;
+  const dueAtChanged = intake ? dueAtDraft !== dueAtToDateInputValue(dueAt) : false;
+  const assigneeChanged = intake
+    ? assigneeIdDraft !== (intake.assigneeId ?? "")
+    : false;
+
+  async function saveAssignee() {
+    if (!intakeId || !intake) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/service-intake/${encodeURIComponent(intakeId)}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assigneeId: assigneeIdDraft || null }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się zapisać osoby do obsługi.");
+      }
+      const updated = {
+        ...intake,
+        ...(payload.item as ServiceIntakeRecord),
+        clientName: intake.clientName,
+        projectName: intake.projectName,
+      };
+      setThread((current) => (current ? { ...current, intake: updated } : current));
+      setAssigneeIdDraft(updated.assigneeId ?? "");
+      onUpdated?.(updated);
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Błąd.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveDueAt() {
+    if (!intakeId || !intake) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/service-intake/${encodeURIComponent(intakeId)}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dueAt: dateInputValueToDueAt(dueAtDraft) }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się zapisać terminu.");
+      }
+      const updated = {
+        ...intake,
+        ...(payload.item as ServiceIntakeRecord),
+        clientName: intake.clientName,
+        projectName: intake.projectName,
+      };
+      setThread((current) => (current ? { ...current, intake: updated } : current));
+      setDueAtDraft(dueAtToDateInputValue(resolveServiceIntakeDueAt(updated)));
+      onUpdated?.(updated);
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Błąd.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function changeStatus(nextStatus: ServiceIntakeStatus) {
     if (!intakeId || !intake) {
+      return;
+    }
+    if (!confirmServiceIntakeStatusChange(nextStatus, intake.status)) {
+      setStatusDraft(intake.status);
       return;
     }
     setBusy(true);
@@ -209,7 +312,7 @@ export function ServiceIntakeDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <StackedDialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-3xl">
+      <StackedDialogContent className="max-h-[92vh] min-w-0 overflow-x-hidden overflow-y-auto sm:max-w-3xl">
         <div className="flex items-start justify-between gap-3">
           <DialogTitle className="text-xl font-semibold">
             {intake?.referenceNumber ?? "Zgłoszenie serwisowe"}
@@ -229,7 +332,7 @@ export function ServiceIntakeDetailModal({
         {error ? <p className="text-sm text-rose-400">{error}</p> : null}
 
         {intake ? (
-          <div className="grid gap-5">
+          <div className="grid min-w-0 gap-5">
             <div className="flex flex-wrap items-center gap-2">
               {cafe ? (
                 <span
@@ -265,7 +368,15 @@ export function ServiceIntakeDetailModal({
                 {intake.clientName ?? intake.contactFullName} · {intake.projectName ?? "Obiekt"}
               </p>
               <p>Zgłoszono: {formatDateTime(intake.createdAt)}</p>
-              {dueAt ? <p>Termin reakcji: {formatDate(dueAt.slice(0, 10))}</p> : null}
+              {dueAt && !dueAtChanged ? (
+                <p>Wykonać do: {formatDate(dueAt.slice(0, 10))}</p>
+              ) : null}
+              {intake.assigneeName ? (
+                <p className="flex items-center gap-1">
+                  <UserRound className="h-3.5 w-3.5" />
+                  Obsługuje: {intake.assigneeName}
+                </p>
+              ) : null}
               <p>{SERVICE_INTAKE_REQUEST_TYPE_LABELS[intake.requestType]} · {intake.serviceTypeHint}</p>
               {intake.priority ? <p>{SERVICE_INTAKE_PRIORITY_LABELS[intake.priority]}</p> : null}
               {intake.postWarrantyAction ? (
@@ -275,17 +386,64 @@ export function ServiceIntakeDetailModal({
 
             <div>
               <p className="mb-2 text-sm font-medium text-foreground">Opis</p>
-              <p className="whitespace-pre-wrap rounded-xl border border-border/70 bg-surface-muted/10 p-3 text-sm text-foreground">
+              <p className="break-words whitespace-pre-wrap rounded-xl border border-border/70 bg-surface-muted/10 p-3 text-sm text-foreground">
                 {intake.description}
               </p>
             </div>
+
+            <Field label="Termin wykonania do">
+              <div className="flex flex-wrap items-end gap-2">
+                <Input
+                  type="date"
+                  value={dueAtDraft}
+                  onChange={(event) => setDueAtDraft(event.target.value)}
+                  className="min-w-0 flex-1 sm:min-w-[220px]"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={busy || !dueAtChanged}
+                  onClick={() => void saveDueAt()}
+                >
+                  Zapisz termin
+                </Button>
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                Domyślnie ustawiany przy zgłoszeniu według priorytetu CAFE (C: 1 dzień, A: 7 dni, F: 30 dni, E: brak).
+              </p>
+            </Field>
+
+            <Field label="Osoba do obsługi">
+              <div className="flex flex-wrap items-end gap-2">
+                <Select
+                  value={assigneeIdDraft}
+                  onChange={(event) => setAssigneeIdDraft(event.target.value)}
+                  className="min-w-0 flex-1 sm:min-w-[220px]"
+                >
+                  <option value="">— brak przypisania —</option>
+                  {teamProfiles.map((profile) => (
+                    <option key={profile.id} value={profile.id}>
+                      {profileToOptionLabel(profile)}
+                    </option>
+                  ))}
+                </Select>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={busy || !assigneeChanged}
+                  onClick={() => void saveAssignee()}
+                >
+                  Zapisz osobę
+                </Button>
+              </div>
+            </Field>
 
             <Field label="Etap na tablicy">
               <div className="flex flex-wrap items-end gap-2">
                 <Select
                   value={statusDraft}
                   onChange={(event) => setStatusDraft(event.target.value as ServiceIntakeStatus)}
-                  className="min-w-[220px]"
+                  className="min-w-0 flex-1 sm:min-w-[220px]"
                 >
                   {SERVICE_INTAKE_KANBAN_COLUMNS.map((status) => (
                     <option key={status} value={status}>
@@ -354,7 +512,15 @@ export function ServiceIntakeDetailModal({
                     Odrzuć
                   </Button>
                 </>
-              ) : null}
+              ) : (
+                <Button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void changeStatus("in_review")}
+                >
+                  Otwórz ponownie
+                </Button>
+              )}
             </div>
           </div>
         ) : null}

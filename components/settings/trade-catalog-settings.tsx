@@ -1,34 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
-import { ArrowDown, ArrowUp, Loader2, MapPin, Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, Building2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import type { FieldOptions, TradeCatalogItem } from "@/lib/field-options";
-import { formatTradeCatalogAddress, geocodeTradeCatalogItem } from "@/lib/trades/catalog-location";
+import { groupTradeDirectory } from "@/lib/trades/company-pool";
+import type { TradeCompanyItem } from "@/lib/trades/company-types";
 import { useAppStore } from "@/store/app-store";
 
-const TradeCatalogMapView = dynamic(
-  () => import("@/components/trades/trade-catalog-map-view").then((module) => module.TradeCatalogMapView),
-  { ssr: false, loading: () => <p className="text-sm text-muted">Ładowanie mapy…</p> },
-);
-
-function emptyItem(): TradeCatalogItem {
+function emptyCategory(): TradeCatalogItem {
   return {
     name: "",
     communicationProtocols: [],
     description: "",
-    company: "",
-    contactName: "",
-    email: "",
-    phone: "",
-    addressStreet: "",
-    addressCity: "",
-    addressPostalCode: "",
-    lat: null,
-    lng: null,
   };
 }
 
@@ -36,24 +22,45 @@ export function TradeCatalogSettings() {
   const fieldOptions = useAppStore((state) => state.fieldOptions);
   const updateFieldOptions = useAppStore((state) => state.updateFieldOptions);
   const isSaving = useAppStore((state) => state.isSaving);
-  const [items, setItems] = useState<TradeCatalogItem[]>(fieldOptions.tradeCatalogItems);
+  const [categories, setCategories] = useState<TradeCatalogItem[]>(fieldOptions.tradeCatalogItems);
+  const [companyPool, setCompanyPool] = useState<TradeCompanyItem[]>(fieldOptions.tradeCompanies ?? []);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [geocodingIndex, setGeocodingIndex] = useState<number | null>(null);
+
+  const loadCompanies = useCallback(async () => {
+    try {
+      const response = await fetch("/api/trades/companies", { credentials: "include" });
+      const payload = await response.json();
+      if (response.ok) {
+        setCompanyPool(payload.companies ?? []);
+      }
+    } catch {
+      setCompanyPool(fieldOptions.tradeCompanies ?? []);
+    }
+  }, [fieldOptions.tradeCompanies]);
 
   useEffect(() => {
-    setItems(fieldOptions.tradeCatalogItems);
+    setCategories(fieldOptions.tradeCatalogItems);
   }, [fieldOptions.tradeCatalogItems]);
 
-  function updateItem(index: number, patch: Partial<TradeCatalogItem>) {
-    setItems((current) =>
+  useEffect(() => {
+    void loadCompanies();
+  }, [loadCompanies]);
+
+  const directory = useMemo(
+    () => groupTradeDirectory(categories, companyPool),
+    [categories, companyPool],
+  );
+
+  function updateCategory(index: number, patch: Partial<TradeCatalogItem>) {
+    setCategories((current) =>
       current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)),
     );
     setSaved(false);
   }
 
   function toggleProtocol(index: number, protocol: string) {
-    setItems((current) =>
+    setCategories((current) =>
       current.map((item, itemIndex) => {
         if (itemIndex !== index) {
           return item;
@@ -70,42 +77,22 @@ export function TradeCatalogSettings() {
     setSaved(false);
   }
 
-  async function geocodeItem(index: number) {
-    const item = items[index];
-    if (!formatTradeCatalogAddress(item) && !item.company?.trim()) {
-      setError("Podaj adres lub nazwę firmy przed geokodowaniem.");
-      return;
-    }
-    setGeocodingIndex(index);
-    setError(null);
-    try {
-      const result = await geocodeTradeCatalogItem(item);
-      if (!result) {
-        setError(`Nie znaleziono lokalizacji dla: ${item.name || "branża"}.`);
-        return;
-      }
-      updateItem(index, { lat: result.lat, lng: result.lng });
-    } finally {
-      setGeocodingIndex(null);
-    }
-  }
-
-  function addItem() {
-    setItems((current) => [...current, emptyItem()]);
+  function addCategory() {
+    setCategories((current) => [...current, emptyCategory()]);
     setSaved(false);
   }
 
-  function removeItem(index: number) {
-    setItems((current) => current.filter((_, itemIndex) => itemIndex !== index));
+  function removeCategory(index: number) {
+    setCategories((current) => current.filter((_, itemIndex) => itemIndex !== index));
     setSaved(false);
   }
 
-  function moveItem(index: number, direction: -1 | 1) {
+  function moveCategory(index: number, direction: -1 | 1) {
     const nextIndex = index + direction;
-    if (nextIndex < 0 || nextIndex >= items.length) {
+    if (nextIndex < 0 || nextIndex >= categories.length) {
       return;
     }
-    setItems((current) => {
+    setCategories((current) => {
       const next = [...current];
       [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
       return next;
@@ -114,37 +101,30 @@ export function TradeCatalogSettings() {
   }
 
   async function handleSave() {
-    const normalized = items
+    const normalizedCategories = categories
       .map((item) => ({
         name: item.name.trim(),
         communicationProtocols: [
           ...new Set(item.communicationProtocols.map((entry) => entry.trim()).filter(Boolean)),
         ],
         description: item.description?.trim() ?? "",
-        company: item.company?.trim() ?? "",
-        contactName: item.contactName?.trim() ?? "",
-        email: item.email?.trim() ?? "",
-        phone: item.phone?.trim() ?? "",
-        addressStreet: item.addressStreet?.trim() ?? "",
-        addressCity: item.addressCity?.trim() ?? "",
-        addressPostalCode: item.addressPostalCode?.trim() ?? "",
-        lat: item.lat ?? null,
-        lng: item.lng ?? null,
       }))
-      .filter((item) => item.name && item.company);
+      .filter((item) => item.name);
 
-    if (normalized.length === 0) {
-      setError("Dodaj co najmniej jedną firmę w katalogu (branża + nazwa firmy).");
+    if (normalizedCategories.length === 0) {
+      setError("Dodaj co najmniej jedną branżę (kategorię).");
       return;
     }
 
     setError(null);
     const nextOptions: FieldOptions = {
       ...fieldOptions,
-      tradeCatalogItems: normalized,
+      tradeCatalogItems: normalizedCategories,
+      tradeCompanies: fieldOptions.tradeCompanies ?? [],
     };
     await updateFieldOptions(nextOptions);
     setSaved(true);
+    void loadCompanies();
   }
 
   return (
@@ -161,160 +141,116 @@ export function TradeCatalogSettings() {
       ) : null}
 
       <p className="text-sm text-muted">
-        Katalog jest wspólny dla całego zespołu. Branże podpowiadają się w projekcie klienta, a lokalizacje
-        widać na mapie w module{" "}
-        <a href="/branze" className="text-accent hover:underline">
-          Katalog branż
-        </a>
-        .
+        Branża to kategoria (np. HVAC, Elektryka). Firmy wykonawcze powstają w projektach klientów i
+        trafiają do wspólnej bazy pod daną branżą — można je później polecać innym klientom.
       </p>
 
-      <TradeCatalogMapView items={items.filter((item) => item.name.trim())} />
-
-      {items.map((item, index) => (
-        <Card key={`trade-catalog-${index}`}>
-          <CardContent className="grid gap-3 pt-6">
-            <div className="flex flex-wrap gap-2">
-              <Field label="Branża">
-                <Input
-                  value={item.name}
-                  onChange={(event) => updateItem(index, { name: event.target.value })}
-                  placeholder="np. Smart Home"
-                />
-              </Field>
-              <div className="flex items-end gap-1">
-                <Button type="button" variant="secondary" size="sm" onClick={() => moveItem(index, -1)} disabled={index === 0}>
-                  <ArrowUp className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => moveItem(index, 1)}
-                  disabled={index === items.length - 1}
-                >
-                  <ArrowDown className="h-4 w-4" />
-                </Button>
-                <Button type="button" variant="destructive" size="sm" onClick={() => removeItem(index)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Firma wykonawcy *">
-                <Input
-                  value={item.company ?? ""}
-                  onChange={(event) => updateItem(index, { company: event.target.value })}
-                  placeholder="Nazwa firmy — wpis katalogowy"
-                />
-              </Field>
-              <Field label="Osoba kontaktowa">
-                <Input
-                  value={item.contactName ?? ""}
-                  onChange={(event) => updateItem(index, { contactName: event.target.value })}
-                />
-              </Field>
-              <Field label="E-mail">
-                <Input
-                  type="email"
-                  value={item.email ?? ""}
-                  onChange={(event) => updateItem(index, { email: event.target.value })}
-                />
-              </Field>
-              <Field label="Telefon">
-                <Input
-                  value={item.phone ?? ""}
-                  onChange={(event) => updateItem(index, { phone: event.target.value })}
-                />
-              </Field>
-            </div>
-
-            <Field label="Domyślny opis / zakres">
-              <Textarea
-                rows={2}
-                value={item.description ?? ""}
-                onChange={(event) => updateItem(index, { description: event.target.value })}
-                placeholder="Krótki opis zakresu branży w projekcie"
-              />
-            </Field>
-
-            <div className="grid gap-3 rounded-xl border border-border/70 bg-surface-muted/15 p-3 sm:grid-cols-3">
-              <Field label="Ulica">
-                <Input
-                  value={item.addressStreet ?? ""}
-                  onChange={(event) => updateItem(index, { addressStreet: event.target.value })}
-                />
-              </Field>
-              <Field label="Kod pocztowy">
-                <Input
-                  value={item.addressPostalCode ?? ""}
-                  onChange={(event) => updateItem(index, { addressPostalCode: event.target.value })}
-                />
-              </Field>
-              <Field label="Miasto">
-                <Input
-                  value={item.addressCity ?? ""}
-                  onChange={(event) => updateItem(index, { addressCity: event.target.value })}
-                />
-              </Field>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={geocodingIndex === index}
-                onClick={() => void geocodeItem(index)}
-              >
-                {geocodingIndex === index ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <MapPin className="mr-2 h-4 w-4" />
-                )}
-                Ustal lokalizację na mapie
-              </Button>
-              {item.lat != null && item.lng != null ? (
-                <span className="text-xs text-muted">
-                  Współrzędne: {item.lat.toFixed(5)}, {item.lng.toFixed(5)}
-                </span>
-              ) : null}
-            </div>
-
-            <div className="grid gap-2">
-              <p className="text-sm font-medium text-foreground">Mapa protokołów komunikacyjnych</p>
+      {categories.map((category, index) => {
+        const linked = directory.find(
+          (group) => group.tradeName.trim().toLowerCase() === category.name.trim().toLowerCase(),
+        );
+        return (
+          <Card key={`trade-category-${index}`}>
+            <CardContent className="grid gap-3 pt-6">
               <div className="flex flex-wrap gap-2">
-                {fieldOptions.communicationProtocols.map((protocol) => {
-                  const active = item.communicationProtocols.includes(protocol);
-                  return (
-                    <button
-                      key={protocol}
-                      type="button"
-                      className={
-                        active
-                          ? "rounded-full border border-accent/50 bg-accent/10 px-3 py-1 text-xs font-medium text-foreground"
-                          : "rounded-full border border-border/70 px-3 py-1 text-xs font-medium text-muted hover:border-accent/30"
-                      }
-                      onClick={() => toggleProtocol(index, protocol)}
-                    >
-                      {protocol}
-                    </button>
-                  );
-                })}
+                <Field label="Branża (kategoria)">
+                  <Input
+                    value={category.name}
+                    onChange={(event) => updateCategory(index, { name: event.target.value })}
+                    placeholder="np. HVAC"
+                  />
+                </Field>
+                <div className="flex items-end gap-1">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => moveCategory(index, -1)}
+                    disabled={index === 0}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => moveCategory(index, 1)}
+                    disabled={index === categories.length - 1}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button type="button" variant="destructive" size="sm" onClick={() => removeCategory(index)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+
+              <Field label="Domyślny opis / zakres branży">
+                <Textarea
+                  rows={2}
+                  value={category.description ?? ""}
+                  onChange={(event) => updateCategory(index, { description: event.target.value })}
+                  placeholder="Krótki opis zakresu branży w projekcie"
+                />
+              </Field>
+
+              <div className="grid gap-2">
+                <p className="text-sm font-medium text-foreground">Mapa protokołów komunikacyjnych</p>
+                <div className="flex flex-wrap gap-2">
+                  {fieldOptions.communicationProtocols.map((protocol) => {
+                    const active = category.communicationProtocols.includes(protocol);
+                    return (
+                      <button
+                        key={protocol}
+                        type="button"
+                        className={
+                          active
+                            ? "rounded-full border border-accent/50 bg-accent/10 px-3 py-1 text-xs font-medium text-foreground"
+                            : "rounded-full border border-border/70 px-3 py-1 text-xs font-medium text-muted hover:border-accent/30"
+                        }
+                        onClick={() => toggleProtocol(index, protocol)}
+                      >
+                        {protocol}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border/70 bg-surface-muted/10 p-3">
+                <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Building2 className="h-4 w-4 text-accent" />
+                  Firmy w bazie ({linked?.companies.length ?? 0})
+                </p>
+                {linked?.companies.length ? (
+                  <ul className="mt-2 grid gap-1 text-sm text-muted">
+                    {linked.companies.map((company) => (
+                      <li key={`${company.tradeName}::${company.company}`}>
+                        <span className="text-foreground">{company.company}</span>
+                        {[company.contactName, company.email].filter(Boolean).length ? (
+                          <span> · {[company.contactName, company.email].filter(Boolean).join(" · ")}</span>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-2 text-xs text-muted">
+                    Brak firm — dodaj wykonawcę w projekcie klienta, wybierając tę branżę.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
 
       <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="secondary" onClick={addItem}>
+        <Button type="button" variant="secondary" onClick={addCategory}>
           <Plus className="mr-2 h-4 w-4" />
           Dodaj branżę
         </Button>
         <Button type="button" onClick={() => void handleSave()} disabled={isSaving}>
-          {isSaving ? "Zapisywanie…" : "Zapisz katalog"}
+          {isSaving ? "Zapisywanie…" : "Zapisz katalog branż"}
         </Button>
       </div>
     </div>

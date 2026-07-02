@@ -19,14 +19,8 @@ import {
   getKanbanTaskAgingClasses,
   KANBAN_PRIORITY_DOT_CLASSES,
 } from "@/lib/process/kanban-ui";
+import { resolveKanbanColumnId, TOUCH_DRAG_THRESHOLD_PX } from "@/lib/process/kanban-drag";
 import { cn } from "@/lib/utils";
-
-const TOUCH_DRAG_THRESHOLD_PX = 8;
-
-function resolveKanbanColumnId(clientX: number, clientY: number) {
-  const target = document.elementFromPoint(clientX, clientY);
-  return target?.closest("[data-column-id]")?.getAttribute("data-column-id") ?? null;
-}
 
 export function KanbanTaskCardView({
   task,

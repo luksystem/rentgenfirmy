@@ -7,7 +7,7 @@ import {
 import {
   addServiceIntakeTeamComment,
   getServiceIntakeThreadById,
-  updateServiceIntakeStatus,
+  updateServiceIntake,
 } from "@/lib/supabase/service-intake-server";
 
 export async function GET(
@@ -53,13 +53,50 @@ export async function PATCH(
 
   try {
     const { id } = await context.params;
-    const body = (await request.json()) as { status?: ServiceIntakeStatus };
+    const body = (await request.json()) as {
+      status?: ServiceIntakeStatus;
+      dueAt?: string | null;
+      assigneeId?: string | null;
+    };
 
-    if (!body.status || !SERVICE_INTAKE_STATUSES.includes(body.status)) {
-      return NextResponse.json({ error: "Nieprawidłowy status." }, { status: 400 });
+    const patch: {
+      status?: ServiceIntakeStatus;
+      dueAt?: string | null;
+      assigneeId?: string | null;
+    } = {};
+
+    if (body.status !== undefined) {
+      if (!SERVICE_INTAKE_STATUSES.includes(body.status)) {
+        return NextResponse.json({ error: "Nieprawidłowy status." }, { status: 400 });
+      }
+      patch.status = body.status;
     }
 
-    const item = await updateServiceIntakeStatus(id, body.status);
+    if (body.dueAt !== undefined) {
+      if (body.dueAt === null || body.dueAt === "") {
+        patch.dueAt = null;
+      } else {
+        const parsed = new Date(body.dueAt);
+        if (Number.isNaN(parsed.getTime())) {
+          return NextResponse.json({ error: "Nieprawidłowa data wykonania." }, { status: 400 });
+        }
+        patch.dueAt = parsed.toISOString();
+      }
+    }
+
+    if (body.assigneeId !== undefined) {
+      patch.assigneeId = body.assigneeId === "" ? null : body.assigneeId;
+    }
+
+    if (
+      patch.status === undefined &&
+      patch.dueAt === undefined &&
+      patch.assigneeId === undefined
+    ) {
+      return NextResponse.json({ error: "Brak pól do aktualizacji." }, { status: 400 });
+    }
+
+    const item = await updateServiceIntake(id, patch);
     return NextResponse.json({ item });
   } catch (error) {
     return NextResponse.json(

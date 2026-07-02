@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import type { ProjectTrade, ProjectTradeInput } from "@/lib/dashboard/trade-types";
-import { mergeTradeIntoCatalogItems, tradeCatalogEntryKey } from "@/lib/trades/catalog-utils";
+import { mergeCompanyIntoPool, tradeCompanyKey } from "@/lib/trades/company-pool";
 import {
   addProjectTrade,
   deleteProjectTrade,
@@ -13,24 +13,24 @@ import { useAppStore } from "@/store/app-store";
 
 const loadPromises = new Map<string, Promise<ProjectTrade[]>>();
 
-async function syncTradeToCatalog(input: ProjectTradeInput) {
+async function syncTradeCompanyToPool(input: ProjectTradeInput) {
   const { fieldOptions, updateFieldOptions } = useAppStore.getState();
-  const merged = mergeTradeIntoCatalogItems(fieldOptions.tradeCatalogItems, input);
+  const merged = mergeCompanyIntoPool(fieldOptions.tradeCompanies ?? [], input);
   const changed =
-    merged.length !== fieldOptions.tradeCatalogItems.length ||
+    merged.length !== (fieldOptions.tradeCompanies ?? []).length ||
     merged.some((item, index) => {
-      const existing = fieldOptions.tradeCatalogItems[index];
+      const existing = fieldOptions.tradeCompanies?.[index];
       if (!existing) {
         return true;
       }
       return (
-        tradeCatalogEntryKey(item) === tradeCatalogEntryKey(existing) &&
+        tradeCompanyKey(item) === tradeCompanyKey(existing) &&
         JSON.stringify(item) !== JSON.stringify(existing)
       );
     });
 
   if (changed) {
-    await updateFieldOptions({ ...fieldOptions, tradeCatalogItems: merged });
+    await updateFieldOptions({ ...fieldOptions, tradeCompanies: merged });
   }
 }
 
@@ -91,7 +91,7 @@ export const useProjectTradeStore = create<ProjectTradeStore>((set, get) => ({
     const created = await addProjectTrade(projectId, input);
     const list = [...(get().byProject[projectId] ?? []), created];
     set({ byProject: { ...get().byProject, [projectId]: list } });
-    await syncTradeToCatalog(input);
+    await syncTradeCompanyToPool(input);
   },
 
   updateTrade: async (projectId, tradeId, input) => {
@@ -100,7 +100,7 @@ export const useProjectTradeStore = create<ProjectTradeStore>((set, get) => ({
       entry.id === tradeId ? updated : entry,
     );
     set({ byProject: { ...get().byProject, [projectId]: list } });
-    await syncTradeToCatalog(input);
+    await syncTradeCompanyToPool(input);
   },
 
   removeTrade: async (projectId, tradeId) => {

@@ -913,13 +913,15 @@ export function ClientDashboardView({
           mode={readOnly ? "client" : "team"}
           authorName={readOnly ? clientAuthorName : teamAuthorName}
           seedNotes={seedMeetingNotes}
-          collapseNotes={readOnly}
+          collapseNotes={true}
           onNotesViewed={(noteIds) => {
-            if (!readOnly || !selectedProjectId) {
+            if (!selectedProjectId) {
               return;
             }
-            markMeetingNotesRead(selectedProjectId, noteIds);
-            setReadMeetingNoteIds(getReadMeetingNoteIds(selectedProjectId));
+            if (readOnly) {
+              markMeetingNotesRead(selectedProjectId, noteIds);
+              setReadMeetingNoteIds(getReadMeetingNoteIds(selectedProjectId));
+            }
           }}
         />
       </div>

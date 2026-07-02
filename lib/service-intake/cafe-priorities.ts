@@ -20,8 +20,8 @@ export const CAFE_PRIORITY_OPTIONS: CafePriorityOption[] = [
       "C — Krytyczny problem, uniemożliwia mi normalne funkcjonowanie, proszę o natychmiastową reakcję.",
     deadlineHint: "Maksymalnie 1 dzień na realizację. W systemie: wysoki priorytet.",
     isHighPriority: true,
-    toneClass: "border-rose-500/40 bg-rose-500/10",
-    letterClass: "bg-rose-600 text-white",
+    toneClass: "border-2 border-red-500/85 bg-red-500/12 shadow-sm shadow-red-500/15",
+    letterClass: "bg-red-600 text-white",
   },
   {
     id: "a",
@@ -30,8 +30,8 @@ export const CAFE_PRIORITY_OPTIONS: CafePriorityOption[] = [
     clientLabel: "A — Utrudnia mi funkcjonowanie, ale wytrzymam z tym ok. tygodnia.",
     deadlineHint: "Maksymalnie 1 tydzień na realizację. W systemie: wysoki priorytet.",
     isHighPriority: true,
-    toneClass: "border-orange-500/40 bg-orange-500/10",
-    letterClass: "bg-orange-500 text-white",
+    toneClass: "border border-amber-500/75 bg-amber-500/10",
+    letterClass: "bg-amber-500 text-black",
   },
   {
     id: "f",

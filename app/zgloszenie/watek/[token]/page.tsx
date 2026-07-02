@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import {
   SERVICE_INTAKE_STATUS_LABELS,
   type ServiceIntakeThread,
 } from "@/lib/service-intake/types";
+import { serviceIntakeAttachmentLabel } from "@/lib/service-intake/attachment-display";
 import { formatDateTime } from "@/lib/utils";
 
 export default function ServiceIntakeThreadPage({
@@ -127,9 +127,9 @@ export default function ServiceIntakeThreadPage({
                 href={attachment.url}
                 target="_blank"
                 rel="noreferrer"
-                className="text-sm text-accent hover:underline"
+                className="block min-w-0 truncate text-sm text-accent hover:underline"
               >
-                {attachment.label || attachment.url}
+                {serviceIntakeAttachmentLabel(attachment)}
               </a>
             ))}
           </CardContent>
@@ -152,13 +152,30 @@ export default function ServiceIntakeThreadPage({
       </div>
 
       {closed ? (
-        <p className="rounded-xl border border-border/70 bg-surface-muted/10 px-4 py-3 text-sm text-muted">
-          Wątek został zamknięty. W razie potrzeby zgłoś nowy problem przez{" "}
-          <Link href="/zgloszenie" className="text-accent hover:underline">
-            formularz zgłoszenia
-          </Link>
-          .
-        </p>
+        <Card>
+          <CardContent className="grid gap-3 py-4">
+            <p className="text-sm text-muted">
+              Problem wrócił z tym samym tematem? Napisz wiadomość — otworzymy ponownie to
+              zgłoszenie ({thread.intake.referenceNumber}) z dotychczasową historią wątku.
+            </p>
+            <Field label="Imię i nazwisko">
+              <Input value={authorName} onChange={(event) => setAuthorName(event.target.value)} />
+            </Field>
+            <Field label="Wiadomość">
+              <Textarea
+                rows={4}
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+                placeholder="Opisz, co się dzieje ponownie…"
+              />
+            </Field>
+            {error ? <p className="text-sm text-rose-400">{error}</p> : null}
+            <Button type="button" disabled={sending || !message.trim()} onClick={() => void sendMessage()}>
+              {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+              Otwórz ponownie i wyślij
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <Card>
           <CardContent className="grid gap-3 py-4">

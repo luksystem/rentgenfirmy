@@ -137,6 +137,8 @@ function AgreementCard({
   onRefresh,
   onWarrantyExtensionAccepted,
   defaultExpanded = false,
+  publicDashboardToken,
+  projectId,
 }: {
   agreement: ProjectClientAgreement;
   mode: "team" | "client";
@@ -155,6 +157,8 @@ function AgreementCard({
   onRefresh?: () => void | Promise<void>;
   onWarrantyExtensionAccepted?: (warrantyEndsAt: string) => void | Promise<void>;
   defaultExpanded?: boolean;
+  publicDashboardToken?: string;
+  projectId?: string;
 }) {
   const [busy, setBusy] = useState(false);
   const [responseNote, setResponseNote] = useState("");
@@ -396,6 +400,8 @@ function AgreementCard({
           onWarrantyExtensionAccepted={onWarrantyExtensionAccepted}
           syncRevision={`${agreement.status}:${agreement.updatedAt}:${agreement.activeVersionId ?? ""}`}
           showApprovalResponses={false}
+          publicDashboardToken={publicDashboardToken}
+          projectId={projectId}
         />
       ) : null}
 
@@ -650,6 +656,37 @@ export function ProjectAgreementsPanel({
     id: string,
     input: { accepted: boolean; clientResponseName: string; clientResponseNote?: string },
   ) {
+    if (publicDashboardToken) {
+      const response = await fetch(
+        `/api/przestrzen/${encodeURIComponent(publicDashboardToken)}/agreements/${encodeURIComponent(id)}?projectId=${encodeURIComponent(projectId)}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "legacy_respond",
+            accepted: input.accepted,
+            authorName: input.clientResponseName,
+            clientResponseNote: input.clientResponseNote,
+          }),
+        },
+      );
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
+        throw new Error(payload.error ?? "Nie udało się zapisać decyzji.");
+      }
+      const payload = (await response.json()) as { agreement: ProjectClientAgreement };
+      if (
+        input.accepted &&
+        payload.agreement.category === "warranty" &&
+        payload.agreement.proposedWarrantyEndDate
+      ) {
+        await onWarrantyExtensionAccepted?.(payload.agreement.proposedWarrantyEndDate);
+      }
+      await refreshLocalAgreements();
+      return;
+    }
+
     const updated = await respond(projectId, id, input);
     if (input.accepted && updated.category === "warranty" && updated.proposedWarrantyEndDate) {
       await onWarrantyExtensionAccepted?.(updated.proposedWarrantyEndDate);
@@ -760,6 +797,8 @@ export function ProjectAgreementsPanel({
             onRefresh={handleRefreshAgreements}
             onWarrantyExtensionAccepted={onWarrantyExtensionAccepted}
             defaultExpanded={agreement.id === focusAgreementId}
+            publicDashboardToken={publicDashboardToken}
+            projectId={projectId}
           />
         ))}
       </div>

@@ -18,10 +18,12 @@ import { findTradeCatalogItem } from "@/lib/field-options";
 import { tradeCatalogItemToProjectTradeInput } from "@/lib/trades/catalog-location";
 import {
   companiesForTrade,
+  companyItemToCatalogShape,
   formatCatalogCompanyLabel,
   tradeCatalogEntryKey,
   uniqueTradeNames,
 } from "@/lib/trades/catalog-utils";
+import type { TradeCompanyItem } from "@/lib/trades/company-types";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 import { useProjectTradeStore } from "@/store/project-trade-store";
@@ -55,21 +57,23 @@ function applyCatalogItem(form: ProjectTradeInput, item: TradeCatalogItem): Proj
 function TradeFormFields({
   form,
   onChange,
-  catalogItems = [],
+  categories = [],
+  companyPool = [],
 }: {
   form: ProjectTradeInput;
   onChange: (next: ProjectTradeInput) => void;
-  catalogItems?: TradeCatalogItem[];
+  categories?: TradeCatalogItem[];
+  companyPool?: TradeCompanyItem[];
 }) {
-  const tradeNames = useMemo(() => uniqueTradeNames(catalogItems), [catalogItems]);
+  const tradeNames = useMemo(() => uniqueTradeNames(categories), [categories]);
   const companiesForSelectedTrade = useMemo(
-    () => (form.name.trim() ? companiesForTrade(form.name, catalogItems) : []),
-    [catalogItems, form.name],
+    () => (form.name.trim() ? companiesForTrade(form.name, companyPool) : []),
+    [companyPool, form.name],
   );
   const companyQuery = (form.company ?? "").trim().toLowerCase();
   const companySuggestions = useMemo(() => {
     if (!form.name.trim()) {
-      return catalogItems;
+      return companyPool.map(companyItemToCatalogShape);
     }
     if (!companyQuery) {
       return companiesForSelectedTrade;
@@ -77,7 +81,7 @@ function TradeFormFields({
     return companiesForSelectedTrade.filter((item) =>
       formatCatalogCompanyLabel(item).toLowerCase().includes(companyQuery),
     );
-  }, [catalogItems, companiesForSelectedTrade, companyQuery, form.name]);
+  }, [companiesForSelectedTrade, companyPool, companyQuery, form.name]);
 
   return (
     <div className="grid gap-3">
@@ -96,12 +100,15 @@ function TradeFormFields({
                     : "border-border/70 text-muted hover:border-accent/30 hover:text-foreground",
                 )}
                 onClick={() => {
-                  const firstCompany = companiesForTrade(tradeName, catalogItems)[0];
-                  onChange(
-                    firstCompany
-                      ? applyCatalogItem({ ...form, name: tradeName }, firstCompany)
-                      : { ...form, name: tradeName },
+                  const category = categories.find(
+                    (entry) => entry.name.trim().toLowerCase() === tradeName.trim().toLowerCase(),
                   );
+                  onChange({
+                    ...form,
+                    name: tradeName,
+                    company: "",
+                    description: category?.description?.trim() || form.description,
+                  });
                 }}
               >
                 {tradeName}
@@ -134,7 +141,8 @@ function TradeFormFields({
             ))}
           </div>
           <p className="text-xs text-muted">
-            Ta sama branża może mieć kilku wykonawców — wybierz firmę z katalogu lub wpisz ręcznie.
+            Wybierz firmę z bazy branży lub wpisz nową — trafi do wspólnej bazy i będzie podpowiadana
+            w kolejnych projektach.
           </p>
         </div>
       ) : null}
@@ -146,12 +154,15 @@ function TradeFormFields({
           list="trade-catalog-suggestions"
           onChange={(event) => {
             const nextName = event.target.value;
-            const matches = companiesForTrade(nextName, catalogItems);
-            if (matches.length === 1) {
-              onChange(applyCatalogItem({ ...form, name: nextName }, matches[0]));
-              return;
-            }
-            onChange({ ...form, name: nextName });
+            const category = categories.find(
+              (entry) => entry.name.trim().toLowerCase() === nextName.trim().toLowerCase(),
+            );
+            onChange({
+              ...form,
+              name: nextName,
+              company: form.name.trim().toLowerCase() === nextName.trim().toLowerCase() ? form.company : "",
+              description: category?.description?.trim() || form.description,
+            });
           }}
         />
         {tradeNames.length > 0 ? (
@@ -166,7 +177,7 @@ function TradeFormFields({
       <Field label="Firma wykonawcy">
         <Input
           value={form.company ?? ""}
-          placeholder="Nazwa firmy — podpowiedzi z katalogu dla wybranej branży"
+          placeholder="Wybierz z bazy branży lub wpisz nową firmę dla tego klienta"
           list="trade-company-suggestions"
           onChange={(event) => {
             const nextCompany = event.target.value;
@@ -254,9 +265,21 @@ export function ProjectTradesPanel({
   const updateTrade = useProjectTradeStore((state) => state.updateTrade);
   const removeTrade = useProjectTradeStore((state) => state.removeTrade);
   const fieldOptions = useAppStore((state) => state.fieldOptions);
-  const catalogItems = useMemo(() => fieldOptions.tradeCatalogItems, [fieldOptions.tradeCatalogItems]);
+  const categories = useMemo(() => fieldOptions.tradeCatalogItems, [fieldOptions.tradeCatalogItems]);
+  const [companyPool, setCompanyPool] = useState<TradeCompanyItem[]>(fieldOptions.tradeCompanies ?? []);
   const trades = storeTrades;
   const isLoading = loading && trades.length === 0;
+
+  useEffect(() => {
+    void fetch("/api/trades/companies", { credentials: "include" })
+      .then(async (response) => {
+        const payload = await response.json();
+        if (response.ok) {
+          setCompanyPool(payload.companies ?? []);
+        }
+      })
+      .catch(() => setCompanyPool(fieldOptions.tradeCompanies ?? []));
+  }, [fieldOptions.tradeCompanies]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -317,7 +340,7 @@ export function ProjectTradesPanel({
     <div className="grid min-w-0 max-w-full gap-4 overflow-x-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted">
-          Firmy z projektu synchronizują się z katalogiem branż (branża + firma).
+          W projekcie dodajesz firmę wykonawczą w danej branży. Trafia ona do wspólnej bazy pod tą branżą.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" variant="outline" asChild>
@@ -419,7 +442,12 @@ export function ProjectTradesPanel({
               akceptacji w ustaleniach.
             </DialogDescription>
           </DialogHeader>
-          <TradeFormFields form={form} onChange={setForm} catalogItems={catalogItems} />
+          <TradeFormFields
+            form={form}
+            onChange={setForm}
+            categories={categories}
+            companyPool={companyPool}
+          />
           {error ? <p className="text-sm text-rose-400">{error}</p> : null}
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button type="button" disabled={saving} onClick={() => void handleSave()}>

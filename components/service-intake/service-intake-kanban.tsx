@@ -1,34 +1,46 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import Link from "next/link";
 import {
   Calendar,
   Coffee,
   ExternalLink,
+  GripVertical,
   Loader2,
   MessageSquare,
   Phone,
   RefreshCw,
   User,
 } from "lucide-react";
+import { KanbanDropPlaceholder, getKanbanColumnDropTargetClasses } from "@/components/process/kanban-drop-placeholder";
 import { KanbanMobileColumnNav } from "@/components/process/kanban-mobile-column-nav";
 import { ServiceIntakeDetailModal } from "@/components/service-intake/service-intake-detail-modal";
 import { Button } from "@/components/ui/button";
 import { useKanbanMobileColumns } from "@/hooks/use-kanban-mobile-columns";
+import { confirmServiceIntakeStatusChange } from "@/lib/service-intake/confirm-status-change";
+import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
+import { useAuthStore } from "@/store/auth-store";
+import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
 import { CAFE_PRIORITY_OPTIONS } from "@/lib/service-intake/cafe-priorities";
 import {
   KANBAN_BOARD_ROOT_CLASS,
+  KANBAN_DRAG_HINT,
   KANBAN_MOBILE_COLUMN_BODY_CLASS,
   KANBAN_MOBILE_COLUMN_SHELL_CLASS,
   KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS,
 } from "@/lib/process/kanban-ui";
+import { resolveKanbanColumnId, TOUCH_DRAG_THRESHOLD_PX } from "@/lib/process/kanban-drag";
 import {
+  countActiveServiceIntakes,
+  countOverdueActiveServiceIntakes,
+  isServiceIntakeInactive,
   isServiceIntakeOverdue,
   SERVICE_INTAKE_KANBAN_COLUMNS,
   SERVICE_INTAKE_STATUS_BADGE_CLASS,
   SERVICE_INTAKE_STATUS_TONE,
-  serviceIntakeDueAt,
+  resolveServiceIntakeDueAt,
+  serviceIntakeKanbanBadgeClass,
   serviceIntakePriorityRank,
 } from "@/lib/service-intake/sla";
 import {
@@ -48,31 +60,141 @@ function cafeOption(priority: ServiceIntakeRecord["priority"]) {
   return CAFE_PRIORITY_OPTIONS.find((entry) => entry.id === priority) ?? null;
 }
 
+function stopDragPropagation(event: ReactPointerEvent) {
+  event.stopPropagation();
+}
+
 function ServiceIntakeCard({
   item,
   busy,
+  isDragging,
+  draggable = true,
   onOpen,
   onStatusChange,
+  onDragStart,
+  onDragEnd,
+  onDragHover,
+  onDragDrop,
 }: {
   item: ServiceIntakeRecord;
   busy: boolean;
+  isDragging?: boolean;
+  draggable?: boolean;
   onOpen: () => void;
   onStatusChange: (status: ServiceIntakeStatus) => void;
+  onDragStart: () => void;
+  onDragEnd?: () => void;
+  onDragHover?: (columnId: string | null) => void;
+  onDragDrop?: (columnId: string) => void;
 }) {
-  const overdue = isServiceIntakeOverdue(item);
-  const dueAt = serviceIntakeDueAt(item.createdAt, item.priority);
+  const canDrag = draggable && !busy;
+  const pointerDragRef = useRef<{
+    pointerId: number;
+    started: boolean;
+    startX: number;
+    startY: number;
+  } | null>(null);
+  const suppressClickRef = useRef(false);
+
+  const overdue = !isServiceIntakeInactive(item.status) && isServiceIntakeOverdue(item);
+  const dueAt = resolveServiceIntakeDueAt(item);
   const statusTone = SERVICE_INTAKE_STATUS_TONE[item.status];
   const cafe = cafeOption(item.priority);
+  const inactive = isServiceIntakeInactive(item.status);
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLElement>) {
+    if (!canDrag || event.pointerType === "mouse" || event.button !== 0) {
+      return;
+    }
+    pointerDragRef.current = {
+      pointerId: event.pointerId,
+      started: false,
+      startX: event.clientX,
+      startY: event.clientY,
+    };
+  }
+
+  function handlePointerMove(event: ReactPointerEvent<HTMLElement>) {
+    const dragState = pointerDragRef.current;
+    if (!canDrag || !dragState || event.pointerId !== dragState.pointerId) {
+      return;
+    }
+    const distance = Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY);
+    if (!dragState.started) {
+      if (distance < TOUCH_DRAG_THRESHOLD_PX) {
+        return;
+      }
+      dragState.started = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      suppressClickRef.current = true;
+      onDragStart();
+    }
+    event.preventDefault();
+    onDragHover?.(resolveKanbanColumnId(event.clientX, event.clientY));
+  }
+
+  function finishPointerDrag(event: ReactPointerEvent<HTMLElement>) {
+    const dragState = pointerDragRef.current;
+    if (!dragState || event.pointerId !== dragState.pointerId) {
+      return;
+    }
+    if (dragState.started) {
+      const columnId = resolveKanbanColumnId(event.clientX, event.clientY);
+      if (columnId) {
+        onDragDrop?.(columnId);
+      }
+      onDragEnd?.();
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    pointerDragRef.current = null;
+  }
+
+  function handleOpenClick() {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    onOpen();
+  }
 
   return (
     <article
+      draggable={canDrag}
+      onDragStart={
+        canDrag
+          ? (event) => {
+              event.dataTransfer.effectAllowed = "move";
+              event.dataTransfer.setData("text/plain", item.id);
+              onDragStart();
+            }
+          : undefined
+      }
+      onDragEnd={canDrag ? onDragEnd : undefined}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={finishPointerDrag}
+      onPointerCancel={finishPointerDrag}
       className={cn(
-        "grid gap-2 rounded-xl border p-3 shadow-sm transition hover:border-accent/30",
-        cafe ? cafe.toneClass : "border-border/70 bg-surface-muted/20",
-        overdue ? "ring-1 ring-rose-500/40" : undefined,
-        item.status === "closed" || item.status === "rejected" ? "opacity-80" : undefined,
+        "grid gap-2 rounded-xl border p-3 shadow-sm transition",
+        canDrag && "touch-manipulation cursor-grab active:cursor-grabbing",
+        inactive
+          ? "border-dashed border-border/50 bg-surface-muted/10 opacity-50 grayscale"
+          : "hover:border-accent/30",
+        !inactive && cafe ? cafe.toneClass : !inactive ? "border-border/70 bg-surface-muted/20" : undefined,
+        !inactive && overdue ? "ring-1 ring-rose-500/40" : undefined,
+        isDragging && "scale-[0.98] opacity-35 ring-2 ring-accent/30",
       )}
     >
+      {canDrag ? (
+        <div className="flex items-center gap-1 text-muted/70" aria-hidden>
+          <GripVertical className="h-4 w-4 shrink-0" />
+          <span className="text-[10px] uppercase tracking-wide">Przeciągnij</span>
+        </div>
+      ) : null}
       {cafe ? (
         <div className="flex items-center justify-between gap-2">
           <span
@@ -89,7 +211,7 @@ function ServiceIntakeCard({
       ) : null}
 
       <div className="min-w-0">
-        <button type="button" className="w-full text-left" onClick={onOpen}>
+        <button type="button" className="w-full text-left" onPointerDown={stopDragPropagation} onClick={handleOpenClick}>
           <p className="font-semibold text-foreground">{item.referenceNumber}</p>
           <p className="mt-0.5 line-clamp-3 text-sm text-foreground/90">{item.description}</p>
         </button>
@@ -124,7 +246,15 @@ function ServiceIntakeCard({
           <Calendar className="h-3 w-3" />
           {formatDateTime(item.createdAt)}
         </p>
-        {dueAt ? <p>Termin: {formatDate(dueAt.slice(0, 10))}</p> : null}
+        {dueAt ? <p>Wykonać do: {formatDate(dueAt.slice(0, 10))}</p> : null}
+        {item.assigneeName ? (
+          <p className="flex items-center gap-1">
+            <User className="h-3 w-3" />
+            {item.assigneeName}
+          </p>
+        ) : item.status !== "closed" && item.status !== "rejected" ? (
+          <p className="text-amber-200/80">Brak osoby do obsługi</p>
+        ) : null}
         {item.contactPhone ? (
           <p className="flex items-center gap-1">
             <Phone className="h-3 w-3" />
@@ -138,12 +268,18 @@ function ServiceIntakeCard({
       </div>
 
       <div className="flex flex-wrap gap-1.5 pt-1">
-        <Button type="button" size="sm" variant="outline" onClick={onOpen}>
+        <Button type="button" size="sm" variant="outline" onPointerDown={stopDragPropagation} onClick={handleOpenClick}>
           <MessageSquare className="mr-1 h-3.5 w-3.5" />
           Szczegóły
         </Button>
         {item.status === "new" ? (
-          <Button type="button" size="sm" disabled={busy} onClick={() => onStatusChange("in_review")}>
+          <Button
+            type="button"
+            size="sm"
+            disabled={busy}
+            onPointerDown={stopDragPropagation}
+            onClick={() => onStatusChange("in_review")}
+          >
             Przyjmij
           </Button>
         ) : null}
@@ -153,12 +289,24 @@ function ServiceIntakeCard({
             size="sm"
             variant="secondary"
             disabled={busy}
+            onPointerDown={stopDragPropagation}
             onClick={() => onStatusChange("converted")}
           >
-            Przekształć
+            Rozlicz
           </Button>
         ) : null}
-        <Button size="sm" variant="ghost" asChild>
+        {inactive ? (
+          <Button
+            type="button"
+            size="sm"
+            disabled={busy}
+            onPointerDown={stopDragPropagation}
+            onClick={() => onStatusChange("in_review")}
+          >
+            Otwórz ponownie
+          </Button>
+        ) : null}
+        <Button size="sm" variant="ghost" asChild onPointerDown={stopDragPropagation}>
           <Link href={`/zgloszenie/watek/${item.trackingToken}`} target="_blank" rel="noreferrer">
             <ExternalLink className="h-3.5 w-3.5" />
           </Link>
@@ -170,11 +318,18 @@ function ServiceIntakeCard({
 
 export function ServiceIntakeKanban({ authorName = "Zespół" }: { authorName?: string }) {
   const [items, setItems] = useState<ServiceIntakeRecord[]>([]);
+  const [teamProfiles, setTeamProfiles] = useState<UserProfile[]>([]);
+  const profile = useAuthStore((state) => state.profile);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [dragItemId, setDragItemId] = useState<string | null>(null);
+  const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
+  const dragItemIdRef = useRef<string | null>(null);
+
+  const dragItem = dragItemId ? (items.find((entry) => entry.id === dragItemId) ?? null) : null;
 
   const columns = useMemo(
     () =>
@@ -215,6 +370,12 @@ export function ServiceIntakeKanban({ authorName = "Zespół" }: { authorName?: 
   }, [loadItems]);
 
   useEffect(() => {
+    void fetchTeamProfiles()
+      .then(setTeamProfiles)
+      .catch(() => setTeamProfiles([]));
+  }, []);
+
+  useEffect(() => {
     const interval = window.setInterval(() => {
       if (document.visibilityState === "visible") {
         void loadItems({ silent: true });
@@ -242,6 +403,11 @@ export function ServiceIntakeKanban({ authorName = "Zespół" }: { authorName?: 
       map.set(
         status,
         [...(map.get(status) ?? [])].sort((left, right) => {
+          const inactiveDiff =
+            Number(isServiceIntakeInactive(left.status)) - Number(isServiceIntakeInactive(right.status));
+          if (inactiveDiff !== 0) {
+            return inactiveDiff;
+          }
           const rankDiff =
             serviceIntakePriorityRank(left.priority) - serviceIntakePriorityRank(right.priority);
           if (rankDiff !== 0) {
@@ -259,18 +425,64 @@ export function ServiceIntakeKanban({ authorName = "Zespół" }: { authorName?: 
     [grouped],
   );
 
+  function beginDrag(itemId: string) {
+    dragItemIdRef.current = itemId;
+    setDragItemId(itemId);
+  }
+
+  function clearDragState() {
+    dragItemIdRef.current = null;
+    setDragItemId(null);
+    setDragOverColumnId(null);
+  }
+
+  async function handleDrop(columnId: string, itemIdOverride?: string) {
+    const itemId = itemIdOverride ?? dragItemIdRef.current ?? dragItemId;
+    if (!itemId) {
+      return;
+    }
+    const nextStatus = columnId as ServiceIntakeStatus;
+    const currentItem = items.find((entry) => entry.id === itemId);
+    clearDragState();
+    if (!currentItem || currentItem.status === nextStatus) {
+      return;
+    }
+    await changeStatus(itemId, nextStatus);
+  }
+
   async function changeStatus(id: string, status: ServiceIntakeStatus) {
+    const currentItem = items.find((entry) => entry.id === id);
+    if (!confirmServiceIntakeStatusChange(status, currentItem?.status)) {
+      return;
+    }
     setBusyId(id);
     const snapshot = items;
+    const patch: { status: ServiceIntakeStatus; assigneeId?: string } = { status };
+    if (status === "in_review" && !currentItem?.assigneeId && profile?.id) {
+      patch.assigneeId = profile.id;
+    }
     setItems((current) =>
-      current.map((entry) => (entry.id === id ? { ...entry, status } : entry)),
+      current.map((entry) =>
+        entry.id === id
+          ? {
+              ...entry,
+              status,
+              closedAt: isServiceIntakeInactive(status) ? new Date().toISOString() : null,
+              assigneeId: patch.assigneeId ?? entry.assigneeId,
+              assigneeName:
+                patch.assigneeId && profile?.id === patch.assigneeId
+                  ? getUserDisplayName(profile)
+                  : entry.assigneeName,
+            }
+          : entry,
+      ),
     );
     try {
       const response = await fetch(`/api/service-intake/${encodeURIComponent(id)}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(patch),
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -335,38 +547,86 @@ export function ServiceIntakeKanban({ authorName = "Zespół" }: { authorName?: 
         columns={columns}
         activeColumnId={activeColumnId}
         onSelect={scrollToColumn}
-        openCountForColumn={(columnId) => grouped.get(columnId as ServiceIntakeStatus)?.length ?? 0}
+        openCountForColumn={(columnId) =>
+          countActiveServiceIntakes(grouped.get(columnId as ServiceIntakeStatus) ?? [])
+        }
+        badgeToneForColumn={(columnId) => {
+          const columnItems = grouped.get(columnId as ServiceIntakeStatus) ?? [];
+          const activeCount = countActiveServiceIntakes(columnItems);
+          const overdueCount = countOverdueActiveServiceIntakes(columnItems);
+          if (activeCount <= 0) {
+            return "empty";
+          }
+          return overdueCount > 0 ? "overdue" : "ok";
+        }}
       />
+
+      <p className="hidden shrink-0 text-sm text-muted md:block">{KANBAN_DRAG_HINT}</p>
 
       <div ref={scrollerRef} className={KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS}>
         {SERVICE_INTAKE_KANBAN_COLUMNS.map((status) => {
           const columnItems = grouped.get(status) ?? [];
-          const tone = SERVICE_INTAKE_STATUS_TONE[status];
+          const activeCount = countActiveServiceIntakes(columnItems);
+          const inactiveCount = columnItems.length - activeCount;
+          const overdueCount = countOverdueActiveServiceIntakes(columnItems);
+          const isArchiveColumn = status === "closed" || status === "rejected";
+          const isDropTarget = Boolean(dragItemId && dragOverColumnId === status);
           return (
             <section
               key={status}
               ref={(node) => setColumnRef(status, node as HTMLDivElement | null)}
               data-column-id={status}
-              className={KANBAN_MOBILE_COLUMN_SHELL_CLASS}
+              className={cn(KANBAN_MOBILE_COLUMN_SHELL_CLASS, getKanbanColumnDropTargetClasses(isDropTarget))}
               style={{ minHeight: `${Math.max(220, maxColumnCount * 168)}px` }}
+              onDragEnter={(event) => {
+                if (!dragItemId) {
+                  return;
+                }
+                event.preventDefault();
+                setDragOverColumnId(status);
+              }}
+              onDragOver={(event) => {
+                if (!dragItemId) {
+                  return;
+                }
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                setDragOverColumnId(status);
+              }}
+              onDragLeave={(event) => {
+                const related = event.relatedTarget as Node | null;
+                if (!event.currentTarget.contains(related)) {
+                  setDragOverColumnId((current) => (current === status ? null : current));
+                }
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                void handleDrop(status);
+              }}
             >
               <header className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-3">
                 <div>
                   <p className="text-sm font-semibold text-foreground">
                     {SERVICE_INTAKE_STATUS_LABELS[status]}
                   </p>
-                  <p className="text-xs text-muted">{columnItems.length} zgłoszeń</p>
+                  <p className="text-xs text-muted">
+                    {isArchiveColumn
+                      ? `${columnItems.length} zarchiwizowanych`
+                      : inactiveCount > 0
+                        ? `${activeCount} aktywnych · ${inactiveCount} nieaktywnych`
+                        : `${activeCount} aktywnych`}
+                  </p>
                 </div>
                 <span
                   className={cn(
                     "rounded-full border px-2.5 py-0.5 text-xs font-bold",
-                    SERVICE_INTAKE_STATUS_BADGE_CLASS[tone],
+                    serviceIntakeKanbanBadgeClass({ activeCount, overdueCount }),
                   )}
                 >
-                  {columnItems.length}
+                  {activeCount}
                 </span>
               </header>
-              <div className={KANBAN_MOBILE_COLUMN_BODY_CLASS}>
+              <div className={cn(KANBAN_MOBILE_COLUMN_BODY_CLASS, isDropTarget && "bg-accent/[0.03]")}>
                 {columnItems.length === 0 ? (
                   <p className="py-6 text-center text-xs text-muted">Brak zgłoszeń</p>
                 ) : (
@@ -375,11 +635,19 @@ export function ServiceIntakeKanban({ authorName = "Zespół" }: { authorName?: 
                       key={item.id}
                       item={item}
                       busy={busyId === item.id}
+                      isDragging={dragItemId === item.id}
                       onOpen={() => setSelectedId(item.id)}
                       onStatusChange={(nextStatus) => void changeStatus(item.id, nextStatus)}
+                      onDragStart={() => beginDrag(item.id)}
+                      onDragEnd={clearDragState}
+                      onDragHover={(columnId) => setDragOverColumnId(columnId)}
+                      onDragDrop={(columnId) => void handleDrop(columnId, item.id)}
                     />
                   ))
                 )}
+                {isDropTarget && dragItem ? (
+                  <KanbanDropPlaceholder title={dragItem.referenceNumber} />
+                ) : null}
               </div>
             </section>
           );
@@ -389,6 +657,7 @@ export function ServiceIntakeKanban({ authorName = "Zespół" }: { authorName?: 
       <ServiceIntakeDetailModal
         intakeId={selectedId}
         authorName={authorName}
+        teamProfiles={teamProfiles}
         open={selectedId !== null}
         onOpenChange={(open) => {
           if (!open) {

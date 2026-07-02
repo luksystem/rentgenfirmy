@@ -217,6 +217,30 @@ export function ProjectMeetingNotesPanel({
           summary={[meta, noteSummary(note)].filter(Boolean).join(" · ")}
           defaultExpanded={false}
         >
+          {mode === "team" ? (
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              {note.status === "draft" ? (
+                <span className="rounded-full border border-border/70 bg-surface-muted/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                  Szkic
+                </span>
+              ) : (
+                <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-200">
+                  Opublikowana
+                </span>
+              )}
+              {note.status === "draft" ? (
+                <Button type="button" size="sm" variant="secondary" onClick={() => void handlePublish(note.id)}>
+                  Opublikuj
+                </Button>
+              ) : null}
+              <Button type="button" size="sm" variant="outline" onClick={() => openEdit(note)}>
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button type="button" size="sm" variant="destructive" onClick={() => void handleDelete(note.id)}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ) : null}
           {renderNoteBody(note)}
         </CollapsibleSection>
       );

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { confirmServiceIntakeStatusChange } from "@/lib/service-intake/confirm-status-change";
 import {
   SERVICE_INTAKE_PRIORITY_LABELS,
   SERVICE_INTAKE_REQUEST_TYPE_LABELS,
@@ -18,7 +19,7 @@ const STATUS_FILTERS: Array<{ id: ServiceIntakeStatus | "all"; label: string }> 
   { id: "all", label: "Wszystkie" },
   { id: "new", label: "Nowe" },
   { id: "in_review", label: "W trakcie" },
-  { id: "converted", label: "Przekształcone" },
+  { id: "converted", label: "Rozliczanie" },
   { id: "closed", label: "Zamknięte" },
   { id: "rejected", label: "Odrzucone" },
 ];
@@ -53,6 +54,9 @@ export function ServiceIntakeListPanel() {
   }, [loadItems]);
 
   async function updateStatus(id: string, status: ServiceIntakeStatus) {
+    if (!confirmServiceIntakeStatusChange(status)) {
+      return;
+    }
     setUpdatingId(id);
     try {
       const response = await fetch(`/api/service-intake/${encodeURIComponent(id)}`, {

@@ -31,7 +31,19 @@ export function serviceIntakeDueAt(createdAt: string, priority: ServiceIntakePri
   return new Date(created.getTime() + days * DAY_MS).toISOString();
 }
 
+export function resolveServiceIntakeDueAt(input: {
+  dueAt?: string | null;
+  createdAt: string;
+  priority: ServiceIntakePriority | null;
+}) {
+  if (input.dueAt) {
+    return input.dueAt;
+  }
+  return serviceIntakeDueAt(input.createdAt, input.priority);
+}
+
 export function isServiceIntakeOverdue(input: {
+  dueAt?: string | null;
   createdAt: string;
   priority: ServiceIntakePriority | null;
   status: ServiceIntakeStatus;
@@ -40,7 +52,7 @@ export function isServiceIntakeOverdue(input: {
   if (input.closedAt || input.status === "closed" || input.status === "rejected") {
     return false;
   }
-  const dueAt = serviceIntakeDueAt(input.createdAt, input.priority);
+  const dueAt = resolveServiceIntakeDueAt(input);
   if (!dueAt) {
     return false;
   }
@@ -49,6 +61,51 @@ export function isServiceIntakeOverdue(input: {
 
 export function isServiceIntakeNew(status: ServiceIntakeStatus) {
   return status === "new";
+}
+
+export function isServiceIntakeInactive(status: ServiceIntakeStatus) {
+  return status === "closed" || status === "rejected";
+}
+
+export function isServiceIntakeActive(status: ServiceIntakeStatus) {
+  return !isServiceIntakeInactive(status);
+}
+
+export function countActiveServiceIntakes(items: Array<{ status: ServiceIntakeStatus }>) {
+  return items.filter((item) => isServiceIntakeActive(item.status)).length;
+}
+
+export function countOverdueActiveServiceIntakes(
+  items: Array<{
+    status: ServiceIntakeStatus;
+    dueAt?: string | null;
+    createdAt: string;
+    priority: ServiceIntakePriority | null;
+    closedAt?: string | null;
+  }>,
+) {
+  return items.filter(
+    (item) => isServiceIntakeActive(item.status) && isServiceIntakeOverdue(item),
+  ).length;
+}
+
+export const SERVICE_INTAKE_KANBAN_BADGE_CLASS = {
+  empty: "border-border/60 bg-surface-muted/20 text-muted",
+  ok: "border-emerald-500/50 bg-emerald-500/15 text-emerald-200",
+  overdue: "border-rose-500/50 bg-rose-500/15 text-rose-200",
+} as const;
+
+export function serviceIntakeKanbanBadgeClass(input: {
+  activeCount: number;
+  overdueCount: number;
+}) {
+  if (input.activeCount <= 0) {
+    return SERVICE_INTAKE_KANBAN_BADGE_CLASS.empty;
+  }
+  if (input.overdueCount > 0) {
+    return SERVICE_INTAKE_KANBAN_BADGE_CLASS.overdue;
+  }
+  return SERVICE_INTAKE_KANBAN_BADGE_CLASS.ok;
 }
 
 export const SERVICE_INTAKE_STATUS_TONE: Record<
@@ -71,8 +128,8 @@ export const SERVICE_INTAKE_STATUS_BADGE_CLASS = {
 } as const;
 
 export const SERVICE_INTAKE_PRIORITY_BADGE_CLASS: Record<ServiceIntakePriority, string> = {
-  c: "border-rose-500/50 bg-rose-600/20 text-rose-100",
-  a: "border-orange-500/50 bg-orange-500/15 text-orange-100",
+  c: "border-2 border-red-500/85 bg-red-600/20 text-red-100",
+  a: "border border-amber-500/75 bg-amber-500/15 text-amber-100",
   f: "border-amber-400/50 bg-amber-400/15 text-amber-100",
   e: "border-emerald-500/50 bg-emerald-500/15 text-emerald-100",
 };
@@ -105,6 +162,8 @@ export function serviceIntakeNeedsAttention(input: {
   status: ServiceIntakeStatus;
   priority: ServiceIntakePriority | null;
   createdAt: string;
+  dueAt?: string | null;
+  closedAt?: string | null;
 }) {
   return isServiceIntakeNew(input.status) || isHighCafePriority(input.priority ?? "f") || isServiceIntakeOverdue(input);
 }

@@ -1,3 +1,4 @@
+import { getUserDisplayName } from "@/lib/auth/types";
 import { namesMatch } from "@/lib/service-intake/name-match";
 import {
   buildServiceIntakeStatusEmail,
@@ -5,7 +6,7 @@ import {
   getServiceInboxRecipients,
   getServiceIntakeThreadUrl,
 } from "@/lib/service-intake/email-templates";
-import { isServiceIntakeOverdue } from "@/lib/service-intake/sla";
+import { serviceIntakeDueAt, isServiceIntakeOverdue, isServiceIntakeInactive, isServiceIntakeActive } from "@/lib/service-intake/sla";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import {
   createIntakeVerifiedToken,
@@ -28,6 +29,8 @@ import { SERVICE_INTAKE_STATUS_LABELS } from "@/lib/service-intake/types";
 import { getWarrantyStatus } from "@/lib/project/warranty";
 import { rowToProject } from "@/lib/supabase/mappers";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import type { ServiceIntakeRequestRow } from "@/lib/supabase/database.types";
+import { mapProfileRow } from "@/lib/supabase/profile-mappers";
 import { normalizeServiceGlobalSettings } from "@/lib/supabase/service-mappers";
 import type { Project } from "@/lib/types";
 
@@ -150,6 +153,9 @@ function rowToIntakeRecord(
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
     closedAt: row.closed_at ? String(row.closed_at) : null,
+    dueAt: row.due_at ? String(row.due_at) : null,
+    assigneeId: row.assignee_id ? String(row.assignee_id) : null,
+    assigneeName: row.assignee_name ? String(row.assignee_name) : null,
     clientName: extras?.clientName ?? null,
     projectName: extras?.projectName ?? null,
   };
@@ -315,6 +321,7 @@ export async function submitServiceIntakeRequest(input: {
     (input.postWarrantyAction === "on_site" ||
       input.postWarrantyAction === "remote" ||
       input.acceptedPaidTerms);
+  const dueAt = serviceIntakeDueAt(now, isServiceRequest ? input.priority : null);
 
   const { data, error } = await supabase
     .from("service_intake_requests")
@@ -335,6 +342,7 @@ export async function submitServiceIntakeRequest(input: {
       description,
       accepted_paid_terms: acceptedPaidTerms,
       accepted_paid_terms_at: acceptedPaidTerms ? now : null,
+      due_at: dueAt,
       metadata_json: {
         projectName: project.name,
         warrantyLabel: warranty.label,
@@ -414,16 +422,96 @@ export async function listServiceIntakeRequests(status?: ServiceIntakeStatus) {
   );
 }
 
-export async function updateServiceIntakeStatus(id: string, status: ServiceIntakeStatus) {
+async function resolveAssigneeUpdate(assigneeId: string | null) {
+  if (!assigneeId) {
+    return { assignee_id: null, assignee_name: null };
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", assigneeId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  if (!data) {
+    throw new Error("Nie znaleziono aktywnego użytkownika.");
+  }
+
+  const profile = mapProfileRow(data);
+  return {
+    assignee_id: profile.id,
+    assignee_name: getUserDisplayName(profile),
+  };
+}
+
+export async function updateServiceIntake(
+  id: string,
+  patch: {
+    status?: ServiceIntakeStatus;
+    dueAt?: string | null;
+    assigneeId?: string | null;
+  },
+) {
+  if (
+    patch.status === undefined &&
+    patch.dueAt === undefined &&
+    patch.assigneeId === undefined
+  ) {
+    throw new Error("Brak pól do aktualizacji.");
+  }
+
   const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
+  const update: Partial<ServiceIntakeRequestRow> = { updated_at: now };
+
+  let previousStatus: ServiceIntakeStatus | null = null;
+  if (patch.status !== undefined) {
+    const { data: existing, error: existingError } = await supabase
+      .from("service_intake_requests")
+      .select("status, priority")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (existingError) {
+      throw new Error(existingError.message);
+    }
+    if (!existing) {
+      throw new Error("Nie znaleziono zgłoszenia.");
+    }
+
+    previousStatus = existing.status as ServiceIntakeStatus;
+    const reopening =
+      isServiceIntakeInactive(previousStatus) && !isServiceIntakeInactive(patch.status);
+
+    update.status = patch.status;
+    update.closed_at = isServiceIntakeInactive(patch.status) ? now : null;
+
+    if (reopening) {
+      update.due_at = serviceIntakeDueAt(
+        now,
+        existing.priority ? (existing.priority as ServiceIntakePriority) : null,
+      );
+    }
+  }
+
+  if (patch.dueAt !== undefined) {
+    update.due_at = patch.dueAt;
+  }
+
+  if (patch.assigneeId !== undefined) {
+    const assignee = await resolveAssigneeUpdate(patch.assigneeId);
+    update.assignee_id = assignee.assignee_id;
+    update.assignee_name = assignee.assignee_name;
+  }
+
   const { data, error } = await supabase
     .from("service_intake_requests")
-    .update({
-      status,
-      updated_at: now,
-      closed_at: status === "closed" || status === "rejected" ? now : null,
-    })
+    .update(update)
     .eq("id", id)
     .select("*")
     .single();
@@ -433,8 +521,14 @@ export async function updateServiceIntakeStatus(id: string, status: ServiceIntak
   }
 
   const record = rowToIntakeRecord(data);
-  await notifyServiceIntakeStatusChange(record);
+  if (patch.status !== undefined) {
+    await notifyServiceIntakeStatusChange(record);
+  }
   return record;
+}
+
+export async function updateServiceIntakeStatus(id: string, status: ServiceIntakeStatus) {
+  return updateServiceIntake(id, { status });
 }
 
 export async function getServiceIntakeThreadByToken(token: string): Promise<ServiceIntakeThread | null> {
@@ -483,13 +577,19 @@ export async function addServiceIntakeComment(input: {
   if (!thread) {
     throw new Error("Nie znaleziono wątku zgłoszenia.");
   }
-  if (thread.intake.status === "closed" || thread.intake.status === "rejected") {
-    throw new Error("Wątek jest zamknięty — nie można dodać wiadomości.");
-  }
 
   const body = input.body.trim();
   if (!body) {
     throw new Error("Wiadomość nie może być pusta.");
+  }
+
+  const isInactive = isServiceIntakeInactive(thread.intake.status);
+  if (isInactive && input.authorSide !== "client") {
+    throw new Error("Zgłoszenie jest zamknięte — otwórz je ponownie, aby odpowiedzieć.");
+  }
+
+  if (isInactive && input.authorSide === "client") {
+    await updateServiceIntake(thread.intake.id, { status: "in_review" });
   }
 
   const supabase = getSupabaseAdmin();
@@ -595,9 +695,14 @@ export async function addServiceIntakeTeamComment(input: {
 
 export async function countServiceIntakeAlerts() {
   const items = await listServiceIntakeRequests();
-  const newCount = items.filter((item) => item.status === "new").length;
-  const overdueCount = items.filter((item) => isServiceIntakeOverdue(item)).length;
-  return { newCount, overdueCount };
+  const activeItems = items.filter((item) => isServiceIntakeActive(item.status));
+  const overdueCount = activeItems.filter((item) => isServiceIntakeOverdue(item)).length;
+  const activeCount = activeItems.length;
+  return {
+    activeCount,
+    overdueCount,
+    newCount: activeCount - overdueCount,
+  };
 }
 
 export async function getPublicServiceRates() {

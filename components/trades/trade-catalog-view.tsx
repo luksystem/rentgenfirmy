@@ -1,14 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Building2, HardHat, List, MapPin, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import type { TradeCatalogItem } from "@/lib/field-options";
-import { formatTradeCatalogAddress } from "@/lib/trades/catalog-location";
-import { groupCatalogByTrade, tradeCatalogEntryKey } from "@/lib/trades/catalog-utils";
+import { companyItemToCatalogShape, groupTradeDirectory, tradeCompanyKey } from "@/lib/trades/company-pool";
+import type { TradeCompanyItem } from "@/lib/trades/company-types";
 import { useAppStore } from "@/store/app-store";
 import { cn } from "@/lib/utils";
 
@@ -22,14 +21,16 @@ const TradeCatalogMapView = dynamic(
 
 type ViewMode = "list" | "map";
 
-function CatalogList({ items }: { items: TradeCatalogItem[] }) {
-  const groups = useMemo(() => groupCatalogByTrade(items), [items]);
-
+function CatalogList({
+  groups,
+}: {
+  groups: ReturnType<typeof groupTradeDirectory>;
+}) {
   if (!groups.length) {
     return (
       <Card>
         <CardContent className="py-6 text-sm text-muted">
-          Katalog jest pusty. Dodaj firmy wykonawców w{" "}
+          Katalog jest pusty. Zdefiniuj branże w{" "}
           <Link href="/ustawienia/branze" className="text-accent hover:underline">
             ustawieniach katalogu
           </Link>
@@ -44,50 +45,54 @@ function CatalogList({ items }: { items: TradeCatalogItem[] }) {
       {groups.map((group) => (
         <Card key={group.tradeName}>
           <CardContent className="grid gap-3 pt-4">
-            <div className="flex items-center gap-2">
-              <HardHat className="h-4 w-4 text-accent" />
-              <p className="font-semibold text-foreground">{group.tradeName}</p>
-              <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] text-muted">
-                {group.companies.length}{" "}
-                {group.companies.length === 1 ? "firma" : group.companies.length < 5 ? "firmy" : "firm"}
-              </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <HardHat className="h-4 w-4 text-accent" />
+                <p className="font-semibold text-foreground">{group.tradeName}</p>
+                <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] text-muted">
+                  {group.companies.length}{" "}
+                  {group.companies.length === 1 ? "firma" : group.companies.length < 5 ? "firmy" : "firm"}
+                </span>
+              </div>
+              {group.category.description ? (
+                <p className="mt-1 text-sm text-muted">{group.category.description}</p>
+              ) : null}
+              {group.category.communicationProtocols.length ? (
+                <p className="mt-1 text-xs text-muted">
+                  Protokoły: {group.category.communicationProtocols.join(", ")}
+                </p>
+              ) : null}
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {group.companies.map((item) => (
-                <div
-                  key={tradeCatalogEntryKey(item)}
-                  className="rounded-xl border border-border/70 bg-surface-muted/15 p-3"
-                >
-                  <div className="flex items-start gap-2">
-                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
-                    <div className="min-w-0">
-                      <p className="font-medium text-foreground">
-                        {item.company?.trim() || "Firma bez nazwy"}
-                      </p>
-                      {item.description ? (
-                        <p className="mt-1 text-sm text-muted">{item.description}</p>
-                      ) : null}
-                      {item.communicationProtocols.length ? (
-                        <p className="mt-1 text-xs text-muted">
-                          Protokoły: {item.communicationProtocols.join(", ")}
-                        </p>
-                      ) : null}
-                      {formatTradeCatalogAddress(item) ? (
-                        <p className="mt-1 flex items-start gap-1 text-xs text-muted">
-                          <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
-                          {formatTradeCatalogAddress(item)}
-                        </p>
-                      ) : null}
-                      {[item.contactName, item.email, item.phone].filter(Boolean).length ? (
-                        <p className="mt-1 text-xs text-muted">
-                          {[item.contactName, item.email, item.phone].filter(Boolean).join(" · ")}
-                        </p>
-                      ) : null}
+
+            {group.companies.length ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {group.companies.map((company) => (
+                  <div
+                    key={tradeCompanyKey(company)}
+                    className="rounded-xl border border-border/70 bg-surface-muted/15 p-3"
+                  >
+                    <div className="flex items-start gap-2">
+                      <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
+                      <div className="min-w-0">
+                        <p className="font-medium text-foreground">{company.company}</p>
+                        {company.description ? (
+                          <p className="mt-1 text-sm text-muted">{company.description}</p>
+                        ) : null}
+                        {[company.contactName, company.email, company.phone].filter(Boolean).length ? (
+                          <p className="mt-1 text-xs text-muted">
+                            {[company.contactName, company.email, company.phone].filter(Boolean).join(" · ")}
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted">
+                Brak firm w bazie — dodaj wykonawców w projektach klientów.
+              </p>
+            )}
           </CardContent>
         </Card>
       ))}
@@ -97,10 +102,32 @@ function CatalogList({ items }: { items: TradeCatalogItem[] }) {
 
 export function TradeCatalogView() {
   const fieldOptions = useAppStore((state) => state.fieldOptions);
-  const items = useMemo(() => fieldOptions.tradeCatalogItems, [fieldOptions.tradeCatalogItems]);
-  const companyCount = items.filter((item) => item.company?.trim()).length;
+  const [companyPool, setCompanyPool] = useState<TradeCompanyItem[]>(fieldOptions.tradeCompanies ?? []);
   const [view, setView] = useState<ViewMode>("list");
   const [mapMounted, setMapMounted] = useState(false);
+
+  useEffect(() => {
+    void fetch("/api/trades/companies", { credentials: "include" })
+      .then(async (response) => {
+        const payload = await response.json();
+        if (response.ok) {
+          setCompanyPool(payload.companies ?? []);
+        }
+      })
+      .catch(() => setCompanyPool(fieldOptions.tradeCompanies ?? []));
+  }, [fieldOptions.tradeCompanies]);
+
+  const groups = useMemo(
+    () => groupTradeDirectory(fieldOptions.tradeCatalogItems, companyPool),
+    [companyPool, fieldOptions.tradeCatalogItems],
+  );
+
+  const mapItems = useMemo(
+    () => companyPool.map((company) => companyItemToCatalogShape(company)),
+    [companyPool],
+  );
+
+  const companyCount = companyPool.length;
 
   return (
     <div className="grid gap-4">
@@ -112,7 +139,7 @@ export function TradeCatalogView() {
             onClick={() => setView("list")}
           >
             <List className="mr-2 h-4 w-4" />
-            Firmy ({companyCount || items.length})
+            Baza firm ({companyCount})
           </Button>
           <Button
             type="button"
@@ -129,18 +156,23 @@ export function TradeCatalogView() {
         <Button variant="secondary" asChild>
           <Link href="/ustawienia/branze">
             <Settings className="mr-2 h-4 w-4" />
-            Edytuj katalog
+            Edytuj branże
           </Link>
         </Button>
       </div>
 
+      <p className="text-sm text-muted">
+        Branże to kategorie współpracy. Firmy wykonawcze z projektów różnych klientów gromadzą się tutaj
+        pod właściwą branżą — baza do polecania wykonawców i przyszłych zleceń podwykonawców.
+      </p>
+
       <div className={cn(view === "list" ? undefined : "hidden")}>
-        <CatalogList items={items} />
+        <CatalogList groups={groups} />
       </div>
 
       {mapMounted ? (
         <div className={cn(view === "map" ? undefined : "hidden")}>
-          <TradeCatalogMapView items={items} />
+          <TradeCatalogMapView items={mapItems} />
         </div>
       ) : null}
     </div>

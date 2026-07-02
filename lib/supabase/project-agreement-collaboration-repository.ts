@@ -749,6 +749,8 @@ export async function publishAgreementVersion(agreementId: string, publishedByNa
     throw new Error(error.message);
   }
 
+  await setAgreementPublicEnabled(agreementId, true);
+
   return fetchAgreementCollaboration(agreementId);
 }
 

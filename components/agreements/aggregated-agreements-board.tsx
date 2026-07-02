@@ -3,13 +3,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AgreementDetailModal } from "@/components/agreements/agreement-detail-modal";
 import { AgreementKanbanCard } from "@/components/agreements/agreement-kanban-card";
+import { KanbanMobileColumnNav } from "@/components/process/kanban-mobile-column-nav";
 import { useAgreementsHubRealtime } from "@/hooks/use-agreements-hub-realtime";
 import { useAgreementApprovalHint } from "@/hooks/use-agreement-approval-hint";
+import { useKanbanMobileColumns } from "@/hooks/use-kanban-mobile-columns";
 import {
   AGREEMENT_KANBAN_COLUMNS,
   agreementKanbanColumnForStatus,
   type AgreementHubEntry,
 } from "@/lib/dashboard/agreement-hub-types";
+import {
+  KANBAN_BOARD_ROOT_CLASS,
+  KANBAN_MOBILE_COLUMN_BODY_CLASS,
+  KANBAN_MOBILE_COLUMN_SHELL_CLASS,
+  KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS,
+} from "@/lib/process/kanban-ui";
 import { cn } from "@/lib/utils";
 import { useAgreementHubStore } from "@/store/agreement-hub-store";
 
@@ -79,6 +87,18 @@ export function AggregatedAgreementsBoard({ authorName }: { authorName: string }
     return grouped;
   }, [snapshot?.entries]);
 
+  const columns = useMemo(
+    () => AGREEMENT_KANBAN_COLUMNS.map((column) => ({ id: column.id, title: column.label })),
+    [],
+  );
+  const { activeColumnId, scrollerRef, scrollToColumn, setColumnRef } = useKanbanMobileColumns(columns);
+
+  const maxColumnCount = useMemo(
+    () =>
+      Math.max(1, ...AGREEMENT_KANBAN_COLUMNS.map((column) => entriesByColumn.get(column.id)?.length ?? 0)),
+    [entriesByColumn],
+  );
+
   if (loading && !snapshot) {
     return <p className="text-sm text-muted">Ładowanie tablicy ustaleń…</p>;
   }
@@ -101,40 +121,52 @@ export function AggregatedAgreementsBoard({ authorName }: { authorName: string }
         Zbiorczy widok wszystkich ustaleń u klientów. Kliknij kartę, aby zobaczyć szczegóły i proces akceptacji.
       </p>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 md:flex-row md:overflow-hidden">
-        {AGREEMENT_KANBAN_COLUMNS.map((column) => {
-          const entries = entriesByColumn.get(column.id) ?? [];
-          const count = entries.length;
+      <div className={cn(KANBAN_BOARD_ROOT_CLASS, "min-h-0 flex-1 md:min-h-[calc(100vh-14rem)]")}>
+        <KanbanMobileColumnNav
+          columns={columns}
+          activeColumnId={activeColumnId}
+          onSelect={scrollToColumn}
+          openCountForColumn={(columnId) => entriesByColumn.get(columnId)?.length ?? 0}
+        />
 
-          return (
-            <div
-              key={column.id}
-              className="flex min-h-[280px] min-w-0 flex-1 flex-col rounded-2xl border border-border/80 bg-surface-muted/30 md:min-h-0"
-            >
-              <div className="shrink-0 border-b border-border/60 px-3 py-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-foreground">{column.label}</p>
-                  <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-surface px-2 text-xs font-semibold text-foreground">
-                    {count}
-                  </span>
+        <div ref={scrollerRef} className={KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS}>
+          {AGREEMENT_KANBAN_COLUMNS.map((column) => {
+            const entries = entriesByColumn.get(column.id) ?? [];
+            const count = entries.length;
+
+            return (
+              <div
+                key={column.id}
+                ref={(node) => setColumnRef(column.id, node)}
+                data-column-id={column.id}
+                className={KANBAN_MOBILE_COLUMN_SHELL_CLASS}
+                style={{ minHeight: `${Math.max(220, maxColumnCount * 140)}px` }}
+              >
+                <div className="shrink-0 border-b border-border/60 px-3 py-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-foreground">{column.label}</p>
+                    <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-surface px-2 text-xs font-semibold text-foreground">
+                      {count}
+                    </span>
+                  </div>
+                </div>
+
+                <div className={KANBAN_MOBILE_COLUMN_BODY_CLASS}>
+                  {entries.map((entry) => (
+                    <AgreementKanbanCardWithHint
+                      key={entry.agreement.id}
+                      entry={entry}
+                      onOpen={() => setActiveEntry(entry)}
+                    />
+                  ))}
+                  {entries.length === 0 ? (
+                    <p className="px-1 py-4 text-center text-xs text-muted">Brak ustaleń</p>
+                  ) : null}
                 </div>
               </div>
-
-              <div className={cn("flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2")}>
-                {entries.map((entry) => (
-                  <AgreementKanbanCardWithHint
-                    key={entry.agreement.id}
-                    entry={entry}
-                    onOpen={() => setActiveEntry(entry)}
-                  />
-                ))}
-                {entries.length === 0 ? (
-                  <p className="px-1 py-4 text-center text-xs text-muted">Brak ustaleń</p>
-                ) : null}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       <AgreementDetailModal
