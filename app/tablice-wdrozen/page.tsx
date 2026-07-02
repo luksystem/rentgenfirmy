@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ClipboardCheck, LayoutGrid, Rows3, Wrench } from "lucide-react";
 import { DeploymentHubBoardTile } from "@/components/kanban-hub/deployment-hub-board-tiles";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAgreementsHubRealtime } from "@/hooks/use-agreements-hub-realtime";
-import { useKanbanNewTasksRealtime, useKanbanOverdueTasksRealtime } from "@/hooks/use-kanban-realtime";
 import { useAgreementHubStore } from "@/store/agreement-hub-store";
 import { useKanbanCacheStore } from "@/store/kanban-cache-store";
 import { useProcessStore } from "@/store/process-store";
@@ -53,64 +52,57 @@ export default function KanbanHubPage() {
     }
   }, []);
 
-  const refreshAll = useCallback(
-    async (options?: { force?: boolean }) => {
-      const force = options?.force ?? false;
-      setError(null);
-      try {
-        await Promise.all([
-          hydrateHub({ force }),
-          refreshKanbanNewTaskCount(),
-          refreshKanbanOverdueTaskCount(),
-          refreshAgreementPendingCounts({ force }),
-          refreshServiceCounts(),
-        ]);
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Błąd ładowania tablic.");
-      }
-    },
-    [
-      hydrateHub,
-      refreshAgreementPendingCounts,
-      refreshKanbanNewTaskCount,
-      refreshKanbanOverdueTaskCount,
-      refreshServiceCounts,
-    ],
-  );
+  const reloadHub = useCallback(async (force = false) => {
+    setError(null);
+    try {
+      await Promise.all([
+        hydrateHub({ force }),
+        refreshKanbanNewTaskCount(),
+        refreshKanbanOverdueTaskCount(),
+        refreshAgreementPendingCounts({ force }),
+        refreshServiceCounts(),
+      ]);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Błąd ładowania tablic.");
+    }
+  }, [
+    hydrateHub,
+    refreshAgreementPendingCounts,
+    refreshKanbanNewTaskCount,
+    refreshKanbanOverdueTaskCount,
+    refreshServiceCounts,
+  ]);
+
+  const reloadHubRef = useRef(reloadHub);
+  reloadHubRef.current = reloadHub;
 
   useEffect(() => {
-    void refreshAll();
-  }, [refreshAll]);
+    void reloadHubRef.current(false);
+  }, []);
 
   useEffect(() => {
-    const interval = window.setInterval(() => {
+    const tick = () => {
       if (document.visibilityState === "visible") {
-        void refreshAll({ force: true });
+        void reloadHubRef.current(true);
       }
-    }, REFRESH_INTERVAL_MS);
-    const onFocus = () => void refreshAll({ force: true });
-    window.addEventListener("focus", onFocus);
+    };
+    const interval = window.setInterval(tick, REFRESH_INTERVAL_MS);
+    window.addEventListener("focus", tick);
     return () => {
       window.clearInterval(interval);
-      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("focus", tick);
     };
-  }, [refreshAll]);
+  }, []);
 
-  useKanbanNewTasksRealtime((count) => {
-    useProcessStore.setState({ kanbanNewTaskCount: count });
-    void hydrateHub({ force: true });
-  });
-  useKanbanOverdueTasksRealtime((count) => {
-    useProcessStore.setState({ kanbanOverdueTaskCount: count });
-    void hydrateHub({ force: true });
-  });
-  useAgreementsHubRealtime(() => {
-    void refreshAgreementPendingCounts({ force: true });
-  });
+  const handleAgreementsRealtime = useCallback(() => {
+    void refreshAgreementPendingCounts({ force: true }).catch(() => undefined);
+  }, [refreshAgreementPendingCounts]);
+
+  useAgreementsHubRealtime(handleAgreementsRealtime);
 
   const clients = hubClients ?? [];
   const totalOpen = clients.reduce((sum, client) => sum + client.openTaskCount, 0);
-  const agreementsPendingCount = agreementPendingCounts.pendingAgreements;
+  const agreementsPendingCount = agreementPendingCounts?.pendingAgreements ?? 0;
 
   return (
     <>
