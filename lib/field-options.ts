@@ -382,11 +382,17 @@ function normalizeTradeCatalogItems(input?: unknown): TradeCatalogItem[] {
       }
 
       const name = String((value as TradeCatalogItem).name).trim();
-      if (!name || seen.has(name)) {
+      const company = String((value as TradeCatalogItem).company ?? "").trim();
+      if (!name) {
         return null;
       }
 
-      seen.add(name);
+      const key = `${name.toLowerCase()}::${company.toLowerCase()}`;
+      if (seen.has(key)) {
+        return null;
+      }
+
+      seen.add(key);
       const protocols = Array.isArray((value as TradeCatalogItem).communicationProtocols)
         ? (value as TradeCatalogItem).communicationProtocols
             .map((entry) => String(entry).trim())

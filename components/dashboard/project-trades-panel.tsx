@@ -16,6 +16,12 @@ import type { ProjectTrade, ProjectTradeInput } from "@/lib/dashboard/trade-type
 import type { TradeCatalogItem } from "@/lib/field-options";
 import { findTradeCatalogItem } from "@/lib/field-options";
 import { tradeCatalogItemToProjectTradeInput } from "@/lib/trades/catalog-location";
+import {
+  companiesForTrade,
+  formatCatalogCompanyLabel,
+  tradeCatalogEntryKey,
+  uniqueTradeNames,
+} from "@/lib/trades/catalog-utils";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 import { useProjectTradeStore } from "@/store/project-trade-store";
@@ -55,50 +61,84 @@ function TradeFormFields({
   onChange: (next: ProjectTradeInput) => void;
   catalogItems?: TradeCatalogItem[];
 }) {
-  const nameQuery = form.name.trim().toLowerCase();
-  const suggestions = useMemo(() => {
-    if (!nameQuery) {
+  const tradeNames = useMemo(() => uniqueTradeNames(catalogItems), [catalogItems]);
+  const companiesForSelectedTrade = useMemo(
+    () => (form.name.trim() ? companiesForTrade(form.name, catalogItems) : []),
+    [catalogItems, form.name],
+  );
+  const companyQuery = (form.company ?? "").trim().toLowerCase();
+  const companySuggestions = useMemo(() => {
+    if (!form.name.trim()) {
       return catalogItems;
     }
-    return catalogItems.filter(
-      (item) =>
-        item.name.toLowerCase().includes(nameQuery) ||
-        item.company?.toLowerCase().includes(nameQuery),
+    if (!companyQuery) {
+      return companiesForSelectedTrade;
+    }
+    return companiesForSelectedTrade.filter((item) =>
+      formatCatalogCompanyLabel(item).toLowerCase().includes(companyQuery),
     );
-  }, [catalogItems, nameQuery]);
+  }, [catalogItems, companiesForSelectedTrade, companyQuery, form.name]);
 
   return (
     <div className="grid gap-3">
-      {catalogItems.length > 0 ? (
+      {tradeNames.length > 0 ? (
         <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/10 p-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">Katalog branż</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">Branża z katalogu</p>
           <div className="flex flex-wrap gap-1.5">
-            {catalogItems.map((item) => (
+            {tradeNames.map((tradeName) => (
               <button
-                key={item.name}
+                key={tradeName}
                 type="button"
                 className={cn(
                   "rounded-full border px-2.5 py-1 text-xs font-medium transition",
-                  form.name === item.name
+                  form.name === tradeName
+                    ? "border-accent/50 bg-accent/10 text-foreground"
+                    : "border-border/70 text-muted hover:border-accent/30 hover:text-foreground",
+                )}
+                onClick={() => {
+                  const firstCompany = companiesForTrade(tradeName, catalogItems)[0];
+                  onChange(
+                    firstCompany
+                      ? applyCatalogItem({ ...form, name: tradeName }, firstCompany)
+                      : { ...form, name: tradeName },
+                  );
+                }}
+              >
+                {tradeName}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {companiesForSelectedTrade.length > 0 ? (
+        <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/10 p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">
+            Firmy w branży „{form.name}”
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {companiesForSelectedTrade.map((item) => (
+              <button
+                key={tradeCatalogEntryKey(item)}
+                type="button"
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-xs font-medium transition",
+                  form.company === item.company && form.name === item.name
                     ? "border-accent/50 bg-accent/10 text-foreground"
                     : "border-border/70 text-muted hover:border-accent/30 hover:text-foreground",
                 )}
                 onClick={() => onChange(applyCatalogItem(form, item))}
-                title={item.description || item.company || undefined}
               >
-                {item.name}
+                {formatCatalogCompanyLabel(item)}
               </button>
             ))}
           </div>
           <p className="text-xs text-muted">
-            Wybierz branżę z katalogu — uzupełnimy firmę, kontakt i opis. Pełna lista i mapa:{" "}
-            <Link href="/branze" className="text-accent hover:underline">
-              Katalog branż
-            </Link>
-            .
+            Ta sama branża może mieć kilku wykonawców — wybierz firmę z katalogu lub wpisz ręcznie.
           </p>
         </div>
       ) : null}
+
       <Field label="Branża *">
         <Input
           value={form.name}
@@ -106,46 +146,64 @@ function TradeFormFields({
           list="trade-catalog-suggestions"
           onChange={(event) => {
             const nextName = event.target.value;
-            const catalogItem = catalogItems.find(
-              (item) => item.name.toLowerCase() === nextName.trim().toLowerCase(),
-            );
-            if (catalogItem) {
-              onChange(applyCatalogItem({ ...form, name: nextName }, catalogItem));
+            const matches = companiesForTrade(nextName, catalogItems);
+            if (matches.length === 1) {
+              onChange(applyCatalogItem({ ...form, name: nextName }, matches[0]));
               return;
             }
             onChange({ ...form, name: nextName });
           }}
         />
-        {catalogItems.length > 0 ? (
+        {tradeNames.length > 0 ? (
           <datalist id="trade-catalog-suggestions">
-            {catalogItems.map((item) => (
-              <option key={item.name} value={item.name} />
+            {tradeNames.map((name) => (
+              <option key={name} value={name} />
             ))}
           </datalist>
         ) : null}
       </Field>
-      {nameQuery && suggestions.length > 0 && suggestions.length <= 6 ? (
+
+      <Field label="Firma wykonawcy">
+        <Input
+          value={form.company ?? ""}
+          placeholder="Nazwa firmy — podpowiedzi z katalogu dla wybranej branży"
+          list="trade-company-suggestions"
+          onChange={(event) => {
+            const nextCompany = event.target.value;
+            const match = companiesForSelectedTrade.find(
+              (item) => (item.company ?? "").toLowerCase() === nextCompany.trim().toLowerCase(),
+            );
+            if (match) {
+              onChange(applyCatalogItem({ ...form, company: nextCompany }, match));
+              return;
+            }
+            onChange({ ...form, company: nextCompany });
+          }}
+        />
+        {companySuggestions.length > 0 ? (
+          <datalist id="trade-company-suggestions">
+            {companySuggestions.map((item) => (
+              <option key={tradeCatalogEntryKey(item)} value={item.company ?? ""} />
+            ))}
+          </datalist>
+        ) : null}
+      </Field>
+
+      {companyQuery && companySuggestions.length > 0 && companySuggestions.length <= 8 ? (
         <div className="flex flex-wrap gap-1.5">
-          {suggestions.map((item) => (
+          {companySuggestions.map((item) => (
             <button
-              key={`suggestion-${item.name}`}
+              key={`company-suggestion-${tradeCatalogEntryKey(item)}`}
               type="button"
               className="rounded-lg border border-border/70 px-2 py-1 text-left text-xs text-muted hover:border-accent/30 hover:text-foreground"
               onClick={() => onChange(applyCatalogItem(form, item))}
             >
-              <span className="font-medium text-foreground">{item.name}</span>
-              {item.company ? <span className="text-muted"> · {item.company}</span> : null}
+              <span className="font-medium text-foreground">{formatCatalogCompanyLabel(item)}</span>
+              <span className="text-muted"> · {item.name}</span>
             </button>
           ))}
         </div>
       ) : null}
-      <Field label="Firma">
-        <Input
-          value={form.company ?? ""}
-          placeholder="Nazwa firmy wykonawcy"
-          onChange={(event) => onChange({ ...form, company: event.target.value })}
-        />
-      </Field>
       <Field label="Osoba kontaktowa">
         <Input
           value={form.contactName ?? ""}
@@ -200,7 +258,14 @@ export function ProjectTradesPanel({
   const trades = storeTrades;
 
   const availableCatalogItems = useMemo(
-    () => catalogItems.filter((item) => !trades.some((trade) => trade.name === item.name)),
+    () =>
+      catalogItems.filter(
+        (item) =>
+          !trades.some(
+            (trade) =>
+              trade.name === item.name && (trade.company ?? "") === (item.company ?? ""),
+          ),
+      ),
     [catalogItems, trades],
   );
   const isLoading = loading && trades.length === 0;
@@ -294,7 +359,7 @@ export function ProjectTradesPanel({
           <div className="flex flex-wrap gap-2">
             {availableCatalogItems.map((item) => (
               <Button
-                key={item.name}
+                key={tradeCatalogEntryKey(item)}
                 type="button"
                 size="sm"
                 variant="outline"
@@ -302,6 +367,7 @@ export function ProjectTradesPanel({
               >
                 <Plus className="mr-1 h-3.5 w-3.5" />
                 {item.name}
+                {item.company ? ` · ${item.company}` : ""}
               </Button>
             ))}
           </div>

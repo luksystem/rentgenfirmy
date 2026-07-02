@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Bell, ClipboardCheck, Sparkles, Star } from "lucide-react";
+import { AlertTriangle, Bell, ClipboardCheck, Sparkles, Star, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavBadges } from "@/components/nav-badges";
 import { cn, formatDate } from "@/lib/utils";
@@ -29,16 +29,21 @@ export function NotificationBell() {
   const agreementPendingCounts = useAgreementHubStore((state) => state.pendingCounts);
   const refreshAgreementPendingCounts = useAgreementHubStore((state) => state.refreshPendingCounts);
   const [open, setOpen] = useState(false);
+  const [serviceNewCount, setServiceNewCount] = useState(0);
+  const [serviceOverdueCount, setServiceOverdueCount] = useState(0);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   const kanbanAlertCount = kanbanNewTaskCount + kanbanOverdueTaskCount;
+  const serviceAlertCount = serviceNewCount + serviceOverdueCount;
   const agreementAlertCount =
     agreementPendingCounts.pendingTeamApproval +
     agreementPendingCounts.pendingClientApproval +
     agreementPendingCounts.pendingOtherApproval;
-  const newBadgeCount = kanbanNewTaskCount + unreadCount + agreementPendingCounts.pendingTeamApproval;
-  const overdueBadgeCount = kanbanOverdueTaskCount;
+  const newBadgeCount =
+    kanbanNewTaskCount + unreadCount + agreementPendingCounts.pendingTeamApproval + serviceNewCount;
+  const overdueBadgeCount = kanbanOverdueTaskCount + serviceOverdueCount;
   const hasKanbanAlerts = kanbanAlertCount > 0;
+  const hasServiceAlerts = serviceAlertCount > 0;
   const hasAgreementAlerts = agreementAlertCount > 0;
   const hasBadges = newBadgeCount > 0 || overdueBadgeCount > 0;
 
@@ -54,6 +59,19 @@ export function NotificationBell() {
     void refreshKanbanNewTaskCount();
     void refreshKanbanOverdueTaskCount();
     void refreshAgreementPendingCounts({ force: true });
+    void fetch("/api/service-intake/counts", { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) {
+          return;
+        }
+        const payload = (await response.json()) as { newCount?: number; overdueCount?: number };
+        setServiceNewCount(payload.newCount ?? 0);
+        setServiceOverdueCount(payload.overdueCount ?? 0);
+      })
+      .catch(() => {
+        setServiceNewCount(0);
+        setServiceOverdueCount(0);
+      });
     if (open) {
       void loadNotifications(profileId);
     }
@@ -275,9 +293,61 @@ export function NotificationBell() {
               </div>
             ) : null}
 
+            {hasServiceAlerts ? (
+              <div className="border-b border-border/60 bg-surface-muted/20">
+                <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                  Zgłoszenia serwisowe
+                </p>
+                {serviceNewCount > 0 ? (
+                  <Link
+                    href="/tablice-wdrozen/serwis"
+                    onClick={() => setOpen(false)}
+                    className="flex items-start gap-3 px-4 py-3 transition hover:bg-surface-muted/30"
+                  >
+                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-sky-500/35 bg-sky-500/10 text-sky-200">
+                      <Wrench className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-foreground">Nowe zgłoszenia serwisowe</p>
+                        <NavBadges newCount={serviceNewCount} size="sm" />
+                      </div>
+                      <p className="mt-1 break-words text-xs leading-relaxed text-muted">
+                        {serviceNewCount === 1
+                          ? "1 zgłoszenie czeka na przyjęcie."
+                          : `${serviceNewCount} zgłoszeń czeka na przyjęcie.`}
+                      </p>
+                    </span>
+                  </Link>
+                ) : null}
+                {serviceOverdueCount > 0 ? (
+                  <Link
+                    href="/tablice-wdrozen/serwis"
+                    onClick={() => setOpen(false)}
+                    className="flex items-start gap-3 px-4 py-3 transition hover:bg-surface-muted/30"
+                  >
+                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-rose-500/35 bg-rose-500/10 text-rose-300">
+                      <AlertTriangle className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-foreground">Przeterminowane zgłoszenia</p>
+                        <NavBadges overdueCount={serviceOverdueCount} size="sm" />
+                      </div>
+                      <p className="mt-1 break-words text-xs leading-relaxed text-muted">
+                        {serviceOverdueCount === 1
+                          ? "1 zgłoszenie przekroczyło termin reakcji."
+                          : `${serviceOverdueCount} zgłoszeń przekroczyło termin reakcji.`}
+                      </p>
+                    </span>
+                  </Link>
+                ) : null}
+              </div>
+            ) : null}
+
             {loading ? (
               <p className="px-4 py-6 text-sm text-muted">Ładowanie…</p>
-            ) : items.length === 0 && !hasKanbanAlerts && !hasAgreementAlerts ? (
+            ) : items.length === 0 && !hasKanbanAlerts && !hasAgreementAlerts && !hasServiceAlerts ? (
               <p className="px-4 py-6 text-sm text-muted">Brak powiadomień.</p>
             ) : items.length === 0 ? (
               <p className="px-4 py-4 text-xs text-muted">Brak innych powiadomień.</p>

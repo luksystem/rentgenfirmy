@@ -131,10 +131,10 @@ export function TradeCatalogSettings() {
         lat: item.lat ?? null,
         lng: item.lng ?? null,
       }))
-      .filter((item) => item.name);
+      .filter((item) => item.name && item.company);
 
     if (normalized.length === 0) {
-      setError("Dodaj co najmniej jedną branżę w katalogu.");
+      setError("Dodaj co najmniej jedną firmę w katalogu (branża + nazwa firmy).");
       return;
     }
 
@@ -175,7 +175,7 @@ export function TradeCatalogSettings() {
         <Card key={`trade-catalog-${index}`}>
           <CardContent className="grid gap-3 pt-6">
             <div className="flex flex-wrap gap-2">
-              <Field label="Nazwa branży" className="min-w-[200px] flex-1">
+              <Field label="Branża">
                 <Input
                   value={item.name}
                   onChange={(event) => updateItem(index, { name: event.target.value })}
@@ -202,10 +202,11 @@ export function TradeCatalogSettings() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Domyślna firma wykonawcy">
+              <Field label="Firma wykonawcy *">
                 <Input
                   value={item.company ?? ""}
                   onChange={(event) => updateItem(index, { company: event.target.value })}
+                  placeholder="Nazwa firmy — wpis katalogowy"
                 />
               </Field>
               <Field label="Osoba kontaktowa">

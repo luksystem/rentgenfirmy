@@ -1,18 +1,30 @@
 import { namesMatch } from "@/lib/service-intake/name-match";
 import {
+  buildServiceIntakeStatusEmail,
+  buildServiceIntakeSubmittedEmail,
+  getServiceInboxRecipients,
+  getServiceIntakeThreadUrl,
+} from "@/lib/service-intake/email-templates";
+import { isServiceIntakeOverdue } from "@/lib/service-intake/sla";
+import { sendTransactionalEmail } from "@/lib/email/send";
+import {
   createIntakeVerifiedToken,
   readIntakeSessionToken,
   readIntakeVerifiedToken,
 } from "@/lib/service-intake/tokens";
 import type {
+  ServiceIntakeAttachment,
+  ServiceIntakeComment,
   ServiceIntakePostWarrantyAction,
   ServiceIntakePriority,
   ServiceIntakeProjectOption,
   ServiceIntakeRecord,
   ServiceIntakeRequestType,
   ServiceIntakeStatus,
+  ServiceIntakeThread,
   ServiceIntakeVerifyResult,
 } from "@/lib/service-intake/types";
+import { SERVICE_INTAKE_STATUS_LABELS } from "@/lib/service-intake/types";
 import { getWarrantyStatus } from "@/lib/project/warranty";
 import { rowToProject } from "@/lib/supabase/mappers";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -137,9 +149,77 @@ function rowToIntakeRecord(
     metadataJson: (row.metadata_json as Record<string, unknown>) ?? {},
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
+    closedAt: row.closed_at ? String(row.closed_at) : null,
     clientName: extras?.clientName ?? null,
     projectName: extras?.projectName ?? null,
   };
+}
+
+function rowToAttachment(row: Record<string, unknown>): ServiceIntakeAttachment {
+  return {
+    id: String(row.id),
+    intakeId: String(row.intake_id),
+    kind: row.kind as ServiceIntakeAttachment["kind"],
+    url: String(row.url),
+    label: row.label ? String(row.label) : null,
+    createdAt: String(row.created_at),
+  };
+}
+
+function rowToComment(row: Record<string, unknown>): ServiceIntakeComment {
+  return {
+    id: String(row.id),
+    intakeId: String(row.intake_id),
+    authorName: String(row.author_name),
+    authorSide: row.author_side as ServiceIntakeComment["authorSide"],
+    body: String(row.body),
+    createdAt: String(row.created_at),
+  };
+}
+
+async function notifyServiceIntakeSubmitted(record: ServiceIntakeRecord) {
+  const threadUrl = getServiceIntakeThreadUrl(record.trackingToken);
+  const template = buildServiceIntakeSubmittedEmail({
+    referenceNumber: record.referenceNumber,
+    contactFullName: record.contactFullName,
+    threadUrl,
+  });
+
+  await Promise.allSettled([
+    sendTransactionalEmail({
+      to: record.contactEmail,
+      subject: template.subject,
+      html: template.html,
+    }),
+    sendTransactionalEmail({
+      to: getServiceInboxRecipients(),
+      subject: `[Nowe] ${template.subject}`,
+      html: `${template.html}<p>Klient: ${record.contactEmail}</p><p>Projekt: ${record.projectName ?? "—"}</p>`,
+    }),
+  ]);
+}
+
+async function notifyServiceIntakeStatusChange(record: ServiceIntakeRecord) {
+  const threadUrl = getServiceIntakeThreadUrl(record.trackingToken);
+  const template = buildServiceIntakeStatusEmail({
+    referenceNumber: record.referenceNumber,
+    contactFullName: record.contactFullName,
+    statusLabel: SERVICE_INTAKE_STATUS_LABELS[record.status],
+    threadUrl,
+  });
+
+  await Promise.allSettled([
+    sendTransactionalEmail({
+      to: record.contactEmail,
+      subject: template.subject,
+      html: template.html,
+    }),
+    sendTransactionalEmail({
+      to: getServiceInboxRecipients(),
+      subject: `[Status] ${template.subject}`,
+      html: template.html,
+    }),
+  ]);
 }
 
 export async function verifyServiceIntakeIdentity(input: {
@@ -183,6 +263,7 @@ export async function submitServiceIntakeRequest(input: {
   description: string;
   contactPhone?: string | null;
   acceptedPaidTerms: boolean;
+  attachments?: Array<{ kind: "image" | "video" | "link"; url: string; label?: string | null }>;
 }) {
   const verified = readIntakeVerifiedToken(input.verificationToken);
   if (!verified) {
@@ -268,10 +349,29 @@ export async function submitServiceIntakeRequest(input: {
     throw new Error(error.message);
   }
 
-  return rowToIntakeRecord(data, {
+  const record = rowToIntakeRecord(data, {
     clientName: verified.fullName,
     projectName: project.name,
   });
+
+  const attachments = (input.attachments ?? []).filter((entry) => entry.url.trim());
+  if (attachments.length) {
+    const { error: attachmentError } = await supabase.from("service_intake_attachments").insert(
+      attachments.map((entry) => ({
+        intake_id: record.id,
+        kind: entry.kind,
+        url: entry.url.trim(),
+        label: entry.label?.trim() || null,
+      })),
+    );
+    if (attachmentError) {
+      throw new Error(attachmentError.message);
+    }
+  }
+
+  await notifyServiceIntakeSubmitted(record);
+
+  return record;
 }
 
 export async function listServiceIntakeRequests(status?: ServiceIntakeStatus) {
@@ -316,11 +416,13 @@ export async function listServiceIntakeRequests(status?: ServiceIntakeStatus) {
 
 export async function updateServiceIntakeStatus(id: string, status: ServiceIntakeStatus) {
   const supabase = getSupabaseAdmin();
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("service_intake_requests")
     .update({
       status,
-      updated_at: new Date().toISOString(),
+      updated_at: now,
+      closed_at: status === "closed" || status === "rejected" ? now : null,
     })
     .eq("id", id)
     .select("*")
@@ -330,7 +432,90 @@ export async function updateServiceIntakeStatus(id: string, status: ServiceIntak
     throw new Error(error.message);
   }
 
-  return rowToIntakeRecord(data);
+  const record = rowToIntakeRecord(data);
+  await notifyServiceIntakeStatusChange(record);
+  return record;
+}
+
+export async function getServiceIntakeThreadByToken(token: string): Promise<ServiceIntakeThread | null> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("service_intake_requests")
+    .select("*")
+    .eq("tracking_token", token)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  if (!data) {
+    return null;
+  }
+
+  const intake = rowToIntakeRecord(data);
+  const [{ data: attachments }, { data: comments }] = await Promise.all([
+    supabase
+      .from("service_intake_attachments")
+      .select("*")
+      .eq("intake_id", intake.id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("service_intake_comments")
+      .select("*")
+      .eq("intake_id", intake.id)
+      .order("created_at", { ascending: true }),
+  ]);
+
+  return {
+    intake,
+    attachments: (attachments ?? []).map((row) => rowToAttachment(row)),
+    comments: (comments ?? []).map((row) => rowToComment(row)),
+  };
+}
+
+export async function addServiceIntakeComment(input: {
+  trackingToken: string;
+  authorName: string;
+  authorSide: "client" | "team";
+  body: string;
+}) {
+  const thread = await getServiceIntakeThreadByToken(input.trackingToken);
+  if (!thread) {
+    throw new Error("Nie znaleziono wątku zgłoszenia.");
+  }
+  if (thread.intake.status === "closed" || thread.intake.status === "rejected") {
+    throw new Error("Wątek jest zamknięty — nie można dodać wiadomości.");
+  }
+
+  const body = input.body.trim();
+  if (!body) {
+    throw new Error("Wiadomość nie może być pusta.");
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("service_intake_comments")
+    .insert({
+      intake_id: thread.intake.id,
+      author_name: input.authorName.trim(),
+      author_side: input.authorSide,
+      body,
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToComment(data);
+}
+
+export async function countServiceIntakeAlerts() {
+  const items = await listServiceIntakeRequests();
+  const newCount = items.filter((item) => item.status === "new").length;
+  const overdueCount = items.filter((item) => isServiceIntakeOverdue(item)).length;
+  return { newCount, overdueCount };
 }
 
 export async function getPublicServiceRates() {

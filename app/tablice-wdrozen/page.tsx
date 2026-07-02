@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ClipboardCheck, LayoutGrid, Rows3 } from "lucide-react";
+import { ClipboardCheck, LayoutGrid, Rows3, Wrench } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,8 @@ export default function KanbanHubPage() {
   const hydrateHub = useKanbanCacheStore((state) => state.hydrateHub);
   const [error, setError] = useState<string | null>(null);
   const [pendingAgreementsCount, setPendingAgreementsCount] = useState(0);
+  const [serviceNewCount, setServiceNewCount] = useState(0);
+  const [serviceOverdueCount, setServiceOverdueCount] = useState(0);
 
   const loading = hubLoading && !hubClients;
 
@@ -23,8 +25,19 @@ export default function KanbanHubPage() {
       setError(null);
       try {
         await hydrateHub();
-        const snapshot = await fetchAgreementHubSnapshot();
+        const [snapshot, serviceCountsResponse] = await Promise.all([
+          fetchAgreementHubSnapshot(),
+          fetch("/api/service-intake/counts", { credentials: "include" }),
+        ]);
         setPendingAgreementsCount(snapshot.countsByStatus.pending_client);
+        if (serviceCountsResponse.ok) {
+          const serviceCounts = (await serviceCountsResponse.json()) as {
+            newCount?: number;
+            overdueCount?: number;
+          };
+          setServiceNewCount(serviceCounts.newCount ?? 0);
+          setServiceOverdueCount(serviceCounts.overdueCount ?? 0);
+        }
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Błąd ładowania tablic.");
       }
@@ -54,6 +67,15 @@ export default function KanbanHubPage() {
                 <Rows3 className="mr-2 h-4 w-4" />
                 Tablica wdrożeń
                 {totalOpen > 0 ? ` (${totalOpen})` : ""}
+              </Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/tablice-wdrozen/serwis">
+                <Wrench className="mr-2 h-4 w-4" />
+                Tablica serwisowa
+                {serviceNewCount + serviceOverdueCount > 0
+                  ? ` (${serviceNewCount + serviceOverdueCount})`
+                  : ""}
               </Link>
             </Button>
           </div>

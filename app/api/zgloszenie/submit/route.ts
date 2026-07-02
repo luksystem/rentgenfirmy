@@ -20,6 +20,7 @@ export async function POST(request: Request) {
       description?: string;
       contactPhone?: string;
       acceptedPaidTerms?: boolean;
+      attachments?: Array<{ kind: "image" | "video" | "link"; url: string; label?: string | null }>;
     };
 
     const requestType = body.requestType ?? "service";
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
       description: body.description ?? "",
       contactPhone: body.contactPhone ?? null,
       acceptedPaidTerms: Boolean(body.acceptedPaidTerms),
+      attachments: body.attachments,
     });
 
     return NextResponse.json({

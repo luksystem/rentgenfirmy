@@ -354,6 +354,25 @@ export type ServiceIntakeRequestRow = {
   metadata_json: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+  closed_at: string | null;
+};
+
+export type ServiceIntakeAttachmentRow = {
+  id: string;
+  intake_id: string;
+  kind: string;
+  url: string;
+  label: string | null;
+  created_at: string;
+};
+
+export type ServiceIntakeCommentRow = {
+  id: string;
+  intake_id: string;
+  author_name: string;
+  author_side: string;
+  body: string;
+  created_at: string;
 };
 
 export type ProjectAgreementVersionRow = {
@@ -951,6 +970,20 @@ export type Database = {
             | "description"
           >;
         Update: Partial<ServiceIntakeRequestRow>;
+        Relationships: [];
+      };
+      service_intake_attachments: {
+        Row: ServiceIntakeAttachmentRow;
+        Insert: Partial<ServiceIntakeAttachmentRow> &
+          Pick<ServiceIntakeAttachmentRow, "intake_id" | "kind" | "url">;
+        Update: Partial<ServiceIntakeAttachmentRow>;
+        Relationships: [];
+      };
+      service_intake_comments: {
+        Row: ServiceIntakeCommentRow;
+        Insert: Partial<ServiceIntakeCommentRow> &
+          Pick<ServiceIntakeCommentRow, "intake_id" | "author_name" | "author_side" | "body">;
+        Update: Partial<ServiceIntakeCommentRow>;
         Relationships: [];
       };
       project_agreement_versions: {

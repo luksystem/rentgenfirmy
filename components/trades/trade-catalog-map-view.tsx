@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Loader2, Mail, MapPin, Phone } from "lucide-react";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import type { TradeCatalogItem } from "@/lib/field-options";
+import { tradeCatalogEntryKey } from "@/lib/trades/catalog-utils";
 import {
   formatTradeCatalogAddress,
   geocodeTradeCatalogItem,
@@ -125,7 +126,7 @@ export function TradeCatalogMapView({ items }: { items: TradeCatalogItem[] }) {
           <MapBounds points={points} />
           {placed.map((entry) => (
             <Marker
-              key={entry.item.name}
+              key={tradeCatalogEntryKey(entry.item)}
               position={[entry.lat, entry.lng]}
               icon={getSmartHomeMarkerIcon()}
             >

@@ -142,6 +142,7 @@ export function ServiceIntakeWizard() {
   );
   const [description, setDescription] = useState("");
   const [contactPhone, setContactPhone] = useState("");
+  const [attachmentLinks, setAttachmentLinks] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [referenceNumber, setReferenceNumber] = useState<string | null>(null);
@@ -266,6 +267,18 @@ export function ServiceIntakeWizard() {
           acceptedPaidTerms:
             requiresActionStep &&
             (postWarrantyAction === "on_site" || postWarrantyAction === "remote"),
+          attachments: attachmentLinks
+            .split(/\n|,/)
+            .map((entry) => entry.trim())
+            .filter(Boolean)
+            .map((url) => ({
+              kind: /\.(mp4|mov|webm)(\?|$)/i.test(url)
+                ? ("video" as const)
+                : /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url)
+                  ? ("image" as const)
+                  : ("link" as const),
+              url,
+            })),
         }),
       });
       const payload = await response.json();
@@ -523,6 +536,14 @@ export function ServiceIntakeWizard() {
                   value={contactPhone}
                   onChange={(event) => setContactPhone(event.target.value)}
                   placeholder="+48 ..."
+                />
+              </Field>
+              <Field label="Linki do zdjęć, filmów lub dokumentów (opcjonalnie)">
+                <Textarea
+                  rows={3}
+                  value={attachmentLinks}
+                  onChange={(event) => setAttachmentLinks(event.target.value)}
+                  placeholder="Wklej linki — każdy w osobnej linii (zdjęcie, film, dokument)"
                 />
               </Field>
               <div className="flex flex-wrap gap-2">

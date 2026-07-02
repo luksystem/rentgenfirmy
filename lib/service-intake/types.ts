@@ -98,6 +98,31 @@ export type ServiceIntakeRecord = {
   metadataJson: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+  closedAt: string | null;
   clientName?: string | null;
   projectName?: string | null;
+};
+
+export type ServiceIntakeAttachment = {
+  id: string;
+  intakeId: string;
+  kind: "image" | "video" | "link";
+  url: string;
+  label: string | null;
+  createdAt: string;
+};
+
+export type ServiceIntakeComment = {
+  id: string;
+  intakeId: string;
+  authorName: string;
+  authorSide: "client" | "team";
+  body: string;
+  createdAt: string;
+};
+
+export type ServiceIntakeThread = {
+  intake: ServiceIntakeRecord;
+  attachments: ServiceIntakeAttachment[];
+  comments: ServiceIntakeComment[];
 };
