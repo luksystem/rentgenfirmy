@@ -1055,6 +1055,47 @@ export type Database = {
         Update: Partial<RequisitionRow>;
         Relationships: [];
       };
+      sms_messages: {
+        Row: {
+          id: string;
+          recipient_phone: string;
+          message: string;
+          provider: string;
+          provider_message_id: string | null;
+          status: string;
+          error_message: string | null;
+          metadata: Record<string, unknown>;
+          sent_at: string | null;
+          delivered_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          recipient_phone: string;
+          message: string;
+          provider?: string;
+          provider_message_id?: string | null;
+          status?: string;
+          error_message?: string | null;
+          metadata?: Record<string, unknown>;
+          sent_at?: string | null;
+          delivered_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<{
+          recipient_phone: string;
+          message: string;
+          provider: string;
+          provider_message_id: string | null;
+          status: string;
+          error_message: string | null;
+          metadata: Record<string, unknown>;
+          sent_at: string | null;
+          delivered_at: string | null;
+          created_at: string;
+        }>;
+        Relationships: [];
+      };
       project_agreement_fulfillments: {
         Row: ProjectAgreementFulfillmentRow;
         Insert: Partial<ProjectAgreementFulfillmentRow> &
