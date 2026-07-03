@@ -7,6 +7,7 @@ import { CommercialPartyPicker, type CommercialPartyKind } from "@/components/co
 import { ClientOfferPanel } from "@/components/service/client-offer-panel";
 import { ClientOfferHistoryPanel } from "@/components/service/client-offer-history-panel";
 import { OfferValidityField } from "@/components/service/offer-validity-field";
+import { ServiceAiEstimatePanel } from "@/components/service/service-ai-estimate-panel";
 import { ServiceComparisonTable } from "@/components/service/service-comparison-table";
 import { ServiceCostBreakdownPanel } from "@/components/service/service-cost-breakdown";
 import { ServiceDiscountsForm } from "@/components/service/service-discounts-form";
@@ -26,6 +27,7 @@ import {
   isActualPristine,
   prepareServiceForActualStep,
 } from "@/lib/service/copy-estimate-to-actual";
+import { finalizeAiEstimateOnSettle } from "@/lib/service/finalize-ai-estimate-on-settle";
 import { isServiceSettled } from "@/lib/service/report-document";
 import { createServiceFormSnapshot } from "@/lib/service/service-form-snapshot";
 import { SERVICE_STATUSES, SERVICE_TYPES, type ServiceRecord } from "@/lib/service/types";
@@ -312,12 +314,12 @@ export function ServiceForm({
       return;
     }
 
-    const payload: ServiceRecord = {
+    const payload: ServiceRecord = finalizeAiEstimateOnSettle({
       ...prepared,
       updatedAt: new Date().toISOString(),
       status: "Rozliczony",
       projectId: withoutProject ? null : prepared.projectId,
-    };
+    });
 
     try {
       const saved = await upsertService(payload);
@@ -662,6 +664,24 @@ export function ServiceForm({
         {mainTab === "quote" && step === 2 ? (
           <Card className="min-w-0 overflow-hidden">
             <CardContent className="py-5">
+              <ServiceAiEstimatePanel
+                serviceType={service.serviceType}
+                clientId={service.clientId}
+                clientLocation={service.client.location}
+                rates={service.rates}
+                zoneSettings={service.zoneSettings}
+                discounts={service.estimateDiscounts}
+                existingRecord={service.aiEstimate}
+                onApply={({ estimate, aiEstimate, titleHint }) => {
+                  setService({
+                    ...service,
+                    estimate,
+                    aiEstimate,
+                    title: service.title.trim() || titleHint || service.title,
+                  });
+                }}
+              />
+              <div className="mt-6 border-t border-border/60 pt-6">
               <ServiceLineItemsForm
                 title="Przewidywane koszty przed wyjazdem"
                 items={service.estimate}
@@ -669,6 +689,7 @@ export function ServiceForm({
                 serviceId={service.id}
                 onChange={(estimate) => setService({ ...service, estimate })}
               />
+              </div>
               <div className="mt-6 grid gap-4 border-t border-border/60 pt-6">
                 <h3 className="text-sm font-semibold text-foreground">Rabaty przewidywanych kosztów</h3>
                 <ServiceDiscountsForm
@@ -760,6 +781,18 @@ export function ServiceForm({
                 estimateDiscounts={service.estimateDiscounts}
                 actualDiscounts={service.actualDiscounts}
               />
+            ) : null}
+            {service.aiEstimate?.variance ? (
+              <div className="rounded-2xl border border-border bg-surface-muted/40 p-4 text-sm">
+                <h3 className="font-semibold text-foreground">Analiza szacunku AI vs rozliczenie</h3>
+                <p className="mt-2 text-muted">{service.aiEstimate.variance.summary}</p>
+                <p className="mt-2 text-xs text-muted">
+                  Szacunek netto: {formatMoney(service.aiEstimate.variance.estimateNetTotal)} ·
+                  rozliczenie netto: {formatMoney(service.aiEstimate.variance.actualNetTotal)} ·
+                  odchylenie: {service.aiEstimate.variance.netDeltaPercent >= 0 ? "+" : ""}
+                  {service.aiEstimate.variance.netDeltaPercent}%
+                </p>
+              </div>
             ) : null}
             <div className="grid gap-4 lg:grid-cols-2">
               <ServiceCostBreakdownPanel

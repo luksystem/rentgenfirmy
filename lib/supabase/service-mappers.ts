@@ -6,13 +6,15 @@ import {
 import { normalizeClientOfferHistory } from "@/lib/service/client-offer-history";
 import { normalizeClientOfferAcceptedDocument } from "@/lib/service/client-offer-snapshot";
 import { normalizeOptionalItems } from "@/lib/service/optional-items";
-import { normalizeServicePhotos } from "@/lib/service/service-photos";
+import { normalizeLineItemsFromJson } from "@/lib/service/normalize-line-items";
+import {
+  normalizeServiceAiEstimateRecord,
+  serializeServiceAiEstimateRecord,
+} from "@/lib/service/ai-estimate-record";
 import type { ServiceRow, ServiceInsert } from "@/lib/supabase/database.types";
 import {
-  emptyLineItems,
   type ServiceDiscounts,
   type ServiceGlobalSettings,
-  type ServiceLineItems,
   type ServiceRates,
   type KilometerZoneSettings,
   type ServiceRecord,
@@ -77,52 +79,6 @@ function normalizeDiscounts(value: unknown): ServiceDiscounts {
   };
 }
 
-function normalizeBillable(value: unknown): ServiceLineItems["billable"] {
-  const data = asObject(value);
-  const defaults = emptyLineItems().billable;
-
-  return {
-    supervisionHours:
-      data.supervisionHours === undefined
-        ? defaults.supervisionHours
-        : data.supervisionHours !== false,
-    programmerHours:
-      data.programmerHours === undefined
-        ? defaults.programmerHours
-        : data.programmerHours !== false,
-    installerHours:
-      data.installerHours === undefined ? defaults.installerHours : data.installerHours !== false,
-    helperHours:
-      data.helperHours === undefined ? defaults.helperHours : data.helperHours !== false,
-    carHours: data.carHours === undefined ? defaults.carHours : data.carHours !== false,
-    carKilometers:
-      data.carKilometers === undefined ? defaults.carKilometers : data.carKilometers !== false,
-    accommodations:
-      data.accommodations === undefined ? defaults.accommodations : data.accommodations !== false,
-    materials: data.materials === undefined ? defaults.materials : data.materials !== false,
-  };
-}
-
-function normalizeLineItems(value: unknown): ServiceLineItems {
-  const data = asObject(value);
-
-  return {
-    accommodations: asNumber(data.accommodations),
-    supervisionHours: asNumber(data.supervisionHours),
-    programmerHours: asNumber(data.programmerHours),
-    installerHours: asNumber(data.installerHours),
-    helperHours: asNumber(data.helperHours),
-    carHours: asNumber(data.carHours),
-    kilometersOneWay: asNumber(data.kilometersOneWay),
-    tripCount: Math.max(1, asNumber(data.tripCount, 1)),
-    materialsCost: asNumber(data.materialsCost),
-    materialsNote: typeof data.materialsNote === "string" ? data.materialsNote : "",
-    workReportNote: typeof data.workReportNote === "string" ? data.workReportNote : "",
-    photos: normalizeServicePhotos(data.photos),
-    billable: normalizeBillable(data.billable),
-  };
-}
-
 export function normalizeServiceGlobalSettings(value: unknown): ServiceGlobalSettings {
   const data = asObject(value);
 
@@ -177,8 +133,9 @@ export function rowToService(row: ServiceRow): ServiceRecord {
     zoneSettings: normalizeZoneSettings(row.zone_settings),
     detailedSettlement: row.detailed_settlement ?? false,
     showEstimateComparison: row.show_estimate_comparison ?? true,
-    estimate: normalizeLineItems(row.estimate),
-    actual: normalizeLineItems(row.actual),
+    estimate: normalizeLineItemsFromJson(row.estimate),
+    actual: normalizeLineItemsFromJson(row.actual),
+    aiEstimate: normalizeServiceAiEstimateRecord(row.ai_estimate),
     optionalItems: normalizeOptionalItems(row.optional_items),
     clientOffer: normalizeClientOffer(row),
     clientOfferHistory: normalizeClientOfferHistory(row.client_offer_history),
@@ -219,6 +176,7 @@ export function serviceToInsert(service: ServiceRecord): ServiceInsert {
     client_offer_last_client_message: service.clientOffer.lastClientMessage,
     client_offer_history: service.clientOfferHistory,
     client_offer_accepted_document: service.clientOfferAcceptedDocument,
+    ai_estimate: service.aiEstimate ? serializeServiceAiEstimateRecord(service.aiEstimate) : null,
     created_at: service.createdAt,
     updated_at: service.updatedAt,
   };

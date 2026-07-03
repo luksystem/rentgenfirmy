@@ -1,3 +1,7 @@
+import type { ServiceAiEstimateRecord } from "@/lib/service/ai-estimate-types";
+import type { IntakeAiEstimatePublic } from "@/lib/service-intake/intake-ai-estimate";
+import type { ServiceType } from "@/lib/service/types";
+
 export const SERVICE_INTAKE_STATUSES = [
   "new",
   "in_review",
@@ -20,6 +24,16 @@ export type ServiceIntakeRequestType = (typeof SERVICE_INTAKE_REQUEST_TYPES)[num
 export const SERVICE_INTAKE_POST_WARRANTY_ACTIONS = ["offer", "on_site", "remote"] as const;
 
 export type ServiceIntakePostWarrantyAction = (typeof SERVICE_INTAKE_POST_WARRANTY_ACTIONS)[number];
+
+export const SERVICE_INTAKE_WORK_PREFERENCES = ["on_site", "remote", "either"] as const;
+
+export type ServiceIntakeWorkPreference = (typeof SERVICE_INTAKE_WORK_PREFERENCES)[number];
+
+export const SERVICE_INTAKE_WORK_PREFERENCE_LABELS: Record<ServiceIntakeWorkPreference, string> = {
+  on_site: "Praca u mnie w obiekcie",
+  remote: "Praca zdalna (zdalny dostęp)",
+  either: "Do ustalenia — obie opcje są możliwe",
+};
 
 export const SERVICE_INTAKE_STATUS_LABELS: Record<ServiceIntakeStatus, string> = {
   new: "Nowe",
@@ -102,8 +116,17 @@ export type ServiceIntakeRecord = {
   dueAt: string | null;
   assigneeId: string | null;
   assigneeName: string | null;
+  aiEstimate: ServiceIntakeAiEstimateSnapshot | null;
+  workPreference: ServiceIntakeWorkPreference | null;
+  preliminaryAcceptedAt: string | null;
   clientName?: string | null;
   projectName?: string | null;
+};
+
+export type ServiceIntakeAiEstimateSnapshot = {
+  public: IntakeAiEstimatePublic;
+  record: ServiceAiEstimateRecord;
+  serviceType: ServiceType;
 };
 
 export type ServiceIntakeAttachment = {

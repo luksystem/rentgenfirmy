@@ -96,6 +96,7 @@ export type ServiceRow = {
   client_offer_last_client_message?: string | null;
   client_offer_history?: unknown;
   client_offer_accepted_document?: unknown;
+  ai_estimate?: unknown;
   created_at: string;
   updated_at: string;
 };
@@ -386,6 +387,9 @@ export type ServiceIntakeRequestRow = {
   due_at: string | null;
   assignee_id: string | null;
   assignee_name: string | null;
+  ai_estimate?: unknown;
+  work_preference?: string | null;
+  preliminary_accepted_at?: string | null;
 };
 
 export type ServiceIntakeAttachmentRow = {
@@ -652,6 +656,7 @@ export type ServiceInsert = {
   client_offer_last_client_message?: string | null;
   client_offer_history?: unknown;
   client_offer_accepted_document?: unknown;
+  ai_estimate?: unknown;
   created_at?: string;
   updated_at?: string;
 };

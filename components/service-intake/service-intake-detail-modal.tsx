@@ -21,6 +21,7 @@ import {
   SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS,
   SERVICE_INTAKE_PRIORITY_LABELS,
   SERVICE_INTAKE_REQUEST_TYPE_LABELS,
+  SERVICE_INTAKE_WORK_PREFERENCE_LABELS,
   SERVICE_INTAKE_STATUS_LABELS,
   type ServiceIntakeAttachment,
   type ServiceIntakeComment,
@@ -29,7 +30,7 @@ import {
   type ServiceIntakeThread,
 } from "@/lib/service-intake/types";
 import { serviceIntakeAttachmentLabel } from "@/lib/service-intake/attachment-display";
-import { cn, formatDate, formatDateTime } from "@/lib/utils";
+import { cn, formatDate, formatDateTime, formatMoney } from "@/lib/utils";
 
 function dueAtToDateInputValue(dueAt: string | null) {
   if (!dueAt) {
@@ -384,6 +385,29 @@ export function ServiceIntakeDetailModal({
               ) : null}
             </div>
 
+            {intake.aiEstimate ? (
+              <div className="rounded-xl border border-accent/25 bg-accent/5 p-4 text-sm">
+                <p className="font-medium text-foreground">Orientacyjna wycena AI</p>
+                <p className="mt-2">
+                  Netto:{" "}
+                  <span className="font-semibold">
+                    {formatMoney(intake.aiEstimate.public.estimatedNetTotal)}
+                  </span>{" "}
+                  · pewność {Math.round(intake.aiEstimate.public.confidence * 100)}%
+                </p>
+                {intake.workPreference ? (
+                  <p className="mt-1 text-muted">
+                    Preferencja klienta: {SERVICE_INTAKE_WORK_PREFERENCE_LABELS[intake.workPreference]}
+                  </p>
+                ) : null}
+                {intake.preliminaryAcceptedAt ? (
+                  <p className="mt-2 text-emerald-300">
+                    Wstępna akceptacja: {formatDateTime(intake.preliminaryAcceptedAt)}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
             <div>
               <p className="mb-2 text-sm font-medium text-foreground">Opis</p>
               <p className="break-words whitespace-pre-wrap rounded-xl border border-border/70 bg-surface-muted/10 p-3 text-sm text-foreground">
@@ -496,7 +520,15 @@ export function ServiceIntakeDetailModal({
                 </Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href="/oferty/nowy">Utwórz ofertę</Link>
+                {intake.serviceId ? (
+                  <Link href={`/oferty/${intake.serviceId}`}>Otwórz rozliczenie</Link>
+                ) : (
+                  <Link
+                    href={`/oferty/nowy?clientId=${intake.clientId ?? ""}&projectId=${intake.projectId ?? ""}`}
+                  >
+                    Utwórz ofertę
+                  </Link>
+                )}
               </Button>
               {intake.status !== "closed" && intake.status !== "rejected" ? (
                 <>

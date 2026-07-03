@@ -13,7 +13,12 @@ import {
   readIntakeSessionToken,
   readIntakeVerifiedToken,
 } from "@/lib/service-intake/tokens";
+import { createServiceIntakePreliminaryOfferNotifications } from "@/lib/notifications/service-intake-offer";
+import { computeIntakeAiEstimate } from "@/lib/service-intake/intake-ai-estimate";
+import { createServiceFromIntakePreliminaryAcceptance } from "@/lib/service-intake/create-service-from-intake";
+import { buildLineItemsFromAiEstimate } from "@/lib/service/apply-ai-estimate";
 import type {
+  ServiceIntakeAiEstimateSnapshot,
   ServiceIntakeAttachment,
   ServiceIntakeComment,
   ServiceIntakePostWarrantyAction,
@@ -24,10 +29,14 @@ import type {
   ServiceIntakeStatus,
   ServiceIntakeThread,
   ServiceIntakeVerifyResult,
+  ServiceIntakeWorkPreference,
 } from "@/lib/service-intake/types";
+import { SERVICE_INTAKE_WORK_PREFERENCES } from "@/lib/service-intake/types";
 import { SERVICE_INTAKE_STATUS_LABELS } from "@/lib/service-intake/types";
 import { getWarrantyStatus } from "@/lib/project/warranty";
 import { rowToProject } from "@/lib/supabase/mappers";
+import { rowToClient } from "@/lib/supabase/client-mappers";
+import { fetchCompanyProfileServer } from "@/lib/supabase/company-profile-server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { ServiceIntakeRequestRow } from "@/lib/supabase/database.types";
 import { mapProfileRow } from "@/lib/supabase/profile-mappers";
@@ -124,6 +133,31 @@ async function nextReferenceNumber() {
   return `${prefix}${sequence}`;
 }
 
+function normalizeWorkPreference(value: unknown): ServiceIntakeWorkPreference | null {
+  return typeof value === "string" &&
+    (SERVICE_INTAKE_WORK_PREFERENCES as readonly string[]).includes(value)
+    ? (value as ServiceIntakeWorkPreference)
+    : null;
+}
+
+function normalizeIntakeAiEstimate(value: unknown): ServiceIntakeAiEstimateSnapshot | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  if (!row.public || !row.record) {
+    return null;
+  }
+
+  return {
+    public: row.public as ServiceIntakeAiEstimateSnapshot["public"],
+    record: row.record as ServiceIntakeAiEstimateSnapshot["record"],
+    serviceType:
+      (row.serviceType as ServiceIntakeAiEstimateSnapshot["serviceType"]) ?? "Pogwarancyjny",
+  };
+}
+
 function rowToIntakeRecord(
   row: Record<string, unknown>,
   extras?: { clientName?: string | null; projectName?: string | null },
@@ -156,6 +190,11 @@ function rowToIntakeRecord(
     dueAt: row.due_at ? String(row.due_at) : null,
     assigneeId: row.assignee_id ? String(row.assignee_id) : null,
     assigneeName: row.assignee_name ? String(row.assignee_name) : null,
+    aiEstimate: normalizeIntakeAiEstimate(row.ai_estimate),
+    workPreference: normalizeWorkPreference(row.work_preference),
+    preliminaryAcceptedAt: row.preliminary_accepted_at
+      ? String(row.preliminary_accepted_at)
+      : null,
     clientName: extras?.clientName ?? null,
     projectName: extras?.projectName ?? null,
   };
@@ -270,6 +309,9 @@ export async function submitServiceIntakeRequest(input: {
   contactPhone?: string | null;
   acceptedPaidTerms: boolean;
   attachments?: Array<{ kind: "image" | "video" | "link"; url: string; label?: string | null }>;
+  workPreference?: ServiceIntakeWorkPreference | null;
+  preliminaryAccepted?: boolean;
+  aiEstimateSnapshot?: ServiceIntakeAiEstimateSnapshot | null;
 }) {
   const verified = readIntakeVerifiedToken(input.verificationToken);
   if (!verified) {
@@ -323,11 +365,55 @@ export async function submitServiceIntakeRequest(input: {
       input.acceptedPaidTerms);
   const dueAt = serviceIntakeDueAt(now, isServiceRequest ? input.priority : null);
 
+  const wantsOfferEstimate =
+    input.requestType === "offer_request" ||
+    (isServiceRequest && !isWarrantyActive && input.postWarrantyAction === "offer");
+
+  const workPreference = normalizeWorkPreference(input.workPreference);
+  let aiEstimateSnapshot = input.aiEstimateSnapshot ?? null;
+
+  if (wantsOfferEstimate && !aiEstimateSnapshot) {
+    const { data: clientRow } = await supabase
+      .from("clients")
+      .select("*")
+      .eq("id", verified.clientId)
+      .maybeSingle();
+
+    if (clientRow) {
+      const client = rowToClient(clientRow);
+      const companyProfile = await fetchCompanyProfileServer();
+      const settings = normalizeServiceGlobalSettings(
+        (
+          await supabase.from("app_settings").select("data").eq("id", SETTINGS_ID).maybeSingle()
+        ).data?.data ?? {},
+      );
+
+      const computed = await computeIntakeAiEstimate({
+        description,
+        serviceType: serviceTypeHint,
+        client,
+        projectName: project.name,
+        companyAddress: companyProfile.address,
+        rates: settings.rates,
+        zoneSettings: settings.zoneSettings,
+        discounts: settings.defaultDiscounts,
+      });
+
+      aiEstimateSnapshot = {
+        public: computed.public,
+        record: computed.record,
+        serviceType: serviceTypeHint,
+      };
+    }
+  }
+
+  const preliminaryAccepted = Boolean(input.preliminaryAccepted && wantsOfferEstimate && aiEstimateSnapshot);
+
   const { data, error } = await supabase
     .from("service_intake_requests")
     .insert({
       reference_number: referenceNumber,
-      status: "new",
+      status: preliminaryAccepted ? "converted" : "new",
       client_id: verified.clientId,
       project_id: project.id,
       contact_email: verified.email,
@@ -343,11 +429,16 @@ export async function submitServiceIntakeRequest(input: {
       accepted_paid_terms: acceptedPaidTerms,
       accepted_paid_terms_at: acceptedPaidTerms ? now : null,
       due_at: dueAt,
+      ai_estimate: aiEstimateSnapshot,
+      work_preference: workPreference,
+      preliminary_accepted_at: preliminaryAccepted ? now : null,
       metadata_json: {
         projectName: project.name,
         warrantyLabel: warranty.label,
         requestType: input.requestType,
         postWarrantyAction: input.postWarrantyAction,
+        workPreference,
+        preliminaryAccepted,
       },
     })
     .select("*")
@@ -378,6 +469,48 @@ export async function submitServiceIntakeRequest(input: {
   }
 
   await notifyServiceIntakeSubmitted(record);
+
+  if (preliminaryAccepted && aiEstimateSnapshot) {
+    const computedLineItems = buildLineItemsFromAiEstimate({
+      proposal: aiEstimateSnapshot.record.proposal,
+      travelContext: aiEstimateSnapshot.record.travelContext,
+    });
+
+    const service = await createServiceFromIntakePreliminaryAcceptance({
+        intakeId: record.id,
+        referenceNumber: record.referenceNumber,
+        clientId: verified.clientId,
+        projectId: project.id,
+        contactEmail: verified.email,
+        contactFullName: verified.fullName,
+        contactPhone: input.contactPhone?.trim() || null,
+        serviceTypeHint: aiEstimateSnapshot.serviceType,
+        description,
+        projectName: project.name,
+        workPreference,
+        aiEstimateRecord: aiEstimateSnapshot.record,
+        lineItems: computedLineItems,
+      });
+
+      await supabase
+        .from("service_intake_requests")
+        .update({
+          service_id: service.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", record.id);
+
+      record.serviceId = service.id;
+
+      await createServiceIntakePreliminaryOfferNotifications({
+        intakeId: record.id,
+        serviceId: service.id,
+        referenceNumber: record.referenceNumber,
+        clientName: verified.fullName,
+        projectName: project.name,
+        estimatedNetTotal: aiEstimateSnapshot.public.estimatedNetTotal,
+      }).catch(() => undefined);
+  }
 
   return record;
 }

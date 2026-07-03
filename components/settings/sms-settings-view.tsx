@@ -49,7 +49,6 @@ function SmsRuleEditor({
           placeholder="Treść wiadomości…"
         />
       </Field>
-      <MessageTemplateVariablesReference trigger={rule.trigger} compact />
     </article>
   );
 }
@@ -240,29 +239,27 @@ export function SmsSettingsView() {
       ) : null}
 
       <section className="mb-8 grid gap-4">
+        <details className="group rounded-xl border border-border/80 bg-surface-muted/15">
+          <summary className="cursor-pointer list-none px-4 py-3 marker:content-none [&::-webkit-details-marker]:hidden">
+            <span className="font-medium text-foreground">Placeholdery i linki w treści SMS</span>
+            <span className="mt-1 block text-sm text-muted">
+              Kliknij, aby rozwinąć listę — skopiuj{" "}
+              <code className="rounded bg-surface-muted px-1">{"{{nazwa}}"}</code> do szablonu reguły.
+            </span>
+          </summary>
+          <div className="border-t border-border/60 px-4 py-4">
+            <MessageTemplateVariablesReference />
+          </div>
+        </details>
+
         <div className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5 text-accent" />
           <h2 className="text-lg font-semibold text-foreground">Reguły wysyłki</h2>
         </div>
         <p className="text-sm text-muted">
           Przy dodawaniu nowych reguł w aplikacji stosuj ten sam wzorzec: checkbox włączenia +
-          edytowalna treść SMS. Reguła uruchamia się tylko gdy checkbox jest zaznaczony. W treści
-          możesz wklejać szybkie linki i dane — skopiuj placeholder z listy pod edytorem.
+          edytowalna treść SMS. Reguła uruchamia się tylko gdy checkbox jest zaznaczony.
         </p>
-
-        <Card className="border-border/80">
-          <CardContent className="grid gap-3 py-4">
-            <div>
-              <p className="font-medium text-foreground">Wszystkie dostępne placeholdery</p>
-              <p className="mt-1 text-sm text-muted">
-                Kliknij „Kopiuj”, wklej do treści SMS w formacie{" "}
-                <code className="rounded bg-surface-muted px-1">{"{{nazwa}}"}</code>. Przy wysyłce
-                zostaną zastąpione rzeczywistymi danymi lub linkiem.
-              </p>
-            </div>
-            <MessageTemplateVariablesReference />
-          </CardContent>
-        </Card>
 
         {loading ? (
           <p className="text-sm text-muted">Wczytywanie reguł…</p>

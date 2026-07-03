@@ -4,6 +4,7 @@ export const USER_NOTIFICATION_KINDS = [
   "warranty_expiring",
   "agreement_client_created",
   "client_stage_rating",
+  "service_intake_preliminary_offer",
 ] as const;
 
 export type UserNotificationKind = (typeof USER_NOTIFICATION_KINDS)[number];

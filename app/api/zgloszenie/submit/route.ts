@@ -3,9 +3,11 @@ import {
   SERVICE_INTAKE_POST_WARRANTY_ACTIONS,
   SERVICE_INTAKE_PRIORITIES,
   SERVICE_INTAKE_REQUEST_TYPES,
+  SERVICE_INTAKE_WORK_PREFERENCES,
   type ServiceIntakePostWarrantyAction,
   type ServiceIntakePriority,
   type ServiceIntakeRequestType,
+  type ServiceIntakeWorkPreference,
 } from "@/lib/service-intake/types";
 import { submitServiceIntakeRequest } from "@/lib/supabase/service-intake-server";
 
@@ -21,6 +23,9 @@ export async function POST(request: Request) {
       contactPhone?: string;
       acceptedPaidTerms?: boolean;
       attachments?: Array<{ kind: "image" | "video" | "link"; url: string; label?: string | null }>;
+      workPreference?: ServiceIntakeWorkPreference | null;
+      preliminaryAccepted?: boolean;
+      aiEstimateSnapshot?: unknown;
     };
 
     const requestType = body.requestType ?? "service";
@@ -41,6 +46,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Nieprawidłowy sposób działania." }, { status: 400 });
     }
 
+    const workPreference =
+      body.workPreference &&
+      SERVICE_INTAKE_WORK_PREFERENCES.includes(body.workPreference as ServiceIntakeWorkPreference)
+        ? (body.workPreference as ServiceIntakeWorkPreference)
+        : null;
+
     const record = await submitServiceIntakeRequest({
       verificationToken: body.verificationToken?.trim() ?? "",
       projectId: body.projectId?.trim() ?? "",
@@ -51,13 +62,23 @@ export async function POST(request: Request) {
       contactPhone: body.contactPhone ?? null,
       acceptedPaidTerms: Boolean(body.acceptedPaidTerms),
       attachments: body.attachments,
+      workPreference,
+      preliminaryAccepted: Boolean(body.preliminaryAccepted),
+      aiEstimateSnapshot:
+        body.aiEstimateSnapshot && typeof body.aiEstimateSnapshot === "object"
+          ? (body.aiEstimateSnapshot as Parameters<typeof submitServiceIntakeRequest>[0]["aiEstimateSnapshot"])
+          : null,
     });
 
     return NextResponse.json({
       ok: true,
       referenceNumber: record.referenceNumber,
       trackingToken: record.trackingToken,
-      message: "Zgłoszenie zostało wysłane. Skontaktujemy się wkrótce.",
+      serviceId: record.serviceId,
+      preliminaryAccepted: Boolean(record.preliminaryAcceptedAt),
+      message: record.preliminaryAcceptedAt
+        ? "Zgłoszenie wysłane. Przyjęliśmy wstępną akceptację orientacyjnej wyceny — przygotujemy szczegółową ofertę."
+        : "Zgłoszenie zostało wysłane. Skontaktujemy się wkrótce.",
     });
   } catch (error) {
     return NextResponse.json(

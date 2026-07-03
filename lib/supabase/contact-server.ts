@@ -8,6 +8,7 @@ import {
 import { clientToServiceClient, type Client } from "@/lib/service/types";
 import { clientInputToInsert, rowToClient } from "@/lib/supabase/client-mappers";
 import { rowToContact } from "@/lib/supabase/contact-mappers";
+import { dispatchClientCreatedSms } from "@/lib/supabase/sms-rules-server";
 import { getSupabaseServer } from "@/lib/supabase/server";
 
 export type ConvertContactResult = {
@@ -105,6 +106,8 @@ export async function convertContactToClientServer(
   if (updateError) {
     throw new Error(updateError.message);
   }
+
+  void dispatchClientCreatedSms(client).catch(() => undefined);
 
   return {
     contact: rowToContact(updatedContactRow),

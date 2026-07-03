@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -15,21 +15,25 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/input";
+import { ServiceIntakeEstimatePanel } from "@/components/service-intake/service-intake-estimate-panel";
 import {
   CAFE_PRIORITY_OPTIONS,
   getDoneScreenContent,
   SERVICE_INTAKE_REQUEST_TYPE_OPTIONS,
   WARRANTY_EMERGENCY_PHONE,
 } from "@/lib/service-intake/cafe-priorities";
+import type { IntakeAiEstimatePublic } from "@/lib/service-intake/intake-ai-estimate";
 import {
   SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS,
   SERVICE_INTAKE_PRIORITY_LABELS,
   SERVICE_INTAKE_REQUEST_TYPE_LABELS,
+  type ServiceIntakeAiEstimateSnapshot,
   type ServiceIntakePostWarrantyAction,
   type ServiceIntakePriority,
   type ServiceIntakeProjectOption,
   type ServiceIntakeRequestType,
   type ServiceIntakeVerifyResult,
+  type ServiceIntakeWorkPreference,
 } from "@/lib/service-intake/types";
 import { cn, formatMoney } from "@/lib/utils";
 
@@ -40,6 +44,7 @@ type WizardStep =
   | "requestType"
   | "details"
   | "action"
+  | "estimate"
   | "summary"
   | "done";
 
@@ -50,6 +55,7 @@ const STEP_LABELS: Record<Exclude<WizardStep, "done">, string> = {
   requestType: "Rodzaj",
   details: "Zgłoszenie",
   action: "Działanie",
+  estimate: "Wycena AI",
   summary: "Podsumowanie",
 };
 
@@ -155,6 +161,14 @@ export function ServiceIntakeWizard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [referenceNumber, setReferenceNumber] = useState<string | null>(null);
+  const [aiEstimate, setAiEstimate] = useState<IntakeAiEstimatePublic | null>(null);
+  const [aiEstimateSnapshot, setAiEstimateSnapshot] =
+    useState<ServiceIntakeAiEstimateSnapshot | null>(null);
+  const [estimateLoading, setEstimateLoading] = useState(false);
+  const [estimateError, setEstimateError] = useState<string | null>(null);
+  const [workPreference, setWorkPreference] = useState<ServiceIntakeWorkPreference | null>(null);
+  const [preliminaryAccepted, setPreliminaryAccepted] = useState(false);
+  const [preliminaryAcceptedOnSubmit, setPreliminaryAcceptedOnSubmit] = useState(false);
 
   const selectedProject = useMemo(
     () => verification?.projects.find((project) => project.id === selectedProjectId) ?? null,
@@ -163,6 +177,9 @@ export function ServiceIntakeWizard() {
 
   const isServiceRequest = requestType === "service";
   const requiresActionStep = isServiceRequest && selectedProject ? !selectedProject.isWarrantyActive : false;
+  const requiresOfferEstimate =
+    requestType === "offer_request" ||
+    (isServiceRequest && requiresActionStep && postWarrantyAction === "offer");
 
   const visibleSteps = useMemo(() => {
     const steps: Exclude<WizardStep, "done">[] = [
@@ -175,9 +192,12 @@ export function ServiceIntakeWizard() {
     if (requiresActionStep) {
       steps.push("action");
     }
+    if (requiresOfferEstimate) {
+      steps.push("estimate");
+    }
     steps.push("summary");
     return steps;
-  }, [requiresActionStep]);
+  }, [requiresActionStep, requiresOfferEstimate]);
 
   const doneContent = useMemo(
     () =>
@@ -204,6 +224,57 @@ export function ServiceIntakeWizard() {
       setStep(previous);
     }
   }
+
+  async function fetchAiEstimate() {
+    if (!verification || !selectedProjectId || description.trim().length < 10) {
+      return;
+    }
+
+    setEstimateLoading(true);
+    setEstimateError(null);
+
+    try {
+      const response = await fetch("/api/zgloszenie/estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          verificationToken: verification.verificationToken,
+          projectId: selectedProjectId,
+          description,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się oszacować kosztów.");
+      }
+
+      const estimate = payload.estimate as IntakeAiEstimatePublic;
+      setAiEstimate(estimate);
+      setAiEstimateSnapshot(payload.snapshot as ServiceIntakeAiEstimateSnapshot);
+
+      const suggested: ServiceIntakeWorkPreference =
+        estimate.suggestedWorkMode === "remote"
+          ? "remote"
+          : estimate.suggestedWorkMode === "on_site"
+            ? "on_site"
+            : "either";
+      setWorkPreference((current) => current ?? suggested);
+    } catch (estimateErr) {
+      setEstimateError(
+        estimateErr instanceof Error ? estimateErr.message : "Nie udało się oszacować kosztów.",
+      );
+      setAiEstimate(null);
+      setAiEstimateSnapshot(null);
+    } finally {
+      setEstimateLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (step === "estimate") {
+      void fetchAiEstimate();
+    }
+  }, [step]);
 
   async function handleStart() {
     setLoading(true);
@@ -305,6 +376,9 @@ export function ServiceIntakeWizard() {
           acceptedPaidTerms:
             requiresActionStep &&
             (postWarrantyAction === "on_site" || postWarrantyAction === "remote"),
+          workPreference,
+          preliminaryAccepted: requiresOfferEstimate && preliminaryAccepted,
+          aiEstimateSnapshot,
           attachments: [
             ...uploadedAttachments,
             ...attachmentLinks
@@ -327,6 +401,7 @@ export function ServiceIntakeWizard() {
         throw new Error(payload.error ?? "Nie udało się wysłać zgłoszenia.");
       }
       setReferenceNumber(payload.referenceNumber ?? null);
+      setPreliminaryAcceptedOnSubmit(Boolean(payload.preliminaryAccepted));
       setStep("done");
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Błąd.");
@@ -717,7 +792,41 @@ export function ServiceIntakeWizard() {
                   Wstecz
                 </Button>
                 <Button type="button" disabled={!postWarrantyAction} onClick={() => goNext("action")}>
-                  Podsumowanie
+                  {postWarrantyAction === "offer" ? "Orientacyjna wycena" : "Podsumowanie"}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          ) : null}
+
+          {step === "estimate" ? (
+            <>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Orientacyjna wycena</h2>
+                <p className="mt-1 text-sm text-muted">
+                  Na podstawie opisu i lokalizacji obiektu szacujemy przewidywany czas pracy i koszt
+                  netto usługi. Ostateczna oferta może się różnić po doprecyzowaniu wymagań.
+                </p>
+              </div>
+              <ServiceIntakeEstimatePanel
+                estimate={aiEstimate}
+                loading={estimateLoading}
+                error={estimateError}
+                workPreference={workPreference}
+                onWorkPreferenceChange={setWorkPreference}
+                onRetry={() => void fetchAiEstimate()}
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={() => goBack("estimate")}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Wstecz
+                </Button>
+                <Button
+                  type="button"
+                  disabled={estimateLoading || !aiEstimate || !workPreference}
+                  onClick={() => goNext("estimate")}
+                >
+                  Dalej do podsumowania
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
@@ -764,12 +873,48 @@ export function ServiceIntakeWizard() {
                   <span className="text-muted">Opis:</span> {description}
                 </p>
               </div>
+
+              {requiresOfferEstimate && aiEstimate ? (
+                <div className="grid gap-3 rounded-2xl border border-accent/25 bg-accent/5 p-4 text-sm">
+                  <p className="font-medium text-foreground">Orientacyjna wycena AI</p>
+                  <p>
+                    Szacowana kwota netto:{" "}
+                    <span className="font-semibold">{formatMoney(aiEstimate.estimatedNetTotal)}</span>
+                  </p>
+                  <p className="text-xs text-muted">{aiEstimate.disclaimer}</p>
+                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/80 bg-background/50 px-3 py-3">
+                    <input
+                      type="checkbox"
+                      checked={preliminaryAccepted}
+                      onChange={(event) => setPreliminaryAccepted(event.target.checked)}
+                      className="mt-1"
+                    />
+                    <span>
+                      <span className="font-medium text-foreground">
+                        Wstępnie akceptuję orientacyjną wycenę
+                      </span>
+                      <span className="mt-1 block text-muted">
+                        Rozumiem, że ostateczna oferta może się zmienić po doprecyzowaniu wymagań.
+                        Po wysłaniu zgłoszenia nasz zespół przygotuje szczegółową propozycję.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              ) : null}
+
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" onClick={() => goBack("summary")}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Wstecz
                 </Button>
-                <Button type="button" disabled={loading} onClick={() => void handleSubmit()}>
+                <Button
+                  type="button"
+                  disabled={
+                    loading ||
+                    (requiresOfferEstimate && preliminaryAccepted && !aiEstimateSnapshot)
+                  }
+                  onClick={() => void handleSubmit()}
+                >
                   {loading ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
@@ -800,6 +945,12 @@ export function ServiceIntakeWizard() {
                       {paragraph}
                     </p>
                   ))}
+                  {preliminaryAcceptedOnSubmit ? (
+                    <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-emerald-200">
+                      Przyjęliśmy wstępną akceptację orientacyjnej wyceny. Przygotujemy szczegółową
+                      ofertę i skontaktujemy się z Tobą.
+                    </p>
+                  ) : null}
                   {doneContent.showEmergencyPhone ? (
                     <p className="flex items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 font-medium text-amber-100">
                       <Phone className="h-4 w-4 shrink-0" />

@@ -189,6 +189,7 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
       },
       clientOfferHistory: [],
       clientOfferAcceptedDocument: null,
+      aiEstimate: null,
       optionalItems: source.optionalItems.map((item) => ({
         ...item,
         id: crypto.randomUUID(),
@@ -267,6 +268,7 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
       },
       clientOfferHistory: [],
       clientOfferAcceptedDocument: null,
+      aiEstimate: null,
     };
   },
 }));

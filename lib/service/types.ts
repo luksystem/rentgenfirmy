@@ -1,3 +1,4 @@
+import type { ServiceAiEstimateRecord } from "@/lib/service/ai-estimate-types";
 import type { ClientOfferStatus } from "@/lib/service/client-offer";
 import type { ClientOfferAcceptedDocument } from "@/lib/service/client-offer-snapshot";
 import type { ClientOfferHistoryEntry } from "@/lib/service/client-offer-history";
@@ -162,6 +163,7 @@ export type ServiceRecord = {
   };
   clientOfferHistory: ClientOfferHistoryEntry[];
   clientOfferAcceptedDocument: ClientOfferAcceptedDocument | null;
+  aiEstimate: ServiceAiEstimateRecord | null;
 };
 
 export type ServiceGlobalSettings = {

@@ -7,6 +7,7 @@ import {
   type SmsRulesSettings,
 } from "@/lib/sms/sms-rules";
 import { sendSms } from "@/lib/sms/sendSms";
+import type { Client } from "@/lib/service/types";
 import { SMS_RULES_SETTINGS_ID } from "@/lib/supabase/sms-rules-repository";
 import { getSupabaseServer } from "@/lib/supabase/server";
 
@@ -122,6 +123,18 @@ export async function dispatchSmsRules(
     skipped: false as const,
     results,
   };
+}
+
+export async function dispatchClientCreatedSms(
+  client: Pick<Client, "id" | "phone" | "fullName" | "email" | "location">,
+) {
+  return dispatchSmsRules("client_created", {
+    clientId: client.id,
+    phone: client.phone,
+    fullName: client.fullName,
+    email: client.email,
+    location: client.location,
+  });
 }
 
 export { renderSmsRuleMessage } from "@/lib/sms/sms-rules";
