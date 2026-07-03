@@ -69,10 +69,7 @@ function CatalogList({
 
             {group.companies.length ? (
               <div className="grid gap-2 sm:grid-cols-2">
-                {group.companies.map((company) => {
-                  const projectCount = company.projects.length;
-
-                  return (
+                {group.companies.map((company) => (
                   <button
                     key={tradeCompanyKey(company)}
                     type="button"
@@ -94,17 +91,15 @@ function CatalogList({
                             {[company.contactName, company.phone].filter(Boolean).join(" · ")}
                           </p>
                         ) : null}
-                        {projectCount ? (
-                          <p className="mt-1.5 text-xs text-accent">
-                            {projectCount}{" "}
-                            {projectCount === 1 ? "projekt" : projectCount < 5 ? "projekty" : "projektów"}
+                        {company.projects.length ? (
+                          <p className="mt-1.5 line-clamp-2 text-xs text-muted">
+                            {company.projects.map((project) => project.projectName).join(" · ")}
                           </p>
                         ) : null}
                       </div>
                     </div>
                   </button>
-                  );
-                })}
+                ))}
               </div>
             ) : (
               <p className="text-sm text-muted">

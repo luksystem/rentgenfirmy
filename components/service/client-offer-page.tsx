@@ -51,6 +51,7 @@ export function ClientOfferPage({ token }: { token: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedOptionalIds, setSelectedOptionalIds] = useState<Set<string>>(() => new Set());
+  const [showDecisionDetails, setShowDecisionDetails] = useState(false);
 
   const loadOffer = useCallback(async () => {
     setLoading(true);
@@ -159,16 +160,108 @@ export function ClientOfferPage({ token }: { token: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mx-auto grid max-w-4xl gap-5">
-        <header className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-5 sm:p-6">
+    <div className="min-h-screen overflow-x-hidden bg-zinc-950 px-4 py-4 sm:px-6 sm:py-8">
+      <div className="mx-auto grid w-full min-w-0 max-w-4xl gap-4 sm:gap-5">
+        {offer.canRespond ? (
+          <div className="sticky top-0 z-30 -mx-4 border-b border-zinc-800 bg-zinc-950/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="min-w-0 shrink">
+                <p className="text-[9px] font-bold uppercase tracking-wide text-zinc-500">
+                  {pricing.meta.grossTotalLabel}
+                </p>
+                <p className="text-lg font-bold tabular-nums leading-tight text-zinc-50 sm:text-xl">
+                  {formatMoney(pricing.combined.grossTotal)}
+                </p>
+              </div>
+              <div className="ml-auto flex max-w-[62%] flex-wrap justify-end gap-1 sm:max-w-none sm:gap-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={submitting}
+                  className="h-8 px-2.5 text-xs"
+                  onClick={() => void submitAction("accept")}
+                >
+                  Akceptuj
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={submitting}
+                  className="h-8 px-2.5 text-xs"
+                  onClick={() => setShowDecisionDetails((value) => !value)}
+                >
+                  {showDecisionDetails ? "Ukryj" : "Więcej"}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="destructive"
+                  disabled={submitting}
+                  className="h-8 px-2.5 text-xs"
+                  onClick={() => void submitAction("reject")}
+                >
+                  Odrzuć
+                </Button>
+              </div>
+            </div>
+            {showDecisionDetails ? (
+              <div className="mt-2 grid gap-2 border-t border-zinc-800 pt-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={submitting}
+                  className="h-8 w-fit text-xs"
+                  onClick={() => setShowNegotiation((value) => !value)}
+                >
+                  {CLIENT_OFFER_ACTION_LABELS.negotiate}
+                </Button>
+                <Field label="Notatka (opcjonalnie)">
+                  <Textarea
+                    value={responseNote}
+                    onChange={(event) => setResponseNote(event.target.value)}
+                    placeholder="Krótka uwaga…"
+                    rows={2}
+                    className="min-h-0 text-sm"
+                  />
+                </Field>
+                {showNegotiation ? (
+                  <div className="grid gap-2 rounded-lg border border-zinc-700 bg-zinc-950/40 p-3">
+                    <Field label="Wiadomość do oferty">
+                      <Textarea
+                        value={negotiationMessage}
+                        onChange={(event) => setNegotiationMessage(event.target.value)}
+                        placeholder="Opisz, co chciałbyś zmienić…"
+                        rows={3}
+                        className="text-sm"
+                      />
+                    </Field>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={submitting || !negotiationMessage.trim()}
+                      onClick={() => void submitAction("negotiate")}
+                    >
+                      Wyślij pytanie
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <header className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 sm:p-6">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">
             Rentgen firmy · wycena serwisu
           </p>
-          <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
-              <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">{service.title}</h1>
-              <p className="mt-2 text-sm text-zinc-400">
+              <h1 className="text-xl font-semibold tracking-tight text-zinc-50 sm:text-2xl">
+                {service.title}
+              </h1>
+              <p className="mt-1.5 text-sm text-zinc-400">
                 {service.client.fullName}
                 {service.client.location ? ` · ${service.client.location}` : ""}
               </p>
@@ -180,7 +273,12 @@ export function ClientOfferPage({ token }: { token: string }) {
                 </p>
               ) : null}
             </div>
-            <div className="shrink-0 text-left sm:text-right">
+            <div
+              className={cn(
+                "shrink-0 text-left sm:text-right",
+                offer.canRespond && "hidden sm:block",
+              )}
+            >
               <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
                 {pricing.meta.grossTotalLabel}
               </p>
@@ -272,72 +370,6 @@ export function ClientOfferPage({ token }: { token: string }) {
           variant="client"
           optionalItemSelection={offer.canRespond ? selectedOptionalIds : undefined}
         />
-
-        {offer.canRespond ? (
-          <Card className="sticky bottom-3 z-10 border-zinc-700 bg-zinc-900 shadow-xl shadow-black/20">
-            <CardContent className="grid gap-4 py-5">
-              <div>
-                <p className="text-sm font-medium text-zinc-100">Twoja decyzja</p>
-                <p className="mt-1 text-sm text-zinc-400">
-                  Po zapoznaniu się z wyceną
-                  {showOptionalPicker ? " i opcjonalnymi pozycjami powyżej" : ""} wybierz jedną z
-                  opcji — zespół serwisowy przejdzie do kolejnego etapu.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => void submitAction("accept")}
-                >
-                  {CLIENT_OFFER_ACTION_LABELS.accept}
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={submitting}
-                  onClick={() => setShowNegotiation((value) => !value)}
-                >
-                  {CLIENT_OFFER_ACTION_LABELS.negotiate}
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  disabled={submitting}
-                  onClick={() => void submitAction("reject")}
-                >
-                  {CLIENT_OFFER_ACTION_LABELS.reject}
-                </Button>
-              </div>
-              <Field label="Notatka (opcjonalnie)">
-                <Textarea
-                  value={responseNote}
-                  onChange={(event) => setResponseNote(event.target.value)}
-                  placeholder="Krótka uwaga przy akceptacji lub odrzuceniu…"
-                  rows={2}
-                />
-              </Field>
-              {showNegotiation ? (
-                <div className="grid gap-3 rounded-xl border border-zinc-700 bg-zinc-950/40 p-4">
-                  <Field label="Wiadomość do oferty">
-                    <Textarea
-                      value={negotiationMessage}
-                      onChange={(event) => setNegotiationMessage(event.target.value)}
-                      placeholder="Opisz, co chciałbyś zmienić w ofercie…"
-                    />
-                  </Field>
-                  <Button
-                    type="button"
-                    disabled={submitting || !negotiationMessage.trim()}
-                    onClick={() => void submitAction("negotiate")}
-                  >
-                    Wyślij pytanie
-                  </Button>
-                </div>
-              ) : null}
-            </CardContent>
-          </Card>
-        ) : null}
 
         {offer.canAskQuestion ? (
           <Card className="border-amber-500/30 bg-zinc-900 shadow-xl shadow-black/20">

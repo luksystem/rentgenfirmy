@@ -365,6 +365,7 @@ export function ServiceForm({
     subStepIndex >= 0 && subSteps[subStepIndex] ? subSteps[subStepIndex].full : null;
 
   return (
+    <div className="min-w-0 max-w-full overflow-x-hidden">
     <>
       {pendingLeaveHref ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
@@ -404,13 +405,13 @@ export function ServiceForm({
 
     <div className="grid min-w-0 gap-6 xl:grid-cols-[1fr_300px]">
       <div className="grid min-w-0 gap-5 pb-2">
-        <div className="sticky top-16 z-10 -mx-1 space-y-2.5 rounded-2xl border border-border/80 bg-background/95 p-2.5 backdrop-blur sm:space-y-3 sm:p-4 xl:top-0 xl:z-20">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-foreground">
+        <div className="sticky top-16 z-10 space-y-2 rounded-2xl border border-border/80 bg-background/95 p-2 backdrop-blur sm:space-y-2.5 sm:p-3 xl:top-0 xl:z-20 xl:p-4">
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-medium text-foreground sm:text-sm">
                 {service.title.trim() || "Nowa oferta"}
               </p>
-              <p className="mt-0.5 text-xs text-muted">
+              <p className="mt-0.5 hidden text-xs text-muted sm:block">
                 {settled ? (
                   <>
                     brutto rozliczenia{" "}
@@ -429,13 +430,13 @@ export function ServiceForm({
                   </>
                 )}
               </p>
+              <p className="mt-0.5 text-[11px] tabular-nums text-muted sm:hidden">
+                {formatMoney(settled ? settlementBilling.grossTotal : quoteBilling.grossTotal)} brutto
+              </p>
             </div>
-            <div className="flex flex-wrap gap-2 xl:hidden">
-              <span className="rounded-full border border-border px-2.5 py-1 text-xs tabular-nums text-muted">
-                netto{" "}
-                {formatMoney(
-                  settled ? settlementBilling.netTotal : quoteBilling.netTotal,
-                )}
+            <div className="shrink-0 xl:hidden">
+              <span className="rounded-full border border-border px-2 py-0.5 text-[10px] tabular-nums text-muted sm:px-2.5 sm:text-xs">
+                {formatMoney(settled ? settlementBilling.netTotal : quoteBilling.netTotal)} netto
               </span>
             </div>
           </div>
@@ -495,7 +496,7 @@ export function ServiceForm({
           ) : null}
 
           {subStepFullLabel ? (
-            <p className="text-xs font-medium text-foreground/80">{subStepFullLabel}</p>
+            <p className="hidden text-xs font-medium text-foreground/80 sm:block">{subStepFullLabel}</p>
           ) : null}
         </div>
 
@@ -816,8 +817,8 @@ export function ServiceForm({
           </div>
         ) : null}
 
-        <div className="sticky bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] z-20 -mx-1 rounded-2xl border border-border/80 bg-background/95 p-2.5 backdrop-blur sm:p-4 xl:bottom-0">
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+        <div className="sticky bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] z-20 rounded-xl border border-border/80 bg-background/95 p-2 backdrop-blur sm:p-3 xl:bottom-0">
+          <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
             {(mainTab === "quote" || mainTab === "settlement") && step > 0 ? (
               <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => goToStep(step - 1)}>
                 Wstecz
@@ -849,5 +850,6 @@ export function ServiceForm({
       <SummaryCard estimate={costs.estimate} actual={costs.actual} className="hidden xl:block" />
     </div>
     </>
+  </div>
   );
 }

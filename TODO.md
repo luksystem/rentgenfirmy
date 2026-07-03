@@ -40,6 +40,23 @@ Widok skrócony do tablic Kanban — bez przechodzenia przez listę projektów.
 
 ---
 
+### [ ] Maile transakcyjne — SMTP własny, konfiguracja i edytor szablonów
+
+Obecnie wysyłka idzie przez **Resend API** (`lib/email/send.ts`). Szablony HTML ustaleń są na sztywno w kodzie (`lib/email/agreement-templates.ts`). Bez `RESEND_API_KEY` wysyłka jest pomijana — działa tylko „Otwórz w kliencie poczty”.
+
+**Do zrobienia:**
+
+- [ ] **Własny SMTP** zamiast (lub obok) Resend — nodemailer w `lib/email/send.ts`, zmienne `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`
+- [ ] **Panel konfiguracji** w aplikacji (np. `/ustawienia` lub admin) — test wysyłki, status połączenia, bez ręcznej edycji `.env` na produkcji (opcjonalnie: szyfrowane sekrety w `app_settings`)
+- [ ] **Klucze API / integracje** — jednolite miejsce na Resend, SMTP, `NEXT_PUBLIC_APP_URL`; komunikaty błędów zamiast cichego skip
+- [ ] **Edytor szablonów HTML na froncie** — szablony maili ustaleń (nagłówek, treść, przyciski akceptacji/dyskusji, stopka z disclaimerem) edytowalne w UI, zapis w DB (np. `app_settings` lub `email_templates`), podgląd przed wysyłką
+- [ ] Szablony dla innych typów maili: zgłoszenia serwisowe (`service-intake-server.ts`), ewentualnie oferty serwisowe
+- [ ] Dokumentacja w `.env.example` — kiedy Resend, kiedy SMTP, wymagania SPF/DKIM przy własnym serwerze
+
+**Pliki startowe:** `lib/email/send.ts`, `lib/email/agreement-templates.ts`, `lib/supabase/agreement-email-server.ts`, `components/dashboard/agreement-delivery-actions.tsx`
+
+---
+
 ## Inne
 
 ### [ ] Uprawnienia wg ról użytkowników
