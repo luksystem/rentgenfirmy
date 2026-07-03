@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ServiceReport } from "@/components/service/service-report";
+import {
+  ClientOptionalItemsPicker,
+  ClientOptionalItemsSummary,
+} from "@/components/service/client-optional-items-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Textarea } from "@/components/ui/input";
@@ -11,10 +15,10 @@ import {
 } from "@/lib/service/client-offer";
 import { OfferValidityCountdown } from "@/components/service/offer-validity-countdown";
 import {
-  buildServiceReportCosts,
-  getServiceReportBillingBreakdown,
+  getServiceCombinedBilling,
   getServiceReportDocumentMeta,
 } from "@/lib/service/report-document";
+import { hasOptionalItems } from "@/lib/service/optional-items";
 import type { ServiceRecord } from "@/lib/service/types";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
 
@@ -30,6 +34,7 @@ type OfferMeta = {
 };
 
 const SECTION_LINKS = [
+  { href: "#offer-optional-items", label: "Opcje dodatkowe" },
   { href: "#offer-scope", label: "Zakres prac" },
   { href: "#offer-details", label: "Szczegóły" },
   { href: "#offer-pricing", label: "Wycena" },
@@ -45,6 +50,7 @@ export function ClientOfferPage({ token }: { token: string }) {
   const [showNegotiation, setShowNegotiation] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
+  const [selectedOptionalIds, setSelectedOptionalIds] = useState<Set<string>>(() => new Set());
 
   const loadOffer = useCallback(async () => {
     setLoading(true);
@@ -60,6 +66,10 @@ export function ClientOfferPage({ token }: { token: string }) {
 
       setService(payload.service as ServiceRecord);
       setOffer(payload.offer as OfferMeta);
+      const loaded = payload.service as ServiceRecord;
+      setSelectedOptionalIds(
+        new Set(loaded.optionalItems.filter((item) => item.clientSelected).map((item) => item.id)),
+      );
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Nie udało się wczytać oferty.");
     } finally {
@@ -76,11 +86,15 @@ export function ClientOfferPage({ token }: { token: string }) {
       return null;
     }
 
-    const costs = buildServiceReportCosts(service);
-    const billing = getServiceReportBillingBreakdown(service, costs);
+    const previewSelection = offer?.canRespond ? selectedOptionalIds : null;
+    const combined = getServiceCombinedBilling(service, previewSelection);
     const meta = getServiceReportDocumentMeta(service);
-    return { billing, meta };
-  }, [service]);
+    return { combined, meta };
+  }, [offer?.canRespond, selectedOptionalIds, service]);
+
+  const showOptionalPicker = Boolean(
+    service && offer?.canRespond && hasOptionalItems(service.optionalItems),
+  );
 
   async function submitAction(action: ClientOfferAction) {
     setSubmitting(true);
@@ -94,6 +108,8 @@ export function ClientOfferPage({ token }: { token: string }) {
         body: JSON.stringify({
           action,
           message: action === "negotiate" ? negotiationMessage : responseNote.trim() || undefined,
+          selectedOptionalItemIds:
+            action === "accept" ? Array.from(selectedOptionalIds) : undefined,
         }),
       });
       const payload = await response.json();
@@ -169,10 +185,16 @@ export function ClientOfferPage({ token }: { token: string }) {
                 {pricing.meta.grossTotalLabel}
               </p>
               <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight text-zinc-50">
-                {formatMoney(pricing.billing.grossTotal)}
+                {formatMoney(pricing.combined.grossTotal)}
               </p>
               <p className="mt-1 text-xs text-zinc-500">
-                netto {formatMoney(pricing.billing.netTotal)}
+                netto {formatMoney(pricing.combined.netTotal)}
+                {pricing.combined.optional.grossTotal > 0 ? (
+                  <>
+                    <span className="mx-1.5 text-zinc-700">·</span>
+                    w tym opcje +{formatMoney(pricing.combined.optional.grossTotal)} brutto
+                  </>
+                ) : null}
               </p>
             </div>
           </div>
@@ -210,13 +232,56 @@ export function ClientOfferPage({ token }: { token: string }) {
           </div>
         )}
 
+        <nav
+          aria-label="Nawigacja po ofercie"
+          className="flex flex-wrap gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-2"
+        >
+          {SECTION_LINKS.filter((link) =>
+            link.href === "#offer-optional-items"
+              ? hasOptionalItems(service.optionalItems)
+              : true,
+          ).map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className={cn(
+                "rounded-lg px-3 py-2 text-sm font-medium text-zinc-300 transition",
+                "hover:bg-zinc-800 hover:text-zinc-50",
+              )}
+            >
+              {link.label}
+            </a>
+          ))}
+        </nav>
+
+        {showOptionalPicker ? (
+          <ClientOptionalItemsPicker
+            items={service.optionalItems}
+            selectedIds={selectedOptionalIds}
+            onChange={setSelectedOptionalIds}
+            interactive
+          />
+        ) : null}
+
+        {!offer.canRespond && service.clientOffer.status === "accepted" ? (
+          <ClientOptionalItemsSummary items={service.optionalItems} />
+        ) : null}
+
+        <ServiceReport
+          service={service}
+          variant="client"
+          optionalItemSelection={offer.canRespond ? selectedOptionalIds : undefined}
+        />
+
         {offer.canRespond ? (
-          <Card className="sticky top-3 z-10 border-zinc-700 bg-zinc-900 shadow-xl shadow-black/20">
+          <Card className="sticky bottom-3 z-10 border-zinc-700 bg-zinc-900 shadow-xl shadow-black/20">
             <CardContent className="grid gap-4 py-5">
               <div>
                 <p className="text-sm font-medium text-zinc-100">Twoja decyzja</p>
                 <p className="mt-1 text-sm text-zinc-400">
-                  Wybierz jedną z opcji — zespół serwisowy przejdzie do kolejnego etapu.
+                  Po zapoznaniu się z wyceną
+                  {showOptionalPicker ? " i opcjonalnymi pozycjami powyżej" : ""} wybierz jedną z
+                  opcji — zespół serwisowy przejdzie do kolejnego etapu.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -275,7 +340,7 @@ export function ClientOfferPage({ token }: { token: string }) {
         ) : null}
 
         {offer.canAskQuestion ? (
-          <Card className="sticky top-3 z-10 border-amber-500/30 bg-zinc-900 shadow-xl shadow-black/20">
+          <Card className="border-amber-500/30 bg-zinc-900 shadow-xl shadow-black/20">
             <CardContent className="grid gap-4 py-5">
               <div>
                 <p className="text-sm font-medium text-amber-200">Oferta straciła ważność</p>
@@ -303,26 +368,6 @@ export function ClientOfferPage({ token }: { token: string }) {
             </CardContent>
           </Card>
         ) : null}
-
-        <nav
-          aria-label="Nawigacja po ofercie"
-          className="flex flex-wrap gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-2"
-        >
-          {SECTION_LINKS.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className={cn(
-                "rounded-lg px-3 py-2 text-sm font-medium text-zinc-300 transition",
-                "hover:bg-zinc-800 hover:text-zinc-50",
-              )}
-            >
-              {link.label}
-            </a>
-          ))}
-        </nav>
-
-        <ServiceReport service={service} variant="client" />
       </div>
     </div>
   );

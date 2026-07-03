@@ -318,8 +318,8 @@ export function NotificationBell() {
                       </div>
                       <p className="mt-1 break-words text-xs leading-relaxed text-muted">
                         {serviceNewCount === 1
-                          ? "1 zgłoszenie czeka na przyjęcie."
-                          : `${serviceNewCount} zgłoszeń czeka na przyjęcie.`}
+                          ? "1 nowe zgłoszenie na pierwszym etapie, bez przypisanej osoby."
+                          : `${serviceNewCount} nowych zgłoszeń na pierwszym etapie, bez przypisanej osoby.`}
                       </p>
                     </span>
                   </Link>

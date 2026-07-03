@@ -37,6 +37,15 @@ export type BillableFlags = {
   materials: boolean;
 };
 
+export type ServicePhoto = {
+  id: string;
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  caption: string;
+  createdAt: string;
+};
+
 export type ServiceLineItems = {
   accommodations: number;
   supervisionHours: number;
@@ -49,6 +58,7 @@ export type ServiceLineItems = {
   materialsCost: number;
   materialsNote: string;
   workReportNote: string;
+  photos: ServicePhoto[];
   billable: BillableFlags;
 };
 
@@ -110,6 +120,18 @@ export function clientToServiceClient(client: Pick<Client, "fullName" | "locatio
   };
 }
 
+export type ServiceOptionalItem = {
+  id: string;
+  title: string;
+  description: string;
+  netAmount: number;
+  vatRate: VatRate;
+  /** Wybrane przez klienta przy akceptacji oferty */
+  clientSelected: boolean;
+  /** Uwzględnione w rozliczeniu (odhaczane przez serwis) */
+  billable: boolean;
+};
+
 export type ServiceRecord = {
   id: string;
   createdAt: string;
@@ -128,6 +150,7 @@ export type ServiceRecord = {
   showEstimateComparison: boolean;
   estimate: ServiceLineItems;
   actual: ServiceLineItems;
+  optionalItems: ServiceOptionalItem[];
   clientOffer: {
     token: string | null;
     expiresAt: string | null;
@@ -198,6 +221,7 @@ export function emptyLineItems(billable: BillableFlags = EMPTY_BILLABLE): Servic
     materialsCost: 0,
     materialsNote: "",
     workReportNote: "",
+    photos: [],
     billable: { ...billable },
   };
 }

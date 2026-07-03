@@ -1,4 +1,5 @@
 import { calculateServiceCost } from "@/lib/service/calculate-service-cost";
+import { buildCombinedBilling } from "@/lib/service/optional-items";
 import type {
   ServiceCostBreakdown,
   ServiceDiscounts,
@@ -63,6 +64,15 @@ export function getServiceReportDocumentMeta(
   };
 }
 
+export function getServiceCombinedBilling(
+  service: ServiceRecord,
+  clientPreviewSelection?: ReadonlySet<string> | null,
+) {
+  const costs = buildServiceReportCosts(service);
+  const base = getServiceReportBillingBreakdown(service, costs);
+  return buildCombinedBilling(service, base, clientPreviewSelection);
+}
+
 export function buildServiceReportCosts(service: ServiceRecord) {
   return {
     estimate: calculateServiceCost(
@@ -105,6 +115,14 @@ export function getServiceReportMaterialsNote(service: ServiceRecord, settled: b
   }
 
   return service.estimate.materialsNote || service.actual.materialsNote;
+}
+
+export function getServiceReportPhotos(service: ServiceRecord, settled: boolean) {
+  if (settled) {
+    return service.actual.photos.length ? service.actual.photos : service.estimate.photos;
+  }
+
+  return service.estimate.photos.length ? service.estimate.photos : service.actual.photos;
 }
 
 export function hasAppliedDiscount(discounts: ServiceDiscounts) {

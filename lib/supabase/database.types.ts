@@ -86,6 +86,7 @@ export type ServiceRow = {
   show_estimate_comparison: boolean;
   estimate: Record<string, unknown>;
   actual: Record<string, unknown>;
+  optional_items?: unknown;
   client_offer_token?: string | null;
   client_offer_expires_at?: string | null;
   client_offer_status?: string | null;
@@ -614,6 +615,7 @@ export type ServiceInsert = {
   show_estimate_comparison?: boolean;
   estimate: Record<string, unknown>;
   actual: Record<string, unknown>;
+  optional_items?: unknown;
   client_offer_token?: string | null;
   client_offer_expires_at?: string | null;
   client_offer_status?: string | null;

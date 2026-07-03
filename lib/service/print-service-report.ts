@@ -5,6 +5,7 @@ import {
   getServiceReportBillingDiscounts,
   getServiceReportDocumentMeta,
   getServiceReportMaterialsNote,
+  getServiceReportPhotos,
   getServiceReportQuantitySections,
   getServiceReportWorkNote,
   getServiceReportWorkTimeSections,
@@ -20,6 +21,10 @@ import {
 } from "@/lib/service/report-compare-rows";
 import { formatDate, formatMoney } from "@/lib/utils";
 import { openHtmlDocument } from "@/lib/service/open-html-document";
+import {
+  attachSignedUrlsToServicePhotos,
+  type ServicePhotoWithUrl,
+} from "@/lib/service/service-photos";
 import type { ServiceCostBreakdown, ServiceDiscounts, ServiceRecord } from "@/lib/service/types";
 
 function escapeHtml(value: string) {
@@ -320,6 +325,34 @@ const PRINT_STYLES = `
     line-height: 1.6;
   }
   .scope-stack { display: grid; gap: 20px; }
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 8px;
+  }
+  .photo-item {
+    break-inside: avoid;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .photo-item img {
+    display: block;
+    width: 100%;
+    min-height: 150px;
+    max-height: 230px;
+    object-fit: contain;
+    background: #fafafa;
+  }
+  .photo-item figcaption {
+    border-top: 1px solid #e4e4e7;
+    padding: 8px 10px;
+    font-size: 8.5pt;
+    color: #52525b;
+    line-height: 1.4;
+  }
   .cost-section { padding-top: 4px; }
   table { width: 100%; border-collapse: collapse; font-size: 10pt; }
   .cost-totals-compact {
@@ -448,9 +481,35 @@ const PRINT_STYLES = `
   }
 `;
 
+function serviceReportPhotosHtml(photos: ServicePhotoWithUrl[]) {
+  if (!photos.length) {
+    return "";
+  }
+
+  const items = photos
+    .filter((photo) => photo.url)
+    .map(
+      (photo) => `<figure class="photo-item">
+        <img src="${escapeHtml(photo.url!)}" alt="${escapeHtml(photo.caption || photo.fileName)}" />
+        ${photo.caption ? `<figcaption>${escapeHtml(photo.caption)}</figcaption>` : ""}
+      </figure>`,
+    )
+    .join("");
+
+  if (!items) {
+    return "";
+  }
+
+  return `<div class="sub-block">
+          <h3 class="subsection-title">Zdjęcia</h3>
+          <div class="photo-grid">${items}</div>
+        </div>`;
+}
+
 export function buildServiceReportPrintDocument(
   service: ServiceRecord,
   projectName?: string,
+  photosWithUrls: ServicePhotoWithUrl[] = [],
 ) {
   const settled = isServiceSettled(service);
   const meta = getServiceReportDocumentMeta(service);
@@ -461,6 +520,7 @@ export function buildServiceReportPrintDocument(
     getServiceReportWorkNote(service, settled) || "Brak opisu prac.";
   const materialsNote =
     getServiceReportMaterialsNote(service, settled) || "Brak informacji o materiałach.";
+  const photosHtml = serviceReportPhotosHtml(photosWithUrls);
   const projectLabel = projectName ?? (service.projectId ? "—" : "Bez projektu");
 
   const diffNet = costs.actual.netTotal - costs.estimate.netTotal;
@@ -593,6 +653,7 @@ export function buildServiceReportPrintDocument(
           <div class="prose">${workNote.trim() || "Brak opisu prac."}</div>
         </div>
         ${materialsSectionHtml(materialsNote)}
+        ${photosHtml}
       </div>
     </section>
 
@@ -639,6 +700,9 @@ export function buildServiceReportPrintDocument(
 </html>`;
 }
 
-export function printServiceReport(service: ServiceRecord, projectName?: string) {
-  openHtmlDocument(buildServiceReportPrintDocument(service, projectName));
+export async function printServiceReport(service: ServiceRecord, projectName?: string) {
+  const settled = isServiceSettled(service);
+  const photos = getServiceReportPhotos(service, settled);
+  const photosWithUrls = photos.length ? await attachSignedUrlsToServicePhotos(photos) : [];
+  openHtmlDocument(buildServiceReportPrintDocument(service, projectName, photosWithUrls));
 }

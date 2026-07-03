@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, Link2, Pencil, Plus, Send, Trash2, X } from "lucide-react";
 import { AgreementCollaborationPanel } from "@/components/dashboard/agreement-collaboration-panel";
+import { AgreementBatchDeliveryActions } from "@/components/dashboard/agreement-batch-delivery-actions";
 import { AgreementDeliveryActions } from "@/components/dashboard/agreement-delivery-actions";
 import { AgreementApprovalResponses } from "@/components/dashboard/agreement-approval-responses";
 import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-collapsible-shell";
@@ -239,6 +240,7 @@ function AgreementCard({
 
       {mode === "team" ? (
         <AgreementDeliveryActions
+          projectId={projectId ?? agreement.projectId}
           agreement={agreement}
           trades={projectTrades}
           clientEmail={clientEmail}
@@ -777,6 +779,16 @@ export function ProjectAgreementsPanel({
 
       {!isLoading && filtered.length === 0 ? (
         <p className="text-sm text-muted">{emptyMessage}</p>
+      ) : null}
+
+      {mode === "team" ? (
+        <AgreementBatchDeliveryActions
+          projectId={projectId}
+          agreements={agreements}
+          clientEmail={projectClient?.email}
+          clientName={projectClient?.fullName}
+          projectName={projects.find((entry) => entry.id === projectId)?.name}
+        />
       ) : null}
 
       <div className="grid gap-3">

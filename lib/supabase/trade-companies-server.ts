@@ -1,20 +1,80 @@
-import type { TradeCompanyItem } from "@/lib/trades/company-types";
-import { mergeTradeCompanyPools, projectTradeToCompanyItem } from "@/lib/trades/company-pool";
+import type { TradeCompanyWithProjects } from "@/lib/trades/company-types";
+import { mergeTradeCompaniesWithProjects, projectTradeToCompanyItem } from "@/lib/trades/company-pool";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-export async function listTradeCompaniesFromProjects(): Promise<TradeCompanyItem[]> {
+type ProjectTradeRow = {
+  name: string;
+  company: string;
+  contact_name: string | null;
+  email: string | null;
+  phone: string | null;
+  description: string | null;
+  project_id: string;
+};
+
+type ProjectRow = {
+  id: string;
+  name: string;
+  client_id: string | null;
+};
+
+type ClientRow = {
+  id: string;
+  full_name: string | null;
+};
+
+export async function listTradeCompaniesFromProjects(): Promise<TradeCompanyWithProjects[]> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("project_trades")
-    .select("name, company, contact_name, email, phone, description")
+    .select("name, company, contact_name, email, phone, description, project_id")
     .order("name", { ascending: true });
 
   if (error) {
     throw new Error(error.message);
   }
 
-  const pool: TradeCompanyItem[] = [];
-  for (const row of data ?? []) {
+  const rows = (data ?? []) as ProjectTradeRow[];
+  if (!rows.length) {
+    return [];
+  }
+
+  const projectIds = [...new Set(rows.map((row) => row.project_id))];
+  const { data: projects, error: projectsError } = await supabase
+    .from("projects")
+    .select("id, name, client_id")
+    .in("id", projectIds);
+
+  if (projectsError) {
+    throw new Error(projectsError.message);
+  }
+
+  const projectRows = (projects ?? []) as ProjectRow[];
+  const projectMap = new Map(projectRows.map((project) => [project.id, project]));
+
+  const clientIds = [
+    ...new Set(projectRows.map((project) => project.client_id).filter((id): id is string => Boolean(id))),
+  ];
+
+  const clientMap = new Map<string, string>();
+  if (clientIds.length) {
+    const { data: clients, error: clientsError } = await supabase
+      .from("clients")
+      .select("id, full_name")
+      .in("id", clientIds);
+
+    if (clientsError) {
+      throw new Error(clientsError.message);
+    }
+
+    for (const client of (clients ?? []) as ClientRow[]) {
+      clientMap.set(client.id, client.full_name?.trim() || "Klient");
+    }
+  }
+
+  const pool: TradeCompanyWithProjects[] = [];
+
+  for (const row of rows) {
     const item = projectTradeToCompanyItem({
       name: String(row.name),
       company: String(row.company ?? ""),
@@ -23,10 +83,27 @@ export async function listTradeCompaniesFromProjects(): Promise<TradeCompanyItem
       phone: row.phone ? String(row.phone) : undefined,
       description: row.description ? String(row.description) : undefined,
     });
-    if (item) {
-      pool.push(item);
+    if (!item) {
+      continue;
     }
+
+    const project = projectMap.get(row.project_id);
+    const clientId = project?.client_id ?? "";
+    pool.push({
+      ...item,
+      projects: [
+        {
+          projectId: row.project_id,
+          projectName: project?.name?.trim() || "Projekt",
+          clientId,
+          clientName: clientId ? clientMap.get(clientId) ?? "Klient" : "Klient",
+          contactName: row.contact_name?.trim() || undefined,
+          email: row.email?.trim() || undefined,
+          phone: row.phone?.trim() || undefined,
+        },
+      ],
+    });
   }
 
-  return mergeTradeCompanyPools(pool);
+  return mergeTradeCompaniesWithProjects(pool);
 }

@@ -75,13 +75,16 @@ export async function POST(
   const data = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
   const action = parseAction(data.action);
   const message = typeof data.message === "string" ? data.message : undefined;
+  const selectedOptionalItemIds = Array.isArray(data.selectedOptionalItemIds)
+    ? data.selectedOptionalItemIds.filter((id): id is string => typeof id === "string")
+    : undefined;
 
   if (!action) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
 
   try {
-    const service = await respondToClientOffer(token, action, message);
+    const service = await respondToClientOffer(token, action, message, selectedOptionalItemIds);
     const offer = service.clientOffer;
 
     return NextResponse.json({

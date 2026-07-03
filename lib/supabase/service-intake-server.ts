@@ -6,7 +6,7 @@ import {
   getServiceInboxRecipients,
   getServiceIntakeThreadUrl,
 } from "@/lib/service-intake/email-templates";
-import { serviceIntakeDueAt, isServiceIntakeOverdue, isServiceIntakeInactive, isServiceIntakeActive } from "@/lib/service-intake/sla";
+import { serviceIntakeDueAt, isServiceIntakeOverdue, isServiceIntakeInactive, isServiceIntakeActive, isServiceIntakeAwaitingPickup } from "@/lib/service-intake/sla";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import {
   createIntakeVerifiedToken,
@@ -697,11 +697,12 @@ export async function countServiceIntakeAlerts() {
   const items = await listServiceIntakeRequests();
   const activeItems = items.filter((item) => isServiceIntakeActive(item.status));
   const overdueCount = activeItems.filter((item) => isServiceIntakeOverdue(item)).length;
-  const activeCount = activeItems.length;
+  const newCount = activeItems.filter((item) => isServiceIntakeAwaitingPickup(item)).length;
+
   return {
-    activeCount,
+    activeCount: activeItems.length,
     overdueCount,
-    newCount: activeCount - overdueCount,
+    newCount,
   };
 }
 

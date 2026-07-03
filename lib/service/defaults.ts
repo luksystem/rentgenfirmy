@@ -48,12 +48,14 @@ function makeService(
     | "clientOffer"
     | "clientOfferHistory"
     | "clientOfferAcceptedDocument"
+    | "optionalItems"
   > & {
     id: string;
     createdAt: string;
     clientOffer?: ServiceRecord["clientOffer"];
     clientOfferHistory?: ServiceRecord["clientOfferHistory"];
     clientOfferAcceptedDocument?: ServiceRecord["clientOfferAcceptedDocument"];
+    optionalItems?: ServiceRecord["optionalItems"];
   },
 ): ServiceRecord {
   const emptyOffer: ServiceRecord["clientOffer"] = {
@@ -67,6 +69,7 @@ function makeService(
 
   return {
     ...partial,
+    optionalItems: partial.optionalItems ?? [],
     clientOffer: partial.clientOffer ?? emptyOffer,
     clientOfferHistory: partial.clientOfferHistory ?? [],
     clientOfferAcceptedDocument: partial.clientOfferAcceptedDocument ?? null,
@@ -87,6 +90,7 @@ export function createSampleServices(): ServiceRecord[] {
       | "clientOffer"
       | "clientOfferHistory"
       | "clientOfferAcceptedDocument"
+      | "optionalItems"
     >
   > = [
     {

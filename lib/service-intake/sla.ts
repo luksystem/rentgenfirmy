@@ -63,6 +63,14 @@ export function isServiceIntakeNew(status: ServiceIntakeStatus) {
   return status === "new";
 }
 
+/** Zgłoszenie czeka na pierwsze przyjęcie — etap „new” bez przypisanej osoby. */
+export function isServiceIntakeAwaitingPickup(input: {
+  status: ServiceIntakeStatus;
+  assigneeId?: string | null;
+}) {
+  return isServiceIntakeNew(input.status) && !input.assigneeId?.trim();
+}
+
 export function isServiceIntakeInactive(status: ServiceIntakeStatus) {
   return status === "closed" || status === "rejected";
 }

@@ -5,6 +5,8 @@ import {
 } from "@/lib/service/client-offer";
 import { normalizeClientOfferHistory } from "@/lib/service/client-offer-history";
 import { normalizeClientOfferAcceptedDocument } from "@/lib/service/client-offer-snapshot";
+import { normalizeOptionalItems } from "@/lib/service/optional-items";
+import { normalizeServicePhotos } from "@/lib/service/service-photos";
 import type { ServiceRow, ServiceInsert } from "@/lib/supabase/database.types";
 import {
   emptyLineItems,
@@ -116,6 +118,7 @@ function normalizeLineItems(value: unknown): ServiceLineItems {
     materialsCost: asNumber(data.materialsCost),
     materialsNote: typeof data.materialsNote === "string" ? data.materialsNote : "",
     workReportNote: typeof data.workReportNote === "string" ? data.workReportNote : "",
+    photos: normalizeServicePhotos(data.photos),
     billable: normalizeBillable(data.billable),
   };
 }
@@ -175,6 +178,7 @@ export function rowToService(row: ServiceRow): ServiceRecord {
     showEstimateComparison: row.show_estimate_comparison ?? true,
     estimate: normalizeLineItems(row.estimate),
     actual: normalizeLineItems(row.actual),
+    optionalItems: normalizeOptionalItems(row.optional_items),
     clientOffer: normalizeClientOffer(row),
     clientOfferHistory: normalizeClientOfferHistory(row.client_offer_history),
     clientOfferAcceptedDocument: normalizeClientOfferAcceptedDocument(
@@ -204,6 +208,7 @@ export function serviceToInsert(service: ServiceRecord): ServiceInsert {
     show_estimate_comparison: service.showEstimateComparison,
     estimate: service.estimate as Record<string, unknown>,
     actual: service.actual as Record<string, unknown>,
+    optional_items: service.optionalItems as Record<string, unknown>[],
     client_offer_token: service.clientOffer.token,
     client_offer_expires_at: service.clientOffer.expiresAt,
     client_offer_status: service.clientOffer.status,

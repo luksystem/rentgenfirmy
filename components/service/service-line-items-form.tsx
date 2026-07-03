@@ -3,6 +3,7 @@
 import { Field } from "@/components/ui/input";
 import { RichTextarea } from "@/components/ui/rich-textarea";
 import { NumericInput } from "@/components/ui/numeric-input";
+import { ServicePhotosField } from "@/components/service/service-photos-field";
 import { resolveKilometerZone } from "@/lib/service/kilometer-zone";
 import type { BillableFlags, KilometerZoneSettings, ServiceLineItems } from "@/lib/service/types";
 
@@ -32,11 +33,13 @@ export function ServiceLineItemsForm({
   title,
   items,
   zoneSettings,
+  serviceId,
   onChange,
 }: {
   title: string;
   items: ServiceLineItems;
   zoneSettings: KilometerZoneSettings;
+  serviceId: string;
   onChange: (items: ServiceLineItems) => void;
 }) {
   const zone = resolveKilometerZone(items.kilometersOneWay, zoneSettings);
@@ -190,6 +193,12 @@ export function ServiceLineItemsForm({
       <Field label="Notatka do raportu z prac">
         <RichTextarea value={items.workReportNote} onChange={(value) => patch("workReportNote", value)} />
       </Field>
+
+      <ServicePhotosField
+        serviceId={serviceId}
+        photos={items.photos}
+        onChange={(photos) => patch("photos", photos)}
+      />
     </div>
   );
 }

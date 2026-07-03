@@ -189,6 +189,12 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
       },
       clientOfferHistory: [],
       clientOfferAcceptedDocument: null,
+      optionalItems: source.optionalItems.map((item) => ({
+        ...item,
+        id: crypto.randomUUID(),
+        clientSelected: false,
+        billable: false,
+      })),
     };
 
     return get().upsertService(clone);
@@ -249,6 +255,7 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
       showEstimateComparison: true,
       estimate: emptyLineItems(),
       actual: emptyLineItems(),
+      optionalItems: [],
       clientOffer: {
         token: null,
         expiresAt: defaultClientOfferExpiry(),

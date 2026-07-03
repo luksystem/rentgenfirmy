@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { AlertCircle, UserRound } from "lucide-react";
 import { AgreementCollaborationPanel } from "@/components/dashboard/agreement-collaboration-panel";
@@ -21,7 +21,9 @@ import { cn } from "@/lib/utils";
 
 export default function PublicAgreementPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const token = String(params.token ?? "");
+  const focus = searchParams.get("focus");
   const [bundle, setBundle] = useState<AgreementCollaborationBundle | null>(null);
   const [authorName, setAuthorName] = useState("");
   const [selectedRoleId, setSelectedRoleId] = useState("");
@@ -58,6 +60,17 @@ export default function PublicAgreementPage() {
       }
     })();
   }, [refresh, token]);
+
+  useEffect(() => {
+    if (!bundle || !focus) {
+      return;
+    }
+    const targetId = focus === "discussion" ? "agreement-discussion" : "agreement-acceptance";
+    const timer = window.setTimeout(() => {
+      document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [bundle, focus]);
 
   if (loading) {
     return (
@@ -115,6 +128,12 @@ export default function PublicAgreementPage() {
               )}
               {costLabel ? (
                 <p className="text-sm font-medium text-foreground">Koszt: {costLabel}</p>
+              ) : null}
+              {(bundle.activeVersion?.costNote ?? bundle.agreement.costNote)?.trim() ? (
+                <p className="text-sm text-muted">
+                  Notatka do kosztów:{" "}
+                  {(bundle.activeVersion?.costNote ?? bundle.agreement.costNote)?.trim()}
+                </p>
               ) : null}
               <p className="text-xs text-muted">
                 Status: {PROJECT_AGREEMENT_STATUS_LABELS[bundle.agreement.status]}
@@ -240,6 +259,8 @@ export default function PublicAgreementPage() {
               defaultExpanded
               summary={AGREEMENT_WORKFLOW_PHASE_LABELS[phase]}
             >
+            <div id="agreement-acceptance" />
+            <div id="agreement-discussion" />
             <AgreementCollaborationPanel
               agreementId={bundle.agreement.id}
               mode="external"

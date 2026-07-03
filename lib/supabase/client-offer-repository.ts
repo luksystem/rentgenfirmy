@@ -7,6 +7,10 @@ import { isOfferExpired, resolveClientOfferExpiresAt } from "@/lib/service/offer
 import { appendClientOfferHistory } from "@/lib/service/client-offer-history";
 import { getPublicOfferView } from "@/lib/service/client-offer-public-view";
 import { buildAcceptedOfferDocument } from "@/lib/service/client-offer-snapshot";
+import {
+  applyClientOptionalSelection,
+  resetOptionalItemSelections,
+} from "@/lib/service/optional-items";
 import type { ServiceRecord } from "@/lib/service/types";
 import { getSupabase } from "@/lib/supabase/client";
 import { getSupabaseServer } from "@/lib/supabase/server";
@@ -34,6 +38,7 @@ export async function regenerateClientOfferForService(
     ...service,
     status: preserveServiceStatus ? service.status : "Oczekuje na klienta",
     updatedAt: new Date().toISOString(),
+    optionalItems: resetOptionalItemSelections(service.optionalItems),
     clientOfferHistory: appendClientOfferHistory(service.clientOfferHistory, {
       type: historyType,
       offerStatus: "pending",
@@ -113,6 +118,7 @@ export async function respondToClientOffer(
   token: string,
   action: ClientOfferAction,
   message?: string,
+  selectedOptionalItemIds?: string[],
 ): Promise<ServiceRecord> {
   const supabase = getSupabaseServer();
   const service = await fetchServiceByClientOfferToken(token);
@@ -137,7 +143,7 @@ export async function respondToClientOffer(
   const offerStatus = offerStatusAfterClientOfferAction(action);
   const clientMessage = message?.trim() || null;
 
-  const updated: ServiceRecord = {
+  let serviceForSave: ServiceRecord = {
     ...service,
     status: statusAfterClientOfferAction(action),
     updatedAt: now,
@@ -154,9 +160,20 @@ export async function respondToClientOffer(
       respondedAt: now,
       lastClientMessage: clientMessage ?? service.clientOffer.lastClientMessage,
     },
+  };
+
+  if (action === "accept") {
+    serviceForSave = applyClientOptionalSelection(
+      serviceForSave,
+      selectedOptionalItemIds ?? [],
+    );
+  }
+
+  const updated: ServiceRecord = {
+    ...serviceForSave,
     clientOfferAcceptedDocument:
       action === "accept"
-        ? buildAcceptedOfferDocument(getPublicOfferView(service), now)
+        ? buildAcceptedOfferDocument(getPublicOfferView(serviceForSave), now)
         : service.clientOfferAcceptedDocument,
   };
 

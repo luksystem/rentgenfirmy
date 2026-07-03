@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, type ReactNode } from "react";
+import { ServiceReportPhotosGrid } from "@/components/service/service-report-photos";
 import { Button } from "@/components/ui/button";
 import { RichHtml } from "@/components/ui/rich-html";
 import { printServiceReport } from "@/lib/service/print-service-report";
@@ -8,16 +9,23 @@ import { resolveProjectLabel } from "@/lib/service/resolve-project-label";
 import {
   buildServiceReportCosts,
   getAppliedDiscountDescription,
+  getServiceCombinedBilling,
   getServiceReportBillingBreakdown,
   getServiceReportBillingDiscounts,
   getServiceReportDocumentMeta,
   getServiceReportMaterialsNote,
+  getServiceReportPhotos,
   getServiceReportQuantitySections,
   getServiceReportWorkNote,
   getServiceReportWorkTimeSections,
   hasAppliedDiscount,
   isServiceSettled,
 } from "@/lib/service/report-document";
+import {
+  hasOptionalItems,
+  optionalItemAmounts,
+  type OptionalItemsBreakdown,
+} from "@/lib/service/optional-items";
 import {
   buildAccommodationsCompareRows,
   buildMaterialsCompareRows,
@@ -250,6 +258,54 @@ function CompactCostSummary({
   );
 }
 
+function OptionalItemsCostBlock({
+  optional,
+  combinedGrossTotal,
+  grossTotalLabel,
+}: {
+  optional: OptionalItemsBreakdown;
+  combinedGrossTotal: number;
+  grossTotalLabel: string;
+}) {
+  if (optional.lines.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-6 space-y-4">
+      <h3 className="text-sm font-bold text-zinc-900">Pozycje opcjonalne</h3>
+      <table className="w-full border-collapse text-sm">
+        <thead>
+          <tr className="border-b-2 border-zinc-900/80 text-left text-[10px] uppercase tracking-[0.08em] text-zinc-400">
+            <th className="py-2 pr-4 font-bold">Pozycja</th>
+            <th className="py-2 text-right font-bold">Netto</th>
+            <th className="py-2 text-right font-bold">VAT</th>
+            <th className="py-2 text-right font-bold">Brutto</th>
+          </tr>
+        </thead>
+        <tbody>
+          {optional.lines.map(({ item, vatAmount, grossAmount }) => (
+            <tr key={item.id} className="border-b border-zinc-100">
+              <td className="py-2 pr-4 text-zinc-800">{item.title}</td>
+              <td className="py-2 text-right tabular-nums">{formatMoney(item.netAmount)}</td>
+              <td className="py-2 text-right tabular-nums">
+                {item.vatRate}% ({formatMoney(vatAmount)})
+              </td>
+              <td className="py-2 text-right tabular-nums font-medium">{formatMoney(grossAmount)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="ml-auto max-w-md border-t-2 border-zinc-900/80 pt-3">
+        <div className="flex items-center justify-between gap-4 text-base font-bold">
+          <span className="text-zinc-900">{grossTotalLabel} (z opcjami)</span>
+          <span className="tabular-nums text-zinc-900">{formatMoney(combinedGrossTotal)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ReportCompareTable({
   title,
   rows,
@@ -395,10 +451,12 @@ export function ServiceReport({
   service,
   projectName,
   variant = "internal",
+  optionalItemSelection,
 }: {
   service: ServiceRecord;
   projectName?: string;
   variant?: "internal" | "client";
+  optionalItemSelection?: ReadonlySet<string>;
 }) {
   const projects = useAppStore((state) => state.projects);
   const resolvedProjectName = resolveProjectLabel(service.projectId, projects, projectName);
@@ -406,9 +464,11 @@ export function ServiceReport({
   const meta = getServiceReportDocumentMeta(service);
   const costs = buildServiceReportCosts(service);
   const billing = getServiceReportBillingBreakdown(service, costs);
+  const combined = getServiceCombinedBilling(service, optionalItemSelection ?? null);
   const billingDiscounts = getServiceReportBillingDiscounts(service);
   const workNote = getServiceReportWorkNote(service, settled);
   const materialsNote = getServiceReportMaterialsNote(service, settled);
+  const reportPhotos = getServiceReportPhotos(service, settled);
   const workTimeSections = getServiceReportWorkTimeSections(service);
   const quantitySections = getServiceReportQuantitySections(service);
   const workTimeRows = [
@@ -435,7 +495,7 @@ export function ServiceReport({
     : "Przewidywany czas pracy";
 
   const handlePrint = useCallback(() => {
-    printServiceReport(service, resolvedProjectName);
+    void printServiceReport(service, resolvedProjectName);
   }, [resolvedProjectName, service]);
 
   const detailsTables = (
@@ -467,8 +527,8 @@ export function ServiceReport({
   );
 
   const reportDocument = (
-    <article className="service-report-document mx-auto max-w-[210mm] overflow-hidden rounded-xl bg-white text-zinc-900 shadow-lg ring-1 ring-zinc-200">
-      <header className="border-b-2 border-zinc-900 px-6 py-6 sm:px-8">
+    <article className="service-report-document mx-auto w-full max-w-full overflow-hidden rounded-xl bg-white text-zinc-900 shadow-lg ring-1 ring-zinc-200 sm:max-w-[210mm]">
+      <header className="border-b-2 border-zinc-900 px-4 py-4 sm:px-8 sm:py-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
@@ -496,8 +556,8 @@ export function ServiceReport({
 
       {variant === "client" ? (
         <ClientPriceSummary
-          netTotal={billing.netTotal}
-          grossTotal={billing.grossTotal}
+          netTotal={combined.netTotal}
+          grossTotal={combined.grossTotal}
           grossTotalLabel={meta.grossTotalLabel}
         />
       ) : null}
@@ -540,6 +600,11 @@ export function ServiceReport({
               className="text-zinc-800"
             />
           </ReportSubsection>
+          {reportPhotos.length ? (
+            <ReportSubsection title="Zdjęcia">
+              <ServiceReportPhotosGrid photos={reportPhotos} />
+            </ReportSubsection>
+          ) : null}
         </div>
       </ReportMajorSection>
 
@@ -589,6 +654,33 @@ export function ServiceReport({
             grossTotalLabel={meta.grossTotalLabel}
           />
         )}
+        <OptionalItemsCostBlock
+          optional={combined.optional}
+          combinedGrossTotal={combined.grossTotal}
+          grossTotalLabel={meta.grossTotalLabel}
+        />
+        {variant === "internal" && hasOptionalItems(service.optionalItems) ? (
+          <div className="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
+            <p className="font-semibold text-zinc-900">Pozycje opcjonalne w ofercie</p>
+            <ul className="mt-2 grid gap-2">
+              {service.optionalItems
+                .filter((item) => item.title.trim())
+                .map((item) => {
+                  const { grossAmount } = optionalItemAmounts(item);
+                  return (
+                    <li key={item.id} className="flex flex-wrap justify-between gap-2">
+                      <span>
+                        {item.title}
+                        {item.clientSelected ? " · wybrane przez klienta" : ""}
+                        {item.billable ? " · w rozliczeniu" : ""}
+                      </span>
+                      <span className="tabular-nums font-medium">{formatMoney(grossAmount)}</span>
+                    </li>
+                  );
+                })}
+            </ul>
+          </div>
+        ) : null}
         {meta.showDetailedCosts && billing.kilometerZone > 0 ? (
           <p className="mt-4 text-xs text-zinc-500">
             Strefa kilometrowa: {billing.kilometerZone} · Sugerowane godziny w aucie:{" "}
@@ -617,21 +709,23 @@ export function ServiceReport({
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-surface-muted/30 p-4 sm:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
+    <div className="min-w-0 rounded-2xl border border-border bg-surface-muted/30 p-3 sm:p-6">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h2 className="text-lg font-semibold text-foreground">{meta.title}</h2>
           <p className="text-sm text-muted">{meta.previewDescription}</p>
         </div>
-        <Button type="button" onClick={handlePrint}>
+        <Button type="button" className="w-full shrink-0 sm:w-auto" onClick={handlePrint}>
           Drukuj / eksportuj PDF
         </Button>
-        <p className="text-xs text-muted">
+        <p className="hidden text-xs text-muted sm:block sm:basis-full">
           Otworzy się podgląd raportu w nowej karcie. W oknie druku możesz wyłączyć „Nagłówki i
           stopki” przeglądarki, jeśli widzisz pustą stronę z samą datą i numerem strony.
         </p>
       </div>
-      {reportDocument}
+      <div className="-mx-1 overflow-x-auto px-1 sm:mx-0 sm:px-0">
+        {reportDocument}
+      </div>
     </div>
   );
 }

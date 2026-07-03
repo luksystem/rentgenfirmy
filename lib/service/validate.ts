@@ -25,7 +25,23 @@ export function validateService(service: ServiceRecord): string[] {
   }
 
   if (!hasBillableLineItem(service.estimate) && !hasBillableLineItem(service.actual)) {
-    errors.push("W przewidywanych kosztach lub kosztach rzeczywistych musi być przynajmniej jedna pozycja do rozliczenia.");
+    const hasOptional = service.optionalItems.some(
+      (item) => item.title.trim() && item.netAmount > 0,
+    );
+    if (!hasOptional) {
+      errors.push(
+        "W przewidywanych kosztach lub kosztach rzeczywistych musi być przynajmniej jedna pozycja do rozliczenia.",
+      );
+    }
+  }
+
+  for (const [index, item] of service.optionalItems.entries()) {
+    if (item.netAmount > 0 && !item.title.trim()) {
+      errors.push(`Pozycja opcjonalna ${index + 1}: tytuł jest wymagany, gdy podano kwotę netto.`);
+    }
+    if (item.title.trim() && item.netAmount <= 0) {
+      errors.push(`Pozycja opcjonalna ${index + 1}: podaj kwotę netto większą od zera.`);
+    }
   }
 
   const numbers = [

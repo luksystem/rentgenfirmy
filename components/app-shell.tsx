@@ -268,8 +268,8 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const kanbanOverdueTaskCount = useProcessStore((state) => state.kanbanOverdueTaskCount);
   const refreshKanbanNewTaskCount = useProcessStore((state) => state.refreshKanbanNewTaskCount);
   const refreshKanbanOverdueTaskCount = useProcessStore((state) => state.refreshKanbanOverdueTaskCount);
+  const [serviceIntakeNewCount, setServiceIntakeNewCount] = useState(0);
   const [serviceIntakeOverdueCount, setServiceIntakeOverdueCount] = useState(0);
-  const [serviceIntakeActiveCount, setServiceIntakeActiveCount] = useState(0);
 
   const refreshServiceIntakeCounts = useCallback(() => {
     void fetch("/api/service-intake/counts", { credentials: "include" })
@@ -282,14 +282,12 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
           overdueCount?: number;
           newCount?: number;
         };
+        setServiceIntakeNewCount(payload.newCount ?? 0);
         setServiceIntakeOverdueCount(payload.overdueCount ?? 0);
-        setServiceIntakeActiveCount(
-          payload.activeCount ?? (payload.newCount ?? 0) + (payload.overdueCount ?? 0),
-        );
       })
       .catch(() => {
+        setServiceIntakeNewCount(0);
         setServiceIntakeOverdueCount(0);
-        setServiceIntakeActiveCount(0);
       });
   }, []);
 
@@ -328,9 +326,9 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const serviceIntakeBadges = useMemo(
     () => ({
       overdueBadgeCount: serviceIntakeOverdueCount,
-      newBadgeCount: Math.max(0, serviceIntakeActiveCount - serviceIntakeOverdueCount),
+      newBadgeCount: serviceIntakeNewCount,
     }),
-    [serviceIntakeActiveCount, serviceIntakeOverdueCount],
+    [serviceIntakeNewCount, serviceIntakeOverdueCount],
   );
 
   function navBadgesForItem(href: string) {

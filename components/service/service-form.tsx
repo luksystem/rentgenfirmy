@@ -17,7 +17,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
+import { ServiceOptionalItemsForm } from "@/components/service/service-optional-items-form";
 import { useServiceDetailAutoRefresh } from "@/lib/hooks/use-service-detail-auto-refresh";
+import { buildCombinedBilling } from "@/lib/service/optional-items";
 import { useUnsavedChangesGuard } from "@/lib/hooks/use-unsaved-changes-guard";
 import {
   copyEstimateToActual,
@@ -106,11 +108,13 @@ function ViewSwitchBar({
   variant,
   children,
   columnsClassName,
+  mobileScroll = false,
 }: {
   title: string;
   variant: "primary" | "secondary";
   children: ReactNode;
   columnsClassName: string;
+  mobileScroll?: boolean;
 }) {
   return (
     <div
@@ -123,13 +127,22 @@ function ViewSwitchBar({
     >
       <p
         className={cn(
-          "mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.14em]",
+          "mb-2 hidden px-1 text-[10px] font-bold uppercase tracking-[0.14em] sm:block",
           variant === "primary" ? "text-accent" : "text-muted",
         )}
       >
         {title}
       </p>
-      <div className={cn("grid gap-1.5", columnsClassName)}>{children}</div>
+      <div
+        className={cn(
+          mobileScroll
+            ? "flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:overflow-visible sm:pb-0 [&>button]:min-w-[5.75rem] sm:[&>button]:min-w-0"
+            : "grid gap-1.5",
+          columnsClassName,
+        )}
+      >
+        {children}
+      </div>
     </div>
   );
 }
@@ -150,7 +163,7 @@ function ViewSwitchButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex min-h-11 items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-semibold leading-tight transition sm:min-h-10 sm:text-sm",
+        "flex min-h-11 shrink-0 snap-start items-center justify-center rounded-lg px-3 py-2 text-center text-xs font-semibold leading-tight transition sm:min-h-10 sm:shrink sm:px-2 sm:text-sm",
         active
           ? "bg-background text-foreground shadow-sm ring-1 ring-border/80"
           : "text-muted hover:bg-background/60 hover:text-foreground",
@@ -200,6 +213,14 @@ export function ServiceForm({
   useServiceDetailAutoRefresh(service, setService, handleRemoteSync);
 
   const costs = useMemo(() => buildServiceCosts(service), [service]);
+  const quoteBilling = useMemo(
+    () => buildCombinedBilling(service, costs.estimate),
+    [costs.estimate, service],
+  );
+  const settlementBilling = useMemo(
+    () => buildCombinedBilling(service, costs.actual),
+    [costs.actual, service],
+  );
   const clientBadge = useMemo(() => clientTabBadge(service), [service]);
   const settled = isServiceSettled(service);
   const isDirty = useMemo(
@@ -381,9 +402,9 @@ export function ServiceForm({
         </div>
       ) : null}
 
-    <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
-      <div className="grid gap-5">
-        <div className="sticky top-0 z-20 -mx-1 space-y-3 rounded-2xl border border-border/80 bg-background/95 p-3 backdrop-blur sm:p-4">
+    <div className="grid min-w-0 gap-6 xl:grid-cols-[1fr_300px]">
+      <div className="grid min-w-0 gap-5 pb-2">
+        <div className="sticky top-16 z-10 -mx-1 space-y-2.5 rounded-2xl border border-border/80 bg-background/95 p-2.5 backdrop-blur sm:space-y-3 sm:p-4 xl:top-0 xl:z-20">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-foreground">
@@ -394,16 +415,16 @@ export function ServiceForm({
                   <>
                     brutto rozliczenia{" "}
                     <span className="font-semibold tabular-nums text-foreground">
-                      {formatMoney(costs.actual.grossTotal)}
+                      {formatMoney(settlementBilling.grossTotal)}
                     </span>
                     <span className="mx-1.5 text-border">·</span>
-                    wycena {formatMoney(costs.estimate.grossTotal)}
+                    wycena {formatMoney(quoteBilling.grossTotal)}
                   </>
                 ) : (
                   <>
                     brutto wyceny{" "}
                     <span className="font-semibold tabular-nums text-foreground">
-                      {formatMoney(costs.estimate.grossTotal)}
+                      {formatMoney(quoteBilling.grossTotal)}
                     </span>
                   </>
                 )}
@@ -411,7 +432,10 @@ export function ServiceForm({
             </div>
             <div className="flex flex-wrap gap-2 xl:hidden">
               <span className="rounded-full border border-border px-2.5 py-1 text-xs tabular-nums text-muted">
-                netto {formatMoney(settled ? costs.actual.netTotal : costs.estimate.netTotal)}
+                netto{" "}
+                {formatMoney(
+                  settled ? settlementBilling.netTotal : quoteBilling.netTotal,
+                )}
               </span>
             </div>
           </div>
@@ -419,7 +443,8 @@ export function ServiceForm({
           <ViewSwitchBar
             title="Widok oferty"
             variant="primary"
-            columnsClassName="grid-cols-2 sm:grid-cols-4"
+            mobileScroll
+            columnsClassName="sm:grid-cols-4"
           >
             {MAIN_TABS.map((tab) => (
               <ViewSwitchButton
@@ -438,7 +463,7 @@ export function ServiceForm({
             ))}
           </ViewSwitchBar>
 
-          <p className="rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2 text-xs leading-relaxed text-muted">
+          <p className="hidden rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2 text-xs leading-relaxed text-muted sm:block">
             {activeMainTab.hint}
           </p>
 
@@ -446,8 +471,9 @@ export function ServiceForm({
             <ViewSwitchBar
               title={mainTab === "quote" ? "Kroki wyceny" : "Kroki rozliczenia"}
               variant="secondary"
+              mobileScroll
               columnsClassName={
-                mainTab === "quote" ? "grid-cols-3" : "grid-cols-2"
+                mainTab === "quote" ? "sm:grid-cols-3" : "sm:grid-cols-2"
               }
             >
               {subSteps.map((item, index) => {
@@ -622,6 +648,7 @@ export function ServiceForm({
                 title="Przewidywane koszty przed wyjazdem"
                 items={service.estimate}
                 zoneSettings={service.zoneSettings}
+                serviceId={service.id}
                 onChange={(estimate) => setService({ ...service, estimate })}
               />
               <div className="mt-6 grid gap-4 border-t border-border/60 pt-6">
@@ -632,6 +659,13 @@ export function ServiceForm({
                 />
               </div>
               <div className="mt-6 border-t border-border/60 pt-6">
+                <ServiceOptionalItemsForm
+                  items={service.optionalItems}
+                  mode="edit"
+                  onChange={(optionalItems) => setService({ ...service, optionalItems })}
+                />
+              </div>
+              <div className="mt-6 border-t border-border/60 pt-6">
                 <ServiceCostBreakdownPanel
                   title="Podsumowanie przewidywanych kosztów"
                   breakdown={costs.estimate}
@@ -639,6 +673,15 @@ export function ServiceForm({
                   kilometerZone={costs.estimate.kilometerZone}
                   suggestedCarHours={costs.estimate.suggestedCarHoursFromZone}
                 />
+                {quoteBilling.optional.grossTotal > 0 ? (
+                  <p className="mt-3 text-sm text-muted">
+                    Po wyborze klienta pozycje opcjonalne mogą doliczyć do{" "}
+                    <span className="font-semibold text-foreground">
+                      +{formatMoney(quoteBilling.optional.grossTotal)} brutto
+                    </span>
+                    .
+                  </p>
+                ) : null}
               </div>
             </CardContent>
           </Card>
@@ -651,6 +694,7 @@ export function ServiceForm({
                 title="Koszty rzeczywiste po serwisie"
                 items={service.actual}
                 zoneSettings={service.zoneSettings}
+                serviceId={service.id}
                 onChange={(actual) => setService({ ...service, actual })}
               />
               <div className="mt-6 grid gap-4 border-t border-border/60 pt-6">
@@ -661,6 +705,13 @@ export function ServiceForm({
                 />
               </div>
               <div className="mt-6 border-t border-border/60 pt-6">
+                <ServiceOptionalItemsForm
+                  items={service.optionalItems}
+                  mode="settlement"
+                  onChange={(optionalItems) => setService({ ...service, optionalItems })}
+                />
+              </div>
+              <div className="mt-6 border-t border-border/60 pt-6">
                 <ServiceCostBreakdownPanel
                   title="Podsumowanie rzeczywistych"
                   breakdown={costs.actual}
@@ -668,6 +719,15 @@ export function ServiceForm({
                   kilometerZone={costs.actual.kilometerZone}
                   suggestedCarHours={costs.actual.suggestedCarHoursFromZone}
                 />
+                {settlementBilling.optional.grossTotal > 0 ? (
+                  <p className="mt-3 text-sm text-muted">
+                    W rozliczeniu uwzględniono pozycje opcjonalne:{" "}
+                    <span className="font-semibold text-foreground">
+                      +{formatMoney(settlementBilling.optional.grossTotal)} brutto
+                    </span>
+                    .
+                  </p>
+                ) : null}
               </div>
             </CardContent>
           </Card>
@@ -756,29 +816,29 @@ export function ServiceForm({
           </div>
         ) : null}
 
-        <div className="sticky bottom-0 z-20 -mx-1 rounded-2xl border border-border/80 bg-background/95 p-3 backdrop-blur sm:p-4">
-          <div className="flex flex-wrap gap-2">
+        <div className="sticky bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] z-20 -mx-1 rounded-2xl border border-border/80 bg-background/95 p-2.5 backdrop-blur sm:p-4 xl:bottom-0">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
             {(mainTab === "quote" || mainTab === "settlement") && step > 0 ? (
-              <Button type="button" variant="secondary" onClick={() => goToStep(step - 1)}>
+              <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => goToStep(step - 1)}>
                 Wstecz
               </Button>
             ) : null}
             {(mainTab === "quote" || mainTab === "settlement") &&
             step < QUOTE_STEPS.length + SETTLEMENT_STEPS.length - 1 ? (
-              <Button type="button" onClick={() => goToStep(step + 1)}>
+              <Button type="button" className="w-full sm:w-auto" onClick={() => goToStep(step + 1)}>
                 Dalej
               </Button>
             ) : null}
-            <Button type="button" variant="secondary" disabled={isSaving} onClick={() => save()}>
+            <Button type="button" variant="secondary" disabled={isSaving} className="w-full sm:w-auto" onClick={() => save()}>
               {isSaving ? "Zapisywanie…" : settled ? "Zapisz rozliczenie" : "Zapisz"}
             </Button>
             {!settled && (mainTab === "settlement" || mainTab === "preview") ? (
-              <Button type="button" disabled={isSaving} onClick={() => void settle()}>
+              <Button type="button" disabled={isSaving} className="col-span-2 w-full sm:col-span-1 sm:w-auto" onClick={() => void settle()}>
                 {isSaving ? "Zapisywanie…" : "Rozlicz i zapisz"}
               </Button>
             ) : null}
             {mainTab === "quote" && step === QUOTE_STEPS.length - 1 ? (
-              <Button type="button" variant="outline" onClick={() => switchMainTab("client")}>
+              <Button type="button" variant="outline" className="col-span-2 w-full sm:col-span-1 sm:w-auto" onClick={() => switchMainTab("client")}>
                 Wyślij klientowi →
               </Button>
             ) : null}

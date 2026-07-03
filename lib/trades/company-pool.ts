@@ -1,6 +1,10 @@
 import type { ProjectTradeInput } from "@/lib/dashboard/trade-types";
 import type { TradeCatalogItem } from "@/lib/field-options";
-import type { TradeCompanyItem } from "@/lib/trades/company-types";
+import type {
+  TradeCompanyItem,
+  TradeCompanyProjectLink,
+  TradeCompanyWithProjects,
+} from "@/lib/trades/company-types";
 
 export function tradeCompanyKey(item: Pick<TradeCompanyItem, "tradeName" | "company">) {
   const trade = item.tradeName.trim().toLowerCase();
@@ -156,7 +160,7 @@ export function mergeCompanyIntoPool(
   return mergeTradeCompanyPools(items, [nextItem]);
 }
 
-export function companiesForTradeName(tradeName: string, companies: TradeCompanyItem[]) {
+export function companiesForTradeName<T extends TradeCompanyItem>(tradeName: string, companies: T[]) {
   const normalized = tradeName.trim().toLowerCase();
   return companies.filter((item) => item.tradeName.trim().toLowerCase() === normalized);
 }
@@ -167,10 +171,10 @@ export function uniqueTradeCategoryNames(categories: TradeCatalogItem[]) {
   );
 }
 
-export function groupTradeDirectory(
+export function groupTradeDirectory<T extends TradeCompanyItem>(
   categories: TradeCatalogItem[],
-  companies: TradeCompanyItem[],
-) {
+  companies: T[],
+): Array<{ tradeName: string; category: TradeCatalogItem; companies: T[] }> {
   const categoryNames = new Set(categories.map((item) => item.name.trim().toLowerCase()));
   const orphanCompanies = companies.filter(
     (item) => !categoryNames.has(item.tradeName.trim().toLowerCase()),
@@ -203,4 +207,68 @@ export function groupTradeDirectory(
   }
 
   return groups.sort((left, right) => left.tradeName.localeCompare(right.tradeName, "pl"));
+}
+
+function mergeProjectLinks(
+  left: TradeCompanyProjectLink[],
+  right: TradeCompanyProjectLink[],
+): TradeCompanyProjectLink[] {
+  const map = new Map<string, TradeCompanyProjectLink>();
+  for (const link of [...left, ...right]) {
+    const existing = map.get(link.projectId);
+    if (!existing) {
+      map.set(link.projectId, { ...link });
+      continue;
+    }
+    map.set(link.projectId, {
+      ...existing,
+      contactName: existing.contactName?.trim() || link.contactName,
+      email: existing.email?.trim() || link.email,
+      phone: existing.phone?.trim() || link.phone,
+    });
+  }
+  return [...map.values()].sort((a, b) => a.projectName.localeCompare(b.projectName, "pl"));
+}
+
+/** Scala firmy z wielu źródeł wraz z listą projektów, w których występują. */
+export function mergeTradeCompaniesWithProjects(
+  ...pools: TradeCompanyWithProjects[][]
+): TradeCompanyWithProjects[] {
+  const map = new Map<string, TradeCompanyWithProjects>();
+
+  for (const pool of pools) {
+    for (const item of pool) {
+      const key = tradeCompanyKey(item);
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, { ...item, projects: [...item.projects] });
+        continue;
+      }
+      map.set(key, {
+        ...existing,
+        contactName: existing.contactName?.trim() || item.contactName,
+        email: existing.email?.trim() || item.email,
+        phone: existing.phone?.trim() || item.phone,
+        addressStreet: existing.addressStreet?.trim() || item.addressStreet,
+        addressCity: existing.addressCity?.trim() || item.addressCity,
+        addressPostalCode: existing.addressPostalCode?.trim() || item.addressPostalCode,
+        lat: existing.lat ?? item.lat ?? null,
+        lng: existing.lng ?? item.lng ?? null,
+        description: existing.description?.trim() || item.description,
+        projects: mergeProjectLinks(existing.projects, item.projects),
+      });
+    }
+  }
+
+  return [...map.values()].sort((left, right) => {
+    const tradeDiff = left.tradeName.localeCompare(right.tradeName, "pl");
+    if (tradeDiff !== 0) {
+      return tradeDiff;
+    }
+    return left.company.localeCompare(right.company, "pl");
+  });
+}
+
+export function tradeCompanyItemWithProjects(item: TradeCompanyItem): TradeCompanyWithProjects {
+  return { ...item, projects: [] };
 }

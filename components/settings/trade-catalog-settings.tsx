@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import type { FieldOptions, TradeCatalogItem } from "@/lib/field-options";
 import { groupTradeDirectory } from "@/lib/trades/company-pool";
-import type { TradeCompanyItem } from "@/lib/trades/company-types";
+import type { TradeCompanyWithProjects } from "@/lib/trades/company-types";
 import { useAppStore } from "@/store/app-store";
 
 function emptyCategory(): TradeCatalogItem {
@@ -23,7 +23,7 @@ export function TradeCatalogSettings() {
   const updateFieldOptions = useAppStore((state) => state.updateFieldOptions);
   const isSaving = useAppStore((state) => state.isSaving);
   const [categories, setCategories] = useState<TradeCatalogItem[]>(fieldOptions.tradeCatalogItems);
-  const [companyPool, setCompanyPool] = useState<TradeCompanyItem[]>(fieldOptions.tradeCompanies ?? []);
+  const [companyPool, setCompanyPool] = useState<TradeCompanyWithProjects[]>([]);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +35,7 @@ export function TradeCatalogSettings() {
         setCompanyPool(payload.companies ?? []);
       }
     } catch {
-      setCompanyPool(fieldOptions.tradeCompanies ?? []);
+      setCompanyPool([]);
     }
   }, [fieldOptions.tradeCompanies]);
 

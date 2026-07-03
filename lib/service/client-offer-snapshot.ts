@@ -1,6 +1,6 @@
-import { buildServiceReportPrintDocument } from "@/lib/service/print-service-report";
 import { getPublicOfferView } from "@/lib/service/client-offer-public-view";
-import { calculateServiceCost } from "@/lib/service/calculate-service-cost";
+import { buildServiceReportPrintDocument } from "@/lib/service/print-service-report";
+import { getServiceCombinedBilling } from "@/lib/service/report-document";
 import type { ServiceRecord } from "@/lib/service/types";
 import { formatDate, formatMoney } from "@/lib/utils";
 
@@ -35,18 +35,13 @@ export function buildAcceptedOfferDocument(
   projectName?: string,
 ): ClientOfferAcceptedDocument {
   const view = getPublicOfferView(service);
-  const costs = calculateServiceCost(
-    view.estimate,
-    view.rates,
-    view.zoneSettings,
-    view.estimateDiscounts,
-  );
+  const combined = getServiceCombinedBilling(view);
   const baseHtml = buildServiceReportPrintDocument(view, projectName);
   const banner = `<div class="accepted-frozen-banner">
     <strong>Zaakceptowana wycena — dokument zamrożony</strong>
     Klient zaakceptował tę wersję oferty ${formatDate(acceptedAt)}.
     Poniższy raport odzwierciedla treść widoczną dla klienta w momencie akceptacji
-    (kwota brutto: ${formatMoney(costs.grossTotal)}).
+    (kwota brutto: ${formatMoney(combined.grossTotal)}).
   </div>`;
 
   const reportHtml = baseHtml
@@ -57,7 +52,7 @@ export function buildAcceptedOfferDocument(
     acceptedAt,
     reportHtml,
     title: service.title,
-    grossTotal: costs.grossTotal,
+    grossTotal: combined.grossTotal,
   };
 }
 

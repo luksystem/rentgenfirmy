@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { Building2, HardHat, List, MapPin, Settings } from "lucide-react";
+import { Building2, ChevronRight, HardHat, List, MapPin, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { TradeCompanyDetailDialog } from "@/components/trades/trade-company-detail-dialog";
 import { companyItemToCatalogShape, groupTradeDirectory, tradeCompanyKey } from "@/lib/trades/company-pool";
-import type { TradeCompanyItem } from "@/lib/trades/company-types";
+import type { TradeCompanyWithProjects } from "@/lib/trades/company-types";
 import { useAppStore } from "@/store/app-store";
 import { cn } from "@/lib/utils";
 
@@ -23,8 +24,10 @@ type ViewMode = "list" | "map";
 
 function CatalogList({
   groups,
+  onSelectCompany,
 }: {
-  groups: ReturnType<typeof groupTradeDirectory>;
+  groups: ReturnType<typeof groupTradeDirectory<TradeCompanyWithProjects>>;
+  onSelectCompany: (companyKey: string) => void;
 }) {
   if (!groups.length) {
     return (
@@ -66,27 +69,42 @@ function CatalogList({
 
             {group.companies.length ? (
               <div className="grid gap-2 sm:grid-cols-2">
-                {group.companies.map((company) => (
-                  <div
+                {group.companies.map((company) => {
+                  const projectCount = company.projects.length;
+
+                  return (
+                  <button
                     key={tradeCompanyKey(company)}
-                    className="rounded-xl border border-border/70 bg-surface-muted/15 p-3"
+                    type="button"
+                    onClick={() => onSelectCompany(tradeCompanyKey(company))}
+                    className="rounded-xl border border-border/70 bg-surface-muted/15 p-3 text-left transition hover:border-accent/40 hover:bg-accent/5"
                   >
                     <div className="flex items-start gap-2">
                       <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
-                      <div className="min-w-0">
-                        <p className="font-medium text-foreground">{company.company}</p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-medium text-foreground">{company.company}</p>
+                          <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
+                        </div>
                         {company.description ? (
-                          <p className="mt-1 text-sm text-muted">{company.description}</p>
+                          <p className="mt-1 line-clamp-2 text-sm text-muted">{company.description}</p>
                         ) : null}
-                        {[company.contactName, company.email, company.phone].filter(Boolean).length ? (
+                        {[company.contactName, company.phone].filter(Boolean).length ? (
                           <p className="mt-1 text-xs text-muted">
-                            {[company.contactName, company.email, company.phone].filter(Boolean).join(" · ")}
+                            {[company.contactName, company.phone].filter(Boolean).join(" · ")}
+                          </p>
+                        ) : null}
+                        {projectCount ? (
+                          <p className="mt-1.5 text-xs text-accent">
+                            {projectCount}{" "}
+                            {projectCount === 1 ? "projekt" : projectCount < 5 ? "projekty" : "projektów"}
                           </p>
                         ) : null}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  </button>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-sm text-muted">
@@ -102,7 +120,8 @@ function CatalogList({
 
 export function TradeCatalogView() {
   const fieldOptions = useAppStore((state) => state.fieldOptions);
-  const [companyPool, setCompanyPool] = useState<TradeCompanyItem[]>(fieldOptions.tradeCompanies ?? []);
+  const [companyPool, setCompanyPool] = useState<TradeCompanyWithProjects[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<TradeCompanyWithProjects | null>(null);
   const [view, setView] = useState<ViewMode>("list");
   const [mapMounted, setMapMounted] = useState(false);
 
@@ -114,7 +133,7 @@ export function TradeCatalogView() {
           setCompanyPool(payload.companies ?? []);
         }
       })
-      .catch(() => setCompanyPool(fieldOptions.tradeCompanies ?? []));
+      .catch(() => setCompanyPool([]));
   }, [fieldOptions.tradeCompanies]);
 
   const groups = useMemo(
@@ -167,8 +186,23 @@ export function TradeCatalogView() {
       </p>
 
       <div className={cn(view === "list" ? undefined : "hidden")}>
-        <CatalogList groups={groups} />
+        <CatalogList
+          groups={groups}
+          onSelectCompany={(key) => {
+            setSelectedCompany(companyPool.find((entry) => tradeCompanyKey(entry) === key) ?? null);
+          }}
+        />
       </div>
+
+      <TradeCompanyDetailDialog
+        company={selectedCompany}
+        open={selectedCompany !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedCompany(null);
+          }
+        }}
+      />
 
       {mapMounted ? (
         <div className={cn(view === "map" ? undefined : "hidden")}>

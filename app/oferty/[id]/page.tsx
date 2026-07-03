@@ -31,9 +31,15 @@ export default function EditOfferPage() {
         eyebrow={COMMERCIAL_MODULES.serviceSettlement.eyebrow}
         title="Edytuj ofertę"
         description={service.title}
+        headerClassName="mb-4 sm:mb-6"
+        titleClassName="text-xl sm:text-3xl"
+        descriptionClassName="truncate sm:whitespace-normal"
         action={
-          <Button variant="secondary" asChild>
-            <Link href="/oferty">Lista ofert</Link>
+          <Button variant="secondary" size="sm" className="w-full sm:w-auto" asChild>
+            <Link href="/oferty">
+              <span className="sm:hidden">Lista</span>
+              <span className="hidden sm:inline">Lista ofert</span>
+            </Link>
           </Button>
         }
       />
