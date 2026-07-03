@@ -58,6 +58,7 @@ import type { ProjectTrade } from "@/lib/dashboard/trade-types";
 import type { ProjectSatisfactionBundle } from "@/lib/dashboard/satisfaction-types";
 import type { SystemCredentialMeta } from "@/lib/dashboard/system-credentials-types";
 import type { DashboardSpace } from "@/lib/dashboard/types";
+import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
 import { getProcessProgress } from "@/lib/process/types";
 import { extractKanbanTokenFromPublicPath } from "@/lib/process/kanban-public-path";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
@@ -632,14 +633,17 @@ export function ClientDashboardView({
   }
 
   function renderProcessSection() {
+    const anchoredTemplate =
+      process && template ? resolveAnchoredProcessTemplate(process, template) : template;
+
     return (
       <div className="grid min-w-0 gap-4">
-        {template && process ? (
+        {anchoredTemplate && process ? (
           <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
             <h2 className="mb-4 text-base font-semibold text-foreground">Proces wdrożenia</h2>
             {readOnly ? (
               <ProcessPipeline
-                template={template}
+                template={anchoredTemplate}
                 process={process}
                 interactive={false}
                 stacked
@@ -649,7 +653,8 @@ export function ClientDashboardView({
             ) : (
               <ProjectProcessPipelineSection
                 projectId={selectedProject.id}
-                template={template}
+                projectType={selectedProject.type}
+                liveTemplate={template!}
                 process={process}
                 actorName={teamAuthorName}
               />

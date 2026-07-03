@@ -161,23 +161,32 @@ export function ClientOfferPage({ token }: { token: string }) {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-zinc-950 px-4 py-4 sm:px-6 sm:py-8">
-      <div className="mx-auto grid w-full min-w-0 max-w-4xl gap-4 sm:gap-5">
-        {offer.canRespond ? (
-          <div className="sticky top-0 z-30 border-b border-zinc-800 bg-zinc-950/95 py-2 backdrop-blur">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-              <div className="min-w-0 shrink-0 pr-1">
-                <p className="text-[9px] font-bold uppercase tracking-wide text-zinc-500">Brutto</p>
-                <p className="text-base font-bold tabular-nums leading-tight text-zinc-50 sm:text-lg">
+    <div className="min-h-screen bg-zinc-950">
+      {offer.canRespond ? (
+        <div
+          className="fixed inset-x-0 top-0 z-50 border-b border-zinc-700/80 bg-zinc-950/98 shadow-lg shadow-black/40 backdrop-blur-md"
+          role="region"
+          aria-label="Decyzja dotycząca oferty"
+        >
+          <div className="mx-auto w-full max-w-5xl px-4 py-3 sm:px-6 sm:py-3.5">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+              <div className="min-w-0 shrink-0">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-500">
+                  Kwota brutto
+                </p>
+                <p className="text-xl font-bold tabular-nums leading-tight text-zinc-50 sm:text-2xl">
                   {formatMoney(pricing.combined.grossTotal)}
                 </p>
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  netto {formatMoney(pricing.combined.netTotal)}
+                </p>
               </div>
-              <div className="ml-auto flex flex-wrap justify-end gap-1">
+              <div className="ml-auto flex flex-wrap justify-end gap-2">
                 <Button
                   type="button"
                   size="sm"
                   disabled={submitting}
-                  className="h-7 px-2 text-[11px]"
+                  className="h-9 px-4 text-sm"
                   onClick={() => void submitAction("accept")}
                 >
                   Akceptuj
@@ -187,7 +196,7 @@ export function ClientOfferPage({ token }: { token: string }) {
                   size="sm"
                   variant="secondary"
                   disabled={submitting}
-                  className="h-7 px-2 text-[11px]"
+                  className="h-9 px-4 text-sm"
                   onClick={() => void submitAction("negotiate")}
                 >
                   Konsultacja
@@ -197,30 +206,38 @@ export function ClientOfferPage({ token }: { token: string }) {
                   size="sm"
                   variant="destructive"
                   disabled={submitting}
-                  className="h-7 px-2 text-[11px]"
+                  className="h-9 px-4 text-sm"
                   onClick={() => void submitAction("reject")}
                 >
                   Odrzuć
                 </Button>
               </div>
             </div>
-            <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
               <input
                 value={responseNote}
                 onChange={(event) => setResponseNote(event.target.value)}
                 placeholder="Notatka (opcjonalnie)…"
-                className="h-8 w-full rounded-lg border border-zinc-700 bg-zinc-950/60 px-2.5 text-xs text-zinc-100 placeholder:text-zinc-500"
+                className="h-9 w-full min-w-0 rounded-lg border border-zinc-700 bg-zinc-950/60 px-3 text-sm text-zinc-100 placeholder:text-zinc-500"
               />
               <input
                 value={negotiationMessage}
                 onChange={(event) => setNegotiationMessage(event.target.value)}
                 placeholder="Wiadomość przy konsultacji…"
-                className="h-8 w-full rounded-lg border border-zinc-700 bg-zinc-950/60 px-2.5 text-xs text-zinc-100 placeholder:text-zinc-500"
+                className="h-9 w-full min-w-0 rounded-lg border border-zinc-700 bg-zinc-950/60 px-3 text-sm text-zinc-100 placeholder:text-zinc-500"
               />
             </div>
           </div>
-        ) : null}
+        </div>
+      ) : null}
 
+      <div
+        className={cn(
+          "px-4 py-4 sm:px-6 sm:py-8",
+          offer.canRespond && "pt-[9.75rem] sm:pt-[8.75rem]",
+        )}
+      >
+      <div className="mx-auto grid w-full min-w-0 max-w-4xl gap-4 sm:gap-5">
         <header className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 sm:p-6">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">
             Rentgen firmy · wycena serwisu
@@ -334,11 +351,13 @@ export function ClientOfferPage({ token }: { token: string }) {
           <ClientOptionalItemsSummary items={service.optionalItems} />
         ) : null}
 
-        <ServiceReport
-          service={service}
-          variant="client"
-          optionalItemSelection={offer.canRespond ? selectedOptionalIds : undefined}
-        />
+        <div className="min-w-0 max-w-full overflow-hidden">
+          <ServiceReport
+            service={service}
+            variant="client"
+            optionalItemSelection={offer.canRespond ? selectedOptionalIds : undefined}
+          />
+        </div>
 
         {offer.canAskQuestion ? (
           <Card className="border-amber-500/30 bg-zinc-900 shadow-xl shadow-black/20">
@@ -369,6 +388,7 @@ export function ClientOfferPage({ token }: { token: string }) {
             </CardContent>
           </Card>
         ) : null}
+      </div>
       </div>
     </div>
   );

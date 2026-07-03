@@ -1,3 +1,11 @@
+import { DEFAULT_COMPANY_PROFILE } from "@/lib/company/company-profile";
+import {
+  buildCompanyFooterHtml,
+  COMPANY_FOOTER_PRINT_STYLES,
+  resolveCompanyProfileDocument,
+  type CompanyProfileDocument,
+} from "@/lib/company/company-profile-document";
+import { fetchCompanyProfileDocumentClient } from "@/lib/hooks/use-company-profile";
 import {
   buildServiceReportCosts,
   getAppliedDiscountDescription,
@@ -479,7 +487,7 @@ const PRINT_STYLES = `
     .major-section { break-inside: avoid; }
     .header { break-inside: avoid; }
   }
-`;
+${COMPANY_FOOTER_PRINT_STYLES}`;
 
 function serviceReportPhotosHtml(photos: ServicePhotoWithUrl[]) {
   if (!photos.length) {
@@ -510,7 +518,9 @@ export function buildServiceReportPrintDocument(
   service: ServiceRecord,
   projectName?: string,
   photosWithUrls: ServicePhotoWithUrl[] = [],
+  companyProfile?: CompanyProfileDocument,
 ) {
+  const company = companyProfile ?? resolveCompanyProfileDocument(DEFAULT_COMPANY_PROFILE);
   const settled = isServiceSettled(service);
   const meta = getServiceReportDocumentMeta(service);
   const costs = buildServiceReportCosts(service);
@@ -605,7 +615,7 @@ export function buildServiceReportPrintDocument(
   <div class="doc">
     <header class="header">
       <div>
-        <p class="brand">Rentgen firmy</p>
+        <p class="brand">${escapeHtml(company.displayName)}</p>
         <h1>${escapeHtml(meta.title)}</h1>
         <p class="subtitle">${escapeHtml(meta.subtitle)}</p>
       </div>
@@ -694,15 +704,26 @@ export function buildServiceReportPrintDocument(
 
     ${comparisonSection}
 
-    <div class="doc-footer">Dokument wygenerowany w module Oferty · Rentgen firmy</div>
+    ${buildCompanyFooterHtml(company)}
   </div>
 </body>
 </html>`;
 }
 
-export async function printServiceReport(service: ServiceRecord, projectName?: string) {
+export async function printServiceReport(
+  service: ServiceRecord,
+  projectName?: string,
+  companyProfile?: CompanyProfileDocument,
+) {
   const settled = isServiceSettled(service);
   const photos = getServiceReportPhotos(service, settled);
   const photosWithUrls = photos.length ? await attachSignedUrlsToServicePhotos(photos) : [];
-  openHtmlDocument(buildServiceReportPrintDocument(service, projectName, photosWithUrls));
+  const company =
+    companyProfile ??
+    (await fetchCompanyProfileDocumentClient().catch(() =>
+      resolveCompanyProfileDocument(DEFAULT_COMPANY_PROFILE),
+    ));
+  openHtmlDocument(
+    buildServiceReportPrintDocument(service, projectName, photosWithUrls, company),
+  );
 }

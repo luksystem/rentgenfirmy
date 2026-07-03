@@ -683,7 +683,7 @@ export async function fetchPublicDashboardPayload(
     }
 
     process = processRow ? rowToProjectProcess(processRow) : null;
-    template = loadedTemplate;
+    template = process?.templateSnapshot ?? loadedTemplate;
     if (process && template) {
       processProgress = getProcessProgress(template, process);
     }

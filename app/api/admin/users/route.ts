@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import type { UserProfileInput } from "@/lib/auth/types";
-import { USER_ROLES } from "@/lib/auth/types";
+import { getUserDisplayName, USER_ROLES, type UserProfileInput } from "@/lib/auth/types";
 import { requireAdministratorProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
+import { ensureEmployeeDashboardSpaceServer } from "@/lib/messages/resolve-message-variables";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   mapProfileInputToInsert,
   mapProfileRow,
 } from "@/lib/supabase/profile-mappers";
+import { dispatchSmsRules } from "@/lib/supabase/sms-rules-server";
 
 type CreateUserBody = UserProfileInput & {
   password?: string;
@@ -126,7 +127,22 @@ export async function POST(request: Request) {
       throw new Error(profileError.message);
     }
 
-    return NextResponse.json({ user: mapProfileRow(profile) }, { status: 201 });
+    const user = mapProfileRow(profile);
+
+    await ensureEmployeeDashboardSpaceServer(admin, {
+      profileId: user.id,
+      displayName: getUserDisplayName(user),
+    }).catch(() => undefined);
+
+    void dispatchSmsRules("user_created", {
+      userId: user.id,
+      phone: user.phone,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    }).catch(() => undefined);
+
+    return NextResponse.json({ user }, { status: 201 });
   } catch (error) {
     return jsonError(error);
   }

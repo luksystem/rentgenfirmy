@@ -139,6 +139,7 @@ export type ServiceRecord = {
   status: ServiceStatus;
   projectId: string | null;
   clientId: string | null;
+  contactId: string | null;
   client: ServiceClient;
   title: string;
   serviceType: ServiceType;

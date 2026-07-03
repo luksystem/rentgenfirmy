@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, type ReactNode } from "react";
+import { CompanyDocumentFooter } from "@/components/company/company-document-footer";
 import { ServiceReportPhotosGrid } from "@/components/service/service-report-photos";
 import { Button } from "@/components/ui/button";
 import { RichHtml } from "@/components/ui/rich-html";
+import { useCompanyProfile } from "@/lib/hooks/use-company-profile";
 import { printServiceReport } from "@/lib/service/print-service-report";
 import { resolveProjectLabel } from "@/lib/service/resolve-project-label";
 import {
@@ -459,6 +461,7 @@ export function ServiceReport({
   optionalItemSelection?: ReadonlySet<string>;
 }) {
   const projects = useAppStore((state) => state.projects);
+  const { profile: companyProfile } = useCompanyProfile();
   const resolvedProjectName = resolveProjectLabel(service.projectId, projects, projectName);
   const settled = isServiceSettled(service);
   const meta = getServiceReportDocumentMeta(service);
@@ -495,8 +498,8 @@ export function ServiceReport({
     : "Przewidywany czas pracy";
 
   const handlePrint = useCallback(() => {
-    void printServiceReport(service, resolvedProjectName);
-  }, [resolvedProjectName, service]);
+    void printServiceReport(service, resolvedProjectName, companyProfile);
+  }, [companyProfile, resolvedProjectName, service]);
 
   const detailsTables = (
     <div className="grid gap-8">
@@ -527,12 +530,12 @@ export function ServiceReport({
   );
 
   const reportDocument = (
-    <article className="service-report-document mx-auto w-full max-w-full overflow-hidden rounded-xl bg-white text-zinc-900 shadow-lg ring-1 ring-zinc-200 sm:max-w-[210mm]">
+    <article className="service-report-document mx-auto w-full max-w-[min(100%,210mm)] overflow-hidden rounded-xl bg-white text-zinc-900 shadow-lg ring-1 ring-zinc-200">
       <header className="border-b-2 border-zinc-900 px-4 py-4 sm:px-8 sm:py-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-              Rentgen firmy
+              {companyProfile.displayName}
             </p>
             <h1 className="mt-2 text-2xl font-bold tracking-tight text-zinc-900">{meta.title}</h1>
             <p className="mt-1 text-sm text-zinc-500">{meta.subtitle}</p>
@@ -698,9 +701,7 @@ export function ServiceReport({
         </ReportMajorSection>
       ) : null}
 
-      <footer className="border-t border-zinc-200 px-6 py-4 text-center text-xs text-zinc-400 sm:px-8">
-        Dokument wygenerowany w module Oferty · Rentgen firmy
-      </footer>
+      <CompanyDocumentFooter profile={companyProfile} />
     </article>
   );
 

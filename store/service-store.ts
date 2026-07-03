@@ -239,6 +239,7 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
       status: "Wycena",
       projectId: null,
       clientId: null,
+      contactId: null,
       client: {
         fullName: "",
         location: "",

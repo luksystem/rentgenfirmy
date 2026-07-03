@@ -1,3 +1,4 @@
+import { parseProcessTemplateSnapshot } from "@/lib/process/anchored-template";
 import { resolveElementDefaultPayload } from "@/lib/process/item-payload";
 import type {
   ProcessElement,
@@ -105,6 +106,7 @@ export function rowToProjectProcess(row: ProjectProcessRow): ProjectProcess {
     id: row.id,
     projectId: row.project_id,
     templateId: row.template_id,
+    templateSnapshot: parseProcessTemplateSnapshot(row.template_snapshot),
     completions:
       completions && typeof completions === "object" && !Array.isArray(completions)
         ? (completions as Record<string, ProcessItemCompletion>)
@@ -117,6 +119,8 @@ export function rowToProjectProcess(row: ProjectProcessRow): ProjectProcess {
 
 export function projectProcessToUpdate(process: ProjectProcess) {
   return {
+    template_id: process.templateId,
+    template_snapshot: process.templateSnapshot,
     completions: process.completions,
     milestone_dates: process.milestoneDates,
     updated_at: process.updatedAt,

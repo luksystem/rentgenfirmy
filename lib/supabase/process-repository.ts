@@ -1,7 +1,13 @@
 import { buildTemplateForProjectType } from "@/lib/process/template-factory";
+import {
+  cloneProcessTemplate,
+  collectTemplateItemIds,
+  collectTemplateMilestoneIds,
+} from "@/lib/process/anchored-template";
 import type { ProcessItemCompletion, ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import { getSupabase } from "@/lib/supabase/client";
 import { fetchProcessElements } from "@/lib/supabase/process-element-repository";
+import { ensureProjectProcessItems } from "@/lib/supabase/process-item-repository";
 import {
   projectProcessToUpdate,
   rowToProcessItem,
@@ -264,10 +270,12 @@ export async function getOrCreateProjectProcess(projectId: string, projectType: 
 
   const supabase = getSupabase();
   const now = new Date().toISOString();
+  const snapshot = cloneProcessTemplate(template);
   const payload = {
     id: crypto.randomUUID(),
     project_id: projectId,
     template_id: template.id,
+    template_snapshot: snapshot,
     completions: {},
     milestone_dates: {},
     created_at: now,
@@ -284,7 +292,9 @@ export async function getOrCreateProjectProcess(projectId: string, projectType: 
     throw new Error(error.message);
   }
 
-  return rowToProjectProcess(data);
+  const created = rowToProjectProcess(data);
+  await ensureProjectProcessItems(projectId, snapshot);
+  return created;
 }
 
 export async function updateProjectProcessCompletion(
@@ -359,6 +369,94 @@ export async function updateProjectProcessMilestoneDate(
   }
 
   return rowToProjectProcess(data);
+}
+
+export async function ensureAnchoredTemplateSnapshot(
+  projectId: string,
+  liveTemplate: ProcessTemplate,
+) {
+  const process = await fetchProjectProcess(projectId);
+  if (!process) {
+    throw new Error("Nie znaleziono procesu projektu.");
+  }
+
+  if (process.templateSnapshot) {
+    return process;
+  }
+
+  const now = new Date().toISOString();
+  const updated: ProjectProcess = {
+    ...process,
+    templateId: liveTemplate.id,
+    templateSnapshot: cloneProcessTemplate(liveTemplate),
+    updatedAt: now,
+  };
+
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("project_processes")
+    .update(projectProcessToUpdate(updated))
+    .eq("project_id", projectId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const saved = rowToProjectProcess(data);
+  await ensureProjectProcessItems(projectId, saved.templateSnapshot ?? liveTemplate);
+  return saved;
+}
+
+export async function syncProjectProcessFromTemplate(
+  projectId: string,
+  liveTemplate: ProcessTemplate,
+) {
+  const process = await fetchProjectProcess(projectId);
+  if (!process) {
+    throw new Error("Nie znaleziono procesu projektu.");
+  }
+
+  const snapshot = cloneProcessTemplate(liveTemplate);
+  const itemIds = collectTemplateItemIds(snapshot);
+  const milestoneIds = collectTemplateMilestoneIds(snapshot);
+  const now = new Date().toISOString();
+
+  const completions = Object.fromEntries(
+    Object.entries(process.completions).filter(([itemId]) => itemIds.has(itemId)),
+  ) as Record<string, ProcessItemCompletion>;
+
+  const milestoneDates = Object.fromEntries(
+    Object.entries(process.milestoneDates).filter(([milestoneId]) =>
+      milestoneIds.has(milestoneId),
+    ),
+  ) as Record<string, string | null>;
+
+  const updated: ProjectProcess = {
+    ...process,
+    templateId: liveTemplate.id,
+    templateSnapshot: snapshot,
+    completions,
+    milestoneDates,
+    updatedAt: now,
+  };
+
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("project_processes")
+    .update(projectProcessToUpdate(updated))
+    .eq("project_id", projectId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const saved = rowToProjectProcess(data);
+  await ensureProjectProcessItems(projectId, snapshot);
+  return saved;
 }
 
 export async function saveProcessTemplate(template: ProcessTemplate) {

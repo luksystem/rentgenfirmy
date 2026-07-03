@@ -32,7 +32,14 @@ import {
   fetchClients,
   updateClientRecord,
 } from "@/lib/supabase/client-repository";
+import {
+  createContactRecord,
+  deleteContactRecord,
+  fetchContacts,
+  updateContactRecord,
+} from "@/lib/supabase/contact-repository";
 import { fetchFieldOptions, saveFieldOptions } from "@/lib/supabase/settings-repository";
+import type { Contact, ContactInput } from "@/lib/contacts/types";
 import type { Client, ClientInput } from "@/lib/service/types";
 import type { Interruption, Project, ProjectInput } from "@/lib/types";
 
@@ -42,6 +49,7 @@ let projectsViewFiltersSaveTimer: ReturnType<typeof setTimeout> | null = null;
 type AppState = {
   projects: Project[];
   clients: Client[];
+  contacts: Contact[];
   interruptions: Interruption[];
   fieldOptions: FieldOptions;
   projectsViewFilters: ProjectsViewFilters;
@@ -66,11 +74,16 @@ type AppState = {
   addClient: (input: ClientInput) => Promise<Client>;
   updateClient: (id: string, input: ClientInput) => Promise<void>;
   deleteClient: (id: string) => Promise<void>;
+  addContact: (input: ContactInput) => Promise<Contact>;
+  updateContact: (id: string, input: ContactInput) => Promise<void>;
+  deleteContact: (id: string) => Promise<void>;
+  convertContactToClient: (contactId: string) => Promise<Client>;
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
   projects: [],
   clients: [],
+  contacts: [],
   interruptions: [],
   fieldOptions: DEFAULT_FIELD_OPTIONS,
   projectsViewFilters: DEFAULT_PROJECTS_VIEW_FILTERS,
@@ -87,10 +100,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const [projects, clients, interruptions, fieldOptions, projectsViewFilters] =
+      const [projects, clients, contacts, interruptions, fieldOptions, projectsViewFilters] =
         await Promise.all([
         fetchProjects(),
         fetchClients(),
+        fetchContacts(),
         fetchInterruptions(),
         fetchFieldOptions(),
         fetchProjectsViewFilters(),
@@ -99,6 +113,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({
         projects,
         clients,
+        contacts,
         interruptions,
         fieldOptions,
         projectsViewFilters,
@@ -333,6 +348,8 @@ export const useAppStore = create<AppState>((set, get) => ({
             clientId: created.id,
             phone: created.phone,
             fullName: created.fullName,
+            email: created.email,
+            location: created.location,
           },
         }),
       }).catch(() => undefined);
@@ -384,6 +401,106 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : "Nie udało się usunąć klienta",
+        isSaving: false,
+      });
+      throw error;
+    }
+  },
+
+  addContact: async (input) => {
+    set({ isSaving: true, error: null });
+
+    try {
+      const created = await createContactRecord(input);
+      set((state) => ({
+        contacts: [...state.contacts, created].sort((a, b) =>
+          a.fullName.localeCompare(b.fullName, "pl"),
+        ),
+        isSaving: false,
+        error: null,
+      }));
+      return created;
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Nie udało się dodać kontaktu",
+        isSaving: false,
+      });
+      throw error;
+    }
+  },
+
+  updateContact: async (id, input) => {
+    set({ isSaving: true, error: null });
+
+    try {
+      const updated = await updateContactRecord(id, input);
+      set((state) => ({
+        contacts: state.contacts
+          .map((item) => (item.id === id ? updated : item))
+          .sort((a, b) => a.fullName.localeCompare(b.fullName, "pl")),
+        isSaving: false,
+        error: null,
+      }));
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Nie udało się zaktualizować kontaktu",
+        isSaving: false,
+      });
+      throw error;
+    }
+  },
+
+  deleteContact: async (id) => {
+    set({ isSaving: true, error: null });
+
+    try {
+      await deleteContactRecord(id);
+      set((state) => ({
+        contacts: state.contacts.filter((item) => item.id !== id),
+        isSaving: false,
+        error: null,
+      }));
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Nie udało się usunąć kontaktu",
+        isSaving: false,
+      });
+      throw error;
+    }
+  },
+
+  convertContactToClient: async (contactId) => {
+    set({ isSaving: true, error: null });
+
+    try {
+      const response = await fetch(`/api/contacts/${contactId}/convert`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się przekształcić kontaktu w klienta.");
+      }
+
+      const client = payload.client as Client;
+      const contact = payload.contact as Contact;
+
+      set((state) => ({
+        clients: [...state.clients.filter((item) => item.id !== client.id), client].sort((a, b) =>
+          a.fullName.localeCompare(b.fullName, "pl"),
+        ),
+        contacts: state.contacts
+          .map((item) => (item.id === contact.id ? contact : item))
+          .sort((a, b) => a.fullName.localeCompare(b.fullName, "pl")),
+        isSaving: false,
+        error: null,
+      }));
+
+      return client;
+    } catch (error) {
+      set({
+        error:
+          error instanceof Error ? error.message : "Nie udało się przekształcić kontaktu w klienta",
         isSaving: false,
       });
       throw error;

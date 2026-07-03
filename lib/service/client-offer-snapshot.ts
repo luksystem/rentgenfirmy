@@ -1,6 +1,7 @@
 import { getPublicOfferView } from "@/lib/service/client-offer-public-view";
 import { buildServiceReportPrintDocument } from "@/lib/service/print-service-report";
 import { getServiceCombinedBilling } from "@/lib/service/report-document";
+import type { CompanyProfileDocument } from "@/lib/company/company-profile-document";
 import type { ServiceRecord } from "@/lib/service/types";
 import { formatDate, formatMoney } from "@/lib/utils";
 
@@ -33,10 +34,11 @@ export function buildAcceptedOfferDocument(
   service: ServiceRecord,
   acceptedAt: string,
   projectName?: string,
+  companyProfile?: CompanyProfileDocument,
 ): ClientOfferAcceptedDocument {
   const view = getPublicOfferView(service);
   const combined = getServiceCombinedBilling(view);
-  const baseHtml = buildServiceReportPrintDocument(view, projectName);
+  const baseHtml = buildServiceReportPrintDocument(view, projectName, [], companyProfile);
   const banner = `<div class="accepted-frozen-banner">
     <strong>Zaakceptowana wycena — dokument zamrożony</strong>
     Klient zaakceptował tę wersję oferty ${formatDate(acceptedAt)}.

@@ -162,6 +162,7 @@ export function rowToService(row: ServiceRow): ServiceRecord {
     status: row.status as ServiceRecord["status"],
     projectId: row.project_id,
     clientId: row.client_id,
+    contactId: row.contact_id ?? null,
     client: {
       fullName: row.client_full_name,
       location: row.client_location,
@@ -192,6 +193,7 @@ export function serviceToInsert(service: ServiceRecord): ServiceInsert {
     id: service.id,
     project_id: service.projectId,
     client_id: service.clientId,
+    contact_id: service.contactId,
     status: service.status,
     service_type: service.serviceType,
     title: service.title,

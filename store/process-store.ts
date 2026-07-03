@@ -30,6 +30,7 @@ import { countNewKanbanTasksForTeam, countOverdueKanbanTasks } from "@/lib/supab
 import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 import {
   ensureDefaultProcessTemplates,
+  ensureAnchoredTemplateSnapshot,
   ensureProcessTemplateForProjectType,
   fetchProcessTemplates,
   fetchProjectProcess,
@@ -39,6 +40,7 @@ import {
   updateProjectProcessCompletion,
   updateProjectProcessMilestoneDate,
 } from "@/lib/supabase/process-repository";
+import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
 
 type ProcessStore = {
   templates: ProcessTemplate[];
@@ -59,6 +61,16 @@ type ProcessStore = {
   getProjectProgress: (projectId: string, projectType: string) => { completed: number; total: number; percent: number } | null;
   ensureProjectProcess: (projectId: string, projectType: string) => Promise<ProjectProcess>;
   ensureProjectProcessItems: (projectId: string, template: ProcessTemplate) => Promise<void>;
+  loadProjectProcessItems: (projectId: string) => Promise<void>;
+  syncProjectProcessFromTemplate: (
+    projectId: string,
+    projectType: string,
+  ) => Promise<ProjectProcess>;
+  applyProjectProcessSync: (
+    projectId: string,
+    process: ProjectProcess,
+    itemsByTemplateId: Record<string, ProjectProcessItem>,
+  ) => void;
   loadTeamProfiles: () => Promise<void>;
   ensureTemplateForProjectType: (projectType: string) => Promise<ProcessTemplate>;
   saveTemplate: (template: ProcessTemplate) => Promise<void>;
@@ -157,8 +169,11 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
     get().projectProcessItems[projectId]?.[templateItemId],
 
   getProjectProgress: (projectId, projectType) => {
-    const template = get().getTemplateByProjectType(projectType);
+    const liveTemplate = get().getTemplateByProjectType(projectType);
     const process = get().getProjectProcess(projectId);
+    const template = process
+      ? resolveAnchoredProcessTemplate(process, liveTemplate)
+      : liveTemplate;
     if (!template || !process) {
       return null;
     }
@@ -166,18 +181,72 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
   },
 
   ensureProjectProcess: async (projectId, projectType) => {
-    const existing = get().getProjectProcess(projectId);
-    if (existing) {
-      return existing;
+    let process = get().getProjectProcess(projectId);
+    if (!process) {
+      process = await getOrCreateProjectProcess(projectId, projectType);
     }
 
-    const created = await getOrCreateProjectProcess(projectId, projectType);
-    const templates = await fetchProcessTemplates();
+    const liveTemplate =
+      get().getTemplateByProjectType(projectType) ??
+      (await ensureProcessTemplateForProjectType(projectType));
+
+    if (liveTemplate && !process.templateSnapshot) {
+      process = await ensureAnchoredTemplateSnapshot(projectId, liveTemplate);
+    }
+
     set((state) => ({
-      projectProcesses: { ...state.projectProcesses, [projectId]: created },
-      templates,
+      projectProcesses: { ...state.projectProcesses, [projectId]: process! },
+      templates: liveTemplate
+        ? state.templates.some((entry) => entry.projectType === projectType)
+          ? state.templates
+          : [...state.templates, liveTemplate]
+        : state.templates,
     }));
-    return created;
+    return process!;
+  },
+
+  loadProjectProcessItems: async (projectId) => {
+    const process = get().getProjectProcess(projectId);
+    if (!process?.templateSnapshot) {
+      return;
+    }
+
+    const items = await ensureProjectProcessItems(projectId, process.templateSnapshot);
+    set((state) => ({
+      projectProcessItems: {
+        ...state.projectProcessItems,
+        [projectId]: mapProjectProcessItemsByTemplateId(items),
+      },
+    }));
+  },
+
+  syncProjectProcessFromTemplate: async (projectId, _projectType) => {
+    const response = await fetch(`/api/projects/${projectId}/process/sync-template`, {
+      method: "POST",
+      credentials: "include",
+    });
+    const payload = (await response.json()) as {
+      process?: ProjectProcess;
+      itemsByTemplateId?: Record<string, ProjectProcessItem>;
+      error?: string;
+    };
+
+    if (!response.ok || !payload.process || !payload.itemsByTemplateId) {
+      throw new Error(payload.error ?? "Nie udało się wczytać szablonu procesu.");
+    }
+
+    get().applyProjectProcessSync(projectId, payload.process, payload.itemsByTemplateId);
+    return payload.process;
+  },
+
+  applyProjectProcessSync: (projectId, process, itemsByTemplateId) => {
+    set((state) => ({
+      projectProcesses: { ...state.projectProcesses, [projectId]: process },
+      projectProcessItems: {
+        ...state.projectProcessItems,
+        [projectId]: itemsByTemplateId,
+      },
+    }));
   },
 
   ensureProjectProcessItems: async (projectId, template) => {

@@ -15,6 +15,12 @@ import type { ServiceRecord } from "@/lib/service/types";
 import { getSupabase } from "@/lib/supabase/client";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { rowToService, serviceToInsert } from "@/lib/supabase/service-mappers";
+import { resolveCompanyProfileDocumentServer } from "@/lib/supabase/company-profile-server";
+import { appendContactHistoryRecord } from "@/lib/supabase/contact-repository";
+import {
+  clientToServiceClient,
+  convertContactToClientServer,
+} from "@/lib/supabase/contact-server";
 import { createWorkOrderFromAcceptedService } from "@/lib/supabase/work-order-repository";
 
 function isOfferExpiredService(service: ServiceRecord) {
@@ -63,7 +69,20 @@ export async function regenerateClientOfferForService(
     throw new Error(error.message);
   }
 
-  return rowToService(data);
+  const saved = rowToService(data);
+
+  if (service.contactId) {
+    await appendContactHistoryRecord(
+      service.contactId,
+      "offer_linked",
+      historyType === "link_regenerated"
+        ? "Wygenerowano ponownie link oferty dla kontaktu."
+        : "Wygenerowano link oferty dla kontaktu.",
+      { serviceId: service.id },
+    );
+  }
+
+  return saved;
 }
 
 export async function generateClientOfferForService(
@@ -167,13 +186,33 @@ export async function respondToClientOffer(
       serviceForSave,
       selectedOptionalItemIds ?? [],
     );
+
+    if (service.contactId && !service.clientId) {
+      const { client } = await convertContactToClientServer(service.contactId, {
+        source: "offer_accepted",
+        serviceId: service.id,
+      });
+      serviceForSave = {
+        ...serviceForSave,
+        clientId: client.id,
+        client: clientToServiceClient(client),
+      };
+    }
   }
+
+  const companyProfile =
+    action === "accept" ? await resolveCompanyProfileDocumentServer() : null;
 
   const updated: ServiceRecord = {
     ...serviceForSave,
     clientOfferAcceptedDocument:
       action === "accept"
-        ? buildAcceptedOfferDocument(getPublicOfferView(serviceForSave), now)
+        ? buildAcceptedOfferDocument(
+            getPublicOfferView(serviceForSave),
+            now,
+            undefined,
+            companyProfile ?? undefined,
+          )
         : service.clientOfferAcceptedDocument,
   };
 

@@ -7,6 +7,7 @@ import { ProjectProcessPipelineSection } from "@/components/process/project-proc
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
 import { getProcessProgress } from "@/lib/process/types";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
@@ -78,7 +79,9 @@ export default function ProjectProcessPage() {
   }
 
   const progress =
-    template && process ? getProcessProgress(template, process) : null;
+    template && process
+      ? getProcessProgress(resolveAnchoredProcessTemplate(process, template) ?? template, process)
+      : null;
 
   return (
     <>
@@ -120,7 +123,8 @@ export default function ProjectProcessPage() {
           <CardContent className="py-5">
             <ProjectProcessPipelineSection
               projectId={project.id}
-              template={template}
+              projectType={project.type}
+              liveTemplate={template}
               process={process}
               actorName={displayName || undefined}
             />

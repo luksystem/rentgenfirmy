@@ -142,6 +142,34 @@ export function ProcessTemplateEditor({
     setError(null);
   }
 
+  function moveMilestone(stageId: string, milestoneIndex: number, direction: "up" | "down") {
+    setTemplate((current) => ({
+      ...current,
+      stages: current.stages.map((stage) =>
+        stage.id !== stageId
+          ? stage
+          : {
+              ...stage,
+              milestones: withPositions(moveItem(stage.milestones, milestoneIndex, direction)),
+            },
+      ),
+    }));
+  }
+
+  function removeMilestone(stageId: string, milestoneIndex: number) {
+    setTemplate((current) => ({
+      ...current,
+      stages: current.stages.map((stage) =>
+        stage.id !== stageId
+          ? stage
+          : {
+              ...stage,
+              milestones: withPositions(removeAt(stage.milestones, milestoneIndex)),
+            },
+      ),
+    }));
+  }
+
   function moveMilestoneItem(
     stageId: string,
     milestoneId: string,
@@ -254,30 +282,69 @@ export function ProcessTemplateEditor({
               Dodaj kamień milowy
             </Button>
 
-            {stage.milestones.map((milestone) => (
+            {stage.milestones.map((milestone, milestoneIndex) => (
               <div key={milestone.id} className="grid gap-3 rounded-xl border border-border/70 p-4">
-                <Field label="Kamień milowy">
-                  <Input
-                    value={milestone.title}
-                    onChange={(event) =>
-                      setTemplate((current) => ({
-                        ...current,
-                        stages: current.stages.map((stageEntry) =>
-                          stageEntry.id !== stage.id
-                            ? stageEntry
-                            : {
-                                ...stageEntry,
-                                milestones: stageEntry.milestones.map((milestoneEntry) =>
-                                  milestoneEntry.id === milestone.id
-                                    ? { ...milestoneEntry, title: event.target.value }
-                                    : milestoneEntry,
-                                ),
-                              },
-                        ),
-                      }))
-                    }
-                  />
-                </Field>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <Field label="Kamień milowy" className="min-w-0 flex-1">
+                    <Input
+                      value={milestone.title}
+                      onChange={(event) =>
+                        setTemplate((current) => ({
+                          ...current,
+                          stages: current.stages.map((stageEntry) =>
+                            stageEntry.id !== stage.id
+                              ? stageEntry
+                              : {
+                                  ...stageEntry,
+                                  milestones: stageEntry.milestones.map((milestoneEntry) =>
+                                    milestoneEntry.id === milestone.id
+                                      ? { ...milestoneEntry, title: event.target.value }
+                                      : milestoneEntry,
+                                  ),
+                                },
+                          ),
+                        }))
+                      }
+                    />
+                  </Field>
+                  <div className="flex shrink-0 gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={milestoneIndex === 0}
+                      onClick={() => moveMilestone(stage.id, milestoneIndex, "up")}
+                      aria-label="Przesuń kamień milowy w górę"
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={milestoneIndex === stage.milestones.length - 1}
+                      onClick={() => moveMilestone(stage.id, milestoneIndex, "down")}
+                      aria-label="Przesuń kamień milowy w dół"
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={stage.milestones.length <= 1}
+                      onClick={() => removeMilestone(stage.id, milestoneIndex)}
+                      aria-label="Usuń kamień milowy"
+                      title={
+                        stage.milestones.length <= 1
+                          ? "Etap musi mieć co najmniej jeden kamień milowy"
+                          : "Usuń kamień milowy"
+                      }
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
 
                 {milestone.items.map((item, itemIndex) => (
                   <div

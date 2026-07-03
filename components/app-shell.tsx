@@ -64,7 +64,7 @@ const navGroupsBase: NavGroup[] = [
   {
     label: "Sprzedaż",
     items: [
-      { href: "#", label: "Kontakty", icon: Contact, disabled: true },
+      { href: "/kontakty", label: "Kontakty", icon: Contact },
       {
         href: COMMERCIAL_MODULES.serviceSettlement.href,
         label: "Szybkie Oferty",
@@ -451,7 +451,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="mx-auto w-full min-w-0 max-w-[1500px] px-4 py-4 pb-28 sm:px-5 sm:py-6 sm:pb-28 xl:px-8 xl:pb-6">
+        <main className="mx-auto w-full min-w-0 max-w-[1500px] overflow-x-clip px-4 py-4 pb-28 sm:px-5 sm:py-6 sm:pb-28 xl:px-8 xl:pb-6">
           {children}
         </main>
 

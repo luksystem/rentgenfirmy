@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ClientPicker } from "@/components/client-picker";
+import { CommercialPartyPicker, type CommercialPartyKind } from "@/components/commercial-party-picker";
 import { ClientOfferPanel } from "@/components/service/client-offer-panel";
 import { ClientOfferHistoryPanel } from "@/components/service/client-offer-history-panel";
 import { OfferValidityField } from "@/components/service/offer-validity-field";
@@ -119,7 +119,7 @@ function ViewSwitchBar({
   return (
     <div
       className={cn(
-        "rounded-xl border p-2 sm:p-2.5",
+        "rounded-xl border p-2 sm:p-2.5 min-w-0 max-w-full",
         variant === "primary"
           ? "border-accent/35 bg-accent/12 shadow-sm shadow-accent/5"
           : "border-border/90 bg-surface-muted/90",
@@ -135,10 +135,8 @@ function ViewSwitchBar({
       </p>
       <div
         className={cn(
-          mobileScroll
-            ? "flex max-w-full gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:max-w-none sm:overflow-visible sm:gap-1.5 sm:pb-0 [&>button]:min-w-0 sm:[&>button]:min-w-0"
-            : "grid gap-1.5",
-          columnsClassName,
+          "grid gap-1.5 min-w-0 max-w-full",
+          mobileScroll ? cn("grid-cols-2 sm:grid", columnsClassName) : columnsClassName,
         )}
       >
         {children}
@@ -163,7 +161,7 @@ function ViewSwitchButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex min-h-11 shrink-0 snap-start items-center justify-center rounded-lg px-3 py-2 text-center text-xs font-semibold leading-tight transition sm:min-h-10 sm:shrink sm:px-2 sm:text-sm",
+        "flex min-h-10 w-full items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-semibold leading-tight transition sm:min-h-10 sm:px-2 sm:text-sm",
         active
           ? "bg-background text-foreground shadow-sm ring-1 ring-border/80"
           : "text-muted hover:bg-background/60 hover:text-foreground",
@@ -183,11 +181,16 @@ export function ServiceForm({
   const router = useRouter();
   const projects = useAppStore((s) => s.projects);
   const clients = useAppStore((s) => s.clients);
+  const contacts = useAppStore((s) => s.contacts);
   const addClient = useAppStore((s) => s.addClient);
+  const addContact = useAppStore((s) => s.addContact);
   const upsertService = useServiceStore((s) => s.upsertService);
   const isSaving = useServiceStore((s) => s.isSaving);
 
   const [service, setService] = useState(initialService);
+  const [partyKind, setPartyKind] = useState<CommercialPartyKind>(() =>
+    initialService.contactId && !initialService.clientId ? "contact" : "client",
+  );
   const [mainTab, setMainTab] = useState<MainTab>(() => initialMainTab(initialService));
   const [step, setStep] = useState(() => initialStep(initialService));
   const [withoutProject, setWithoutProject] = useState(!initialService.projectId);
@@ -404,7 +407,7 @@ export function ServiceForm({
 
     <div className="grid w-full min-w-0 max-w-full gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
       <div className="grid min-w-0 max-w-full gap-5 pb-2">
-        <div className="sticky top-16 z-10 space-y-2 rounded-2xl border border-border/80 bg-background/95 p-2 backdrop-blur sm:space-y-2.5 sm:p-3 xl:top-0 xl:z-20 xl:p-4">
+        <div className="sticky top-16 z-10 min-w-0 max-w-full space-y-2 overflow-hidden rounded-2xl border border-border/80 bg-background/95 p-2 backdrop-blur sm:space-y-2.5 sm:p-3 xl:top-0 xl:z-20 xl:p-4">
           <div className="flex items-center justify-between gap-2 sm:gap-3">
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-medium text-foreground sm:text-sm">
@@ -521,7 +524,7 @@ export function ServiceForm({
         ) : null}
 
         {mainTab === "quote" && step === 0 ? (
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardContent className="grid gap-4 py-5 sm:grid-cols-2">
               <Field label="Tytuł oferty / zgłoszenia" className="sm:col-span-2">
                 <Input
@@ -561,14 +564,29 @@ export function ServiceForm({
               </Field>
 
               <div className="sm:col-span-2">
-                <ClientPicker
+                <CommercialPartyPicker
+                  partyKind={partyKind}
+                  onPartyKindChange={(kind) => {
+                    setPartyKind(kind);
+                    if (kind === "client") {
+                      setService({ ...service, contactId: null });
+                    } else {
+                      setService({ ...service, clientId: null });
+                    }
+                  }}
                   clients={clients}
+                  contacts={contacts}
                   clientId={service.clientId}
-                  clientSnapshot={service.client}
+                  contactId={service.contactId}
+                  partySnapshot={service.client}
                   onSelectClient={(clientId, snapshot) =>
-                    setService({ ...service, clientId, client: snapshot })
+                    setService({ ...service, clientId, contactId: null, client: snapshot })
+                  }
+                  onSelectContact={(contactId, snapshot) =>
+                    setService({ ...service, contactId, clientId: null, client: snapshot })
                   }
                   onCreateClient={addClient}
+                  onCreateContact={addContact}
                 />
               </div>
 
@@ -605,7 +623,7 @@ export function ServiceForm({
         ) : null}
 
         {mainTab === "quote" && step === 1 ? (
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardContent className="grid gap-4 py-5 sm:grid-cols-2">
               <p className="sm:col-span-2 text-sm text-muted">
                 Stawki i progi stref możesz edytować globalnie w{" "}
@@ -771,7 +789,7 @@ export function ServiceForm({
         ) : null}
 
         {mainTab === "preview" ? (
-          <div className="grid gap-4">
+          <div className="grid min-w-0 max-w-full gap-4">
             <Card>
               <CardContent className="grid gap-4 py-4">
                 <label className="flex items-start gap-2 text-sm">
@@ -812,11 +830,13 @@ export function ServiceForm({
                 </label>
               </CardContent>
             </Card>
-            <ServiceReport service={service} projectName={projectName} />
+            <div className="min-w-0 max-w-full overflow-hidden">
+              <ServiceReport service={service} projectName={projectName} />
+            </div>
           </div>
         ) : null}
 
-        <div className="sticky bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] z-20 rounded-xl border border-border/80 bg-background/95 p-2 backdrop-blur sm:p-3 xl:bottom-0">
+        <div className="sticky bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] z-20 min-w-0 max-w-full rounded-xl border border-border/80 bg-background/95 p-2 backdrop-blur sm:p-3 xl:bottom-0">
           <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
             {(mainTab === "quote" || mainTab === "settlement") && step > 0 ? (
               <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => goToStep(step - 1)}>

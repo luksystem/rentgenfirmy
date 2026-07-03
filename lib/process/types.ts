@@ -134,6 +134,7 @@ export type ProjectProcess = {
   id: string;
   projectId: string;
   templateId: string;
+  templateSnapshot: ProcessTemplate | null;
   completions: Record<string, ProcessItemCompletion>;
   milestoneDates: Record<string, string | null>;
   createdAt: string;

@@ -1,3 +1,4 @@
+import { resolveMessageTemplateVariables } from "@/lib/messages/resolve-message-variables";
 import {
   getEnabledRulesForTrigger,
   normalizeSmsRulesSettings,
@@ -11,8 +12,14 @@ import { getSupabaseServer } from "@/lib/supabase/server";
 
 export type SmsDispatchContext = {
   clientId?: string;
+  userId?: string;
+  projectId?: string;
   phone?: string;
   fullName?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  location?: string;
 };
 
 export async function fetchSmsRulesSettingsServer() {
@@ -67,33 +74,24 @@ export async function dispatchSmsRules(
     return { sent: 0, skipped: true as const, results: [] };
   }
 
-  let phone = context.phone?.trim() ?? "";
-  let fullName = context.fullName?.trim() ?? "";
+  const supabase = getSupabaseServer();
+  const variables = await resolveMessageTemplateVariables(supabase, {
+    trigger,
+    clientId: context.clientId,
+    userId: context.userId,
+    projectId: context.projectId,
+    phone: context.phone,
+    fullName: context.fullName,
+    firstName: context.firstName,
+    lastName: context.lastName,
+    email: context.email,
+    location: context.location,
+  });
 
-  if ((!phone || !fullName) && context.clientId) {
-    const supabase = getSupabaseServer();
-    const { data } = await supabase
-      .from("clients")
-      .select("phone, full_name")
-      .eq("id", context.clientId)
-      .maybeSingle();
-
-    if (!phone) {
-      phone = data?.phone?.trim() ?? "";
-    }
-    if (!fullName && data?.full_name) {
-      fullName = data.full_name;
-    }
-  }
-
+  const phone = variables.phone?.trim() ?? "";
   if (!phone) {
     return { sent: 0, skipped: true as const, results: [], reason: "missing_phone" as const };
   }
-
-  const variables = {
-    fullName,
-    phone,
-  };
 
   const results = [];
 
@@ -111,6 +109,8 @@ export async function dispatchSmsRules(
         ruleId: rule.id,
         trigger,
         clientId: context.clientId ?? null,
+        userId: context.userId ?? null,
+        projectId: context.projectId ?? null,
       },
     });
 
@@ -123,3 +123,5 @@ export async function dispatchSmsRules(
     results,
   };
 }
+
+export { renderSmsRuleMessage } from "@/lib/sms/sms-rules";

@@ -70,6 +70,7 @@ export type ServiceRow = {
   id: string;
   project_id: string | null;
   client_id: string | null;
+  contact_id?: string | null;
   status: string;
   service_type: string;
   title: string;
@@ -113,6 +114,32 @@ export type ClientRow = {
   created_at: string;
   updated_at: string;
 };
+
+export type ContactRow = {
+  id: string;
+  full_name: string;
+  location: string;
+  address_street: string;
+  address_city: string;
+  address_postal_code: string;
+  email: string;
+  phone: string;
+  notes: string | null;
+  external_id: string | null;
+  converted_client_id: string | null;
+  converted_at: string | null;
+  conversion_source: string | null;
+  history: unknown;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ContactInsert = Partial<ContactRow> &
+  Pick<ContactRow, "full_name"> & {
+    history?: unknown;
+  };
+
+export type ContactUpdate = Partial<ContactRow>;
 
 export type ClientInsert = {
   id?: string;
@@ -599,6 +626,7 @@ export type ServiceInsert = {
   id?: string;
   project_id?: string | null;
   client_id?: string | null;
+  contact_id?: string | null;
   status: string;
   service_type: string;
   title: string;
@@ -753,6 +781,7 @@ export type ProjectProcessRow = {
   id: string;
   project_id: string;
   template_id: string;
+  template_snapshot?: unknown;
   completions: Record<string, unknown>;
   milestone_dates: Record<string, unknown>;
   created_at: string;
@@ -865,6 +894,12 @@ export type Database = {
         Row: ClientRow;
         Insert: ClientInsert;
         Update: ClientUpdate;
+        Relationships: [];
+      };
+      contacts: {
+        Row: ContactRow;
+        Insert: ContactInsert;
+        Update: ContactUpdate;
         Relationships: [];
       };
       dashboard_spaces: {

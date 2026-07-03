@@ -1,4 +1,6 @@
-export const SMS_RULE_TRIGGERS = ["client_created"] as const;
+import { getTemplateVariableKeysForTrigger } from "@/lib/messages/template-variables";
+
+export const SMS_RULE_TRIGGERS = ["client_created", "user_created"] as const;
 
 export type SmsRuleTrigger = (typeof SMS_RULE_TRIGGERS)[number];
 
@@ -17,6 +19,12 @@ export type SmsRulesSettings = {
 
 export const SMS_RULE_TRIGGER_LABELS: Record<SmsRuleTrigger, string> = {
   client_created: "Nowy klient w bazie Klientów",
+  user_created: "Nowy użytkownik w aplikacji",
+};
+
+export const SMS_RULE_VARIABLES: Record<SmsRuleTrigger, string[]> = {
+  client_created: getTemplateVariableKeysForTrigger("client_created"),
+  user_created: getTemplateVariableKeysForTrigger("user_created"),
 };
 
 export const DEFAULT_SMS_RULES: SmsRule[] = [
@@ -28,6 +36,16 @@ export const DEFAULT_SMS_RULES: SmsRule[] = [
       "SMS na numer telefonu klienta wysyłany jednorazowo w momencie dodania nowego rekordu do bazy Klientów (nie przy edycji).",
     enabled: false,
     messageTemplate: "WITAJ w Rentgenie Luksystem.",
+  },
+  {
+    id: "user_created_welcome",
+    trigger: "user_created",
+    label: "Powitanie nowego użytkownika",
+    description:
+      "SMS na numer telefonu użytkownika wysyłany jednorazowo w momencie utworzenia konta przez administratora (nie przy edycji profilu).",
+    enabled: false,
+    messageTemplate:
+      "Witaj {{firstName}}! Utworzyliśmy dla Ciebie konto w aplikacji Rentgen Luksystem.",
   },
 ];
 

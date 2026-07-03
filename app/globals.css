@@ -55,6 +55,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
+html {
+  overflow-x: clip;
+}
+
 body {
   background-color: var(--background);
   background-image:

@@ -29,8 +29,14 @@ export async function POST(request: Request) {
 
     const result = await dispatchSmsRules(trigger, {
       clientId: typeof context.clientId === "string" ? context.clientId : undefined,
+      userId: typeof context.userId === "string" ? context.userId : undefined,
+      projectId: typeof context.projectId === "string" ? context.projectId : undefined,
       phone: typeof context.phone === "string" ? context.phone : undefined,
       fullName: typeof context.fullName === "string" ? context.fullName : undefined,
+      firstName: typeof context.firstName === "string" ? context.firstName : undefined,
+      lastName: typeof context.lastName === "string" ? context.lastName : undefined,
+      email: typeof context.email === "string" ? context.email : undefined,
+      location: typeof context.location === "string" ? context.location : undefined,
     });
 
     return NextResponse.json({ ok: true, ...result });

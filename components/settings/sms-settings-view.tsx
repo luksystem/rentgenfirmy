@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/input";
+import { MessageTemplateVariablesReference } from "@/components/settings/message-template-variables-reference";
 import type { SmsMessageRecord } from "@/lib/sms/types";
 import type { SmsRule, SmsRulesSettings } from "@/lib/sms/sms-rules";
 import { cn, formatDateTime } from "@/lib/utils";
@@ -48,9 +49,7 @@ function SmsRuleEditor({
           placeholder="Treść wiadomości…"
         />
       </Field>
-      <p className="text-xs text-muted">
-        Dostępne zmienne: <code className="rounded bg-surface-muted px-1">{"{{fullName}}"}</code>
-      </p>
+      <MessageTemplateVariablesReference trigger={rule.trigger} compact />
     </article>
   );
 }
@@ -247,8 +246,23 @@ export function SmsSettingsView() {
         </div>
         <p className="text-sm text-muted">
           Przy dodawaniu nowych reguł w aplikacji stosuj ten sam wzorzec: checkbox włączenia +
-          edytowalna treść SMS. Reguła uruchamia się tylko gdy checkbox jest zaznaczony.
+          edytowalna treść SMS. Reguła uruchamia się tylko gdy checkbox jest zaznaczony. W treści
+          możesz wklejać szybkie linki i dane — skopiuj placeholder z listy pod edytorem.
         </p>
+
+        <Card className="border-border/80">
+          <CardContent className="grid gap-3 py-4">
+            <div>
+              <p className="font-medium text-foreground">Wszystkie dostępne placeholdery</p>
+              <p className="mt-1 text-sm text-muted">
+                Kliknij „Kopiuj”, wklej do treści SMS w formacie{" "}
+                <code className="rounded bg-surface-muted px-1">{"{{nazwa}}"}</code>. Przy wysyłce
+                zostaną zastąpione rzeczywistymi danymi lub linkiem.
+              </p>
+            </div>
+            <MessageTemplateVariablesReference />
+          </CardContent>
+        </Card>
 
         {loading ? (
           <p className="text-sm text-muted">Wczytywanie reguł…</p>
