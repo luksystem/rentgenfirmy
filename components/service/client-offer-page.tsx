@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Textarea } from "@/components/ui/input";
 import {
-  CLIENT_OFFER_ACTION_LABELS,
   type ClientOfferAction,
 } from "@/lib/service/client-offer";
 import { OfferValidityCountdown } from "@/components/service/offer-validity-countdown";
@@ -47,11 +46,9 @@ export function ClientOfferPage({ token }: { token: string }) {
   const [error, setError] = useState<string | null>(null);
   const [negotiationMessage, setNegotiationMessage] = useState("");
   const [responseNote, setResponseNote] = useState("");
-  const [showNegotiation, setShowNegotiation] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedOptionalIds, setSelectedOptionalIds] = useState<Set<string>>(() => new Set());
-  const [showDecisionDetails, setShowDecisionDetails] = useState(false);
 
   const loadOffer = useCallback(async () => {
     setLoading(true);
@@ -98,6 +95,11 @@ export function ClientOfferPage({ token }: { token: string }) {
   );
 
   async function submitAction(action: ClientOfferAction) {
+    if (action === "negotiate" && !negotiationMessage.trim()) {
+      setError("Wpisz wiadomość przy konsultacji.");
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     setSuccess(null);
@@ -127,7 +129,6 @@ export function ClientOfferPage({ token }: { token: string }) {
             ? "Oferta została odrzucona."
             : "Wiadomość negocjacyjna została wysłana.",
       );
-      setShowNegotiation(false);
     } catch (submitError) {
       setError(
         submitError instanceof Error ? submitError.message : "Nie udało się wysłać decyzji.",
@@ -163,22 +164,20 @@ export function ClientOfferPage({ token }: { token: string }) {
     <div className="min-h-screen overflow-x-hidden bg-zinc-950 px-4 py-4 sm:px-6 sm:py-8">
       <div className="mx-auto grid w-full min-w-0 max-w-4xl gap-4 sm:gap-5">
         {offer.canRespond ? (
-          <div className="sticky top-0 z-30 -mx-4 border-b border-zinc-800 bg-zinc-950/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="min-w-0 shrink">
-                <p className="text-[9px] font-bold uppercase tracking-wide text-zinc-500">
-                  {pricing.meta.grossTotalLabel}
-                </p>
-                <p className="text-lg font-bold tabular-nums leading-tight text-zinc-50 sm:text-xl">
+          <div className="sticky top-0 z-30 border-b border-zinc-800 bg-zinc-950/95 py-2 backdrop-blur">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+              <div className="min-w-0 shrink-0 pr-1">
+                <p className="text-[9px] font-bold uppercase tracking-wide text-zinc-500">Brutto</p>
+                <p className="text-base font-bold tabular-nums leading-tight text-zinc-50 sm:text-lg">
                   {formatMoney(pricing.combined.grossTotal)}
                 </p>
               </div>
-              <div className="ml-auto flex max-w-[62%] flex-wrap justify-end gap-1 sm:max-w-none sm:gap-1.5">
+              <div className="ml-auto flex flex-wrap justify-end gap-1">
                 <Button
                   type="button"
                   size="sm"
                   disabled={submitting}
-                  className="h-8 px-2.5 text-xs"
+                  className="h-7 px-2 text-[11px]"
                   onClick={() => void submitAction("accept")}
                 >
                   Akceptuj
@@ -188,67 +187,37 @@ export function ClientOfferPage({ token }: { token: string }) {
                   size="sm"
                   variant="secondary"
                   disabled={submitting}
-                  className="h-8 px-2.5 text-xs"
-                  onClick={() => setShowDecisionDetails((value) => !value)}
+                  className="h-7 px-2 text-[11px]"
+                  onClick={() => void submitAction("negotiate")}
                 >
-                  {showDecisionDetails ? "Ukryj" : "Więcej"}
+                  Konsultacja
                 </Button>
                 <Button
                   type="button"
                   size="sm"
                   variant="destructive"
                   disabled={submitting}
-                  className="h-8 px-2.5 text-xs"
+                  className="h-7 px-2 text-[11px]"
                   onClick={() => void submitAction("reject")}
                 >
                   Odrzuć
                 </Button>
               </div>
             </div>
-            {showDecisionDetails ? (
-              <div className="mt-2 grid gap-2 border-t border-zinc-800 pt-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={submitting}
-                  className="h-8 w-fit text-xs"
-                  onClick={() => setShowNegotiation((value) => !value)}
-                >
-                  {CLIENT_OFFER_ACTION_LABELS.negotiate}
-                </Button>
-                <Field label="Notatka (opcjonalnie)">
-                  <Textarea
-                    value={responseNote}
-                    onChange={(event) => setResponseNote(event.target.value)}
-                    placeholder="Krótka uwaga…"
-                    rows={2}
-                    className="min-h-0 text-sm"
-                  />
-                </Field>
-                {showNegotiation ? (
-                  <div className="grid gap-2 rounded-lg border border-zinc-700 bg-zinc-950/40 p-3">
-                    <Field label="Wiadomość do oferty">
-                      <Textarea
-                        value={negotiationMessage}
-                        onChange={(event) => setNegotiationMessage(event.target.value)}
-                        placeholder="Opisz, co chciałbyś zmienić…"
-                        rows={3}
-                        className="text-sm"
-                      />
-                    </Field>
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={submitting || !negotiationMessage.trim()}
-                      onClick={() => void submitAction("negotiate")}
-                    >
-                      Wyślij pytanie
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
+            <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+              <input
+                value={responseNote}
+                onChange={(event) => setResponseNote(event.target.value)}
+                placeholder="Notatka (opcjonalnie)…"
+                className="h-8 w-full rounded-lg border border-zinc-700 bg-zinc-950/60 px-2.5 text-xs text-zinc-100 placeholder:text-zinc-500"
+              />
+              <input
+                value={negotiationMessage}
+                onChange={(event) => setNegotiationMessage(event.target.value)}
+                placeholder="Wiadomość przy konsultacji…"
+                className="h-8 w-full rounded-lg border border-zinc-700 bg-zinc-950/60 px-2.5 text-xs text-zinc-100 placeholder:text-zinc-500"
+              />
+            </div>
           </div>
         ) : null}
 

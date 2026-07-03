@@ -26,7 +26,7 @@ export default function EditOfferPage() {
   }
 
   return (
-    <div className="min-w-0 max-w-full overflow-x-hidden">
+    <div className="min-w-0 max-w-full">
       <PageHeader
         eyebrow={COMMERCIAL_MODULES.serviceSettlement.eyebrow}
         title="Edytuj ofertę"

@@ -24,10 +24,10 @@ function ComparisonRow({ label, estimate, actual, bold }: Row & { bold?: boolean
 
   return (
     <tr className={cn(bold && "font-semibold")}>
-      <td className="px-3 py-2">{label}</td>
-      <td className="px-3 py-2 text-right tabular-nums">{formatMoney(estimate)}</td>
-      <td className="px-3 py-2 text-right tabular-nums">{formatMoney(actual)}</td>
-      <td className={cn("px-3 py-2 text-right tabular-nums", diffTone(diff))}>
+      <td className="px-2 py-2 sm:px-3">{label}</td>
+      <td className="px-2 py-2 text-right tabular-nums sm:px-3">{formatMoney(estimate)}</td>
+      <td className="px-2 py-2 text-right tabular-nums sm:px-3">{formatMoney(actual)}</td>
+      <td className={cn("px-2 py-2 text-right tabular-nums sm:px-3", diffTone(diff))}>
         {diff >= 0 ? "+" : ""}
         {formatMoney(diff)}
       </td>
@@ -67,14 +67,14 @@ export function ServiceComparisonTable({
   ];
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border">
-      <table className="w-full min-w-[640px] text-left text-sm">
-        <thead className="bg-surface-muted text-xs uppercase tracking-wide text-muted">
+    <div className="max-w-full overflow-x-auto rounded-2xl border border-border [-webkit-overflow-scrolling:touch]">
+      <table className="w-full min-w-[520px] text-left text-xs sm:min-w-[640px] sm:text-sm">
+        <thead className="bg-surface-muted text-[10px] uppercase tracking-wide text-muted sm:text-xs">
           <tr>
-            <th className="px-3 py-3">Kategoria</th>
-            <th className="px-3 py-3 text-right">Przewidywane koszty netto</th>
-            <th className="px-3 py-3 text-right">Rzeczywiste netto</th>
-            <th className="px-3 py-3 text-right">Różnica</th>
+            <th className="px-2 py-2 sm:px-3 sm:py-3">Kategoria</th>
+            <th className="px-2 py-2 text-right sm:px-3 sm:py-3">Przewidywane netto</th>
+            <th className="px-2 py-2 text-right sm:px-3 sm:py-3">Rzeczywiste netto</th>
+            <th className="px-2 py-2 text-right sm:px-3 sm:py-3">Różnica</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border/60">

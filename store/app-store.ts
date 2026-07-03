@@ -322,6 +322,21 @@ export const useAppStore = create<AppState>((set, get) => ({
         isSaving: false,
         error: null,
       }));
+
+      void fetch("/api/sms/dispatch", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trigger: "client_created",
+          context: {
+            clientId: created.id,
+            phone: created.phone,
+            fullName: created.fullName,
+          },
+        }),
+      }).catch(() => undefined);
+
       return created;
     } catch (error) {
       set({

@@ -125,6 +125,20 @@ export default function SettingsPage() {
       <Card className="mb-6 border border-border/80">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
           <div>
+            <p className="font-medium text-foreground">Wysyłki SMS</p>
+            <p className="mt-1 text-sm text-muted">
+              Reguły automatycznej wysyłki SMS, treści wiadomości i test ręczny.
+            </p>
+          </div>
+          <Button variant="secondary" asChild>
+            <Link href="/ustawienia/sms">Otwórz wysyłki SMS</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-6 border border-border/80">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+          <div>
             <p className="font-medium text-foreground">Katalog branż</p>
             <p className="mt-1 text-sm text-muted">
               Standardowe branże z mapą protokołów komunikacyjnych i domyślnym opisem zakresu.

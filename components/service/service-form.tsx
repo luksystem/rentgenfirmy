@@ -136,7 +136,7 @@ function ViewSwitchBar({
       <div
         className={cn(
           mobileScroll
-            ? "flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:overflow-visible sm:pb-0 [&>button]:min-w-[5.75rem] sm:[&>button]:min-w-0"
+            ? "flex max-w-full gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:max-w-none sm:overflow-visible sm:gap-1.5 sm:pb-0 [&>button]:min-w-0 sm:[&>button]:min-w-0"
             : "grid gap-1.5",
           columnsClassName,
         )}
@@ -365,7 +365,6 @@ export function ServiceForm({
     subStepIndex >= 0 && subSteps[subStepIndex] ? subSteps[subStepIndex].full : null;
 
   return (
-    <div className="min-w-0 max-w-full overflow-x-hidden">
     <>
       {pendingLeaveHref ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
@@ -403,8 +402,8 @@ export function ServiceForm({
         </div>
       ) : null}
 
-    <div className="grid min-w-0 gap-6 xl:grid-cols-[1fr_300px]">
-      <div className="grid min-w-0 gap-5 pb-2">
+    <div className="grid w-full min-w-0 max-w-full gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid min-w-0 max-w-full gap-5 pb-2">
         <div className="sticky top-16 z-10 space-y-2 rounded-2xl border border-border/80 bg-background/95 p-2 backdrop-blur sm:space-y-2.5 sm:p-3 xl:top-0 xl:z-20 xl:p-4">
           <div className="flex items-center justify-between gap-2 sm:gap-3">
             <div className="min-w-0 flex-1">
@@ -643,7 +642,7 @@ export function ServiceForm({
         ) : null}
 
         {mainTab === "quote" && step === 2 ? (
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardContent className="py-5">
               <ServiceLineItemsForm
                 title="Przewidywane koszty przed wyjazdem"
@@ -689,7 +688,7 @@ export function ServiceForm({
         ) : null}
 
         {mainTab === "settlement" && step === QUOTE_STEPS.length ? (
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardContent className="py-5">
               <ServiceLineItemsForm
                 title="Koszty rzeczywiste po serwisie"
@@ -850,6 +849,5 @@ export function ServiceForm({
       <SummaryCard estimate={costs.estimate} actual={costs.actual} className="hidden xl:block" />
     </div>
     </>
-  </div>
   );
 }

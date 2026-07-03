@@ -40,20 +40,22 @@ Widok skrócony do tablic Kanban — bez przechodzenia przez listę projektów.
 
 ---
 
-### [ ] Maile transakcyjne — SMTP własny, konfiguracja i edytor szablonów
+### [ ] Maile transakcyjne — Resend.com, SMTP własny, klucze API i edytor szablonów
 
-Obecnie wysyłka idzie przez **Resend API** (`lib/email/send.ts`). Szablony HTML ustaleń są na sztywno w kodzie (`lib/email/agreement-templates.ts`). Bez `RESEND_API_KEY` wysyłka jest pomijana — działa tylko „Otwórz w kliencie poczty”.
+Obecnie wysyłka idzie przez **Resend API** (`lib/email/send.ts`, `RESEND_API_KEY`). Szablony HTML ustaleń są na sztywno w kodzie (`lib/email/agreement-templates.ts`). Bez `RESEND_API_KEY` wysyłka jest pomijana — działa tylko „Otwórz w kliencie poczty”.
 
 **Do zrobienia:**
 
+- [ ] **Resend.com — konfiguracja produkcyjna** — weryfikacja domeny nadawcy, SPF/DKIM/DMARC, `EMAIL_FROM`, limity i monitoring błędów w panelu Resend
+- [ ] **Klucze API Resend w aplikacji** — sekcja w ustawieniach (np. `/ustawienia` → integracje) zamiast ręcznej edycji `.env`; szyfrowany zapis w `app_settings`, test wysyłki, status „skonfigurowano / brak klucza”
 - [ ] **Własny SMTP** zamiast (lub obok) Resend — nodemailer w `lib/email/send.ts`, zmienne `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`
-- [ ] **Panel konfiguracji** w aplikacji (np. `/ustawienia` lub admin) — test wysyłki, status połączenia, bez ręcznej edycji `.env` na produkcji (opcjonalnie: szyfrowane sekrety w `app_settings`)
-- [ ] **Klucze API / integracje** — jednolite miejsce na Resend, SMTP, `NEXT_PUBLIC_APP_URL`; komunikaty błędów zamiast cichego skip
+- [ ] **Panel konfiguracji poczty** — wybór providera (Resend vs SMTP), test wysyłki, czytelne komunikaty błędów zamiast cichego skip
+- [ ] **Jednolite miejsce na integracje** — Resend, SMTP, SMSAPI, `NEXT_PUBLIC_APP_URL`; dokumentacja w `.env.example`
 - [ ] **Edytor szablonów HTML na froncie** — szablony maili ustaleń (nagłówek, treść, przyciski akceptacji/dyskusji, stopka z disclaimerem) edytowalne w UI, zapis w DB (np. `app_settings` lub `email_templates`), podgląd przed wysyłką
 - [ ] Szablony dla innych typów maili: zgłoszenia serwisowe (`service-intake-server.ts`), ewentualnie oferty serwisowe
-- [ ] Dokumentacja w `.env.example` — kiedy Resend, kiedy SMTP, wymagania SPF/DKIM przy własnym serwerze
+- [ ] **Logi wysyłki maili** — historia statusów (queued/sent/failed) analogicznie do SMS (`sms_messages`)
 
-**Pliki startowe:** `lib/email/send.ts`, `lib/email/agreement-templates.ts`, `lib/supabase/agreement-email-server.ts`, `components/dashboard/agreement-delivery-actions.tsx`
+**Pliki startowe:** `lib/email/send.ts`, `lib/email/agreement-templates.ts`, `lib/supabase/agreement-email-server.ts`, `components/dashboard/agreement-delivery-actions.tsx`, `.env.example`
 
 ---
 
