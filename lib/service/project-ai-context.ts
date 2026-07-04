@@ -90,14 +90,6 @@ function isFulfillmentStatus(value: string): value is FulfillmentStatus {
   return value === "pending" || value === "met" || value === "not_met" || value === "partial";
 }
 
-function isAgreementCategory(value: string): value is ProjectAgreementCategory {
-  return value in PROJECT_AGREEMENT_CATEGORY_LABELS;
-}
-
-function isAgreementStatus(value: string): value is ProjectAgreementStatus {
-  return value in PROJECT_AGREEMENT_STATUS_LABELS;
-}
-
 function rowToSpec(row: SpecRow): ProjectSpecificationItem {
   return {
     id: row.id,
