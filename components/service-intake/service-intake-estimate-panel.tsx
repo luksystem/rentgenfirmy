@@ -2,7 +2,7 @@
 
 import { Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/input";
+import { Textarea, fieldGroupInvalidClassName } from "@/components/ui/input";
 import type { IntakeAiEstimatePublic, IntakeSuggestedWorkMode } from "@/lib/service-intake/intake-ai-estimate";
 import {
   SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS,
@@ -35,6 +35,8 @@ export function ServiceIntakeEstimatePanel({
   onEstimateClarificationsChange,
   onRecalculateWithClarifications,
   recalculating = false,
+  workPreferenceError,
+  preliminaryAcceptedError,
 }: {
   estimate: IntakeAiEstimatePublic | null;
   loading: boolean;
@@ -52,6 +54,8 @@ export function ServiceIntakeEstimatePanel({
   onEstimateClarificationsChange?: (value: string) => void;
   onRecalculateWithClarifications?: () => void;
   recalculating?: boolean;
+  workPreferenceError?: string;
+  preliminaryAcceptedError?: string;
 }) {
   if (loading) {
     return (
@@ -189,8 +193,16 @@ export function ServiceIntakeEstimatePanel({
       </div>
 
       {showWorkPreference ? (
-        <div className="grid gap-2">
-          <p className="text-sm font-medium text-foreground">Sugerowany sposób realizacji</p>
+        <div
+          className={cn(
+            "grid gap-2 rounded-xl p-1",
+            workPreferenceError && fieldGroupInvalidClassName,
+          )}
+        >
+          <p className="text-sm font-medium text-foreground">Sugerowany sposób realizacji *</p>
+          {workPreferenceError ? (
+            <p className="text-xs text-rose-400">{workPreferenceError}</p>
+          ) : null}
           <p className="text-xs text-muted">{WORK_MODE_HINTS[estimate.suggestedWorkMode]}</p>
           <div className="grid gap-2">
             {(Object.keys(SERVICE_INTAKE_WORK_PREFERENCE_LABELS) as ServiceIntakeWorkPreference[]).map(
@@ -201,7 +213,9 @@ export function ServiceIntakeEstimatePanel({
                     "flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 text-sm transition",
                     workPreference === option
                       ? "border-accent bg-accent/10"
-                      : "border-border bg-surface-muted/20 hover:border-accent/40",
+                      : workPreferenceError
+                        ? "border-rose-500/50 bg-rose-500/5"
+                        : "border-border bg-surface-muted/20 hover:border-accent/40",
                   )}
                 >
                   <input
@@ -270,7 +284,14 @@ export function ServiceIntakeEstimatePanel({
       ) : null}
 
       {showPreliminaryAcceptance ? (
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/80 bg-background/50 px-3 py-3 text-sm">
+        <label
+          className={cn(
+            "flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 text-sm",
+            preliminaryAcceptedError
+              ? "border-rose-500/50 bg-rose-500/5 ring-1 ring-rose-500/30"
+              : "border-border/80 bg-background/50",
+          )}
+        >
           <input
             type="checkbox"
             checked={preliminaryAccepted}
@@ -288,6 +309,9 @@ export function ServiceIntakeEstimatePanel({
                 ? " Bez tej akceptacji nie przejdziemy dalej."
                 : " Akceptacja jest dobrowolna."}
             </span>
+            {preliminaryAcceptedError ? (
+              <span className="mt-2 block text-xs text-rose-400">{preliminaryAcceptedError}</span>
+            ) : null}
           </span>
         </label>
       ) : null}

@@ -1,5 +1,5 @@
 import { appendContactHistory, createContactHistoryEntry } from "@/lib/contacts/history";
-import type { Contact, ContactInput } from "@/lib/contacts/types";
+import { isContactConverted, type Contact, type ContactInput } from "@/lib/contacts/types";
 import { contactInputToInsert, rowToContact } from "@/lib/supabase/contact-mappers";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -105,7 +105,7 @@ export async function resolveContactFromIntakeAdmin(
   input: ContactInput & { intakeReference?: string },
 ): Promise<{ contact: Contact; reusedExisting: boolean }> {
   const existing = await findContactByEmailAdmin(input.email);
-  if (existing) {
+  if (existing && !isContactConverted(existing)) {
     const contact = await linkExistingContactFromIntakeAdmin(existing, input);
     return { contact, reusedExisting: true };
   }

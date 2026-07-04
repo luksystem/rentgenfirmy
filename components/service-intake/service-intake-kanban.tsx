@@ -50,6 +50,7 @@ import {
   SERVICE_INTAKE_REQUEST_TYPE_LABELS,
   SERVICE_INTAKE_STATUS_LABELS,
   type ServiceIntakeRecord,
+  type ServiceIntakeRequestType,
   type ServiceIntakeStatus,
 } from "@/lib/service-intake/types";
 import { cn, formatDate, formatDateTime } from "@/lib/utils";
@@ -340,7 +341,13 @@ function ServiceIntakeCard({
   );
 }
 
-export function ServiceIntakeKanban({ authorName = "Zespół" }: { authorName?: string }) {
+export function ServiceIntakeKanban({
+  authorName = "Zespół",
+  requestTypeFilter,
+}: {
+  authorName?: string;
+  requestTypeFilter?: ServiceIntakeRequestType;
+}) {
   const [items, setItems] = useState<ServiceIntakeRecord[]>([]);
   const [teamProfiles, setTeamProfiles] = useState<UserProfile[]>([]);
   const profile = useAuthStore((state) => state.profile);
@@ -375,7 +382,14 @@ export function ServiceIntakeKanban({ authorName = "Zespół" }: { authorName?: 
     }
     setError(null);
     try {
-      const response = await fetch("/api/service-intake", { credentials: "include" });
+      const params = new URLSearchParams();
+      if (requestTypeFilter) {
+        params.set("requestType", requestTypeFilter);
+      }
+      const query = params.toString();
+      const response = await fetch(`/api/service-intake${query ? `?${query}` : ""}`, {
+        credentials: "include",
+      });
       const payload = await response.json();
       if (!response.ok) {
         throw new Error(payload.error ?? "Nie udało się wczytać zgłoszeń.");
@@ -387,7 +401,7 @@ export function ServiceIntakeKanban({ authorName = "Zespół" }: { authorName?: 
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [requestTypeFilter]);
 
   useEffect(() => {
     void loadItems();

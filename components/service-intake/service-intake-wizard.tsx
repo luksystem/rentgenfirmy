@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Field, Input, Textarea } from "@/components/ui/input";
+import { Field, Input, Textarea, fieldGroupInvalidClassName } from "@/components/ui/input";
 import { ServiceIntakeEstimatePanel } from "@/components/service-intake/service-intake-estimate-panel";
 import {
   CAFE_PRIORITY_OPTIONS,
@@ -32,6 +32,8 @@ import type { IntakeAiEstimatePublic } from "@/lib/service-intake/intake-ai-esti
 import {
   formatGuestContactAddress,
   isGuestContactAddressComplete,
+  isValidGuestPostalCode,
+  normalizeGuestContactAddress,
   normalizeGuestPostalCode,
 } from "@/lib/service-intake/guest-address";
 import {
@@ -59,6 +61,46 @@ type WizardStep =
   | "estimate"
   | "summary"
   | "done";
+
+type WizardFieldKey =
+  | "email"
+  | "fullName"
+  | "project"
+  | "description"
+  | "contactPhone"
+  | "guestAddressStreet"
+  | "guestAddressPostalCode"
+  | "guestAddressCity"
+  | "postWarrantyAction"
+  | "workPreference"
+  | "preliminaryAccepted";
+
+type WizardFieldErrors = Partial<Record<WizardFieldKey, string>>;
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function validateGuestAddressFields(address: {
+  addressStreet: string;
+  addressCity: string;
+  addressPostalCode: string;
+}): WizardFieldErrors {
+  const normalized = normalizeGuestContactAddress(address);
+  const errors: WizardFieldErrors = {};
+
+  if (normalized.addressStreet.length < 3) {
+    errors.guestAddressStreet = "Podaj ulicę i numer obiektu (min. 3 znaki).";
+  }
+  if (normalized.addressCity.length < 2) {
+    errors.guestAddressCity = "Podaj miasto.";
+  }
+  if (!isValidGuestPostalCode(normalized.addressPostalCode)) {
+    errors.guestAddressPostalCode = "Podaj poprawny kod pocztowy (format: 00-001).";
+  }
+
+  return errors;
+}
 
 const STEP_LABELS: Record<Exclude<WizardStep, "done">, string> = {
   email: "E-mail",
@@ -200,6 +242,23 @@ export function ServiceIntakeWizard() {
     : "";
   const [estimateClarifications, setEstimateClarifications] = useState("");
   const [recalculatingEstimate, setRecalculatingEstimate] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<WizardFieldErrors>({});
+
+  function clearFieldError(key: WizardFieldKey) {
+    setFieldErrors((current) => {
+      if (!current[key]) {
+        return current;
+      }
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function applyFieldErrors(errors: WizardFieldErrors) {
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
 
   const selectedProject = useMemo(
     () => verification?.projects.find((project) => project.id === selectedProjectId) ?? null,
@@ -265,6 +324,7 @@ export function ServiceIntakeWizard() {
   );
 
   function goNext(from: Exclude<WizardStep, "done">) {
+    setFieldErrors({});
     const index = visibleSteps.indexOf(from);
     const next = visibleSteps[index + 1];
     if (next) {
@@ -272,7 +332,118 @@ export function ServiceIntakeWizard() {
     }
   }
 
+  function validateEmailStep(): boolean {
+    const errors: WizardFieldErrors = {};
+    const trimmed = email.trim();
+    if (!trimmed) {
+      errors.email = "Podaj adres e-mail.";
+    } else if (!isValidEmail(trimmed)) {
+      errors.email = "Podaj poprawny adres e-mail.";
+    }
+    return applyFieldErrors(errors);
+  }
+
+  function validateVerifyStep(): boolean {
+    const errors: WizardFieldErrors = {};
+    if (!fullName.trim()) {
+      errors.fullName = "Podaj imię i nazwisko.";
+    }
+    return applyFieldErrors(errors);
+  }
+
+  function validateProjectStep(): boolean {
+    const errors: WizardFieldErrors = {};
+    if (!selectedProjectId) {
+      errors.project = "Wybierz obiekt, którego dotyczy zgłoszenie.";
+    }
+    return applyFieldErrors(errors);
+  }
+
+  function validateDetailsStep(): boolean {
+    const errors: WizardFieldErrors = {};
+    if (description.trim().length < 10) {
+      errors.description = "Opis musi mieć co najmniej 10 znaków.";
+    }
+    if (isGuestMode) {
+      if (contactPhone.trim().length < 7) {
+        errors.contactPhone = "Podaj numer telefonu (min. 7 znaków).";
+      }
+      Object.assign(errors, validateGuestAddressFields(guestContactAddress));
+    }
+    return applyFieldErrors(errors);
+  }
+
+  function validateActionStep(): boolean {
+    const errors: WizardFieldErrors = {};
+    if (!postWarrantyAction) {
+      errors.postWarrantyAction = "Wybierz sposób działania.";
+    }
+    return applyFieldErrors(errors);
+  }
+
+  function validateEstimateStep(): boolean {
+    const errors: WizardFieldErrors = {};
+    if (!aiEstimate) {
+      setError("Poczekaj na wycenę AI albo spróbuj ponownie.");
+      return false;
+    }
+    if (!postWarrantyAction && !workPreference) {
+      errors.workPreference = "Wybierz preferowany sposób realizacji.";
+    }
+    if (requiresPreliminaryAcceptance && !preliminaryAccepted) {
+      errors.preliminaryAccepted = "Zaakceptuj orientacyjną wycenę, aby przejść dalej.";
+    }
+    setError(null);
+    return applyFieldErrors(errors);
+  }
+
+  function handleEmailNext() {
+    if (!validateEmailStep()) {
+      return;
+    }
+    void handleStart();
+  }
+
+  function handleVerifyNext() {
+    if (!validateVerifyStep()) {
+      return;
+    }
+    void handleVerify();
+  }
+
+  function handleProjectNext() {
+    if (!validateProjectStep()) {
+      return;
+    }
+    goNext("project");
+  }
+
+  function handleDetailsNext() {
+    if (!validateDetailsStep()) {
+      return;
+    }
+    goNext("details");
+  }
+
+  function handleActionNext() {
+    if (!validateActionStep()) {
+      return;
+    }
+    goNext("action");
+  }
+
+  function handleEstimateNext() {
+    if (estimateLoading || recalculatingEstimate) {
+      return;
+    }
+    if (!validateEstimateStep()) {
+      return;
+    }
+    goNext("estimate");
+  }
+
   function goBack(from: Exclude<WizardStep, "done">) {
+    setFieldErrors({});
     const index = visibleSteps.indexOf(from);
     const previous = visibleSteps[index - 1];
     if (previous) {
@@ -505,6 +676,18 @@ export function ServiceIntakeWizard() {
       return;
     }
 
+    const errors: WizardFieldErrors = {};
+    if (requiresPreliminaryAcceptance && !preliminaryAccepted) {
+      errors.preliminaryAccepted = "Zaakceptuj orientacyjną wycenę, aby wysłać zgłoszenie.";
+    }
+    if (!applyFieldErrors(errors)) {
+      return;
+    }
+    if (preliminaryAccepted && !aiEstimateSnapshot) {
+      setError("Brak zapisanej wyceny — wróć do kroku wyceny i spróbuj ponownie.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -557,12 +740,7 @@ export function ServiceIntakeWizard() {
     }
   }
 
-  const estimateNextDisabled =
-    estimateLoading ||
-    recalculatingEstimate ||
-    !aiEstimate ||
-    (!postWarrantyAction && !workPreference) ||
-    (requiresPreliminaryAcceptance && !preliminaryAccepted);
+  const estimateNextDisabled = estimateLoading || recalculatingEstimate;
 
   return (
     <div className="mx-auto w-full max-w-2xl">
@@ -599,16 +777,20 @@ export function ServiceIntakeWizard() {
                   Użyj adresu podanego przy wdrożeniu systemu. Następnie potwierdzimy Twoją tożsamość.
                 </p>
               </div>
-              <Field label="E-mail">
+              <Field label="E-mail" error={fieldErrors.email} invalid={Boolean(fieldErrors.email)}>
                 <Input
                   type="email"
                   autoComplete="email"
                   value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  invalid={Boolean(fieldErrors.email)}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    clearFieldError("email");
+                  }}
                   placeholder="jan@firma.pl"
                 />
               </Field>
-              <Button type="button" disabled={loading || !email.trim()} onClick={() => void handleStart()}>
+              <Button type="button" disabled={loading} onClick={handleEmailNext}>
                 {loading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
@@ -628,11 +810,17 @@ export function ServiceIntakeWizard() {
                   bazie klientów.
                 </p>
               </div>
-              <Field label="Imię i nazwisko">
+              <Field
+                label="Imię i nazwisko"
+                error={fieldErrors.fullName}
+                invalid={Boolean(fieldErrors.fullName)}
+              >
                 <Input
                   value={fullName}
+                  invalid={Boolean(fieldErrors.fullName)}
                   onChange={(event) => {
                     setFullName(event.target.value);
+                    clearFieldError("fullName");
                     setVerifyFailureMessage(null);
                   }}
                   placeholder="Jan Kowalski"
@@ -664,7 +852,16 @@ export function ServiceIntakeWizard() {
                   Wstecz
                 </Button>
                 {verifyFailureMessage ? (
-                  <Button type="button" disabled={loading} onClick={() => void handleContinueAsGuest()}>
+                  <Button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => {
+                      if (!validateVerifyStep()) {
+                        return;
+                      }
+                      void handleContinueAsGuest();
+                    }}
+                  >
                     {loading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
@@ -675,8 +872,8 @@ export function ServiceIntakeWizard() {
                 ) : null}
                 <Button
                   type="button"
-                  disabled={loading || !fullName.trim()}
-                  onClick={() => void handleVerify()}
+                  disabled={loading}
+                  onClick={handleVerifyNext}
                 >
                   {loading ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -697,17 +894,30 @@ export function ServiceIntakeWizard() {
                 </h2>
                 <p className="mt-1 text-sm text-muted">Wybierz obiekt, którego dotyczy zgłoszenie.</p>
               </div>
-              <div className="grid gap-3">
+              <div
+                className={cn(
+                  "grid gap-3 rounded-2xl p-1",
+                  fieldErrors.project && fieldGroupInvalidClassName,
+                )}
+              >
+                {fieldErrors.project ? (
+                  <p className="px-1 text-xs text-rose-400">{fieldErrors.project}</p>
+                ) : null}
                 {verification.projects.map((project) => (
                   <button
                     key={project.id}
                     type="button"
-                    onClick={() => setSelectedProjectId(project.id)}
+                    onClick={() => {
+                      setSelectedProjectId(project.id);
+                      clearFieldError("project");
+                    }}
                     className={cn(
                       "rounded-2xl border px-4 py-3 text-left transition",
                       selectedProjectId === project.id
                         ? "border-accent bg-accent/10"
-                        : "border-border bg-surface-muted/20 hover:border-accent/40",
+                        : fieldErrors.project
+                          ? "border-rose-500/50 bg-rose-500/5 hover:border-rose-500/70"
+                          : "border-border bg-surface-muted/20 hover:border-accent/40",
                     )}
                   >
                     <div className="flex flex-wrap items-center gap-2">
@@ -725,7 +935,7 @@ export function ServiceIntakeWizard() {
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Wstecz
                 </Button>
-                <Button type="button" disabled={!selectedProjectId} onClick={() => goNext("project")}>
+                <Button type="button" onClick={handleProjectNext}>
                   Dalej
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -832,11 +1042,19 @@ export function ServiceIntakeWizard() {
                 </>
               ) : null}
 
-              <Field label="Opis problemu / zgłoszenia *">
+              <Field
+                label="Opis problemu / zgłoszenia *"
+                error={fieldErrors.description}
+                invalid={Boolean(fieldErrors.description)}
+              >
                 <Textarea
                   rows={5}
                   value={description}
-                  onChange={(event) => setDescription(event.target.value)}
+                  invalid={Boolean(fieldErrors.description)}
+                  onChange={(event) => {
+                    setDescription(event.target.value);
+                    clearFieldError("description");
+                  }}
                   placeholder={
                     isGuestMode
                       ? "Opisz, czego potrzebujesz — im więcej szczegółów, tym trafniejsza wycena."
@@ -845,7 +1063,16 @@ export function ServiceIntakeWizard() {
                 />
               </Field>
               {isGuestMode ? (
-                <div className="grid gap-3 rounded-2xl border border-border/70 bg-surface-muted/15 p-4">
+                <div
+                  className={cn(
+                    "grid gap-3 rounded-2xl border bg-surface-muted/15 p-4",
+                    fieldErrors.guestAddressStreet ||
+                      fieldErrors.guestAddressPostalCode ||
+                      fieldErrors.guestAddressCity
+                      ? "border-rose-500/50 ring-1 ring-rose-500/30"
+                      : "border-border/70",
+                  )}
+                >
                   <div>
                     <p className="text-sm font-medium text-foreground">Adres obiektu *</p>
                     <p className="mt-1 text-xs text-muted">
@@ -853,19 +1080,35 @@ export function ServiceIntakeWizard() {
                       numerem, kod pocztowy i miasto.
                     </p>
                   </div>
-                  <Field label="Ulica i numer *">
+                  <Field
+                    label="Ulica i numer *"
+                    error={fieldErrors.guestAddressStreet}
+                    invalid={Boolean(fieldErrors.guestAddressStreet)}
+                  >
                     <Input
                       value={guestAddressStreet}
-                      onChange={(event) => setGuestAddressStreet(event.target.value)}
+                      invalid={Boolean(fieldErrors.guestAddressStreet)}
+                      onChange={(event) => {
+                        setGuestAddressStreet(event.target.value);
+                        clearFieldError("guestAddressStreet");
+                      }}
                       placeholder="np. Zbożowa 77"
                       autoComplete="street-address"
                     />
                   </Field>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <Field label="Kod pocztowy *">
+                    <Field
+                      label="Kod pocztowy *"
+                      error={fieldErrors.guestAddressPostalCode}
+                      invalid={Boolean(fieldErrors.guestAddressPostalCode)}
+                    >
                       <Input
                         value={guestAddressPostalCode}
-                        onChange={(event) => setGuestAddressPostalCode(event.target.value)}
+                        invalid={Boolean(fieldErrors.guestAddressPostalCode)}
+                        onChange={(event) => {
+                          setGuestAddressPostalCode(event.target.value);
+                          clearFieldError("guestAddressPostalCode");
+                        }}
                         onBlur={() =>
                           setGuestAddressPostalCode((current) => normalizeGuestPostalCode(current))
                         }
@@ -874,10 +1117,18 @@ export function ServiceIntakeWizard() {
                         autoComplete="postal-code"
                       />
                     </Field>
-                    <Field label="Miasto *">
+                    <Field
+                      label="Miasto *"
+                      error={fieldErrors.guestAddressCity}
+                      invalid={Boolean(fieldErrors.guestAddressCity)}
+                    >
                       <Input
                         value={guestAddressCity}
-                        onChange={(event) => setGuestAddressCity(event.target.value)}
+                        invalid={Boolean(fieldErrors.guestAddressCity)}
+                        onChange={(event) => {
+                          setGuestAddressCity(event.target.value);
+                          clearFieldError("guestAddressCity");
+                        }}
                         placeholder="np. Biskupice"
                         autoComplete="address-level2"
                       />
@@ -885,10 +1136,18 @@ export function ServiceIntakeWizard() {
                   </div>
                 </div>
               ) : null}
-              <Field label={isGuestMode ? "Telefon kontaktowy *" : "Telefon kontaktowy (opcjonalnie)"}>
+              <Field
+                label={isGuestMode ? "Telefon kontaktowy *" : "Telefon kontaktowy (opcjonalnie)"}
+                error={fieldErrors.contactPhone}
+                invalid={Boolean(fieldErrors.contactPhone)}
+              >
                 <Input
                   value={contactPhone}
-                  onChange={(event) => setContactPhone(event.target.value)}
+                  invalid={Boolean(fieldErrors.contactPhone)}
+                  onChange={(event) => {
+                    setContactPhone(event.target.value);
+                    clearFieldError("contactPhone");
+                  }}
                   placeholder="+48 ..."
                 />
               </Field>
@@ -930,16 +1189,7 @@ export function ServiceIntakeWizard() {
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Wstecz
                 </Button>
-                <Button
-                  type="button"
-                  disabled={
-                    description.trim().length < 10 ||
-                    (isServiceRequest && !priority) ||
-                    (isGuestMode &&
-                      (contactPhone.trim().length < 7 || !guestAddressComplete))
-                  }
-                  onClick={() => goNext("details")}
-                >
+                <Button type="button" onClick={handleDetailsNext}>
                   Dalej
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -962,20 +1212,33 @@ export function ServiceIntakeWizard() {
                   Obiekt jest pogwarancyjny — wybierz preferowany sposób obsługi zgłoszenia.
                 </p>
               </div>
-              <div className="grid gap-3">
+              <div
+                className={cn(
+                  "grid gap-3 rounded-2xl p-1",
+                  fieldErrors.postWarrantyAction && fieldGroupInvalidClassName,
+                )}
+              >
+                {fieldErrors.postWarrantyAction ? (
+                  <p className="px-1 text-xs text-rose-400">{fieldErrors.postWarrantyAction}</p>
+                ) : null}
                 <label
                   className={cn(
                     "flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-3",
                     postWarrantyAction === "offer"
                       ? "border-accent bg-accent/10"
-                      : "border-border bg-surface-muted/20",
+                      : fieldErrors.postWarrantyAction
+                        ? "border-rose-500/50 bg-rose-500/5"
+                        : "border-border bg-surface-muted/20",
                   )}
                 >
                   <input
                     type="radio"
                     name="postWarrantyAction"
                     checked={postWarrantyAction === "offer"}
-                    onChange={() => setPostWarrantyAction("offer")}
+                    onChange={() => {
+                      setPostWarrantyAction("offer");
+                      clearFieldError("postWarrantyAction");
+                    }}
                     className="mt-1"
                   />
                   <span className="text-sm text-foreground">
@@ -987,14 +1250,19 @@ export function ServiceIntakeWizard() {
                     "flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-3",
                     postWarrantyAction === "on_site"
                       ? "border-accent bg-accent/10"
-                      : "border-border bg-surface-muted/20",
+                      : fieldErrors.postWarrantyAction
+                        ? "border-rose-500/50 bg-rose-500/5"
+                        : "border-border bg-surface-muted/20",
                   )}
                 >
                   <input
                     type="radio"
                     name="postWarrantyAction"
                     checked={postWarrantyAction === "on_site"}
-                    onChange={() => setPostWarrantyAction("on_site")}
+                    onChange={() => {
+                      setPostWarrantyAction("on_site");
+                      clearFieldError("postWarrantyAction");
+                    }}
                     className="mt-1"
                   />
                   <span className="text-sm text-foreground">
@@ -1006,14 +1274,19 @@ export function ServiceIntakeWizard() {
                     "flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-3",
                     postWarrantyAction === "remote"
                       ? "border-accent bg-accent/10"
-                      : "border-border bg-surface-muted/20",
+                      : fieldErrors.postWarrantyAction
+                        ? "border-rose-500/50 bg-rose-500/5"
+                        : "border-border bg-surface-muted/20",
                   )}
                 >
                   <input
                     type="radio"
                     name="postWarrantyAction"
                     checked={postWarrantyAction === "remote"}
-                    onChange={() => setPostWarrantyAction("remote")}
+                    onChange={() => {
+                      setPostWarrantyAction("remote");
+                      clearFieldError("postWarrantyAction");
+                    }}
                     className="mt-1"
                   />
                   <span className="text-sm text-foreground">
@@ -1026,7 +1299,7 @@ export function ServiceIntakeWizard() {
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Wstecz
                 </Button>
-                <Button type="button" disabled={!postWarrantyAction} onClick={() => goNext("action")}>
+                <Button type="button" onClick={handleActionNext}>
                   {effectiveRequiresAiEstimate ? "Orientacyjna wycena" : "Podsumowanie"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -1065,12 +1338,18 @@ export function ServiceIntakeWizard() {
                 loading={estimateLoading}
                 error={estimateError}
                 workPreference={workPreference}
-                onWorkPreferenceChange={setWorkPreference}
+                onWorkPreferenceChange={(value) => {
+                  setWorkPreference(value);
+                  clearFieldError("workPreference");
+                }}
                 postWarrantyAction={postWarrantyAction}
                 showPreliminaryAcceptance={allowsPreliminaryAcceptance}
                 requiresPreliminaryAcceptance={requiresPreliminaryAcceptance}
                 preliminaryAccepted={preliminaryAccepted}
-                onPreliminaryAcceptedChange={setPreliminaryAccepted}
+                onPreliminaryAcceptedChange={(value) => {
+                  setPreliminaryAccepted(value);
+                  clearFieldError("preliminaryAccepted");
+                }}
                 onRetry={() => void fetchAiEstimate()}
                 isNewContact={isGuestMode}
                 estimateClarifications={estimateClarifications}
@@ -1079,17 +1358,15 @@ export function ServiceIntakeWizard() {
                   void fetchAiEstimate({ clarifications: estimateClarifications, isRecalculate: true })
                 }
                 recalculating={recalculatingEstimate}
+                workPreferenceError={fieldErrors.workPreference}
+                preliminaryAcceptedError={fieldErrors.preliminaryAccepted}
               />
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" onClick={() => goBack("estimate")}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Wstecz
                 </Button>
-                <Button
-                  type="button"
-                  disabled={estimateNextDisabled}
-                  onClick={() => goNext("estimate")}
-                >
+                <Button type="button" disabled={estimateNextDisabled} onClick={handleEstimateNext}>
                   Dalej do podsumowania
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -1175,6 +1452,9 @@ export function ServiceIntakeWizard() {
                   {preliminaryAccepted ? (
                     <p className="text-xs text-emerald-300">Wstępnie zaakceptowano orientacyjną wycenę.</p>
                   ) : null}
+                  {fieldErrors.preliminaryAccepted ? (
+                    <p className="text-xs text-rose-400">{fieldErrors.preliminaryAccepted}</p>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -1185,11 +1465,7 @@ export function ServiceIntakeWizard() {
                 </Button>
                 <Button
                   type="button"
-                  disabled={
-                    loading ||
-                    (requiresPreliminaryAcceptance && !preliminaryAccepted) ||
-                    (preliminaryAccepted && !aiEstimateSnapshot)
-                  }
+                  disabled={loading}
                   onClick={() => void handleSubmit()}
                 >
                   {loading ? (

@@ -77,6 +77,7 @@ type AppState = {
   addContact: (input: ContactInput) => Promise<Contact>;
   updateContact: (id: string, input: ContactInput) => Promise<void>;
   deleteContact: (id: string) => Promise<void>;
+  refreshContacts: () => Promise<void>;
   convertContactToClient: (contactId: string) => Promise<Client>;
 };
 
@@ -466,6 +467,17 @@ export const useAppStore = create<AppState>((set, get) => ({
         isSaving: false,
       });
       throw error;
+    }
+  },
+
+  refreshContacts: async () => {
+    try {
+      const contacts = await fetchContacts();
+      set({ contacts, error: null });
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Nie udało się odświeżyć kontaktów",
+      });
     }
   },
 

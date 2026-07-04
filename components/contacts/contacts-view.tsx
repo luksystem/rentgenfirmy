@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ContactsTable } from "@/components/contacts/contacts-table";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,12 @@ import { useAppStore } from "@/store/app-store";
 
 export function ContactsView() {
   const allContacts = useAppStore((state) => state.contacts);
+  const refreshContacts = useAppStore((state) => state.refreshContacts);
   const [filters, setFilters] = useState<ContactListFilters>(EMPTY_CONTACT_LIST_FILTERS);
+
+  useEffect(() => {
+    void refreshContacts();
+  }, [refreshContacts]);
 
   const filteredContacts = useMemo(
     () => filterContacts(allContacts, filters),

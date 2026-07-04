@@ -9,7 +9,7 @@ export default function ServiceBoardPage() {
         title="Tablica serwisowa"
         description="Kanban zgłoszeń serwisowych z priorytetami CAFE, terminami reakcji i wątkami publicznymi."
       />
-      <ServiceIntakeKanban />
+      <ServiceIntakeKanban requestTypeFilter="service" />
     </>
   );
 }

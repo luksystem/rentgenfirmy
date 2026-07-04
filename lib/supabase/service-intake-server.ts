@@ -829,15 +829,22 @@ export async function submitServiceIntakeRequest(input: {
   return record;
 }
 
-export async function listServiceIntakeRequests(status?: ServiceIntakeStatus) {
+export async function listServiceIntakeRequests(options?: {
+  status?: ServiceIntakeStatus;
+  requestType?: ServiceIntakeRequestType;
+}) {
   const supabase = getSupabaseAdmin();
   let query = supabase
     .from("service_intake_requests")
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (status) {
-    query = query.eq("status", status);
+  if (options?.status) {
+    query = query.eq("status", options.status);
+  }
+
+  if (options?.requestType) {
+    query = query.eq("request_type", options.requestType);
   }
 
   const { data, error } = await query;
@@ -1141,7 +1148,7 @@ export async function addServiceIntakeTeamComment(input: {
 }
 
 export async function countServiceIntakeAlerts() {
-  const items = await listServiceIntakeRequests();
+  const items = await listServiceIntakeRequests({ requestType: "service" });
   const activeItems = items.filter((item) => isServiceIntakeActive(item.status));
   const overdueCount = activeItems.filter((item) => isServiceIntakeOverdue(item)).length;
   const newCount = activeItems.filter((item) => isServiceIntakeAwaitingPickup(item)).length;
