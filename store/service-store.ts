@@ -215,7 +215,7 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
   },
 
   updateSettings: async (settings) => {
-    set({ isSaving: true, error: null });
+    set({ isSaving: true, error: null, settings });
 
     try {
       const saved = await saveServiceSettings(settings);

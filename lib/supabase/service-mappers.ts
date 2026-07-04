@@ -97,16 +97,14 @@ function normalizeAiEstimateSettings(
   const defaults = DEFAULT_SERVICE_SETTINGS.aiEstimateSettings;
 
   const systemPrompt =
-    typeof data.systemPrompt === "string" && data.systemPrompt.trim()
-      ? data.systemPrompt.trim()
+    typeof data.systemPrompt === "string"
+      ? data.systemPrompt
       : defaults.systemPrompt;
   const rulesPrompt =
-    typeof data.rulesPrompt === "string" && data.rulesPrompt.trim()
-      ? data.rulesPrompt.trim()
-      : defaults.rulesPrompt;
+    typeof data.rulesPrompt === "string" ? data.rulesPrompt : defaults.rulesPrompt;
   const newContactRulesPrompt =
-    typeof data.newContactRulesPrompt === "string" && data.newContactRulesPrompt.trim()
-      ? data.newContactRulesPrompt.trim()
+    typeof data.newContactRulesPrompt === "string"
+      ? data.newContactRulesPrompt
       : defaults.newContactRulesPrompt;
 
   return {

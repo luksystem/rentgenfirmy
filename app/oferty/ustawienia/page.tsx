@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -40,29 +41,44 @@ function SettingsSection({
 
 export default function OfertySettingsPage() {
   const settings = useServiceStore((s) => s.settings);
+  const hydrated = useServiceStore((s) => s.hydrated);
   const updateSettings = useServiceStore((s) => s.updateSettings);
   const isSaving = useServiceStore((s) => s.isSaving);
   const error = useServiceStore((s) => s.error);
 
   const intakeSettings = settings.intakeSettings ?? DEFAULT_SERVICE_SETTINGS.intakeSettings;
-  const aiEstimateSettings =
+  const savedAiEstimateSettings =
     settings.aiEstimateSettings ?? DEFAULT_SERVICE_SETTINGS.aiEstimateSettings;
+  const [draftAiEstimateSettings, setDraftAiEstimateSettings] =
+    useState<ServiceAiEstimateSettings>(savedAiEstimateSettings);
 
-  function updateAiEstimateSettings(patch: Partial<ServiceAiEstimateSettings>) {
-    void updateSettings({
-      ...settings,
-      aiEstimateSettings: {
-        ...aiEstimateSettings,
-        ...patch,
-      },
-    });
+  useEffect(() => {
+    if (hydrated) {
+      setDraftAiEstimateSettings(savedAiEstimateSettings);
+    }
+  }, [hydrated, savedAiEstimateSettings]);
+
+  function updateDraftAiEstimateSettings(patch: Partial<ServiceAiEstimateSettings>) {
+    setDraftAiEstimateSettings((current) => ({
+      ...current,
+      ...patch,
+    }));
   }
 
   function resetAiEstimateDefaults() {
-    void updateSettings({
+    setDraftAiEstimateSettings(getDefaultServiceAiEstimateSettings());
+  }
+
+  async function handleSaveSettings() {
+    await updateSettings(buildSettingsForSave());
+  }
+
+  function buildSettingsForSave(patch: Partial<typeof settings> = {}) {
+    return {
       ...settings,
-      aiEstimateSettings: getDefaultServiceAiEstimateSettings(),
-    });
+      aiEstimateSettings: draftAiEstimateSettings,
+      ...patch,
+    };
   }
 
   return (
@@ -90,13 +106,14 @@ export default function OfertySettingsPage() {
               <NumericInput
                 value={intakeSettings.prioritySurchargePercent}
                 onChange={(value) =>
-                  void updateSettings({
-                    ...settings,
-                    intakeSettings: {
-                      ...intakeSettings,
-                      prioritySurchargePercent: Math.max(0, value),
-                    },
-                  })
+                  void updateSettings(
+                    buildSettingsForSave({
+                      intakeSettings: {
+                        ...intakeSettings,
+                        prioritySurchargePercent: Math.max(0, value),
+                      },
+                    }),
+                  )
                 }
               />
             </Field>
@@ -115,25 +132,29 @@ export default function OfertySettingsPage() {
             <div className="sm:col-span-2 grid gap-4">
               <Field label="Komunikat systemowy">
                 <Textarea
-                  value={aiEstimateSettings.systemPrompt}
-                  onChange={(event) => updateAiEstimateSettings({ systemPrompt: event.target.value })}
+                  value={draftAiEstimateSettings.systemPrompt}
+                  onChange={(event) =>
+                    updateDraftAiEstimateSettings({ systemPrompt: event.target.value })
+                  }
                   rows={3}
                   className="font-mono text-xs"
                 />
               </Field>
               <Field label="Zasady wyceny (sekcja „Zasady” w prompcie)">
                 <Textarea
-                  value={aiEstimateSettings.rulesPrompt}
-                  onChange={(event) => updateAiEstimateSettings({ rulesPrompt: event.target.value })}
+                  value={draftAiEstimateSettings.rulesPrompt}
+                  onChange={(event) =>
+                    updateDraftAiEstimateSettings({ rulesPrompt: event.target.value })
+                  }
                   rows={12}
                   className="font-mono text-xs"
                 />
               </Field>
               <Field label="Zasady dla nowego kontaktu (/zgloszenie jako gość)">
                 <Textarea
-                  value={aiEstimateSettings.newContactRulesPrompt}
+                  value={draftAiEstimateSettings.newContactRulesPrompt}
                   onChange={(event) =>
-                    updateAiEstimateSettings({ newContactRulesPrompt: event.target.value })
+                    updateDraftAiEstimateSettings({ newContactRulesPrompt: event.target.value })
                   }
                   rows={10}
                   className="font-mono text-xs"
@@ -148,7 +169,7 @@ export default function OfertySettingsPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() =>
-                    updateAiEstimateSettings({
+                    updateDraftAiEstimateSettings({
                       systemPrompt: DEFAULT_SERVICE_AI_SYSTEM_PROMPT,
                     })
                   }
@@ -160,7 +181,7 @@ export default function OfertySettingsPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() =>
-                    updateAiEstimateSettings({
+                    updateDraftAiEstimateSettings({
                       rulesPrompt: DEFAULT_SERVICE_AI_RULES_PROMPT,
                     })
                   }
@@ -172,7 +193,7 @@ export default function OfertySettingsPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() =>
-                    updateAiEstimateSettings({
+                    updateDraftAiEstimateSettings({
                       newContactRulesPrompt: DEFAULT_SERVICE_AI_NEW_CONTACT_RULES_PROMPT,
                     })
                   }
@@ -184,6 +205,7 @@ export default function OfertySettingsPage() {
                 Zasady dla wybranej opcji pogwarancyjnej (oferta / przyjazd / zdalny) nadal
                 dokładane są automatycznie według wyboru klienta. Format odpowiedzi JSON pozostaje
                 stały — nie usuwaj wymagań dotyczących pól recognizedTasks, travel, materials itd.
+                Zmiany w promptach zapisuj przyciskiem „Zapisz ustawienia” na dole strony.
               </p>
             </div>
           </SettingsSection>
@@ -207,10 +229,11 @@ export default function OfertySettingsPage() {
                 <NumericInput
                   value={settings.rates[key]}
                   onChange={(value) =>
-                    void updateSettings({
-                      ...settings,
-                      rates: { ...settings.rates, [key]: value },
-                    })
+                    void updateSettings(
+                      buildSettingsForSave({
+                        rates: { ...settings.rates, [key]: value },
+                      }),
+                    )
                   }
                 />
               </Field>
@@ -223,13 +246,14 @@ export default function OfertySettingsPage() {
                 decimals={false}
                 value={settings.zoneSettings.zone1ThresholdKm}
                 onChange={(value) =>
-                  void updateSettings({
-                    ...settings,
-                    zoneSettings: {
-                      ...settings.zoneSettings,
-                      zone1ThresholdKm: value,
-                    },
-                  })
+                  void updateSettings(
+                    buildSettingsForSave({
+                      zoneSettings: {
+                        ...settings.zoneSettings,
+                        zone1ThresholdKm: value,
+                      },
+                    }),
+                  )
                 }
               />
             </Field>
@@ -238,13 +262,14 @@ export default function OfertySettingsPage() {
                 decimals={false}
                 value={settings.zoneSettings.zone2ThresholdKm}
                 onChange={(value) =>
-                  void updateSettings({
-                    ...settings,
-                    zoneSettings: {
-                      ...settings.zoneSettings,
-                      zone2ThresholdKm: value,
-                    },
-                  })
+                  void updateSettings(
+                    buildSettingsForSave({
+                      zoneSettings: {
+                        ...settings.zoneSettings,
+                        zone2ThresholdKm: value,
+                      },
+                    }),
+                  )
                 }
               />
             </Field>
@@ -253,13 +278,14 @@ export default function OfertySettingsPage() {
                 decimals={false}
                 value={settings.zoneSettings.zone3ThresholdKm}
                 onChange={(value) =>
-                  void updateSettings({
-                    ...settings,
-                    zoneSettings: {
-                      ...settings.zoneSettings,
-                      zone3ThresholdKm: value,
-                    },
-                  })
+                  void updateSettings(
+                    buildSettingsForSave({
+                      zoneSettings: {
+                        ...settings.zoneSettings,
+                        zone3ThresholdKm: value,
+                      },
+                    }),
+                  )
                 }
               />
             </Field>
@@ -270,13 +296,14 @@ export default function OfertySettingsPage() {
               <NumericInput
                 value={settings.defaultDiscounts.percentDiscount}
                 onChange={(value) =>
-                  void updateSettings({
-                    ...settings,
-                    defaultDiscounts: {
-                      ...settings.defaultDiscounts,
-                      percentDiscount: Math.min(100, value),
-                    },
-                  })
+                  void updateSettings(
+                    buildSettingsForSave({
+                      defaultDiscounts: {
+                        ...settings.defaultDiscounts,
+                        percentDiscount: Math.min(100, value),
+                      },
+                    }),
+                  )
                 }
               />
             </Field>
@@ -284,13 +311,14 @@ export default function OfertySettingsPage() {
               <NumericInput
                 value={settings.defaultDiscounts.specialDiscountPln}
                 onChange={(value) =>
-                  void updateSettings({
-                    ...settings,
-                    defaultDiscounts: {
-                      ...settings.defaultDiscounts,
-                      specialDiscountPln: value,
-                    },
-                  })
+                  void updateSettings(
+                    buildSettingsForSave({
+                      defaultDiscounts: {
+                        ...settings.defaultDiscounts,
+                        specialDiscountPln: value,
+                      },
+                    }),
+                  )
                 }
               />
             </Field>
@@ -298,13 +326,14 @@ export default function OfertySettingsPage() {
               <Select
                 value={settings.defaultDiscounts.vatRate}
                 onChange={(e) =>
-                  void updateSettings({
-                    ...settings,
-                    defaultDiscounts: {
-                      ...settings.defaultDiscounts,
-                      vatRate: Number(e.target.value) as typeof settings.defaultDiscounts.vatRate,
-                    },
-                  })
+                  void updateSettings(
+                    buildSettingsForSave({
+                      defaultDiscounts: {
+                        ...settings.defaultDiscounts,
+                        vatRate: Number(e.target.value) as typeof settings.defaultDiscounts.vatRate,
+                      },
+                    }),
+                  )
                 }
               >
                 {VAT_RATES.map((rate) => (
@@ -317,7 +346,7 @@ export default function OfertySettingsPage() {
           </SettingsSection>
 
           <div className="border-t border-border/60 pt-6">
-            <Button disabled={isSaving} onClick={() => void updateSettings(settings)}>
+            <Button disabled={isSaving} onClick={() => void handleSaveSettings()}>
               {isSaving ? "Zapisywanie…" : "Zapisz ustawienia"}
             </Button>
           </div>
