@@ -30,6 +30,11 @@ import {
 } from "@/lib/service-intake/ai-estimate-flow";
 import type { IntakeAiEstimatePublic } from "@/lib/service-intake/intake-ai-estimate";
 import {
+  formatGuestContactAddress,
+  isGuestContactAddressComplete,
+  normalizeGuestPostalCode,
+} from "@/lib/service-intake/guest-address";
+import {
   isGuestIntakeRequestType,
   SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS,
   SERVICE_INTAKE_PRIORITY_LABELS,
@@ -178,7 +183,21 @@ export function ServiceIntakeWizard() {
   const [preliminaryAcceptedOnSubmit, setPreliminaryAcceptedOnSubmit] = useState(false);
   const [isGuestMode, setIsGuestMode] = useState(false);
   const [verifyFailureMessage, setVerifyFailureMessage] = useState<string | null>(null);
-  const [guestLocation, setGuestLocation] = useState("");
+  const [guestAddressStreet, setGuestAddressStreet] = useState("");
+  const [guestAddressCity, setGuestAddressCity] = useState("");
+  const [guestAddressPostalCode, setGuestAddressPostalCode] = useState("");
+  const guestContactAddress = useMemo(
+    () => ({
+      addressStreet: guestAddressStreet,
+      addressCity: guestAddressCity,
+      addressPostalCode: guestAddressPostalCode,
+    }),
+    [guestAddressStreet, guestAddressCity, guestAddressPostalCode],
+  );
+  const guestAddressComplete = isGuestContactAddressComplete(guestContactAddress);
+  const guestAddressLabel = guestAddressComplete
+    ? formatGuestContactAddress(guestContactAddress)
+    : "";
   const [estimateClarifications, setEstimateClarifications] = useState("");
   const [recalculatingEstimate, setRecalculatingEstimate] = useState(false);
 
@@ -266,7 +285,7 @@ export function ServiceIntakeWizard() {
       return;
     }
     if (isGuestMode) {
-      if (guestLocation.trim().length < 3) {
+      if (!guestAddressComplete) {
         return;
       }
     } else if (!selectedProjectId) {
@@ -293,7 +312,7 @@ export function ServiceIntakeWizard() {
           requestType,
           priority: isServiceRequest ? priority : null,
           postWarrantyAction: requiresActionStep ? postWarrantyAction : null,
-          contactLocation: isGuestMode ? guestLocation : undefined,
+          contactAddress: isGuestMode ? guestContactAddress : undefined,
           contactPhone: isGuestMode ? contactPhone : undefined,
           isNewContact: isGuestMode,
           estimateClarifications: clarifications.trim() || undefined,
@@ -343,7 +362,9 @@ export function ServiceIntakeWizard() {
     postWarrantyAction,
     isServiceRequest,
     isGuestMode,
-    guestLocation,
+    guestAddressStreet,
+    guestAddressCity,
+    guestAddressPostalCode,
     contactPhone,
   ]);
 
@@ -396,7 +417,9 @@ export function ServiceIntakeWizard() {
       }
 
       setIsGuestMode(false);
-      setGuestLocation("");
+      setGuestAddressStreet("");
+      setGuestAddressCity("");
+      setGuestAddressPostalCode("");
       setVerification(payload as ServiceIntakeVerifyResult);
       setSelectedProjectId(payload.projects[0]?.id ?? null);
       setRequestType("service");
@@ -434,6 +457,9 @@ export function ServiceIntakeWizard() {
       setPostWarrantyAction(null);
       setPriority("f");
       setEstimateClarifications("");
+      setGuestAddressStreet("");
+      setGuestAddressCity("");
+      setGuestAddressPostalCode("");
       setStep("requestType");
     } catch (guestError) {
       setError(guestError instanceof Error ? guestError.message : "Błąd.");
@@ -493,11 +519,13 @@ export function ServiceIntakeWizard() {
           postWarrantyAction: requiresActionStep ? postWarrantyAction : null,
           description,
           contactPhone,
-          contactLocation: isGuestMode ? guestLocation : undefined,
+          contactAddress: isGuestMode ? guestContactAddress : undefined,
           workPreference,
           preliminaryAccepted: allowsPreliminaryAcceptance && preliminaryAccepted,
           aiEstimateSnapshot,
-          estimateClarifications: isGuestMode ? estimateClarifications.trim() || undefined : undefined,
+          estimateClarifications: effectiveRequiresAiEstimate
+            ? estimateClarifications.trim() || undefined
+            : undefined,
           attachments: [
             ...uploadedAttachments,
             ...attachmentLinks
@@ -817,13 +845,45 @@ export function ServiceIntakeWizard() {
                 />
               </Field>
               {isGuestMode ? (
-                <Field label="Lokalizacja obiektu *">
-                  <Input
-                    value={guestLocation}
-                    onChange={(event) => setGuestLocation(event.target.value)}
-                    placeholder="Miasto lub adres — do orientacyjnej wyceny dojazdu"
-                  />
-                </Field>
+                <div className="grid gap-3 rounded-2xl border border-border/70 bg-surface-muted/15 p-4">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Adres obiektu *</p>
+                    <p className="mt-1 text-xs text-muted">
+                      Pełny adres pozwala nam wyliczyć odległość i koszt dojazdu. Podaj ulicę z
+                      numerem, kod pocztowy i miasto.
+                    </p>
+                  </div>
+                  <Field label="Ulica i numer *">
+                    <Input
+                      value={guestAddressStreet}
+                      onChange={(event) => setGuestAddressStreet(event.target.value)}
+                      placeholder="np. Zbożowa 77"
+                      autoComplete="street-address"
+                    />
+                  </Field>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Kod pocztowy *">
+                      <Input
+                        value={guestAddressPostalCode}
+                        onChange={(event) => setGuestAddressPostalCode(event.target.value)}
+                        onBlur={() =>
+                          setGuestAddressPostalCode((current) => normalizeGuestPostalCode(current))
+                        }
+                        placeholder="00-001"
+                        inputMode="numeric"
+                        autoComplete="postal-code"
+                      />
+                    </Field>
+                    <Field label="Miasto *">
+                      <Input
+                        value={guestAddressCity}
+                        onChange={(event) => setGuestAddressCity(event.target.value)}
+                        placeholder="np. Biskupice"
+                        autoComplete="address-level2"
+                      />
+                    </Field>
+                  </div>
+                </div>
               ) : null}
               <Field label={isGuestMode ? "Telefon kontaktowy *" : "Telefon kontaktowy (opcjonalnie)"}>
                 <Input
@@ -876,7 +936,7 @@ export function ServiceIntakeWizard() {
                     description.trim().length < 10 ||
                     (isServiceRequest && !priority) ||
                     (isGuestMode &&
-                      (contactPhone.trim().length < 7 || guestLocation.trim().length < 3))
+                      (contactPhone.trim().length < 7 || !guestAddressComplete))
                   }
                   onClick={() => goNext("details")}
                 >
@@ -980,14 +1040,13 @@ export function ServiceIntakeWizard() {
                 <h2 className="text-lg font-semibold text-foreground">Orientacyjna wycena</h2>
                 <p className="mt-1 text-sm text-muted">
                   Na podstawie opisu, specyfikacji obiektu i lokalizacji szacujemy przewidywany czas
-                  pracy i koszt netto usługi. Ostateczna oferta może się różnić po doprecyzowaniu
-                  wymagań.
+                  pracy i koszt netto usługi. Możesz doprecyzować wycenę poniżej — przy każdej opcji
+                  działania (oferta, przyjazd, serwis zdalny).
                 </p>
                 {isGuestMode ? (
                   <p className="mt-2 text-xs text-amber-100">
                     Jako nowy kontakt wycena uwzględnia odległość od naszej firmy i dojazd. Przy
-                    ogólnym opisie celowo szacujemy ostrożnie w górę — odpowiedzi na pytania AI
-                    pozwolą skorygować kwotę.
+                    ogólnym opisie celowo szacujemy ostrożnie w górę.
                   </p>
                 ) : null}
               </div>
@@ -1058,7 +1117,7 @@ export function ServiceIntakeWizard() {
                       <span className="text-muted">Telefon:</span> {contactPhone}
                     </p>
                     <p>
-                      <span className="text-muted">Lokalizacja:</span> {guestLocation}
+                      <span className="text-muted">Adres obiektu:</span> {guestAddressLabel}
                     </p>
                     <p className="text-xs text-muted">
                       Utworzymy nowy kontakt w naszej bazie i przygotujemy rozliczenie serwisowe z

@@ -5,6 +5,12 @@ import {
   shouldApplyIntakePrioritySurcharge,
 } from "@/lib/service-intake/ai-estimate-flow";
 import { computeIntakeAiEstimate } from "@/lib/service-intake/intake-ai-estimate";
+import {
+  buildGuestServiceClient,
+  parseGuestContactAddressBody,
+  validateGuestContactAddress,
+  formatGuestContactAddress,
+} from "@/lib/service-intake/guest-address";
 import { readIntakeAuthToken } from "@/lib/service-intake/tokens";
 import {
   isGuestIntakeRequestType,
@@ -15,36 +21,12 @@ import {
   type ServiceIntakePriority,
   type ServiceIntakeRequestType,
 } from "@/lib/service-intake/types";
-import type { Client } from "@/lib/service/types";
 import { rowToClient } from "@/lib/supabase/client-mappers";
 import { fetchCompanyProfileServer } from "@/lib/supabase/company-profile-server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeServiceGlobalSettings } from "@/lib/supabase/service-mappers";
 import { rowToProject } from "@/lib/supabase/mappers";
 import { getWarrantyStatus, resolveServiceAiWarrantyContext } from "@/lib/project/warranty";
-
-function buildGuestEstimateClient(input: {
-  fullName: string;
-  email: string;
-  phone: string;
-  location: string;
-}): Client {
-  const now = new Date().toISOString();
-  return {
-    id: "guest",
-    fullName: input.fullName,
-    location: input.location,
-    addressStreet: "",
-    addressCity: "",
-    addressPostalCode: "",
-    email: input.email,
-    phone: input.phone,
-    notes: "",
-    externalId: null,
-    createdAt: now,
-    updatedAt: now,
-  };
-}
 
 export async function POST(request: Request) {
   try {
@@ -55,8 +37,12 @@ export async function POST(request: Request) {
       requestType?: ServiceIntakeRequestType;
       priority?: ServiceIntakePriority | null;
       postWarrantyAction?: ServiceIntakePostWarrantyAction | null;
-      contactLocation?: string;
       contactPhone?: string;
+      contactAddress?: {
+        addressStreet?: string;
+        addressCity?: string;
+        addressPostalCode?: string;
+      };
       estimateClarifications?: string;
       isNewContact?: boolean;
     };
@@ -99,19 +85,21 @@ export async function POST(request: Request) {
         );
       }
 
-      const contactLocation = body.contactLocation?.trim() ?? "";
-      if (contactLocation.length < 3) {
+      const contactAddress = parseGuestContactAddressBody(body.contactAddress);
+      const addressError = contactAddress ? validateGuestContactAddress(contactAddress) : "Podaj pełny adres obiektu.";
+      if (!contactAddress || addressError) {
         return NextResponse.json(
-          { error: "Podaj lokalizację obiektu przed wyceną." },
+          { error: addressError ?? "Podaj pełny adres obiektu." },
           { status: 400 },
         );
       }
 
-      const client = buildGuestEstimateClient({
+      const formattedAddress = formatGuestContactAddress(contactAddress);
+      const client = buildGuestServiceClient({
         fullName: auth.fullName,
         email: auth.email,
         phone: body.contactPhone?.trim() ?? "",
-        location: contactLocation,
+        address: contactAddress,
       });
 
       const serviceType = resolveIntakeAiServiceType({
@@ -124,7 +112,7 @@ export async function POST(request: Request) {
         serviceType,
         client,
         projectId: "",
-        projectName: contactLocation,
+        projectName: formattedAddress,
         warrantyContext: null,
         companyAddress: companyProfile.address,
         rates: settings.rates,
@@ -231,6 +219,7 @@ export async function POST(request: Request) {
       applyPrioritySurcharge,
       postWarrantyAction: isServiceRequest && !isWarrantyActive ? postWarrantyAction : null,
       aiEstimateSettings: settings.aiEstimateSettings,
+      estimateClarifications: body.estimateClarifications?.trim() || null,
     });
 
     return NextResponse.json({

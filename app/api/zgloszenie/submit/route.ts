@@ -11,6 +11,10 @@ import {
 } from "@/lib/service-intake/types";
 import { readIntakeGuestToken } from "@/lib/service-intake/tokens";
 import {
+  parseGuestContactAddressBody,
+  validateGuestContactAddress,
+} from "@/lib/service-intake/guest-address";
+import {
   submitGuestServiceIntakeRequest,
   submitServiceIntakeRequest,
 } from "@/lib/supabase/service-intake-server";
@@ -25,7 +29,11 @@ export async function POST(request: Request) {
       postWarrantyAction?: ServiceIntakePostWarrantyAction | null;
       description?: string;
       contactPhone?: string;
-      contactLocation?: string;
+      contactAddress?: {
+        addressStreet?: string;
+        addressCity?: string;
+        addressPostalCode?: string;
+      };
       acceptedPaidTerms?: boolean;
       attachments?: Array<{ kind: "image" | "video" | "link"; url: string; label?: string | null }>;
       workPreference?: ServiceIntakeWorkPreference | null;
@@ -64,13 +72,27 @@ export async function POST(request: Request) {
         ? (body.aiEstimateSnapshot as Parameters<typeof submitServiceIntakeRequest>[0]["aiEstimateSnapshot"])
         : null;
 
-    const record = readIntakeGuestToken(verificationToken)
+    const isGuest = Boolean(readIntakeGuestToken(verificationToken));
+    const guestContactAddress = isGuest ? parseGuestContactAddressBody(body.contactAddress) : null;
+    if (isGuest) {
+      const guestAddressError = guestContactAddress
+        ? validateGuestContactAddress(guestContactAddress)
+        : "Podaj pełny adres obiektu (ulica, kod pocztowy, miasto).";
+      if (!guestContactAddress || guestAddressError) {
+        return NextResponse.json(
+          { error: guestAddressError ?? "Podaj pełny adres obiektu." },
+          { status: 400 },
+        );
+      }
+    }
+
+    const record = isGuest
       ? await submitGuestServiceIntakeRequest({
           verificationToken,
           requestType,
           description: body.description ?? "",
           contactPhone: body.contactPhone ?? "",
-          contactLocation: body.contactLocation ?? "",
+          contactAddress: guestContactAddress!,
           attachments: body.attachments,
           workPreference,
           preliminaryAccepted: Boolean(body.preliminaryAccepted),
@@ -90,6 +112,7 @@ export async function POST(request: Request) {
           workPreference,
           preliminaryAccepted: Boolean(body.preliminaryAccepted),
           aiEstimateSnapshot,
+          estimateClarifications: body.estimateClarifications?.trim() || null,
         });
 
     return NextResponse.json({

@@ -17,7 +17,14 @@ import {
 } from "@/lib/service-intake/tokens";
 import { createServiceIntakePreliminaryOfferNotifications } from "@/lib/notifications/service-intake-offer";
 import { createServiceFromGuestIntake } from "@/lib/service-intake/create-service-from-guest-intake";
-import { appendContactHistoryAdmin, createContactFromIntakeAdmin } from "@/lib/supabase/contact-admin";
+import { appendContactHistoryAdmin, resolveContactFromIntakeAdmin } from "@/lib/supabase/contact-admin";
+import {
+  buildGuestServiceClient,
+  formatGuestContactAddress,
+  normalizeGuestContactAddress,
+  validateGuestContactAddress,
+  type GuestContactAddress,
+} from "@/lib/service-intake/guest-address";
 import {
   intakeAllowsPreliminaryAcceptance,
   intakeRequestTypeRequiresAiEstimate,
@@ -60,29 +67,6 @@ import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
 
 const SETTINGS_ID = "service_global_settings";
-
-function buildGuestServiceClient(input: {
-  fullName: string;
-  email: string;
-  phone: string;
-  location: string;
-}): Client {
-  const now = new Date().toISOString();
-  return {
-    id: "guest",
-    fullName: input.fullName,
-    location: input.location,
-    addressStreet: "",
-    addressCity: "",
-    addressPostalCode: "",
-    email: input.email,
-    phone: input.phone,
-    notes: "",
-    externalId: null,
-    createdAt: now,
-    updatedAt: now,
-  };
-}
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -372,7 +356,7 @@ export async function submitGuestServiceIntakeRequest(input: {
   requestType: ServiceIntakeRequestType;
   description: string;
   contactPhone: string;
-  contactLocation: string;
+  contactAddress: GuestContactAddress;
   attachments?: Array<{ kind: "image" | "video" | "link"; url: string; label?: string | null }>;
   workPreference?: ServiceIntakeWorkPreference | null;
   preliminaryAccepted?: boolean;
@@ -397,10 +381,13 @@ export async function submitGuestServiceIntakeRequest(input: {
     throw new Error("Podaj numer telefonu — jest wymagany dla nowych kontaktów.");
   }
 
-  const location = input.contactLocation.trim();
-  if (location.length < 3) {
-    throw new Error("Podaj lokalizację obiektu (miasto lub adres).");
+  const locationError = validateGuestContactAddress(input.contactAddress);
+  if (locationError) {
+    throw new Error(locationError);
   }
+
+  const contactAddress = normalizeGuestContactAddress(input.contactAddress);
+  const location = formatGuestContactAddress(contactAddress);
 
   const description = input.description.trim();
   if (description.length < 10) {
@@ -428,7 +415,7 @@ export async function submitGuestServiceIntakeRequest(input: {
       fullName: guest.fullName,
       email: guest.email,
       phone,
-      location,
+      address: contactAddress,
     });
 
     const computed = await computeIntakeAiEstimate({
@@ -456,12 +443,12 @@ export async function submitGuestServiceIntakeRequest(input: {
     };
   }
 
-  const contact = await createContactFromIntakeAdmin({
+  const { contact, reusedExisting } = await resolveContactFromIntakeAdmin({
     fullName: guest.fullName,
     location,
-    addressStreet: "",
-    addressCity: "",
-    addressPostalCode: "",
+    addressStreet: contactAddress.addressStreet,
+    addressCity: contactAddress.addressCity,
+    addressPostalCode: contactAddress.addressPostalCode,
     email: guest.email,
     phone,
     notes: `Zgłoszenie ${referenceNumber} — kontakt spoza bazy klientów.`,
@@ -493,6 +480,7 @@ export async function submitGuestServiceIntakeRequest(input: {
       metadata_json: {
         isGuest: true,
         contactId: contact.id,
+        contactReused: reusedExisting,
         contactLocation: location,
         requestType: input.requestType,
         workPreference,
@@ -585,6 +573,7 @@ export async function submitServiceIntakeRequest(input: {
   workPreference?: ServiceIntakeWorkPreference | null;
   preliminaryAccepted?: boolean;
   aiEstimateSnapshot?: ServiceIntakeAiEstimateSnapshot | null;
+  estimateClarifications?: string | null;
 }) {
   const verified = readIntakeVerifiedToken(input.verificationToken);
   if (!verified) {
@@ -696,6 +685,7 @@ export async function submitServiceIntakeRequest(input: {
         postWarrantyAction:
           !isWarrantyActive && isServiceRequest ? input.postWarrantyAction : null,
         aiEstimateSettings: settings.aiEstimateSettings,
+        estimateClarifications: input.estimateClarifications?.trim() || null,
       });
 
       aiEstimateSnapshot = {

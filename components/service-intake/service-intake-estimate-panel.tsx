@@ -221,50 +221,51 @@ export function ServiceIntakeEstimatePanel({
 
       {estimate.questions.length > 0 ? (
         <div className="rounded-xl border border-border/70 bg-background/40 p-3 text-sm">
-          <p className="mb-2 font-medium text-foreground">
-            {isNewContact ? "Pomóż nam doprecyzować wycenę" : "Do doprecyzowania"}
-          </p>
-          {isNewContact ? (
-            <p className="mb-3 text-xs text-muted">
-              Przy ogólnym opisie celowo szacujemy ostrożnie w górę. Odpowiedzi na pytania poniżej
-              pozwolą skorygować orientacyjny koszt.
-            </p>
-          ) : null}
+          <p className="mb-2 font-medium text-foreground">Pytania AI do doprecyzowania</p>
           <ul className="list-disc space-y-1 pl-5 text-muted">
             {estimate.questions.map((question) => (
               <li key={question}>{question}</li>
             ))}
           </ul>
-          {isNewContact && onEstimateClarificationsChange && onRecalculateWithClarifications ? (
-            <div className="mt-4 grid gap-3">
-              <label className="grid gap-1.5">
-                <span className="text-xs font-medium text-foreground">Twoje odpowiedzi</span>
-                <Textarea
-                  value={estimateClarifications}
-                  onChange={(event) => onEstimateClarificationsChange(event.target.value)}
-                  placeholder="Np. liczba pomieszczeń, typ instalacji, czy system już działa, preferowany termin…"
-                  rows={4}
-                  disabled={recalculating}
-                />
-              </label>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={recalculating || estimateClarifications.trim().length < 5}
-                onClick={onRecalculateWithClarifications}
-              >
-                {recalculating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Przeliczam…
-                  </>
-                ) : (
-                  "Przelicz z doprecyzowaniem"
-                )}
-              </Button>
-            </div>
-          ) : null}
+        </div>
+      ) : null}
+
+      {onEstimateClarificationsChange && onRecalculateWithClarifications ? (
+        <div className="rounded-xl border border-border/70 bg-background/40 p-3 text-sm">
+          <p className="mb-2 font-medium text-foreground">Doprecyzuj orientacyjną wycenę</p>
+          <p className="mb-3 text-xs text-muted">
+            {isNewContact
+              ? "Przy ogólnym opisie celowo szacujemy ostrożnie w górę. Odpowiedzi na pytania AI lub własne doprecyzowanie pozwolą skorygować koszt."
+              : "Możesz uzupełnić szczegóły techniczne, odpowiedzieć na pytania AI albo dopisać własne informacje — wtedy przeliczymy orientacyjną wycenę."}
+          </p>
+          <div className="grid gap-3">
+            <label className="grid gap-1.5">
+              <span className="text-xs font-medium text-foreground">Twoje doprecyzowanie</span>
+              <Textarea
+                value={estimateClarifications}
+                onChange={(event) => onEstimateClarificationsChange(event.target.value)}
+                placeholder="Np. objawy, liczba urządzeń, dostęp zdalny, preferowany termin, zdjęcia/szkice…"
+                rows={4}
+                disabled={recalculating}
+              />
+            </label>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={recalculating || estimateClarifications.trim().length < 5}
+              onClick={onRecalculateWithClarifications}
+            >
+              {recalculating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Przeliczam…
+                </>
+              ) : (
+                "Przelicz z doprecyzowaniem"
+              )}
+            </Button>
+          </div>
         </div>
       ) : null}
 
