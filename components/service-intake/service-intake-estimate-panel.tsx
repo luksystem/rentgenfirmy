@@ -4,7 +4,9 @@ import { Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { IntakeAiEstimatePublic, IntakeSuggestedWorkMode } from "@/lib/service-intake/intake-ai-estimate";
 import {
+  SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS,
   SERVICE_INTAKE_WORK_PREFERENCE_LABELS,
+  type ServiceIntakePostWarrantyAction,
   type ServiceIntakeWorkPreference,
 } from "@/lib/service-intake/types";
 import { cn, formatMoney } from "@/lib/utils";
@@ -21,6 +23,11 @@ export function ServiceIntakeEstimatePanel({
   error,
   workPreference,
   onWorkPreferenceChange,
+  postWarrantyAction,
+  showPreliminaryAcceptance,
+  requiresPreliminaryAcceptance,
+  preliminaryAccepted,
+  onPreliminaryAcceptedChange,
   onRetry,
 }: {
   estimate: IntakeAiEstimatePublic | null;
@@ -28,6 +35,11 @@ export function ServiceIntakeEstimatePanel({
   error: string | null;
   workPreference: ServiceIntakeWorkPreference | null;
   onWorkPreferenceChange: (value: ServiceIntakeWorkPreference) => void;
+  postWarrantyAction: ServiceIntakePostWarrantyAction | null;
+  showPreliminaryAcceptance: boolean;
+  requiresPreliminaryAcceptance: boolean;
+  preliminaryAccepted: boolean;
+  onPreliminaryAcceptedChange: (value: boolean) => void;
   onRetry?: () => void;
 }) {
   if (loading) {
@@ -56,6 +68,14 @@ export function ServiceIntakeEstimatePanel({
     return null;
   }
 
+  const showWorkPreference = !postWarrantyAction;
+  const selectedActionLabel = postWarrantyAction
+    ? SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS[postWarrantyAction]
+    : null;
+  const recommendedActionLabel = estimate.recommendedPostWarrantyAction
+    ? SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS[estimate.recommendedPostWarrantyAction]
+    : null;
+
   return (
     <div className="grid gap-4 rounded-2xl border border-accent/30 bg-accent/5 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -66,10 +86,43 @@ export function ServiceIntakeEstimatePanel({
         <span className="text-xs text-muted">Pewność: {Math.round(estimate.confidence * 100)}%</span>
       </div>
 
+      {selectedActionLabel ? (
+        <p className="text-xs text-muted">
+          Wybrany sposób działania: <strong className="text-foreground">{selectedActionLabel}</strong>
+          {estimate.estimateScope === "remote_only"
+            ? " — w kwocie poniżej tylko praca zdalna (bez dojazdu)."
+            : " — w kwocie poniżej praca u klienta, zdalna i dojazd."}
+        </p>
+      ) : null}
+
       <p className="text-sm text-muted">{estimate.summary}</p>
       <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
         {estimate.disclaimer}
       </p>
+
+      {recommendedActionLabel && estimate.actionRecommendationNote ? (
+        <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-3 text-sm">
+          <p className="font-medium text-foreground">
+            Rekomendacja AI: {recommendedActionLabel}
+            {estimate.recommendedPostWarrantyAction === postWarrantyAction ? (
+              <span className="ml-2 text-xs font-normal text-emerald-300">(zgodna z Twoim wyborem)</span>
+            ) : postWarrantyAction ? (
+              <span className="ml-2 text-xs font-normal text-amber-200">(inna niż wybrana opcja)</span>
+            ) : null}
+          </p>
+          <p className="mt-1 text-muted">{estimate.actionRecommendationNote}</p>
+          {estimate.estimateScope === "remote_only" && estimate.onsiteVisitLikelyRequired ? (
+            <p className="mt-2 text-xs text-amber-100">
+              Może być konieczny przyjazd serwisanta — koszt dojazdu nie jest wliczony w powyższą kwotę.
+            </p>
+          ) : null}
+          {estimate.estimateScope === "remote_only" && estimate.remoteOnlyViable === false ? (
+            <p className="mt-2 text-xs text-rose-200">
+              Sam serwis zdalny może okazać się nieskuteczny — rozważ opcję przyjazdu lub oferty.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="grid gap-2 rounded-xl border border-border/70 bg-background/40 p-3 text-sm">
         <div className="flex justify-between gap-2">
@@ -101,40 +154,49 @@ export function ServiceIntakeEstimatePanel({
           klienta {estimate.hours.programmerOnsite} h · programista zdalnie{" "}
           {estimate.hours.programmerRemote} h · nadzór {estimate.hours.supervision} h
         </p>
-        <p className="text-xs text-muted">
-          Dojazd: {estimate.travel.oneWayDistanceKm} km w jedną stronę · {estimate.travel.trips}{" "}
-          wyjazd(y) · {estimate.travel.overnights} nocleg(i)
-        </p>
+        {estimate.estimateScope === "remote_only" ? (
+          <p className="text-xs text-muted">
+            Dojazd: nie wliczony (serwis zdalny). Odległość do obiektu: {estimate.travel.oneWayDistanceKm}{" "}
+            km.
+          </p>
+        ) : (
+          <p className="text-xs text-muted">
+            Dojazd: {estimate.travel.oneWayDistanceKm} km w jedną stronę · {estimate.travel.trips}{" "}
+            wyjazd(y) · {estimate.travel.overnights} nocleg(i)
+          </p>
+        )}
       </div>
 
-      <div className="grid gap-2">
-        <p className="text-sm font-medium text-foreground">Sugerowany sposób realizacji</p>
-        <p className="text-xs text-muted">{WORK_MODE_HINTS[estimate.suggestedWorkMode]}</p>
+      {showWorkPreference ? (
         <div className="grid gap-2">
-          {(Object.keys(SERVICE_INTAKE_WORK_PREFERENCE_LABELS) as ServiceIntakeWorkPreference[]).map(
-            (option) => (
-              <label
-                key={option}
-                className={cn(
-                  "flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 text-sm transition",
-                  workPreference === option
-                    ? "border-accent bg-accent/10"
-                    : "border-border bg-surface-muted/20 hover:border-accent/40",
-                )}
-              >
-                <input
-                  type="radio"
-                  name="workPreference"
-                  checked={workPreference === option}
-                  onChange={() => onWorkPreferenceChange(option)}
-                  className="mt-0.5"
-                />
-                <span>{SERVICE_INTAKE_WORK_PREFERENCE_LABELS[option]}</span>
-              </label>
-            ),
-          )}
+          <p className="text-sm font-medium text-foreground">Sugerowany sposób realizacji</p>
+          <p className="text-xs text-muted">{WORK_MODE_HINTS[estimate.suggestedWorkMode]}</p>
+          <div className="grid gap-2">
+            {(Object.keys(SERVICE_INTAKE_WORK_PREFERENCE_LABELS) as ServiceIntakeWorkPreference[]).map(
+              (option) => (
+                <label
+                  key={option}
+                  className={cn(
+                    "flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 text-sm transition",
+                    workPreference === option
+                      ? "border-accent bg-accent/10"
+                      : "border-border bg-surface-muted/20 hover:border-accent/40",
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="workPreference"
+                    checked={workPreference === option}
+                    onChange={() => onWorkPreferenceChange(option)}
+                    className="mt-0.5"
+                  />
+                  <span>{SERVICE_INTAKE_WORK_PREFERENCE_LABELS[option]}</span>
+                </label>
+              ),
+            )}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {estimate.questions.length > 0 ? (
         <div className="rounded-xl border border-border/70 bg-background/40 p-3 text-sm">
@@ -145,6 +207,29 @@ export function ServiceIntakeEstimatePanel({
             ))}
           </ul>
         </div>
+      ) : null}
+
+      {showPreliminaryAcceptance ? (
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/80 bg-background/50 px-3 py-3 text-sm">
+          <input
+            type="checkbox"
+            checked={preliminaryAccepted}
+            onChange={(event) => onPreliminaryAcceptedChange(event.target.checked)}
+            className="mt-1"
+          />
+          <span>
+            <span className="font-medium text-foreground">
+              Wstępnie akceptuję orientacyjną wycenę
+              {requiresPreliminaryAcceptance ? " *" : ""}
+            </span>
+            <span className="mt-1 block text-muted">
+              Rozumiem, że ostateczna oferta może się zmienić po doprecyzowaniu wymagań.
+              {requiresPreliminaryAcceptance
+                ? " Bez tej akceptacji nie przejdziemy dalej."
+                : " Akceptacja jest dobrowolna."}
+            </span>
+          </span>
+        </label>
       ) : null}
     </div>
   );

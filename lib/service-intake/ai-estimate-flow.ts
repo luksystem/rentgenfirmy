@@ -33,7 +33,35 @@ export function intakeAllowsPreliminaryAcceptance(input: {
     return true;
   }
 
-  return input.postWarrantyAction === "offer";
+  return (
+    input.postWarrantyAction === "offer" ||
+    input.postWarrantyAction === "on_site" ||
+    input.postWarrantyAction === "remote"
+  );
+}
+
+/** Przyjazd / serwis zdalny / gość — wymagana akceptacja wyceny na kroku wyceny. */
+export function intakeRequiresPreliminaryAcceptance(input: {
+  requestType: ServiceIntakeRequestType;
+  postWarrantyAction: "offer" | "on_site" | "remote" | null;
+  isGuest?: boolean;
+}): boolean {
+  if (input.isGuest) {
+    return true;
+  }
+
+  return (
+    input.requestType === "service" &&
+    (input.postWarrantyAction === "on_site" || input.postWarrantyAction === "remote")
+  );
+}
+
+export type IntakeEstimateScope = "full" | "remote_only";
+
+export function resolveIntakeEstimateScope(
+  postWarrantyAction: "offer" | "on_site" | "remote" | null,
+): IntakeEstimateScope {
+  return postWarrantyAction === "remote" ? "remote_only" : "full";
 }
 
 /** Dopłata % do stawek — tylko serwis pogwarancyjny z priorytetem CAFE C lub A. */

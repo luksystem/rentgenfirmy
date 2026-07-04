@@ -4,6 +4,11 @@ import type { ServiceAiEstimateRecord } from "@/lib/service/ai-estimate-types";
 import { aggregateAiTaskHours, buildLineItemsFromAiEstimate } from "@/lib/service/apply-ai-estimate";
 import { calculateServiceCost } from "@/lib/service/calculate-service-cost";
 import {
+  resolveIntakeEstimateScope,
+  type IntakeEstimateScope,
+} from "@/lib/service-intake/ai-estimate-flow";
+import type { ServiceIntakePostWarrantyAction } from "@/lib/service-intake/types";
+import {
   fetchProjectAiContext,
   formatProjectAiContextForPrompt,
 } from "@/lib/service/project-ai-context";
@@ -31,7 +36,12 @@ export type IntakeAiEstimatePublic = {
   confidence: number;
   summary: string;
   disclaimer: string;
+  estimateScope: IntakeEstimateScope;
   suggestedWorkMode: IntakeSuggestedWorkMode;
+  recommendedPostWarrantyAction: ServiceIntakePostWarrantyAction | null;
+  actionRecommendationNote: string | null;
+  remoteOnlyViable: boolean | null;
+  onsiteVisitLikelyRequired: boolean | null;
   hours: {
     installer: number;
     helper: number;
@@ -82,6 +92,39 @@ function resolveSuggestedWorkMode(hours: ReturnType<typeof aggregateAiTaskHours>
   return onsite >= remote * 2 ? "on_site" : "mixed";
 }
 
+export function applyEstimateScopeToLineItems(
+  lineItems: ServiceLineItems,
+  scope: IntakeEstimateScope,
+  remoteProgrammerHours: number,
+): ServiceLineItems {
+  if (scope !== "remote_only") {
+    return lineItems;
+  }
+
+  return {
+    ...lineItems,
+    installerHours: 0,
+    helperHours: 0,
+    programmerHours: Math.round(remoteProgrammerHours * 10) / 10,
+    supervisionHours: 0,
+    tripCount: 0,
+    accommodations: 0,
+    carHours: 0,
+    materialsCost: 0,
+    billable: {
+      ...lineItems.billable,
+      installerHours: false,
+      helperHours: false,
+      programmerHours: remoteProgrammerHours > 0,
+      supervisionHours: false,
+      carKilometers: false,
+      carHours: false,
+      accommodations: false,
+      materials: false,
+    },
+  };
+}
+
 export async function computeIntakeAiEstimate(input: {
   description: string;
   serviceType: ServiceType;
@@ -95,6 +138,7 @@ export async function computeIntakeAiEstimate(input: {
   discounts: ServiceDiscounts;
   prioritySurchargePercent?: number;
   applyPrioritySurcharge?: boolean;
+  postWarrantyAction?: ServiceIntakePostWarrantyAction | null;
 }): Promise<IntakeAiEstimateResult> {
   const supabase = getSupabaseAdmin();
   const [{ data: settledRows }, projectContextData] = await Promise.all([
@@ -118,6 +162,8 @@ export async function computeIntakeAiEstimate(input: {
     ? formatProjectAiContextForPrompt(projectContextData)
     : null;
 
+  const estimateScope = resolveIntakeEstimateScope(input.postWarrantyAction ?? null);
+
   const proposal = await generateServiceAiEstimate({
     description: input.description,
     serviceType: input.serviceType,
@@ -127,21 +173,34 @@ export async function computeIntakeAiEstimate(input: {
     referenceCases,
     projectContext,
     warrantyContext: input.warrantyContext,
+    postWarrantyAction: input.postWarrantyAction ?? null,
   });
 
   const hours = aggregateAiTaskHours(proposal.recognizedTasks);
   const totalOnsiteHours =
-    hours.installerHours +
-    hours.helperHours +
-    hours.programmerOnsiteHours +
-    hours.supervisorHours;
+    estimateScope === "remote_only"
+      ? 0
+      : hours.installerHours +
+        hours.helperHours +
+        hours.programmerOnsiteHours +
+        hours.supervisorHours;
 
   const travelContext = await buildServiceTravelContext({
     companyAddress: input.companyAddress,
     client: input.client,
     clientLocationFallback: input.client.location,
     zoneSettings: input.zoneSettings,
-    aiTravel: proposal.travel,
+    aiTravel:
+      estimateScope === "remote_only"
+        ? {
+            ...proposal.travel,
+            estimatedTrips: 0,
+            overnights: 0,
+            overnightRequired: false,
+            estimatedDriveTimeHours: 0,
+            totalDistanceKm: 0,
+          }
+        : proposal.travel,
     totalOnsiteHours,
   });
 
@@ -155,10 +214,22 @@ export async function computeIntakeAiEstimate(input: {
     estimatedTrips: travelContext.resolvedTrips,
   };
 
-  const lineItems = buildLineItemsFromAiEstimate({
-    proposal,
-    travelContext,
-  });
+  const lineItems = applyEstimateScopeToLineItems(
+    buildLineItemsFromAiEstimate({
+      proposal,
+      travelContext:
+        estimateScope === "remote_only"
+          ? {
+              ...travelContext,
+              resolvedTrips: 0,
+              resolvedOvernights: 0,
+              estimatedDriveTimeHours: 0,
+            }
+          : travelContext,
+    }),
+    estimateScope,
+    hours.programmerRemoteHours,
+  );
 
   const surchargePercent =
     input.applyPrioritySurcharge && (input.prioritySurchargePercent ?? 0) > 0
@@ -196,11 +267,21 @@ export async function computeIntakeAiEstimate(input: {
   const materialsNetEstimate =
     lineItems.materialsCost > 0 ? lineItems.materialsCost : null;
 
+  const intakeRecommendation = proposal.intakeRecommendation;
+
   const publicView: IntakeAiEstimatePublic = {
     confidence: proposal.confidence,
     summary: proposal.summary,
-    disclaimer: INTAKE_ESTIMATE_DISCLAIMER,
+    disclaimer:
+      estimateScope === "remote_only"
+        ? "Orientacyjna wycena pracy zdalnej — dojazd i prace na miejscu nie są wliczone. Ostateczna kwota może się zmienić po weryfikacji."
+        : INTAKE_ESTIMATE_DISCLAIMER,
+    estimateScope,
     suggestedWorkMode: resolveSuggestedWorkMode(hours),
+    recommendedPostWarrantyAction: intakeRecommendation?.recommendedAction ?? null,
+    actionRecommendationNote: intakeRecommendation?.note ?? null,
+    remoteOnlyViable: intakeRecommendation?.remoteOnlyViable ?? null,
+    onsiteVisitLikelyRequired: intakeRecommendation?.onsiteVisitLikelyRequired ?? null,
     hours: {
       installer: hours.installerHours,
       helper: hours.helperHours,
@@ -216,15 +297,16 @@ export async function computeIntakeAiEstimate(input: {
     },
     travel: {
       oneWayDistanceKm: travelContext.oneWayDistanceKm,
-      trips: travelContext.resolvedTrips,
-      overnights: travelContext.resolvedOvernights,
-      driveTimeHours: travelContext.estimatedDriveTimeHours,
+      trips: estimateScope === "remote_only" ? 0 : travelContext.resolvedTrips,
+      overnights: estimateScope === "remote_only" ? 0 : travelContext.resolvedOvernights,
+      driveTimeHours:
+        estimateScope === "remote_only" ? 0 : travelContext.estimatedDriveTimeHours,
     },
     estimatedNetTotal: costBreakdown.netTotal,
     estimatedNetTotalBeforeSurcharge: costBreakdownBase?.netTotal ?? null,
     prioritySurchargeApplied: surchargePercent > 0,
     prioritySurchargePercent: surchargePercent > 0 ? surchargePercent : null,
-    materialsNetEstimate,
+    materialsNetEstimate: estimateScope === "remote_only" ? null : materialsNetEstimate,
     questions: proposal.questions,
     riskFlags: proposal.riskFlags,
   };

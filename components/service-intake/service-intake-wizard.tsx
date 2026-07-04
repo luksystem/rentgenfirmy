@@ -25,10 +25,12 @@ import {
 import {
   intakeAllowsPreliminaryAcceptance,
   intakeRequestTypeRequiresAiEstimate,
+  intakeRequiresPreliminaryAcceptance,
   shouldApplyIntakePrioritySurcharge,
 } from "@/lib/service-intake/ai-estimate-flow";
 import type { IntakeAiEstimatePublic } from "@/lib/service-intake/intake-ai-estimate";
 import {
+  isGuestIntakeRequestType,
   SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS,
   SERVICE_INTAKE_PRIORITY_LABELS,
   SERVICE_INTAKE_REQUEST_TYPE_LABELS,
@@ -174,6 +176,9 @@ export function ServiceIntakeWizard() {
   const [workPreference, setWorkPreference] = useState<ServiceIntakeWorkPreference | null>(null);
   const [preliminaryAccepted, setPreliminaryAccepted] = useState(false);
   const [preliminaryAcceptedOnSubmit, setPreliminaryAcceptedOnSubmit] = useState(false);
+  const [isGuestMode, setIsGuestMode] = useState(false);
+  const [verifyFailureMessage, setVerifyFailureMessage] = useState<string | null>(null);
+  const [guestLocation, setGuestLocation] = useState("");
 
   const selectedProject = useMemo(
     () => verification?.projects.find((project) => project.id === selectedProjectId) ?? null,
@@ -193,29 +198,40 @@ export function ServiceIntakeWizard() {
     requestType,
     postWarrantyAction,
   });
+  const requiresPreliminaryAcceptance = intakeRequiresPreliminaryAcceptance({
+    requestType,
+    postWarrantyAction,
+    isGuest: isGuestMode,
+  });
+  const guestRequestTypeOptions = useMemo(
+    () => SERVICE_INTAKE_REQUEST_TYPE_OPTIONS.filter((option) => isGuestIntakeRequestType(option.id)),
+    [],
+  );
+  const requestTypeOptions = isGuestMode ? guestRequestTypeOptions : SERVICE_INTAKE_REQUEST_TYPE_OPTIONS;
+  const requiresAiEstimateGuest = isGuestMode && isGuestIntakeRequestType(requestType);
+  const effectiveRequiresAiEstimate = isGuestMode ? requiresAiEstimateGuest : requiresAiEstimate;
+
+  const visibleSteps = useMemo(() => {
+    const steps: Exclude<WizardStep, "done">[] = ["email", "verify"];
+    if (!isGuestMode) {
+      steps.push("project");
+    }
+    steps.push("requestType", "details");
+    if (requiresActionStep) {
+      steps.push("action");
+    }
+    if (effectiveRequiresAiEstimate) {
+      steps.push("estimate");
+    }
+    steps.push("summary");
+    return steps;
+  }, [requiresActionStep, effectiveRequiresAiEstimate, isGuestMode]);
+
   const appliesPrioritySurcharge = shouldApplyIntakePrioritySurcharge({
     requestType,
     isWarrantyActive: selectedProject?.isWarrantyActive ?? false,
     priority: isServiceRequest ? priority : null,
   });
-
-  const visibleSteps = useMemo(() => {
-    const steps: Exclude<WizardStep, "done">[] = [
-      "email",
-      "verify",
-      "project",
-      "requestType",
-      "details",
-    ];
-    if (requiresActionStep) {
-      steps.push("action");
-    }
-    if (requiresAiEstimate) {
-      steps.push("estimate");
-    }
-    steps.push("summary");
-    return steps;
-  }, [requiresActionStep, requiresAiEstimate]);
 
   const doneContent = useMemo(
     () =>
@@ -244,7 +260,14 @@ export function ServiceIntakeWizard() {
   }
 
   async function fetchAiEstimate() {
-    if (!verification || !selectedProjectId || description.trim().length < 10) {
+    if (!verification || description.trim().length < 10) {
+      return;
+    }
+    if (isGuestMode) {
+      if (guestLocation.trim().length < 3) {
+        return;
+      }
+    } else if (!selectedProjectId) {
       return;
     }
 
@@ -257,10 +280,13 @@ export function ServiceIntakeWizard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           verificationToken: verification.verificationToken,
-          projectId: selectedProjectId,
+          projectId: isGuestMode ? undefined : selectedProjectId,
           description,
           requestType,
           priority: isServiceRequest ? priority : null,
+          postWarrantyAction: requiresActionStep ? postWarrantyAction : null,
+          contactLocation: isGuestMode ? guestLocation : undefined,
+          contactPhone: isGuestMode ? contactPhone : undefined,
         }),
       });
       const payload = await response.json();
@@ -273,12 +299,17 @@ export function ServiceIntakeWizard() {
       setAiEstimateSnapshot(payload.snapshot as ServiceIntakeAiEstimateSnapshot);
 
       const suggested: ServiceIntakeWorkPreference =
-        estimate.suggestedWorkMode === "remote"
-          ? "remote"
-          : estimate.suggestedWorkMode === "on_site"
-            ? "on_site"
-            : "either";
+        postWarrantyAction === "on_site"
+          ? "on_site"
+          : postWarrantyAction === "remote"
+            ? "remote"
+            : estimate.suggestedWorkMode === "remote"
+              ? "remote"
+              : estimate.suggestedWorkMode === "on_site"
+                ? "on_site"
+                : "either";
       setWorkPreference((current) => current ?? suggested);
+      setPreliminaryAccepted(false);
     } catch (estimateErr) {
       setEstimateError(
         estimateErr instanceof Error ? estimateErr.message : "Nie udało się oszacować kosztów.",
@@ -294,7 +325,16 @@ export function ServiceIntakeWizard() {
     if (step === "estimate") {
       void fetchAiEstimate();
     }
-  }, [step, priority, requestType, postWarrantyAction, isServiceRequest]);
+  }, [
+    step,
+    priority,
+    requestType,
+    postWarrantyAction,
+    isServiceRequest,
+    isGuestMode,
+    guestLocation,
+    contactPhone,
+  ]);
 
   async function handleStart() {
     setLoading(true);
@@ -325,6 +365,7 @@ export function ServiceIntakeWizard() {
 
     setLoading(true);
     setError(null);
+    setVerifyFailureMessage(null);
     try {
       const response = await fetch("/api/zgloszenie/verify", {
         method: "POST",
@@ -335,11 +376,55 @@ export function ServiceIntakeWizard() {
       if (!response.ok) {
         throw new Error(payload.error ?? "Weryfikacja nie powiodła się.");
       }
+      if (payload.ok === false) {
+        setVerifyFailureMessage(
+          payload.message ??
+            "Nie udało się potwierdzić tożsamości. Sprawdź dane albo kontynuuj jako nowy kontakt.",
+        );
+        return;
+      }
+
+      setIsGuestMode(false);
+      setGuestLocation("");
       setVerification(payload as ServiceIntakeVerifyResult);
       setSelectedProjectId(payload.projects[0]?.id ?? null);
+      setRequestType("service");
       setStep("project");
     } catch (verifyError) {
       setError(verifyError instanceof Error ? verifyError.message : "Błąd.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleContinueAsGuest() {
+    if (!sessionToken) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/zgloszenie/guest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionToken, email, fullName }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się kontynuować.");
+      }
+
+      setIsGuestMode(true);
+      setVerifyFailureMessage(null);
+      setVerification(payload as ServiceIntakeVerifyResult);
+      setSelectedProjectId(null);
+      setRequestType("offer_request");
+      setPostWarrantyAction(null);
+      setPriority("f");
+      setStep("requestType");
+    } catch (guestError) {
+      setError(guestError instanceof Error ? guestError.message : "Błąd.");
     } finally {
       setLoading(false);
     }
@@ -375,7 +460,10 @@ export function ServiceIntakeWizard() {
   }
 
   async function handleSubmit() {
-    if (!verification || !selectedProjectId) {
+    if (!verification) {
+      return;
+    }
+    if (!isGuestMode && !selectedProjectId) {
       return;
     }
 
@@ -387,15 +475,13 @@ export function ServiceIntakeWizard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           verificationToken: verification.verificationToken,
-          projectId: selectedProjectId,
+          projectId: isGuestMode ? undefined : selectedProjectId,
           requestType,
           priority: isServiceRequest ? priority : null,
           postWarrantyAction: requiresActionStep ? postWarrantyAction : null,
           description,
           contactPhone,
-          acceptedPaidTerms:
-            requiresActionStep &&
-            (postWarrantyAction === "on_site" || postWarrantyAction === "remote"),
+          contactLocation: isGuestMode ? guestLocation : undefined,
           workPreference,
           preliminaryAccepted: allowsPreliminaryAcceptance && preliminaryAccepted,
           aiEstimateSnapshot,
@@ -430,8 +516,11 @@ export function ServiceIntakeWizard() {
     }
   }
 
-  const installerRate = verification?.rates.installerHourly ?? 250;
-  const carPerKm = verification?.rates.carPerKm ?? 1;
+  const estimateNextDisabled =
+    estimateLoading ||
+    !aiEstimate ||
+    (!postWarrantyAction && !workPreference) ||
+    (requiresPreliminaryAcceptance && !preliminaryAccepted);
 
   return (
     <div className="mx-auto w-full max-w-2xl">
@@ -500,15 +589,48 @@ export function ServiceIntakeWizard() {
               <Field label="Imię i nazwisko">
                 <Input
                   value={fullName}
-                  onChange={(event) => setFullName(event.target.value)}
+                  onChange={(event) => {
+                    setFullName(event.target.value);
+                    setVerifyFailureMessage(null);
+                  }}
                   placeholder="Jan Kowalski"
                 />
               </Field>
+
+              {verifyFailureMessage ? (
+                <div className="grid gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
+                  <p className="font-medium text-amber-100">Nie udało się potwierdzić tożsamości</p>
+                  <p className="text-muted">{verifyFailureMessage}</p>
+                  <p className="text-muted">
+                    Prawdopodobnie nie jesteś naszym klientem albo wpisałeś błędne dane. Możesz cofnąć
+                    się i poprawić e-mail / imię i nazwisko albo kontynuować jako nowy kontakt — wtedy
+                    przygotujemy orientacyjną ofertę na prośbę o wycenę lub nową funkcjonalność.
+                  </p>
+                </div>
+              ) : null}
+
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" onClick={() => setStep("email")}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setVerifyFailureMessage(null);
+                    setStep("email");
+                  }}
+                >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Wstecz
                 </Button>
+                {verifyFailureMessage ? (
+                  <Button type="button" disabled={loading} onClick={() => void handleContinueAsGuest()}>
+                    {loading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ArrowRight className="mr-2 h-4 w-4" />
+                    )}
+                    Kontynuuj jako nowy kontakt
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   disabled={loading || !fullName.trim()}
@@ -519,7 +641,7 @@ export function ServiceIntakeWizard() {
                   ) : (
                     <ShieldCheck className="mr-2 h-4 w-4" />
                   )}
-                  Zweryfikuj
+                  {verifyFailureMessage ? "Spróbuj ponownie" : "Zweryfikuj"}
                 </Button>
               </div>
             </>
@@ -573,10 +695,14 @@ export function ServiceIntakeWizard() {
             <>
               <div>
                 <h2 className="text-lg font-semibold text-foreground">Wybierz rodzaj zgłoszenia</h2>
-                <p className="mt-1 text-sm text-muted">W czym możemy pomóc?</p>
+                <p className="mt-1 text-sm text-muted">
+                  {isGuestMode
+                    ? "Jako nowy kontakt możesz poprosić o ofertę lub opisać nową funkcjonalność."
+                    : "W czym możemy pomóc?"}
+                </p>
               </div>
               <div className="grid gap-3">
-                {SERVICE_INTAKE_REQUEST_TYPE_OPTIONS.map((option) => (
+                {requestTypeOptions.map((option) => (
                   <label
                     key={option.id}
                     className={cn(
@@ -669,10 +795,23 @@ export function ServiceIntakeWizard() {
                   rows={5}
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
-                  placeholder="Co nie działa? Od kiedy? Czy problem dotyczy całego obiektu?"
+                  placeholder={
+                    isGuestMode
+                      ? "Opisz, czego potrzebujesz — im więcej szczegółów, tym trafniejsza wycena."
+                      : "Co nie działa? Od kiedy? Czy problem dotyczy całego obiektu?"
+                  }
                 />
               </Field>
-              <Field label="Telefon kontaktowy (opcjonalnie)">
+              {isGuestMode ? (
+                <Field label="Lokalizacja obiektu *">
+                  <Input
+                    value={guestLocation}
+                    onChange={(event) => setGuestLocation(event.target.value)}
+                    placeholder="Miasto lub adres — do orientacyjnej wyceny dojazdu"
+                  />
+                </Field>
+              ) : null}
+              <Field label={isGuestMode ? "Telefon kontaktowy *" : "Telefon kontaktowy (opcjonalnie)"}>
                 <Input
                   value={contactPhone}
                   onChange={(event) => setContactPhone(event.target.value)}
@@ -719,7 +858,12 @@ export function ServiceIntakeWizard() {
                 </Button>
                 <Button
                   type="button"
-                  disabled={description.trim().length < 10 || (isServiceRequest && !priority)}
+                  disabled={
+                    description.trim().length < 10 ||
+                    (isServiceRequest && !priority) ||
+                    (isGuestMode &&
+                      (contactPhone.trim().length < 7 || guestLocation.trim().length < 3))
+                  }
                   onClick={() => goNext("details")}
                 >
                   Dalej
@@ -780,9 +924,7 @@ export function ServiceIntakeWizard() {
                     className="mt-1"
                   />
                   <span className="text-sm text-foreground">
-                    Poproszę o jak najszybsze działanie PRZYJAZD — akceptuję stawkę serwisową{" "}
-                    {formatMoney(installerRate)}/h pracy serwisanta łącznie z dojazdem i{" "}
-                    {formatMoney(carPerKm)}/km dojazdu
+                    Poproszę o jak najszybsze działanie PRZYJAZD — serwisant przyjedzie do obiektu
                   </span>
                 </label>
                 <label
@@ -801,8 +943,7 @@ export function ServiceIntakeWizard() {
                     className="mt-1"
                   />
                   <span className="text-sm text-foreground">
-                    Poproszę o jak najszybsze działanie SERWIS ZDALNY — akceptuję stawkę serwisową{" "}
-                    {formatMoney(installerRate)}/h pracy serwisanta
+                    Poproszę o jak najszybsze działanie SERWIS ZDALNY — praca zdalna bez dojazdu
                   </span>
                 </label>
               </div>
@@ -812,7 +953,7 @@ export function ServiceIntakeWizard() {
                   Wstecz
                 </Button>
                 <Button type="button" disabled={!postWarrantyAction} onClick={() => goNext("action")}>
-                  {requiresAiEstimate ? "Orientacyjna wycena" : "Podsumowanie"}
+                  {effectiveRequiresAiEstimate ? "Orientacyjna wycena" : "Podsumowanie"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
@@ -845,6 +986,11 @@ export function ServiceIntakeWizard() {
                 error={estimateError}
                 workPreference={workPreference}
                 onWorkPreferenceChange={setWorkPreference}
+                postWarrantyAction={postWarrantyAction}
+                showPreliminaryAcceptance={allowsPreliminaryAcceptance}
+                requiresPreliminaryAcceptance={requiresPreliminaryAcceptance}
+                preliminaryAccepted={preliminaryAccepted}
+                onPreliminaryAcceptedChange={setPreliminaryAccepted}
                 onRetry={() => void fetchAiEstimate()}
               />
               <div className="flex flex-wrap gap-2">
@@ -854,7 +1000,7 @@ export function ServiceIntakeWizard() {
                 </Button>
                 <Button
                   type="button"
-                  disabled={estimateLoading || !aiEstimate || !workPreference}
+                  disabled={estimateNextDisabled}
                   onClick={() => goNext("estimate")}
                 >
                   Dalej do podsumowania
@@ -864,7 +1010,7 @@ export function ServiceIntakeWizard() {
             </>
           ) : null}
 
-          {step === "summary" && selectedProject && verification ? (
+          {step === "summary" && verification && (isGuestMode || selectedProject) ? (
             <>
               <div>
                 <h2 className="text-lg font-semibold text-foreground">Podsumowanie</h2>
@@ -872,18 +1018,36 @@ export function ServiceIntakeWizard() {
               </div>
               <div className="grid gap-2 rounded-2xl border border-border bg-surface-muted/20 p-4 text-sm">
                 <p>
-                  <span className="text-muted">Klient:</span> {verification.clientDisplayName}
+                  <span className="text-muted">{isGuestMode ? "Kontakt:" : "Klient:"}</span>{" "}
+                  {verification.clientDisplayName}
                 </p>
                 <p>
                   <span className="text-muted">E-mail:</span> {email}
                 </p>
-                <p>
-                  <span className="text-muted">Obiekt:</span> {selectedProject.name}
-                </p>
-                <p className="flex flex-wrap items-center gap-2">
-                  <span className="text-muted">Gwarancja:</span>
-                  <WarrantyBadge project={selectedProject} />
-                </p>
+                {isGuestMode ? (
+                  <>
+                    <p>
+                      <span className="text-muted">Telefon:</span> {contactPhone}
+                    </p>
+                    <p>
+                      <span className="text-muted">Lokalizacja:</span> {guestLocation}
+                    </p>
+                    <p className="text-xs text-muted">
+                      Utworzymy nowy kontakt w naszej bazie i przygotujemy rozliczenie serwisowe z
+                      orientacyjną ofertą.
+                    </p>
+                  </>
+                ) : selectedProject ? (
+                  <>
+                    <p>
+                      <span className="text-muted">Obiekt:</span> {selectedProject.name}
+                    </p>
+                    <p className="flex flex-wrap items-center gap-2">
+                      <span className="text-muted">Gwarancja:</span>
+                      <WarrantyBadge project={selectedProject} />
+                    </p>
+                  </>
+                ) : null}
                 <p>
                   <span className="text-muted">Rodzaj:</span>{" "}
                   {SERVICE_INTAKE_REQUEST_TYPE_LABELS[requestType]}
@@ -905,31 +1069,25 @@ export function ServiceIntakeWizard() {
                 </p>
               </div>
 
-              {requiresAiEstimate && aiEstimate && allowsPreliminaryAcceptance ? (
+              {effectiveRequiresAiEstimate && aiEstimate ? (
                 <div className="grid gap-3 rounded-2xl border border-accent/25 bg-accent/5 p-4 text-sm">
                   <p className="font-medium text-foreground">Orientacyjna wycena AI</p>
                   <p>
                     Szacowana kwota netto:{" "}
                     <span className="font-semibold">{formatMoney(aiEstimate.estimatedNetTotal)}</span>
                   </p>
+                  {aiEstimate.recommendedPostWarrantyAction && aiEstimate.actionRecommendationNote ? (
+                    <p className="text-xs text-muted">
+                      Rekomendacja AI:{" "}
+                      {SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS[aiEstimate.recommendedPostWarrantyAction]}
+                      {" — "}
+                      {aiEstimate.actionRecommendationNote}
+                    </p>
+                  ) : null}
                   <p className="text-xs text-muted">{aiEstimate.disclaimer}</p>
-                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/80 bg-background/50 px-3 py-3">
-                    <input
-                      type="checkbox"
-                      checked={preliminaryAccepted}
-                      onChange={(event) => setPreliminaryAccepted(event.target.checked)}
-                      className="mt-1"
-                    />
-                    <span>
-                      <span className="font-medium text-foreground">
-                        Wstępnie akceptuję orientacyjną wycenę
-                      </span>
-                      <span className="mt-1 block text-muted">
-                        Rozumiem, że ostateczna oferta może się zmienić po doprecyzowaniu wymagań.
-                        Po wysłaniu zgłoszenia nasz zespół przygotuje szczegółową propozycję.
-                      </span>
-                    </span>
-                  </label>
+                  {preliminaryAccepted ? (
+                    <p className="text-xs text-emerald-300">Wstępnie zaakceptowano orientacyjną wycenę.</p>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -942,7 +1100,8 @@ export function ServiceIntakeWizard() {
                   type="button"
                   disabled={
                     loading ||
-                    (allowsPreliminaryAcceptance && preliminaryAccepted && !aiEstimateSnapshot)
+                    (requiresPreliminaryAcceptance && !preliminaryAccepted) ||
+                    (preliminaryAccepted && !aiEstimateSnapshot)
                   }
                   onClick={() => void handleSubmit()}
                 >

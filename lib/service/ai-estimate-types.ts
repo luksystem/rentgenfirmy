@@ -34,6 +34,16 @@ export type ServiceAiMaterialProposal = {
   notes: string;
 };
 
+export const AI_INTAKE_RECOMMENDED_ACTIONS = ["offer", "on_site", "remote"] as const;
+export type AiIntakeRecommendedAction = (typeof AI_INTAKE_RECOMMENDED_ACTIONS)[number];
+
+export type ServiceAiIntakeRecommendation = {
+  recommendedAction: AiIntakeRecommendedAction;
+  note: string;
+  remoteOnlyViable: boolean;
+  onsiteVisitLikelyRequired: boolean;
+};
+
 export type ServiceAiEstimateProposal = {
   confidence: number;
   summary: string;
@@ -42,6 +52,7 @@ export type ServiceAiEstimateProposal = {
   materials: ServiceAiMaterialProposal[];
   questions: string[];
   riskFlags: string[];
+  intakeRecommendation: ServiceAiIntakeRecommendation | null;
 };
 
 export type ServiceAiTravelContext = {

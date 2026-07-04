@@ -5,19 +5,46 @@ import {
   shouldApplyIntakePrioritySurcharge,
 } from "@/lib/service-intake/ai-estimate-flow";
 import { computeIntakeAiEstimate } from "@/lib/service-intake/intake-ai-estimate";
-import { readIntakeVerifiedToken } from "@/lib/service-intake/tokens";
+import { readIntakeAuthToken } from "@/lib/service-intake/tokens";
 import {
+  isGuestIntakeRequestType,
+  SERVICE_INTAKE_POST_WARRANTY_ACTIONS,
   SERVICE_INTAKE_PRIORITIES,
   SERVICE_INTAKE_REQUEST_TYPES,
+  type ServiceIntakePostWarrantyAction,
   type ServiceIntakePriority,
   type ServiceIntakeRequestType,
 } from "@/lib/service-intake/types";
+import type { Client } from "@/lib/service/types";
 import { rowToClient } from "@/lib/supabase/client-mappers";
 import { fetchCompanyProfileServer } from "@/lib/supabase/company-profile-server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeServiceGlobalSettings } from "@/lib/supabase/service-mappers";
 import { rowToProject } from "@/lib/supabase/mappers";
 import { getWarrantyStatus, resolveServiceAiWarrantyContext } from "@/lib/project/warranty";
+
+function buildGuestEstimateClient(input: {
+  fullName: string;
+  email: string;
+  phone: string;
+  location: string;
+}): Client {
+  const now = new Date().toISOString();
+  return {
+    id: "guest",
+    fullName: input.fullName,
+    location: input.location,
+    addressStreet: "",
+    addressCity: "",
+    addressPostalCode: "",
+    email: input.email,
+    phone: input.phone,
+    notes: "",
+    externalId: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
 
 export async function POST(request: Request) {
   try {
@@ -27,10 +54,13 @@ export async function POST(request: Request) {
       description?: string;
       requestType?: ServiceIntakeRequestType;
       priority?: ServiceIntakePriority | null;
+      postWarrantyAction?: ServiceIntakePostWarrantyAction | null;
+      contactLocation?: string;
+      contactPhone?: string;
     };
 
-    const verified = readIntakeVerifiedToken(body.verificationToken?.trim() ?? "");
-    if (!verified) {
+    const auth = readIntakeAuthToken(body.verificationToken?.trim() ?? "");
+    if (!auth) {
       return NextResponse.json(
         { error: "Sesja wygasła. Odśwież stronę i zacznij od początku." },
         { status: 401 },
@@ -45,30 +75,92 @@ export async function POST(request: Request) {
       );
     }
 
-    const projectId = body.projectId?.trim() ?? "";
-    if (!projectId) {
-      return NextResponse.json({ error: "Wybierz obiekt." }, { status: 400 });
-    }
-
     const requestTypeRaw = body.requestType ?? "offer_request";
     const requestType = SERVICE_INTAKE_REQUEST_TYPES.includes(requestTypeRaw)
       ? requestTypeRaw
       : "offer_request";
 
     const supabase = getSupabaseAdmin();
+    const companyProfile = await fetchCompanyProfileServer();
+    const { data: settingsRow } = await supabase
+      .from("app_settings")
+      .select("data")
+      .eq("id", "service_global_settings")
+      .maybeSingle();
+    const settings = normalizeServiceGlobalSettings(settingsRow?.data ?? {});
 
-    const [{ data: clientRow }, { data: projectRow }, companyProfile, { data: settingsRow }] =
-      await Promise.all([
-        supabase.from("clients").select("*").eq("id", verified.clientId).maybeSingle(),
-        supabase.from("projects").select("*").eq("id", projectId).maybeSingle(),
-        fetchCompanyProfileServer(),
-        supabase.from("app_settings").select("data").eq("id", "service_global_settings").maybeSingle(),
-      ]);
+    if (auth.kind === "guest") {
+      if (!isGuestIntakeRequestType(requestType)) {
+        return NextResponse.json(
+          { error: "Gość może poprosić tylko o ofertę lub nową funkcjonalność." },
+          { status: 400 },
+        );
+      }
+
+      const contactLocation = body.contactLocation?.trim() ?? "";
+      if (contactLocation.length < 3) {
+        return NextResponse.json(
+          { error: "Podaj lokalizację obiektu przed wyceną." },
+          { status: 400 },
+        );
+      }
+
+      const client = buildGuestEstimateClient({
+        fullName: auth.fullName,
+        email: auth.email,
+        phone: body.contactPhone?.trim() ?? "",
+        location: contactLocation,
+      });
+
+      const serviceType = resolveIntakeAiServiceType({
+        requestType,
+        isWarrantyActive: false,
+      });
+
+      const result = await computeIntakeAiEstimate({
+        description,
+        serviceType,
+        client,
+        projectId: "",
+        projectName: contactLocation,
+        warrantyContext: null,
+        companyAddress: companyProfile.address,
+        rates: settings.rates,
+        zoneSettings: settings.zoneSettings,
+        discounts: settings.defaultDiscounts,
+        postWarrantyAction: null,
+      });
+
+      return NextResponse.json({
+        ok: true,
+        estimate: result.public,
+        serviceType,
+        requestType,
+        snapshot: {
+          public: result.public,
+          record: result.record,
+          serviceType,
+          requestType,
+          prioritySurchargeApplied: result.public.prioritySurchargeApplied,
+          prioritySurchargePercent: result.public.prioritySurchargePercent,
+        },
+      });
+    }
+
+    const projectId = body.projectId?.trim() ?? "";
+    if (!projectId) {
+      return NextResponse.json({ error: "Wybierz obiekt." }, { status: 400 });
+    }
+
+    const [{ data: clientRow }, { data: projectRow }] = await Promise.all([
+      supabase.from("clients").select("*").eq("id", auth.clientId).maybeSingle(),
+      supabase.from("projects").select("*").eq("id", projectId).maybeSingle(),
+    ]);
 
     if (!clientRow) {
       return NextResponse.json({ error: "Nie znaleziono klienta." }, { status: 400 });
     }
-    if (!projectRow || projectRow.client_id !== verified.clientId) {
+    if (!projectRow || projectRow.client_id !== auth.clientId) {
       return NextResponse.json({ error: "Wybrany obiekt nie należy do Twojego konta." }, { status: 400 });
     }
 
@@ -102,11 +194,16 @@ export async function POST(request: Request) {
       serviceType,
     });
 
-    const settings = normalizeServiceGlobalSettings(settingsRow?.data ?? {});
-
     const priorityRaw = body.priority ?? null;
     const priority =
       priorityRaw && SERVICE_INTAKE_PRIORITIES.includes(priorityRaw) ? priorityRaw : null;
+
+    const postWarrantyActionRaw = body.postWarrantyAction ?? null;
+    const postWarrantyAction =
+      postWarrantyActionRaw &&
+      SERVICE_INTAKE_POST_WARRANTY_ACTIONS.includes(postWarrantyActionRaw)
+        ? postWarrantyActionRaw
+        : null;
 
     const applyPrioritySurcharge = shouldApplyIntakePrioritySurcharge({
       requestType,
@@ -127,6 +224,7 @@ export async function POST(request: Request) {
       discounts: settings.defaultDiscounts,
       prioritySurchargePercent: settings.intakeSettings.prioritySurchargePercent,
       applyPrioritySurcharge,
+      postWarrantyAction: isServiceRequest && !isWarrantyActive ? postWarrantyAction : null,
     });
 
     return NextResponse.json({

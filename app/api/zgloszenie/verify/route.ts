@@ -20,26 +20,27 @@ export async function POST(request: Request) {
     const result = await verifyServiceIntakeIdentity({ sessionToken, email, fullName });
 
     if (!result) {
-      return NextResponse.json(
-        {
-          error:
-            "Nie udało się zweryfikować danych. Sprawdź e-mail i imię/nazwisko albo skontaktuj się z nami telefonicznie.",
-        },
-        { status: 403 },
-      );
+      return NextResponse.json({
+        ok: false,
+        code: "verification_failed",
+        message:
+          "Nie udało się potwierdzić tożsamości. Prawdopodobnie nie jesteś naszym klientem albo wpisałeś błędne dane.",
+      });
     }
 
     if (result.projects.length === 0) {
-      return NextResponse.json(
-        {
-          error:
-            "Nie znaleźliśmy przypisanych obiektów do tego konta. Skontaktuj się z nami, aby dokończyć zgłoszenie.",
-        },
-        { status: 403 },
-      );
+      return NextResponse.json({
+        ok: false,
+        code: "no_projects",
+        message:
+          "Nie znaleźliśmy przypisanych obiektów do tego konta. Możesz poprawić dane albo kontynuować jako nowy kontakt.",
+      });
     }
 
-    return NextResponse.json(result);
+    return NextResponse.json({
+      ok: true,
+      ...result,
+    });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Błąd weryfikacji." },

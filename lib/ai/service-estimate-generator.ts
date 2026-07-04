@@ -1,4 +1,5 @@
 import type { ServiceAiEstimateProposal } from "@/lib/service/ai-estimate-types";
+import type { ServiceIntakePostWarrantyAction } from "@/lib/service-intake/types";
 import {
   extractJsonObject,
   parseServiceAiEstimateProposal,
@@ -21,6 +22,44 @@ export type ServiceAiReferenceCase = {
   netDeltaPercent: number;
 };
 
+function buildIntakeActionPrompt(postWarrantyAction: ServiceIntakePostWarrantyAction | null) {
+  if (!postWarrantyAction) {
+    return "";
+  }
+
+  const sharedRecommendation = `
+Rekomendacja sposobu działania (wymagane pole intakeRecommendation):
+- Klient wybrał jedną z trzech opcji pogwarancyjnych: oferta / przyjazd / serwis zdalny.
+- Oceń problem i w intakeRecommendation wskaż, która opcja jest najlepsza (recommendedAction: offer | on_site | remote).
+- Uzasadnij w note — np. czy serwis zdalny wystarczy, czy prawdopodobny jest przyjazd, czy lepiej najpierw oferta.
+- remoteOnlyViable=true tylko gdy problem realnie da się rozwiązać zdalnie bez wizyty.
+- onsiteVisitLikelyRequired=true gdy bez wizyty w obiekcie prace mogą być nieskuteczne lub niemożliwe.`;
+
+  if (postWarrantyAction === "offer") {
+    return `
+Preferencja klienta: PRZYGOTOWANIE OFERTY (offer).
+- Wycen orientacyjnie pełny zakres: praca u klienta, praca zdalna, dojazd, noclegi (noclegi liczy aplikacja).
+- Szacuj realistycznie zarówno programmerRemoteHours jak i programmerOnsiteHours / installerHours.
+${sharedRecommendation}`;
+  }
+
+  if (postWarrantyAction === "on_site") {
+    return `
+Preferencja klienta: JAK NAJSZYBSZY PRZYJAZD (on_site).
+- Wycen orientacyjnie pełny zakres: praca u klienta, praca zdalna, dojazd, noclegi (noclegi liczy aplikacja).
+- Klient oczekuje działania na miejscu — uwzględnij typowy przyjazd serwisanta z dojazdem.
+${sharedRecommendation}`;
+  }
+
+  return `
+Preferencja klienta: SERWIS ZDALNY (remote).
+- W wycenie kosztowej licz TYLKO pracę zdalną: programmerRemoteHours (ew. zdalny nadzór w supervisorHours).
+- Ustaw installerHours=0, helperHours=0, programmerOnsiteHours=0, requiresTrip=false dla zadań.
+- W summary jasno napisz, czy sam serwis zdalny wystarczy, czy może być konieczny przyjazd, albo czy zdalnie problem nie da się skutecznie rozwiązać.
+- Dojazd i praca na miejscu NIE wchodzą do kosztów tej wyceny — opisz je tylko w rekomendacji, jeśli potrzebne.
+${sharedRecommendation}`;
+}
+
 function buildPrompt(input: {
   description: string;
   serviceType: ServiceType;
@@ -30,6 +69,7 @@ function buildPrompt(input: {
   referenceCases: ServiceAiReferenceCase[];
   projectContext: string | null;
   warrantyContext: string | null;
+  postWarrantyAction: ServiceIntakePostWarrantyAction | null;
 }) {
   const references =
     input.referenceCases.length > 0
@@ -86,6 +126,7 @@ Zasady kontekstu projektu:
 - Nie zwracaj kwot robocizny/dojazdu — aplikacja liczy je ze stawek.
 - Noclegi (overnights): ustaw 0 — aplikacja wyliczy je z odległości i liczby dni. Przy krótkim dojeździe (< progu km z ustawień) zawsze 0.
 - estimatedTrips: przy krótkim dojeździe i wielodniowych pracach aplikacja liczy osobne wyjazdy na każdy dzień.
+${buildIntakeActionPrompt(input.postWarrantyAction)}
 
 Opis zgłoszenia:
 """
@@ -129,7 +170,17 @@ Odpowiedz WYŁĄCZNIE poprawnym JSON:
     }
   ],
   "questions": ["string"],
-  "riskFlags": ["string"]
+  "riskFlags": ["string"]${
+    input.postWarrantyAction
+      ? `,
+  "intakeRecommendation": {
+    "recommendedAction": "on_site",
+    "note": "string",
+    "remoteOnlyViable": false,
+    "onsiteVisitLikelyRequired": true
+  }`
+      : ""
+  }
 }`;
 }
 
@@ -142,6 +193,7 @@ export async function generateServiceAiEstimate(input: {
   referenceCases: ServiceAiReferenceCase[];
   projectContext?: string | null;
   warrantyContext?: ServiceAiWarrantyContext | null;
+  postWarrantyAction?: ServiceIntakePostWarrantyAction | null;
 }): Promise<ServiceAiEstimateProposal> {
   const plain = input.description.trim();
   if (!plain) {
@@ -182,6 +234,7 @@ export async function generateServiceAiEstimate(input: {
             warrantyContext: formatServiceAiWarrantyContextForPrompt(
               input.warrantyContext ?? null,
             ),
+            postWarrantyAction: input.postWarrantyAction ?? null,
           }),
         },
       ],

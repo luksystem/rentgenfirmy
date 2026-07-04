@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { readIntakeVerifiedToken } from "@/lib/service-intake/tokens";
+import { readIntakeAuthToken } from "@/lib/service-intake/tokens";
 import { uploadServiceIntakeAttachment } from "@/lib/supabase/service-intake-attachments-repository";
 
 export async function POST(request: Request) {
@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     const verificationToken = String(formData.get("verificationToken") ?? "").trim();
     const file = formData.get("file");
 
-    if (!verificationToken || !readIntakeVerifiedToken(verificationToken)) {
+    if (!verificationToken || !readIntakeAuthToken(verificationToken)) {
       return NextResponse.json({ error: "Sesja wygasła. Odśwież stronę." }, { status: 401 });
     }
 

@@ -14,6 +14,13 @@ type IntakeVerifiedPayload = {
   exp: number;
 };
 
+type IntakeGuestPayload = {
+  kind: "guest";
+  email: string;
+  fullName: string;
+  exp: number;
+};
+
 function getSecret() {
   return (
     process.env.CLIENTS_API_SECRET?.trim() ||
@@ -22,7 +29,7 @@ function getSecret() {
   );
 }
 
-function signPayload(payload: IntakeSessionPayload | IntakeVerifiedPayload) {
+function signPayload(payload: IntakeSessionPayload | IntakeVerifiedPayload | IntakeGuestPayload) {
   const secret = getSecret();
   if (!secret) {
     throw new Error("Brak sekretu do podpisywania sesji zgłoszenia.");
@@ -33,7 +40,9 @@ function signPayload(payload: IntakeSessionPayload | IntakeVerifiedPayload) {
   return `${body}.${signature}`;
 }
 
-function readPayload<T extends IntakeSessionPayload | IntakeVerifiedPayload>(token: string): T | null {
+function readPayload<T extends IntakeSessionPayload | IntakeVerifiedPayload | IntakeGuestPayload>(
+  token: string,
+): T | null {
   const secret = getSecret();
   if (!secret) {
     return null;
@@ -97,6 +106,39 @@ export function createIntakeVerifiedToken(input: {
     fullName: input.fullName.trim(),
     exp: Date.now() + VERIFIED_TTL_MS,
   });
+}
+
+export function createIntakeGuestToken(input: { email: string; fullName: string }) {
+  return signPayload({
+    kind: "guest",
+    email: input.email.trim().toLowerCase(),
+    fullName: input.fullName.trim(),
+    exp: Date.now() + VERIFIED_TTL_MS,
+  });
+}
+
+export function readIntakeGuestToken(token: string) {
+  const payload = readPayload<IntakeGuestPayload>(token);
+  if (!payload || payload.kind !== "guest") {
+    return null;
+  }
+  return payload;
+}
+
+export function readIntakeAuthToken(
+  token: string,
+): IntakeVerifiedPayload | IntakeGuestPayload | null {
+  const verified = readIntakeVerifiedToken(token);
+  if (verified) {
+    return verified;
+  }
+
+  const guest = readIntakeGuestToken(token);
+  if (guest) {
+    return guest;
+  }
+
+  return null;
 }
 
 export function readIntakeVerifiedToken(token: string) {

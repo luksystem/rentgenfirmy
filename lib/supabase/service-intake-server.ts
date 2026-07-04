@@ -9,20 +9,26 @@ import {
 import { serviceIntakeDueAt, isServiceIntakeOverdue, isServiceIntakeInactive, isServiceIntakeActive, isServiceIntakeAwaitingPickup } from "@/lib/service-intake/sla";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import {
+  createIntakeGuestToken,
   createIntakeVerifiedToken,
+  readIntakeGuestToken,
   readIntakeSessionToken,
   readIntakeVerifiedToken,
 } from "@/lib/service-intake/tokens";
 import { createServiceIntakePreliminaryOfferNotifications } from "@/lib/notifications/service-intake-offer";
+import { createServiceFromGuestIntake } from "@/lib/service-intake/create-service-from-guest-intake";
+import { appendContactHistoryAdmin, createContactFromIntakeAdmin } from "@/lib/supabase/contact-admin";
 import {
   intakeAllowsPreliminaryAcceptance,
   intakeRequestTypeRequiresAiEstimate,
+  intakeRequiresPreliminaryAcceptance,
   resolveIntakeAiServiceType,
   shouldApplyIntakePrioritySurcharge,
 } from "@/lib/service-intake/ai-estimate-flow";
-import { computeIntakeAiEstimate } from "@/lib/service-intake/intake-ai-estimate";
+import { computeIntakeAiEstimate, applyEstimateScopeToLineItems } from "@/lib/service-intake/intake-ai-estimate";
 import { createServiceFromIntakePreliminaryAcceptance } from "@/lib/service-intake/create-service-from-intake";
-import { buildLineItemsFromAiEstimate } from "@/lib/service/apply-ai-estimate";
+import { aggregateAiTaskHours, buildLineItemsFromAiEstimate } from "@/lib/service/apply-ai-estimate";
+import { resolveIntakeEstimateScope } from "@/lib/service-intake/ai-estimate-flow";
 import type {
   ServiceIntakeAiEstimateSnapshot,
   ServiceIntakeAttachment,
@@ -37,7 +43,10 @@ import type {
   ServiceIntakeVerifyResult,
   ServiceIntakeWorkPreference,
 } from "@/lib/service-intake/types";
-import { SERVICE_INTAKE_WORK_PREFERENCES } from "@/lib/service-intake/types";
+import {
+  isGuestIntakeRequestType,
+  SERVICE_INTAKE_WORK_PREFERENCES,
+} from "@/lib/service-intake/types";
 import { SERVICE_INTAKE_STATUS_LABELS } from "@/lib/service-intake/types";
 import { getWarrantyStatus, resolveServiceAiWarrantyContext } from "@/lib/project/warranty";
 import { rowToProject } from "@/lib/supabase/mappers";
@@ -47,9 +56,33 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { ServiceIntakeRequestRow } from "@/lib/supabase/database.types";
 import { mapProfileRow } from "@/lib/supabase/profile-mappers";
 import { normalizeServiceGlobalSettings } from "@/lib/supabase/service-mappers";
+import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
 
 const SETTINGS_ID = "service_global_settings";
+
+function buildGuestServiceClient(input: {
+  fullName: string;
+  email: string;
+  phone: string;
+  location: string;
+}): Client {
+  const now = new Date().toISOString();
+  return {
+    id: "guest",
+    fullName: input.fullName,
+    location: input.location,
+    addressStreet: "",
+    addressCity: "",
+    addressPostalCode: "",
+    email: input.email,
+    phone: input.phone,
+    notes: "",
+    externalId: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -306,6 +339,235 @@ export async function verifyServiceIntakeIdentity(input: {
   };
 }
 
+export async function createGuestIntakeSession(input: {
+  sessionToken: string;
+  email: string;
+  fullName: string;
+}): Promise<ServiceIntakeVerifyResult> {
+  const session = readIntakeSessionToken(input.sessionToken);
+  const email = normalizeEmail(input.email);
+
+  if (!session || session.email !== email) {
+    throw new Error("Sesja wygasła. Odśwież stronę i zacznij od początku.");
+  }
+
+  const fullName = input.fullName.trim();
+  if (!fullName) {
+    throw new Error("Podaj imię i nazwisko.");
+  }
+
+  const rates = await fetchServiceRates();
+
+  return {
+    verificationToken: createIntakeGuestToken({ email, fullName }),
+    clientDisplayName: fullName,
+    isGuest: true,
+    projects: [],
+    rates,
+  };
+}
+
+export async function submitGuestServiceIntakeRequest(input: {
+  verificationToken: string;
+  requestType: ServiceIntakeRequestType;
+  description: string;
+  contactPhone: string;
+  contactLocation: string;
+  attachments?: Array<{ kind: "image" | "video" | "link"; url: string; label?: string | null }>;
+  workPreference?: ServiceIntakeWorkPreference | null;
+  preliminaryAccepted?: boolean;
+  aiEstimateSnapshot?: ServiceIntakeAiEstimateSnapshot | null;
+}) {
+  const guest = readIntakeGuestToken(input.verificationToken);
+  if (!guest) {
+    throw new Error("Sesja wygasła. Odśwież stronę i zacznij od początku.");
+  }
+
+  if (!isGuestIntakeRequestType(input.requestType)) {
+    throw new Error("Gość może zgłosić tylko prośbę o ofertę lub nową funkcjonalność.");
+  }
+
+  if (!input.preliminaryAccepted) {
+    throw new Error("Zaakceptuj orientacyjną wycenę, aby wysłać zgłoszenie.");
+  }
+
+  const phone = input.contactPhone.trim();
+  if (phone.length < 7) {
+    throw new Error("Podaj numer telefonu — jest wymagany dla nowych kontaktów.");
+  }
+
+  const location = input.contactLocation.trim();
+  if (location.length < 3) {
+    throw new Error("Podaj lokalizację obiektu (miasto lub adres).");
+  }
+
+  const description = input.description.trim();
+  if (description.length < 10) {
+    throw new Error("Opisz zgłoszenie (minimum 10 znaków).");
+  }
+
+  const supabase = getSupabaseAdmin();
+  const referenceNumber = await nextReferenceNumber();
+  const now = new Date().toISOString();
+  const serviceTypeHint = resolveIntakeAiServiceType({
+    requestType: input.requestType,
+    isWarrantyActive: false,
+  });
+  const workPreference = normalizeWorkPreference(input.workPreference);
+  let aiEstimateSnapshot = input.aiEstimateSnapshot ?? null;
+
+  if (!aiEstimateSnapshot) {
+    const companyProfile = await fetchCompanyProfileServer();
+    const settings = normalizeServiceGlobalSettings(
+      (
+        await supabase.from("app_settings").select("data").eq("id", SETTINGS_ID).maybeSingle()
+      ).data?.data ?? {},
+    );
+    const guestClient = buildGuestServiceClient({
+      fullName: guest.fullName,
+      email: guest.email,
+      phone,
+      location,
+    });
+
+    const computed = await computeIntakeAiEstimate({
+      description,
+      serviceType: serviceTypeHint,
+      client: guestClient,
+      projectId: "",
+      projectName: location,
+      warrantyContext: null,
+      companyAddress: companyProfile.address,
+      rates: settings.rates,
+      zoneSettings: settings.zoneSettings,
+      discounts: settings.defaultDiscounts,
+      postWarrantyAction: null,
+    });
+
+    aiEstimateSnapshot = {
+      public: computed.public,
+      record: computed.record,
+      serviceType: serviceTypeHint,
+      requestType: input.requestType,
+    };
+  }
+
+  const contact = await createContactFromIntakeAdmin({
+    fullName: guest.fullName,
+    location,
+    addressStreet: "",
+    addressCity: "",
+    addressPostalCode: "",
+    email: guest.email,
+    phone,
+    notes: `Zgłoszenie ${referenceNumber} — kontakt spoza bazy klientów.`,
+    intakeReference: referenceNumber,
+  });
+
+  const { data, error } = await supabase
+    .from("service_intake_requests")
+    .insert({
+      reference_number: referenceNumber,
+      status: "converted",
+      client_id: null,
+      project_id: null,
+      contact_email: guest.email,
+      contact_full_name: guest.fullName,
+      contact_phone: phone,
+      warranty_status: null,
+      service_type_hint: serviceTypeHint,
+      request_type: input.requestType,
+      priority: null,
+      post_warranty_action: null,
+      description,
+      accepted_paid_terms: false,
+      accepted_paid_terms_at: null,
+      due_at: serviceIntakeDueAt(now, null),
+      ai_estimate: aiEstimateSnapshot,
+      work_preference: workPreference,
+      preliminary_accepted_at: now,
+      metadata_json: {
+        isGuest: true,
+        contactId: contact.id,
+        contactLocation: location,
+        requestType: input.requestType,
+        workPreference,
+        preliminaryAccepted: true,
+      },
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const record = rowToIntakeRecord(data, {
+    clientName: guest.fullName,
+    projectName: location,
+  });
+
+  const attachments = (input.attachments ?? []).filter((entry) => entry.url.trim());
+  if (attachments.length) {
+    const { error: attachmentError } = await supabase.from("service_intake_attachments").insert(
+      attachments.map((entry) => ({
+        intake_id: record.id,
+        kind: entry.kind,
+        url: entry.url.trim(),
+        label: entry.label?.trim() || null,
+      })),
+    );
+    if (attachmentError) {
+      throw new Error(attachmentError.message);
+    }
+  }
+
+  const computedLineItems = buildLineItemsFromAiEstimate({
+    proposal: aiEstimateSnapshot.record.proposal,
+    travelContext: aiEstimateSnapshot.record.travelContext,
+  });
+
+  const service = await createServiceFromGuestIntake({
+    intakeReference: record.referenceNumber,
+    contact,
+    serviceTypeHint,
+    description,
+    workPreference,
+    aiEstimateRecord: aiEstimateSnapshot.record,
+    lineItems: computedLineItems,
+  });
+
+  await supabase
+    .from("service_intake_requests")
+    .update({
+      service_id: service.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", record.id);
+
+  record.serviceId = service.id;
+
+  await appendContactHistoryAdmin(
+    contact.id,
+    "offer_linked",
+    `Powiązano z rozliczeniem serwisowym ${service.title}.`,
+    { serviceId: service.id },
+  );
+
+  await notifyServiceIntakeSubmitted(record);
+
+  await createServiceIntakePreliminaryOfferNotifications({
+    intakeId: record.id,
+    serviceId: service.id,
+    referenceNumber: record.referenceNumber,
+    clientName: guest.fullName,
+    projectName: location,
+    estimatedNetTotal: aiEstimateSnapshot.public.estimatedNetTotal,
+  }).catch(() => undefined);
+
+  return record;
+}
+
 export async function submitServiceIntakeRequest(input: {
   verificationToken: string;
   projectId: string;
@@ -351,12 +613,18 @@ export async function submitServiceIntakeRequest(input: {
     throw new Error("Wybierz, w jaki sposób mamy zadziałać.");
   }
 
-  if (!isWarrantyActive && isServiceRequest) {
-    const requiresPaidAcceptance =
-      input.postWarrantyAction === "on_site" || input.postWarrantyAction === "remote";
-    if (requiresPaidAcceptance && !input.acceptedPaidTerms) {
-      throw new Error("Zaakceptuj stawki serwisowe, aby wysłać zgłoszenie.");
-    }
+  const allowsPreliminaryAcceptance = intakeAllowsPreliminaryAcceptance({
+    requestType: input.requestType,
+    postWarrantyAction: input.postWarrantyAction,
+  });
+
+  const requiresPreliminaryAcceptance = intakeRequiresPreliminaryAcceptance({
+    requestType: input.requestType,
+    postWarrantyAction: input.postWarrantyAction,
+  });
+
+  if (requiresPreliminaryAcceptance && !input.preliminaryAccepted) {
+    throw new Error("Zaakceptuj orientacyjną wycenę, aby wysłać zgłoszenie.");
   }
 
   const description = input.description.trim();
@@ -367,12 +635,6 @@ export async function submitServiceIntakeRequest(input: {
   const supabase = getSupabaseAdmin();
   const referenceNumber = await nextReferenceNumber();
   const now = new Date().toISOString();
-  const acceptedPaidTerms =
-    !isWarrantyActive &&
-    isServiceRequest &&
-    (input.postWarrantyAction === "on_site" ||
-      input.postWarrantyAction === "remote" ||
-      input.acceptedPaidTerms);
   const dueAt = serviceIntakeDueAt(now, isServiceRequest ? input.priority : null);
 
   const wantsAiEstimate = intakeRequestTypeRequiresAiEstimate({
@@ -381,10 +643,7 @@ export async function submitServiceIntakeRequest(input: {
     isServiceRequest,
   });
 
-  const allowsPreliminaryAcceptance = intakeAllowsPreliminaryAcceptance({
-    requestType: input.requestType,
-    postWarrantyAction: input.postWarrantyAction,
-  });
+  const allowsPreliminaryAcceptanceForSnapshot = allowsPreliminaryAcceptance;
 
   const workPreference = normalizeWorkPreference(input.workPreference);
   let aiEstimateSnapshot = input.aiEstimateSnapshot ?? null;
@@ -430,6 +689,8 @@ export async function submitServiceIntakeRequest(input: {
         discounts: settings.defaultDiscounts,
         prioritySurchargePercent: settings.intakeSettings.prioritySurchargePercent,
         applyPrioritySurcharge,
+        postWarrantyAction:
+          !isWarrantyActive && isServiceRequest ? input.postWarrantyAction : null,
       });
 
       aiEstimateSnapshot = {
@@ -444,7 +705,7 @@ export async function submitServiceIntakeRequest(input: {
   }
 
   const preliminaryAccepted = Boolean(
-    input.preliminaryAccepted && allowsPreliminaryAcceptance && aiEstimateSnapshot,
+    input.preliminaryAccepted && allowsPreliminaryAcceptanceForSnapshot && aiEstimateSnapshot,
   );
 
   const { data, error } = await supabase
@@ -464,8 +725,8 @@ export async function submitServiceIntakeRequest(input: {
       post_warranty_action:
         !isWarrantyActive && isServiceRequest ? input.postWarrantyAction : null,
       description,
-      accepted_paid_terms: acceptedPaidTerms,
-      accepted_paid_terms_at: acceptedPaidTerms ? now : null,
+      accepted_paid_terms: false,
+      accepted_paid_terms_at: null,
       due_at: dueAt,
       ai_estimate: aiEstimateSnapshot,
       work_preference: workPreference,
@@ -511,10 +772,29 @@ export async function submitServiceIntakeRequest(input: {
   await notifyServiceIntakeSubmitted(record);
 
   if (preliminaryAccepted && aiEstimateSnapshot) {
-    const computedLineItems = buildLineItemsFromAiEstimate({
-      proposal: aiEstimateSnapshot.record.proposal,
-      travelContext: aiEstimateSnapshot.record.travelContext,
-    });
+    const estimateScope = resolveIntakeEstimateScope(
+      !isWarrantyActive && isServiceRequest ? input.postWarrantyAction : null,
+    );
+    const remoteHours = aggregateAiTaskHours(
+      aiEstimateSnapshot.record.proposal.recognizedTasks,
+    ).programmerRemoteHours;
+    const travelContext = aiEstimateSnapshot.record.travelContext;
+    const computedLineItems = applyEstimateScopeToLineItems(
+      buildLineItemsFromAiEstimate({
+        proposal: aiEstimateSnapshot.record.proposal,
+        travelContext:
+          estimateScope === "remote_only"
+            ? {
+                ...travelContext,
+                resolvedTrips: 0,
+                resolvedOvernights: 0,
+                estimatedDriveTimeHours: 0,
+              }
+            : travelContext,
+      }),
+      estimateScope,
+      remoteHours,
+    );
 
     const service = await createServiceFromIntakePreliminaryAcceptance({
         intakeId: record.id,

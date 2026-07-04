@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import {
-  SERVICE_INTAKE_POST_WARRANTY_ACTIONS,
   SERVICE_INTAKE_PRIORITIES,
+  SERVICE_INTAKE_POST_WARRANTY_ACTIONS,
   SERVICE_INTAKE_REQUEST_TYPES,
   SERVICE_INTAKE_WORK_PREFERENCES,
   type ServiceIntakePostWarrantyAction,
@@ -9,7 +9,11 @@ import {
   type ServiceIntakeRequestType,
   type ServiceIntakeWorkPreference,
 } from "@/lib/service-intake/types";
-import { submitServiceIntakeRequest } from "@/lib/supabase/service-intake-server";
+import { readIntakeGuestToken } from "@/lib/service-intake/tokens";
+import {
+  submitGuestServiceIntakeRequest,
+  submitServiceIntakeRequest,
+} from "@/lib/supabase/service-intake-server";
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +25,7 @@ export async function POST(request: Request) {
       postWarrantyAction?: ServiceIntakePostWarrantyAction | null;
       description?: string;
       contactPhone?: string;
+      contactLocation?: string;
       acceptedPaidTerms?: boolean;
       attachments?: Array<{ kind: "image" | "video" | "link"; url: string; label?: string | null }>;
       workPreference?: ServiceIntakeWorkPreference | null;
@@ -28,6 +33,7 @@ export async function POST(request: Request) {
       aiEstimateSnapshot?: unknown;
     };
 
+    const verificationToken = body.verificationToken?.trim() ?? "";
     const requestType = body.requestType ?? "service";
     if (!SERVICE_INTAKE_REQUEST_TYPES.includes(requestType)) {
       return NextResponse.json({ error: "Nieprawidłowy rodzaj zgłoszenia." }, { status: 400 });
@@ -52,23 +58,37 @@ export async function POST(request: Request) {
         ? (body.workPreference as ServiceIntakeWorkPreference)
         : null;
 
-    const record = await submitServiceIntakeRequest({
-      verificationToken: body.verificationToken?.trim() ?? "",
-      projectId: body.projectId?.trim() ?? "",
-      requestType,
-      priority,
-      postWarrantyAction,
-      description: body.description ?? "",
-      contactPhone: body.contactPhone ?? null,
-      acceptedPaidTerms: Boolean(body.acceptedPaidTerms),
-      attachments: body.attachments,
-      workPreference,
-      preliminaryAccepted: Boolean(body.preliminaryAccepted),
-      aiEstimateSnapshot:
-        body.aiEstimateSnapshot && typeof body.aiEstimateSnapshot === "object"
-          ? (body.aiEstimateSnapshot as Parameters<typeof submitServiceIntakeRequest>[0]["aiEstimateSnapshot"])
-          : null,
-    });
+    const aiEstimateSnapshot =
+      body.aiEstimateSnapshot && typeof body.aiEstimateSnapshot === "object"
+        ? (body.aiEstimateSnapshot as Parameters<typeof submitServiceIntakeRequest>[0]["aiEstimateSnapshot"])
+        : null;
+
+    const record = readIntakeGuestToken(verificationToken)
+      ? await submitGuestServiceIntakeRequest({
+          verificationToken,
+          requestType,
+          description: body.description ?? "",
+          contactPhone: body.contactPhone ?? "",
+          contactLocation: body.contactLocation ?? "",
+          attachments: body.attachments,
+          workPreference,
+          preliminaryAccepted: Boolean(body.preliminaryAccepted),
+          aiEstimateSnapshot,
+        })
+      : await submitServiceIntakeRequest({
+          verificationToken,
+          projectId: body.projectId?.trim() ?? "",
+          requestType,
+          priority,
+          postWarrantyAction,
+          description: body.description ?? "",
+          contactPhone: body.contactPhone ?? null,
+          acceptedPaidTerms: Boolean(body.acceptedPaidTerms),
+          attachments: body.attachments,
+          workPreference,
+          preliminaryAccepted: Boolean(body.preliminaryAccepted),
+          aiEstimateSnapshot,
+        });
 
     return NextResponse.json({
       ok: true,

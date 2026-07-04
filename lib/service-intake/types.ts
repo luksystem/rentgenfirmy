@@ -76,9 +76,20 @@ export type ServiceIntakeProjectOption = {
   isWarrantyActive: boolean;
 };
 
+export const GUEST_INTAKE_REQUEST_TYPES = ["new_feature", "offer_request"] as const;
+
+export type GuestIntakeRequestType = (typeof GUEST_INTAKE_REQUEST_TYPES)[number];
+
+export function isGuestIntakeRequestType(
+  requestType: ServiceIntakeRequestType,
+): requestType is GuestIntakeRequestType {
+  return (GUEST_INTAKE_REQUEST_TYPES as readonly string[]).includes(requestType);
+}
+
 export type ServiceIntakeVerifyResult = {
   verificationToken: string;
   clientDisplayName: string;
+  isGuest?: boolean;
   projects: ServiceIntakeProjectOption[];
   rates: {
     supervisionHourly: number;

@@ -4,7 +4,11 @@ import type {
   ServiceAiRecognizedTask,
   ServiceAiTravelProposal,
 } from "@/lib/service/ai-estimate-types";
-import { AI_WARRANTY_STATUSES } from "@/lib/service/ai-estimate-types";
+import {
+  AI_INTAKE_RECOMMENDED_ACTIONS,
+  AI_WARRANTY_STATUSES,
+  type ServiceAiIntakeRecommendation,
+} from "@/lib/service/ai-estimate-types";
 
 function clamp01(value: number) {
   if (Number.isNaN(value)) {
@@ -71,6 +75,33 @@ function normalizeMaterial(value: unknown): ServiceAiMaterialProposal | null {
   };
 }
 
+function normalizeIntakeRecommendation(value: unknown): ServiceAiIntakeRecommendation | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const row = value as Record<string, unknown>;
+  const recommendedAction = row.recommendedAction;
+  if (
+    typeof recommendedAction !== "string" ||
+    !(AI_INTAKE_RECOMMENDED_ACTIONS as readonly string[]).includes(recommendedAction)
+  ) {
+    return null;
+  }
+
+  const note = typeof row.note === "string" ? row.note.trim() : "";
+  if (!note) {
+    return null;
+  }
+
+  return {
+    recommendedAction: recommendedAction as ServiceAiIntakeRecommendation["recommendedAction"],
+    note,
+    remoteOnlyViable: row.remoteOnlyViable === true,
+    onsiteVisitLikelyRequired: row.onsiteVisitLikelyRequired === true,
+  };
+}
+
 function normalizeTravel(value: unknown): ServiceAiTravelProposal {
   const row =
     value && typeof value === "object" && !Array.isArray(value)
@@ -124,6 +155,7 @@ export function parseServiceAiEstimateProposal(raw: unknown): ServiceAiEstimateP
           .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
           .map((item) => item.trim())
       : [],
+    intakeRecommendation: normalizeIntakeRecommendation(row.intakeRecommendation),
   };
 }
 
