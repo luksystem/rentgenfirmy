@@ -63,7 +63,6 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { ServiceIntakeRequestRow } from "@/lib/supabase/database.types";
 import { mapProfileRow } from "@/lib/supabase/profile-mappers";
 import { normalizeServiceGlobalSettings } from "@/lib/supabase/service-mappers";
-import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
 
 const SETTINGS_ID = "service_global_settings";
