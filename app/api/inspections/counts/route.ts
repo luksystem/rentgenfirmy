@@ -13,7 +13,7 @@ export async function GET() {
   }
 
   try {
-    const counts = await countInspectionAlerts();
+    const counts = await countInspectionAlerts(user.id);
     return NextResponse.json(counts);
   } catch (error) {
     return NextResponse.json(

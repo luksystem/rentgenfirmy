@@ -6,11 +6,13 @@ import { FileUp, Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/input";
+import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
 import type {
   InspectionGlobalSettings,
   InspectionProtocolTemplate,
   InspectionSystemDefinition,
 } from "@/lib/inspections/types";
+import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 
 function SettingsSection({
   title,
@@ -42,6 +44,7 @@ export function InspectionSettingsView() {
   const [templateName, setTemplateName] = useState("");
   const [templateSystemCode, setTemplateSystemCode] = useState("");
   const [templateFile, setTemplateFile] = useState<File | null>(null);
+  const [teamProfiles, setTeamProfiles] = useState<UserProfile[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -69,6 +72,9 @@ export function InspectionSettingsView() {
 
   useEffect(() => {
     void loadData();
+    void fetchTeamProfiles()
+      .then(setTeamProfiles)
+      .catch(() => setTeamProfiles([]));
   }, [loadData]);
 
   function updateSystem(index: number, patch: Partial<InspectionSystemDefinition>) {
@@ -76,6 +82,7 @@ export function InspectionSettingsView() {
       return;
     }
     setSettings({
+      ...settings,
       systems: settings.systems.map((entry, entryIndex) =>
         entryIndex === index ? { ...entry, ...patch } : entry,
       ),
@@ -88,6 +95,7 @@ export function InspectionSettingsView() {
       return;
     }
     setSettings({
+      ...settings,
       systems: [
         ...settings.systems,
         { code: `system_${settings.systems.length + 1}`, label: "Nowy system", active: true },
@@ -101,6 +109,7 @@ export function InspectionSettingsView() {
       return;
     }
     setSettings({
+      ...settings,
       systems: settings.systems.filter((_, entryIndex) => entryIndex !== index),
     });
     setSaved(false);
@@ -186,6 +195,36 @@ export function InspectionSettingsView() {
 
       <Card>
         <CardContent className="grid gap-2 py-5">
+          <SettingsSection
+            title="Rozliczenia"
+            description="Osoba otrzymująca powiadomienie, gdy zrealizowany przegląd trafi do kolumny „Do rozliczenia”."
+          >
+            <Field label="Osoba odpowiedzialna za rozliczenie">
+              <select
+                value={settings?.billingResponsibleProfileId ?? ""}
+                onChange={(event) => {
+                  setSaved(false);
+                  setSettings((current) =>
+                    current
+                      ? {
+                          ...current,
+                          billingResponsibleProfileId: event.target.value || null,
+                        }
+                      : current,
+                  );
+                }}
+                className="h-10 w-full rounded-xl border border-border bg-surface-muted px-3 text-sm"
+              >
+                <option value="">— wybierz —</option>
+                {teamProfiles.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {getUserDisplayName(member)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </SettingsSection>
+
           <SettingsSection
             title="Systemy do przeglądu"
             description="Definicje systemów (SSP, SSWiN, CCTV itd.) dostępne w kreatorze planowania."

@@ -1,4 +1,11 @@
-export const INSPECTION_STATUSES = ["quoting", "preliminary", "planned", "completed"] as const;
+export const INSPECTION_STATUSES = [
+  "quoting",
+  "preliminary",
+  "planned",
+  "completed",
+  "billing",
+  "settled",
+] as const;
 export type InspectionStatus = (typeof INSPECTION_STATUSES)[number];
 
 export const INSPECTION_KANBAN_COLUMNS: InspectionStatus[] = [
@@ -6,6 +13,8 @@ export const INSPECTION_KANBAN_COLUMNS: InspectionStatus[] = [
   "preliminary",
   "planned",
   "completed",
+  "billing",
+  "settled",
 ];
 
 export const INSPECTION_STATUS_LABELS: Record<InspectionStatus, string> = {
@@ -13,6 +22,8 @@ export const INSPECTION_STATUS_LABELS: Record<InspectionStatus, string> = {
   preliminary: "Wstępnie zaplanowane",
   planned: "Zaplanowane",
   completed: "Zrealizowane",
+  billing: "Do rozliczenia",
+  settled: "Rozliczone",
 };
 
 export const INSPECTION_FREQUENCIES = ["monthly", "quarterly", "semi_annual", "annual"] as const;
@@ -36,6 +47,8 @@ export type InspectionSystemDefinition = {
 
 export type InspectionGlobalSettings = {
   systems: InspectionSystemDefinition[];
+  billingResponsibleProfileId: string | null;
+  billingResponsibleName: string | null;
 };
 
 export type InspectionProtocolTemplate = {
@@ -108,6 +121,8 @@ export type InspectionRecord = {
   protocolClientSigner: string | null;
   planningReminderSentAt: string | null;
   completedAt: string | null;
+  billingSettledAt: string | null;
+  billingNotificationSentAt: string | null;
   createdAt: string;
   updatedAt: string;
   clientName?: string | null;

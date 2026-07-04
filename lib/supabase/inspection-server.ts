@@ -3,8 +3,11 @@ import {
   DEFAULT_INSPECTION_SETTINGS,
   normalizeInspectionGlobalSettings,
 } from "@/lib/inspections/defaults";
-import { generateUpcomingPreliminaryDates } from "@/lib/inspections/schedule";
-import { isInspectionPlanningDue } from "@/lib/inspections/schedule";
+import {
+  generateUpcomingPreliminaryDates,
+  isInspectionPlanningDue,
+  isInspectionPlanningOverdue,
+} from "@/lib/inspections/schedule";
 import type {
   InspectionPlanInput,
   InspectionReactionEmoji,
@@ -27,6 +30,29 @@ const SETTINGS_ID = "inspection_global_settings";
 
 type InspectionUpdate = Database["public"]["Tables"]["inspections"]["Update"];
 
+async function resolveProfileDisplayName(profileId: string | null) {
+  if (!profileId) {
+    return null;
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", profileId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  if (!data) {
+    return null;
+  }
+
+  return getUserDisplayName(mapProfileRow(data));
+}
+
 export async function fetchInspectionGlobalSettings() {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
@@ -42,11 +68,26 @@ export async function fetchInspectionGlobalSettings() {
   return normalizeInspectionGlobalSettings(data?.data ?? DEFAULT_INSPECTION_SETTINGS);
 }
 
-export async function saveInspectionGlobalSettings(settings: ReturnType<typeof normalizeInspectionGlobalSettings>) {
+export async function saveInspectionGlobalSettings(
+  settings: ReturnType<typeof normalizeInspectionGlobalSettings>,
+) {
   const supabase = getSupabaseAdmin();
+  let billingResponsibleName = settings.billingResponsibleName;
+
+  if (settings.billingResponsibleProfileId) {
+    billingResponsibleName = await resolveProfileDisplayName(settings.billingResponsibleProfileId);
+  } else {
+    billingResponsibleName = null;
+  }
+
+  const payload = {
+    ...settings,
+    billingResponsibleName,
+  };
+
   const { error } = await supabase.from("app_settings").upsert({
     id: SETTINGS_ID,
-    data: settings,
+    data: payload,
     updated_at: new Date().toISOString(),
   });
 
@@ -54,7 +95,7 @@ export async function saveInspectionGlobalSettings(settings: ReturnType<typeof n
     throw new Error(error.message);
   }
 
-  return settings;
+  return payload;
 }
 
 export async function listInspectionProtocolTemplates(clientId?: string | null) {
@@ -76,12 +117,18 @@ export async function listInspectionProtocolTemplates(clientId?: string | null) 
   return (data ?? []).map(rowToInspectionProtocolTemplate);
 }
 
-export async function listInspections(status?: InspectionStatus): Promise<InspectionRecord[]> {
+export async function listInspections(input?: {
+  status?: InspectionStatus;
+  clientId?: string;
+}): Promise<InspectionRecord[]> {
   const supabase = getSupabaseAdmin();
   let query = supabase.from("inspections").select("*").order("preliminary_date", { ascending: true });
 
-  if (status) {
-    query = query.eq("status", status);
+  if (input?.status) {
+    query = query.eq("status", input.status);
+  }
+  if (input?.clientId) {
+    query = query.eq("client_id", input.clientId);
   }
 
   const { data, error } = await query;
@@ -153,6 +200,23 @@ export async function getInspectionById(id: string): Promise<InspectionRecord | 
   return record;
 }
 
+export async function deleteInspection(id: string): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const { data: existing } = await supabase.from("inspections").select("id").eq("id", id).maybeSingle();
+
+  if (!existing) {
+    throw new Error("Nie znaleziono przeglądu.");
+  }
+
+  await supabase.from("user_notifications").delete().eq("source_id", id);
+
+  const { error } = await supabase.from("inspections").delete().eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export async function updateInspection(
   id: string,
   patch: Partial<{
@@ -169,6 +233,8 @@ export async function updateInspection(
     protocolCompanySigner: string | null;
     protocolClientSigner: string | null;
     completedAt: string | null;
+    billingSettledAt: string | null;
+    billingNotificationSentAt: string | null;
   }>,
 ): Promise<InspectionRecord> {
   const supabase = getSupabaseAdmin();
@@ -196,13 +262,21 @@ export async function updateInspection(
     update.protocol_client_signer = patch.protocolClientSigner;
   }
   if (patch.completedAt !== undefined) update.completed_at = patch.completedAt;
+  if (patch.billingSettledAt !== undefined) update.billing_settled_at = patch.billingSettledAt;
+  if (patch.billingNotificationSentAt !== undefined) {
+    update.billing_notification_sent_at = patch.billingNotificationSentAt;
+  }
 
   if (patch.status === "planned" && patch.confirmedDate && !patch.completedAt) {
     update.status = "planned";
   }
 
-  if (patch.status === "completed") {
+  if (patch.status === "completed" || patch.status === "billing") {
     update.completed_at = patch.completedAt ?? now;
+  }
+
+  if (patch.status === "settled") {
+    update.billing_settled_at = patch.billingSettledAt ?? now;
   }
 
   const { data, error } = await supabase.from("inspections").update(update).eq("id", id).select("*").single();
@@ -417,8 +491,8 @@ export async function planInspectionsForClient(input: InspectionPlanInput) {
   return created;
 }
 
-export async function countInspectionAlerts() {
-  const items = await listInspections();
+export async function countInspectionAlerts(profileId?: string | null) {
+  const [items, settings] = await Promise.all([listInspections(), fetchInspectionGlobalSettings()]);
   const planningDueCount = items.filter((item) =>
     isInspectionPlanningDue({
       preliminaryDate: item.preliminaryDate,
@@ -427,12 +501,26 @@ export async function countInspectionAlerts() {
     }),
   ).length;
 
+  const planningOverdueCount = items.filter((item) =>
+    isInspectionPlanningOverdue({
+      preliminaryDate: item.preliminaryDate,
+      confirmedDate: item.confirmedDate,
+      status: item.status,
+    }),
+  ).length;
+
   const quotingCount = items.filter((item) => item.status === "quoting").length;
+  const billingDueCount = items.filter((item) => item.status === "billing").length;
+  const billingAlertCount =
+    profileId && settings.billingResponsibleProfileId === profileId ? billingDueCount : 0;
 
   return {
     planningDueCount,
+    planningOverdueCount,
     quotingCount,
-    newCount: planningDueCount + quotingCount,
+    billingDueCount,
+    billingAlertCount,
+    newCount: planningDueCount + quotingCount + billingAlertCount,
   };
 }
 

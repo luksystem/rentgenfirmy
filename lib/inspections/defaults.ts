@@ -10,6 +10,8 @@ export const DEFAULT_INSPECTION_SYSTEMS: InspectionGlobalSettings["systems"] = [
 
 export const DEFAULT_INSPECTION_SETTINGS: InspectionGlobalSettings = {
   systems: DEFAULT_INSPECTION_SYSTEMS,
+  billingResponsibleProfileId: null,
+  billingResponsibleName: null,
 };
 
 export function normalizeInspectionGlobalSettings(raw: unknown): InspectionGlobalSettings {
@@ -35,7 +37,18 @@ export function normalizeInspectionGlobalSettings(raw: unknown): InspectionGloba
     })
     .filter(Boolean) as InspectionGlobalSettings["systems"];
 
+  const billingResponsibleProfileId =
+    typeof data.billingResponsibleProfileId === "string" && data.billingResponsibleProfileId.trim()
+      ? data.billingResponsibleProfileId.trim()
+      : null;
+  const billingResponsibleName =
+    typeof data.billingResponsibleName === "string" && data.billingResponsibleName.trim()
+      ? data.billingResponsibleName.trim()
+      : null;
+
   return {
     systems: systems.length ? systems : DEFAULT_INSPECTION_SYSTEMS,
+    billingResponsibleProfileId,
+    billingResponsibleName,
   };
 }

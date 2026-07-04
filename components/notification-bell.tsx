@@ -32,11 +32,12 @@ export function NotificationBell() {
   const [serviceNewCount, setServiceNewCount] = useState(0);
   const [serviceOverdueCount, setServiceOverdueCount] = useState(0);
   const [inspectionsPlanningCount, setInspectionsPlanningCount] = useState(0);
+  const [inspectionsBillingCount, setInspectionsBillingCount] = useState(0);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   const kanbanAlertCount = kanbanNewTaskCount + kanbanOverdueTaskCount;
   const serviceAlertCount = serviceNewCount + serviceOverdueCount;
-  const inspectionsAlertCount = inspectionsPlanningCount;
+  const inspectionsAlertCount = inspectionsPlanningCount + inspectionsBillingCount;
   const agreementAlertCount =
     agreementPendingCounts.pendingTeamApproval +
     agreementPendingCounts.pendingClientApproval +
@@ -46,7 +47,8 @@ export function NotificationBell() {
     unreadCount +
     agreementPendingCounts.pendingTeamApproval +
     serviceNewCount +
-    inspectionsPlanningCount;
+    inspectionsPlanningCount +
+    inspectionsBillingCount;
   const overdueBadgeCount = kanbanOverdueTaskCount + serviceOverdueCount;
   const hasKanbanAlerts = kanbanAlertCount > 0;
   const hasServiceAlerts = serviceAlertCount > 0;
@@ -90,12 +92,15 @@ export function NotificationBell() {
         }
         const payload = (await response.json()) as {
           planningDueCount?: number;
+          billingAlertCount?: number;
           newCount?: number;
         };
-        setInspectionsPlanningCount(payload.planningDueCount ?? payload.newCount ?? 0);
+        setInspectionsPlanningCount(payload.planningDueCount ?? 0);
+        setInspectionsBillingCount(payload.billingAlertCount ?? 0);
       })
       .catch(() => {
         setInspectionsPlanningCount(0);
+        setInspectionsBillingCount(0);
       });
     if (open) {
       void loadNotifications(profileId);
@@ -120,11 +125,15 @@ export function NotificationBell() {
           }
           const payload = (await response.json()) as {
             planningDueCount?: number;
-            newCount?: number;
+            billingAlertCount?: number;
           };
-          setInspectionsPlanningCount(payload.planningDueCount ?? payload.newCount ?? 0);
+          setInspectionsPlanningCount(payload.planningDueCount ?? 0);
+          setInspectionsBillingCount(payload.billingAlertCount ?? 0);
         })
-        .catch(() => setInspectionsPlanningCount(0));
+        .catch(() => {
+          setInspectionsPlanningCount(0);
+          setInspectionsBillingCount(0);
+        });
     }
 
     window.addEventListener("inspections-count-changed", onInspectionsCountChanged);
@@ -413,6 +422,28 @@ export function NotificationBell() {
                         {inspectionsPlanningCount === 1
                           ? "1 przegląd wymaga potwierdzenia konkretnej daty wizyty (ok. 2 tyg. przed terminem)."
                           : `${inspectionsPlanningCount} przeglądów wymaga potwierdzenia konkretnej daty wizyty.`}
+                      </p>
+                    </span>
+                  </Link>
+                ) : null}
+                {inspectionsBillingCount > 0 ? (
+                  <Link
+                    href="/przeglady"
+                    onClick={() => setOpen(false)}
+                    className="flex items-start gap-3 px-4 py-3 transition hover:bg-surface-muted/30"
+                  >
+                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-violet-500/35 bg-violet-500/10 text-violet-200">
+                      <ClipboardCheck className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-foreground">Przeglądy do rozliczenia</p>
+                        <NavBadges newCount={inspectionsBillingCount} size="sm" />
+                      </div>
+                      <p className="mt-1 break-words text-xs leading-relaxed text-muted">
+                        {inspectionsBillingCount === 1
+                          ? "1 zrealizowany przegląd czeka na rozliczenie."
+                          : `${inspectionsBillingCount} zrealizowanych przeglądów czeka na rozliczenie.`}
                       </p>
                     </span>
                   </Link>

@@ -62,6 +62,7 @@ function ClientDashboardPageContent() {
   const initialTab =
     tabFromQuery === "agreements" ||
     tabFromQuery === "offers" ||
+    tabFromQuery === "inspections" ||
     tabFromQuery === "home" ||
     tabFromQuery === "project" ||
     tabFromQuery === "overview" ||

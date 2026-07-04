@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FileText, Loader2, Send } from "lucide-react";
+import { FileText, Loader2, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,11 +28,13 @@ export function InspectionDetailModal({
   open,
   onClose,
   onUpdated,
+  onDeleted,
 }: {
   item: InspectionRecord | null;
   open: boolean;
   onClose: () => void;
   onUpdated: (item: InspectionRecord) => void;
+  onDeleted?: (id: string) => void;
 }) {
   const profile = useAuthStore((state) => state.profile);
   const [detail, setDetail] = useState<InspectionRecord | null>(item);
@@ -195,13 +197,53 @@ export function InspectionDetailModal({
     const signer = profile ? getUserDisplayName(profile) : "Zespół serwisowy";
 
     await patchDetail({
-      status: "completed",
+      status: "billing",
       protocolData: { ...detail?.protocolData, notes: protocolNotes },
       protocolCompanySignedAt: now,
       protocolClientSignedAt: now,
       protocolCompanySigner: signer,
       protocolClientSigner: detail?.protocolClientSigner ?? "Przedstawiciel klienta",
     });
+  }
+
+  async function handleSettle() {
+    await patchDetail({ status: "settled" });
+  }
+
+  async function handleDelete() {
+    if (!detail) {
+      return;
+    }
+
+    if (
+      !window.confirm(
+        "Usunąć ten przegląd na stałe? Komentarze i protokół również zostaną usunięte.",
+      )
+    ) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/inspections/${detail.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się usunąć przeglądu.");
+      }
+      onDeleted?.(detail.id);
+      onClose();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("inspections-count-changed"));
+        window.dispatchEvent(new CustomEvent("inspections-reload"));
+      }
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Błąd.");
+      setBusy(false);
+    }
   }
 
   return (
@@ -325,8 +367,13 @@ export function InspectionDetailModal({
                   Zapisz protokół
                 </Button>
                 <Button type="button" size="sm" disabled={busy} onClick={() => void handleComplete()}>
-                  Podpisz i zakończ
+                  Podpisz i wyślij do rozliczenia
                 </Button>
+                {detail.status === "billing" ? (
+                  <Button type="button" size="sm" variant="default" disabled={busy} onClick={() => void handleSettle()}>
+                    Oznacz jako rozliczone
+                  </Button>
+                ) : null}
               </div>
               {detail.protocolCompanySignedAt ? (
                 <p className="mt-2 text-xs text-emerald-300">
@@ -389,6 +436,20 @@ export function InspectionDetailModal({
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
+            </div>
+
+            <div className="flex justify-end border-t border-border/60 pt-4">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={busy}
+                className="text-rose-300 hover:text-rose-200"
+                onClick={() => void handleDelete()}
+              >
+                <Trash2 className="mr-1 h-3.5 w-3.5" />
+                {busy ? "Usuwanie…" : "Usuń przegląd"}
+              </Button>
             </div>
           </div>
         ) : null}

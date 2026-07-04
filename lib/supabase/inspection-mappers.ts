@@ -33,6 +33,8 @@ type InspectionRow = {
   protocol_client_signer: string | null;
   planning_reminder_sent_at: string | null;
   completed_at: string | null;
+  billing_settled_at: string | null;
+  billing_notification_sent_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -68,6 +70,8 @@ export function rowToInspection(
     protocolClientSigner: row.protocol_client_signer,
     planningReminderSentAt: row.planning_reminder_sent_at,
     completedAt: row.completed_at,
+    billingSettledAt: row.billing_settled_at,
+    billingNotificationSentAt: row.billing_notification_sent_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     clientName: meta?.clientName ?? null,

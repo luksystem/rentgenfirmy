@@ -276,6 +276,8 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const [contactsNewCount, setContactsNewCount] = useState(0);
   const [intakeOffersNewCount, setIntakeOffersNewCount] = useState(0);
   const [inspectionsPlanningCount, setInspectionsPlanningCount] = useState(0);
+  const [inspectionsPlanningOverdueCount, setInspectionsPlanningOverdueCount] = useState(0);
+  const [inspectionsBillingCount, setInspectionsBillingCount] = useState(0);
 
   const refreshServiceIntakeCounts = useCallback(() => {
     void fetch("/api/service-intake/counts", { credentials: "include" })
@@ -322,12 +324,17 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
         }
         const payload = (await response.json()) as {
           planningDueCount?: number;
-          newCount?: number;
+          planningOverdueCount?: number;
+          billingAlertCount?: number;
         };
-        setInspectionsPlanningCount(payload.planningDueCount ?? payload.newCount ?? 0);
+        setInspectionsPlanningCount(payload.planningDueCount ?? 0);
+        setInspectionsPlanningOverdueCount(payload.planningOverdueCount ?? 0);
+        setInspectionsBillingCount(payload.billingAlertCount ?? 0);
       })
       .catch(() => {
         setInspectionsPlanningCount(0);
+        setInspectionsPlanningOverdueCount(0);
+        setInspectionsBillingCount(0);
       });
   }, []);
 
@@ -431,7 +438,14 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
       return { newBadgeCount: intakeOffersNewCount };
     }
     if (href === "/przeglady") {
-      return { newBadgeCount: inspectionsPlanningCount };
+      const planningApproachingCount = Math.max(
+        0,
+        inspectionsPlanningCount - inspectionsPlanningOverdueCount,
+      );
+      return {
+        newBadgeCount: planningApproachingCount,
+        overdueBadgeCount: inspectionsPlanningOverdueCount,
+      };
     }
     return {};
   }

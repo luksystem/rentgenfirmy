@@ -18,6 +18,7 @@ import {
   Star,
   StickyNote,
 } from "lucide-react";
+import { ClientInspectionsPanel } from "@/components/dashboard/client-inspections-panel";
 import { ProjectAgreementsPanel } from "@/components/dashboard/project-agreements-panel";
 import { ProjectSatisfactionPanel } from "@/components/dashboard/project-satisfaction-panel";
 import { ProjectSatisfactionSummaryCard } from "@/components/dashboard/project-satisfaction-summary-card";
@@ -90,6 +91,7 @@ type ClientDashboardTab =
   | "process"
   | "agreements"
   | "offers"
+  | "inspections"
   | "specification"
   | "trades"
   | "satisfaction"
@@ -110,6 +112,7 @@ const PUBLIC_CLIENT_TAB_CONFIG: Array<{
   { id: "process", label: "Proces", icon: GitBranch },
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
   { id: "offers", label: "Oferty", icon: Receipt },
+  { id: "inspections", label: "Przeglądy", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
   { id: "trades", label: "Branże", icon: HardHat },
   { id: "notes", label: "Notatki", icon: StickyNote },
@@ -128,6 +131,7 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "process", label: "Proces", icon: GitBranch },
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
   { id: "offers", label: "Oferty", icon: Receipt },
+  { id: "inspections", label: "Przeglądy", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
   { id: "trades", label: "Branże", icon: HardHat },
   { id: "notes", label: "Notatki", icon: StickyNote },
@@ -246,7 +250,32 @@ export function ClientDashboardView({
   const [kanbanPublicLinks, setKanbanPublicLinks] = useState<Record<string, string>>({});
   const [meetingNotes, setMeetingNotes] = useState<ProjectMeetingNote[]>(seedMeetingNotes ?? []);
   const [readMeetingNoteIds, setReadMeetingNoteIds] = useState<Set<string>>(() => new Set());
+  const [hasClientInspections, setHasClientInspections] = useState(false);
   const agreementsSyncKeyRef = useRef("");
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch(`/api/inspections?clientId=${client.id}`, { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok || cancelled) {
+          return;
+        }
+        const payload = (await response.json()) as { items?: Array<{ status: string }> };
+        const active =
+          (payload.items ?? []).filter((entry) => entry.status !== "quoting").length > 0;
+        if (!cancelled) {
+          setHasClientInspections(active);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHasClientInspections(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [client.id]);
 
   const handleSelectTab = useCallback(
     (tab: ClientDashboardTab) => {
@@ -524,6 +553,7 @@ export function ClientDashboardView({
   }, [process, processProgress, template]);
 
   const publicClientTabs = PUBLIC_CLIENT_TAB_CONFIG.filter((tab) => {
+    if (tab.id === "inspections" && !hasClientInspections) return false;
     if (tab.id === "agreements" && !enableAgreements) return false;
     if (tab.id === "offers" && !enableOffers) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
@@ -535,6 +565,7 @@ export function ClientDashboardView({
   });
 
   const teamMainTabs = teamTabsWithProject.filter((tab) => {
+    if (tab.id === "inspections" && !hasClientInspections) return false;
     if (tab.id === "integrations" && !canViewIntegrations) return false;
     if (tab.id === "agreements" && !enableAgreements) return false;
     if (tab.id === "offers" && !enableOffers) return false;
@@ -849,6 +880,14 @@ export function ClientDashboardView({
     );
   }
 
+  function renderInspectionsPanel() {
+    return (
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
+        <ClientInspectionsPanel client={client} projects={projects} />
+      </div>
+    );
+  }
+
   function renderAgreementsPanel() {
     return (
       <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
@@ -1132,6 +1171,8 @@ export function ClientDashboardView({
         return enableAgreements ? renderAgreementsPanel() : null;
       case "offers":
         return enableOffers ? renderOffersPanel() : null;
+      case "inspections":
+        return hasClientInspections ? renderInspectionsPanel() : null;
       case "specification":
         return enableSpecification ? renderSpecificationPanel() : null;
       case "trades":

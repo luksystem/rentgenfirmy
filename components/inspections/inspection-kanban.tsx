@@ -149,6 +149,14 @@ export function InspectionKanban() {
   }, [loadItems]);
 
   useEffect(() => {
+    function onReload() {
+      void loadItems({ silent: true });
+    }
+    window.addEventListener("inspections-reload", onReload);
+    return () => window.removeEventListener("inspections-reload", onReload);
+  }, [loadItems]);
+
+  useEffect(() => {
     const interval = window.setInterval(() => {
       if (document.visibilityState === "visible") {
         void loadItems({ silent: true });
@@ -180,6 +188,11 @@ export function InspectionKanban() {
     return map;
   }, [items]);
 
+  const maxColumnCount = useMemo(
+    () => Math.max(1, ...INSPECTION_KANBAN_COLUMNS.map((status) => grouped.get(status)?.length ?? 0)),
+    [grouped],
+  );
+
   async function moveItem(itemId: string, status: InspectionStatus) {
     const item = items.find((entry) => entry.id === itemId);
     if (!item || item.status === status) {
@@ -192,13 +205,13 @@ export function InspectionKanban() {
       return;
     }
 
-    if (status === "completed") {
+    if (status === "completed" || status === "billing") {
       const hasSignatures =
         item.protocolCompanySignedAt &&
         item.protocolClientSignedAt;
       if (!hasSignatures) {
         setSelectedId(itemId);
-        setError("Otwórz przegląd, uzupełnij protokół i podpisz przed zakończeniem.");
+        setError("Otwórz przegląd, uzupełnij protokół i podpisz przed przeniesieniem.");
         return;
       }
     }
@@ -246,20 +259,25 @@ export function InspectionKanban() {
   }
 
   return (
-    <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div className={cn(KANBAN_BOARD_ROOT_CLASS, "md:min-h-[calc(100vh-12rem)]")}>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm text-muted">
           <ClipboardCheck className="h-4 w-4" />
           {items.length} przeglądów na tablicy
         </div>
-        <Button type="button" variant="outline" size="sm" disabled={refreshing} onClick={() => void loadItems({ silent: true })}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={refreshing}
+          onClick={() => void loadItems({ silent: true })}
+        >
           {refreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
           Odśwież
         </Button>
       </div>
 
-      {error ? <p className="mb-4 text-sm text-rose-400">{error}</p> : null}
-      <p className="mb-3 text-xs text-muted">{KANBAN_DRAG_HINT}</p>
+      {error ? <p className="mb-3 text-sm text-rose-400">{error}</p> : null}
 
       <KanbanMobileColumnNav
         columns={columns}
@@ -268,45 +286,67 @@ export function InspectionKanban() {
         openCountForColumn={(columnId) => (grouped.get(columnId as InspectionStatus) ?? []).length}
       />
 
+      <p className="mb-3 hidden shrink-0 text-sm text-muted md:block">{KANBAN_DRAG_HINT}</p>
+
       <div ref={scrollerRef} className={KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS}>
-        <div className={KANBAN_BOARD_ROOT_CLASS}>
-          {columns.map((column) => {
-            const columnItems = grouped.get(column.id as InspectionStatus) ?? [];
-            const isDropTarget = dragOverColumnId === column.id;
+        {columns.map((column) => {
+          const columnItems = grouped.get(column.id as InspectionStatus) ?? [];
+          const isDropTarget = Boolean(dragItemId && dragOverColumnId === column.id);
 
-            return (
-              <section
-                key={column.id}
-                ref={(node) => setColumnRef(column.id, node as HTMLDivElement | null)}
-                data-column-id={column.id}
-                className={KANBAN_MOBILE_COLUMN_SHELL_CLASS}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  setDragOverColumnId(column.id);
-                }}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  const itemId = event.dataTransfer.getData("text/plain") || dragItemId;
-                  if (itemId) {
-                    void moveItem(itemId, column.id as InspectionStatus);
-                  }
-                }}
-              >
-                <header className="mb-3 flex items-center justify-between gap-2">
-                  <h3 className="font-semibold text-foreground">{column.title}</h3>
-                  <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs text-muted">
-                    {columnItems.length}
-                  </span>
-                </header>
+          return (
+            <section
+              key={column.id}
+              ref={(node) => setColumnRef(column.id, node as HTMLDivElement | null)}
+              data-column-id={column.id}
+              className={cn(KANBAN_MOBILE_COLUMN_SHELL_CLASS, getKanbanColumnDropTargetClasses(isDropTarget))}
+              style={{ minHeight: `${Math.max(220, maxColumnCount * 168)}px` }}
+              onDragEnter={(event) => {
+                if (!dragItemId) {
+                  return;
+                }
+                event.preventDefault();
+                setDragOverColumnId(column.id);
+              }}
+              onDragOver={(event) => {
+                if (!dragItemId) {
+                  return;
+                }
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                setDragOverColumnId(column.id);
+              }}
+              onDragLeave={(event) => {
+                const related = event.relatedTarget as Node | null;
+                if (!event.currentTarget.contains(related)) {
+                  setDragOverColumnId((current) => (current === column.id ? null : current));
+                }
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                const itemId = event.dataTransfer.getData("text/plain") || dragItemId;
+                if (itemId) {
+                  void moveItem(itemId, column.id as InspectionStatus);
+                }
+              }}
+            >
+              <header className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{column.title}</p>
+                  <p className="text-xs text-muted">
+                    {columnItems.length === 1 ? "1 przegląd" : `${columnItems.length} przeglądów`}
+                  </p>
+                </div>
+                <span className="rounded-full border border-border/70 bg-surface-muted px-2.5 py-0.5 text-xs font-bold text-muted">
+                  {columnItems.length}
+                </span>
+              </header>
 
-                <div
-                  className={cn(
-                    KANBAN_MOBILE_COLUMN_BODY_CLASS,
-                    getKanbanColumnDropTargetClasses(isDropTarget),
-                  )}
-                >
-                  {dragItemId && isDropTarget ? <KanbanDropPlaceholder /> : null}
-                  {columnItems.map((item) => (
+              <div className={cn(KANBAN_MOBILE_COLUMN_BODY_CLASS, isDropTarget && "bg-accent/[0.03]")}>
+                {dragItemId && isDropTarget ? <KanbanDropPlaceholder /> : null}
+                {columnItems.length === 0 ? (
+                  <p className="py-6 text-center text-xs text-muted">Brak przeglądów</p>
+                ) : (
+                  columnItems.map((item) => (
                     <div
                       key={item.id}
                       draggable={!busyId}
@@ -331,12 +371,12 @@ export function InspectionKanban() {
                         onOpen={() => setSelectedId(item.id)}
                       />
                     </div>
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </div>
+                  ))
+                )}
+              </div>
+            </section>
+          );
+        })}
       </div>
 
       <InspectionDetailModal
@@ -349,7 +389,11 @@ export function InspectionKanban() {
             window.dispatchEvent(new CustomEvent("inspections-count-changed"));
           }
         }}
+        onDeleted={(id) => {
+          setItems((current) => current.filter((entry) => entry.id !== id));
+          setSelectedId(null);
+        }}
       />
-    </>
+    </div>
   );
 }

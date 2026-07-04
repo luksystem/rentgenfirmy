@@ -16,12 +16,13 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const statusParam = url.searchParams.get("status");
+    const clientId = url.searchParams.get("clientId")?.trim() || undefined;
     const status =
       statusParam && INSPECTION_STATUSES.includes(statusParam as InspectionStatus)
         ? (statusParam as InspectionStatus)
         : undefined;
 
-    const items = await listInspections(status);
+    const items = await listInspections({ status, clientId });
     return NextResponse.json({ items });
   } catch (error) {
     return NextResponse.json(

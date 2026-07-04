@@ -57,7 +57,20 @@ export function isInspectionPlanningDue(input: {
     return false;
   }
 
-  const leadDays = input.leadDays ?? 14;
+  const leadDays = input.leadDays ?? 21;
   const dueAt = new Date(`${input.preliminaryDate}T12:00:00`).getTime() - leadDays * DAY_MS;
   return Date.now() >= dueAt;
+}
+
+/** Termin wstępny minął, a konkretna data wizyty nadal nieustawiona. */
+export function isInspectionPlanningOverdue(input: {
+  preliminaryDate: string | null;
+  confirmedDate: string | null;
+  status: string;
+}): boolean {
+  if (input.status !== "preliminary" || !input.preliminaryDate || input.confirmedDate) {
+    return false;
+  }
+
+  return Date.now() > new Date(`${input.preliminaryDate}T12:00:00`).getTime();
 }

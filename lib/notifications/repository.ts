@@ -33,7 +33,9 @@ function rowToNotification(row: NotificationRow): UserNotification {
             ? "client_stage_rating"
             : row.kind === "service_intake_preliminary_offer"
               ? "service_intake_preliminary_offer"
-              : "kanban_new_activity";
+              : row.kind === "inspection_billing_due"
+                ? "inspection_billing_due"
+                : "kanban_new_activity";
 
   return {
     id: row.id,
