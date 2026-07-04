@@ -15,6 +15,7 @@ import {
   serviceOfferListRowClassName,
 } from "@/lib/service/client-offer-history";
 import { useListAutoRefresh } from "@/lib/hooks/use-list-auto-refresh";
+import { isUnreviewedIntakeOffer } from "@/lib/service/intake-offer";
 import { SERVICE_STATUSES } from "@/lib/service/types";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
 
@@ -176,15 +177,29 @@ export function ServiceList() {
         {rows.map(({ service, costs, diff, projectLabel }) => {
           const offerTone = getServiceOfferListTone(service);
           const offerBadge = serviceOfferListBadge(offerTone);
+          const unreviewedIntake = isUnreviewedIntakeOffer(service);
 
           return (
             <Card
               key={service.id}
-              className={cn("overflow-hidden border p-4", serviceOfferListCardClassName(offerTone))}
+              className={cn(
+                "overflow-hidden border p-4",
+                serviceOfferListCardClassName(offerTone),
+                unreviewedIntake && "ring-1 ring-emerald-500/30",
+              )}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-foreground">{service.title}</p>
+                  <p className="font-semibold text-foreground">
+                    <span className="inline-flex items-center gap-2">
+                      {service.title}
+                      {unreviewedIntake ? (
+                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+                          Nowa
+                        </span>
+                      ) : null}
+                    </span>
+                  </p>
                   <p className="mt-1 text-sm text-muted">{service.client.fullName}</p>
                   {service.client.location ? (
                     <p className="mt-0.5 truncate text-xs text-muted">{service.client.location}</p>
@@ -306,11 +321,15 @@ export function ServiceList() {
               {rows.map(({ service, costs, diff, projectLabel }) => {
                 const offerTone = getServiceOfferListTone(service);
                 const offerBadge = serviceOfferListBadge(offerTone);
+                const unreviewedIntake = isUnreviewedIntakeOffer(service);
 
                 return (
                   <tr
                     key={service.id}
-                    className={cn(serviceOfferListRowClassName(offerTone))}
+                    className={cn(
+                      serviceOfferListRowClassName(offerTone),
+                      unreviewedIntake && "bg-emerald-500/5",
+                    )}
                   >
                     <td
                       className={cn(
@@ -357,7 +376,16 @@ export function ServiceList() {
                     <td className="px-4 py-3">{formatDate(service.createdAt)}</td>
                     <td className="px-4 py-3">{service.client.fullName}</td>
                     <td className="px-4 py-3">{service.client.location}</td>
-                    <td className="px-4 py-3 font-medium">{service.title}</td>
+                    <td className="px-4 py-3 font-medium">
+                      <span className="inline-flex items-center gap-2">
+                        {service.title}
+                        {unreviewedIntake ? (
+                          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+                            Nowa
+                          </span>
+                        ) : null}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">{projectLabel}</td>
                     <td className="px-4 py-3">{service.serviceType}</td>
                     <td className="px-4 py-3">

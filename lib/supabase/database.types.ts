@@ -97,6 +97,8 @@ export type ServiceRow = {
   client_offer_history?: unknown;
   client_offer_accepted_document?: unknown;
   ai_estimate?: unknown;
+  intake_reference?: string | null;
+  reviewed_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -658,6 +660,8 @@ export type ServiceInsert = {
   client_offer_history?: unknown;
   client_offer_accepted_document?: unknown;
   ai_estimate?: unknown;
+  intake_reference?: string | null;
+  reviewed_at?: string | null;
   created_at?: string;
   updated_at?: string;
 };

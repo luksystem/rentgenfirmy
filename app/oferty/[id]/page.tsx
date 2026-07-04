@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useEffect } from "react";
 import { ServiceForm } from "@/components/service/service-form";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { isUnreviewedIntakeOffer } from "@/lib/service/intake-offer";
 import { useServiceStore } from "@/store/service-store";
 import { COMMERCIAL_MODULES } from "@/lib/modules/commercial-modules";
 
@@ -12,7 +14,16 @@ export default function EditOfferPage() {
   const params = useParams();
   const id = String(params.id);
   const getServiceById = useServiceStore((s) => s.getServiceById);
+  const markIntakeOfferReviewed = useServiceStore((s) => s.markIntakeOfferReviewed);
   const service = getServiceById(id);
+
+  useEffect(() => {
+    if (!service || !isUnreviewedIntakeOffer(service)) {
+      return;
+    }
+
+    void markIntakeOfferReviewed(service.id).catch(() => undefined);
+  }, [markIntakeOfferReviewed, service]);
 
   if (!service) {
     return (

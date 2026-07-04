@@ -98,6 +98,8 @@ export async function createServiceFromGuestIntake(input: {
       appliedLineItems: estimate,
       calculatedCosts: input.aiEstimateRecord.calculatedCosts,
     },
+    intakeReference: input.intakeReference,
+    reviewedAt: null,
   };
 
   const { data, error } = await supabase

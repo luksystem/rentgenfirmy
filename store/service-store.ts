@@ -16,6 +16,7 @@ import {
   type ServiceGlobalSettings,
   type ServiceRecord,
 } from "@/lib/service/types";
+import { isUnreviewedIntakeOffer } from "@/lib/service/intake-offer";
 
 let servicesRefreshGeneration = 0;
 
@@ -35,6 +36,7 @@ type ServiceStore = {
   duplicateServiceForClient: (sourceId: string, client: ServiceRecord["client"]) => Promise<ServiceRecord>;
   updateSettings: (settings: ServiceGlobalSettings) => Promise<void>;
   createEmptyService: () => ServiceRecord;
+  markIntakeOfferReviewed: (serviceId: string) => Promise<ServiceRecord | null>;
 };
 
 export function buildServiceCosts(service: ServiceRecord) {
@@ -106,6 +108,9 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
         hydrated: true,
         error: null,
       });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("services-intake-count-changed"));
+      }
     } catch (error) {
       if (generation !== servicesRefreshGeneration) {
         return;
@@ -114,6 +119,42 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
       set({
         error: error instanceof Error ? error.message : "Nie udało się odświeżyć ofert",
       });
+    }
+  },
+
+  markIntakeOfferReviewed: async (serviceId) => {
+    const existing = get().services.find((item) => item.id === serviceId);
+    if (existing && !isUnreviewedIntakeOffer(existing)) {
+      return existing;
+    }
+
+    try {
+      const response = await fetch(`/api/services/${serviceId}/review`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się oznaczyć oferty jako obejrzanej.");
+      }
+
+      const service = payload.service as ServiceRecord;
+      set((state) => ({
+        services: state.services.map((item) => (item.id === service.id ? service : item)),
+        error: null,
+      }));
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("services-intake-count-changed"));
+      }
+
+      return service;
+    } catch (error) {
+      set({
+        error:
+          error instanceof Error ? error.message : "Nie udało się oznaczyć oferty jako obejrzanej",
+      });
+      throw error;
     }
   },
 
@@ -190,6 +231,8 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
       clientOfferHistory: [],
       clientOfferAcceptedDocument: null,
       aiEstimate: null,
+      intakeReference: null,
+      reviewedAt: null,
       optionalItems: source.optionalItems.map((item) => ({
         ...item,
         id: crypto.randomUUID(),
@@ -269,6 +312,8 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
       clientOfferHistory: [],
       clientOfferAcceptedDocument: null,
       aiEstimate: null,
+      intakeReference: null,
+      reviewedAt: null,
     };
   },
 }));

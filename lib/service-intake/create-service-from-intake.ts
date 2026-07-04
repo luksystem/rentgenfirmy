@@ -119,6 +119,8 @@ export async function createServiceFromIntakePreliminaryAcceptance(input: {
       appliedLineItems: estimate,
       calculatedCosts: input.aiEstimateRecord.calculatedCosts,
     },
+    intakeReference: input.referenceNumber,
+    reviewedAt: null,
   };
 
   const { data, error } = await supabase

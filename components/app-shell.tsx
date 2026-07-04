@@ -272,6 +272,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const [serviceIntakeNewCount, setServiceIntakeNewCount] = useState(0);
   const [serviceIntakeOverdueCount, setServiceIntakeOverdueCount] = useState(0);
   const [contactsNewCount, setContactsNewCount] = useState(0);
+  const [intakeOffersNewCount, setIntakeOffersNewCount] = useState(0);
 
   const refreshServiceIntakeCounts = useCallback(() => {
     void fetch("/api/service-intake/counts", { credentials: "include" })
@@ -310,6 +311,23 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
       });
   }, []);
 
+  const refreshIntakeOffersCounts = useCallback(() => {
+    void fetch("/api/services/intake-offers/counts", { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) {
+          return;
+        }
+        const payload = (await response.json()) as {
+          unreviewedCount?: number;
+          newCount?: number;
+        };
+        setIntakeOffersNewCount(payload.newCount ?? payload.unreviewedCount ?? 0);
+      })
+      .catch(() => {
+        setIntakeOffersNewCount(0);
+      });
+  }, []);
+
   const handleKanbanOverdueCountChange = useCallback((count: number) => {
     useProcessStore.setState({ kanbanOverdueTaskCount: count });
   }, []);
@@ -323,26 +341,33 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
     void refreshKanbanNewTaskCount();
     refreshServiceIntakeCounts();
     refreshContactsCounts();
+    refreshIntakeOffersCounts();
     const interval = window.setInterval(() => {
       refreshServiceIntakeCounts();
       refreshContactsCounts();
+      refreshIntakeOffersCounts();
     }, 30000);
     const onFocus = () => {
       refreshServiceIntakeCounts();
       refreshContactsCounts();
+      refreshIntakeOffersCounts();
     };
     const onContactsCountChanged = () => refreshContactsCounts();
+    const onIntakeOffersCountChanged = () => refreshIntakeOffersCounts();
     window.addEventListener("focus", onFocus);
     window.addEventListener("contacts-count-changed", onContactsCountChanged);
+    window.addEventListener("services-intake-count-changed", onIntakeOffersCountChanged);
     return () => {
       window.clearInterval(interval);
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("contacts-count-changed", onContactsCountChanged);
+      window.removeEventListener("services-intake-count-changed", onIntakeOffersCountChanged);
     };
   }, [
     refreshKanbanNewTaskCount,
     refreshKanbanOverdueTaskCount,
     refreshContactsCounts,
+    refreshIntakeOffersCounts,
     refreshServiceIntakeCounts,
   ]);
 
@@ -374,6 +399,9 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
     }
     if (href === "/kontakty") {
       return { newBadgeCount: contactsNewCount };
+    }
+    if (href === COMMERCIAL_MODULES.serviceSettlement.href) {
+      return { newBadgeCount: intakeOffersNewCount };
     }
     return {};
   }

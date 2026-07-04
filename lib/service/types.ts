@@ -175,6 +175,10 @@ export type ServiceRecord = {
   clientOfferHistory: ClientOfferHistoryEntry[];
   clientOfferAcceptedDocument: ClientOfferAcceptedDocument | null;
   aiEstimate: ServiceAiEstimateRecord | null;
+  /** Numer zgłoszenia z formularza /zgloszenie — null dla ofert dodanych ręcznie. */
+  intakeReference: string | null;
+  /** Kiedy zespół otworzył ofertę z formularza (badge znika). */
+  reviewedAt: string | null;
 };
 
 export type ServiceIntakeSettings = {

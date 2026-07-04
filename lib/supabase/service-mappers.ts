@@ -179,6 +179,8 @@ export function rowToService(row: ServiceRow): ServiceRecord {
     clientOfferAcceptedDocument: normalizeClientOfferAcceptedDocument(
       row.client_offer_accepted_document,
     ),
+    intakeReference: row.intake_reference ?? null,
+    reviewedAt: row.reviewed_at ?? null,
   };
 }
 
@@ -214,6 +216,8 @@ export function serviceToInsert(service: ServiceRecord): ServiceInsert {
     client_offer_history: service.clientOfferHistory,
     client_offer_accepted_document: service.clientOfferAcceptedDocument,
     ai_estimate: service.aiEstimate ? serializeServiceAiEstimateRecord(service.aiEstimate) : null,
+    intake_reference: service.intakeReference,
+    reviewed_at: service.reviewedAt,
     created_at: service.createdAt,
     updated_at: service.updatedAt,
   };

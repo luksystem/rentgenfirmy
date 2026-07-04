@@ -55,6 +55,8 @@ function makeService(
     | "clientOfferAcceptedDocument"
     | "aiEstimate"
     | "optionalItems"
+    | "intakeReference"
+    | "reviewedAt"
   > & {
     id: string;
     createdAt: string;
@@ -63,6 +65,8 @@ function makeService(
     clientOfferAcceptedDocument?: ServiceRecord["clientOfferAcceptedDocument"];
     aiEstimate?: ServiceRecord["aiEstimate"];
     optionalItems?: ServiceRecord["optionalItems"];
+    intakeReference?: ServiceRecord["intakeReference"];
+    reviewedAt?: ServiceRecord["reviewedAt"];
   },
 ): ServiceRecord {
   const emptyOffer: ServiceRecord["clientOffer"] = {
@@ -81,6 +85,8 @@ function makeService(
     clientOfferHistory: partial.clientOfferHistory ?? [],
     clientOfferAcceptedDocument: partial.clientOfferAcceptedDocument ?? null,
     aiEstimate: partial.aiEstimate ?? null,
+    intakeReference: partial.intakeReference ?? null,
+    reviewedAt: partial.reviewedAt ?? null,
     updatedAt: partial.createdAt,
   };
 }
@@ -100,6 +106,8 @@ export function createSampleServices(): ServiceRecord[] {
       | "clientOfferAcceptedDocument"
       | "aiEstimate"
       | "optionalItems"
+      | "intakeReference"
+      | "reviewedAt"
     >
   > = [
     {
