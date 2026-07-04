@@ -11,6 +11,7 @@ import {
   MessageSquare,
   Phone,
   RefreshCw,
+  Shield,
   User,
 } from "lucide-react";
 import { KanbanDropPlaceholder, getKanbanColumnDropTargetClasses } from "@/components/process/kanban-drop-placeholder";
@@ -58,6 +59,28 @@ function cafeOption(priority: ServiceIntakeRecord["priority"]) {
     return null;
   }
   return CAFE_PRIORITY_OPTIONS.find((entry) => entry.id === priority) ?? null;
+}
+
+function ServiceIntakeWarrantyBadge({ item }: { item: ServiceIntakeRecord }) {
+  if (item.requestType !== "service") {
+    return null;
+  }
+
+  const isWarranty = item.serviceTypeHint === "Gwarancyjny";
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+        isWarranty
+          ? "border-emerald-500/45 bg-emerald-500/15 text-emerald-300"
+          : "border-amber-500/45 bg-amber-500/15 text-amber-200",
+      )}
+    >
+      <Shield className="h-3 w-3 shrink-0" />
+      {isWarranty ? "Gwarancyjne" : "Pogwarancyjne"}
+    </span>
+  );
 }
 
 function stopDragPropagation(event: ReactPointerEvent) {
@@ -218,6 +241,7 @@ function ServiceIntakeCard({
       </div>
 
       <div className="flex flex-wrap gap-1.5">
+        <ServiceIntakeWarrantyBadge item={item} />
         <span
           className={cn(
             "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
