@@ -8,6 +8,7 @@ import {
   BarChart3,
   CheckCircle2,
   Clock3,
+  ClipboardCheck,
   Contact,
   ClipboardList,
   ExternalLink,
@@ -93,6 +94,7 @@ const navGroupsBase: NavGroup[] = [
   {
     label: "Serwisy",
     items: [
+      { href: "/przeglady", label: "Przeglądy", icon: ClipboardCheck },
       { href: "/oferty/zgloszenia", label: "Zgłoszenia", icon: Inbox },
       { href: "/oferty/ustawienia", label: "Stawki serwisu", icon: Settings },
       {
@@ -273,6 +275,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const [serviceIntakeOverdueCount, setServiceIntakeOverdueCount] = useState(0);
   const [contactsNewCount, setContactsNewCount] = useState(0);
   const [intakeOffersNewCount, setIntakeOffersNewCount] = useState(0);
+  const [inspectionsPlanningCount, setInspectionsPlanningCount] = useState(0);
 
   const refreshServiceIntakeCounts = useCallback(() => {
     void fetch("/api/service-intake/counts", { credentials: "include" })
@@ -311,6 +314,23 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
       });
   }, []);
 
+  const refreshInspectionsCounts = useCallback(() => {
+    void fetch("/api/inspections/counts", { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) {
+          return;
+        }
+        const payload = (await response.json()) as {
+          planningDueCount?: number;
+          newCount?: number;
+        };
+        setInspectionsPlanningCount(payload.planningDueCount ?? payload.newCount ?? 0);
+      })
+      .catch(() => {
+        setInspectionsPlanningCount(0);
+      });
+  }, []);
+
   const refreshIntakeOffersCounts = useCallback(() => {
     void fetch("/api/services/intake-offers/counts", { credentials: "include" })
       .then(async (response) => {
@@ -342,32 +362,39 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
     refreshServiceIntakeCounts();
     refreshContactsCounts();
     refreshIntakeOffersCounts();
+    refreshInspectionsCounts();
     const interval = window.setInterval(() => {
       refreshServiceIntakeCounts();
       refreshContactsCounts();
       refreshIntakeOffersCounts();
+      refreshInspectionsCounts();
     }, 30000);
     const onFocus = () => {
       refreshServiceIntakeCounts();
       refreshContactsCounts();
       refreshIntakeOffersCounts();
+      refreshInspectionsCounts();
     };
     const onContactsCountChanged = () => refreshContactsCounts();
     const onIntakeOffersCountChanged = () => refreshIntakeOffersCounts();
+    const onInspectionsCountChanged = () => refreshInspectionsCounts();
     window.addEventListener("focus", onFocus);
     window.addEventListener("contacts-count-changed", onContactsCountChanged);
     window.addEventListener("services-intake-count-changed", onIntakeOffersCountChanged);
+    window.addEventListener("inspections-count-changed", onInspectionsCountChanged);
     return () => {
       window.clearInterval(interval);
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("contacts-count-changed", onContactsCountChanged);
       window.removeEventListener("services-intake-count-changed", onIntakeOffersCountChanged);
+      window.removeEventListener("inspections-count-changed", onInspectionsCountChanged);
     };
   }, [
     refreshKanbanNewTaskCount,
     refreshKanbanOverdueTaskCount,
     refreshContactsCounts,
     refreshIntakeOffersCounts,
+    refreshInspectionsCounts,
     refreshServiceIntakeCounts,
   ]);
 
@@ -402,6 +429,9 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
     }
     if (href === COMMERCIAL_MODULES.serviceSettlement.href) {
       return { newBadgeCount: intakeOffersNewCount };
+    }
+    if (href === "/przeglady") {
+      return { newBadgeCount: inspectionsPlanningCount };
     }
     return {};
   }

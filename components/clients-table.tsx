@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Edit, LayoutDashboard, Plus, Trash2 } from "lucide-react";
+import { Edit, CalendarClock, LayoutDashboard, Plus, Trash2 } from "lucide-react";
 import { ClientForm } from "@/components/client-form";
+import { InspectionPlanWizard } from "@/components/inspections/inspection-plan-wizard";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -21,9 +22,10 @@ type DialogMode = "create" | "edit" | null;
 
 export function ClientsTable({ clients }: { clients: Client[] }) {
   const router = useRouter();
-  const { addClient, updateClient, deleteClient, isSaving } = useAppStore();
+  const { addClient, updateClient, deleteClient, isSaving, projects } = useAppStore();
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [planClient, setPlanClient] = useState<Client | null>(null);
 
   function openCreate() {
     setEditingClient(null);
@@ -123,6 +125,15 @@ export function ClientsTable({ clients }: { clients: Client[] }) {
                         </Button>
                         <Button
                           type="button"
+                          variant="outline"
+                          size="sm"
+                          title="Zaplanuj przeglądy"
+                          onClick={() => setPlanClient(client)}
+                        >
+                          <CalendarClock className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
                           variant="secondary"
                           size="sm"
                           onClick={() => openEdit(client)}
@@ -164,6 +175,19 @@ export function ClientsTable({ clients }: { clients: Client[] }) {
           />
         </DialogContent>
       </Dialog>
+
+      <InspectionPlanWizard
+        open={Boolean(planClient)}
+        client={planClient}
+        projects={projects}
+        onClose={() => setPlanClient(null)}
+        onSuccess={() => {
+          setPlanClient(null);
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("inspections-count-changed"));
+          }
+        }}
+      />
     </>
   );
 }

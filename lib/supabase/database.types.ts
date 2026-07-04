@@ -850,6 +850,80 @@ export type ProjectProcessItemPublicAccessRow = {
   updated_at: string;
 };
 
+export type InspectionProtocolTemplateRow = {
+  id: string;
+  client_id: string | null;
+  system_code: string;
+  name: string;
+  file_path: string | null;
+  file_url: string | null;
+  fields_schema: unknown;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InspectionClientPlanRow = {
+  id: string;
+  client_id: string;
+  project_id: string | null;
+  system_code: string;
+  frequency: string;
+  schedule_months: number[];
+  protocol_template_id: string | null;
+  work_scope: string;
+  responsible_profile_id: string | null;
+  responsible_name: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InspectionRow = {
+  id: string;
+  client_id: string;
+  project_id: string | null;
+  plan_id: string | null;
+  system_code: string;
+  system_label: string;
+  status: string;
+  title: string;
+  work_scope: string;
+  preliminary_date: string | null;
+  confirmed_date: string | null;
+  assignee_id: string | null;
+  assignee_name: string | null;
+  responsible_id: string | null;
+  responsible_name: string | null;
+  protocol_template_id: string | null;
+  protocol_data: unknown;
+  protocol_company_signed_at: string | null;
+  protocol_client_signed_at: string | null;
+  protocol_company_signer: string | null;
+  protocol_client_signer: string | null;
+  planning_reminder_sent_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InspectionCommentRow = {
+  id: string;
+  inspection_id: string;
+  author_profile_id: string | null;
+  author_name: string;
+  body: string;
+  created_at: string;
+};
+
+export type InspectionReactionRow = {
+  id: string;
+  inspection_id: string;
+  emoji: string;
+  author_profile_id: string | null;
+  author_name: string;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -1364,6 +1438,41 @@ export type Database = {
           author_side?: string;
           created_at?: string;
         };
+        Relationships: [];
+      };
+      inspection_protocol_templates: {
+        Row: InspectionProtocolTemplateRow;
+        Insert: Partial<InspectionProtocolTemplateRow> &
+          Pick<InspectionProtocolTemplateRow, "system_code" | "name">;
+        Update: Partial<InspectionProtocolTemplateRow>;
+        Relationships: [];
+      };
+      inspection_client_plans: {
+        Row: InspectionClientPlanRow;
+        Insert: Partial<InspectionClientPlanRow> &
+          Pick<InspectionClientPlanRow, "client_id" | "system_code" | "frequency" | "schedule_months">;
+        Update: Partial<InspectionClientPlanRow>;
+        Relationships: [];
+      };
+      inspections: {
+        Row: InspectionRow;
+        Insert: Partial<InspectionRow> &
+          Pick<InspectionRow, "client_id" | "system_code" | "system_label" | "status" | "title">;
+        Update: Partial<InspectionRow>;
+        Relationships: [];
+      };
+      inspection_comments: {
+        Row: InspectionCommentRow;
+        Insert: Partial<InspectionCommentRow> &
+          Pick<InspectionCommentRow, "inspection_id" | "author_name" | "body">;
+        Update: Partial<InspectionCommentRow>;
+        Relationships: [];
+      };
+      inspection_reactions: {
+        Row: InspectionReactionRow;
+        Insert: Partial<InspectionReactionRow> &
+          Pick<InspectionReactionRow, "inspection_id" | "emoji" | "author_name">;
+        Update: Partial<InspectionReactionRow>;
         Relationships: [];
       };
     };
