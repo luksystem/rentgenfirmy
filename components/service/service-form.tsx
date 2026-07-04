@@ -630,7 +630,7 @@ export function ServiceForm({
               <p className="sm:col-span-2 text-sm text-muted">
                 Stawki i progi stref możesz edytować globalnie w{" "}
                 <Link href="/oferty/ustawienia" className="text-accent underline">
-                  ustawieniach ofert
+                  ustawieniach stawek serwisu
                 </Link>
                 .
               </p>

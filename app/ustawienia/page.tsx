@@ -125,6 +125,21 @@ export default function SettingsPage() {
       <Card className="mb-6 border border-border/80">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
           <div>
+            <p className="font-medium text-foreground">Rozliczenia serwisowe — stawki</p>
+            <p className="mt-1 text-sm text-muted">
+              Stawki robocizny, dojazdu, strefy km oraz dopłata CAFE C/A po gwarancji w wycenie AI
+              zgłoszeń klienta.
+            </p>
+          </div>
+          <Button variant="secondary" asChild>
+            <Link href="/oferty/ustawienia">Otwórz ustawienia stawek</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-6 border border-border/80">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+          <div>
             <p className="font-medium text-foreground">Firma</p>
             <p className="mt-1 text-sm text-muted">
               Nazwa, adres, NIP, telefon i logo w stopkach ofert oraz raportów.

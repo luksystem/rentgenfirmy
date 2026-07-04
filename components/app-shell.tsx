@@ -94,6 +94,7 @@ const navGroupsBase: NavGroup[] = [
     label: "Serwisy",
     items: [
       { href: "/oferty/zgloszenia", label: "Zgłoszenia", icon: Inbox },
+      { href: "/oferty/ustawienia", label: "Stawki serwisu", icon: Settings },
       {
         href: "/zgloszenie",
         label: "Formularz klienta",
