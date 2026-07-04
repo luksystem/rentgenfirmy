@@ -87,6 +87,7 @@ async function linkExistingContactFromIntakeAdmin(
     .from("contacts")
     .update({
       ...contactInputToInsert(merged, { updatedAt: now }),
+      handled_at: null,
       history,
       updated_at: now,
     })
@@ -142,7 +143,7 @@ export async function createContactFromIntakeAdmin(
           notes: input.notes,
           externalId: input.externalId ?? null,
         },
-        { createdAt: now, updatedAt: now, history },
+        { createdAt: now, updatedAt: now, history, handledAt: null },
       ),
     )
     .select("*")

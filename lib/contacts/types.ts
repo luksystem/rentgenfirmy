@@ -36,6 +36,7 @@ export type Contact = {
   convertedClientId: string | null;
   convertedAt: string | null;
   conversionSource: ContactConversionSource | null;
+  handledAt: string | null;
   history: ContactHistoryEntry[];
   createdAt: string;
   updatedAt: string;
@@ -47,6 +48,7 @@ export type ContactInput = Omit<
   | "convertedClientId"
   | "convertedAt"
   | "conversionSource"
+  | "handledAt"
   | "history"
   | "createdAt"
   | "updatedAt"
@@ -79,6 +81,14 @@ export function contactToClientInput(contact: Contact): ClientInput {
 
 export function isContactConverted(contact: Contact) {
   return Boolean(contact.convertedClientId);
+}
+
+export function isContactUnhandled(contact: Contact) {
+  return !isContactConverted(contact) && !contact.handledAt;
+}
+
+export function countUnhandledContacts(contacts: Contact[]) {
+  return contacts.filter(isContactUnhandled).length;
 }
 
 export function activeContacts(contacts: Contact[]) {

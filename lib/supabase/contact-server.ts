@@ -96,6 +96,7 @@ export async function convertContactToClientServer(
       converted_client_id: client.id,
       converted_at: now,
       conversion_source: options.source,
+      handled_at: contact.handledAt ?? now,
       history: updatedHistory,
       updated_at: now,
     })
@@ -154,3 +155,58 @@ export async function appendContactHistoryServer(
 }
 
 export { contactToServiceClient, clientToServiceClient };
+
+export async function countUnhandledContactsServer(): Promise<number> {
+  const supabase = getSupabaseServer();
+  const { count, error } = await supabase
+    .from("contacts")
+    .select("id", { count: "exact", head: true })
+    .is("handled_at", null)
+    .is("converted_client_id", null);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+}
+
+export async function markContactHandledServer(contactId: string): Promise<Contact> {
+  const supabase = getSupabaseServer();
+  const now = new Date().toISOString();
+
+  const { data: row, error: fetchError } = await supabase
+    .from("contacts")
+    .select("*")
+    .eq("id", contactId)
+    .maybeSingle();
+
+  if (fetchError) {
+    throw new Error(fetchError.message);
+  }
+
+  if (!row) {
+    throw new Error("Nie znaleziono kontaktu.");
+  }
+
+  const contact = rowToContact(row);
+  if (contact.handledAt || contact.convertedClientId) {
+    return contact;
+  }
+
+  const { data, error } = await supabase
+    .from("contacts")
+    .update({
+      handled_at: now,
+      updated_at: now,
+    })
+    .eq("id", contactId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToContact(data);
+}

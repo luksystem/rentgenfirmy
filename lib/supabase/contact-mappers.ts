@@ -21,6 +21,7 @@ export function rowToContact(row: ContactRow): Contact {
     convertedClientId: row.converted_client_id,
     convertedAt: row.converted_at,
     conversionSource: row.conversion_source as ContactConversionSource | null,
+    handledAt: row.handled_at,
     history: normalizeContactHistory(row.history),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -29,7 +30,12 @@ export function rowToContact(row: ContactRow): Contact {
 
 export function contactInputToInsert(
   input: ContactInput,
-  audit?: { createdAt?: string; updatedAt?: string; history?: Contact["history"] },
+  audit?: {
+    createdAt?: string;
+    updatedAt?: string;
+    history?: Contact["history"];
+    handledAt?: string | null;
+  },
 ): ContactInsert {
   const now = new Date().toISOString();
 
@@ -43,6 +49,7 @@ export function contactInputToInsert(
     phone: input.phone.trim(),
     notes: input.notes?.trim() || null,
     external_id: input.externalId?.trim() || null,
+    handled_at: audit?.handledAt ?? null,
     history: audit?.history ?? [],
     created_at: audit?.createdAt ?? now,
     updated_at: audit?.updatedAt ?? now,
@@ -64,6 +71,7 @@ export function contactToInsert(contact: Contact): ContactInsert {
     converted_client_id: contact.convertedClientId,
     converted_at: contact.convertedAt,
     conversion_source: contact.conversionSource,
+    handled_at: contact.handledAt,
     history: contact.history,
     created_at: contact.createdAt,
     updated_at: contact.updatedAt,

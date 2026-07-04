@@ -130,6 +130,7 @@ export type ContactRow = {
   converted_client_id: string | null;
   converted_at: string | null;
   conversion_source: string | null;
+  handled_at: string | null;
   history: unknown;
   created_at: string;
   updated_at: string;

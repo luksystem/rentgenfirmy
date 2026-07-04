@@ -30,7 +30,7 @@ export async function createContactRecord(input: ContactInput): Promise<Contact>
 
   const { data, error } = await supabase
     .from("contacts")
-    .insert(contactInputToInsert(input, { createdAt: now, updatedAt: now, history }))
+    .insert(contactInputToInsert(input, { createdAt: now, updatedAt: now, history, handledAt: now }))
     .select("*")
     .single();
 

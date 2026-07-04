@@ -271,6 +271,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const refreshKanbanOverdueTaskCount = useProcessStore((state) => state.refreshKanbanOverdueTaskCount);
   const [serviceIntakeNewCount, setServiceIntakeNewCount] = useState(0);
   const [serviceIntakeOverdueCount, setServiceIntakeOverdueCount] = useState(0);
+  const [contactsNewCount, setContactsNewCount] = useState(0);
 
   const refreshServiceIntakeCounts = useCallback(() => {
     void fetch("/api/service-intake/counts", { credentials: "include" })
@@ -292,6 +293,23 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
       });
   }, []);
 
+  const refreshContactsCounts = useCallback(() => {
+    void fetch("/api/contacts/counts", { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) {
+          return;
+        }
+        const payload = (await response.json()) as {
+          unhandledCount?: number;
+          newCount?: number;
+        };
+        setContactsNewCount(payload.newCount ?? payload.unhandledCount ?? 0);
+      })
+      .catch(() => {
+        setContactsNewCount(0);
+      });
+  }, []);
+
   const handleKanbanOverdueCountChange = useCallback((count: number) => {
     useProcessStore.setState({ kanbanOverdueTaskCount: count });
   }, []);
@@ -304,14 +322,29 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
     void refreshKanbanOverdueTaskCount();
     void refreshKanbanNewTaskCount();
     refreshServiceIntakeCounts();
-    const interval = window.setInterval(refreshServiceIntakeCounts, 30000);
-    const onFocus = () => refreshServiceIntakeCounts();
+    refreshContactsCounts();
+    const interval = window.setInterval(() => {
+      refreshServiceIntakeCounts();
+      refreshContactsCounts();
+    }, 30000);
+    const onFocus = () => {
+      refreshServiceIntakeCounts();
+      refreshContactsCounts();
+    };
+    const onContactsCountChanged = () => refreshContactsCounts();
     window.addEventListener("focus", onFocus);
+    window.addEventListener("contacts-count-changed", onContactsCountChanged);
     return () => {
       window.clearInterval(interval);
       window.removeEventListener("focus", onFocus);
+      window.removeEventListener("contacts-count-changed", onContactsCountChanged);
     };
-  }, [refreshKanbanNewTaskCount, refreshKanbanOverdueTaskCount, refreshServiceIntakeCounts]);
+  }, [
+    refreshKanbanNewTaskCount,
+    refreshKanbanOverdueTaskCount,
+    refreshContactsCounts,
+    refreshServiceIntakeCounts,
+  ]);
 
   useKanbanOverdueTasksRealtime(handleKanbanOverdueCountChange);
   useKanbanNewTasksRealtime(handleKanbanNewCountChange);
@@ -338,6 +371,9 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
     }
     if (href === "/oferty/zgloszenia") {
       return serviceIntakeBadges;
+    }
+    if (href === "/kontakty") {
+      return { newBadgeCount: contactsNewCount };
     }
     return {};
   }

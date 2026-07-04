@@ -78,6 +78,7 @@ type AppState = {
   updateContact: (id: string, input: ContactInput) => Promise<void>;
   deleteContact: (id: string) => Promise<void>;
   refreshContacts: () => Promise<void>;
+  markContactHandled: (contactId: string) => Promise<Contact | null>;
   convertContactToClient: (contactId: string) => Promise<Client>;
 };
 
@@ -474,10 +475,49 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const contacts = await fetchContacts();
       set({ contacts, error: null });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("contacts-count-changed"));
+      }
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : "Nie udało się odświeżyć kontaktów",
       });
+    }
+  },
+
+  markContactHandled: async (contactId) => {
+    const existing = get().contacts.find((item) => item.id === contactId);
+    if (existing && (existing.handledAt || existing.convertedClientId)) {
+      return existing;
+    }
+
+    try {
+      const response = await fetch(`/api/contacts/${contactId}/handle`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się oznaczyć kontaktu jako obsłużony.");
+      }
+
+      const contact = payload.contact as Contact;
+      set((state) => ({
+        contacts: state.contacts.map((item) => (item.id === contact.id ? contact : item)),
+        error: null,
+      }));
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("contacts-count-changed"));
+      }
+
+      return contact;
+    } catch (error) {
+      set({
+        error:
+          error instanceof Error ? error.message : "Nie udało się oznaczyć kontaktu jako obsłużony",
+      });
+      throw error;
     }
   },
 
@@ -507,6 +547,10 @@ export const useAppStore = create<AppState>((set, get) => ({
         isSaving: false,
         error: null,
       }));
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("contacts-count-changed"));
+      }
 
       return client;
     } catch (error) {

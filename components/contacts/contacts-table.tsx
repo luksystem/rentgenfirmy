@@ -13,14 +13,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { isContactConverted, type Contact, type ContactInput } from "@/lib/contacts/types";
-import { formatDateTime } from "@/lib/utils";
+import { isContactConverted, isContactUnhandled, type Contact, type ContactInput } from "@/lib/contacts/types";
+import { cn, formatDateTime } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 
 type DialogMode = "create" | "edit" | "history" | null;
 
 export function ContactsTable({ contacts }: { contacts: Contact[] }) {
-  const { addContact, updateContact, deleteContact, convertContactToClient, isSaving } =
+  const { addContact, updateContact, deleteContact, convertContactToClient, markContactHandled, isSaving } =
     useAppStore();
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [activeContact, setActiveContact] = useState<Contact | null>(null);
@@ -56,6 +56,30 @@ export function ContactsTable({ contacts }: { contacts: Contact[] }) {
     } catch {
       // Błąd wyświetla DataProvider
     }
+  }
+
+  async function handleContactClick(contact: Contact) {
+    let nextContact = contact;
+    if (isContactUnhandled(contact)) {
+      try {
+        const updated = await markContactHandled(contact.id);
+        if (updated) {
+          nextContact = updated;
+        }
+      } catch {
+        // Błąd wyświetla DataProvider
+      }
+    }
+
+    if (!isContactConverted(nextContact)) {
+      openEdit(nextContact);
+    } else {
+      openHistory(nextContact);
+    }
+  }
+
+  function stopRowClick(event: React.MouseEvent) {
+    event.stopPropagation();
   }
 
   async function handleDelete(id: string) {
@@ -120,9 +144,26 @@ export function ContactsTable({ contacts }: { contacts: Contact[] }) {
               ) : (
                 contacts.map((contact) => {
                   const converted = isContactConverted(contact);
+                  const unhandled = isContactUnhandled(contact);
                   return (
-                    <tr key={contact.id} className="hover:bg-surface-muted/60">
-                      <td className="px-4 py-3 font-medium">{contact.fullName || "—"}</td>
+                    <tr
+                      key={contact.id}
+                      onClick={() => void handleContactClick(contact)}
+                      className={cn(
+                        "cursor-pointer transition hover:bg-surface-muted/60",
+                        unhandled && "bg-emerald-500/5",
+                      )}
+                    >
+                      <td className="px-4 py-3 font-medium">
+                        <span className="inline-flex items-center gap-2">
+                          {contact.fullName || "—"}
+                          {unhandled ? (
+                            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+                              Nowy
+                            </span>
+                          ) : null}
+                        </span>
+                      </td>
                       <td className="px-4 py-3">{contact.location || "—"}</td>
                       <td className="px-4 py-3">
                         {[contact.email, contact.phone].filter(Boolean).join(" · ") || "—"}
@@ -149,7 +190,7 @@ export function ContactsTable({ contacts }: { contacts: Contact[] }) {
                           <span className="text-muted">Aktywny kontakt</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" onClick={stopRowClick}>
                         <div className="flex flex-wrap gap-2">
                           <Button
                             type="button"
