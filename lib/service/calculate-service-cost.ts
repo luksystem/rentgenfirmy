@@ -1,3 +1,4 @@
+import { effectiveLineItemsForCost } from "@/lib/service/warranty-hours";
 import { resolveKilometerZone } from "@/lib/service/kilometer-zone";
 import type {
   CostCategoryKey,
@@ -17,19 +18,20 @@ function travelCosts(
   rates: ServiceRates,
   zones: KilometerZoneSettings,
 ) {
-  const zone = resolveKilometerZone(items.kilometersOneWay, zones);
+  const billable = effectiveLineItemsForCost(items);
+  const zone = resolveKilometerZone(billable.kilometersOneWay, zones);
   const suggestedCarHoursFromZone = zone * 2;
-  const trips = Math.max(1, items.tripCount || 1);
+  const trips = Math.max(1, billable.tripCount || 1);
 
   let car = 0;
-  if (items.billable.carKilometers) {
-    car = items.kilometersOneWay * 2 * rates.carPerKm * trips;
+  if (billable.billable.carKilometers) {
+    car = billable.kilometersOneWay * 2 * rates.carPerKm * trips;
   }
 
   let carHours = 0;
-  if (items.billable.carHours) {
+  if (billable.billable.carHours) {
     const hoursPerTrip =
-      items.carHours > 0 ? items.carHours : suggestedCarHoursFromZone;
+      billable.carHours > 0 ? billable.carHours : suggestedCarHoursFromZone;
     carHours = hoursPerTrip * rates.carHourly * trips;
   }
 
@@ -37,41 +39,44 @@ function travelCosts(
 }
 
 function laborCost(items: ServiceLineItems, rates: ServiceRates) {
+  const billable = effectiveLineItemsForCost(items);
   let total = 0;
 
-  if (items.billable.supervisionHours) {
-    total += items.supervisionHours * rates.supervisionHourly;
+  if (billable.billable.supervisionHours) {
+    total += billable.supervisionHours * rates.supervisionHourly;
   }
 
-  if (items.billable.programmerHours) {
-    total += items.programmerHours * rates.programmerHourly;
+  if (billable.billable.programmerHours) {
+    total += billable.programmerHours * rates.programmerHourly;
   }
 
-  if (items.billable.installerHours) {
-    total += items.installerHours * rates.installerHourly;
+  if (billable.billable.installerHours) {
+    total += billable.installerHours * rates.installerHourly;
   }
 
-  if (items.billable.helperHours) {
-    total += items.helperHours * rates.helperHourly;
+  if (billable.billable.helperHours) {
+    total += billable.helperHours * rates.helperHourly;
   }
 
   return roundMoney(total);
 }
 
 function accommodationsCost(items: ServiceLineItems, rates: ServiceRates) {
-  if (!items.billable.accommodations) {
+  const billable = effectiveLineItemsForCost(items);
+  if (!billable.billable.accommodations) {
     return 0;
   }
 
-  return roundMoney(items.accommodations * rates.accommodationCost);
+  return roundMoney(billable.accommodations * rates.accommodationCost);
 }
 
 function materialsCost(items: ServiceLineItems) {
-  if (!items.billable.materials) {
+  const billable = effectiveLineItemsForCost(items);
+  if (!billable.billable.materials) {
     return 0;
   }
 
-  return roundMoney(items.materialsCost);
+  return roundMoney(billable.materialsCost);
 }
 
 export function calculateServiceCost(

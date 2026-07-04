@@ -87,6 +87,7 @@ export type ServiceIntakeVerifyResult = {
     carPerKm: number;
     carHourly: number;
     vatRate: number;
+    prioritySurchargePercent: number;
   };
 };
 
@@ -127,6 +128,9 @@ export type ServiceIntakeAiEstimateSnapshot = {
   public: IntakeAiEstimatePublic;
   record: ServiceAiEstimateRecord;
   serviceType: ServiceType;
+  requestType?: ServiceIntakeRequestType;
+  prioritySurchargeApplied?: boolean;
+  prioritySurchargePercent?: number | null;
 };
 
 export type ServiceIntakeAttachment = {

@@ -78,6 +78,14 @@ export function ServiceIntakeEstimatePanel({
             {formatMoney(estimate.estimatedNetTotal)}
           </span>
         </div>
+        {estimate.prioritySurchargeApplied &&
+        estimate.estimatedNetTotalBeforeSurcharge != null &&
+        estimate.prioritySurchargePercent ? (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+            Wliczono dopłatę za priorytet CAFE C/A (+{estimate.prioritySurchargePercent}% do stawek). Bez
+            dopłaty: ~{formatMoney(estimate.estimatedNetTotalBeforeSurcharge)} netto.
+          </div>
+        ) : null}
         {estimate.materialsNetEstimate ? (
           <div className="flex justify-between gap-2 text-xs text-muted">
             <span>Sprzęt / materiały (orientacyjnie, do weryfikacji)</span>

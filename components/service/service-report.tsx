@@ -18,6 +18,7 @@ import {
   getServiceReportMaterialsNote,
   getServiceReportPhotos,
   getServiceReportQuantitySections,
+  getServiceReportWarrantyHoursRows,
   getServiceReportWorkNote,
   getServiceReportWorkTimeSections,
   hasAppliedDiscount,
@@ -496,6 +497,7 @@ export function ServiceReport({
   const workTimeTitle = workTimeSections.showComparison
     ? "Czas pracy"
     : "Przewidywany czas pracy";
+  const warrantyRows = getServiceReportWarrantyHoursRows(service);
 
   const handlePrint = useCallback(() => {
     void printServiceReport(service, resolvedProjectName, companyProfile);
@@ -526,6 +528,15 @@ export function ServiceReport({
         valueHeader="Ilość"
         compact={!meta.showDetailedCosts}
       />
+      {warrantyRows.length > 0 ? (
+        <ReportCompareTable
+          title="Prace w ramach gwarancji"
+          rows={warrantyRows}
+          showComparison={false}
+          valueHeader="Godziny"
+          compact={!meta.showDetailedCosts}
+        />
+      ) : null}
     </div>
   );
 

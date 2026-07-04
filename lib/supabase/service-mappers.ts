@@ -79,6 +79,17 @@ function normalizeDiscounts(value: unknown): ServiceDiscounts {
   };
 }
 
+function normalizeIntakeSettings(value: unknown): import("@/lib/service/types").ServiceIntakeSettings {
+  const data = asObject(value);
+
+  return {
+    prioritySurchargePercent: asNumber(
+      data.prioritySurchargePercent,
+      DEFAULT_SERVICE_SETTINGS.intakeSettings.prioritySurchargePercent,
+    ),
+  };
+}
+
 export function normalizeServiceGlobalSettings(value: unknown): ServiceGlobalSettings {
   const data = asObject(value);
 
@@ -86,6 +97,7 @@ export function normalizeServiceGlobalSettings(value: unknown): ServiceGlobalSet
     rates: normalizeRates(data.rates),
     zoneSettings: normalizeZoneSettings(data.zoneSettings),
     defaultDiscounts: normalizeDiscounts(data.defaultDiscounts ?? data),
+    intakeSettings: normalizeIntakeSettings(data.intakeSettings),
   };
 }
 

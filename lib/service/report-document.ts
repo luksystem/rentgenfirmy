@@ -1,5 +1,7 @@
 import { calculateServiceCost } from "@/lib/service/calculate-service-cost";
 import { buildCombinedBilling } from "@/lib/service/optional-items";
+import { hasWarrantyHours } from "@/lib/service/warranty-hours";
+import { buildWarrantyHoursReportRows } from "@/lib/service/report-compare-rows";
 import type {
   ServiceCostBreakdown,
   ServiceDiscounts,
@@ -235,4 +237,17 @@ export function getServiceReportQuantitySections(service: ServiceRecord) {
     predicted: buildServiceQuantitySummary(service.estimate),
     actual: buildServiceQuantitySummary(service.actual),
   };
+}
+
+export function getServiceReportWarrantyHoursRows(service: ServiceRecord) {
+  if (!isServiceSettled(service)) {
+    return [];
+  }
+
+  const warrantyHours = service.actual.warrantyHours;
+  if (!hasWarrantyHours(warrantyHours)) {
+    return [];
+  }
+
+  return buildWarrantyHoursReportRows(warrantyHours);
 }

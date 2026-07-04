@@ -14,6 +14,12 @@ import {
   readIntakeVerifiedToken,
 } from "@/lib/service-intake/tokens";
 import { createServiceIntakePreliminaryOfferNotifications } from "@/lib/notifications/service-intake-offer";
+import {
+  intakeAllowsPreliminaryAcceptance,
+  intakeRequestTypeRequiresAiEstimate,
+  resolveIntakeAiServiceType,
+  shouldApplyIntakePrioritySurcharge,
+} from "@/lib/service-intake/ai-estimate-flow";
 import { computeIntakeAiEstimate } from "@/lib/service-intake/intake-ai-estimate";
 import { createServiceFromIntakePreliminaryAcceptance } from "@/lib/service-intake/create-service-from-intake";
 import { buildLineItemsFromAiEstimate } from "@/lib/service/apply-ai-estimate";
@@ -33,7 +39,7 @@ import type {
 } from "@/lib/service-intake/types";
 import { SERVICE_INTAKE_WORK_PREFERENCES } from "@/lib/service-intake/types";
 import { SERVICE_INTAKE_STATUS_LABELS } from "@/lib/service-intake/types";
-import { getWarrantyStatus } from "@/lib/project/warranty";
+import { getWarrantyStatus, resolveServiceAiWarrantyContext } from "@/lib/project/warranty";
 import { rowToProject } from "@/lib/supabase/mappers";
 import { rowToClient } from "@/lib/supabase/client-mappers";
 import { fetchCompanyProfileServer } from "@/lib/supabase/company-profile-server";
@@ -81,6 +87,7 @@ async function fetchServiceRates() {
     carPerKm: settings.rates.carPerKm,
     carHourly: settings.rates.carHourly,
     vatRate: settings.defaultDiscounts.vatRate,
+    prioritySurchargePercent: settings.intakeSettings.prioritySurchargePercent,
   };
 }
 
@@ -326,7 +333,10 @@ export async function submitServiceIntakeRequest(input: {
 
   const warranty = getWarrantyStatus(project);
   const isWarrantyActive = warranty.status === "active" || warranty.status === "expiring_soon";
-  const serviceTypeHint = isWarrantyActive ? "Gwarancyjny" : "Pogwarancyjny";
+  const serviceTypeHint = resolveIntakeAiServiceType({
+    requestType: input.requestType,
+    isWarrantyActive,
+  });
   const isServiceRequest = input.requestType === "service";
 
   if (isServiceRequest && !input.priority) {
@@ -365,14 +375,21 @@ export async function submitServiceIntakeRequest(input: {
       input.acceptedPaidTerms);
   const dueAt = serviceIntakeDueAt(now, isServiceRequest ? input.priority : null);
 
-  const wantsOfferEstimate =
-    input.requestType === "offer_request" ||
-    (isServiceRequest && !isWarrantyActive && input.postWarrantyAction === "offer");
+  const wantsAiEstimate = intakeRequestTypeRequiresAiEstimate({
+    requestType: input.requestType,
+    isWarrantyActive,
+    isServiceRequest,
+  });
+
+  const allowsPreliminaryAcceptance = intakeAllowsPreliminaryAcceptance({
+    requestType: input.requestType,
+    postWarrantyAction: input.postWarrantyAction,
+  });
 
   const workPreference = normalizeWorkPreference(input.workPreference);
   let aiEstimateSnapshot = input.aiEstimateSnapshot ?? null;
 
-  if (wantsOfferEstimate && !aiEstimateSnapshot) {
+  if (wantsAiEstimate && !aiEstimateSnapshot) {
     const { data: clientRow } = await supabase
       .from("clients")
       .select("*")
@@ -388,26 +405,47 @@ export async function submitServiceIntakeRequest(input: {
         ).data?.data ?? {},
       );
 
+      const warrantyContext = await resolveServiceAiWarrantyContext({
+        project,
+        projectId: project.id,
+        serviceType: serviceTypeHint,
+      });
+
+      const applyPrioritySurcharge = shouldApplyIntakePrioritySurcharge({
+        requestType: input.requestType,
+        isWarrantyActive,
+        priority: input.priority,
+      });
+
       const computed = await computeIntakeAiEstimate({
         description,
         serviceType: serviceTypeHint,
         client,
+        projectId: project.id,
         projectName: project.name,
+        warrantyContext,
         companyAddress: companyProfile.address,
         rates: settings.rates,
         zoneSettings: settings.zoneSettings,
         discounts: settings.defaultDiscounts,
+        prioritySurchargePercent: settings.intakeSettings.prioritySurchargePercent,
+        applyPrioritySurcharge,
       });
 
       aiEstimateSnapshot = {
         public: computed.public,
         record: computed.record,
         serviceType: serviceTypeHint,
+        requestType: input.requestType,
+        prioritySurchargeApplied: computed.public.prioritySurchargeApplied,
+        prioritySurchargePercent: computed.public.prioritySurchargePercent,
       };
     }
   }
 
-  const preliminaryAccepted = Boolean(input.preliminaryAccepted && wantsOfferEstimate && aiEstimateSnapshot);
+  const preliminaryAccepted = Boolean(
+    input.preliminaryAccepted && allowsPreliminaryAcceptance && aiEstimateSnapshot,
+  );
 
   const { data, error } = await supabase
     .from("service_intake_requests")
@@ -439,6 +477,8 @@ export async function submitServiceIntakeRequest(input: {
         postWarrantyAction: input.postWarrantyAction,
         workPreference,
         preliminaryAccepted,
+        prioritySurchargeApplied: aiEstimateSnapshot?.prioritySurchargeApplied ?? false,
+        prioritySurchargePercent: aiEstimateSnapshot?.prioritySurchargePercent ?? null,
       },
     })
     .select("*")

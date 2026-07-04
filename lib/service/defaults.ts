@@ -26,6 +26,9 @@ export const DEFAULT_SERVICE_SETTINGS: ServiceGlobalSettings = {
     specialDiscountPln: 0,
     vatRate: 23,
   },
+  intakeSettings: {
+    prioritySurchargePercent: 50,
+  },
 };
 
 const warrantyBillable: BillableFlags = {

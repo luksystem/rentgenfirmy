@@ -5,7 +5,17 @@ import { RichTextarea } from "@/components/ui/rich-textarea";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { ServicePhotosField } from "@/components/service/service-photos-field";
 import { resolveKilometerZone } from "@/lib/service/kilometer-zone";
-import type { BillableFlags, KilometerZoneSettings, ServiceLineItems } from "@/lib/service/types";
+import type {
+  BillableFlags,
+  KilometerZoneSettings,
+  ServiceLineItems,
+  ServiceWarrantyHours,
+} from "@/lib/service/types";
+import {
+  clampWarrantyHours,
+  EMPTY_WARRANTY_HOURS,
+  hasWarrantyHours,
+} from "@/lib/service/warranty-hours";
 
 function BillableCheckbox({
   label,
@@ -35,12 +45,14 @@ export function ServiceLineItemsForm({
   zoneSettings,
   serviceId,
   onChange,
+  showWarrantyHours = false,
 }: {
   title: string;
   items: ServiceLineItems;
   zoneSettings: KilometerZoneSettings;
   serviceId: string;
   onChange: (items: ServiceLineItems) => void;
+  showWarrantyHours?: boolean;
 }) {
   const zone = resolveKilometerZone(items.kilometersOneWay, zoneSettings);
   const trips = Math.max(1, items.tripCount || 1);
@@ -56,6 +68,17 @@ export function ServiceLineItemsForm({
       billable: { ...items.billable, [key]: value },
     });
   }
+
+  function patchWarranty(key: keyof ServiceWarrantyHours, value: number) {
+    const current = items.warrantyHours ?? { ...EMPTY_WARRANTY_HOURS };
+    const next = clampWarrantyHours(items, { ...current, [key]: value });
+    onChange({
+      ...items,
+      warrantyHours: hasWarrantyHours(next) ? next : null,
+    });
+  }
+
+  const warrantyHours = items.warrantyHours ?? EMPTY_WARRANTY_HOURS;
 
   return (
     <div className="grid gap-4">
@@ -182,6 +205,51 @@ export function ServiceLineItemsForm({
           />
         </Field>
       </div>
+
+      {showWarrantyHours ? (
+        <div className="grid gap-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-4">
+          <div>
+            <h4 className="font-semibold text-foreground">Godziny w ramach gwarancji (opcjonalnie)</h4>
+            <p className="mt-1 text-sm text-muted">
+              Domyślnie całość jest rozliczana jako praca pogwarancyjna. Wpisz godziny objęte gwarancją —
+              zostaną odjęte od kosztu rozliczenia i pojawią się w raporcie. Puste pola = brak sekcji w
+              raporcie.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={`Nadzór (max ${items.supervisionHours} h)`}>
+              <NumericInput
+                value={warrantyHours.supervisionHours}
+                onChange={(value) => patchWarranty("supervisionHours", value)}
+              />
+            </Field>
+            <Field label={`Programista (max ${items.programmerHours} h)`}>
+              <NumericInput
+                value={warrantyHours.programmerHours}
+                onChange={(value) => patchWarranty("programmerHours", value)}
+              />
+            </Field>
+            <Field label={`Instalator (max ${items.installerHours} h)`}>
+              <NumericInput
+                value={warrantyHours.installerHours}
+                onChange={(value) => patchWarranty("installerHours", value)}
+              />
+            </Field>
+            <Field label={`Pomocnik (max ${items.helperHours} h)`}>
+              <NumericInput
+                value={warrantyHours.helperHours}
+                onChange={(value) => patchWarranty("helperHours", value)}
+              />
+            </Field>
+            <Field label={`Auto (max ${items.carHours} h)`}>
+              <NumericInput
+                value={warrantyHours.carHours}
+                onChange={(value) => patchWarranty("carHours", value)}
+              />
+            </Field>
+          </div>
+        </div>
+      ) : null}
 
       <Field label="Notatka do użytych materiałów">
         <RichTextarea

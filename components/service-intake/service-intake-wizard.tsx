@@ -22,6 +22,11 @@ import {
   SERVICE_INTAKE_REQUEST_TYPE_OPTIONS,
   WARRANTY_EMERGENCY_PHONE,
 } from "@/lib/service-intake/cafe-priorities";
+import {
+  intakeAllowsPreliminaryAcceptance,
+  intakeRequestTypeRequiresAiEstimate,
+  shouldApplyIntakePrioritySurcharge,
+} from "@/lib/service-intake/ai-estimate-flow";
 import type { IntakeAiEstimatePublic } from "@/lib/service-intake/intake-ai-estimate";
 import {
   SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS,
@@ -176,10 +181,23 @@ export function ServiceIntakeWizard() {
   );
 
   const isServiceRequest = requestType === "service";
-  const requiresActionStep = isServiceRequest && selectedProject ? !selectedProject.isWarrantyActive : false;
-  const requiresOfferEstimate =
-    requestType === "offer_request" ||
-    (isServiceRequest && requiresActionStep && postWarrantyAction === "offer");
+  const isPostWarrantyService =
+    isServiceRequest && selectedProject ? !selectedProject.isWarrantyActive : false;
+  const requiresActionStep = isPostWarrantyService;
+  const requiresAiEstimate = intakeRequestTypeRequiresAiEstimate({
+    requestType,
+    isWarrantyActive: selectedProject?.isWarrantyActive ?? false,
+    isServiceRequest,
+  });
+  const allowsPreliminaryAcceptance = intakeAllowsPreliminaryAcceptance({
+    requestType,
+    postWarrantyAction,
+  });
+  const appliesPrioritySurcharge = shouldApplyIntakePrioritySurcharge({
+    requestType,
+    isWarrantyActive: selectedProject?.isWarrantyActive ?? false,
+    priority: isServiceRequest ? priority : null,
+  });
 
   const visibleSteps = useMemo(() => {
     const steps: Exclude<WizardStep, "done">[] = [
@@ -192,12 +210,12 @@ export function ServiceIntakeWizard() {
     if (requiresActionStep) {
       steps.push("action");
     }
-    if (requiresOfferEstimate) {
+    if (requiresAiEstimate) {
       steps.push("estimate");
     }
     steps.push("summary");
     return steps;
-  }, [requiresActionStep, requiresOfferEstimate]);
+  }, [requiresActionStep, requiresAiEstimate]);
 
   const doneContent = useMemo(
     () =>
@@ -241,6 +259,8 @@ export function ServiceIntakeWizard() {
           verificationToken: verification.verificationToken,
           projectId: selectedProjectId,
           description,
+          requestType,
+          priority: isServiceRequest ? priority : null,
         }),
       });
       const payload = await response.json();
@@ -274,7 +294,7 @@ export function ServiceIntakeWizard() {
     if (step === "estimate") {
       void fetchAiEstimate();
     }
-  }, [step]);
+  }, [step, priority, requestType, postWarrantyAction, isServiceRequest]);
 
   async function handleStart() {
     setLoading(true);
@@ -377,7 +397,7 @@ export function ServiceIntakeWizard() {
             requiresActionStep &&
             (postWarrantyAction === "on_site" || postWarrantyAction === "remote"),
           workPreference,
-          preliminaryAccepted: requiresOfferEstimate && preliminaryAccepted,
+          preliminaryAccepted: allowsPreliminaryAcceptance && preliminaryAccepted,
           aiEstimateSnapshot,
           attachments: [
             ...uploadedAttachments,
@@ -792,7 +812,7 @@ export function ServiceIntakeWizard() {
                   Wstecz
                 </Button>
                 <Button type="button" disabled={!postWarrantyAction} onClick={() => goNext("action")}>
-                  {postWarrantyAction === "offer" ? "Orientacyjna wycena" : "Podsumowanie"}
+                  {requiresAiEstimate ? "Orientacyjna wycena" : "Podsumowanie"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
@@ -804,10 +824,21 @@ export function ServiceIntakeWizard() {
               <div>
                 <h2 className="text-lg font-semibold text-foreground">Orientacyjna wycena</h2>
                 <p className="mt-1 text-sm text-muted">
-                  Na podstawie opisu i lokalizacji obiektu szacujemy przewidywany czas pracy i koszt
-                  netto usługi. Ostateczna oferta może się różnić po doprecyzowaniu wymagań.
+                  Na podstawie opisu, specyfikacji obiektu i lokalizacji szacujemy przewidywany czas
+                  pracy i koszt netto usługi. Ostateczna oferta może się różnić po doprecyzowaniu
+                  wymagań.
                 </p>
               </div>
+
+              {appliesPrioritySurcharge && verification ? (
+                <p className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                  Wybrano priorytet CAFE{" "}
+                  <strong>{priority === "c" ? "C — Krytyczny" : "A — Asap"}</strong>. Orientacyjna
+                  wycena uwzględnia dopłatę +{verification.rates.prioritySurchargePercent}% do
+                  wszystkich stawek robocizny i dojazdu.
+                </p>
+              ) : null}
+
               <ServiceIntakeEstimatePanel
                 estimate={aiEstimate}
                 loading={estimateLoading}
@@ -874,7 +905,7 @@ export function ServiceIntakeWizard() {
                 </p>
               </div>
 
-              {requiresOfferEstimate && aiEstimate ? (
+              {requiresAiEstimate && aiEstimate && allowsPreliminaryAcceptance ? (
                 <div className="grid gap-3 rounded-2xl border border-accent/25 bg-accent/5 p-4 text-sm">
                   <p className="font-medium text-foreground">Orientacyjna wycena AI</p>
                   <p>
@@ -911,7 +942,7 @@ export function ServiceIntakeWizard() {
                   type="button"
                   disabled={
                     loading ||
-                    (requiresOfferEstimate && preliminaryAccepted && !aiEstimateSnapshot)
+                    (allowsPreliminaryAcceptance && preliminaryAccepted && !aiEstimateSnapshot)
                   }
                   onClick={() => void handleSubmit()}
                 >

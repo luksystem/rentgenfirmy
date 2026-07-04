@@ -3,7 +3,12 @@ import { buildReferenceCasesFromServices } from "@/lib/service/ai-reference-case
 import type { ServiceAiEstimateRecord } from "@/lib/service/ai-estimate-types";
 import { aggregateAiTaskHours, buildLineItemsFromAiEstimate } from "@/lib/service/apply-ai-estimate";
 import { calculateServiceCost } from "@/lib/service/calculate-service-cost";
+import {
+  fetchProjectAiContext,
+  formatProjectAiContextForPrompt,
+} from "@/lib/service/project-ai-context";
 import { buildServiceTravelContext } from "@/lib/service/travel-context";
+import type { ServiceAiWarrantyContext } from "@/lib/project/warranty";
 import type {
   ServiceCostBreakdown,
   ServiceDiscounts,
@@ -13,6 +18,7 @@ import type {
   KilometerZoneSettings,
   Client,
 } from "@/lib/service/types";
+import { applyRateSurchargePercent } from "@/lib/service/rate-surcharge";
 import { rowToService } from "@/lib/supabase/service-mappers";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -41,6 +47,9 @@ export type IntakeAiEstimatePublic = {
     driveTimeHours: number;
   };
   estimatedNetTotal: number;
+  estimatedNetTotalBeforeSurcharge: number | null;
+  prioritySurchargeApplied: boolean;
+  prioritySurchargePercent: number | null;
   materialsNetEstimate: number | null;
   questions: string[];
   riskFlags: string[];
@@ -77,23 +86,37 @@ export async function computeIntakeAiEstimate(input: {
   description: string;
   serviceType: ServiceType;
   client: Client;
+  projectId: string;
   projectName: string;
+  warrantyContext: ServiceAiWarrantyContext | null;
   companyAddress: string;
   rates: ServiceRates;
   zoneSettings: KilometerZoneSettings;
   discounts: ServiceDiscounts;
+  prioritySurchargePercent?: number;
+  applyPrioritySurcharge?: boolean;
 }): Promise<IntakeAiEstimateResult> {
   const supabase = getSupabaseAdmin();
-  const { data: settledRows } = await supabase
-    .from("services")
-    .select("*")
-    .eq("status", "Rozliczony")
-    .order("updated_at", { ascending: false })
-    .limit(10);
+  const [{ data: settledRows }, projectContextData] = await Promise.all([
+    supabase
+      .from("services")
+      .select("*")
+      .eq("status", "Rozliczony")
+      .order("updated_at", { ascending: false })
+      .limit(10),
+    fetchProjectAiContext({
+      projectId: input.projectId,
+      projectName: input.projectName,
+    }),
+  ]);
 
   const referenceCases = buildReferenceCasesFromServices(
     (settledRows ?? []).map(rowToService),
   );
+
+  const projectContext = projectContextData
+    ? formatProjectAiContextForPrompt(projectContextData)
+    : null;
 
   const proposal = await generateServiceAiEstimate({
     description: input.description,
@@ -102,6 +125,8 @@ export async function computeIntakeAiEstimate(input: {
     companyAddress: input.companyAddress,
     oneWayDistanceKm: null,
     referenceCases,
+    projectContext,
+    warrantyContext: input.warrantyContext,
   });
 
   const hours = aggregateAiTaskHours(proposal.recognizedTasks);
@@ -135,12 +160,26 @@ export async function computeIntakeAiEstimate(input: {
     travelContext,
   });
 
+  const surchargePercent =
+    input.applyPrioritySurcharge && (input.prioritySurchargePercent ?? 0) > 0
+      ? input.prioritySurchargePercent!
+      : 0;
+  const billingRates =
+    surchargePercent > 0
+      ? applyRateSurchargePercent(input.rates, surchargePercent)
+      : input.rates;
+
   const costBreakdown = calculateServiceCost(
     lineItems,
-    input.rates,
+    billingRates,
     input.zoneSettings,
     input.discounts,
   );
+
+  const costBreakdownBase =
+    surchargePercent > 0
+      ? calculateServiceCost(lineItems, input.rates, input.zoneSettings, input.discounts)
+      : null;
 
   const now = new Date().toISOString();
   const record: ServiceAiEstimateRecord = {
@@ -182,6 +221,9 @@ export async function computeIntakeAiEstimate(input: {
       driveTimeHours: travelContext.estimatedDriveTimeHours,
     },
     estimatedNetTotal: costBreakdown.netTotal,
+    estimatedNetTotalBeforeSurcharge: costBreakdownBase?.netTotal ?? null,
+    prioritySurchargeApplied: surchargePercent > 0,
+    prioritySurchargePercent: surchargePercent > 0 ? surchargePercent : null,
     materialsNetEstimate,
     questions: proposal.questions,
     riskFlags: proposal.riskFlags,

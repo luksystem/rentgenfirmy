@@ -1,13 +1,23 @@
 import { NextResponse } from "next/server";
+import {
+  intakeRequestTypeRequiresAiEstimate,
+  resolveIntakeAiServiceType,
+  shouldApplyIntakePrioritySurcharge,
+} from "@/lib/service-intake/ai-estimate-flow";
 import { computeIntakeAiEstimate } from "@/lib/service-intake/intake-ai-estimate";
 import { readIntakeVerifiedToken } from "@/lib/service-intake/tokens";
-import { SERVICE_TYPES, type ServiceType } from "@/lib/service/types";
+import {
+  SERVICE_INTAKE_PRIORITIES,
+  SERVICE_INTAKE_REQUEST_TYPES,
+  type ServiceIntakePriority,
+  type ServiceIntakeRequestType,
+} from "@/lib/service-intake/types";
 import { rowToClient } from "@/lib/supabase/client-mappers";
 import { fetchCompanyProfileServer } from "@/lib/supabase/company-profile-server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeServiceGlobalSettings } from "@/lib/supabase/service-mappers";
 import { rowToProject } from "@/lib/supabase/mappers";
-import { getWarrantyStatus } from "@/lib/project/warranty";
+import { getWarrantyStatus, resolveServiceAiWarrantyContext } from "@/lib/project/warranty";
 
 export async function POST(request: Request) {
   try {
@@ -15,7 +25,8 @@ export async function POST(request: Request) {
       verificationToken?: string;
       projectId?: string;
       description?: string;
-      serviceTypeHint?: ServiceType;
+      requestType?: ServiceIntakeRequestType;
+      priority?: ServiceIntakePriority | null;
     };
 
     const verified = readIntakeVerifiedToken(body.verificationToken?.trim() ?? "");
@@ -39,6 +50,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Wybierz obiekt." }, { status: 400 });
     }
 
+    const requestTypeRaw = body.requestType ?? "offer_request";
+    const requestType = SERVICE_INTAKE_REQUEST_TYPES.includes(requestTypeRaw)
+      ? requestTypeRaw
+      : "offer_request";
+
     const supabase = getSupabaseAdmin();
 
     const [{ data: clientRow }, { data: projectRow }, companyProfile, { data: settingsRow }] =
@@ -60,32 +76,71 @@ export async function POST(request: Request) {
     const project = rowToProject(projectRow);
     const warranty = getWarrantyStatus(project);
     const isWarrantyActive = warranty.status === "active" || warranty.status === "expiring_soon";
-    const defaultServiceType = isWarrantyActive ? "Gwarancyjny" : "Pogwarancyjny";
+    const isServiceRequest = requestType === "service";
 
-    const serviceTypeRaw = body.serviceTypeHint ?? defaultServiceType;
-    const serviceType = SERVICE_TYPES.includes(serviceTypeRaw) ? serviceTypeRaw : defaultServiceType;
+    if (
+      !intakeRequestTypeRequiresAiEstimate({
+        requestType,
+        isWarrantyActive,
+        isServiceRequest,
+      })
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Orientacyjna wycena AI nie dotyczy zgłoszeń serwisowych objętych aktywną gwarancją.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const serviceType = resolveIntakeAiServiceType({ requestType, isWarrantyActive });
+
+    const warrantyContext = await resolveServiceAiWarrantyContext({
+      project,
+      projectId,
+      serviceType,
+    });
 
     const settings = normalizeServiceGlobalSettings(settingsRow?.data ?? {});
+
+    const priorityRaw = body.priority ?? null;
+    const priority =
+      priorityRaw && SERVICE_INTAKE_PRIORITIES.includes(priorityRaw) ? priorityRaw : null;
+
+    const applyPrioritySurcharge = shouldApplyIntakePrioritySurcharge({
+      requestType,
+      isWarrantyActive,
+      priority,
+    });
 
     const result = await computeIntakeAiEstimate({
       description,
       serviceType,
       client,
+      projectId,
       projectName: project.name,
+      warrantyContext,
       companyAddress: companyProfile.address,
       rates: settings.rates,
       zoneSettings: settings.zoneSettings,
       discounts: settings.defaultDiscounts,
+      prioritySurchargePercent: settings.intakeSettings.prioritySurchargePercent,
+      applyPrioritySurcharge,
     });
 
     return NextResponse.json({
       ok: true,
       estimate: result.public,
       serviceType,
+      requestType,
       snapshot: {
         public: result.public,
         record: result.record,
         serviceType,
+        requestType,
+        prioritySurchargeApplied: result.public.prioritySurchargeApplied,
+        prioritySurchargePercent: result.public.prioritySurchargePercent,
       },
     });
   } catch (error) {

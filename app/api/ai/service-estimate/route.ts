@@ -11,6 +11,12 @@ import { buildReferenceCasesFromServices } from "@/lib/service/ai-reference-case
 import { buildLineItemsFromAiEstimate } from "@/lib/service/apply-ai-estimate";
 import { calculateServiceCost } from "@/lib/service/calculate-service-cost";
 import { buildServiceTravelContext } from "@/lib/service/travel-context";
+import {
+  fetchProjectAiContext,
+  formatProjectAiContextForPrompt,
+} from "@/lib/service/project-ai-context";
+import { resolveServiceAiWarrantyContext } from "@/lib/project/warranty";
+import { rowToProject } from "@/lib/supabase/mappers";
 import { normalizeServiceGlobalSettings } from "@/lib/supabase/service-mappers";
 import { SERVICE_TYPES, type ServiceType } from "@/lib/service/types";
 
@@ -37,6 +43,7 @@ export async function POST(request: Request) {
     ? (serviceTypeRaw as ServiceType)
     : "Pogwarancyjny";
   const clientId = typeof data.clientId === "string" ? data.clientId : null;
+  const projectId = typeof data.projectId === "string" ? data.projectId.trim() : "";
   const clientLocation =
     typeof data.clientLocation === "string" ? data.clientLocation.trim() : "";
 
@@ -84,6 +91,30 @@ export async function POST(request: Request) {
       (settledRows ?? []).map(rowToService),
     );
 
+    const projectContextData = projectId
+      ? await fetchProjectAiContext({ projectId })
+      : null;
+    const projectContext = projectContextData
+      ? formatProjectAiContextForPrompt(projectContextData)
+      : null;
+
+    let warrantyContext = null;
+    if (projectId) {
+      const { data: projectRow } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("id", projectId)
+        .maybeSingle();
+
+      if (projectRow) {
+        warrantyContext = await resolveServiceAiWarrantyContext({
+          project: rowToProject(projectRow),
+          projectId,
+          serviceType,
+        });
+      }
+    }
+
     const proposal = await generateServiceAiEstimate({
       description,
       serviceType,
@@ -91,6 +122,8 @@ export async function POST(request: Request) {
       companyAddress: companyProfile.address,
       oneWayDistanceKm: null,
       referenceCases,
+      projectContext,
+      warrantyContext,
     });
 
     const hours = aggregateAiTaskHours(proposal.recognizedTasks);
@@ -137,6 +170,8 @@ export async function POST(request: Request) {
       lineItemsPreview,
       costBreakdown,
       referenceCasesUsed: referenceCases.length,
+      projectContextUsed: Boolean(projectContext),
+      warrantyContextUsed: Boolean(warrantyContext),
     });
   } catch (error) {
     return NextResponse.json(

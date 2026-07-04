@@ -1,4 +1,5 @@
 import type { ServiceWorkTimeBreakdown } from "@/lib/service/report-document";
+import type { ServiceWarrantyHours } from "@/lib/service/types";
 import { formatCount, formatHours, formatMoney } from "@/lib/utils";
 
 export type ReportCompareRow = {
@@ -117,4 +118,27 @@ export function buildTripCountCompareRows(
       group: true,
     },
   ];
+}
+
+export function buildWarrantyHoursReportRows(warrantyHours: ServiceWarrantyHours): ReportCompareRow[] {
+  const rows: ReportCompareRow[] = [];
+
+  function add(label: string, value: number) {
+    if (value > 0) {
+      rows.push({
+        label,
+        predicted: formatHours(value),
+        settled: "",
+        group: true,
+      });
+    }
+  }
+
+  add("Godziny nadzoru", warrantyHours.supervisionHours);
+  add("Godziny programisty", warrantyHours.programmerHours);
+  add("Godziny instalatora", warrantyHours.installerHours);
+  add("Godziny pomocnika", warrantyHours.helperHours);
+  add("Godziny w aucie", warrantyHours.carHours);
+
+  return rows;
 }

@@ -667,6 +667,7 @@ export function ServiceForm({
               <ServiceAiEstimatePanel
                 serviceType={service.serviceType}
                 clientId={service.clientId}
+                projectId={withoutProject ? null : service.projectId}
                 clientLocation={service.client.location}
                 rates={service.rates}
                 zoneSettings={service.zoneSettings}
@@ -734,6 +735,7 @@ export function ServiceForm({
                 items={service.actual}
                 zoneSettings={service.zoneSettings}
                 serviceId={service.id}
+                showWarrantyHours
                 onChange={(actual) => setService({ ...service, actual })}
               />
               <div className="mt-6 grid gap-4 border-t border-border/60 pt-6">

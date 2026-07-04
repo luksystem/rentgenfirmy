@@ -4,6 +4,10 @@ import {
   parseServiceAiEstimateProposal,
 } from "@/lib/service/ai-estimate-normalize";
 import type { ServiceType } from "@/lib/service/types";
+import {
+  formatServiceAiWarrantyContextForPrompt,
+  type ServiceAiWarrantyContext,
+} from "@/lib/project/warranty";
 
 export const SERVICE_AI_MAX_INPUT_CHARS = 12_000;
 
@@ -24,6 +28,8 @@ function buildPrompt(input: {
   companyAddress: string;
   oneWayDistanceKm: number | null;
   referenceCases: ServiceAiReferenceCase[];
+  projectContext: string | null;
+  warrantyContext: string | null;
 }) {
   const references =
     input.referenceCases.length > 0
@@ -46,16 +52,40 @@ Kontekst:
 - Baza firmy: ${input.companyAddress || "niepodana"}
 - Odległość od bazy (jeśli znana): ${input.oneWayDistanceKm ?? "nieznana"} km w jedną stronę
 
-Podobne rozliczenia historyczne:
+${
+  input.warrantyContext
+    ? `Gwarancja:
+${input.warrantyContext}
+
+`
+    : ""
+}Podobne rozliczenia historyczne:
 ${references}
 
-Zasady:
+${
+  input.projectContext
+    ? `Kontekst instalacji klienta (specyfikacja, ustalenia, wdrożenie):
+"""
+${input.projectContext}
+"""
+
+Zasady kontekstu projektu:
+- Traktuj powyższe jako stan faktyczny instalacji — odróżniaj rozbudowę od prac od zera.
+- Jeśli system już istnieje (np. DALI, podlewanie, BMS) — szacuj godziny i materiały dla rozbudowy/integracji, nie pełnej instalacji.
+- Nie duplikuj prac oznaczonych jako zrealizowane w specyfikacji.
+- Uwzględnij otwarte zadania wdrożenia i zaakceptowane ustalenia przy rozpoznawaniu recognizedTasks.
+`
+    : ""
+}Zasady:
 - Rozdziel zadania na listę recognizedTasks.
-- Oznacz warrantyStatus: warranty | paid | mixed | unknown.
+- Oznacz warrantyStatus: warranty | paid | mixed | unknown (szczególnie ważne przy aktywnej gwarancji — patrz sekcja Gwarancja powyżej).
 - programmerOnsiteHours = praca u klienta, programmerRemoteHours = zdalnie.
+- helperHours: podaj 0 — aplikacja ustawi pomocnika na tyle samo godzin co instalator (zazwyczaj jadą razem).
 - Jeśli opis jest ogólny — obniż confidence i dodaj questions.
 - Materiały tylko orientacyjnie, verificationRequired=true gdy niepewne.
 - Nie zwracaj kwot robocizny/dojazdu — aplikacja liczy je ze stawek.
+- Noclegi (overnights): ustaw 0 — aplikacja wyliczy je z odległości i liczby dni. Przy krótkim dojeździe (< progu km z ustawień) zawsze 0.
+- estimatedTrips: przy krótkim dojeździe i wielodniowych pracach aplikacja liczy osobne wyjazdy na każdy dzień.
 
 Opis zgłoszenia:
 """
@@ -70,7 +100,7 @@ Odpowiedz WYŁĄCZNIE poprawnym JSON:
     {
       "name": "string",
       "category": "string",
-      "warrantyStatus": "paid",
+      "warrantyStatus": "warranty",
       "installerHours": 1,
       "helperHours": 0,
       "programmerOnsiteHours": 0,
@@ -110,6 +140,8 @@ export async function generateServiceAiEstimate(input: {
   companyAddress: string;
   oneWayDistanceKm: number | null;
   referenceCases: ServiceAiReferenceCase[];
+  projectContext?: string | null;
+  warrantyContext?: ServiceAiWarrantyContext | null;
 }): Promise<ServiceAiEstimateProposal> {
   const plain = input.description.trim();
   if (!plain) {
@@ -142,7 +174,16 @@ export async function generateServiceAiEstimate(input: {
           content:
             "Jesteś asystentem wyceny serwisowej Smart Home. Zwracaj wyłącznie JSON zgodny ze schematem. Nie podawaj kwot robocizny.",
         },
-        { role: "user", content: buildPrompt(input) },
+        {
+          role: "user",
+          content: buildPrompt({
+            ...input,
+            projectContext: input.projectContext?.trim() || null,
+            warrantyContext: formatServiceAiWarrantyContextForPrompt(
+              input.warrantyContext ?? null,
+            ),
+          }),
+        },
       ],
     }),
   });

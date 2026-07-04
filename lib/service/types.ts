@@ -47,6 +47,15 @@ export type ServicePhoto = {
   createdAt: string;
 };
 
+/** Godziny poszczególnych ról wykonane w ramach gwarancji (tylko rozliczenie). */
+export type ServiceWarrantyHours = {
+  supervisionHours: number;
+  programmerHours: number;
+  installerHours: number;
+  helperHours: number;
+  carHours: number;
+};
+
 export type ServiceLineItems = {
   accommodations: number;
   supervisionHours: number;
@@ -61,6 +70,8 @@ export type ServiceLineItems = {
   workReportNote: string;
   photos: ServicePhoto[];
   billable: BillableFlags;
+  /** Opcjonalnie — tylko w kosztach rzeczywistych; nie wpływa na raport gdy puste. */
+  warrantyHours?: ServiceWarrantyHours | null;
 };
 
 export type ServiceRates = {
@@ -166,10 +177,16 @@ export type ServiceRecord = {
   aiEstimate: ServiceAiEstimateRecord | null;
 };
 
+export type ServiceIntakeSettings = {
+  /** Dopłata % do wszystkich stawek przy priorytetowej obsłudze pogwarancyjnej (zgłoszenie klienta). */
+  prioritySurchargePercent: number;
+};
+
 export type ServiceGlobalSettings = {
   rates: ServiceRates;
   zoneSettings: KilometerZoneSettings;
   defaultDiscounts: ServiceDiscounts;
+  intakeSettings: ServiceIntakeSettings;
 };
 
 export type CostCategoryKey =

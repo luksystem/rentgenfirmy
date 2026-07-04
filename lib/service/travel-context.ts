@@ -26,19 +26,21 @@ export function resolveOvernights(
   estimatedWorkDays: number,
   aiTravel: ServiceAiTravelProposal,
 ) {
-  if (aiTravel.overnights > 0) {
-    return aiTravel.overnights;
+  const km = Math.max(0, oneWayKm);
+  const multiDayOvernights = estimatedWorkDays > 1 ? estimatedWorkDays - 1 : 0;
+
+  // Strefa lokalna (poniżej progu zone1) — codzienny dojazd, bez noclegów.
+  if (km < zoneSettings.zone1ThresholdKm) {
+    return 0;
   }
 
-  if (estimatedWorkDays > 1) {
-    return estimatedWorkDays - 1;
+  // Bardzo daleko — nocleg praktycznie wymagany przy wyjazdach wielodniowych.
+  if (km >= zoneSettings.zone3ThresholdKm || aiTravel.overnightRequired) {
+    return Math.max(1, multiDayOvernights);
   }
 
-  if (oneWayKm >= zoneSettings.zone3ThresholdKm || aiTravel.overnightRequired) {
-    return 1;
-  }
-
-  return 0;
+  // Strefa pośrednia — nocleg tylko przy pracach trwających > 1 dzień roboczy.
+  return multiDayOvernights;
 }
 
 export async function buildServiceTravelContext(input: {
@@ -90,7 +92,10 @@ export async function buildServiceTravelContext(input: {
     estimatedWorkDays,
     input.aiTravel,
   );
-  const resolvedTrips = Math.max(1, input.aiTravel.estimatedTrips || estimatedWorkDays);
+  const resolvedTrips =
+    oneWayDistanceKm < input.zoneSettings.zone1ThresholdKm && estimatedWorkDays > 1
+      ? estimatedWorkDays
+      : Math.max(1, input.aiTravel.estimatedTrips || estimatedWorkDays);
   const totalDistanceKm = oneWayDistanceKm * 2 * resolvedTrips;
 
   return {

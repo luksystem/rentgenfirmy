@@ -32,6 +32,8 @@ type AiEstimateApiResponse = {
   lineItemsPreview: ServiceLineItems;
   costBreakdown: ServiceCostBreakdown;
   referenceCasesUsed: number;
+  projectContextUsed?: boolean;
+  warrantyContextUsed?: boolean;
 };
 
 const WARRANTY_LABELS: Record<ServiceAiRecognizedTask["warrantyStatus"], string> = {
@@ -93,6 +95,7 @@ export function ServiceAiEstimatePanel({
   description: initialDescription,
   serviceType,
   clientId,
+  projectId,
   clientLocation,
   rates,
   zoneSettings,
@@ -103,6 +106,7 @@ export function ServiceAiEstimatePanel({
   description?: string;
   serviceType: ServiceType;
   clientId: string | null;
+  projectId?: string | null;
   clientLocation: string;
   rates: ServiceRates;
   zoneSettings: KilometerZoneSettings;
@@ -126,6 +130,8 @@ export function ServiceAiEstimatePanel({
     existingRecord?.travelContext ?? null,
   );
   const [referenceCasesUsed, setReferenceCasesUsed] = useState(0);
+  const [projectContextUsed, setProjectContextUsed] = useState(false);
+  const [warrantyContextUsed, setWarrantyContextUsed] = useState(false);
   const [editing, setEditing] = useState(!existingRecord?.appliedAt);
 
   const preview = useMemo(() => {
@@ -154,6 +160,7 @@ export function ServiceAiEstimatePanel({
           description,
           serviceType,
           clientId,
+          projectId: projectId ?? undefined,
           clientLocation,
         }),
       });
@@ -166,6 +173,8 @@ export function ServiceAiEstimatePanel({
       setProposal(payload.proposal);
       setTravelContext(payload.travelContext);
       setReferenceCasesUsed(payload.referenceCasesUsed);
+      setProjectContextUsed(Boolean(payload.projectContextUsed));
+      setWarrantyContextUsed(Boolean(payload.warrantyContextUsed));
       setEditing(true);
     } catch (estimateError) {
       setError(
@@ -226,6 +235,7 @@ export function ServiceAiEstimatePanel({
           <p className="mt-1 text-sm text-muted">
             Opisz zgłoszenie — AI zaproponuje orientacyjne godziny i dojazd. Kwoty liczy aplikacja
             ze stawek. Propozycja wymaga zatwierdzenia.
+            {projectId ? " Uwzględniana jest specyfikacja i wdrożenie wybranego projektu." : ""}
           </p>
         </div>
         {existingRecord?.appliedAt ? (
@@ -274,6 +284,19 @@ export function ServiceAiEstimatePanel({
           {referenceCasesUsed > 0 ? (
             <p className="text-xs text-muted">
               Uwzględniono {referenceCasesUsed} podobnych rozliczeń historycznych.
+            </p>
+          ) : null}
+
+          {projectContextUsed ? (
+            <p className="text-xs text-muted">
+              Uwzględniono specyfikację projektu, ustalenia z klientem i zadania wdrożenia.
+            </p>
+          ) : null}
+
+          {warrantyContextUsed ? (
+            <p className="text-xs text-muted">
+              Uwzględniono status gwarancji projektu — podział prac gwarancyjnych i płatnych w
+              podsumowaniu wymaga weryfikacji.
             </p>
           ) : null}
 

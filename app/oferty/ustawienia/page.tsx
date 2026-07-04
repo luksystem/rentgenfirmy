@@ -152,6 +152,25 @@ export default function OfertySettingsPage() {
             </Select>
           </Field>
 
+          <Field label="Dopłata priorytetowa zgłoszeń klienta (%)">
+            <NumericInput
+              value={settings.intakeSettings.prioritySurchargePercent}
+              onChange={(value) =>
+                void updateSettings({
+                  ...settings,
+                  intakeSettings: {
+                    ...settings.intakeSettings,
+                    prioritySurchargePercent: Math.max(0, value),
+                  },
+                })
+              }
+            />
+          </Field>
+          <p className="text-xs text-muted sm:col-span-2">
+            Stosowana przy zgłoszeniu serwisowym pogwarancyjnym z priorytetem CAFE C (Krytyczny) lub
+            A (Asap) — dopłata liczona od wszystkich stawek w orientacyjnej wycenie AI.
+          </p>
+
           <div className="sm:col-span-2">
             <Button disabled={isSaving} onClick={() => void updateSettings(settings)}>
               {isSaving ? "Zapisywanie…" : "Zapisz ustawienia"}

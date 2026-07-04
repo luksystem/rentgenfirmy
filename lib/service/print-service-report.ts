@@ -15,6 +15,7 @@ import {
   getServiceReportMaterialsNote,
   getServiceReportPhotos,
   getServiceReportQuantitySections,
+  getServiceReportWarrantyHoursRows,
   getServiceReportWorkNote,
   getServiceReportWorkTimeSections,
   hasAppliedDiscount,
@@ -234,6 +235,19 @@ function reportCompareSectionsHtml(service: ServiceRecord, detailed: boolean) {
       !detailed,
     ),
   );
+
+  const warrantyRows = getServiceReportWarrantyHoursRows(service);
+  if (warrantyRows.length > 0) {
+    parts.push(
+      compareSectionHtml(
+        "Prace w ramach gwarancji",
+        warrantyRows,
+        false,
+        "Godziny",
+        !detailed,
+      ),
+    );
+  }
 
   return {
     materialsRows,

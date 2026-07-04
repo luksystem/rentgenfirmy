@@ -10,7 +10,7 @@ function roundHours(value: number) {
 }
 
 export function aggregateAiTaskHours(tasks: ServiceAiRecognizedTask[]) {
-  return tasks.reduce(
+  const totals = tasks.reduce(
     (acc, task) => ({
       installerHours: acc.installerHours + task.installerHours,
       helperHours: acc.helperHours + task.helperHours,
@@ -26,6 +26,12 @@ export function aggregateAiTaskHours(tasks: ServiceAiRecognizedTask[]) {
       supervisorHours: 0,
     },
   );
+
+  // Pomocnik jeździ z instalatorem — liczymy tyle samo godzin co instalator.
+  return {
+    ...totals,
+    helperHours: totals.installerHours,
+  };
 }
 
 export function buildMaterialsNote(materials: ServiceAiEstimateProposal["materials"]) {

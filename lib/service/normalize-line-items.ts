@@ -1,4 +1,5 @@
 import { normalizeServicePhotos } from "@/lib/service/service-photos";
+import { normalizeWarrantyHours } from "@/lib/service/warranty-hours";
 import { emptyLineItems, type ServiceLineItems } from "@/lib/service/types";
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -55,5 +56,6 @@ export function normalizeLineItemsFromJson(value: unknown): ServiceLineItems {
     workReportNote: typeof data.workReportNote === "string" ? data.workReportNote : "",
     photos: normalizeServicePhotos(data.photos),
     billable: normalizeBillable(data.billable),
+    warrantyHours: normalizeWarrantyHours(data.warrantyHours),
   };
 }

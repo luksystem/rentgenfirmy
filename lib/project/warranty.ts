@@ -175,6 +175,104 @@ export function hasPendingWarrantyExtension(agreements: ProjectClientAgreement[]
   );
 }
 
+export type ServiceAiWarrantyContext = {
+  status: WarrantyStatus;
+  label: string;
+  endsAt: string | null;
+  serviceType: import("@/lib/service/types").ServiceType;
+};
+
+export function buildServiceAiWarrantyContext(
+  project: ProjectWarrantyFields,
+  serviceType: import("@/lib/service/types").ServiceType,
+  options?: { hasPendingExtension?: boolean },
+): ServiceAiWarrantyContext {
+  const info = getWarrantyStatus(project, options);
+  return {
+    status: info.status,
+    label: info.label,
+    endsAt: resolveProjectWarrantyEndsAt(project),
+    serviceType,
+  };
+}
+
+export async function resolveServiceAiWarrantyContext(input: {
+  project: ProjectWarrantyFields;
+  projectId?: string;
+  serviceType: import("@/lib/service/types").ServiceType;
+}): Promise<ServiceAiWarrantyContext> {
+  let hasPendingExtension = false;
+
+  if (input.projectId?.trim()) {
+    const { getSupabaseAdmin } = await import("@/lib/supabase/admin");
+    const supabase = getSupabaseAdmin();
+    const { data } = await supabase
+      .from("project_client_agreements")
+      .select("id")
+      .eq("project_id", input.projectId.trim())
+      .eq("category", "warranty")
+      .eq("status", "pending_client")
+      .limit(1);
+
+    hasPendingExtension = (data?.length ?? 0) > 0;
+  }
+
+  return buildServiceAiWarrantyContext(input.project, input.serviceType, {
+    hasPendingExtension,
+  });
+}
+
+export function formatServiceAiWarrantyContextForPrompt(
+  context: ServiceAiWarrantyContext | null,
+): string | null {
+  if (!context) {
+    return null;
+  }
+
+  const endDate = context.endsAt ? formatDate(context.endsAt) : "nieustalony";
+  const lines = [
+    `- Status gwarancji projektu: ${context.label} (${context.status})`,
+    `- Koniec gwarancji: ${endDate}`,
+    `- Typ rozliczenia serwisowego: ${context.serviceType}`,
+  ];
+
+  const isActiveLike =
+    context.status === "active" ||
+    context.status === "expiring_soon" ||
+    context.status === "pending_extension";
+
+  if (isActiveLike) {
+    lines.push(
+      "",
+      "Zasady gwarancji (WAŻNE):",
+      "- Gwarancja jest aktywna lub w trakcie przedłużenia — część prac może być wykonana w ramach gwarancji (bez kosztu robocizny dla klienta).",
+      "- Dla każdego recognizedTasks ustaw warrantyStatus:",
+      "  · warranty — naprawa usterki / praca objęta gwarancją,",
+      "  · paid — rozbudowa, nowy element, praca wyraźnie poza gwarancją,",
+      "  · mixed — część diagnostyki/remontu gwarancyjna, część płatna,",
+      "  · unknown — gdy nie da się jednoznacznie rozstrzygnąć.",
+      "- W polu summary napisz zachowawczo, które prace prawdopodobnie mieszczą się w gwarancji, a które mogą być płatne.",
+      "- Dodaj do questions lub riskFlags informację, że ostateczny podział gwarancja/płatne wymaga weryfikacji (chyba że opis jednoznacznie wskazuje awarię gwarancyjną).",
+      "- Godziny w JSON nadal podawaj łącznie — aplikacja rozlicza stawki; oznaczenie warrantyStatus służy do informacji i dalszego doprecyzowania.",
+    );
+  } else if (context.status === "expired") {
+    lines.push(
+      "",
+      "Zasady gwarancji:",
+      "- Gwarancja wygasła — domyślnie oznaczaj recognizedTasks jako paid, chyba że opis wskazuje inaczej.",
+      "- W summary wspomnij, że prace są pogwarancyjne.",
+    );
+  } else {
+    lines.push(
+      "",
+      "Zasady gwarancji:",
+      "- Brak aktywnej gwarancji — domyślnie oznaczaj recognizedTasks jako paid lub unknown.",
+    );
+  }
+
+  return lines.join("\n");
+}
+
 export function filterWarrantyAgreements(agreements: ProjectClientAgreement[]) {
   return agreements.filter((entry) => entry.category === "warranty");
 }
