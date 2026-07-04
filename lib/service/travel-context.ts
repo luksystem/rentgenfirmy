@@ -13,6 +13,70 @@ function estimateDriveTimeHours(oneWayKm: number) {
   return Math.round((oneWayKm / averageSpeedKmH) * 2 * 10) / 10;
 }
 
+export async function resolveOneWayDistanceKm(input: {
+  companyAddress: string;
+  client: Client | null;
+  clientLocationFallback: string;
+}): Promise<{
+  oneWayDistanceKm: number | null;
+  geocoded: boolean;
+  geocodeNote: string | null;
+  clientAddress: string;
+}> {
+  const clientAddress =
+    (input.client ? formatClientAddress(input.client) : "") ||
+    input.clientLocationFallback.trim() ||
+    "—";
+  const companyAddress = input.companyAddress.trim() || "—";
+
+  if (companyAddress === "—") {
+    return {
+      oneWayDistanceKm: null,
+      geocoded: false,
+      geocodeNote: "Uzupełnij adres firmy w ustawieniach, aby liczyć dojazd automatycznie.",
+      clientAddress,
+    };
+  }
+
+  const companyHit = await geocodeAddressServer(`${companyAddress}, Polska`);
+  if (!companyHit) {
+    return {
+      oneWayDistanceKm: null,
+      geocoded: false,
+      geocodeNote: "Nie udało się geokodować adresu firmy.",
+      clientAddress,
+    };
+  }
+
+  const clientQueries = input.client
+    ? buildClientGeocodeQueries(input.client)
+    : input.clientLocationFallback.trim()
+      ? [`${input.clientLocationFallback.trim()}, Polska`]
+      : [];
+
+  for (const query of clientQueries) {
+    const clientHit = await geocodeAddressServer(query);
+    if (clientHit) {
+      return {
+        oneWayDistanceKm: haversineDistanceKm(companyHit, clientHit),
+        geocoded: true,
+        geocodeNote: `Odległość wyliczona z adresu firmy i lokalizacji klienta (${clientHit.label}).`,
+        clientAddress: clientHit.label,
+      };
+    }
+  }
+
+  return {
+    oneWayDistanceKm: null,
+    geocoded: false,
+    geocodeNote:
+      clientAddress !== "—"
+        ? "Nie udało się geokodować lokalizacji klienta — dojazd może być niedoszacowany."
+        : "Brak lokalizacji klienta do wyliczenia dojazdu.",
+    clientAddress,
+  };
+}
+
 function estimateWorkDaysFromTasks(totalOnsiteHours: number) {
   if (totalOnsiteHours <= 8) {
     return 1;
@@ -61,28 +125,20 @@ export async function buildServiceTravelContext(input: {
   let geocoded = false;
   let geocodeNote: string | null = null;
 
-  if (input.client && companyAddress !== "—") {
-    const clientQueries = buildClientGeocodeQueries(input.client);
-    const companyHit = await geocodeAddressServer(`${companyAddress}, Polska`);
+  const resolved = await resolveOneWayDistanceKm({
+    companyAddress: input.companyAddress,
+    client: input.client,
+    clientLocationFallback: input.clientLocationFallback,
+  });
 
-    for (const query of clientQueries) {
-      const clientHit = await geocodeAddressServer(query);
-      if (companyHit && clientHit) {
-        oneWayDistanceKm = haversineDistanceKm(companyHit, clientHit);
-        geocoded = true;
-        geocodeNote = `Odległość wyliczona z adresu firmy i klienta (${clientHit.label}).`;
-        break;
-      }
-    }
-
-    if (!geocoded) {
-      geocodeNote =
-        "Nie udało się geokodować adresu — użyto dystansu z propozycji AI lub ręcznego wpisu.";
-    }
+  if (resolved.geocoded && resolved.oneWayDistanceKm != null) {
+    oneWayDistanceKm = resolved.oneWayDistanceKm;
+    geocoded = true;
+    geocodeNote = resolved.geocodeNote;
+  } else if (resolved.geocodeNote) {
+    geocodeNote = resolved.geocodeNote;
   } else if (companyAddress === "—") {
     geocodeNote = "Uzupełnij adres firmy w ustawieniach, aby liczyć dojazd automatycznie.";
-  } else if (!input.client) {
-    geocodeNote = "Przypisz klienta do oferty, aby wyliczyć odległość od bazy firmy.";
   }
 
   const estimatedWorkDays = estimateWorkDaysFromTasks(input.totalOnsiteHours);

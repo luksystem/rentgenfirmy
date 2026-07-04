@@ -113,7 +113,7 @@ export type ServiceIntakeRecord = {
   contactFullName: string;
   contactPhone: string | null;
   warrantyStatus: string | null;
-  serviceTypeHint: "Gwarancyjny" | "Pogwarancyjny";
+  serviceTypeHint: ServiceType;
   requestType: ServiceIntakeRequestType;
   priority: ServiceIntakePriority | null;
   postWarrantyAction: ServiceIntakePostWarrantyAction | null;

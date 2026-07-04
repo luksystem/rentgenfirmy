@@ -182,11 +182,21 @@ export type ServiceIntakeSettings = {
   prioritySurchargePercent: number;
 };
 
+export type ServiceAiEstimateSettings = {
+  /** Komunikat systemowy wysyłany do modelu AI. */
+  systemPrompt: string;
+  /** Zasady wyceny — wstawiane w sekcji „Zasady” promptu (kontekst i opis dodaje aplikacja). */
+  rulesPrompt: string;
+  /** Dodatkowe zasady dla nowego kontaktu w formularzu /zgloszenie. */
+  newContactRulesPrompt: string;
+};
+
 export type ServiceGlobalSettings = {
   rates: ServiceRates;
   zoneSettings: KilometerZoneSettings;
   defaultDiscounts: ServiceDiscounts;
   intakeSettings: ServiceIntakeSettings;
+  aiEstimateSettings: ServiceAiEstimateSettings;
 };
 
 export type CostCategoryKey =

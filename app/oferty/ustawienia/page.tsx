@@ -4,9 +4,16 @@ import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Field, Select } from "@/components/ui/input";
+import { Field, Select, Textarea } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
+import {
+  DEFAULT_SERVICE_AI_NEW_CONTACT_RULES_PROMPT,
+  DEFAULT_SERVICE_AI_RULES_PROMPT,
+  DEFAULT_SERVICE_AI_SYSTEM_PROMPT,
+  getDefaultServiceAiEstimateSettings,
+} from "@/lib/ai/service-estimate-prompt-defaults";
 import { DEFAULT_SERVICE_SETTINGS } from "@/lib/service/defaults";
+import type { ServiceAiEstimateSettings } from "@/lib/service/types";
 import { VAT_RATES } from "@/lib/service/types";
 import { useServiceStore } from "@/store/service-store";
 import { COMMERCIAL_MODULES } from "@/lib/modules/commercial-modules";
@@ -38,6 +45,25 @@ export default function OfertySettingsPage() {
   const error = useServiceStore((s) => s.error);
 
   const intakeSettings = settings.intakeSettings ?? DEFAULT_SERVICE_SETTINGS.intakeSettings;
+  const aiEstimateSettings =
+    settings.aiEstimateSettings ?? DEFAULT_SERVICE_SETTINGS.aiEstimateSettings;
+
+  function updateAiEstimateSettings(patch: Partial<ServiceAiEstimateSettings>) {
+    void updateSettings({
+      ...settings,
+      aiEstimateSettings: {
+        ...aiEstimateSettings,
+        ...patch,
+      },
+    });
+  }
+
+  function resetAiEstimateDefaults() {
+    void updateSettings({
+      ...settings,
+      aiEstimateSettings: getDefaultServiceAiEstimateSettings(),
+    });
+  }
 
   return (
     <>
@@ -79,6 +105,86 @@ export default function OfertySettingsPage() {
               wycenie AI, gdy klient wybierze priorytet{" "}
               <strong>C — Krytyczny</strong> lub <strong>A — Asap</strong> przy zgłoszeniu
               serwisowym bez aktywnej gwarancji. Priorytety F i E — bez dopłaty.
+            </div>
+          </SettingsSection>
+
+          <SettingsSection
+            title="Prompt wyceny AI"
+            description="Instrukcje dla modelu przy orientacyjnych wycenach w rozliczeniach serwisowych i formularzu /zgloszenie. Kontekst klienta, specyfikacja projektu, odległość i opis zgłoszenia są dokładane automatycznie."
+          >
+            <div className="sm:col-span-2 grid gap-4">
+              <Field label="Komunikat systemowy">
+                <Textarea
+                  value={aiEstimateSettings.systemPrompt}
+                  onChange={(event) => updateAiEstimateSettings({ systemPrompt: event.target.value })}
+                  rows={3}
+                  className="font-mono text-xs"
+                />
+              </Field>
+              <Field label="Zasady wyceny (sekcja „Zasady” w prompcie)">
+                <Textarea
+                  value={aiEstimateSettings.rulesPrompt}
+                  onChange={(event) => updateAiEstimateSettings({ rulesPrompt: event.target.value })}
+                  rows={12}
+                  className="font-mono text-xs"
+                />
+              </Field>
+              <Field label="Zasady dla nowego kontaktu (/zgloszenie jako gość)">
+                <Textarea
+                  value={aiEstimateSettings.newContactRulesPrompt}
+                  onChange={(event) =>
+                    updateAiEstimateSettings({ newContactRulesPrompt: event.target.value })
+                  }
+                  rows={10}
+                  className="font-mono text-xs"
+                />
+              </Field>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={resetAiEstimateDefaults}>
+                  Przywróć domyślne prompty
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    updateAiEstimateSettings({
+                      systemPrompt: DEFAULT_SERVICE_AI_SYSTEM_PROMPT,
+                    })
+                  }
+                >
+                  Domyślny system
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    updateAiEstimateSettings({
+                      rulesPrompt: DEFAULT_SERVICE_AI_RULES_PROMPT,
+                    })
+                  }
+                >
+                  Domyślne zasady
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    updateAiEstimateSettings({
+                      newContactRulesPrompt: DEFAULT_SERVICE_AI_NEW_CONTACT_RULES_PROMPT,
+                    })
+                  }
+                >
+                  Domyślne — nowy kontakt
+                </Button>
+              </div>
+              <p className="text-xs text-muted">
+                Zasady dla wybranej opcji pogwarancyjnej (oferta / przyjazd / zdalny) nadal
+                dokładane są automatycznie według wyboru klienta. Format odpowiedzi JSON pozostaje
+                stały — nie usuwaj wymagań dotyczących pól recognizedTasks, travel, materials itd.
+              </p>
             </div>
           </SettingsSection>
 

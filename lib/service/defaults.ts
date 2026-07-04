@@ -1,3 +1,4 @@
+import { getDefaultServiceAiEstimateSettings } from "@/lib/ai/service-estimate-prompt-defaults";
 import {
   emptyLineItems,
   type BillableFlags,
@@ -29,6 +30,7 @@ export const DEFAULT_SERVICE_SETTINGS: ServiceGlobalSettings = {
   intakeSettings: {
     prioritySurchargePercent: 50,
   },
+  aiEstimateSettings: getDefaultServiceAiEstimateSettings(),
 };
 
 const warrantyBillable: BillableFlags = {

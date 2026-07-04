@@ -2,6 +2,7 @@
 
 import { Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/input";
 import type { IntakeAiEstimatePublic, IntakeSuggestedWorkMode } from "@/lib/service-intake/intake-ai-estimate";
 import {
   SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS,
@@ -29,6 +30,11 @@ export function ServiceIntakeEstimatePanel({
   preliminaryAccepted,
   onPreliminaryAcceptedChange,
   onRetry,
+  isNewContact = false,
+  estimateClarifications = "",
+  onEstimateClarificationsChange,
+  onRecalculateWithClarifications,
+  recalculating = false,
 }: {
   estimate: IntakeAiEstimatePublic | null;
   loading: boolean;
@@ -41,6 +47,11 @@ export function ServiceIntakeEstimatePanel({
   preliminaryAccepted: boolean;
   onPreliminaryAcceptedChange: (value: boolean) => void;
   onRetry?: () => void;
+  isNewContact?: boolean;
+  estimateClarifications?: string;
+  onEstimateClarificationsChange?: (value: string) => void;
+  onRecalculateWithClarifications?: () => void;
+  recalculating?: boolean;
 }) {
   if (loading) {
     return (
@@ -165,6 +176,16 @@ export function ServiceIntakeEstimatePanel({
             wyjazd(y) · {estimate.travel.overnights} nocleg(i)
           </p>
         )}
+        {estimate.travelGeocodeNote ? (
+          <p
+            className={cn(
+              "text-xs",
+              estimate.travelGeocoded ? "text-emerald-300" : "text-amber-200",
+            )}
+          >
+            {estimate.travelGeocodeNote}
+          </p>
+        ) : null}
       </div>
 
       {showWorkPreference ? (
@@ -200,12 +221,50 @@ export function ServiceIntakeEstimatePanel({
 
       {estimate.questions.length > 0 ? (
         <div className="rounded-xl border border-border/70 bg-background/40 p-3 text-sm">
-          <p className="mb-2 font-medium text-foreground">Do doprecyzowania</p>
+          <p className="mb-2 font-medium text-foreground">
+            {isNewContact ? "Pomóż nam doprecyzować wycenę" : "Do doprecyzowania"}
+          </p>
+          {isNewContact ? (
+            <p className="mb-3 text-xs text-muted">
+              Przy ogólnym opisie celowo szacujemy ostrożnie w górę. Odpowiedzi na pytania poniżej
+              pozwolą skorygować orientacyjny koszt.
+            </p>
+          ) : null}
           <ul className="list-disc space-y-1 pl-5 text-muted">
             {estimate.questions.map((question) => (
               <li key={question}>{question}</li>
             ))}
           </ul>
+          {isNewContact && onEstimateClarificationsChange && onRecalculateWithClarifications ? (
+            <div className="mt-4 grid gap-3">
+              <label className="grid gap-1.5">
+                <span className="text-xs font-medium text-foreground">Twoje odpowiedzi</span>
+                <Textarea
+                  value={estimateClarifications}
+                  onChange={(event) => onEstimateClarificationsChange(event.target.value)}
+                  placeholder="Np. liczba pomieszczeń, typ instalacji, czy system już działa, preferowany termin…"
+                  rows={4}
+                  disabled={recalculating}
+                />
+              </label>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={recalculating || estimateClarifications.trim().length < 5}
+                onClick={onRecalculateWithClarifications}
+              >
+                {recalculating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Przeliczam…
+                  </>
+                ) : (
+                  "Przelicz z doprecyzowaniem"
+                )}
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : null}
 

@@ -12,9 +12,11 @@ import {
   fetchProjectAiContext,
   formatProjectAiContextForPrompt,
 } from "@/lib/service/project-ai-context";
-import { buildServiceTravelContext } from "@/lib/service/travel-context";
+import { buildServiceTravelContext, resolveOneWayDistanceKm } from "@/lib/service/travel-context";
 import type { ServiceAiWarrantyContext } from "@/lib/project/warranty";
+import { getDefaultServiceAiEstimateSettings } from "@/lib/ai/service-estimate-prompt-defaults";
 import type {
+  ServiceAiEstimateSettings,
   ServiceCostBreakdown,
   ServiceDiscounts,
   ServiceLineItems,
@@ -63,6 +65,8 @@ export type IntakeAiEstimatePublic = {
   materialsNetEstimate: number | null;
   questions: string[];
   riskFlags: string[];
+  travelGeocoded: boolean;
+  travelGeocodeNote: string | null;
 };
 
 export type IntakeAiEstimateResult = {
@@ -125,6 +129,15 @@ export function applyEstimateScopeToLineItems(
   };
 }
 
+function buildEstimateDescription(description: string, estimateClarifications?: string | null) {
+  const base = description.trim();
+  const clarifications = estimateClarifications?.trim();
+  if (!clarifications) {
+    return base;
+  }
+  return `${base}\n\nDoprecyzowanie klienta:\n${clarifications}`;
+}
+
 export async function computeIntakeAiEstimate(input: {
   description: string;
   serviceType: ServiceType;
@@ -139,6 +152,9 @@ export async function computeIntakeAiEstimate(input: {
   prioritySurchargePercent?: number;
   applyPrioritySurcharge?: boolean;
   postWarrantyAction?: ServiceIntakePostWarrantyAction | null;
+  isNewContact?: boolean;
+  estimateClarifications?: string | null;
+  aiEstimateSettings?: ServiceAiEstimateSettings;
 }): Promise<IntakeAiEstimateResult> {
   const supabase = getSupabaseAdmin();
   const [{ data: settledRows }, projectContextData] = await Promise.all([
@@ -162,18 +178,31 @@ export async function computeIntakeAiEstimate(input: {
     ? formatProjectAiContextForPrompt(projectContextData)
     : null;
 
+  const estimateDescription = buildEstimateDescription(
+    input.description,
+    input.estimateClarifications,
+  );
+
+  const distancePreview = await resolveOneWayDistanceKm({
+    companyAddress: input.companyAddress,
+    client: input.client,
+    clientLocationFallback: input.client.location,
+  });
+
   const estimateScope = resolveIntakeEstimateScope(input.postWarrantyAction ?? null);
 
   const proposal = await generateServiceAiEstimate({
-    description: input.description,
+    description: estimateDescription,
     serviceType: input.serviceType,
     clientLocation: input.client.location,
     companyAddress: input.companyAddress,
-    oneWayDistanceKm: null,
+    oneWayDistanceKm: distancePreview.oneWayDistanceKm,
     referenceCases,
     projectContext,
     warrantyContext: input.warrantyContext,
     postWarrantyAction: input.postWarrantyAction ?? null,
+    isNewContact: input.isNewContact ?? false,
+    promptSettings: input.aiEstimateSettings ?? getDefaultServiceAiEstimateSettings(),
   });
 
   const hours = aggregateAiTaskHours(proposal.recognizedTasks);
@@ -255,7 +284,7 @@ export async function computeIntakeAiEstimate(input: {
   const now = new Date().toISOString();
   const record: ServiceAiEstimateRecord = {
     createdAt: now,
-    description: input.description.trim(),
+    description: estimateDescription,
     proposal,
     travelContext,
     appliedAt: null,
@@ -275,7 +304,9 @@ export async function computeIntakeAiEstimate(input: {
     disclaimer:
       estimateScope === "remote_only"
         ? "Orientacyjna wycena pracy zdalnej — dojazd i prace na miejscu nie są wliczone. Ostateczna kwota może się zmienić po weryfikacji."
-        : INTAKE_ESTIMATE_DISCLAIMER,
+        : input.isNewContact
+          ? "Orientacyjna wycena dla nowego kontaktu — przy ogólnym opisie celowo szacujemy ostrożnie w górę. Odpowiedzi na pytania poniżej mogą doprecyzować koszt."
+          : INTAKE_ESTIMATE_DISCLAIMER,
     estimateScope,
     suggestedWorkMode: resolveSuggestedWorkMode(hours),
     recommendedPostWarrantyAction: intakeRecommendation?.recommendedAction ?? null,
@@ -309,6 +340,8 @@ export async function computeIntakeAiEstimate(input: {
     materialsNetEstimate: estimateScope === "remote_only" ? null : materialsNetEstimate,
     questions: proposal.questions,
     riskFlags: proposal.riskFlags,
+    travelGeocoded: travelContext.geocoded,
+    travelGeocodeNote: travelContext.geocodeNote,
   };
 
   return { public: publicView, record, lineItems, costBreakdown };

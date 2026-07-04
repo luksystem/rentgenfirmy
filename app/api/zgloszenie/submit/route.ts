@@ -31,6 +31,7 @@ export async function POST(request: Request) {
       workPreference?: ServiceIntakeWorkPreference | null;
       preliminaryAccepted?: boolean;
       aiEstimateSnapshot?: unknown;
+      estimateClarifications?: string;
     };
 
     const verificationToken = body.verificationToken?.trim() ?? "";
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
           workPreference,
           preliminaryAccepted: Boolean(body.preliminaryAccepted),
           aiEstimateSnapshot,
+          estimateClarifications: body.estimateClarifications?.trim() || null,
         })
       : await submitServiceIntakeRequest({
           verificationToken,

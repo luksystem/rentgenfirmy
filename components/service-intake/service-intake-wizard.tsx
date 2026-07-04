@@ -179,6 +179,8 @@ export function ServiceIntakeWizard() {
   const [isGuestMode, setIsGuestMode] = useState(false);
   const [verifyFailureMessage, setVerifyFailureMessage] = useState<string | null>(null);
   const [guestLocation, setGuestLocation] = useState("");
+  const [estimateClarifications, setEstimateClarifications] = useState("");
+  const [recalculatingEstimate, setRecalculatingEstimate] = useState(false);
 
   const selectedProject = useMemo(
     () => verification?.projects.find((project) => project.id === selectedProjectId) ?? null,
@@ -259,7 +261,7 @@ export function ServiceIntakeWizard() {
     }
   }
 
-  async function fetchAiEstimate() {
+  async function fetchAiEstimate(options?: { clarifications?: string; isRecalculate?: boolean }) {
     if (!verification || description.trim().length < 10) {
       return;
     }
@@ -271,7 +273,13 @@ export function ServiceIntakeWizard() {
       return;
     }
 
-    setEstimateLoading(true);
+    const clarifications = options?.clarifications ?? estimateClarifications;
+
+    if (options?.isRecalculate) {
+      setRecalculatingEstimate(true);
+    } else {
+      setEstimateLoading(true);
+    }
     setEstimateError(null);
 
     try {
@@ -287,6 +295,8 @@ export function ServiceIntakeWizard() {
           postWarrantyAction: requiresActionStep ? postWarrantyAction : null,
           contactLocation: isGuestMode ? guestLocation : undefined,
           contactPhone: isGuestMode ? contactPhone : undefined,
+          isNewContact: isGuestMode,
+          estimateClarifications: clarifications.trim() || undefined,
         }),
       });
       const payload = await response.json();
@@ -318,6 +328,7 @@ export function ServiceIntakeWizard() {
       setAiEstimateSnapshot(null);
     } finally {
       setEstimateLoading(false);
+      setRecalculatingEstimate(false);
     }
   }
 
@@ -422,6 +433,7 @@ export function ServiceIntakeWizard() {
       setRequestType("offer_request");
       setPostWarrantyAction(null);
       setPriority("f");
+      setEstimateClarifications("");
       setStep("requestType");
     } catch (guestError) {
       setError(guestError instanceof Error ? guestError.message : "Błąd.");
@@ -485,6 +497,7 @@ export function ServiceIntakeWizard() {
           workPreference,
           preliminaryAccepted: allowsPreliminaryAcceptance && preliminaryAccepted,
           aiEstimateSnapshot,
+          estimateClarifications: isGuestMode ? estimateClarifications.trim() || undefined : undefined,
           attachments: [
             ...uploadedAttachments,
             ...attachmentLinks
@@ -518,6 +531,7 @@ export function ServiceIntakeWizard() {
 
   const estimateNextDisabled =
     estimateLoading ||
+    recalculatingEstimate ||
     !aiEstimate ||
     (!postWarrantyAction && !workPreference) ||
     (requiresPreliminaryAcceptance && !preliminaryAccepted);
@@ -969,6 +983,13 @@ export function ServiceIntakeWizard() {
                   pracy i koszt netto usługi. Ostateczna oferta może się różnić po doprecyzowaniu
                   wymagań.
                 </p>
+                {isGuestMode ? (
+                  <p className="mt-2 text-xs text-amber-100">
+                    Jako nowy kontakt wycena uwzględnia odległość od naszej firmy i dojazd. Przy
+                    ogólnym opisie celowo szacujemy ostrożnie w górę — odpowiedzi na pytania AI
+                    pozwolą skorygować kwotę.
+                  </p>
+                ) : null}
               </div>
 
               {appliesPrioritySurcharge && verification ? (
@@ -992,6 +1013,13 @@ export function ServiceIntakeWizard() {
                 preliminaryAccepted={preliminaryAccepted}
                 onPreliminaryAcceptedChange={setPreliminaryAccepted}
                 onRetry={() => void fetchAiEstimate()}
+                isNewContact={isGuestMode}
+                estimateClarifications={estimateClarifications}
+                onEstimateClarificationsChange={setEstimateClarifications}
+                onRecalculateWithClarifications={() =>
+                  void fetchAiEstimate({ clarifications: estimateClarifications, isRecalculate: true })
+                }
+                recalculating={recalculatingEstimate}
               />
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" onClick={() => goBack("estimate")}>

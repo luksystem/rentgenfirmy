@@ -1,10 +1,11 @@
 import type { ServiceAiEstimateProposal } from "@/lib/service/ai-estimate-types";
+import { getDefaultServiceAiEstimateSettings } from "@/lib/ai/service-estimate-prompt-defaults";
 import type { ServiceIntakePostWarrantyAction } from "@/lib/service-intake/types";
 import {
   extractJsonObject,
   parseServiceAiEstimateProposal,
 } from "@/lib/service/ai-estimate-normalize";
-import type { ServiceType } from "@/lib/service/types";
+import type { ServiceAiEstimateSettings, ServiceType } from "@/lib/service/types";
 import {
   formatServiceAiWarrantyContextForPrompt,
   type ServiceAiWarrantyContext,
@@ -60,6 +61,14 @@ Preferencja klienta: SERWIS ZDALNY (remote).
 ${sharedRecommendation}`;
 }
 
+function buildNewContactPrompt(isNewContact: boolean, newContactRulesPrompt: string) {
+  if (!isNewContact) {
+    return "";
+  }
+
+  return `\n${newContactRulesPrompt.trim()}`;
+}
+
 function buildPrompt(input: {
   description: string;
   serviceType: ServiceType;
@@ -70,6 +79,8 @@ function buildPrompt(input: {
   projectContext: string | null;
   warrantyContext: string | null;
   postWarrantyAction: ServiceIntakePostWarrantyAction | null;
+  isNewContact: boolean;
+  promptSettings: ServiceAiEstimateSettings;
 }) {
   const references =
     input.referenceCases.length > 0
@@ -117,16 +128,9 @@ Zasady kontekstu projektu:
 `
     : ""
 }Zasady:
-- Rozdziel zadania na listę recognizedTasks.
-- Oznacz warrantyStatus: warranty | paid | mixed | unknown (szczególnie ważne przy aktywnej gwarancji — patrz sekcja Gwarancja powyżej).
-- programmerOnsiteHours = praca u klienta, programmerRemoteHours = zdalnie.
-- helperHours: podaj 0 — aplikacja ustawi pomocnika na tyle samo godzin co instalator (zazwyczaj jadą razem).
-- Jeśli opis jest ogólny — obniż confidence i dodaj questions.
-- Materiały tylko orientacyjnie, verificationRequired=true gdy niepewne.
-- Nie zwracaj kwot robocizny/dojazdu — aplikacja liczy je ze stawek.
-- Noclegi (overnights): ustaw 0 — aplikacja wyliczy je z odległości i liczby dni. Przy krótkim dojeździe (< progu km z ustawień) zawsze 0.
-- estimatedTrips: przy krótkim dojeździe i wielodniowych pracach aplikacja liczy osobne wyjazdy na każdy dzień.
+${input.promptSettings.rulesPrompt.trim()}
 ${buildIntakeActionPrompt(input.postWarrantyAction)}
+${buildNewContactPrompt(input.isNewContact, input.promptSettings.newContactRulesPrompt)}
 
 Opis zgłoszenia:
 """
@@ -194,7 +198,10 @@ export async function generateServiceAiEstimate(input: {
   projectContext?: string | null;
   warrantyContext?: ServiceAiWarrantyContext | null;
   postWarrantyAction?: ServiceIntakePostWarrantyAction | null;
+  isNewContact?: boolean;
+  promptSettings?: ServiceAiEstimateSettings;
 }): Promise<ServiceAiEstimateProposal> {
+  const promptSettings = input.promptSettings ?? getDefaultServiceAiEstimateSettings();
   const plain = input.description.trim();
   if (!plain) {
     throw new Error("Wpisz opis prac do oszacowania.");
@@ -223,8 +230,7 @@ export async function generateServiceAiEstimate(input: {
       messages: [
         {
           role: "system",
-          content:
-            "Jesteś asystentem wyceny serwisowej Smart Home. Zwracaj wyłącznie JSON zgodny ze schematem. Nie podawaj kwot robocizny.",
+          content: promptSettings.systemPrompt,
         },
         {
           role: "user",
@@ -235,6 +241,8 @@ export async function generateServiceAiEstimate(input: {
               input.warrantyContext ?? null,
             ),
             postWarrantyAction: input.postWarrantyAction ?? null,
+            isNewContact: input.isNewContact ?? false,
+            promptSettings,
           }),
         },
       ],

@@ -57,6 +57,8 @@ export async function POST(request: Request) {
       postWarrantyAction?: ServiceIntakePostWarrantyAction | null;
       contactLocation?: string;
       contactPhone?: string;
+      estimateClarifications?: string;
+      isNewContact?: boolean;
     };
 
     const auth = readIntakeAuthToken(body.verificationToken?.trim() ?? "");
@@ -129,6 +131,9 @@ export async function POST(request: Request) {
         zoneSettings: settings.zoneSettings,
         discounts: settings.defaultDiscounts,
         postWarrantyAction: null,
+        isNewContact: true,
+        estimateClarifications: body.estimateClarifications?.trim() || null,
+        aiEstimateSettings: settings.aiEstimateSettings,
       });
 
       return NextResponse.json({
@@ -225,6 +230,7 @@ export async function POST(request: Request) {
       prioritySurchargePercent: settings.intakeSettings.prioritySurchargePercent,
       applyPrioritySurcharge,
       postWarrantyAction: isServiceRequest && !isWarrantyActive ? postWarrantyAction : null,
+      aiEstimateSettings: settings.aiEstimateSettings,
     });
 
     return NextResponse.json({

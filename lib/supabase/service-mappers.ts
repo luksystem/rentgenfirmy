@@ -90,6 +90,32 @@ function normalizeIntakeSettings(value: unknown): import("@/lib/service/types").
   };
 }
 
+function normalizeAiEstimateSettings(
+  value: unknown,
+): import("@/lib/service/types").ServiceAiEstimateSettings {
+  const data = asObject(value);
+  const defaults = DEFAULT_SERVICE_SETTINGS.aiEstimateSettings;
+
+  const systemPrompt =
+    typeof data.systemPrompt === "string" && data.systemPrompt.trim()
+      ? data.systemPrompt.trim()
+      : defaults.systemPrompt;
+  const rulesPrompt =
+    typeof data.rulesPrompt === "string" && data.rulesPrompt.trim()
+      ? data.rulesPrompt.trim()
+      : defaults.rulesPrompt;
+  const newContactRulesPrompt =
+    typeof data.newContactRulesPrompt === "string" && data.newContactRulesPrompt.trim()
+      ? data.newContactRulesPrompt.trim()
+      : defaults.newContactRulesPrompt;
+
+  return {
+    systemPrompt,
+    rulesPrompt,
+    newContactRulesPrompt,
+  };
+}
+
 export function normalizeServiceGlobalSettings(value: unknown): ServiceGlobalSettings {
   const data = asObject(value);
 
@@ -98,6 +124,7 @@ export function normalizeServiceGlobalSettings(value: unknown): ServiceGlobalSet
     zoneSettings: normalizeZoneSettings(data.zoneSettings),
     defaultDiscounts: normalizeDiscounts(data.defaultDiscounts ?? data),
     intakeSettings: normalizeIntakeSettings(data.intakeSettings),
+    aiEstimateSettings: normalizeAiEstimateSettings(data.aiEstimateSettings),
   };
 }
 

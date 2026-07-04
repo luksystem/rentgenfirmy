@@ -377,6 +377,7 @@ export async function submitGuestServiceIntakeRequest(input: {
   workPreference?: ServiceIntakeWorkPreference | null;
   preliminaryAccepted?: boolean;
   aiEstimateSnapshot?: ServiceIntakeAiEstimateSnapshot | null;
+  estimateClarifications?: string | null;
 }) {
   const guest = readIntakeGuestToken(input.verificationToken);
   if (!guest) {
@@ -442,6 +443,9 @@ export async function submitGuestServiceIntakeRequest(input: {
       zoneSettings: settings.zoneSettings,
       discounts: settings.defaultDiscounts,
       postWarrantyAction: null,
+      isNewContact: true,
+      estimateClarifications: input.estimateClarifications?.trim() || null,
+      aiEstimateSettings: settings.aiEstimateSettings,
     });
 
     aiEstimateSnapshot = {
@@ -691,6 +695,7 @@ export async function submitServiceIntakeRequest(input: {
         applyPrioritySurcharge,
         postWarrantyAction:
           !isWarrantyActive && isServiceRequest ? input.postWarrantyAction : null,
+        aiEstimateSettings: settings.aiEstimateSettings,
       });
 
       aiEstimateSnapshot = {

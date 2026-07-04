@@ -124,6 +124,7 @@ export async function POST(request: Request) {
       referenceCases,
       projectContext,
       warrantyContext,
+      promptSettings: settings.aiEstimateSettings,
     });
 
     const hours = aggregateAiTaskHours(proposal.recognizedTasks);
