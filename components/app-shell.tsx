@@ -277,7 +277,6 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const [intakeOffersNewCount, setIntakeOffersNewCount] = useState(0);
   const [inspectionsPlanningCount, setInspectionsPlanningCount] = useState(0);
   const [inspectionsPlanningOverdueCount, setInspectionsPlanningOverdueCount] = useState(0);
-  const [inspectionsBillingCount, setInspectionsBillingCount] = useState(0);
 
   const refreshServiceIntakeCounts = useCallback(() => {
     void fetch("/api/service-intake/counts", { credentials: "include" })
@@ -325,16 +324,13 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
         const payload = (await response.json()) as {
           planningDueCount?: number;
           planningOverdueCount?: number;
-          billingAlertCount?: number;
         };
         setInspectionsPlanningCount(payload.planningDueCount ?? 0);
         setInspectionsPlanningOverdueCount(payload.planningOverdueCount ?? 0);
-        setInspectionsBillingCount(payload.billingAlertCount ?? 0);
       })
       .catch(() => {
         setInspectionsPlanningCount(0);
         setInspectionsPlanningOverdueCount(0);
-        setInspectionsBillingCount(0);
       });
   }, []);
 
