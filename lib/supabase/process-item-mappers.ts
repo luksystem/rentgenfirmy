@@ -51,8 +51,16 @@ export function rowToProjectProcessItem(row: ProjectProcessItemRow): ProjectProc
     signedBy: row.signed_by ?? null,
     signedByName: row.signed_by_name ?? null,
     signatureNote: row.signature_note ?? null,
+    blocksNextStage: Boolean(row.blocks_next_stage),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+export function projectProcessItemBlockingUpdate(blocksNextStage: boolean) {
+  return {
+    blocks_next_stage: blocksNextStage,
+    updated_at: new Date().toISOString(),
   };
 }
 

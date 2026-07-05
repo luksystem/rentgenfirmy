@@ -16,6 +16,9 @@ import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template"
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import { useAuthStore } from "@/store/auth-store";
 import { useProcessStore } from "@/store/process-store";
+import { useProjectAgreementStore } from "@/store/project-agreement-store";
+
+const EMPTY_AGREEMENTS: import("@/lib/dashboard/agreement-types").ProjectClientAgreement[] = [];
 
 export function ProjectProcessPipelineSection({
   projectId,
@@ -45,6 +48,10 @@ export function ProjectProcessPipelineSection({
   const signProcessItem = useProcessStore((state) => state.signProcessItem);
   const toggleItemCompletion = useProcessStore((state) => state.toggleItemCompletion);
   const saveMilestoneDate = useProcessStore((state) => state.saveMilestoneDate);
+  const agreements = useProjectAgreementStore(
+    (state) => state.byProject[projectId] ?? EMPTY_AGREEMENTS,
+  );
+  const ensureAgreements = useProjectAgreementStore((state) => state.ensureAgreements);
 
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -68,6 +75,7 @@ export function ProjectProcessPipelineSection({
       try {
         await loadTeamProfiles();
         await loadProjectProcessItems(projectId);
+        await ensureAgreements(projectId);
       } catch (error) {
         if (!cancelled) {
           setLoadError(error instanceof Error ? error.message : "Błąd ładowania elementów procesu.");
@@ -82,7 +90,7 @@ export function ProjectProcessPipelineSection({
     return () => {
       cancelled = true;
     };
-  }, [loadProjectProcessItems, loadTeamProfiles, projectId, process.updatedAt]);
+  }, [ensureAgreements, loadProjectProcessItems, loadTeamProfiles, projectId, process.updatedAt]);
 
   async function handleConfirmSync() {
     setSyncing(true);
@@ -154,6 +162,7 @@ export function ProjectProcessPipelineSection({
         onToggleItem={(itemId, completed) =>
           void toggleItemCompletion(projectId, itemId, completed, resolvedActorName)
         }
+        agreements={agreements}
       />
 
       <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>

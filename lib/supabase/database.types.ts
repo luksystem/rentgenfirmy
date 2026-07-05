@@ -220,6 +220,8 @@ export type ProjectClientAgreementRow = {
   discussion_open: boolean;
   active_version_id: string | null;
   communication_protocols: string[] | null;
+  acceptance_deadline_stage_id: string | null;
+  blocks_next_stage: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -248,6 +250,8 @@ export type ProjectClientAgreementInsert = {
   discussion_open?: boolean;
   active_version_id?: string | null;
   communication_protocols?: string[] | null;
+  acceptance_deadline_stage_id?: string | null;
+  blocks_next_stage?: boolean;
   created_at?: string;
   updated_at?: string;
 };
@@ -794,6 +798,7 @@ export type ProjectProcessRow = {
   template_snapshot?: unknown;
   completions: Record<string, unknown>;
   milestone_dates: Record<string, unknown>;
+  active_stage_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -813,6 +818,7 @@ export type ProjectProcessItemRow = {
   signed_by: string | null;
   signed_by_name: string | null;
   signature_note: string | null;
+  blocks_next_stage: boolean;
   created_at: string;
   updated_at: string;
 };

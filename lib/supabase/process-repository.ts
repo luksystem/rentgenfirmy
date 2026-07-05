@@ -371,6 +371,36 @@ export async function updateProjectProcessMilestoneDate(
   return rowToProjectProcess(data);
 }
 
+export async function updateProjectProcessActiveStage(
+  projectId: string,
+  stageId: string | null,
+) {
+  const process = await fetchProjectProcess(projectId);
+  if (!process) {
+    throw new Error("Nie znaleziono procesu projektu.");
+  }
+
+  const updated: ProjectProcess = {
+    ...process,
+    activeStageId: stageId,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("project_processes")
+    .update(projectProcessToUpdate(updated))
+    .eq("project_id", projectId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToProjectProcess(data);
+}
+
 export async function ensureAnchoredTemplateSnapshot(
   projectId: string,
   liveTemplate: ProcessTemplate,

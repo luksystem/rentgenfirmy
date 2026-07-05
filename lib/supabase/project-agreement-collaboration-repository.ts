@@ -46,6 +46,8 @@ type AgreementRow = {
   discussion_open: boolean;
   active_version_id: string | null;
   communication_protocols?: string[] | null;
+  acceptance_deadline_stage_id?: string | null;
+  blocks_next_stage?: boolean | null;
   created_at: string;
   updated_at: string;
 };
@@ -93,6 +95,8 @@ export function rowToAgreement(row: AgreementRow): ProjectClientAgreement {
     communicationProtocols: Array.isArray(row.communication_protocols)
       ? row.communication_protocols.filter(Boolean)
       : [],
+    acceptanceDeadlineStageId: row.acceptance_deadline_stage_id ?? null,
+    blocksNextStage: Boolean(row.blocks_next_stage),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

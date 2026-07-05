@@ -43,6 +43,10 @@ export type ProjectClientAgreement = {
   discussionOpen: boolean;
   activeVersionId: string | null;
   communicationProtocols: string[];
+  /** Id etapu procesu (w template_snapshot projektu), przed którym wymagana jest akceptacja. */
+  acceptanceDeadlineStageId: string | null;
+  /** Jeśli true i ustalenie nie jest w pełni zaakceptowane, blokuje wybrany etap i wszystkie po nim. */
+  blocksNextStage: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -59,6 +63,8 @@ export type ProjectAgreementInput = {
   publicEnabled?: boolean;
   communicationProtocols?: string[];
   approverRoles?: import("@/lib/dashboard/agreement-collaboration-types").AgreementApproverRoleInput[];
+  acceptanceDeadlineStageId?: string | null;
+  blocksNextStage?: boolean;
 };
 
 export function normalizeAgreementOptionalDate(value: string | null | undefined): string | null {
@@ -77,6 +83,8 @@ export function normalizeProjectAgreementInput(input: ProjectAgreementInput): Pr
     costNote: input.costNote?.trim() || undefined,
     proposedWarrantyEndDate: normalizeAgreementOptionalDate(input.proposedWarrantyEndDate),
     communicationProtocols: [...new Set((input.communicationProtocols ?? []).map((item) => item.trim()).filter(Boolean))],
+    acceptanceDeadlineStageId: input.acceptanceDeadlineStageId?.trim() || null,
+    blocksNextStage: Boolean(input.blocksNextStage && input.acceptanceDeadlineStageId?.trim()),
   };
 }
 
@@ -120,6 +128,17 @@ export const AGREEMENT_STATUS_BADGE_CLASS: Record<AgreementStatusBadgeTone, stri
   success: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
   danger: "border-rose-500/40 bg-rose-500/10 text-rose-200",
 };
+
+/** Ustalenie ma deadline akceptacji i blokuje etap procesu, dopóki nie jest zaakceptowane. */
+export function isAgreementBlockingActive(
+  agreement: Pick<ProjectClientAgreement, "blocksNextStage" | "acceptanceDeadlineStageId" | "status">,
+): boolean {
+  return Boolean(
+    agreement.blocksNextStage &&
+      agreement.acceptanceDeadlineStageId &&
+      agreement.status !== "accepted",
+  );
+}
 
 /** Krótki opis procesu akceptacji na zwiniętej karcie (bez szczegółów ról). */
 export function getAgreementAcceptanceHint(

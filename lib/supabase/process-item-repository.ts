@@ -10,6 +10,7 @@ import { flattenProcessItems } from "@/lib/process/types";
 import { getSupabase } from "@/lib/supabase/client";
 import {
   projectProcessItemAssigneeUpdate,
+  projectProcessItemBlockingUpdate,
   projectProcessItemSignatureUpdate,
   projectProcessItemToUpdate,
   rowToProjectProcessItem,
@@ -175,6 +176,29 @@ export async function assignProjectProcessItem(
   const { data, error } = await supabase
     .from("project_process_items")
     .update(projectProcessItemAssigneeUpdate(assigneeId, assigneeName))
+    .eq("project_id", projectId)
+    .eq("template_item_id", templateItemId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToProjectProcessItem(data);
+}
+
+export async function setProjectProcessItemBlocksNextStage(
+  projectId: string,
+  templateItemId: string,
+  blocksNextStage: boolean,
+) {
+  const supabase = getSupabase();
+  await getProjectProcessItemRow(projectId, templateItemId);
+
+  const { data, error } = await supabase
+    .from("project_process_items")
+    .update(projectProcessItemBlockingUpdate(blocksNextStage))
     .eq("project_id", projectId)
     .eq("template_item_id", templateItemId)
     .select("*")

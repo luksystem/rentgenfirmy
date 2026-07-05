@@ -1,19 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { CheckCircle2, ChevronRight, Circle, FileCheck2, LayoutGrid, Receipt } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronRight,
+  Circle,
+  FileCheck2,
+  LayoutGrid,
+  Lock,
+  Receipt,
+} from "lucide-react";
 import { MilestoneDateBadge } from "@/components/process/milestone-date-badge";
 import { ProcessItemPanel } from "@/components/process/process-item-panel";
 import { formatAssigneeLabel } from "@/components/process/process-item-responsible-section";
 import { cn } from "@/lib/utils";
 import type { UserProfile } from "@/lib/auth/types";
+import { isAgreementBlockingActive, type ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
 import {
   getProcessItemVisualState,
   PROCESS_ITEM_VISUAL_CLASSES,
 } from "@/lib/process/item-completion-state";
 import { checklistProgress } from "@/lib/process/item-payload";
 import { canOpenProcessItem } from "@/lib/process/item-access";
+import {
+  buildAgreementBlockSources,
+  buildProcessItemBlockSources,
+  computeStageGate,
+  findUnblockedIncompleteStagesBeforeActive,
+} from "@/lib/process/stage-gate";
 import {
   PROCESS_ITEM_KIND_LABELS,
   type ChecklistItemPayload,
@@ -54,6 +70,8 @@ type ProcessPipelineProps = {
   kanbanPublicLinks?: Record<string, string>;
   /** Zamiast nawigacji na osobną stronę `/kanban/...` (np. osadzenie w publicznym dashboardzie). */
   onKanbanNavigate?: (kanbanHref: string) => void;
+  /** Ustalenia projektu — źródło blokady kaskadowej etapów (deadline akceptacji). */
+  agreements?: ProjectClientAgreement[];
 };
 
 export function ProcessPipeline({
@@ -75,9 +93,37 @@ export function ProcessPipeline({
   stacked = false,
   kanbanPublicLinks,
   onKanbanNavigate,
+  agreements,
 }: ProcessPipelineProps) {
   const [activeItem, setActiveItem] = useState<ProcessItem | null>(null);
   const ensureProjectProcessItems = useProcessStore((state) => state.ensureProjectProcessItems);
+
+  const stageGate = useMemo(() => {
+    const itemSources = buildProcessItemBlockSources(template, itemInstances, process);
+    const agreementSources = buildAgreementBlockSources(
+      template,
+      (agreements ?? []).map((agreement) => ({
+        title: agreement.title,
+        acceptanceDeadlineStageId: agreement.acceptanceDeadlineStageId,
+        blocksNextStage: agreement.blocksNextStage,
+        isFullyAccepted: !isAgreementBlockingActive(agreement),
+      })),
+      "Ustalenie",
+    );
+    return computeStageGate(template.stages.length, [...itemSources, ...agreementSources]);
+  }, [template, itemInstances, process, agreements]);
+
+  const softWarningIndexes = useMemo(
+    () =>
+      new Set(
+        findUnblockedIncompleteStagesBeforeActive(
+          template,
+          process,
+          stageGate.blockedStageIndexes,
+        ),
+      ),
+    [template, process, stageGate.blockedStageIndexes],
+  );
 
   async function handleOpenItem(item: ProcessItem) {
     if (interactive && projectId && !itemInstances?.[item.id]) {
@@ -101,6 +147,10 @@ export function ProcessPipeline({
             const stageTotal = stageItems.length;
             const stagePercent = stageTotal > 0 ? Math.round((stageCompleted / stageTotal) * 100) : 0;
             const isLastStage = stageIndex === template.stages.length - 1;
+            const isBlocked = stageGate.blockedStageIndexes.has(stageIndex);
+            const hasSoftWarning = !isBlocked && softWarningIndexes.has(stageIndex);
+            const blockReasons = stageGate.reasonsByStageIndex.get(stageIndex) ?? [];
+            const isActiveStage = process?.activeStageId === stage.id;
 
             return (
               <div
@@ -121,27 +171,66 @@ export function ProcessPipeline({
                 ) : null}
 
                 <div className={cn("relative mb-5", !stacked && "md:mb-6")}>
-                  <div className="relative overflow-hidden rounded-2xl border-2 border-accent/25 bg-gradient-to-br from-surface-elevated to-surface-muted/50 px-4 py-4 shadow-soft">
-                    <div className="absolute left-0 top-0 h-full w-1 bg-accent" aria-hidden />
+                  <div
+                    className={cn(
+                      "relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br from-surface-elevated to-surface-muted/50 px-4 py-4 shadow-soft",
+                      isActiveStage
+                        ? "border-accent shadow-[0_0_0_3px_rgba(var(--accent-rgb,59,130,246),0.15)]"
+                        : isBlocked
+                          ? "border-rose-500/40"
+                          : "border-accent/25",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "absolute left-0 top-0 h-full w-1",
+                        isBlocked ? "bg-rose-500" : "bg-accent",
+                      )}
+                      aria-hidden
+                    />
                     <div className="flex items-start gap-3 pl-2">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/15 text-sm font-bold text-accent">
-                        {stageIndex + 1}
+                      <span
+                        className={cn(
+                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold",
+                          isBlocked ? "bg-rose-500/15 text-rose-300" : "bg-accent/15 text-accent",
+                        )}
+                      >
+                        {isBlocked ? <Lock className="h-3.5 w-3.5" /> : stageIndex + 1}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-accent">
+                        <p
+                          className={cn(
+                            "flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em]",
+                            isBlocked ? "text-rose-300" : "text-accent",
+                          )}
+                        >
                           Etap {stageIndex + 1}
+                          {isActiveStage ? (
+                            <span className="rounded-full bg-accent/20 px-1.5 py-0.5 text-[9px] normal-case tracking-normal text-accent">
+                              Aktywny
+                            </span>
+                          ) : null}
                         </p>
                         <p className="mt-0.5 text-base font-semibold leading-snug text-foreground">
                           {stage.title}
                         </p>
                         {stageTotal > 0 ? (
                           <>
-                            <p className="mt-1.5 text-xs text-muted">
+                            <p className="mt-1.5 flex items-center gap-1 text-xs text-muted">
                               {stageCompleted}/{stageTotal} elementów ukończonych
+                              {hasSoftWarning ? (
+                                <AlertTriangle
+                                  className="h-3.5 w-3.5 shrink-0 text-amber-400"
+                                  aria-label="Etap nie jest w pełni ukończony"
+                                />
+                              ) : null}
                             </p>
                             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border/60">
                               <div
-                                className="h-full rounded-full bg-accent transition-all duration-300"
+                                className={cn(
+                                  "h-full rounded-full transition-all duration-300",
+                                  hasSoftWarning ? "bg-amber-400" : "bg-accent",
+                                )}
                                 style={{ width: `${stagePercent}%` }}
                               />
                             </div>
@@ -149,6 +238,12 @@ export function ProcessPipeline({
                         ) : (
                           <p className="mt-1.5 text-xs text-muted">Brak elementów w etapie</p>
                         )}
+                        {isBlocked && blockReasons.length > 0 ? (
+                          <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2 py-1.5 text-[11px] text-rose-200">
+                            <Lock className="mt-0.5 h-3 w-3 shrink-0" />
+                            <span>{blockReasons.join(" · ")}</span>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -222,8 +317,7 @@ export function ProcessPipeline({
                               !interactive ? kanbanPublicLinks?.[item.id] : undefined;
                             const canOpen = canOpenProcessItem(item, {
                               stageIndex,
-                              template,
-                              process,
+                              blockedStageIndexes: stageGate.blockedStageIndexes,
                             });
 
                             if (interactive) {

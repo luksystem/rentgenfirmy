@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { CheckCircle2, FileCheck2, LayoutGrid, Receipt, ShieldCheck } from "lucide-react";
+import { CheckCircle2, FileCheck2, Lock, LayoutGrid, Receipt, ShieldCheck } from "lucide-react";
 import { ProcessChecklistBoard } from "@/components/process/process-checklist-board";
 import { ProcessInternalAcceptanceBoard } from "@/components/process/process-internal-acceptance-board";
 import { ProcessKanbanBoard } from "@/components/process/process-kanban-board";
@@ -77,7 +77,9 @@ export function ProcessItemPanel({
   const [structureDraft, setStructureDraft] = useState<ChecklistItemPayload | null>(null);
   const [structureOpen, setStructureOpen] = useState(false);
   const [structureSaving, setStructureSaving] = useState(false);
+  const [blockingSaving, setBlockingSaving] = useState(false);
   const replaceProjectProcessItem = useProcessStore((state) => state.replaceProjectProcessItem);
+  const setItemBlocksNextStage = useProcessStore((state) => state.setItemBlocksNextStage);
   const storeInstance = useProcessStore((state) =>
     projectId && item ? state.projectProcessItems[projectId]?.[item.id] : undefined,
   );
@@ -115,6 +117,21 @@ export function ProcessItemPanel({
       setStructureSaving(false);
     }
   }, [checklistPayload, item, onSaveChecklist, structureDraft]);
+
+  const handleToggleBlocksNextStage = useCallback(
+    async (next: boolean) => {
+      if (!projectId || !item) {
+        return;
+      }
+      setBlockingSaving(true);
+      try {
+        await setItemBlocksNextStage(projectId, item.id, next);
+      } finally {
+        setBlockingSaving(false);
+      }
+    },
+    [item, projectId, setItemBlocksNextStage],
+  );
 
   if (!item) {
     return null;
@@ -158,6 +175,35 @@ export function ProcessItemPanel({
             showMobileNavPadding && "pb-24",
           )}
         >
+          {interactive && resolvedInstance && !isInternalAcceptance ? (
+            <label
+              className={cn(
+                "flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm",
+                resolvedInstance.blocksNextStage
+                  ? "border-rose-500/40 bg-rose-500/10"
+                  : "border-border/70 bg-surface-muted/20",
+              )}
+            >
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={resolvedInstance.blocksNextStage}
+                disabled={blockingSaving}
+                onChange={(event) => void handleToggleBlocksNextStage(event.target.checked)}
+              />
+              <span className="min-w-0">
+                <span className="flex items-center gap-1.5 font-medium text-foreground">
+                  <Lock className="h-3.5 w-3.5 shrink-0 text-rose-400" />
+                  Blokuj kolejny etap
+                </span>
+                <span className="mt-0.5 block text-[11px] text-muted">
+                  Jeśli ten element nie zostanie ukończony, kolejny etap procesu (i wszystkie po
+                  nim) będzie zablokowany.
+                </span>
+              </span>
+            </label>
+          ) : null}
+
           {interactive && resolvedInstance && item.kind !== "kanban" ? (
             <ProcessPublicLinkControls
               projectProcessItemId={resolvedInstance.id}

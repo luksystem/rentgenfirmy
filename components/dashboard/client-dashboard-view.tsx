@@ -678,6 +678,7 @@ export function ClientDashboardView({
                 stacked
                 kanbanPublicLinks={kanbanPublicLinks}
                 onKanbanNavigate={onKanbanTokenChange ? handleKanbanNavigate : undefined}
+                agreements={agreementSource}
               />
             ) : (
               <ProjectProcessPipelineSection

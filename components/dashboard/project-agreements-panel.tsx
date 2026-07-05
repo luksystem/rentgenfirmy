@@ -42,9 +42,11 @@ import { findTradeCatalogItem } from "@/lib/field-options";
 import { createPublicClientAgreement } from "@/lib/dashboard/public-agreement-client";
 import { useAgreementApprovalHint } from "@/hooks/use-agreement-approval-hint";
 import { fetchAgreementApproverRoles } from "@/lib/supabase/project-agreement-collaboration-repository";
+import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
 import { cn, formatDate } from "@/lib/utils";
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
 import { useProjectTradeStore } from "@/store/project-trade-store";
+import { useProcessStore } from "@/store/process-store";
 import { useAppStore } from "@/store/app-store";
 
 const EMPTY_TRADES: import("@/lib/dashboard/trade-types").ProjectTrade[] = [];
@@ -77,6 +79,8 @@ function emptyInput(): ProjectAgreementInput {
       { label: TEAM_APPROVER_ROLE_LABEL, isRequired: true, isTeamRole: true },
       { label: "Klient", isRequired: true, isClientRole: true },
     ],
+    acceptanceDeadlineStageId: null,
+    blocksNextStage: false,
   };
 }
 
@@ -96,6 +100,8 @@ function agreementToInput(agreement: ProjectClientAgreement): ProjectAgreementIn
       { label: TEAM_APPROVER_ROLE_LABEL, isRequired: true, isTeamRole: true },
       { label: "Klient", isRequired: true, isClientRole: true },
     ],
+    acceptanceDeadlineStageId: agreement.acceptanceDeadlineStageId,
+    blocksNextStage: agreement.blocksNextStage,
   };
 }
 
@@ -494,6 +500,37 @@ export function ProjectAgreementsPanel({
   const fieldOptions = useAppStore((state) => state.fieldOptions);
   const projects = useAppStore((state) => state.projects);
   const clients = useAppStore((state) => state.clients);
+
+  const currentProject = useMemo(
+    () => projects.find((entry) => entry.id === projectId),
+    [projects, projectId],
+  );
+  const ensureProjectProcess = useProcessStore((state) => state.ensureProjectProcess);
+  const processTemplate = useProcessStore((state) =>
+    currentProject
+      ? resolveAnchoredProcessTemplate(
+          state.getProjectProcess(projectId) ?? {
+            id: "",
+            projectId,
+            templateId: "",
+            templateSnapshot: null,
+            completions: {},
+            milestoneDates: {},
+            activeStageId: null,
+            createdAt: "",
+            updatedAt: "",
+          },
+          state.getTemplateByProjectType(currentProject.type),
+        )
+      : null,
+  );
+
+  useEffect(() => {
+    if (mode !== "team" || !currentProject) {
+      return;
+    }
+    void ensureProjectProcess(projectId, currentProject.type);
+  }, [currentProject, ensureProjectProcess, mode, projectId]);
 
   const projectClient = useMemo(() => {
     const project = projects.find((entry) => entry.id === projectId);
@@ -900,6 +937,69 @@ export function ProjectAgreementsPanel({
                 placeholder="np. wycena orientacyjna, do potwierdzenia po pomiarach"
               />
             </Field>
+
+            {mode === "team" ? (
+              <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/10 p-3">
+                <p className="text-sm font-medium text-foreground">Deadline akceptacji</p>
+                <p className="text-xs text-muted">
+                  Wskaż etap procesu, przed którym to ustalenie musi być zaakceptowane przez
+                  wszystkie role. Lista etapów pochodzi z procesu wczytanego do tego projektu.
+                </p>
+                <Field label="Etap procesu">
+                  <select
+                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    value={form.acceptanceDeadlineStageId ?? ""}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        acceptanceDeadlineStageId: event.target.value || null,
+                        blocksNextStage: event.target.value ? current.blocksNextStage : false,
+                      }))
+                    }
+                  >
+                    <option value="">Brak (nie wiąż z etapem procesu)</option>
+                    {(processTemplate?.stages ?? []).map((stage, index) => (
+                      <option key={stage.id} value={stage.id}>
+                        Etap {index + 1}: {stage.title}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                {!processTemplate?.stages.length ? (
+                  <p className="text-xs text-amber-400">
+                    Ten projekt nie ma jeszcze wczytanego procesu — etapy pojawią się tu po jego
+                    uruchomieniu.
+                  </p>
+                ) : null}
+                <label
+                  className={cn(
+                    "flex items-start gap-2 rounded-lg border px-3 py-2 text-sm",
+                    !form.acceptanceDeadlineStageId
+                      ? "border-border/60 bg-surface-muted/20 text-muted"
+                      : form.blocksNextStage
+                        ? "border-rose-500/40 bg-rose-500/10"
+                        : "border-border/70",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={form.blocksNextStage ?? false}
+                    disabled={!form.acceptanceDeadlineStageId}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, blocksNextStage: event.target.checked }))
+                    }
+                  />
+                  <span>
+                    <span className="font-medium text-foreground">Blokuj kolejny etap</span>
+                    <span className="mt-0.5 block text-[11px] text-muted">
+                      Wybrany etap (i wszystkie po nim) nie ruszy, dopóki wszystkie role nie
+                      zaakceptują tego ustalenia.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            ) : null}
 
             {communicationProtocolOptions.length > 0 ? (
               <div className="rounded-xl border border-border/70 bg-surface-muted/10 p-3">

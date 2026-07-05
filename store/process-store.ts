@@ -18,6 +18,7 @@ import {
   ensureProjectProcessItems,
   mapProjectProcessItemsByTemplateId,
   saveProjectProcessItemChecklist,
+  setProjectProcessItemBlocksNextStage,
   signProjectProcessItem,
 } from "@/lib/supabase/process-item-repository";
 import {
@@ -37,6 +38,7 @@ import {
   fetchProjectProcesses,
   getOrCreateProjectProcess,
   saveProcessTemplate,
+  updateProjectProcessActiveStage,
   updateProjectProcessCompletion,
   updateProjectProcessMilestoneDate,
 } from "@/lib/supabase/process-repository";
@@ -102,6 +104,12 @@ type ProcessStore = {
     milestoneId: string,
     plannedDate: string | null,
   ) => Promise<void>;
+  setItemBlocksNextStage: (
+    projectId: string,
+    templateItemId: string,
+    blocksNextStage: boolean,
+  ) => Promise<void>;
+  setActiveStage: (projectId: string, stageId: string | null) => Promise<void>;
   loadElements: () => Promise<void>;
   createElement: (input: {
     kind: ProcessItemKind;
@@ -437,6 +445,30 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
       }));
       throw error;
     }
+  },
+
+  setItemBlocksNextStage: async (projectId, templateItemId, blocksNextStage) => {
+    const saved = await setProjectProcessItemBlocksNextStage(
+      projectId,
+      templateItemId,
+      blocksNextStage,
+    );
+    set((state) => ({
+      projectProcessItems: {
+        ...state.projectProcessItems,
+        [projectId]: {
+          ...state.projectProcessItems[projectId],
+          [templateItemId]: saved,
+        },
+      },
+    }));
+  },
+
+  setActiveStage: async (projectId, stageId) => {
+    const updated = await updateProjectProcessActiveStage(projectId, stageId);
+    set((state) => ({
+      projectProcesses: { ...state.projectProcesses, [projectId]: updated },
+    }));
   },
 
   loadElements: async () => {

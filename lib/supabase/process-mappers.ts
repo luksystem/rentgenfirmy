@@ -112,6 +112,7 @@ export function rowToProjectProcess(row: ProjectProcessRow): ProjectProcess {
         ? (completions as Record<string, ProcessItemCompletion>)
         : {},
     milestoneDates: normalizeMilestoneDates(row.milestone_dates),
+    activeStageId: row.active_stage_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -123,6 +124,7 @@ export function projectProcessToUpdate(process: ProjectProcess) {
     template_snapshot: process.templateSnapshot,
     completions: process.completions,
     milestone_dates: process.milestoneDates,
+    active_stage_id: process.activeStageId,
     updated_at: process.updatedAt,
   };
 }

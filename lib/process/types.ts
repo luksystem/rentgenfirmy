@@ -126,6 +126,8 @@ export type ProjectProcessItem = {
   signedBy: string | null;
   signedByName: string | null;
   signatureNote: string | null;
+  /** Ustawiane z poziomu projektu — jeśli true i element nie ukończony, blokuje kolejny etap. */
+  blocksNextStage: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -137,6 +139,8 @@ export type ProjectProcess = {
   templateSnapshot: ProcessTemplate | null;
   completions: Record<string, ProcessItemCompletion>;
   milestoneDates: Record<string, string | null>;
+  /** Etap ręcznie oznaczony jako aktualnie aktywny (widok klienta, ostrzeżenia). */
+  activeStageId: string | null;
   createdAt: string;
   updatedAt: string;
 };
