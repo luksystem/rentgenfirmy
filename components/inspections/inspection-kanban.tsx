@@ -121,10 +121,12 @@ export function InspectionKanban() {
 
   const { activeColumnId, scrollerRef, scrollToColumn, setColumnRef } = useKanbanMobileColumns(columns);
 
-  const loadItems = useCallback(async (options?: { silent?: boolean }) => {
-    const silent = options?.silent ?? false;
-    if (silent) setRefreshing(true);
-    else setLoading(true);
+  const loadItems = useCallback(async (options?: { manual?: boolean }) => {
+    if (options?.manual) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     try {
       const response = await fetch("/api/inspections", { credentials: "include" });
@@ -132,10 +134,12 @@ export function InspectionKanban() {
       if (!response.ok) {
         throw new Error(payload.error ?? "Nie udało się wczytać przeglądów.");
       }
-      setItems(payload.items ?? []);
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("inspections-count-changed"));
-      }
+      const next = (payload.items ?? []) as InspectionRecord[];
+      setItems((current) => {
+        const currentSig = current.map((entry) => `${entry.id}:${entry.updatedAt}`).join("|");
+        const nextSig = next.map((entry) => `${entry.id}:${entry.updatedAt}`).join("|");
+        return currentSig === nextSig ? current : next;
+      });
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Błąd.");
     } finally {
@@ -150,19 +154,10 @@ export function InspectionKanban() {
 
   useEffect(() => {
     function onReload() {
-      void loadItems({ silent: true });
+      void loadItems();
     }
     window.addEventListener("inspections-reload", onReload);
     return () => window.removeEventListener("inspections-reload", onReload);
-  }, [loadItems]);
-
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") {
-        void loadItems({ silent: true });
-      }
-    }, 30000);
-    return () => window.clearInterval(interval);
   }, [loadItems]);
 
   const grouped = useMemo(() => {
@@ -270,7 +265,7 @@ export function InspectionKanban() {
           variant="outline"
           size="sm"
           disabled={refreshing}
-          onClick={() => void loadItems({ silent: true })}
+          onClick={() => void loadItems({ manual: true })}
         >
           {refreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
           Odśwież
@@ -380,6 +375,7 @@ export function InspectionKanban() {
       </div>
 
       <InspectionDetailModal
+        key={selectedId ?? "closed"}
         item={selected}
         open={Boolean(selected)}
         onClose={() => setSelectedId(null)}

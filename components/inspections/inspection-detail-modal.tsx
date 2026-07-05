@@ -15,6 +15,8 @@ import { isInspectionPlanningDue } from "@/lib/inspections/schedule";
 import {
   INSPECTION_REACTION_EMOJIS,
   INSPECTION_STATUS_LABELS,
+  buildInspectionProtocolData,
+  parseInspectionProtocolData,
   type InspectionRecord,
   type InspectionStatus,
 } from "@/lib/inspections/types";
@@ -46,9 +48,21 @@ export function InspectionDetailModal({
   const [confirmedDate, setConfirmedDate] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [protocolNotes, setProtocolNotes] = useState("");
+  const [additionalWork, setAdditionalWork] = useState("");
+  const [recommendations, setRecommendations] = useState("");
 
   useEffect(() => {
     if (!open || !item) {
+      setBusy(false);
+      setLoading(false);
+      setError(null);
+      setComment("");
+      setDetail(null);
+      setConfirmedDate("");
+      setAssigneeId("");
+      setProtocolNotes("");
+      setAdditionalWork("");
+      setRecommendations("");
       return;
     }
 
@@ -61,16 +75,19 @@ export function InspectionDetailModal({
           throw new Error(payload.error ?? "Nie udało się wczytać szczegółów.");
         }
         const loaded = payload.item as InspectionRecord;
+        const protocol = parseInspectionProtocolData(loaded.protocolData);
         setDetail(loaded);
         setConfirmedDate(loaded.confirmedDate ?? "");
         setAssigneeId(loaded.assigneeId ?? "");
-        setProtocolNotes(String(loaded.protocolData.notes ?? ""));
+        setProtocolNotes(protocol.notes ?? "");
+        setAdditionalWork(protocol.additionalWork ?? "");
+        setRecommendations(protocol.recommendations ?? "");
       })
       .catch((loadError) => {
         setError(loadError instanceof Error ? loadError.message : "Błąd.");
       })
       .finally(() => setLoading(false));
-  }, [open, item]);
+  }, [open, item?.id]);
 
   useEffect(() => {
     void fetchTeamProfiles()
@@ -198,7 +215,11 @@ export function InspectionDetailModal({
 
     await patchDetail({
       status: "billing",
-      protocolData: { ...detail?.protocolData, notes: protocolNotes },
+      protocolData: buildInspectionProtocolData(detail?.protocolData, {
+        notes: protocolNotes,
+        additionalWork,
+        recommendations,
+      }),
       protocolCompanySignedAt: now,
       protocolClientSignedAt: now,
       protocolCompanySigner: signer,
@@ -238,10 +259,10 @@ export function InspectionDetailModal({
       onClose();
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("inspections-count-changed"));
-        window.dispatchEvent(new CustomEvent("inspections-reload"));
       }
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Błąd.");
+    } finally {
       setBusy(false);
     }
   }
@@ -321,7 +342,7 @@ export function InspectionDetailModal({
               <Button type="button" size="sm" disabled={busy} onClick={() => void handlePlanConfirm()}>
                 Zapisz i zaplanuj
               </Button>
-              {(["quoting", "preliminary", "planned", "completed"] as InspectionStatus[]).map((status) => (
+              {(["preliminary", "planned", "completed"] as InspectionStatus[]).map((status) => (
                 <Button
                   key={status}
                   type="button"
@@ -349,7 +370,23 @@ export function InspectionDetailModal({
                   rows={4}
                   value={protocolNotes}
                   onChange={(event) => setProtocolNotes(event.target.value)}
-                  placeholder="Wyniki przeglądu, uwagi, zalecenia…"
+                  placeholder="Wyniki przeglądu, stan systemu, uwagi z wizyty…"
+                />
+              </Field>
+              <Field label="Prace dodatkowe">
+                <Textarea
+                  rows={3}
+                  value={additionalWork}
+                  onChange={(event) => setAdditionalWork(event.target.value)}
+                  placeholder="Co wykonano poza standardowym zakresem przeglądu…"
+                />
+              </Field>
+              <Field label="Zalecenia na następny przegląd">
+                <Textarea
+                  rows={3}
+                  value={recommendations}
+                  onChange={(event) => setRecommendations(event.target.value)}
+                  placeholder="Co należy wykonać przy kolejnym przeglądzie…"
                 />
               </Field>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -360,7 +397,11 @@ export function InspectionDetailModal({
                   disabled={busy}
                   onClick={() =>
                     void patchDetail({
-                      protocolData: { ...detail.protocolData, notes: protocolNotes },
+                      protocolData: buildInspectionProtocolData(detail.protocolData, {
+                        notes: protocolNotes,
+                        additionalWork,
+                        recommendations,
+                      }),
                     })
                   }
                 >

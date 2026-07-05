@@ -261,10 +261,8 @@ export function ClientDashboardView({
           return;
         }
         const payload = (await response.json()) as { items?: Array<{ status: string }> };
-        const active =
-          (payload.items ?? []).filter((entry) => entry.status !== "quoting").length > 0;
         if (!cancelled) {
-          setHasClientInspections(active);
+          setHasClientInspections((payload.items ?? []).length > 0);
         }
       })
       .catch(() => {

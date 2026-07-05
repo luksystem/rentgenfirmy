@@ -509,7 +509,6 @@ export async function countInspectionAlerts(profileId?: string | null) {
     }),
   ).length;
 
-  const quotingCount = items.filter((item) => item.status === "quoting").length;
   const billingDueCount = items.filter((item) => item.status === "billing").length;
   const billingAlertCount =
     profileId && settings.billingResponsibleProfileId === profileId ? billingDueCount : 0;
@@ -517,10 +516,9 @@ export async function countInspectionAlerts(profileId?: string | null) {
   return {
     planningDueCount,
     planningOverdueCount,
-    quotingCount,
     billingDueCount,
     billingAlertCount,
-    newCount: planningDueCount + quotingCount + billingAlertCount,
+    newCount: planningDueCount + billingAlertCount,
   };
 }
 

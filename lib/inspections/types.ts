@@ -1,5 +1,4 @@
 export const INSPECTION_STATUSES = [
-  "quoting",
   "preliminary",
   "planned",
   "completed",
@@ -9,7 +8,6 @@ export const INSPECTION_STATUSES = [
 export type InspectionStatus = (typeof INSPECTION_STATUSES)[number];
 
 export const INSPECTION_KANBAN_COLUMNS: InspectionStatus[] = [
-  "quoting",
   "preliminary",
   "planned",
   "completed",
@@ -18,7 +16,6 @@ export const INSPECTION_KANBAN_COLUMNS: InspectionStatus[] = [
 ];
 
 export const INSPECTION_STATUS_LABELS: Record<InspectionStatus, string> = {
-  quoting: "Ofertowanie",
   preliminary: "Wstępnie zaplanowane",
   planned: "Zaplanowane",
   completed: "Zrealizowane",
@@ -38,6 +35,37 @@ export const INSPECTION_FREQUENCY_LABELS: Record<InspectionFrequency, string> = 
 
 export const INSPECTION_REACTION_EMOJIS = ["👍", "❤️", "✅"] as const;
 export type InspectionReactionEmoji = (typeof INSPECTION_REACTION_EMOJIS)[number];
+
+export type InspectionProtocolData = {
+  notes?: string;
+  additionalWork?: string;
+  recommendations?: string;
+};
+
+export function parseInspectionProtocolData(
+  data: Record<string, unknown> | null | undefined,
+): InspectionProtocolData {
+  if (!data || typeof data !== "object") {
+    return {};
+  }
+  return {
+    notes: typeof data.notes === "string" ? data.notes : "",
+    additionalWork: typeof data.additionalWork === "string" ? data.additionalWork : "",
+    recommendations: typeof data.recommendations === "string" ? data.recommendations : "",
+  };
+}
+
+export function buildInspectionProtocolData(
+  base: Record<string, unknown> | null | undefined,
+  fields: InspectionProtocolData,
+): Record<string, unknown> {
+  return {
+    ...(base && typeof base === "object" ? base : {}),
+    notes: fields.notes ?? "",
+    additionalWork: fields.additionalWork ?? "",
+    recommendations: fields.recommendations ?? "",
+  };
+}
 
 export type InspectionSystemDefinition = {
   code: string;
