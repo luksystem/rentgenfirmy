@@ -1,0 +1,94 @@
+[
+  {
+    "code": "heating",
+    "sort_order": 1,
+    "official_name_en": "Heating",
+    "official_name_pl": "Ogrzewanie",
+    "description_en": "Smart-ready services improving performance of space heating systems: storage, generation, distribution and heat emission.",
+    "description_pl": "Usługi smart-ready poprawiające działanie instalacji grzewczych: magazynowanie, wytwarzanie, dystrybucja i emisja ciepła.",
+    "source_document": "Delegated Regulation (EU) 2020/2155, Annex IV(a); DG ENER Technical Study 2020",
+    "references": [
+      { "document": "32020R2155", "annex": "IV", "article": null, "note": "Technical domain (a)" }
+    ]
+  },
+  {
+    "code": "cooling",
+    "sort_order": 2,
+    "official_name_en": "Cooling",
+    "official_name_pl": "Chłodzenie",
+    "description_en": "Services for heat storage, emission control, generators and space cooling energy use.",
+    "description_pl": "Usługi magazynowania chłodu, sterowania emisją, agregatów chłodu i zużycia energii na chłodzenie.",
+    "source_document": "Delegated Regulation (EU) 2020/2155, Annex IV(b)",
+    "references": [{ "document": "32020R2155", "annex": "IV", "article": null, "note": "Technical domain (b)" }]
+  },
+  {
+    "code": "domestic_hot_water",
+    "sort_order": 3,
+    "official_name_en": "Domestic hot water",
+    "official_name_pl": "Ciepła woda użytkowa (CWU)",
+    "description_en": "Intelligent control of DHW generation, storage and distribution.",
+    "description_pl": "Inteligentne sterowanie wytwarzaniem, magazynowaniem i dystrybucją CWU.",
+    "source_document": "Delegated Regulation (EU) 2020/2155, Annex IV(c)",
+    "references": [{ "document": "32020R2155", "annex": "IV", "article": null, "note": "Technical domain (c)" }]
+  },
+  {
+    "code": "ventilation",
+    "sort_order": 4,
+    "official_name_en": "Ventilation",
+    "official_name_pl": "Wentylacja",
+    "description_en": "Controlled ventilation: air flow, indoor air quality and related temperature control services.",
+    "description_pl": "Wentylacja kontrolowana: przepływ powietrza, jakość powietrza wewnętrznego i powiązane sterowanie temperaturą.",
+    "source_document": "Delegated Regulation (EU) 2020/2155, Annex IV(d); Art. 2(18) definition of ventilation",
+    "references": [{ "document": "32020R2155", "annex": "IV", "article": "2(18)" }]
+  },
+  {
+    "code": "lighting",
+    "sort_order": 5,
+    "official_name_en": "Lighting",
+    "official_name_pl": "Oświetlenie",
+    "description_en": "Electric lighting control: daylight, scheduling, occupancy, dimming.",
+    "description_pl": "Sterowanie oświetleniem elektrycznym: światło dzienne, harmonogramy, obecność, ściemnianie.",
+    "source_document": "Delegated Regulation (EU) 2020/2155, Annex IV(e)",
+    "references": [{ "document": "32020R2155", "annex": "IV", "article": null }]
+  },
+  {
+    "code": "dynamic_building_envelope",
+    "sort_order": 6,
+    "official_name_en": "Dynamic building envelope",
+    "official_name_pl": "Dynamiczna powłoka budynku",
+    "description_en": "Smart operation of passive features: movable shading, operable windows, reducing HVAC need and improving comfort.",
+    "description_pl": "Inteligentne działanie elementów pasywnych: ruchome osłony, okna, redukcja zapotrzebowania HVAC i komfort.",
+    "source_document": "Delegated Regulation (EU) 2020/2155, Annex IV(f)",
+    "references": [{ "document": "32020R2155", "annex": "IV", "article": null }]
+  },
+  {
+    "code": "electricity",
+    "sort_order": 7,
+    "official_name_en": "Electricity",
+    "official_name_pl": "Elektryczność",
+    "description_en": "Monitoring and optimization of on-site generation, storage and grid exchange.",
+    "description_pl": "Monitorowanie i optymalizacja lokalnej generacji, magazynowania i wymiany z siecią.",
+    "source_document": "Delegated Regulation (EU) 2020/2155, Annex IV(g)",
+    "references": [{ "document": "32020R2155", "annex": "IV", "article": null }]
+  },
+  {
+    "code": "electric_vehicle_charging",
+    "sort_order": 8,
+    "official_name_en": "Electric vehicle charging",
+    "official_name_pl": "Ładowanie pojazdów elektrycznych",
+    "description_en": "Building services for EV charging: capacity, load management, information, V2G flexibility.",
+    "description_pl": "Usługi budynku dla ładowania EV: moc, zarządzanie obciążeniem, informacja, elastyczność V2G.",
+    "source_document": "Delegated Regulation (EU) 2020/2155, Annex IV(h)",
+    "references": [{ "document": "32020R2155", "annex": "IV", "article": null }]
+  },
+  {
+    "code": "monitoring_and_control",
+    "sort_order": 9,
+    "official_name_en": "Monitoring and control",
+    "official_name_pl": "Monitorowanie i sterowanie",
+    "description_en": "Cross-cutting building automation: central reporting, grid integration, fault detection, DSM, occupancy orchestration.",
+    "description_pl": "Automatyka obejmująca cały budynek: raportowanie, integracja z siecią, diagnostyka, DSM, obecność.",
+    "source_document": "Delegated Regulation (EU) 2020/2155, Annex IV(i)",
+    "references": [{ "document": "32020R2155", "annex": "IV", "article": null }]
+  }
+]

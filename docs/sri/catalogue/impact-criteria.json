@@ -1,0 +1,72 @@
+[
+  {
+    "code": "energy_efficiency",
+    "sort_order": 1,
+    "official_name_en": "Energy efficiency",
+    "official_name_pl": "Efektywność energetyczna",
+    "description_en": "Contribution of smart-ready services to on-site energy savings (not whole-building EPC, only smart-control contribution).",
+    "description_pl": "Wkład usług smart-ready w oszczędności energii na miejscu (nie cały EPC, tylko efekt sterowania).",
+    "key_functionality_code": "energy_performance_and_operation",
+    "source_document": "Delegated Regulation (EU) 2020/2155, Annex II(a); Annex III(2)"
+  },
+  {
+    "code": "maintenance_and_fault_prediction",
+    "sort_order": 2,
+    "official_name_en": "Maintenance and fault prediction",
+    "official_name_pl": "Konserwacja i predykcja awarii",
+    "description_en": "Automated fault detection, diagnosis and improved TBS maintenance.",
+    "description_pl": "Automatyczna detekcja usterek, diagnostyka i lepsza eksploatacja TBS.",
+    "key_functionality_code": "energy_performance_and_operation",
+    "source_document": "Delegated Regulation (EU) 2020/2155, Annex II(b); Annex III(2)"
+  },
+  {
+    "code": "comfort",
+    "sort_order": 3,
+    "official_name_en": "Comfort",
+    "official_name_pl": "Komfort",
+    "description_en": "Thermal, acoustic and visual comfort including adequate lighting without glare.",
+    "description_pl": "Komfort termiczny, akustyczny i wizualny, w tym oświetlenie bez olśnienia.",
+    "key_functionality_code": "response_to_occupant_needs",
+    "source_document": "Delegated Regulation (EU) 2020/2155, Annex II(c); Annex III(3)"
+  },
+  {
+    "code": "convenience",
+    "sort_order": 4,
+    "official_name_en": "Convenience",
+    "official_name_pl": "Wygoda",
+    "description_en": "Reduced manual interaction with building systems.",
+    "description_pl": "Mniejsza liczba ręcznych interakcji z instalacjami budynku.",
+    "key_functionality_code": "response_to_occupant_needs",
+    "source_document": "Delegated Regulation (EU) 2020/2155, Annex II(d); Annex III(3)"
+  },
+  {
+    "code": "health_wellbeing_accessibility",
+    "sort_order": 5,
+    "official_name_en": "Health, well-being and accessibility",
+    "official_name_pl": "Zdrowie, dobrostan i dostępność",
+    "description_en": "Indoor air quality, wellbeing and inclusive access to building functions.",
+    "description_pl": "Jakość powietrza wewnętrznego, dobrostan i dostępność funkcji budynku.",
+    "key_functionality_code": "response_to_occupant_needs",
+    "source_document": "Delegated Regulation (EU) 2020/2155, Annex II(e); Annex III(3)"
+  },
+  {
+    "code": "information_to_occupants",
+    "sort_order": 6,
+    "official_name_en": "Information to occupants",
+    "official_name_pl": "Informacja dla użytkowników",
+    "description_en": "Provision of information on building operation to occupants.",
+    "description_pl": "Dostarczanie użytkownikom informacji o pracy budynku.",
+    "key_functionality_code": "response_to_occupant_needs",
+    "source_document": "Delegated Regulation (EU) 2020/2155, Annex II(f); Annex III(3)"
+  },
+  {
+    "code": "energy_flexibility_and_storage",
+    "sort_order": 7,
+    "official_name_en": "Energy flexibility and storage",
+    "official_name_pl": "Elastyczność energetyczna i magazynowanie",
+    "description_en": "Flexibility for electricity, district heating/cooling grids and on-site storage including EV batteries.",
+    "description_pl": "Elastyczność względem sieci elektrycznej, ciepłowniczych/chłodniczych i magazynów, w tym EV.",
+    "key_functionality_code": "energy_flexibility",
+    "source_document": "Delegated Regulation (EU) 2020/2155, Annex II(g); Annex III(4)"
+  }
+]
