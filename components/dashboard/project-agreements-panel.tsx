@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Copy, Link2, Pencil, Plus, Send, Trash2, X } from "lucide-react";
+import { Check, Copy, Link2, Lock, Pencil, Plus, Send, Trash2, X } from "lucide-react";
 import { AgreementCollaborationPanel } from "@/components/dashboard/agreement-collaboration-panel";
 import { AgreementBatchDeliveryActions } from "@/components/dashboard/agreement-batch-delivery-actions";
 import { AgreementDeliveryActions } from "@/components/dashboard/agreement-delivery-actions";
@@ -24,6 +24,7 @@ import {
   PROJECT_AGREEMENT_CATEGORY_LABELS,
   buildAgreementCollapsibleMeta,
   formatAgreementCost,
+  isAgreementBlockingActive,
   isAgreementPendingAttention,
   normalizeProjectAgreementInput,
   type ProjectAgreementCategory,
@@ -146,6 +147,7 @@ function AgreementCard({
   defaultExpanded = false,
   publicDashboardToken,
   projectId,
+  blockingStageLabel,
 }: {
   agreement: ProjectClientAgreement;
   mode: "team" | "client";
@@ -166,6 +168,8 @@ function AgreementCard({
   defaultExpanded?: boolean;
   publicDashboardToken?: string;
   projectId?: string;
+  /** Nazwa etapu procesu blokowanego przez to ustalenie — pokazuje kłódkę na karcie. */
+  blockingStageLabel?: string | null;
 }) {
   const [busy, setBusy] = useState(false);
   const [responseNote, setResponseNote] = useState("");
@@ -173,6 +177,7 @@ function AgreementCard({
   const meta = buildAgreementCollapsibleMeta(agreement);
   const approvalHint = useAgreementApprovalHint(agreement);
   const costLabel = formatAgreementCost(agreement);
+  const isBlocking = isAgreementBlockingActive(agreement);
 
   useEffect(() => {
     if (!defaultExpanded || !cardRef.current) {
@@ -199,6 +204,16 @@ function AgreementCard({
         statusTone={meta.statusTone}
         hint={approvalHint ?? meta.hint}
         defaultExpanded={defaultExpanded}
+        banner={
+          isBlocking ? (
+            <div className="flex items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-1.5 text-xs font-medium text-rose-300">
+              <Lock className="h-3.5 w-3.5 shrink-0" />
+              {blockingStageLabel
+                ? `Blokuje etap „${blockingStageLabel}” do czasu akceptacji`
+                : "Blokuje kolejny etap procesu do czasu akceptacji"}
+            </div>
+          ) : null
+        }
         preview={
           <>
             {agreement.communicationProtocols?.length ? (
@@ -549,6 +564,14 @@ export function ProjectAgreementsPanel({
     [storeAgreements, seedAgreements],
   );
 
+  const stageLabelById = useMemo(() => {
+    const map = new Map<string, string>();
+    (processTemplate?.stages ?? []).forEach((stage, index) => {
+      map.set(stage.id, `Etap ${index + 1}: ${stage.title}`);
+    });
+    return map;
+  }, [processTemplate]);
+
   const [filter, setFilter] = useState<FilterKey>(focusAgreementId ? "all" : mode === "client" ? "pending_client" : "all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -848,6 +871,11 @@ export function ProjectAgreementsPanel({
             defaultExpanded={agreement.id === focusAgreementId}
             publicDashboardToken={publicDashboardToken}
             projectId={projectId}
+            blockingStageLabel={
+              agreement.acceptanceDeadlineStageId
+                ? (stageLabelById.get(agreement.acceptanceDeadlineStageId) ?? null)
+                : null
+            }
           />
         ))}
       </div>

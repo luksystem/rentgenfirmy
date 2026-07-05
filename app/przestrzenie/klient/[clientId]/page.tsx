@@ -61,6 +61,7 @@ function ClientDashboardPageContent() {
   const agreementFromQuery = searchParams.get("agreement");
   const initialTab =
     tabFromQuery === "agreements" ||
+    tabFromQuery === "changes" ||
     tabFromQuery === "offers" ||
     tabFromQuery === "inspections" ||
     tabFromQuery === "home" ||

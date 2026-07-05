@@ -258,6 +258,54 @@ export type ProjectClientAgreementInsert = {
 
 export type ProjectClientAgreementUpdate = Partial<ProjectClientAgreementInsert>;
 
+export type ProjectChangeRequestRow = {
+  id: string;
+  project_id: string;
+  title: string;
+  body: string;
+  status: string;
+  proposed_cost_net: number | string | null;
+  proposed_cost_gross: number | string | null;
+  proposed_cost_vat_rate: number | string | null;
+  cost_note: string | null;
+  created_by_name: string;
+  created_by_side: string;
+  submitted_at: string | null;
+  client_responded_at: string | null;
+  client_response_name: string | null;
+  client_response_note: string | null;
+  position: number;
+  acceptance_deadline_stage_id: string | null;
+  blocks_next_stage: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectChangeRequestInsert = {
+  id?: string;
+  project_id: string;
+  title: string;
+  body?: string;
+  status?: string;
+  proposed_cost_net?: number | null;
+  proposed_cost_gross?: number | null;
+  proposed_cost_vat_rate?: number | null;
+  cost_note?: string | null;
+  created_by_name: string;
+  created_by_side?: string;
+  submitted_at?: string | null;
+  client_responded_at?: string | null;
+  client_response_name?: string | null;
+  client_response_note?: string | null;
+  position?: number;
+  acceptance_deadline_stage_id?: string | null;
+  blocks_next_stage?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ProjectChangeRequestUpdate = Partial<ProjectChangeRequestInsert>;
+
 export type ProjectAgreementApproverRoleRow = {
   id: string;
   agreement_id: string;
@@ -1004,6 +1052,12 @@ export type Database = {
         Row: ProjectClientAgreementRow;
         Insert: ProjectClientAgreementInsert;
         Update: ProjectClientAgreementUpdate;
+        Relationships: [];
+      };
+      project_change_requests: {
+        Row: ProjectChangeRequestRow;
+        Insert: ProjectChangeRequestInsert;
+        Update: ProjectChangeRequestUpdate;
         Relationships: [];
       };
       project_agreement_approver_roles: {

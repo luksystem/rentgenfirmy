@@ -17,6 +17,11 @@ import {
 } from "@/lib/dashboard/client-offer-summary";
 import { isAgreementPendingAttention } from "@/lib/dashboard/agreement-types";
 import type {
+  ProjectChangeRequest,
+  ProjectChangeRequestStatus,
+} from "@/lib/dashboard/change-request-types";
+import { sumAcceptedOffersGross } from "@/lib/dashboard/project-cost-summary";
+import type {
   DashboardContentSection,
   DashboardContentType,
   ProjectDashboardContent,
@@ -65,6 +70,29 @@ type SpaceRow = {
   public_access_password_hash?: string | null;
   public_access_username?: string | null;
   public_author_name?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type ChangeRequestRow = {
+  id: string;
+  project_id: string;
+  title: string;
+  body: string;
+  status: string;
+  proposed_cost_net: number | string | null;
+  proposed_cost_gross: number | string | null;
+  proposed_cost_vat_rate: number | string | null;
+  cost_note: string | null;
+  created_by_name: string;
+  created_by_side: string;
+  submitted_at: string | null;
+  client_responded_at: string | null;
+  client_response_name: string | null;
+  client_response_note: string | null;
+  position: number;
+  acceptance_deadline_stage_id: string | null;
+  blocks_next_stage: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -173,6 +201,35 @@ function isCategory(value: string): value is ProjectAgreementCategory {
 
 function isStatus(value: string): value is ProjectAgreementStatus {
   return ["draft", "pending_client", "accepted", "rejected", "cancelled"].includes(value);
+}
+
+function isChangeRequestStatus(value: string): value is ProjectChangeRequestStatus {
+  return ["draft", "pending_client", "accepted", "rejected", "cancelled"].includes(value);
+}
+
+function rowToChangeRequest(row: ChangeRequestRow): ProjectChangeRequest {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    title: row.title,
+    body: row.body,
+    status: isChangeRequestStatus(row.status) ? row.status : "draft",
+    proposedCostNet: parseNumber(row.proposed_cost_net),
+    proposedCostGross: parseNumber(row.proposed_cost_gross),
+    proposedCostVatRate: parseNumber(row.proposed_cost_vat_rate),
+    costNote: row.cost_note,
+    createdByName: row.created_by_name,
+    createdBySide: row.created_by_side === "client" ? "client" : "team",
+    submittedAt: row.submitted_at,
+    clientRespondedAt: row.client_responded_at,
+    clientResponseName: row.client_response_name,
+    clientResponseNote: row.client_response_note,
+    position: row.position,
+    acceptanceDeadlineStageId: row.acceptance_deadline_stage_id ?? null,
+    blocksNextStage: Boolean(row.blocks_next_stage),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
 function rowToAgreement(row: AgreementRow): ProjectClientAgreement {
@@ -436,6 +493,9 @@ export type PublicDashboardPayload = {
   process: ProjectProcess | null;
   template: ProcessTemplate | null;
   agreements: ProjectClientAgreement[];
+  changeRequests: ProjectChangeRequest[];
+  offersGrossTotal: number;
+  acceptedOffersCount: number;
   specificationItems: ProjectSpecificationItem[];
   trades: ProjectTrade[];
   satisfaction: ProjectSatisfactionBundle | null;
@@ -450,6 +510,7 @@ export type PublicDashboardPayload = {
   documents: ProjectDocument[];
   features: {
     agreements: boolean;
+    changeRequests: boolean;
     specification: boolean;
     trades: boolean;
     satisfaction: boolean;
@@ -464,6 +525,7 @@ export type PublicDashboardPayload = {
 async function tableExists(
   table:
     | "project_client_agreements"
+    | "project_change_requests"
     | "specification_catalog_items"
     | "project_dashboard_content"
     | "project_trades"
@@ -495,6 +557,25 @@ async function fetchAgreementsForProject(projectId: string) {
   }
 
   return (data ?? []).map((row) => rowToAgreement(row as AgreementRow));
+}
+
+async function fetchChangeRequestsForProject(projectId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("project_change_requests")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (isMissingTableError(error.message)) {
+      return [];
+    }
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row) => rowToChangeRequest(row as ChangeRequestRow));
 }
 
 async function fetchSpecificationItemsForProject(projectId: string) {
@@ -693,22 +774,44 @@ export async function fetchPublicDashboardPayload(
     }
   }
 
-  const [agreementsEnabled, specificationEnabled, tradesEnabled, satisfactionEnabled, contentEnabled, credentialsEnabled, offersEnabled, meetingNotesEnabled, documentsEnabled] =
-    await Promise.all([
-      tableExists("project_client_agreements"),
-      tableExists("specification_catalog_items"),
-      tableExists("project_trades"),
-      satisfactionTablesExist(),
-      tableExists("project_dashboard_content"),
-      systemCredentialsTableExists(),
-      servicesTableExists(),
-      tableExists("project_meeting_notes"),
-      tableExists("project_documents"),
-    ]);
+  const [
+    agreementsEnabled,
+    changeRequestsEnabled,
+    specificationEnabled,
+    tradesEnabled,
+    satisfactionEnabled,
+    contentEnabled,
+    credentialsEnabled,
+    offersEnabled,
+    meetingNotesEnabled,
+    documentsEnabled,
+  ] = await Promise.all([
+    tableExists("project_client_agreements"),
+    tableExists("project_change_requests"),
+    tableExists("specification_catalog_items"),
+    tableExists("project_trades"),
+    satisfactionTablesExist(),
+    tableExists("project_dashboard_content"),
+    systemCredentialsTableExists(),
+    servicesTableExists(),
+    tableExists("project_meeting_notes"),
+    tableExists("project_documents"),
+  ]);
 
-  const [agreements, specificationItems, trades, satisfaction, content, credentials, meetingNotes, documents] = initialProjectId
+  const [
+    agreements,
+    changeRequests,
+    specificationItems,
+    trades,
+    satisfaction,
+    content,
+    credentials,
+    meetingNotes,
+    documents,
+  ] = initialProjectId
     ? await Promise.all([
         agreementsEnabled ? fetchAgreementsForProject(initialProjectId) : Promise.resolve([]),
+        changeRequestsEnabled ? fetchChangeRequestsForProject(initialProjectId) : Promise.resolve([]),
         specificationEnabled
           ? fetchSpecificationItemsForProject(initialProjectId)
           : Promise.resolve([]),
@@ -723,7 +826,7 @@ export async function fetchPublicDashboardPayload(
         meetingNotesEnabled ? fetchMeetingNotesForProject(initialProjectId) : Promise.resolve([]),
         documentsEnabled ? fetchDocumentsForProject(initialProjectId) : Promise.resolve([]),
       ])
-    : [[], [], [], null, [], [], [], []];
+    : [[], [], [], [], null, [], [], [], []];
 
   const pendingAgreementsCount = agreements.filter((entry) => isAgreementPendingAttention(entry)).length;
 
@@ -734,6 +837,11 @@ export async function fetchPublicDashboardPayload(
     publicOnly: true,
   });
   const pendingOffersCount = countPendingClientOffers(offers);
+  const acceptedOffersSummary = sumAcceptedOffersGross(
+    initialProjectId
+      ? clientServices.filter((service) => service.projectId === initialProjectId)
+      : [],
+  );
 
   let serviceIntakes: ServiceIntakeRecord[] = [];
   if (initialProjectId && offersEnabled) {
@@ -759,6 +867,9 @@ export async function fetchPublicDashboardPayload(
     process,
     template,
     agreements,
+    changeRequests,
+    offersGrossTotal: acceptedOffersSummary.total,
+    acceptedOffersCount: acceptedOffersSummary.count,
     specificationItems,
     trades,
     satisfaction,
@@ -773,6 +884,7 @@ export async function fetchPublicDashboardPayload(
     documents,
     features: {
       agreements: agreementsEnabled,
+      changeRequests: changeRequestsEnabled,
       specification: specificationEnabled,
       trades: tradesEnabled,
       satisfaction: satisfactionEnabled,

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/input";
 import type { ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
+import type { ProjectChangeRequest } from "@/lib/dashboard/change-request-types";
 import type { ProjectDashboardContent } from "@/lib/dashboard/content-types";
 import type { DashboardPublicAccessInfo } from "@/lib/dashboard/types";
 import type { DashboardSpace } from "@/lib/dashboard/types";
@@ -24,6 +25,9 @@ type PublicDashboardPayload = {
   process: ProjectProcess | null;
   template: ProcessTemplate | null;
   agreements: ProjectClientAgreement[];
+  changeRequests: ProjectChangeRequest[];
+  offersGrossTotal: number;
+  acceptedOffersCount: number;
   specificationItems: import("@/lib/dashboard/specification-types").ProjectSpecificationItem[];
   trades: import("@/lib/dashboard/trade-types").ProjectTrade[];
   satisfaction: import("@/lib/dashboard/satisfaction-types").ProjectSatisfactionBundle | null;
@@ -38,6 +42,7 @@ type PublicDashboardPayload = {
   documents: import("@/lib/documents/types").ProjectDocument[];
   features: {
     agreements: boolean;
+    changeRequests: boolean;
     specification: boolean;
     trades: boolean;
     satisfaction: boolean;
@@ -110,6 +115,9 @@ function PublicDashboardPageContent() {
     PublicDashboardPayload["processProgress"] | undefined
   >(undefined);
   const [agreements, setAgreements] = useState<ProjectClientAgreement[]>([]);
+  const [changeRequests, setChangeRequests] = useState<ProjectChangeRequest[]>([]);
+  const [offersGrossTotal, setOffersGrossTotal] = useState(0);
+  const [acceptedOffersCount, setAcceptedOffersCount] = useState(0);
   const [specificationItems, setSpecificationItems] = useState<
     PublicDashboardPayload["specificationItems"]
   >([]);
@@ -127,6 +135,7 @@ function PublicDashboardPageContent() {
   const [pendingOffersCount, setPendingOffersCount] = useState(0);
   const [features, setFeatures] = useState({
     agreements: false,
+    changeRequests: false,
     specification: false,
     trades: false,
     satisfaction: false,
@@ -163,6 +172,9 @@ function PublicDashboardPageContent() {
     setTemplate(payload.template);
     setProcessProgress(payload.processProgress);
     setAgreements(payload.agreements);
+    setChangeRequests(payload.changeRequests ?? []);
+    setOffersGrossTotal(payload.offersGrossTotal ?? 0);
+    setAcceptedOffersCount(payload.acceptedOffersCount ?? 0);
     setSpecificationItems(payload.specificationItems);
     setTrades(payload.trades);
     setSatisfaction(payload.satisfaction);
@@ -419,6 +431,9 @@ function PublicDashboardPageContent() {
           template={template}
           processProgress={processProgress}
           seedAgreements={features.agreements ? agreements : undefined}
+          seedChangeRequests={features.changeRequests ? changeRequests : undefined}
+          seedOffersGrossTotal={offersGrossTotal}
+          seedAcceptedOffersCount={acceptedOffersCount}
           seedOffers={features.offers ? offers : undefined}
           seedServiceIntakes={features.offers ? serviceIntakes : undefined}
           pendingOffersCount={pendingOffersCount}
@@ -435,6 +450,7 @@ function PublicDashboardPageContent() {
           enableContent={features.content}
           clientAuthorName={client.fullName}
           enableAgreements={features.agreements}
+          enableChangeRequests={features.changeRequests}
           enableOffers={features.offers}
           enableSpecification={features.specification}
           enableTrades={features.trades}

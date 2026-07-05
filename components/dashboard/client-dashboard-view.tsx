@@ -6,6 +6,7 @@ import {
   Briefcase,
   Cable,
   ClipboardCheck,
+  FileEdit,
   FileText,
   FolderOpen,
   GitBranch,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { ClientInspectionsPanel } from "@/components/dashboard/client-inspections-panel";
 import { ProjectAgreementsPanel } from "@/components/dashboard/project-agreements-panel";
+import { ProjectChangeRequestsPanel } from "@/components/dashboard/project-change-requests-panel";
 import { ProjectSatisfactionPanel } from "@/components/dashboard/project-satisfaction-panel";
 import { ProjectSatisfactionSummaryCard } from "@/components/dashboard/project-satisfaction-summary-card";
 import { ProjectSystemCredentialsPanel } from "@/components/dashboard/project-system-credentials-panel";
@@ -46,6 +48,9 @@ import type { ClientOfferSummary } from "@/lib/dashboard/client-offer-summary";
 import type { ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
 import { isAgreementPendingAttention } from "@/lib/dashboard/agreement-types";
 import { mergeAgreementsById } from "@/lib/dashboard/merge-agreements";
+import type { ProjectChangeRequest } from "@/lib/dashboard/change-request-types";
+import { isChangeRequestPendingAttention } from "@/lib/dashboard/change-request-types";
+import { mergeChangeRequestsById } from "@/lib/dashboard/merge-change-requests";
 import type { ProjectDashboardContent } from "@/lib/dashboard/content-types";
 import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
 import type { ProjectMeetingNote } from "@/lib/dashboard/meeting-note-types";
@@ -72,6 +77,7 @@ import { isIntegrationOperator } from "@/lib/auth/types";
 import { useAuthStore } from "@/store/auth-store";
 import { useProjectAgreementsRealtime } from "@/hooks/use-project-agreements-realtime";
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
+import { useProjectChangeRequestStore } from "@/store/project-change-request-store";
 import { useProjectSatisfactionStore } from "@/store/project-satisfaction-store";
 import { useProjectSpecificationStore } from "@/store/project-specification-store";
 import { useAppStore } from "@/store/app-store";
@@ -90,6 +96,7 @@ type ClientDashboardTab =
   | "overview"
   | "process"
   | "agreements"
+  | "changes"
   | "offers"
   | "inspections"
   | "specification"
@@ -101,6 +108,7 @@ type ClientDashboardTab =
   | "links";
 
 const EMPTY_AGREEMENTS: ProjectClientAgreement[] = [];
+const EMPTY_CHANGE_REQUESTS: ProjectChangeRequest[] = [];
 const EMPTY_SPECIFICATION_ITEMS: ProjectSpecificationItem[] = [];
 
 const PUBLIC_CLIENT_TAB_CONFIG: Array<{
@@ -111,6 +119,7 @@ const PUBLIC_CLIENT_TAB_CONFIG: Array<{
   { id: "home", label: "HOME", icon: Home },
   { id: "process", label: "Proces", icon: GitBranch },
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
+  { id: "changes", label: "Zmiany projektu", icon: FileEdit },
   { id: "offers", label: "Oferty", icon: Receipt },
   { id: "inspections", label: "Przeglądy", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
@@ -130,6 +139,7 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "home", label: "HOME", icon: Home },
   { id: "process", label: "Proces", icon: GitBranch },
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
+  { id: "changes", label: "Zmiany projektu", icon: FileEdit },
   { id: "offers", label: "Oferty", icon: Receipt },
   { id: "inspections", label: "Przeglądy", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
@@ -173,6 +183,7 @@ export function ClientDashboardView({
   clientAuthorName = "Klient",
   teamAuthorName = "Zespół",
   enableAgreements = true,
+  enableChangeRequests = true,
   enableOffers = true,
   enableSpecification = true,
   enableTrades = true,
@@ -183,6 +194,9 @@ export function ClientDashboardView({
   enableContent = true,
   processProgress,
   seedAgreements,
+  seedChangeRequests,
+  seedOffersGrossTotal,
+  seedAcceptedOffersCount,
   seedOffers,
   seedServiceIntakes,
   seedSpecificationItems,
@@ -214,6 +228,7 @@ export function ClientDashboardView({
   clientAuthorName?: string;
   teamAuthorName?: string;
   enableAgreements?: boolean;
+  enableChangeRequests?: boolean;
   enableOffers?: boolean;
   enableSpecification?: boolean;
   enableTrades?: boolean;
@@ -224,6 +239,10 @@ export function ClientDashboardView({
   enableContent?: boolean;
   processProgress?: { percent: number; completed: number; total: number } | null;
   seedAgreements?: ProjectClientAgreement[];
+  seedChangeRequests?: ProjectChangeRequest[];
+  /** Suma zaakceptowanych ofert (widok publiczny) — liczona po stronie serwera. */
+  seedOffersGrossTotal?: number;
+  seedAcceptedOffersCount?: number;
   seedOffers?: ClientOfferSummary[];
   seedServiceIntakes?: ServiceIntakeRecord[];
   pendingOffersCount?: number;
@@ -324,6 +343,14 @@ export function ClientDashboardView({
   const agreementSource = useMemo(
     () => mergeAgreementsById(storeAgreements, seedAgreements),
     [storeAgreements, seedAgreements],
+  );
+
+  const storeChangeRequests = useProjectChangeRequestStore(
+    (state) => state.byProject[selectedProjectId] ?? EMPTY_CHANGE_REQUESTS,
+  );
+  const changeRequestSource = useMemo(
+    () => mergeChangeRequestsById(storeChangeRequests, seedChangeRequests),
+    [storeChangeRequests, seedChangeRequests],
   );
 
   const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? projects[0];
@@ -540,6 +567,12 @@ export function ClientDashboardView({
     ).length;
   }, [agreementSource, selectedProjectId]);
 
+  const pendingChangeRequestsCount = useMemo(() => {
+    return changeRequestSource.filter(
+      (entry) => entry.projectId === selectedProjectId && isChangeRequestPendingAttention(entry),
+    ).length;
+  }, [changeRequestSource, selectedProjectId]);
+
   const progress = useMemo(() => {
     if (processProgress !== undefined) {
       return processProgress;
@@ -553,6 +586,7 @@ export function ClientDashboardView({
   const publicClientTabs = PUBLIC_CLIENT_TAB_CONFIG.filter((tab) => {
     if (tab.id === "inspections" && !hasClientInspections) return false;
     if (tab.id === "agreements" && !enableAgreements) return false;
+    if (tab.id === "changes" && !enableChangeRequests) return false;
     if (tab.id === "offers" && !enableOffers) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
     if (tab.id === "trades" && !enableTrades) return false;
@@ -566,6 +600,7 @@ export function ClientDashboardView({
     if (tab.id === "inspections" && !hasClientInspections) return false;
     if (tab.id === "integrations" && !canViewIntegrations) return false;
     if (tab.id === "agreements" && !enableAgreements) return false;
+    if (tab.id === "changes" && !enableChangeRequests) return false;
     if (tab.id === "offers" && !enableOffers) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
     if (tab.id === "trades" && !enableTrades) return false;
@@ -679,6 +714,7 @@ export function ClientDashboardView({
                 kanbanPublicLinks={kanbanPublicLinks}
                 onKanbanNavigate={onKanbanTokenChange ? handleKanbanNavigate : undefined}
                 agreements={agreementSource}
+                changeRequests={changeRequestSource}
               />
             ) : (
               <ProjectProcessPipelineSection
@@ -907,6 +943,27 @@ export function ClientDashboardView({
     );
   }
 
+  function renderChangeRequestsPanel() {
+    return (
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
+        <h2 className="mb-3 text-base font-semibold text-foreground">Karta zmian Projektu</h2>
+        <p className="mb-4 text-sm text-muted">
+          Zmiany zakresu lub kosztu projektu wymagające akceptacji klienta. Zaakceptowane zmiany
+          sumują się do całkowitego kosztu projektu (baza z ofert + zmiany).
+        </p>
+        <ProjectChangeRequestsPanel
+          projectId={selectedProject.id}
+          mode={readOnly ? "client" : "team"}
+          authorName={readOnly ? clientAuthorName : teamAuthorName}
+          seedChangeRequests={seedChangeRequests}
+          seedOffersGrossTotal={seedOffersGrossTotal}
+          seedAcceptedOffersCount={seedAcceptedOffersCount}
+          publicDashboardToken={readOnly ? publicDashboardToken : undefined}
+        />
+      </div>
+    );
+  }
+
   function renderSpecificationPanel() {
     return (
       <div className="rounded-2xl border border-border/80 bg-surface p-4">
@@ -1020,6 +1077,9 @@ export function ClientDashboardView({
   function tabBadgeCount(tabId: ClientDashboardTab) {
     if (tabId === "agreements") {
       return pendingAcceptanceCount;
+    }
+    if (tabId === "changes") {
+      return pendingChangeRequestsCount;
     }
     if (tabId === "offers") {
       return pendingOffersCount ?? 0;
@@ -1168,6 +1228,8 @@ export function ClientDashboardView({
         return renderProcessSection();
       case "agreements":
         return enableAgreements ? renderAgreementsPanel() : null;
+      case "changes":
+        return enableChangeRequests ? renderChangeRequestsPanel() : null;
       case "offers":
         return enableOffers ? renderOffersPanel() : null;
       case "inspections":

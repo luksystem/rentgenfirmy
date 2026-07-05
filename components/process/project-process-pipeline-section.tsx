@@ -17,8 +17,10 @@ import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import { useAuthStore } from "@/store/auth-store";
 import { useProcessStore } from "@/store/process-store";
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
+import { useProjectChangeRequestStore } from "@/store/project-change-request-store";
 
 const EMPTY_AGREEMENTS: import("@/lib/dashboard/agreement-types").ProjectClientAgreement[] = [];
+const EMPTY_CHANGE_REQUESTS: import("@/lib/dashboard/change-request-types").ProjectChangeRequest[] = [];
 
 export function ProjectProcessPipelineSection({
   projectId,
@@ -52,6 +54,10 @@ export function ProjectProcessPipelineSection({
     (state) => state.byProject[projectId] ?? EMPTY_AGREEMENTS,
   );
   const ensureAgreements = useProjectAgreementStore((state) => state.ensureAgreements);
+  const changeRequests = useProjectChangeRequestStore(
+    (state) => state.byProject[projectId] ?? EMPTY_CHANGE_REQUESTS,
+  );
+  const ensureChangeRequests = useProjectChangeRequestStore((state) => state.ensureChangeRequests);
 
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -76,6 +82,7 @@ export function ProjectProcessPipelineSection({
         await loadTeamProfiles();
         await loadProjectProcessItems(projectId);
         await ensureAgreements(projectId);
+        await ensureChangeRequests(projectId);
       } catch (error) {
         if (!cancelled) {
           setLoadError(error instanceof Error ? error.message : "Błąd ładowania elementów procesu.");
@@ -90,7 +97,14 @@ export function ProjectProcessPipelineSection({
     return () => {
       cancelled = true;
     };
-  }, [ensureAgreements, loadProjectProcessItems, loadTeamProfiles, projectId, process.updatedAt]);
+  }, [
+    ensureAgreements,
+    ensureChangeRequests,
+    loadProjectProcessItems,
+    loadTeamProfiles,
+    projectId,
+    process.updatedAt,
+  ]);
 
   async function handleConfirmSync() {
     setSyncing(true);
@@ -163,6 +177,7 @@ export function ProjectProcessPipelineSection({
           void toggleItemCompletion(projectId, itemId, completed, resolvedActorName)
         }
         agreements={agreements}
+        changeRequests={changeRequests}
       />
 
       <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>

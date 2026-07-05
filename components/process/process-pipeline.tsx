@@ -19,6 +19,10 @@ import { cn } from "@/lib/utils";
 import type { UserProfile } from "@/lib/auth/types";
 import { isAgreementBlockingActive, type ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
 import {
+  isChangeRequestBlockingActive,
+  type ProjectChangeRequest,
+} from "@/lib/dashboard/change-request-types";
+import {
   getProcessItemVisualState,
   PROCESS_ITEM_VISUAL_CLASSES,
 } from "@/lib/process/item-completion-state";
@@ -72,6 +76,8 @@ type ProcessPipelineProps = {
   onKanbanNavigate?: (kanbanHref: string) => void;
   /** Ustalenia projektu — źródło blokady kaskadowej etapów (deadline akceptacji). */
   agreements?: ProjectClientAgreement[];
+  /** Karta zmian Projektu — kolejne źródło blokady kaskadowej etapów (deadline akceptacji). */
+  changeRequests?: ProjectChangeRequest[];
 };
 
 export function ProcessPipeline({
@@ -94,6 +100,7 @@ export function ProcessPipeline({
   kanbanPublicLinks,
   onKanbanNavigate,
   agreements,
+  changeRequests,
 }: ProcessPipelineProps) {
   const [activeItem, setActiveItem] = useState<ProcessItem | null>(null);
   const ensureProjectProcessItems = useProcessStore((state) => state.ensureProjectProcessItems);
@@ -110,8 +117,22 @@ export function ProcessPipeline({
       })),
       "Ustalenie",
     );
-    return computeStageGate(template.stages.length, [...itemSources, ...agreementSources]);
-  }, [template, itemInstances, process, agreements]);
+    const changeRequestSources = buildAgreementBlockSources(
+      template,
+      (changeRequests ?? []).map((entry) => ({
+        title: entry.title,
+        acceptanceDeadlineStageId: entry.acceptanceDeadlineStageId,
+        blocksNextStage: entry.blocksNextStage,
+        isFullyAccepted: !isChangeRequestBlockingActive(entry),
+      })),
+      "Karta zmian Projektu",
+    );
+    return computeStageGate(template.stages.length, [
+      ...itemSources,
+      ...agreementSources,
+      ...changeRequestSources,
+    ]);
+  }, [template, itemInstances, process, agreements, changeRequests]);
 
   const softWarningIndexes = useMemo(
     () =>
