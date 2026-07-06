@@ -154,6 +154,7 @@ export type InspectionRecord = {
   createdAt: string;
   updatedAt: string;
   clientName?: string | null;
+  clientAddress?: string | null;
   projectName?: string | null;
   comments?: InspectionComment[];
   reactions?: InspectionReaction[];

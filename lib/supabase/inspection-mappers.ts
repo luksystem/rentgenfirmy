@@ -41,7 +41,7 @@ type InspectionRow = {
 
 export function rowToInspection(
   row: InspectionRow,
-  meta?: { clientName?: string | null; projectName?: string | null },
+  meta?: { clientName?: string | null; clientAddress?: string | null; projectName?: string | null },
 ): InspectionRecord {
   return {
     id: row.id,
@@ -75,6 +75,7 @@ export function rowToInspection(
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     clientName: meta?.clientName ?? null,
+    clientAddress: meta?.clientAddress ?? null,
     projectName: meta?.projectName ?? null,
   };
 }

@@ -7,6 +7,7 @@ import {
   GripVertical,
   Loader2,
   MessageSquare,
+  Navigation,
   RefreshCw,
   User,
 } from "lucide-react";
@@ -15,6 +16,7 @@ import { KanbanDropPlaceholder, getKanbanColumnDropTargetClasses } from "@/compo
 import { KanbanMobileColumnNav } from "@/components/process/kanban-mobile-column-nav";
 import { Button } from "@/components/ui/button";
 import { useKanbanMobileColumns } from "@/hooks/use-kanban-mobile-columns";
+import { buildGoogleMapsDirectionsUrl } from "@/lib/dashboard/google-maps";
 import {
   KANBAN_BOARD_ROOT_CLASS,
   KANBAN_DRAG_HINT,
@@ -52,6 +54,7 @@ function InspectionCard({
       ? "preliminary"
       : "none";
   const dateValue = item.confirmedDate ?? item.preliminaryDate ?? null;
+  const directionsUrl = item.clientAddress ? buildGoogleMapsDirectionsUrl(item.clientAddress) : null;
 
   return (
     <article
@@ -106,10 +109,26 @@ function InspectionCard({
         )}
       </div>
 
-      <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onOpen}>
-        <MessageSquare className="mr-1 h-3.5 w-3.5" />
-        Szczegóły
-      </Button>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onOpen}>
+          <MessageSquare className="mr-1 h-3.5 w-3.5" />
+          Szczegóły
+        </Button>
+        {directionsUrl ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="border-accent/40 text-accent hover:bg-accent/10"
+            asChild
+          >
+            <a href={directionsUrl} target="_blank" rel="noopener noreferrer">
+              <Navigation className="mr-1 h-3.5 w-3.5" />
+              Prowadź do
+            </a>
+          </Button>
+        ) : null}
+      </div>
     </article>
   );
 }

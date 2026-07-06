@@ -1,4 +1,5 @@
 import { getUserDisplayName } from "@/lib/auth/types";
+import { buildClientAddressLine } from "@/lib/dashboard/google-maps";
 import {
   DEFAULT_INSPECTION_SETTINGS,
   normalizeInspectionGlobalSettings,
@@ -142,19 +143,43 @@ export async function listInspections(input?: {
 
   const [{ data: clients }, { data: projects }] = await Promise.all([
     clientIds.length
-      ? supabase.from("clients").select("id, full_name").in("id", clientIds)
-      : Promise.resolve({ data: [] as Array<{ id: string; full_name: string }> }),
+      ? supabase
+          .from("clients")
+          .select("id, full_name, address_street, address_city, address_postal_code, location")
+          .in("id", clientIds)
+      : Promise.resolve({
+          data: [] as Array<{
+            id: string;
+            full_name: string;
+            address_street: string | null;
+            address_city: string | null;
+            address_postal_code: string | null;
+            location: string | null;
+          }>,
+        }),
     projectIds.length
       ? supabase.from("projects").select("id, name").in("id", projectIds)
       : Promise.resolve({ data: [] as Array<{ id: string; name: string }> }),
   ]);
 
   const clientMap = new Map((clients ?? []).map((row) => [row.id, row.full_name]));
+  const clientAddressMap = new Map(
+    (clients ?? []).map((row) => [
+      row.id,
+      buildClientAddressLine({
+        addressStreet: row.address_street ?? "",
+        addressCity: row.address_city ?? "",
+        addressPostalCode: row.address_postal_code ?? "",
+        location: row.location ?? "",
+      }),
+    ]),
+  );
   const projectMap = new Map((projects ?? []).map((row) => [row.id, row.name]));
 
   return rows.map((row) =>
     rowToInspection(row, {
       clientName: clientMap.get(row.client_id) ?? null,
+      clientAddress: clientAddressMap.get(row.client_id) || null,
       projectName: row.project_id ? projectMap.get(row.project_id) ?? null : null,
     }),
   );
@@ -174,7 +199,11 @@ export async function getInspectionById(id: string): Promise<InspectionRecord | 
 
   const [{ data: client }, { data: project }, { data: comments }, { data: reactions }] =
     await Promise.all([
-      supabase.from("clients").select("full_name").eq("id", data.client_id).maybeSingle(),
+      supabase
+        .from("clients")
+        .select("full_name, address_street, address_city, address_postal_code, location")
+        .eq("id", data.client_id)
+        .maybeSingle(),
       data.project_id
         ? supabase.from("projects").select("name").eq("id", data.project_id).maybeSingle()
         : Promise.resolve({ data: null }),
@@ -192,6 +221,14 @@ export async function getInspectionById(id: string): Promise<InspectionRecord | 
 
   const record = rowToInspection(data, {
     clientName: client?.full_name ?? null,
+    clientAddress: client
+      ? buildClientAddressLine({
+          addressStreet: client.address_street ?? "",
+          addressCity: client.address_city ?? "",
+          addressPostalCode: client.address_postal_code ?? "",
+          location: client.location ?? "",
+        }) || null
+      : null,
     projectName: project?.name ?? null,
   });
 

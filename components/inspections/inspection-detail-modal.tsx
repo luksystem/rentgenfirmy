@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FileText, Loader2, Send, Trash2 } from "lucide-react";
+import { FileText, Loader2, Navigation, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Field, Input, Textarea } from "@/components/ui/input";
+import { buildGoogleMapsDirectionsUrl } from "@/lib/dashboard/google-maps";
 import { isInspectionPlanningDue } from "@/lib/inspections/schedule";
 import {
   INSPECTION_REACTION_EMOJIS,
@@ -276,6 +277,28 @@ export function InspectionDetailModal({
             {detail?.clientName ?? item.clientName} · {detail?.systemLabel ?? item.systemLabel}
           </DialogDescription>
         </DialogHeader>
+
+        {(() => {
+          const clientAddress = detail?.clientAddress ?? item.clientAddress;
+          const directionsUrl = clientAddress ? buildGoogleMapsDirectionsUrl(clientAddress) : null;
+          if (!directionsUrl) {
+            return null;
+          }
+          return (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="w-fit border-accent/40 text-accent hover:bg-accent/10"
+              asChild
+            >
+              <a href={directionsUrl} target="_blank" rel="noopener noreferrer">
+                <Navigation className="mr-1.5 h-3.5 w-3.5" />
+                Prowadź do
+              </a>
+            </Button>
+          );
+        })()}
 
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted">
