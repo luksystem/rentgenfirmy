@@ -535,14 +535,14 @@ export function ClientDashboardView({
     if (!enableChangeRequests || !selectedProjectId) {
       return;
     }
-    void ensureChangeRequests(selectedProjectId);
+    ensureChangeRequests(selectedProjectId).catch(() => undefined);
   }, [enableChangeRequests, ensureChangeRequests, selectedProjectId]);
 
   const refreshChangeRequestsFromServer = useCallback(() => {
     if (!enableChangeRequests || !selectedProjectId) {
       return;
     }
-    void ensureChangeRequests(selectedProjectId, { force: true });
+    ensureChangeRequests(selectedProjectId, { force: true }).catch(() => undefined);
   }, [enableChangeRequests, ensureChangeRequests, selectedProjectId]);
 
   useProjectChangeRequestsRealtime(selectedProjectId, refreshChangeRequestsFromServer, {

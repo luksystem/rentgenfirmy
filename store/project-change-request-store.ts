@@ -82,6 +82,12 @@ export const useProjectChangeRequestStore = create<ProjectChangeRequestStore>((s
         setProjectChangeRequests(projectId, entries, set, get);
         return entries;
       })
+      .catch((error) => {
+        set({
+          loadingProjects: { ...get().loadingProjects, [projectId]: false },
+        });
+        throw error;
+      })
       .finally(() => {
         loadPromises.delete(projectId);
       });

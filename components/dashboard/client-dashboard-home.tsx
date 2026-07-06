@@ -4,7 +4,6 @@ import { useState } from "react";
 import {
   AlertTriangle,
   ChevronDown,
-  ClipboardCheck,
   ExternalLink,
   GitBranch,
   LayoutGrid,
@@ -643,40 +642,6 @@ export function ClientDashboardHome({
               </div>
             </div>
           </div>
-        </div>
-      ) : null}
-
-      {pendingAgreements.length > 0 ? (
-        <div className="rounded-2xl border border-border/80 bg-surface p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
-            <ClipboardCheck className="h-4 w-4 text-accent" />
-            Oczekujące ustalenia
-          </h3>
-          <div className="grid gap-2">
-            {pendingAgreements.slice(0, 5).map((entry) => (
-              <AgreementSummaryCard
-                key={entry.id}
-                agreement={entry}
-                compact
-                className="border-amber-500/30 bg-amber-500/5"
-              >
-                {entry.body ? (
-                  <p className="line-clamp-4 whitespace-pre-wrap text-sm text-muted">{entry.body}</p>
-                ) : null}
-              </AgreementSummaryCard>
-            ))}
-          </div>
-          {onOpenTab ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="mt-3"
-              onClick={() => onOpenTab("agreements")}
-            >
-              Wszystkie ustalenia
-            </Button>
-          ) : null}
         </div>
       ) : null}
 

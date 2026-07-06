@@ -81,6 +81,8 @@ type ProcessPipelineProps = {
   agreements?: ProjectClientAgreement[];
   /** Karta zmian Projektu — kolejne źródło blokady kaskadowej etapów (deadline akceptacji). */
   changeRequests?: ProjectChangeRequest[];
+  /** Ustawienie / wyczyszczenie aktywnego etapu — widoczne tylko w widoku zespołu (interactive). */
+  onSetActiveStage?: (stageId: string | null) => Promise<void>;
 };
 
 export function ProcessPipeline({
@@ -104,9 +106,23 @@ export function ProcessPipeline({
   onKanbanNavigate,
   agreements,
   changeRequests,
+  onSetActiveStage,
 }: ProcessPipelineProps) {
   const [activeItem, setActiveItem] = useState<ProcessItem | null>(null);
+  const [settingActiveStageId, setSettingActiveStageId] = useState<string | null>(null);
   const ensureProjectProcessItems = useProcessStore((state) => state.ensureProjectProcessItems);
+
+  async function handleSetActiveStage(stageId: string | null) {
+    if (!onSetActiveStage || settingActiveStageId) {
+      return;
+    }
+    setSettingActiveStageId(stageId ?? "clear");
+    try {
+      await onSetActiveStage(stageId);
+    } finally {
+      setSettingActiveStageId(null);
+    }
+  }
 
   const stageGate = useMemo(() => {
     const itemSources = buildProcessItemBlockSources(template, itemInstances, process);
@@ -335,6 +351,28 @@ export function ProcessPipeline({
                             <Lock className="mt-0.5 h-3 w-3 shrink-0" />
                             <span>{blockReasons.join(" · ")}</span>
                           </div>
+                        ) : null}
+                        {onSetActiveStage ? (
+                          <button
+                            type="button"
+                            disabled={Boolean(settingActiveStageId)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleSetActiveStage(isActiveStage ? null : stage.id);
+                            }}
+                            className={cn(
+                              "mt-2 rounded-full border px-2.5 py-1 text-[11px] font-medium transition disabled:opacity-60",
+                              isActiveStage
+                                ? "border-accent/50 bg-accent/10 text-accent hover:bg-accent/20"
+                                : "border-border/70 text-muted hover:border-accent/40 hover:text-foreground",
+                            )}
+                          >
+                            {settingActiveStageId === (isActiveStage ? "clear" : stage.id)
+                              ? "Zapisywanie…"
+                              : isActiveStage
+                                ? "Wyczyść aktywny etap"
+                                : "Oznacz jako aktywny etap"}
+                          </button>
                         ) : null}
                       </div>
                       {collapsible ? (

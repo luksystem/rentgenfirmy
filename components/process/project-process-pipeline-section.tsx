@@ -50,6 +50,7 @@ export function ProjectProcessPipelineSection({
   const signProcessItem = useProcessStore((state) => state.signProcessItem);
   const toggleItemCompletion = useProcessStore((state) => state.toggleItemCompletion);
   const saveMilestoneDate = useProcessStore((state) => state.saveMilestoneDate);
+  const setActiveStage = useProcessStore((state) => state.setActiveStage);
   const agreements = useProjectAgreementStore(
     (state) => state.byProject[projectId] ?? EMPTY_AGREEMENTS,
   );
@@ -178,6 +179,7 @@ export function ProjectProcessPipelineSection({
         }
         agreements={agreements}
         changeRequests={changeRequests}
+        onSetActiveStage={(stageId) => setActiveStage(projectId, stageId)}
       />
 
       <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
