@@ -54,6 +54,17 @@ export const DEFAULT_PROCESS_ELEMENT_KIND_META: ProcessElementKindMeta[] = [
     sortOrder: 40,
     isActive: true,
   },
+  {
+    kind: "note",
+    label: "Notatka / dokument",
+    description:
+      "Podpięcie istniejącej notatki ze spotkania i/lub dokumentu do kroku procesu, albo utworzenie nowego wpisu.",
+    icon: "sticky-note",
+    supportsPublicLink: false,
+    supportsInternalAcceptance: false,
+    sortOrder: 50,
+    isActive: true,
+  },
 ];
 
 export function getProcessKindMetaMap(meta = DEFAULT_PROCESS_ELEMENT_KIND_META) {

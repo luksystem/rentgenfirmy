@@ -12,6 +12,7 @@ import {
   LayoutGrid,
   Lock,
   Receipt,
+  StickyNote,
 } from "lucide-react";
 import { MilestoneDateBadge } from "@/components/process/milestone-date-badge";
 import { ProcessItemPanel } from "@/components/process/process-item-panel";
@@ -51,6 +52,7 @@ const kindIcon: Record<ProcessItemKind, React.ComponentType<{ className?: string
   protocol: FileCheck2,
   settlement: Receipt,
   kanban: LayoutGrid,
+  note: StickyNote,
 };
 
 type ProcessPipelineProps = {

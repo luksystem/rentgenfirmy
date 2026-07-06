@@ -306,6 +306,24 @@ export type ProjectChangeRequestInsert = {
 
 export type ProjectChangeRequestUpdate = Partial<ProjectChangeRequestInsert>;
 
+export type ProjectProcessItemLinkRow = {
+  id: string;
+  project_process_item_id: string;
+  document_id: string | null;
+  meeting_note_id: string | null;
+  created_at: string;
+};
+
+export type ProjectProcessItemLinkInsert = {
+  id?: string;
+  project_process_item_id: string;
+  document_id?: string | null;
+  meeting_note_id?: string | null;
+  created_at?: string;
+};
+
+export type ProjectProcessItemLinkUpdate = Partial<ProjectProcessItemLinkInsert>;
+
 export type ProjectAgreementApproverRoleRow = {
   id: string;
   agreement_id: string;
@@ -1058,6 +1076,12 @@ export type Database = {
         Row: ProjectChangeRequestRow;
         Insert: ProjectChangeRequestInsert;
         Update: ProjectChangeRequestUpdate;
+        Relationships: [];
+      };
+      project_process_item_links: {
+        Row: ProjectProcessItemLinkRow;
+        Insert: ProjectProcessItemLinkInsert;
+        Update: ProjectProcessItemLinkUpdate;
         Relationships: [];
       };
       project_agreement_approver_roles: {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CheckCircle2, FileCheck2, LayoutGrid, Receipt } from "lucide-react";
+import { CheckCircle2, FileCheck2, LayoutGrid, Receipt, StickyNote } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,6 +21,7 @@ const kindIcons: Record<ProcessItemKind, React.ComponentType<{ className?: strin
   protocol: FileCheck2,
   settlement: Receipt,
   kanban: LayoutGrid,
+  note: StickyNote,
 };
 
 export default function ProcessKindTypesPage() {

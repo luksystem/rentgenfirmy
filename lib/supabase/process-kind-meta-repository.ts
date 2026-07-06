@@ -17,7 +17,13 @@ type KindMetaRow = {
 };
 
 function isProcessItemKind(value: string): value is ProcessItemKind {
-  return value === "checklist" || value === "protocol" || value === "settlement" || value === "kanban";
+  return (
+    value === "checklist" ||
+    value === "protocol" ||
+    value === "settlement" ||
+    value === "kanban" ||
+    value === "note"
+  );
 }
 
 function rowToKindMeta(row: KindMetaRow): ProcessElementKindMeta | null {

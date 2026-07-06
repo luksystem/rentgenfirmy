@@ -18,7 +18,13 @@ import type {
 } from "@/lib/supabase/database.types";
 
 function isProcessItemKind(value: string): value is ProcessItem["kind"] {
-  return value === "checklist" || value === "protocol" || value === "settlement" || value === "kanban";
+  return (
+    value === "checklist" ||
+    value === "protocol" ||
+    value === "settlement" ||
+    value === "kanban" ||
+    value === "note"
+  );
 }
 
 export function rowToProcessItem(

@@ -3,7 +3,13 @@ import type { ProcessElement, ProcessItemKind } from "@/lib/process/types";
 import type { ProcessElementRow } from "@/lib/supabase/database.types";
 
 function isProcessItemKind(value: string): value is ProcessItemKind {
-  return value === "checklist" || value === "protocol" || value === "settlement" || value === "kanban";
+  return (
+    value === "checklist" ||
+    value === "protocol" ||
+    value === "settlement" ||
+    value === "kanban" ||
+    value === "note"
+  );
 }
 
 export function rowToProcessElement(row: ProcessElementRow): ProcessElement {

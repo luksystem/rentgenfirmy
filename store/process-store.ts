@@ -8,11 +8,20 @@ import type {
   ProcessElement,
   ProcessElementPayload,
   ProcessItemKind,
+  ProcessItemLink,
   ProcessTemplate,
   ProjectProcess,
   ProjectProcessItem,
 } from "@/lib/process/types";
 import { getProcessProgress } from "@/lib/process/types";
+import type { ProjectMeetingNote, ProjectMeetingNoteInput } from "@/lib/dashboard/meeting-note-types";
+import { createProjectMeetingNote } from "@/lib/supabase/project-meeting-note-repository";
+import {
+  fetchProcessItemLinksForItems,
+  linkDocumentToProcessItem,
+  linkMeetingNoteToProcessItem,
+  unlinkProcessItemLink,
+} from "@/lib/supabase/process-item-link-repository";
 import {
   assignProjectProcessItem,
   ensureProjectProcessItems,
@@ -44,6 +53,8 @@ import {
 } from "@/lib/supabase/process-repository";
 import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
 
+const noteLinksLoadPromises = new Map<string, Promise<void>>();
+
 type ProcessStore = {
   templates: ProcessTemplate[];
   elements: ProcessElement[];
@@ -51,6 +62,8 @@ type ProcessStore = {
   kanbanOverdueTaskCount: number;
   projectProcesses: Record<string, ProjectProcess>;
   projectProcessItems: Record<string, Record<string, ProjectProcessItem>>;
+  /** projectId → projectProcessItemId (DB id) → podpięte notatki/dokumenty. */
+  noteLinksByProject: Record<string, Record<string, ProcessItemLink[]>>;
   teamProfiles: UserProfile[];
   hydrated: boolean;
   isLoading: boolean;
@@ -110,6 +123,28 @@ type ProcessStore = {
     blocksNextStage: boolean,
   ) => Promise<void>;
   setActiveStage: (projectId: string, stageId: string | null) => Promise<void>;
+  ensureNoteLinks: (projectId: string, options?: { force?: boolean }) => Promise<void>;
+  linkDocumentToItem: (
+    projectId: string,
+    projectProcessItemId: string,
+    documentId: string,
+  ) => Promise<void>;
+  linkMeetingNoteToItem: (
+    projectId: string,
+    projectProcessItemId: string,
+    meetingNoteId: string,
+  ) => Promise<void>;
+  createAndLinkMeetingNote: (
+    projectId: string,
+    projectProcessItemId: string,
+    input: ProjectMeetingNoteInput,
+    authorName: string,
+  ) => Promise<ProjectMeetingNote>;
+  unlinkNoteLink: (
+    projectId: string,
+    projectProcessItemId: string,
+    linkId: string,
+  ) => Promise<void>;
   loadElements: () => Promise<void>;
   createElement: (input: {
     kind: ProcessItemKind;
@@ -131,6 +166,7 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
   kanbanOverdueTaskCount: 0,
   projectProcesses: {},
   projectProcessItems: {},
+  noteLinksByProject: {},
   teamProfiles: [],
   hydrated: false,
   isLoading: false,
@@ -469,6 +505,92 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
     set((state) => ({
       projectProcesses: { ...state.projectProcesses, [projectId]: updated },
     }));
+  },
+
+  ensureNoteLinks: async (projectId, options) => {
+    const force = options?.force ?? false;
+    if (!force && get().noteLinksByProject[projectId]) {
+      return;
+    }
+
+    const inFlight = noteLinksLoadPromises.get(projectId);
+    if (inFlight && !force) {
+      return inFlight;
+    }
+
+    const itemIds = Object.values(get().projectProcessItems[projectId] ?? {}).map(
+      (item) => item.id,
+    );
+
+    const promise = (async () => {
+      const links = await fetchProcessItemLinksForItems(itemIds);
+      const grouped: Record<string, ProcessItemLink[]> = {};
+      links.forEach((link) => {
+        (grouped[link.projectProcessItemId] ??= []).push(link);
+      });
+      set((state) => ({
+        noteLinksByProject: { ...state.noteLinksByProject, [projectId]: grouped },
+      }));
+    })().finally(() => {
+      noteLinksLoadPromises.delete(projectId);
+    });
+
+    noteLinksLoadPromises.set(projectId, promise);
+    return promise;
+  },
+
+  linkDocumentToItem: async (projectId, projectProcessItemId, documentId) => {
+    const link = await linkDocumentToProcessItem(projectProcessItemId, documentId);
+    set((state) => {
+      const current = state.noteLinksByProject[projectId]?.[projectProcessItemId] ?? [];
+      return {
+        noteLinksByProject: {
+          ...state.noteLinksByProject,
+          [projectId]: {
+            ...state.noteLinksByProject[projectId],
+            [projectProcessItemId]: [...current, link],
+          },
+        },
+      };
+    });
+  },
+
+  linkMeetingNoteToItem: async (projectId, projectProcessItemId, meetingNoteId) => {
+    const link = await linkMeetingNoteToProcessItem(projectProcessItemId, meetingNoteId);
+    set((state) => {
+      const current = state.noteLinksByProject[projectId]?.[projectProcessItemId] ?? [];
+      return {
+        noteLinksByProject: {
+          ...state.noteLinksByProject,
+          [projectId]: {
+            ...state.noteLinksByProject[projectId],
+            [projectProcessItemId]: [...current, link],
+          },
+        },
+      };
+    });
+  },
+
+  createAndLinkMeetingNote: async (projectId, projectProcessItemId, input, authorName) => {
+    const note = await createProjectMeetingNote(projectId, input, authorName);
+    await get().linkMeetingNoteToItem(projectId, projectProcessItemId, note.id);
+    return note;
+  },
+
+  unlinkNoteLink: async (projectId, projectProcessItemId, linkId) => {
+    await unlinkProcessItemLink(linkId);
+    set((state) => {
+      const current = state.noteLinksByProject[projectId]?.[projectProcessItemId] ?? [];
+      return {
+        noteLinksByProject: {
+          ...state.noteLinksByProject,
+          [projectId]: {
+            ...state.noteLinksByProject[projectId],
+            [projectProcessItemId]: current.filter((entry) => entry.id !== linkId),
+          },
+        },
+      };
+    });
   },
 
   loadElements: async () => {

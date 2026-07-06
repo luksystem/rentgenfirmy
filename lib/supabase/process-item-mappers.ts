@@ -20,7 +20,13 @@ function parseInternalAcceptanceState(value: unknown): InternalAcceptanceState |
 }
 
 function isProcessItemKind(value: string): value is ProcessItemKind {
-  return value === "checklist" || value === "protocol" || value === "settlement" || value === "kanban";
+  return (
+    value === "checklist" ||
+    value === "protocol" ||
+    value === "settlement" ||
+    value === "kanban" ||
+    value === "note"
+  );
 }
 
 function isProjectProcessItemStatus(value: string): value is ProjectProcessItemStatus {

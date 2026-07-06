@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { CheckCircle2, FileCheck2, Lock, LayoutGrid, Receipt, ShieldCheck } from "lucide-react";
+import { CheckCircle2, FileCheck2, Lock, LayoutGrid, Receipt, ShieldCheck, StickyNote } from "lucide-react";
 import { ProcessChecklistBoard } from "@/components/process/process-checklist-board";
 import { ProcessInternalAcceptanceBoard } from "@/components/process/process-internal-acceptance-board";
 import { ProcessKanbanBoard } from "@/components/process/process-kanban-board";
+import { ProcessNoteLinksBoard } from "@/components/process/process-note-links-board";
 import { ProcessSettlementPanel } from "@/components/process/process-settlement-panel";
 import { ProcessItemResponsibleSection } from "@/components/process/process-item-responsible-section";
 import { ProcessPublicLinkControls } from "@/components/process/process-public-link-controls";
@@ -36,6 +37,7 @@ const kindIcon = {
   protocol: FileCheck2,
   settlement: Receipt,
   kanban: LayoutGrid,
+  note: StickyNote,
 } as const;
 
 type ProcessItemPanelProps = {
@@ -327,6 +329,21 @@ export function ProcessItemPanel({
               <p className="text-sm font-medium text-foreground">Protokół odbioru</p>
               <p className="mt-2 text-sm text-muted">
                 Formularz protokołu z podpisem klienta będzie dostępny w kolejnej fazie.
+              </p>
+            </div>
+          ) : null}
+
+          {item.kind === "note" && projectId && resolvedInstance && interactive ? (
+            <ProcessNoteLinksBoard
+              projectId={projectId}
+              projectProcessItemId={resolvedInstance.id}
+              actorName={actorName}
+            />
+          ) : item.kind === "note" ? (
+            <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4">
+              <p className="text-sm font-medium text-foreground">Notatka / dokument</p>
+              <p className="mt-2 text-sm text-muted">
+                Podpięte notatki i dokumenty będą dostępne po otwarciu tego elementu w widoku zespołu.
               </p>
             </div>
           ) : null}

@@ -1,6 +1,6 @@
 import type { KanbanTemplatePayload } from "@/lib/process/kanban-types";
 
-export const PROCESS_ITEM_KINDS = ["checklist", "protocol", "settlement", "kanban"] as const;
+export const PROCESS_ITEM_KINDS = ["checklist", "protocol", "settlement", "kanban", "note"] as const;
 
 export type ProcessItemKind = (typeof PROCESS_ITEM_KINDS)[number];
 
@@ -150,6 +150,16 @@ export const PROCESS_ITEM_KIND_LABELS: Record<ProcessItemKind, string> = {
   protocol: "Protokół odbioru",
   settlement: "Rozliczenie",
   kanban: "Tablica Kanban",
+  note: "Notatka / dokument",
+};
+
+/** Podpięcie istniejącej notatki lub dokumentu (albo nowo utworzonych) do kroku procesu typu „note”. */
+export type ProcessItemLink = {
+  id: string;
+  projectProcessItemId: string;
+  documentId: string | null;
+  meetingNoteId: string | null;
+  createdAt: string;
 };
 
 export function countProcessItems(template: ProcessTemplate) {

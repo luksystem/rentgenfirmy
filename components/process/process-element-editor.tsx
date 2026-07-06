@@ -155,6 +155,11 @@ export function ProcessElementEditor({
             }
             onChange={(defaultPayload) => setElement({ ...element, defaultPayload })}
           />
+        ) : element.kind === "note" ? (
+          <p className="rounded-xl border border-accent/30 bg-accent/5 p-3 text-sm text-muted">
+            W projekcie zespół podepnie tu istniejącą notatkę ze spotkania i/lub dokument, albo utworzy
+            nowy wpis — bez konfiguracji na poziomie szablonu.
+          </p>
         ) : (
           <p className="text-sm text-muted">
             Ten typ elementu będzie rozwijany w kolejnych fazach (formularz protokołu, rozliczenie).
