@@ -133,6 +133,8 @@ export type ServiceIntakeRecord = {
   preliminaryAcceptedAt: string | null;
   clientName?: string | null;
   projectName?: string | null;
+  /** Sformatowany adres (ulica, kod, miasto) do nawigacji Google Maps — klienta lub kontaktu-gościa. */
+  clientAddress?: string | null;
 };
 
 export type ServiceIntakeAiEstimateSnapshot = {

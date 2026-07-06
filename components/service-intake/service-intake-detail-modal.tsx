@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Coffee, ExternalLink, Loader2, UserRound, X } from "lucide-react";
+import { Coffee, ExternalLink, Loader2, Navigation, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogTitle, StackedDialogContent } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { buildGoogleMapsDirectionsUrl } from "@/lib/dashboard/google-maps";
 import { confirmServiceIntakeStatusChange } from "@/lib/service-intake/confirm-status-change";
 import type { UserProfile } from "@/lib/auth/types";
 import { profileToOptionLabel } from "@/lib/supabase/profile-repository";
@@ -368,6 +369,24 @@ export function ServiceIntakeDetailModal({
               <p>
                 {intake.clientName ?? intake.contactFullName} · {intake.projectName ?? "Obiekt"}
               </p>
+              {intake.clientAddress ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="w-fit border-accent/40 text-accent hover:bg-accent/10"
+                  asChild
+                >
+                  <a
+                    href={buildGoogleMapsDirectionsUrl(intake.clientAddress) ?? undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Navigation className="mr-1.5 h-3.5 w-3.5" />
+                    Prowadź do
+                  </a>
+                </Button>
+              ) : null}
               <p>Zgłoszono: {formatDateTime(intake.createdAt)}</p>
               {dueAt && !dueAtChanged ? (
                 <p>Wykonać do: {formatDate(dueAt.slice(0, 10))}</p>

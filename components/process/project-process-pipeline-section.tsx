@@ -51,6 +51,8 @@ export function ProjectProcessPipelineSection({
   const toggleItemCompletion = useProcessStore((state) => state.toggleItemCompletion);
   const saveMilestoneDate = useProcessStore((state) => state.saveMilestoneDate);
   const setActiveStage = useProcessStore((state) => state.setActiveStage);
+  const addProjectProcessItem = useProcessStore((state) => state.addProjectProcessItem);
+  const removeProjectProcessItem = useProcessStore((state) => state.removeProjectProcessItem);
   const agreements = useProjectAgreementStore(
     (state) => state.byProject[projectId] ?? EMPTY_AGREEMENTS,
   );
@@ -180,6 +182,8 @@ export function ProjectProcessPipelineSection({
         agreements={agreements}
         changeRequests={changeRequests}
         onSetActiveStage={(stageId) => setActiveStage(projectId, stageId)}
+        onAddItem={(milestoneId, input) => addProjectProcessItem(projectId, milestoneId, input)}
+        onRemoveItem={(itemId) => removeProjectProcessItem(projectId, itemId)}
       />
 
       <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>

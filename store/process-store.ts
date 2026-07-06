@@ -16,12 +16,32 @@ import type {
 import { getProcessProgress } from "@/lib/process/types";
 import type { ProjectMeetingNote, ProjectMeetingNoteInput } from "@/lib/dashboard/meeting-note-types";
 import { createProjectMeetingNote } from "@/lib/supabase/project-meeting-note-repository";
+import type {
+  ProjectProcessProtocol,
+  ProtocolField,
+  ProtocolFieldValue,
+  ProtocolSignature,
+  ProtocolTemplate,
+  ProtocolTemplateSource,
+} from "@/lib/process/protocol-types";
 import {
   fetchProcessItemLinksForItems,
   linkDocumentToProcessItem,
   linkMeetingNoteToProcessItem,
   unlinkProcessItemLink,
 } from "@/lib/supabase/process-item-link-repository";
+import {
+  assignProtocolTemplateToItem,
+  clearProtocolSignature as clearProtocolSignatureRepo,
+  createProtocolTemplate as createProtocolTemplateRepo,
+  deleteProtocolTemplate,
+  fetchOrCreateProjectProcessProtocol,
+  fetchProtocolTemplates,
+  saveProtocolFieldValues as saveProtocolFieldValuesRepo,
+  saveProtocolTemplate as saveProtocolTemplateRepo,
+  signProtocolAsClient,
+  signProtocolAsCompany,
+} from "@/lib/supabase/process-protocol-repository";
 import {
   assignProjectProcessItem,
   ensureProjectProcessItems,
@@ -39,6 +59,7 @@ import {
 import { countNewKanbanTasksForTeam, countOverdueKanbanTasks } from "@/lib/supabase/kanban-repository";
 import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 import {
+  addProjectProcessSnapshotItem,
   ensureDefaultProcessTemplates,
   ensureAnchoredTemplateSnapshot,
   ensureProcessTemplateForProjectType,
@@ -46,6 +67,7 @@ import {
   fetchProjectProcess,
   fetchProjectProcesses,
   getOrCreateProjectProcess,
+  removeProjectProcessSnapshotItem,
   saveProcessTemplate,
   updateProjectProcessActiveStage,
   updateProjectProcessCompletion,
@@ -54,6 +76,8 @@ import {
 import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
 
 const noteLinksLoadPromises = new Map<string, Promise<void>>();
+let protocolTemplatesLoadPromise: Promise<void> | null = null;
+const projectProtocolLoadPromises = new Map<string, Promise<void>>();
 
 type ProcessStore = {
   templates: ProcessTemplate[];
@@ -64,6 +88,10 @@ type ProcessStore = {
   projectProcessItems: Record<string, Record<string, ProjectProcessItem>>;
   /** projectId → projectProcessItemId (DB id) → podpięte notatki/dokumenty. */
   noteLinksByProject: Record<string, Record<string, ProcessItemLink[]>>;
+  protocolTemplates: ProtocolTemplate[];
+  protocolTemplatesHydrated: boolean;
+  /** projectProcessItemId (DB id) → wypełniony protokół projektu. */
+  projectProtocols: Record<string, ProjectProcessProtocol>;
   teamProfiles: UserProfile[];
   hydrated: boolean;
   isLoading: boolean;
@@ -123,6 +151,42 @@ type ProcessStore = {
     blocksNextStage: boolean,
   ) => Promise<void>;
   setActiveStage: (projectId: string, stageId: string | null) => Promise<void>;
+  addProjectProcessItem: (
+    projectId: string,
+    milestoneId: string,
+    input: { title: string; kind: ProcessItemKind },
+  ) => Promise<void>;
+  removeProjectProcessItem: (projectId: string, itemId: string) => Promise<void>;
+  ensureProtocolTemplates: (options?: { force?: boolean }) => Promise<void>;
+  createProtocolTemplate: (input: {
+    name: string;
+    description?: string;
+    source: ProtocolTemplateSource;
+    fields: ProtocolField[];
+    projectType?: string | null;
+    referenceFile?: File | null;
+  }) => Promise<ProtocolTemplate>;
+  saveProtocolTemplate: (template: ProtocolTemplate, replaceReferenceFile?: File | null) => Promise<void>;
+  removeProtocolTemplate: (id: string) => Promise<void>;
+  ensureProjectProtocol: (
+    projectProcessItemId: string,
+    options?: { force?: boolean },
+  ) => Promise<ProjectProcessProtocol>;
+  chooseProtocolTemplateForItem: (
+    projectProcessItemId: string,
+    protocolTemplateId: string | null,
+  ) => Promise<void>;
+  saveProtocolFieldValues: (
+    projectProcessItemId: string,
+    fieldValues: Record<string, ProtocolFieldValue>,
+    notes?: string,
+  ) => Promise<void>;
+  signProtocolCompany: (projectProcessItemId: string, signature: ProtocolSignature) => Promise<void>;
+  signProtocolClient: (projectProcessItemId: string, signature: ProtocolSignature) => Promise<void>;
+  clearProtocolSignature: (
+    projectProcessItemId: string,
+    which: "company" | "client",
+  ) => Promise<void>;
   ensureNoteLinks: (projectId: string, options?: { force?: boolean }) => Promise<void>;
   linkDocumentToItem: (
     projectId: string,
@@ -167,6 +231,9 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
   projectProcesses: {},
   projectProcessItems: {},
   noteLinksByProject: {},
+  protocolTemplates: [],
+  protocolTemplatesHydrated: false,
+  projectProtocols: {},
   teamProfiles: [],
   hydrated: false,
   isLoading: false,
@@ -504,6 +571,124 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
     const updated = await updateProjectProcessActiveStage(projectId, stageId);
     set((state) => ({
       projectProcesses: { ...state.projectProcesses, [projectId]: updated },
+    }));
+  },
+
+  addProjectProcessItem: async (projectId, milestoneId, input) => {
+    const { process } = await addProjectProcessSnapshotItem(projectId, milestoneId, input);
+    set((state) => ({
+      projectProcesses: { ...state.projectProcesses, [projectId]: process },
+    }));
+    if (process.templateSnapshot) {
+      await get().loadProjectProcessItems(projectId);
+    }
+  },
+
+  removeProjectProcessItem: async (projectId, itemId) => {
+    const updated = await removeProjectProcessSnapshotItem(projectId, itemId);
+    set((state) => {
+      const items = { ...(state.projectProcessItems[projectId] ?? {}) };
+      delete items[itemId];
+      return {
+        projectProcesses: { ...state.projectProcesses, [projectId]: updated },
+        projectProcessItems: { ...state.projectProcessItems, [projectId]: items },
+      };
+    });
+  },
+
+  ensureProtocolTemplates: async (options) => {
+    if (get().protocolTemplatesHydrated && !options?.force) {
+      return;
+    }
+    if (protocolTemplatesLoadPromise && !options?.force) {
+      return protocolTemplatesLoadPromise;
+    }
+    const promise = (async () => {
+      const templates = await fetchProtocolTemplates();
+      set({ protocolTemplates: templates, protocolTemplatesHydrated: true });
+    })().finally(() => {
+      protocolTemplatesLoadPromise = null;
+    });
+    protocolTemplatesLoadPromise = promise;
+    return promise;
+  },
+
+  createProtocolTemplate: async (input) => {
+    const created = await createProtocolTemplateRepo(input);
+    set((state) => ({ protocolTemplates: [...state.protocolTemplates, created] }));
+    return created;
+  },
+
+  saveProtocolTemplate: async (template, replaceReferenceFile) => {
+    const saved = await saveProtocolTemplateRepo(template, replaceReferenceFile);
+    set((state) => ({
+      protocolTemplates: state.protocolTemplates.map((entry) => (entry.id === saved.id ? saved : entry)),
+    }));
+  },
+
+  removeProtocolTemplate: async (id) => {
+    const existing = get().protocolTemplates.find((entry) => entry.id === id);
+    await deleteProtocolTemplate(id, existing?.referencePdfPath);
+    set((state) => ({
+      protocolTemplates: state.protocolTemplates.filter((entry) => entry.id !== id),
+    }));
+  },
+
+  ensureProjectProtocol: async (projectProcessItemId, options) => {
+    const cached = get().projectProtocols[projectProcessItemId];
+    if (cached && !options?.force) {
+      return cached;
+    }
+    const inFlight = projectProtocolLoadPromises.get(projectProcessItemId);
+    if (inFlight && !options?.force) {
+      await inFlight;
+      return get().projectProtocols[projectProcessItemId]!;
+    }
+    const promise = (async () => {
+      const protocol = await fetchOrCreateProjectProcessProtocol(projectProcessItemId);
+      set((state) => ({
+        projectProtocols: { ...state.projectProtocols, [projectProcessItemId]: protocol },
+      }));
+    })().finally(() => {
+      projectProtocolLoadPromises.delete(projectProcessItemId);
+    });
+    projectProtocolLoadPromises.set(projectProcessItemId, promise);
+    await promise;
+    return get().projectProtocols[projectProcessItemId]!;
+  },
+
+  chooseProtocolTemplateForItem: async (projectProcessItemId, protocolTemplateId) => {
+    const updated = await assignProtocolTemplateToItem(projectProcessItemId, protocolTemplateId);
+    set((state) => ({
+      projectProtocols: { ...state.projectProtocols, [projectProcessItemId]: updated },
+    }));
+  },
+
+  saveProtocolFieldValues: async (projectProcessItemId, fieldValues, notes) => {
+    const updated = await saveProtocolFieldValuesRepo(projectProcessItemId, fieldValues, notes);
+    set((state) => ({
+      projectProtocols: { ...state.projectProtocols, [projectProcessItemId]: updated },
+    }));
+  },
+
+  signProtocolCompany: async (projectProcessItemId, signature) => {
+    const updated = await signProtocolAsCompany(projectProcessItemId, signature);
+    set((state) => ({
+      projectProtocols: { ...state.projectProtocols, [projectProcessItemId]: updated },
+    }));
+  },
+
+  signProtocolClient: async (projectProcessItemId, signature) => {
+    const updated = await signProtocolAsClient(projectProcessItemId, signature);
+    set((state) => ({
+      projectProtocols: { ...state.projectProtocols, [projectProcessItemId]: updated },
+    }));
+  },
+
+  clearProtocolSignature: async (projectProcessItemId, which) => {
+    const updated = await clearProtocolSignatureRepo(projectProcessItemId, which);
+    set((state) => ({
+      projectProtocols: { ...state.projectProtocols, [projectProcessItemId]: updated },
     }));
   },
 

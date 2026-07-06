@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { TemplateChecklistLinesEditor } from "@/components/process/template-checklist-lines-editor";
 import { Button } from "@/components/ui/button";
@@ -160,9 +161,18 @@ export function ProcessElementEditor({
             W projekcie zespół podepnie tu istniejącą notatkę ze spotkania i/lub dokument, albo utworzy
             nowy wpis — bez konfiguracji na poziomie szablonu.
           </p>
+        ) : element.kind === "protocol" ? (
+          <p className="rounded-xl border border-accent/30 bg-accent/5 p-3 text-sm text-muted">
+            Wzór protokołu (pola formularza lub referencyjny PDF) zespół wybierze bezpośrednio w
+            projekcie, w{" "}
+            <Link href="/procesy/protokoly" className="text-accent hover:underline">
+              katalogu wzorów protokołów
+            </Link>
+            .
+          </p>
         ) : (
           <p className="text-sm text-muted">
-            Ten typ elementu będzie rozwijany w kolejnych fazach (formularz protokołu, rozliczenie).
+            Ten typ elementu będzie rozwijany w kolejnych fazach (rozliczenie).
           </p>
         )}
 

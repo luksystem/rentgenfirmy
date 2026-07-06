@@ -45,6 +45,9 @@ export default function ProcesyPage() {
             <Button variant="secondary" asChild>
               <Link href="/procesy/typy">Typy elementów</Link>
             </Button>
+            <Button variant="secondary" asChild>
+              <Link href="/procesy/protokoly">Wzory protokołów</Link>
+            </Button>
             <Button asChild>
               <Link href="/procesy/elementy">Elementy procesu</Link>
             </Button>

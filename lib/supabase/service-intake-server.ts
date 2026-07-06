@@ -1,4 +1,5 @@
 import { getUserDisplayName } from "@/lib/auth/types";
+import { buildClientAddressLine } from "@/lib/dashboard/google-maps";
 import { namesMatch } from "@/lib/service-intake/name-match";
 import {
   buildServiceIntakeStatusEmail,
@@ -183,8 +184,12 @@ function normalizeIntakeAiEstimate(value: unknown): ServiceIntakeAiEstimateSnaps
 
 function rowToIntakeRecord(
   row: Record<string, unknown>,
-  extras?: { clientName?: string | null; projectName?: string | null },
+  extras?: { clientName?: string | null; projectName?: string | null; clientAddress?: string | null },
 ): ServiceIntakeRecord {
+  const metadataJson = (row.metadata_json as Record<string, unknown>) ?? {};
+  const contactLocation =
+    typeof metadataJson.contactLocation === "string" ? metadataJson.contactLocation : null;
+
   return {
     id: String(row.id),
     referenceNumber: String(row.reference_number),
@@ -220,6 +225,7 @@ function rowToIntakeRecord(
       : null,
     clientName: extras?.clientName ?? null,
     projectName: extras?.projectName ?? null,
+    clientAddress: extras?.clientAddress ?? contactLocation,
   };
 }
 
@@ -858,20 +864,44 @@ export async function listServiceIntakeRequests(options?: {
 
   const [{ data: clients }, { data: projects }] = await Promise.all([
     clientIds.length
-      ? supabase.from("clients").select("id, full_name").in("id", clientIds)
-      : Promise.resolve({ data: [] as Array<{ id: string; full_name: string }> }),
+      ? supabase
+          .from("clients")
+          .select("id, full_name, address_street, address_city, address_postal_code, location")
+          .in("id", clientIds)
+      : Promise.resolve({
+          data: [] as Array<{
+            id: string;
+            full_name: string;
+            address_street: string | null;
+            address_city: string | null;
+            address_postal_code: string | null;
+            location: string | null;
+          }>,
+        }),
     projectIds.length
       ? supabase.from("projects").select("id, name").in("id", projectIds)
       : Promise.resolve({ data: [] as Array<{ id: string; name: string }> }),
   ]);
 
   const clientMap = new Map((clients ?? []).map((row) => [row.id, row.full_name]));
+  const clientAddressMap = new Map(
+    (clients ?? []).map((row) => [
+      row.id,
+      buildClientAddressLine({
+        addressStreet: row.address_street ?? "",
+        addressCity: row.address_city ?? "",
+        addressPostalCode: row.address_postal_code ?? "",
+        location: row.location ?? "",
+      }),
+    ]),
+  );
   const projectMap = new Map((projects ?? []).map((row) => [row.id, row.name]));
 
   return rows.map((row) =>
     rowToIntakeRecord(row, {
       clientName: row.client_id ? clientMap.get(row.client_id) ?? null : null,
       projectName: row.project_id ? projectMap.get(row.project_id) ?? null : null,
+      clientAddress: row.client_id ? clientAddressMap.get(row.client_id) || null : undefined,
     }),
   );
 }
@@ -1093,18 +1123,32 @@ export async function getServiceIntakeThreadById(id: string): Promise<ServiceInt
       .eq("intake_id", intake.id)
       .order("created_at", { ascending: true }),
     intake.clientId
-      ? supabase.from("clients").select("full_name").eq("id", intake.clientId).maybeSingle()
+      ? supabase
+          .from("clients")
+          .select("full_name, address_street, address_city, address_postal_code, location")
+          .eq("id", intake.clientId)
+          .maybeSingle()
       : Promise.resolve({ data: null }),
     intake.projectId
       ? supabase.from("projects").select("name").eq("id", intake.projectId).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
 
+  const clientAddress = clientResult.data
+    ? buildClientAddressLine({
+        addressStreet: clientResult.data.address_street ?? "",
+        addressCity: clientResult.data.address_city ?? "",
+        addressPostalCode: clientResult.data.address_postal_code ?? "",
+        location: clientResult.data.location ?? "",
+      })
+    : null;
+
   return {
     intake: {
       ...intake,
       clientName: clientResult.data?.full_name ?? intake.clientName ?? null,
       projectName: projectResult.data?.name ?? intake.projectName ?? null,
+      clientAddress: clientAddress || (intake.clientAddress ?? null),
     },
     attachments: (attachments ?? []).map((row) => rowToAttachment(row)),
     comments: (comments ?? []).map((row) => rowToComment(row)),

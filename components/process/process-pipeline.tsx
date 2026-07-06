@@ -10,13 +10,19 @@ import {
   Circle,
   FileCheck2,
   LayoutGrid,
+  Loader2,
   Lock,
+  Plus,
   Receipt,
   StickyNote,
+  Trash2,
+  X,
 } from "lucide-react";
 import { MilestoneDateBadge } from "@/components/process/milestone-date-badge";
 import { ProcessItemPanel } from "@/components/process/process-item-panel";
 import { formatAssigneeLabel } from "@/components/process/process-item-responsible-section";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { UserProfile } from "@/lib/auth/types";
 import { isAgreementBlockingActive, type ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
@@ -83,6 +89,10 @@ type ProcessPipelineProps = {
   changeRequests?: ProjectChangeRequest[];
   /** Ustawienie / wyczyszczenie aktywnego etapu — widoczne tylko w widoku zespołu (interactive). */
   onSetActiveStage?: (stageId: string | null) => Promise<void>;
+  /** Doraźne dodanie elementu „Notatka / dokument” tylko do tego projektu (widok zespołu). */
+  onAddItem?: (milestoneId: string, input: { title: string; kind: ProcessItemKind }) => Promise<void>;
+  /** Usunięcie elementu dodanego doraźnie do projektu (elementId puste = nie pochodzi z katalogu). */
+  onRemoveItem?: (itemId: string) => Promise<void>;
 };
 
 export function ProcessPipeline({
@@ -107,10 +117,50 @@ export function ProcessPipeline({
   agreements,
   changeRequests,
   onSetActiveStage,
+  onAddItem,
+  onRemoveItem,
 }: ProcessPipelineProps) {
   const [activeItem, setActiveItem] = useState<ProcessItem | null>(null);
   const [settingActiveStageId, setSettingActiveStageId] = useState<string | null>(null);
+  const [addingToMilestoneId, setAddingToMilestoneId] = useState<string | null>(null);
+  const [newItemTitle, setNewItemTitle] = useState("");
+  const [addBusy, setAddBusy] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const ensureProjectProcessItems = useProcessStore((state) => state.ensureProjectProcessItems);
+
+  async function handleAddItem(milestoneId: string) {
+    if (!onAddItem || addBusy) {
+      return;
+    }
+    const title = newItemTitle.trim() || "Notatka / dokument";
+    setAddBusy(true);
+    setAddError(null);
+    try {
+      await onAddItem(milestoneId, { title, kind: "note" });
+      setNewItemTitle("");
+      setAddingToMilestoneId(null);
+    } catch (error) {
+      setAddError(error instanceof Error ? error.message : "Nie udało się dodać elementu.");
+    } finally {
+      setAddBusy(false);
+    }
+  }
+
+  async function handleRemoveItem(itemId: string) {
+    if (!onRemoveItem || removingItemId) {
+      return;
+    }
+    if (typeof window !== "undefined" && !window.confirm("Usunąć ten element z procesu tego projektu?")) {
+      return;
+    }
+    setRemovingItemId(itemId);
+    try {
+      await onRemoveItem(itemId);
+    } finally {
+      setRemovingItemId(null);
+    }
+  }
 
   async function handleSetActiveStage(stageId: string | null) {
     if (!onSetActiveStage || settingActiveStageId) {
@@ -466,38 +516,55 @@ export function ProcessPipeline({
                             });
 
                             if (interactive) {
+                              const isAdHocItem = onRemoveItem && item.elementId === "";
                               return (
-                                <button
-                                  key={item.id}
-                                  type="button"
-                                  disabled={!canOpen}
-                                  onClick={() => void handleOpenItem(item)}
-                                  className={cn(
-                                    "flex w-full items-start gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition",
-                                    visualClasses.card,
-                                    canOpen
-                                      ? "cursor-pointer hover:border-accent/30 hover:bg-surface-elevated/80"
-                                      : "cursor-not-allowed opacity-60",
-                                  )}
-                                >
-                                  <FallbackIcon
-                                    className={cn("mt-0.5 h-4 w-4 shrink-0", visualClasses.icon)}
-                                  />
-                                  <span className="min-w-0 flex-1">
-                                    <span className="flex items-center gap-1.5 font-medium text-foreground">
-                                      <Icon className="h-3.5 w-3.5 shrink-0 text-accent" />
-                                      {item.title}
+                                <div key={item.id} className="flex items-stretch gap-1.5">
+                                  <button
+                                    type="button"
+                                    disabled={!canOpen}
+                                    onClick={() => void handleOpenItem(item)}
+                                    className={cn(
+                                      "flex min-w-0 flex-1 items-start gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition",
+                                      visualClasses.card,
+                                      canOpen
+                                        ? "cursor-pointer hover:border-accent/30 hover:bg-surface-elevated/80"
+                                        : "cursor-not-allowed opacity-60",
+                                    )}
+                                  >
+                                    <FallbackIcon
+                                      className={cn("mt-0.5 h-4 w-4 shrink-0", visualClasses.icon)}
+                                    />
+                                    <span className="min-w-0 flex-1">
+                                      <span className="flex items-center gap-1.5 font-medium text-foreground">
+                                        <Icon className="h-3.5 w-3.5 shrink-0 text-accent" />
+                                        {item.title}
+                                      </span>
+                                      <span className="mt-0.5 block text-[11px] text-muted">
+                                        {kindLabel}
+                                        {checklistStats && checklistStats.total > 0
+                                          ? ` · ${checklistStats.completed}/${checklistStats.total} gotowe`
+                                          : ""}
+                                        {assigneeLabel ? ` · ${assigneeLabel}` : ""}
+                                      </span>
                                     </span>
-                                    <span className="mt-0.5 block text-[11px] text-muted">
-                                      {kindLabel}
-                                      {checklistStats && checklistStats.total > 0
-                                        ? ` · ${checklistStats.completed}/${checklistStats.total} gotowe`
-                                        : ""}
-                                      {assigneeLabel ? ` · ${assigneeLabel}` : ""}
-                                    </span>
-                                  </span>
-                                  <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
-                                </button>
+                                    <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
+                                  </button>
+                                  {isAdHocItem ? (
+                                    <button
+                                      type="button"
+                                      title="Usuń element dodany do tego projektu"
+                                      disabled={removingItemId === item.id}
+                                      onClick={() => void handleRemoveItem(item.id)}
+                                      className="flex shrink-0 items-center justify-center rounded-xl border border-border/70 px-2 text-muted transition hover:border-rose-500/40 hover:text-rose-300 disabled:opacity-50"
+                                    >
+                                      {removingItemId === item.id ? (
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      )}
+                                    </button>
+                                  ) : null}
+                                </div>
                               );
                             }
 
@@ -542,6 +609,69 @@ export function ProcessPipeline({
                             );
                           })}
                         </div>
+
+                        {interactive && onAddItem ? (
+                          addingToMilestoneId === milestone.id ? (
+                            <div className="mt-3 rounded-xl border border-dashed border-accent/40 bg-accent/[0.04] p-2.5">
+                              <Input
+                                autoFocus
+                                value={newItemTitle}
+                                onChange={(event) => setNewItemTitle(event.target.value)}
+                                placeholder="Tytuł notatki / dokumentu"
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter") {
+                                    void handleAddItem(milestone.id);
+                                  }
+                                }}
+                              />
+                              {addError ? (
+                                <p className="mt-1.5 text-xs text-rose-400">{addError}</p>
+                              ) : null}
+                              <div className="mt-2 flex justify-end gap-1.5">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={addBusy}
+                                  onClick={() => {
+                                    setAddingToMilestoneId(null);
+                                    setAddError(null);
+                                    setNewItemTitle("");
+                                  }}
+                                >
+                                  <X className="mr-1 h-3.5 w-3.5" />
+                                  Anuluj
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  disabled={addBusy}
+                                  onClick={() => void handleAddItem(milestone.id)}
+                                >
+                                  {addBusy ? (
+                                    <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Plus className="mr-1 h-3.5 w-3.5" />
+                                  )}
+                                  Dodaj
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAddingToMilestoneId(milestone.id);
+                                setNewItemTitle("");
+                                setAddError(null);
+                              }}
+                              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border/70 py-2 text-xs font-medium text-muted transition hover:border-accent/40 hover:text-accent"
+                            >
+                              <StickyNote className="h-3.5 w-3.5" />
+                              Dodaj notatkę / dokument
+                            </button>
+                          )
+                        ) : null}
                       </div>
                     );
                   })}

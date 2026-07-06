@@ -324,6 +324,60 @@ export type ProjectProcessItemLinkInsert = {
 
 export type ProjectProcessItemLinkUpdate = Partial<ProjectProcessItemLinkInsert>;
 
+export type ProcessProtocolTemplateRow = {
+  id: string;
+  name: string;
+  description: string;
+  source: string;
+  fields: unknown;
+  reference_pdf_path: string | null;
+  reference_pdf_name: string | null;
+  project_type: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProcessProtocolTemplateInsert = {
+  id?: string;
+  name: string;
+  description?: string;
+  source?: string;
+  fields?: unknown;
+  reference_pdf_path?: string | null;
+  reference_pdf_name?: string | null;
+  project_type?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ProcessProtocolTemplateUpdate = Partial<ProcessProtocolTemplateInsert>;
+
+export type ProjectProcessProtocolRow = {
+  id: string;
+  project_process_item_id: string;
+  protocol_template_id: string | null;
+  field_values: unknown;
+  notes: string;
+  company_signature: unknown;
+  client_signature: unknown;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectProcessProtocolInsert = {
+  id?: string;
+  project_process_item_id: string;
+  protocol_template_id?: string | null;
+  field_values?: unknown;
+  notes?: string;
+  company_signature?: unknown;
+  client_signature?: unknown;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ProjectProcessProtocolUpdate = Partial<ProjectProcessProtocolInsert>;
+
 export type ProjectAgreementApproverRoleRow = {
   id: string;
   agreement_id: string;
@@ -1082,6 +1136,18 @@ export type Database = {
         Row: ProjectProcessItemLinkRow;
         Insert: ProjectProcessItemLinkInsert;
         Update: ProjectProcessItemLinkUpdate;
+        Relationships: [];
+      };
+      process_protocol_templates: {
+        Row: ProcessProtocolTemplateRow;
+        Insert: ProcessProtocolTemplateInsert;
+        Update: ProcessProtocolTemplateUpdate;
+        Relationships: [];
+      };
+      project_process_protocols: {
+        Row: ProjectProcessProtocolRow;
+        Insert: ProjectProcessProtocolInsert;
+        Update: ProjectProcessProtocolUpdate;
         Relationships: [];
       };
       project_agreement_approver_roles: {

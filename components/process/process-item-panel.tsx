@@ -6,6 +6,7 @@ import { ProcessChecklistBoard } from "@/components/process/process-checklist-bo
 import { ProcessInternalAcceptanceBoard } from "@/components/process/process-internal-acceptance-board";
 import { ProcessKanbanBoard } from "@/components/process/process-kanban-board";
 import { ProcessNoteLinksBoard } from "@/components/process/process-note-links-board";
+import { ProcessProtocolBoard } from "@/components/process/process-protocol-board";
 import { ProcessSettlementPanel } from "@/components/process/process-settlement-panel";
 import { ProcessItemResponsibleSection } from "@/components/process/process-item-responsible-section";
 import { ProcessPublicLinkControls } from "@/components/process/process-public-link-controls";
@@ -324,11 +325,14 @@ export function ProcessItemPanel({
             </div>
           ) : null}
 
-          {item.kind === "protocol" ? (
+          {item.kind === "protocol" && resolvedInstance && interactive ? (
+            <ProcessProtocolBoard projectProcessItemId={resolvedInstance.id} actorName={actorName} />
+          ) : item.kind === "protocol" ? (
             <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4">
               <p className="text-sm font-medium text-foreground">Protokół odbioru</p>
               <p className="mt-2 text-sm text-muted">
-                Formularz protokołu z podpisem klienta będzie dostępny w kolejnej fazie.
+                Protokół zostanie wypełniony i podpisany elektronicznie (Ty i przedstawiciel firmy)
+                na tablecie podczas wizyty.
               </p>
             </div>
           ) : null}

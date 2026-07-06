@@ -46,19 +46,48 @@ function InspectionCard({
     status: item.status,
   });
 
+  const dateKind: "confirmed" | "preliminary" | "none" = item.confirmedDate
+    ? "confirmed"
+    : item.preliminaryDate
+      ? "preliminary"
+      : "none";
+  const dateValue = item.confirmedDate ?? item.preliminaryDate ?? null;
+
   return (
     <article
       className={cn(
-        "grid gap-2 rounded-xl border p-3 shadow-sm transition hover:border-accent/30",
+        "grid gap-2.5 rounded-xl border p-3 shadow-sm transition hover:border-accent/30",
         planningDue ? "border-amber-500/40 bg-amber-500/5 ring-1 ring-amber-500/20" : "border-border/70 bg-surface-muted/20",
       )}
     >
       <button type="button" className="w-full text-left" onClick={onOpen} disabled={busy}>
-        <p className="font-semibold text-foreground">{item.systemLabel}</p>
-        <p className="mt-0.5 line-clamp-2 text-sm text-muted">{item.title}</p>
+        <p className="flex items-center gap-1.5 text-sm font-bold leading-tight text-foreground">
+          <User className="h-3.5 w-3.5 shrink-0 text-accent" />
+          <span className="truncate">{item.clientName ?? "Klient nieprzypisany"}</span>
+        </p>
+        <p className="mt-1 truncate text-xs font-semibold text-muted">{item.systemLabel}</p>
+        <p className="line-clamp-2 text-xs text-muted/80">{item.title}</p>
       </button>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div
+        className={cn(
+          "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-bold",
+          dateKind === "confirmed"
+            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+            : dateKind === "preliminary"
+              ? "border-sky-500/40 bg-sky-500/10 text-sky-200"
+              : "border-border/70 bg-surface-muted/40 text-muted",
+        )}
+      >
+        <Calendar className="h-3.5 w-3.5 shrink-0" />
+        {dateKind === "confirmed"
+          ? `Termin: ${formatDate(dateValue!)}`
+          : dateKind === "preliminary"
+            ? `Wstępnie: ${formatDate(dateValue!)}`
+            : "Brak daty"}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
         <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] text-muted">
           {INSPECTION_STATUS_LABELS[item.status]}
         </span>
@@ -67,29 +96,14 @@ function InspectionCard({
             Zaplanuj termin
           </span>
         ) : null}
-      </div>
-
-      <div className="grid gap-1 text-xs text-muted">
-        <p className="flex items-center gap-1">
-          <User className="h-3 w-3" />
-          {item.clientName ?? "Klient"}
-        </p>
         {item.responsibleName || item.assigneeName ? (
-          <p className="flex items-center gap-1">
+          <span className="flex items-center gap-1 text-[11px] text-muted">
             <User className="h-3 w-3" />
             {item.assigneeName ?? item.responsibleName}
-          </p>
+          </span>
         ) : (
-          <p className="text-amber-200/80">Brak osoby odpowiedzialnej</p>
+          <span className="text-[11px] text-amber-200/80">Brak osoby odpowiedzialnej</span>
         )}
-        <p className="flex items-center gap-1">
-          <Calendar className="h-3 w-3" />
-          {item.confirmedDate
-            ? `Termin: ${formatDate(item.confirmedDate)}`
-            : item.preliminaryDate
-              ? `Wstępnie: ${formatDate(item.preliminaryDate)}`
-              : "Bez daty"}
-        </p>
       </div>
 
       <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onOpen}>

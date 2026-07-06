@@ -4,7 +4,13 @@ import {
   collectTemplateItemIds,
   collectTemplateMilestoneIds,
 } from "@/lib/process/anchored-template";
-import type { ProcessItemCompletion, ProcessTemplate, ProjectProcess } from "@/lib/process/types";
+import type {
+  ProcessItem,
+  ProcessItemCompletion,
+  ProcessItemKind,
+  ProcessTemplate,
+  ProjectProcess,
+} from "@/lib/process/types";
 import { getSupabase } from "@/lib/supabase/client";
 import { fetchProcessElements } from "@/lib/supabase/process-element-repository";
 import { ensureProjectProcessItems } from "@/lib/supabase/process-item-repository";
@@ -335,6 +341,130 @@ export async function updateProjectProcessCompletion(
   if (error) {
     throw new Error(error.message);
   }
+
+  return rowToProjectProcess(data);
+}
+
+/**
+ * Dodaje nowy element (np. notatkę/dokument) do struktury procesu WYŁĄCZNIE dla tego projektu —
+ * mutuje `template_snapshot`, nie dotyka globalnego szablonu innych projektów tego typu.
+ */
+export async function addProjectProcessSnapshotItem(
+  projectId: string,
+  milestoneId: string,
+  input: { title: string; kind: ProcessItemKind },
+): Promise<{ process: ProjectProcess; item: ProcessItem }> {
+  const process = await fetchProjectProcess(projectId);
+  if (!process) {
+    throw new Error("Nie znaleziono procesu projektu.");
+  }
+  if (!process.templateSnapshot) {
+    throw new Error("Proces projektu nie ma jeszcze zakotwiczonej struktury.");
+  }
+
+  const snapshot = cloneProcessTemplate(process.templateSnapshot);
+  const milestone = snapshot.stages
+    .flatMap((stage) => stage.milestones)
+    .find((entry) => entry.id === milestoneId);
+
+  if (!milestone) {
+    throw new Error("Nie znaleziono kamienia milowego w strukturze procesu.");
+  }
+
+  const newItem: ProcessItem = {
+    id: crypto.randomUUID(),
+    milestoneId,
+    elementId: "",
+    kind: input.kind,
+    title: input.title.trim() || "Nowy element",
+    position: milestone.items.length,
+    defaultPayload: { sections: [] },
+    isInternalAcceptance: false,
+  };
+  milestone.items.push(newItem);
+
+  const updated: ProjectProcess = {
+    ...process,
+    templateSnapshot: snapshot,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("project_processes")
+    .update(projectProcessToUpdate(updated))
+    .eq("project_id", projectId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await ensureProjectProcessItems(projectId, snapshot);
+
+  return { process: rowToProjectProcess(data), item: newItem };
+}
+
+/** Usuwa element dodany doraźnie do projektu (mutacja `template_snapshot`, jak wyżej). */
+export async function removeProjectProcessSnapshotItem(
+  projectId: string,
+  itemId: string,
+): Promise<ProjectProcess> {
+  const process = await fetchProjectProcess(projectId);
+  if (!process) {
+    throw new Error("Nie znaleziono procesu projektu.");
+  }
+  if (!process.templateSnapshot) {
+    throw new Error("Proces projektu nie ma jeszcze zakotwiczonej struktury.");
+  }
+
+  const snapshot = cloneProcessTemplate(process.templateSnapshot);
+  let removed = false;
+  for (const stage of snapshot.stages) {
+    for (const milestone of stage.milestones) {
+      const index = milestone.items.findIndex((entry) => entry.id === itemId);
+      if (index !== -1) {
+        milestone.items.splice(index, 1);
+        milestone.items.forEach((entry, position) => {
+          entry.position = position;
+        });
+        removed = true;
+      }
+    }
+  }
+
+  if (!removed) {
+    throw new Error("Nie znaleziono elementu procesu do usunięcia.");
+  }
+
+  const completions = { ...process.completions };
+  delete completions[itemId];
+
+  const updated: ProjectProcess = {
+    ...process,
+    templateSnapshot: snapshot,
+    completions,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("project_processes")
+    .update(projectProcessToUpdate(updated))
+    .eq("project_id", projectId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await supabase
+    .from("project_process_items")
+    .delete()
+    .eq("project_id", projectId)
+    .eq("template_item_id", itemId);
 
   return rowToProjectProcess(data);
 }

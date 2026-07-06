@@ -9,6 +9,7 @@ import {
   GripVertical,
   Loader2,
   MessageSquare,
+  Navigation,
   Phone,
   RefreshCw,
   Shield,
@@ -19,6 +20,7 @@ import { KanbanMobileColumnNav } from "@/components/process/kanban-mobile-column
 import { ServiceIntakeDetailModal } from "@/components/service-intake/service-intake-detail-modal";
 import { Button } from "@/components/ui/button";
 import { useKanbanMobileColumns } from "@/hooks/use-kanban-mobile-columns";
+import { buildGoogleMapsDirectionsUrl } from "@/lib/dashboard/google-maps";
 import { confirmServiceIntakeStatusChange } from "@/lib/service-intake/confirm-status-change";
 import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 import { useAuthStore } from "@/store/auth-store";
@@ -125,6 +127,7 @@ function ServiceIntakeCard({
   const statusTone = SERVICE_INTAKE_STATUS_TONE[item.status];
   const cafe = cafeOption(item.priority);
   const inactive = isServiceIntakeInactive(item.status);
+  const directionsUrl = item.clientAddress ? buildGoogleMapsDirectionsUrl(item.clientAddress) : null;
 
   function handlePointerDown(event: ReactPointerEvent<HTMLElement>) {
     if (!canDrag || event.pointerType === "mouse" || event.button !== 0) {
@@ -329,6 +332,21 @@ function ServiceIntakeCard({
             onClick={() => onStatusChange("in_review")}
           >
             Otwórz ponownie
+          </Button>
+        ) : null}
+        {directionsUrl ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="border-accent/40 text-accent hover:bg-accent/10"
+            asChild
+            onPointerDown={stopDragPropagation}
+          >
+            <a href={directionsUrl} target="_blank" rel="noopener noreferrer">
+              <Navigation className="mr-1 h-3.5 w-3.5" />
+              Prowadź do
+            </a>
           </Button>
         ) : null}
         <Button size="sm" variant="ghost" asChild onPointerDown={stopDragPropagation}>
