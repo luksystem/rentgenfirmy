@@ -19,6 +19,10 @@ import {
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
 import type { ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
 
+// Stabilna referencja — nowa tablica `[]` przy każdym wywołaniu selektora Zustand powoduje
+// nieskończoną pętlę renderów pod React 18 (useSyncExternalStore).
+const EMPTY_AGREEMENTS: ProjectClientAgreement[] = [];
+
 function InternalAcceptanceAgreementDialogBody({
   agreement,
   projectId,
@@ -84,7 +88,7 @@ export function InternalAcceptanceAgreementDialog({
 }) {
   const ensureAgreements = useProjectAgreementStore((state) => state.ensureAgreements);
   const agreements = useProjectAgreementStore((state) =>
-    agreementId ? (state.byProject[projectId] ?? []) : [],
+    agreementId ? state.byProject[projectId] ?? EMPTY_AGREEMENTS : EMPTY_AGREEMENTS,
   );
   const loading = useProjectAgreementStore(
     (state) => Boolean(projectId && state.loadingProjects[projectId]),

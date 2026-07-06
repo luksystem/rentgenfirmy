@@ -76,6 +76,7 @@ export function ProcessItemPanel({
   onSign,
   onToggleComplete,
   actorName,
+  canCustomizeChecklist = false,
 }: ProcessItemPanelProps) {
   const [structureDraft, setStructureDraft] = useState<ChecklistItemPayload | null>(null);
   const [structureOpen, setStructureOpen] = useState(false);
@@ -326,7 +327,11 @@ export function ProcessItemPanel({
           ) : null}
 
           {item.kind === "protocol" && resolvedInstance && interactive ? (
-            <ProcessProtocolBoard projectProcessItemId={resolvedInstance.id} actorName={actorName} />
+            <ProcessProtocolBoard
+              projectProcessItemId={resolvedInstance.id}
+              actorName={actorName}
+              canManageTemplate={canCustomizeChecklist}
+            />
           ) : item.kind === "protocol" ? (
             <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4">
               <p className="text-sm font-medium text-foreground">Protokół odbioru</p>

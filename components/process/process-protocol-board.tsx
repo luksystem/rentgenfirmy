@@ -106,9 +106,12 @@ function ProtocolSignatureBlock({
 export function ProcessProtocolBoard({
   projectProcessItemId,
   actorName,
+  canManageTemplate = false,
 }: {
   projectProcessItemId: string;
   actorName?: string;
+  /** Administrator: możliwość zmiany lub wyczyszczenia już wybranego wzoru (czyści też pola i podpisy). */
+  canManageTemplate?: boolean;
 }) {
   const protocolTemplates = useProcessStore((state) => state.protocolTemplates);
   const templatesHydrated = useProcessStore((state) => state.protocolTemplatesHydrated);
@@ -124,6 +127,8 @@ export function ProcessProtocolBoard({
   const [ready, setReady] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [choosingBusy, setChoosingBusy] = useState(false);
+  const [changingTemplate, setChangingTemplate] = useState(false);
+  const [clearingTemplate, setClearingTemplate] = useState(false);
   const [fieldValues, setFieldValues] = useState<Record<string, ProtocolFieldValue>>({});
   const [notes, setNotes] = useState("");
   const [savingFields, setSavingFields] = useState(false);
@@ -168,10 +173,34 @@ export function ProcessProtocolBoard({
     setError(null);
     try {
       await chooseProtocolTemplateForItem(projectProcessItemId, selectedTemplateId);
+      setChangingTemplate(false);
+      setSelectedTemplateId("");
     } catch (chooseError) {
       setError(chooseError instanceof Error ? chooseError.message : "Nie udało się wybrać wzoru.");
     } finally {
       setChoosingBusy(false);
+    }
+  }
+
+  async function handleClearTemplate() {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        "Wyczyścić wybrany wzór protokołu? Wypełnione pola, uwagi i oba podpisy zostaną usunięte.",
+      )
+    ) {
+      return;
+    }
+    setClearingTemplate(true);
+    setError(null);
+    try {
+      await chooseProtocolTemplateForItem(projectProcessItemId, null);
+      setChangingTemplate(false);
+      setSelectedTemplateId("");
+    } catch (clearError) {
+      setError(clearError instanceof Error ? clearError.message : "Nie udało się wyczyścić wzoru.");
+    } finally {
+      setClearingTemplate(false);
     }
   }
 
@@ -191,13 +220,20 @@ export function ProcessProtocolBoard({
     return <p className="text-sm text-muted">Ładowanie protokołu…</p>;
   }
 
-  if (!protocol?.protocolTemplateId) {
+  if (!protocol?.protocolTemplateId || changingTemplate) {
     return (
       <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4">
-        <p className="text-sm font-medium text-foreground">Wybierz wzór protokołu</p>
+        <p className="text-sm font-medium text-foreground">
+          {protocol?.protocolTemplateId ? "Zmień wzór protokołu" : "Wybierz wzór protokołu"}
+        </p>
         <p className="mt-1 text-sm text-muted">
           Formularz pól albo referencyjny PDF — skonfigurowany w katalogu wzorów protokołów.
         </p>
+        {protocol?.protocolTemplateId ? (
+          <p className="mt-1 text-xs text-amber-300">
+            Zmiana wzoru wyczyści dotychczas wypełnione pola i oba podpisy tego protokołu.
+          </p>
+        ) : null}
         <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
           <Select value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.target.value)}>
             <option value="">Wybierz wzór…</option>
@@ -220,6 +256,33 @@ export function ProcessProtocolBoard({
             .
           </p>
         ) : null}
+        {protocol?.protocolTemplateId ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={choosingBusy || clearingTemplate}
+              onClick={() => {
+                setChangingTemplate(false);
+                setSelectedTemplateId("");
+                setError(null);
+              }}
+            >
+              Anuluj
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-rose-500/40 text-rose-300 hover:bg-rose-500/10"
+              disabled={clearingTemplate || choosingBusy}
+              onClick={() => void handleClearTemplate()}
+            >
+              {clearingTemplate ? "Czyszczenie…" : "Wyczyść wzór"}
+            </Button>
+          </div>
+        ) : null}
         {error ? <p className="mt-2 text-sm text-rose-400">{error}</p> : null}
       </div>
     );
@@ -227,9 +290,22 @@ export function ProcessProtocolBoard({
 
   return (
     <div className="grid gap-3">
-      <div className="rounded-xl border border-border/70 bg-surface-muted/20 p-3">
-        <p className="text-sm font-medium text-foreground">{template?.name ?? "Wzór protokołu"}</p>
-        {template?.description ? <p className="mt-1 text-xs text-muted">{template.description}</p> : null}
+      <div className="flex items-start justify-between gap-2 rounded-xl border border-border/70 bg-surface-muted/20 p-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground">{template?.name ?? "Wzór protokołu"}</p>
+          {template?.description ? <p className="mt-1 text-xs text-muted">{template.description}</p> : null}
+        </div>
+        {canManageTemplate ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="shrink-0"
+            onClick={() => setChangingTemplate(true)}
+          >
+            Zmień wzór
+          </Button>
+        ) : null}
       </div>
 
       {template?.source === "pdf" ? (

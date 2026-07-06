@@ -6,10 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import type { ProjectMeetingNote } from "@/lib/dashboard/meeting-note-types";
 import type { ProjectDocument } from "@/lib/documents/types";
+import type { ProcessItemLink } from "@/lib/process/types";
 import { fetchProjectDocuments } from "@/lib/supabase/project-document-repository";
 import { fetchProjectMeetingNotes } from "@/lib/supabase/project-meeting-note-repository";
 import { formatDateTime } from "@/lib/utils";
 import { useProcessStore } from "@/store/process-store";
+
+// Referencja musi być stabilna między renderami — nowa tablica `[]` przy każdym wywołaniu
+// selektora Zustand powoduje nieskończoną pętlę renderów pod React 18 (useSyncExternalStore
+// przy każdym commicie widzi "inny" snapshot i natychmiast planuje kolejny render).
+const EMPTY_NOTE_LINKS: ProcessItemLink[] = [];
 
 type ProcessNoteLinksBoardProps = {
   projectId: string;
@@ -23,7 +29,7 @@ export function ProcessNoteLinksBoard({
   actorName,
 }: ProcessNoteLinksBoardProps) {
   const links = useProcessStore(
-    (state) => state.noteLinksByProject[projectId]?.[projectProcessItemId] ?? [],
+    (state) => state.noteLinksByProject[projectId]?.[projectProcessItemId] ?? EMPTY_NOTE_LINKS,
   );
   const ensureNoteLinks = useProcessStore((state) => state.ensureNoteLinks);
   const linkDocumentToItem = useProcessStore((state) => state.linkDocumentToItem);
