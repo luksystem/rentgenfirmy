@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   Circle,
   FileCheck2,
@@ -146,6 +147,56 @@ export function ProcessPipeline({
     [template, process, stageGate.blockedStageIndexes],
   );
 
+  /** W widoku klienta (nieinteraktywnym) zwijamy pozostałe etapy i wyróżniamy aktywny. */
+  const collapsible = !interactive;
+
+  const defaultExpandedStageId = useMemo(() => {
+    if (process?.activeStageId && template.stages.some((stage) => stage.id === process.activeStageId)) {
+      return process.activeStageId;
+    }
+    for (const stage of template.stages) {
+      const items = stage.milestones.flatMap((milestone) => milestone.items);
+      const completed = items.filter((item) => process?.completions?.[item.id]).length;
+      if (items.length === 0 || completed < items.length) {
+        return stage.id;
+      }
+    }
+    return template.stages[template.stages.length - 1]?.id ?? null;
+  }, [process?.activeStageId, process?.completions, template]);
+
+  const [expandedStageIds, setExpandedStageIds] = useState<Set<string>>(
+    () => new Set(defaultExpandedStageId ? [defaultExpandedStageId] : []),
+  );
+
+  useEffect(() => {
+    if (!collapsible || !process?.activeStageId) {
+      return;
+    }
+    setExpandedStageIds(new Set([process.activeStageId]));
+  }, [collapsible, process?.activeStageId]);
+
+  const stageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    if (!collapsible || !process?.activeStageId) {
+      return;
+    }
+    const el = stageRefs.current[process.activeStageId];
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [collapsible, process?.activeStageId]);
+
+  function toggleStageExpanded(stageId: string) {
+    setExpandedStageIds((current) => {
+      const next = new Set(current);
+      if (next.has(stageId)) {
+        next.delete(stageId);
+      } else {
+        next.add(stageId);
+      }
+      return next;
+    });
+  }
+
   async function handleOpenItem(item: ProcessItem) {
     if (interactive && projectId && !itemInstances?.[item.id]) {
       await ensureProjectProcessItems(projectId, template);
@@ -172,10 +223,14 @@ export function ProcessPipeline({
             const hasSoftWarning = !isBlocked && softWarningIndexes.has(stageIndex);
             const blockReasons = stageGate.reasonsByStageIndex.get(stageIndex) ?? [];
             const isActiveStage = process?.activeStageId === stage.id;
+            const isExpanded = !collapsible || expandedStageIds.has(stage.id);
 
             return (
               <div
                 key={stage.id}
+                ref={(el) => {
+                  stageRefs.current[stage.id] = el;
+                }}
                 className={cn(
                   "relative flex w-full flex-col",
                   !stacked && "md:w-80 md:shrink-0 md:px-3",
@@ -193,8 +248,22 @@ export function ProcessPipeline({
 
                 <div className={cn("relative mb-5", !stacked && "md:mb-6")}>
                   <div
+                    role={collapsible ? "button" : undefined}
+                    tabIndex={collapsible ? 0 : undefined}
+                    onClick={collapsible ? () => toggleStageExpanded(stage.id) : undefined}
+                    onKeyDown={
+                      collapsible
+                        ? (event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              toggleStageExpanded(stage.id);
+                            }
+                          }
+                        : undefined
+                    }
                     className={cn(
                       "relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br from-surface-elevated to-surface-muted/50 px-4 py-4 shadow-soft",
+                      collapsible && "cursor-pointer select-none",
                       isActiveStage
                         ? "border-accent shadow-[0_0_0_3px_rgba(var(--accent-rgb,59,130,246),0.15)]"
                         : isBlocked
@@ -266,6 +335,15 @@ export function ProcessPipeline({
                           </div>
                         ) : null}
                       </div>
+                      {collapsible ? (
+                        <ChevronDown
+                          className={cn(
+                            "mt-1 h-4 w-4 shrink-0 text-muted transition-transform",
+                            isExpanded && "rotate-180",
+                          )}
+                          aria-hidden
+                        />
+                      ) : null}
                     </div>
                   </div>
                   {!isLastStage && !stacked ? (
@@ -276,7 +354,13 @@ export function ProcessPipeline({
                   ) : null}
                 </div>
 
-                <div className={cn("grid flex-1 gap-4 pl-2", !stacked && "md:pl-0")}>
+                <div
+                  className={cn(
+                    "grid flex-1 gap-4 pl-2",
+                    !stacked && "md:pl-0",
+                    collapsible && !isExpanded && "hidden",
+                  )}
+                >
                   {stage.milestones.map((milestone) => {
                     const plannedDate = process?.milestoneDates?.[milestone.id] ?? null;
 
