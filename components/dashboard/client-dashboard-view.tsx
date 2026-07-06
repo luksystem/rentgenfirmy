@@ -76,6 +76,7 @@ import { cn } from "@/lib/utils";
 import { isIntegrationOperator } from "@/lib/auth/types";
 import { useAuthStore } from "@/store/auth-store";
 import { useProjectAgreementsRealtime } from "@/hooks/use-project-agreements-realtime";
+import { useProjectChangeRequestsRealtime } from "@/hooks/use-project-change-requests-realtime";
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
 import { useProjectChangeRequestStore } from "@/store/project-change-request-store";
 import { useProjectSatisfactionStore } from "@/store/project-satisfaction-store";
@@ -528,6 +529,26 @@ export function ClientDashboardView({
     enabled: enableAgreements,
   });
 
+  const ensureChangeRequests = useProjectChangeRequestStore((state) => state.ensureChangeRequests);
+
+  useEffect(() => {
+    if (!enableChangeRequests || !selectedProjectId) {
+      return;
+    }
+    void ensureChangeRequests(selectedProjectId);
+  }, [enableChangeRequests, ensureChangeRequests, selectedProjectId]);
+
+  const refreshChangeRequestsFromServer = useCallback(() => {
+    if (!enableChangeRequests || !selectedProjectId) {
+      return;
+    }
+    void ensureChangeRequests(selectedProjectId, { force: true });
+  }, [enableChangeRequests, ensureChangeRequests, selectedProjectId]);
+
+  useProjectChangeRequestsRealtime(selectedProjectId, refreshChangeRequestsFromServer, {
+    enabled: enableChangeRequests,
+  });
+
   useEffect(() => {
     if (!onAgreementsUpdated || storeAgreements.length === 0) {
       return;
@@ -840,6 +861,8 @@ export function ClientDashboardView({
         pendingAgreementsCount={pendingOtherAgreementsCount}
         pendingOffersCount={pendingOffersCount}
         pendingWarrantyCount={pendingWarrantyCount}
+        changeRequests={enableChangeRequests ? changeRequestSource : []}
+        pendingChangeRequestsCount={enableChangeRequests ? pendingChangeRequestsCount : 0}
         onOpenTab={(tab) => handleSelectTab(tab)}
         clientSpace={clientSpace}
         showPublicLinkPanel={showPublicLink && !readOnly}
@@ -882,6 +905,8 @@ export function ClientDashboardView({
         agreements={agreementSource}
         pendingAgreementsCount={pendingOtherAgreementsCount}
         pendingWarrantyCount={pendingWarrantyCount}
+        changeRequests={enableChangeRequests ? changeRequestSource : []}
+        pendingChangeRequestsCount={enableChangeRequests ? pendingChangeRequestsCount : 0}
         readOnly={readOnly}
         onOpenTab={
           onOpenTab

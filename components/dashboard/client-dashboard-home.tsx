@@ -8,6 +8,7 @@ import {
   ExternalLink,
   GitBranch,
   LayoutGrid,
+  Lock,
   NotebookPen,
   Receipt,
   Shield,
@@ -31,9 +32,15 @@ import { ClientProjectSummary } from "@/components/dashboard/client-project-summ
 import { DashboardPublicLinkPanel } from "@/components/dashboard/dashboard-public-link-panel";
 import { ProjectWarrantyPanel } from "@/components/dashboard/project-warranty-panel";
 import {
+  isAgreementBlockingActive,
   isAgreementPendingAttention,
   type ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";
+import {
+  isChangeRequestBlockingActive,
+  isChangeRequestPendingAttention,
+  type ProjectChangeRequest,
+} from "@/lib/dashboard/change-request-types";
 import {
   isRecentPublishedMeetingNote,
   type ProjectMeetingNote,
@@ -381,6 +388,8 @@ export function ClientDashboardHome({
   pendingAgreementsCount,
   pendingOffersCount = 0,
   pendingWarrantyCount,
+  changeRequests = [],
+  pendingChangeRequestsCount = 0,
   onOpenTab,
   clientSpace = null,
   showPublicLinkPanel = false,
@@ -408,7 +417,11 @@ export function ClientDashboardHome({
   pendingAgreementsCount: number;
   pendingOffersCount?: number;
   pendingWarrantyCount: number;
-  onOpenTab?: (tab: "agreements" | "offers" | "process" | "home" | "satisfaction" | "notes") => void;
+  changeRequests?: ProjectChangeRequest[];
+  pendingChangeRequestsCount?: number;
+  onOpenTab?: (
+    tab: "agreements" | "changes" | "offers" | "process" | "home" | "satisfaction" | "notes",
+  ) => void;
   clientSpace?: DashboardSpace | null;
   /** Panel włączania linku publicznego dashboardu — tylko widok zespołu. */
   showPublicLinkPanel?: boolean;
@@ -437,11 +450,16 @@ export function ClientDashboardHome({
   const pendingWarranty = agreements.filter(
     (entry) => entry.category === "warranty" && entry.status === "pending_client",
   );
-  const totalPending = pendingAgreementsCount + pendingWarrantyCount;
+  const pendingChangeRequests = changeRequests.filter((entry) => isChangeRequestPendingAttention(entry));
+  const totalPending = pendingAgreementsCount + pendingWarrantyCount + pendingChangeRequestsCount;
   const pendingDiscussionCount = pendingAgreements.filter(
     (entry) => entry.discussionOpen && entry.status !== "pending_client",
   ).length;
   const pendingAcceptanceOnlyCount = pendingAgreements.length - pendingDiscussionCount;
+  const hasBlockingPending =
+    pendingAgreements.some((entry) => isAgreementBlockingActive(entry)) ||
+    pendingWarranty.some((entry) => isAgreementBlockingActive(entry)) ||
+    pendingChangeRequests.some((entry) => isChangeRequestBlockingActive(entry));
   const recentMeetingNotes = meetingNotes.filter((note) => isRecentPublishedMeetingNote(note));
 
   return (
@@ -572,10 +590,16 @@ export function ClientDashboardHome({
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-amber-100">
+              <p className="flex flex-wrap items-center gap-1.5 font-medium text-amber-100">
                 {readOnly
                   ? "Masz propozycje do zaakceptowania"
                   : "Ustalenia wymagające uwagi"}
+                {hasBlockingPending ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-rose-500/50 bg-rose-500/15 px-2 py-0.5 text-[11px] font-semibold text-rose-300">
+                    <Lock className="h-3 w-3 shrink-0" />
+                    Blokuje etap
+                  </span>
+                ) : null}
               </p>
               <p className="mt-1 text-sm text-amber-200/90">
                 {[
@@ -588,21 +612,35 @@ export function ClientDashboardHome({
                   pendingWarrantyCount > 0
                     ? `${pendingWarrantyCount} propozycji gwarancji`
                     : null,
+                  pendingChangeRequestsCount > 0
+                    ? `${pendingChangeRequestsCount} ${readOnly ? "zmian projektowych do akceptacji" : "zmian projektowych oczekujących"}`
+                    : null,
                 ]
                   .filter(Boolean)
                   .join(" · ")}
               </p>
-              {onOpenTab && pendingAgreementsCount > 0 ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="mt-3"
-                  onClick={() => onOpenTab("agreements")}
-                >
-                  Przejdź do ustaleń
-                </Button>
-              ) : null}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {onOpenTab && pendingAgreementsCount > 0 ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onOpenTab("agreements")}
+                  >
+                    Przejdź do ustaleń
+                  </Button>
+                ) : null}
+                {onOpenTab && pendingChangeRequestsCount > 0 ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onOpenTab("changes")}
+                  >
+                    Przejdź do zmian projektowych
+                  </Button>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
