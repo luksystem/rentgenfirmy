@@ -1,14 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CheckCircle2, FileText } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, FileText, Lock, Unlock } from "lucide-react";
+import { PdfPageAnnotator } from "@/components/process/pdf-page-annotator";
 import { SignaturePad } from "@/components/process/signature-pad";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
-import type { ProtocolFieldValue, ProtocolSignature } from "@/lib/process/protocol-types";
-import { getProtocolReferencePdfUrl } from "@/lib/supabase/process-protocol-repository";
-import { formatDate } from "@/lib/utils";
+import { isProtocolLocked, type ProtocolFieldValue, type ProtocolSignature } from "@/lib/process/protocol-types";
+import {
+  getProtocolAnnotationUrl,
+  getProtocolReferencePdfUrl,
+} from "@/lib/supabase/process-protocol-repository";
+import { formatDateTime } from "@/lib/utils";
 import { useProcessStore } from "@/store/process-store";
+
+const EMPTY_ANNOTATION_URLS: Record<number, string> = {};
 
 function ProtocolSignatureBlock({
   label,
@@ -16,12 +22,14 @@ function ProtocolSignatureBlock({
   defaultSignerName,
   onSign,
   onClear,
+  readOnly = false,
 }: {
   label: string;
   signature: ProtocolSignature | null;
   defaultSignerName?: string;
   onSign: (signature: ProtocolSignature) => Promise<void>;
   onClear: () => Promise<void>;
+  readOnly?: boolean;
 }) {
   const [signerName, setSignerName] = useState(defaultSignerName ?? "");
   const [pendingDataUrl, setPendingDataUrl] = useState<string | null>(null);
@@ -75,11 +83,29 @@ function ProtocolSignatureBlock({
           className="mt-2 h-20 w-fit rounded-lg border border-border/60 bg-white px-3 object-contain"
         />
         <p className="mt-1 text-xs text-muted">
-          {signature.signerName} · {formatDate(signature.signedAt)}
+          {signature.signerName} · {formatDateTime(signature.signedAt)}
         </p>
-        <Button type="button" size="sm" variant="outline" className="mt-2" disabled={busy} onClick={() => void handleClear()}>
-          Usuń i podpisz ponownie
-        </Button>
+        {!readOnly ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="mt-2"
+            disabled={busy}
+            onClick={() => void handleClear()}
+          >
+            Usuń i podpisz ponownie
+          </Button>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (readOnly) {
+    return (
+      <div className="rounded-xl border border-border/70 bg-surface-muted/20 p-3">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="mt-1 text-xs text-muted">Brak podpisu.</p>
       </div>
     );
   }
@@ -105,10 +131,12 @@ function ProtocolSignatureBlock({
 
 export function ProcessProtocolBoard({
   projectProcessItemId,
+  projectId,
   actorName,
   canManageTemplate = false,
 }: {
   projectProcessItemId: string;
+  projectId?: string;
   actorName?: string;
   /** Administrator: możliwość zmiany lub wyczyszczenia już wybranego wzoru (czyści też pola i podpisy). */
   canManageTemplate?: boolean;
@@ -123,6 +151,9 @@ export function ProcessProtocolBoard({
   const signProtocolCompany = useProcessStore((state) => state.signProtocolCompany);
   const signProtocolClient = useProcessStore((state) => state.signProtocolClient);
   const clearProtocolSignature = useProcessStore((state) => state.clearProtocolSignature);
+  const saveProtocolAnnotation = useProcessStore((state) => state.saveProtocolAnnotation);
+  const acceptProtocol = useProcessStore((state) => state.acceptProtocol);
+  const unacceptProtocol = useProcessStore((state) => state.unacceptProtocol);
 
   const [ready, setReady] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
@@ -133,7 +164,13 @@ export function ProcessProtocolBoard({
   const [notes, setNotes] = useState("");
   const [savingFields, setSavingFields] = useState(false);
   const [referencePdfUrl, setReferencePdfUrl] = useState<string | null>(null);
+  const [annotationUrls, setAnnotationUrls] = useState<Record<number, string>>(EMPTY_ANNOTATION_URLS);
+  const [generatedPdfUrl, setGeneratedPdfUrl] = useState<string | null>(null);
+  const [accepting, setAccepting] = useState(false);
+  const [unaccepting, setUnaccepting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const locked = isProtocolLocked(protocol);
 
   useEffect(() => {
     let cancelled = false;
@@ -164,6 +201,87 @@ export function ProcessProtocolBoard({
       setReferencePdfUrl(null);
     }
   }, [template?.id, template?.referencePdfPath]);
+
+  const annotationPathsKey = useMemo(
+    () => (protocol?.annotations ?? []).map((entry) => `${entry.page}:${entry.imagePath}`).join("|"),
+    [protocol?.annotations],
+  );
+
+  useEffect(() => {
+    const annotations = protocol?.annotations ?? [];
+    if (!annotations.length) {
+      setAnnotationUrls(EMPTY_ANNOTATION_URLS);
+      return;
+    }
+    let cancelled = false;
+    void Promise.all(
+      annotations.map(async (entry) => {
+        const url = await getProtocolAnnotationUrl(entry.imagePath);
+        return [entry.page, url] as const;
+      }),
+    ).then((entries) => {
+      if (cancelled) {
+        return;
+      }
+      const next: Record<number, string> = {};
+      for (const [page, url] of entries) {
+        if (url) {
+          next[page] = url;
+        }
+      }
+      setAnnotationUrls(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [annotationPathsKey]);
+
+  useEffect(() => {
+    if (protocol?.generatedPdfPath) {
+      void getProtocolAnnotationUrl(protocol.generatedPdfPath).then(setGeneratedPdfUrl);
+    } else {
+      setGeneratedPdfUrl(null);
+    }
+  }, [protocol?.generatedPdfPath]);
+
+  async function handleSaveAnnotation(page: number, dataUrl: string | null) {
+    await saveProtocolAnnotation(projectProcessItemId, page, dataUrl);
+  }
+
+  async function handleAccept() {
+    if (!projectId) {
+      setError("Brak identyfikatora projektu — nie można wygenerować dokumentu.");
+      return;
+    }
+    setAccepting(true);
+    setError(null);
+    try {
+      await acceptProtocol(projectProcessItemId, projectId, actorName ?? "Przedstawiciel firmy");
+    } catch (acceptError) {
+      setError(acceptError instanceof Error ? acceptError.message : "Nie udało się zaakceptować protokołu.");
+    } finally {
+      setAccepting(false);
+    }
+  }
+
+  async function handleUnaccept() {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm("Odblokować protokół do edycji? Wcześniej wygenerowany PDF zostanie w Dokumentach jako archiwum.")
+    ) {
+      return;
+    }
+    setUnaccepting(true);
+    setError(null);
+    try {
+      await unacceptProtocol(projectProcessItemId);
+    } catch (unacceptError) {
+      setError(unacceptError instanceof Error ? unacceptError.message : "Nie udało się odblokować protokołu.");
+    } finally {
+      setUnaccepting(false);
+    }
+  }
 
   async function handleChooseTemplate() {
     if (!selectedTemplateId) {
@@ -295,7 +413,7 @@ export function ProcessProtocolBoard({
           <p className="text-sm font-medium text-foreground">{template?.name ?? "Wzór protokołu"}</p>
           {template?.description ? <p className="mt-1 text-xs text-muted">{template.description}</p> : null}
         </div>
-        {canManageTemplate ? (
+        {canManageTemplate && !locked ? (
           <Button
             type="button"
             variant="ghost"
@@ -311,24 +429,41 @@ export function ProcessProtocolBoard({
       {template?.source === "pdf" ? (
         <div className="grid gap-3">
           {referencePdfUrl ? (
-            <a
-              href={referencePdfUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="flex w-fit items-center gap-1.5 rounded-lg border border-border/70 bg-surface-muted/20 px-3 py-2 text-sm text-accent hover:underline"
-            >
-              <FileText className="h-4 w-4" />
-              Zobacz wzór PDF: {template.referencePdfName ?? "dokument"}
-            </a>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <a
+                href={referencePdfUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex w-fit items-center gap-1.5 rounded-lg border border-border/70 bg-surface-muted/20 px-3 py-2 text-sm text-accent hover:underline"
+              >
+                <FileText className="h-4 w-4" />
+                Oryginalny wzór: {template.referencePdfName ?? "dokument"}
+              </a>
+            </div>
           ) : (
             <p className="text-sm text-muted">Wzór PDF nie został jeszcze wgrany.</p>
           )}
+          {referencePdfUrl ? (
+            <PdfPageAnnotator
+              pdfUrl={referencePdfUrl}
+              annotationUrlsByPage={annotationUrls}
+              onSaveAnnotation={handleSaveAnnotation}
+              readOnly={locked}
+            />
+          ) : null}
           <Field label="Uwagi / notatki protokołu">
-            <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={4} />
+            <Textarea
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              rows={4}
+              disabled={locked}
+            />
           </Field>
-          <Button type="button" size="sm" disabled={savingFields} onClick={() => void handleSaveFields()}>
-            {savingFields ? "Zapisywanie…" : "Zapisz uwagi"}
-          </Button>
+          {!locked ? (
+            <Button type="button" size="sm" disabled={savingFields} onClick={() => void handleSaveFields()}>
+              {savingFields ? "Zapisywanie…" : "Zapisz uwagi"}
+            </Button>
+          ) : null}
         </div>
       ) : (
         <div className="grid gap-3">
@@ -339,12 +474,14 @@ export function ProcessProtocolBoard({
                   value={typeof fieldValues[field.id] === "string" ? (fieldValues[field.id] as string) : ""}
                   onChange={(event) => setFieldValues((current) => ({ ...current, [field.id]: event.target.value }))}
                   rows={3}
+                  disabled={locked}
                 />
               ) : field.type === "checkbox" ? (
                 <label className="flex items-center gap-2 text-sm text-foreground">
                   <input
                     type="checkbox"
                     checked={Boolean(fieldValues[field.id])}
+                    disabled={locked}
                     onChange={(event) => setFieldValues((current) => ({ ...current, [field.id]: event.target.checked }))}
                   />
                   Tak
@@ -352,6 +489,7 @@ export function ProcessProtocolBoard({
               ) : field.type === "select" ? (
                 <Select
                   value={typeof fieldValues[field.id] === "string" ? (fieldValues[field.id] as string) : ""}
+                  disabled={locked}
                   onChange={(event) => setFieldValues((current) => ({ ...current, [field.id]: event.target.value }))}
                 >
                   <option value="">Wybierz…</option>
@@ -365,19 +503,23 @@ export function ProcessProtocolBoard({
                 <Input
                   type="date"
                   value={typeof fieldValues[field.id] === "string" ? (fieldValues[field.id] as string) : ""}
+                  disabled={locked}
                   onChange={(event) => setFieldValues((current) => ({ ...current, [field.id]: event.target.value }))}
                 />
               ) : (
                 <Input
                   value={typeof fieldValues[field.id] === "string" ? (fieldValues[field.id] as string) : ""}
+                  disabled={locked}
                   onChange={(event) => setFieldValues((current) => ({ ...current, [field.id]: event.target.value }))}
                 />
               )}
             </Field>
           ))}
-          <Button type="button" size="sm" disabled={savingFields} onClick={() => void handleSaveFields()}>
-            {savingFields ? "Zapisywanie…" : "Zapisz protokół"}
-          </Button>
+          {!locked ? (
+            <Button type="button" size="sm" disabled={savingFields} onClick={() => void handleSaveFields()}>
+              {savingFields ? "Zapisywanie…" : "Zapisz protokół"}
+            </Button>
+          ) : null}
         </div>
       )}
 
@@ -390,20 +532,72 @@ export function ProcessProtocolBoard({
           defaultSignerName={actorName}
           onSign={(signature) => signProtocolCompany(projectProcessItemId, signature)}
           onClear={() => clearProtocolSignature(projectProcessItemId, "company")}
+          readOnly={locked}
         />
         <ProtocolSignatureBlock
           label="Klient"
           signature={protocol.clientSignature}
           onSign={(signature) => signProtocolClient(projectProcessItemId, signature)}
           onClear={() => clearProtocolSignature(projectProcessItemId, "client")}
+          readOnly={locked}
         />
       </div>
 
-      {protocol.companySignature && protocol.clientSignature ? (
+      {locked ? (
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-          Protokół podpisany przez obie strony.
+          <div className="flex items-center gap-1.5 font-medium">
+            <Lock className="h-4 w-4" />
+            Protokół zaakceptowany {formatDateTime(protocol.acceptedAt ?? undefined)}
+            {protocol.acceptedBy ? ` przez ${protocol.acceptedBy}` : ""}.
+          </div>
+          <p className="mt-1 text-emerald-100/80">Protokół jest zablokowany do edycji.</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {generatedPdfUrl ? (
+              <a
+                href={generatedPdfUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-100 hover:bg-emerald-500/20"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                Otwórz wygenerowany PDF
+              </a>
+            ) : null}
+            {canManageTemplate ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="border-emerald-400/40 text-emerald-100 hover:bg-emerald-500/10"
+                disabled={unaccepting}
+                onClick={() => void handleUnaccept()}
+              >
+                <Unlock className="mr-1.5 h-3.5 w-3.5" />
+                {unaccepting ? "Odblokowywanie…" : "Odblokuj protokół"}
+              </Button>
+            ) : null}
+          </div>
         </div>
-      ) : null}
+      ) : (
+        <div className="rounded-xl border border-border/70 bg-surface-muted/20 p-3">
+          {protocol.companySignature && protocol.clientSignature ? (
+            <p className="mb-2 text-sm text-emerald-300">Protokół podpisany przez obie strony.</p>
+          ) : (
+            <p className="mb-2 text-xs text-muted">
+              Do akceptacji i wygenerowania finalnego PDF potrzebne są oba podpisy.
+            </p>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            disabled={!protocol.companySignature || !protocol.clientSignature || accepting}
+            onClick={() => void handleAccept()}
+          >
+            <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+            {accepting ? "Generowanie PDF…" : "Zaakceptuj i wygeneruj PDF"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

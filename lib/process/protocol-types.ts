@@ -41,6 +41,12 @@ export type ProtocolSignature = {
   signedAt: string;
 };
 
+/** Odręczna adnotacja (pismo/rysunek) naniesiona na jedną stronę wzoru PDF. */
+export type ProtocolAnnotation = {
+  page: number;
+  imagePath: string;
+};
+
 export type ProjectProcessProtocol = {
   id: string;
   projectProcessItemId: string;
@@ -49,6 +55,15 @@ export type ProjectProcessProtocol = {
   notes: string;
   companySignature: ProtocolSignature | null;
   clientSignature: ProtocolSignature | null;
+  /** Odręczne adnotacje na stronach wzoru PDF (tylko dla szablonów source="pdf"). */
+  annotations: ProtocolAnnotation[];
+  /** Ścieżka w Storage do finalnego, wygenerowanego PDF po akceptacji. */
+  generatedPdfPath: string | null;
+  /** Kiedy protokół zaakceptowano (protokół zablokowany do edycji, jeśli ustawione). */
+  acceptedAt: string | null;
+  acceptedBy: string | null;
+  /** Id dokumentu projektu (project_documents), do którego dopięto finalny PDF. */
+  linkedDocumentId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -67,4 +82,9 @@ export function emptyProtocolTemplate(): Omit<ProtocolTemplate, "id" | "createdA
 
 export function isProtocolFullySigned(protocol: ProjectProcessProtocol | null | undefined) {
   return Boolean(protocol?.companySignature && protocol?.clientSignature);
+}
+
+/** Zaakceptowany protokół jest zablokowany do edycji (do czasu odblokowania przez administratora). */
+export function isProtocolLocked(protocol: ProjectProcessProtocol | null | undefined) {
+  return Boolean(protocol?.acceptedAt);
 }

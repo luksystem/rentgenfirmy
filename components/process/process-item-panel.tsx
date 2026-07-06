@@ -329,6 +329,7 @@ export function ProcessItemPanel({
           {item.kind === "protocol" && resolvedInstance && interactive ? (
             <ProcessProtocolBoard
               projectProcessItemId={resolvedInstance.id}
+              projectId={projectId}
               actorName={actorName}
               canManageTemplate={canCustomizeChecklist}
             />

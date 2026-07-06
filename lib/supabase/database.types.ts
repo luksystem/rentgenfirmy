@@ -360,6 +360,11 @@ export type ProjectProcessProtocolRow = {
   notes: string;
   company_signature: unknown;
   client_signature: unknown;
+  annotations: unknown;
+  generated_pdf_path: string | null;
+  accepted_at: string | null;
+  accepted_by: string | null;
+  linked_document_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -372,6 +377,11 @@ export type ProjectProcessProtocolInsert = {
   notes?: string;
   company_signature?: unknown;
   client_signature?: unknown;
+  annotations?: unknown;
+  generated_pdf_path?: string | null;
+  accepted_at?: string | null;
+  accepted_by?: string | null;
+  linked_document_id?: string | null;
   created_at?: string;
   updated_at?: string;
 };

@@ -1,5 +1,6 @@
 import type {
   ProjectProcessProtocol,
+  ProtocolAnnotation,
   ProtocolField,
   ProtocolFieldValue,
   ProtocolSignature,
@@ -42,6 +43,11 @@ function rowToProjectProcessProtocol(row: ProjectProcessProtocolRow): ProjectPro
     notes: row.notes ?? "",
     companySignature: (row.company_signature as ProtocolSignature | null) ?? null,
     clientSignature: (row.client_signature as ProtocolSignature | null) ?? null,
+    annotations: Array.isArray(row.annotations) ? (row.annotations as ProtocolAnnotation[]) : [],
+    generatedPdfPath: row.generated_pdf_path ?? null,
+    acceptedAt: row.accepted_at ?? null,
+    acceptedBy: row.accepted_by ?? null,
+    linkedDocumentId: row.linked_document_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -366,4 +372,204 @@ export function signProtocolAsClient(projectProcessItemId: string, signature: Pr
 
 export function clearProtocolSignature(projectProcessItemId: string, which: "company" | "client") {
   return setProtocolSignature(projectProcessItemId, which, null);
+}
+
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [meta, base64] = dataUrl.split(",");
+  const mimeMatch = /data:([^;]+);base64/.exec(meta ?? "");
+  const mimeType = mimeMatch?.[1] ?? "image/png";
+  const binary = atob(base64 ?? "");
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mimeType });
+}
+
+function annotationPath(projectProcessItemId: string, page: number) {
+  return `${projectProcessItemId}/annotations/page-${page}.png`;
+}
+
+/** Zapisuje (lub usuwa, gdy `dataUrl` to `null`) odręczną adnotację jednej strony wzoru PDF. */
+export async function saveProtocolAnnotation(
+  projectProcessItemId: string,
+  page: number,
+  dataUrl: string | null,
+): Promise<ProjectProcessProtocol> {
+  const row = await ensureProtocolRow(projectProcessItemId);
+  const supabase = getSupabase();
+  const path = annotationPath(projectProcessItemId, page);
+  const existingAnnotations = Array.isArray(row.annotations)
+    ? (row.annotations as ProtocolAnnotation[])
+    : [];
+
+  let nextAnnotations: ProtocolAnnotation[];
+  if (dataUrl) {
+    const blob = dataUrlToBlob(dataUrl);
+    const { error: uploadError } = await supabase.storage
+      .from(PROCESS_PROTOCOLS_BUCKET)
+      .upload(path, blob, { contentType: "image/png", upsert: true });
+    if (uploadError) {
+      throw new Error(uploadError.message);
+    }
+    nextAnnotations = [
+      ...existingAnnotations.filter((entry) => entry.page !== page),
+      { page, imagePath: path },
+    ];
+  } else {
+    await supabase.storage.from(PROCESS_PROTOCOLS_BUCKET).remove([path]);
+    nextAnnotations = existingAnnotations.filter((entry) => entry.page !== page);
+  }
+
+  const { data, error } = await supabase
+    .from("project_process_protocols")
+    .update({ annotations: nextAnnotations, updated_at: new Date().toISOString() })
+    .eq("project_process_item_id", projectProcessItemId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToProjectProcessProtocol(data as ProjectProcessProtocolRow);
+}
+
+export async function getProtocolAnnotationUrl(path: string): Promise<string | null> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.storage
+    .from(PROCESS_PROTOCOLS_BUCKET)
+    .createSignedUrl(path, 60 * 60 * 24);
+
+  if (error) {
+    return null;
+  }
+
+  return data?.signedUrl ?? null;
+}
+
+async function downloadStorageFile(bucket: string, path: string): Promise<ArrayBuffer> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.storage.from(bucket).download(path);
+  if (error || !data) {
+    throw new Error(error?.message ?? `Nie udało się pobrać pliku ${path}.`);
+  }
+  return data.arrayBuffer();
+}
+
+/**
+ * Akceptuje protokół: generuje finalny PDF (wzór + odręczne adnotacje + podpisy, albo — dla
+ * szablonów bez oryginału — czysty raport z wartości pól), zapisuje go w Storage, dopina jako
+ * dokument projektu (zakładka „Dokumenty”) i blokuje protokół do edycji.
+ */
+export async function acceptProtocol(
+  protocol: ProjectProcessProtocol,
+  template: ProtocolTemplate | null,
+  projectId: string,
+  actorName: string,
+): Promise<{ protocol: ProjectProcessProtocol; documentId: string }> {
+  if (!protocol.companySignature || !protocol.clientSignature) {
+    throw new Error("Do akceptacji protokołu wymagane są oba podpisy.");
+  }
+
+  const { generateAnnotatedProtocolPdf, generateFieldReportPdf } = await import(
+    "@/lib/process/protocol-pdf"
+  );
+  const acceptedAt = new Date().toISOString();
+  const acceptedBy = actorName.trim() || "Przedstawiciel firmy";
+
+  let pdfBytes: Uint8Array;
+  if (template?.source === "pdf" && template.referencePdfPath) {
+    const originalPdfBytes = await downloadStorageFile(PROCESS_PROTOCOLS_BUCKET, template.referencePdfPath);
+    const pageAnnotationBytes = new Map<number, Uint8Array>();
+    for (const annotation of protocol.annotations) {
+      const bytes = await downloadStorageFile(PROCESS_PROTOCOLS_BUCKET, annotation.imagePath);
+      pageAnnotationBytes.set(annotation.page, new Uint8Array(bytes));
+    }
+    pdfBytes = await generateAnnotatedProtocolPdf({
+      originalPdfBytes,
+      pageAnnotationBytes,
+      companySignature: protocol.companySignature,
+      clientSignature: protocol.clientSignature,
+      acceptedAt,
+      acceptedBy,
+    });
+  } else {
+    pdfBytes = await generateFieldReportPdf({
+      templateName: template?.name ?? "Protokół",
+      fields: template?.fields ?? [],
+      fieldValues: protocol.fieldValues,
+      notes: protocol.notes,
+      companySignature: protocol.companySignature,
+      clientSignature: protocol.clientSignature,
+      acceptedAt,
+      acceptedBy,
+    });
+  }
+
+  const supabase = getSupabase();
+  const generatedPath = `${protocol.projectProcessItemId}/generated/${Date.now()}.pdf`;
+  const pdfBlob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
+  const { error: uploadError } = await supabase.storage
+    .from(PROCESS_PROTOCOLS_BUCKET)
+    .upload(generatedPath, pdfBlob, { contentType: "application/pdf", upsert: true });
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  const { createProjectDocument } = await import("@/lib/supabase/project-document-repository");
+  const fileName = `Protokol-${(template?.name ?? "protokol").replace(/[^a-zA-Z0-9-_]+/g, "_")}.pdf`;
+  const file = new File([pdfBlob], fileName, { type: "application/pdf" });
+  const document = await createProjectDocument(
+    {
+      projectId,
+      category: "protocol",
+      title: `Protokół — ${template?.name ?? "wzór"} — ${acceptedAt.slice(0, 10)}`,
+      source: "manual",
+    },
+    acceptedBy,
+    file,
+  );
+
+  const { data, error } = await supabase
+    .from("project_process_protocols")
+    .update({
+      generated_pdf_path: generatedPath,
+      accepted_at: acceptedAt,
+      accepted_by: acceptedBy,
+      linked_document_id: document.id,
+      updated_at: acceptedAt,
+    })
+    .eq("project_process_item_id", protocol.projectProcessItemId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return { protocol: rowToProjectProcessProtocol(data as ProjectProcessProtocolRow), documentId: document.id };
+}
+
+/** Odblokowuje protokół do dalszej edycji (administrator) — nie usuwa już wygenerowanego dokumentu. */
+export async function unacceptProtocol(projectProcessItemId: string): Promise<ProjectProcessProtocol> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("project_process_protocols")
+    .update({
+      generated_pdf_path: null,
+      accepted_at: null,
+      accepted_by: null,
+      linked_document_id: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("project_process_item_id", projectProcessItemId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToProjectProcessProtocol(data as ProjectProcessProtocolRow);
 }

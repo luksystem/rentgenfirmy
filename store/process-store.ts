@@ -31,16 +31,19 @@ import {
   unlinkProcessItemLink,
 } from "@/lib/supabase/process-item-link-repository";
 import {
+  acceptProtocol as acceptProtocolRepo,
   assignProtocolTemplateToItem,
   clearProtocolSignature as clearProtocolSignatureRepo,
   createProtocolTemplate as createProtocolTemplateRepo,
   deleteProtocolTemplate,
   fetchOrCreateProjectProcessProtocol,
   fetchProtocolTemplates,
+  saveProtocolAnnotation as saveProtocolAnnotationRepo,
   saveProtocolFieldValues as saveProtocolFieldValuesRepo,
   saveProtocolTemplate as saveProtocolTemplateRepo,
   signProtocolAsClient,
   signProtocolAsCompany,
+  unacceptProtocol as unacceptProtocolRepo,
 } from "@/lib/supabase/process-protocol-repository";
 import {
   assignProjectProcessItem,
@@ -187,6 +190,17 @@ type ProcessStore = {
     projectProcessItemId: string,
     which: "company" | "client",
   ) => Promise<void>;
+  saveProtocolAnnotation: (
+    projectProcessItemId: string,
+    page: number,
+    dataUrl: string | null,
+  ) => Promise<void>;
+  acceptProtocol: (
+    projectProcessItemId: string,
+    projectId: string,
+    actorName: string,
+  ) => Promise<void>;
+  unacceptProtocol: (projectProcessItemId: string) => Promise<void>;
   ensureNoteLinks: (projectId: string, options?: { force?: boolean }) => Promise<void>;
   linkDocumentToItem: (
     projectId: string,
@@ -687,6 +701,30 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
 
   clearProtocolSignature: async (projectProcessItemId, which) => {
     const updated = await clearProtocolSignatureRepo(projectProcessItemId, which);
+    set((state) => ({
+      projectProtocols: { ...state.projectProtocols, [projectProcessItemId]: updated },
+    }));
+  },
+  saveProtocolAnnotation: async (projectProcessItemId, page, dataUrl) => {
+    const updated = await saveProtocolAnnotationRepo(projectProcessItemId, page, dataUrl);
+    set((state) => ({
+      projectProtocols: { ...state.projectProtocols, [projectProcessItemId]: updated },
+    }));
+  },
+  acceptProtocol: async (projectProcessItemId, projectId, actorName) => {
+    const protocol = get().projectProtocols[projectProcessItemId];
+    if (!protocol) {
+      throw new Error("Protokół nie został jeszcze wczytany.");
+    }
+    const template =
+      get().protocolTemplates.find((entry) => entry.id === protocol.protocolTemplateId) ?? null;
+    const { protocol: updated } = await acceptProtocolRepo(protocol, template, projectId, actorName);
+    set((state) => ({
+      projectProtocols: { ...state.projectProtocols, [projectProcessItemId]: updated },
+    }));
+  },
+  unacceptProtocol: async (projectProcessItemId) => {
+    const updated = await unacceptProtocolRepo(projectProcessItemId);
     set((state) => ({
       projectProtocols: { ...state.projectProtocols, [projectProcessItemId]: updated },
     }));
