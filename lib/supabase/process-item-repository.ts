@@ -69,23 +69,29 @@ export async function ensureProjectProcessItems(projectId: string, template: Pro
 
   const supabase = getSupabase();
   const now = new Date().toISOString();
-  const { error } = await supabase.from("project_process_items").insert(
-        missing.map((item) => ({
-      project_id: projectId,
-      template_item_id: item.id,
-      kind: item.kind,
-      is_internal_acceptance: item.isInternalAcceptance ?? false,
-      payload:
-        item.kind === "checklist"
-          ? cloneTemplatePayloadForProject(
-              "lines" in item.defaultPayload ? item.defaultPayload : emptyChecklistPayload(),
-            )
-          : emptyChecklistPayload(),
-      status: "open",
-      created_at: now,
-      updated_at: now,
-    })),
-  );
+  // `upsert` + `ignoreDuplicates` (nie `insert`) — kilka równoległych wywołań (np. otwarcie elementu
+  // i jednoczesne dodanie innego) mogą policzyć te same „brakujące” pozycje; bez tego druga próba
+  // wstawienia tego samego (project_id, template_item_id) kończy się konfliktem 409.
+  const { error } = await supabase
+    .from("project_process_items")
+    .upsert(
+      missing.map((item) => ({
+        project_id: projectId,
+        template_item_id: item.id,
+        kind: item.kind,
+        is_internal_acceptance: item.isInternalAcceptance ?? false,
+        payload:
+          item.kind === "checklist"
+            ? cloneTemplatePayloadForProject(
+                "lines" in item.defaultPayload ? item.defaultPayload : emptyChecklistPayload(),
+              )
+            : emptyChecklistPayload(),
+        status: "open",
+        created_at: now,
+        updated_at: now,
+      })),
+      { onConflict: "project_id,template_item_id", ignoreDuplicates: true },
+    );
 
   if (error) {
     throw new Error(error.message);

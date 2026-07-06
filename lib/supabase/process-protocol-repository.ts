@@ -244,9 +244,11 @@ async function ensureProtocolRow(projectProcessItemId: string): Promise<ProjectP
 
   const supabase = getSupabase();
   const now = new Date().toISOString();
-  const { data, error } = await supabase
-    .from("project_process_protocols")
-    .insert({
+  // `upsert` + `ignoreDuplicates`, nie `insert` — dwa równoległe wywołania (np. otwarcie tego samego
+  // elementu procesu w dwóch kartach) mogą oba nie zobaczyć jeszcze istniejącego wiersza; bez tego
+  // druga próba wstawienia tego samego project_process_item_id kończy się konfliktem 409.
+  const { error: upsertError } = await supabase.from("project_process_protocols").upsert(
+    {
       id: crypto.randomUUID(),
       project_process_item_id: projectProcessItemId,
       protocol_template_id: null,
@@ -254,15 +256,20 @@ async function ensureProtocolRow(projectProcessItemId: string): Promise<ProjectP
       notes: "",
       created_at: now,
       updated_at: now,
-    })
-    .select("*")
-    .single();
+    },
+    { onConflict: "project_process_item_id", ignoreDuplicates: true },
+  );
 
-  if (error) {
-    throw new Error(error.message);
+  if (upsertError) {
+    throw new Error(upsertError.message);
   }
 
-  return data as ProjectProcessProtocolRow;
+  const row = await fetchProtocolRow(projectProcessItemId);
+  if (!row) {
+    throw new Error("Nie udało się utworzyć wiersza protokołu.");
+  }
+
+  return row;
 }
 
 export async function fetchOrCreateProjectProcessProtocol(
