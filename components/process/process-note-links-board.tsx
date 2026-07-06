@@ -1,16 +1,53 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, FileText, Link2, NotebookPen, Plus, Trash2 } from "lucide-react";
+import {
+  ExternalLink,
+  Eye,
+  FileText,
+  Link2,
+  NotebookPen,
+  Plus,
+  Send,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Select, Textarea } from "@/components/ui/input";
-import type { ProjectMeetingNote } from "@/lib/dashboard/meeting-note-types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Field, Input, Select } from "@/components/ui/input";
+import { RichHtml } from "@/components/ui/rich-html";
+import { RichTextarea } from "@/components/ui/rich-textarea";
+import { isRichTextEmpty } from "@/lib/dashboard/meeting-notes-read";
+import type { ProjectMeetingNote, ProjectMeetingNoteInput } from "@/lib/dashboard/meeting-note-types";
 import type { ProjectDocument } from "@/lib/documents/types";
 import type { ProcessItemLink } from "@/lib/process/types";
 import { fetchProjectDocuments } from "@/lib/supabase/project-document-repository";
-import { fetchProjectMeetingNotes } from "@/lib/supabase/project-meeting-note-repository";
-import { formatDateTime } from "@/lib/utils";
+import {
+  fetchProjectMeetingNotes,
+  publishProjectMeetingNote,
+  updateProjectMeetingNote,
+} from "@/lib/supabase/project-meeting-note-repository";
+import { cn, formatDateTime } from "@/lib/utils";
 import { useProcessStore } from "@/store/process-store";
+
+function emptyNoteInput(): ProjectMeetingNoteInput {
+  return { title: "", body: "", meetingAt: "", status: "draft" };
+}
+
+function noteToInput(note: ProjectMeetingNote): ProjectMeetingNoteInput {
+  return {
+    title: note.title,
+    body: note.body,
+    meetingAt: note.meetingAt ?? "",
+    status: note.status,
+  };
+}
 
 // Referencja musi być stabilna między renderami — nowa tablica `[]` przy każdym wywołaniu
 // selektora Zustand powoduje nieskończoną pętlę renderów pod React 18 (useSyncExternalStore
@@ -45,10 +82,13 @@ export function ProcessNoteLinksBoard({
   const [linkingDocument, setLinkingDocument] = useState(false);
   const [linkingNote, setLinkingNote] = useState(false);
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
-  const [newNoteOpen, setNewNoteOpen] = useState(false);
-  const [newNoteTitle, setNewNoteTitle] = useState("");
-  const [newNoteBody, setNewNoteBody] = useState("");
-  const [creatingNote, setCreatingNote] = useState(false);
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [noteForm, setNoteForm] = useState<ProjectMeetingNoteInput>(emptyNoteInput());
+  const [savingNote, setSavingNote] = useState(false);
+  const [formattingNote, setFormattingNote] = useState(false);
+  const [publishingNoteId, setPublishingNoteId] = useState<string | null>(null);
+  const [noteFormError, setNoteFormError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -135,28 +175,92 @@ export function ProcessNoteLinksBoard({
     }
   }
 
-  async function handleCreateNote() {
-    if (!newNoteTitle.trim() && !newNoteBody.trim()) {
-      setError("Podaj tytuł lub treść notatki.");
+  function openNewNoteDialog() {
+    setEditingNoteId(null);
+    setNoteForm(emptyNoteInput());
+    setNoteFormError(null);
+    setNoteDialogOpen(true);
+  }
+
+  function openNoteDialog(note: ProjectMeetingNote) {
+    setEditingNoteId(note.id);
+    setNoteForm(noteToInput(note));
+    setNoteFormError(null);
+    setNoteDialogOpen(true);
+  }
+
+  async function handleFormatNoteWithAi() {
+    if (isRichTextEmpty(noteForm.body)) {
+      setNoteFormError("Wklej surowe notatki przed formatowaniem AI.");
       return;
     }
-    setCreatingNote(true);
-    setError(null);
+
+    setFormattingNote(true);
+    setNoteFormError(null);
     try {
-      const created = await createAndLinkMeetingNote(
-        projectId,
-        projectProcessItemId,
-        { title: newNoteTitle, body: newNoteBody, status: "draft" },
-        actorName ?? "Zespół",
-      );
-      setNotes((current) => [created, ...current]);
-      setNewNoteTitle("");
-      setNewNoteBody("");
-      setNewNoteOpen(false);
-    } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "Nie udało się utworzyć notatki.");
+      const response = await fetch("/api/ai/format-meeting-note", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rawNotes: noteForm.body }),
+      });
+      const payload = (await response.json()) as { formatted?: string; error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się sformatować notatek.");
+      }
+      if (payload.formatted) {
+        setNoteForm((current) => ({ ...current, body: payload.formatted ?? current.body }));
+      }
+    } catch (formatError) {
+      setNoteFormError(formatError instanceof Error ? formatError.message : "Błąd formatowania AI.");
     } finally {
-      setCreatingNote(false);
+      setFormattingNote(false);
+    }
+  }
+
+  async function handleSaveNote(publish = false) {
+    if (isRichTextEmpty(noteForm.body)) {
+      setNoteFormError("Treść notatki jest wymagana.");
+      return;
+    }
+
+    setSavingNote(true);
+    setNoteFormError(null);
+    try {
+      const payload: ProjectMeetingNoteInput = {
+        ...noteForm,
+        status: publish ? "published" : noteForm.status ?? "draft",
+      };
+
+      if (editingNoteId) {
+        const updated = await updateProjectMeetingNote(editingNoteId, payload);
+        setNotes((current) => current.map((note) => (note.id === editingNoteId ? updated : note)));
+      } else {
+        const created = await createAndLinkMeetingNote(
+          projectId,
+          projectProcessItemId,
+          payload,
+          actorName ?? "Zespół",
+        );
+        setNotes((current) => [created, ...current]);
+      }
+
+      setNoteDialogOpen(false);
+    } catch (saveError) {
+      setNoteFormError(saveError instanceof Error ? saveError.message : "Nie udało się zapisać notatki.");
+    } finally {
+      setSavingNote(false);
+    }
+  }
+
+  async function handlePublishNote(noteId: string) {
+    setPublishingNoteId(noteId);
+    try {
+      const updated = await publishProjectMeetingNote(noteId);
+      setNotes((current) => current.map((note) => (note.id === noteId ? updated : note)));
+    } catch (publishError) {
+      setError(publishError instanceof Error ? publishError.message : "Nie udało się opublikować notatki.");
+    } finally {
+      setPublishingNoteId(null);
     }
   }
 
@@ -193,24 +297,72 @@ export function ProcessNoteLinksBoard({
                   key={link.id}
                   className="flex items-start justify-between gap-2 rounded-lg border border-border/60 bg-surface-elevated/50 px-3 py-2 text-sm"
                 >
-                  <div className="min-w-0">
-                    <p className="font-medium text-foreground">{note?.title || "Notatka"}</p>
-                    {note?.body ? (
-                      <p className="mt-0.5 line-clamp-2 text-xs text-muted">{note.body}</p>
-                    ) : null}
-                    <p className="mt-0.5 text-[11px] text-muted">
-                      {formatDateTime(note?.createdAt ?? link.createdAt)}
-                    </p>
-                  </div>
-                  <Button
+                  <button
                     type="button"
-                    size="sm"
-                    variant="ghost"
-                    disabled={unlinkingId === link.id}
-                    onClick={() => void handleUnlink(link.id)}
+                    className="min-w-0 flex-1 text-left"
+                    disabled={!note}
+                    onClick={() => note && openNoteDialog(note)}
                   >
-                    <Trash2 className="h-3.5 w-3.5 text-rose-400" />
-                  </Button>
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      <span className="font-medium text-foreground underline-offset-2 hover:underline">
+                        {note?.title || "Notatka"}
+                      </span>
+                      {note ? (
+                        <span
+                          className={cn(
+                            "rounded-full border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                            note.status === "published"
+                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+                              : "border-border/70 bg-surface-muted/40 text-muted",
+                          )}
+                        >
+                          {note.status === "published" ? "Opublikowana" : "Szkic"}
+                        </span>
+                      ) : null}
+                    </span>
+                    {note?.body ? (
+                      <span className="mt-0.5 line-clamp-2 block text-xs text-muted">
+                        {note.body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() || "Brak treści"}
+                      </span>
+                    ) : null}
+                    <span className="mt-0.5 block text-[11px] text-muted">
+                      {formatDateTime(note?.createdAt ?? link.createdAt)}
+                    </span>
+                  </button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {note ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        title="Podgląd / edycja"
+                        onClick={() => openNoteDialog(note)}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : null}
+                    {note && note.status === "draft" ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        title="Opublikuj dla klienta"
+                        disabled={publishingNoteId === note.id}
+                        onClick={() => void handlePublishNote(note.id)}
+                      >
+                        <Send className="h-3.5 w-3.5 text-accent" />
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={unlinkingId === link.id}
+                      onClick={() => void handleUnlink(link.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+                    </Button>
+                  </div>
                 </div>
               );
             })}
@@ -246,35 +398,14 @@ export function ProcessNoteLinksBoard({
             <Link2 className="mr-1.5 h-3.5 w-3.5" />
             Podepnij
           </Button>
-          <Button type="button" size="sm" variant="secondary" onClick={() => setNewNoteOpen((v) => !v)}>
+          <Button type="button" size="sm" variant="secondary" onClick={openNewNoteDialog}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
             Nowa notatka
           </Button>
         </div>
-
-        {newNoteOpen ? (
-          <div className="mt-3 grid gap-2 rounded-lg border border-border/60 bg-surface-elevated/40 p-3">
-            <Input
-              value={newNoteTitle}
-              onChange={(event) => setNewNoteTitle(event.target.value)}
-              placeholder="Tytuł notatki"
-            />
-            <Textarea
-              rows={3}
-              value={newNoteBody}
-              onChange={(event) => setNewNoteBody(event.target.value)}
-              placeholder="Treść notatki…"
-            />
-            <div className="flex gap-2">
-              <Button type="button" size="sm" disabled={creatingNote} onClick={() => void handleCreateNote()}>
-                {creatingNote ? "Zapisywanie…" : "Zapisz i podepnij"}
-              </Button>
-              <Button type="button" size="sm" variant="ghost" onClick={() => setNewNoteOpen(false)}>
-                Anuluj
-              </Button>
-            </div>
-          </div>
-        ) : null}
+        <p className="mt-1.5 text-[11px] text-muted">
+          Notatki opublikowane widzi klient w zakładce „Notatki”.
+        </p>
       </div>
 
       <div className="rounded-xl border border-border/70 bg-surface-muted/25 p-3.5">
@@ -292,12 +423,26 @@ export function ProcessNoteLinksBoard({
                   key={link.id}
                   className="flex items-start justify-between gap-2 rounded-lg border border-border/60 bg-surface-elevated/50 px-3 py-2 text-sm"
                 >
-                  <div className="min-w-0">
-                    <p className="font-medium text-foreground">{document?.title ?? "Dokument"}</p>
-                    <p className="mt-0.5 text-[11px] text-muted">
-                      {document ? formatDateTime(document.createdAt) : ""}
-                    </p>
-                  </div>
+                  {document?.fileUrl ? (
+                    <a
+                      href={document.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <p className="font-medium text-foreground underline-offset-2 hover:underline">
+                        {document.title}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-muted">{formatDateTime(document.createdAt)}</p>
+                    </a>
+                  ) : (
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-foreground">{document?.title ?? "Dokument"}</p>
+                      <p className="mt-0.5 text-[11px] text-muted">
+                        {document ? formatDateTime(document.createdAt) : ""}
+                      </p>
+                    </div>
+                  )}
                   <div className="flex shrink-0 items-center gap-1">
                     {document?.fileUrl ? (
                       <Button type="button" size="sm" variant="outline" asChild>
@@ -358,7 +503,74 @@ export function ProcessNoteLinksBoard({
             </a>
           </Button>
         </div>
+        <p className="mt-1.5 text-[11px] text-muted">
+          Dokumenty podpięte tutaj są widoczne w zakładce „Dokumenty” klienta.
+        </p>
       </div>
+
+      <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingNoteId ? "Notatka" : "Nowa notatka"}</DialogTitle>
+            <DialogDescription>
+              Wklej surowe zapiski i użyj AI — powstanie czytelna treść z nagłówkami, listami i
+              pogrubieniami. Opublikowana notatka trafia do zakładki „Notatki” klienta.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <Field label="Tytuł">
+              <Input
+                value={noteForm.title}
+                onChange={(event) => setNoteForm((current) => ({ ...current, title: event.target.value }))}
+                placeholder="np. Notatka z etapu procesu"
+              />
+            </Field>
+            <Field label="Data spotkania (opcjonalnie)">
+              <Input
+                type="date"
+                value={noteForm.meetingAt ?? ""}
+                onChange={(event) =>
+                  setNoteForm((current) => ({ ...current, meetingAt: event.target.value }))
+                }
+              />
+            </Field>
+            <Field label="Treść">
+              <RichTextarea
+                value={noteForm.body}
+                onChange={(body) => setNoteForm((current) => ({ ...current, body }))}
+                rows={10}
+                placeholder="Wklej notatki…"
+              />
+            </Field>
+            {noteForm.body.trim() && !isRichTextEmpty(noteForm.body) ? (
+              <div className="rounded-xl border border-border/70 bg-surface-muted/10 p-4">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
+                  Podgląd dla klienta
+                </p>
+                <RichHtml html={noteForm.body} variant="document" fallback="Brak treści" />
+              </div>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={formattingNote || isRichTextEmpty(noteForm.body)}
+              onClick={() => void handleFormatNoteWithAi()}
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              {formattingNote ? "Formatowanie…" : "Sformatuj z AI"}
+            </Button>
+            {noteFormError ? <p className="text-sm text-rose-400">{noteFormError}</p> : null}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button type="button" disabled={savingNote} onClick={() => void handleSaveNote(false)}>
+                {savingNote ? "Zapisywanie…" : "Zapisz szkic"}
+              </Button>
+              <Button type="button" disabled={savingNote} onClick={() => void handleSaveNote(true)}>
+                Opublikuj dla klienta
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
