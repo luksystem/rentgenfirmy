@@ -3,11 +3,12 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { LockKeyhole } from "lucide-react";
-import { ClientDashboardView } from "@/components/dashboard/client-dashboard-view";
+import { ClientDashboardView, type ClientDashboardTab } from "@/components/dashboard/client-dashboard-view";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/input";
 import type { ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
+import { isClientDashboardTab } from "@/lib/dashboard/client-dashboard-tabs";
 import type { ProjectChangeRequest } from "@/lib/dashboard/change-request-types";
 import type { ProjectDashboardContent } from "@/lib/dashboard/content-types";
 import type { DashboardPublicAccessInfo } from "@/lib/dashboard/types";
@@ -106,6 +107,8 @@ function PublicDashboardPageContent() {
   const token = String(params.token ?? "");
   const activeKanbanToken = searchParams.get("kanban");
   const projectIdFromUrl = searchParams.get("projectId");
+  const tabFromUrl = searchParams.get("tab");
+  const initialTab = isClientDashboardTab(tabFromUrl) ? tabFromUrl : undefined;
   const [space, setSpace] = useState<DashboardSpace | null>(null);
   const [client, setClient] = useState<Client | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -296,6 +299,24 @@ function PublicDashboardPageContent() {
     }
   }
 
+  const handleTabChange = useCallback(
+    (tab: ClientDashboardTab) => {
+      const nextParams = new URLSearchParams(searchParams.toString());
+      if (tab === "home") {
+        nextParams.delete("tab");
+      } else {
+        nextParams.set("tab", tab);
+      }
+      const query = nextParams.toString();
+      // router.push (nie replace) — żeby przycisk „wstecz” przełączał zakładki w dashboardzie klienta,
+      // zamiast wychodzić od razu z całego dashboardu.
+      router.push(query ? `/przestrzen/${token}?${query}` : `/przestrzen/${token}`, {
+        scroll: false,
+      });
+    },
+    [router, searchParams, token],
+  );
+
   const handleAgreementsUpdated = useCallback((updated: ProjectClientAgreement[]) => {
     setAgreements(updated);
   }, []);
@@ -463,6 +484,8 @@ function PublicDashboardPageContent() {
           activeKanbanToken={activeKanbanToken}
           onKanbanTokenChange={handleKanbanTokenChange}
           publicDashboardToken={token}
+          initialTab={initialTab}
+          onTabChange={handleTabChange}
         />
       </div>
     </div>

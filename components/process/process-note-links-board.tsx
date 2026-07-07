@@ -65,6 +65,12 @@ export function ProcessNoteLinksBoard({
   projectProcessItemId,
   actorName,
 }: ProcessNoteLinksBoardProps) {
+  const [returnUrl, setReturnUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    setReturnUrl(`${window.location.pathname}${window.location.search}`);
+  }, []);
+
   const links = useProcessStore(
     (state) => state.noteLinksByProject[projectId]?.[projectProcessItemId] ?? EMPTY_NOTE_LINKS,
   );
@@ -276,7 +282,9 @@ export function ProcessNoteLinksBoard({
     }
   }
 
-  const newDocumentHref = `/dokumenty/nowy?projectId=${encodeURIComponent(projectId)}`;
+  const newDocumentHref = `/dokumenty/nowy?projectId=${encodeURIComponent(projectId)}${
+    returnUrl ? `&returnTo=${encodeURIComponent(returnUrl)}` : ""
+  }`;
 
   return (
     <div className="grid gap-4">
@@ -497,7 +505,7 @@ export function ProcessNoteLinksBoard({
             Podepnij
           </Button>
           <Button type="button" size="sm" variant="secondary" asChild>
-            <a href={newDocumentHref} target="_blank" rel="noreferrer">
+            <a href={newDocumentHref}>
               <Plus className="mr-1.5 h-3.5 w-3.5" />
               Nowy dokument
             </a>

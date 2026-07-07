@@ -23,7 +23,7 @@ import {
   publishProjectMeetingNote,
   updateProjectMeetingNote,
 } from "@/lib/supabase/project-meeting-note-repository";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, formatDateTime } from "@/lib/utils";
 
 function emptyInput(): ProjectMeetingNoteInput {
   return {
@@ -202,6 +202,7 @@ export function ProjectMeetingNotesPanel({
 
   function renderNoteCard(note: ProjectMeetingNote) {
     const meta = [
+      `Dodano ${formatDateTime(note.createdAt)}`,
       note.authorName,
       note.meetingAt ? `spotkanie ${formatDate(note.meetingAt)}` : null,
       note.publishedAt ? `opublikowano ${formatDate(note.publishedAt.slice(0, 10))}` : null,
@@ -209,25 +210,31 @@ export function ProjectMeetingNotesPanel({
       .filter(Boolean)
       .join(" · ");
 
+    const statusBadge =
+      mode === "team" ? (
+        note.status === "draft" ? (
+          <span className="shrink-0 rounded-full border border-border/70 bg-surface-muted/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+            Szkic
+          </span>
+        ) : (
+          <span className="shrink-0 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-200">
+            Opublikowana
+          </span>
+        )
+      ) : null;
+
     if (shouldCollapseNotes) {
       return (
         <CollapsibleSection
           key={note.id}
           title={note.title || "Notatka ze spotkania"}
-          summary={[meta, noteSummary(note)].filter(Boolean).join(" · ")}
+          badge={statusBadge}
+          meta={meta}
+          summary={noteSummary(note)}
           defaultExpanded={false}
         >
           {mode === "team" ? (
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              {note.status === "draft" ? (
-                <span className="rounded-full border border-border/70 bg-surface-muted/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
-                  Szkic
-                </span>
-              ) : (
-                <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-200">
-                  Opublikowana
-                </span>
-              )}
               {note.status === "draft" ? (
                 <Button type="button" size="sm" variant="secondary" onClick={() => void handlePublish(note.id)}>
                   Opublikuj

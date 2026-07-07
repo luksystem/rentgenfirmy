@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ExternalLink, FileUp, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,8 @@ export function ProjectDocumentsPanel({
   const [documents, setDocuments] = useState<ProjectDocument[]>(seedDocuments ?? []);
   const [loading, setLoading] = useState(seedDocuments === undefined);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     let cancelled = false;
@@ -76,9 +79,10 @@ export function ProjectDocumentsPanel({
     }
   }
 
+  const currentUrl = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
   const newDocumentHref = clientId
-    ? `/dokumenty/nowy?projectId=${encodeURIComponent(projectId)}&clientId=${encodeURIComponent(clientId)}`
-    : `/dokumenty/nowy?projectId=${encodeURIComponent(projectId)}`;
+    ? `/dokumenty/nowy?projectId=${encodeURIComponent(projectId)}&clientId=${encodeURIComponent(clientId)}&returnTo=${encodeURIComponent(currentUrl)}`
+    : `/dokumenty/nowy?projectId=${encodeURIComponent(projectId)}&returnTo=${encodeURIComponent(currentUrl)}`;
 
   if (loading && documents.length === 0) {
     return <p className="text-sm text-muted">Ładowanie dokumentacji…</p>;

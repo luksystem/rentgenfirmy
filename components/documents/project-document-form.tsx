@@ -33,12 +33,15 @@ type ProjectDocumentFormProps = {
   initialClientId?: string | null;
   initialProjectId?: string | null;
   initialCategory?: ProjectDocumentCategory;
+  /** Dokąd wrócić po zapisie/anulowaniu — np. do procesu lub zakładki „Dokumentacja”, z której otwarto formularz. */
+  returnTo?: string | null;
 };
 
 export function ProjectDocumentForm({
   initialClientId,
   initialProjectId,
   initialCategory,
+  returnTo,
 }: ProjectDocumentFormProps) {
   const router = useRouter();
   const projects = useAppStore((state) => state.projects);
@@ -78,7 +81,7 @@ export function ProjectDocumentForm({
 
     try {
       await createProjectDocument(normalized, displayName || "Zespół", file);
-      router.push("/dokumenty");
+      router.push(returnTo || "/dokumenty");
       router.refresh();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Nie udało się zapisać dokumentu.");
@@ -188,7 +191,7 @@ export function ProjectDocumentForm({
             {saving ? "Zapisywanie…" : "Zapisz dokument"}
           </Button>
           <Button type="button" variant="secondary" asChild>
-            <Link href="/dokumenty">Anuluj</Link>
+            <Link href={returnTo || "/dokumenty"}>Anuluj</Link>
           </Button>
         </div>
       </CardContent>

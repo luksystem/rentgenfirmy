@@ -640,7 +640,6 @@ async function fetchMeetingNotesForProject(projectId: string) {
     .select("*")
     .eq("project_id", projectId)
     .eq("status", "published")
-    .order("position", { ascending: true })
     .order("created_at", { ascending: false });
 
   if (error) {

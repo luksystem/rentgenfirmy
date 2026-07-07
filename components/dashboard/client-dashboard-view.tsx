@@ -90,7 +90,7 @@ const EMPTY_SATISFACTION: ProjectSatisfactionBundle = {
   overview: null,
 };
 
-type ClientDashboardTab =
+export type ClientDashboardTab =
   | "home"
   | "project"
   | "integrations"
@@ -214,6 +214,7 @@ export function ClientDashboardView({
   onKanbanTokenChange,
   publicDashboardToken,
   initialTab,
+  onTabChange,
   focusAgreementId,
   pendingOffersCount = 0,
 }: {
@@ -264,6 +265,8 @@ export function ClientDashboardView({
   /** Token publicznego dashboardu — przekazywany do osadzonej tablicy Kanban. */
   publicDashboardToken?: string;
   initialTab?: ClientDashboardTab;
+  /** Wywoływane przy każdej zmianie aktywnej zakładki — pozwala rodzicowi zsynchronizować URL, żeby przycisk „wstecz” działał wewnątrz dashboardu. */
+  onTabChange?: (tab: ClientDashboardTab) => void;
   focusAgreementId?: string;
 }) {
   const [activeTab, setActiveTab] = useState<ClientDashboardTab>(initialTab ?? "home");
@@ -308,8 +311,9 @@ export function ClientDashboardView({
         setReadMeetingNoteIds(getReadMeetingNoteIds(selectedProjectId));
       }
       setActiveTab(tab);
+      onTabChange?.(tab);
     },
-    [activeKanbanToken, meetingNotes, onKanbanTokenChange, readOnly, selectedProjectId],
+    [activeKanbanToken, meetingNotes, onKanbanTokenChange, onTabChange, readOnly, selectedProjectId],
   );
 
   const handleKanbanNavigate = useCallback(
@@ -325,9 +329,8 @@ export function ClientDashboardView({
   );
 
   useEffect(() => {
-    if (initialTab) {
-      setActiveTab(initialTab);
-    }
+    // Synchronizacja z URL (np. przycisk „wstecz” w przeglądarce po zmianie zakładki).
+    setActiveTab(initialTab ?? "home");
   }, [initialTab]);
 
   useEffect(() => {

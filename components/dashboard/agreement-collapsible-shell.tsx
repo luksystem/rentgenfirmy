@@ -103,12 +103,18 @@ export function AgreementCollapsibleShell({
 
 export function CollapsibleSection({
   title,
+  badge,
+  meta,
   summary,
   defaultExpanded = false,
   children,
   className,
 }: {
   title: string;
+  /** Znacznik statusu widoczny zawsze, przy tytule (np. „Szkic” / „Opublikowana”). */
+  badge?: React.ReactNode;
+  /** Zawsze widoczna linia meta (np. data dodania, autor) — niezależnie od stanu zwinięcia. */
+  meta?: React.ReactNode;
   summary?: string;
   defaultExpanded?: boolean;
   children: React.ReactNode;
@@ -131,9 +137,13 @@ export function CollapsibleSection({
           )}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-foreground">{title}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="break-words text-sm font-medium text-foreground">{title}</p>
+            {badge}
+          </div>
+          {meta ? <p className="mt-0.5 break-words text-xs text-muted">{meta}</p> : null}
           {!expanded && summary ? (
-            <p className="mt-0.5 line-clamp-2 text-xs text-muted">{summary}</p>
+            <p className="mt-0.5 line-clamp-2 text-xs text-muted/70">{summary}</p>
           ) : null}
         </div>
       </button>

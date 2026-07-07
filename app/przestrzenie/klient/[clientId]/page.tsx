@@ -3,10 +3,11 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ClientDashboardView } from "@/components/dashboard/client-dashboard-view";
+import { ClientDashboardView, type ClientDashboardTab } from "@/components/dashboard/client-dashboard-view";
 import { DashboardSpaceShell } from "@/components/dashboard/dashboard-space-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { isClientDashboardTab } from "@/lib/dashboard/client-dashboard-tabs";
 import { useAuthStore } from "@/store/auth-store";
 import { useAppStore } from "@/store/app-store";
 import { useDashboardStore } from "@/store/dashboard-store";
@@ -59,22 +60,7 @@ function ClientDashboardPageContent() {
   const activeKanbanToken = searchParams.get("kanban");
   const tabFromQuery = searchParams.get("tab");
   const agreementFromQuery = searchParams.get("agreement");
-  const initialTab =
-    tabFromQuery === "agreements" ||
-    tabFromQuery === "changes" ||
-    tabFromQuery === "offers" ||
-    tabFromQuery === "inspections" ||
-    tabFromQuery === "home" ||
-    tabFromQuery === "project" ||
-    tabFromQuery === "overview" ||
-    tabFromQuery === "process" ||
-    tabFromQuery === "specification" ||
-    tabFromQuery === "trades" ||
-    tabFromQuery === "satisfaction" ||
-    tabFromQuery === "credentials" ||
-    tabFromQuery === "links"
-      ? tabFromQuery
-      : undefined;
+  const initialTab = isClientDashboardTab(tabFromQuery) ? tabFromQuery : undefined;
   const [selectedProjectId, setSelectedProjectId] = useState(
     projectFromQuery && clientProjects.some((project) => project.id === projectFromQuery)
       ? projectFromQuery
@@ -117,6 +103,26 @@ function ClientDashboardPageContent() {
     setSelectedProjectId(projectId);
     router.replace(`/przestrzenie/klient/${clientId}?project=${projectId}`, { scroll: false });
   }
+
+  const handleTabChange = useCallback(
+    (tab: ClientDashboardTab) => {
+      const nextParams = new URLSearchParams(searchParams.toString());
+      if (tab === "home") {
+        nextParams.delete("tab");
+      } else {
+        nextParams.set("tab", tab);
+      }
+      nextParams.delete("agreement");
+      const query = nextParams.toString();
+      // router.push (nie replace) — żeby przycisk „wstecz” przełączał zakładki wewnątrz dashboardu,
+      // zamiast wychodzić od razu do listy klientów.
+      router.push(
+        query ? `/przestrzenie/klient/${clientId}?${query}` : `/przestrzenie/klient/${clientId}`,
+        { scroll: false },
+      );
+    },
+    [clientId, router, searchParams],
+  );
 
   const handleKanbanTokenChange = useCallback(
     (kanbanToken: string | null) => {
@@ -191,6 +197,7 @@ function ClientDashboardPageContent() {
         activeKanbanToken={activeKanbanToken}
         onKanbanTokenChange={handleKanbanTokenChange}
         initialTab={initialTab}
+        onTabChange={handleTabChange}
         focusAgreementId={agreementFromQuery ?? undefined}
         onProjectPatch={(projectId, patch) => {
           const project = clientProjects.find((entry) => entry.id === projectId);

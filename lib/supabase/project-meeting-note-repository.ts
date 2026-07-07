@@ -49,7 +49,6 @@ export async function fetchProjectMeetingNotes(
     .from("project_meeting_notes")
     .select("*")
     .eq("project_id", projectId)
-    .order("position", { ascending: true })
     .order("created_at", { ascending: false });
 
   if (options?.publishedOnly) {

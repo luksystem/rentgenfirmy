@@ -19,6 +19,7 @@ function NewDocumentPageContent() {
   const clientId = searchParams.get("clientId");
   const projectId = searchParams.get("projectId");
   const categoryParam = searchParams.get("category");
+  const returnTo = searchParams.get("returnTo");
 
   const initialCategory = useMemo(
     () => (isCategory(categoryParam) ? categoryParam : undefined),
@@ -41,6 +42,7 @@ function NewDocumentPageContent() {
         initialClientId={clientId}
         initialProjectId={projectId}
         initialCategory={initialCategory}
+        returnTo={returnTo}
       />
     </>
   );
