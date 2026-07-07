@@ -6,7 +6,12 @@ import { PdfPageAnnotator } from "@/components/process/pdf-page-annotator";
 import { SignaturePad } from "@/components/process/signature-pad";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
-import { isProtocolLocked, type ProtocolFieldValue, type ProtocolSignature } from "@/lib/process/protocol-types";
+import {
+  isProtocolLocked,
+  type ProtocolFieldValue,
+  type ProtocolOverlayItem,
+  type ProtocolSignature,
+} from "@/lib/process/protocol-types";
 import {
   getProtocolAnnotationUrl,
   getProtocolReferencePdfUrl,
@@ -134,12 +139,15 @@ export function ProcessProtocolBoard({
   projectId,
   actorName,
   canManageTemplate = false,
+  onToggleComplete,
 }: {
   projectProcessItemId: string;
   projectId?: string;
   actorName?: string;
   /** Administrator: możliwość zmiany lub wyczyszczenia już wybranego wzoru (czyści też pola i podpisy). */
   canManageTemplate?: boolean;
+  /** Odhacza element procesu jako ukończony/nieukończony — wywoływane automatycznie przy akceptacji protokołu. */
+  onToggleComplete?: (completed: boolean) => void;
 }) {
   const protocolTemplates = useProcessStore((state) => state.protocolTemplates);
   const templatesHydrated = useProcessStore((state) => state.protocolTemplatesHydrated);
@@ -152,6 +160,7 @@ export function ProcessProtocolBoard({
   const signProtocolClient = useProcessStore((state) => state.signProtocolClient);
   const clearProtocolSignature = useProcessStore((state) => state.clearProtocolSignature);
   const saveProtocolAnnotation = useProcessStore((state) => state.saveProtocolAnnotation);
+  const saveProtocolOverlayItems = useProcessStore((state) => state.saveProtocolOverlayItems);
   const acceptProtocol = useProcessStore((state) => state.acceptProtocol);
   const unacceptProtocol = useProcessStore((state) => state.unacceptProtocol);
 
@@ -249,6 +258,10 @@ export function ProcessProtocolBoard({
     await saveProtocolAnnotation(projectProcessItemId, page, dataUrl);
   }
 
+  async function handleSaveOverlayItems(overlayItems: ProtocolOverlayItem[]) {
+    await saveProtocolOverlayItems(projectProcessItemId, overlayItems);
+  }
+
   async function handleAccept() {
     if (!projectId) {
       setError("Brak identyfikatora projektu — nie można wygenerować dokumentu.");
@@ -258,6 +271,7 @@ export function ProcessProtocolBoard({
     setError(null);
     try {
       await acceptProtocol(projectProcessItemId, projectId, actorName ?? "Przedstawiciel firmy");
+      onToggleComplete?.(true);
     } catch (acceptError) {
       setError(acceptError instanceof Error ? acceptError.message : "Nie udało się zaakceptować protokołu.");
     } finally {
@@ -276,6 +290,7 @@ export function ProcessProtocolBoard({
     setError(null);
     try {
       await unacceptProtocol(projectProcessItemId);
+      onToggleComplete?.(false);
     } catch (unacceptError) {
       setError(unacceptError instanceof Error ? unacceptError.message : "Nie udało się odblokować protokołu.");
     } finally {
@@ -448,6 +463,10 @@ export function ProcessProtocolBoard({
               pdfUrl={referencePdfUrl}
               annotationUrlsByPage={annotationUrls}
               onSaveAnnotation={handleSaveAnnotation}
+              overlayItems={protocol.overlayItems}
+              onSaveOverlayItems={handleSaveOverlayItems}
+              companySignatureUrl={protocol.companySignature?.imageDataUrl ?? null}
+              clientSignatureUrl={protocol.clientSignature?.imageDataUrl ?? null}
               readOnly={locked}
             />
           ) : null}

@@ -215,8 +215,13 @@ export function ProcessPipeline({
     [template, process, stageGate.blockedStageIndexes],
   );
 
-  /** W widoku klienta (nieinteraktywnym) zwijamy pozostałe etapy i wyróżniamy aktywny. */
-  const collapsible = !interactive;
+  /**
+   * Zwijamy nieaktywne etapy i wyróżniamy aktywny — zawsze w widoku klienta (`stacked`, wąska
+   * kolumna niezależnie od szerokości ekranu), a w widoku zespołu (poziomy pipeline na desktopie)
+   * tylko na wąskich ekranach: od `md` w górę pipeline pokazuje wszystkie etapy rozwinięte.
+   */
+  const collapsible = true;
+  const collapsesOnlyOnMobile = interactive && !stacked;
 
   const defaultExpandedStageId = useMemo(() => {
     if (process?.activeStageId && template.stages.some((stage) => stage.id === process.activeStageId)) {
@@ -237,21 +242,25 @@ export function ProcessPipeline({
   );
 
   useEffect(() => {
-    if (!collapsible || !process?.activeStageId) {
+    if (!process?.activeStageId) {
       return;
     }
     setExpandedStageIds(new Set([process.activeStageId]));
-  }, [collapsible, process?.activeStageId]);
+  }, [process?.activeStageId]);
 
   const stageRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
-    if (!collapsible || !process?.activeStageId) {
+    if (!process?.activeStageId) {
       return;
     }
-    const el = stageRefs.current[process.activeStageId];
-    el?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [collapsible, process?.activeStageId]);
+    // Krótkie opóźnienie, żeby layout (w tym rozwinięcie/zwinięcie etapów powyżej) zdążył się ustawić.
+    const timeoutId = window.setTimeout(() => {
+      const el = stageRefs.current[process.activeStageId!];
+      el?.scrollIntoView({ behavior: "smooth", block: "start", inline: "center" });
+    }, 80);
+    return () => window.clearTimeout(timeoutId);
+  }, [process?.activeStageId]);
 
   function toggleStageExpanded(stageId: string) {
     setExpandedStageIds((current) => {
@@ -291,7 +300,7 @@ export function ProcessPipeline({
             const hasSoftWarning = !isBlocked && softWarningIndexes.has(stageIndex);
             const blockReasons = stageGate.reasonsByStageIndex.get(stageIndex) ?? [];
             const isActiveStage = process?.activeStageId === stage.id;
-            const isExpanded = !collapsible || expandedStageIds.has(stage.id);
+            const isExpanded = expandedStageIds.has(stage.id);
 
             return (
               <div
@@ -330,19 +339,19 @@ export function ProcessPipeline({
                         : undefined
                     }
                     className={cn(
-                      "relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br from-surface-elevated to-surface-muted/50 px-4 py-4 shadow-soft",
+                      "relative overflow-hidden rounded-2xl border-2 px-4 py-4 shadow-soft transition-colors",
                       collapsible && "cursor-pointer select-none",
                       isActiveStage
-                        ? "border-accent shadow-[0_0_0_3px_rgba(var(--accent-rgb,59,130,246),0.15)]"
+                        ? "border-accent bg-gradient-to-br from-accent/[0.14] via-accent/[0.05] to-surface-elevated shadow-[0_0_0_3px_rgba(var(--accent-rgb,59,130,246),0.22)] ring-1 ring-accent/50"
                         : isBlocked
-                          ? "border-rose-500/40"
-                          : "border-accent/25",
+                          ? "border-rose-500/40 bg-gradient-to-br from-surface-elevated to-surface-muted/50"
+                          : "border-accent/25 bg-gradient-to-br from-surface-elevated to-surface-muted/50",
                     )}
                   >
                     <div
                       className={cn(
-                        "absolute left-0 top-0 h-full w-1",
-                        isBlocked ? "bg-rose-500" : "bg-accent",
+                        "absolute left-0 top-0 h-full",
+                        isActiveStage ? "w-1.5 bg-accent" : isBlocked ? "w-1 bg-rose-500" : "w-1 bg-accent/25",
                       )}
                       aria-hidden
                     />
@@ -350,7 +359,11 @@ export function ProcessPipeline({
                       <span
                         className={cn(
                           "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold",
-                          isBlocked ? "bg-rose-500/15 text-rose-300" : "bg-accent/15 text-accent",
+                          isActiveStage
+                            ? "bg-accent text-white shadow-[0_0_0_4px_rgba(var(--accent-rgb,59,130,246),0.18)]"
+                            : isBlocked
+                              ? "bg-rose-500/15 text-rose-300"
+                              : "bg-accent/15 text-accent",
                         )}
                       >
                         {isBlocked ? <Lock className="h-3.5 w-3.5" /> : stageIndex + 1}
@@ -359,17 +372,23 @@ export function ProcessPipeline({
                         <p
                           className={cn(
                             "flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em]",
-                            isBlocked ? "text-rose-300" : "text-accent",
+                            isActiveStage ? "text-accent" : isBlocked ? "text-rose-300" : "text-muted",
                           )}
                         >
                           Etap {stageIndex + 1}
                           {isActiveStage ? (
-                            <span className="rounded-full bg-accent/20 px-1.5 py-0.5 text-[9px] normal-case tracking-normal text-accent">
-                              Aktywny
+                            <span className="flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[9px] normal-case tracking-normal text-white shadow-sm">
+                              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden />
+                              Aktywny etap
                             </span>
                           ) : null}
                         </p>
-                        <p className="mt-0.5 text-base font-semibold leading-snug text-foreground">
+                        <p
+                          className={cn(
+                            "mt-0.5 text-base font-semibold leading-snug",
+                            isActiveStage ? "text-foreground" : "text-foreground/90",
+                          )}
+                        >
                           {stage.title}
                         </p>
                         {stageTotal > 0 ? (
@@ -425,15 +444,14 @@ export function ProcessPipeline({
                           </button>
                         ) : null}
                       </div>
-                      {collapsible ? (
-                        <ChevronDown
-                          className={cn(
-                            "mt-1 h-4 w-4 shrink-0 text-muted transition-transform",
-                            isExpanded && "rotate-180",
-                          )}
-                          aria-hidden
-                        />
-                      ) : null}
+                      <ChevronDown
+                        className={cn(
+                          "mt-1 h-4 w-4 shrink-0 text-muted transition-transform",
+                          isExpanded && "rotate-180",
+                          collapsesOnlyOnMobile && "md:hidden",
+                        )}
+                        aria-hidden
+                      />
                     </div>
                   </div>
                   {!isLastStage && !stacked ? (
@@ -448,7 +466,7 @@ export function ProcessPipeline({
                   className={cn(
                     "grid flex-1 gap-4 pl-2",
                     !stacked && "md:pl-0",
-                    collapsible && !isExpanded && "hidden",
+                    !isExpanded && (collapsesOnlyOnMobile ? "hidden md:grid" : "hidden"),
                   )}
                 >
                   {stage.milestones.map((milestone) => {
@@ -485,6 +503,7 @@ export function ProcessPipeline({
                             const visualState = getProcessItemVisualState(
                               process?.completions?.[item.id],
                               instance,
+                              item.kind,
                             );
                             const visualClasses = PROCESS_ITEM_VISUAL_CLASSES[visualState];
                             const Icon = kindIcon[item.kind] ?? CheckCircle2;

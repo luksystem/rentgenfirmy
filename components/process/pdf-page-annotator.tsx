@@ -1,17 +1,37 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Eraser, Loader2, Pencil, Trash2, Type, X } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Eraser,
+  Loader2,
+  Minus,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Stamp,
+  Trash2,
+  Type,
+  X,
+} from "lucide-react";
 import type { PDFDocumentLoadingTask, PDFDocumentProxy } from "pdfjs-dist";
 import { Button } from "@/components/ui/button";
+import type { ProtocolOverlayItem } from "@/lib/process/protocol-types";
 import { cn } from "@/lib/utils";
 
 const RENDER_WIDTH = 760;
+const MIN_ZOOM_WIDTH = 420;
+const MAX_ZOOM_WIDTH = 1500;
+const ZOOM_STEP = 140;
 const PEN_WIDTH = 3;
 const ERASER_WIDTH = 22;
-const TEXT_FONT_SIZE = 18;
+const DEFAULT_FONT_SIZE_RATIO = 0.022;
+const DEFAULT_SIGNATURE_WIDTH_RATIO = 0.22;
+const DRAG_THRESHOLD_PX = 4;
 
-type Tool = "pen" | "eraser" | "text";
+type Tool = "pen" | "eraser" | "text" | "stamp-company" | "stamp-client";
 
 const PEN_COLORS = [
   { value: "#dc2626", label: "Czerwony" },
@@ -22,13 +42,25 @@ const PEN_COLORS = [
 ];
 
 type TextEditorState = {
-  /** Współrzędne w przestrzeni surowego canvasu (do rysowania tekstu). */
-  x: number;
-  y: number;
-  /** Współrzędne CSS względem kontenera (do pozycjonowania pływającego pola). */
+  /** `null` = tworzenie nowego pola tekstowego, w przeciwnym razie edycja istniejącego elementu. */
+  id: string | null;
+  page: number;
+  xRatio: number;
+  yRatio: number;
   cssX: number;
   cssY: number;
   value: string;
+  color: string;
+};
+
+type DragState = {
+  itemId: string;
+  pointerId: number;
+  startClientX: number;
+  startClientY: number;
+  startXRatio: number;
+  startYRatio: number;
+  moved: boolean;
 };
 
 type PdfPageAnnotatorProps = {
@@ -37,20 +69,31 @@ type PdfPageAnnotatorProps = {
   annotationUrlsByPage: Record<number, string>;
   /** Wywoływane po dokończeniu pociągnięcia / wyczyszczeniu strony — `null` usuwa adnotację. */
   onSaveAnnotation: (page: number, dataUrl: string | null) => Promise<void>;
+  /** Pola tekstowe i umieszczone podpisy na stronach wzoru (dane strukturalne, edytowalne). */
+  overlayItems?: ProtocolOverlayItem[];
+  onSaveOverlayItems?: (items: ProtocolOverlayItem[]) => Promise<void>;
+  /** Data URL złożonego podpisu — pozwala wstawić go jako pieczątkę w wybranym miejscu strony. */
+  companySignatureUrl?: string | null;
+  clientSignatureUrl?: string | null;
   readOnly?: boolean;
   className?: string;
 };
 
 /**
  * Renderuje wzór PDF strona po stronie (pdf.js) z nakładką do odręcznego pisania/rysowania
- * (rysik/palec — pointer events). Optymalizowane pod tablet: strony renderowane w stałej
- * rozdzielczości logicznej, ale wyświetlane responsywnie (CSS `max-width: 100%`), więc
- * współrzędne rysowania są zawsze przeliczane względem faktycznego rozmiaru na ekranie.
+ * (rysik/palec — pointer events) oraz edytowalnymi elementami strukturalnymi: polami tekstowymi
+ * i umieszczonymi w wybranym miejscu podpisami. Optymalizowane pod tablet: strony renderowane
+ * w logicznej rozdzielczości sterowanej poziomem przybliżenia, współrzędne zawsze przeliczane
+ * względem faktycznego rozmiaru na ekranie.
  */
 export function PdfPageAnnotator({
   pdfUrl,
   annotationUrlsByPage,
   onSaveAnnotation,
+  overlayItems = [],
+  onSaveOverlayItems,
+  companySignatureUrl,
+  clientSignatureUrl,
   readOnly = false,
   className,
 }: PdfPageAnnotatorProps) {
@@ -66,24 +109,38 @@ export function PdfPageAnnotator({
   const currentPageRef = useRef(1);
   const ratioRef = useRef(1);
   const saveTimeoutRef = useRef<number | null>(null);
+  const overlaySaveTimeoutRef = useRef<number | null>(null);
+  const overlayDirtyRef = useRef(false);
+  const itemsRef = useRef<ProtocolOverlayItem[]>(overlayItems);
+  const dragStateRef = useRef<DragState | null>(null);
 
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingDoc, setLoadingDoc] = useState(true);
   const [renderingPage, setRenderingPage] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingOverlay, setSavingOverlay] = useState(false);
   const [isEmpty, setIsEmpty] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [zoomWidth, setZoomWidth] = useState(RENDER_WIDTH);
   const [canvasCssSize, setCanvasCssSize] = useState({ width: RENDER_WIDTH, height: Math.round(RENDER_WIDTH * 1.414) });
   const [tool, setTool] = useState<Tool>("pen");
   const [penColor, setPenColor] = useState(PEN_COLORS[0].value);
   const [textEditor, setTextEditor] = useState<TextEditorState | null>(null);
+  const [items, setItems] = useState<ProtocolOverlayItem[]>(overlayItems);
 
   const annotationUrlsKey = JSON.stringify(annotationUrlsByPage);
+  const overlayItemsKey = JSON.stringify(overlayItems);
 
   useEffect(() => {
     currentPageRef.current = currentPage;
   }, [currentPage]);
+
+  useEffect(() => {
+    setItems(overlayItems);
+    itemsRef.current = overlayItems;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overlayItemsKey]);
 
   const flushSave = useCallback(async () => {
     if (!dirtyRef.current || readOnly) {
@@ -105,14 +162,50 @@ export function PdfPageAnnotator({
     }
   }, [onSaveAnnotation, readOnly]);
 
+  const flushOverlaySave = useCallback(async () => {
+    if (!overlayDirtyRef.current || readOnly || !onSaveOverlayItems) {
+      return;
+    }
+    overlayDirtyRef.current = false;
+    setSavingOverlay(true);
+    try {
+      await onSaveOverlayItems(itemsRef.current);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Nie udało się zapisać elementów strony.");
+    } finally {
+      setSavingOverlay(false);
+    }
+  }, [onSaveOverlayItems, readOnly]);
+
+  function commitItems(next: ProtocolOverlayItem[], { immediate = false }: { immediate?: boolean } = {}) {
+    setItems(next);
+    itemsRef.current = next;
+    overlayDirtyRef.current = true;
+    if (overlaySaveTimeoutRef.current) {
+      window.clearTimeout(overlaySaveTimeoutRef.current);
+      overlaySaveTimeoutRef.current = null;
+    }
+    if (immediate) {
+      void flushOverlaySave();
+    } else {
+      overlaySaveTimeoutRef.current = window.setTimeout(() => {
+        void flushOverlaySave();
+      }, 600);
+    }
+  }
+
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
         window.clearTimeout(saveTimeoutRef.current);
       }
+      if (overlaySaveTimeoutRef.current) {
+        window.clearTimeout(overlaySaveTimeoutRef.current);
+      }
       void flushSave();
+      void flushOverlaySave();
     };
-  }, [flushSave]);
+  }, [flushSave, flushOverlaySave]);
 
   useEffect(() => {
     let cancelled = false;
@@ -168,7 +261,7 @@ export function PdfPageAnnotator({
       const naturalViewport = page.getViewport({ scale: 1 });
       const ratio = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
       ratioRef.current = ratio;
-      const cssWidth = Math.min(RENDER_WIDTH, naturalViewport.width);
+      const cssWidth = zoomWidth;
       const renderScale = (cssWidth / naturalViewport.width) * ratio;
       const viewport = page.getViewport({ scale: renderScale });
       const cssHeight = (cssWidth / naturalViewport.width) * naturalViewport.height;
@@ -215,7 +308,7 @@ export function PdfPageAnnotator({
       setRenderingPage(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [annotationUrlsKey]);
+  }, [annotationUrlsKey, zoomWidth]);
 
   useEffect(() => {
     if (numPages > 0) {
@@ -256,19 +349,40 @@ export function PdfPageAnnotator({
     return { x: (event.clientX - rect.left) * scaleX, y: (event.clientY - rect.top) * scaleY };
   }
 
-  function openTextEditor(event: React.PointerEvent<HTMLCanvasElement>) {
+  function getCssRatio(clientX: number, clientY: number) {
     const wrapper = wrapperRef.current;
     if (!wrapper) {
+      return { xRatio: 0, yRatio: 0, cssX: 0, cssY: 0 };
+    }
+    const rect = wrapper.getBoundingClientRect();
+    const cssX = clientX - rect.left;
+    const cssY = clientY - rect.top;
+    return {
+      xRatio: Math.min(1, Math.max(0, cssX / canvasCssSize.width)),
+      yRatio: Math.min(1, Math.max(0, cssY / canvasCssSize.height)),
+      cssX,
+      cssY,
+    };
+  }
+
+  function openNewTextEditor(clientX: number, clientY: number) {
+    const { xRatio, yRatio, cssX, cssY } = getCssRatio(clientX, clientY);
+    setTextEditor({ id: null, page: currentPage, xRatio, yRatio, cssX, cssY, value: "", color: penColor });
+  }
+
+  function openEditForItem(item: ProtocolOverlayItem) {
+    if (readOnly || item.kind !== "text") {
       return;
     }
-    const canvasPoint = getPoint(event);
-    const wrapperRect = wrapper.getBoundingClientRect();
     setTextEditor({
-      x: canvasPoint.x,
-      y: canvasPoint.y,
-      cssX: event.clientX - wrapperRect.left,
-      cssY: event.clientY - wrapperRect.top,
-      value: "",
+      id: item.id,
+      page: item.page,
+      xRatio: item.xRatio,
+      yRatio: item.yRatio,
+      cssX: item.xRatio * canvasCssSize.width,
+      cssY: item.yRatio * canvasCssSize.height,
+      value: item.text ?? "",
+      color: item.color ?? penColor,
     });
   }
 
@@ -278,23 +392,28 @@ export function PdfPageAnnotator({
         return null;
       }
       const text = current.value.trim();
-      if (!text) {
-        return null;
-      }
-      const ctx = drawCanvasRef.current?.getContext("2d");
-      if (ctx) {
-        ctx.globalCompositeOperation = "source-over";
-        ctx.fillStyle = penColor;
-        const fontSize = TEXT_FONT_SIZE * ratioRef.current;
-        ctx.font = `${fontSize}px sans-serif`;
-        ctx.textBaseline = "top";
-        text.split("\n").forEach((line, index) => {
-          ctx.fillText(line, current.x, current.y + index * fontSize * 1.3);
-        });
-        hasContentRef.current = true;
-        dirtyRef.current = true;
-        setIsEmpty(false);
-        scheduleSave();
+      if (current.id) {
+        if (!text) {
+          commitItems(itemsRef.current.filter((entry) => entry.id !== current.id));
+        } else {
+          commitItems(
+            itemsRef.current.map((entry) =>
+              entry.id === current.id ? { ...entry, text, color: current.color } : entry,
+            ),
+          );
+        }
+      } else if (text) {
+        const newItem: ProtocolOverlayItem = {
+          id: crypto.randomUUID(),
+          page: current.page,
+          xRatio: current.xRatio,
+          yRatio: current.yRatio,
+          kind: "text",
+          text,
+          color: current.color,
+          fontSizeRatio: DEFAULT_FONT_SIZE_RATIO,
+        };
+        commitItems([...itemsRef.current, newItem]);
       }
       return null;
     });
@@ -302,6 +421,28 @@ export function PdfPageAnnotator({
 
   function cancelTextEditor() {
     setTextEditor(null);
+  }
+
+  function removeItem(id: string) {
+    commitItems(
+      itemsRef.current.filter((entry) => entry.id !== id),
+      { immediate: true },
+    );
+  }
+
+  function placeSignatureStamp(clientX: number, clientY: number, which: "company" | "client") {
+    const { xRatio, yRatio } = getCssRatio(clientX, clientY);
+    const newItem: ProtocolOverlayItem = {
+      id: crypto.randomUUID(),
+      page: currentPage,
+      xRatio,
+      yRatio,
+      kind: "signature",
+      which,
+      widthRatio: DEFAULT_SIGNATURE_WIDTH_RATIO,
+    };
+    commitItems([...itemsRef.current, newItem], { immediate: true });
+    setTool("pen");
   }
 
   function handlePointerDown(event: React.PointerEvent<HTMLCanvasElement>) {
@@ -313,7 +454,11 @@ export function PdfPageAnnotator({
       return;
     }
     if (tool === "text") {
-      openTextEditor(event);
+      openNewTextEditor(event.clientX, event.clientY);
+      return;
+    }
+    if (tool === "stamp-company" || tool === "stamp-client") {
+      placeSignatureStamp(event.clientX, event.clientY, tool === "stamp-company" ? "company" : "client");
       return;
     }
     const ctx = drawCanvasRef.current?.getContext("2d");
@@ -378,6 +523,56 @@ export function PdfPageAnnotator({
     void flushSave();
   }
 
+  function handleItemPointerDown(event: React.PointerEvent<HTMLDivElement>, item: ProtocolOverlayItem) {
+    if (readOnly) {
+      return;
+    }
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragStateRef.current = {
+      itemId: item.id,
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startXRatio: item.xRatio,
+      startYRatio: item.yRatio,
+      moved: false,
+    };
+  }
+
+  function handleItemPointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const drag = dragStateRef.current;
+    if (!drag) {
+      return;
+    }
+    const deltaX = event.clientX - drag.startClientX;
+    const deltaY = event.clientY - drag.startClientY;
+    if (!drag.moved && Math.hypot(deltaX, deltaY) < DRAG_THRESHOLD_PX) {
+      return;
+    }
+    drag.moved = true;
+    const nextXRatio = Math.min(1, Math.max(0, drag.startXRatio + deltaX / canvasCssSize.width));
+    const nextYRatio = Math.min(1, Math.max(0, drag.startYRatio + deltaY / canvasCssSize.height));
+    const next = itemsRef.current.map((entry) =>
+      entry.id === drag.itemId ? { ...entry, xRatio: nextXRatio, yRatio: nextYRatio } : entry,
+    );
+    itemsRef.current = next;
+    setItems(next);
+  }
+
+  function handleItemPointerUp(event: React.PointerEvent<HTMLDivElement>, item: ProtocolOverlayItem) {
+    const drag = dragStateRef.current;
+    dragStateRef.current = null;
+    if (!drag || drag.itemId !== item.id) {
+      return;
+    }
+    if (drag.moved) {
+      commitItems(itemsRef.current);
+    } else if (item.kind === "text") {
+      openEditForItem(item);
+    }
+  }
+
   if (loadingDoc) {
     return (
       <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-surface-muted/20 p-6 text-sm text-muted">
@@ -386,6 +581,9 @@ export function PdfPageAnnotator({
       </div>
     );
   }
+
+  const currentPageItems = items.filter((entry) => entry.page === currentPage);
+  const zoomPercent = Math.round((zoomWidth / RENDER_WIDTH) * 100);
 
   return (
     <div className={cn("grid gap-2", className)}>
@@ -413,8 +611,42 @@ export function PdfPageAnnotator({
             <ChevronRight className="h-3.5 w-3.5" />
           </Button>
         </div>
+        <div className="flex items-center gap-1.5">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={zoomWidth <= MIN_ZOOM_WIDTH || renderingPage}
+            onClick={() => setZoomWidth((current) => Math.max(MIN_ZOOM_WIDTH, current - ZOOM_STEP))}
+            title="Pomniejsz"
+          >
+            <Minus className="h-3.5 w-3.5" />
+          </Button>
+          <span className="min-w-[44px] text-center text-xs text-muted">{zoomPercent}%</span>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={zoomWidth >= MAX_ZOOM_WIDTH || renderingPage}
+            onClick={() => setZoomWidth((current) => Math.min(MAX_ZOOM_WIDTH, current + ZOOM_STEP))}
+            title="Powiększ"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+          {zoomWidth !== RENDER_WIDTH ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => setZoomWidth(RENDER_WIDTH)}
+              title="Przywróć domyślny rozmiar"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </Button>
+          ) : null}
+        </div>
         <div className="flex items-center gap-2">
-          {saving ? (
+          {saving || savingOverlay ? (
             <span className="flex items-center gap-1 text-xs text-muted">
               <Loader2 className="h-3 w-3 animate-spin" />
               Zapisywanie…
@@ -423,7 +655,7 @@ export function PdfPageAnnotator({
           {!readOnly ? (
             <Button type="button" size="sm" variant="outline" disabled={isEmpty} onClick={handleClearPage}>
               <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-              Wyczyść całą stronę
+              Wyczyść odręczne pismo
             </Button>
           ) : null}
         </div>
@@ -461,12 +693,52 @@ export function PdfPageAnnotator({
               size="sm"
               variant={tool === "text" ? "default" : "outline"}
               onClick={() => setTool("text")}
-              title="Wstaw pole tekstowe"
+              title="Wstaw pole tekstowe (kliknij istniejące, aby edytować)"
             >
               <Type className="h-3.5 w-3.5" />
             </Button>
           </div>
-          {tool !== "eraser" ? (
+          {onSaveOverlayItems ? (
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                size="sm"
+                variant={tool === "stamp-company" ? "default" : "outline"}
+                disabled={!companySignatureUrl}
+                onClick={() => {
+                  commitTextEditor();
+                  setTool("stamp-company");
+                }}
+                title={
+                  companySignatureUrl
+                    ? "Wstaw podpis firmy w wybranym miejscu na stronie"
+                    : "Najpierw złóż podpis firmy poniżej"
+                }
+              >
+                <Stamp className="mr-1.5 h-3.5 w-3.5" />
+                Podpis firmy
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={tool === "stamp-client" ? "default" : "outline"}
+                disabled={!clientSignatureUrl}
+                onClick={() => {
+                  commitTextEditor();
+                  setTool("stamp-client");
+                }}
+                title={
+                  clientSignatureUrl
+                    ? "Wstaw podpis klienta w wybranym miejscu na stronie"
+                    : "Najpierw złóż podpis klienta poniżej"
+                }
+              >
+                <Stamp className="mr-1.5 h-3.5 w-3.5" />
+                Podpis klienta
+              </Button>
+            </div>
+          ) : null}
+          {tool !== "eraser" && tool !== "stamp-company" && tool !== "stamp-client" ? (
             <div className="flex items-center gap-1.5">
               {PEN_COLORS.map((colorOption) => (
                 <button
@@ -488,68 +760,177 @@ export function PdfPageAnnotator({
 
       {error ? <p className="text-xs text-rose-400">{error}</p> : null}
 
-      <div
-        ref={wrapperRef}
-        className="relative mx-auto overflow-hidden rounded-xl border-2 border-dashed border-border/70 bg-white"
-        style={{ width: "100%", maxWidth: canvasCssSize.width }}
-      >
-        <canvas ref={bgCanvasRef} className="block w-full" style={{ height: "auto" }} />
-        <canvas
-          ref={drawCanvasRef}
-          className={cn(
-            "absolute inset-0 block w-full",
-            readOnly ? "cursor-default" : tool === "text" ? "cursor-text" : "cursor-crosshair",
-          )}
-          style={{ height: "auto", touchAction: "none" }}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={finishStroke}
-          onPointerLeave={finishStroke}
-          onPointerCancel={finishStroke}
-        />
-        {renderingPage ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/60">
-            <Loader2 className="h-5 w-5 animate-spin text-muted" />
-          </div>
-        ) : null}
-        {textEditor ? (
-          <div
-            className="absolute z-10 grid gap-1 rounded-lg border border-border bg-white p-1.5 shadow-lg"
-            style={{ left: textEditor.cssX, top: textEditor.cssY }}
-          >
-            <textarea
-              autoFocus
-              rows={2}
-              value={textEditor.value}
-              onChange={(event) =>
-                setTextEditor((current) => (current ? { ...current, value: event.target.value } : current))
-              }
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  cancelTextEditor();
-                } else if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  commitTextEditor();
-                }
-              }}
-              style={{ color: penColor }}
-              className="w-48 resize-none rounded border border-border/70 bg-white p-1.5 text-sm outline-none"
-              placeholder="Wpisz tekst…"
-            />
-            <div className="flex items-center justify-end gap-1">
-              <Button type="button" size="sm" variant="ghost" onClick={cancelTextEditor}>
-                <X className="h-3.5 w-3.5" />
-              </Button>
-              <Button type="button" size="sm" onClick={commitTextEditor}>
-                <Check className="h-3.5 w-3.5" />
-              </Button>
+      <div className="overflow-x-auto">
+        <div
+          ref={wrapperRef}
+          className="relative mx-auto overflow-hidden rounded-xl border-2 border-dashed border-border/70 bg-white"
+          style={{ width: canvasCssSize.width, maxWidth: "none" }}
+        >
+          <canvas ref={bgCanvasRef} className="block w-full" style={{ height: "auto" }} />
+          <canvas
+            ref={drawCanvasRef}
+            className={cn(
+              "absolute inset-0 block w-full",
+              readOnly
+                ? "cursor-default"
+                : tool === "text"
+                  ? "cursor-text"
+                  : tool === "stamp-company" || tool === "stamp-client"
+                    ? "cursor-copy"
+                    : "cursor-crosshair",
+            )}
+            style={{ height: "auto", touchAction: "none" }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={finishStroke}
+            onPointerLeave={finishStroke}
+            onPointerCancel={finishStroke}
+          />
+          {renderingPage ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/60">
+              <Loader2 className="h-5 w-5 animate-spin text-muted" />
             </div>
-          </div>
-        ) : null}
+          ) : null}
+
+          {currentPageItems.map((item) => {
+            if (textEditor?.id === item.id) {
+              return null;
+            }
+            if (item.kind === "signature") {
+              const imageUrl = item.which === "company" ? companySignatureUrl : clientSignatureUrl;
+              const width = (item.widthRatio ?? DEFAULT_SIGNATURE_WIDTH_RATIO) * canvasCssSize.width;
+              return (
+                <div
+                  key={item.id}
+                  className={cn(
+                    "group absolute rounded-md border border-dashed border-accent/50 bg-white/70 p-1",
+                    !readOnly && "cursor-move",
+                  )}
+                  style={{ left: item.xRatio * canvasCssSize.width, top: item.yRatio * canvasCssSize.height, width }}
+                  onPointerDown={(event) => handleItemPointerDown(event, item)}
+                  onPointerMove={handleItemPointerMove}
+                  onPointerUp={(event) => handleItemPointerUp(event, item)}
+                  onPointerCancel={() => {
+                    dragStateRef.current = null;
+                  }}
+                >
+                  {imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={imageUrl} alt="Podpis" className="pointer-events-none w-full object-contain" draggable={false} />
+                  ) : (
+                    <p className="text-center text-[10px] text-muted">
+                      {item.which === "company" ? "Podpis firmy" : "Podpis klienta"} — brak
+                    </p>
+                  )}
+                  {!readOnly ? (
+                    <button
+                      type="button"
+                      title="Usuń podpis z tego miejsca"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        removeItem(item.id);
+                      }}
+                      className="absolute -right-2 -top-2 hidden h-5 w-5 items-center justify-center rounded-full border border-border bg-white text-muted shadow group-hover:flex"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  ) : null}
+                </div>
+              );
+            }
+            const fontSize = (item.fontSizeRatio ?? DEFAULT_FONT_SIZE_RATIO) * canvasCssSize.height;
+            return (
+              <div
+                key={item.id}
+                className={cn("group absolute max-w-[80%]", !readOnly && "cursor-move")}
+                style={{ left: item.xRatio * canvasCssSize.width, top: item.yRatio * canvasCssSize.height }}
+                onPointerDown={(event) => handleItemPointerDown(event, item)}
+                onPointerMove={handleItemPointerMove}
+                onPointerUp={(event) => handleItemPointerUp(event, item)}
+                onPointerCancel={() => {
+                  dragStateRef.current = null;
+                }}
+              >
+                <span
+                  className="whitespace-pre-wrap break-words rounded px-0.5"
+                  style={{ color: item.color ?? penColor, fontSize, lineHeight: 1.25 }}
+                >
+                  {item.text}
+                </span>
+                {!readOnly ? (
+                  <button
+                    type="button"
+                    title="Usuń pole tekstowe"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      removeItem(item.id);
+                    }}
+                    className="absolute -right-3 -top-3 hidden h-5 w-5 items-center justify-center rounded-full border border-border bg-white text-muted shadow group-hover:flex"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
+
+          {textEditor ? (
+            <div
+              className="absolute z-10 grid gap-1 rounded-lg border border-border bg-white p-1.5 shadow-lg"
+              style={{ left: textEditor.cssX, top: textEditor.cssY }}
+            >
+              <textarea
+                autoFocus
+                rows={2}
+                value={textEditor.value}
+                onChange={(event) =>
+                  setTextEditor((current) => (current ? { ...current, value: event.target.value } : current))
+                }
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    cancelTextEditor();
+                  } else if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    commitTextEditor();
+                  }
+                }}
+                style={{ color: textEditor.color }}
+                className="w-48 resize-none rounded border border-border/70 bg-white p-1.5 text-sm outline-none"
+                placeholder="Wpisz tekst…"
+              />
+              <div className="flex items-center gap-1.5">
+                {PEN_COLORS.map((colorOption) => (
+                  <button
+                    key={colorOption.value}
+                    type="button"
+                    title={colorOption.label}
+                    onClick={() =>
+                      setTextEditor((current) => (current ? { ...current, color: colorOption.value } : current))
+                    }
+                    className={cn(
+                      "h-4 w-4 rounded-full border-2 transition",
+                      textEditor.color === colorOption.value ? "border-foreground scale-110" : "border-border/50",
+                    )}
+                    style={{ backgroundColor: colorOption.value }}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center justify-end gap-1">
+                <Button type="button" size="sm" variant="ghost" onClick={cancelTextEditor}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+                <Button type="button" size="sm" onClick={commitTextEditor}>
+                  <Check className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
       {!readOnly ? (
         <p className="text-center text-[11px] text-muted">
-          Pisz/rysuj rysikiem lub palcem, użyj gumki do poprawek albo wstaw pole tekstowe — zapisuje się automatycznie.
+          Pisz/rysuj rysikiem lub palcem, użyj gumki do poprawek, wstaw pole tekstowe (kliknij, aby edytować) albo
+          złożony podpis w wybranym miejscu — przeciągnij, aby przesunąć. Zapisuje się automatycznie.
         </p>
       ) : null}
     </div>

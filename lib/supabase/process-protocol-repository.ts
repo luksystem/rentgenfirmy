@@ -3,6 +3,7 @@ import type {
   ProtocolAnnotation,
   ProtocolField,
   ProtocolFieldValue,
+  ProtocolOverlayItem,
   ProtocolSignature,
   ProtocolTemplate,
   ProtocolTemplateSource,
@@ -44,6 +45,7 @@ function rowToProjectProcessProtocol(row: ProjectProcessProtocolRow): ProjectPro
     companySignature: (row.company_signature as ProtocolSignature | null) ?? null,
     clientSignature: (row.client_signature as ProtocolSignature | null) ?? null,
     annotations: Array.isArray(row.annotations) ? (row.annotations as ProtocolAnnotation[]) : [],
+    overlayItems: Array.isArray(row.overlay_items) ? (row.overlay_items as ProtocolOverlayItem[]) : [],
     generatedPdfPath: row.generated_pdf_path ?? null,
     acceptedAt: row.accepted_at ?? null,
     acceptedBy: row.accepted_by ?? null,
@@ -435,6 +437,28 @@ export async function saveProtocolAnnotation(
   return rowToProjectProcessProtocol(data as ProjectProcessProtocolRow);
 }
 
+/** Zapisuje pełną listę edytowalnych elementów (pola tekstowe, umieszczone podpisy) na wzorze PDF. */
+export async function saveProtocolOverlayItems(
+  projectProcessItemId: string,
+  overlayItems: ProtocolOverlayItem[],
+): Promise<ProjectProcessProtocol> {
+  await ensureProtocolRow(projectProcessItemId);
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase
+    .from("project_process_protocols")
+    .update({ overlay_items: overlayItems, updated_at: new Date().toISOString() })
+    .eq("project_process_item_id", projectProcessItemId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToProjectProcessProtocol(data as ProjectProcessProtocolRow);
+}
+
 export async function getProtocolAnnotationUrl(path: string): Promise<string | null> {
   const supabase = getSupabase();
   const { data, error } = await supabase.storage
@@ -489,6 +513,7 @@ export async function acceptProtocol(
     pdfBytes = await generateAnnotatedProtocolPdf({
       originalPdfBytes,
       pageAnnotationBytes,
+      overlayItems: protocol.overlayItems,
       companySignature: protocol.companySignature,
       clientSignature: protocol.clientSignature,
       acceptedAt,

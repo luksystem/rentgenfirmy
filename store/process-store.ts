@@ -20,6 +20,7 @@ import type {
   ProjectProcessProtocol,
   ProtocolField,
   ProtocolFieldValue,
+  ProtocolOverlayItem,
   ProtocolSignature,
   ProtocolTemplate,
   ProtocolTemplateSource,
@@ -40,6 +41,7 @@ import {
   fetchProtocolTemplates,
   saveProtocolAnnotation as saveProtocolAnnotationRepo,
   saveProtocolFieldValues as saveProtocolFieldValuesRepo,
+  saveProtocolOverlayItems as saveProtocolOverlayItemsRepo,
   saveProtocolTemplate as saveProtocolTemplateRepo,
   signProtocolAsClient,
   signProtocolAsCompany,
@@ -194,6 +196,10 @@ type ProcessStore = {
     projectProcessItemId: string,
     page: number,
     dataUrl: string | null,
+  ) => Promise<void>;
+  saveProtocolOverlayItems: (
+    projectProcessItemId: string,
+    overlayItems: ProtocolOverlayItem[],
   ) => Promise<void>;
   acceptProtocol: (
     projectProcessItemId: string,
@@ -707,6 +713,12 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
   },
   saveProtocolAnnotation: async (projectProcessItemId, page, dataUrl) => {
     const updated = await saveProtocolAnnotationRepo(projectProcessItemId, page, dataUrl);
+    set((state) => ({
+      projectProtocols: { ...state.projectProtocols, [projectProcessItemId]: updated },
+    }));
+  },
+  saveProtocolOverlayItems: async (projectProcessItemId, overlayItems) => {
+    const updated = await saveProtocolOverlayItemsRepo(projectProcessItemId, overlayItems);
     set((state) => ({
       projectProtocols: { ...state.projectProtocols, [projectProcessItemId]: updated },
     }));

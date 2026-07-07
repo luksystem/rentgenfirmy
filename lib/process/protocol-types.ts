@@ -47,6 +47,27 @@ export type ProtocolAnnotation = {
   imagePath: string;
 };
 
+/**
+ * Edytowalny element nałożony na stronę wzoru PDF — pole tekstowe albo umieszczony w konkretnym
+ * miejscu podpis (firma/klient). W przeciwieństwie do odręcznego pisma (`ProtocolAnnotation`,
+ * rastrowe PNG) to są dane strukturalne — można je później kliknąć, poprawić, przesunąć lub usunąć.
+ * Współrzędne jako ułamek (0..1) szerokości/wysokości strony — niezależne od poziomu przybliżenia.
+ */
+export type ProtocolOverlayItem = {
+  id: string;
+  page: number;
+  xRatio: number;
+  yRatio: number;
+  kind: "text" | "signature";
+  /** kind === "text" */
+  text?: string;
+  color?: string;
+  fontSizeRatio?: number;
+  /** kind === "signature" */
+  which?: "company" | "client";
+  widthRatio?: number;
+};
+
 export type ProjectProcessProtocol = {
   id: string;
   projectProcessItemId: string;
@@ -57,6 +78,8 @@ export type ProjectProcessProtocol = {
   clientSignature: ProtocolSignature | null;
   /** Odręczne adnotacje na stronach wzoru PDF (tylko dla szablonów source="pdf"). */
   annotations: ProtocolAnnotation[];
+  /** Pola tekstowe i umieszczone podpisy na stronach wzoru PDF. */
+  overlayItems: ProtocolOverlayItem[];
   /** Ścieżka w Storage do finalnego, wygenerowanego PDF po akceptacji. */
   generatedPdfPath: string | null;
   /** Kiedy protokół zaakceptowano (protokół zablokowany do edycji, jeśli ustawione). */

@@ -332,6 +332,7 @@ export function ProcessItemPanel({
               projectId={projectId}
               actorName={actorName}
               canManageTemplate={canCustomizeChecklist}
+              onToggleComplete={onToggleComplete}
             />
           ) : item.kind === "protocol" ? (
             <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4">

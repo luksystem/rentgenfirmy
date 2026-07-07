@@ -1,18 +1,21 @@
-import type { ProcessItemCompletion, ProjectProcessItem } from "@/lib/process/types";
+import type { ProcessItemCompletion, ProcessItemKind, ProjectProcessItem } from "@/lib/process/types";
 
 export type ProcessItemVisualState = "open" | "completed" | "signed";
 
 export function getProcessItemVisualState(
   completion?: ProcessItemCompletion,
   instance?: ProjectProcessItem,
+  kind?: ProcessItemKind,
 ): ProcessItemVisualState {
   if (instance?.signedAt) {
     return "signed";
   }
-  if (completion || instance?.status === "completed") {
-    return "completed";
+  const isCompleted = Boolean(completion) || instance?.status === "completed";
+  if (!isCompleted) {
+    return "open";
   }
-  return "open";
+  // Protokół ukończony = zaakceptowany oboma podpisami — wizualnie traktujemy jak "podpisany" (zielony).
+  return kind === "protocol" ? "signed" : "completed";
 }
 
 export const PROCESS_ITEM_VISUAL_CLASSES: Record<

@@ -1,6 +1,11 @@
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
-import type { ProtocolField, ProtocolFieldValue, ProtocolSignature } from "@/lib/process/protocol-types";
+import type {
+  ProtocolField,
+  ProtocolFieldValue,
+  ProtocolOverlayItem,
+  ProtocolSignature,
+} from "@/lib/process/protocol-types";
 import { formatDateTime } from "@/lib/utils";
 
 /**
@@ -108,12 +113,82 @@ async function drawSignatureBlock(
   });
 }
 
+function hexToRgb(hex: string) {
+  const match = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim());
+  if (!match) {
+    return rgb(0.1, 0.1, 0.1);
+  }
+  const [r, g, b] = [match[1], match[2], match[3]].map((part) => parseInt(part, 16) / 255);
+  return rgb(r, g, b);
+}
+
 /**
- * Wzór PDF + odręczne adnotacje "wypalone" na oryginalnych stronach + podpisy na ostatniej stronie.
+ * Nanosi na strony wzoru pola tekstowe i umieszczone podpisy (`ProtocolOverlayItem`) — dane
+ * strukturalne wprowadzone przez użytkownika w edytorze (`PdfPageAnnotator`), niezależne od
+ * odręcznego rastrowego pisma. Współrzędne to ułamek (0..1) szerokości/wysokości strony,
+ * z origin w lewym górnym rogu (jak na ekranie) — dlatego oś Y jest odwracana względem PDF.
+ */
+async function drawOverlayItems(
+  pdfDoc: PDFDocument,
+  overlayItems: ProtocolOverlayItem[],
+  fonts: { regular: PDFFont; bold: PDFFont },
+  signatures: { company: ProtocolSignature | null; client: ProtocolSignature | null },
+) {
+  const signatureImageCache = new Map<string, Awaited<ReturnType<PDFDocument["embedPng"]>>>();
+
+  async function embedSignatureImage(dataUrl: string) {
+    const cached = signatureImageCache.get(dataUrl);
+    if (cached) {
+      return cached;
+    }
+    const image = await pdfDoc.embedPng(dataUrlToBytes(dataUrl));
+    signatureImageCache.set(dataUrl, image);
+    return image;
+  }
+
+  for (const item of overlayItems) {
+    const pdfPage = pdfDoc.getPage(item.page - 1);
+    if (!pdfPage) {
+      continue;
+    }
+    const { width, height } = pdfPage.getSize();
+    const x = item.xRatio * width;
+    const yTop = item.yRatio * height;
+
+    if (item.kind === "text" && item.text?.trim()) {
+      const fontSize = (item.fontSizeRatio ?? 0.018) * height;
+      const color = hexToRgb(item.color ?? "#111827");
+      const lines = item.text.split("\n");
+      lines.forEach((line, index) => {
+        pdfPage.drawText(line, {
+          x,
+          y: height - yTop - fontSize * (index + 1) * 1.25,
+          size: fontSize,
+          font: fonts.regular,
+          color,
+        });
+      });
+    } else if (item.kind === "signature") {
+      const signature = item.which === "company" ? signatures.company : signatures.client;
+      if (!signature) {
+        continue;
+      }
+      const image = await embedSignatureImage(signature.imageDataUrl);
+      const w = (item.widthRatio ?? 0.22) * width;
+      const h = (w / image.width) * image.height;
+      pdfPage.drawImage(image, { x, y: height - yTop - h, width: w, height: h });
+    }
+  }
+}
+
+/**
+ * Wzór PDF + odręczne adnotacje "wypalone" na oryginalnych stronach + pola tekstowe/podpisy
+ * umieszczone przez użytkownika w wybranych miejscach + podpisy zbiorczo na ostatniej stronie.
  */
 export async function generateAnnotatedProtocolPdf(params: {
   originalPdfBytes: ArrayBuffer;
   pageAnnotationBytes: Map<number, Uint8Array>;
+  overlayItems: ProtocolOverlayItem[];
   companySignature: ProtocolSignature | null;
   clientSignature: ProtocolSignature | null;
   acceptedAt: string;
@@ -132,6 +207,16 @@ export async function generateAnnotatedProtocolPdf(params: {
   }
 
   const fonts = await embedTextFonts(pdfDoc);
+
+  if (params.overlayItems.length) {
+    await drawOverlayItems(
+      pdfDoc,
+      params.overlayItems,
+      fonts,
+      { company: params.companySignature, client: params.clientSignature },
+    );
+  }
+
   const lastPage = pdfDoc.getPage(pdfDoc.getPageCount() - 1);
   await drawSignatureBlock(
     pdfDoc,

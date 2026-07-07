@@ -361,6 +361,7 @@ export type ProjectProcessProtocolRow = {
   company_signature: unknown;
   client_signature: unknown;
   annotations: unknown;
+  overlay_items: unknown;
   generated_pdf_path: string | null;
   accepted_at: string | null;
   accepted_by: string | null;
@@ -378,6 +379,7 @@ export type ProjectProcessProtocolInsert = {
   company_signature?: unknown;
   client_signature?: unknown;
   annotations?: unknown;
+  overlay_items?: unknown;
   generated_pdf_path?: string | null;
   accepted_at?: string | null;
   accepted_by?: string | null;
