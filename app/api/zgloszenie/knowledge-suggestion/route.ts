@@ -56,6 +56,7 @@ export async function POST(request: Request) {
       description,
       excerpts,
       historyExcerpts,
+      instructions: settings.suggestionPromptInstructions,
     });
 
     return NextResponse.json({ ok: true, suggestion });

@@ -4,6 +4,7 @@ import { jsonError } from "@/lib/auth/http-error";
 import { analyzeKnowledgeImage } from "@/lib/ai/knowledge-image-analyzer";
 import { chunkText } from "@/lib/knowledge/chunking";
 import {
+  extractTextFromCsvBuffer,
   extractTextFromPdfBuffer,
   extractTextFromPlainBuffer,
   extractTextFromWhatsAppBuffer,
@@ -22,7 +23,12 @@ async function extractContent(
 ): Promise<{ text: string; titleOverride?: string | null }> {
   const supabase = getSupabaseAdmin();
 
-  if (source.type === "pdf" || source.type === "text" || source.type === "whatsapp") {
+  if (
+    source.type === "pdf" ||
+    source.type === "text" ||
+    source.type === "whatsapp" ||
+    source.type === "csv"
+  ) {
     if (!source.storage_path) {
       throw new Error("Brak pliku dla tego źródła.");
     }
@@ -39,6 +45,9 @@ async function extractContent(
     }
     if (source.type === "whatsapp") {
       return { text: extractTextFromWhatsAppBuffer(buffer) };
+    }
+    if (source.type === "csv") {
+      return { text: extractTextFromCsvBuffer(buffer) };
     }
     return { text: extractTextFromPlainBuffer(buffer) };
   }

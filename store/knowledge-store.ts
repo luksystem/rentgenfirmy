@@ -26,7 +26,7 @@ type KnowledgeStore = {
   error: string | null;
   ensure: (options?: { force?: boolean }) => Promise<void>;
   addFileSource: (input: {
-    type: "pdf" | "text" | "whatsapp" | "image";
+    type: "pdf" | "text" | "whatsapp" | "image" | "csv";
     title: string;
     description?: string;
     file: File;

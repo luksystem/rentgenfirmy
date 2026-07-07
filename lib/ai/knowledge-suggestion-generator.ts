@@ -1,3 +1,4 @@
+import { DEFAULT_KNOWLEDGE_SUGGESTION_INSTRUCTIONS } from "@/lib/knowledge/settings";
 import type { KnowledgeSuggestionResult } from "@/lib/knowledge/types";
 
 export const KNOWLEDGE_SUGGESTION_MAX_INPUT_CHARS = 6_000;
@@ -12,6 +13,7 @@ function buildPrompt(input: {
   description: string;
   excerpts: KnowledgeSuggestionExcerpt[];
   historyExcerpts: string[];
+  instructions: string;
 }) {
   const excerptsBlock =
     input.excerpts.length > 0
@@ -30,21 +32,9 @@ function buildPrompt(input: {
           .join("\n\n")
       : "Brak podobnych wcześniejszych zgłoszeń.";
 
-  return `Jesteś asystentem wsparcia technicznego firmy instalującej systemy Smart Home / BMS.
+  const instructions = input.instructions.trim() || DEFAULT_KNOWLEDGE_SUGGESTION_INSTRUCTIONS;
 
-Klient opisał problem PRZED zgłoszeniem serwisu. Twoje zadanie: sprawdzić, czy na podstawie
-DOSTARCZONYCH fragmentów (baza wiedzy firmy + historia podobnych zgłoszeń) można podać klientowi
-bezpieczną sugestię, którą może wypróbować SAMODZIELNIE, zanim zgłosi serwis.
-
-ZASADY (krytyczne):
-- Korzystaj WYŁĄCZNIE z poniższych fragmentów. Nie zgaduj, nie wymyślaj faktów, modeli urządzeń,
-  numerów menu czy instrukcji, których nie ma w tekście poniżej.
-- Jeśli fragmenty nie zawierają wystarczających informacji, ustaw "hasSuggestion": false i napisz
-  krótkie, uprzejme summary, że najlepiej zgłosić serwis — bez podawania niepewnych kroków.
-- Nigdy nie sugeruj działań niebezpiecznych (np. przy instalacji elektrycznej pod napięciem) —
-  w takim wypadku zawsze hasSuggestion=false i poleć kontakt z serwisem.
-- Jeśli warto dopytać klienta o dodatkowy szczegół przed sugestią, możesz wypełnić
-  "followUpQuestion" (jedno pytanie), ale i tak podaj najlepszą możliwą sugestię w summary/steps.
+  return `${instructions}
 
 Opis problemu klienta:
 """
@@ -71,6 +61,7 @@ export async function generateKnowledgeSuggestion(input: {
   description: string;
   excerpts: KnowledgeSuggestionExcerpt[];
   historyExcerpts: string[];
+  instructions?: string;
 }): Promise<KnowledgeSuggestionResult> {
   const plain = input.description.trim();
   if (!plain) {
@@ -106,6 +97,7 @@ export async function generateKnowledgeSuggestion(input: {
             description: plain.slice(0, KNOWLEDGE_SUGGESTION_MAX_INPUT_CHARS),
             excerpts: input.excerpts,
             historyExcerpts: input.historyExcerpts,
+            instructions: input.instructions ?? DEFAULT_KNOWLEDGE_SUGGESTION_INSTRUCTIONS,
           }),
         },
       ],

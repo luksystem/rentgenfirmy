@@ -90,12 +90,15 @@ function extensionForFile(file: File) {
   if (file.type.startsWith("image/")) {
     return file.type.split("/")[1] || "jpg";
   }
+  if (file.type === "text/csv" || file.type === "application/vnd.ms-excel") {
+    return "csv";
+  }
   return "txt";
 }
 
-/** Tworzy wpis źródła z przesłanym plikiem (PDF / TXT / eksport WhatsApp / zdjęcie). */
+/** Tworzy wpis źródła z przesłanym plikiem (PDF / TXT / eksport WhatsApp / zdjęcie / CSV). */
 export async function createKnowledgeSourceFromFile(input: {
-  type: "pdf" | "text" | "whatsapp" | "image";
+  type: "pdf" | "text" | "whatsapp" | "image" | "csv";
   title: string;
   description?: string;
   file: File;

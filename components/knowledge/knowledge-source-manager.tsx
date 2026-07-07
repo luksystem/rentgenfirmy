@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  FileSpreadsheet,
   FileText,
   ImageIcon,
   Link2,
@@ -31,19 +32,21 @@ const TYPE_OPTIONS: Array<{ id: KnowledgeSourceType; icon: React.ComponentType<{
   { id: "note", icon: NotebookPen },
   { id: "pdf", icon: FileText },
   { id: "image", icon: ImageIcon },
+  { id: "csv", icon: FileSpreadsheet },
   { id: "text", icon: FileText },
   { id: "whatsapp", icon: MessageSquareText },
   { id: "link", icon: Link2 },
   { id: "youtube", icon: SquarePlay },
 ];
 
-const FILE_TYPES: KnowledgeSourceType[] = ["pdf", "text", "whatsapp", "image"];
+const FILE_TYPES: KnowledgeSourceType[] = ["pdf", "text", "whatsapp", "image", "csv"];
 
 const FILE_ACCEPT: Partial<Record<KnowledgeSourceType, string>> = {
   pdf: "application/pdf",
   text: "text/plain,.txt",
   whatsapp: "text/plain,.txt",
   image: "image/*",
+  csv: "text/csv,.csv",
 };
 
 function StatusBadge({
@@ -139,7 +142,7 @@ export function KnowledgeSourceManager() {
           return;
         }
         await addFileSource({
-          type: type as "pdf" | "text" | "whatsapp" | "image",
+          type: type as "pdf" | "text" | "whatsapp" | "image" | "csv",
           title: title.trim() || file.name,
           description,
           file,
@@ -184,9 +187,10 @@ export function KnowledgeSourceManager() {
           <div>
             <h2 className="text-base font-semibold text-foreground">Dodaj nowe źródło</h2>
             <p className="mt-1 text-sm text-muted">
-              Wpisz tekst wprost, wgraj zdjęcie (AI je opisze), PDF, plik tekstowy, eksport czatu
-              WhatsApp (.txt), podaj link do dokumentacji albo film YouTube — treść zostanie
-              automatycznie wydobyta i zaindeksowana do wyszukiwania przez AI.
+              Wpisz tekst wprost, wgraj zdjęcie (AI je opisze), plik CSV (np. baza usterek albo
+              cennik), PDF, plik tekstowy, eksport czatu WhatsApp (.txt), podaj link do
+              dokumentacji albo film YouTube — treść zostanie automatycznie wydobyta i
+              zaindeksowana do wyszukiwania przez AI.
             </p>
           </div>
 
@@ -231,7 +235,9 @@ export function KnowledgeSourceManager() {
                     ? "Eksport czatu (.txt) *"
                     : type === "image"
                       ? "Zdjęcie *"
-                      : "Plik *"
+                      : type === "csv"
+                        ? "Plik CSV *"
+                        : "Plik *"
                 }
               >
                 <Input
@@ -243,6 +249,12 @@ export function KnowledgeSourceManager() {
                   <p className="mt-1 text-xs text-muted">
                     AI opisze zawartość zdjęcia (urządzenia, etykiety, ekrany) i zapisze opis jako
                     treść przeszukiwalną.
+                  </p>
+                ) : null}
+                {type === "csv" ? (
+                  <p className="mt-1 text-xs text-muted">
+                    Każdy wiersz zostanie zapisany jako osobny rekord (nazwa kolumny: wartość) —
+                    działa dobrze np. dla bazy usterek, cennika czy listy urządzeń.
                   </p>
                 ) : null}
               </Field>

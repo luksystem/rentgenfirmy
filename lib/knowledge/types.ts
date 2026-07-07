@@ -6,6 +6,7 @@ export const KNOWLEDGE_SOURCE_TYPES = [
   "youtube",
   "note",
   "image",
+  "csv",
 ] as const;
 export type KnowledgeSourceType = (typeof KNOWLEDGE_SOURCE_TYPES)[number];
 
@@ -17,6 +18,7 @@ export const KNOWLEDGE_SOURCE_TYPE_LABELS: Record<KnowledgeSourceType, string> =
   youtube: "Film YouTube",
   note: "Wpisany tekst",
   image: "Zdjęcie (analiza AI)",
+  csv: "Plik CSV",
 };
 
 export const KNOWLEDGE_SOURCE_STATUSES = ["pending", "processing", "ready", "error"] as const;
