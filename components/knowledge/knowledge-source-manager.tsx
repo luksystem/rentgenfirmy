@@ -5,9 +5,11 @@ import {
   AlertTriangle,
   CheckCircle2,
   FileText,
+  ImageIcon,
   Link2,
   Loader2,
   MessageSquareText,
+  NotebookPen,
   Plus,
   RefreshCw,
   SquarePlay,
@@ -26,14 +28,23 @@ import { useAuthStore } from "@/store/auth-store";
 import { useKnowledgeStore } from "@/store/knowledge-store";
 
 const TYPE_OPTIONS: Array<{ id: KnowledgeSourceType; icon: React.ComponentType<{ className?: string }> }> = [
+  { id: "note", icon: NotebookPen },
   { id: "pdf", icon: FileText },
+  { id: "image", icon: ImageIcon },
   { id: "text", icon: FileText },
   { id: "whatsapp", icon: MessageSquareText },
   { id: "link", icon: Link2 },
   { id: "youtube", icon: SquarePlay },
 ];
 
-const FILE_TYPES: KnowledgeSourceType[] = ["pdf", "text", "whatsapp"];
+const FILE_TYPES: KnowledgeSourceType[] = ["pdf", "text", "whatsapp", "image"];
+
+const FILE_ACCEPT: Partial<Record<KnowledgeSourceType, string>> = {
+  pdf: "application/pdf",
+  text: "text/plain,.txt",
+  whatsapp: "text/plain,.txt",
+  image: "image/*",
+};
 
 function StatusBadge({
   status,
@@ -77,14 +88,16 @@ export function KnowledgeSourceManager() {
   const ensure = useKnowledgeStore((s) => s.ensure);
   const addFileSource = useKnowledgeStore((s) => s.addFileSource);
   const addUrlSource = useKnowledgeStore((s) => s.addUrlSource);
+  const addNoteSource = useKnowledgeStore((s) => s.addNoteSource);
   const removeSource = useKnowledgeStore((s) => s.removeSource);
   const retrySource = useKnowledgeStore((s) => s.retrySource);
   const displayName = useAuthStore((s) => s.displayName);
 
-  const [type, setType] = useState<KnowledgeSourceType>("pdf");
+  const [type, setType] = useState<KnowledgeSourceType>("note");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [url, setUrl] = useState("");
+  const [content, setContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -97,6 +110,7 @@ export function KnowledgeSourceManager() {
     setTitle("");
     setDescription("");
     setUrl("");
+    setContent("");
     setFile(null);
   }
 
@@ -108,13 +122,24 @@ export function KnowledgeSourceManager() {
 
     try {
       setSubmitting(true);
-      if (FILE_TYPES.includes(type)) {
+      if (type === "note") {
+        if (!content.trim()) {
+          setFormError("Wpisz treść do zapisania.");
+          return;
+        }
+        await addNoteSource({
+          title: title.trim() || content.trim().slice(0, 60),
+          description,
+          content: content.trim(),
+          createdByName,
+        });
+      } else if (FILE_TYPES.includes(type)) {
         if (!file) {
-          setFormError("Wybierz plik do przesłania.");
+          setFormError(type === "image" ? "Wybierz zdjęcie do przesłania." : "Wybierz plik do przesłania.");
           return;
         }
         await addFileSource({
-          type: type as "pdf" | "text" | "whatsapp",
+          type: type as "pdf" | "text" | "whatsapp" | "image",
           title: title.trim() || file.name,
           description,
           file,
@@ -159,9 +184,9 @@ export function KnowledgeSourceManager() {
           <div>
             <h2 className="text-base font-semibold text-foreground">Dodaj nowe źródło</h2>
             <p className="mt-1 text-sm text-muted">
-              PDF, plik tekstowy, eksport czatu WhatsApp (.txt), link do dokumentacji albo film
-              YouTube — treść zostanie automatycznie wydobyta i zaindeksowana do wyszukiwania przez
-              AI.
+              Wpisz tekst wprost, wgraj zdjęcie (AI je opisze), PDF, plik tekstowy, eksport czatu
+              WhatsApp (.txt), podaj link do dokumentacji albo film YouTube — treść zostanie
+              automatycznie wydobyta i zaindeksowana do wyszukiwania przez AI.
             </p>
           </div>
 
@@ -190,13 +215,36 @@ export function KnowledgeSourceManager() {
           <form className="grid gap-4" onSubmit={handleSubmit}>
             {formError ? <p className="text-sm text-rose-400">{formError}</p> : null}
 
-            {FILE_TYPES.includes(type) ? (
-              <Field label={type === "whatsapp" ? "Eksport czatu (.txt) *" : "Plik *"}>
+            {type === "note" ? (
+              <Field label="Treść *">
+                <Textarea
+                  rows={6}
+                  value={content}
+                  onChange={(event) => setContent(event.target.value)}
+                  placeholder="Wpisz wiedzę, którą chcesz zapisać — np. procedurę, checklistę, rozwiązanie problemu…"
+                />
+              </Field>
+            ) : FILE_TYPES.includes(type) ? (
+              <Field
+                label={
+                  type === "whatsapp"
+                    ? "Eksport czatu (.txt) *"
+                    : type === "image"
+                      ? "Zdjęcie *"
+                      : "Plik *"
+                }
+              >
                 <Input
                   type="file"
-                  accept={type === "pdf" ? "application/pdf" : "text/plain,.txt"}
+                  accept={FILE_ACCEPT[type]}
                   onChange={(event) => setFile(event.target.files?.[0] ?? null)}
                 />
+                {type === "image" ? (
+                  <p className="mt-1 text-xs text-muted">
+                    AI opisze zawartość zdjęcia (urządzenia, etykiety, ekrany) i zapisze opis jako
+                    treść przeszukiwalną.
+                  </p>
+                ) : null}
               </Field>
             ) : (
               <Field label={type === "youtube" ? "Link do filmu YouTube *" : "Adres URL *"}>

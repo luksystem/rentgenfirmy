@@ -1,6 +1,7 @@
--- Ten plik NIE jest osobną migracją — to kopia migracji 093 do jednorazowego wklejenia
+-- Ten plik NIE jest osobną migracją — to kopia migracji 093 i 094 do jednorazowego wklejenia
 -- w Supabase SQL Editor (skoro CLI Supabase nie jest tu skonfigurowane).
--- Po wykonaniu można ten plik usunąć (093_knowledge_base.sql pozostaje jako źródło prawdy).
+-- Po wykonaniu można ten plik usunąć (093_knowledge_base.sql i 094_knowledge_base_more_types.sql
+-- pozostają jako źródło prawdy).
 
 -- ============================================================
 -- 093_knowledge_base.sql
@@ -81,3 +82,12 @@ create policy "knowledge_base_storage_insert"
 create policy "knowledge_base_storage_delete"
   on storage.objects for delete
   using (bucket_id = 'knowledge-base');
+
+-- ============================================================
+-- 094_knowledge_base_more_types.sql
+-- ============================================================
+alter table public.knowledge_sources drop constraint if exists knowledge_sources_type_check;
+
+alter table public.knowledge_sources
+  add constraint knowledge_sources_type_check
+  check (type in ('pdf', 'text', 'whatsapp', 'link', 'youtube', 'note', 'image'));

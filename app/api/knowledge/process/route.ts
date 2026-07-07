@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
+import { analyzeKnowledgeImage } from "@/lib/ai/knowledge-image-analyzer";
 import { chunkText } from "@/lib/knowledge/chunking";
 import {
   extractTextFromPdfBuffer,
@@ -56,6 +57,23 @@ async function extractContent(
     }
     const { text, title } = await fetchYoutubeTranscriptAndTitle(source.url);
     return { text, titleOverride: title };
+  }
+
+  if (source.type === "image") {
+    if (!source.storage_path) {
+      throw new Error("Brak pliku zdjęcia.");
+    }
+    const { data, error } = await supabase.storage
+      .from(KNOWLEDGE_BASE_BUCKET)
+      .createSignedUrl(source.storage_path, 300);
+    if (error || !data?.signedUrl) {
+      throw new Error(error?.message ?? "Nie udało się przygotować adresu zdjęcia.");
+    }
+    const text = await analyzeKnowledgeImage({
+      imageUrl: data.signedUrl,
+      contextNote: source.description,
+    });
+    return { text };
   }
 
   throw new Error(`Nieobsługiwany typ źródła: ${source.type}`);

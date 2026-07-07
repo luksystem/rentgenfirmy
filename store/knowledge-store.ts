@@ -8,6 +8,7 @@ import {
 import type { KnowledgeSource } from "@/lib/knowledge/types";
 import {
   createKnowledgeSourceFromFile,
+  createKnowledgeSourceFromText,
   createKnowledgeSourceFromUrl,
   deleteKnowledgeSource,
   fetchKnowledgeBaseSettings,
@@ -25,10 +26,16 @@ type KnowledgeStore = {
   error: string | null;
   ensure: (options?: { force?: boolean }) => Promise<void>;
   addFileSource: (input: {
-    type: "pdf" | "text" | "whatsapp";
+    type: "pdf" | "text" | "whatsapp" | "image";
     title: string;
     description?: string;
     file: File;
+    createdByName: string;
+  }) => Promise<KnowledgeSource>;
+  addNoteSource: (input: {
+    title: string;
+    description?: string;
+    content: string;
     createdByName: string;
   }) => Promise<KnowledgeSource>;
   addUrlSource: (input: {
@@ -108,6 +115,12 @@ export const useKnowledgeStore = create<KnowledgeStore>((set, get) => ({
     const source = await createKnowledgeSourceFromUrl(input);
     set((state) => ({ sources: [source, ...state.sources] }));
     void get().processSource(source.id);
+    return source;
+  },
+
+  addNoteSource: async (input) => {
+    const source = await createKnowledgeSourceFromText(input);
+    set((state) => ({ sources: [source, ...state.sources] }));
     return source;
   },
 

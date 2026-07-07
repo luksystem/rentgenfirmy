@@ -1,4 +1,5 @@
 import type { KnowledgeChunkRow, KnowledgeSourceRow } from "@/lib/supabase/database.types";
+import { chunkText } from "@/lib/knowledge/chunking";
 import {
   DEFAULT_KNOWLEDGE_BASE_SETTINGS,
   normalizeKnowledgeBaseSettings,
@@ -83,12 +84,18 @@ function extensionForFile(file: File) {
   if (fromName && /^[a-z0-9]{1,8}$/.test(fromName)) {
     return fromName;
   }
-  return file.type === "application/pdf" ? "pdf" : "txt";
+  if (file.type === "application/pdf") {
+    return "pdf";
+  }
+  if (file.type.startsWith("image/")) {
+    return file.type.split("/")[1] || "jpg";
+  }
+  return "txt";
 }
 
-/** Tworzy wpis źródła z przesłanym plikiem (PDF / TXT / eksport WhatsApp). */
+/** Tworzy wpis źródła z przesłanym plikiem (PDF / TXT / eksport WhatsApp / zdjęcie). */
 export async function createKnowledgeSourceFromFile(input: {
-  type: "pdf" | "text" | "whatsapp";
+  type: "pdf" | "text" | "whatsapp" | "image";
   title: string;
   description?: string;
   file: File;
@@ -171,6 +178,63 @@ export async function createKnowledgeSourceFromUrl(input: {
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  return rowToKnowledgeSource(data as KnowledgeSourceRow);
+}
+
+/**
+ * Tworzy wpis źródła z tekstem wpisanym ręcznie — bez pliku i bez wywołania API do ekstrakcji;
+ * chunkowanie odbywa się od razu, a źródło jest gotowe do wyszukiwania natychmiast po zapisie.
+ */
+export async function createKnowledgeSourceFromText(input: {
+  title: string;
+  description?: string;
+  content: string;
+  createdByName: string;
+}): Promise<KnowledgeSource> {
+  const trimmed = input.content.trim();
+  if (!trimmed) {
+    throw new Error("Wpisz treść do zapisania.");
+  }
+
+  const supabase = getSupabase();
+  const sourceId = crypto.randomUUID();
+  const now = new Date().toISOString();
+  const chunks = chunkText(trimmed);
+
+  const { data, error } = await supabase
+    .from("knowledge_sources")
+    .insert({
+      id: sourceId,
+      type: "note",
+      title: input.title.trim() || "Notatka",
+      description: input.description?.trim() ?? "",
+      status: "ready",
+      char_count: trimmed.length,
+      created_by_name: input.createdByName.trim() || "Zespół",
+      created_at: now,
+      updated_at: now,
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (chunks.length > 0) {
+    const { error: chunkError } = await supabase.from("knowledge_chunks").insert(
+      chunks.map((content, index) => ({
+        source_id: sourceId,
+        chunk_index: index,
+        content,
+      })),
+    );
+    if (chunkError) {
+      await supabase.from("knowledge_sources").delete().eq("id", sourceId);
+      throw new Error(chunkError.message);
+    }
   }
 
   return rowToKnowledgeSource(data as KnowledgeSourceRow);

@@ -1,4 +1,12 @@
-export const KNOWLEDGE_SOURCE_TYPES = ["pdf", "text", "whatsapp", "link", "youtube"] as const;
+export const KNOWLEDGE_SOURCE_TYPES = [
+  "pdf",
+  "text",
+  "whatsapp",
+  "link",
+  "youtube",
+  "note",
+  "image",
+] as const;
 export type KnowledgeSourceType = (typeof KNOWLEDGE_SOURCE_TYPES)[number];
 
 export const KNOWLEDGE_SOURCE_TYPE_LABELS: Record<KnowledgeSourceType, string> = {
@@ -7,6 +15,8 @@ export const KNOWLEDGE_SOURCE_TYPE_LABELS: Record<KnowledgeSourceType, string> =
   whatsapp: "Eksport czatu WhatsApp",
   link: "Link / dokumentacja",
   youtube: "Film YouTube",
+  note: "Wpisany tekst",
+  image: "Zdjęcie (analiza AI)",
 };
 
 export const KNOWLEDGE_SOURCE_STATUSES = ["pending", "processing", "ready", "error"] as const;
