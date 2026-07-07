@@ -324,6 +324,62 @@ export type ProjectProcessItemLinkInsert = {
 
 export type ProjectProcessItemLinkUpdate = Partial<ProjectProcessItemLinkInsert>;
 
+export type KnowledgeSourceRow = {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  url: string | null;
+  storage_path: string | null;
+  file_name: string | null;
+  mime_type: string | null;
+  size_bytes: number | string | null;
+  status: string;
+  error_message: string | null;
+  char_count: number;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type KnowledgeSourceInsert = {
+  id?: string;
+  type: string;
+  title: string;
+  description?: string;
+  url?: string | null;
+  storage_path?: string | null;
+  file_name?: string | null;
+  mime_type?: string | null;
+  size_bytes?: number | null;
+  status?: string;
+  error_message?: string | null;
+  char_count?: number;
+  created_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type KnowledgeSourceUpdate = Partial<KnowledgeSourceInsert>;
+
+export type KnowledgeChunkRow = {
+  id: string;
+  source_id: string;
+  chunk_index: number;
+  content: string;
+  created_at: string;
+};
+
+export type KnowledgeChunkInsert = {
+  id?: string;
+  source_id: string;
+  chunk_index?: number;
+  content: string;
+  created_at?: string;
+};
+
+export type KnowledgeChunkUpdate = Partial<KnowledgeChunkInsert>;
+
 export type ProcessProtocolTemplateRow = {
   id: string;
   name: string;
@@ -1148,6 +1204,18 @@ export type Database = {
         Row: ProjectProcessItemLinkRow;
         Insert: ProjectProcessItemLinkInsert;
         Update: ProjectProcessItemLinkUpdate;
+        Relationships: [];
+      };
+      knowledge_sources: {
+        Row: KnowledgeSourceRow;
+        Insert: KnowledgeSourceInsert;
+        Update: KnowledgeSourceUpdate;
+        Relationships: [];
+      };
+      knowledge_chunks: {
+        Row: KnowledgeChunkRow;
+        Insert: KnowledgeChunkInsert;
+        Update: KnowledgeChunkUpdate;
         Relationships: [];
       };
       process_protocol_templates: {

@@ -10,6 +10,7 @@ import {
   Loader2,
   Phone,
   ShieldCheck,
+  Sparkles,
   Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,7 @@ import {
   type ServiceIntakeVerifyResult,
   type ServiceIntakeWorkPreference,
 } from "@/lib/service-intake/types";
+import type { KnowledgeSuggestionResult } from "@/lib/knowledge/types";
 import { cn, formatMoney } from "@/lib/utils";
 
 type WizardStep =
@@ -57,10 +59,12 @@ type WizardStep =
   | "project"
   | "requestType"
   | "details"
+  | "suggestion"
   | "action"
   | "estimate"
   | "summary"
-  | "done";
+  | "done"
+  | "resolved";
 
 type WizardFieldKey =
   | "email"
@@ -102,12 +106,13 @@ function validateGuestAddressFields(address: {
   return errors;
 }
 
-const STEP_LABELS: Record<Exclude<WizardStep, "done">, string> = {
+const STEP_LABELS: Record<Exclude<WizardStep, "done" | "resolved">, string> = {
   email: "E-mail",
   verify: "Tożsamość",
   project: "Obiekt",
   requestType: "Rodzaj",
   details: "Zgłoszenie",
+  suggestion: "Sugestia AI",
   action: "Działanie",
   estimate: "Wycena AI",
   summary: "Podsumowanie",
@@ -117,8 +122,8 @@ function StepIndicator({
   steps,
   current,
 }: {
-  steps: Exclude<WizardStep, "done">[];
-  current: Exclude<WizardStep, "done">;
+  steps: Exclude<WizardStep, "done" | "resolved">[];
+  current: Exclude<WizardStep, "done" | "resolved">;
 }) {
   const currentIndex = steps.indexOf(current);
 
@@ -243,6 +248,11 @@ export function ServiceIntakeWizard() {
   const [estimateClarifications, setEstimateClarifications] = useState("");
   const [recalculatingEstimate, setRecalculatingEstimate] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<WizardFieldErrors>({});
+  const [suggestionAsked, setSuggestionAsked] = useState<"pending" | "loading" | "shown" | "error">(
+    "pending",
+  );
+  const [suggestionResult, setSuggestionResult] = useState<KnowledgeSuggestionResult | null>(null);
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
   function clearFieldError(key: WizardFieldKey) {
     setFieldErrors((current) => {
@@ -292,11 +302,14 @@ export function ServiceIntakeWizard() {
   const effectiveRequiresAiEstimate = isGuestMode ? requiresAiEstimateGuest : requiresAiEstimate;
 
   const visibleSteps = useMemo(() => {
-    const steps: Exclude<WizardStep, "done">[] = ["email", "verify"];
+    const steps: Exclude<WizardStep, "done" | "resolved">[] = ["email", "verify"];
     if (!isGuestMode) {
       steps.push("project");
     }
     steps.push("requestType", "details");
+    if (isServiceRequest) {
+      steps.push("suggestion");
+    }
     if (requiresActionStep) {
       steps.push("action");
     }
@@ -305,7 +318,7 @@ export function ServiceIntakeWizard() {
     }
     steps.push("summary");
     return steps;
-  }, [requiresActionStep, effectiveRequiresAiEstimate, isGuestMode]);
+  }, [isServiceRequest, requiresActionStep, effectiveRequiresAiEstimate, isGuestMode]);
 
   const appliesPrioritySurcharge = shouldApplyIntakePrioritySurcharge({
     requestType,
@@ -323,7 +336,7 @@ export function ServiceIntakeWizard() {
     [isServiceRequest, priority, requestType, selectedProject?.isWarrantyActive],
   );
 
-  function goNext(from: Exclude<WizardStep, "done">) {
+  function goNext(from: Exclude<WizardStep, "done" | "resolved">) {
     setFieldErrors({});
     const index = visibleSteps.indexOf(from);
     const next = visibleSteps[index + 1];
@@ -422,7 +435,37 @@ export function ServiceIntakeWizard() {
     if (!validateDetailsStep()) {
       return;
     }
+    setSuggestionAsked("pending");
+    setSuggestionResult(null);
+    setSuggestionError(null);
     goNext("details");
+  }
+
+  async function fetchKnowledgeSuggestion() {
+    if (!verification) {
+      return;
+    }
+    setSuggestionAsked("loading");
+    setSuggestionError(null);
+    try {
+      const response = await fetch("/api/zgloszenie/knowledge-suggestion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          verificationToken: verification.verificationToken,
+          description,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się wygenerować sugestii.");
+      }
+      setSuggestionResult(payload.suggestion as KnowledgeSuggestionResult);
+      setSuggestionAsked("shown");
+    } catch (err) {
+      setSuggestionError(err instanceof Error ? err.message : "Nie udało się wygenerować sugestii.");
+      setSuggestionAsked("error");
+    }
   }
 
   function handleActionNext() {
@@ -442,7 +485,7 @@ export function ServiceIntakeWizard() {
     goNext("estimate");
   }
 
-  function goBack(from: Exclude<WizardStep, "done">) {
+  function goBack(from: Exclude<WizardStep, "done" | "resolved">) {
     setFieldErrors({});
     const index = visibleSteps.indexOf(from);
     const previous = visibleSteps[index - 1];
@@ -759,9 +802,12 @@ export function ServiceIntakeWizard() {
         </div>
       </div>
 
-      {step !== "done" ? (
+      {step !== "done" && step !== "resolved" ? (
         <div className="mb-6">
-          <StepIndicator steps={visibleSteps} current={step as Exclude<WizardStep, "done">} />
+          <StepIndicator
+            steps={visibleSteps}
+            current={step as Exclude<WizardStep, "done" | "resolved">}
+          />
         </div>
       ) : null}
 
@@ -1197,6 +1243,121 @@ export function ServiceIntakeWizard() {
             </>
           ) : null}
 
+          {step === "suggestion" ? (
+            <>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Sugestia rozwiązania</h2>
+                <p className="mt-1 text-sm text-muted">
+                  Zanim zgłosisz serwis, możemy sprawdzić naszą bazę wiedzy i podsunąć Ci możliwe
+                  rozwiązanie problemu.
+                </p>
+              </div>
+
+              {suggestionAsked === "pending" ? (
+                <div className="grid gap-3">
+                  <p className="text-sm text-foreground">
+                    Chcesz otrzymać sugestię rozwiązania problemu, zanim zgłosisz serwis?
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" onClick={() => void fetchKnowledgeSuggestion()}>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Tak, pokaż sugestię
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => goNext("suggestion")}>
+                      Nie, przejdź dalej do zgłoszenia
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {suggestionAsked === "loading" ? (
+                <p className="flex items-center gap-2 text-sm text-muted">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Analizujemy opis i szukamy w bazie wiedzy…
+                </p>
+              ) : null}
+
+              {suggestionAsked === "error" ? (
+                <div className="grid gap-3">
+                  <p className="text-sm text-rose-400">{suggestionError}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => void fetchKnowledgeSuggestion()}
+                    >
+                      Spróbuj ponownie
+                    </Button>
+                    <Button type="button" onClick={() => goNext("suggestion")}>
+                      Przejdź dalej do zgłoszenia
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {suggestionAsked === "shown" && suggestionResult ? (
+                <div className="grid gap-3">
+                  <div className="rounded-2xl border border-accent/25 bg-accent/5 p-4 text-sm">
+                    {suggestionResult.hasSuggestion ? (
+                      <>
+                        <p className="font-medium text-foreground">Możliwe rozwiązanie</p>
+                        <p className="mt-2 whitespace-pre-line text-foreground/90">
+                          {suggestionResult.summary}
+                        </p>
+                        {suggestionResult.steps.length > 0 ? (
+                          <ol className="mt-3 grid gap-1 list-decimal pl-4 text-foreground/90">
+                            {suggestionResult.steps.map((item, index) => (
+                              <li key={index}>{item}</li>
+                            ))}
+                          </ol>
+                        ) : null}
+                        {suggestionResult.followUpQuestion ? (
+                          <p className="mt-3 text-xs text-muted">
+                            Dodatkowe pytanie: {suggestionResult.followUpQuestion}
+                          </p>
+                        ) : null}
+                        {suggestionResult.sourceTitles.length > 0 ? (
+                          <p className="mt-3 text-xs text-muted">
+                            Źródła: {suggestionResult.sourceTitles.join(", ")}
+                          </p>
+                        ) : null}
+                      </>
+                    ) : (
+                      <p className="text-foreground/90">
+                        {suggestionResult.summary ||
+                          "Nie znaleźliśmy wystarczających informacji w naszej bazie wiedzy, aby zaproponować rozwiązanie. Najlepiej zgłoś serwis — zajmiemy się tym."}
+                      </p>
+                    )}
+                    <p className="mt-3 text-xs text-muted">
+                      To tylko sugestia AI na podstawie wiedzy firmy — nie zastępuje profesjonalnej
+                      diagnozy serwisowej.
+                    </p>
+                  </div>
+                  <p className="text-sm font-medium text-foreground">
+                    Czy spróbujesz rozwiązać problem samodzielnie, czy nadal chcesz zgłosić serwis?
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" onClick={() => setStep("resolved")}>
+                      Spróbuję rozwiązać sam
+                    </Button>
+                    <Button type="button" onClick={() => goNext("suggestion")}>
+                      Nadal chcę zgłosić serwis
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={() => goBack("suggestion")}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Wstecz
+                </Button>
+              </div>
+            </>
+          ) : null}
+
           {step === "action" && verification && selectedProject ? (
             <>
               <div className="rounded-2xl border border-border/80 bg-surface-muted/20 p-4 text-sm">
@@ -1513,6 +1674,27 @@ export function ServiceIntakeWizard() {
                       <span className="text-xs font-normal text-amber-100/80">(24/7 — gwarancja)</span>
                     </p>
                   ) : null}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {step === "resolved" ? (
+            <div className="grid gap-4">
+              <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-400" />
+              <div className="overflow-hidden rounded-2xl border border-border/80">
+                <div className="bg-foreground px-4 py-3 text-center text-sm font-semibold text-background">
+                  Trzymamy kciuki!
+                </div>
+                <div className="grid gap-3 p-4 text-sm text-foreground">
+                  <p className="text-center text-muted">
+                    Cieszymy się, że mogliśmy pomóc. Jeśli sugestia nie zadziała albo problem
+                    wróci, wróć na tę stronę i zgłoś serwis — jesteśmy do dyspozycji.
+                  </p>
+                  <Button type="button" variant="outline" onClick={() => goNext("suggestion")}>
+                    Mimo wszystko zgłoś serwis
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </div>

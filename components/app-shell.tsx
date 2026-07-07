@@ -6,6 +6,7 @@ import { useMemo, useState, useCallback, useEffect } from "react";
 import {
   Activity,
   BarChart3,
+  BookOpen,
   CheckCircle2,
   Clock3,
   ClipboardCheck,
@@ -96,6 +97,7 @@ const navGroupsBase: NavGroup[] = [
     items: [
       { href: "/przeglady", label: "Przeglądy", icon: ClipboardCheck },
       { href: "/oferty/zgloszenia", label: "Zgłoszenia", icon: Inbox },
+      { href: "/baza-wiedzy", label: "Baza wiedzy", icon: BookOpen },
       { href: "/oferty/ustawienia", label: "Stawki serwisu", icon: Settings },
       {
         href: "/zgloszenie",
