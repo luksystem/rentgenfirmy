@@ -1,0 +1,25 @@
+{
+  "source_version": "SRI calculation sheet v4.5",
+  "provenance": "VERIFIED_REGULATION",
+  "legal_basis": "Delegated Regulation (EU) 2020/2155, Annex I/III",
+  "key_functionalities": [
+    {
+      "code": "energy_performance_and_operation",
+      "sort_order": 1,
+      "name_en": "Energy performance and operation",
+      "name_pl": "Efektywność energetyczna i eksploatacja"
+    },
+    {
+      "code": "response_to_occupant_needs",
+      "sort_order": 2,
+      "name_en": "Response to user needs",
+      "name_pl": "Reakcja na potrzeby użytkowników"
+    },
+    {
+      "code": "energy_flexibility",
+      "sort_order": 3,
+      "name_en": "Energy flexibility",
+      "name_pl": "Elastyczność energetyczna"
+    }
+  ]
+}

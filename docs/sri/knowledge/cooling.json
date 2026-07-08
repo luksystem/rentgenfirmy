@@ -1,0 +1,919 @@
+{
+  "domain_code": "cooling",
+  "domain_name_pl": "Chlodzenie",
+  "service_count": 10,
+  "provenance": {
+    "official_fields": "VERIFIED_ANNEX_D",
+    "expert_fields": "EXPERT_AUTHORED"
+  },
+  "cards": [
+    {
+      "official_code": "C-1a",
+      "internal_code": "C-01",
+      "domain_code": "cooling",
+      "service_group_en": "Cooling control - demand side",
+      "official_name_en": "Cooling emission control",
+      "official_name_pl": "Sterowanie emisją chłodu",
+      "included_in_method_a": true,
+      "fl_max": 4,
+      "friendly_name_pl": "Sterowanie chlodzeniem w pomieszczeniach",
+      "purpose_pl": "Dostarczanie chlodu do pomieszczen zgodnie z rzeczywistym zapotrzebowaniem i obecnoscia, utrzymujac komfort przy minimalnym zuzyciu energii.",
+      "technical_description_pl": "Regulacja mocy chlodniczej klimakonwektorow/belek/ukladow w oparciu o temperature zadana i rzeczywista strefy. Od termostatu centralnego, przez indywidualne sterowanie pomieszczen, po sterowanie komunikujace sie z BMS i detekcje obecnosci.",
+      "energy_significance_pl": "Chlodzenie jest energochlonne — indywidualna regulacja i wylaczanie chlodzenia w pustych strefach daja duze oszczednosci i redukcje szczytow mocy latem.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control",
+          "practical_description_pl": "Brak automatyki — sterowanie reczne."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Central automatic control",
+          "practical_description_pl": "Centralny termostat dla strefy/budynku."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Individual room control",
+          "practical_description_pl": "Indywidualna regulacja pomieszczen."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Individual room control with communication between controllers and to BACS",
+          "practical_description_pl": "Indywidualna regulacja z komunikacja miedzy sterownikami i z BMS."
+        },
+        {
+          "level": 4,
+          "official_description_en": "Individual room control with communication and occupancy detection",
+          "practical_description_pl": "Jak poziom 3 plus detekcja obecnosci (chlodzenie tylko uzywanych pomieszczen)."
+        }
+      ],
+      "technologies": [
+        "KNX",
+        "Loxone",
+        "Modbus/BACnet",
+        "sterowniki klimakonwektorow",
+        "czujniki obecnosci"
+      ],
+      "devices": [
+        "klimakonwektory (fan-coil)",
+        "belki chlodzace",
+        "termostaty/sterowniki pomieszczeniowe",
+        "czujniki temperatury i obecnosci"
+      ],
+      "audit_verification": [
+        "sprawdz niezalezne zadawanie temperatury chlodzenia per pomieszczenie",
+        "ustal harmonogramy i integracje z BMS",
+        "zweryfikuj detekcje obecnosci powiazana z chlodzeniem (poziom 4)"
+      ],
+      "evidence": [
+        "nastawy per pomieszczenie w BMS",
+        "lista I/O",
+        "schemat AKPiA",
+        "zdjecia sterownikow fan-coil"
+      ],
+      "common_mistakes": [
+        "czujnik w niereprezentatywnym miejscu",
+        "chlodzenie pustych stref",
+        "brak martwej strefy miedzy grzaniem a chlodzeniem (patrz C-1f)"
+      ],
+      "limitations": [
+        "bezwladnosc ukladow plaszczyznowych (patrz C-1b)",
+        "kondensacja przy zbyt niskiej temperaturze belek"
+      ],
+      "dependencies": [
+        "C-1c (temperatura wody lodowej)",
+        "C-1f (blokada grzanie/chlodzenie)",
+        "C-2a (zrodlo chlodu)",
+        "DE-1 (zacienienie ogranicza zyski ciepla)"
+      ],
+      "cross_domain_impact": [
+        "ogrzewanie (unikanie jednoczesnej pracy)",
+        "powloka budynku (zacienienie redukuje zapotrzebowanie)",
+        "monitoring (optymalizacja wg obecnosci)"
+      ],
+      "modernization": [
+        "indywidualne sterowanie stref i harmonogramy",
+        "detekcja obecnosci w salach",
+        "integracja z zacienieniem i BMS"
+      ],
+      "examples": [
+        "biuro z fan-coilami sterowanymi per pokoj i detekcja obecnosci",
+        "sala konferencyjna chlodzona tylko podczas rezerwacji"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "C-1b",
+      "internal_code": "C-02",
+      "domain_code": "cooling",
+      "service_group_en": "Cooling control - demand side",
+      "official_name_en": "Emission control for TABS (cooling mode)",
+      "official_name_pl": "Sterowanie emisją TABS (tryb chłodzenia)",
+      "included_in_method_a": false,
+      "fl_max": 3,
+      "friendly_name_pl": "Sterowanie chlodzeniem plaszczyznowym TABS",
+      "purpose_pl": "Regulacja chlodzenia w masie budynku (TABS) z wykorzystaniem bezwladnosci do stabilnego, energooszczednego chlodzenia (czesto pasywnego).",
+      "technical_description_pl": "Sterowanie ukladami TABS w trybie chlodzenia — glownie temperatura zasilania i harmonogramy z wyprzedzeniem, z ochrona przed kondensacja; wyzsze poziomy z predykcja.",
+      "energy_significance_pl": "Chlodzenie wysokotemperaturowe TABS umozliwia free-cooling i wysoka sprawnosc agregatow; przesuwanie chlodzenia na noc obniza koszty.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control",
+          "practical_description_pl": "Brak automatyki chlodzenia TABS."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Central automatic control",
+          "practical_description_pl": "Centralne sterowanie automatyczne."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Advanced central automatic control",
+          "practical_description_pl": "Sterowanie wg stref/warunkow z ochrona przed kondensacja."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Advanced central automatic control with intermittent operation and/or room temperature feedback control",
+          "practical_description_pl": "Sterowanie predykcyjne wykorzystujace bezwladnosc masy."
+        }
+      ],
+      "technologies": [
+        "sterowanie temperatura zasilania",
+        "ochrona antykondensacyjna (punkt rosy)",
+        "predykcja pogody",
+        "free-cooling"
+      ],
+      "devices": [
+        "zawory mieszajace z silownikami",
+        "czujniki temperatury i wilgotnosci (punkt rosy)",
+        "sterownik strefy TABS"
+      ],
+      "audit_verification": [
+        "ustal obecnosc TABS w trybie chlodzenia",
+        "sprawdz ochrone przed kondensacja (pomiar wilgotnosci/punktu rosy)",
+        "zweryfikuj sterowanie predykcyjne (poziom 3)"
+      ],
+      "evidence": [
+        "projekt TABS",
+        "konfiguracja ochrony antykondensacyjnej",
+        "trendy temperatur zasilania i wilgotnosci"
+      ],
+      "common_mistakes": [
+        "brak ochrony przed kondensacja (ryzyko zawilgocenia)",
+        "zbyt niska temperatura zasilania",
+        "jednoczesne grzanie i chlodzenie TABS"
+      ],
+      "limitations": [
+        "bardzo duza bezwladnosc",
+        "ryzyko kondensacji przy wysokiej wilgotnosci",
+        "wystepuje tylko przy TABS (triage vs C-1a)"
+      ],
+      "dependencies": [
+        "C-1c (temperatura wody)",
+        "C-1f (blokada grzanie/chlodzenie)",
+        "H-1b (ten sam TABS w trybie grzania)"
+      ],
+      "cross_domain_impact": [
+        "ogrzewanie (wspoldzielony uklad TABS)",
+        "elastycznosc (magazyn chlodu w masie)"
+      ],
+      "modernization": [
+        "dodanie ochrony antykondensacyjnej",
+        "sterowanie predykcyjne i free-cooling",
+        "przesuniecie chlodzenia na noc"
+      ],
+      "examples": [
+        "biurowiec z chlodzonymi stropami i free-coolingiem nocnym",
+        "budynek z TABS chlodzacym predykcyjnie wg prognozy"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "C-1c",
+      "internal_code": "C-03",
+      "domain_code": "cooling",
+      "service_group_en": "Cooling control - demand side",
+      "official_name_en": "Control of distribution network chilled water temperature (supply or return)",
+      "official_name_pl": "Sterowanie agregatem chłodu",
+      "included_in_method_a": false,
+      "fl_max": 2,
+      "friendly_name_pl": "Regulacja temperatury wody lodowej",
+      "purpose_pl": "Dostosowanie temperatury wody lodowej w sieci dystrybucji do rzeczywistego zapotrzebowania, zamiast produkcji nadmiernie zimnej wody.",
+      "technical_description_pl": "Regulacja temperatury zasilania/powrotu wody lodowej wg zapotrzebowania stref lub warunkow zewnetrznych (reset temperatury wody lodowej).",
+      "energy_significance_pl": "Podniesienie temperatury wody lodowej, gdy to mozliwe, znaczaco poprawia sprawnosc agregatow (EER) i umozliwia free-cooling.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Constant temperature control",
+          "practical_description_pl": "Stala temperatura wody lodowej."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Outside temperature compensated control",
+          "practical_description_pl": "Kompensacja wg warunkow zewnetrznych/harmonogramu."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Demand based control",
+          "practical_description_pl": "Reset temperatury wg rzeczywistego zapotrzebowania stref."
+        }
+      ],
+      "technologies": [
+        "reset temperatury wody lodowej",
+        "regulacja wg zapotrzebowania",
+        "sterowniki agregatow/wezlow",
+        "Modbus/BACnet"
+      ],
+      "devices": [
+        "czujniki temperatury zasilania/powrotu",
+        "zawory mieszajace",
+        "sterownik agregatu/BMS"
+      ],
+      "audit_verification": [
+        "sprawdz, czy temperatura wody lodowej jest stala czy resetowana",
+        "zweryfikuj powiazanie z zapotrzebowaniem stref",
+        "przejrzyj trendy temperatur"
+      ],
+      "evidence": [
+        "nastawy resetu temperatury",
+        "trendy temperatur wody lodowej vs obciazenie",
+        "schemat zrodla chlodu"
+      ],
+      "common_mistakes": [
+        "stala, zbyt niska temperatura 'na zapas'",
+        "brak resetu mimo zmiennego obciazenia",
+        "kolizja z wymaganiami osuszania"
+      ],
+      "limitations": [
+        "ograniczone wymaganiami osuszania/wilgotnosci",
+        "zalezne od zrownowazenia hydraulicznego"
+      ],
+      "dependencies": [
+        "C-1d (pompy)",
+        "C-2a/C-2b (zrodlo chlodu)",
+        "C-1a (odbior w strefach)"
+      ],
+      "cross_domain_impact": [
+        "wentylacja (osuszanie vs temperatura wody)",
+        "elektrycznosc (sprawnosc agregatow)"
+      ],
+      "modernization": [
+        "wdrozenie resetu temperatury wody lodowej",
+        "podniesienie temperatury dla free-coolingu",
+        "regulacja wg zapotrzebowania"
+      ],
+      "examples": [
+        "agregat z resetem temperatury wg obciazenia",
+        "instalacja z podniesiona temperatura wody lodowej i free-coolingiem"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "C-1d",
+      "internal_code": "C-04",
+      "domain_code": "cooling",
+      "service_group_en": "Cooling control - demand side",
+      "official_name_en": "Control of distribution pumps in networks",
+      "official_name_pl": "Sterowanie temperaturą wody chłodniczej w sieci",
+      "included_in_method_a": false,
+      "fl_max": 4,
+      "friendly_name_pl": "Sterowanie pompami obiegowymi chlodzenia",
+      "purpose_pl": "Redukcja energii pomp wody lodowej przez dopasowanie ich pracy do wymaganego przeplywu.",
+      "technical_description_pl": "Sterowanie pompami wody lodowej: od staloobrotowych, przez zmienna predkosc ze stalym cisnieniem, po regulacje wg zmiennego cisnienia/zapotrzebowania.",
+      "energy_significance_pl": "Pompy o zmiennej predkosci wg zapotrzebowania radykalnie obnizaja pomocnicze zuzycie energii chlodzenia.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control",
+          "practical_description_pl": "Pompa staloobrotowa pracujaca ciagle."
+        },
+        {
+          "level": 1,
+          "official_description_en": "On off control",
+          "practical_description_pl": "Zalaczanie/wylaczanie wg zapotrzebowania."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Multi-Stage control",
+          "practical_description_pl": "Zmienna predkosc ze stala roznica cisnien."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Variable speed pump control (pump unit (internal) estimations)",
+          "practical_description_pl": "Zmienna predkosc ze zmienna (proporcjonalna) roznica cisnien."
+        },
+        {
+          "level": 4,
+          "official_description_en": "Variable speed pump control (external demand signal)",
+          "practical_description_pl": "Regulacja wg rzeczywistego zapotrzebowania stref."
+        }
+      ],
+      "technologies": [
+        "pompy elektroniczne (falownik)",
+        "regulacja proporcjonalna",
+        "sygnaly z zaworow",
+        "Modbus/0-10V"
+      ],
+      "devices": [
+        "pompy wody lodowej z regulacja predkosci",
+        "czujniki cisnienia/przeplywu",
+        "sterownik/BMS"
+      ],
+      "audit_verification": [
+        "sprawdz typ pomp i tryb regulacji",
+        "ustal, czy pompa reaguje na zapotrzebowanie",
+        "przejrzyj trendy predkosci/mocy"
+      ],
+      "evidence": [
+        "DTR pomp",
+        "nastawy trybu pracy",
+        "trendy poboru mocy"
+      ],
+      "common_mistakes": [
+        "pompa w trybie stalej predkosci",
+        "przewymiarowanie",
+        "brak powiazania z zaworami stref"
+      ],
+      "limitations": [
+        "korzysc zalezy od zmiennosci obciazenia",
+        "wymaga rownowazenia hydraulicznego"
+      ],
+      "dependencies": [
+        "C-1a (odbior w strefach)",
+        "C-1c (temperatura wody)",
+        "C-3 (raportowanie)"
+      ],
+      "cross_domain_impact": [
+        "elektrycznosc (redukcja poboru pomocniczego)"
+      ],
+      "modernization": [
+        "wymiana pomp na elektroniczne",
+        "regulacja proporcjonalna/wg zapotrzebowania",
+        "wylaczanie poza sezonem"
+      ],
+      "examples": [
+        "maszynownia chlodu z pompami elektronicznymi wg zapotrzebowania"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "C-1f",
+      "internal_code": "C-05",
+      "domain_code": "cooling",
+      "service_group_en": "Cooling control - demand side",
+      "official_name_en": "Interlock: avoiding simultaneous heating and cooling in the same room",
+      "official_name_pl": "Sterowanie pompami w sieci chłodu",
+      "included_in_method_a": false,
+      "fl_max": 2,
+      "friendly_name_pl": "Blokada jednoczesnego grzania i chlodzenia",
+      "purpose_pl": "Zapobieganie marnotrawstwu energii przez uniemozliwienie jednoczesnego ogrzewania i chlodzenia tego samego pomieszczenia.",
+      "technical_description_pl": "Logika blokady (interlock) i martwej strefy (dead-band) miedzy trybami grzania i chlodzenia w strefie; wyzszy poziom z automatyczna koordynacja.",
+      "energy_significance_pl": "Eliminuje jeden z najczestszych i najbardziej kosztownych bledow — walke instalacji grzewczej z chlodnicza; szybki, tani zysk.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No interlock",
+          "practical_description_pl": "Brak blokady — mozliwe jednoczesne grzanie i chlodzenie."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Partial interlock (minimising risk of simultanieus heating and cooling e.g. by sliding setpoints)",
+          "practical_description_pl": "Martwa strefa/blokada uniemozliwiajaca jednoczesna prace."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Total interlock (control system ensures no  simultaneous heating and cooling can take place)",
+          "practical_description_pl": "Automatyczna koordynacja trybow z optymalizacja przejsc."
+        }
+      ],
+      "technologies": [
+        "logika interlock w sterowniku pomieszczenia",
+        "dead-band grzanie/chlodzenie",
+        "koordynacja w BMS"
+      ],
+      "devices": [
+        "sterownik pomieszczeniowy z trybem H/C",
+        "czujnik temperatury",
+        "BMS"
+      ],
+      "audit_verification": [
+        "sprawdz, czy istnieje martwa strefa miedzy nastawami H i C",
+        "zweryfikuj, czy nie wystepuje jednoczesna praca (trendy)",
+        "ustal koordynacje w BMS (poziom 2)"
+      ],
+      "evidence": [
+        "konfiguracja dead-band/interlock",
+        "trendy trybow H/C strefy",
+        "opis logiki w projekcie"
+      ],
+      "common_mistakes": [
+        "nakladajace sie nastawy grzania i chlodzenia",
+        "brak koordynacji przy zmianie sezonu",
+        "reczne wymuszenia obchodzace blokade"
+      ],
+      "limitations": [
+        "wymaga wspolnego sterownika/koordynacji trybow",
+        "istotne zwlaszcza w strefach z H i C jednoczesnie"
+      ],
+      "dependencies": [
+        "H-1a/H-1b (grzanie strefy)",
+        "C-1a/C-1b (chlodzenie strefy)"
+      ],
+      "cross_domain_impact": [
+        "ogrzewanie (bezposrednia koordynacja z chlodzeniem)"
+      ],
+      "modernization": [
+        "wprowadzenie martwej strefy i blokady",
+        "koordynacja sezonowa w BMS",
+        "usuniecie recznych wymuszen"
+      ],
+      "examples": [
+        "biuro z jedna nastawa komfortu i martwa strefa 2-3 K",
+        "strefa z fan-coilem 4-rurowym i interlockiem H/C"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "C-1g",
+      "internal_code": "C-06",
+      "domain_code": "cooling",
+      "service_group_en": "Cooling control - demand side",
+      "official_name_en": "Control of Thermal Energy Storage (TES) operation",
+      "official_name_pl": "Sterowanie magazynem energii cieplnej (chłodzenie)",
+      "included_in_method_a": false,
+      "fl_max": 3,
+      "friendly_name_pl": "Sterowanie magazynem chlodu (TES)",
+      "purpose_pl": "Gromadzenie chlodu (woda lodowa/lod) w celu przesuniecia produkcji na godziny tanie/nocne i redukcji szczytow mocy.",
+      "technical_description_pl": "Sterowanie ladowaniem/rozladowaniem magazynu chlodu wg harmonogramu, zapotrzebowania i sygnalow zewnetrznych (taryfy, siec).",
+      "energy_significance_pl": "Produkcja chlodu noca (nizsza temperatura, tansza energia) i rozladunek w szczycie obniza koszty i zapotrzebowanie mocy oraz odciaza siec.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Continuous storage operation",
+          "practical_description_pl": "Brak magazynu chlodu lub brak sterowania."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Time-scheduled storage operation",
+          "practical_description_pl": "Sterowanie ladowaniem wg harmonogramu/temperatury."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Load prediction based storage operation",
+          "practical_description_pl": "Optymalizacja wg zapotrzebowania i warunkow."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Cold storage capable of flexible control through grid signals (e.g. DSM)",
+          "practical_description_pl": "Ladowanie sterowane sygnalami zewnetrznymi (taryfy/siec) — elastycznosc."
+        }
+      ],
+      "technologies": [
+        "magazyny lodu/wody lodowej",
+        "sterowanie taryfowe",
+        "predykcja zapotrzebowania chlodu",
+        "integracja z siecia"
+      ],
+      "devices": [
+        "zbiornik TES chlodu",
+        "czujniki temperatury/naladowania",
+        "zawory przelaczajace",
+        "sterownik/EMS"
+      ],
+      "audit_verification": [
+        "ustal obecnosc i typ magazynu chlodu",
+        "sprawdz logike ladowania/rozladowania",
+        "zweryfikuj powiazanie z taryfami/siecia (poziom 3)"
+      ],
+      "evidence": [
+        "schemat z magazynem chlodu",
+        "konfiguracja ladowania",
+        "trendy naladowania vs ceny"
+      ],
+      "common_mistakes": [
+        "ladowanie w drogich godzinach",
+        "zly dobor pojemnosci",
+        "straty magazynu"
+      ],
+      "limitations": [
+        "straty postojowe",
+        "miejsce i koszt inwestycji",
+        "korzysc zalezy od profilu taryf/szczytow"
+      ],
+      "dependencies": [
+        "C-2a/C-2b (produkcja chlodu)",
+        "C-4 (elastycznosc/siec)",
+        "MC-25 (smart grid)"
+      ],
+      "cross_domain_impact": [
+        "elektrycznosc (redukcja szczytow mocy)",
+        "elastycznosc energetyczna"
+      ],
+      "modernization": [
+        "dodanie magazynu chlodu do obiektow o duzym szczycie chlodniczym",
+        "sterowanie taryfowe ladowania",
+        "integracja z EMS"
+      ],
+      "examples": [
+        "centrum handlowe z magazynem lodu ladowanym noca",
+        "biurowiec z TES rozladowywanym w szczycie letnim"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "C-2a",
+      "internal_code": "C-07",
+      "domain_code": "cooling",
+      "service_group_en": "Control cooling production facilities",
+      "official_name_en": "Generator control for cooling",
+      "official_name_pl": "Blokada jednoczesnego ogrzewania i chłodzenia w strefach",
+      "included_in_method_a": true,
+      "fl_max": 3,
+      "friendly_name_pl": "Sterowanie zrodlem chlodu (agregatem)",
+      "purpose_pl": "Optymalna praca agregatu chlodniczego tak, aby produkowal chlod o odpowiednich parametrach z wysoka sprawnoscia (EER).",
+      "technical_description_pl": "Sterowanie generatorem chlodu: od stalych parametrow, przez sterowanie zmienne wg obciazenia/warunkow, po optymalizacje punktu pracy i wspolprace z free-coolingiem.",
+      "energy_significance_pl": "Dostosowanie parametrow i unikanie taktowania podnosi EER; free-cooling i wyzsza temperatura wody lodowej daja duze oszczednosci.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "On/Off-control of cooling production",
+          "practical_description_pl": "Sterowanie staloparametrowe (on/off)."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Multi-stage control of  cooling production capacity depending on the load or demand (e.g. on/off of several compressors)",
+          "practical_description_pl": "Sterowanie zmienne wg obciazenia/warunkow zewnetrznych."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Variable control of  cooling production capacity depending on the load or demand (e.g. hot gas bypass, inverter frequency control)",
+          "practical_description_pl": "Sterowanie wg zapotrzebowania z optymalizacja punktu pracy."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Variable control of  cooling production capacity depending on the load AND external signals from grid",
+          "practical_description_pl": "Zaawansowana optymalizacja (EER, free-cooling, koordynacja)."
+        }
+      ],
+      "technologies": [
+        "agregaty inwerterowe",
+        "free-cooling",
+        "reset temperatury wody lodowej",
+        "Modbus/BACnet"
+      ],
+      "devices": [
+        "agregat wody lodowej (chiller)",
+        "czujniki temperatur i cisnien",
+        "sterownik agregatu/BMS"
+      ],
+      "audit_verification": [
+        "ustal typ agregatu i logike sterowania",
+        "sprawdz free-cooling i reset temperatury",
+        "przejrzyj trendy EER/obciazenia"
+      ],
+      "evidence": [
+        "DTR agregatu",
+        "nastawy sterownika",
+        "trendy sprawnosci/obciazenia"
+      ],
+      "common_mistakes": [
+        "staly, nadmiarowy chlod",
+        "brak free-coolingu mimo mozliwosci",
+        "taktowanie przy niskim obciazeniu"
+      ],
+      "limitations": [
+        "sprawnosc zalezna od temperatury otoczenia",
+        "ograniczenia zakresu modulacji"
+      ],
+      "dependencies": [
+        "C-1c (temperatura wody)",
+        "C-2b (kaskada)",
+        "C-3 (raportowanie)"
+      ],
+      "cross_domain_impact": [
+        "elektrycznosc (agregat to duzy odbiornik)",
+        "elastycznosc (praca wg taryf)"
+      ],
+      "modernization": [
+        "wdrozenie free-coolingu",
+        "reset temperatury wody lodowej",
+        "wymiana na agregat inwerterowy"
+      ],
+      "examples": [
+        "chiller z free-coolingiem i resetem temperatury",
+        "maszynownia z optymalizacja EER w BMS"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "C-2b",
+      "internal_code": "C-08",
+      "domain_code": "cooling",
+      "service_group_en": "Control cooling production facilities",
+      "official_name_en": "Sequencing of different cooling generators",
+      "official_name_pl": "Sekwencjonowanie wielu źródeł chłodu",
+      "included_in_method_a": false,
+      "fl_max": 4,
+      "friendly_name_pl": "Kaskada / sekwencja zrodel chlodu",
+      "purpose_pl": "Optymalne zalaczanie kilku agregatow chlodniczych wg sprawnosci i obciazenia dla najnizszego zuzycia energii.",
+      "technical_description_pl": "Logika sekwencjonowania wielu agregatow wg sprawnosci czesciowej, obciazenia i kosztu, z rownowazeniem czasu pracy.",
+      "energy_significance_pl": "Praca agregatow w optymalnym zakresie obciazenia (unikanie pracy jednego mocno przy niskim EER) obniza zuzycie energii chlodzenia.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Priorities only based on running times",
+          "practical_description_pl": "Brak koordynacji agregatow."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Fixed sequencing based on loads only: e.g. depending on the generators characteristics such as absorption chiller vs. centrifugal chiller",
+          "practical_description_pl": "Prosta sekwencja wg stalych priorytetow."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Dynamic priorities based on generator efficiency and characteristics (e.g. availability of free cooling)",
+          "practical_description_pl": "Sekwencja wg obciazenia/sprawnosci."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Load prediction based sequencing: the sequence is based on e.g. COP and available power of a device and the predicted required power",
+          "practical_description_pl": "Sekwencja z kryterium kosztu/warunkow."
+        },
+        {
+          "level": 4,
+          "official_description_en": "Sequencing based on dynamic priority list, including external signals from grid",
+          "practical_description_pl": "Pelna optymalizacja predykcyjna z rownowazeniem pracy."
+        }
+      ],
+      "technologies": [
+        "menedzer kaskady agregatow",
+        "optymalizacja sprawnosci czesciowej",
+        "predykcja zapotrzebowania"
+      ],
+      "devices": [
+        "sterownik nadrzedny",
+        "liczniki energii agregatow",
+        "czujniki temperatur/przeplywu"
+      ],
+      "audit_verification": [
+        "ustal liczbe agregatow i logike kaskady",
+        "sprawdz kryteria przelaczania i rownowazenie motogodzin",
+        "przejrzyj udzial agregatow w trendach"
+      ],
+      "evidence": [
+        "schemat maszynowni",
+        "konfiguracja kaskady",
+        "trendy udzialu agregatow"
+      ],
+      "common_mistakes": [
+        "staly priorytet ignorujacy EER czesciowy",
+        "czeste przelaczanie",
+        "praca jednego agregatu na skraju zakresu"
+      ],
+      "limitations": [
+        "wymaga opomiarowania agregatow",
+        "zlozonosc przy wielu maszynach"
+      ],
+      "dependencies": [
+        "C-2a (agregaty)",
+        "C-1g (magazyn chlodu)",
+        "C-3 (raportowanie)"
+      ],
+      "cross_domain_impact": [
+        "elektrycznosc (redukcja poboru)",
+        "elastycznosc energetyczna"
+      ],
+      "modernization": [
+        "menedzer kaskady wg sprawnosci czesciowej",
+        "rownowazenie motogodzin",
+        "integracja z magazynem chlodu"
+      ],
+      "examples": [
+        "maszynownia z 3 agregatami i kaskada wg EER czesciowego"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "C-3",
+      "internal_code": "C-09",
+      "domain_code": "cooling",
+      "service_group_en": "Information to occupants and facility managers",
+      "official_name_en": "Report information regarding cooling system performance",
+      "official_name_pl": "Elastyczność sterowania chłodzeniem",
+      "included_in_method_a": true,
+      "fl_max": 4,
+      "friendly_name_pl": "Raportowanie pracy systemu chlodzenia",
+      "purpose_pl": "Dostarczanie danych o zuzyciu i sprawnosci chlodzenia dla monitoringu, wykrywania odchylen i optymalizacji.",
+      "technical_description_pl": "Zbieranie i prezentacja danych chlodzenia: zuzycie energii, chlod dostarczony, sprawnosc (EER), temperatury; wyzsze poziomy z benchmarkiem i alarmami.",
+      "energy_significance_pl": "Monitoring ujawnia spadki EER, wycieki i bledy nastaw; umozliwia utrzymanie sprawnosci i redukcje kosztow letnich.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None",
+          "practical_description_pl": "Brak raportowania chlodzenia."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Central or remote reporting of current performance KPIs (e.g. temperatures, submetering energy usage)",
+          "practical_description_pl": "Podstawowe informacje o stanie."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Central or remote reporting of current performance KPIs and historical data",
+          "practical_description_pl": "Rejestracja zuzycia i historii."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Central or remote reporting of performance evaluation including forecasting and/or benchmarking",
+          "practical_description_pl": "Analiza/benchmark i sygnalizacja odchylen."
+        },
+        {
+          "level": 4,
+          "official_description_en": "Central or remote reporting of performance evaluation including forecasting and/or benchmarking; also including predictive management and fault detection",
+          "practical_description_pl": "Pelne raportowanie sprawnosci ze wsparciem optymalizacji."
+        }
+      ],
+      "technologies": [
+        "liczniki chlodu/energii",
+        "historian/trendy",
+        "dashboardy",
+        "Modbus/BACnet"
+      ],
+      "devices": [
+        "cieplomierze chlodu",
+        "liczniki energii agregatow",
+        "czujniki temperatur",
+        "koncentrator"
+      ],
+      "audit_verification": [
+        "sprawdz opomiarowanie chlodu i archiwizacje",
+        "zweryfikuj dostepnosc trendow/raportow",
+        "ustal alarmy odchylen (wyzsze poziomy)"
+      ],
+      "evidence": [
+        "dashboardy zuzycia chlodu",
+        "eksport trendow EER",
+        "lista opomiarowania"
+      ],
+      "common_mistakes": [
+        "brak licznikow chlodu",
+        "dane bez analizy",
+        "brak wskaznikow odniesienia"
+      ],
+      "limitations": [
+        "jakosc zalezy od opomiarowania",
+        "koniecznosc kalibracji"
+      ],
+      "dependencies": [
+        "C-2a/C-2b (zrodla danych)",
+        "MC-13 (centralne raportowanie)",
+        "MC-4 (detekcja usterek)"
+      ],
+      "cross_domain_impact": [
+        "monitoring i sterowanie (dane do MC-13/MC-4)"
+      ],
+      "modernization": [
+        "montaz licznikow chlodu/energii",
+        "dashboard EER i alarmy",
+        "benchmarking kWh/m2 chlodu"
+      ],
+      "examples": [
+        "biurowiec z monitoringiem EER i alarmami spadku sprawnosci"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "C-4",
+      "internal_code": "C-10",
+      "domain_code": "cooling",
+      "service_group_en": "Flexibility and grid interaction",
+      "official_name_en": "Flexibility and grid interaction",
+      "official_name_pl": "Raportowanie informacji o pracy chłodzenia",
+      "included_in_method_a": true,
+      "fl_max": 4,
+      "friendly_name_pl": "Elastycznosc chlodzenia i wspolpraca z siecia",
+      "purpose_pl": "Przesuwanie poboru energii na chlodzenie w odpowiedzi na sygnaly sieci/taryf, redukcja szczytow i kosztow.",
+      "technical_description_pl": "Reakcja chlodzenia na sygnaly zewnetrzne (ceny, DSM, OZE) poprzez sterowanie agregatem, magazynem chlodu i masa budynku; od braku, przez taryfy, po automatyczna wspolprace z siecia.",
+      "energy_significance_pl": "Szczyt zapotrzebowania na moc czesto przypada na chlodzenie latem — elastycznosc obniza szczyty, koszty i wspiera siec; wysoka waga w SRI.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control",
+          "practical_description_pl": "Brak reakcji na sygnaly zewnetrzne."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Scheduled operation of cooling system",
+          "practical_description_pl": "Sterowanie wg statycznych taryf/harmonogramu."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Self-learning optimal control of cooling system",
+          "practical_description_pl": "Reakcja na zmienne sygnaly cenowe/DSM."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Cooling system capable of flexible control through grid signals (e.g. DSM)",
+          "practical_description_pl": "Automatyczna wspolpraca z siecia z magazynem chlodu i predykcja."
+        },
+        {
+          "level": 4,
+          "official_description_en": "Optimized control of  cooling system based on local predictions and grid signals (e.g. through model predictive control)",
+          "practical_description_pl": "Pelna, zoptymalizowana elastycznosc z rozliczaniem uslug sieciowych."
+        }
+      ],
+      "technologies": [
+        "sterowanie taryfowe/cenowe",
+        "OpenADR/DSM",
+        "magazyn chlodu",
+        "predykcja cen/pogody",
+        "EMS"
+      ],
+      "devices": [
+        "EMS/sterownik elastycznosci",
+        "magazyn chlodu (TES)",
+        "licznik dwukierunkowy",
+        "brama sygnalow"
+      ],
+      "audit_verification": [
+        "ustal reakcje chlodzenia na taryfy/sygnaly",
+        "sprawdz wykorzystanie magazynu/masy",
+        "zweryfikuj automatyzacje i rozliczenia DSM (wyzsze poziomy)"
+      ],
+      "evidence": [
+        "konfiguracja taryf/DSM w EMS",
+        "trendy poboru vs ceny",
+        "umowy uslug DSM"
+      ],
+      "common_mistakes": [
+        "brak magazynu ograniczajacy elastycznosc",
+        "kolizja z komfortem",
+        "deklaracja bez realnego sygnalu"
+      ],
+      "limitations": [
+        "wymaga magazynu/masy do przesuniec",
+        "zalezy od dostepnosci sygnalow rynkowych"
+      ],
+      "dependencies": [
+        "C-1g (magazyn chlodu)",
+        "C-2a (agregat)",
+        "MC-25 (smart grid)",
+        "E-3 (magazyn energii)"
+      ],
+      "cross_domain_impact": [
+        "elektrycznosc (redukcja szczytow)",
+        "monitoring (MC-25/28/29 DSM)"
+      ],
+      "modernization": [
+        "sterowanie taryfowe agregatow",
+        "dodanie magazynu chlodu",
+        "integracja z EMS/sygnalami sieci"
+      ],
+      "examples": [
+        "centrum handlowe przesuwajace chlodzenie wg cen energii",
+        "biurowiec z TES i reakcja na sygnaly DSM"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    }
+  ]
+}

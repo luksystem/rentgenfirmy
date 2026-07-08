@@ -1,0 +1,4416 @@
+{
+  "source_version": "SRI calculation sheet v4.5",
+  "provenance": "VERIFIED_ANNEX_D",
+  "weights": [
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.2990905106
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.4267288852
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.3145970715
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.092805265
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.132410377
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0976168201
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1873639473
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1970779649
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0369676699
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1337726072
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.1908607378
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1407081435
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.05
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.05
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.05
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "comfort",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "convenience",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.3396680152
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.457215993
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.3464347295
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.07621044
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.1025843779
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0777286703
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0303893122
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0409060581
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0309947145
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1781719754
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1817214378
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0146493273
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1109109299
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.149293571
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1131204478
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.05
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.05
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.05
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "comfort",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "convenience",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "west_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.3166640413
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.3762432561
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.3284046521
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0997943494
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.1185703018
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1034943167
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0688087545
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0817548773
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0713599024
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0919518533
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0953610529
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0268128299
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1459681716
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.1734315647
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1513800759
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.05
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.05
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.05
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "comfort",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "convenience",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.3038297583
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.4117192774
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.3063631393
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1392768023
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.1887337986
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1404381145
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1903328284
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1919198539
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0062019073
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1103587038
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.149546924
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1112788922
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.05
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.05
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.05
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "comfort",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "convenience",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.2062053893
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.2443824513
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.2087097335
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0580318116
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0687758765
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0587366023
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1465927354
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.1737330539
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1483730897
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1081645015
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1094781488
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0089993796
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.2220061825
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.2631086183
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.2247024257
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.05
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.05
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.05
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "comfort",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "convenience",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.2
+    },
+    {
+      "building_type": "residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.3132189359
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.4938372451
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.349623516
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.053686299
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0846446079
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0599261107
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0936961876
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.1477262766
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1045862392
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1962146378
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.2190201284
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0780938177
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0150901221
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0237918704
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0168440057
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.05
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.05
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.05
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "comfort",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "convenience",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.2727808723
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.4066222315
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.3165877765
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0825849794
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.1231057307
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0958476112
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1267015258
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.1888682909
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1470489994
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1430864983
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1660652961
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1037790482
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.021067076
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0314037469
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0244503168
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.05
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.05
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.05
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "comfort",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "convenience",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "west_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.3019774217
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.4174601862
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.3593752289
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1072719794
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.1482951283
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1276615051
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1174321529
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.1623407742
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.139752855
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0876872014
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1043541862
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1197866517
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0158445928
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0219039113
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0188562248
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.05
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.05
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.05
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "comfort",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "convenience",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.2924781278
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.4442771206
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.3240327033
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0938783062
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.1426020602
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1040065511
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0838776516
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.1274109685
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0929269562
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1832216489
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.2029888752
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0730356269
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0235086387
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0357098508
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0260449142
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.05
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.05
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.05
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "comfort",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "convenience",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "north_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.2870630862
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.4218432489
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.3257387008
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "heating",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1157227255
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.1700561753
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1313138891
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "domestic_hot_water",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0745857284
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.1096047785
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0846345609
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "cooling",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1505781965
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1708653897
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "ventilation",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0890490163
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "lighting",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.033001247
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0484957973
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0374474596
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electricity",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.05
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "comfort",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.16
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.05
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "dynamic_building_envelope",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.05
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "convenience",
+      "weight": 0.1
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.0
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "electric_vehicle_charging",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.1142857143
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "comfort",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "convenience",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.2
+    },
+    {
+      "building_type": "non_residential",
+      "climate_zone": "south_east_europe",
+      "domain_code": "monitoring_and_control",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.2
+    }
+  ]
+}

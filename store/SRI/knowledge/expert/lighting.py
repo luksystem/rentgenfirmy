@@ -1,0 +1,50 @@
+# -*- coding: utf-8 -*-
+"""Tresc ekspercka SRI — domena: Oswietlenie (Lighting). 2 uslugi."""
+
+EXPERT = {
+    "L-1a": {
+        "friendly_name": "Sterowanie oswietleniem wg obecnosci",
+        "purpose": "Zalaczanie oswietlenia tylko wtedy, gdy w pomieszczeniu sa ludzie, i wylaczanie po ich wyjsciu — eliminacja swiecenia w pustych strefach.",
+        "technical": "Sterowanie oprawami na podstawie detekcji obecnosci/ruchu — od recznego, przez automatyczne wylaczanie (auto-off), po pelna automatyke z auto-on/off i strefowaniem.",
+        "energy_significance": "Jedna z najprostszych i najbardziej oplacalnych oszczednosci — w korytarzach, toaletach, magazynach i biurach eliminuje znaczna czesc zbednego swiecenia.",
+        "level_notes": {
+            0: "Sterowanie reczne (wlacznik).",
+            1: "Reczne zalaczanie z automatycznym wylaczaniem (auto-off po nieobecnosci).",
+            2: "Automatyczne zalaczanie/wylaczanie wg obecnosci.",
+            3: "Automatyka wg obecnosci ze strefowaniem i komunikacja/harmonogramami.",
+        },
+        "technologies": ["czujniki PIR/obecnosci", "DALI", "KNX", "Loxone", "systemy oprawy z wbudowanym czujnikiem"],
+        "devices": ["czujniki obecnosci/ruchu", "oprawy sterowalne (DALI)", "sterowniki oswietlenia", "przekazniki/bramki KNX"],
+        "audit_verification": ["sprawdz obecnosc czujnikow ruchu/obecnosci i ich zasieg", "ustal logike auto-off/auto-on i czasy zwloki", "zweryfikuj strefowanie (poziom 3)"],
+        "evidence": ["schemat oswietlenia/DALI", "nastawy czasow i stref", "zdjecia czujnikow", "trendy zalaczen"],
+        "common_mistakes": ["za dlugie czasy zwloki (dlugie swiecenie po wyjsciu)", "zle rozmieszczone czujniki (martwe pola)", "auto-on w pomieszczeniach z dostatecznym swiatlem dziennym (bez L-2)"],
+        "limitations": ["dyskomfort przy zbyt czulym/malo czulym czujniku", "ograniczenia w pomieszczeniach o nietypowej geometrii"],
+        "dependencies": ["L-2 (sterowanie wg swiatla dziennego)", "MC-9 (detekcja obecnosci wspoldzielona)", "V-1a (obecnosc dla wentylacji)"],
+        "cross_domain_impact": ["wentylacja/ogrzewanie/chlodzenie (wspolna informacja o obecnosci)", "elektrycznosc (redukcja poboru na oswietlenie)"],
+        "modernization": ["montaz czujnikow obecnosci w strefach wspolnych", "skrocenie czasow zwloki", "integracja z DALI/BMS i strefowanie"],
+        "examples": ["biuro z auto-off w pokojach i auto-on w korytarzach", "magazyn ze strefowym oswietleniem wg obecnosci"],
+    },
+    "L-2": {
+        "friendly_name": "Sciemnianie oswietlenia wg swiatla dziennego",
+        "purpose": "Automatyczne dostosowanie mocy opraw do ilosci swiatla dziennego (daylight harvesting), aby utrzymac stale natezenie przy minimalnym zuzyciu energii.",
+        "technical": "Regulacja mocy opraw na podstawie pomiaru natezenia swiatla — od braku, przez sterowanie schodkowe, po plynne sciemnianie z regulacja wg zadanego luksu (constant light).",
+        "energy_significance": "W strefach przyokiennych daylight harvesting daje duze oszczednosci, wykorzystujac darmowe swiatlo dzienne zamiast pelnej mocy opraw.",
+        "level_notes": {
+            0: "Brak sterowania wg swiatla dziennego (stala moc).",
+            1: "Sterowanie schodkowe (np. wylaczanie rzedu opraw przy oknach).",
+            2: "Plynne sciemnianie wg swiatla dziennego.",
+            3: "Regulacja wg zadanego natezenia (constant light) w strefach.",
+            4: "Zaawansowane sterowanie wielostrefowe z optymalizacja i integracja.",
+        },
+        "technologies": ["daylight harvesting", "DALI z regulacja plynna", "czujniki natezenia swiatla (lux)", "constant light control"],
+        "devices": ["czujniki natezenia swiatla", "oprawy scieramialne (DALI)", "sterowniki oswietlenia", "bramki KNX/DALI"],
+        "audit_verification": ["sprawdz obecnosc czujnikow luksowych i stref przyokiennych", "ustal typ regulacji (schodkowa/plynna/constant light)", "zweryfikuj utrzymanie zadanego natezenia (trendy)"],
+        "evidence": ["schemat stref daylight", "nastawy zadanego luksu", "trendy sciemniania vs swiatlo dzienne"],
+        "common_mistakes": ["czujnik luksu zle skierowany/skalibrowany", "brak podzialu na strefy przyokienne i wewnetrzne", "migotanie przy zlej regulacji"],
+        "limitations": ["wymaga opraw scieramialnych", "skutecznosc zalezy od dostepu swiatla dziennego (przeszklenia, zacienienie)"],
+        "dependencies": ["L-1a (obecnosc)", "DE-1 (zacienienie wplywa na swiatlo dzienne)"],
+        "cross_domain_impact": ["powloka budynku (zacienienie vs swiatlo dzienne — koordynacja)", "chlodzenie (mniej ciepla od opraw)", "elektrycznosc (redukcja poboru)"],
+        "modernization": ["wymiana na oprawy DALI scieramialne", "montaz czujnikow luksowych w strefach przyokiennych", "koordynacja z roletami (DE-1)"],
+        "examples": ["biuro open-space z constant light w strefie okien", "sala z plynnym sciemnianiem wg swiatla dziennego"],
+    },
+}

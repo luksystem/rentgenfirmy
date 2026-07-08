@@ -1,0 +1,5500 @@
+{
+  "meta": {
+    "engine": "SRI Dependency Engine",
+    "engine_version": "1.0.0",
+    "generated_at": "2026-07-08T20:58:16.846988+00:00",
+    "role": "advisory_layer",
+    "service_count": 54,
+    "capability_count": 46,
+    "dependency_edges": 249,
+    "source_catalogue": "docs/sri/catalogue/services-authoritative.json",
+    "content_checksum": "2cfa06592df014dda83a0d0697d6c0d86e82cd5673355fab38aded3572f31be1"
+  },
+  "services": {
+    "C-1a": {
+      "code": "C-1a",
+      "domain": "cooling",
+      "name_en": "Cooling emission control",
+      "name_pl": "Sterowanie emisją chłodu",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "central_automatic_control",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "temperature_measurement",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "zonal_control",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "bms_integration",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "digital_communication",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "occupancy_detection",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "central_automatic_control",
+          "temperature_measurement"
+        ],
+        "2": [
+          "central_automatic_control",
+          "temperature_measurement",
+          "zonal_control"
+        ],
+        "3": [
+          "bms_integration",
+          "central_automatic_control",
+          "digital_communication",
+          "temperature_measurement",
+          "zonal_control"
+        ],
+        "4": [
+          "bms_integration",
+          "central_automatic_control",
+          "digital_communication",
+          "occupancy_detection",
+          "temperature_measurement",
+          "zonal_control"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "central_automatic_control",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "temperature_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "zonal_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "bms_integration",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "digital_communication",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "occupancy_detection",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "C-1b": {
+      "code": "C-1b",
+      "domain": "cooling",
+      "name_en": "Emission control for TABS (cooling mode)",
+      "name_pl": "Sterowanie emisją TABS (tryb chłodzenia)",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "central_automatic_control",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "humidity_measurement",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "temperature_measurement",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "zonal_control",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "weather_data",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "central_automatic_control",
+          "humidity_measurement",
+          "temperature_measurement"
+        ],
+        "2": [
+          "central_automatic_control",
+          "humidity_measurement",
+          "temperature_measurement",
+          "zonal_control"
+        ],
+        "3": [
+          "central_automatic_control",
+          "humidity_measurement",
+          "predictive_control",
+          "temperature_measurement",
+          "weather_data",
+          "zonal_control"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "central_automatic_control",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "humidity_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "temperature_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "zonal_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "weather_data",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    },
+    "C-1c": {
+      "code": "C-1c",
+      "domain": "cooling",
+      "name_en": "Control of distribution network chilled water temperature (supply or return)",
+      "name_pl": "Sterowanie agregatem chłodu",
+      "fl_max": 2,
+      "required_capabilities": [
+        {
+          "capability": "temperature_measurement",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "weather_data",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "demand_based_control",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "temperature_measurement",
+          "weather_data"
+        ],
+        "2": [
+          "demand_based_control",
+          "temperature_measurement",
+          "weather_data"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "temperature_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "weather_data",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "demand_based_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "C-1d": {
+      "code": "C-1d",
+      "domain": "cooling",
+      "name_en": "Control of distribution pumps in networks",
+      "name_pl": "Sterowanie temperaturą wody chłodniczej w sieci",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "demand_based_control",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "variable_speed_drive",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "digital_communication",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "demand_based_control"
+        ],
+        "2": [
+          "demand_based_control",
+          "variable_speed_drive"
+        ],
+        "3": [
+          "demand_based_control",
+          "variable_speed_drive"
+        ],
+        "4": [
+          "demand_based_control",
+          "digital_communication",
+          "variable_speed_drive"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "demand_based_control",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "variable_speed_drive",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "digital_communication",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "C-1f": {
+      "code": "C-1f",
+      "domain": "cooling",
+      "name_en": "Interlock: avoiding simultaneous heating and cooling in the same room",
+      "name_pl": "Sterowanie pompami w sieci chłodu",
+      "fl_max": 2,
+      "required_capabilities": [
+        {
+          "capability": "interlock_control",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "temperature_measurement",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "bms_integration",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "interlock_control",
+          "temperature_measurement"
+        ],
+        "2": [
+          "bms_integration",
+          "interlock_control",
+          "temperature_measurement"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "interlock_control",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "temperature_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "bms_integration",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "C-1g": {
+      "code": "C-1g",
+      "domain": "cooling",
+      "name_en": "Control of Thermal Energy Storage (TES) operation",
+      "name_pl": "Sterowanie magazynem energii cieplnej (chłodzenie)",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "scheduling",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "temperature_measurement",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "thermal_storage",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "demand_based_control",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "scheduling",
+          "temperature_measurement",
+          "thermal_storage"
+        ],
+        "2": [
+          "demand_based_control",
+          "scheduling",
+          "temperature_measurement",
+          "thermal_storage"
+        ],
+        "3": [
+          "demand_based_control",
+          "grid_signal_interface",
+          "scheduling",
+          "temperature_measurement",
+          "thermal_storage"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "scheduling",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "temperature_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "thermal_storage",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "demand_based_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "C-2a": {
+      "code": "C-2a",
+      "domain": "cooling",
+      "name_en": "Generator control for cooling",
+      "name_pl": "Blokada jednoczesnego ogrzewania i chłodzenia w strefach",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "modulating_generator",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "weather_data",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "demand_based_control",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "free_cooling",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "modulating_generator",
+          "weather_data"
+        ],
+        "2": [
+          "demand_based_control",
+          "modulating_generator",
+          "weather_data"
+        ],
+        "3": [
+          "demand_based_control",
+          "free_cooling",
+          "modulating_generator",
+          "predictive_control",
+          "weather_data"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "modulating_generator",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "weather_data",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "demand_based_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "free_cooling",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "C-2b": {
+      "code": "C-2b",
+      "domain": "cooling",
+      "name_en": "Sequencing of different cooling generators",
+      "name_pl": "Sekwencjonowanie wielu źródeł chłodu",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "sequencing_controller",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "energy_metering",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "sequencing_controller"
+        ],
+        "2": [
+          "energy_metering",
+          "sequencing_controller"
+        ],
+        "3": [
+          "energy_metering",
+          "grid_signal_interface",
+          "sequencing_controller"
+        ],
+        "4": [
+          "energy_metering",
+          "grid_signal_interface",
+          "predictive_control",
+          "sequencing_controller"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "sequencing_controller",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "energy_metering",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "C-3": {
+      "code": "C-3",
+      "domain": "cooling",
+      "name_en": "Report information regarding cooling system performance",
+      "name_pl": "Elastyczność sterowania chłodzeniem",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "reporting_platform",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "data_logging",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "energy_metering",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "alarms",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "fault_detection",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "reporting_platform"
+        ],
+        "2": [
+          "data_logging",
+          "energy_metering",
+          "reporting_platform"
+        ],
+        "3": [
+          "alarms",
+          "data_logging",
+          "energy_metering",
+          "fault_detection",
+          "reporting_platform"
+        ],
+        "4": [
+          "alarms",
+          "data_logging",
+          "energy_metering",
+          "fault_detection",
+          "predictive_control",
+          "reporting_platform"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "reporting_platform",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "data_logging",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "energy_metering",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "alarms",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "fault_detection",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "C-4": {
+      "code": "C-4",
+      "domain": "cooling",
+      "name_en": "Flexibility and grid interaction",
+      "name_pl": "Raportowanie informacji o pracy chłodzenia",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "scheduling",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "thermal_storage",
+          "min_level": 2,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "bidirectional_metering",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "grid_signal_interface",
+          "scheduling"
+        ],
+        "2": [
+          "grid_signal_interface",
+          "scheduling",
+          "thermal_storage"
+        ],
+        "3": [
+          "grid_signal_interface",
+          "predictive_control",
+          "scheduling",
+          "thermal_storage"
+        ],
+        "4": [
+          "bidirectional_metering",
+          "grid_signal_interface",
+          "predictive_control",
+          "scheduling",
+          "thermal_storage"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "scheduling",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "thermal_storage",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "bidirectional_metering",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "DE-1": {
+      "code": "DE-1",
+      "domain": "dynamic_building_envelope",
+      "name_en": "Window solar shading control",
+      "name_pl": "Sterowanie osłonami przeciwsłonecznymi",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "shading_actuation",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "weather_data",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "temperature_measurement",
+          "min_level": 2,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "zonal_control",
+          "min_level": 2,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "sun_position_tracking",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "bms_integration",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "shading_actuation",
+          "weather_data"
+        ],
+        "2": [
+          "shading_actuation",
+          "temperature_measurement",
+          "weather_data",
+          "zonal_control"
+        ],
+        "3": [
+          "shading_actuation",
+          "sun_position_tracking",
+          "temperature_measurement",
+          "weather_data",
+          "zonal_control"
+        ],
+        "4": [
+          "bms_integration",
+          "predictive_control",
+          "shading_actuation",
+          "sun_position_tracking",
+          "temperature_measurement",
+          "weather_data",
+          "zonal_control"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "shading_actuation",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "weather_data",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "temperature_measurement",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "zonal_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "sun_position_tracking",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "bms_integration",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "DE-2": {
+      "code": "DE-2",
+      "domain": "dynamic_building_envelope",
+      "name_en": "Window open/closed control, combined with HVAC system",
+      "name_pl": "Sterowanie otwieraniem okien z integracją HVAC",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "bms_integration",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "window_contact",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "window_actuation",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "bms_integration",
+          "window_contact"
+        ],
+        "2": [
+          "bms_integration",
+          "window_actuation",
+          "window_contact"
+        ],
+        "3": [
+          "bms_integration",
+          "predictive_control",
+          "window_actuation",
+          "window_contact"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "bms_integration",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "window_contact",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "window_actuation",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "DE-4": {
+      "code": "DE-4",
+      "domain": "dynamic_building_envelope",
+      "name_en": "Reporting information regarding performance of dynamic building envelope systems",
+      "name_pl": "Raportowanie pracy dynamicznej powłoki budynku",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "actuator_feedback",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "reporting_platform",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "data_logging",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "alarms",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "fault_detection",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "actuator_feedback",
+          "reporting_platform"
+        ],
+        "2": [
+          "actuator_feedback",
+          "data_logging",
+          "reporting_platform"
+        ],
+        "3": [
+          "actuator_feedback",
+          "alarms",
+          "data_logging",
+          "fault_detection",
+          "reporting_platform"
+        ],
+        "4": [
+          "actuator_feedback",
+          "alarms",
+          "data_logging",
+          "fault_detection",
+          "predictive_control",
+          "reporting_platform"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "actuator_feedback",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "reporting_platform",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "data_logging",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "alarms",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "fault_detection",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "DHW-1a": {
+      "code": "DHW-1a",
+      "domain": "domestic_hot_water",
+      "name_en": "Control of DHW storage charging (with direct electric heating or integrated electric heat pump)",
+      "name_pl": "Sterowanie ładowaniem zasobnika CWU (grzałka lub wbudowana pompa)",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "scheduling",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "temperature_measurement",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "demand_based_control",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "self_consumption_optimization",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "scheduling",
+          "temperature_measurement"
+        ],
+        "2": [
+          "demand_based_control",
+          "scheduling",
+          "temperature_measurement"
+        ],
+        "3": [
+          "demand_based_control",
+          "grid_signal_interface",
+          "scheduling",
+          "self_consumption_optimization",
+          "temperature_measurement"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "scheduling",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "temperature_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "demand_based_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "self_consumption_optimization",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    },
+    "DHW-1b": {
+      "code": "DHW-1b",
+      "domain": "domestic_hot_water",
+      "name_en": "Control of DHW storage charging (using hot water generation)",
+      "name_pl": "Sterowanie ładowaniem zasobnika CWU (wytwarzanie ciepłej wody)",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "scheduling",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "temperature_measurement",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "demand_based_control",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "scheduling",
+          "temperature_measurement"
+        ],
+        "2": [
+          "demand_based_control",
+          "scheduling",
+          "temperature_measurement"
+        ],
+        "3": [
+          "demand_based_control",
+          "grid_signal_interface",
+          "scheduling",
+          "temperature_measurement"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "scheduling",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "temperature_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "demand_based_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "DHW-1d": {
+      "code": "DHW-1d",
+      "domain": "domestic_hot_water",
+      "name_en": "Control of DHW storage charging (with solar collector and supplymentary heat generation)",
+      "name_pl": "Sterowanie ładowaniem CWU (kolektor słoneczny + źródło uzupełniające)",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "solar_thermal_collector",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "temperature_measurement",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "demand_based_control",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "weather_data",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "solar_thermal_collector",
+          "temperature_measurement"
+        ],
+        "2": [
+          "demand_based_control",
+          "solar_thermal_collector",
+          "temperature_measurement"
+        ],
+        "3": [
+          "demand_based_control",
+          "predictive_control",
+          "solar_thermal_collector",
+          "temperature_measurement",
+          "weather_data"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "solar_thermal_collector",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "temperature_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "demand_based_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "weather_data",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    },
+    "DHW-2b": {
+      "code": "DHW-2b",
+      "domain": "domestic_hot_water",
+      "name_en": "Sequencing in case of different DHW generators",
+      "name_pl": "Sekwencjonowanie wielu generatorów CWU",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "sequencing_controller",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "energy_metering",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "sequencing_controller"
+        ],
+        "2": [
+          "energy_metering",
+          "sequencing_controller"
+        ],
+        "3": [
+          "energy_metering",
+          "grid_signal_interface",
+          "sequencing_controller"
+        ],
+        "4": [
+          "energy_metering",
+          "grid_signal_interface",
+          "predictive_control",
+          "sequencing_controller"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "sequencing_controller",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "energy_metering",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "DHW-3": {
+      "code": "DHW-3",
+      "domain": "domestic_hot_water",
+      "name_en": "Report information regarding domestic hot water performance",
+      "name_pl": "Raportowanie informacji o pracy instalacji CWU",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "energy_metering",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "reporting_platform",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "data_logging",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "alarms",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "fault_detection",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "energy_metering",
+          "reporting_platform"
+        ],
+        "2": [
+          "data_logging",
+          "energy_metering",
+          "reporting_platform"
+        ],
+        "3": [
+          "alarms",
+          "data_logging",
+          "energy_metering",
+          "fault_detection",
+          "reporting_platform"
+        ],
+        "4": [
+          "alarms",
+          "data_logging",
+          "energy_metering",
+          "fault_detection",
+          "predictive_control",
+          "reporting_platform"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "energy_metering",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "reporting_platform",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "data_logging",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "alarms",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "fault_detection",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "E-11": {
+      "code": "E-11",
+      "domain": "electricity",
+      "name_en": "Reporting information regarding energy storage",
+      "name_pl": "Raportowanie stanu magazynów energii",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "electrical_storage",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "reporting_platform",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "data_logging",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "alarms",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "electrical_storage",
+          "reporting_platform"
+        ],
+        "2": [
+          "data_logging",
+          "electrical_storage",
+          "reporting_platform"
+        ],
+        "3": [
+          "alarms",
+          "data_logging",
+          "electrical_storage",
+          "reporting_platform"
+        ],
+        "4": [
+          "alarms",
+          "data_logging",
+          "electrical_storage",
+          "predictive_control",
+          "reporting_platform"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "electrical_storage",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "reporting_platform",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "data_logging",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "alarms",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "E-12": {
+      "code": "E-12",
+      "domain": "electricity",
+      "name_en": "Reporting information regarding electricity consumption",
+      "name_pl": "Wsparcie trybu pracy mikro-sieci",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "energy_metering",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "reporting_platform",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "data_logging",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "alarms",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "submetering",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "energy_metering",
+          "reporting_platform"
+        ],
+        "2": [
+          "data_logging",
+          "energy_metering",
+          "reporting_platform"
+        ],
+        "3": [
+          "alarms",
+          "data_logging",
+          "energy_metering",
+          "reporting_platform",
+          "submetering"
+        ],
+        "4": [
+          "alarms",
+          "data_logging",
+          "energy_metering",
+          "predictive_control",
+          "reporting_platform",
+          "submetering"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "energy_metering",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "reporting_platform",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "data_logging",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "alarms",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "submetering",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "E-2": {
+      "code": "E-2",
+      "domain": "electricity",
+      "name_en": "Reporting information regarding local electricity generation",
+      "name_pl": "Raportowanie lokalnej generacji energii",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "pv_monitoring",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "reporting_platform",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "data_logging",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "alarms",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "pv_monitoring",
+          "reporting_platform"
+        ],
+        "2": [
+          "data_logging",
+          "pv_monitoring",
+          "reporting_platform"
+        ],
+        "3": [
+          "alarms",
+          "data_logging",
+          "pv_monitoring",
+          "reporting_platform"
+        ],
+        "4": [
+          "alarms",
+          "data_logging",
+          "predictive_control",
+          "pv_monitoring",
+          "reporting_platform"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "pv_monitoring",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "reporting_platform",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "data_logging",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "alarms",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "E-3": {
+      "code": "E-3",
+      "domain": "electricity",
+      "name_en": "Storage of (locally generated) electricity",
+      "name_pl": "Magazynowanie lokalnie wytworzonej energii",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "electrical_storage",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "self_consumption_optimization",
+          "min_level": 2,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "bidirectional_metering",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "electrical_storage"
+        ],
+        "2": [
+          "electrical_storage",
+          "grid_signal_interface",
+          "self_consumption_optimization"
+        ],
+        "3": [
+          "bidirectional_metering",
+          "electrical_storage",
+          "grid_signal_interface",
+          "self_consumption_optimization"
+        ],
+        "4": [
+          "bidirectional_metering",
+          "electrical_storage",
+          "grid_signal_interface",
+          "predictive_control",
+          "self_consumption_optimization"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "electrical_storage",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "self_consumption_optimization",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "bidirectional_metering",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "E-4": {
+      "code": "E-4",
+      "domain": "electricity",
+      "name_en": "Optimizing self-consumption of locally generated electricity",
+      "name_pl": "Raportowanie zużycia energii elektrycznej",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "local_generation",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "self_consumption_optimization",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "bms_integration",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "local_generation",
+          "self_consumption_optimization"
+        ],
+        "2": [
+          "bms_integration",
+          "local_generation",
+          "self_consumption_optimization"
+        ],
+        "3": [
+          "bms_integration",
+          "local_generation",
+          "predictive_control",
+          "self_consumption_optimization"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "local_generation",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "self_consumption_optimization",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "bms_integration",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "E-5": {
+      "code": "E-5",
+      "domain": "electricity",
+      "name_en": "Control of combined heat and power plant (CHP)",
+      "name_pl": "Optymalizacja autokonsumpcji energii",
+      "fl_max": 2,
+      "required_capabilities": [
+        {
+          "capability": "local_generation",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "modulating_generator",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "thermal_storage",
+          "min_level": 2,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": true
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "local_generation",
+          "modulating_generator"
+        ],
+        "2": [
+          "grid_signal_interface",
+          "local_generation",
+          "modulating_generator",
+          "thermal_storage"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "local_generation",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "modulating_generator",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "thermal_storage",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    },
+    "E-8": {
+      "code": "E-8",
+      "domain": "electricity",
+      "name_en": "Support of (micro)grid operation modes",
+      "name_pl": "Sterowanie kogeneracją (CHP)",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "electrical_storage",
+          "min_level": 2,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "microgrid_controller",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "grid_signal_interface"
+        ],
+        "2": [
+          "electrical_storage",
+          "grid_signal_interface",
+          "microgrid_controller"
+        ],
+        "3": [
+          "electrical_storage",
+          "grid_signal_interface",
+          "microgrid_controller",
+          "predictive_control"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "electrical_storage",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "microgrid_controller",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "EV-15": {
+      "code": "EV-15",
+      "domain": "electric_vehicle_charging",
+      "name_en": "EV Charging Capacity",
+      "name_pl": "Moce ładowania pojazdów elektrycznych",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "ev_charging_point",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "scheduling",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "load_balancing",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 4,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "self_consumption_optimization",
+          "min_level": 4,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "ev_charging_point"
+        ],
+        "2": [
+          "ev_charging_point",
+          "scheduling"
+        ],
+        "3": [
+          "ev_charging_point",
+          "load_balancing",
+          "scheduling"
+        ],
+        "4": [
+          "ev_charging_point",
+          "grid_signal_interface",
+          "load_balancing",
+          "scheduling",
+          "self_consumption_optimization"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "ev_charging_point",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "scheduling",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "load_balancing",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "self_consumption_optimization",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    },
+    "EV-16": {
+      "code": "EV-16",
+      "domain": "electric_vehicle_charging",
+      "name_en": "EV Charging Grid balancing",
+      "name_pl": "Harmonogramowe balansowanie obciążenia ładowania EV",
+      "fl_max": 2,
+      "required_capabilities": [
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "bidirectional_metering",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "grid_signal_interface"
+        ],
+        "2": [
+          "bidirectional_metering",
+          "grid_signal_interface"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "bidirectional_metering",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "EV-17": {
+      "code": "EV-17",
+      "domain": "electric_vehicle_charging",
+      "name_en": "EV charging information and connectivity",
+      "name_pl": "Informacja o ładowaniu pojazdów elektrycznych",
+      "fl_max": 2,
+      "required_capabilities": [
+        {
+          "capability": "reporting_platform",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "charging_connectivity",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "remote_access",
+          "min_level": 2,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "reporting_platform"
+        ],
+        "2": [
+          "charging_connectivity",
+          "remote_access",
+          "reporting_platform"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "reporting_platform",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "charging_connectivity",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "remote_access",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    },
+    "H-1a": {
+      "code": "H-1a",
+      "domain": "heating",
+      "name_en": "Heat emission control",
+      "name_pl": "Sterowanie emisją ciepła",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "central_automatic_control",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "temperature_measurement",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "zonal_control",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "bms_integration",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "digital_communication",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "occupancy_detection",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "central_automatic_control",
+          "temperature_measurement"
+        ],
+        "2": [
+          "central_automatic_control",
+          "temperature_measurement",
+          "zonal_control"
+        ],
+        "3": [
+          "bms_integration",
+          "central_automatic_control",
+          "digital_communication",
+          "temperature_measurement",
+          "zonal_control"
+        ],
+        "4": [
+          "bms_integration",
+          "central_automatic_control",
+          "digital_communication",
+          "occupancy_detection",
+          "temperature_measurement",
+          "zonal_control"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "central_automatic_control",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "temperature_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "zonal_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "bms_integration",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "digital_communication",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "occupancy_detection",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "H-1b": {
+      "code": "H-1b",
+      "domain": "heating",
+      "name_en": "Emission control for TABS (heating mode)",
+      "name_pl": "Sterowanie emisją dla TABS",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "central_automatic_control",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "temperature_measurement",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "demand_based_control",
+          "min_level": 2,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "zonal_control",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "weather_data",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "central_automatic_control",
+          "temperature_measurement"
+        ],
+        "2": [
+          "central_automatic_control",
+          "demand_based_control",
+          "temperature_measurement",
+          "zonal_control"
+        ],
+        "3": [
+          "central_automatic_control",
+          "demand_based_control",
+          "predictive_control",
+          "temperature_measurement",
+          "weather_data",
+          "zonal_control"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "central_automatic_control",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "temperature_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "demand_based_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "zonal_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "weather_data",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    },
+    "H-1c": {
+      "code": "H-1c",
+      "domain": "heating",
+      "name_en": "Control of distribution fluid temperature (supply or return air flow or water flow) - Similar function can be applied to the control of direct electric heating networks",
+      "name_pl": "Sterowanie temperaturą medium w sieci grzewczej",
+      "fl_max": 2,
+      "required_capabilities": [
+        {
+          "capability": "temperature_measurement",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "weather_data",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "demand_based_control",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "temperature_measurement",
+          "weather_data"
+        ],
+        "2": [
+          "demand_based_control",
+          "temperature_measurement",
+          "weather_data"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "temperature_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "weather_data",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "demand_based_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "H-1d": {
+      "code": "H-1d",
+      "domain": "heating",
+      "name_en": "Control of distribution pumps in networks",
+      "name_pl": "Sterowanie pompami obiegowymi w instalacji grzewczej",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "demand_based_control",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "variable_speed_drive",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "digital_communication",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "demand_based_control"
+        ],
+        "2": [
+          "demand_based_control",
+          "variable_speed_drive"
+        ],
+        "3": [
+          "demand_based_control",
+          "variable_speed_drive"
+        ],
+        "4": [
+          "demand_based_control",
+          "digital_communication",
+          "variable_speed_drive"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "demand_based_control",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "variable_speed_drive",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "digital_communication",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "H-1f": {
+      "code": "H-1f",
+      "domain": "heating",
+      "name_en": "Thermal Energy Storage (TES) for building heating (excluding TABS)",
+      "name_pl": "Sterowanie źródłem ciepła",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "scheduling",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "temperature_measurement",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "thermal_storage",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "demand_based_control",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "scheduling",
+          "temperature_measurement",
+          "thermal_storage"
+        ],
+        "2": [
+          "demand_based_control",
+          "scheduling",
+          "temperature_measurement",
+          "thermal_storage"
+        ],
+        "3": [
+          "demand_based_control",
+          "grid_signal_interface",
+          "scheduling",
+          "temperature_measurement",
+          "thermal_storage"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "scheduling",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "temperature_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "thermal_storage",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "demand_based_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "H-2a": {
+      "code": "H-2a",
+      "domain": "heating",
+      "name_en": "Heat generator control (all except heat pumps)",
+      "name_pl": "Sterowanie wytwarzaniem ciepła (pompy ciepła)",
+      "fl_max": 2,
+      "required_capabilities": [
+        {
+          "capability": "modulating_generator",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "weather_data",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "bms_integration",
+          "min_level": 2,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "demand_based_control",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "modulating_generator",
+          "weather_data"
+        ],
+        "2": [
+          "bms_integration",
+          "demand_based_control",
+          "modulating_generator",
+          "weather_data"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "modulating_generator",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "weather_data",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "bms_integration",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "demand_based_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "H-2b": {
+      "code": "H-2b",
+      "domain": "heating",
+      "name_en": "Heat generator control (for heat pumps)",
+      "name_pl": "Sterowanie magazynem energii cieplnej (ogrzewanie)",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "modulating_generator",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "weather_data",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "demand_based_control",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "temperature_measurement",
+          "min_level": 2,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "thermal_storage",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": true
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "modulating_generator",
+          "weather_data"
+        ],
+        "2": [
+          "demand_based_control",
+          "modulating_generator",
+          "temperature_measurement",
+          "weather_data"
+        ],
+        "3": [
+          "demand_based_control",
+          "grid_signal_interface",
+          "modulating_generator",
+          "predictive_control",
+          "temperature_measurement",
+          "thermal_storage",
+          "weather_data"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "modulating_generator",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "weather_data",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "demand_based_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "temperature_measurement",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "thermal_storage",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    },
+    "H-2d": {
+      "code": "H-2d",
+      "domain": "heating",
+      "name_en": "Sequencing in case of different heat generators",
+      "name_pl": "Sekwencjonowanie wielu źródeł ciepła",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "sequencing_controller",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "energy_metering",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "weather_data",
+          "min_level": 4,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "sequencing_controller"
+        ],
+        "2": [
+          "energy_metering",
+          "sequencing_controller"
+        ],
+        "3": [
+          "energy_metering",
+          "grid_signal_interface",
+          "sequencing_controller"
+        ],
+        "4": [
+          "energy_metering",
+          "grid_signal_interface",
+          "predictive_control",
+          "sequencing_controller",
+          "weather_data"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "sequencing_controller",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "energy_metering",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "weather_data",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    },
+    "H-3": {
+      "code": "H-3",
+      "domain": "heating",
+      "name_en": "Report information regarding heating system performance",
+      "name_pl": "Elastyczność sterowania źródłem ciepła",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "reporting_platform",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "data_logging",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "energy_metering",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "alarms",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "fault_detection",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "reporting_platform"
+        ],
+        "2": [
+          "data_logging",
+          "energy_metering",
+          "reporting_platform"
+        ],
+        "3": [
+          "alarms",
+          "data_logging",
+          "energy_metering",
+          "fault_detection",
+          "reporting_platform"
+        ],
+        "4": [
+          "alarms",
+          "data_logging",
+          "energy_metering",
+          "fault_detection",
+          "predictive_control",
+          "reporting_platform"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "reporting_platform",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "data_logging",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "energy_metering",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "alarms",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "fault_detection",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "H-4": {
+      "code": "H-4",
+      "domain": "heating",
+      "name_en": "Flexibility and grid interaction",
+      "name_pl": "Raportowanie informacji o pracy ogrzewania",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "scheduling",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "thermal_storage",
+          "min_level": 2,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "bidirectional_metering",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "grid_signal_interface",
+          "scheduling"
+        ],
+        "2": [
+          "grid_signal_interface",
+          "scheduling",
+          "thermal_storage"
+        ],
+        "3": [
+          "grid_signal_interface",
+          "predictive_control",
+          "scheduling",
+          "thermal_storage"
+        ],
+        "4": [
+          "bidirectional_metering",
+          "grid_signal_interface",
+          "predictive_control",
+          "scheduling",
+          "thermal_storage"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "scheduling",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "thermal_storage",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "bidirectional_metering",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "L-1a": {
+      "code": "L-1a",
+      "domain": "lighting",
+      "name_en": "Occupancy control for indoor lighting",
+      "name_pl": "Sterowanie oświetleniem w zależności od obecności",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "occupancy_detection",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "automated_switching_actuation",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "digital_communication",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "zonal_control",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "occupancy_detection"
+        ],
+        "2": [
+          "automated_switching_actuation",
+          "occupancy_detection"
+        ],
+        "3": [
+          "automated_switching_actuation",
+          "digital_communication",
+          "occupancy_detection",
+          "zonal_control"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "occupancy_detection",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "automated_switching_actuation",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "digital_communication",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "zonal_control",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    },
+    "L-2": {
+      "code": "L-2",
+      "domain": "lighting",
+      "name_en": "Control artificial lighting power based on daylight levels",
+      "name_pl": "Automatyczne sterowanie oświetleniem w zależności od światła dziennego",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "automated_switching_actuation",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "daylight_measurement",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "dimmable_lighting",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "zonal_control",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "digital_communication",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "automated_switching_actuation",
+          "daylight_measurement"
+        ],
+        "2": [
+          "automated_switching_actuation",
+          "daylight_measurement",
+          "dimmable_lighting"
+        ],
+        "3": [
+          "automated_switching_actuation",
+          "daylight_measurement",
+          "dimmable_lighting",
+          "zonal_control"
+        ],
+        "4": [
+          "automated_switching_actuation",
+          "daylight_measurement",
+          "digital_communication",
+          "dimmable_lighting",
+          "zonal_control"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "automated_switching_actuation",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "daylight_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "dimmable_lighting",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "zonal_control",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "digital_communication",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "MC-13": {
+      "code": "MC-13",
+      "domain": "monitoring_and_control",
+      "name_en": "Central reporting of TBS performance and energy use",
+      "name_pl": "Harmonogramowanie pracy systemów HVAC",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "bms_integration",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "reporting_platform",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "data_logging",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "energy_metering",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "alarms",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "fault_detection",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "bms_integration",
+          "reporting_platform"
+        ],
+        "2": [
+          "bms_integration",
+          "data_logging",
+          "energy_metering",
+          "reporting_platform"
+        ],
+        "3": [
+          "alarms",
+          "bms_integration",
+          "data_logging",
+          "energy_metering",
+          "fault_detection",
+          "reporting_platform"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "bms_integration",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "reporting_platform",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "data_logging",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "energy_metering",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "alarms",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "fault_detection",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    },
+    "MC-25": {
+      "code": "MC-25",
+      "domain": "monitoring_and_control",
+      "name_en": "Smart Grid Integration",
+      "name_pl": "Wykrywanie usterek TBS i wsparcie diagnostyki",
+      "fl_max": 2,
+      "required_capabilities": [
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "bidirectional_metering",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "grid_signal_interface"
+        ],
+        "2": [
+          "bidirectional_metering",
+          "grid_signal_interface"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "bidirectional_metering",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "MC-28": {
+      "code": "MC-28",
+      "domain": "monitoring_and_control",
+      "name_en": "Reporting information regarding demand side management performance and operation",
+      "name_pl": "Detekcja obecności powiązana z usługami budynku",
+      "fl_max": 2,
+      "required_capabilities": [
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "reporting_platform",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "bidirectional_metering",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "data_logging",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "grid_signal_interface",
+          "reporting_platform"
+        ],
+        "2": [
+          "bidirectional_metering",
+          "data_logging",
+          "grid_signal_interface",
+          "reporting_platform"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "reporting_platform",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "bidirectional_metering",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "data_logging",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "MC-29": {
+      "code": "MC-29",
+      "domain": "monitoring_and_control",
+      "name_en": "Override of DSM control",
+      "name_pl": "Raportowanie efektów zarządzania popytem (DSM)",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "dsm_override",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "zonal_control",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "data_logging",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "dsm_override",
+          "grid_signal_interface"
+        ],
+        "2": [
+          "dsm_override",
+          "grid_signal_interface",
+          "zonal_control"
+        ],
+        "3": [
+          "data_logging",
+          "dsm_override",
+          "grid_signal_interface",
+          "zonal_control"
+        ],
+        "4": [
+          "data_logging",
+          "dsm_override",
+          "grid_signal_interface",
+          "predictive_control",
+          "zonal_control"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "dsm_override",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "zonal_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "data_logging",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "MC-3": {
+      "code": "MC-3",
+      "domain": "monitoring_and_control",
+      "name_en": "Run time management of HVAC systems",
+      "name_pl": "Centralne raportowanie pracy TBS i zużycia energii",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "scheduling",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "weather_data",
+          "min_level": 2,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "occupancy_detection",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "scheduling"
+        ],
+        "2": [
+          "predictive_control",
+          "scheduling",
+          "weather_data"
+        ],
+        "3": [
+          "occupancy_detection",
+          "predictive_control",
+          "scheduling",
+          "weather_data"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "scheduling",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "weather_data",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "occupancy_detection",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "MC-30": {
+      "code": "MC-30",
+      "domain": "monitoring_and_control",
+      "name_en": "Single platform that allows automated control & coordination between TBS + optimization of energy flow based on occupancy, weather and grid signals",
+      "name_pl": "Optymalizacja przepływów energii wg obecności, pogody i sygnałów sieci",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "bms_integration",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "digital_communication",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "reporting_platform",
+          "min_level": 2,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "grid_signal_interface",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "occupancy_detection",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "weather_data",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "bms_integration"
+        ],
+        "2": [
+          "bms_integration",
+          "digital_communication",
+          "reporting_platform"
+        ],
+        "3": [
+          "bms_integration",
+          "digital_communication",
+          "grid_signal_interface",
+          "occupancy_detection",
+          "predictive_control",
+          "reporting_platform",
+          "weather_data"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "bms_integration",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "digital_communication",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "reporting_platform",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "grid_signal_interface",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "occupancy_detection",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "weather_data",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    },
+    "MC-4": {
+      "code": "MC-4",
+      "domain": "monitoring_and_control",
+      "name_en": "Detecting faults of technical building systems and providing support to the diagnosis of these faults",
+      "name_pl": "Integracja z inteligentną siecią (harmonizacja TBS)",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "alarms",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "fault_detection",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "remote_access",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "reporting_platform",
+          "min_level": 3,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "alarms"
+        ],
+        "2": [
+          "alarms",
+          "fault_detection"
+        ],
+        "3": [
+          "alarms",
+          "fault_detection",
+          "remote_access",
+          "reporting_platform"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "alarms",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "fault_detection",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "remote_access",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "reporting_platform",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    },
+    "MC-9": {
+      "code": "MC-9",
+      "domain": "monitoring_and_control",
+      "name_en": "Occupancy detection: connected services",
+      "name_pl": "Jedna platforma automatycznego sterowania i koordynacji TBS",
+      "fl_max": 2,
+      "required_capabilities": [
+        {
+          "capability": "occupancy_detection",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "bms_integration",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "digital_communication",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "occupancy_detection"
+        ],
+        "2": [
+          "bms_integration",
+          "digital_communication",
+          "occupancy_detection"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "occupancy_detection",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "bms_integration",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "digital_communication",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "V-1a": {
+      "code": "V-1a",
+      "domain": "ventilation",
+      "name_en": "Supply air flow control at the room level",
+      "name_pl": "Sterowanie przepływem powietrza nawiewanego w pomieszczeniu",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "demand_based_control",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "scheduling",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "occupancy_detection",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "co2_measurement",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "bms_integration",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "digital_communication",
+          "min_level": 4,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "demand_based_control",
+          "scheduling"
+        ],
+        "2": [
+          "demand_based_control",
+          "occupancy_detection",
+          "scheduling"
+        ],
+        "3": [
+          "co2_measurement",
+          "demand_based_control",
+          "occupancy_detection",
+          "scheduling"
+        ],
+        "4": [
+          "bms_integration",
+          "co2_measurement",
+          "demand_based_control",
+          "digital_communication",
+          "occupancy_detection",
+          "scheduling"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "demand_based_control",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "scheduling",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "occupancy_detection",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "co2_measurement",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "bms_integration",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "digital_communication",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "V-1c": {
+      "code": "V-1c",
+      "domain": "ventilation",
+      "name_en": "Air flow or pressure control at the air handler level",
+      "name_pl": "Sterowanie przepływem/ciśnieniem na poziomie centrali wentylacyjnej",
+      "fl_max": 4,
+      "required_capabilities": [
+        {
+          "capability": "demand_based_control",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "variable_speed_drive",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "digital_communication",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "bms_integration",
+          "min_level": 4,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "demand_based_control"
+        ],
+        "2": [
+          "demand_based_control",
+          "variable_speed_drive"
+        ],
+        "3": [
+          "demand_based_control",
+          "digital_communication",
+          "variable_speed_drive"
+        ],
+        "4": [
+          "bms_integration",
+          "demand_based_control",
+          "digital_communication",
+          "variable_speed_drive"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "demand_based_control",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "variable_speed_drive",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "digital_communication",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "bms_integration",
+          "blocks_from_level": 4,
+          "max_reachable_without": 3,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    },
+    "V-2c": {
+      "code": "V-2c",
+      "domain": "ventilation",
+      "name_en": "Heat recovery control:\nprevention of overheating",
+      "name_pl": "Sterowanie odzyskiem ciepła: zapobieganie przegrzewaniu",
+      "fl_max": 2,
+      "required_capabilities": [
+        {
+          "capability": "heat_recovery_control",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": true
+        },
+        {
+          "capability": "temperature_measurement",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "free_cooling",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "heat_recovery_control",
+          "temperature_measurement"
+        ],
+        "2": [
+          "free_cooling",
+          "heat_recovery_control",
+          "temperature_measurement"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "heat_recovery_control",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "temperature_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "free_cooling",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "V-2d": {
+      "code": "V-2d",
+      "domain": "ventilation",
+      "name_en": "Supply air temperature control at the air handling unit level",
+      "name_pl": "Sterowanie temperaturą powietrza nawiewanego w centrali",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "temperature_measurement",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "weather_data",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "demand_based_control",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "temperature_measurement",
+          "weather_data"
+        ],
+        "2": [
+          "demand_based_control",
+          "temperature_measurement",
+          "weather_data"
+        ],
+        "3": [
+          "demand_based_control",
+          "predictive_control",
+          "temperature_measurement",
+          "weather_data"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "temperature_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "weather_data",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "demand_based_control",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "V-3": {
+      "code": "V-3",
+      "domain": "ventilation",
+      "name_en": "Free cooling with mechanical ventilation system",
+      "name_pl": "Free cooling z wykorzystaniem mechanicznej wentylacji",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "free_cooling",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "temperature_measurement",
+          "min_level": 1,
+          "source_type": "engineering_assumption",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "humidity_measurement",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "predictive_control",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "free_cooling",
+          "temperature_measurement"
+        ],
+        "2": [
+          "free_cooling",
+          "humidity_measurement",
+          "temperature_measurement"
+        ],
+        "3": [
+          "free_cooling",
+          "humidity_measurement",
+          "predictive_control",
+          "temperature_measurement"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "free_cooling",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "temperature_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "missing_capability": "humidity_measurement",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "predictive_control",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    "V-6": {
+      "code": "V-6",
+      "domain": "ventilation",
+      "name_en": "Reporting information regarding IAQ",
+      "name_pl": "Monitorowanie jakości powietrza wewnętrznego",
+      "fl_max": 3,
+      "required_capabilities": [
+        {
+          "capability": "co2_measurement",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "reporting_platform",
+          "min_level": 1,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "data_logging",
+          "min_level": 2,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        },
+        {
+          "capability": "alarms",
+          "min_level": 3,
+          "source_type": "official_methodology",
+          "needs_manual_verification": false
+        }
+      ],
+      "fl_prerequisites": {
+        "1": [
+          "co2_measurement",
+          "reporting_platform"
+        ],
+        "2": [
+          "co2_measurement",
+          "data_logging",
+          "reporting_platform"
+        ],
+        "3": [
+          "alarms",
+          "co2_measurement",
+          "data_logging",
+          "reporting_platform"
+        ]
+      },
+      "blocking_conditions": [
+        {
+          "missing_capability": "co2_measurement",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "reporting_platform",
+          "blocks_from_level": 1,
+          "max_reachable_without": 0,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "data_logging",
+          "blocks_from_level": 2,
+          "max_reachable_without": 1,
+          "source_type": "official_methodology"
+        },
+        {
+          "missing_capability": "alarms",
+          "blocks_from_level": 3,
+          "max_reachable_without": 2,
+          "source_type": "official_methodology"
+        }
+      ]
+    }
+  },
+  "cross_domain": [
+    {
+      "id": "occupancy",
+      "factor_pl": "Obecnosc uzytkownikow",
+      "capability": "occupancy_detection",
+      "source_type": "official_methodology",
+      "affected_domains": [
+        "heating",
+        "cooling",
+        "ventilation",
+        "lighting",
+        "monitoring_and_control"
+      ],
+      "description": "Jedna wiarygodna detekcja obecnosci steruje ogrzewaniem, chlodzeniem, wentylacja i oswietleniem."
+    },
+    {
+      "id": "weather",
+      "factor_pl": "Pogoda / prognoza",
+      "capability": "weather_data",
+      "source_type": "engineering_assumption",
+      "affected_domains": [
+        "heating",
+        "cooling",
+        "ventilation",
+        "dynamic_building_envelope",
+        "domestic_hot_water"
+      ],
+      "description": "Dane pogodowe i prognoza wplywaja na ogrzewanie, chlodzenie, wentylacje, zacienienie i CWU."
+    },
+    {
+      "id": "pv_storage",
+      "factor_pl": "PV i magazyn energii",
+      "capability": "self_consumption_optimization",
+      "source_type": "official_methodology",
+      "affected_domains": [
+        "electricity",
+        "electric_vehicle_charging",
+        "heating",
+        "cooling",
+        "domestic_hot_water"
+      ],
+      "description": "Lokalna produkcja i magazyn wplywaja na elektrycznosc, EV oraz elastycznosc HVAC/CWU (autokonsumpcja)."
+    },
+    {
+      "id": "grid_signal",
+      "factor_pl": "Sygnaly sieci / taryfy",
+      "capability": "grid_signal_interface",
+      "source_type": "official_methodology",
+      "affected_domains": [
+        "electricity",
+        "electric_vehicle_charging",
+        "heating",
+        "cooling",
+        "monitoring_and_control"
+      ],
+      "description": "Sygnaly taryf/DSM/smart grid uruchamiaja elastycznosc w wielu domenach jednoczesnie."
+    },
+    {
+      "id": "energy_data",
+      "factor_pl": "Dane pomiarowe energii",
+      "capability": "energy_metering",
+      "source_type": "official_methodology",
+      "affected_domains": [
+        "heating",
+        "cooling",
+        "domestic_hot_water",
+        "electricity",
+        "monitoring_and_control"
+      ],
+      "description": "Pomiar energii/ciepla/chlodu zasila raportowanie i FDD we wszystkich domenach oraz raport centralny."
+    },
+    {
+      "id": "digital_integration",
+      "factor_pl": "Integracja cyfrowa / BMS",
+      "capability": "bms_integration",
+      "source_type": "official_methodology",
+      "affected_domains": [
+        "heating",
+        "cooling",
+        "ventilation",
+        "lighting",
+        "dynamic_building_envelope",
+        "monitoring_and_control"
+      ],
+      "description": "Integracja cyfrowa i BMS warunkuje wyzsze poziomy sterowania i koordynacje miedzydomenowa (MC-30)."
+    }
+  ],
+  "capability_impact": {
+    "temperature_measurement": {
+      "services": [
+        "C-1a",
+        "C-1b",
+        "C-1c",
+        "C-1f",
+        "C-1g",
+        "DE-1",
+        "DHW-1a",
+        "DHW-1b",
+        "DHW-1d",
+        "H-1a",
+        "H-1b",
+        "H-1c",
+        "H-1f",
+        "H-2b",
+        "V-2c",
+        "V-2d",
+        "V-3"
+      ],
+      "service_count": 17,
+      "domains": [
+        "cooling",
+        "domestic_hot_water",
+        "dynamic_building_envelope",
+        "heating",
+        "ventilation"
+      ],
+      "domain_count": 5,
+      "cross_domain": true
+    },
+    "occupancy_detection": {
+      "services": [
+        "C-1a",
+        "H-1a",
+        "L-1a",
+        "MC-3",
+        "MC-30",
+        "MC-9",
+        "V-1a"
+      ],
+      "service_count": 7,
+      "domains": [
+        "cooling",
+        "heating",
+        "lighting",
+        "monitoring_and_control",
+        "ventilation"
+      ],
+      "domain_count": 5,
+      "cross_domain": true
+    },
+    "co2_measurement": {
+      "services": [
+        "V-1a",
+        "V-6"
+      ],
+      "service_count": 2,
+      "domains": [
+        "ventilation"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "humidity_measurement": {
+      "services": [
+        "C-1b",
+        "V-3"
+      ],
+      "service_count": 2,
+      "domains": [
+        "cooling",
+        "ventilation"
+      ],
+      "domain_count": 2,
+      "cross_domain": true
+    },
+    "daylight_measurement": {
+      "services": [
+        "L-2"
+      ],
+      "service_count": 1,
+      "domains": [
+        "lighting"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "weather_data": {
+      "services": [
+        "C-1b",
+        "C-1c",
+        "C-2a",
+        "DE-1",
+        "DHW-1d",
+        "H-1b",
+        "H-1c",
+        "H-2a",
+        "H-2b",
+        "H-2d",
+        "MC-3",
+        "MC-30",
+        "V-2d"
+      ],
+      "service_count": 13,
+      "domains": [
+        "cooling",
+        "domestic_hot_water",
+        "dynamic_building_envelope",
+        "heating",
+        "monitoring_and_control",
+        "ventilation"
+      ],
+      "domain_count": 6,
+      "cross_domain": true
+    },
+    "central_automatic_control": {
+      "services": [
+        "C-1a",
+        "C-1b",
+        "H-1a",
+        "H-1b"
+      ],
+      "service_count": 4,
+      "domains": [
+        "cooling",
+        "heating"
+      ],
+      "domain_count": 2,
+      "cross_domain": true
+    },
+    "zonal_control": {
+      "services": [
+        "C-1a",
+        "C-1b",
+        "DE-1",
+        "H-1a",
+        "H-1b",
+        "L-1a",
+        "L-2",
+        "MC-29"
+      ],
+      "service_count": 8,
+      "domains": [
+        "cooling",
+        "dynamic_building_envelope",
+        "heating",
+        "lighting",
+        "monitoring_and_control"
+      ],
+      "domain_count": 5,
+      "cross_domain": true
+    },
+    "scheduling": {
+      "services": [
+        "C-1g",
+        "C-4",
+        "DHW-1a",
+        "DHW-1b",
+        "EV-15",
+        "H-1f",
+        "H-4",
+        "MC-3",
+        "V-1a"
+      ],
+      "service_count": 9,
+      "domains": [
+        "cooling",
+        "domestic_hot_water",
+        "electric_vehicle_charging",
+        "heating",
+        "monitoring_and_control",
+        "ventilation"
+      ],
+      "domain_count": 6,
+      "cross_domain": true
+    },
+    "demand_based_control": {
+      "services": [
+        "C-1c",
+        "C-1d",
+        "C-1g",
+        "C-2a",
+        "DHW-1a",
+        "DHW-1b",
+        "DHW-1d",
+        "H-1b",
+        "H-1c",
+        "H-1d",
+        "H-1f",
+        "H-2a",
+        "H-2b",
+        "V-1a",
+        "V-1c",
+        "V-2d"
+      ],
+      "service_count": 16,
+      "domains": [
+        "cooling",
+        "domestic_hot_water",
+        "heating",
+        "ventilation"
+      ],
+      "domain_count": 4,
+      "cross_domain": true
+    },
+    "predictive_control": {
+      "services": [
+        "C-1b",
+        "C-2a",
+        "C-2b",
+        "C-3",
+        "C-4",
+        "DE-1",
+        "DE-2",
+        "DE-4",
+        "DHW-1d",
+        "DHW-2b",
+        "DHW-3",
+        "E-11",
+        "E-12",
+        "E-2",
+        "E-3",
+        "E-4",
+        "E-8",
+        "H-1b",
+        "H-2b",
+        "H-2d",
+        "H-3",
+        "H-4",
+        "MC-29",
+        "MC-3",
+        "MC-30",
+        "V-2d",
+        "V-3"
+      ],
+      "service_count": 27,
+      "domains": [
+        "cooling",
+        "domestic_hot_water",
+        "dynamic_building_envelope",
+        "electricity",
+        "heating",
+        "monitoring_and_control",
+        "ventilation"
+      ],
+      "domain_count": 7,
+      "cross_domain": true
+    },
+    "interlock_control": {
+      "services": [
+        "C-1f"
+      ],
+      "service_count": 1,
+      "domains": [
+        "cooling"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "sequencing_controller": {
+      "services": [
+        "C-2b",
+        "DHW-2b",
+        "H-2d"
+      ],
+      "service_count": 3,
+      "domains": [
+        "cooling",
+        "domestic_hot_water",
+        "heating"
+      ],
+      "domain_count": 3,
+      "cross_domain": true
+    },
+    "modulating_generator": {
+      "services": [
+        "C-2a",
+        "E-5",
+        "H-2a",
+        "H-2b"
+      ],
+      "service_count": 4,
+      "domains": [
+        "cooling",
+        "electricity",
+        "heating"
+      ],
+      "domain_count": 3,
+      "cross_domain": true
+    },
+    "variable_speed_drive": {
+      "services": [
+        "C-1d",
+        "H-1d",
+        "V-1c"
+      ],
+      "service_count": 3,
+      "domains": [
+        "cooling",
+        "heating",
+        "ventilation"
+      ],
+      "domain_count": 3,
+      "cross_domain": true
+    },
+    "digital_communication": {
+      "services": [
+        "C-1a",
+        "C-1d",
+        "H-1a",
+        "H-1d",
+        "L-1a",
+        "L-2",
+        "MC-30",
+        "MC-9",
+        "V-1a",
+        "V-1c"
+      ],
+      "service_count": 10,
+      "domains": [
+        "cooling",
+        "heating",
+        "lighting",
+        "monitoring_and_control",
+        "ventilation"
+      ],
+      "domain_count": 5,
+      "cross_domain": true
+    },
+    "bms_integration": {
+      "services": [
+        "C-1a",
+        "C-1f",
+        "DE-1",
+        "DE-2",
+        "E-4",
+        "H-1a",
+        "H-2a",
+        "MC-13",
+        "MC-30",
+        "MC-9",
+        "V-1a",
+        "V-1c"
+      ],
+      "service_count": 12,
+      "domains": [
+        "cooling",
+        "dynamic_building_envelope",
+        "electricity",
+        "heating",
+        "monitoring_and_control",
+        "ventilation"
+      ],
+      "domain_count": 6,
+      "cross_domain": true
+    },
+    "remote_access": {
+      "services": [
+        "EV-17",
+        "MC-4"
+      ],
+      "service_count": 2,
+      "domains": [
+        "electric_vehicle_charging",
+        "monitoring_and_control"
+      ],
+      "domain_count": 2,
+      "cross_domain": true
+    },
+    "energy_metering": {
+      "services": [
+        "C-2b",
+        "C-3",
+        "DHW-2b",
+        "DHW-3",
+        "E-12",
+        "H-2d",
+        "H-3",
+        "MC-13"
+      ],
+      "service_count": 8,
+      "domains": [
+        "cooling",
+        "domestic_hot_water",
+        "electricity",
+        "heating",
+        "monitoring_and_control"
+      ],
+      "domain_count": 5,
+      "cross_domain": true
+    },
+    "submetering": {
+      "services": [
+        "E-12"
+      ],
+      "service_count": 1,
+      "domains": [
+        "electricity"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "pv_monitoring": {
+      "services": [
+        "E-2"
+      ],
+      "service_count": 1,
+      "domains": [
+        "electricity"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "bidirectional_metering": {
+      "services": [
+        "C-4",
+        "E-3",
+        "EV-16",
+        "H-4",
+        "MC-25",
+        "MC-28"
+      ],
+      "service_count": 6,
+      "domains": [
+        "cooling",
+        "electric_vehicle_charging",
+        "electricity",
+        "heating",
+        "monitoring_and_control"
+      ],
+      "domain_count": 5,
+      "cross_domain": true
+    },
+    "reporting_platform": {
+      "services": [
+        "C-3",
+        "DE-4",
+        "DHW-3",
+        "E-11",
+        "E-12",
+        "E-2",
+        "EV-17",
+        "H-3",
+        "MC-13",
+        "MC-28",
+        "MC-30",
+        "MC-4",
+        "V-6"
+      ],
+      "service_count": 13,
+      "domains": [
+        "cooling",
+        "domestic_hot_water",
+        "dynamic_building_envelope",
+        "electric_vehicle_charging",
+        "electricity",
+        "heating",
+        "monitoring_and_control",
+        "ventilation"
+      ],
+      "domain_count": 8,
+      "cross_domain": true
+    },
+    "data_logging": {
+      "services": [
+        "C-3",
+        "DE-4",
+        "DHW-3",
+        "E-11",
+        "E-12",
+        "E-2",
+        "H-3",
+        "MC-13",
+        "MC-28",
+        "MC-29",
+        "V-6"
+      ],
+      "service_count": 11,
+      "domains": [
+        "cooling",
+        "domestic_hot_water",
+        "dynamic_building_envelope",
+        "electricity",
+        "heating",
+        "monitoring_and_control",
+        "ventilation"
+      ],
+      "domain_count": 7,
+      "cross_domain": true
+    },
+    "fault_detection": {
+      "services": [
+        "C-3",
+        "DE-4",
+        "DHW-3",
+        "H-3",
+        "MC-13",
+        "MC-4"
+      ],
+      "service_count": 6,
+      "domains": [
+        "cooling",
+        "domestic_hot_water",
+        "dynamic_building_envelope",
+        "heating",
+        "monitoring_and_control"
+      ],
+      "domain_count": 5,
+      "cross_domain": true
+    },
+    "alarms": {
+      "services": [
+        "C-3",
+        "DE-4",
+        "DHW-3",
+        "E-11",
+        "E-12",
+        "E-2",
+        "H-3",
+        "MC-13",
+        "MC-4",
+        "V-6"
+      ],
+      "service_count": 10,
+      "domains": [
+        "cooling",
+        "domestic_hot_water",
+        "dynamic_building_envelope",
+        "electricity",
+        "heating",
+        "monitoring_and_control",
+        "ventilation"
+      ],
+      "domain_count": 7,
+      "cross_domain": true
+    },
+    "actuator_feedback": {
+      "services": [
+        "DE-4"
+      ],
+      "service_count": 1,
+      "domains": [
+        "dynamic_building_envelope"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "thermal_storage": {
+      "services": [
+        "C-1g",
+        "C-4",
+        "E-5",
+        "H-1f",
+        "H-2b",
+        "H-4"
+      ],
+      "service_count": 6,
+      "domains": [
+        "cooling",
+        "electricity",
+        "heating"
+      ],
+      "domain_count": 3,
+      "cross_domain": true
+    },
+    "electrical_storage": {
+      "services": [
+        "E-11",
+        "E-3",
+        "E-8"
+      ],
+      "service_count": 3,
+      "domains": [
+        "electricity"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "local_generation": {
+      "services": [
+        "E-4",
+        "E-5"
+      ],
+      "service_count": 2,
+      "domains": [
+        "electricity"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "solar_thermal_collector": {
+      "services": [
+        "DHW-1d"
+      ],
+      "service_count": 1,
+      "domains": [
+        "domestic_hot_water"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "self_consumption_optimization": {
+      "services": [
+        "DHW-1a",
+        "E-3",
+        "E-4",
+        "EV-15"
+      ],
+      "service_count": 4,
+      "domains": [
+        "domestic_hot_water",
+        "electric_vehicle_charging",
+        "electricity"
+      ],
+      "domain_count": 3,
+      "cross_domain": true
+    },
+    "grid_signal_interface": {
+      "services": [
+        "C-1g",
+        "C-2b",
+        "C-4",
+        "DHW-1a",
+        "DHW-1b",
+        "DHW-2b",
+        "E-3",
+        "E-5",
+        "E-8",
+        "EV-15",
+        "EV-16",
+        "H-1f",
+        "H-2b",
+        "H-2d",
+        "H-4",
+        "MC-25",
+        "MC-28",
+        "MC-29",
+        "MC-30"
+      ],
+      "service_count": 19,
+      "domains": [
+        "cooling",
+        "domestic_hot_water",
+        "electric_vehicle_charging",
+        "electricity",
+        "heating",
+        "monitoring_and_control"
+      ],
+      "domain_count": 6,
+      "cross_domain": true
+    },
+    "microgrid_controller": {
+      "services": [
+        "E-8"
+      ],
+      "service_count": 1,
+      "domains": [
+        "electricity"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "dsm_override": {
+      "services": [
+        "MC-29"
+      ],
+      "service_count": 1,
+      "domains": [
+        "monitoring_and_control"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "heat_recovery_control": {
+      "services": [
+        "V-2c"
+      ],
+      "service_count": 1,
+      "domains": [
+        "ventilation"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "free_cooling": {
+      "services": [
+        "C-2a",
+        "V-2c",
+        "V-3"
+      ],
+      "service_count": 3,
+      "domains": [
+        "cooling",
+        "ventilation"
+      ],
+      "domain_count": 2,
+      "cross_domain": true
+    },
+    "automated_switching_actuation": {
+      "services": [
+        "L-1a",
+        "L-2"
+      ],
+      "service_count": 2,
+      "domains": [
+        "lighting"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "dimmable_lighting": {
+      "services": [
+        "L-2"
+      ],
+      "service_count": 1,
+      "domains": [
+        "lighting"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "shading_actuation": {
+      "services": [
+        "DE-1"
+      ],
+      "service_count": 1,
+      "domains": [
+        "dynamic_building_envelope"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "sun_position_tracking": {
+      "services": [
+        "DE-1"
+      ],
+      "service_count": 1,
+      "domains": [
+        "dynamic_building_envelope"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "window_contact": {
+      "services": [
+        "DE-2"
+      ],
+      "service_count": 1,
+      "domains": [
+        "dynamic_building_envelope"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "window_actuation": {
+      "services": [
+        "DE-2"
+      ],
+      "service_count": 1,
+      "domains": [
+        "dynamic_building_envelope"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "ev_charging_point": {
+      "services": [
+        "EV-15"
+      ],
+      "service_count": 1,
+      "domains": [
+        "electric_vehicle_charging"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "load_balancing": {
+      "services": [
+        "EV-15"
+      ],
+      "service_count": 1,
+      "domains": [
+        "electric_vehicle_charging"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    },
+    "charging_connectivity": {
+      "services": [
+        "EV-17"
+      ],
+      "service_count": 1,
+      "domains": [
+        "electric_vehicle_charging"
+      ],
+      "domain_count": 1,
+      "cross_domain": false
+    }
+  }
+}

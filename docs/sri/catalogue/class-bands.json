@@ -1,0 +1,49 @@
+{
+  "source_version": "SRI calculation sheet v4.5",
+  "provenance": "VERIFIED_REGULATION",
+  "legal_basis": "Delegated Regulation (EU) 2020/2155, Annex VIII",
+  "bands": [
+    {
+      "class_number": 1,
+      "label": "A",
+      "score_min_percent": 90,
+      "score_max_percent": 100
+    },
+    {
+      "class_number": 2,
+      "label": "B",
+      "score_min_percent": 80,
+      "score_max_percent": 90
+    },
+    {
+      "class_number": 3,
+      "label": "C",
+      "score_min_percent": 65,
+      "score_max_percent": 80
+    },
+    {
+      "class_number": 4,
+      "label": "D",
+      "score_min_percent": 50,
+      "score_max_percent": 65
+    },
+    {
+      "class_number": 5,
+      "label": "E",
+      "score_min_percent": 35,
+      "score_max_percent": 50
+    },
+    {
+      "class_number": 6,
+      "label": "F",
+      "score_min_percent": 20,
+      "score_max_percent": 35
+    },
+    {
+      "class_number": 7,
+      "label": "G",
+      "score_min_percent": 0,
+      "score_max_percent": 20
+    }
+  ]
+}

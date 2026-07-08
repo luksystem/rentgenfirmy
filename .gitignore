@@ -49,3 +49,12 @@ next-env.d.ts
 
 # pdf.js worker — kopiowany z node_modules przez `postinstall` (scripts/copy-pdf-worker.mjs)
 /public/pdf.worker.min.mjs
+
+# SRI — oficjalne pliki zrodlowe KE (T&C zabraniaja redystrybucji; hashe w import-manifest.json)
+/store/sri/*.xlsx
+/store/sri/*.pdf
+/store/sri/raw/
+
+# Python cache (skrypty SRI)
+__pycache__/
+*.pyc

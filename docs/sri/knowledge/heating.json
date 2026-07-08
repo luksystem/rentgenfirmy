@@ -1,0 +1,944 @@
+{
+  "domain_code": "heating",
+  "domain_name_pl": "Ogrzewanie",
+  "service_count": 10,
+  "provenance": {
+    "official_fields": "VERIFIED_ANNEX_D",
+    "expert_fields": "EXPERT_AUTHORED"
+  },
+  "cards": [
+    {
+      "official_code": "H-1a",
+      "internal_code": "H-01",
+      "domain_code": "heating",
+      "service_group_en": "Heat control - demand side",
+      "official_name_en": "Heat emission control",
+      "official_name_pl": "Sterowanie emisją ciepła",
+      "included_in_method_a": true,
+      "fl_max": 4,
+      "friendly_name_pl": "Sterowanie ogrzewaniem w pomieszczeniach",
+      "purpose_pl": "Dostarczanie ciepla do pomieszczen dokladnie w takiej ilosci i wtedy, kiedy jest potrzebne, aby utrzymac komfort przy minimalnym zuzyciu energii.",
+      "technical_description_pl": "Regulacja mocy grzejnikow, ogrzewania podlogowego lub klimakonwektorow w oparciu o temperature zadana i rzeczywista w strefie/pomieszczeniu. Od prostego termostatu centralnego, przez indywidualne sterowanie pomieszczeniami (glowice/termostaty), az po sterowanie komunikujace sie z systemem BMS i uwzgledniajace obecnosc uzytkownikow.",
+      "energy_significance_pl": "Jedna z najbardziej oplacalnych uslug — indywidualna regulacja pomieszczen i detekcja obecnosci ograniczaja przegrzewanie i eliminuja grzanie pustych stref, dajac typowo kilkanascie procent oszczednosci na ogrzewaniu.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control",
+          "practical_description_pl": "Brak automatyki — zawory reczne, temperatura ustawiana recznie; sterowanie tylko przez uzytkownika."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Central automatic control (e.g. central thermostat)",
+          "practical_description_pl": "Jeden termostat centralny dla calego budynku/strefy — brak roznicowania pomieszczen."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Individual room control (e.g. thermostatic valves, or electronic controller)",
+          "practical_description_pl": "Indywidualna regulacja pomieszczen (glowice termostatyczne lub sterowniki elektroniczne) — kazde pomieszczenie trzyma wlasna temperature."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Individual room control with communication between controllers and to BACS",
+          "practical_description_pl": "Indywidualna regulacja z komunikacja miedzy sterownikami i z BMS — harmonogramy, zdalna zmiana nastaw, koordynacja stref."
+        },
+        {
+          "level": 4,
+          "official_description_en": "Individual room control with communication and occupancy detection",
+          "practical_description_pl": "Jak poziom 3 plus detekcja obecnosci — automatyczne obnizanie temperatury w nieuzywanych pomieszczeniach."
+        }
+      ],
+      "technologies": [
+        "KNX",
+        "Loxone",
+        "Modbus",
+        "bezprzewodowe glowice (Zigbee/EnOcean)",
+        "termostaty komunikacyjne",
+        "integracja z BMS/BACS"
+      ],
+      "devices": [
+        "glowice termostatyczne elektroniczne",
+        "termostaty pokojowe",
+        "sterowniki stref ogrzewania podlogowego (listwy)",
+        "czujniki temperatury i obecnosci",
+        "sterowniki pomieszczeniowe KNX/Loxone"
+      ],
+      "audit_verification": [
+        "Sprawdz, czy pomieszczenia maja niezalezne zadawanie temperatury (glowice/termostaty).",
+        "Zapytaj, czy istnieja harmonogramy dobowe/tygodniowe i gdzie sa konfigurowane.",
+        "Sprawdz w systemie, czy sterowniki komunikuja sie z BMS (widocznosc nastaw i temperatur).",
+        "Zweryfikuj obecnosc czujnikow obecnosci powiazanych z ogrzewaniem (poziom 4)."
+      ],
+      "evidence": [
+        "zrzuty ekranu z BMS z nastawami per pomieszczenie",
+        "lista punktow (I/O) w sterowniku",
+        "schemat instalacji AKPiA",
+        "zdjecia glowic/termostatow z modelami",
+        "projekt automatyki / DTR"
+      ],
+      "common_mistakes": [
+        "Czujnik temperatury zamontowany w zlym miejscu (nad grzejnikiem, w przeciagu, na scianie zewnetrznej).",
+        "Glowice ustawione na sztywno lub zdemontowane przez uzytkownikow.",
+        "Brak realnych harmonogramow — system dziala 24/7 na jednej nastawie.",
+        "Detekcja obecnosci deklarowana, ale niepodlaczona do logiki grzania."
+      ],
+      "limitations": [
+        "bezwladnosc ogrzewania podlogowego ogranicza skutecznosc szybkich zmian nastaw",
+        "w TABS stosuje sie osobna usluge H-1b (triage)",
+        "stare instalacje jednorurowe utrudniaja indywidualna regulacje"
+      ],
+      "dependencies": [
+        "H-1c (temperatura zasilania)",
+        "H-2a/H-2b (zrodlo ciepla)",
+        "MC-3 (harmonogramy/run-time)",
+        "DE-2 (blokada grzania przy otwartym oknie)"
+      ],
+      "cross_domain_impact": [
+        "chlodzenie (C-1f: blokada jednoczesnego grzania i chlodzenia)",
+        "wentylacja (koordynacja komfortu cieplnego)",
+        "monitoring (MC-30: optymalizacja wg obecnosci/pogody)"
+      ],
+      "modernization": [
+        "wymiana glowic recznych na elektroniczne komunikacyjne",
+        "dodanie czujnikow obecnosci w salach konferencyjnych/biurach",
+        "integracja termostatow z BMS i wprowadzenie harmonogramow",
+        "strefowanie ogrzewania podlogowego"
+      ],
+      "examples": [
+        "biuro z glowicami KNX i harmonogramem pracy 7-18",
+        "mieszkanie z termostatami pokojowymi Loxone i detekcja obecnosci",
+        "szkola z obnizaniem temperatury w salach poza planem lekcji"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "H-1b",
+      "internal_code": "H-02",
+      "domain_code": "heating",
+      "service_group_en": "Heat control - demand side",
+      "official_name_en": "Emission control for TABS (heating mode)",
+      "official_name_pl": "Sterowanie emisją dla TABS",
+      "included_in_method_a": false,
+      "fl_max": 3,
+      "friendly_name_pl": "Sterowanie ogrzewaniem plaszczyznowym TABS",
+      "purpose_pl": "Regulacja ogrzewania aktywowanego termicznie w konstrukcji budynku (betonowe rdzenie/stropy) tak, aby wykorzystac bezwladnosc masy do stabilnego, taniego ogrzewania.",
+      "technical_description_pl": "Sterowanie ukladami TABS (thermally activated building systems) — ogrzewanie zatopione w stropach/scianach. Ze wzgledu na duza bezwladnosc reguluje sie glownie temperatura zasilania i harmonogramami z wyprzedzeniem, opcjonalnie z predykcja pogody.",
+      "energy_significance_pl": "TABS pozwala grzac woda o niskiej temperaturze i przesuwac pobor energii w czasie (magazyn ciepla w masie), co sprzyja pompom ciepla i taryfom nocnym oraz obniza szczyty mocy.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control",
+          "practical_description_pl": "Brak automatyki — reczne lub stalotemperaturowe zasilanie TABS."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Central automatic control",
+          "practical_description_pl": "Centralne sterowanie automatyczne (np. wg krzywej grzewczej/harmonogramu)."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Advanced central automatic control",
+          "practical_description_pl": "Sterowanie z uwzglednieniem stref lub warunkow wewnetrznych/zewnetrznych."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Advanced central automatic control with intermittent operation and/or room temperature feedback control",
+          "practical_description_pl": "Zaawansowane sterowanie predykcyjne (pogoda, oblozenie) wykorzystujace bezwladnosc masy."
+        }
+      ],
+      "technologies": [
+        "sterowniki BMS z krzywa grzewcza",
+        "regulacja predykcyjna (pogoda)",
+        "Modbus/BACnet",
+        "zawory mieszajace z silownikami"
+      ],
+      "devices": [
+        "zawory mieszajace 3-drogowe z silownikami",
+        "czujniki temperatury zasilania i pomieszczen",
+        "stacja pogodowa",
+        "sterownik strefy TABS"
+      ],
+      "audit_verification": [
+        "ustal, czy budynek ma TABS (stropy/sciany aktywowane termicznie)",
+        "sprawdz sposob regulacji temperatury zasilania i istnienie harmonogramow z wyprzedzeniem",
+        "zweryfikuj integracje z prognoza pogody (poziom 3)"
+      ],
+      "evidence": [
+        "projekt instalacji TABS",
+        "schemat wezla mieszajacego",
+        "konfiguracja krzywej grzewczej w BMS",
+        "trendy temperatur zasilania"
+      ],
+      "common_mistakes": [
+        "sterowanie TABS jak zwyklym ogrzewaniem (za szybkie zmiany nastaw)",
+        "brak wyprzedzenia czasowego wzgledem oblozenia",
+        "jednoczesne grzanie TABS i doziebianie tej samej strefy"
+      ],
+      "limitations": [
+        "bardzo duza bezwladnosc — reakcja liczona w godzinach",
+        "trudna szybka korekta komfortu",
+        "wystepuje tylko w budynkach z TABS (triage wzgledem H-1a)"
+      ],
+      "dependencies": [
+        "H-1c (temperatura zasilania)",
+        "C-1b (TABS w trybie chlodzenia)",
+        "C-1f (blokada grzanie/chlodzenie)",
+        "MC-30 (optymalizacja predykcyjna)"
+      ],
+      "cross_domain_impact": [
+        "chlodzenie (ten sam uklad TABS bywa wspoldzielony)",
+        "elastycznosc energetyczna (magazyn ciepla w masie budynku)"
+      ],
+      "modernization": [
+        "dodanie regulacji predykcyjnej wg pogody i oblozenia",
+        "rozdzielenie stref TABS",
+        "integracja z taryfami/sygnalami sieci"
+      ],
+      "examples": [
+        "biurowiec klasy A z aktywowanymi termicznie stropami i sterowaniem predykcyjnym",
+        "budynek uzytecznosci publicznej z TABS ladowanym noca"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "H-1c",
+      "internal_code": "H-03",
+      "domain_code": "heating",
+      "service_group_en": "Heat control - demand side",
+      "official_name_en": "Control of distribution fluid temperature (supply or return air flow or water flow) - Similar function can be applied to the control of direct electric heating networks",
+      "official_name_pl": "Sterowanie temperaturą medium w sieci grzewczej",
+      "included_in_method_a": true,
+      "fl_max": 2,
+      "friendly_name_pl": "Regulacja temperatury czynnika grzewczego",
+      "purpose_pl": "Dopasowanie temperatury wody/powietrza w instalacji do rzeczywistego zapotrzebowania budynku (kompensacja pogodowa), zamiast grzania stala, wysoka temperatura.",
+      "technical_description_pl": "Regulacja temperatury zasilania w oparciu o krzywa grzewcza (temperatura zewnetrzna) lub o zapotrzebowanie stref. Dotyczy tez sterowania bezposrednim ogrzewaniem elektrycznym.",
+      "energy_significance_pl": "Nizsza temperatura zasilania to mniejsze straty dystrybucji i wyzsza sprawnosc zrodel kondensacyjnych oraz pomp ciepla — jeden z podstawowych mechanizmow oszczednosci.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control",
+          "practical_description_pl": "Stala temperatura zasilania — brak dostosowania do warunkow."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Outside temperature compensated control",
+          "practical_description_pl": "Kompensacja wg temperatury zewnetrznej (krzywa grzewcza) lub prosty harmonogram."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Demand based control",
+          "practical_description_pl": "Regulacja wg zapotrzebowania (np. na podstawie sygnalow ze stref/zaworow), dynamiczne dostosowanie krzywej."
+        }
+      ],
+      "technologies": [
+        "regulacja pogodowa (krzywa grzewcza)",
+        "regulacja wg zadania stref",
+        "sterowniki wezlow cieplnych",
+        "Modbus/BACnet"
+      ],
+      "devices": [
+        "czujnik temperatury zewnetrznej",
+        "czujnik temperatury zasilania/powrotu",
+        "zawor mieszajacy z silownikiem",
+        "sterownik wezla"
+      ],
+      "audit_verification": [
+        "sprawdz, czy istnieje czujnik zewnetrzny i aktywna krzywa grzewcza",
+        "zweryfikuj, czy temperatura zasilania zmienia sie z pogoda (trendy)",
+        "ustal, czy regulacja reaguje na zapotrzebowanie stref (poziom 2)"
+      ],
+      "evidence": [
+        "konfiguracja krzywej grzewczej",
+        "trendy temperatur zasilania vs zewnetrznej",
+        "schemat wezla cieplnego"
+      ],
+      "common_mistakes": [
+        "zbyt wysoko ustawiona krzywa 'na zapas'",
+        "czujnik zewnetrzny w naslonecznionym/cieplym miejscu",
+        "brak korekty krzywej po termomodernizacji"
+      ],
+      "limitations": [
+        "skutecznosc zalezy od poprawnego zrownowazenia hydraulicznego",
+        "ograniczona przy wspoldzieleniu obiegow o roznych wymaganiach"
+      ],
+      "dependencies": [
+        "H-1a/H-1b (odbior ciepla w strefach)",
+        "H-1d (pompy obiegowe)",
+        "H-2a/H-2b (zrodlo)"
+      ],
+      "cross_domain_impact": [
+        "efektywnosc zrodla ciepla i pomp ciepla (wspolny efekt z domena elektrycznosci przy PC)"
+      ],
+      "modernization": [
+        "wdrozenie/optymalizacja krzywej grzewczej",
+        "obnizenie temperatury zasilania po dociepleniu",
+        "regulacja wg zapotrzebowania stref"
+      ],
+      "examples": [
+        "wezel cieplny z kompensacja pogodowa",
+        "instalacja z pompa ciepla i obnizona krzywa dla podlogowki"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "H-1d",
+      "internal_code": "H-04",
+      "domain_code": "heating",
+      "service_group_en": "Heat control - demand side",
+      "official_name_en": "Control of distribution pumps in networks",
+      "official_name_pl": "Sterowanie pompami obiegowymi w instalacji grzewczej",
+      "included_in_method_a": false,
+      "fl_max": 4,
+      "friendly_name_pl": "Sterowanie pompami obiegowymi ogrzewania",
+      "purpose_pl": "Ograniczenie energii elektrycznej pomp obiegowych przez dopasowanie ich pracy do rzeczywistego przeplywu wymaganego przez instalacje.",
+      "technical_description_pl": "Sterowanie pompami: od staloobrotowych zalacz/wylacz, przez pompy o zmiennej predkosci (falownik) ze stalym cisnieniem, po regulacje wg zmiennego cisnienia/przeplywu na podstawie zapotrzebowania.",
+      "energy_significance_pl": "Pompy o zmiennej predkosci sterowane wg zapotrzebowania zuzywaja wielokrotnie mniej energii niz pompy staloobrotowe pracujace ciagle — szybki zwrot z modernizacji.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control",
+          "practical_description_pl": "Pompa staloobrotowa pracujaca w sposob ciagly."
+        },
+        {
+          "level": 1,
+          "official_description_en": "On off control",
+          "practical_description_pl": "Zalaczanie/wylaczanie pompy wg zapotrzebowania (on/off)."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Multi-Stage control",
+          "practical_description_pl": "Pompa o zmiennej predkosci ze stala roznica cisnien."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Variable speed pump control (pump unit (internal) estimations)",
+          "practical_description_pl": "Pompa o zmiennej predkosci ze zmienna roznica cisnien (proporcjonalna)."
+        },
+        {
+          "level": 4,
+          "official_description_en": "Variable speed pump control (external demand signal)",
+          "practical_description_pl": "Regulacja wg rzeczywistego zapotrzebowania stref (sygnaly z zaworow/BMS)."
+        }
+      ],
+      "technologies": [
+        "pompy elektroniczne (falownik)",
+        "regulacja proporcjonalna cisnienia",
+        "sygnaly z zaworow strefowych",
+        "Modbus/analog 0-10V"
+      ],
+      "devices": [
+        "pompy obiegowe z regulacja predkosci",
+        "czujniki cisnienia/roznicy cisnien",
+        "przetworniki przeplywu",
+        "sterownik/BMS"
+      ],
+      "audit_verification": [
+        "sprawdz typ pomp (staloobrotowe vs elektroniczne)",
+        "ustal tryb regulacji (stale/zmienne cisnienie, wg zapotrzebowania)",
+        "zweryfikuj, czy pompa wylacza sie przy braku zapotrzebowania"
+      ],
+      "evidence": [
+        "tabliczki/DTR pomp",
+        "nastawy trybu pracy pompy",
+        "trendy poboru mocy/predkosci pompy"
+      ],
+      "common_mistakes": [
+        "pozostawienie pompy w trybie stalej predkosci",
+        "przewymiarowanie pomp",
+        "brak powiazania pracy pompy z zapotrzebowaniem stref"
+      ],
+      "limitations": [
+        "korzysc zalezy od zmiennosci obciazenia instalacji",
+        "wymaga poprawnego zrownowazenia hydraulicznego"
+      ],
+      "dependencies": [
+        "H-1a (odbior w strefach generuje zapotrzebowanie)",
+        "H-1c (temperatura zasilania)",
+        "H-3 (raportowanie pracy)"
+      ],
+      "cross_domain_impact": [
+        "elektrycznosc (redukcja poboru pomocniczej energii elektrycznej)"
+      ],
+      "modernization": [
+        "wymiana pomp staloobrotowych na elektroniczne",
+        "przejscie na regulacje proporcjonalna/wg zapotrzebowania",
+        "wylaczanie pomp poza sezonem/przy braku rozbioru"
+      ],
+      "examples": [
+        "kotlownia z pompami elektronicznymi ze zmiennym cisnieniem",
+        "instalacja ze sterowaniem pomp wg otwarcia zaworow strefowych"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "H-1f",
+      "internal_code": "H-05",
+      "domain_code": "heating",
+      "service_group_en": "Heat control - demand side",
+      "official_name_en": "Thermal Energy Storage (TES) for building heating (excluding TABS)",
+      "official_name_pl": "Sterowanie źródłem ciepła",
+      "included_in_method_a": false,
+      "fl_max": 3,
+      "friendly_name_pl": "Magazyn ciepla (bufor) dla ogrzewania",
+      "purpose_pl": "Gromadzenie ciepla w zasobniku, aby oddzielic prace zrodla od chwilowego zapotrzebowania — stabilizacja pracy, wykorzystanie tanszej energii i integracja OZE.",
+      "technical_description_pl": "Sterowanie ladowaniem/rozladowaniem bufora ciepla (poza TABS). Od braku sterowania, przez sterowanie wg harmonogramu/temperatury, po sterowanie uwzgledniajace sygnaly zewnetrzne (pogoda, taryfy, dostepnosc OZE).",
+      "energy_significance_pl": "Bufor pozwala pompie ciepla/kotlowi pracowac w optymalnym punkcie i przesuwac pobor energii na godziny tanie lub z nadwyzka PV, obnizajac koszty i szczyty mocy.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Continuous storage operation",
+          "practical_description_pl": "Brak magazynu lub brak sterowania jego ladowaniem."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Time-scheduled storage operation",
+          "practical_description_pl": "Sterowanie ladowaniem wg temperatury/harmonogramu."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Load prediction based storage operation",
+          "practical_description_pl": "Optymalizacja ladowania wg zapotrzebowania i warunkow (np. pogoda)."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Heat storage capable of flexible control through grid signals (e.g. DSM)",
+          "practical_description_pl": "Ladowanie sterowane sygnalami zewnetrznymi (taryfy/siec/OZE) — funkcja elastycznosci."
+        }
+      ],
+      "technologies": [
+        "zasobniki buforowe",
+        "sterowanie warstwowaniem (stratyfikacja)",
+        "integracja z taryfami/sygnalami sieci",
+        "sterowanie wg nadwyzki PV"
+      ],
+      "devices": [
+        "zasobnik buforowy",
+        "czujniki temperatury w warstwach zbiornika",
+        "zawory przelaczajace",
+        "sterownik/BMS"
+      ],
+      "audit_verification": [
+        "ustal obecnosc i pojemnosc bufora",
+        "sprawdz logike ladowania (harmonogram, temperatura, sygnaly zewnetrzne)",
+        "zweryfikuj powiazanie z PV/taryfami (poziom 3)"
+      ],
+      "evidence": [
+        "schemat hydrauliczny z buforem",
+        "konfiguracja logiki ladowania",
+        "trendy temperatur w zbiorniku"
+      ],
+      "common_mistakes": [
+        "zbyt maly lub zbyt duzy bufor",
+        "brak stratyfikacji (mieszanie warstw)",
+        "ladowanie w drogich godzinach szczytu"
+      ],
+      "limitations": [
+        "straty postojowe zbiornika",
+        "miejsce w kotlowni",
+        "korzysc zalezy od zmiennosci taryf/udzialu OZE"
+      ],
+      "dependencies": [
+        "H-2a/H-2b (zrodlo ciepla)",
+        "H-4 (elastycznosc/siec)",
+        "E-3 (magazyn energii elektrycznej — komplementarnosc)"
+      ],
+      "cross_domain_impact": [
+        "elektrycznosc (autokonsumpcja PV przez grzanie bufora)",
+        "elastycznosc energetyczna"
+      ],
+      "modernization": [
+        "dodanie bufora do instalacji z pompa ciepla",
+        "sterowanie ladowaniem wg nadwyzki PV i taryf",
+        "poprawa stratyfikacji zbiornika"
+      ],
+      "examples": [
+        "dom z pompa ciepla i buforem ladowanym z PV",
+        "kotlownia z buforem ladowanym w taryfie nocnej"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "H-2a",
+      "internal_code": "H-06",
+      "domain_code": "heating",
+      "service_group_en": "Control heat production facilities",
+      "official_name_en": "Heat generator control (all except heat pumps)",
+      "official_name_pl": "Sterowanie wytwarzaniem ciepła (pompy ciepła)",
+      "included_in_method_a": true,
+      "fl_max": 2,
+      "friendly_name_pl": "Sterowanie zrodlem ciepla (poza pompami ciepla)",
+      "purpose_pl": "Regulacja pracy kotla/wymiennika tak, aby produkowal cieplo o odpowiedniej temperaturze i mocy zgodnie z zapotrzebowaniem, przy wysokiej sprawnosci.",
+      "technical_description_pl": "Sterowanie generatorem ciepla (kociol gazowy/olejowy, wezel cieplny) — od stalej temperatury, przez sterowanie zmienne zaleznie od obciazenia lub temperatury zewnetrznej.",
+      "energy_significance_pl": "Dostosowanie temperatury i mocy zrodla do potrzeb podnosi sprawnosc (zwlaszcza kondensacja) i ogranicza taktowanie oraz straty postojowe.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Constant temperature control",
+          "practical_description_pl": "Sterowanie stalotemperaturowe — zrodlo grzeje do stalej wartosci."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Variable temperature control depending on outdoor temperature",
+          "practical_description_pl": "Sterowanie zmienne wg temperatury zewnetrznej lub obciazenia."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Variable temperature control depending on the load (e.g. depending on supply water temperature set point)",
+          "practical_description_pl": "Sterowanie zmienne wg zapotrzebowania (sygnaly ze stref/BMS), optymalizacja punktu pracy."
+        }
+      ],
+      "technologies": [
+        "sterowniki kotlowe",
+        "regulacja pogodowa",
+        "modulacja mocy palnika",
+        "Modbus/OpenTherm/BACnet"
+      ],
+      "devices": [
+        "kociol z modulacja",
+        "sterownik kotla",
+        "czujniki temperatury zasilania i zewnetrznej",
+        "zawory mieszajace"
+      ],
+      "audit_verification": [
+        "ustal typ zrodla i sposob sterowania temperatura",
+        "sprawdz, czy dziala modulacja/kompensacja",
+        "zweryfikuj reakcje na zapotrzebowanie (poziom 2)"
+      ],
+      "evidence": [
+        "DTR/tabliczka kotla",
+        "nastawy sterownika kotlowego",
+        "trendy temperatur i modulacji"
+      ],
+      "common_mistakes": [
+        "kociol pracujacy na stalej, wysokiej temperaturze",
+        "brak kondensacji mimo kotla kondensacyjnego (za wysoki powrot)",
+        "taktowanie przez przewymiarowanie"
+      ],
+      "limitations": [
+        "ograniczenia zakresu modulacji starszych kotlow",
+        "wystepuje dla zrodel innych niz pompy ciepla (dla PC — H-2b)"
+      ],
+      "dependencies": [
+        "H-1c (temperatura zasilania)",
+        "H-2d (sekwencja wielu zrodel)",
+        "H-3 (raportowanie)"
+      ],
+      "cross_domain_impact": [
+        "CWU (wspoldzielenie zrodla — patrz DHW-1b/DHW-2b)"
+      ],
+      "modernization": [
+        "wymiana na kociol kondensacyjny z modulacja",
+        "wlaczenie kompensacji pogodowej",
+        "obnizenie temperatury powrotu dla kondensacji"
+      ],
+      "examples": [
+        "kotlownia gazowa z modulacja i regulacja pogodowa",
+        "wezel cieplny miejski ze sterowaniem wg zapotrzebowania"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "H-2b",
+      "internal_code": "H-07",
+      "domain_code": "heating",
+      "service_group_en": "Control heat production facilities",
+      "official_name_en": "Heat generator control (for heat pumps)",
+      "official_name_pl": "Sterowanie magazynem energii cieplnej (ogrzewanie)",
+      "included_in_method_a": true,
+      "fl_max": 3,
+      "friendly_name_pl": "Sterowanie pompa ciepla",
+      "purpose_pl": "Optymalna praca pompy ciepla tak, aby maksymalizowac wspolczynnik efektywnosci (COP/SCOP) przy pokryciu zapotrzebowania na cieplo.",
+      "technical_description_pl": "Sterowanie pompa ciepla z uwzglednieniem temperatury zasilania, warunkow zrodla dolnego i zapotrzebowania. Wyzsze poziomy obejmuja optymalizacje punktu pracy i wspolprace z buforem/OZE.",
+      "energy_significance_pl": "Kazdy stopien nizszej temperatury zasilania i unikanie taktowania znaczaco podnosi COP; inteligentne sterowanie PC to duze oszczednosci energii elektrycznej.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "On/Off-control of heat generator",
+          "practical_description_pl": "Brak sterowania optymalizujacego — praca staloparametrowa/on-off."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Multi-stage control of heat generator capacity depending on the load or demand (e.g. on/off of several compressors)",
+          "practical_description_pl": "Sterowanie wg temperatury zewnetrznej/obciazenia."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Variable control of heat generator capacity depending on the load or demand (e.g. hot gas bypass, inverter frequency control)",
+          "practical_description_pl": "Sterowanie wg zapotrzebowania z optymalizacja temperatury zasilania."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Variable control of heat generator capacity depending on the load AND external signals from grid",
+          "practical_description_pl": "Zaawansowana optymalizacja punktu pracy (COP), wspolpraca z buforem/OZE/taryfami."
+        }
+      ],
+      "technologies": [
+        "inwerterowe pompy ciepla",
+        "regulacja pogodowa",
+        "optymalizacja COP",
+        "integracja PV/bufor/taryfy",
+        "Modbus/SG-Ready"
+      ],
+      "devices": [
+        "pompa ciepla inwerterowa",
+        "czujniki temperatur (zasilanie, dolne zrodlo)",
+        "bufor",
+        "sterownik PC/BMS"
+      ],
+      "audit_verification": [
+        "ustal typ PC (inwerter/on-off) i logike sterowania",
+        "sprawdz temperature zasilania i jej dostosowanie",
+        "zweryfikuj wspolprace z PV/buforem/SG-Ready (poziom 3)"
+      ],
+      "evidence": [
+        "DTR pompy ciepla",
+        "nastawy sterownika PC",
+        "trendy COP/temperatur",
+        "konfiguracja SG-Ready/PV"
+      ],
+      "common_mistakes": [
+        "za wysoka temperatura zasilania (niski COP)",
+        "taktowanie przez brak bufora/przewymiarowanie",
+        "brak wykorzystania nadwyzek PV"
+      ],
+      "limitations": [
+        "COP zalezny od temperatury zrodla dolnego",
+        "ograniczenia mocy przy niskich temperaturach zewnetrznych"
+      ],
+      "dependencies": [
+        "H-1c (temperatura zasilania)",
+        "H-1f (bufor)",
+        "H-4 (elastycznosc)",
+        "E-4 (autokonsumpcja PV)"
+      ],
+      "cross_domain_impact": [
+        "elektrycznosc (PC jest duzym odbiornikiem — synergia z PV/magazynem)",
+        "elastycznosc energetyczna (SG-Ready)"
+      ],
+      "modernization": [
+        "obnizenie temperatury zasilania (wieksze grzejniki/podlogowka)",
+        "dodanie bufora i logiki PV",
+        "aktywacja SG-Ready/sterowania taryfowego"
+      ],
+      "examples": [
+        "dom z PC inwerterowa, buforem i sterowaniem wg PV",
+        "biurowiec z PC i optymalizacja COP w BMS"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "H-2d",
+      "internal_code": "H-08",
+      "domain_code": "heating",
+      "service_group_en": "Control heat production facilities",
+      "official_name_en": "Sequencing in case of different heat generators",
+      "official_name_pl": "Sekwencjonowanie wielu źródeł ciepła",
+      "included_in_method_a": false,
+      "fl_max": 4,
+      "friendly_name_pl": "Kaskada / sekwencja wielu zrodel ciepla",
+      "purpose_pl": "Optymalne zalaczanie kilku zrodel ciepla (np. pompa ciepla + kociol szczytowy) tak, aby priorytetyzowac najtansze/najbardziej sprawne zrodlo.",
+      "technical_description_pl": "Logika sekwencjonowania i priorytetow generatorow: dobor zrodla wg sprawnosci, kosztu, dostepnosci OZE i warunkow zewnetrznych; rownowazenie czasu pracy.",
+      "energy_significance_pl": "Wlasciwa kaskada maksymalizuje udzial taniego/OZE zrodla (np. PC) i uruchamia szczytowe tylko gdy konieczne, obnizajac koszt i emisje.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Priorities only based on running time",
+          "practical_description_pl": "Brak koordynacji — zrodla pracuja niezaleznie."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Control according to fixed priority list: e.g. based on rated energy efficiency",
+          "practical_description_pl": "Prosta sekwencja wg stalych priorytetow."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Control according to dynamic priority list (based on current energy efficiency, carbon emissions and capacity of generators, e.g. solar, geothermal heat, cogeneration plant, fossil fuels)",
+          "practical_description_pl": "Sekwencja wg obciazenia/sprawnosci."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Control according to dynamic priority list (based on current AND predicted load, energy efficiency, carbon emissions  and capacity of generators)",
+          "practical_description_pl": "Sekwencja z optymalizacja wg kosztu/warunkow (pogoda, OZE)."
+        },
+        {
+          "level": 4,
+          "official_description_en": "Control according to dynamic priority list (based on current AND predicted load, energy efficiency, carbon emissions, capacity of generators AND external signals from grid)",
+          "practical_description_pl": "Pelna optymalizacja predykcyjna z rownowazeniem pracy i sygnalami zewnetrznymi."
+        }
+      ],
+      "technologies": [
+        "menedzer kaskady/zrodel w BMS",
+        "optymalizacja kosztowa",
+        "predykcja pogody",
+        "Modbus/BACnet"
+      ],
+      "devices": [
+        "sterownik nadrzedny kaskady",
+        "liczniki ciepla/energii zrodel",
+        "czujniki temperatur",
+        "zawory przelaczajace"
+      ],
+      "audit_verification": [
+        "ustal liczbe i typy zrodel",
+        "sprawdz logike priorytetow i warunki przelaczania",
+        "zweryfikuj rownowazenie czasu pracy i kryteria kosztowe (wyzsze poziomy)"
+      ],
+      "evidence": [
+        "schemat zrodel i kaskady",
+        "konfiguracja priorytetow w BMS",
+        "trendy udzialu poszczegolnych zrodel"
+      ],
+      "common_mistakes": [
+        "staly priorytet nieuwzgledniajacy sprawnosci/kosztu",
+        "czeste przelaczanie (taktowanie zrodel)",
+        "kociol szczytowy zalaczany zbyt wczesnie"
+      ],
+      "limitations": [
+        "wymaga opomiarowania zrodel",
+        "zlozonosc rosnie z liczba generatorow"
+      ],
+      "dependencies": [
+        "H-2a/H-2b (poszczegolne zrodla)",
+        "H-1f (bufor jako element kaskady)",
+        "H-3 (raportowanie udzialu zrodel)"
+      ],
+      "cross_domain_impact": [
+        "elektrycznosc (priorytet PC wobec kotla)",
+        "elastycznosc energetyczna"
+      ],
+      "modernization": [
+        "wdrozenie menedzera kaskady z kryterium kosztowym",
+        "dodanie predykcji pogody",
+        "priorytet OZE/PC przed zrodlem szczytowym"
+      ],
+      "examples": [
+        "uklad hybrydowy PC + kociol gazowy z kaskada kosztowa",
+        "kotlownia z kilkoma kotlami i rownowazeniem motogodzin"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "H-3",
+      "internal_code": "H-09",
+      "domain_code": "heating",
+      "service_group_en": "Information to occupants and facility managers",
+      "official_name_en": "Report information regarding heating system performance",
+      "official_name_pl": "Elastyczność sterowania źródłem ciepła",
+      "included_in_method_a": true,
+      "fl_max": 4,
+      "friendly_name_pl": "Raportowanie pracy systemu grzewczego",
+      "purpose_pl": "Dostarczanie informacji o zuzyciu i sprawnosci ogrzewania, aby umozliwic monitoring, wykrywanie odchylen i swiadome decyzje eksploatacyjne.",
+      "technical_description_pl": "Zbieranie i prezentacja danych o pracy ogrzewania: zuzycie ciepla/energii, temperatury, czasy pracy, sprawnosc. Wyzsze poziomy obejmuja benchmarking, alarmy i analize trendow.",
+      "energy_significance_pl": "Bez pomiaru nie ma zarzadzania — raportowanie ujawnia marnotrawstwo, umozliwia optymalizacje nastaw i utrzymanie sprawnosci w czasie.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None",
+          "practical_description_pl": "Brak raportowania danych o ogrzewaniu."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Central or remote reporting of current performance KPIs (e.g. temperatures, submetering energy usage)",
+          "practical_description_pl": "Podstawowe informacje o aktualnym stanie (temperatury, praca)."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Central or remote reporting of current performance KPIs and historical data",
+          "practical_description_pl": "Rejestracja zuzycia i historii (trendy)."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Central or remote reporting of performance evaluation including forecasting and/or benchmarking",
+          "practical_description_pl": "Analiza/benchmark i sygnalizacja odchylen."
+        },
+        {
+          "level": 4,
+          "official_description_en": "Central or remote reporting of performance evaluation including forecasting and/or benchmarking; also including predictive management and fault detection",
+          "practical_description_pl": "Pelne raportowanie z ocena sprawnosci i wsparciem optymalizacji."
+        }
+      ],
+      "technologies": [
+        "liczniki ciepla",
+        "system trendow/historian",
+        "dashboardy energetyczne",
+        "M-Bus/Modbus/BACnet"
+      ],
+      "devices": [
+        "cieplomierze",
+        "liczniki energii elektrycznej zrodel",
+        "czujniki temperatur",
+        "brama/koncentrator danych"
+      ],
+      "audit_verification": [
+        "sprawdz, czy istnieja liczniki ciepla i czy dane sa archiwizowane",
+        "zweryfikuj dostepnosc trendow i raportow",
+        "ustal, czy sa alarmy odchylen (wyzsze poziomy)"
+      ],
+      "evidence": [
+        "zrzuty dashboardow zuzycia",
+        "eksport trendow/raportow",
+        "lista opomiarowania"
+      ],
+      "common_mistakes": [
+        "brak licznikow ciepla (tylko szacunki)",
+        "dane zbierane, ale nikt ich nie analizuje",
+        "brak jednostek odniesienia (kWh/m2)"
+      ],
+      "limitations": [
+        "jakosc raportu zalezy od opomiarowania",
+        "wymaga utrzymania systemu i kalibracji licznikow"
+      ],
+      "dependencies": [
+        "H-1d/H-2a/H-2b (zrodla danych)",
+        "MC-13 (centralne raportowanie TBS)",
+        "MC-4 (detekcja usterek)"
+      ],
+      "cross_domain_impact": [
+        "monitoring i sterowanie (dane zasilaja MC-13/MC-4)",
+        "efektywnosc calego budynku"
+      ],
+      "modernization": [
+        "montaz cieplomierzy i licznikow energii",
+        "wdrozenie dashboardu i alarmow odchylen",
+        "benchmarking wskaznikow kWh/m2"
+      ],
+      "examples": [
+        "kotlownia z cieplomierzami i dashboardem zuzycia",
+        "biurowiec z alarmami przekroczen zuzycia ciepla"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "H-4",
+      "internal_code": "H-10",
+      "domain_code": "heating",
+      "service_group_en": "Flexibility and grid interaction",
+      "official_name_en": "Flexibility and grid interaction",
+      "official_name_pl": "Raportowanie informacji o pracy ogrzewania",
+      "included_in_method_a": false,
+      "fl_max": 4,
+      "friendly_name_pl": "Elastycznosc ogrzewania i wspolpraca z siecia",
+      "purpose_pl": "Umozliwienie przesuwania poboru energii na ogrzewanie w czasie w odpowiedzi na sygnaly sieci/taryf, wspierajac stabilnosc systemu i obnizajac koszty.",
+      "technical_description_pl": "Reagowanie ogrzewania na sygnaly zewnetrzne (ceny, sygnaly DSM, dostepnosc OZE) poprzez sterowanie zrodlem, buforem i masa budynku. Od braku, przez sterowanie taryfowe, po automatyczna, dwukierunkowa wspolprace z siecia.",
+      "energy_significance_pl": "Elastycznosc obniza koszty (praca w tanich godzinach), zwieksza autokonsumpcje OZE i redukuje szczyty mocy — kryterium o wysokiej wadze w metodologii SRI.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control",
+          "practical_description_pl": "Brak reakcji na sygnaly zewnetrzne."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Scheduled operation of heating system",
+          "practical_description_pl": "Sterowanie wg staticznych taryf/harmonogramu cen."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Self-learning optimal control of heating system",
+          "practical_description_pl": "Reakcja na zmienne sygnaly cenowe/DSM (przesuwanie poboru)."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Heating system capable of flexible control through grid signals (e.g. DSM)",
+          "practical_description_pl": "Automatyczna wspolpraca z siecia z wykorzystaniem magazynu ciepla i predykcji."
+        },
+        {
+          "level": 4,
+          "official_description_en": "Optimized control of  heating system based on local predictions and grid signals (e.g. through model predictive control)",
+          "practical_description_pl": "Pelna, zoptymalizowana elastycznosc z rozliczaniem uslug sieciowych."
+        }
+      ],
+      "technologies": [
+        "SG-Ready",
+        "sterowanie taryfowe/cenowe",
+        "OpenADR/sygnaly DSM",
+        "predykcja pogody i cen",
+        "integracja bufor/PV"
+      ],
+      "devices": [
+        "sterownik elastycznosci/EMS",
+        "bufor ciepla",
+        "licznik dwukierunkowy",
+        "brama sygnalow sieci"
+      ],
+      "audit_verification": [
+        "ustal, czy ogrzewanie reaguje na taryfy/sygnaly sieci",
+        "sprawdz wykorzystanie bufora/masy do przesuwania poboru",
+        "zweryfikuj automatyzacje i rozliczenia uslug DSM (wyzsze poziomy)"
+      ],
+      "evidence": [
+        "konfiguracja SG-Ready/taryf w EMS",
+        "trendy poboru vs ceny/sygnaly",
+        "umowy/uslugi DSM"
+      ],
+      "common_mistakes": [
+        "deklarowany SG-Ready bez realnego podlaczenia sygnalu",
+        "brak magazynu ciepla ograniczajacy elastycznosc",
+        "sterowanie kolidujace z komfortem"
+      ],
+      "limitations": [
+        "wymaga zrodla/magazynu zdolnego do przesuniec",
+        "zalezy od dostepnosci sygnalow rynkowych/taryf"
+      ],
+      "dependencies": [
+        "H-1f (bufor)",
+        "H-2b (pompa ciepla SG-Ready)",
+        "E-3 (magazyn energii)",
+        "MC-25 (integracja smart grid)"
+      ],
+      "cross_domain_impact": [
+        "elektrycznosc (autokonsumpcja PV, redukcja szczytow)",
+        "monitoring (MC-25/MC-28/MC-29 DSM)"
+      ],
+      "modernization": [
+        "aktywacja SG-Ready i sterowania taryfowego",
+        "dodanie bufora dla przesuwania poboru",
+        "integracja z EMS i sygnalami sieci"
+      ],
+      "examples": [
+        "dom z PC SG-Ready ladujacy bufor w tanich godzinach",
+        "budynek z EMS przesuwajacym grzanie wg cen energii"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    }
+  ]
+}

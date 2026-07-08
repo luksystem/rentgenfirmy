@@ -1,0 +1,473 @@
+{
+  "domain_code": "domestic_hot_water",
+  "domain_name_pl": "Ciepla woda uzytkowa",
+  "service_count": 5,
+  "provenance": {
+    "official_fields": "VERIFIED_ANNEX_D",
+    "expert_fields": "EXPERT_AUTHORED"
+  },
+  "cards": [
+    {
+      "official_code": "DHW-1a",
+      "internal_code": "DHW-01",
+      "domain_code": "domestic_hot_water",
+      "service_group_en": "Control DHW production facilities",
+      "official_name_en": "Control of DHW storage charging (with direct electric heating or integrated electric heat pump)",
+      "official_name_pl": "Sterowanie ładowaniem zasobnika CWU (grzałka lub wbudowana pompa)",
+      "included_in_method_a": true,
+      "fl_max": 3,
+      "friendly_name_pl": "Sterowanie ladowaniem zasobnika CWU (grzalka / pompa ciepla)",
+      "purpose_pl": "Podgrzewanie zasobnika CWU z bezposredniego zrodla elektrycznego lub zintegrowanej pompy ciepla dokladnie wtedy, gdy jest to potrzebne i najtansze, z zachowaniem higieny.",
+      "technical_description_pl": "Regulacja ladowania zasobnika z grzalki elektrycznej lub wbudowanej pompy ciepla wg temperatury, harmonogramu i (na wyzszych poziomach) sygnalow zewnetrznych oraz nadwyzek PV.",
+      "energy_significance_pl": "CWU to znaczna czesc zuzycia energii; sterowanie czasem ladowania (taryfy, PV) i temperatura mocno obniza koszt bez utraty komfortu i bezpieczenstwa mikrobiologicznego.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Automatic control on / off",
+          "practical_description_pl": "Brak sterowania — ciagle utrzymywanie temperatury lub reczne zalaczanie."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Automatic control on / off and scheduled charging enable",
+          "practical_description_pl": "Sterowanie wg temperatury/harmonogramu."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Automatic control on / off and scheduled charging enable and multi-sensor storage management",
+          "practical_description_pl": "Optymalizacja ladowania wg zapotrzebowania i warunkow."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Automatic charging control based on local availability of renewables or information from electricity grid (DR, DSM)",
+          "practical_description_pl": "Ladowanie sterowane sygnalami zewnetrznymi (taryfy/PV) z funkcja elastycznosci."
+        }
+      ],
+      "technologies": [
+        "sterowanie taryfowe",
+        "integracja z nadwyzka PV",
+        "programy antylegionella",
+        "SG-Ready dla PC"
+      ],
+      "devices": [
+        "zasobnik CWU z grzalka lub PC",
+        "czujniki temperatury zasobnika",
+        "sterownik/BMS",
+        "licznik energii"
+      ],
+      "audit_verification": [
+        "ustal zrodlo ladowania (grzalka/PC)",
+        "sprawdz harmonogram i logike temperatur",
+        "zweryfikuj wykorzystanie taryf/PV i program antylegionella"
+      ],
+      "evidence": [
+        "nastawy sterownika CWU",
+        "trendy temperatur zasobnika",
+        "konfiguracja PV/taryf",
+        "log programu antylegionella"
+      ],
+      "common_mistakes": [
+        "ciagle grzanie zasobnika 24/7",
+        "ladowanie w godzinach szczytu",
+        "pominiecie cyklu antylegionella"
+      ],
+      "limitations": [
+        "straty postojowe zasobnika",
+        "kompromis komfort/higiena vs oszczednosci",
+        "moc grzalki obciaza siec elektryczna"
+      ],
+      "dependencies": [
+        "DHW-2b (sekwencja zrodel)",
+        "DHW-3 (raportowanie)",
+        "E-4 (autokonsumpcja PV)",
+        "H-2b (wspolna PC)"
+      ],
+      "cross_domain_impact": [
+        "elektrycznosc (grzalka/PC to duzy odbiornik — synergia z PV/magazynem)",
+        "elastycznosc energetyczna"
+      ],
+      "modernization": [
+        "wprowadzenie ladowania wg taryf i nadwyzki PV",
+        "obnizenie temperatury utrzymania z zachowaniem antylegionella",
+        "wymiana na zasobnik z PC"
+      ],
+      "examples": [
+        "dom z zasobnikiem CWU ladowanym z nadwyzki PV",
+        "budynek z grzalka sterowana taryfa nocna i cyklem antylegionella"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "DHW-1b",
+      "internal_code": "DHW-02",
+      "domain_code": "domestic_hot_water",
+      "service_group_en": "Control DHW production facilities",
+      "official_name_en": "Control of DHW storage charging (using hot water generation)",
+      "official_name_pl": "Sterowanie ładowaniem zasobnika CWU (wytwarzanie ciepłej wody)",
+      "included_in_method_a": true,
+      "fl_max": 3,
+      "friendly_name_pl": "Sterowanie ladowaniem zasobnika CWU (z kotla/wezla)",
+      "purpose_pl": "Efektywne ladowanie zasobnika CWU z zrodla produkcji ciepla (kociol, wezel, PC hydrauliczna) przy zachowaniu komfortu i higieny.",
+      "technical_description_pl": "Regulacja ladowania zasobnika CWU zasilanego z generatora ciepla — sterowanie temperatura, priorytetem CWU wzgledem ogrzewania i harmonogramem; wyzsze poziomy wg zapotrzebowania i sygnalow.",
+      "energy_significance_pl": "Priorytetyzacja i wlasciwe temperatury ladowania ograniczaja straty i pozwalaja zrodlu pracowac sprawnie; sterowanie czasem obniza koszty.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Automatic control on / off",
+          "practical_description_pl": "Brak sterowania — stale utrzymywanie temperatury."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Automatic control on / off and scheduled charging enable",
+          "practical_description_pl": "Sterowanie wg temperatury/harmonogramu z priorytetem CWU."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Automatic on/off control, scheduled charging enable and demand-based supply temperature control or multi-sensor storage management",
+          "practical_description_pl": "Optymalizacja wg zapotrzebowania i warunkow pracy zrodla."
+        },
+        {
+          "level": 3,
+          "official_description_en": "DHW production system capable of automatic charging control based on external signals (e.g. from district heating grid)",
+          "practical_description_pl": "Ladowanie sterowane sygnalami zewnetrznymi (taryfy/OZE) — elastycznosc."
+        }
+      ],
+      "technologies": [
+        "priorytet CWU w sterowniku zrodla",
+        "zawory przelaczajace CWU/CO",
+        "sterowanie taryfowe",
+        "programy antylegionella"
+      ],
+      "devices": [
+        "zasobnik CWU",
+        "zawor przelaczajacy (priorytet)",
+        "czujniki temperatury zasobnika",
+        "sterownik zrodla/BMS"
+      ],
+      "audit_verification": [
+        "sprawdz logike priorytetu CWU wzgledem ogrzewania",
+        "ustal harmonogram i temperatury ladowania",
+        "zweryfikuj antylegionella i sterowanie taryfami (wyzsze poziomy)"
+      ],
+      "evidence": [
+        "schemat hydrauliczny z priorytetem CWU",
+        "nastawy sterownika",
+        "trendy temperatur"
+      ],
+      "common_mistakes": [
+        "brak priorytetu CWU (dlugie ladowanie kosztem CO)",
+        "za wysoka temperatura ladowania",
+        "grzanie w szczycie"
+      ],
+      "limitations": [
+        "straty postojowe zasobnika",
+        "wspoldzielenie zrodla z ogrzewaniem",
+        "bezwladnosc ladowania"
+      ],
+      "dependencies": [
+        "H-2a/H-2b (zrodlo)",
+        "DHW-2b (sekwencja zrodel)",
+        "DHW-3 (raportowanie)"
+      ],
+      "cross_domain_impact": [
+        "ogrzewanie (wspoldzielone zrodlo i sterowanie priorytetem)"
+      ],
+      "modernization": [
+        "wdrozenie priorytetu CWU i harmonogramow",
+        "sterowanie ladowaniem wg taryf",
+        "izolacja zasobnika i obiegow"
+      ],
+      "examples": [
+        "kotlownia z zasobnikiem CWU i priorytetem cieplej wody",
+        "wezel cieplny z ladowaniem CWU wg harmonogramu"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "DHW-1d",
+      "internal_code": "DHW-03",
+      "domain_code": "domestic_hot_water",
+      "service_group_en": "Control DHW production facilities",
+      "official_name_en": "Control of DHW storage charging (with solar collector and supplymentary heat generation)",
+      "official_name_pl": "Sterowanie ładowaniem CWU (kolektor słoneczny + źródło uzupełniające)",
+      "included_in_method_a": false,
+      "fl_max": 3,
+      "friendly_name_pl": "Sterowanie CWU z kolektorem slonecznym i dogrzewaniem",
+      "purpose_pl": "Maksymalne wykorzystanie ciepla ze slonca do przygotowania CWU, z inteligentnym dogrzewaniem tylko wtedy, gdy energia sloneczna nie wystarcza.",
+      "technical_description_pl": "Sterowanie ukladem solarnym (kolektory) z zasobnikiem i zrodlem dogrzewajacym — priorytet dla energii solarnej, sterowanie pompa solarna i logika dogrzewania wg prognozy/uzytkowania.",
+      "energy_significance_pl": "Priorytet solarny minimalizuje uzycie zrodla konwencjonalnego; inteligentne dogrzewanie unika niepotrzebnego grzania, gdy zapowiada sie naslonecznienie.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Manual selected control of solar energy or heat generation",
+          "practical_description_pl": "Brak sterowania koordynujacego solar i dogrzewanie."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Automatic control of solar storage charge (Prio. 1) and supplementary storage charge",
+          "practical_description_pl": "Podstawowe sterowanie pompa solarna wg roznicy temperatur."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Automatic control of solar storage charge (Prio. 1) and supplementary storage charge and demand-oriented supply or multi-sensor storage management",
+          "practical_description_pl": "Koordynacja solar + dogrzewanie wg zapotrzebowania."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Automatic control of solar storage charge (Prio. 1) and supplementary storage charge, demand-oriented supply and return temperature control and multi-sensor storage management",
+          "practical_description_pl": "Optymalizacja z prognoza naslonecznienia/uzycia — minimalizacja dogrzewania."
+        }
+      ],
+      "technologies": [
+        "regulator solarny roznicowy",
+        "prognoza naslonecznienia",
+        "logika priorytetu solarnego",
+        "sterowanie dogrzewaniem"
+      ],
+      "devices": [
+        "kolektory sloneczne",
+        "pompa solarna",
+        "czujniki temperatury kolektora i zasobnika",
+        "zasobnik biwalentny",
+        "sterownik solarny"
+      ],
+      "audit_verification": [
+        "ustal obecnosc kolektorow i logike pompy solarnej",
+        "sprawdz priorytet solarny wzgledem dogrzewania",
+        "zweryfikuj wykorzystanie prognozy (poziom 3)"
+      ],
+      "evidence": [
+        "schemat instalacji solarnej",
+        "nastawy regulatora solarnego",
+        "trendy uzysku solarnego"
+      ],
+      "common_mistakes": [
+        "dogrzewanie zasobnika rano mimo zapowiadanego slonca",
+        "zle rozmieszczone czujniki w zasobniku biwalentnym",
+        "brak ochrony przed przegrzewem/stagnacja"
+      ],
+      "limitations": [
+        "zaleznosc od pogody",
+        "wymagany zasobnik biwalentny",
+        "sezonowa zmiennosc uzysku"
+      ],
+      "dependencies": [
+        "DHW-1b (dogrzewanie z kotla)",
+        "DHW-2b (sekwencja)",
+        "DHW-3 (raportowanie uzysku)"
+      ],
+      "cross_domain_impact": [
+        "elektrycznosc/OZE (komplementarnosc z PV)",
+        "ogrzewanie (wspolne zrodlo dogrzewania)"
+      ],
+      "modernization": [
+        "dodanie prognozowego sterowania dogrzewaniem",
+        "optymalizacja rozmieszczenia czujnikow",
+        "integracja z BMS i raportowaniem uzysku"
+      ],
+      "examples": [
+        "dom z kolektorami i zasobnikiem biwalentnym ze sterowaniem prognozowym",
+        "hotel z instalacja solarna CWU i dogrzewaniem gazowym"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "DHW-2b",
+      "internal_code": "DHW-04",
+      "domain_code": "domestic_hot_water",
+      "service_group_en": "Control DHW production facilities",
+      "official_name_en": "Sequencing in case of different DHW generators",
+      "official_name_pl": "Sekwencjonowanie wielu generatorów CWU",
+      "included_in_method_a": false,
+      "fl_max": 4,
+      "friendly_name_pl": "Kaskada / sekwencja zrodel CWU",
+      "purpose_pl": "Optymalny dobor i kolejnosc zrodel przygotowania CWU (np. PC + grzalka + kolektor) dla najnizszego kosztu i wysokiej sprawnosci.",
+      "technical_description_pl": "Logika sekwencjonowania kilku generatorow CWU wg sprawnosci, kosztu i dostepnosci OZE, z rownowazeniem czasu pracy i priorytetem zrodel taniej energii.",
+      "energy_significance_pl": "Wlasciwa kolejnosc zrodel (najpierw solar/PC, potem szczytowe) maksymalizuje udzial taniej energii i obniza koszt CWU.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Priorities only based on running time",
+          "practical_description_pl": "Brak koordynacji zrodel CWU."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Control according to fixed priority list: e.g. based on rated energy efficiency",
+          "practical_description_pl": "Prosta sekwencja wg stalych priorytetow."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Control according to dynamic priority list (based on current energy efficiency, carbon emissions and capacity of generators, e.g. solar, geothermal heat, cogeneration plant, fossil fuels)",
+          "practical_description_pl": "Sekwencja wg obciazenia/sprawnosci."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Control according to dynamic priority list (based on current AND predicted load, energy efficiency, carbon emissions  and capacity of generators)",
+          "practical_description_pl": "Sekwencja z kryterium kosztu/warunkow."
+        },
+        {
+          "level": 4,
+          "official_description_en": "Control according to dynamic priority list (based on current AND predicted load, energy efficiency, carbon emissions, capacity of generators AND external signals from grid)",
+          "practical_description_pl": "Pelna optymalizacja predykcyjna z rownowazeniem pracy."
+        }
+      ],
+      "technologies": [
+        "menedzer zrodel CWU w BMS",
+        "optymalizacja kosztowa",
+        "integracja solar/PC/grzalka"
+      ],
+      "devices": [
+        "sterownik nadrzedny CWU",
+        "liczniki energii zrodel",
+        "zawory przelaczajace",
+        "czujniki temperatur"
+      ],
+      "audit_verification": [
+        "ustal liczbe/typy zrodel CWU",
+        "sprawdz logike priorytetow i warunki przelaczania",
+        "zweryfikuj kryteria kosztowe i rownowazenie (wyzsze poziomy)"
+      ],
+      "evidence": [
+        "schemat zrodel CWU",
+        "konfiguracja priorytetow",
+        "trendy udzialu zrodel"
+      ],
+      "common_mistakes": [
+        "staly priorytet ignorujacy koszt",
+        "czeste przelaczanie zrodel",
+        "grzalka jako pierwsze zrodlo zamiast ostatniego"
+      ],
+      "limitations": [
+        "wymaga opomiarowania zrodel",
+        "zlozonosc przy wielu generatorach"
+      ],
+      "dependencies": [
+        "DHW-1a/DHW-1b/DHW-1d (poszczegolne zrodla)",
+        "DHW-3 (raportowanie)"
+      ],
+      "cross_domain_impact": [
+        "elektrycznosc (priorytet PC/PV nad grzalka)",
+        "elastycznosc energetyczna"
+      ],
+      "modernization": [
+        "wdrozenie menedzera zrodel z kryterium kosztu",
+        "priorytet OZE/PC przed grzalka",
+        "rownowazenie motogodzin"
+      ],
+      "examples": [
+        "uklad CWU: kolektor + PC + grzalka szczytowa z kaskada kosztowa",
+        "hotel z kilkoma podgrzewaczami i sekwencja wg sprawnosci"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "DHW-3",
+      "internal_code": "DHW-05",
+      "domain_code": "domestic_hot_water",
+      "service_group_en": "Information to occupants and facility managers",
+      "official_name_en": "Report information regarding domestic hot water performance",
+      "official_name_pl": "Raportowanie informacji o pracy instalacji CWU",
+      "included_in_method_a": true,
+      "fl_max": 4,
+      "friendly_name_pl": "Raportowanie pracy systemu CWU",
+      "purpose_pl": "Dostarczanie danych o zuzyciu i sprawnosci przygotowania CWU dla monitoringu, wykrywania strat (np. cyrkulacji) i optymalizacji.",
+      "technical_description_pl": "Zbieranie i prezentacja danych CWU: zuzycie energii/wody, temperatury, uzysk solarny, straty cyrkulacji; wyzsze poziomy z benchmarkiem i alarmami.",
+      "energy_significance_pl": "Ujawnia ukryte straty (np. przewymiarowana cyrkulacja, przegrzewanie) i umozliwia korekte nastaw — czesto szybkie, bezkosztowe oszczednosci.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None",
+          "practical_description_pl": "Brak raportowania CWU."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Indication of actual values (e.g. temperatures, submetering energy usage)",
+          "practical_description_pl": "Podstawowe informacje o stanie (temperatury)."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Actual values and historical data",
+          "practical_description_pl": "Rejestracja zuzycia i historii."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Performance evaluation including forecasting and/or benchmarking",
+          "practical_description_pl": "Analiza/benchmark i sygnalizacja odchylen."
+        },
+        {
+          "level": 4,
+          "official_description_en": "Performance evaluation including forecasting and/or benchmarking; also including predictive management and fault detection",
+          "practical_description_pl": "Pelne raportowanie ze sprawnoscia i wsparciem optymalizacji."
+        }
+      ],
+      "technologies": [
+        "liczniki ciepla/wody",
+        "historian/trendy",
+        "dashboardy",
+        "M-Bus/Modbus"
+      ],
+      "devices": [
+        "cieplomierze/wodomierze",
+        "czujniki temperatur (zasobnik, cyrkulacja)",
+        "koncentrator danych"
+      ],
+      "audit_verification": [
+        "sprawdz opomiarowanie CWU i archiwizacje danych",
+        "zweryfikuj dostepnosc trendow/raportow",
+        "ustal alarmy odchylen (wyzsze poziomy)"
+      ],
+      "evidence": [
+        "dashboardy zuzycia CWU",
+        "eksport trendow",
+        "lista opomiarowania"
+      ],
+      "common_mistakes": [
+        "brak licznikow (szacunki)",
+        "ignorowanie strat cyrkulacji",
+        "brak wskaznikow odniesienia"
+      ],
+      "limitations": [
+        "jakosc zalezy od opomiarowania",
+        "koniecznosc utrzymania/kalibracji"
+      ],
+      "dependencies": [
+        "DHW-1a/DHW-1b/DHW-1d (zrodla danych)",
+        "MC-13 (centralne raportowanie)",
+        "MC-4 (detekcja usterek)"
+      ],
+      "cross_domain_impact": [
+        "monitoring i sterowanie (dane do MC-13/MC-4)",
+        "gospodarka woda"
+      ],
+      "modernization": [
+        "montaz cieplomierzy/wodomierzy CWU",
+        "monitoring strat cyrkulacji",
+        "dashboard i alarmy odchylen"
+      ],
+      "examples": [
+        "hotel z monitoringiem zuzycia CWU i strat cyrkulacji",
+        "budynek z dashboardem uzysku solarnego CWU"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    }
+  ]
+}

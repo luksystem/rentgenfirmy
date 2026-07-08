@@ -1,0 +1,45 @@
+{
+  "source_version": "SRI calculation sheet v4.5",
+  "methodology_version": "eu-2020-2155-v1",
+  "legal_basis": "Delegated Regulation (EU) 2020/2155 + Implementing Regulation (EU) 2020/2156",
+  "import_date": "2026-07-08",
+  "importer_version": "1.0.0",
+  "import_hash_algo": "sha256",
+  "source_files": [
+    {
+      "filename": "SRI_calculation-sheet_v4.5.xlsx",
+      "role": "primary_dataset",
+      "size_bytes": 660869,
+      "sha256": "255e1e696a8da283ffdba0c37d902e1a0b78c5d75dcbbe275268ef1e55362da5"
+    },
+    {
+      "filename": "Practical Guide SRI calculation framework v4.5.pdf",
+      "role": "practical_guide",
+      "size_bytes": 1584800,
+      "sha256": "50027bb329c865a0cd3ccbc7bd26c409b3ed92bff216f3c2cdae68b7ac3c5f44"
+    }
+  ],
+  "import_hash": "255e1e696a8da283ffdba0c37d902e1a0b78c5d75dcbbe275268ef1e55362da5",
+  "source_checksum": "fea84a1931abb38c78e6ede524120c9c3527d8330407cbe5ff10e74f06ef95a4",
+  "source_checksum_scope": "canonical sha256 of normalized {services, impact_scores, domain_weights, impact_weights}",
+  "record_counts": {
+    "services_method_b": 54,
+    "services_method_a": 27,
+    "impact_score_rows": 228,
+    "domain_weight_rows": 630,
+    "impact_weight_rows": 14,
+    "class_bands": 7
+  },
+  "climate_zones": [
+    "north_east_europe",
+    "north_europe",
+    "south_east_europe",
+    "south_europe",
+    "west_europe"
+  ],
+  "building_types": [
+    "non_residential",
+    "residential"
+  ],
+  "notes": "Wyekstrahowane z oficjalnego arkusza KE. Pliki zrodlowe (Excel/PDF) nie sa w repo (T&C KE) - hashe pozwalaja zweryfikowac tozsamosc pliku przy nastepnym imporcie."
+}

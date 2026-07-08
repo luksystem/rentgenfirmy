@@ -1,0 +1,131 @@
+{
+  "total_services": 54,
+  "domains": [
+    {
+      "domain_code": "cooling",
+      "domain_name_pl": "Chlodzenie",
+      "service_count": 10,
+      "file": "cooling.json",
+      "services": [
+        "C-1a",
+        "C-1b",
+        "C-1c",
+        "C-1d",
+        "C-1f",
+        "C-1g",
+        "C-2a",
+        "C-2b",
+        "C-3",
+        "C-4"
+      ]
+    },
+    {
+      "domain_code": "domestic_hot_water",
+      "domain_name_pl": "Ciepla woda uzytkowa",
+      "service_count": 5,
+      "file": "domestic_hot_water.json",
+      "services": [
+        "DHW-1a",
+        "DHW-1b",
+        "DHW-1d",
+        "DHW-2b",
+        "DHW-3"
+      ]
+    },
+    {
+      "domain_code": "dynamic_building_envelope",
+      "domain_name_pl": "Dynamiczna powloka budynku",
+      "service_count": 3,
+      "file": "dynamic_building_envelope.json",
+      "services": [
+        "DE-1",
+        "DE-2",
+        "DE-4"
+      ]
+    },
+    {
+      "domain_code": "electric_vehicle_charging",
+      "domain_name_pl": "Ladowanie pojazdow elektrycznych",
+      "service_count": 3,
+      "file": "electric_vehicle_charging.json",
+      "services": [
+        "EV-15",
+        "EV-16",
+        "EV-17"
+      ]
+    },
+    {
+      "domain_code": "electricity",
+      "domain_name_pl": "Elektrycznosc",
+      "service_count": 7,
+      "file": "electricity.json",
+      "services": [
+        "E-11",
+        "E-12",
+        "E-2",
+        "E-3",
+        "E-4",
+        "E-5",
+        "E-8"
+      ]
+    },
+    {
+      "domain_code": "heating",
+      "domain_name_pl": "Ogrzewanie",
+      "service_count": 10,
+      "file": "heating.json",
+      "services": [
+        "H-1a",
+        "H-1b",
+        "H-1c",
+        "H-1d",
+        "H-1f",
+        "H-2a",
+        "H-2b",
+        "H-2d",
+        "H-3",
+        "H-4"
+      ]
+    },
+    {
+      "domain_code": "lighting",
+      "domain_name_pl": "Oswietlenie",
+      "service_count": 2,
+      "file": "lighting.json",
+      "services": [
+        "L-1a",
+        "L-2"
+      ]
+    },
+    {
+      "domain_code": "monitoring_and_control",
+      "domain_name_pl": "Monitorowanie i sterowanie",
+      "service_count": 8,
+      "file": "monitoring_and_control.json",
+      "services": [
+        "MC-13",
+        "MC-25",
+        "MC-28",
+        "MC-29",
+        "MC-3",
+        "MC-30",
+        "MC-4",
+        "MC-9"
+      ]
+    },
+    {
+      "domain_code": "ventilation",
+      "domain_name_pl": "Wentylacja",
+      "service_count": 6,
+      "file": "ventilation.json",
+      "services": [
+        "V-1a",
+        "V-1c",
+        "V-2c",
+        "V-2d",
+        "V-3",
+        "V-6"
+      ]
+    }
+  ]
+}

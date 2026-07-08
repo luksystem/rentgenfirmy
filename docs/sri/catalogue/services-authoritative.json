@@ -1,0 +1,2786 @@
+{
+  "catalogue_id": "eu-method-b-2020-v4.5",
+  "methodology_version": "eu-2020-2155-v1",
+  "source_version": "SRI calculation sheet v4.5",
+  "provenance": "VERIFIED_ANNEX_D",
+  "service_count": 54,
+  "services": [
+    {
+      "official_code": "H-1a",
+      "internal_code": "H-01",
+      "domain_code": "heating",
+      "sort_order": 1,
+      "official_name_en": "Heat emission control",
+      "official_name_pl": "Sterowanie emisją ciepła",
+      "service_group_en": "Heat control - demand side",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Triage: not relevant in case of TABS.",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Central automatic control (e.g. central thermostat)"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Individual room control (e.g. thermostatic valves, or electronic controller)"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Individual room control with communication between controllers and to BACS"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Individual room control with communication and occupancy detection"
+        }
+      ],
+      "purpose_en": "Regulate heat delivery to occupied spaces according to demand.",
+      "when_applicable_en": "When space heating emitters (radiators, floor heating, fan coils) are present.",
+      "typical_devices_en": [
+        "Room thermostats",
+        "TRVs",
+        "Floor heating manifolds",
+        "BMS room controllers"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1 — emission control"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "H-1b",
+      "internal_code": "H-02",
+      "domain_code": "heating",
+      "sort_order": 2,
+      "official_name_en": "Emission control for TABS (heating mode)",
+      "official_name_pl": "Sterowanie emisją dla TABS",
+      "service_group_en": "Heat control - demand side",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Triage: only relevant in case of TABS. Mostly restricted to non-residential buildings",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Central automatic control"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Advanced central automatic control"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Advanced central automatic control with intermittent operation and/or room temperature feedback control"
+        }
+      ],
+      "purpose_en": "Control thermally activated building structures for heating.",
+      "when_applicable_en": "When TABS (concrete core activation) is installed.",
+      "typical_devices_en": [
+        "TABS controllers",
+        "Supply temperature limiters"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "H-1c",
+      "internal_code": "H-03",
+      "domain_code": "heating",
+      "sort_order": 3,
+      "official_name_en": "Control of distribution fluid temperature (supply or return air flow or water flow) - Similar function can be applied to the control of direct electric heating networks",
+      "official_name_pl": "Sterowanie temperaturą medium w sieci grzewczej",
+      "service_group_en": "Heat control - demand side",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Not applicable in case of individual heaters (e.g. stoves)",
+      "fl_max": 2,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Outside temperature compensated control"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Demand based control"
+        }
+      ],
+      "purpose_en": "Match distribution temperature to building load (weather compensation).",
+      "when_applicable_en": "When hydronic or air heating distribution exists.",
+      "typical_devices_en": [
+        "Mixing valves",
+        "Boiler controllers",
+        "Outdoor sensors"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "H-1d",
+      "internal_code": "H-04",
+      "domain_code": "heating",
+      "sort_order": 4,
+      "official_name_en": "Control of distribution pumps in networks",
+      "official_name_pl": "Sterowanie pompami obiegowymi w instalacji grzewczej",
+      "service_group_en": "Heat control - demand side",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable for hydronic heating systems",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control"
+        },
+        {
+          "level": 1,
+          "official_description_en": "On off control"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Multi-Stage control"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Variable speed pump control (pump unit (internal) estimations)"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Variable speed pump control (external demand signal)"
+        }
+      ],
+      "purpose_en": "Optimize pump energy via speed or on/off control aligned with demand.",
+      "when_applicable_en": "When circulation pumps serve heating distribution.",
+      "typical_devices_en": [
+        "Variable speed drives",
+        "Pump controllers",
+        "BMS"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "H-1f",
+      "internal_code": "H-05",
+      "domain_code": "heating",
+      "sort_order": 5,
+      "official_name_en": "Thermal Energy Storage (TES) for building heating (excluding TABS)",
+      "official_name_pl": "Sterowanie źródłem ciepła",
+      "service_group_en": "Heat control - demand side",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case thermal energy storage is present.",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Continuous storage operation"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Time-scheduled storage operation"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Load prediction based storage operation"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Heat storage capable of flexible control through grid signals (e.g. DSM)"
+        }
+      ],
+      "purpose_en": "Modulate heat production to match building demand.",
+      "when_applicable_en": "When boilers, heat pumps or district heat substations are present.",
+      "typical_devices_en": [
+        "Boiler cascade controllers",
+        "Heat pump inverters",
+        "Substation controllers"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "H-2a",
+      "internal_code": "H-06",
+      "domain_code": "heating",
+      "sort_order": 6,
+      "official_name_en": "Heat generator control (all except heat pumps)",
+      "official_name_pl": "Sterowanie wytwarzaniem ciepła (pompy ciepła)",
+      "service_group_en": "Control heat production facilities",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case of combustion heater or district heating",
+      "fl_max": 2,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Constant temperature control"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Variable temperature control depending on outdoor temperature"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Variable temperature control depending on the load (e.g. depending on supply water temperature set point)"
+        }
+      ],
+      "purpose_en": "Advanced control of heat pump operation including bivalent and hybrid modes.",
+      "when_applicable_en": "When heat pumps provide space heating.",
+      "typical_devices_en": [
+        "HP outdoor unit controllers",
+        "BMS integration",
+        "Smart tariffs interface"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1",
+        "DG ENER study — extended FL for HP"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "H-2b",
+      "internal_code": "H-07",
+      "domain_code": "heating",
+      "sort_order": 7,
+      "official_name_en": "Heat generator control (for heat pumps)",
+      "official_name_pl": "Sterowanie magazynem energii cieplnej (ogrzewanie)",
+      "service_group_en": "Control heat production facilities",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case of heat pumps",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "On/Off-control of heat generator"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Multi-stage control of heat generator capacity depending on the load or demand (e.g. on/off of several compressors)"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Variable control of heat generator capacity depending on the load or demand (e.g. hot gas bypass, inverter frequency control)"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Variable control of heat generator capacity depending on the load AND external signals from grid"
+        }
+      ],
+      "purpose_en": "Charge/discharge thermal storage aligned with demand and tariffs.",
+      "when_applicable_en": "When buffer tanks or seasonal storage (excluding TABS) exist.",
+      "typical_devices_en": [
+        "Buffer tank controllers",
+        "TES charging logic"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "H-2d",
+      "internal_code": "H-08",
+      "domain_code": "heating",
+      "sort_order": 8,
+      "official_name_en": "Sequencing in case of different heat generators",
+      "official_name_pl": "Sekwencjonowanie wielu źródeł ciepła",
+      "service_group_en": "Control heat production facilities",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case of multiple heat generators, mostly restricted to large buildings",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Priorities only based on running time"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Control according to fixed priority list: e.g. based on rated energy efficiency"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Control according to dynamic priority list (based on current energy efficiency, carbon emissions and capacity of generators, e.g. solar, geothermal heat, cogeneration plant, fossil fuels)"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Control according to dynamic priority list (based on current AND predicted load, energy efficiency, carbon emissions  and capacity of generators)"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Control according to dynamic priority list (based on current AND predicted load, energy efficiency, carbon emissions, capacity of generators AND external signals from grid)"
+        }
+      ],
+      "purpose_en": "Optimally switch between multiple heat sources.",
+      "when_applicable_en": "When more than one heat generator is installed (mutually exclusive operation).",
+      "typical_devices_en": [
+        "Cascade controllers",
+        "BMS sequencing logic"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": "heat_generator_type",
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "H-3",
+      "internal_code": "H-09",
+      "domain_code": "heating",
+      "sort_order": 9,
+      "official_name_en": "Report information regarding heating system performance",
+      "official_name_pl": "Elastyczność sterowania źródłem ciepła",
+      "service_group_en": "Information to occupants and facility managers",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "0",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Central or remote reporting of current performance KPIs (e.g. temperatures, submetering energy usage)"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Central or remote reporting of current performance KPIs and historical data"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Central or remote reporting of performance evaluation including forecasting and/or benchmarking"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Central or remote reporting of performance evaluation including forecasting and/or benchmarking; also including predictive management and fault detection"
+        }
+      ],
+      "purpose_en": "Time-shift or remote control of heating for grid or tariff response.",
+      "when_applicable_en": "When heating can participate in demand response.",
+      "typical_devices_en": [
+        "Smart thermostats",
+        "BMS DSM modules",
+        "Grid signal interfaces"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "H-4",
+      "internal_code": "H-10",
+      "domain_code": "heating",
+      "sort_order": 10,
+      "official_name_en": "Flexibility and grid interaction",
+      "official_name_pl": "Raportowanie informacji o pracy ogrzewania",
+      "service_group_en": "Flexibility and grid interaction",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "The inspectability of the nature of the control algorithm would need to be facilitated",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Scheduled operation of heating system"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Self-learning optimal control of heating system"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Heating system capable of flexible control through grid signals (e.g. DSM)"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Optimized control of  heating system based on local predictions and grid signals (e.g. through model predictive control)"
+        }
+      ],
+      "purpose_en": "Inform occupants/operators about heating operation and status.",
+      "when_applicable_en": "When heating systems exist and reporting is feasible.",
+      "typical_devices_en": [
+        "BMS dashboards",
+        "Tenant apps",
+        "Energy portals"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "DHW-1a",
+      "internal_code": "DHW-01",
+      "domain_code": "domestic_hot_water",
+      "sort_order": 11,
+      "official_name_en": "Control of DHW storage charging (with direct electric heating or integrated electric heat pump)",
+      "official_name_pl": "Sterowanie ładowaniem zasobnika CWU (grzałka lub wbudowana pompa)",
+      "service_group_en": "Control DHW production facilities",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case of DHW storage with electric heating",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Automatic control on / off"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Automatic control on / off and scheduled charging enable"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Automatic control on / off and scheduled charging enable and multi-sensor storage management"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Automatic charging control based on local availability of renewables or information from electricity grid (DR, DSM)"
+        }
+      ],
+      "purpose_en": "Optimize DHW charging from electric resistance or integrated HP.",
+      "when_applicable_en": "When electric DHW storage or HP-integrated DHW exists.",
+      "typical_devices_en": [
+        "DHW cylinders",
+        "HP DHW modules",
+        "Smart timers"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "DHW-1b",
+      "internal_code": "DHW-02",
+      "domain_code": "domestic_hot_water",
+      "sort_order": 12,
+      "official_name_en": "Control of DHW storage charging (using hot water generation)",
+      "official_name_pl": "Sterowanie ładowaniem zasobnika CWU (wytwarzanie ciepłej wody)",
+      "service_group_en": "Control DHW production facilities",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case of DHW storage with non-electrical heat  generation",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Automatic control on / off"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Automatic control on / off and scheduled charging enable"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Automatic on/off control, scheduled charging enable and demand-based supply temperature control or multi-sensor storage management"
+        },
+        {
+          "level": 3,
+          "official_description_en": "DHW production system capable of automatic charging control based on external signals (e.g. from district heating grid)"
+        }
+      ],
+      "purpose_en": "Control DHW charging from boiler or central heat generator.",
+      "when_applicable_en": "When DHW is produced via boiler/central plant.",
+      "typical_devices_en": [
+        "DHW charging controllers",
+        "Boiler DHW circuits"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "DHW-1d",
+      "internal_code": "DHW-03",
+      "domain_code": "domestic_hot_water",
+      "sort_order": 13,
+      "official_name_en": "Control of DHW storage charging (with solar collector and supplymentary heat generation)",
+      "official_name_pl": "Sterowanie ładowaniem CWU (kolektor słoneczny + źródło uzupełniające)",
+      "service_group_en": "Control DHW production facilities",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case of DHW storage with solar collector",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Manual selected control of solar energy or heat generation"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Automatic control of solar storage charge (Prio. 1) and supplementary storage charge"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Automatic control of solar storage charge (Prio. 1) and supplementary storage charge and demand-oriented supply or multi-sensor storage management"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Automatic control of solar storage charge (Prio. 1) and supplementary storage charge, demand-oriented supply and return temperature control and multi-sensor storage management"
+        }
+      ],
+      "purpose_en": "Prioritize solar DHW with backup heat source control.",
+      "when_applicable_en": "When solar thermal DHW with backup exists.",
+      "typical_devices_en": [
+        "Solar controllers",
+        "Backup boiler interfaces"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "DHW-2b",
+      "internal_code": "DHW-04",
+      "domain_code": "domestic_hot_water",
+      "sort_order": 14,
+      "official_name_en": "Sequencing in case of different DHW generators",
+      "official_name_pl": "Sekwencjonowanie wielu generatorów CWU",
+      "service_group_en": "Control DHW production facilities",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case of multiple heat generators, mostly restricted to large buildings",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Priorities only based on running time"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Control according to fixed priority list: e.g. based on rated energy efficiency"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Control according to dynamic priority list (based on current energy efficiency, carbon emissions and capacity of generators, e.g. solar, geothermal heat, cogeneration plant, fossil fuels)"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Control according to dynamic priority list (based on current AND predicted load, energy efficiency, carbon emissions  and capacity of generators)"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Control according to dynamic priority list (based on current AND predicted load, energy efficiency, carbon emissions, capacity of generators AND external signals from grid)"
+        }
+      ],
+      "purpose_en": "Select optimal DHW generator among multiple sources.",
+      "when_applicable_en": "When multiple DHW generation paths exist.",
+      "typical_devices_en": [
+        "BMS sequencing",
+        "Multi-source DHW controllers"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "DHW-3",
+      "internal_code": "DHW-05",
+      "domain_code": "domestic_hot_water",
+      "sort_order": 15,
+      "official_name_en": "Report information regarding domestic hot water performance",
+      "official_name_pl": "Raportowanie informacji o pracy instalacji CWU",
+      "service_group_en": "Information to occupants and facility managers",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "0",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Indication of actual values (e.g. temperatures, submetering energy usage)"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Actual values and historical data"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Performance evaluation including forecasting and/or benchmarking"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Performance evaluation including forecasting and/or benchmarking; also including predictive management and fault detection"
+        }
+      ],
+      "purpose_en": "Report DHW temperatures, consumption and faults to users.",
+      "when_applicable_en": "When DHW system is present.",
+      "typical_devices_en": [
+        "BMS",
+        "Smart water heaters with app"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "C-1a",
+      "internal_code": "C-01",
+      "domain_code": "cooling",
+      "sort_order": 16,
+      "official_name_en": "Cooling emission control",
+      "official_name_pl": "Sterowanie emisją chłodu",
+      "service_group_en": "Cooling control - demand side",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case mechanical cooling systems are present",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Central automatic control"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Individual room control"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Individual room control with communication between controllers and to BACS"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Individual room control with communication and occupancy detection"
+        }
+      ],
+      "purpose_en": "Regulate cooling delivery to spaces based on demand.",
+      "when_applicable_en": "When cooling emitters (FCU, chilled ceilings, etc.) exist.",
+      "typical_devices_en": [
+        "Room cooling controllers",
+        "FCU valves",
+        "BMS"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "C-1b",
+      "internal_code": "C-02",
+      "domain_code": "cooling",
+      "sort_order": 17,
+      "official_name_en": "Emission control for TABS (cooling mode)",
+      "official_name_pl": "Sterowanie emisją TABS (tryb chłodzenia)",
+      "service_group_en": "Cooling control - demand side",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case mechanical cooling systems  based on TABS are present",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Central automatic control"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Advanced central automatic control"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Advanced central automatic control with intermittent operation and/or room temperature feedback control"
+        }
+      ],
+      "purpose_en": "Control TABS for cooling operation.",
+      "when_applicable_en": "When TABS used for cooling.",
+      "typical_devices_en": [
+        "TABS cooling controllers"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "C-1c",
+      "internal_code": "C-03",
+      "domain_code": "cooling",
+      "sort_order": 18,
+      "official_name_en": "Control of distribution network chilled water temperature (supply or return)",
+      "official_name_pl": "Sterowanie agregatem chłodu",
+      "service_group_en": "Cooling control - demand side",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case mechanical cooling systems  with hydronic distribution system are present",
+      "fl_max": 2,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Constant temperature control"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Outside temperature compensated control"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Demand based control"
+        }
+      ],
+      "purpose_en": "Modulate chillers/ cooling plant to match load.",
+      "when_applicable_en": "When mechanical cooling plant exists.",
+      "typical_devices_en": [
+        "Chiller controllers",
+        "VRF systems",
+        "Cooling towers"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "C-1d",
+      "internal_code": "C-04",
+      "domain_code": "cooling",
+      "sort_order": 19,
+      "official_name_en": "Control of distribution pumps in networks",
+      "official_name_pl": "Sterowanie temperaturą wody chłodniczej w sieci",
+      "service_group_en": "Cooling control - demand side",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case mechanical cooling systems  with hydronic distribution system are present",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control"
+        },
+        {
+          "level": 1,
+          "official_description_en": "On off control"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Multi-Stage control"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Variable speed pump control (pump unit (internal) estimations)"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Variable speed pump control (external demand signal)"
+        }
+      ],
+      "purpose_en": "Optimize supply/return chilled water temperature.",
+      "when_applicable_en": "When chilled water distribution exists.",
+      "typical_devices_en": [
+        "Primary/secondary pump skids",
+        "Reset controllers"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "C-1f",
+      "internal_code": "C-05",
+      "domain_code": "cooling",
+      "sort_order": 20,
+      "official_name_en": "Interlock: avoiding simultaneous heating and cooling in the same room",
+      "official_name_pl": "Sterowanie pompami w sieci chłodu",
+      "service_group_en": "Cooling control - demand side",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "Only applicable in case mechanical cooling systems are present",
+      "fl_max": 2,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No interlock"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Partial interlock (minimising risk of simultanieus heating and cooling e.g. by sliding setpoints)"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Total interlock (control system ensures no  simultaneous heating and cooling can take place)"
+        }
+      ],
+      "purpose_en": "Variable pumping aligned with cooling demand.",
+      "when_applicable_en": "When cooling circulation pumps exist.",
+      "typical_devices_en": [
+        "VSD pumps",
+        "BMS"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "C-1g",
+      "internal_code": "C-06",
+      "domain_code": "cooling",
+      "sort_order": 21,
+      "official_name_en": "Control of Thermal Energy Storage (TES) operation",
+      "official_name_pl": "Sterowanie magazynem energii cieplnej (chłodzenie)",
+      "service_group_en": "Cooling control - demand side",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case mechanical cooling systems are present ánd include TES systems",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Continuous storage operation"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Time-scheduled storage operation"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Load prediction based storage operation"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Cold storage capable of flexible control through grid signals (e.g. DSM)"
+        }
+      ],
+      "purpose_en": "Ice/water TES charging for load shifting.",
+      "when_applicable_en": "When cooling thermal storage is installed.",
+      "typical_devices_en": [
+        "Ice storage controllers",
+        "TES tanks"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "C-2a",
+      "internal_code": "C-07",
+      "domain_code": "cooling",
+      "sort_order": 22,
+      "official_name_en": "Generator control for cooling",
+      "official_name_pl": "Blokada jednoczesnego ogrzewania i chłodzenia w strefach",
+      "service_group_en": "Control cooling production facilities",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "Only applicable in case mechanical cooling systems are present",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "On/Off-control of cooling production"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Multi-stage control of  cooling production capacity depending on the load or demand (e.g. on/off of several compressors)"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Variable control of  cooling production capacity depending on the load or demand (e.g. hot gas bypass, inverter frequency control)"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Variable control of  cooling production capacity depending on the load AND external signals from grid"
+        }
+      ],
+      "purpose_en": "Avoid energy waste from concurrent heating/cooling.",
+      "when_applicable_en": "When both heating and cooling can serve same zones.",
+      "typical_devices_en": [
+        "BMS interlocks",
+        "Four-pipe system logic"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "C-2b",
+      "internal_code": "C-08",
+      "domain_code": "cooling",
+      "sort_order": 23,
+      "official_name_en": "Sequencing of different cooling generators",
+      "official_name_pl": "Sekwencjonowanie wielu źródeł chłodu",
+      "service_group_en": "Control cooling production facilities",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case multiple mechanical cooling systems are present",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Priorities only based on running times"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Fixed sequencing based on loads only: e.g. depending on the generators characteristics such as absorption chiller vs. centrifugal chiller"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Dynamic priorities based on generator efficiency and characteristics (e.g. availability of free cooling)"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Load prediction based sequencing: the sequence is based on e.g. COP and available power of a device and the predicted required power"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Sequencing based on dynamic priority list, including external signals from grid"
+        }
+      ],
+      "purpose_en": "Switch between chillers, free cooling, etc.",
+      "when_applicable_en": "When multiple cooling sources exist.",
+      "typical_devices_en": [
+        "Chiller sequencing controllers"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "C-3",
+      "internal_code": "C-09",
+      "domain_code": "cooling",
+      "sort_order": 24,
+      "official_name_en": "Report information regarding cooling system performance",
+      "official_name_pl": "Elastyczność sterowania chłodzeniem",
+      "service_group_en": "Information to occupants and facility managers",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "Only applicable in case mechanical cooling systems are present",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Central or remote reporting of current performance KPIs (e.g. temperatures, submetering energy usage)"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Central or remote reporting of current performance KPIs and historical data"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Central or remote reporting of performance evaluation including forecasting and/or benchmarking"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Central or remote reporting of performance evaluation including forecasting and/or benchmarking; also including predictive management and fault detection"
+        }
+      ],
+      "purpose_en": "Time-shift or remote cooling for DSM/grid signals.",
+      "when_applicable_en": "When cooling participates in demand response.",
+      "typical_devices_en": [
+        "BMS DSM",
+        "Smart AC interfaces"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "C-4",
+      "internal_code": "C-10",
+      "domain_code": "cooling",
+      "sort_order": 25,
+      "official_name_en": "Flexibility and grid interaction",
+      "official_name_pl": "Raportowanie informacji o pracy chłodzenia",
+      "service_group_en": "Flexibility and grid interaction",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "The inspectability of the nature of the control algorithm would need to be facilitated",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Scheduled operation of cooling system"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Self-learning optimal control of cooling system"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Cooling system capable of flexible control through grid signals (e.g. DSM)"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Optimized control of  cooling system based on local predictions and grid signals (e.g. through model predictive control)"
+        }
+      ],
+      "purpose_en": "Inform users about cooling operation and efficiency.",
+      "when_applicable_en": "When cooling systems exist.",
+      "typical_devices_en": [
+        "BMS dashboards",
+        "Monitoring portals"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "V-1a",
+      "internal_code": "V-01",
+      "domain_code": "ventilation",
+      "sort_order": 26,
+      "official_name_en": "Supply air flow control at the room level",
+      "official_name_pl": "Sterowanie przepływem powietrza nawiewanego w pomieszczeniu",
+      "service_group_en": "Air flow control",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "Always to be assessed",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No ventilation system or manual control"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Clock control"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Occupancy detection control"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Central Demand Control based on air quality sensors (CO2, VOC, humidity, ...)"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Local Demand Control based on air quality sensors (CO2, VOC,...) with local flow from/to the zone regulated by dampers"
+        }
+      ],
+      "purpose_en": "Adjust ventilation flow per room based on need.",
+      "when_applicable_en": "When room-level VAV or similar exists.",
+      "typical_devices_en": [
+        "VAV boxes",
+        "Room dampers",
+        "DCV valves"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "V-1c",
+      "internal_code": "V-02",
+      "domain_code": "ventilation",
+      "sort_order": 27,
+      "official_name_en": "Air flow or pressure control at the air handler level",
+      "official_name_pl": "Sterowanie przepływem/ciśnieniem na poziomie centrali wentylacyjnej",
+      "service_group_en": "Air flow control",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only in case of mechanical ventilation",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control: Continuously supplies of air flow for a maximum load of all rooms"
+        },
+        {
+          "level": 1,
+          "official_description_en": "On off time control: Continuously supplies of air flow for a maximum load of all rooms during nominal occupancy time"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Multi-stage control: To reduce the auxiliary energy demand of the fan"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Automatic flow or pressure control without pressure reset: Load dependent supplies of air flow for the demand of all connected rooms."
+        },
+        {
+          "level": 4,
+          "official_description_en": "Automatic flow or pressure control with pressure reset: Load dependent supplies of air flow for the demand of all connected rooms (for variable air volume systems with VFD)."
+        }
+      ],
+      "purpose_en": "Optimize AHU fan and duct pressure.",
+      "when_applicable_en": "When central AHU serves building.",
+      "typical_devices_en": [
+        "AHU controllers",
+        "VSD fans",
+        "Pressure sensors"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "V-2c",
+      "internal_code": "V-03",
+      "domain_code": "ventilation",
+      "sort_order": 28,
+      "official_name_en": "Heat recovery control:\nprevention of overheating",
+      "official_name_pl": "Sterowanie odzyskiem ciepła: zapobieganie przegrzewaniu",
+      "service_group_en": "Air temperature control",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only in case of mechanical ventilation with heat recovery",
+      "fl_max": 2,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Without overheating control"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Modulate or bypass heat recovery based on sensors in air exhaust"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Modulate or bypass heat recovery based on multiple room temperature sensors or predictive control"
+        }
+      ],
+      "purpose_en": "Protect heat recovery from summer overheating bypass.",
+      "when_applicable_en": "When HRU is installed.",
+      "typical_devices_en": [
+        "Rotary/plate HRU controllers",
+        "Bypass dampers"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "V-2d",
+      "internal_code": "V-04",
+      "domain_code": "ventilation",
+      "sort_order": 29,
+      "official_name_en": "Supply air temperature control at the air handling unit level",
+      "official_name_pl": "Sterowanie temperaturą powietrza nawiewanego w centrali",
+      "service_group_en": "Air temperature control",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only in case of mechanical ventilation which supplies heating",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Constant setpoint: A control loop enables to control the supply air_x000D_\ntemperature, the setpoint is constant and can only be modified by a manual_x000D_\naction"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Variable set point with outdoor temperature compensation"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Variable set point with load dependant compensation. A control loop enables to control the supply air temperature. The setpoint is defined as a function of the loads in the room"
+        }
+      ],
+      "purpose_en": "Condition supply air temperature efficiently.",
+      "when_applicable_en": "When AHU includes heating/cooling coils.",
+      "typical_devices_en": [
+        "AHU coil controllers",
+        "Mixing dampers"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "V-3",
+      "internal_code": "V-05",
+      "domain_code": "ventilation",
+      "sort_order": 30,
+      "official_name_en": "Free cooling with mechanical ventilation system",
+      "official_name_pl": "Free cooling z wykorzystaniem mechanicznej wentylacji",
+      "service_group_en": "Free cooling",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only in case of mechanical or hybrid ventilation",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No automatic control"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Night cooling"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Free cooling: air flows modulated during all periods of time to minimize the amount of mechanical_x000D_\ncooling"
+        },
+        {
+          "level": 3,
+          "official_description_en": "H,x- directed control: The amount of outside air and recirculation air are modulated during all periods of time to minimize the amount of mechanical cooling. Calculation is performed on the basis of temperatures and humidity\n(enthalpy)."
+        }
+      ],
+      "purpose_en": "Use outdoor air for cooling when conditions allow.",
+      "when_applicable_en": "When AHU supports economizer/free cooling.",
+      "typical_devices_en": [
+        "Economizer controls",
+        "Mixed-air dampers"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "V-6",
+      "internal_code": "V-06",
+      "domain_code": "ventilation",
+      "sort_order": 31,
+      "official_name_en": "Reporting information regarding IAQ",
+      "official_name_pl": "Monitorowanie jakości powietrza wewnętrznego",
+      "service_group_en": "Feedback - Reporting information",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "Always to be assessed",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Air quality sensors (e.g. CO2) and real time autonomous monitoring"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Real time monitoring & historical information of IAQ available to occupants"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Real time monitoring & historical information of IAQ available to occupants + warning on maintenance needs or occupant actions (e.g. window opening)"
+        }
+      ],
+      "purpose_en": "Ventilate based on CO₂, VOC or particulate sensors.",
+      "when_applicable_en": "When DCV or IAQ-based control is feasible.",
+      "typical_devices_en": [
+        "CO₂ sensors",
+        "IAQ multisensors",
+        "BMS"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1",
+        "DG ENER study"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "L-1a",
+      "internal_code": "L-01",
+      "domain_code": "lighting",
+      "sort_order": 32,
+      "official_name_en": "Occupancy control for indoor lighting",
+      "official_name_pl": "Sterowanie oświetleniem w zależności od obecności",
+      "service_group_en": "Artificial lighting control",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "Always to be assessed",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Manual on/off switch"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Manual on/off switch + additional sweeping extinction signal"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Automatic detection (auto on / dimmed or auto off)"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Automatic detection (manual on / dimmed or auto off)"
+        }
+      ],
+      "purpose_en": "Switch lighting based on presence detection.",
+      "when_applicable_en": "When artificial lighting exists in occupied zones.",
+      "typical_devices_en": [
+        "PIR sensors",
+        "Presence detectors",
+        "DALI controllers"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "L-2",
+      "internal_code": "L-02",
+      "domain_code": "lighting",
+      "sort_order": 33,
+      "official_name_en": "Control artificial lighting power based on daylight levels",
+      "official_name_pl": "Automatyczne sterowanie oświetleniem w zależności od światła dziennego",
+      "service_group_en": "Control artificial lighting power based on daylight levels",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "Always to be assessed",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Manual (central)"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Manual (per room / zone)"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Automatic switching"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Automatic dimming"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Automatic dimming including scene-based light control (during time intervals, dynamic and\nadapted lighting scenes are set, for example, in terms of\nilluminance level, different correlated colour temperature (CCT)\nand the possibility to change the light distribution within the space\naccording to e. g. design, human needs, visual tasks)"
+        }
+      ],
+      "purpose_en": "Dim or switch lighting using daylight harvesting.",
+      "when_applicable_en": "When daylight reaches occupied areas.",
+      "typical_devices_en": [
+        "Daylight sensors",
+        "DALI dimming",
+        "Constant light control"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "DE-1",
+      "internal_code": "E-01",
+      "domain_code": "dynamic_building_envelope",
+      "sort_order": 34,
+      "official_name_en": "Window solar shading control",
+      "official_name_pl": "Sterowanie osłonami przeciwsłonecznymi",
+      "service_group_en": "Window control",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case movable shades, screens or blinds are present",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No sun shading or only manual operation"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Motorized operation with manual control"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Motorized operation with automatic control based on sensor data"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Combined light/blind/HVAC control"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Predictive blind control (e.g. based on weather forecast)"
+        }
+      ],
+      "purpose_en": "Automate blinds/shading for solar gain and glare control.",
+      "when_applicable_en": "When movable shading devices are present.",
+      "typical_devices_en": [
+        "Motorized blinds",
+        "Facade actuators",
+        "BMS"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "DE-2",
+      "internal_code": "E-02",
+      "domain_code": "dynamic_building_envelope",
+      "sort_order": 35,
+      "official_name_en": "Window open/closed control, combined with HVAC system",
+      "official_name_pl": "Sterowanie otwieraniem okien z integracją HVAC",
+      "service_group_en": "Window control",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "0",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Manual operation or only fixed windows"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Open/closed detection to shut down heating or cooling systems"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Level 1 + Automised mechanical window opening based on room sensor data"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Level 2 + Centralized coordination of operable windows, e.g. to control free natural night cooling"
+        }
+      ],
+      "purpose_en": "Coordinate natural ventilation windows with HVAC interlocks.",
+      "when_applicable_en": "When automated windows or vents exist.",
+      "typical_devices_en": [
+        "Motorized windows",
+        "BMS interlocks"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "DE-4",
+      "internal_code": "E-03",
+      "domain_code": "dynamic_building_envelope",
+      "sort_order": 36,
+      "official_name_en": "Reporting information regarding performance of dynamic building envelope systems",
+      "official_name_pl": "Raportowanie pracy dynamicznej powłoki budynku",
+      "service_group_en": "Feedback - Reporting information",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case movable shades, screens or blinds are present",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No reporting"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Position of each product & fault detection"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Position of each product, fault detection & predictive maintenance"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Position of each product, fault detection, predictive maintenance, real-time sensor data (wind, lux, temperature…)"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Position of each product, fault detection, predictive maintenance, real-time & historical sensor data (wind, lux, temperature…)"
+        }
+      ],
+      "purpose_en": "Inform users about shading/window operation and impact.",
+      "when_applicable_en": "When dynamic envelope elements exist.",
+      "typical_devices_en": [
+        "BMS dashboards",
+        "Facade monitoring"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "E-2",
+      "internal_code": "EL-01",
+      "domain_code": "electricity",
+      "sort_order": 37,
+      "official_name_en": "Reporting information regarding local electricity generation",
+      "official_name_pl": "Raportowanie lokalnej generacji energii",
+      "service_group_en": "Feedback - Reporting information",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case of local energy generation",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Current generation data available"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Actual values and historical data"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Performance evaluation including forecasting and/or benchmarking"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Performance evaluation including forecasting and/or benchmarking; also including predictive management and fault detection"
+        }
+      ],
+      "purpose_en": "Report PV/other on-site generation to occupants/operators.",
+      "when_applicable_en": "When local generation is installed.",
+      "typical_devices_en": [
+        "Inverter monitoring",
+        "Energy dashboards"
+      ],
+      "standards_basis": [
+        "IEC Smart Grid roadmap",
+        "DG ENER study"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "E-3",
+      "internal_code": "EL-02",
+      "domain_code": "electricity",
+      "sort_order": 38,
+      "official_name_en": "Storage of (locally generated) electricity",
+      "official_name_pl": "Magazynowanie lokalnie wytworzonej energii",
+      "service_group_en": "DER - Storage",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case of local energy generation",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None"
+        },
+        {
+          "level": 1,
+          "official_description_en": "On site storage of electricity (e.g. electric battery)"
+        },
+        {
+          "level": 2,
+          "official_description_en": "On site storage of energy (e.g. electric battery or thermal storage) with controller based on grid signals"
+        },
+        {
+          "level": 3,
+          "official_description_en": "On site storage of energy (e.g. electric battery or thermal storage) with controller optimising the use of locally generated electricity"
+        },
+        {
+          "level": 4,
+          "official_description_en": "On site storage of energy (e.g. electric battery or thermal storage) with controller optimising the use of locally generated electricity and possibility to feed back into the grid"
+        }
+      ],
+      "purpose_en": "Store PV surplus in batteries or other storage.",
+      "when_applicable_en": "When electrical storage coupled to generation exists.",
+      "typical_devices_en": [
+        "Battery EMS",
+        "Hybrid inverters"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "E-4",
+      "internal_code": "EL-03",
+      "domain_code": "electricity",
+      "sort_order": 39,
+      "official_name_en": "Optimizing self-consumption of locally generated electricity",
+      "official_name_pl": "Raportowanie zużycia energii elektrycznej",
+      "service_group_en": "DER- Optimization",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case of local energy generation",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Scheduling electricity consumption (plug loads, white goods, etc.)"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Automated management of local electricity consumption based on current renewable energy availability"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Automated management of local electricity consumption based on current and predicted energy needs and renewable energy availability"
+        }
+      ],
+      "purpose_en": "Provide granular electricity use feedback.",
+      "when_applicable_en": "When metering/sub-metering exists.",
+      "typical_devices_en": [
+        "Smart meters",
+        "Sub-metering",
+        "Tenant portals"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "E-5",
+      "internal_code": "EL-04",
+      "domain_code": "electricity",
+      "sort_order": 40,
+      "official_name_en": "Control of combined heat and power plant (CHP)",
+      "official_name_pl": "Optymalizacja autokonsumpcji energii",
+      "service_group_en": "DER - Generation Control",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case of CHP",
+      "fl_max": 2,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "CHP control based on scheduled runtime management and/or current heat energy demand"
+        },
+        {
+          "level": 1,
+          "official_description_en": "CHP runtime control influenced by the fluctuating availability of RES; overproduction will be fed into the grid"
+        },
+        {
+          "level": 2,
+          "official_description_en": "CHP runtime control influenced by the fluctuating availability of RES and grid signals; dynamic charging and runtime control to optimise self-consumption of renewables"
+        }
+      ],
+      "purpose_en": "Maximize self-consumption of on-site generation.",
+      "when_applicable_en": "When PV and controllable loads coexist.",
+      "typical_devices_en": [
+        "EMS",
+        "Load control",
+        "Battery logic"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "E-8",
+      "internal_code": "EL-05",
+      "domain_code": "electricity",
+      "sort_order": 41,
+      "official_name_en": "Support of (micro)grid operation modes",
+      "official_name_pl": "Sterowanie kogeneracją (CHP)",
+      "service_group_en": "DSM- Storage",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case of local energy storage",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Automated management of (building-level) electricity consumption based on grid signals"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Automated management of (building-level) electricity consumption and electricity supply to neighbouring buildings (microgrid) or grid"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Automated management of (building-level) electricity consumption and supply, with potential to continue limited off-grid operation (island mode)"
+        }
+      ],
+      "purpose_en": "Operate CHP aligned with heat and electricity demand.",
+      "when_applicable_en": "When CHP is installed.",
+      "typical_devices_en": [
+        "CHP controllers",
+        "BMS"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "E-11",
+      "internal_code": "EL-06",
+      "domain_code": "electricity",
+      "sort_order": 42,
+      "official_name_en": "Reporting information regarding energy storage",
+      "official_name_pl": "Raportowanie stanu magazynów energii",
+      "service_group_en": "Feedback - Reporting information",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only applicable in case of local energy storage",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Current state of charge (SOC) data available"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Actual values and historical data"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Performance evaluation including forecasting and/or benchmarking"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Performance evaluation including forecasting and/or benchmarking; also including predictive management and fault detection"
+        }
+      ],
+      "purpose_en": "Report SOC, cycles and storage performance.",
+      "when_applicable_en": "When electrical/thermal storage reporting is available.",
+      "typical_devices_en": [
+        "Battery monitoring",
+        "BMS"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "E-12",
+      "internal_code": "EL-07",
+      "domain_code": "electricity",
+      "sort_order": 43,
+      "official_name_en": "Reporting information regarding electricity consumption",
+      "official_name_pl": "Wsparcie trybu pracy mikro-sieci",
+      "service_group_en": "Feedback - Reporting information",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "Always to be assessed",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None"
+        },
+        {
+          "level": 1,
+          "official_description_en": "reporting on current electricity consumption on building level"
+        },
+        {
+          "level": 2,
+          "official_description_en": "real-time feedback or benchmarking on building level"
+        },
+        {
+          "level": 3,
+          "official_description_en": "real-time feedback or benchmarking on appliance level"
+        },
+        {
+          "level": 4,
+          "official_description_en": "real-time feedback or benchmarking on appliance level with automated personalized recommendations"
+        }
+      ],
+      "purpose_en": "Islanded or coordinated microgrid operation.",
+      "when_applicable_en": "When microgrid architecture is implemented.",
+      "typical_devices_en": [
+        "Microgrid controllers",
+        "Grid-forming inverters"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "EV-15",
+      "internal_code": "EV-01",
+      "domain_code": "electric_vehicle_charging",
+      "sort_order": 44,
+      "official_name_en": "EV Charging Capacity",
+      "official_name_pl": "Moce ładowania pojazdów elektrycznych",
+      "service_group_en": "EV Charging",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only to be assessed if parking spots available on site",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "not present"
+        },
+        {
+          "level": 1,
+          "official_description_en": "ducting (or simple power plug) available"
+        },
+        {
+          "level": 2,
+          "official_description_en": "0-9% of parking spaces has recharging points"
+        },
+        {
+          "level": 3,
+          "official_description_en": "10-50% or parking spaces has recharging point"
+        },
+        {
+          "level": 4,
+          "official_description_en": ">50% of parking spaces has recharging point"
+        }
+      ],
+      "purpose_en": "Provide and manage EV charging infrastructure capacity.",
+      "when_applicable_en": "When EV charging points are present or planned (triage).",
+      "typical_devices_en": [
+        "EVSE",
+        "Load management controllers"
+      ],
+      "standards_basis": [
+        "IEC EV roadmap",
+        "DG ENER study"
+      ],
+      "applicability_mode": "smart_possible",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "EV-16",
+      "internal_code": "EV-02",
+      "domain_code": "electric_vehicle_charging",
+      "sort_order": 45,
+      "official_name_en": "EV Charging Grid balancing",
+      "official_name_pl": "Harmonogramowe balansowanie obciążenia ładowania EV",
+      "service_group_en": "EV Charging - Grid",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only to be assessed if EV charging available on site",
+      "fl_max": 2,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Not present (uncontrolled charging)"
+        },
+        {
+          "level": 1,
+          "official_description_en": "1-way controlled charging (e.g. including desired departure time and grid signals for optimization)"
+        },
+        {
+          "level": 2,
+          "official_description_en": "2-way controlled charging (e.g. including desired departure time and grid signals for optimization)"
+        }
+      ],
+      "purpose_en": "Shift EV charging to off-peak or renewable surplus.",
+      "when_applicable_en": "When multiple EVSE or smart charging exists.",
+      "typical_devices_en": [
+        "Smart EVSE",
+        "OCPP backends",
+        "BMS"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_possible",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "EV-17",
+      "internal_code": "EV-03",
+      "domain_code": "electric_vehicle_charging",
+      "sort_order": 46,
+      "official_name_en": "EV charging information and connectivity",
+      "official_name_pl": "Informacja o ładowaniu pojazdów elektrycznych",
+      "service_group_en": "EV Charging - connectivity",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": false,
+      "preconditions_en": "Only to be assessed if EV charging available on site",
+      "fl_max": 2,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No information available"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Reporting information on EV charging status to occupant"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Reporting information on EV charging status to occupant AND automatic identification and authorizition of the driver to the charging station (ISO 15118 compliant)"
+        }
+      ],
+      "purpose_en": "Inform users about charging status, cost and availability.",
+      "when_applicable_en": "When EV charging is available.",
+      "typical_devices_en": [
+        "EV apps",
+        "Display panels",
+        "BMS"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_possible",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "MC-3",
+      "internal_code": "M-01",
+      "domain_code": "monitoring_and_control",
+      "sort_order": 47,
+      "official_name_en": "Run time management of HVAC systems",
+      "official_name_pl": "Centralne raportowanie pracy TBS i zużycia energii",
+      "service_group_en": "HVAC interaction control",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "0",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Manual setting"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Runtime setting of heating and cooling plants following a predefined time schedule"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Heating and cooling plant on/off control based on building loads"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Heating and cooling plant on/off control based on predictive control or grid signals"
+        }
+      ],
+      "purpose_en": "Unified visibility of all technical building systems.",
+      "when_applicable_en": "When BMS or central monitoring exists.",
+      "typical_devices_en": [
+        "BMS",
+        "SCADA",
+        "Energy management platforms"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "MC-4",
+      "internal_code": "M-02",
+      "domain_code": "monitoring_and_control",
+      "sort_order": 48,
+      "official_name_en": "Detecting faults of technical building systems and providing support to the diagnosis of these faults",
+      "official_name_pl": "Integracja z inteligentną siecią (harmonizacja TBS)",
+      "service_group_en": "Fault detection",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "0",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No central indication of detected faults and alarms"
+        },
+        {
+          "level": 1,
+          "official_description_en": "With central indication of detected faults and alarms for at least 2 relevant TBS"
+        },
+        {
+          "level": 2,
+          "official_description_en": "With central indication of detected faults and alarms for all relevant TBS"
+        },
+        {
+          "level": 3,
+          "official_description_en": "With central indication of detected faults and alarms for all relevant TBS, including diagnosing functions"
+        }
+      ],
+      "purpose_en": "Coordinate building systems for grid-friendly operation.",
+      "when_applicable_en": "When grid interface or aggregator connection exists.",
+      "typical_devices_en": [
+        "Grid interfaces",
+        "OpenADR",
+        "BMS"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "MC-9",
+      "internal_code": "M-03",
+      "domain_code": "monitoring_and_control",
+      "sort_order": 49,
+      "official_name_en": "Occupancy detection: connected services",
+      "official_name_pl": "Jedna platforma automatycznego sterowania i koordynacji TBS",
+      "service_group_en": "TBS interaction control",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "0",
+      "fl_max": 2,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Occupancy detection for individual functions, e.g. lighting"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Centralised occupant detection which feeds in to several TBS such as lighting and heating"
+        }
+      ],
+      "purpose_en": "Orchestrate HVAC, lighting, envelope from one platform.",
+      "when_applicable_en": "When integrated BMS/BACS platform exists.",
+      "typical_devices_en": [
+        "BMS",
+        "IoT platforms",
+        "Digital twins"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "MC-13",
+      "internal_code": "M-04",
+      "domain_code": "monitoring_and_control",
+      "sort_order": 50,
+      "official_name_en": "Central reporting of TBS performance and energy use",
+      "official_name_pl": "Harmonogramowanie pracy systemów HVAC",
+      "service_group_en": "Feedback - Reporting information",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "0",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Central or remote reporting of realtime energy use per energy carrier"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Central or remote reporting of realtime energy use per energy carrier, combining TBS of at least 2 domains in one interface"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Central or remote reporting of realtime energy use per energy carrier, combining TBS of all main domains in one interface"
+        }
+      ],
+      "purpose_en": "Program HVAC operation by occupancy calendar.",
+      "when_applicable_en": "When schedulable HVAC exists.",
+      "typical_devices_en": [
+        "BMS schedules",
+        "Time clocks"
+      ],
+      "standards_basis": [
+        "EN ISO 52120-1"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "MC-25",
+      "internal_code": "M-05",
+      "domain_code": "monitoring_and_control",
+      "sort_order": 51,
+      "official_name_en": "Smart Grid Integration",
+      "official_name_pl": "Wykrywanie usterek TBS i wsparcie diagnostyki",
+      "service_group_en": "Smart Grid Integration",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "The inspectability of the nature of the control algorithm would need to be facilitated for level 2. Service 7.5 in EN15232-1-17. Average impacts derived from multiple simulations to produce BACS factors in EN15232.",
+      "fl_max": 2,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None - No harmonization between grid and TBS; building is operated independently from the grid load"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Demand side management possible for (some) individual TBS, but not coordinated over various domains"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Coordinated demand side management of multiple TBS"
+        }
+      ],
+      "purpose_en": "FDD and maintenance support across systems.",
+      "when_applicable_en": "When monitoring data enables fault detection.",
+      "typical_devices_en": [
+        "FDD software",
+        "BMS alarms",
+        "Analytics"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "MC-28",
+      "internal_code": "M-06",
+      "domain_code": "monitoring_and_control",
+      "sort_order": 52,
+      "official_name_en": "Reporting information regarding demand side management performance and operation",
+      "official_name_pl": "Detekcja obecności powiązana z usługami budynku",
+      "service_group_en": "Feedback - Reporting information",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "0",
+      "fl_max": 2,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Reporting information on current DSM status, including managed energy flows"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Reporting information on currenthistorical and predicted DSM status, including managed energy flows"
+        }
+      ],
+      "purpose_en": "Use occupancy to drive heating, lighting and ventilation.",
+      "when_applicable_en": "When building-wide occupancy sensing exists.",
+      "typical_devices_en": [
+        "PIR networks",
+        "CO₂ proxy",
+        "Access control integration"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "MC-29",
+      "internal_code": "M-07",
+      "domain_code": "monitoring_and_control",
+      "sort_order": 53,
+      "official_name_en": "Override of DSM control",
+      "official_name_pl": "Raportowanie efektów zarządzania popytem (DSM)",
+      "service_group_en": "Override control",
+      "included_in_method_a": false,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "0",
+      "fl_max": 4,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No DSM control"
+        },
+        {
+          "level": 1,
+          "official_description_en": "DSM control without the possibility to override this control by the building user (occupant or facility manager)"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Manual override and reactivation of DSM control by the building user"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Scheduled override of DSM control (and reactivation) by the building user"
+        },
+        {
+          "level": 4,
+          "official_description_en": "Scheduled override of DSM control and reactivation with optimised control"
+        }
+      ],
+      "purpose_en": "Report load shifting and DSM outcomes.",
+      "when_applicable_en": "When DSM strategies are implemented.",
+      "typical_devices_en": [
+        "EMS",
+        "Utility portals"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    },
+    {
+      "official_code": "MC-30",
+      "internal_code": "M-08",
+      "domain_code": "monitoring_and_control",
+      "sort_order": 54,
+      "official_name_en": "Single platform that allows automated control & coordination between TBS + optimization of energy flow based on occupancy, weather and grid signals",
+      "official_name_pl": "Optymalizacja przepływów energii wg obecności, pogody i sygnałów sieci",
+      "service_group_en": "Single platform that allows automated control & coordination between TBS + optimization of energy flow based on occupancy, weather and grid signals",
+      "included_in_method_a": true,
+      "included_in_method_b": true,
+      "triage_affects_max": true,
+      "preconditions_en": "Always to be assessed",
+      "fl_max": 3,
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None"
+        },
+        {
+          "level": 1,
+          "official_description_en": "Single platform that allows manual control of multiple TBS"
+        },
+        {
+          "level": 2,
+          "official_description_en": "Single platform that allows automated control & coordination between TBS"
+        },
+        {
+          "level": 3,
+          "official_description_en": "Single platform that allows automated control & coordination between TBS + optimization of energy flow based on occupancy, weather and grid signals"
+        }
+      ],
+      "purpose_en": "Holistic optimization across systems and external signals.",
+      "when_applicable_en": "When advanced BMS/EMS with external data exists.",
+      "typical_devices_en": [
+        "EMS",
+        "Digital twin",
+        "Grid APIs"
+      ],
+      "standards_basis": [
+        "DG ENER Technical Study 2020"
+      ],
+      "applicability_mode": "smart_ready",
+      "mutual_exclusion_group": null,
+      "provenance": "VERIFIED_ANNEX_D",
+      "curated_fields_provenance": {
+        "official_name_pl": "RECONSTRUCTED",
+        "purpose_en": "RECONSTRUCTED",
+        "when_applicable_en": "RECONSTRUCTED",
+        "typical_devices_en": "RECONSTRUCTED"
+      }
+    }
+  ]
+}

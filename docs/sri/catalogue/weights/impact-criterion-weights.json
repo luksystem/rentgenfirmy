@@ -1,0 +1,77 @@
+{
+  "source_version": "SRI calculation sheet v4.5",
+  "provenance": "VERIFIED_ANNEX_D",
+  "note": "W_f(ic) - wagi kryteriow oddzialywania, suma = 1 per typ budynku",
+  "weights": [
+    {
+      "building_type": "residential",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1666666667
+    },
+    {
+      "building_type": "residential",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.3333333333
+    },
+    {
+      "building_type": "residential",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0833333333
+    },
+    {
+      "building_type": "residential",
+      "impact_criterion_code": "convenience",
+      "weight": 0.0833333333
+    },
+    {
+      "building_type": "residential",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0833333333
+    },
+    {
+      "building_type": "residential",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1666666667
+    },
+    {
+      "building_type": "residential",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.0833333333
+    },
+    {
+      "building_type": "non_residential",
+      "impact_criterion_code": "energy_efficiency",
+      "weight": 0.1666666667
+    },
+    {
+      "building_type": "non_residential",
+      "impact_criterion_code": "energy_flexibility_and_storage",
+      "weight": 0.3333333333
+    },
+    {
+      "building_type": "non_residential",
+      "impact_criterion_code": "comfort",
+      "weight": 0.0833333333
+    },
+    {
+      "building_type": "non_residential",
+      "impact_criterion_code": "convenience",
+      "weight": 0.0833333333
+    },
+    {
+      "building_type": "non_residential",
+      "impact_criterion_code": "health_wellbeing_accessibility",
+      "weight": 0.0833333333
+    },
+    {
+      "building_type": "non_residential",
+      "impact_criterion_code": "maintenance_and_fault_prediction",
+      "weight": 0.1666666667
+    },
+    {
+      "building_type": "non_residential",
+      "impact_criterion_code": "information_to_occupants",
+      "weight": 0.0833333333
+    }
+  ]
+}

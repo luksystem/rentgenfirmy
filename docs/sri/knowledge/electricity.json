@@ -1,0 +1,661 @@
+{
+  "domain_code": "electricity",
+  "domain_name_pl": "Elektrycznosc",
+  "service_count": 7,
+  "provenance": {
+    "official_fields": "VERIFIED_ANNEX_D",
+    "expert_fields": "EXPERT_AUTHORED"
+  },
+  "cards": [
+    {
+      "official_code": "E-11",
+      "internal_code": "EL-06",
+      "domain_code": "electricity",
+      "service_group_en": "Feedback - Reporting information",
+      "official_name_en": "Reporting information regarding energy storage",
+      "official_name_pl": "Raportowanie stanu magazynów energii",
+      "included_in_method_a": true,
+      "fl_max": 4,
+      "friendly_name_pl": "Raportowanie pracy magazynu energii",
+      "purpose_pl": "Dostarczanie danych o pracy magazynu energii (naladowanie, cykle, sprawnosc), aby monitorowac stan, kondycje i efekty ekonomiczne.",
+      "technical_description_pl": "Zbieranie i prezentacja danych magazynu: SoC, cykle, sprawnosc round-trip, degradacja; wyzsze poziomy z benchmarkiem, alarmami i wsparciem optymalizacji.",
+      "energy_significance_pl": "Monitoring magazynu pozwala ocenic realne korzysci, kondycje baterii i skutecznosc strategii ladowania — warunek optymalizacji.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None",
+          "practical_description_pl": "Brak raportowania magazynu."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Current state of charge (SOC) data available",
+          "practical_description_pl": "Podstawowe wskazanie stanu (SoC)."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Actual values and historical data",
+          "practical_description_pl": "Rejestracja i historia pracy magazynu."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Performance evaluation including forecasting and/or benchmarking",
+          "practical_description_pl": "Analiza/benchmark i alarmy (degradacja, odchylenia)."
+        },
+        {
+          "level": 4,
+          "official_description_en": "Performance evaluation including forecasting and/or benchmarking; also including predictive management and fault detection",
+          "practical_description_pl": "Pelne raportowanie ze sprawnoscia i wsparciem optymalizacji."
+        }
+      ],
+      "technologies": [
+        "monitoring BMS baterii",
+        "historian/trendy",
+        "dashboardy magazynu",
+        "analiza degradacji"
+      ],
+      "devices": [
+        "magazyn energii z BMS",
+        "licznik energii",
+        "brama monitoringu/EMS"
+      ],
+      "audit_verification": [
+        "sprawdz monitoring SoC/cykli i archiwizacje",
+        "zweryfikuj wskazniki sprawnosci/degradacji",
+        "ustal alarmy (wyzsze poziomy)"
+      ],
+      "evidence": [
+        "dashboard magazynu",
+        "trendy SoC/cykli",
+        "raport sprawnosci round-trip"
+      ],
+      "common_mistakes": [
+        "brak monitoringu degradacji",
+        "dane bez analizy oplacalnosci",
+        "brak alarmow o awariach ogniw"
+      ],
+      "limitations": [
+        "jakosc zalezy od danych z BMS baterii",
+        "wymaga interpretacji"
+      ],
+      "dependencies": [
+        "E-3 (magazyn)",
+        "E-12 (zuzycie)",
+        "MC-13 (centralne raportowanie)"
+      ],
+      "cross_domain_impact": [
+        "monitoring i sterowanie (dane do MC-13)",
+        "elastycznosc energetyczna"
+      ],
+      "modernization": [
+        "wdrozenie dashboardu magazynu",
+        "monitoring degradacji i alarmy",
+        "raporty oplacalnosci"
+      ],
+      "examples": [
+        "obiekt z dashboardem magazynu (SoC, cykle, sprawnosc)"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "E-12",
+      "internal_code": "EL-07",
+      "domain_code": "electricity",
+      "service_group_en": "Feedback - Reporting information",
+      "official_name_en": "Reporting information regarding electricity consumption",
+      "official_name_pl": "Wsparcie trybu pracy mikro-sieci",
+      "included_in_method_a": true,
+      "fl_max": 4,
+      "friendly_name_pl": "Raportowanie zuzycia energii elektrycznej",
+      "purpose_pl": "Pomiar i prezentacja zuzycia energii elektrycznej (najlepiej z podzialem na obwody/odbiory), aby zarzadzac energia i wykrywac marnotrawstwo.",
+      "technical_description_pl": "Zbieranie i prezentacja danych zuzycia: sumaryczne i podlicznikowe (submetering), profile mocy, szczyty; wyzsze poziomy z benchmarkiem, alarmami i wsparciem optymalizacji.",
+      "energy_significance_pl": "Podlicznikowanie ujawnia najwiekszych odbiorcow i marnotrawstwo (np. praca poza godzinami), umozliwiajac celowane oszczednosci i zarzadzanie szczytami.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None",
+          "practical_description_pl": "Brak raportowania zuzycia."
+        },
+        {
+          "level": 1,
+          "official_description_en": "reporting on current electricity consumption on building level",
+          "practical_description_pl": "Pomiar zuzycia sumarycznego."
+        },
+        {
+          "level": 2,
+          "official_description_en": "real-time feedback or benchmarking on building level",
+          "practical_description_pl": "Rejestracja i historia zuzycia (profile)."
+        },
+        {
+          "level": 3,
+          "official_description_en": "real-time feedback or benchmarking on appliance level",
+          "practical_description_pl": "Submetering/benchmark i alarmy odchylen."
+        },
+        {
+          "level": 4,
+          "official_description_en": "real-time feedback or benchmarking on appliance level with automated personalized recommendations",
+          "practical_description_pl": "Pelne raportowanie z analiza i wsparciem optymalizacji."
+        }
+      ],
+      "technologies": [
+        "submetering (podliczniki)",
+        "analiza profili obciazenia",
+        "dashboardy energetyczne",
+        "Modbus/M-Bus"
+      ],
+      "devices": [
+        "liczniki/analizatory energii",
+        "przekladniki pradowe",
+        "brama/koncentrator",
+        "system monitoringu energii"
+      ],
+      "audit_verification": [
+        "sprawdz zakres opomiarowania (sumaryczne vs podliczniki)",
+        "zweryfikuj dostepnosc profili/historii",
+        "ustal alarmy odchylen (wyzsze poziomy)"
+      ],
+      "evidence": [
+        "dashboard zuzycia energii",
+        "schemat opomiarowania obwodow",
+        "eksport profili mocy"
+      ],
+      "common_mistakes": [
+        "tylko licznik glowny (brak submeteringu)",
+        "dane bez analizy",
+        "brak identyfikacji szczytow/baseloadu"
+      ],
+      "limitations": [
+        "koszt rozbudowanego submeteringu",
+        "koniecznosc utrzymania systemu"
+      ],
+      "dependencies": [
+        "E-2 (produkcja)",
+        "E-11 (magazyn)",
+        "MC-13 (centralne raportowanie)",
+        "MC-4 (detekcja usterek)"
+      ],
+      "cross_domain_impact": [
+        "wszystkie domeny (identyfikacja odbiorcow: HVAC, oswietlenie, IT)",
+        "elastycznosc (zarzadzanie szczytami)"
+      ],
+      "modernization": [
+        "wdrozenie submeteringu kluczowych obwodow",
+        "dashboard i alarmy odchylen",
+        "analiza baseloadu i szczytow"
+      ],
+      "examples": [
+        "biurowiec z submeteringiem HVAC/oswietlenia/IT i dashboardem",
+        "obiekt z alarmami zuzycia poza godzinami pracy"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "E-2",
+      "internal_code": "EL-01",
+      "domain_code": "electricity",
+      "service_group_en": "Feedback - Reporting information",
+      "official_name_en": "Reporting information regarding local electricity generation",
+      "official_name_pl": "Raportowanie lokalnej generacji energii",
+      "included_in_method_a": true,
+      "fl_max": 4,
+      "friendly_name_pl": "Raportowanie produkcji energii (PV/OZE)",
+      "purpose_pl": "Monitorowanie i prezentacja produkcji energii z lokalnych zrodel (np. PV), aby ocenic uzysk, wykrywac usterki i optymalizowac autokonsumpcje.",
+      "technical_description_pl": "Zbieranie i prezentacja danych produkcji lokalnej: moc/energia chwilowa i skumulowana, uzysk per string/falownik; wyzsze poziomy z benchmarkiem, alarmami i prognoza.",
+      "energy_significance_pl": "Bez pomiaru produkcji nie da sie zarzadzac autokonsumpcja ani wykryc spadku uzysku (zabrudzenia, awarie) — podstawa optymalizacji OZE.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None",
+          "practical_description_pl": "Brak raportowania produkcji."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Current generation data available",
+          "practical_description_pl": "Podstawowe wskazanie biezacej produkcji."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Actual values and historical data",
+          "practical_description_pl": "Rejestracja i historia produkcji."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Performance evaluation including forecasting and/or benchmarking",
+          "practical_description_pl": "Analiza/benchmark uzysku i alarmy odchylen."
+        },
+        {
+          "level": 4,
+          "official_description_en": "Performance evaluation including forecasting and/or benchmarking; also including predictive management and fault detection",
+          "practical_description_pl": "Pelne raportowanie z prognoza i wsparciem optymalizacji."
+        }
+      ],
+      "technologies": [
+        "monitoring falownikow",
+        "liczniki produkcji",
+        "dashboardy PV",
+        "prognoza produkcji",
+        "Modbus/API falownikow"
+      ],
+      "devices": [
+        "falowniki PV",
+        "liczniki energii produkcji",
+        "czujniki naslonecznienia",
+        "brama monitoringu"
+      ],
+      "audit_verification": [
+        "sprawdz monitoring falownikow i archiwizacje produkcji",
+        "zweryfikuj dostepnosc trendow/uzysku",
+        "ustal alarmy odchylen i prognoze (wyzsze poziomy)"
+      ],
+      "evidence": [
+        "dashboard produkcji PV",
+        "eksport uzysku dziennego/miesiecznego",
+        "konfiguracja monitoringu falownikow"
+      ],
+      "common_mistakes": [
+        "brak monitoringu per string (niewykryte awarie)",
+        "dane bez alarmow spadku uzysku",
+        "brak porownania z prognoza/benchmarkiem"
+      ],
+      "limitations": [
+        "jakosc zalezy od monitoringu falownikow",
+        "zaleznosc uzysku od pogody"
+      ],
+      "dependencies": [
+        "E-4 (autokonsumpcja)",
+        "E-3 (magazyn)",
+        "E-12 (zuzycie)",
+        "MC-13 (centralne raportowanie)"
+      ],
+      "cross_domain_impact": [
+        "ogrzewanie/CWU/chlodzenie (sterowanie wg nadwyzki PV)",
+        "elastycznosc energetyczna"
+      ],
+      "modernization": [
+        "wdrozenie monitoringu per string",
+        "dashboard i alarmy uzysku",
+        "integracja prognozy produkcji"
+      ],
+      "examples": [
+        "biurowiec z monitoringiem PV per falownik i alarmami spadku uzysku"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "E-3",
+      "internal_code": "EL-02",
+      "domain_code": "electricity",
+      "service_group_en": "DER - Storage",
+      "official_name_en": "Storage of (locally generated) electricity",
+      "official_name_pl": "Magazynowanie lokalnie wytworzonej energii",
+      "included_in_method_a": true,
+      "fl_max": 4,
+      "friendly_name_pl": "Magazynowanie energii elektrycznej",
+      "purpose_pl": "Gromadzenie lokalnie wytworzonej energii (np. z PV) w magazynie, aby zwiekszyc autokonsumpcje, obnizyc szczyty i wspierac siec.",
+      "technical_description_pl": "Sterowanie magazynem energii (bateria): ladowanie/rozladowanie wg autokonsumpcji, taryf, szczytow i sygnalow sieci; wyzsze poziomy z pelna optymalizacja i uslugami sieciowymi.",
+      "energy_significance_pl": "Magazyn zwieksza autokonsumpcje PV, redukuje szczyty mocy i koszty; kluczowy dla elastycznosci energetycznej (wysoka waga w SRI).",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None",
+          "practical_description_pl": "Brak magazynu lub brak sterowania."
+        },
+        {
+          "level": 1,
+          "official_description_en": "On site storage of electricity (e.g. electric battery)",
+          "practical_description_pl": "Podstawowe sterowanie ladowaniem/rozladowaniem (autokonsumpcja)."
+        },
+        {
+          "level": 2,
+          "official_description_en": "On site storage of energy (e.g. electric battery or thermal storage) with controller based on grid signals",
+          "practical_description_pl": "Optymalizacja wg taryf/szczytow i autokonsumpcji."
+        },
+        {
+          "level": 3,
+          "official_description_en": "On site storage of energy (e.g. electric battery or thermal storage) with controller optimising the use of locally generated electricity",
+          "practical_description_pl": "Sterowanie z uslugami sieciowymi (peak shaving, wsparcie sieci)."
+        },
+        {
+          "level": 4,
+          "official_description_en": "On site storage of energy (e.g. electric battery or thermal storage) with controller optimising the use of locally generated electricity and possibility to feed back into the grid",
+          "practical_description_pl": "Pelna optymalizacja z dwukierunkowa wspolpraca i rozliczaniem uslug."
+        }
+      ],
+      "technologies": [
+        "magazyny bateryjne (BESS)",
+        "EMS",
+        "peak shaving",
+        "integracja z siecia (V2G/uslugi)",
+        "Modbus/API"
+      ],
+      "devices": [
+        "bateria/magazyn energii",
+        "falownik hybrydowy/magazynu",
+        "licznik dwukierunkowy",
+        "EMS"
+      ],
+      "audit_verification": [
+        "ustal obecnosc i pojemnosc magazynu",
+        "sprawdz logike ladowania/rozladowania (autokonsumpcja/taryfy/szczyty)",
+        "zweryfikuj uslugi sieciowe (wyzsze poziomy)"
+      ],
+      "evidence": [
+        "DTR magazynu/falownika",
+        "konfiguracja EMS",
+        "trendy naladowania vs produkcja/ceny"
+      ],
+      "common_mistakes": [
+        "magazyn tylko na autokonsumpcje bez peak shaving",
+        "zle dobrana pojemnosc",
+        "brak koordynacji z PV/odbiorami"
+      ],
+      "limitations": [
+        "koszt i zywotnosc baterii",
+        "korzysc zalezy od profilu produkcji/zuzycia i taryf"
+      ],
+      "dependencies": [
+        "E-2 (produkcja)",
+        "E-4 (autokonsumpcja)",
+        "E-11 (raportowanie magazynu)",
+        "MC-25 (smart grid)"
+      ],
+      "cross_domain_impact": [
+        "ogrzewanie/chlodzenie (magazyn energii komplementarny do magazynow ciepla/chlodu)",
+        "EV (wspolna elastycznosc)"
+      ],
+      "modernization": [
+        "dodanie magazynu do instalacji PV",
+        "wdrozenie peak shaving w EMS",
+        "integracja z uslugami sieciowymi"
+      ],
+      "examples": [
+        "obiekt z PV + magazyn i peak shaving w szczycie",
+        "budynek z EMS optymalizujacym baterie wg taryf"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "E-4",
+      "internal_code": "EL-03",
+      "domain_code": "electricity",
+      "service_group_en": "DER- Optimization",
+      "official_name_en": "Optimizing self-consumption of locally generated electricity",
+      "official_name_pl": "Raportowanie zużycia energii elektrycznej",
+      "included_in_method_a": false,
+      "fl_max": 3,
+      "friendly_name_pl": "Optymalizacja autokonsumpcji energii z PV",
+      "purpose_pl": "Maksymalne zuzycie na miejscu energii wyprodukowanej lokalnie (PV), przez sterowanie odbiornikami zgodnie z biezaca produkcja.",
+      "technical_description_pl": "Koordynacja odbiornikow (CWU, PC, chlodzenie, EV, magazyn) z produkcja PV — od braku, przez proste sterowanie nadwyzka, po predykcyjna optymalizacje autokonsumpcji.",
+      "energy_significance_pl": "Autokonsumpcja jest zwykle bardziej oplacalna niz oddawanie do sieci — inteligentne sterowanie odbiornikami znaczaco podnosi jej udzial.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None",
+          "practical_description_pl": "Brak optymalizacji autokonsumpcji."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Scheduling electricity consumption (plug loads, white goods, etc.)",
+          "practical_description_pl": "Proste sterowanie odbiornikami wg nadwyzki produkcji."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Automated management of local electricity consumption based on current renewable energy availability",
+          "practical_description_pl": "Koordynacja wielu odbiornikow wg produkcji i priorytetow."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Automated management of local electricity consumption based on current and predicted energy needs and renewable energy availability",
+          "practical_description_pl": "Predykcyjna optymalizacja autokonsumpcji (prognoza produkcji/zuzycia)."
+        }
+      ],
+      "technologies": [
+        "EMS/HEMS",
+        "sterowanie odbiornikami wg nadwyzki",
+        "prognoza PV/zuzycia",
+        "integracja PC/CWU/EV/magazyn"
+      ],
+      "devices": [
+        "EMS",
+        "licznik dwukierunkowy",
+        "przekazniki/sterowniki odbiornikow",
+        "falownik PV"
+      ],
+      "audit_verification": [
+        "sprawdz, czy odbiorniki reaguja na nadwyzke PV",
+        "ustal priorytety i koordynacje odbiornikow",
+        "zweryfikuj optymalizacje predykcyjna (poziom 3)"
+      ],
+      "evidence": [
+        "konfiguracja EMS/priorytetow",
+        "trendy autokonsumpcji",
+        "logi sterowania odbiornikami wg PV"
+      ],
+      "common_mistakes": [
+        "oddawanie nadwyzki do sieci mimo dostepnych odbiornikow",
+        "brak priorytetow (konflikty odbiornikow)",
+        "brak prognozy (nieoptymalne decyzje)"
+      ],
+      "limitations": [
+        "wymaga sterowalnych odbiornikow",
+        "korzysc zalezy od zbieznosci produkcji i zuzycia"
+      ],
+      "dependencies": [
+        "E-2 (produkcja)",
+        "E-3 (magazyn)",
+        "H-2b/DHW-1a (odbiorniki PC/CWU)",
+        "EV-15/EV-16 (ladowanie EV)"
+      ],
+      "cross_domain_impact": [
+        "ogrzewanie/CWU/chlodzenie/EV (sterowane wg nadwyzki PV)",
+        "elastycznosc energetyczna"
+      ],
+      "modernization": [
+        "wdrozenie EMS koordynujacego odbiorniki wg PV",
+        "priorytetyzacja CWU/PC/EV/magazyn",
+        "prognozowa optymalizacja"
+      ],
+      "examples": [
+        "dom z HEMS grzejacym CWU i ladujacym EV z nadwyzki PV",
+        "obiekt z priorytetem autokonsumpcji przed oddaniem do sieci"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "E-5",
+      "internal_code": "EL-04",
+      "domain_code": "electricity",
+      "service_group_en": "DER - Generation Control",
+      "official_name_en": "Control of combined heat and power plant (CHP)",
+      "official_name_pl": "Optymalizacja autokonsumpcji energii",
+      "included_in_method_a": false,
+      "fl_max": 2,
+      "friendly_name_pl": "Sterowanie kogeneracja (CHP)",
+      "purpose_pl": "Optymalna praca ukladu skojarzonego (produkcja pradu i ciepla) tak, aby maksymalizowac korzysc z jednoczesnej produkcji energii i ciepla.",
+      "technical_description_pl": "Sterowanie CHP wg zapotrzebowania na cieplo/energie, cen i sygnalow sieci — od podstawowego, po sterowanie zoptymalizowane wg warunkow rynkowych.",
+      "energy_significance_pl": "CHP jest najbardziej oplacalny przy jednoczesnym wykorzystaniu ciepla i pradu; inteligentne sterowanie dopasowuje prace do zapotrzebowania i cen.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "CHP control based on scheduled runtime management and/or current heat energy demand",
+          "practical_description_pl": "Brak sterowania optymalizujacego CHP."
+        },
+        {
+          "level": 1,
+          "official_description_en": "CHP runtime control influenced by the fluctuating availability of RES; overproduction will be fed into the grid",
+          "practical_description_pl": "Sterowanie wg zapotrzebowania na cieplo lub energie."
+        },
+        {
+          "level": 2,
+          "official_description_en": "CHP runtime control influenced by the fluctuating availability of RES and grid signals; dynamic charging and runtime control to optimise self-consumption of renewables",
+          "practical_description_pl": "Sterowanie zoptymalizowane wg warunkow (ceny, siec, zapotrzebowanie)."
+        }
+      ],
+      "technologies": [
+        "sterowniki CHP",
+        "praca wg zapotrzebowania cieplnego/elektrycznego",
+        "optymalizacja kosztowa",
+        "integracja z buforem"
+      ],
+      "devices": [
+        "agregat kogeneracyjny",
+        "bufor ciepla",
+        "liczniki energii/ciepla",
+        "sterownik/EMS"
+      ],
+      "audit_verification": [
+        "ustal obecnosc CHP i logike sterowania (cieplo/energia)",
+        "sprawdz wspolprace z buforem",
+        "zweryfikuj optymalizacje wg cen/sieci (poziom 2)"
+      ],
+      "evidence": [
+        "DTR CHP",
+        "konfiguracja sterowania",
+        "trendy produkcji ciepla/energii vs zapotrzebowanie"
+      ],
+      "common_mistakes": [
+        "praca CHP bez odbioru ciepla (marnowanie)",
+        "brak bufora (taktowanie)",
+        "ignorowanie cen energii"
+      ],
+      "limitations": [
+        "oplacalnosc zalezy od jednoczesnego zapotrzebowania cieplo/prad",
+        "wystepuje tylko przy instalacji CHP"
+      ],
+      "dependencies": [
+        "H-1f (bufor)",
+        "H-2d (kaskada zrodel)",
+        "E-8 (praca w microgrid)",
+        "E-2 (raportowanie produkcji)"
+      ],
+      "cross_domain_impact": [
+        "ogrzewanie (CHP jako zrodlo ciepla)",
+        "elastycznosc energetyczna"
+      ],
+      "modernization": [
+        "sterowanie CHP wg zapotrzebowania cieplnego i cen",
+        "dodanie bufora",
+        "integracja z EMS/microgrid"
+      ],
+      "examples": [
+        "szpital z CHP sterowanym wg zapotrzebowania na cieplo i energie"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "E-8",
+      "internal_code": "EL-05",
+      "domain_code": "electricity",
+      "service_group_en": "DSM- Storage",
+      "official_name_en": "Support of (micro)grid operation modes",
+      "official_name_pl": "Sterowanie kogeneracją (CHP)",
+      "included_in_method_a": false,
+      "fl_max": 3,
+      "friendly_name_pl": "Wsparcie pracy (mikro)sieci",
+      "purpose_pl": "Umozliwienie budynkowi pracy w roznych trybach sieci (np. wyspowym), wspierajac lokalna mikrosiec i ciaglosc zasilania.",
+      "technical_description_pl": "Sterowanie umozliwiajace prace w trybach on-grid/off-grid (wyspa), koordynacja zrodel, magazynu i odbiorow; wyzsze poziomy z automatycznym przelaczaniem i optymalizacja.",
+      "energy_significance_pl": "Wspiera integracje OZE i odpornosc (rezyliencje) zasilania; umozliwia lokalny bilans energii i uslugi dla sieci.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "None",
+          "practical_description_pl": "Brak wsparcia trybow (mikro)sieci."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Automated management of (building-level) electricity consumption based on grid signals",
+          "practical_description_pl": "Podstawowe wsparcie/przelaczanie trybow."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Automated management of (building-level) electricity consumption and electricity supply to neighbouring buildings (microgrid) or grid",
+          "practical_description_pl": "Koordynacja zrodel i magazynu w trybach sieci."
+        },
+        {
+          "level": 3,
+          "official_description_en": "Automated management of (building-level) electricity consumption and supply, with potential to continue limited off-grid operation (island mode)",
+          "practical_description_pl": "Automatyczna praca wyspowa z optymalizacja i bezprzerwowym przelaczaniem."
+        }
+      ],
+      "technologies": [
+        "falowniki gridformujace",
+        "sterowanie microgrid",
+        "automatyczne przelaczanie SZR",
+        "EMS"
+      ],
+      "devices": [
+        "falowniki hybrydowe/gridformujace",
+        "magazyn energii",
+        "uklad SZR/rozlaczniki",
+        "kontroler microgrid/EMS"
+      ],
+      "audit_verification": [
+        "ustal zdolnosc pracy wyspowej i tryby sieci",
+        "sprawdz koordynacje zrodel/magazynu",
+        "zweryfikuj automatyczne przelaczanie (wyzsze poziomy)"
+      ],
+      "evidence": [
+        "schemat microgrid/SZR",
+        "konfiguracja kontrolera",
+        "testy przelaczania trybow"
+      ],
+      "common_mistakes": [
+        "magazyn/falownik bez funkcji gridformujacej",
+        "brak testow przelaczania",
+        "niezbilansowane zrodla w trybie wyspy"
+      ],
+      "limitations": [
+        "wymaga odpowiednich falownikow/architektury",
+        "zlozonosc i koszt",
+        "aspekty formalne przylaczenia"
+      ],
+      "dependencies": [
+        "E-3 (magazyn)",
+        "E-5 (CHP)",
+        "E-2 (produkcja)",
+        "MC-25 (smart grid)"
+      ],
+      "cross_domain_impact": [
+        "elastycznosc energetyczna",
+        "cala infrastruktura (rezyliencja zasilania TBS)"
+      ],
+      "modernization": [
+        "wdrozenie falownikow gridformujacych i EMS microgrid",
+        "automatyczne przelaczanie na wyspe",
+        "koordynacja zrodel/magazynu"
+      ],
+      "examples": [
+        "obiekt krytyczny z praca wyspowa PV+magazyn+CHP",
+        "kampus z lokalna mikrosiecia"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    }
+  ]
+}

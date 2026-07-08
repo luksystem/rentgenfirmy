@@ -1,0 +1,279 @@
+{
+  "domain_code": "electric_vehicle_charging",
+  "domain_name_pl": "Ladowanie pojazdow elektrycznych",
+  "service_count": 3,
+  "provenance": {
+    "official_fields": "VERIFIED_ANNEX_D",
+    "expert_fields": "EXPERT_AUTHORED"
+  },
+  "cards": [
+    {
+      "official_code": "EV-15",
+      "internal_code": "EV-01",
+      "domain_code": "electric_vehicle_charging",
+      "service_group_en": "EV Charging",
+      "official_name_en": "EV Charging Capacity",
+      "official_name_pl": "Moce ładowania pojazdów elektrycznych",
+      "included_in_method_a": true,
+      "fl_max": 4,
+      "friendly_name_pl": "Infrastruktura i moc ladowania EV",
+      "purpose_pl": "Zapewnienie odpowiedniej liczby i mocy punktow ladowania pojazdow elektrycznych z inteligentnym zarzadzaniem moca (nieprzeciazanie przylacza).",
+      "technical_description_pl": "Zarzadzanie ladowaniem EV: od braku, przez pojedyncze punkty, po dynamiczne zarzadzanie moca (load balancing) rozdzielajace dostepna moc miedzy pojazdy i pozostale odbiory.",
+      "energy_significance_pl": "Dynamiczny load balancing pozwala ladowac wiecej pojazdow bez rozbudowy przylacza i unika drogich szczytow mocy; umozliwia ladowanie z nadwyzek OZE.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "not present",
+          "practical_description_pl": "Brak infrastruktury EV lub ladowanie niesterowane."
+        },
+        {
+          "level": 1,
+          "official_description_en": "ducting (or simple power plug) available",
+          "practical_description_pl": "Podstawowe punkty ladowania (stala moc)."
+        },
+        {
+          "level": 2,
+          "official_description_en": "0-9% of parking spaces has recharging points",
+          "practical_description_pl": "Sterowanie moca pojedynczych punktow (harmonogram/limit)."
+        },
+        {
+          "level": 3,
+          "official_description_en": "10-50% or parking spaces has recharging point",
+          "practical_description_pl": "Dynamiczne zarzadzanie moca miedzy punktami (load balancing)."
+        },
+        {
+          "level": 4,
+          "official_description_en": ">50% of parking spaces has recharging point",
+          "practical_description_pl": "Zaawansowane, zoptymalizowane zarzadzanie (OZE/taryfy/priorytety uzytkownikow)."
+        }
+      ],
+      "technologies": [
+        "load balancing (statyczny/dynamiczny)",
+        "OCPP",
+        "integracja z licznikiem przylacza",
+        "sterowanie wg PV/taryf"
+      ],
+      "devices": [
+        "stacje ladowania (wallbox/AC/DC)",
+        "licznik przylacza",
+        "kontroler load balancing/EMS"
+      ],
+      "audit_verification": [
+        "ustal liczbe i moc punktow oraz sposob zarzadzania moca",
+        "sprawdz load balancing wzgledem przylacza",
+        "zweryfikuj integracje z PV/taryfami (poziom 4)"
+      ],
+      "evidence": [
+        "schemat instalacji EV i przylacza",
+        "konfiguracja load balancing/OCPP",
+        "trendy mocy ladowania vs limit przylacza"
+      ],
+      "common_mistakes": [
+        "brak load balancingu (ryzyko przeciazenia)",
+        "stala moc bez uwzglednienia szczytow",
+        "brak integracji z PV mimo dostepnosci"
+      ],
+      "limitations": [
+        "ograniczenia mocy przylacza",
+        "standardy zlaczy/protokolow",
+        "zaleznosc od zachowan uzytkownikow"
+      ],
+      "dependencies": [
+        "EV-16 (bilansowanie sieci)",
+        "EV-17 (informacja/laczonosc)",
+        "E-4 (autokonsumpcja PV)",
+        "MC-25 (smart grid)"
+      ],
+      "cross_domain_impact": [
+        "elektrycznosc (EV jako duzy, sterowalny odbiornik)",
+        "elastycznosc energetyczna"
+      ],
+      "modernization": [
+        "wdrozenie dynamicznego load balancingu",
+        "integracja ladowania z nadwyzka PV i taryfami",
+        "rozbudowa o OCPP i priorytety"
+      ],
+      "examples": [
+        "parking biurowy z dynamicznym load balancingiem i OCPP",
+        "obiekt ladujacy EV z nadwyzki PV"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "EV-16",
+      "internal_code": "EV-02",
+      "domain_code": "electric_vehicle_charging",
+      "service_group_en": "EV Charging - Grid",
+      "official_name_en": "EV Charging Grid balancing",
+      "official_name_pl": "Harmonogramowe balansowanie obciążenia ładowania EV",
+      "included_in_method_a": true,
+      "fl_max": 2,
+      "friendly_name_pl": "Bilansowanie sieci przez ladowanie EV",
+      "purpose_pl": "Wykorzystanie ladowania (i ewentualnie rozladowania V2G) pojazdow do wspierania sieci — przesuwanie poboru, redukcja szczytow, uslugi elastycznosci.",
+      "technical_description_pl": "Sterowanie ladowaniem EV wg sygnalow sieci/taryf (smart charging), a na wyzszym poziomie dwukierunkowo (V2G/V2B) — od braku, przez smart charging, po pelne uslugi sieciowe.",
+      "energy_significance_pl": "EV to duzy, przesuwalny odbiornik (i potencjalny magazyn) — jego elastycznosc obniza koszty, szczyty i wspiera stabilnosc sieci; wysoka waga w SRI.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "Not present (uncontrolled charging)",
+          "practical_description_pl": "Brak bilansowania (ladowanie niesterowane sygnalami)."
+        },
+        {
+          "level": 1,
+          "official_description_en": "1-way controlled charging (e.g. including desired departure time and grid signals for optimization)",
+          "practical_description_pl": "Smart charging wg taryf/sygnalow (jednokierunkowo)."
+        },
+        {
+          "level": 2,
+          "official_description_en": "2-way controlled charging (e.g. including desired departure time and grid signals for optimization)",
+          "practical_description_pl": "Dwukierunkowa wspolpraca (V2G/V2B) / uslugi sieciowe."
+        }
+      ],
+      "technologies": [
+        "smart charging",
+        "V2G/V2B",
+        "OCPP/OpenADR",
+        "integracja z EMS i sygnalami sieci"
+      ],
+      "devices": [
+        "stacje ladowania z funkcja smart/V2G",
+        "licznik dwukierunkowy",
+        "EMS/kontroler",
+        "brama sygnalow sieci"
+      ],
+      "audit_verification": [
+        "sprawdz reakcje ladowania na taryfy/sygnaly sieci",
+        "ustal, czy dostepne jest V2G/V2B",
+        "zweryfikuj uslugi sieciowe i rozliczenia (poziom 2)"
+      ],
+      "evidence": [
+        "konfiguracja smart charging/V2G",
+        "trendy poboru EV vs ceny/sygnaly",
+        "umowy uslug elastycznosci"
+      ],
+      "common_mistakes": [
+        "ladowanie w szczycie bez sterowania",
+        "deklaracja smart charging bez realnego sygnalu",
+        "brak koordynacji z load balancingiem"
+      ],
+      "limitations": [
+        "dostepnosc V2G zalezna od pojazdow/stacji",
+        "aspekty formalne uslug sieciowych",
+        "zachowania uzytkownikow"
+      ],
+      "dependencies": [
+        "EV-15 (infrastruktura/moc)",
+        "E-3 (magazyn)",
+        "MC-25 (smart grid)",
+        "MC-29 (override DSM)"
+      ],
+      "cross_domain_impact": [
+        "elektrycznosc (elastycznosc i magazynowanie)",
+        "elastycznosc energetyczna",
+        "monitoring (DSM)"
+      ],
+      "modernization": [
+        "wdrozenie smart charging wg taryf/sieci",
+        "pilotaz V2G/V2B",
+        "integracja z EMS i uslugami elastycznosci"
+      ],
+      "examples": [
+        "flota sluzbowa ladowana wg cen energii i sygnalow sieci",
+        "obiekt z pilotazem V2B wspierajacym szczyty"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    },
+    {
+      "official_code": "EV-17",
+      "internal_code": "EV-03",
+      "domain_code": "electric_vehicle_charging",
+      "service_group_en": "EV Charging - connectivity",
+      "official_name_en": "EV charging information and connectivity",
+      "official_name_pl": "Informacja o ładowaniu pojazdów elektrycznych",
+      "included_in_method_a": true,
+      "fl_max": 2,
+      "friendly_name_pl": "Informacja i laczonosc ladowania EV",
+      "purpose_pl": "Udostepnianie uzytkownikom i systemom informacji o ladowaniu (status, koszt, dostepnosc) oraz laczonosci umozliwiajacej zdalne zarzadzanie i rozliczenia.",
+      "technical_description_pl": "Funkcje informacyjne i komunikacyjne stacji: status sesji, identyfikacja/autoryzacja, rozliczenia, integracja z systemami; od braku, przez podstawowa informacje, po pelna laczonosc i integracje.",
+      "energy_significance_pl": "Laczonosc i informacja umozliwiaja smart charging, rozliczenia i optymalizacje uzycia — warunek zaawansowanego zarzadzania i elastycznosci EV.",
+      "functionality_levels": [
+        {
+          "level": 0,
+          "official_description_en": "No information available",
+          "practical_description_pl": "Brak informacji/laczonosci (stacja offline)."
+        },
+        {
+          "level": 1,
+          "official_description_en": "Reporting information on EV charging status to occupant",
+          "practical_description_pl": "Podstawowa informacja o statusie ladowania."
+        },
+        {
+          "level": 2,
+          "official_description_en": "Reporting information on EV charging status to occupant AND automatic identification and authorizition of the driver to the charging station (ISO 15118 compliant)",
+          "practical_description_pl": "Pelna laczonosc i integracja (autoryzacja, rozliczenia, zdalne zarzadzanie)."
+        }
+      ],
+      "technologies": [
+        "OCPP",
+        "aplikacje/portale uzytkownika",
+        "autoryzacja RFID/aplikacja",
+        "integracja z systemami rozliczen"
+      ],
+      "devices": [
+        "stacje ladowania z laczonoscia",
+        "czytniki RFID",
+        "brama/backend zarzadzania ladowaniem"
+      ],
+      "audit_verification": [
+        "sprawdz laczonosc stacji (OCPP/backend)",
+        "ustal dostepnosc informacji dla uzytkownikow (status/koszt)",
+        "zweryfikuj autoryzacje i rozliczenia (poziom 2)"
+      ],
+      "evidence": [
+        "konfiguracja OCPP/backendu",
+        "zrzuty aplikacji/portalu",
+        "raporty sesji ladowania"
+      ],
+      "common_mistakes": [
+        "stacje offline (brak zarzadzania)",
+        "brak autoryzacji (niekontrolowane uzycie)",
+        "brak danych do rozliczen"
+      ],
+      "limitations": [
+        "zaleznosc od backendu/operatora",
+        "kwestie ochrony danych uzytkownikow"
+      ],
+      "dependencies": [
+        "EV-15 (infrastruktura)",
+        "EV-16 (smart charging)",
+        "MC-13 (raportowanie)"
+      ],
+      "cross_domain_impact": [
+        "monitoring i sterowanie (dane sesji, integracja)",
+        "elastycznosc energetyczna (warunek smart charging)"
+      ],
+      "modernization": [
+        "wdrozenie OCPP i backendu zarzadzania",
+        "aplikacja/portal dla uzytkownikow",
+        "autoryzacja i rozliczenia sesji"
+      ],
+      "examples": [
+        "parking z ladowarkami OCPP, autoryzacja RFID i rozliczeniami",
+        "obiekt z portalem statusu i rezerwacji ladowarek"
+      ],
+      "provenance": {
+        "official_fields": "VERIFIED_ANNEX_D",
+        "expert_fields": "EXPERT_AUTHORED",
+        "source_version": "SRI calculation sheet v4.5"
+      }
+    }
+  ]
+}

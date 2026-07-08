@@ -1,41 +1,31 @@
-# SRI — Handoff na następną sesję (import Excela)
+# SRI — Handoff na następną sesję
 
-Krótka notatka startowa. Gdy będzie plik Excel KE, zacznij stąd.
+> **✅ IMPORT ZAKOŃCZONY (2026-07-08).** Oficjalny arkusz KE `SRI calculation sheet v4.5`
+> został zaimportowany, zwalidowany i zapisany jako katalog + migracja + seed.
+> Bieżący status i pełny opis w `SRI-KNOWLEDGE-BASE-STATUS.md`.
 
-## Status zamrożony na: 2026-07-05
-- **Ogólny status bazy:** `NOT_READY_FOR_SCORING`.
-- Warstwa normatywna (9 domen, 7 kryteriów, 3 funkcjonalności, wzory, 7 klas) = odwzorowana z prawa UE (Reg. 2020/2155).
-- Warstwa liczbowa (impact scores, wagi, poziomy funkcjonalności, kody/nazwy 54 usług) = **BRAK** — czeka na oficjalny pakiet Excel.
+## Co jest zrobione
+- **Ekstrakcja + walidacja** danych z Excela v4.5: 54 usługi Method B, 27 Method A, 228 impact scores, 630 wag domen, 14 wag kryteriów. Testy spójności zdane.
+- **Katalog JSON** w `docs/sri/catalogue/` (services-authoritative, impact-scores, weights/*, class-bands, key-functionalities).
+- **Proweniencja** (`catalogue/import-manifest.json` + tabela `sri_source_imports`): source_version, import_date, import_hash (Excel), source_checksum (dane), importer_version, liczniki.
+- **Migracja** `supabase/migrations/096_sri_catalogue.sql` (schemat + słowniki + rekord importu).
+- **Seed** `supabase/seed/096_sri_catalogue_seed.sql` (masowe dane, regenerowalny z JSON).
+- **Pipeline** w `store/sri/`: `_extract.py` → `_build_catalogue.py` → `_gen_seed_sql.py`.
 
-## Dlaczego czekamy
-Autorytatywne dane liczbowe są **tylko** w pakiecie Excel DG ENER, dostępnym po wniosku:
-https://ec.europa.eu/eusurvey/runner/SRI-assessment-package (formularz + akceptacja Terms & Conditions).
-Publiczny raport BEAMA/2018 = inna, przestarzała metodologia (11 domen, 8 kryteriów, 112 usług) — **NIE używać** do punktacji.
+## Pliki źródłowe KE
+W `.gitignore` (`store/sri/*.xlsx`, `*.pdf`, `raw/`) — T&C KE zabraniają redystrybucji.
+Tożsamość weryfikuje się hashami w `import-manifest.json`.
 
-## Gdy plik będzie dostępny — checklista wznowienia
-1. Wrzuć skoroszyt do `docs/sri/source-excel/` (preferowana wersja EN, `.xlsx`; jak jest, dołóż practical guide PDF).
-2. Odczytaj strukturę: lista zakładek + nagłówki (bez interpretacji).
-3. Import wg `IMPORT-MAPPING.md §7`:
-   - usługi → `official_code` + nazwy (zastąp zrekonstruowane),
-   - poziomy funkcjonalności (opisy, liczba),
-   - macierze impact scores (FL × 7 kryteriów; **dozwolone wartości ujemne**),
-   - wagi domen `W(d,ic)`, wagi `W_f(ic)`, `W_f`,
-   - applicability / triage.
-4. Testy spójności: Σ wag domen = 100% per kryterium; Σ W_f = 1; FLmax zgodny z macierzą; potwierdź skalę punktów.
-5. Popraw znane błędy: Method A = **27** (obecnie 26 flag); provenance → `VERIFIED_ANNEX_D`; zdejmij `needs_verification`.
-6. Zaktualizuj `SRI-KNOWLEDGE-BASE-STATUS.md` (kryteria wyjścia §6 → 9/9) i dopiero potem projekt pytań audytowych.
+## Aktualizacja do przyszłej wersji (SRI v5.0)
+Patrz `SRI-KNOWLEDGE-BASE-STATUS.md §4` — procedura krok po kroku (nowy `CATALOGUE_CODE`,
+stary katalog zostaje do porównań, diff po `record_counts` i `source_checksum`).
 
-## Pliki do przeczytania w pierwszej kolejności (kontekst pełny)
-- `SRI-KNOWLEDGE-BASE-STATUS.md` — stan ogólny i macierz.
-- `VALIDATION-GAP-PLAN.md` — luki V1–V10, błędy E1–E4, zmiany modelu §4, kryteria gotowości §6.
-- `IMPORT-MAPPING.md` — kontrakt mapowania Excel→DB, reguły anty-konfabulacyjne, checklista 54 usług.
+## Następne kroki (nowa funkcjonalność, poza importem)
+1. Silnik obliczeniowy SRI (I → D → SR) na tabelach `sri_*`.
+2. Pytania audytowe generowane z poziomów funkcjonalności.
+3. Opcjonalnie katalog krajowy PL (Annex VI) jako `catalogue: pl-national`.
 
-## Zmiany modelu do wykonania przy imporcie (z VALIDATION-GAP-PLAN §4)
-1. Nowa tabela `sri_key_functionality_total_weights` (`W_f`, Σ=1).
-2. `sri_services`: `official_code`, `provenance`, `needs_verification`.
-3. `sri_functionality_level_impact_scores`: dopuścić ujemne, dodać `needs_verification`.
-4. `sri_catalogues`: `score_scale`, `completeness_status`.
-5. Referencje prawne per usługa.
-
-## Uwaga techniczna
-Do czytania `.xlsx`: Node `xlsx` (SheetJS) albo Python `openpyxl`. Nic nie instaluj z góry — dobiorę po zobaczeniu pliku.
+## Pliki do przeczytania w pierwszej kolejności
+- `SRI-KNOWLEDGE-BASE-STATUS.md` — stan ogólny, artefakty, mechanizm proweniencji.
+- `IMPORT-MAPPING.md` — kontrakt mapowania Excel→DB.
+- `DATABASE-SCHEMA.md` — DDL (odzwierciedlony w migracji 096).
