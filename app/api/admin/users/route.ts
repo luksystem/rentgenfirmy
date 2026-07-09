@@ -43,9 +43,24 @@ function parseUserInput(body: unknown): CreateUserBody | null {
     baseLocation: typeof data.baseLocation === "string" ? data.baseLocation : "",
     costRate: typeof data.costRate === "number" ? data.costRate : null,
     isAvailableForPlanning: data.isAvailableForPlanning !== false,
+    supervisorId: typeof data.supervisorId === "string" && data.supervisorId.trim() ? data.supervisorId : null,
     password: typeof data.password === "string" ? data.password : undefined,
     sendInvite: data.sendInvite === true,
   };
+}
+
+/** Przełożony jest obowiązkowy dla wszystkich ról poza administratorem. */
+function validateSupervisor(body: CreateUserBody, ownId?: string) {
+  if (body.role === "administrator") {
+    return null;
+  }
+  if (!body.supervisorId) {
+    return "Wybierz przełożonego (wymagane dla wszystkich ról poza administratorem).";
+  }
+  if (ownId && body.supervisorId === ownId) {
+    return "Użytkownik nie może być swoim własnym przełożonym.";
+  }
+  return null;
 }
 
 export async function GET() {
@@ -76,6 +91,11 @@ export async function POST(request: Request) {
 
     if (!body) {
       return NextResponse.json({ error: "Nieprawidłowe dane użytkownika." }, { status: 400 });
+    }
+
+    const supervisorError = validateSupervisor(body);
+    if (supervisorError) {
+      return NextResponse.json({ error: supervisorError }, { status: 400 });
     }
 
     if (!body.sendInvite && (!body.password || body.password.length < 8)) {

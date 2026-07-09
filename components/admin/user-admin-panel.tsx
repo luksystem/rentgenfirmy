@@ -32,6 +32,7 @@ const emptyForm = (): UserFormState => ({
   baseLocation: "",
   costRate: null,
   isAvailableForPlanning: true,
+  supervisorId: null,
   password: "",
   sendInvite: false,
 });
@@ -49,6 +50,7 @@ function profileToForm(user: UserProfile): UserFormState {
     baseLocation: user.baseLocation,
     costRate: user.costRate,
     isAvailableForPlanning: user.isAvailableForPlanning,
+    supervisorId: user.supervisorId,
     password: "",
     sendInvite: false,
   };
@@ -120,6 +122,11 @@ export function UserAdminPanel() {
   }
 
   async function saveUser() {
+    if (form.role !== "administrator" && !form.supervisorId) {
+      setError("Wybierz przełożonego (wymagane dla wszystkich ról poza administratorem).");
+      return;
+    }
+
     setIsSaving(true);
     setMessage(null);
     setError(null);
@@ -406,6 +413,37 @@ export function UserAdminPanel() {
               />
               Konto aktywne
             </label>
+
+            <Field
+              label="Przełożony"
+              error={
+                form.role !== "administrator" && !form.supervisorId
+                  ? "Wymagany dla wszystkich ról poza administratorem."
+                  : undefined
+              }
+              invalid={form.role !== "administrator" && !form.supervisorId}
+            >
+              <Select
+                value={form.supervisorId ?? ""}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    supervisorId: event.target.value || null,
+                  }))
+                }
+              >
+                <option value="">
+                  {form.role === "administrator" ? "— brak (administrator) —" : "— wybierz przełożonego —"}
+                </option>
+                {users
+                  .filter((candidate) => candidate.id !== selectedId)
+                  .map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {candidate.firstName} {candidate.lastName} ({USER_ROLE_LABELS[candidate.role]})
+                    </option>
+                  ))}
+              </Select>
+            </Field>
 
             <div className="grid gap-4 rounded-xl border border-border/70 bg-surface-muted/15 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted">

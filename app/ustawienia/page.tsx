@@ -196,6 +196,20 @@ export default function SettingsPage() {
       <Card className="mb-6 border border-border/80">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
           <div>
+            <p className="font-medium text-foreground">Moja praca — Dostępność / Urlopy</p>
+            <p className="mt-1 text-sm text-muted">
+              Typy dostępności (urlop wypoczynkowy, zwolnienie lekarskie...) i wzór karty urlopowej PDF.
+            </p>
+          </div>
+          <Button variant="secondary" asChild>
+            <Link href="/ustawienia/urlopy">Otwórz ustawienia urlopów</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-6 border border-border/80">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+          <div>
             <p className="font-medium text-foreground">Plan Zasobów — słowniki</p>
             <p className="mt-1 text-sm text-muted">
               Role operacyjne, kompetencje, zespoły, obszary, typy pracy, statusy, ryzyka, nieobecności i budżety.

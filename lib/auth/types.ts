@@ -22,6 +22,8 @@ export type UserProfile = {
   baseLocation: string;
   costRate: number | null;
   isAvailableForPlanning: boolean;
+  /** Przełożony — odbiorca wniosków urlopowych. Wymagany dla wszystkich ról poza administratorem. */
+  supervisorId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -38,6 +40,7 @@ export type UserProfileInput = {
   baseLocation?: string;
   costRate?: number | null;
   isAvailableForPlanning?: boolean;
+  supervisorId?: string | null;
 };
 
 export const USER_ROLE_LABELS: Record<UserRole, string> = {

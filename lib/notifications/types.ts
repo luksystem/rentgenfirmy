@@ -10,6 +10,8 @@ export const USER_NOTIFICATION_KINDS = [
   "goal_period_ending",
   "goal_at_risk",
   "goal_recurring_created",
+  "leave_request_created",
+  "leave_request_decided",
 ] as const;
 
 export type UserNotificationKind = (typeof USER_NOTIFICATION_KINDS)[number];

@@ -21,9 +21,11 @@ import {
   Inbox,
   LayoutDashboard,
   LayoutGrid,
+  ListTodo,
   LogOut,
   Key,
   Menu,
+  PalmtreeIcon,
   PauseCircle,
   PhoneCall,
   Plus,
@@ -31,7 +33,9 @@ import {
   Settings,
   Shield,
   Target,
+  Timer,
   Users,
+  Users2,
   CalendarRange,
   X,
 } from "lucide-react";
@@ -64,6 +68,14 @@ const navGroupsBase: NavGroup[] = [
   {
     label: "Główne",
     items: [{ href: "/", label: "Start", icon: Home }],
+  },
+  {
+    label: "Moja praca",
+    items: [
+      { href: "/moja-praca/zadania", label: "Zadania", icon: ListTodo, disabled: true },
+      { href: "/moja-praca/czas-pracy", label: "Czas pracy", icon: Timer, disabled: true },
+      { href: "/moja-praca/dostepnosc", label: "Dostępność", icon: PalmtreeIcon },
+    ],
   },
   {
     label: "Sprzedaż",
@@ -117,6 +129,7 @@ const navGroupsBase: NavGroup[] = [
       { href: "/tablice-wdrozen", label: "Tablice wdrożeń", icon: LayoutGrid },
       { href: "/tablice-celow", label: "Tablice celów", icon: Target },
       { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
+      { href: "/pracownicy", label: "Pracownicy", icon: Users2 },
     ],
   },
   {
@@ -200,7 +213,7 @@ function NavLink({
     return (
       <div
         aria-disabled="true"
-        title="Moduł w przygotowaniu — leady"
+        title="Moduł w przygotowaniu"
         className={cn(
           "flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium opacity-45",
           variant === "sheet" && "rounded-2xl border border-border/50 bg-surface-muted/40 px-4 py-3",

@@ -84,3 +84,75 @@ export async function createKanbanNewActivityNotificationsServer(input: {
 function normalizeAuthor(value: string) {
   return value.trim().toLocaleLowerCase("pl");
 }
+
+/** Powiadomienie dla przełożonego + administratorów o nowym wniosku urlopowym (sekcja „Pracownicy”). */
+export async function createLeaveRequestCreatedNotificationsServer(input: {
+  leaveRequestId: string;
+  employeeName: string;
+  leaveTypeName: string;
+  startDate: string;
+  endDate: string;
+  recipientProfileIds: string[];
+  linkUrl?: string;
+}) {
+  const recipients = Array.from(new Set(input.recipientProfileIds.filter(Boolean)));
+  if (!recipients.length) {
+    return;
+  }
+
+  const supabase = getSupabaseAdmin();
+  const title = `${input.employeeName} — wniosek o urlop`;
+  const body = `${input.leaveTypeName}: ${input.startDate} — ${input.endDate}. Wymaga akceptacji.`;
+  const now = new Date().toISOString();
+  const rows = recipients.map((profileId) => ({
+    id: crypto.randomUUID(),
+    profile_id: profileId,
+    kind: "leave_request_created" as UserNotificationKind,
+    title,
+    body,
+    link_url: input.linkUrl ?? "/pracownicy/urlopy",
+    source_id: input.leaveRequestId,
+    created_at: now,
+  }));
+
+  const { error } = await supabase.from("user_notifications").insert(rows);
+  if (error && !error.message.toLowerCase().includes("does not exist")) {
+    throw new Error(error.message);
+  }
+}
+
+/** Powiadomienie dla pracownika o decyzji (akceptacja/odrzucenie) w sprawie jego wniosku. */
+export async function createLeaveRequestDecidedNotificationServer(input: {
+  leaveRequestId: string;
+  employeeProfileId: string;
+  approved: boolean;
+  leaveTypeName: string;
+  startDate: string;
+  endDate: string;
+  decisionNote?: string;
+  linkUrl?: string;
+}) {
+  const supabase = getSupabaseAdmin();
+  const title = input.approved
+    ? `Twój urlop został zaakceptowany`
+    : `Twój wniosek o urlop został odrzucony`;
+  const bodyParts = [`${input.leaveTypeName}: ${input.startDate} — ${input.endDate}.`];
+  if (!input.approved && input.decisionNote?.trim()) {
+    bodyParts.push(`Powód: ${input.decisionNote.trim()}`);
+  }
+
+  const { error } = await supabase.from("user_notifications").insert({
+    id: crypto.randomUUID(),
+    profile_id: input.employeeProfileId,
+    kind: "leave_request_decided" as UserNotificationKind,
+    title,
+    body: bodyParts.join(" "),
+    link_url: input.linkUrl ?? "/moja-praca/dostepnosc",
+    source_id: input.leaveRequestId,
+    created_at: new Date().toISOString(),
+  });
+
+  if (error && !error.message.toLowerCase().includes("does not exist")) {
+    throw new Error(error.message);
+  }
+}

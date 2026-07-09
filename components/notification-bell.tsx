@@ -2,7 +2,17 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Bell, CalendarClock, ClipboardCheck, Sparkles, Star, Wrench } from "lucide-react";
+import {
+  AlertTriangle,
+  Bell,
+  CalendarClock,
+  ClipboardCheck,
+  PalmtreeIcon,
+  Sparkles,
+  Star,
+  Target,
+  Wrench,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavBadges } from "@/components/nav-badges";
 import { cn, formatDate } from "@/lib/utils";
@@ -33,6 +43,7 @@ export function NotificationBell() {
   const [serviceOverdueCount, setServiceOverdueCount] = useState(0);
   const [inspectionsPlanningCount, setInspectionsPlanningCount] = useState(0);
   const [inspectionsBillingCount, setInspectionsBillingCount] = useState(0);
+  const [leavePendingCount, setLeavePendingCount] = useState(0);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   const kanbanAlertCount = kanbanNewTaskCount + kanbanOverdueTaskCount;
@@ -48,12 +59,14 @@ export function NotificationBell() {
     agreementPendingCounts.pendingTeamApproval +
     serviceNewCount +
     inspectionsPlanningCount +
-    inspectionsBillingCount;
+    inspectionsBillingCount +
+    leavePendingCount;
   const overdueBadgeCount = kanbanOverdueTaskCount + serviceOverdueCount;
   const hasKanbanAlerts = kanbanAlertCount > 0;
   const hasServiceAlerts = serviceAlertCount > 0;
   const hasInspectionsAlerts = inspectionsAlertCount > 0;
   const hasAgreementAlerts = agreementAlertCount > 0;
+  const hasLeaveAlerts = leavePendingCount > 0;
   const hasBadges = newBadgeCount > 0 || overdueBadgeCount > 0;
 
   const refreshBadge = useCallback(() => {
@@ -102,6 +115,15 @@ export function NotificationBell() {
         setInspectionsPlanningCount(0);
         setInspectionsBillingCount(0);
       });
+    void fetch("/api/leave-requests/counts", { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) {
+          return;
+        }
+        const payload = (await response.json()) as { pendingForMeCount?: number };
+        setLeavePendingCount(payload.pendingForMeCount ?? 0);
+      })
+      .catch(() => setLeavePendingCount(0));
     if (open) {
       void loadNotifications(profileId);
     }
@@ -295,6 +317,34 @@ export function NotificationBell() {
               </div>
             ) : null}
 
+            {hasLeaveAlerts ? (
+              <div className="border-b border-border/60 bg-surface-muted/20">
+                <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                  Pracownicy
+                </p>
+                <Link
+                  href="/pracownicy/urlopy"
+                  onClick={() => setOpen(false)}
+                  className="flex items-start gap-3 px-4 py-3 transition hover:bg-surface-muted/30"
+                >
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-emerald-500/35 bg-emerald-500/10 text-emerald-300">
+                    <PalmtreeIcon className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">Wnioski urlopowe do akceptacji</p>
+                      <NavBadges newCount={leavePendingCount} size="sm" />
+                    </div>
+                    <p className="mt-1 break-words text-xs leading-relaxed text-muted">
+                      {leavePendingCount === 1
+                        ? "1 wniosek o urlop czeka na Twoją decyzję."
+                        : `${leavePendingCount} wniosków o urlop czeka na Twoją decyzję.`}
+                    </p>
+                  </span>
+                </Link>
+              </div>
+            ) : null}
+
             {hasKanbanAlerts ? (
               <div className="border-b border-border/60 bg-surface-muted/20">
                 <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wide text-muted">
@@ -453,7 +503,11 @@ export function NotificationBell() {
 
             {loading ? (
               <p className="px-4 py-6 text-sm text-muted">Ładowanie…</p>
-            ) : items.length === 0 && !hasKanbanAlerts && !hasAgreementAlerts && !hasServiceAlerts ? (
+            ) : items.length === 0 &&
+              !hasKanbanAlerts &&
+              !hasAgreementAlerts &&
+              !hasServiceAlerts &&
+              !hasLeaveAlerts ? (
               <p className="px-4 py-6 text-sm text-muted">Brak powiadomień.</p>
             ) : items.length === 0 ? (
               <p className="px-4 py-4 text-xs text-muted">Brak innych powiadomień.</p>
@@ -486,6 +540,24 @@ export function NotificationBell() {
                     ) : item.kind === "service_intake_preliminary_offer" ? (
                       <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-sky-500/35 bg-sky-500/10 text-sky-200">
                         <Sparkles className="h-4 w-4" />
+                      </span>
+                    ) : item.kind === "goal_review_due" ||
+                      item.kind === "goal_period_ending" ||
+                      item.kind === "goal_at_risk" ||
+                      item.kind === "goal_recurring_created" ? (
+                      <span
+                        className={cn(
+                          "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border",
+                          item.kind === "goal_at_risk"
+                            ? "border-rose-500/35 bg-rose-500/10 text-rose-300"
+                            : "border-blue-500/35 bg-blue-500/10 text-blue-300",
+                        )}
+                      >
+                        <Target className="h-4 w-4" />
+                      </span>
+                    ) : item.kind === "leave_request_created" || item.kind === "leave_request_decided" ? (
+                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-emerald-500/35 bg-emerald-500/10 text-emerald-300">
+                        <PalmtreeIcon className="h-4 w-4" />
                       </span>
                     ) : null}
                     <span className="min-w-0 flex-1">

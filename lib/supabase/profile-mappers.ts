@@ -15,6 +15,7 @@ export function mapProfileRow(row: ProfileRow): UserProfile {
     baseLocation: row.base_location,
     costRate: row.cost_rate,
     isAvailableForPlanning: row.is_available_for_planning,
+    supervisorId: row.supervisor_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -37,6 +38,7 @@ export function mapProfileInputToInsert(
     base_location: input.baseLocation?.trim() ?? "",
     cost_rate: input.costRate ?? null,
     is_available_for_planning: input.isAvailableForPlanning ?? true,
+    supervisor_id: input.supervisorId ?? null,
   };
 }
 
@@ -53,6 +55,7 @@ export function mapProfileInputToUpdate(input: UserProfileInput): ProfileUpdate 
     base_location: input.baseLocation?.trim() ?? "",
     cost_rate: input.costRate ?? null,
     is_available_for_planning: input.isAvailableForPlanning ?? true,
+    supervisor_id: input.supervisorId ?? null,
     updated_at: new Date().toISOString(),
   };
 }

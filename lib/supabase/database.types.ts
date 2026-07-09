@@ -917,6 +917,7 @@ export type ProfileRow = {
   base_location: string;
   cost_rate: number | null;
   is_available_for_planning: boolean;
+  supervisor_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -934,11 +935,54 @@ export type ProfileInsert = {
   base_location?: string;
   cost_rate?: number | null;
   is_available_for_planning?: boolean;
+  supervisor_id?: string | null;
   created_at?: string;
   updated_at?: string;
 };
 
 export type ProfileUpdate = Partial<Omit<ProfileInsert, "id">>;
+
+export type LeaveRequestRow = {
+  id: string;
+  profile_id: string;
+  leave_type_item_id: string | null;
+  start_date: string;
+  end_date: string;
+  note: string;
+  status: string;
+  supervisor_id: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_note: string;
+  signature: unknown;
+  generated_pdf_path: string | null;
+  generated_pdf_name: string | null;
+  google_calendar_event_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LeaveRequestInsert = {
+  id?: string;
+  profile_id: string;
+  leave_type_item_id?: string | null;
+  start_date: string;
+  end_date: string;
+  note?: string;
+  status?: string;
+  supervisor_id?: string | null;
+  decided_by?: string | null;
+  decided_at?: string | null;
+  decision_note?: string;
+  signature?: unknown;
+  generated_pdf_path?: string | null;
+  generated_pdf_name?: string | null;
+  google_calendar_event_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LeaveRequestUpdate = Partial<Omit<LeaveRequestInsert, "id" | "profile_id">>;
 
 export type UserOperationalRoleRow = {
   id: string;
@@ -1970,6 +2014,12 @@ export type Database = {
         Row: ProfileRow;
         Insert: ProfileInsert;
         Update: ProfileUpdate;
+        Relationships: [];
+      };
+      leave_requests: {
+        Row: LeaveRequestRow;
+        Insert: LeaveRequestInsert;
+        Update: LeaveRequestUpdate;
         Relationships: [];
       };
       process_templates: {
