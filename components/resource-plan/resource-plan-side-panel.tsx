@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { UserProfile } from "@/lib/auth/types";
 import { getUserDisplayName } from "@/lib/auth/types";
 import type { ProcessStage } from "@/lib/process/types";
 import { ensureAnchoredTemplateSnapshot } from "@/lib/supabase/process-repository";
