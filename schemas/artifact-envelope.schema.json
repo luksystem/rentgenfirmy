@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "artifact-envelope.schema.json",
+  "title": "Artifact Envelope",
+  "description": "Uniwersalna koperta artefaktu: provenance + payload. Kontrakt ZAMROZONY.",
+  "x-schema-version": "1.0.0",
+  "type": "object",
+  "required": ["provenance", "payload"],
+  "properties": {
+    "provenance": { "$ref": "provenance-header.schema.json" },
+    "payload": {}
+  },
+  "additionalProperties": false
+}

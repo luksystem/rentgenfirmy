@@ -1,0 +1,89 @@
+{
+  "provenance": {
+    "artifact_type": "catalogue_criterion_weights",
+    "methodology_version_id": "eu-sri-v4.5",
+    "schema_version": "1.0.0",
+    "engine_version": "1.0.0",
+    "generated_by": "core/artifacts.py",
+    "generated_at": "2026-07-09T16:13:32Z",
+    "source_checksum": "fea84a1931abb38c78e6ede524120c9c3527d8330407cbe5ff10e74f06ef95a4",
+    "payload_checksum": "32058471d79c5d43508875542e5679dc16af2c9f6fb25315d5de8e15ce319cd5"
+  },
+  "payload": {
+    "source_version": "SRI calculation sheet v4.5",
+    "provenance": "VERIFIED_ANNEX_D",
+    "note": "W_f(ic) - wagi kryteriow oddzialywania, suma = 1 per typ budynku",
+    "weights": [
+      {
+        "building_type": "residential",
+        "impact_criterion_code": "energy_efficiency",
+        "weight": 0.1666666667
+      },
+      {
+        "building_type": "residential",
+        "impact_criterion_code": "energy_flexibility_and_storage",
+        "weight": 0.3333333333
+      },
+      {
+        "building_type": "residential",
+        "impact_criterion_code": "comfort",
+        "weight": 0.0833333333
+      },
+      {
+        "building_type": "residential",
+        "impact_criterion_code": "convenience",
+        "weight": 0.0833333333
+      },
+      {
+        "building_type": "residential",
+        "impact_criterion_code": "health_wellbeing_accessibility",
+        "weight": 0.0833333333
+      },
+      {
+        "building_type": "residential",
+        "impact_criterion_code": "maintenance_and_fault_prediction",
+        "weight": 0.1666666667
+      },
+      {
+        "building_type": "residential",
+        "impact_criterion_code": "information_to_occupants",
+        "weight": 0.0833333333
+      },
+      {
+        "building_type": "non_residential",
+        "impact_criterion_code": "energy_efficiency",
+        "weight": 0.1666666667
+      },
+      {
+        "building_type": "non_residential",
+        "impact_criterion_code": "energy_flexibility_and_storage",
+        "weight": 0.3333333333
+      },
+      {
+        "building_type": "non_residential",
+        "impact_criterion_code": "comfort",
+        "weight": 0.0833333333
+      },
+      {
+        "building_type": "non_residential",
+        "impact_criterion_code": "convenience",
+        "weight": 0.0833333333
+      },
+      {
+        "building_type": "non_residential",
+        "impact_criterion_code": "health_wellbeing_accessibility",
+        "weight": 0.0833333333
+      },
+      {
+        "building_type": "non_residential",
+        "impact_criterion_code": "maintenance_and_fault_prediction",
+        "weight": 0.1666666667
+      },
+      {
+        "building_type": "non_residential",
+        "impact_criterion_code": "information_to_occupants",
+        "weight": 0.0833333333
+      }
+    ]
+  }
+}

@@ -1,0 +1,2137 @@
+{
+  "meta": {
+    "engine": "SRI Recommendation Engine — Expected Gain Model",
+    "engine_version": "1.0.0",
+    "generated_at": "2026-07-09T15:51:18.682892+00:00",
+    "role": "advisory_layer",
+    "definition": "Expected Gain = maksymalny udzial uslugi w calkowitym SRI, gdy usluga przechodzi z braku (FL0) do FLmax w pelni wyposazonym budynku referencyjnym. Suma po wszystkich uslugach ~ 100% dla kazdego typu budynku.",
+    "criteria": [
+      "energy_efficiency",
+      "maintenance_and_fault_prediction",
+      "comfort",
+      "convenience",
+      "health_wellbeing_accessibility",
+      "information_to_occupants",
+      "energy_flexibility_and_storage"
+    ]
+  },
+  "expected_gain": {
+    "non_residential": {
+      "C-1a": {
+        "total_percent": 1.6321603066717496,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.22558783927304682,
+          "maintenance_and_fault_prediction": 0.3792997405368843,
+          "comfort": 0.26666666656000004,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.5333333331200001,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.22558783927304682
+      },
+      "C-1b": {
+        "total_percent": 1.795059598253353,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.1503918928486979,
+          "maintenance_and_fault_prediction": 0.3792997405368843,
+          "comfort": 0.26666666656000004,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.5333333331200001,
+          "information_to_occupants": 0.23809523800595236,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.1503918928486979
+      },
+      "C-1c": {
+        "total_percent": 0.35948280185597065,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.1503918928486979,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.13333333328000002,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.1503918928486979
+      },
+      "C-1d": {
+        "total_percent": 0.1503918928486979,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.1503918928486979,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.1503918928486979
+      },
+      "C-1f": {
+        "total_percent": 0.22558783927304682,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.22558783927304682,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.22558783927304682
+      },
+      "C-1g": {
+        "total_percent": 1.0424538184410177,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.1503918928486979,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.8920619255923198
+        },
+        "energy_percent": 1.0424538184410177
+      },
+      "C-2a": {
+        "total_percent": 1.7551514477971775,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.1503918928486979,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.26666666656000004,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.3380928883884795
+        },
+        "energy_percent": 1.4884847812371773
+      },
+      "C-2b": {
+        "total_percent": 1.5636807276615263,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.22558783927304682,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.3380928883884795
+        },
+        "energy_percent": 1.5636807276615263
+      },
+      "C-3": {
+        "total_percent": 2.003138457780132,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.07519594642434894,
+          "maintenance_and_fault_prediction": 1.1378992216106527,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.7142857140178571,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.07519594642434894
+      },
+      "C-4": {
+        "total_percent": 2.3824241748189956,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.1503918928486979,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.39999999984000006,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.26666666656000004,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.3380928883884795
+        },
+        "energy_percent": 1.4884847812371773
+      },
+      "DE-1": {
+        "total_percent": 2.71666666588,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.5000000001,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.7999999996800001,
+          "convenience": 0.41666666650000006,
+          "health_wellbeing_accessibility": 0.9999999996,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.5000000001
+      },
+      "DE-2": {
+        "total_percent": 1.4777777773866667,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.33333333340000004,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.5333333331200001,
+          "convenience": 0.2777777776666667,
+          "health_wellbeing_accessibility": 0.3333333332,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.33333333340000004
+      },
+      "DE-4": {
+        "total_percent": 1.9246031743404761,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.8333333334833334,
+          "comfort": 0.0,
+          "convenience": 0.13888888883333336,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.9523809520238095,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.0
+      },
+      "DHW-1a": {
+        "total_percent": 1.728553054093806,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.2746329027867708,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.23809523800000001,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.2158249133070351
+        },
+        "energy_percent": 1.490457816093806
+      },
+      "DHW-1b": {
+        "total_percent": 1.728553054093806,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.2746329027867708,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.23809523800000001,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.2158249133070351
+        },
+        "energy_percent": 1.490457816093806
+      },
+      "DHW-1d": {
+        "total_percent": 1.4605945343848463,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.41194935418015616,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.23809523800000001,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.8105499422046902
+        },
+        "energy_percent": 1.2224992963848464
+      },
+      "DHW-2b": {
+        "total_percent": 1.6277742674871913,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.41194935418015616,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.2158249133070351
+        },
+        "energy_percent": 1.6277742674871913
+      },
+      "DHW-3": {
+        "total_percent": 2.9379305800525937,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.1373164513933854,
+          "maintenance_and_fault_prediction": 1.729185557635399,
+          "comfort": 0.0,
+          "convenience": 0.11904761900000001,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.9523809520238095,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.1373164513933854
+      },
+      "E-11": {
+        "total_percent": 0.5822711434995057,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.05167222696320335,
+          "maintenance_and_fault_prediction": 0.13738102346775982,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.3174603173412698,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.05167222696320335
+      },
+      "E-12": {
+        "total_percent": 0.6856155974259124,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.15501668088961004,
+          "maintenance_and_fault_prediction": 0.13738102346775982,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.3174603173412698,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.15501668088961004
+      },
+      "E-2": {
+        "total_percent": 0.5822711434995057,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.05167222696320335,
+          "maintenance_and_fault_prediction": 0.13738102346775982,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.3174603173412698,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.05167222696320335
+      },
+      "E-3": {
+        "total_percent": 0.44479729087327,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.15151515145454547,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.29328213941872455
+        },
+        "energy_percent": 0.29328213941872455
+      },
+      "E-4": {
+        "total_percent": 0.44479729087327,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.15151515145454547,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.29328213941872455
+        },
+        "energy_percent": 0.29328213941872455
+      },
+      "E-5": {
+        "total_percent": 0.37462345593282914,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.1033444539264067,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.1955214262791497
+        },
+        "energy_percent": 0.2988658802055564
+      },
+      "E-8": {
+        "total_percent": 0.5205548666005427,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.29328213941872455
+        },
+        "energy_percent": 0.29328213941872455
+      },
+      "EV-15": {
+        "total_percent": 0.41666666650000006,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.41666666650000006,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.0
+      },
+      "EV-16": {
+        "total_percent": 1.5277777775166668,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.2777777776666667,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.24999999985
+        },
+        "energy_percent": 1.24999999985
+      },
+      "EV-17": {
+        "total_percent": 1.5079365074738096,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.13888888883333336,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.9523809520238095,
+          "energy_flexibility_and_storage": 0.4166666666166667
+        },
+        "energy_percent": 0.4166666666166667
+      },
+      "H-1a": {
+        "total_percent": 2.7985518730615015,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.698818306758018,
+          "maintenance_and_fault_prediction": 1.1169052838683318,
+          "comfort": 0.22222222213333334,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.5333333331200001,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.698818306758018
+      },
+      "H-1b": {
+        "total_percent": 2.803707675481448,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.465878871172012,
+          "maintenance_and_fault_prediction": 1.1169052838683318,
+          "comfort": 0.22222222213333334,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.5333333331200001,
+          "information_to_occupants": 0.23809523800595236,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.465878871172012
+      },
+      "H-1c": {
+        "total_percent": 0.6527475579659514,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.465878871172012,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.11111111106666667,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.465878871172012
+      },
+      "H-1d": {
+        "total_percent": 0.465878871172012,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.465878871172012,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.465878871172012
+      },
+      "H-1f": {
+        "total_percent": 3.1132001221261554,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.465878871172012,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 2.647321250954143
+        },
+        "energy_percent": 3.113200122126155
+      },
+      "H-2a": {
+        "total_percent": 0.6881010933053453,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.465878871172012,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.22222222213333334,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.465878871172012
+      },
+      "H-2b": {
+        "total_percent": 4.65908296973656,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.465878871172012,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.22222222213333334,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 3.9709818764312144
+        },
+        "energy_percent": 4.436860747603227
+      },
+      "H-2d": {
+        "total_percent": 4.669800183189232,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.698818306758018,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 3.9709818764312144
+        },
+        "energy_percent": 4.669800183189232
+      },
+      "H-3": {
+        "total_percent": 4.373698576936131,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.232939435586006,
+          "maintenance_and_fault_prediction": 3.3507158516049955,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.7142857140178571,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.232939435586006
+      },
+      "H-4": {
+        "total_percent": 5.264133474545044,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.465878871172012,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.3333333332,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.26666666656000004,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 3.9709818764312144
+        },
+        "energy_percent": 4.436860747603227
+      },
+      "L-1a": {
+        "total_percent": 1.639573601150866,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.7729069348308657,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.5333333331200001,
+          "convenience": 0.3333333332000001,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.7729069348308657
+      },
+      "L-2": {
+        "total_percent": 3.406240267110866,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.7729069348308657,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.7999999996800001,
+          "convenience": 0.4999999998000001,
+          "health_wellbeing_accessibility": 1.3333333328,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.7729069348308657
+      },
+      "MC-13": {
+        "total_percent": 2.1754307782235,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.41666666675,
+          "maintenance_and_fault_prediction": 0.9090909092545454,
+          "comfort": 0.0,
+          "convenience": 0.29411764694117654,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.5555555552777779,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.41666666675
+      },
+      "MC-25": {
+        "total_percent": 2.736928104352614,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.41666666675,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.09803921564705884,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 2.222222221955555
+        },
+        "energy_percent": 2.638888888705555
+      },
+      "MC-28": {
+        "total_percent": 2.34006733966633,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.3030303030848485,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.5555555552777779,
+          "energy_flexibility_and_storage": 1.4814814813037036
+        },
+        "energy_percent": 1.4814814813037036
+      },
+      "MC-29": {
+        "total_percent": 2.0786294313297287,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.3030303030848485,
+          "comfort": 0.0,
+          "convenience": 0.29411764694117654,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.4814814813037036
+        },
+        "energy_percent": 1.4814814813037036
+      },
+      "MC-3": {
+        "total_percent": 4.553376905661547,
+        "by_criterion_percent": {
+          "energy_efficiency": 1.25000000025,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 1.111111110666667,
+          "convenience": 0.29411764694117654,
+          "health_wellbeing_accessibility": 0.41666666650000006,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.4814814813037036
+        },
+        "energy_percent": 2.7314814815537036
+      },
+      "MC-30": {
+        "total_percent": 1.430481283526025,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.8333333335,
+          "maintenance_and_fault_prediction": 0.3030303030848485,
+          "comfort": 0.0,
+          "convenience": 0.29411764694117654,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.8333333335
+      },
+      "MC-4": {
+        "total_percent": 3.0087641109735,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.9090909092545454,
+          "comfort": 0.0,
+          "convenience": 0.29411764694117654,
+          "health_wellbeing_accessibility": 1.2499999995000002,
+          "information_to_occupants": 0.5555555552777779,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.0
+      },
+      "MC-9": {
+        "total_percent": 1.6763220439000894,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.41666666675,
+          "maintenance_and_fault_prediction": 0.606060606169697,
+          "comfort": 0.5555555553333335,
+          "convenience": 0.09803921564705884,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.41666666675
+      },
+      "V-1a": {
+        "total_percent": 1.7003645747231242,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.5434201307414575,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.39999999984000006,
+          "convenience": 0.31249999987500005,
+          "health_wellbeing_accessibility": 0.4444444442666667,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.5434201307414575
+      },
+      "V-1c": {
+        "total_percent": 0.5434201307414575,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.5434201307414575,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.5434201307414575
+      },
+      "V-2c": {
+        "total_percent": 1.1335763831487495,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.36228008716097165,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.26666666656000004,
+          "convenience": 0.20833333325000003,
+          "health_wellbeing_accessibility": 0.2962962961777778,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.36228008716097165
+      },
+      "V-2d": {
+        "total_percent": 0.9142534639264576,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.5434201307414575,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.26666666656000004,
+          "convenience": 0.10416666662500002,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.5434201307414575
+      },
+      "V-3": {
+        "total_percent": 1.2999016119203466,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.5434201307414575,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.39999999984000006,
+          "convenience": 0.20833333325000003,
+          "health_wellbeing_accessibility": 0.1481481480888889,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.5434201307414575
+      },
+      "V-6": {
+        "total_percent": 4.27447164880905,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 2.8776462525185744,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.4444444442666667,
+          "information_to_occupants": 0.9523809520238095,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.0
+      }
+    },
+    "residential": {
+      "C-1a": {
+        "total_percent": 1.3061476231899594,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.11172309189264427,
+          "maintenance_and_fault_prediction": 0.16715180443549665,
+          "comfort": 0.26666666656000004,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.5333333331200001,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.11172309189264427
+      },
+      "C-1b": {
+        "total_percent": 1.5070018305650303,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.07448206126176286,
+          "maintenance_and_fault_prediction": 0.16715180443549665,
+          "comfort": 0.26666666656000004,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.5333333331200001,
+          "information_to_occupants": 0.23809523800595236,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.07448206126176286
+      },
+      "C-1c": {
+        "total_percent": 0.2835729702690356,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.07448206126176286,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.13333333328000002,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.07448206126176286
+      },
+      "C-1d": {
+        "total_percent": 0.07448206126176286,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.07448206126176286,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.07448206126176286
+      },
+      "C-1f": {
+        "total_percent": 0.11172309189264427,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.11172309189264427,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.11172309189264427
+      },
+      "C-1g": {
+        "total_percent": 0.43374750281150354,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.07448206126176286,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.35926544154974066
+        },
+        "energy_percent": 0.43374750281150354
+      },
+      "C-2a": {
+        "total_percent": 0.8800468901463739,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.07448206126176286,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.26666666656000004,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.538898162324611
+        },
+        "energy_percent": 0.6133802235863738
+      },
+      "C-2b": {
+        "total_percent": 0.6506212542172553,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.11172309189264427,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.538898162324611
+        },
+        "energy_percent": 0.6506212542172553
+      },
+      "C-3": {
+        "total_percent": 1.328739733682501,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.03724103063088143,
+          "maintenance_and_fault_prediction": 0.5014554133064899,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.7142857140178571,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.03724103063088143
+      },
+      "C-4": {
+        "total_percent": 1.5073196171681922,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.07448206126176286,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.39999999984000006,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.26666666656000004,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.538898162324611
+        },
+        "energy_percent": 0.6133802235863738
+      },
+      "DE-1": {
+        "total_percent": 2.71666666588,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.5000000001,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.7999999996800001,
+          "convenience": 0.41666666650000006,
+          "health_wellbeing_accessibility": 0.9999999996,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.5000000001
+      },
+      "DE-2": {
+        "total_percent": 1.4777777773866667,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.33333333340000004,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.5333333331200001,
+          "convenience": 0.2777777776666667,
+          "health_wellbeing_accessibility": 0.3333333332,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.33333333340000004
+      },
+      "DE-4": {
+        "total_percent": 1.9246031743904761,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.8333333335333334,
+          "comfort": 0.0,
+          "convenience": 0.13888888883333336,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.9523809520238095,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.0
+      },
+      "DHW-1a": {
+        "total_percent": 1.6316363674771803,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.2824961626576359,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.23809523800000001,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.1110449668195446
+        },
+        "energy_percent": 1.3935411294771805
+      },
+      "DHW-1b": {
+        "total_percent": 1.6316363674771803,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.2824961626576359,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.23809523800000001,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.1110449668195446
+        },
+        "energy_percent": 1.3935411294771805
+      },
+      "DHW-1d": {
+        "total_percent": 1.402536126532817,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.4237442439864538,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.23809523800000001,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.7406966445463631
+        },
+        "energy_percent": 1.1644408885328168
+      },
+      "DHW-2b": {
+        "total_percent": 1.5347892108059982,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.4237442439864538,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.1110449668195446
+        },
+        "energy_percent": 1.5347892108059984
+      },
+      "DHW-3": {
+        "total_percent": 2.8060583990773593,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.14124808132881794,
+          "maintenance_and_fault_prediction": 1.593381746724732,
+          "comfort": 0.0,
+          "convenience": 0.11904761900000001,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.9523809520238095,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.14124808132881794
+      },
+      "E-11": {
+        "total_percent": 1.5610559378879154,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.3442936167408419,
+          "maintenance_and_fault_prediction": 0.8235444280785309,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.3174603173412698,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.3442936167408419
+      },
+      "E-12": {
+        "total_percent": 2.2496431713695992,
+        "by_criterion_percent": {
+          "energy_efficiency": 1.0328808502225257,
+          "maintenance_and_fault_prediction": 0.8235444280785309,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.3174603173412698,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 1.0328808502225257
+      },
+      "E-2": {
+        "total_percent": 1.5610559378879154,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.3442936167408419,
+          "maintenance_and_fault_prediction": 0.8235444280785309,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.3174603173412698,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.3442936167408419
+      },
+      "E-3": {
+        "total_percent": 1.8355904527722162,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.15151515145454547,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.6840753013176708
+        },
+        "energy_percent": 1.6840753013176708
+      },
+      "E-4": {
+        "total_percent": 1.8355904527722162,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.15151515145454547,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.6840753013176708
+        },
+        "energy_percent": 1.6840753013176708
+      },
+      "E-5": {
+        "total_percent": 1.8870616767540704,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.6885872334816838,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.1227168675451138
+        },
+        "energy_percent": 1.8113041010267976
+      },
+      "E-8": {
+        "total_percent": 1.9113480284994888,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.6840753013176708
+        },
+        "energy_percent": 1.6840753013176708
+      },
+      "EV-15": {
+        "total_percent": 0.41666666650000006,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.41666666650000006,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.0
+      },
+      "EV-16": {
+        "total_percent": 1.5277777775666668,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.2777777776666667,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.2499999999
+        },
+        "energy_percent": 1.2499999999
+      },
+      "EV-17": {
+        "total_percent": 1.5079365074904763,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.13888888883333336,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.9523809520238095,
+          "energy_flexibility_and_storage": 0.41666666663333335
+        },
+        "energy_percent": 0.41666666663333335
+      },
+      "H-1a": {
+        "total_percent": 2.6836715070808577,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.6978370071349186,
+          "maintenance_and_fault_prediction": 1.0030062175107877,
+          "comfort": 0.22222222213333334,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.5333333331200001,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.6978370071349186
+      },
+      "H-1b": {
+        "total_percent": 2.689154409375171,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.465224671423279,
+          "maintenance_and_fault_prediction": 1.0030062175107877,
+          "comfort": 0.22222222213333334,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.5333333331200001,
+          "information_to_occupants": 0.23809523800595236,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.465224671423279
+      },
+      "H-1c": {
+        "total_percent": 0.6520933582172185,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.465224671423279,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.11111111106666667,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.465224671423279
+      },
+      "H-1d": {
+        "total_percent": 0.465224671423279,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.465224671423279,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.465224671423279
+      },
+      "H-1f": {
+        "total_percent": 2.7880002627517584,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.465224671423279,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 2.322775591328479
+        },
+        "energy_percent": 2.788000262751758
+      },
+      "H-2a": {
+        "total_percent": 0.6874468935566124,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.465224671423279,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.22222222213333334,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.465224671423279
+      },
+      "H-2b": {
+        "total_percent": 4.171610280549331,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.465224671423279,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.22222222213333334,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 3.4841633869927184
+        },
+        "energy_percent": 3.9493880584159973
+      },
+      "H-2d": {
+        "total_percent": 4.182000394127637,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.6978370071349186,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 3.4841633869927184
+        },
+        "energy_percent": 4.182000394127637
+      },
+      "H-3": {
+        "total_percent": 4.031674277989133,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.2326123357116395,
+          "maintenance_and_fault_prediction": 3.0090186525323634,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.7142857140178571,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.2326123357116395
+      },
+      "H-4": {
+        "total_percent": 4.776660785357816,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.465224671423279,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.3333333332,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.26666666656000004,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 3.4841633869927184
+        },
+        "energy_percent": 3.9493880584159973
+      },
+      "L-1a": {
+        "total_percent": 1.0227185230183435,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.15605185669834326,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.5333333331200001,
+          "convenience": 0.3333333332000001,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.15605185669834326
+      },
+      "L-2": {
+        "total_percent": 2.7893851889783434,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.15605185669834326,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.7999999996800001,
+          "convenience": 0.4999999998000001,
+          "health_wellbeing_accessibility": 1.3333333328,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.15605185669834326
+      },
+      "MC-13": {
+        "total_percent": 2.1754307782780455,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.41666666675,
+          "maintenance_and_fault_prediction": 0.9090909093090909,
+          "comfort": 0.0,
+          "convenience": 0.29411764694117654,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.5555555552777779,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.41666666675
+      },
+      "MC-25": {
+        "total_percent": 2.736928104441503,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.41666666675,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.09803921564705884,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 2.222222222044444
+        },
+        "energy_percent": 2.638888888794444
+      },
+      "MC-28": {
+        "total_percent": 2.3400673397437712,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.3030303031030303,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.5555555552777779,
+          "energy_flexibility_and_storage": 1.4814814813629629
+        },
+        "energy_percent": 1.4814814813629629
+      },
+      "MC-29": {
+        "total_percent": 2.07862943140717,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.3030303031030303,
+          "comfort": 0.0,
+          "convenience": 0.29411764694117654,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.4814814813629629
+        },
+        "energy_percent": 1.4814814813629629
+      },
+      "MC-3": {
+        "total_percent": 4.553376905720807,
+        "by_criterion_percent": {
+          "energy_efficiency": 1.25000000025,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 1.111111110666667,
+          "convenience": 0.29411764694117654,
+          "health_wellbeing_accessibility": 0.41666666650000006,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.4814814813629629
+        },
+        "energy_percent": 2.731481481612963
+      },
+      "MC-30": {
+        "total_percent": 1.430481283544207,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.8333333335,
+          "maintenance_and_fault_prediction": 0.3030303031030303,
+          "comfort": 0.0,
+          "convenience": 0.29411764694117654,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.8333333335
+      },
+      "MC-4": {
+        "total_percent": 3.0087641110280456,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.9090909093090909,
+          "comfort": 0.0,
+          "convenience": 0.29411764694117654,
+          "health_wellbeing_accessibility": 1.2499999995000002,
+          "information_to_occupants": 0.5555555552777779,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.0
+      },
+      "MC-9": {
+        "total_percent": 1.676322043936453,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.41666666675,
+          "maintenance_and_fault_prediction": 0.6060606062060606,
+          "comfort": 0.5555555553333335,
+          "convenience": 0.09803921564705884,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.41666666675
+      },
+      "V-1a": {
+        "total_percent": 1.6969338054409382,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.5399893614592715,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.39999999984000006,
+          "convenience": 0.31249999987500005,
+          "health_wellbeing_accessibility": 0.4444444442666667,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.5399893614592715
+      },
+      "V-1c": {
+        "total_percent": 0.5399893614592715,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.5399893614592715,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.5399893614592715
+      },
+      "V-2c": {
+        "total_percent": 1.1312892036272921,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.35999290763951436,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.26666666656000004,
+          "convenience": 0.20833333325000003,
+          "health_wellbeing_accessibility": 0.2962962961777778,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.35999290763951436
+      },
+      "V-2d": {
+        "total_percent": 0.9108226946442716,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.5399893614592715,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.26666666656000004,
+          "convenience": 0.10416666662500002,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.5399893614592715
+      },
+      "V-3": {
+        "total_percent": 1.2964708426381606,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.5399893614592715,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.39999999984000006,
+          "convenience": 0.20833333325000003,
+          "health_wellbeing_accessibility": 0.1481481480888889,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.5399893614592715
+      },
+      "V-6": {
+        "total_percent": 3.9820202579320623,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 2.585194861641586,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.4444444442666667,
+          "information_to_occupants": 0.9523809520238095,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.0
+      }
+    },
+    "combined": {
+      "C-1a": {
+        "total_percent": 1.4691539649308545,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.16865546558284555,
+          "maintenance_and_fault_prediction": 0.2732257724861905,
+          "comfort": 0.26666666656000004,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.5333333331200001,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.16865546558284555
+      },
+      "C-1b": {
+        "total_percent": 1.6510307144091918,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.11243697705523037,
+          "maintenance_and_fault_prediction": 0.2732257724861905,
+          "comfort": 0.26666666656000004,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.5333333331200001,
+          "information_to_occupants": 0.23809523800595236,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.11243697705523037
+      },
+      "C-1c": {
+        "total_percent": 0.32152788606250315,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.11243697705523037,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.13333333328000002,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.11243697705523037
+      },
+      "C-1d": {
+        "total_percent": 0.11243697705523037,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.11243697705523037,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.11243697705523037
+      },
+      "C-1f": {
+        "total_percent": 0.16865546558284555,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.16865546558284555,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.16865546558284555
+      },
+      "C-1g": {
+        "total_percent": 0.7381006606262606,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.11243697705523037,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.6256636835710302
+        },
+        "energy_percent": 0.7381006606262606
+      },
+      "C-2a": {
+        "total_percent": 1.3175991689717756,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.11243697705523037,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.26666666656000004,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.9384955253565452
+        },
+        "energy_percent": 1.0509325024117757
+      },
+      "C-2b": {
+        "total_percent": 1.1071509909393908,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.16865546558284555,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.9384955253565452
+        },
+        "energy_percent": 1.1071509909393908
+      },
+      "C-3": {
+        "total_percent": 1.6659390957313165,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.056218488527615185,
+          "maintenance_and_fault_prediction": 0.8196773174585713,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.7142857140178571,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.056218488527615185
+      },
+      "C-4": {
+        "total_percent": 1.944871895993594,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.11243697705523037,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.39999999984000006,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.26666666656000004,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.9384955253565452
+        },
+        "energy_percent": 1.0509325024117757
+      },
+      "DE-1": {
+        "total_percent": 2.71666666588,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.5000000001,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.7999999996800001,
+          "convenience": 0.41666666650000006,
+          "health_wellbeing_accessibility": 0.9999999996,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.5000000001
+      },
+      "DE-2": {
+        "total_percent": 1.4777777773866667,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.33333333340000004,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.5333333331200001,
+          "convenience": 0.2777777776666667,
+          "health_wellbeing_accessibility": 0.3333333332,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.33333333340000004
+      },
+      "DE-4": {
+        "total_percent": 1.9246031743654761,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.8333333335083334,
+          "comfort": 0.0,
+          "convenience": 0.13888888883333336,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.9523809520238095,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.0
+      },
+      "DHW-1a": {
+        "total_percent": 1.680094710785493,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.2785645327222034,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.23809523800000001,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.16343494006329
+        },
+        "energy_percent": 1.4419994727854935
+      },
+      "DHW-1b": {
+        "total_percent": 1.680094710785493,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.2785645327222034,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.23809523800000001,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.16343494006329
+        },
+        "energy_percent": 1.4419994727854935
+      },
+      "DHW-1d": {
+        "total_percent": 1.4315653304588316,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.41784679908330497,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.23809523800000001,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.7756232933755267
+        },
+        "energy_percent": 1.1934700924588317
+      },
+      "DHW-2b": {
+        "total_percent": 1.5812817391465948,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.41784679908330497,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.16343494006329
+        },
+        "energy_percent": 1.581281739146595
+      },
+      "DHW-3": {
+        "total_percent": 2.8719944895649765,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.1392822663611017,
+          "maintenance_and_fault_prediction": 1.6612836521800656,
+          "comfort": 0.0,
+          "convenience": 0.11904761900000001,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.9523809520238095,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.1392822663611017
+      },
+      "E-11": {
+        "total_percent": 1.0716635406937105,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.19798292185202263,
+          "maintenance_and_fault_prediction": 0.48046272577314536,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.3174603173412698,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.19798292185202263
+      },
+      "E-12": {
+        "total_percent": 1.467629384397756,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.5939487655560679,
+          "maintenance_and_fault_prediction": 0.48046272577314536,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.3174603173412698,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.5939487655560679
+      },
+      "E-2": {
+        "total_percent": 1.0716635406937105,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.19798292185202263,
+          "maintenance_and_fault_prediction": 0.48046272577314536,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.3174603173412698,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.19798292185202263
+      },
+      "E-3": {
+        "total_percent": 1.1401938718227431,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.15151515145454547,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.9886787203681977
+        },
+        "energy_percent": 0.9886787203681977
+      },
+      "E-4": {
+        "total_percent": 1.1401938718227431,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.15151515145454547,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.9886787203681977
+        },
+        "energy_percent": 0.9886787203681977
+      },
+      "E-5": {
+        "total_percent": 1.1308425663434498,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.39596584370404525,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.6591191469121318
+        },
+        "energy_percent": 1.055084990616177
+      },
+      "E-8": {
+        "total_percent": 1.2159514475500157,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.9886787203681977
+        },
+        "energy_percent": 0.9886787203681977
+      },
+      "EV-15": {
+        "total_percent": 0.41666666650000006,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.41666666650000006,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.0
+      },
+      "EV-16": {
+        "total_percent": 1.5277777775416668,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.2777777776666667,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.249999999875
+        },
+        "energy_percent": 1.249999999875
+      },
+      "EV-17": {
+        "total_percent": 1.507936507482143,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.13888888883333336,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.9523809520238095,
+          "energy_flexibility_and_storage": 0.416666666625
+        },
+        "energy_percent": 0.416666666625
+      },
+      "H-1a": {
+        "total_percent": 2.74111169007118,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.6983276569464683,
+          "maintenance_and_fault_prediction": 1.0599557506895598,
+          "comfort": 0.22222222213333334,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.5333333331200001,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.6983276569464683
+      },
+      "H-1b": {
+        "total_percent": 2.746431042428309,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.46555177129764547,
+          "maintenance_and_fault_prediction": 1.0599557506895598,
+          "comfort": 0.22222222213333334,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.5333333331200001,
+          "information_to_occupants": 0.23809523800595236,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.46555177129764547
+      },
+      "H-1c": {
+        "total_percent": 0.6524204580915849,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.46555177129764547,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.11111111106666667,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.46555177129764547
+      },
+      "H-1d": {
+        "total_percent": 0.46555177129764547,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.46555177129764547,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.46555177129764547
+      },
+      "H-1f": {
+        "total_percent": 2.950600192438957,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.46555177129764547,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 2.485048421141311
+        },
+        "energy_percent": 2.9506001924389564
+      },
+      "H-2a": {
+        "total_percent": 0.6877739934309788,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.46555177129764547,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.22222222213333334,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.46555177129764547
+      },
+      "H-2b": {
+        "total_percent": 4.415346625142945,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.46555177129764547,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.22222222213333334,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 3.7275726317119666
+        },
+        "energy_percent": 4.193124403009612
+      },
+      "H-2d": {
+        "total_percent": 4.425900288658434,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.6983276569464683,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 3.7275726317119666
+        },
+        "energy_percent": 4.425900288658434
+      },
+      "H-3": {
+        "total_percent": 4.202686427462632,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.23277588564882273,
+          "maintenance_and_fault_prediction": 3.1798672520686795,
+          "comfort": 0.0,
+          "convenience": 0.07575757572727274,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.7142857140178571,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.23277588564882273
+      },
+      "H-4": {
+        "total_percent": 5.02039712995143,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.46555177129764547,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.3333333332,
+          "convenience": 0.2272727271818182,
+          "health_wellbeing_accessibility": 0.26666666656000004,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 3.7275726317119666
+        },
+        "energy_percent": 4.193124403009612
+      },
+      "L-1a": {
+        "total_percent": 1.3311460620846047,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.4644793957646045,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.5333333331200001,
+          "convenience": 0.3333333332000001,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.4644793957646045
+      },
+      "L-2": {
+        "total_percent": 3.0978127280446044,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.4644793957646045,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.7999999996800001,
+          "convenience": 0.4999999998000001,
+          "health_wellbeing_accessibility": 1.3333333328,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.4644793957646045
+      },
+      "MC-13": {
+        "total_percent": 2.1754307782507727,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.41666666675,
+          "maintenance_and_fault_prediction": 0.9090909092818181,
+          "comfort": 0.0,
+          "convenience": 0.29411764694117654,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.5555555552777779,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.41666666675
+      },
+      "MC-25": {
+        "total_percent": 2.7369281043970584,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.41666666675,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.09803921564705884,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 2.2222222219999996
+        },
+        "energy_percent": 2.6388888887499995
+      },
+      "MC-28": {
+        "total_percent": 2.3400673397050507,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.3030303030939394,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.5555555552777779,
+          "energy_flexibility_and_storage": 1.4814814813333332
+        },
+        "energy_percent": 1.4814814813333332
+      },
+      "MC-29": {
+        "total_percent": 2.0786294313684492,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.3030303030939394,
+          "comfort": 0.0,
+          "convenience": 0.29411764694117654,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.4814814813333332
+        },
+        "energy_percent": 1.4814814813333332
+      },
+      "MC-3": {
+        "total_percent": 4.553376905691177,
+        "by_criterion_percent": {
+          "energy_efficiency": 1.25000000025,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 1.111111110666667,
+          "convenience": 0.29411764694117654,
+          "health_wellbeing_accessibility": 0.41666666650000006,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 1.4814814813333332
+        },
+        "energy_percent": 2.7314814815833333
+      },
+      "MC-30": {
+        "total_percent": 1.430481283535116,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.8333333335,
+          "maintenance_and_fault_prediction": 0.3030303030939394,
+          "comfort": 0.0,
+          "convenience": 0.29411764694117654,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.8333333335
+      },
+      "MC-4": {
+        "total_percent": 3.008764111000773,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 0.9090909092818181,
+          "comfort": 0.0,
+          "convenience": 0.29411764694117654,
+          "health_wellbeing_accessibility": 1.2499999995000002,
+          "information_to_occupants": 0.5555555552777779,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.0
+      },
+      "MC-9": {
+        "total_percent": 1.676322043918271,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.41666666675,
+          "maintenance_and_fault_prediction": 0.6060606061878788,
+          "comfort": 0.5555555553333335,
+          "convenience": 0.09803921564705884,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.41666666675
+      },
+      "V-1a": {
+        "total_percent": 1.698649190082031,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.5417047461003645,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.39999999984000006,
+          "convenience": 0.31249999987500005,
+          "health_wellbeing_accessibility": 0.4444444442666667,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.5417047461003645
+      },
+      "V-1c": {
+        "total_percent": 0.5417047461003645,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.5417047461003645,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.5417047461003645
+      },
+      "V-2c": {
+        "total_percent": 1.1324327933880207,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.361136497400243,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.26666666656000004,
+          "convenience": 0.20833333325000003,
+          "health_wellbeing_accessibility": 0.2962962961777778,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.361136497400243
+      },
+      "V-2d": {
+        "total_percent": 0.9125380792853646,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.5417047461003645,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.26666666656000004,
+          "convenience": 0.10416666662500002,
+          "health_wellbeing_accessibility": 0.0,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.5417047461003645
+      },
+      "V-3": {
+        "total_percent": 1.2981862272792535,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.5417047461003645,
+          "maintenance_and_fault_prediction": 0.0,
+          "comfort": 0.39999999984000006,
+          "convenience": 0.20833333325000003,
+          "health_wellbeing_accessibility": 0.1481481480888889,
+          "information_to_occupants": 0.0,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.5417047461003645
+      },
+      "V-6": {
+        "total_percent": 4.128245953370556,
+        "by_criterion_percent": {
+          "energy_efficiency": 0.0,
+          "maintenance_and_fault_prediction": 2.7314205570800802,
+          "comfort": 0.0,
+          "convenience": 0.0,
+          "health_wellbeing_accessibility": 0.4444444442666667,
+          "information_to_occupants": 0.9523809520238095,
+          "energy_flexibility_and_storage": 0.0
+        },
+        "energy_percent": 0.0
+      }
+    }
+  },
+  "totals_check": {
+    "non_residential": 100.0,
+    "residential": 100.0,
+    "combined": 100.0
+  }
+}

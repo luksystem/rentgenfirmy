@@ -2,7 +2,7 @@
 
 > Jakie dane i dowody nalezy zebrac w audycie, aby potwierdzic zaleznosci. To jeszcze **nie** sa pytania audytowe — to katalog wymaganych danych wejsciowych.
 
-- Wygenerowano: `2026-07-08T20:58:16.846988+00:00`
+- Wygenerowano: `2026-07-09T15:51:17.584007+00:00`
 
 ## Tryby weryfikacji
 
@@ -405,8 +405,8 @@ Jesli brak danych wejsciowych lub dowodu — wynik oznaczyc jako `needs_verifica
 | Czynnik | Capability | Domeny |
 |---|---|---|
 | Obecnosc uzytkownikow | `occupancy_detection` | Ogrzewanie, Chlodzenie, Wentylacja, Oswietlenie, Monitoring i sterowanie |
-| Pogoda / prognoza | `weather_data` | Ogrzewanie, Chlodzenie, Wentylacja, Dynamiczna obudowa budynku, Cieppla woda uzytkowa |
-| PV i magazyn energii | `self_consumption_optimization` | Elektrycznosc, Ladowanie pojazdow elektrycznych, Ogrzewanie, Chlodzenie, Cieppla woda uzytkowa |
+| Pogoda / prognoza | `weather_data` | Ogrzewanie, Chlodzenie, Wentylacja, Dynamiczna obudowa budynku, Ciepla woda uzytkowa |
+| PV i magazyn energii | `self_consumption_optimization` | Elektrycznosc, Ladowanie pojazdow elektrycznych, Ogrzewanie, Chlodzenie, Ciepla woda uzytkowa |
 | Sygnaly sieci / taryfy | `grid_signal_interface` | Elektrycznosc, Ladowanie pojazdow elektrycznych, Ogrzewanie, Chlodzenie, Monitoring i sterowanie |
-| Dane pomiarowe energii | `energy_metering` | Ogrzewanie, Chlodzenie, Cieppla woda uzytkowa, Elektrycznosc, Monitoring i sterowanie |
+| Dane pomiarowe energii | `energy_metering` | Ogrzewanie, Chlodzenie, Ciepla woda uzytkowa, Elektrycznosc, Monitoring i sterowanie |
 | Integracja cyfrowa / BMS | `bms_integration` | Ogrzewanie, Chlodzenie, Wentylacja, Oswietlenie, Dynamiczna obudowa budynku, Monitoring i sterowanie |

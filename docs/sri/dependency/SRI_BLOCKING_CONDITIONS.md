@@ -2,7 +2,7 @@
 
 > Czego brak **ogranicza pulap Functionality Level**. Wynika bezposrednio z modelu zaleznosci (advisory).
 
-- Wygenerowano: `2026-07-08T20:58:16.846988+00:00`
+- Wygenerowano: `2026-07-09T15:51:17.584007+00:00`
 
 ## Blokady per usluga
 

@@ -1,0 +1,232 @@
+{
+  "meta": {
+    "engine": "SRI Optimization Engine — Grouping Rules",
+    "engine_version": "1.0.0",
+    "generated_at": "2026-07-09T15:51:19.328698+00:00",
+    "role": "advisory_layer",
+    "note": "Reguly etapowania i pakowania rekomendacji. Nie zmieniaja punktacji SRI."
+  },
+  "stages": [
+    {
+      "id": 1,
+      "name": "Szybkie wygrane / niski prog wejscia",
+      "description": "Konfiguracja i oprogramowanie bez nowego sprzetu: harmonogramy, centralna automatyka, wizualizacja, historia, alarmy, zdalny dostep.",
+      "entry_criteria": "brak inwestycji sprzetowej, niskie ryzyko, szybki efekt",
+      "typical_risk": "low"
+    },
+    {
+      "id": 2,
+      "name": "Fundament techniczny",
+      "description": "Czujniki, liczniki, komunikacja cyfrowa i integracja z BMS oraz sterowanie strefowe. Warstwa danych, ktora odblokowuje wyzsze poziomy w wielu uslugach.",
+      "entry_criteria": "montaz czujnikow/licznikow/magistrali; fundament pod dalsze etapy",
+      "typical_risk": "low-medium"
+    },
+    {
+      "id": 3,
+      "name": "Zaawansowana automatyka",
+      "description": "Sterowanie wg zapotrzebowania, napedy o zmiennej predkosci, modulacja zrodel, kaskady, odzysk/free-cooling, sterowanie oslonami, wykrywanie usterek (FDD).",
+      "entry_criteria": "wymaga fundamentu z etapu 2 (dane + integracja)",
+      "typical_risk": "medium"
+    },
+    {
+      "id": 4,
+      "name": "Elastycznosc energetyczna / PV / magazyn / EV",
+      "description": "Reakcja na sygnaly sieci/taryf, PV, magazyny ciepla/energii, autokonsumpcja, pomiar dwukierunkowy, ladowanie EV, mikrosiec.",
+      "entry_criteria": "inwestycje kapitalowe i prace elektryczne; wysoki potencjal elastycznosci",
+      "typical_risk": "high"
+    },
+    {
+      "id": 5,
+      "name": "Predykcja, AI, optymalizacja",
+      "description": "Sterowanie predykcyjne i optymalizacja z wyprzedzeniem (pogoda, oblozenie, ceny). Szczyt dojrzalosci — wymaga danych i dojrzalej automatyki.",
+      "entry_criteria": "wymaga danych historycznych i dzialajacej automatyki z etapow 2-4",
+      "typical_risk": "medium"
+    }
+  ],
+  "stage_capabilities": {
+    "1": [
+      "alarms",
+      "central_automatic_control",
+      "data_logging",
+      "remote_access",
+      "reporting_platform",
+      "scheduling",
+      "temperature_measurement"
+    ],
+    "2": [
+      "actuator_feedback",
+      "automated_switching_actuation",
+      "bms_integration",
+      "co2_measurement",
+      "daylight_measurement",
+      "digital_communication",
+      "dimmable_lighting",
+      "energy_metering",
+      "humidity_measurement",
+      "occupancy_detection",
+      "pv_monitoring",
+      "submetering",
+      "weather_data",
+      "window_contact",
+      "zonal_control"
+    ],
+    "3": [
+      "demand_based_control",
+      "fault_detection",
+      "free_cooling",
+      "heat_recovery_control",
+      "interlock_control",
+      "modulating_generator",
+      "sequencing_controller",
+      "shading_actuation",
+      "sun_position_tracking",
+      "variable_speed_drive",
+      "window_actuation"
+    ],
+    "4": [
+      "bidirectional_metering",
+      "charging_connectivity",
+      "dsm_override",
+      "electrical_storage",
+      "ev_charging_point",
+      "grid_signal_interface",
+      "load_balancing",
+      "local_generation",
+      "microgrid_controller",
+      "self_consumption_optimization",
+      "solar_thermal_collector",
+      "thermal_storage"
+    ],
+    "5": [
+      "predictive_control"
+    ]
+  },
+  "capability_stage": {
+    "actuator_feedback": 2,
+    "alarms": 1,
+    "automated_switching_actuation": 2,
+    "bidirectional_metering": 4,
+    "bms_integration": 2,
+    "central_automatic_control": 1,
+    "charging_connectivity": 4,
+    "co2_measurement": 2,
+    "data_logging": 1,
+    "daylight_measurement": 2,
+    "demand_based_control": 3,
+    "digital_communication": 2,
+    "dimmable_lighting": 2,
+    "dsm_override": 4,
+    "electrical_storage": 4,
+    "energy_metering": 2,
+    "ev_charging_point": 4,
+    "fault_detection": 3,
+    "free_cooling": 3,
+    "grid_signal_interface": 4,
+    "heat_recovery_control": 3,
+    "humidity_measurement": 2,
+    "interlock_control": 3,
+    "load_balancing": 4,
+    "local_generation": 4,
+    "microgrid_controller": 4,
+    "modulating_generator": 3,
+    "occupancy_detection": 2,
+    "predictive_control": 5,
+    "pv_monitoring": 2,
+    "remote_access": 1,
+    "reporting_platform": 1,
+    "scheduling": 1,
+    "self_consumption_optimization": 4,
+    "sequencing_controller": 3,
+    "shading_actuation": 3,
+    "solar_thermal_collector": 4,
+    "submetering": 2,
+    "sun_position_tracking": 3,
+    "temperature_measurement": 1,
+    "thermal_storage": 4,
+    "variable_speed_drive": 3,
+    "weather_data": 2,
+    "window_actuation": 3,
+    "window_contact": 2,
+    "zonal_control": 2
+  },
+  "capability_risk": {
+    "actuator_feedback": "low",
+    "alarms": "low",
+    "automated_switching_actuation": "low",
+    "bidirectional_metering": "medium",
+    "bms_integration": "low",
+    "central_automatic_control": "low",
+    "charging_connectivity": "medium",
+    "co2_measurement": "low",
+    "data_logging": "low",
+    "daylight_measurement": "low",
+    "demand_based_control": "medium",
+    "digital_communication": "low",
+    "dimmable_lighting": "high",
+    "dsm_override": "medium",
+    "electrical_storage": "high",
+    "energy_metering": "low",
+    "ev_charging_point": "high",
+    "fault_detection": "medium",
+    "free_cooling": "medium",
+    "grid_signal_interface": "medium",
+    "heat_recovery_control": "high",
+    "humidity_measurement": "low",
+    "interlock_control": "medium",
+    "load_balancing": "medium",
+    "local_generation": "high",
+    "microgrid_controller": "high",
+    "modulating_generator": "high",
+    "occupancy_detection": "low",
+    "predictive_control": "medium",
+    "pv_monitoring": "low",
+    "remote_access": "low",
+    "reporting_platform": "low",
+    "scheduling": "low",
+    "self_consumption_optimization": "medium",
+    "sequencing_controller": "medium",
+    "shading_actuation": "high",
+    "solar_thermal_collector": "high",
+    "submetering": "low",
+    "sun_position_tracking": "medium",
+    "temperature_measurement": "low",
+    "thermal_storage": "high",
+    "variable_speed_drive": "high",
+    "weather_data": "low",
+    "window_actuation": "high",
+    "window_contact": "low",
+    "zonal_control": "low"
+  },
+  "packaging_rules": [
+    {
+      "id": "P1_same_stage_domain",
+      "description": "Rekomendacje w tym samym etapie i tej samej domenie -> jeden pakiet wykonawczy.",
+      "condition": "stage == stage AND domain == domain"
+    },
+    {
+      "id": "P2_shared_foundation",
+      "description": "Rekomendacje wspoldzielace fundamentalna funkcje (bms_integration, digital_communication, energy_metering) -> wspolne uruchomienie/commissioning.",
+      "condition": "shared_capability in {bms_integration, digital_communication, energy_metering}"
+    },
+    {
+      "id": "P3_shared_sensor_install",
+      "description": "Rekomendacje wymagajace tej samej instalacji czujnikow (occupancy, co2, temperature) -> wspolny montaz dla HVAC/wentylacji/oswietlenia.",
+      "condition": "shared_capability in {occupancy_detection, co2_measurement, temperature_measurement}"
+    },
+    {
+      "id": "P4_cross_domain_once",
+      "description": "Funkcje cross-domain (occupancy, weather, energy_metering, grid_signal) wdraza sie RAZ dla wszystkich domen, ktore z nich korzystaja.",
+      "condition": "capability.cross_domain == true"
+    },
+    {
+      "id": "P5_capital_bundle",
+      "description": "Inwestycje kapitalowe etapu 4 (PV + magazyn + EV + pomiar dwukierunkowy) laczy sie w jeden pakiet elektryczny/elastycznosciowy.",
+      "condition": "stage == 4 AND capability in flexibility_set"
+    }
+  ],
+  "staging_logic": {
+    "level_progression": "Usluga awansuje do najwyzszego FL, dla ktorego wszystkie wymagane capability naleza do etapow <= k (kumulatywnie).",
+    "blocking": "Capability z wyzszego etapu blokuje osiagniecie FL, ktory jej wymaga, do tego etapu.",
+    "risk": "Ryzyko rekomendacji = maks. ryzyko wsrod dodawanych capability (low<medium<high)."
+  }
+}

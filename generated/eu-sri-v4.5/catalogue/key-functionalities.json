@@ -1,0 +1,37 @@
+{
+  "provenance": {
+    "artifact_type": "catalogue_key_functionalities",
+    "methodology_version_id": "eu-sri-v4.5",
+    "schema_version": "1.0.0",
+    "engine_version": "1.0.0",
+    "generated_by": "core/artifacts.py",
+    "generated_at": "2026-07-09T16:13:32Z",
+    "source_checksum": "fea84a1931abb38c78e6ede524120c9c3527d8330407cbe5ff10e74f06ef95a4",
+    "payload_checksum": "463db1d00c73d9c7c724c4c88a672618293c669725116dfbe6ca7c8573968452"
+  },
+  "payload": {
+    "source_version": "SRI calculation sheet v4.5",
+    "provenance": "VERIFIED_REGULATION",
+    "legal_basis": "Delegated Regulation (EU) 2020/2155, Annex I/III",
+    "key_functionalities": [
+      {
+        "code": "energy_performance_and_operation",
+        "sort_order": 1,
+        "name_en": "Energy performance and operation",
+        "name_pl": "Efektywność energetyczna i eksploatacja"
+      },
+      {
+        "code": "response_to_occupant_needs",
+        "sort_order": 2,
+        "name_en": "Response to user needs",
+        "name_pl": "Reakcja na potrzeby użytkowników"
+      },
+      {
+        "code": "energy_flexibility",
+        "sort_order": 3,
+        "name_en": "Energy flexibility",
+        "name_pl": "Elastyczność energetyczna"
+      }
+    ]
+  }
+}

@@ -14,36 +14,28 @@ Metodologia (skrot):
        SR(kf) = sum_{ic in kf} W_f(ic)*SR(ic) / sum_{ic in kf} W_f(ic)
   5. Klasa SRI wg progow procentowych (Annex VIII).
 """
-import json
 import os
+import sys
 
-BASE = os.path.join(os.path.dirname(__file__), "..", "..", "..", "docs", "sri", "catalogue")
+# Wspoldzielony, wersjo-swiadomy loader katalogu (jedno zrodlo prawdy).
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from _common.catalogue import CatalogueRepository  # noqa: E402
 
-CRITERIA = [
-    "energy_efficiency",
-    "energy_flexibility_and_storage",
-    "comfort",
-    "convenience",
-    "health_wellbeing_accessibility",
-    "maintenance_and_fault_prediction",
-    "information_to_occupants",
-]
+# Domyslne repozytorium katalogu (mozna nadpisac przy tworzeniu Catalogue).
+_REPO = CatalogueRepository()
+BASE = _REPO.dir
 
-KEY_FUNCTIONALITIES = {
-    "energy_performance_and_operation": ["energy_efficiency", "maintenance_and_fault_prediction"],
-    "response_to_occupant_needs": ["comfort", "convenience", "health_wellbeing_accessibility", "information_to_occupants"],
-    "energy_flexibility": ["energy_flexibility_and_storage"],
-}
-
-BUILDING_TYPES = ["residential", "non_residential"]
-CLIMATE_ZONES = ["north_europe", "west_europe", "south_europe", "north_east_europe", "south_east_europe"]
+# Stale metodologii wyprowadzone z katalogu (nie hardkodowane) -> gotowe na wiele wersji.
+CRITERIA = _REPO.criteria()
+KEY_FUNCTIONALITIES = _REPO.key_functionalities()
+BUILDING_TYPES = _REPO.building_types()
+CLIMATE_ZONES = _REPO.climate_zones()
 
 TOL = 1e-9
 
 
 def _load(*p):
-    with open(os.path.join(BASE, *p), encoding="utf-8") as f:
-        return json.load(f)
+    return _REPO.load(*p)
 
 
 class Catalogue:

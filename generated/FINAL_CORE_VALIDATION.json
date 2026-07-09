@@ -1,0 +1,59 @@
+{
+  "version_id": "eu-sri-v4.5",
+  "all_passed": true,
+  "checks": [
+    {
+      "name": "Schemat envelope waliduje poprawna koperte",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Schemat envelope odrzuca bledna koperte",
+      "passed": true,
+      "detail": "7 bledow"
+    },
+    {
+      "name": "Integralnosc 24 opublikowanych kopert (checksum+schemat)",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Macierz zgodnosci zgodna ze schematem",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Manifest seeda zgodny ze schematem",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Seed ma niepuste liczby wierszy",
+      "passed": true,
+      "detail": "{'services': 54, 'functionality_levels': 228, 'impact_scores': 1596, 'domain_weights': 630, 'criterion_weights': 14}"
+    },
+    {
+      "name": "AssessmentInput (realny) zgodny ze schematem",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "AssessmentInput przechodzi walidacje silnika",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "CalculationResult (realny wynik silnika) zgodny ze schematem",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Determinizm silnika (2x te same wejscia)",
+      "passed": true,
+      "detail": "0.000000 vs 0.000000"
+    }
+  ],
+  "sample_scenario": 1,
+  "sample_result_percent": 0.0,
+  "sample_class": "G"
+}

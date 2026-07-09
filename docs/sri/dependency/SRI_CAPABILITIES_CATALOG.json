@@ -2,7 +2,7 @@
   "meta": {
     "engine": "SRI Dependency Engine",
     "engine_version": "1.0.0",
-    "generated_at": "2026-07-08T20:58:16.846988+00:00",
+    "generated_at": "2026-07-09T15:51:17.584007+00:00",
     "role": "advisory_layer",
     "note": "Warstwa pomocnicza nad oficjalna metodologia SRI. Nie zmienia punktacji.",
     "capability_count": 46

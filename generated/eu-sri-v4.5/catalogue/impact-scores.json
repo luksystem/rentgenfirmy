@@ -1,0 +1,2876 @@
+{
+  "provenance": {
+    "artifact_type": "catalogue_impact_scores",
+    "methodology_version_id": "eu-sri-v4.5",
+    "schema_version": "1.0.0",
+    "engine_version": "1.0.0",
+    "generated_by": "core/artifacts.py",
+    "generated_at": "2026-07-09T16:13:32Z",
+    "source_checksum": "fea84a1931abb38c78e6ede524120c9c3527d8330407cbe5ff10e74f06ef95a4",
+    "payload_checksum": "761a5a65fc00e190d582ca37c2a15b28dca8447e5ea1c8b67942d8053cc5c2f5"
+  },
+  "payload": {
+    "source_version": "SRI calculation sheet v4.5",
+    "provenance": "VERIFIED_ANNEX_D",
+    "score_scale": {
+      "min": -2,
+      "max": 3,
+      "note": "wartosci ujemne dozwolone (metodologia SRI)"
+    },
+    "impact_criteria_order": [
+      "energy_efficiency",
+      "energy_flexibility_and_storage",
+      "comfort",
+      "convenience",
+      "health_wellbeing_accessibility",
+      "maintenance_and_fault_prediction",
+      "information_to_occupants"
+    ],
+    "scores_by_service": {
+      "H-1a": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 2.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 2.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 2.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "H-1b": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 2.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 2.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 1.0
+          }
+        }
+      ],
+      "H-1c": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "H-1d": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "H-1f": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "H-2a": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "H-2b": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 1.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 2.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 3.0,
+            "comfort": 2.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "H-2d": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 3.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "H-3": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 1.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 2.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 3.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 3.0,
+            "information_to_occupants": 3.0
+          }
+        }
+      ],
+      "H-4": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 2.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 3.0,
+            "comfort": 2.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 3.0,
+            "comfort": 3.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "DHW-1a": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 3.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "DHW-1b": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 3.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "DHW-1d": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "DHW-2b": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 3.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "DHW-3": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 1.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 2.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 3.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 2.0,
+            "information_to_occupants": 3.0
+          }
+        }
+      ],
+      "C-1a": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 2.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 2.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 2.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "C-1b": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 2.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 2.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 1.0
+          }
+        }
+      ],
+      "C-1c": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "C-1d": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "C-1f": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "C-1g": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "C-2a": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 1.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 2.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 3.0,
+            "comfort": 2.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "C-2b": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 3.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "C-3": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 1.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 2.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 3.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 3.0,
+            "information_to_occupants": 3.0
+          }
+        }
+      ],
+      "C-4": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 2.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 3.0,
+            "comfort": 2.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 3.0,
+            "comfort": 3.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "V-1a": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 2.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 3.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 3.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 3.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 3.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "V-1c": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "V-2c": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 2.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "V-2d": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "V-3": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 3.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 3.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 3.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "V-6": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 2.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 1.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 3.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 2.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 3.0,
+            "maintenance_and_fault_prediction": 2.0,
+            "information_to_occupants": 3.0
+          }
+        }
+      ],
+      "L-1a": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "L-2": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 2.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 3.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 3.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "DE-1": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 2.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 3.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 3.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "DE-2": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 2.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "DE-4": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 1.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 2.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 3.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 2.0,
+            "information_to_occupants": 3.0
+          }
+        }
+      ],
+      "E-2": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 1.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 2.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 3.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 2.0,
+            "information_to_occupants": 3.0
+          }
+        }
+      ],
+      "E-3": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 3.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "E-4": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 3.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "E-5": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "E-8": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 3.0,
+            "comfort": 0.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "E-11": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 1.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 2.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 3.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 2.0,
+            "information_to_occupants": 3.0
+          }
+        }
+      ],
+      "E-12": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 1.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 2.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 3.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 2.0,
+            "information_to_occupants": 3.0
+          }
+        }
+      ],
+      "EV-15": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "EV-16": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": -2.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 3.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "EV-17": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 2.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 3.0
+          }
+        }
+      ],
+      "MC-3": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 2.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 3.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 2.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "MC-4": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 1.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 1.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 2.0,
+            "maintenance_and_fault_prediction": 2.0,
+            "information_to_occupants": 2.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 3.0,
+            "maintenance_and_fault_prediction": 3.0,
+            "information_to_occupants": 3.0
+          }
+        }
+      ],
+      "MC-9": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 1.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 2.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "MC-13": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 1.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 2.0,
+            "information_to_occupants": 2.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 3.0,
+            "information_to_occupants": 3.0
+          }
+        }
+      ],
+      "MC-25": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 3.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "MC-28": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 2.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 3.0
+          }
+        }
+      ],
+      "MC-29": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 3.0,
+            "comfort": -2.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": -1.0,
+            "information_to_occupants": -2.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 1.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 4,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 2.0,
+            "comfort": 0.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ],
+      "MC-30": [
+        {
+          "level": 0,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 0.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 0.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 1,
+          "scores": {
+            "energy_efficiency": 0.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 1.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 2,
+          "scores": {
+            "energy_efficiency": 1.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 2.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 0.0
+          }
+        },
+        {
+          "level": 3,
+          "scores": {
+            "energy_efficiency": 2.0,
+            "energy_flexibility_and_storage": 0.0,
+            "comfort": 0.0,
+            "convenience": 3.0,
+            "health_wellbeing_accessibility": 0.0,
+            "maintenance_and_fault_prediction": 1.0,
+            "information_to_occupants": 0.0
+          }
+        }
+      ]
+    }
+  }
+}

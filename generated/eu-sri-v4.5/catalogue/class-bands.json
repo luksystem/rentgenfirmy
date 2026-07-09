@@ -1,0 +1,61 @@
+{
+  "provenance": {
+    "artifact_type": "catalogue_class_bands",
+    "methodology_version_id": "eu-sri-v4.5",
+    "schema_version": "1.0.0",
+    "engine_version": "1.0.0",
+    "generated_by": "core/artifacts.py",
+    "generated_at": "2026-07-09T16:13:32Z",
+    "source_checksum": "fea84a1931abb38c78e6ede524120c9c3527d8330407cbe5ff10e74f06ef95a4",
+    "payload_checksum": "33761dcf9c1f2fe778548a2aa71b188764e6d328dcd7d155764f68a085c16e37"
+  },
+  "payload": {
+    "source_version": "SRI calculation sheet v4.5",
+    "provenance": "VERIFIED_REGULATION",
+    "legal_basis": "Delegated Regulation (EU) 2020/2155, Annex VIII",
+    "bands": [
+      {
+        "class_number": 1,
+        "label": "A",
+        "score_min_percent": 90,
+        "score_max_percent": 100
+      },
+      {
+        "class_number": 2,
+        "label": "B",
+        "score_min_percent": 80,
+        "score_max_percent": 90
+      },
+      {
+        "class_number": 3,
+        "label": "C",
+        "score_min_percent": 65,
+        "score_max_percent": 80
+      },
+      {
+        "class_number": 4,
+        "label": "D",
+        "score_min_percent": 50,
+        "score_max_percent": 65
+      },
+      {
+        "class_number": 5,
+        "label": "E",
+        "score_min_percent": 35,
+        "score_max_percent": 50
+      },
+      {
+        "class_number": 6,
+        "label": "F",
+        "score_min_percent": 20,
+        "score_max_percent": 35
+      },
+      {
+        "class_number": 7,
+        "label": "G",
+        "score_min_percent": 0,
+        "score_max_percent": 20
+      }
+    ]
+  }
+}

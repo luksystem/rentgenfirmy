@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "assessment-input.schema.json",
+  "title": "Assessment Input",
+  "description": "Wejscie obliczenia (Audit -> Calculation). Kontrakt ZAMROZONY (FINAL_CORE_ARCHITECTURE).",
+  "x-schema-version": "1.0.0",
+  "type": "object",
+  "required": ["methodology_version_id", "building_type", "climate_zone", "services"],
+  "properties": {
+    "methodology_version_id": { "type": "string", "minLength": 1 },
+    "building_type": { "type": "string", "minLength": 1 },
+    "climate_zone": { "type": "string", "minLength": 1 },
+    "services": {
+      "type": "object",
+      "patternProperties": {
+        "^.+$": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

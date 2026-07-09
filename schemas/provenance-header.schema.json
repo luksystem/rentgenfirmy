@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "provenance-header.schema.json",
+  "title": "Provenance Header",
+  "description": "Naglowek prowenansu dla kazdego artefaktu maszynowego platformy Rentgen. Kontrakt ZAMROZONY.",
+  "x-schema-version": "1.0.0",
+  "type": "object",
+  "required": [
+    "artifact_type",
+    "methodology_version_id",
+    "schema_version",
+    "engine_version",
+    "generated_by",
+    "generated_at",
+    "payload_checksum"
+  ],
+  "properties": {
+    "artifact_type": {
+      "type": "string",
+      "enum": [
+        "catalogue_services",
+        "catalogue_impact_scores",
+        "catalogue_domain_weights",
+        "catalogue_criterion_weights",
+        "catalogue_class_bands",
+        "catalogue_impact_criteria",
+        "catalogue_key_functionalities",
+        "catalogue_domains",
+        "dependency_graph",
+        "capabilities_catalog",
+        "recommendation_graph",
+        "expected_gain_model",
+        "optimization_rules",
+        "service_knowledge",
+        "methodology_registry",
+        "methodology_diffs",
+        "compatibility_matrix",
+        "seed_manifest",
+        "artifact_index"
+      ]
+    },
+    "methodology_version_id": { "type": "string", "minLength": 1 },
+    "schema_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "engine_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "generated_by": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" },
+    "source_checksum": { "type": ["string", "null"] },
+    "payload_checksum": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  },
+  "additionalProperties": true
+}

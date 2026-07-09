@@ -1,0 +1,28 @@
+{
+  "provenance": {
+    "artifact_type": "seed_manifest",
+    "methodology_version_id": "eu-sri-v4.5",
+    "schema_version": "1.0.0",
+    "engine_version": "1.0.0",
+    "generated_by": "core/seed_engine.py",
+    "generated_at": "2026-07-09T16:13:32Z",
+    "source_checksum": "SRI calculation sheet v4.5",
+    "payload_checksum": "d1044638d0e39befe2133c56cec0af9ca09938377bdae8dcad187ce85eb3afa1"
+  },
+  "payload": {
+    "methodology_version_id": "eu-sri-v4.5",
+    "catalogue_code": "eu-method-b-2020-v4.5",
+    "seed_file": "supabase/seed/eu-sri-v4.5/seed.sql",
+    "transactional": true,
+    "idempotent": true,
+    "source_checksum": "SRI calculation sheet v4.5",
+    "content_checksum": "a720caa9af3260d4c4ea10a8522ed4e5e34191d6cb97ef752708d0c3c75e94ab",
+    "row_counts": {
+      "services": 54,
+      "functionality_levels": 228,
+      "impact_scores": 1596,
+      "domain_weights": 630,
+      "criterion_weights": 14
+    }
+  }
+}

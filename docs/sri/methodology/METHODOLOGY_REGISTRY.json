@@ -1,0 +1,239 @@
+{
+  "generated_from": "store/sri/methodology/methodology_engine.py",
+  "root_source_checksum": "fea84a1931abb38c78e6ede524120c9c3527d8330407cbe5ff10e74f06ef95a4",
+  "calculation_strategies": [
+    {
+      "id": "iso52120_weighted_renormalized",
+      "name": "SRI EU Method B (renormalizacja wag domen)",
+      "description": "Oficjalna metoda obliczania SRI wg Delegated Reg. (EU) 2020/2155. Dla kazdego impact criterion sumuje achieved/maxposs po uslugach, wazy udzialem domen, renormalizuje wagi tylko dla domen obecnych w budynku, a nastepnie agreguje po kryteriach do 3 kluczowych funkcjonalnosci i wyniku calkowitego.",
+      "algorithm_type": "weighted_domain_renormalized_aggregation",
+      "supported_methodologies": [
+        "SRI"
+      ],
+      "config_schema": {
+        "renormalize_domain_weights": {
+          "type": "bool",
+          "default": true
+        },
+        "aggregation": {
+          "type": "enum",
+          "values": [
+            "weighted_sum"
+          ],
+          "default": "weighted_sum"
+        },
+        "impact_criteria_count": {
+          "type": "int",
+          "default": 7
+        },
+        "key_functionalities_count": {
+          "type": "int",
+          "default": 3
+        },
+        "score_ratio": {
+          "type": "enum",
+          "values": [
+            "achieved_over_maxposs"
+          ],
+          "default": "achieved_over_maxposs"
+        },
+        "cap_percent": {
+          "type": "float|null",
+          "default": null
+        }
+      }
+    },
+    {
+      "id": "iso52120_weighted_no_renorm",
+      "name": "SRI wazony bez renormalizacji domen",
+      "description": "Wariant referencyjny: wagi domen stosowane wprost, bez renormalizacji do domen obecnych. Uzywany do porownan i testow regresji.",
+      "algorithm_type": "weighted_domain_aggregation",
+      "supported_methodologies": [
+        "SRI",
+        "EN ISO 52120"
+      ],
+      "config_schema": {
+        "renormalize_domain_weights": {
+          "type": "bool",
+          "default": false
+        },
+        "aggregation": {
+          "type": "enum",
+          "values": [
+            "weighted_sum"
+          ],
+          "default": "weighted_sum"
+        },
+        "impact_criteria_count": {
+          "type": "int",
+          "default": 7
+        },
+        "cap_percent": {
+          "type": "float|null",
+          "default": null
+        }
+      }
+    },
+    {
+      "id": "pl_capped_weighted",
+      "name": "SRI Polska - wazony z limitem klasy",
+      "description": "Adaptacja krajowa: jak metoda B (z renormalizacja), ale wynik calkowity jest ograniczony gornym pulapem (cap_percent), dopoki nie zostana spelnione minimalne wymagania monitoringu energii. Zalozenie inzynierskie / krajowe.",
+      "algorithm_type": "weighted_domain_renormalized_with_cap",
+      "supported_methodologies": [
+        "SRI"
+      ],
+      "config_schema": {
+        "renormalize_domain_weights": {
+          "type": "bool",
+          "default": true
+        },
+        "aggregation": {
+          "type": "enum",
+          "values": [
+            "weighted_sum"
+          ],
+          "default": "weighted_sum"
+        },
+        "impact_criteria_count": {
+          "type": "int",
+          "default": 7
+        },
+        "cap_percent": {
+          "type": "float",
+          "default": 95.0
+        },
+        "cap_release_capability": {
+          "type": "string",
+          "default": "energy_metering"
+        }
+      }
+    }
+  ],
+  "versions": [
+    {
+      "id": "eu-sri-v4.5",
+      "methodology_type": "SRI",
+      "name": "SRI EU - arkusz obliczeniowy v4.5",
+      "country": "EU",
+      "version": "4.5",
+      "valid_from": "2020-10-14",
+      "valid_to": null,
+      "status": "active",
+      "calculation_strategy": "iso52120_weighted_renormalized",
+      "source_document": "SRI calculation sheet v4.5",
+      "source_checksum": "fea84a1931abb38c78e6ede524120c9c3527d8330407cbe5ff10e74f06ef95a4",
+      "import_date": "2026-07-08",
+      "importer_version": "1.0.0",
+      "inherits_from": null,
+      "migration_notes": "Wersja bazowa. Import bezposrednio z oficjalnego arkusza KE (Method B).",
+      "content_stats": {
+        "services": 54,
+        "impact_scores": 1596,
+        "weights_domain": 630,
+        "weights_criterion": 14,
+        "audit_questions": 0
+      },
+      "content_checksum": "98244fda28a80b62ef0be745d505c027874212ca5fc9e52297317d0c31e91f9a"
+    },
+    {
+      "id": "pl-sri-v1.0",
+      "methodology_type": "SRI",
+      "name": "SRI Polska v1.0 (adaptacja wag krajowych)",
+      "country": "PL",
+      "version": "1.0",
+      "valid_from": "2026-01-01",
+      "valid_to": null,
+      "status": "draft",
+      "calculation_strategy": "iso52120_weighted_renormalized",
+      "source_document": "Adaptacja krajowa PL - zalacznik wag (projekt)",
+      "source_checksum": "pl-v1.0-weights-draft",
+      "import_date": "2026-07-08",
+      "importer_version": "1.0.0",
+      "inherits_from": "eu-sri-v4.5",
+      "migration_notes": "Zmieniono wagi domen/kryteriow dla strefy north_east_europe (klimat PL). Calculation strategy, uslugi, FL i impact scores bez zmian.",
+      "content_stats": {
+        "services": 54,
+        "impact_scores": 1596,
+        "weights_domain": 630,
+        "weights_criterion": 14,
+        "audit_questions": 0
+      },
+      "content_checksum": "ece102dcf888217977cc5972e7baa461e98511b9058738001f9c230c4f7e67fa"
+    },
+    {
+      "id": "pl-sri-v1.1",
+      "methodology_type": "SRI",
+      "name": "SRI Polska v1.1 (dodatkowe pytania audytowe)",
+      "country": "PL",
+      "version": "1.1",
+      "valid_from": "2026-03-01",
+      "valid_to": null,
+      "status": "draft",
+      "calculation_strategy": "iso52120_weighted_renormalized",
+      "source_document": "Adaptacja krajowa PL - zestaw pytan audytowych (projekt)",
+      "source_checksum": "pl-v1.1-questions-draft",
+      "import_date": "2026-07-08",
+      "importer_version": "1.0.0",
+      "inherits_from": "eu-sri-v4.5",
+      "migration_notes": "Dodano krajowe pytania audytowe (warstwa zbioru danych, bez tresci audytu). Wagi, uslugi, impact scores i calculation strategy identyczne jak EU v4.5. Wynik liczbowy SRI niezmieniony.",
+      "content_stats": {
+        "services": 54,
+        "impact_scores": 1596,
+        "weights_domain": 630,
+        "weights_criterion": 14,
+        "audit_questions": 3
+      },
+      "content_checksum": "69edab8e163012f805f69782db48e0e3c81e685e3666a85b1fab285185d4de63"
+    },
+    {
+      "id": "pl-sri-v2.0",
+      "methodology_type": "SRI",
+      "name": "SRI Polska v2.0 (nowa strategia liczenia)",
+      "country": "PL",
+      "version": "2.0",
+      "valid_from": "2027-01-01",
+      "valid_to": null,
+      "status": "draft",
+      "calculation_strategy": "pl_capped_weighted",
+      "source_document": "Adaptacja krajowa PL - metoda z limitem klasy (projekt)",
+      "source_checksum": "pl-v2.0-strategy-draft",
+      "import_date": "2026-07-08",
+      "importer_version": "1.0.0",
+      "inherits_from": "pl-sri-v1.1",
+      "migration_notes": "Dziedziczy z PL v1.1 (pytania audytowe). Zmieniono calculation_strategy na pl_capped_weighted (limit klasy do czasu wdrozenia monitoringu energii). ZMIANA WYMAGA RECZNEJ WERYFIKACJI - wplyw na wynik i klasyfikacje.",
+      "content_stats": {
+        "services": 54,
+        "impact_scores": 1596,
+        "weights_domain": 630,
+        "weights_criterion": 14,
+        "audit_questions": 3
+      },
+      "content_checksum": "331a695cd319c00f1d54f38e776bca8612be97cb064be81cf65e7ffec604163c"
+    },
+    {
+      "id": "eu-sri-v5.0",
+      "methodology_type": "SRI",
+      "name": "SRI EU v5.0 (hipotetyczna aktualizacja KE)",
+      "country": "EU",
+      "version": "5.0",
+      "valid_from": "2028-01-01",
+      "valid_to": null,
+      "status": "draft",
+      "calculation_strategy": "iso52120_weighted_renormalized",
+      "source_document": "SRI calculation sheet v5.0 (hipotetyczny)",
+      "source_checksum": "eu-v5.0-hypothetical",
+      "import_date": "2026-07-08",
+      "importer_version": "1.0.0",
+      "inherits_from": "eu-sri-v4.5",
+      "migration_notes": "Hipotetyczna aktualizacja KE: dodano nowa usluge sterowania odpowiedzia popytowa ogrzewania, podniesiono fl_max jednej uslugi wentylacji, skorygowano wybrane impact scores. Wszystkie zmiany oficjalne.",
+      "content_stats": {
+        "services": 55,
+        "impact_scores": 1596,
+        "weights_domain": 630,
+        "weights_criterion": 14,
+        "audit_questions": 0
+      },
+      "content_checksum": "42e9ef0b2eaa01f81f990cb00fe68f184a8d91f7dbd7ed763bde384e48b90406"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "calculation-result.schema.json",
+  "title": "Calculation Result",
+  "description": "Wynik obliczenia SRI/audytu. Kontrakt ZAMROZONY (FINAL_CORE_ARCHITECTURE).",
+  "x-schema-version": "1.0.0",
+  "type": "object",
+  "required": [
+    "methodology_version_id",
+    "engine_version",
+    "total_score_percent",
+    "class",
+    "per_domain",
+    "per_criterion",
+    "per_service"
+  ],
+  "properties": {
+    "methodology_version_id": { "type": "string", "minLength": 1 },
+    "engine_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "total_score_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+    "class": {
+      "type": "object",
+      "required": ["label", "number"],
+      "properties": {
+        "label": { "type": "string" },
+        "number": { "type": "integer" }
+      },
+      "additionalProperties": true
+    },
+    "per_domain": { "type": "object" },
+    "per_criterion": { "type": "object" },
+    "per_service": { "type": "object" },
+    "warnings": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": true
+}

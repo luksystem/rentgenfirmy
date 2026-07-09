@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "compatibility-matrix.schema.json",
+  "title": "Compatibility Matrix",
+  "description": "Macierz zgodnosci wersji metodologii, silnika i schematow.",
+  "x-schema-version": "1.0.0",
+  "type": "object",
+  "required": ["provenance", "payload"],
+  "properties": {
+    "provenance": { "$ref": "provenance-header.schema.json" },
+    "payload": {
+      "type": "object",
+      "required": ["core_engine_version", "envelope_schema_version", "methodologies"],
+      "properties": {
+        "core_engine_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "envelope_schema_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "methodologies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["methodology_version_id", "status", "engine_version", "compatible_runtime"],
+            "properties": {
+              "methodology_version_id": { "type": "string", "minLength": 1 },
+              "methodology_type": { "type": "string" },
+              "country": { "type": "string" },
+              "status": { "type": "string", "enum": ["active", "draft", "deprecated", "archived"] },
+              "engine_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+              "compatible_runtime": { "type": "string" },
+              "inherits_from": { "type": ["string", "null"] },
+              "migration_from": { "type": "array", "items": { "type": "string" } },
+              "source_checksum": { "type": ["string", "null"] },
+              "artifacts": { "type": "array", "items": { "type": "string" } }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,109 @@
+{
+  "provenance": {
+    "artifact_type": "compatibility_matrix",
+    "methodology_version_id": "__platform__",
+    "schema_version": "1.0.0",
+    "engine_version": "1.0.0",
+    "generated_by": "core/artifacts.py",
+    "generated_at": "2026-07-09T16:13:32Z",
+    "source_checksum": null,
+    "payload_checksum": "27428e8a03f3c324a33a723f5610bbc3b8461a0b7d10fcb11ca081f802ac1445"
+  },
+  "payload": {
+    "core_engine_version": "1.0.0",
+    "envelope_schema_version": "1.0.0",
+    "methodologies": [
+      {
+        "methodology_version_id": "eu-sri-v4.5",
+        "methodology_type": "SRI",
+        "country": "EU",
+        "status": "active",
+        "engine_version": "1.0.0",
+        "compatible_runtime": ">=1.0.0 <2.0.0",
+        "inherits_from": null,
+        "migration_from": [],
+        "source_checksum": "fea84a1931abb38c78e6ede524120c9c3527d8330407cbe5ff10e74f06ef95a4",
+        "artifacts": [
+          "catalogue_services",
+          "catalogue_impact_scores",
+          "catalogue_domain_weights",
+          "catalogue_criterion_weights",
+          "catalogue_class_bands",
+          "catalogue_impact_criteria",
+          "catalogue_key_functionalities",
+          "catalogue_domains",
+          "dependency_graph",
+          "capabilities_catalog",
+          "recommendation_graph",
+          "expected_gain_model",
+          "optimization_rules",
+          "service_knowledge",
+          "service_knowledge",
+          "service_knowledge",
+          "service_knowledge",
+          "service_knowledge",
+          "service_knowledge",
+          "service_knowledge",
+          "service_knowledge",
+          "service_knowledge"
+        ]
+      },
+      {
+        "methodology_version_id": "pl-sri-v1.0",
+        "methodology_type": "SRI",
+        "country": "PL",
+        "status": "draft",
+        "engine_version": "1.0.0",
+        "compatible_runtime": ">=1.0.0 <2.0.0",
+        "inherits_from": "eu-sri-v4.5",
+        "migration_from": [
+          "eu-sri-v4.5"
+        ],
+        "source_checksum": "pl-v1.0-weights-draft",
+        "artifacts": []
+      },
+      {
+        "methodology_version_id": "pl-sri-v1.1",
+        "methodology_type": "SRI",
+        "country": "PL",
+        "status": "draft",
+        "engine_version": "1.0.0",
+        "compatible_runtime": ">=1.0.0 <2.0.0",
+        "inherits_from": "eu-sri-v4.5",
+        "migration_from": [
+          "eu-sri-v4.5"
+        ],
+        "source_checksum": "pl-v1.1-questions-draft",
+        "artifacts": []
+      },
+      {
+        "methodology_version_id": "pl-sri-v2.0",
+        "methodology_type": "SRI",
+        "country": "PL",
+        "status": "draft",
+        "engine_version": "1.0.0",
+        "compatible_runtime": ">=1.0.0 <2.0.0",
+        "inherits_from": "pl-sri-v1.1",
+        "migration_from": [
+          "pl-sri-v1.1"
+        ],
+        "source_checksum": "pl-v2.0-strategy-draft",
+        "artifacts": []
+      },
+      {
+        "methodology_version_id": "eu-sri-v5.0",
+        "methodology_type": "SRI",
+        "country": "EU",
+        "status": "draft",
+        "engine_version": "1.0.0",
+        "compatible_runtime": ">=1.0.0 <2.0.0",
+        "inherits_from": "eu-sri-v4.5",
+        "migration_from": [
+          "eu-sri-v4.5"
+        ],
+        "source_checksum": "eu-v5.0-hypothetical",
+        "artifacts": []
+      }
+    ]
+  }
+}

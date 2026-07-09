@@ -58,3 +58,7 @@ next-env.d.ts
 # Python cache (skrypty SRI)
 __pycache__/
 *.pyc
+
+# Core Orchestrator — staging i cache buildu (artefakty w generated/<version>/ sa commitowane)
+/generated/.staging/
+/generated/.cache/

@@ -2,7 +2,7 @@
 
 > Warstwa **pomocnicza (advisory)** nad oficjalna metodologia SRI. Nie zmienia punktacji ani listy uslug. Sluzy do odpowiedzi: co jest wymagane, aby osiagnac dany Functionality Level, co blokuje wyzszy poziom oraz jakie dane zebrac w audycie.
 
-- Wygenerowano: `2026-07-08T20:58:16.846988+00:00`
+- Wygenerowano: `2026-07-09T15:51:17.584007+00:00`
 - Wersja silnika zaleznosci: `1.0.0`
 - Zdefiniowanych capability: **46**
 - Uslug SRI objetych modelem: **54 / 54**
@@ -231,7 +231,7 @@ _Prerekwizyty:_ FL1: reporting_platform; FL2: data_logging, energy_metering, rep
 
 _Prerekwizyty:_ FL1: grid_signal_interface, scheduling; FL2: grid_signal_interface, scheduling, thermal_storage; FL3: grid_signal_interface, predictive_control, scheduling, thermal_storage; FL4: bidirectional_metering, grid_signal_interface, predictive_control, scheduling, thermal_storage
 
-### Cieppla woda uzytkowa (`domestic_hot_water`)
+### Ciepla woda uzytkowa (`domestic_hot_water`)
 
 #### DHW-1a — Sterowanie ładowaniem zasobnika CWU (grzałka lub wbudowana pompa) (FLmax 3)
 
@@ -763,10 +763,10 @@ _Prerekwizyty:_ FL1: co2_measurement, reporting_platform; FL2: co2_measurement, 
 | Czynnik | Capability | source_type | Domeny |
 |---|---|---|---|
 | Obecnosc uzytkownikow | `occupancy_detection` | official_methodology | Ogrzewanie, Chlodzenie, Wentylacja, Oswietlenie, Monitoring i sterowanie |
-| Pogoda / prognoza | `weather_data` | engineering_assumption | Ogrzewanie, Chlodzenie, Wentylacja, Dynamiczna obudowa budynku, Cieppla woda uzytkowa |
-| PV i magazyn energii | `self_consumption_optimization` | official_methodology | Elektrycznosc, Ladowanie pojazdow elektrycznych, Ogrzewanie, Chlodzenie, Cieppla woda uzytkowa |
+| Pogoda / prognoza | `weather_data` | engineering_assumption | Ogrzewanie, Chlodzenie, Wentylacja, Dynamiczna obudowa budynku, Ciepla woda uzytkowa |
+| PV i magazyn energii | `self_consumption_optimization` | official_methodology | Elektrycznosc, Ladowanie pojazdow elektrycznych, Ogrzewanie, Chlodzenie, Ciepla woda uzytkowa |
 | Sygnaly sieci / taryfy | `grid_signal_interface` | official_methodology | Elektrycznosc, Ladowanie pojazdow elektrycznych, Ogrzewanie, Chlodzenie, Monitoring i sterowanie |
-| Dane pomiarowe energii | `energy_metering` | official_methodology | Ogrzewanie, Chlodzenie, Cieppla woda uzytkowa, Elektrycznosc, Monitoring i sterowanie |
+| Dane pomiarowe energii | `energy_metering` | official_methodology | Ogrzewanie, Chlodzenie, Ciepla woda uzytkowa, Elektrycznosc, Monitoring i sterowanie |
 | Integracja cyfrowa / BMS | `bms_integration` | official_methodology | Ogrzewanie, Chlodzenie, Wentylacja, Oswietlenie, Dynamiczna obudowa budynku, Monitoring i sterowanie |
 
 - **Obecnosc uzytkownikow**: Jedna wiarygodna detekcja obecnosci steruje ogrzewaniem, chlodzeniem, wentylacja i oswietleniem.

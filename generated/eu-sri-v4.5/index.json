@@ -1,0 +1,129 @@
+{
+  "provenance": {
+    "artifact_type": "artifact_index",
+    "methodology_version_id": "eu-sri-v4.5",
+    "schema_version": "1.0.0",
+    "engine_version": "1.0.0",
+    "generated_by": "core/artifacts.py",
+    "generated_at": "2026-07-09T16:13:32Z",
+    "source_checksum": "fea84a1931abb38c78e6ede524120c9c3527d8330407cbe5ff10e74f06ef95a4",
+    "payload_checksum": "4264e682b9e3871a21dba33396e7881bb2c9fd9269d4eb334919d48e8f438dd9"
+  },
+  "payload": {
+    "methodology_version_id": "eu-sri-v4.5",
+    "source_checksum": "fea84a1931abb38c78e6ede524120c9c3527d8330407cbe5ff10e74f06ef95a4",
+    "artifact_count": 22,
+    "artifacts": [
+      {
+        "artifact_type": "catalogue_services",
+        "path": "eu-sri-v4.5/catalogue/services.json",
+        "payload_checksum": "c8bbeec753ca6fa201efd84db4ae5291b91ca0036e64928c019bbc83be83650d"
+      },
+      {
+        "artifact_type": "catalogue_impact_scores",
+        "path": "eu-sri-v4.5/catalogue/impact-scores.json",
+        "payload_checksum": "761a5a65fc00e190d582ca37c2a15b28dca8447e5ea1c8b67942d8053cc5c2f5"
+      },
+      {
+        "artifact_type": "catalogue_domain_weights",
+        "path": "eu-sri-v4.5/catalogue/domain-weights.json",
+        "payload_checksum": "5440c45411b7a14a4939a5b425c5d10ae4700074171d6bab21a2b62c82f16549"
+      },
+      {
+        "artifact_type": "catalogue_criterion_weights",
+        "path": "eu-sri-v4.5/catalogue/criterion-weights.json",
+        "payload_checksum": "32058471d79c5d43508875542e5679dc16af2c9f6fb25315d5de8e15ce319cd5"
+      },
+      {
+        "artifact_type": "catalogue_class_bands",
+        "path": "eu-sri-v4.5/catalogue/class-bands.json",
+        "payload_checksum": "33761dcf9c1f2fe778548a2aa71b188764e6d328dcd7d155764f68a085c16e37"
+      },
+      {
+        "artifact_type": "catalogue_impact_criteria",
+        "path": "eu-sri-v4.5/catalogue/impact-criteria.json",
+        "payload_checksum": "f856ab2a62992b85fe96787c733fbe60128246edff785ec24d65c838e7ed88a8"
+      },
+      {
+        "artifact_type": "catalogue_key_functionalities",
+        "path": "eu-sri-v4.5/catalogue/key-functionalities.json",
+        "payload_checksum": "463db1d00c73d9c7c724c4c88a672618293c669725116dfbe6ca7c8573968452"
+      },
+      {
+        "artifact_type": "catalogue_domains",
+        "path": "eu-sri-v4.5/catalogue/domains.json",
+        "payload_checksum": "cc856961d97b735357f566141a7b700426da16444c121cc5ad7f2f7ccc7bf2d5"
+      },
+      {
+        "artifact_type": "dependency_graph",
+        "path": "eu-sri-v4.5/dependency-graph.json",
+        "payload_checksum": "340faf351268d36e9695b5f748dc2f962512681ee2e58960030a98fc7321547f"
+      },
+      {
+        "artifact_type": "capabilities_catalog",
+        "path": "eu-sri-v4.5/capabilities-catalog.json",
+        "payload_checksum": "91662c665c67803a85b56acf076d42a8d880716d39be838795d3e75176267eb8"
+      },
+      {
+        "artifact_type": "recommendation_graph",
+        "path": "eu-sri-v4.5/recommendation-graph.json",
+        "payload_checksum": "10dfef247f68c8dd5b6811f3b5c5c9b29cd9fcfb62e2918f5bc8a342d8094e90"
+      },
+      {
+        "artifact_type": "expected_gain_model",
+        "path": "eu-sri-v4.5/expected-gain-model.json",
+        "payload_checksum": "2c9c2c282298054825da404c4ebd33a4adb2104f15fb3b6da0a423ce06d41e82"
+      },
+      {
+        "artifact_type": "optimization_rules",
+        "path": "eu-sri-v4.5/optimization-rules.json",
+        "payload_checksum": "076b0752fc5baa31673b2945fe5bd255b46c3242de6843a16af1fd64b5d5ae07"
+      },
+      {
+        "artifact_type": "service_knowledge",
+        "path": "eu-sri-v4.5/service-knowledge/cooling.json",
+        "payload_checksum": "a23dc967535ed177050cb51e9e9acda2a5852dba27d028cd753e4ab4a09090da"
+      },
+      {
+        "artifact_type": "service_knowledge",
+        "path": "eu-sri-v4.5/service-knowledge/domestic_hot_water.json",
+        "payload_checksum": "9e713f31ab2d84f8e6ffa3759659b0726625132d92f3e527f1146b14a3a87103"
+      },
+      {
+        "artifact_type": "service_knowledge",
+        "path": "eu-sri-v4.5/service-knowledge/dynamic_building_envelope.json",
+        "payload_checksum": "3aa3050ce20318d07ce041dfdcb0ae9ff77b5941734c1d9f0da01723ccd38574"
+      },
+      {
+        "artifact_type": "service_knowledge",
+        "path": "eu-sri-v4.5/service-knowledge/electric_vehicle_charging.json",
+        "payload_checksum": "61847f5d3f33325a6c22dcc335f84d806270794d0ecfb120aab0ff8e7ca21139"
+      },
+      {
+        "artifact_type": "service_knowledge",
+        "path": "eu-sri-v4.5/service-knowledge/electricity.json",
+        "payload_checksum": "cbe3786a0758e2317409388b989eefb8d0cdf26ece00cdbf45dc200f5d1f9a04"
+      },
+      {
+        "artifact_type": "service_knowledge",
+        "path": "eu-sri-v4.5/service-knowledge/heating.json",
+        "payload_checksum": "6df2df564ee594b9cd15cd7c53502ea74bb202d67f43fd04e049e51e8caa0c73"
+      },
+      {
+        "artifact_type": "service_knowledge",
+        "path": "eu-sri-v4.5/service-knowledge/lighting.json",
+        "payload_checksum": "5cc0bf6d6eca4ddc7bf2b4dce47f4eaaf587713c649cf4e4a1d55e58aad1a045"
+      },
+      {
+        "artifact_type": "service_knowledge",
+        "path": "eu-sri-v4.5/service-knowledge/monitoring_and_control.json",
+        "payload_checksum": "47f01010d2936de2ab31cb942bf770ad3c9423a3502e00b58b827dda50167ec3"
+      },
+      {
+        "artifact_type": "service_knowledge",
+        "path": "eu-sri-v4.5/service-knowledge/ventilation.json",
+        "payload_checksum": "f60ce5b8eb440eb1137178e045018b4f311669ce72bb24e81334eb0e983de7a6"
+      }
+    ]
+  }
+}

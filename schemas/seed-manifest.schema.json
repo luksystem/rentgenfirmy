@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "seed-manifest.schema.json",
+  "title": "Seed Manifest",
+  "description": "Manifest transakcyjnego importu metodologii do bazy (Seed Engine).",
+  "x-schema-version": "1.0.0",
+  "type": "object",
+  "required": ["provenance", "payload"],
+  "properties": {
+    "provenance": { "$ref": "provenance-header.schema.json" },
+    "payload": {
+      "type": "object",
+      "required": ["methodology_version_id", "seed_file", "transactional", "idempotent", "row_counts"],
+      "properties": {
+        "methodology_version_id": { "type": "string", "minLength": 1 },
+        "catalogue_code": { "type": "string" },
+        "seed_file": { "type": "string" },
+        "transactional": { "type": "boolean", "const": true },
+        "idempotent": { "type": "boolean", "const": true },
+        "source_checksum": { "type": ["string", "null"] },
+        "content_checksum": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "row_counts": {
+          "type": "object",
+          "patternProperties": { "^.+$": { "type": "integer", "minimum": 0 } },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

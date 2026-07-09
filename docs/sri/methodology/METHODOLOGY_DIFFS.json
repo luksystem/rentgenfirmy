@@ -1,0 +1,354 @@
+{
+  "diffs": [
+    {
+      "pair": {
+        "base": "eu-sri-v4.5",
+        "compared": "pl-sri-v1.0",
+        "scenario": "S1 - PL v1.0 zmienia tylko wagi"
+      },
+      "summary": {
+        "total": 3,
+        "by_entity": {
+          "weight_domain": 2,
+          "weight_criterion": 1
+        },
+        "by_change": {
+          "modified": 3
+        },
+        "by_impact": {
+          "high": 1,
+          "medium": 2
+        },
+        "requires_manual_review": 3
+      },
+      "diffs": [
+        {
+          "id": "fe56983b-635c-571f-a26b-72f9e1413d4c",
+          "base_version_id": "eu-sri-v4.5",
+          "compared_version_id": "pl-sri-v1.0",
+          "change_type": "modified",
+          "entity_type": "weight_domain",
+          "entity_id": "non_residential|north_east_europe|cooling|energy_efficiency",
+          "old_value": 0.083878,
+          "new_value": 0.06,
+          "impact_level": "high",
+          "requires_manual_review": true,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "id": "03c8af4c-4a2c-57bb-983b-1fd25fe985d6",
+          "base_version_id": "eu-sri-v4.5",
+          "compared_version_id": "pl-sri-v1.0",
+          "change_type": "modified",
+          "entity_type": "weight_domain",
+          "entity_id": "non_residential|north_east_europe|heating|energy_efficiency",
+          "old_value": 0.292478,
+          "new_value": 0.35,
+          "impact_level": "medium",
+          "requires_manual_review": true,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "id": "fb64e450-a3f1-5ee0-916a-5ab8c9540a6f",
+          "base_version_id": "eu-sri-v4.5",
+          "compared_version_id": "pl-sri-v1.0",
+          "change_type": "modified",
+          "entity_type": "weight_criterion",
+          "entity_id": "non_residential|energy_efficiency",
+          "old_value": 0.166667,
+          "new_value": 0.2,
+          "impact_level": "medium",
+          "requires_manual_review": true,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    },
+    {
+      "pair": {
+        "base": "eu-sri-v4.5",
+        "compared": "pl-sri-v1.1",
+        "scenario": "S2 - PL v1.1 dodaje pytania audytowe (bez zmian liczenia)"
+      },
+      "summary": {
+        "total": 4,
+        "by_entity": {
+          "audit_question": 3,
+          "report": 1
+        },
+        "by_change": {
+          "added": 3,
+          "modified": 1
+        },
+        "by_impact": {
+          "low": 4
+        },
+        "requires_manual_review": 0
+      },
+      "diffs": [
+        {
+          "id": "40d833ed-c31f-5c42-b4f1-5e6356ce1a94",
+          "base_version_id": "eu-sri-v4.5",
+          "compared_version_id": "pl-sri-v1.1",
+          "change_type": "added",
+          "entity_type": "audit_question",
+          "entity_id": "PL-AQ-001",
+          "old_value": null,
+          "new_value": {
+            "topic": "heating",
+            "note": "Weryfikacja licznika ciepla (placeholder)"
+          },
+          "impact_level": "low",
+          "requires_manual_review": false,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "id": "89757a69-4ee2-5a36-ad93-e32b99fe0102",
+          "base_version_id": "eu-sri-v4.5",
+          "compared_version_id": "pl-sri-v1.1",
+          "change_type": "added",
+          "entity_type": "audit_question",
+          "entity_id": "PL-AQ-002",
+          "old_value": null,
+          "new_value": {
+            "topic": "electricity",
+            "note": "Weryfikacja licznika energii (placeholder)"
+          },
+          "impact_level": "low",
+          "requires_manual_review": false,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "id": "f8543e2e-5f34-5d51-8051-1806eb15fff1",
+          "base_version_id": "eu-sri-v4.5",
+          "compared_version_id": "pl-sri-v1.1",
+          "change_type": "added",
+          "entity_type": "audit_question",
+          "entity_id": "PL-AQ-003",
+          "old_value": null,
+          "new_value": {
+            "topic": "monitoring",
+            "note": "Dostep do danych BMS (placeholder)"
+          },
+          "impact_level": "low",
+          "requires_manual_review": false,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "id": "4bdd6de1-6712-5d17-8948-e893c26768b8",
+          "base_version_id": "eu-sri-v4.5",
+          "compared_version_id": "pl-sri-v1.1",
+          "change_type": "modified",
+          "entity_type": "report",
+          "entity_id": "reports",
+          "old_value": "1.0",
+          "new_value": "1.1-pl",
+          "impact_level": "low",
+          "requires_manual_review": false,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    },
+    {
+      "pair": {
+        "base": "pl-sri-v1.1",
+        "compared": "pl-sri-v2.0",
+        "scenario": "S3 - PL v2.0 zmienia calculation_strategy"
+      },
+      "summary": {
+        "total": 1,
+        "by_entity": {
+          "calculation_strategy": 1
+        },
+        "by_change": {
+          "modified": 1
+        },
+        "by_impact": {
+          "high": 1
+        },
+        "requires_manual_review": 1
+      },
+      "diffs": [
+        {
+          "id": "6be4bc87-eec6-5156-bb07-b6bccb72f63e",
+          "base_version_id": "pl-sri-v1.1",
+          "compared_version_id": "pl-sri-v2.0",
+          "change_type": "modified",
+          "entity_type": "calculation_strategy",
+          "entity_id": "calculation_strategy",
+          "old_value": "iso52120_weighted_renormalized",
+          "new_value": "pl_capped_weighted",
+          "impact_level": "high",
+          "requires_manual_review": true,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    },
+    {
+      "pair": {
+        "base": "eu-sri-v4.5",
+        "compared": "eu-sri-v5.0",
+        "scenario": "S4 - EU v5.0 zmienia uslugi i impact scores"
+      },
+      "summary": {
+        "total": 3,
+        "by_entity": {
+          "service": 1,
+          "impact_score": 2
+        },
+        "by_change": {
+          "added": 1,
+          "modified": 2
+        },
+        "by_impact": {
+          "high": 3
+        },
+        "requires_manual_review": 3
+      },
+      "diffs": [
+        {
+          "id": "37e07ce1-fc91-566b-9570-cbc8cb39bc50",
+          "base_version_id": "eu-sri-v4.5",
+          "compared_version_id": "eu-sri-v5.0",
+          "change_type": "added",
+          "entity_type": "service",
+          "entity_id": "H-DR1",
+          "old_value": null,
+          "new_value": {
+            "domain": "heating",
+            "fl_max": 3,
+            "name": "Heating demand response control"
+          },
+          "impact_level": "high",
+          "requires_manual_review": true,
+          "source_type": "official_methodology"
+        },
+        {
+          "id": "46c6ab97-0b60-5291-8df8-69bcfa4d9103",
+          "base_version_id": "eu-sri-v4.5",
+          "compared_version_id": "eu-sri-v5.0",
+          "change_type": "modified",
+          "entity_type": "impact_score",
+          "entity_id": "H-1a|L3|energy_flexibility_and_storage",
+          "old_value": 0.0,
+          "new_value": 1.0,
+          "impact_level": "high",
+          "requires_manual_review": true,
+          "source_type": "official_methodology"
+        },
+        {
+          "id": "4efa70ab-b3e4-59c5-a592-1e99fd4dc1d0",
+          "base_version_id": "eu-sri-v4.5",
+          "compared_version_id": "eu-sri-v5.0",
+          "change_type": "modified",
+          "entity_type": "impact_score",
+          "entity_id": "H-1a|L4|energy_efficiency",
+          "old_value": 3.0,
+          "new_value": 4.0,
+          "impact_level": "high",
+          "requires_manual_review": true,
+          "source_type": "official_methodology"
+        }
+      ]
+    },
+    {
+      "pair": {
+        "base": "eu-sri-v4.5",
+        "compared": "pl-sri-v2.0",
+        "scenario": "S5 - porownanie EU v4.5 vs PL v2.0 (pelny zakres roznic)"
+      },
+      "summary": {
+        "total": 5,
+        "by_entity": {
+          "calculation_strategy": 1,
+          "audit_question": 3,
+          "report": 1
+        },
+        "by_change": {
+          "modified": 2,
+          "added": 3
+        },
+        "by_impact": {
+          "high": 1,
+          "low": 4
+        },
+        "requires_manual_review": 1
+      },
+      "diffs": [
+        {
+          "id": "81d10183-ef41-5084-af38-9311cb5540a8",
+          "base_version_id": "eu-sri-v4.5",
+          "compared_version_id": "pl-sri-v2.0",
+          "change_type": "modified",
+          "entity_type": "calculation_strategy",
+          "entity_id": "calculation_strategy",
+          "old_value": "iso52120_weighted_renormalized",
+          "new_value": "pl_capped_weighted",
+          "impact_level": "high",
+          "requires_manual_review": true,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "id": "acde9d07-fb9a-53e9-9bc6-0dc196909b4e",
+          "base_version_id": "eu-sri-v4.5",
+          "compared_version_id": "pl-sri-v2.0",
+          "change_type": "added",
+          "entity_type": "audit_question",
+          "entity_id": "PL-AQ-001",
+          "old_value": null,
+          "new_value": {
+            "topic": "heating",
+            "note": "Weryfikacja licznika ciepla (placeholder)"
+          },
+          "impact_level": "low",
+          "requires_manual_review": false,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "id": "c738f069-609b-51b1-a9a7-c39da2c33e0b",
+          "base_version_id": "eu-sri-v4.5",
+          "compared_version_id": "pl-sri-v2.0",
+          "change_type": "added",
+          "entity_type": "audit_question",
+          "entity_id": "PL-AQ-002",
+          "old_value": null,
+          "new_value": {
+            "topic": "electricity",
+            "note": "Weryfikacja licznika energii (placeholder)"
+          },
+          "impact_level": "low",
+          "requires_manual_review": false,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "id": "73b1793c-4396-5083-873b-60dade776287",
+          "base_version_id": "eu-sri-v4.5",
+          "compared_version_id": "pl-sri-v2.0",
+          "change_type": "added",
+          "entity_type": "audit_question",
+          "entity_id": "PL-AQ-003",
+          "old_value": null,
+          "new_value": {
+            "topic": "monitoring",
+            "note": "Dostep do danych BMS (placeholder)"
+          },
+          "impact_level": "low",
+          "requires_manual_review": false,
+          "source_type": "engineering_assumption"
+        },
+        {
+          "id": "d7e761ce-e914-506b-9173-0a32e5da38cd",
+          "base_version_id": "eu-sri-v4.5",
+          "compared_version_id": "pl-sri-v2.0",
+          "change_type": "modified",
+          "entity_type": "report",
+          "entity_id": "reports",
+          "old_value": "1.0",
+          "new_value": "1.1-pl",
+          "impact_level": "low",
+          "requires_manual_review": false,
+          "source_type": "engineering_assumption"
+        }
+      ]
+    }
+  ]
+}

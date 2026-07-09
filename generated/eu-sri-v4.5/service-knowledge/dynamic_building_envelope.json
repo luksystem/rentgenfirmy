@@ -1,0 +1,302 @@
+{
+  "provenance": {
+    "artifact_type": "service_knowledge",
+    "methodology_version_id": "eu-sri-v4.5",
+    "schema_version": "1.0.0",
+    "engine_version": "1.0.0",
+    "generated_by": "core/artifacts.py",
+    "generated_at": "2026-07-09T16:13:32Z",
+    "source_checksum": "fea84a1931abb38c78e6ede524120c9c3527d8330407cbe5ff10e74f06ef95a4",
+    "payload_checksum": "3aa3050ce20318d07ce041dfdcb0ae9ff77b5941734c1d9f0da01723ccd38574"
+  },
+  "payload": {
+    "domain_code": "dynamic_building_envelope",
+    "domain_name_pl": "Dynamiczna powloka budynku",
+    "service_count": 3,
+    "provenance": {
+      "official_fields": "VERIFIED_ANNEX_D",
+      "expert_fields": "EXPERT_AUTHORED"
+    },
+    "cards": [
+      {
+        "official_code": "DE-1",
+        "internal_code": "E-01",
+        "domain_code": "dynamic_building_envelope",
+        "service_group_en": "Window control",
+        "official_name_en": "Window solar shading control",
+        "official_name_pl": "Sterowanie osłonami przeciwsłonecznymi",
+        "included_in_method_a": true,
+        "fl_max": 4,
+        "friendly_name_pl": "Sterowanie zacienieniem / roletami",
+        "purpose_pl": "Automatyczne sterowanie oslonami przeciwslonecznymi (rolety, zaluzje, markizy), aby ograniczac zyski ciepla latem, wykorzystywac je zima i chronic przed olsnieniem.",
+        "technical_description_pl": "Sterowanie oslonami wg naslonecznienia, pozycji slonca, temperatury i obecnosci — od recznego, przez czasowe/nasloneczniowe, po sterowanie zoptymalizowane wg pozycji slonca i potrzeb HVAC/oswietlenia.",
+        "energy_significance_pl": "Zacienienie redukuje szczyty chlodnicze latem i zyski ciepla, a zima pozwala na darmowe zyski sloneczne; wplywa tez na zapotrzebowanie na oswietlenie.",
+        "functionality_levels": [
+          {
+            "level": 0,
+            "official_description_en": "No sun shading or only manual operation",
+            "practical_description_pl": "Sterowanie reczne oslonami."
+          },
+          {
+            "level": 1,
+            "official_description_en": "Motorized operation with manual control",
+            "practical_description_pl": "Sterowanie automatyczne (czasowe lub wg naslonecznienia)."
+          },
+          {
+            "level": 2,
+            "official_description_en": "Motorized operation with automatic control based on sensor data",
+            "practical_description_pl": "Sterowanie wg naslonecznienia i temperatury z uwzglednieniem stref."
+          },
+          {
+            "level": 3,
+            "official_description_en": "Combined light/blind/HVAC control",
+            "practical_description_pl": "Sterowanie wg pozycji slonca z ochrona przed olsnieniem."
+          },
+          {
+            "level": 4,
+            "official_description_en": "Predictive blind control (e.g. based on weather forecast)",
+            "practical_description_pl": "Zoptymalizowane sterowanie zintegrowane z HVAC i oswietleniem (predykcja)."
+          }
+        ],
+        "technologies": [
+          "stacja pogodowa/czujniki naslonecznienia",
+          "sledzenie pozycji slonca",
+          "KNX/Loxone",
+          "integracja z HVAC i oswietleniem"
+        ],
+        "devices": [
+          "napedy rolet/zaluzji",
+          "czujniki naslonecznienia i wiatru",
+          "stacja pogodowa",
+          "sterowniki zacienienia"
+        ],
+        "audit_verification": [
+          "sprawdz automatyzacje oslon i czujniki naslonecznienia",
+          "ustal logike wg pozycji slonca/temperatury",
+          "zweryfikuj integracje z HVAC/oswietleniem (poziom 4)"
+        ],
+        "evidence": [
+          "schemat sterowania oslonami",
+          "nastawy logiki naslonecznienia",
+          "trendy pozycji oslon vs naslonecznienie"
+        ],
+        "common_mistakes": [
+          "brak ochrony przed wiatrem (uszkodzenia)",
+          "konflikt z daylight harvesting (za duzo zaciemnienia)",
+          "sterowanie tylko czasowe bez czujnikow"
+        ],
+        "limitations": [
+          "wymaga napedow i czujnikow zewnetrznych",
+          "kompromis miedzy zacienieniem a swiatlem dziennym/widokiem"
+        ],
+        "dependencies": [
+          "L-2 (swiatlo dzienne)",
+          "DE-2 (okna/HVAC)",
+          "C-1a (redukcja zyskow ciepla)"
+        ],
+        "cross_domain_impact": [
+          "chlodzenie (redukcja szczytow letnich)",
+          "ogrzewanie (zyski sloneczne zima)",
+          "oswietlenie (swiatlo dzienne)"
+        ],
+        "modernization": [
+          "automatyzacja rolet z czujnikami naslonecznienia/wiatru",
+          "sterowanie wg pozycji slonca",
+          "koordynacja z oswietleniem i HVAC"
+        ],
+        "examples": [
+          "biurowiec z fasada z automatycznymi zaluzjami wg pozycji slonca",
+          "dom z roletami sterowanymi naslonecznieniem i wiatrem"
+        ],
+        "provenance": {
+          "official_fields": "VERIFIED_ANNEX_D",
+          "expert_fields": "EXPERT_AUTHORED",
+          "source_version": "SRI calculation sheet v4.5"
+        }
+      },
+      {
+        "official_code": "DE-2",
+        "internal_code": "E-02",
+        "domain_code": "dynamic_building_envelope",
+        "service_group_en": "Window control",
+        "official_name_en": "Window open/closed control, combined with HVAC system",
+        "official_name_pl": "Sterowanie otwieraniem okien z integracją HVAC",
+        "included_in_method_a": false,
+        "fl_max": 3,
+        "friendly_name_pl": "Sterowanie otwieraniem okien z HVAC",
+        "purpose_pl": "Koordynacja otwierania/zamykania okien z praca ogrzewania, chlodzenia i wentylacji, aby umozliwic przewietrzanie bez marnowania energii.",
+        "technical_description_pl": "Sterowanie okien (lub sygnalizacja ich stanu) zintegrowane z HVAC — blokada grzania/chlodzenia przy otwartym oknie, sterowane przewietrzanie naturalne; wyzsze poziomy z automatyka i optymalizacja.",
+        "energy_significance_pl": "Blokowanie HVAC przy otwartych oknach eliminuje typowe marnotrawstwo; sterowane przewietrzanie umozliwia darmowe chlodzenie nocne.",
+        "functionality_levels": [
+          {
+            "level": 0,
+            "official_description_en": "Manual operation or only fixed windows",
+            "practical_description_pl": "Brak koordynacji okien z HVAC."
+          },
+          {
+            "level": 1,
+            "official_description_en": "Open/closed detection to shut down heating or cooling systems",
+            "practical_description_pl": "Detekcja otwarcia okna z blokada grzania/chlodzenia strefy."
+          },
+          {
+            "level": 2,
+            "official_description_en": "Level 1 + Automised mechanical window opening based on room sensor data",
+            "practical_description_pl": "Sterowane przewietrzanie naturalne skoordynowane z HVAC."
+          },
+          {
+            "level": 3,
+            "official_description_en": "Level 2 + Centralized coordination of operable windows, e.g. to control free natural night cooling",
+            "practical_description_pl": "Zautomatyzowane, zoptymalizowane przewietrzanie (np. nocne) z predykcja."
+          }
+        ],
+        "technologies": [
+          "kontaktrony okienne",
+          "napedy okien/klap",
+          "logika blokady HVAC",
+          "night ventilation"
+        ],
+        "devices": [
+          "czujniki otwarcia okna (kontaktrony)",
+          "silowniki okien/klap oddymiajacych",
+          "sterowniki stref/BMS"
+        ],
+        "audit_verification": [
+          "sprawdz detekcje otwarcia okien i blokade HVAC",
+          "ustal, czy istnieje sterowane przewietrzanie",
+          "zweryfikuj automatyzacje nocnego przewietrzania (poziom 3)"
+        ],
+        "evidence": [
+          "schemat kontaktronow/napedow",
+          "logika blokady w BMS",
+          "trendy stanu okien vs praca HVAC"
+        ],
+        "common_mistakes": [
+          "brak blokady HVAC przy otwartym oknie",
+          "napedy okien bez zabezpieczen pogodowych (deszcz/wiatr)",
+          "przewietrzanie kolidujace z komfortem"
+        ],
+        "limitations": [
+          "wymaga czujnikow/napedow okien",
+          "ograniczenia bezpieczenstwa i pogodowe"
+        ],
+        "dependencies": [
+          "H-1a/C-1a (blokada grzania/chlodzenia strefy)",
+          "V-3 (free-cooling/przewietrzanie)",
+          "DE-1 (zacienienie)"
+        ],
+        "cross_domain_impact": [
+          "ogrzewanie/chlodzenie (blokada przy otwartym oknie)",
+          "wentylacja (przewietrzanie naturalne)"
+        ],
+        "modernization": [
+          "montaz kontaktronow i blokady HVAC",
+          "automatyzacja przewietrzania nocnego",
+          "koordynacja z wentylacja mechaniczna"
+        ],
+        "examples": [
+          "biuro z blokada fan-coila przy otwartym oknie",
+          "budynek z automatycznym nocnym przewietrzaniem klapami"
+        ],
+        "provenance": {
+          "official_fields": "VERIFIED_ANNEX_D",
+          "expert_fields": "EXPERT_AUTHORED",
+          "source_version": "SRI calculation sheet v4.5"
+        }
+      },
+      {
+        "official_code": "DE-4",
+        "internal_code": "E-03",
+        "domain_code": "dynamic_building_envelope",
+        "service_group_en": "Feedback - Reporting information",
+        "official_name_en": "Reporting information regarding performance of dynamic building envelope systems",
+        "official_name_pl": "Raportowanie pracy dynamicznej powłoki budynku",
+        "included_in_method_a": true,
+        "fl_max": 4,
+        "friendly_name_pl": "Raportowanie pracy dynamicznej powloki budynku",
+        "purpose_pl": "Dostarczanie informacji o dzialaniu oslon i elementow ruchomych powloki, aby monitorowac ich skutecznosc i wykrywac usterki.",
+        "technical_description_pl": "Zbieranie i prezentacja danych o pracy zacienienia/okien: pozycje, cykle, awarie; wyzsze poziomy z analiza skutecznosci i alarmami.",
+        "energy_significance_pl": "Monitoring ujawnia niedzialajace/zablokowane oslony i pozwala utrzymac ich wklad w redukcje zyskow ciepla i komfort.",
+        "functionality_levels": [
+          {
+            "level": 0,
+            "official_description_en": "No reporting",
+            "practical_description_pl": "Brak raportowania powloki."
+          },
+          {
+            "level": 1,
+            "official_description_en": "Position of each product & fault detection",
+            "practical_description_pl": "Podstawowa informacja o stanie oslon/okien."
+          },
+          {
+            "level": 2,
+            "official_description_en": "Position of each product, fault detection & predictive maintenance",
+            "practical_description_pl": "Rejestracja i historia pracy elementow powloki."
+          },
+          {
+            "level": 3,
+            "official_description_en": "Position of each product, fault detection, predictive maintenance, real-time sensor data (wind, lux, temperature…)",
+            "practical_description_pl": "Analiza skutecznosci i sygnalizacja odchylen."
+          },
+          {
+            "level": 4,
+            "official_description_en": "Position of each product, fault detection, predictive maintenance, real-time & historical sensor data (wind, lux, temperature…)",
+            "practical_description_pl": "Pelne raportowanie ze wsparciem optymalizacji i diagnostyki."
+          }
+        ],
+        "technologies": [
+          "monitoring pozycji napedow",
+          "historian/trendy",
+          "dashboardy",
+          "diagnostyka napedow"
+        ],
+        "devices": [
+          "napedy z informacja zwrotna o pozycji",
+          "czujniki stanu",
+          "koncentrator danych/BMS"
+        ],
+        "audit_verification": [
+          "sprawdz, czy pozycje/stany oslon sa raportowane",
+          "zweryfikuj historie i alarmy usterek",
+          "ustal analize skutecznosci (wyzsze poziomy)"
+        ],
+        "evidence": [
+          "dashboard stanu powloki",
+          "logi cykli/awarii napedow",
+          "trendy pozycji"
+        ],
+        "common_mistakes": [
+          "brak informacji zwrotnej z napedow",
+          "dane bez alarmow o awariach",
+          "brak powiazania ze skutecznoscia energetyczna"
+        ],
+        "limitations": [
+          "wymaga napedow z informacja zwrotna",
+          "jakosc zalezy od opomiarowania"
+        ],
+        "dependencies": [
+          "DE-1 (zacienienie)",
+          "DE-2 (okna)",
+          "MC-13 (centralne raportowanie)",
+          "MC-4 (detekcja usterek)"
+        ],
+        "cross_domain_impact": [
+          "monitoring i sterowanie (dane do MC-13/MC-4)",
+          "chlodzenie/oswietlenie (skutecznosc zacienienia)"
+        ],
+        "modernization": [
+          "napedy z informacja zwrotna o pozycji",
+          "dashboard i alarmy usterek oslon",
+          "analiza skutecznosci zacienienia"
+        ],
+        "examples": [
+          "fasada z monitoringiem pozycji zaluzji i alarmami awarii napedow"
+        ],
+        "provenance": {
+          "official_fields": "VERIFIED_ANNEX_D",
+          "expert_fields": "EXPERT_AUTHORED",
+          "source_version": "SRI calculation sheet v4.5"
+        }
+      }
+    ]
+  }
+}

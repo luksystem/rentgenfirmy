@@ -1,0 +1,728 @@
+{
+  "provenance": {
+    "artifact_type": "service_knowledge",
+    "methodology_version_id": "eu-sri-v4.5",
+    "schema_version": "1.0.0",
+    "engine_version": "1.0.0",
+    "generated_by": "core/artifacts.py",
+    "generated_at": "2026-07-09T16:13:32Z",
+    "source_checksum": "fea84a1931abb38c78e6ede524120c9c3527d8330407cbe5ff10e74f06ef95a4",
+    "payload_checksum": "47f01010d2936de2ab31cb942bf770ad3c9423a3502e00b58b827dda50167ec3"
+  },
+  "payload": {
+    "domain_code": "monitoring_and_control",
+    "domain_name_pl": "Monitorowanie i sterowanie",
+    "service_count": 8,
+    "provenance": {
+      "official_fields": "VERIFIED_ANNEX_D",
+      "expert_fields": "EXPERT_AUTHORED"
+    },
+    "cards": [
+      {
+        "official_code": "MC-13",
+        "internal_code": "M-04",
+        "domain_code": "monitoring_and_control",
+        "service_group_en": "Feedback - Reporting information",
+        "official_name_en": "Central reporting of TBS performance and energy use",
+        "official_name_pl": "Harmonogramowanie pracy systemów HVAC",
+        "included_in_method_a": true,
+        "fl_max": 3,
+        "friendly_name_pl": "Centralne raportowanie pracy i zuzycia budynku",
+        "purpose_pl": "Zbieranie w jednym miejscu danych o pracy i zuzyciu wszystkich instalacji technicznych, aby umozliwic zarzadzanie energia calym budynkiem.",
+        "technical_description_pl": "Centralny system raportowania (energy management): agregacja danych ze wszystkich domen, dashboardy, raporty, benchmarking; wyzsze poziomy z analiza i wsparciem decyzji.",
+        "energy_significance_pl": "Zapewnia caloscowy obraz zuzycia i sprawnosci, umozliwiajac priorytetyzacje dzialan, benchmarking i utrzymanie efektow w czasie.",
+        "functionality_levels": [
+          {
+            "level": 0,
+            "official_description_en": "None",
+            "practical_description_pl": "Brak centralnego raportowania."
+          },
+          {
+            "level": 1,
+            "official_description_en": "Central or remote reporting of realtime energy use per energy carrier",
+            "practical_description_pl": "Podstawowe centralne wskazania stanu/zuzycia."
+          },
+          {
+            "level": 2,
+            "official_description_en": "Central or remote reporting of realtime energy use per energy carrier, combining TBS of at least 2 domains in one interface",
+            "practical_description_pl": "Rejestracja i historia z wielu systemow (dashboardy)."
+          },
+          {
+            "level": 3,
+            "official_description_en": "Central or remote reporting of realtime energy use per energy carrier, combining TBS of all main domains in one interface",
+            "practical_description_pl": "Analiza, benchmarking i wsparcie decyzji (KPI, alarmy)."
+          }
+        ],
+        "technologies": [
+          "platforma energy management/EMS",
+          "historian/dashboardy",
+          "raporty/KPI",
+          "integracja BACnet/Modbus/API"
+        ],
+        "devices": [
+          "serwer EMS/BMS",
+          "koncentratory danych",
+          "liczniki/analizatory z wielu domen"
+        ],
+        "audit_verification": [
+          "sprawdz istnienie centralnej platformy raportowej",
+          "ustal zakres integrowanych danych (domeny)",
+          "zweryfikuj dashboardy, KPI i alarmy (wyzsze poziomy)"
+        ],
+        "evidence": [
+          "zrzuty centralnych dashboardow",
+          "raporty energetyczne",
+          "lista integrowanych systemow/punktow"
+        ],
+        "common_mistakes": [
+          "dane w silosach (brak agregacji)",
+          "dashboardy bez KPI/benchmarku",
+          "raporty niewykorzystywane w decyzjach"
+        ],
+        "limitations": [
+          "koszt i zlozonosc integracji wielu systemow",
+          "jakosc zalezy od opomiarowania domen"
+        ],
+        "dependencies": [
+          "H-3/C-3/DHW-3/DE-4/E-2/E-11/E-12/V-6 (zrodla danych)",
+          "MC-4 (FDD)",
+          "MC-30 (platforma sterowania)"
+        ],
+        "cross_domain_impact": [
+          "wszystkie domeny (centralny obraz i zarzadzanie)"
+        ],
+        "modernization": [
+          "wdrozenie centralnej platformy EMS",
+          "agregacja danych ze wszystkich domen",
+          "KPI, benchmarking i alarmy"
+        ],
+        "examples": [
+          "portfel budynkow z centralnym EMS i benchmarkingiem kWh/m2"
+        ],
+        "provenance": {
+          "official_fields": "VERIFIED_ANNEX_D",
+          "expert_fields": "EXPERT_AUTHORED",
+          "source_version": "SRI calculation sheet v4.5"
+        }
+      },
+      {
+        "official_code": "MC-25",
+        "internal_code": "M-05",
+        "domain_code": "monitoring_and_control",
+        "service_group_en": "Smart Grid Integration",
+        "official_name_en": "Smart Grid Integration",
+        "official_name_pl": "Wykrywanie usterek TBS i wsparcie diagnostyki",
+        "included_in_method_a": true,
+        "fl_max": 2,
+        "friendly_name_pl": "Integracja ze smart grid",
+        "purpose_pl": "Umozliwienie budynkowi komunikacji i wspolpracy z inteligentna siecia energetyczna (odbior sygnalow, uslugi elastycznosci).",
+        "technical_description_pl": "Integracja z siecia: odbior sygnalow cen/DSM, komunikacja dwukierunkowa, koordynacja odbiorow/zrodel/magazynow wg sygnalow sieci; od braku, przez odbior sygnalow, po aktywne uslugi.",
+        "energy_significance_pl": "Warunek uczestnictwa w elastycznosci energetycznej (kryterium o wysokiej wadze w SRI) — pozwala reagowac na siec i czerpac korzysci rynkowe.",
+        "functionality_levels": [
+          {
+            "level": 0,
+            "official_description_en": "None - No harmonization between grid and TBS; building is operated independently from the grid load",
+            "practical_description_pl": "Brak integracji ze smart grid."
+          },
+          {
+            "level": 1,
+            "official_description_en": "Demand side management possible for (some) individual TBS, but not coordinated over various domains",
+            "practical_description_pl": "Odbior sygnalow z sieci (ceny/DSM) i reakcja podstawowa."
+          },
+          {
+            "level": 2,
+            "official_description_en": "Coordinated demand side management of multiple TBS",
+            "practical_description_pl": "Aktywna, dwukierunkowa wspolpraca i uslugi sieciowe."
+          }
+        ],
+        "technologies": [
+          "OpenADR",
+          "protokoly DSM/rynkowe",
+          "brama smart grid",
+          "integracja z EMS"
+        ],
+        "devices": [
+          "brama/kontroler smart grid",
+          "licznik dwukierunkowy",
+          "EMS",
+          "sterowane zrodla/odbiory/magazyny"
+        ],
+        "audit_verification": [
+          "sprawdz, czy budynek odbiera sygnaly sieci/cen",
+          "ustal reakcje odbiorow/zrodel na sygnaly",
+          "zweryfikuj uslugi sieciowe i rozliczenia (poziom 2)"
+        ],
+        "evidence": [
+          "konfiguracja OpenADR/DSM",
+          "trendy reakcji na sygnaly sieci",
+          "umowy uslug elastycznosci"
+        ],
+        "common_mistakes": [
+          "brama bez realnego zrodla sygnalow",
+          "reakcja bez koordynacji z komfortem",
+          "brak zasobow elastycznych (magazyn/masa)"
+        ],
+        "limitations": [
+          "dostepnosc programow DSM/rynkow lokalnie",
+          "wymaga zasobow elastycznych i formalnosci"
+        ],
+        "dependencies": [
+          "H-4/C-4 (elastycznosc HVAC)",
+          "E-3 (magazyn)",
+          "EV-16 (EV)",
+          "MC-28/MC-29 (DSM)"
+        ],
+        "cross_domain_impact": [
+          "elastycznosc energetyczna (wszystkie sterowalne odbiory/zrodla)",
+          "elektrycznosc"
+        ],
+        "modernization": [
+          "wdrozenie bramy smart grid/OpenADR",
+          "koordynacja zasobow elastycznych",
+          "przystapienie do programow DSM"
+        ],
+        "examples": [
+          "budynek reagujacy na sygnaly OpenADR przez magazyn i HVAC"
+        ],
+        "provenance": {
+          "official_fields": "VERIFIED_ANNEX_D",
+          "expert_fields": "EXPERT_AUTHORED",
+          "source_version": "SRI calculation sheet v4.5"
+        }
+      },
+      {
+        "official_code": "MC-28",
+        "internal_code": "M-06",
+        "domain_code": "monitoring_and_control",
+        "service_group_en": "Feedback - Reporting information",
+        "official_name_en": "Reporting information regarding demand side management performance and operation",
+        "official_name_pl": "Detekcja obecności powiązana z usługami budynku",
+        "included_in_method_a": false,
+        "fl_max": 2,
+        "friendly_name_pl": "Raportowanie zarzadzania popytem (DSM)",
+        "purpose_pl": "Dostarczanie danych o dzialaniach elastycznosci/DSM (kiedy, ile, z jakim efektem), aby oceniac i optymalizowac uslugi sieciowe.",
+        "technical_description_pl": "Zbieranie i prezentacja danych DSM: zdarzenia, przesuniety/zredukowany pobor, efekty finansowe; wyzsze poziomy z analiza skutecznosci.",
+        "energy_significance_pl": "Bez raportowania DSM nie da sie ocenic ani rozliczyc elastycznosci — warunek swiadomego udzialu w uslugach sieciowych.",
+        "functionality_levels": [
+          {
+            "level": 0,
+            "official_description_en": "None",
+            "practical_description_pl": "Brak raportowania DSM."
+          },
+          {
+            "level": 1,
+            "official_description_en": "Reporting information on current DSM status, including managed energy flows",
+            "practical_description_pl": "Podstawowa rejestracja zdarzen/dzialan DSM."
+          },
+          {
+            "level": 2,
+            "official_description_en": "Reporting information on currenthistorical and predicted DSM status, including managed energy flows",
+            "practical_description_pl": "Analiza skutecznosci i efektow DSM (raporty/rozliczenia)."
+          }
+        ],
+        "technologies": [
+          "rejestracja zdarzen DSM",
+          "dashboardy elastycznosci",
+          "raporty rozliczeniowe",
+          "integracja z EMS/OpenADR"
+        ],
+        "devices": [
+          "EMS/kontroler DSM",
+          "licznik dwukierunkowy",
+          "koncentrator danych"
+        ],
+        "audit_verification": [
+          "sprawdz rejestracje zdarzen DSM",
+          "ustal, czy raportowany jest efekt (kWh/koszt)",
+          "zweryfikuj analize skutecznosci (poziom 2)"
+        ],
+        "evidence": [
+          "raporty zdarzen DSM",
+          "dashboardy przesuniec poboru",
+          "rozliczenia uslug"
+        ],
+        "common_mistakes": [
+          "brak pomiaru efektu DSM",
+          "dane bez analizy oplacalnosci",
+          "brak powiazania z sygnalami sieci"
+        ],
+        "limitations": [
+          "wymaga integracji z DSM/rynkiem",
+          "jakosc zalezy od opomiarowania"
+        ],
+        "dependencies": [
+          "MC-25 (smart grid)",
+          "MC-29 (override DSM)",
+          "E-12 (zuzycie)",
+          "MC-13 (raportowanie)"
+        ],
+        "cross_domain_impact": [
+          "elastycznosc energetyczna",
+          "elektrycznosc (bilans poboru)"
+        ],
+        "modernization": [
+          "wdrozenie rejestracji i raportow DSM",
+          "analiza skutecznosci i oplacalnosci",
+          "integracja z EMS/OpenADR"
+        ],
+        "examples": [
+          "obiekt z raportem zdarzen DSM i efektow finansowych elastycznosci"
+        ],
+        "provenance": {
+          "official_fields": "VERIFIED_ANNEX_D",
+          "expert_fields": "EXPERT_AUTHORED",
+          "source_version": "SRI calculation sheet v4.5"
+        }
+      },
+      {
+        "official_code": "MC-29",
+        "internal_code": "M-07",
+        "domain_code": "monitoring_and_control",
+        "service_group_en": "Override control",
+        "official_name_en": "Override of DSM control",
+        "official_name_pl": "Raportowanie efektów zarządzania popytem (DSM)",
+        "included_in_method_a": false,
+        "fl_max": 4,
+        "friendly_name_pl": "Nadrzedne sterowanie DSM (override)",
+        "purpose_pl": "Mozliwosc recznego lub warunkowego nadpisania automatyki DSM, aby chronic komfort/procesy krytyczne podczas zdarzen elastycznosci.",
+        "technical_description_pl": "Funkcje override sterowania DSM: reczne/warunkowe wylaczenie lub modyfikacja reakcji na sygnaly, z zachowaniem priorytetow komfortu/procesow; wyzsze poziomy z granularnoscia i automatyzacja wyjatkow.",
+        "energy_significance_pl": "Zaufany mechanizm override zwieksza akceptacje DSM (mozna bezpiecznie uczestniczyc), co posrednio zwieksza realna elastycznosc budynku.",
+        "functionality_levels": [
+          {
+            "level": 0,
+            "official_description_en": "No DSM control",
+            "practical_description_pl": "Brak mozliwosci nadpisania DSM."
+          },
+          {
+            "level": 1,
+            "official_description_en": "DSM control without the possibility to override this control by the building user (occupant or facility manager)",
+            "practical_description_pl": "Podstawowy reczny override."
+          },
+          {
+            "level": 2,
+            "official_description_en": "Manual override and reactivation of DSM control by the building user",
+            "practical_description_pl": "Override z priorytetami/warunkami (strefy, procesy krytyczne)."
+          },
+          {
+            "level": 3,
+            "official_description_en": "Scheduled override of DSM control (and reactivation) by the building user",
+            "practical_description_pl": "Granularny, cześciowy override z rejestracja i regulami."
+          },
+          {
+            "level": 4,
+            "official_description_en": "Scheduled override of DSM control and reactivation with optimised control",
+            "practical_description_pl": "Automatyczne, zoptymalizowane zarzadzanie wyjatkami DSM."
+          }
+        ],
+        "technologies": [
+          "mechanizmy override w EMS",
+          "priorytety/reguly wyjatkow",
+          "rejestracja override",
+          "integracja komfort/proces"
+        ],
+        "devices": [
+          "EMS/kontroler DSM",
+          "panele/przyciski override",
+          "sterowniki stref"
+        ],
+        "audit_verification": [
+          "sprawdz mozliwosc i zakres override DSM",
+          "ustal priorytety (komfort/procesy krytyczne)",
+          "zweryfikuj rejestracje i reguly wyjatkow (wyzsze poziomy)"
+        ],
+        "evidence": [
+          "konfiguracja override/priorytetow",
+          "logi zdarzen override",
+          "opis regul wyjatkow"
+        ],
+        "common_mistakes": [
+          "brak override (spadek akceptacji DSM)",
+          "override globalny bez granularnosci",
+          "brak rejestracji nadpisan"
+        ],
+        "limitations": [
+          "kompromis miedzy elastycznoscia a komfortem",
+          "wymaga jasnych priorytetow"
+        ],
+        "dependencies": [
+          "MC-25 (smart grid)",
+          "MC-28 (raportowanie DSM)",
+          "H-4/C-4 (elastycznosc HVAC)"
+        ],
+        "cross_domain_impact": [
+          "elastycznosc energetyczna (bezpieczne uczestnictwo)",
+          "komfort uzytkownikow"
+        ],
+        "modernization": [
+          "wdrozenie granularnego override z priorytetami",
+          "rejestracja i reguly wyjatkow",
+          "ochrona procesow krytycznych"
+        ],
+        "examples": [
+          "szpital z override DSM chroniacym strefy krytyczne",
+          "biuro z czasowym override komfortu podczas zdarzen DSM"
+        ],
+        "provenance": {
+          "official_fields": "VERIFIED_ANNEX_D",
+          "expert_fields": "EXPERT_AUTHORED",
+          "source_version": "SRI calculation sheet v4.5"
+        }
+      },
+      {
+        "official_code": "MC-3",
+        "internal_code": "M-01",
+        "domain_code": "monitoring_and_control",
+        "service_group_en": "HVAC interaction control",
+        "official_name_en": "Run time management of HVAC systems",
+        "official_name_pl": "Centralne raportowanie pracy TBS i zużycia energii",
+        "included_in_method_a": false,
+        "fl_max": 3,
+        "friendly_name_pl": "Zarzadzanie czasem pracy instalacji (harmonogramy)",
+        "purpose_pl": "Zalaczanie i wylaczanie instalacji technicznych (HVAC) zgodnie z rzeczywistym uzytkowaniem budynku, zamiast pracy ciaglej.",
+        "technical_description_pl": "Zarzadzanie czasem pracy: harmonogramy dobowe/tygodniowe, tryby swiateczne, optymalny start/stop (predykcyjne wyprzedzenie wzgledem oblozenia), a na wyzszych poziomach adaptacja wg obecnosci.",
+        "energy_significance_pl": "Wylaczanie/ograniczanie instalacji poza godzinami uzytkowania to jedna z najwiekszych i najtanszych oszczednosci; optymalny start unika przegrzewania przed otwarciem.",
+        "functionality_levels": [
+          {
+            "level": 0,
+            "official_description_en": "Manual setting",
+            "practical_description_pl": "Praca ciagla / reczne zalaczanie (brak harmonogramow)."
+          },
+          {
+            "level": 1,
+            "official_description_en": "Runtime setting of heating and cooling plants following a predefined time schedule",
+            "practical_description_pl": "Harmonogramy czasowe (dobowe/tygodniowe)."
+          },
+          {
+            "level": 2,
+            "official_description_en": "Heating and cooling plant on/off control based on building loads",
+            "practical_description_pl": "Optymalny start/stop wg warunkow (wyprzedzenie)."
+          },
+          {
+            "level": 3,
+            "official_description_en": "Heating and cooling plant on/off control based on predictive control or grid signals",
+            "practical_description_pl": "Adaptacyjne zarzadzanie czasem pracy wg obecnosci/uzytkowania."
+          }
+        ],
+        "technologies": [
+          "harmonogramy w BMS",
+          "optymalny start/stop",
+          "kalendarze/tryby swiateczne",
+          "integracja obecnosci"
+        ],
+        "devices": [
+          "sterowniki BMS/PLC",
+          "zegary/kalendarze",
+          "czujniki obecnosci",
+          "sterowniki central/zrodel"
+        ],
+        "audit_verification": [
+          "sprawdz istnienie i realnosc harmonogramow dla HVAC",
+          "ustal optymalny start/stop",
+          "zweryfikuj adaptacje wg obecnosci (poziom 3)"
+        ],
+        "evidence": [
+          "konfiguracja harmonogramow w BMS",
+          "trendy pracy vs godziny uzytkowania",
+          "kalendarze/tryby"
+        ],
+        "common_mistakes": [
+          "praca 24/7 mimo uzytkowania 8-18",
+          "harmonogramy nieaktualne po zmianie uzytkowania",
+          "brak trybu swiatecznego/urlopowego"
+        ],
+        "limitations": [
+          "bezwladnosc instalacji (potrzebny start z wyprzedzeniem)",
+          "wymaga aktualizacji przy zmianie najemcow"
+        ],
+        "dependencies": [
+          "H-1a/C-1a (odbior stref)",
+          "V-1c (wentylacja)",
+          "MC-30 (koordynacja/optymalizacja)",
+          "MC-9 (obecnosc)"
+        ],
+        "cross_domain_impact": [
+          "ogrzewanie/chlodzenie/wentylacja/oswietlenie (wspolne harmonogramy)"
+        ],
+        "modernization": [
+          "wdrozenie realnych harmonogramow i optymalnego start/stop",
+          "tryby swiateczne/urlopowe",
+          "adaptacja wg obecnosci"
+        ],
+        "examples": [
+          "biurowiec z optymalnym startem HVAC przed przyjsciem pracownikow",
+          "szkola z harmonogramem wg planu lekcji"
+        ],
+        "provenance": {
+          "official_fields": "VERIFIED_ANNEX_D",
+          "expert_fields": "EXPERT_AUTHORED",
+          "source_version": "SRI calculation sheet v4.5"
+        }
+      },
+      {
+        "official_code": "MC-30",
+        "internal_code": "M-08",
+        "domain_code": "monitoring_and_control",
+        "service_group_en": "Single platform that allows automated control & coordination between TBS + optimization of energy flow based on occupancy, weather and grid signals",
+        "official_name_en": "Single platform that allows automated control & coordination between TBS + optimization of energy flow based on occupancy, weather and grid signals",
+        "official_name_pl": "Optymalizacja przepływów energii wg obecności, pogody i sygnałów sieci",
+        "included_in_method_a": true,
+        "fl_max": 3,
+        "friendly_name_pl": "Jedna platforma sterowania i optymalizacji budynku",
+        "purpose_pl": "Zintegrowana platforma (BMS/BACS) koordynujaca wszystkie instalacje i optymalizujaca przeplyw energii wg obecnosci, pogody i sygnalow sieci.",
+        "technical_description_pl": "Wspolna platforma automatyzujaca sterowanie i koordynacje TBS oraz optymalizujaca energie w oparciu o dane (obecnosc, pogoda, ceny/siec); od braku integracji, przez wspolne sterowanie, po pelna optymalizacje predykcyjna.",
+        "energy_significance_pl": "Koordynacja miedzydomenowa (np. HVAC + zacienienie + oswietlenie + siec) daje efekty niedostepne dla pojedynczych systemow — najwyzszy poziom inteligencji budynku.",
+        "functionality_levels": [
+          {
+            "level": 0,
+            "official_description_en": "None",
+            "practical_description_pl": "Brak wspolnej platformy (systemy niezalezne)."
+          },
+          {
+            "level": 1,
+            "official_description_en": "Single platform that allows manual control of multiple TBS",
+            "practical_description_pl": "Wspolne sterowanie/koordynacja wybranych systemow."
+          },
+          {
+            "level": 2,
+            "official_description_en": "Single platform that allows automated control & coordination between TBS",
+            "practical_description_pl": "Zintegrowana koordynacja wielu TBS z optymalizacja."
+          },
+          {
+            "level": 3,
+            "official_description_en": "Single platform that allows automated control & coordination between TBS + optimization of energy flow based on occupancy, weather and grid signals",
+            "practical_description_pl": "Pelna optymalizacja predykcyjna (obecnosc, pogoda, siec) miedzy domenami."
+          }
+        ],
+        "technologies": [
+          "BMS/BACS (BACnet/KNX/Modbus)",
+          "platformy optymalizacji/AI",
+          "integracja pogody i sygnalow sieci",
+          "API/IoT"
+        ],
+        "devices": [
+          "serwer/kontroler BMS",
+          "bramy integracyjne",
+          "stacja pogodowa",
+          "koncentratory danych"
+        ],
+        "audit_verification": [
+          "sprawdz stopien integracji systemow na jednej platformie",
+          "ustal koordynacje miedzydomenowa",
+          "zweryfikuj optymalizacje predykcyjna (pogoda/obecnosc/siec) (poziom 3)"
+        ],
+        "evidence": [
+          "architektura integracji/BMS",
+          "opis logiki koordynacji/optymalizacji",
+          "trendy skoordynowanego dzialania systemow"
+        ],
+        "common_mistakes": [
+          "systemy w silosach (brak realnej koordynacji)",
+          "platforma tylko wizualizujaca (bez optymalizacji)",
+          "brak danych wejsciowych (pogoda/obecnosc)"
+        ],
+        "limitations": [
+          "koszt/zlozonosc integracji",
+          "roznorodnosc protokolow",
+          "wymaga kompetencji utrzymania"
+        ],
+        "dependencies": [
+          "MC-3 (harmonogramy)",
+          "MC-9 (obecnosc)",
+          "MC-13 (dane)",
+          "MC-4 (FDD)",
+          "MC-25 (siec)",
+          "wszystkie uslugi domenowe"
+        ],
+        "cross_domain_impact": [
+          "wszystkie domeny (nadrzedna koordynacja i optymalizacja)"
+        ],
+        "modernization": [
+          "integracja systemow na wspolnej platformie",
+          "wdrozenie koordynacji miedzydomenowej",
+          "optymalizacja predykcyjna wg pogody/obecnosci/sieci"
+        ],
+        "examples": [
+          "biurowiec klasy A z BMS koordynujacym HVAC, zacienienie, oswietlenie i reakcje na siec",
+          "obiekt z optymalizacja predykcyjna wg prognoz i oblozenia"
+        ],
+        "provenance": {
+          "official_fields": "VERIFIED_ANNEX_D",
+          "expert_fields": "EXPERT_AUTHORED",
+          "source_version": "SRI calculation sheet v4.5"
+        }
+      },
+      {
+        "official_code": "MC-4",
+        "internal_code": "M-02",
+        "domain_code": "monitoring_and_control",
+        "service_group_en": "Fault detection",
+        "official_name_en": "Detecting faults of technical building systems and providing support to the diagnosis of these faults",
+        "official_name_pl": "Integracja z inteligentną siecią (harmonizacja TBS)",
+        "included_in_method_a": false,
+        "fl_max": 3,
+        "friendly_name_pl": "Wykrywanie i diagnostyka usterek (FDD)",
+        "purpose_pl": "Automatyczne wykrywanie usterek i nieprawidlowosci instalacji technicznych oraz wsparcie diagnozy, aby szybko przywracac sprawnosc i unikac strat energii.",
+        "technical_description_pl": "Funkcje FDD (Fault Detection and Diagnosis): reguly/analiza danych wykrywajace odchylenia, awarie, dryf nastaw; wyzsze poziomy z diagnoza przyczyn i priorytetyzacja.",
+        "energy_significance_pl": "Niewykryte usterki (zawory, czujniki, jednoczesne grzanie/chlodzenie) powoduja duze, ukryte straty; FDD utrzymuje sprawnosc i obniza koszty eksploatacji.",
+        "functionality_levels": [
+          {
+            "level": 0,
+            "official_description_en": "No central indication of detected faults and alarms",
+            "practical_description_pl": "Brak automatycznego wykrywania usterek."
+          },
+          {
+            "level": 1,
+            "official_description_en": "With central indication of detected faults and alarms for at least 2 relevant TBS",
+            "practical_description_pl": "Podstawowe alarmy (progi/awarie urzadzen)."
+          },
+          {
+            "level": 2,
+            "official_description_en": "With central indication of detected faults and alarms for all relevant TBS",
+            "practical_description_pl": "Wykrywanie odchylen i nieprawidlowosci pracy (reguly FDD)."
+          },
+          {
+            "level": 3,
+            "official_description_en": "With central indication of detected faults and alarms for all relevant TBS, including diagnosing functions",
+            "practical_description_pl": "Diagnoza przyczyn i wsparcie usuwania usterek (priorytetyzacja)."
+          }
+        ],
+        "technologies": [
+          "FDD (reguly/analityka)",
+          "alarmy i powiadomienia",
+          "analiza trendow/anomalii",
+          "CMMS/integracja serwisu"
+        ],
+        "devices": [
+          "BMS z modulem alarmow/FDD",
+          "czujniki procesowe",
+          "koncentrator danych/serwer analityki"
+        ],
+        "audit_verification": [
+          "sprawdz obecnosc alarmow i regul FDD",
+          "ustal, czy wykrywane sa odchylenia (nie tylko awarie)",
+          "zweryfikuj diagnoze przyczyn i obsluge zgloszen (poziom 3)"
+        ],
+        "evidence": [
+          "lista alarmow/regul FDD",
+          "raporty wykrytych usterek",
+          "integracja z systemem serwisowym"
+        ],
+        "common_mistakes": [
+          "tylko alarmy awaryjne (brak wykrywania odchylen)",
+          "zalew alarmow bez priorytetow",
+          "alarmy ignorowane (brak procesu obslugi)"
+        ],
+        "limitations": [
+          "skutecznosc zalezy od jakosci danych/czujnikow",
+          "wymaga konfiguracji regul i utrzymania"
+        ],
+        "dependencies": [
+          "MC-13 (dane/raportowanie)",
+          "H-3/C-3/DHW-3 (dane domenowe)",
+          "MC-30 (platforma)"
+        ],
+        "cross_domain_impact": [
+          "wszystkie domeny (diagnostyka calego TBS)",
+          "utrzymanie sprawnosci energetycznej"
+        ],
+        "modernization": [
+          "wdrozenie regul FDD ponad podstawowe alarmy",
+          "priorytetyzacja i proces obslugi zgloszen",
+          "integracja z CMMS"
+        ],
+        "examples": [
+          "biurowiec z FDD wykrywajacym jednoczesne grzanie/chlodzenie i zablokowane zawory"
+        ],
+        "provenance": {
+          "official_fields": "VERIFIED_ANNEX_D",
+          "expert_fields": "EXPERT_AUTHORED",
+          "source_version": "SRI calculation sheet v4.5"
+        }
+      },
+      {
+        "official_code": "MC-9",
+        "internal_code": "M-03",
+        "domain_code": "monitoring_and_control",
+        "service_group_en": "TBS interaction control",
+        "official_name_en": "Occupancy detection: connected services",
+        "official_name_pl": "Jedna platforma automatycznego sterowania i koordynacji TBS",
+        "included_in_method_a": false,
+        "fl_max": 2,
+        "friendly_name_pl": "Detekcja obecnosci dla wielu systemow",
+        "purpose_pl": "Wspoldzielona informacja o obecnosci osob wykorzystywana przez rozne instalacje (HVAC, oswietlenie, wentylacja) do sterowania wg rzeczywistego uzytkowania.",
+        "technical_description_pl": "Zbieranie i udostepnianie danych o obecnosci z czujnikow/systemow (ruch, zajetosc, dostep) jako uslugi dla wielu systemow; wyzszy poziom z pelna integracja i wykorzystaniem przez liczne TBS.",
+        "energy_significance_pl": "Jedna wiarygodna informacja o obecnosci pozwala wszystkim instalacjom ograniczac prace w pustych strefach — mnoznikowy efekt oszczednosci.",
+        "functionality_levels": [
+          {
+            "level": 0,
+            "official_description_en": "None",
+            "practical_description_pl": "Brak wspoldzielonej detekcji obecnosci."
+          },
+          {
+            "level": 1,
+            "official_description_en": "Occupancy detection for individual functions, e.g. lighting",
+            "practical_description_pl": "Detekcja obecnosci wykorzystywana przez pojedynczy system."
+          },
+          {
+            "level": 2,
+            "official_description_en": "Centralised occupant detection which feeds in to several TBS such as lighting and heating",
+            "practical_description_pl": "Wspoldzielona detekcja obecnosci zintegrowana z wieloma systemami (connected)."
+          }
+        ],
+        "technologies": [
+          "czujniki obecnosci (PIR/ultradzwiek)",
+          "integracja z systemem dostepu/rezerwacji",
+          "magistrale KNX/BACnet",
+          "platforma danych"
+        ],
+        "devices": [
+          "czujniki obecnosci",
+          "kontrola dostepu",
+          "systemy rezerwacji sal",
+          "brama integracyjna/BMS"
+        ],
+        "audit_verification": [
+          "sprawdz zrodla danych o obecnosci i ich wspoldzielenie",
+          "ustal, ktore systemy korzystaja z obecnosci",
+          "zweryfikuj integracje wielosystemowa (poziom 2)"
+        ],
+        "evidence": [
+          "schemat integracji obecnosci",
+          "konfiguracja powiazan (HVAC/oswietlenie/wentylacja)",
+          "trendy obecnosci"
+        ],
+        "common_mistakes": [
+          "osobne czujniki dla kazdego systemu (brak wspoldzielenia)",
+          "martwe pola/za niska czulosc",
+          "brak wykorzystania danych mimo ich zbierania"
+        ],
+        "limitations": [
+          "prywatnosc/ochrona danych",
+          "jakosc detekcji zalezna od rozmieszczenia czujnikow"
+        ],
+        "dependencies": [
+          "L-1a (oswietlenie)",
+          "V-1a (wentylacja DCV)",
+          "H-1a/C-1a (HVAC)",
+          "MC-30 (platforma)"
+        ],
+        "cross_domain_impact": [
+          "oswietlenie/wentylacja/ogrzewanie/chlodzenie (wspolne wykorzystanie obecnosci)"
+        ],
+        "modernization": [
+          "konsolidacja detekcji obecnosci jako wspolnej uslugi",
+          "integracja z rezerwacja sal/dostepem",
+          "powiazanie z HVAC/oswietleniem/wentylacja"
+        ],
+        "examples": [
+          "biuro, gdzie jedna detekcja obecnosci steruje swiatlem, wentylacja i HVAC"
+        ],
+        "provenance": {
+          "official_fields": "VERIFIED_ANNEX_D",
+          "expert_fields": "EXPERT_AUTHORED",
+          "source_version": "SRI calculation sheet v4.5"
+        }
+      }
+    ]
+  }
+}
