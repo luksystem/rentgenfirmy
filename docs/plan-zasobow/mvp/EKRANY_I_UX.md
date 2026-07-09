@@ -39,10 +39,39 @@ etapu w `components/process/process-template-editor.tsx`. Pola:
 
 Te dane są bazą dla auto-podpowiedzi w panelu tworzenia elementu planu (§5).
 
-## 4. Plan Zasobów — widok listy (`/plan-zasobow`)
+## 4. Plan Zasobów (`/plan-zasobow`) — przełącznik Gantt / Lista
 
-`components/resource-plan/resource-plan-list.tsx`. Bieżący, zaimplementowany widok MVP —
-**lista**, nie Gantt (patrz `STAN_WDROZENIA.md` — uzasadnienie i plan rozbudowy).
+`app/plan-zasobow/page.tsx` renderuje jeden z dwóch widoków przez pill-przełącznik w nagłówku
+strony (domyślnie **Gantt**). Oba czytają z tej samej warstwy danych
+(`store/resource-plan-store.ts`) i tego samego panelu edycji (`ResourcePlanSidePanel`).
+
+### 4.1. Widok Gantt (domyślny)
+
+`components/resource-plan/resource-plan-gantt.tsx`. Siatka: sticky pierwsza kolumna (etykieta
+wiersza), przewijana w poziomie oś dni bieżącego miesiąca, nawigacja miesiącami jak w liście.
+
+- **Przełącznik grupowania wierszy** (pill, wzorem zakładek `dictionary-settings-page.tsx`):
+  Osoby (domyślnie, z `useProcessStore().teamProfiles`) / Zespoły (słownik `team`) / Projekty
+  (aktywne projekty, z podetykietą klienta).
+- **Kolumny dni** z wyróżnieniem weekendów (tło) i dzisiejszego dnia (kolor akcentu).
+- **Bloki elementów planu** — kolor i ikona ze statusu (`plan_status`), tooltip (`title`) z
+  tytułem, projektem, osobą odpowiedzialną, zespołem i ryzykiem. Pozycja i szerokość liczone
+  proporcjonalnie do godzin (nie tylko całymi dniami), więc krótkie zadania w ciągu dnia widać
+  jako węższe bloki.
+- **Tory (lanes)** — nakładające się czasowo elementy w tym samym wierszu renderują się jedno
+  pod drugim (algorytm zachłanny `assignGanttLanes`), więc konflikt jest widoczny bez klikania.
+- **Interakcje** (Pointer Events, `setPointerCapture` — ten sam wzorzec co dotykowy drag w
+  `kanban-task-card.tsx`):
+  - przeciągnięcie środka bloku → zmiana terminu (przesunięcie, zachowana długość),
+  - przeciągnięcie 8px uchwytu na lewym/prawym brzegu → zmiana długości (rozciąganie),
+  - snapowanie do pełnych dni; puszczenie zapisuje przez `updateItem` i od razu przelicza
+    ostrzeżenia (`validateResourcePlanItem`), prezentowane w odznaczalnym żółtym banerze —
+    **nigdy nie blokuje zapisu**,
+  - kliknięcie bez przeciągnięcia → otwiera `ResourcePlanSidePanel` w edycji,
+  - dwuklik na pustym miejscu wiersza → nowy element z datą startu odpowiadającą kliknięciu.
+- Przycisk „Nowy element planu” — jak w widoku listy.
+
+### 4.2. Widok listy
 
 - Nawigacja miesiącami: „← Poprzedni” / „Następny →” / „Dziś”, zakres dociągany przez
   `useResourcePlanStore().ensureRange(from, to)` (cache po zakresie dat).
@@ -84,14 +113,15 @@ Przepływ:
 6. Zapis: `createItem`/`updateItem` w `useResourcePlanStore()`, po sukcesie panel się zamyka
    (`onSaved`).
 
-## 6. Planowane, niezaimplementowane jeszcze widoki (Etapy 4-rozszerzenie / 6)
+## 6. Planowane, niezaimplementowane jeszcze widoki (Etap 6 i rozszerzenia Gantta)
 
 | Widok | Ścieżka (propozycja) | Zakres |
 |---|---|---|
-| Gantt / RTM | `/plan-zasobow/gantt` | Wiersze: użytkownicy/zespoły/projekty. Kolumny: dni/tygodnie/miesiące. Bloki kolorowane statusem/ryzykiem, przeciąganie zmiany terminu (natywny HTML5 DnD, wzorem `lib/process/kanban-drag.ts`), tooltip ze szczegółami, szybki podgląd + otwarcie panelu bocznego (reużycie `resource-plan-side-panel.tsx`). |
 | Kalendarz | `/plan-zasobow/kalendarz` | Widok miesiąc/tydzień, elementy planu jako wydarzenia. W aplikacji nie ma biblioteki kalendarza — do wyboru: własny komponent siatki (wzorem `process-milestone-dates-panel.tsx`, ale z rozkładem miesiąca) albo lekka biblioteka (do ustalenia z właścicielem produktu). |
 | Dashboard modułu | `/plan-zasobow/dashboard` | Karty KPI (Recharts) — obciążenie firmy/zespołu/osoby, liczba konfliktów, zadania zagrożone, wolna zdolność, nieprzypisane projekty/zadania, planowany budżet robocizny. Patrz `STAN_WDROZENIA.md` Etap 6. |
+| Gantt — przeciąganie między wierszami | rozszerzenie `resource-plan-gantt.tsx` | Zmiana przypisania osoby/zespołu przez przeciągnięcie bloku do innego wiersza (obecnie zmienia tylko oś czasu — patrz `STAN_WDROZENIA.md`, znane ograniczenia). |
+| Gantt — zoom tydzień/kwartał | rozszerzenie `resource-plan-gantt.tsx` | Obecnie tylko widok miesięczny; przełącznik zakresu jak w widoku listy. |
 
-Wszystkie trzy widoki mogą reużyć istniejącą warstwę danych (`store/resource-plan-store.ts`,
+Kalendarz i dashboard mogą reużyć istniejącą warstwę danych (`store/resource-plan-store.ts`,
 `lib/resource-plan/validations.ts`) bez zmian w modelu — to był jeden z celów budowy MVP jako
-listy najpierw.
+listy/Gantta najpierw.

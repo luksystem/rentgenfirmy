@@ -11,6 +11,7 @@ import type { ProcessStage } from "@/lib/process/types";
 import { ensureAnchoredTemplateSnapshot } from "@/lib/supabase/process-repository";
 import { fetchProcessTemplateByProjectType, getOrCreateProjectProcess } from "@/lib/supabase/process-repository";
 import type { ResourcePlanItem, ResourcePlanItemInput, ResourcePlanParticipant } from "@/lib/resource-plan/types";
+import { resourcePlanItemToInput } from "@/lib/resource-plan/types";
 import { validateResourcePlanItem } from "@/lib/resource-plan/validations";
 import { useDictionaryStore } from "@/store/dictionary-store";
 import { useResourcePlanStore } from "@/store/resource-plan-store";
@@ -59,33 +60,6 @@ function defaultInput(defaultStartIso?: string): ResourcePlanItemInput {
   };
 }
 
-function itemToInput(item: ResourcePlanItem): ResourcePlanItemInput {
-  return {
-    projectId: item.projectId,
-    clientId: item.clientId,
-    processStageId: item.processStageId,
-    taskId: item.taskId,
-    serviceIntakeRequestId: item.serviceIntakeRequestId,
-    workTypeItemId: item.workTypeItemId,
-    title: item.title,
-    startAt: item.startAt,
-    endAt: item.endAt,
-    plannedHours: item.plannedHours,
-    actualHours: item.actualHours,
-    assigneeId: item.assigneeId,
-    teamItemId: item.teamItemId,
-    statusItemId: item.statusItemId,
-    riskItemId: item.riskItemId,
-    riskNote: item.riskNote,
-    laborBudget: item.laborBudget,
-    materialBudget: item.materialBudget,
-    travelBudget: item.travelBudget,
-    notes: item.notes,
-    acceptedRisk: item.acceptedRisk,
-    participants: item.participants,
-  };
-}
-
 export function ResourcePlanSidePanel({
   open,
   onOpenChange,
@@ -119,7 +93,9 @@ export function ResourcePlanSidePanel({
   const ensureProfiles = useUserResourceStore((state) => state.ensureProfiles);
   const resourceProfilesById = useUserResourceStore((state) => state.byUser);
 
-  const [input, setInput] = useState<ResourcePlanItemInput>(() => editingItem ? itemToInput(editingItem) : defaultInput(defaultStartIso));
+  const [input, setInput] = useState<ResourcePlanItemInput>(() =>
+    editingItem ? resourcePlanItemToInput(editingItem) : defaultInput(defaultStartIso),
+  );
   const [stage, setStage] = useState<ProcessStage | null>(null);
   const [stageOptions, setStageOptions] = useState<ProcessStage[]>([]);
   const [loadingStages, setLoadingStages] = useState(false);
@@ -129,7 +105,7 @@ export function ResourcePlanSidePanel({
 
   useEffect(() => {
     if (!open) return;
-    setInput(editingItem ? itemToInput(editingItem) : defaultInput(defaultStartIso));
+    setInput(editingItem ? resourcePlanItemToInput(editingItem) : defaultInput(defaultStartIso));
     void ensureDictionaries();
     void loadTeamProfiles();
   }, [open, editingItem, defaultStartIso, ensureDictionaries, loadTeamProfiles]);

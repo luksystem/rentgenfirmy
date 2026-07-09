@@ -149,7 +149,9 @@ manager = „koordynator”), zdefiniowana w `098_resource_plan_dictionaries.sql
 | UI ustawień | `components/settings/dictionary-settings-page.tsx` + `app/ustawienia/plan-zasobow/page.tsx` | generyczny edytor wszystkich 10 słowników (zakładki, sortowanie strzałkami — wzorem `field-options-editor.tsx`) |
 | UI admina | `components/admin/user-resource-profile-editor.tsx` (w `user-admin-panel.tsx`) | edycja ról/kompetencji/zespołów/certyfikatów/nieobecności użytkownika |
 | UI szablonu procesu | `components/process/process-stage-resource-panel.tsx` (w `process-template-editor.tsx`) | edycja wymagań zasobowych etapu |
-| UI planu | `components/resource-plan/resource-plan-list.tsx` + `resource-plan-side-panel.tsx` | widok listy (MVP) + panel boczny tworzenia/edycji z ostrzeżeniami |
+| UI planu | `components/resource-plan/resource-plan-list.tsx` + `resource-plan-side-panel.tsx` | widok listy + panel boczny tworzenia/edycji z ostrzeżeniami |
+| Logika drag/resize Gantta | `lib/resource-plan/gantt-drag.ts` | przeliczanie pikseli↔dni, snapowanie, przydział „torów” dla nakładających się elementów (`assignGanttLanes`) |
+| UI Gantta | `components/resource-plan/resource-plan-gantt.tsx` | widok Gantt (domyślny w `/plan-zasobow`) — przeciąganie/rozciąganie elementów na osi czasu, grupowanie wierszy (osoby/zespoły/projekty) |
 
 ## 6. Model walidacji — ostrzeżenia, nie blokady (Etap 5)
 
@@ -174,6 +176,9 @@ ostrzeżeniami — koordynator może **świadomie** przejść dalej.
 | D6 | Wstawianie wymagań etapu | Dwufazowe (najpierw wszystkie etapy, potem wymagania/zależności) — unika FK violation przy zależnościach „w przód” w tym samym szablonie. |
 | D7 | UI edytora słowników | Wzorzec `field-options-editor.tsx` (karty, sortowanie strzałkami), nie drag&drop — zgodnie z resztą aplikacji (brak biblioteki DnD poza natywnym HTML5 w Kanbanie). |
 | D8 | Panel boczny | Radix `Dialog` w wariancie fullscreen (wzorem `process-item-panel.tsx`), nie dedykowany Drawer/Sheet — taki komponent nie istnieje w aplikacji. |
+| D9 | Mechanizm drag w Gantcie | Pointer Events (`onPointerDown/Move/Up` + `setPointerCapture`) z pozycjonowaniem absolutnym w pikselach, nie natywny HTML5 Drag&Drop — HTML5 DnD nie daje płynnej, ciągłej informacji o pozycji podczas przeciągania (potrzebnej do dowolnego przesuwania/rozciągania na osi czasu), a Pointer Events już są używane w aplikacji do dotykowego przeciągania w Kanbanie (`kanban-task-card.tsx`). |
+| D10 | Zakres przeciągania w Gantcie | Przeciąganie zmienia tylko `startAt`/`endAt` (oś czasu), nie zmienia wiersza (osoby/zespołu/projektu) — zgodnie z pierwotnym zakresem prośby („przesuwanie na osi czasu”). Zmiana przypisania wymaga edycji w panelu bocznym. |
+| D11 | Snapowanie i grupowanie Gantta | Snapowanie do pełnych dni, domyślne grupowanie wierszy po osobach z przełącznikiem na zespoły/projekty, widok tylko miesięczny (bez zoomu tydzień/kwartał) — decyzje produktowe potwierdzone z właścicielem przed implementacją. |
 
 ## 8. Co dalej
 

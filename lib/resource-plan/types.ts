@@ -69,3 +69,31 @@ export type ResourcePlanFilters = {
   teamItemId?: string;
   projectId?: string;
 };
+
+/** Wspólne mapowanie zapisanego elementu na formularz edycji — używane przez panel boczny i Gantt. */
+export function resourcePlanItemToInput(item: ResourcePlanItem): ResourcePlanItemInput {
+  return {
+    projectId: item.projectId,
+    clientId: item.clientId,
+    processStageId: item.processStageId,
+    taskId: item.taskId,
+    serviceIntakeRequestId: item.serviceIntakeRequestId,
+    workTypeItemId: item.workTypeItemId,
+    title: item.title,
+    startAt: item.startAt,
+    endAt: item.endAt,
+    plannedHours: item.plannedHours,
+    actualHours: item.actualHours,
+    assigneeId: item.assigneeId,
+    teamItemId: item.teamItemId,
+    statusItemId: item.statusItemId,
+    riskItemId: item.riskItemId,
+    riskNote: item.riskNote,
+    laborBudget: item.laborBudget,
+    materialBudget: item.materialBudget,
+    travelBudget: item.travelBudget,
+    notes: item.notes,
+    acceptedRisk: item.acceptedRisk,
+    participants: item.participants,
+  };
+}

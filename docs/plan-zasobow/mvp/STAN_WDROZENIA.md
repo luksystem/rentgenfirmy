@@ -64,13 +64,45 @@
 - Nawigacja: wpis „Plan Zasobów” w grupie „Projekty” (`components/app-shell.tsx`),
   strona `app/plan-zasobow/page.tsx`.
 
-**Uwaga / odstępstwo od oryginalnego planu:** zbudowano widok **listy**, nie Gantt/RTM.
-Gantt/kalendarz/dashboard to osobne widoki tego samego modułu (Etapy 6 i rozszerzenie Etapu 4) —
-zaplanowane, nie zaimplementowane (patrz „Do zrobienia” poniżej). Uzasadnienie: w aplikacji nie
-istniała żadna biblioteka Gantt/kalendarza ani wzorzec drag&drop poza natywnym HTML5 w Kanbanie
-(potwierdzone analizą — patrz `docs/plan-zasobow/mvp/ARCHITEKTURA.md` §7 D7/D8) — lista +
-panel boczny to najszybsza ścieżka do w pełni działającego, przetestowalnego MVP, na którym
-osadzi się kolejne widoki bez zmian w warstwie danych.
+**Aktualizacja:** po MVP listy dodano też widok **Gantt** (patrz niżej) — oba widoki
+(`/plan-zasobow`, przełącznik „Gantt” / „Lista”) korzystają z tej samej warstwy danych
+(`store/resource-plan-store.ts`), bez zmian w modelu. Kalendarz i dashboard modułu
+(Etap 6) wciąż nie są zaimplementowane.
+
+### Widok Gantt — przesuwanie i rozciąganie elementów na osi czasu ✅ Zrobione
+
+- `lib/resource-plan/gantt-drag.ts` — logika przeliczania pikseli ↔ dni (snapowanie do pełnych
+  dni, zachowanie godziny startu/końca), przydział elementów do „torów” (lanes) w ramach wiersza
+  dla nakładających się terminów (`assignGanttLanes`).
+- `components/resource-plan/resource-plan-gantt.tsx` — siatka: sticky pierwsza kolumna (etykieta
+  wiersza) + przewijana w poziomie oś dni bieżącego miesiąca (nawigacja miesiąc wstecz/w przód,
+  jak w liście). Przełącznik grupowania wierszy: **Osoby** (domyślnie) / **Zespoły** / **Projekty**
+  (aktywne).
+- Interakcje na blokach (Pointer Events — `onPointerDown/Move/Up` + `setPointerCapture`, wzorem
+  istniejącego wzorca dotykowego z `components/process/kanban-task-card.tsx`):
+  - przeciągnięcie środka bloku → **przesunięcie** całego zakresu (zachowuje długość),
+  - przeciągnięcie lewego/prawego brzegu (uchwyty 8px) → **rozciągnięcie** (zmiana
+    `startAt`/`endAt` niezależnie, z minimalnym czasem trwania 30 min),
+  - kliknięcie bez ruchu → otwarcie `ResourcePlanSidePanel` w trybie edycji,
+  - dwuklik na pustym miejscu wiersza → nowy element z datą startu wyliczoną z pozycji kursora.
+  - Snapowanie: pełne dni (zgodnie z decyzją produktową), środek/brzegi bloku odzwierciedlają
+    rzeczywistą godzinę (pozycja liczona proporcjonalnie w ramach dnia, nie tylko całymi kolumnami).
+- Po zakończeniu przeciągania: zapis przez `useResourcePlanStore().updateItem`, następnie
+  ponowne przeliczenie `validateResourcePlanItem` (bez kontekstu etapu procesu — `stage: null`,
+  patrz ograniczenie poniżej) i pokazanie ewentualnych ostrzeżeń w odznaczalnym banerze nad
+  siatką — **zapis nie jest blokowany** przez ostrzeżenia (zgodnie z D5 z `ARCHITEKTURA.md`).
+- Wspólny mapper `resourcePlanItemToInput` (`lib/resource-plan/types.ts`) wydzielony z panelu
+  bocznego, żeby Gantt i panel boczny nie duplikowały tej logiki.
+
+**Znane ograniczenia widoku Gantt (do doprecyzowania w kolejnych iteracjach):**
+- Przeciąganie zmienia tylko oś czasu — **nie** zmienia przypisania do wiersza (osoby/zespołu/
+  projektu). Przeniesienie między wierszami wymaga edycji w panelu bocznym.
+- Walidacja po przeciągnięciu nie ładuje definicji etapu procesu (`stage: null`), więc reguły
+  „brak wymaganej roli/kompetencji/lidera/budżetu” (zależne od etapu) nie są sprawdzane od razu
+  po drag — pojawią się dopiero po otwarciu elementu w pełnym panelu edycji.
+- Brak synchronizacji sticky nagłówka dni w osi wertykalnej przy przewijaniu strony (tylko
+  pierwsza kolumna jest sticky w poziomie) — do rozważenia przy dużej liczbie wierszy.
+- Brak przełącznika tygodnia/zoomu — tylko widok miesięczny (decyzja produktowa na start).
 
 ## Etap 5 — Walidacje ⚠️ Częściowo zrobione
 
