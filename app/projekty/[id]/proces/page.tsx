@@ -97,6 +97,11 @@ export default function ProjectProcessPage() {
             <Button variant="secondary" asChild>
               <Link href={`/procesy/${encodeURIComponent(project.type)}`}>Szablon procesu</Link>
             </Button>
+            <Button variant="secondary" asChild>
+              <Link href={`/tablice-celow/zbiorcza?projectId=${encodeURIComponent(project.id)}`}>
+                Cele projektu
+              </Link>
+            </Button>
           </div>
         }
       />

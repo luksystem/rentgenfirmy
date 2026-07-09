@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { GoalAiReviewPanel } from "@/components/goals/goal-ai-review-panel";
+import { GoalLinksPanel } from "@/components/goals/goal-links-panel";
 import {
   GOAL_LEVEL_LABELS,
   GOAL_PERIOD_TYPE_LABELS,
@@ -49,7 +50,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { useGoalStore } from "@/store/goal-store";
 import type { GoalMethodology } from "@/lib/goals/types";
 
-type TabKey = "przeglad" | "kpi" | "historia" | "komentarze" | "przeglady" | "rozliczenie";
+type TabKey = "przeglad" | "kpi" | "historia" | "komentarze" | "przeglady" | "powiazania" | "rozliczenie";
 
 const TABS: Array<{ key: TabKey; label: string }> = [
   { key: "przeglad", label: "Przegląd" },
@@ -57,6 +58,7 @@ const TABS: Array<{ key: TabKey; label: string }> = [
   { key: "historia", label: "Historia" },
   { key: "komentarze", label: "Komentarze" },
   { key: "przeglady", label: "Przeglądy" },
+  { key: "powiazania", label: "Powiązania" },
   { key: "rozliczenie", label: "Rozliczenie" },
 ];
 
@@ -201,6 +203,8 @@ export function GoalDetailView({ goalId }: { goalId: string }) {
           onChanged={async () => setReviews(await fetchGoalReviews(goal.id))}
         />
       ) : null}
+
+      {tab === "powiazania" ? <GoalLinksPanel goalId={goal.id} projectId={goal.projectId} /> : null}
 
       {tab === "rozliczenie" ? (
         <SettlementTab goal={goal} currentProfileId={profile?.id ?? null} onChanged={syncGoal} />

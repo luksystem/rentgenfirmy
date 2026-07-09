@@ -1,16 +1,15 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { GoalCollectiveView } from "@/components/goals/goal-collective-view";
+import { GoalsSummaryDashboard } from "@/components/goals/goals-summary-dashboard";
 import { PageHeader } from "@/components/page-header";
 
-export default function GoalCollectivePage() {
+export default function GoalsSummaryPage() {
   return (
     <>
       <PageHeader
         eyebrow="Tablice celów"
-        title="Widok zbiorczy"
-        description="Wszystkie cele firmy, zespołów i pracowników w jednym miejscu."
+        title="Podsumowanie realizacji"
+        description="Stan bieżącego okresu: realizacja per zespół/osoba/typ tablicy oraz cele wymagające uwagi."
         action={
           <Link
             href="/tablice-celow"
@@ -21,9 +20,7 @@ export default function GoalCollectivePage() {
           </Link>
         }
       />
-      <Suspense fallback={<p className="text-sm text-muted">Ładowanie...</p>}>
-        <GoalCollectiveView />
-      </Suspense>
+      <GoalsSummaryDashboard />
     </>
   );
 }

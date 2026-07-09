@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import {
   Dialog,
@@ -26,6 +26,13 @@ import {
 } from "@/lib/goals/types";
 import { profileToOptionLabel } from "@/lib/supabase/profile-repository";
 import { addGoalInitiative, upsertGoalKpi, markGoalAiSuggestionAccepted } from "@/lib/supabase/goal-repository";
+import {
+  ensureAnchoredTemplateSnapshot,
+  fetchProcessTemplateByProjectType,
+  getOrCreateProjectProcess,
+} from "@/lib/supabase/process-repository";
+import type { ProcessStage } from "@/lib/process/types";
+import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useGoalStore } from "@/store/goal-store";
 
@@ -63,6 +70,8 @@ export function CreateGoalDialog({ boardId }: { boardId: string }) {
   const methodologies = useGoalStore((state) => state.methodologies);
   const boards = useGoalStore((state) => state.boards);
   const createGoal = useGoalStore((state) => state.createGoal);
+  const projects = useAppStore((state) => state.projects);
+  const clients = useAppStore((state) => state.clients);
 
   const board = useMemo(() => boards.find((entry) => entry.id === boardId) ?? null, [boards, boardId]);
 
@@ -82,10 +91,77 @@ export function CreateGoalDialog({ boardId }: { boardId: string }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [projectId, setProjectId] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [processStageId, setProcessStageId] = useState("");
+  const [processMilestoneId, setProcessMilestoneId] = useState("");
+  const [stageOptions, setStageOptions] = useState<ProcessStage[]>([]);
+  const [loadingStages, setLoadingStages] = useState(false);
+
   const selectedMethodology = useMemo(
     () => methodologies.find((entry) => entry.code === methodologyId) ?? null,
     [methodologies, methodologyId],
   );
+
+  const milestoneOptions = useMemo(
+    () => stageOptions.find((stage) => stage.id === processStageId)?.milestones ?? [],
+    [stageOptions, processStageId],
+  );
+
+  useEffect(() => {
+    if (!projectId) {
+      setStageOptions([]);
+      setProcessStageId("");
+      setProcessMilestoneId("");
+      return;
+    }
+    const project = projects.find((entry) => entry.id === projectId);
+    if (!project) return;
+
+    if (project.clientId) {
+      setClientId(project.clientId);
+    }
+
+    let cancelled = false;
+    setLoadingStages(true);
+    (async () => {
+      try {
+        const liveTemplate = await fetchProcessTemplateByProjectType(project.type);
+        const projectProcess = await getOrCreateProjectProcess(project.id, project.type);
+        const anchored = projectProcess.templateSnapshot
+          ? projectProcess
+          : liveTemplate
+            ? await ensureAnchoredTemplateSnapshot(project.id, liveTemplate)
+            : projectProcess;
+        if (cancelled) return;
+        const stages = anchored.templateSnapshot?.stages ?? liveTemplate?.stages ?? [];
+        setStageOptions(stages);
+      } catch {
+        if (!cancelled) setStageOptions([]);
+      } finally {
+        if (!cancelled) setLoadingStages(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  function handleProjectChange(nextProjectId: string) {
+    setProjectId(nextProjectId);
+    setProcessStageId("");
+    setProcessMilestoneId("");
+    if (!nextProjectId) {
+      setClientId("");
+    }
+  }
+
+  function handleStageChange(stageId: string) {
+    setProcessStageId(stageId);
+    setProcessMilestoneId("");
+  }
 
   function handleApplyAiAdvice(advice: GoalAiAdviceResponse) {
     if (advice.recommendedMethodologyCode) {
@@ -124,6 +200,10 @@ export function CreateGoalDialog({ boardId }: { boardId: string }) {
         methodologyId: methodologyId || null,
         methodologyFields,
         isRecurring,
+        projectId: projectId || null,
+        clientId: clientId || null,
+        processStageId: processStageId || null,
+        processMilestoneId: processMilestoneId || null,
         createdBy: profile?.id ?? null,
       });
 
@@ -172,6 +252,10 @@ export function CreateGoalDialog({ boardId }: { boardId: string }) {
       setDescription("");
       setMethodologyFields({});
       setPendingAiAdvice(null);
+      setProjectId("");
+      setClientId("");
+      setProcessStageId("");
+      setProcessMilestoneId("");
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Nie udało się utworzyć celu.");
     } finally {
@@ -280,6 +364,62 @@ export function CreateGoalDialog({ boardId }: { boardId: string }) {
             />
             Cel cykliczny — po rozliczeniu automatycznie utwórz następny okres
           </label>
+
+          <div className="grid gap-3 rounded-xl border border-border/70 bg-surface-muted/20 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Powiązania (opcjonalnie)
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Projekt">
+                <Select value={projectId} onChange={(event) => handleProjectChange(event.target.value)}>
+                  <option value="">— brak —</option>
+                  {projects.filter((entry) => entry.isActive).map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Klient">
+                <Select value={clientId} onChange={(event) => setClientId(event.target.value)}>
+                  <option value="">— brak —</option>
+                  {clients.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.fullName}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Etap procesu">
+                <Select
+                  value={processStageId}
+                  disabled={!projectId || loadingStages}
+                  onChange={(event) => handleStageChange(event.target.value)}
+                >
+                  <option value="">{loadingStages ? "Ładowanie..." : "— brak —"}</option>
+                  {stageOptions.map((stage) => (
+                    <option key={stage.id} value={stage.id}>
+                      {stage.title}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Kamień milowy">
+                <Select
+                  value={processMilestoneId}
+                  disabled={!processStageId}
+                  onChange={(event) => setProcessMilestoneId(event.target.value)}
+                >
+                  <option value="">— brak —</option>
+                  {milestoneOptions.map((milestone) => (
+                    <option key={milestone.id} value={milestone.id}>
+                      {milestone.title}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+          </div>
 
           <Field label="Metodologia (opcjonalnie)">
             <Select value={methodologyId} onChange={(event) => setMethodologyId(event.target.value)}>

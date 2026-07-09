@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Loader2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/input";
 import { fetchAllGoals } from "@/lib/supabase/goal-repository";
@@ -14,18 +15,42 @@ import {
   type GoalStatus,
 } from "@/lib/goals/types";
 import { formatDate } from "@/lib/utils";
+import { useAppStore } from "@/store/app-store";
 import { useGoalStore } from "@/store/goal-store";
 
-export function GoalCollectiveView() {
+export function GoalCollectiveView({
+  projectId: fixedProjectId,
+  clientId: fixedClientId,
+}: {
+  projectId?: string;
+  clientId?: string;
+} = {}) {
   const boards = useGoalStore((state) => state.boards);
   const boardKinds = useGoalStore((state) => state.boardKinds);
   const getOwnerName = useGoalStore((state) => state.getOwnerName);
+  const hydrateGoalStore = useGoalStore((state) => state.hydrate);
+  const projects = useAppStore((state) => state.projects);
+  const clients = useAppStore((state) => state.clients);
+  const searchParams = useSearchParams();
+
+  // Widok bywa osadzany poza `/tablice-celow` (np. zakładka „Cele” w dashboardzie klienta),
+  // gdzie `GoalHydrator` nie jest zamontowany — dociągamy katalog tablic/metodologii samodzielnie.
+  useEffect(() => {
+    void hydrateGoalStore();
+  }, [hydrateGoalStore]);
 
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<GoalStatus | "all">("all");
   const [boardFilter, setBoardFilter] = useState<string>("all");
+  const [contextProjectId, setContextProjectId] = useState<string | null>(
+    fixedProjectId ?? searchParams?.get("projectId") ?? null,
+  );
+  const [contextClientId, setContextClientId] = useState<string | null>(
+    fixedClientId ?? searchParams?.get("clientId") ?? null,
+  );
+  const canClearContext = !fixedProjectId && !fixedClientId;
 
   useEffect(() => {
     void (async () => {
@@ -42,10 +67,20 @@ export function GoalCollectiveView() {
 
   const boardsById = useMemo(() => new Map(boards.map((board) => [board.id, board])), [boards]);
   const kindsByCode = useMemo(() => new Map(boardKinds.map((kind) => [kind.code, kind])), [boardKinds]);
+  const contextProjectName = useMemo(
+    () => (contextProjectId ? projects.find((entry) => entry.id === contextProjectId)?.name ?? null : null),
+    [projects, contextProjectId],
+  );
+  const contextClientName = useMemo(
+    () => (contextClientId ? clients.find((entry) => entry.id === contextClientId)?.fullName ?? null : null),
+    [clients, contextClientId],
+  );
 
   const filtered = goals.filter((goal) => {
     if (statusFilter !== "all" && goal.status !== statusFilter) return false;
     if (boardFilter !== "all" && goal.boardId !== boardFilter) return false;
+    if (contextProjectId && goal.projectId !== contextProjectId) return false;
+    if (contextClientId && goal.clientId !== contextClientId) return false;
     return true;
   });
 
@@ -64,6 +99,31 @@ export function GoalCollectiveView() {
 
   return (
     <div className="grid gap-4">
+      {contextProjectId || contextClientId ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-foreground/90">
+          <span className="font-medium">Filtr kontekstowy:</span>
+          {contextProjectName || contextProjectId ? (
+            <Badge tone="blue">Projekt: {contextProjectName ?? contextProjectId}</Badge>
+          ) : null}
+          {contextClientName || contextClientId ? (
+            <Badge tone="blue">Klient: {contextClientName ?? contextClientId}</Badge>
+          ) : null}
+          {canClearContext ? (
+            <button
+              type="button"
+              onClick={() => {
+                setContextProjectId(null);
+                setContextClientId(null);
+              }}
+              className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs text-muted transition hover:bg-surface-muted hover:text-foreground"
+            >
+              <X className="h-3 w-3" />
+              Wyczyść
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap gap-3">
         <Select
           value={statusFilter}

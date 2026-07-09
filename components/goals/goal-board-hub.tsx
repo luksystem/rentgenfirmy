@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BookOpen, LayoutGrid, Trash2 } from "lucide-react";
+import { BarChart3, BookOpen, History, LayoutGrid, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,20 @@ export function GoalBoardHub() {
             <BookOpen className="h-4 w-4" />
             Biblioteka metodologii
           </Link>
+          <Link
+            href="/tablice-celow/podsumowanie"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
+          >
+            <BarChart3 className="h-4 w-4" />
+            Podsumowanie
+          </Link>
+          <Link
+            href="/tablice-celow/historia"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
+          >
+            <History className="h-4 w-4" />
+            Historia i wnioski
+          </Link>
         </div>
         <CreateGoalBoardDialog boardKinds={boardKinds} />
       </div>
@@ -111,10 +125,13 @@ export function GoalBoardHub() {
                             {board.description ? (
                               <p className="mt-0.5 line-clamp-2 text-xs text-muted">{board.description}</p>
                             ) : null}
-                            <div className="mt-2 flex items-center gap-2">
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
                               <Badge tone="neutral">{counts?.total ?? 0} celów</Badge>
                               {counts && counts.atRisk > 0 ? (
                                 <Badge tone="critical">{counts.atRisk} zagrożonych</Badge>
+                              ) : null}
+                              {counts && counts.dueForReview > 0 ? (
+                                <Badge tone="waiting">{counts.dueForReview} do przeglądu</Badge>
                               ) : null}
                             </div>
                           </Link>

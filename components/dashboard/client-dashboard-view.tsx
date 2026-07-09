@@ -18,7 +18,9 @@ import {
   Receipt,
   Star,
   StickyNote,
+  Target,
 } from "lucide-react";
+import { GoalCollectiveView } from "@/components/goals/goal-collective-view";
 import { ClientInspectionsPanel } from "@/components/dashboard/client-inspections-panel";
 import { ProjectAgreementsPanel } from "@/components/dashboard/project-agreements-panel";
 import { ProjectChangeRequestsPanel } from "@/components/dashboard/project-change-requests-panel";
@@ -96,6 +98,7 @@ export type ClientDashboardTab =
   | "integrations"
   | "overview"
   | "process"
+  | "goals"
   | "agreements"
   | "changes"
   | "offers"
@@ -139,6 +142,7 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
 }> = [
   { id: "home", label: "HOME", icon: Home },
   { id: "process", label: "Proces", icon: GitBranch },
+  { id: "goals", label: "Cele", icon: Target },
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
   { id: "changes", label: "Zmiany projektu", icon: FileEdit },
   { id: "offers", label: "Oferty", icon: Receipt },
@@ -711,6 +715,15 @@ export function ClientDashboardView({
     );
   }
 
+  function renderGoalsSection() {
+    return (
+      <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
+        <h2 className="mb-4 text-base font-semibold text-foreground">Cele</h2>
+        <GoalCollectiveView projectId={selectedProject.id} clientId={client.id} />
+      </div>
+    );
+  }
+
   function renderProjectSettingsSection() {
     return (
       <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
@@ -1254,6 +1267,8 @@ export function ClientDashboardView({
         return renderOverviewSection((nextTab) => handleSelectTab(nextTab));
       case "process":
         return renderProcessSection();
+      case "goals":
+        return renderGoalsSection();
       case "agreements":
         return enableAgreements ? renderAgreementsPanel() : null;
       case "changes":
