@@ -42,6 +42,35 @@ export type InspectionProtocolData = {
   recommendations?: string;
 };
 
+/**
+ * Sentinel value written when the user consciously confirms there is nothing
+ * to report for a protocol field (instead of leaving it empty by omission).
+ */
+export const INSPECTION_PROTOCOL_NONE_VALUE = "Brak";
+
+export function isInspectionProtocolFieldFilled(value: string | null | undefined): boolean {
+  return Boolean(value && value.trim().length > 0);
+}
+
+export function isInspectionProtocolFieldNone(value: string | null | undefined): boolean {
+  return (value ?? "").trim().toLowerCase() === INSPECTION_PROTOCOL_NONE_VALUE.toLowerCase();
+}
+
+/**
+ * Before an inspection can move to the "billing" (rozliczenie) stage, the
+ * additional-work and recommendations fields must be explicitly filled in —
+ * either with real content or with the conscious "Brak" sentinel.
+ */
+export function isInspectionProtocolReadyForBilling(protocol: InspectionProtocolData): boolean {
+  return (
+    isInspectionProtocolFieldFilled(protocol.additionalWork) &&
+    isInspectionProtocolFieldFilled(protocol.recommendations)
+  );
+}
+
+export const INSPECTION_PROTOCOL_BILLING_INCOMPLETE_MESSAGE =
+  "Uzupełnij „Prace dodatkowe” i „Zalecenia” (zaznacz „Brak”, jeśli nie ma nic do zgłoszenia) przed przeniesieniem do rozliczenia.";
+
 export function parseInspectionProtocolData(
   data: Record<string, unknown> | null | undefined,
 ): InspectionProtocolData {

@@ -8,7 +8,12 @@ import {
   updateInspection,
   updateInspectionWithAssignee,
 } from "@/lib/supabase/inspection-server";
-import { INSPECTION_STATUSES } from "@/lib/inspections/types";
+import {
+  INSPECTION_PROTOCOL_BILLING_INCOMPLETE_MESSAGE,
+  INSPECTION_STATUSES,
+  isInspectionProtocolReadyForBilling,
+  parseInspectionProtocolData,
+} from "@/lib/inspections/types";
 
 function statusRequiresProtocolSignatures(status?: string) {
   return status === "completed" || status === "billing";
@@ -82,6 +87,17 @@ export async function PATCH(
 
     if (statusRequiresProtocolSignatures(body.status)) {
       const current = await getInspectionById(id);
+
+      const mergedProtocol = parseInspectionProtocolData(
+        body.protocolData ?? current?.protocolData,
+      );
+      if (!isInspectionProtocolReadyForBilling(mergedProtocol)) {
+        return NextResponse.json(
+          { error: INSPECTION_PROTOCOL_BILLING_INCOMPLETE_MESSAGE },
+          { status: 400 },
+        );
+      }
+
       if (!current?.protocolCompanySignedAt || !current?.protocolClientSignedAt) {
         if (!body.protocolCompanySignedAt || !body.protocolClientSignedAt) {
           return NextResponse.json(

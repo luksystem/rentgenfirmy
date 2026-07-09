@@ -27,7 +27,10 @@ import {
 import { isInspectionPlanningDue } from "@/lib/inspections/schedule";
 import {
   INSPECTION_KANBAN_COLUMNS,
+  INSPECTION_PROTOCOL_BILLING_INCOMPLETE_MESSAGE,
   INSPECTION_STATUS_LABELS,
+  isInspectionProtocolReadyForBilling,
+  parseInspectionProtocolData,
   type InspectionRecord,
   type InspectionStatus,
 } from "@/lib/inspections/types";
@@ -240,6 +243,12 @@ export function InspectionKanban() {
       if (!hasSignatures) {
         setSelectedId(itemId);
         setError("Otwórz przegląd, uzupełnij protokół i podpisz przed przeniesieniem.");
+        return;
+      }
+
+      if (!isInspectionProtocolReadyForBilling(parseInspectionProtocolData(item.protocolData))) {
+        setSelectedId(itemId);
+        setError(INSPECTION_PROTOCOL_BILLING_INCOMPLETE_MESSAGE);
         return;
       }
     }

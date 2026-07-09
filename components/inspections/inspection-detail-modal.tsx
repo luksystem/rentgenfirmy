@@ -14,9 +14,13 @@ import { Field, Input, Textarea } from "@/components/ui/input";
 import { buildGoogleMapsDirectionsUrl } from "@/lib/dashboard/google-maps";
 import { isInspectionPlanningDue } from "@/lib/inspections/schedule";
 import {
+  INSPECTION_PROTOCOL_BILLING_INCOMPLETE_MESSAGE,
+  INSPECTION_PROTOCOL_NONE_VALUE,
   INSPECTION_REACTION_EMOJIS,
   INSPECTION_STATUS_LABELS,
   buildInspectionProtocolData,
+  isInspectionProtocolFieldNone,
+  isInspectionProtocolReadyForBilling,
   parseInspectionProtocolData,
   type InspectionRecord,
   type InspectionStatus,
@@ -211,6 +215,16 @@ export function InspectionDetailModal({
   }
 
   async function handleComplete() {
+    if (
+      !isInspectionProtocolReadyForBilling({
+        additionalWork,
+        recommendations,
+      })
+    ) {
+      setError(INSPECTION_PROTOCOL_BILLING_INCOMPLETE_MESSAGE);
+      return;
+    }
+
     const now = new Date().toISOString();
     const signer = profile ? getUserDisplayName(profile) : "Zespół serwisowy";
 
@@ -396,22 +410,46 @@ export function InspectionDetailModal({
                   placeholder="Wyniki przeglądu, stan systemu, uwagi z wizyty…"
                 />
               </Field>
-              <Field label="Prace dodatkowe">
+              <div className="grid gap-1.5 text-sm font-medium text-foreground/90">
+                <span>Prace dodatkowe</span>
+                <label className="flex items-center gap-2 text-xs font-normal text-muted">
+                  <input
+                    type="checkbox"
+                    checked={isInspectionProtocolFieldNone(additionalWork)}
+                    onChange={(event) =>
+                      setAdditionalWork(event.target.checked ? INSPECTION_PROTOCOL_NONE_VALUE : "")
+                    }
+                  />
+                  Brak prac dodatkowych
+                </label>
                 <Textarea
                   rows={3}
                   value={additionalWork}
+                  disabled={isInspectionProtocolFieldNone(additionalWork)}
                   onChange={(event) => setAdditionalWork(event.target.value)}
                   placeholder="Co wykonano poza standardowym zakresem przeglądu…"
                 />
-              </Field>
-              <Field label="Zalecenia na następny przegląd">
+              </div>
+              <div className="grid gap-1.5 text-sm font-medium text-foreground/90">
+                <span>Zalecenia na następny przegląd</span>
+                <label className="flex items-center gap-2 text-xs font-normal text-muted">
+                  <input
+                    type="checkbox"
+                    checked={isInspectionProtocolFieldNone(recommendations)}
+                    onChange={(event) =>
+                      setRecommendations(event.target.checked ? INSPECTION_PROTOCOL_NONE_VALUE : "")
+                    }
+                  />
+                  Brak zaleceń
+                </label>
                 <Textarea
                   rows={3}
                   value={recommendations}
+                  disabled={isInspectionProtocolFieldNone(recommendations)}
                   onChange={(event) => setRecommendations(event.target.value)}
                   placeholder="Co należy wykonać przy kolejnym przeglądzie…"
                 />
-              </Field>
+              </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button
                   type="button"
