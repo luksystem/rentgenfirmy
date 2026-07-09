@@ -12,6 +12,9 @@ import type {
 import type {
   ProcessItemRow,
   ProcessMilestoneRow,
+  ProcessStageCompetencyRequirementRow,
+  ProcessStageDependencyRow,
+  ProcessStageRoleRequirementRow,
   ProcessStageRow,
   ProcessTemplateRow,
   ProjectProcessRow,
@@ -68,6 +71,11 @@ export function rowToProcessMilestone(
 export function rowToProcessStage(
   row: ProcessStageRow,
   milestones: ProcessMilestone[],
+  requirements?: {
+    roles?: ProcessStageRoleRequirementRow[];
+    competencies?: ProcessStageCompetencyRequirementRow[];
+    dependencies?: ProcessStageDependencyRow[];
+  },
 ): ProcessStage {
   return {
     id: row.id,
@@ -75,6 +83,22 @@ export function rowToProcessStage(
     title: row.title,
     position: row.position,
     milestones: milestones.sort((a, b) => a.position - b.position),
+    minPeopleCount: row.min_people_count ?? 1,
+    optimalPeopleCount: row.optimal_people_count ?? null,
+    estimatedDurationDays: row.estimated_duration_days ?? null,
+    estimatedLaborHours: row.estimated_labor_hours ?? null,
+    defaultLaborBudget: row.default_labor_budget ?? null,
+    defaultMaterialBudget: row.default_material_budget ?? null,
+    defaultRiskItemId: row.default_risk_item_id ?? null,
+    canRunInParallel: Boolean(row.can_run_in_parallel),
+    requiresLeader: Boolean(row.requires_leader),
+    allowsTrainee: row.allows_trainee ?? true,
+    requiredRoles: (requirements?.roles ?? []).map((r) => ({ roleItemId: r.role_item_id, minCount: r.min_count })),
+    requiredCompetencies: (requirements?.competencies ?? []).map((c) => ({
+      competencyItemId: c.competency_item_id,
+      minLevelItemId: c.min_level_item_id,
+    })),
+    dependsOnStageIds: (requirements?.dependencies ?? []).map((d) => d.depends_on_stage_id),
   };
 }
 

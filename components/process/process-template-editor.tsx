@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { ProcessPipeline } from "@/components/process/process-pipeline";
+import { ProcessStageResourcePanel } from "@/components/process/process-stage-resource-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
@@ -278,6 +279,20 @@ export function ProcessTemplateEditor({
                 }
               />
             </Field>
+
+            <ProcessStageResourcePanel
+              stage={stage}
+              otherStages={template.stages
+                .filter((entry) => entry.id !== stage.id)
+                .map((entry) => ({ id: entry.id, title: entry.title }))}
+              onChange={(patch) =>
+                setTemplate((current) => ({
+                  ...current,
+                  stages: current.stages.map((entry) => (entry.id === stage.id ? { ...entry, ...patch } : entry)),
+                }))
+              }
+            />
+
             <Button type="button" variant="secondary" size="sm" onClick={() => addMilestone(stage.id)}>
               Dodaj kamień milowy
             </Button>

@@ -29,6 +29,11 @@ function parseUserInput(body: unknown): UserProfileInput | null {
     email: data.email,
     role: role as UserProfileInput["role"],
     isActive: data.isActive !== false,
+    dailyHoursLimit: typeof data.dailyHoursLimit === "number" ? data.dailyHoursLimit : null,
+    weeklyHoursLimit: typeof data.weeklyHoursLimit === "number" ? data.weeklyHoursLimit : null,
+    baseLocation: typeof data.baseLocation === "string" ? data.baseLocation : "",
+    costRate: typeof data.costRate === "number" ? data.costRate : null,
+    isAvailableForPlanning: data.isAvailableForPlanning !== false,
   };
 }
 

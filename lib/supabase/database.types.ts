@@ -912,6 +912,11 @@ export type ProfileRow = {
   email: string;
   role: string;
   is_active: boolean;
+  daily_hours_limit: number | null;
+  weekly_hours_limit: number | null;
+  base_location: string;
+  cost_rate: number | null;
+  is_available_for_planning: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -924,11 +929,226 @@ export type ProfileInsert = {
   email: string;
   role?: string;
   is_active?: boolean;
+  daily_hours_limit?: number | null;
+  weekly_hours_limit?: number | null;
+  base_location?: string;
+  cost_rate?: number | null;
+  is_available_for_planning?: boolean;
   created_at?: string;
   updated_at?: string;
 };
 
 export type ProfileUpdate = Partial<Omit<ProfileInsert, "id">>;
+
+export type UserOperationalRoleRow = {
+  id: string;
+  user_id: string;
+  role_item_id: string;
+  created_at: string;
+};
+
+export type UserOperationalRoleInsert = {
+  id?: string;
+  user_id: string;
+  role_item_id: string;
+  created_at?: string;
+};
+
+export type UserCompetencyRow = {
+  id: string;
+  user_id: string;
+  competency_item_id: string;
+  level_item_id: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type UserCompetencyInsert = {
+  id?: string;
+  user_id: string;
+  competency_item_id: string;
+  level_item_id?: string | null;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type UserCompetencyUpdate = Partial<Omit<UserCompetencyInsert, "id" | "user_id" | "competency_item_id">>;
+
+export type UserTeamRow = {
+  id: string;
+  user_id: string;
+  team_item_id: string;
+  is_lead: boolean;
+  created_at: string;
+};
+
+export type UserTeamInsert = {
+  id?: string;
+  user_id: string;
+  team_item_id: string;
+  is_lead?: boolean;
+  created_at?: string;
+};
+
+export type UserCertificateRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  issued_at: string | null;
+  expires_at: string | null;
+  file_url: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type UserCertificateInsert = {
+  id?: string;
+  user_id: string;
+  name: string;
+  issued_at?: string | null;
+  expires_at?: string | null;
+  file_url?: string | null;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type UserCertificateUpdate = Partial<Omit<UserCertificateInsert, "id" | "user_id">>;
+
+export type UserAbsenceRow = {
+  id: string;
+  user_id: string;
+  absence_type_item_id: string | null;
+  start_date: string;
+  end_date: string;
+  note: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type UserAbsenceInsert = {
+  id?: string;
+  user_id: string;
+  absence_type_item_id?: string | null;
+  start_date: string;
+  end_date: string;
+  note?: string;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type UserAbsenceUpdate = Partial<Omit<UserAbsenceInsert, "id" | "user_id">>;
+
+export type ResourceDictionaryItemRow = {
+  id: string;
+  dictionary_key: string;
+  name: string;
+  description: string;
+  color: string;
+  icon: string;
+  is_active: boolean;
+  sort_order: number;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ResourceDictionaryItemInsert = {
+  id?: string;
+  dictionary_key: string;
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  is_active?: boolean;
+  sort_order?: number;
+  metadata?: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ResourceDictionaryItemUpdate = Partial<Omit<ResourceDictionaryItemInsert, "id" | "dictionary_key">>;
+
+export type ResourcePlanItemRow = {
+  id: string;
+  project_id: string | null;
+  client_id: string | null;
+  process_stage_id: string | null;
+  task_id: string | null;
+  service_intake_request_id: string | null;
+  work_type_item_id: string | null;
+  title: string;
+  start_at: string;
+  end_at: string;
+  planned_hours: number | null;
+  actual_hours: number | null;
+  assignee_id: string | null;
+  team_item_id: string | null;
+  status_item_id: string | null;
+  risk_item_id: string | null;
+  risk_note: string;
+  labor_budget: number | null;
+  material_budget: number | null;
+  travel_budget: number | null;
+  notes: string;
+  accepted_risk: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ResourcePlanItemInsert = {
+  id?: string;
+  project_id?: string | null;
+  client_id?: string | null;
+  process_stage_id?: string | null;
+  task_id?: string | null;
+  service_intake_request_id?: string | null;
+  work_type_item_id?: string | null;
+  title?: string;
+  start_at: string;
+  end_at: string;
+  planned_hours?: number | null;
+  actual_hours?: number | null;
+  assignee_id?: string | null;
+  team_item_id?: string | null;
+  status_item_id?: string | null;
+  risk_item_id?: string | null;
+  risk_note?: string;
+  labor_budget?: number | null;
+  material_budget?: number | null;
+  travel_budget?: number | null;
+  notes?: string;
+  accepted_risk?: boolean;
+  created_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ResourcePlanItemUpdate = Partial<Omit<ResourcePlanItemInsert, "id">>;
+
+export type ResourcePlanItemParticipantRow = {
+  id: string;
+  plan_item_id: string;
+  user_id: string;
+  role_item_id: string | null;
+  is_lead: boolean;
+  created_at: string;
+};
+
+export type ResourcePlanItemParticipantInsert = {
+  id?: string;
+  plan_item_id: string;
+  user_id: string;
+  role_item_id?: string | null;
+  is_lead?: boolean;
+  created_at?: string;
+};
 
 export type ProcessTemplateRow = {
   id: string;
@@ -944,6 +1164,39 @@ export type ProcessStageRow = {
   template_id: string;
   title: string;
   position: number;
+  min_people_count: number;
+  optimal_people_count: number | null;
+  estimated_duration_days: number | null;
+  estimated_labor_hours: number | null;
+  default_labor_budget: number | null;
+  default_material_budget: number | null;
+  default_risk_item_id: string | null;
+  can_run_in_parallel: boolean;
+  requires_leader: boolean;
+  allows_trainee: boolean;
+  created_at: string;
+};
+
+export type ProcessStageRoleRequirementRow = {
+  id: string;
+  stage_id: string;
+  role_item_id: string;
+  min_count: number;
+  created_at: string;
+};
+
+export type ProcessStageCompetencyRequirementRow = {
+  id: string;
+  stage_id: string;
+  competency_item_id: string;
+  min_level_item_id: string | null;
+  created_at: string;
+};
+
+export type ProcessStageDependencyRow = {
+  id: string;
+  stage_id: string;
+  depends_on_stage_id: string;
   created_at: string;
 };
 
@@ -1117,6 +1370,167 @@ export type InspectionReactionRow = {
   emoji: string;
   author_profile_id: string | null;
   author_name: string;
+  created_at: string;
+};
+
+export type GoalBoardKindRow = {
+  code: string;
+  label: string;
+  description: string;
+  icon: string;
+  visibility: string;
+  sort_order: number;
+  is_active: boolean;
+};
+
+export type GoalBoardRow = {
+  id: string;
+  kind: string;
+  name: string;
+  description: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GoalMethodologyRow = {
+  code: string;
+  name: string;
+  short_description: string;
+  purpose: string;
+  when_to_use: string;
+  when_not_to_use: string;
+  structure_md: string;
+  example_md: string;
+  best_practices_md: string;
+  common_mistakes_md: string;
+  field_schema: unknown;
+  schema_version: number;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GoalRow = {
+  id: string;
+  board_id: string;
+  level: string;
+  name: string;
+  description: string;
+  owner_id: string | null;
+  priority: string;
+  status: string;
+  period_type: string;
+  period_start: string;
+  period_end: string;
+  progress_percent: number;
+  methodology_id: string | null;
+  methodology_fields: unknown;
+  is_recurring: boolean;
+  recurrence_parent_id: string | null;
+  recurrence_root_id: string | null;
+  parent_goal_id: string | null;
+  project_id: string | null;
+  client_id: string | null;
+  process_stage_id: string | null;
+  process_milestone_id: string | null;
+  settlement_status: string | null;
+  settlement_what_worked: string | null;
+  settlement_what_failed: string | null;
+  settlement_conclusions: string | null;
+  settled_at: string | null;
+  settled_by: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GoalParticipantRow = {
+  goal_id: string;
+  profile_id: string;
+  role: string;
+};
+
+export type GoalKpiRow = {
+  id: string;
+  goal_id: string;
+  name: string;
+  unit: string;
+  target_value: number | null;
+  current_value: number;
+  source: string;
+  position: number;
+};
+
+export type GoalUpdateRow = {
+  id: string;
+  goal_id: string;
+  author_id: string | null;
+  previous_progress: number | null;
+  new_progress: number | null;
+  previous_status: string | null;
+  new_status: string | null;
+  note: string | null;
+  created_at: string;
+};
+
+export type GoalCommentRow = {
+  id: string;
+  goal_id: string;
+  author_id: string | null;
+  author_name: string;
+  body: string;
+  created_at: string;
+};
+
+export type GoalReviewRow = {
+  id: string;
+  goal_id: string;
+  scheduled_at: string;
+  requires_action: boolean;
+  completed_at: string | null;
+  closed_by: string | null;
+  outcome: string | null;
+  progress_snapshot: number | null;
+  note: string | null;
+  created_at: string;
+};
+
+export type GoalInitiativeRow = {
+  id: string;
+  goal_id: string;
+  kind: string;
+  title: string;
+  description: string;
+  estimated_value: number | null;
+  estimated_unit: string | null;
+  status: string;
+  converted_task_id: string | null;
+  source: string;
+  created_at: string;
+};
+
+export type GoalLinkRow = {
+  id: string;
+  goal_id: string;
+  linked_type: string;
+  linked_id: string;
+  created_at: string;
+};
+
+export type GoalAiSuggestionRow = {
+  id: string;
+  goal_id: string | null;
+  trigger: string;
+  input_description: string;
+  suggested_methodology_code: string | null;
+  justification: string | null;
+  alternatives: unknown;
+  structure: unknown;
+  vague_warning: string | null;
+  accepted: boolean;
+  created_by: string | null;
   created_at: string;
 };
 
@@ -1371,6 +1785,54 @@ export type Database = {
         Update: Partial<SpecificationCatalogItemRow>;
         Relationships: [];
       };
+      resource_dictionary_items: {
+        Row: ResourceDictionaryItemRow;
+        Insert: ResourceDictionaryItemInsert;
+        Update: ResourceDictionaryItemUpdate;
+        Relationships: [];
+      };
+      resource_plan_items: {
+        Row: ResourcePlanItemRow;
+        Insert: ResourcePlanItemInsert;
+        Update: ResourcePlanItemUpdate;
+        Relationships: [];
+      };
+      resource_plan_item_participants: {
+        Row: ResourcePlanItemParticipantRow;
+        Insert: ResourcePlanItemParticipantInsert;
+        Update: Partial<ResourcePlanItemParticipantInsert>;
+        Relationships: [];
+      };
+      user_operational_roles: {
+        Row: UserOperationalRoleRow;
+        Insert: UserOperationalRoleInsert;
+        Update: Partial<UserOperationalRoleInsert>;
+        Relationships: [];
+      };
+      user_competencies: {
+        Row: UserCompetencyRow;
+        Insert: UserCompetencyInsert;
+        Update: UserCompetencyUpdate;
+        Relationships: [];
+      };
+      user_teams: {
+        Row: UserTeamRow;
+        Insert: UserTeamInsert;
+        Update: Partial<UserTeamInsert>;
+        Relationships: [];
+      };
+      user_certificates: {
+        Row: UserCertificateRow;
+        Insert: UserCertificateInsert;
+        Update: UserCertificateUpdate;
+        Relationships: [];
+      };
+      user_absences: {
+        Row: UserAbsenceRow;
+        Insert: UserAbsenceInsert;
+        Update: UserAbsenceUpdate;
+        Relationships: [];
+      };
       project_specification_items: {
         Row: ProjectSpecificationItemRow;
         Insert: Partial<ProjectSpecificationItemRow> &
@@ -1526,6 +1988,27 @@ export type Database = {
         Row: ProcessMilestoneRow;
         Insert: Partial<ProcessMilestoneRow> & Pick<ProcessMilestoneRow, "stage_id" | "title">;
         Update: Partial<ProcessMilestoneRow>;
+        Relationships: [];
+      };
+      process_stage_role_requirements: {
+        Row: ProcessStageRoleRequirementRow;
+        Insert: Partial<ProcessStageRoleRequirementRow> &
+          Pick<ProcessStageRoleRequirementRow, "stage_id" | "role_item_id">;
+        Update: Partial<ProcessStageRoleRequirementRow>;
+        Relationships: [];
+      };
+      process_stage_competency_requirements: {
+        Row: ProcessStageCompetencyRequirementRow;
+        Insert: Partial<ProcessStageCompetencyRequirementRow> &
+          Pick<ProcessStageCompetencyRequirementRow, "stage_id" | "competency_item_id">;
+        Update: Partial<ProcessStageCompetencyRequirementRow>;
+        Relationships: [];
+      };
+      process_stage_dependencies: {
+        Row: ProcessStageDependencyRow;
+        Insert: Partial<ProcessStageDependencyRow> &
+          Pick<ProcessStageDependencyRow, "stage_id" | "depends_on_stage_id">;
+        Update: Partial<ProcessStageDependencyRow>;
         Relationships: [];
       };
       process_elements: {
@@ -1705,6 +2188,79 @@ export type Database = {
         Insert: Partial<InspectionReactionRow> &
           Pick<InspectionReactionRow, "inspection_id" | "emoji" | "author_name">;
         Update: Partial<InspectionReactionRow>;
+        Relationships: [];
+      };
+      goal_board_kinds: {
+        Row: GoalBoardKindRow;
+        Insert: Partial<GoalBoardKindRow> & Pick<GoalBoardKindRow, "code" | "label">;
+        Update: Partial<GoalBoardKindRow>;
+        Relationships: [];
+      };
+      goal_boards: {
+        Row: GoalBoardRow;
+        Insert: Partial<GoalBoardRow> & Pick<GoalBoardRow, "kind" | "name">;
+        Update: Partial<GoalBoardRow>;
+        Relationships: [];
+      };
+      goal_methodologies: {
+        Row: GoalMethodologyRow;
+        Insert: Partial<GoalMethodologyRow> & Pick<GoalMethodologyRow, "code" | "name">;
+        Update: Partial<GoalMethodologyRow>;
+        Relationships: [];
+      };
+      goals: {
+        Row: GoalRow;
+        Insert: Partial<GoalRow> &
+          Pick<GoalRow, "board_id" | "level" | "name" | "period_type" | "period_start" | "period_end">;
+        Update: Partial<GoalRow>;
+        Relationships: [];
+      };
+      goal_participants: {
+        Row: GoalParticipantRow;
+        Insert: Partial<GoalParticipantRow> & Pick<GoalParticipantRow, "goal_id" | "profile_id">;
+        Update: Partial<GoalParticipantRow>;
+        Relationships: [];
+      };
+      goal_kpis: {
+        Row: GoalKpiRow;
+        Insert: Partial<GoalKpiRow> & Pick<GoalKpiRow, "goal_id" | "name">;
+        Update: Partial<GoalKpiRow>;
+        Relationships: [];
+      };
+      goal_updates: {
+        Row: GoalUpdateRow;
+        Insert: Partial<GoalUpdateRow> & Pick<GoalUpdateRow, "goal_id">;
+        Update: Partial<GoalUpdateRow>;
+        Relationships: [];
+      };
+      goal_comments: {
+        Row: GoalCommentRow;
+        Insert: Partial<GoalCommentRow> & Pick<GoalCommentRow, "goal_id" | "author_name" | "body">;
+        Update: Partial<GoalCommentRow>;
+        Relationships: [];
+      };
+      goal_reviews: {
+        Row: GoalReviewRow;
+        Insert: Partial<GoalReviewRow> & Pick<GoalReviewRow, "goal_id" | "scheduled_at">;
+        Update: Partial<GoalReviewRow>;
+        Relationships: [];
+      };
+      goal_initiatives: {
+        Row: GoalInitiativeRow;
+        Insert: Partial<GoalInitiativeRow> & Pick<GoalInitiativeRow, "goal_id" | "kind" | "title">;
+        Update: Partial<GoalInitiativeRow>;
+        Relationships: [];
+      };
+      goal_links: {
+        Row: GoalLinkRow;
+        Insert: Partial<GoalLinkRow> & Pick<GoalLinkRow, "goal_id" | "linked_type" | "linked_id">;
+        Update: Partial<GoalLinkRow>;
+        Relationships: [];
+      };
+      goal_ai_suggestions: {
+        Row: GoalAiSuggestionRow;
+        Insert: Partial<GoalAiSuggestionRow> & Pick<GoalAiSuggestionRow, "input_description">;
+        Update: Partial<GoalAiSuggestionRow>;
         Relationships: [];
       };
     };

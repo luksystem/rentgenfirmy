@@ -33,6 +33,31 @@ export function parseProcessTemplateSnapshot(value: unknown): ProcessTemplate | 
         templateId: String(stage.templateId ?? value.id),
         title: String(stage.title ?? ""),
         position: Number(stage.position ?? 0),
+        minPeopleCount: Number(stage.minPeopleCount ?? 1),
+        optimalPeopleCount: stage.optimalPeopleCount == null ? null : Number(stage.optimalPeopleCount),
+        estimatedDurationDays: stage.estimatedDurationDays == null ? null : Number(stage.estimatedDurationDays),
+        estimatedLaborHours: stage.estimatedLaborHours == null ? null : Number(stage.estimatedLaborHours),
+        defaultLaborBudget: stage.defaultLaborBudget == null ? null : Number(stage.defaultLaborBudget),
+        defaultMaterialBudget: stage.defaultMaterialBudget == null ? null : Number(stage.defaultMaterialBudget),
+        defaultRiskItemId: stage.defaultRiskItemId ? String(stage.defaultRiskItemId) : null,
+        canRunInParallel: stage.canRunInParallel === true,
+        requiresLeader: stage.requiresLeader === true,
+        allowsTrainee: stage.allowsTrainee !== false,
+        requiredRoles: (Array.isArray(stage.requiredRoles) ? stage.requiredRoles : [])
+          .filter(isRecord)
+          .map((requirement) => ({
+            roleItemId: String(requirement.roleItemId ?? ""),
+            minCount: Number(requirement.minCount ?? 1),
+          })),
+        requiredCompetencies: (Array.isArray(stage.requiredCompetencies) ? stage.requiredCompetencies : [])
+          .filter(isRecord)
+          .map((requirement) => ({
+            competencyItemId: String(requirement.competencyItemId ?? ""),
+            minLevelItemId: requirement.minLevelItemId ? String(requirement.minLevelItemId) : null,
+          })),
+        dependsOnStageIds: (Array.isArray(stage.dependsOnStageIds) ? stage.dependsOnStageIds : []).map((id) =>
+          String(id),
+        ),
         milestones: sortByPosition(
           (Array.isArray(stage.milestones) ? stage.milestones : [])
             .filter(isRecord)

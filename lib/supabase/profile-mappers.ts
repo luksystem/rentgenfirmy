@@ -10,6 +10,11 @@ export function mapProfileRow(row: ProfileRow): UserProfile {
     email: row.email,
     role: row.role as UserRole,
     isActive: row.is_active,
+    dailyHoursLimit: row.daily_hours_limit,
+    weeklyHoursLimit: row.weekly_hours_limit,
+    baseLocation: row.base_location,
+    costRate: row.cost_rate,
+    isAvailableForPlanning: row.is_available_for_planning,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -27,6 +32,11 @@ export function mapProfileInputToInsert(
     email: input.email.trim().toLowerCase(),
     role: input.role,
     is_active: input.isActive,
+    daily_hours_limit: input.dailyHoursLimit ?? null,
+    weekly_hours_limit: input.weeklyHoursLimit ?? null,
+    base_location: input.baseLocation?.trim() ?? "",
+    cost_rate: input.costRate ?? null,
+    is_available_for_planning: input.isAvailableForPlanning ?? true,
   };
 }
 
@@ -38,6 +48,11 @@ export function mapProfileInputToUpdate(input: UserProfileInput): ProfileUpdate 
     email: input.email.trim().toLowerCase(),
     role: input.role,
     is_active: input.isActive,
+    daily_hours_limit: input.dailyHoursLimit ?? null,
+    weekly_hours_limit: input.weeklyHoursLimit ?? null,
+    base_location: input.baseLocation?.trim() ?? "",
+    cost_rate: input.costRate ?? null,
+    is_available_for_planning: input.isAvailableForPlanning ?? true,
     updated_at: new Date().toISOString(),
   };
 }

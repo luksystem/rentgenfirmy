@@ -31,6 +31,7 @@ import {
   Settings,
   Shield,
   Users,
+  CalendarRange,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -86,6 +87,7 @@ const navGroupsBase: NavGroup[] = [
     items: [
       { href: "/klienci", label: "Klienci", icon: Users },
       { href: "/procesy", label: "Procesy", icon: GitBranch },
+      { href: "/plan-zasobow", label: "Plan Zasobów", icon: CalendarRange },
       { href: "/projekty", label: "Projekty", icon: FolderKanban },
       { href: "/zlecenia", label: "Zlecenia", icon: ClipboardList },
       { href: "/dokumenty", label: "Dokumenty", icon: FileUp },

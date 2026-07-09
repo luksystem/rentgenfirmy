@@ -35,12 +35,44 @@ export type ProcessMilestone = {
   items: ProcessItem[];
 };
 
+/** Wymagana kompetencja na etapie procesu (Plan Zasobów, Etap 3). */
+export type ProcessStageCompetencyRequirement = {
+  competencyItemId: string;
+  minLevelItemId: string | null;
+};
+
+/** Wymagana rola operacyjna na etapie procesu, z minimalną liczbą osób. */
+export type ProcessStageRoleRequirement = {
+  roleItemId: string;
+  minCount: number;
+};
+
 export type ProcessStage = {
   id: string;
   templateId: string;
   title: string;
   position: number;
   milestones: ProcessMilestone[];
+  /**
+   * Plan Zasobów (Etap 3) — etap procesu jako źródło prawdy dla planowania.
+   * Opcjonalne w typie (żeby nie łamać istniejących generatorów szablonów) —
+   * przy odczycie z bazy/snapshotu zawsze mają wartość (patrz process-mappers / anchored-template).
+   */
+  minPeopleCount?: number;
+  optimalPeopleCount?: number | null;
+  estimatedDurationDays?: number | null;
+  estimatedLaborHours?: number | null;
+  defaultLaborBudget?: number | null;
+  defaultMaterialBudget?: number | null;
+  /** Odwołanie do resource_dictionary_items (dictionary_key='risk_level'). */
+  defaultRiskItemId?: string | null;
+  canRunInParallel?: boolean;
+  requiresLeader?: boolean;
+  allowsTrainee?: boolean;
+  requiredRoles?: ProcessStageRoleRequirement[];
+  requiredCompetencies?: ProcessStageCompetencyRequirement[];
+  /** ID innych etapów tego samego szablonu, od których zależy ten etap. */
+  dependsOnStageIds?: string[];
 };
 
 export type ProcessTemplate = {

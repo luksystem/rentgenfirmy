@@ -13,6 +13,7 @@ import {
   type UserRole,
 } from "@/lib/auth/types";
 import { ADMIN_SETUP_ERROR_CODE, ADMIN_SETUP_STEPS } from "@/lib/auth/admin-setup";
+import { UserResourceProfileEditor } from "@/components/admin/user-resource-profile-editor";
 
 type UserFormState = UserProfileInput & {
   password: string;
@@ -26,6 +27,11 @@ const emptyForm = (): UserFormState => ({
   email: "",
   role: "pracownik",
   isActive: true,
+  dailyHoursLimit: null,
+  weeklyHoursLimit: null,
+  baseLocation: "",
+  costRate: null,
+  isAvailableForPlanning: true,
   password: "",
   sendInvite: false,
 });
@@ -38,6 +44,11 @@ function profileToForm(user: UserProfile): UserFormState {
     email: user.email,
     role: user.role,
     isActive: user.isActive,
+    dailyHoursLimit: user.dailyHoursLimit,
+    weeklyHoursLimit: user.weeklyHoursLimit,
+    baseLocation: user.baseLocation,
+    costRate: user.costRate,
+    isAvailableForPlanning: user.isAvailableForPlanning,
     password: "",
     sendInvite: false,
   };
@@ -396,6 +407,75 @@ export function UserAdminPanel() {
               Konto aktywne
             </label>
 
+            <div className="grid gap-4 rounded-xl border border-border/70 bg-surface-muted/15 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                Plan Zasobów — dostępność i limity
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Limit godzin dziennie">
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={form.dailyHoursLimit ?? ""}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        dailyHoursLimit: event.target.value === "" ? null : Number(event.target.value),
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label="Limit godzin tygodniowo">
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={form.weeklyHoursLimit ?? ""}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        weeklyHoursLimit: event.target.value === "" ? null : Number(event.target.value),
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label="Lokalizacja bazowa">
+                  <Input
+                    value={form.baseLocation ?? ""}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, baseLocation: event.target.value }))
+                    }
+                  />
+                </Field>
+                <Field label="Stawka kosztowa (opcjonalnie)">
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={form.costRate ?? ""}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        costRate: event.target.value === "" ? null : Number(event.target.value),
+                      }))
+                    }
+                  />
+                </Field>
+              </div>
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground/90">
+                <input
+                  type="checkbox"
+                  checked={form.isAvailableForPlanning ?? true}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, isAvailableForPlanning: event.target.checked }))
+                  }
+                  className="h-4 w-4 rounded border-border"
+                />
+                Dostępny do planowania w module Plan Zasobów
+              </label>
+            </div>
+
             {!isEditing ? (
               <>
                 <Field label="Hasło startowe">
@@ -466,6 +546,14 @@ export function UserAdminPanel() {
             </div>
           </CardContent>
         </Card>
+
+        {isEditing && selectedUser ? (
+          <Card className="xl:col-span-2">
+            <CardContent className="py-6">
+              <UserResourceProfileEditor userId={selectedUser.id} />
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
     </>
   );

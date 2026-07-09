@@ -16,6 +16,12 @@ export type UserProfile = {
   email: string;
   role: UserRole;
   isActive: boolean;
+  /** Etap 2 (Plan Zasobów) — limit godzin dziennych/tygodniowych do walidacji obciążenia. */
+  dailyHoursLimit: number | null;
+  weeklyHoursLimit: number | null;
+  baseLocation: string;
+  costRate: number | null;
+  isAvailableForPlanning: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -27,6 +33,11 @@ export type UserProfileInput = {
   email: string;
   role: UserRole;
   isActive: boolean;
+  dailyHoursLimit?: number | null;
+  weeklyHoursLimit?: number | null;
+  baseLocation?: string;
+  costRate?: number | null;
+  isAvailableForPlanning?: boolean;
 };
 
 export const USER_ROLE_LABELS: Record<UserRole, string> = {

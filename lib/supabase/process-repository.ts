@@ -53,6 +53,39 @@ async function fetchTemplatesGraph(): Promise<ProcessTemplate[]> {
 
   const stageIds = (stages ?? []).map((row) => row.id);
 
+  const [roleReqResult, competencyReqResult, dependencyResult] = stageIds.length
+    ? await Promise.all([
+        supabase.from("process_stage_role_requirements").select("*").in("stage_id", stageIds),
+        supabase.from("process_stage_competency_requirements").select("*").in("stage_id", stageIds),
+        supabase.from("process_stage_dependencies").select("*").in("stage_id", stageIds),
+      ])
+    : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
+
+  if (roleReqResult.error) throw new Error(roleReqResult.error.message);
+  if (competencyReqResult.error) throw new Error(competencyReqResult.error.message);
+  if (dependencyResult.error) throw new Error(dependencyResult.error.message);
+
+  const roleReqByStage = new Map<string, typeof roleReqResult.data>();
+  (roleReqResult.data ?? []).forEach((row) => {
+    const list = roleReqByStage.get(row.stage_id) ?? [];
+    list.push(row);
+    roleReqByStage.set(row.stage_id, list);
+  });
+
+  const competencyReqByStage = new Map<string, typeof competencyReqResult.data>();
+  (competencyReqResult.data ?? []).forEach((row) => {
+    const list = competencyReqByStage.get(row.stage_id) ?? [];
+    list.push(row);
+    competencyReqByStage.set(row.stage_id, list);
+  });
+
+  const dependencyByStage = new Map<string, typeof dependencyResult.data>();
+  (dependencyResult.data ?? []).forEach((row) => {
+    const list = dependencyByStage.get(row.stage_id) ?? [];
+    list.push(row);
+    dependencyByStage.set(row.stage_id, list);
+  });
+
   const { data: milestones, error: milestonesError } = stageIds.length
     ? await supabase
         .from("process_milestones")
@@ -100,7 +133,11 @@ async function fetchTemplatesGraph(): Promise<ProcessTemplate[]> {
 
   const stagesByTemplate = new Map<string, ReturnType<typeof rowToProcessStage>[]>();
   (stages ?? []).forEach((row) => {
-    const mapped = rowToProcessStage(row, milestonesByStage.get(row.id) ?? []);
+    const mapped = rowToProcessStage(row, milestonesByStage.get(row.id) ?? [], {
+      roles: roleReqByStage.get(row.id) ?? [],
+      competencies: competencyReqByStage.get(row.id) ?? [],
+      dependencies: dependencyByStage.get(row.id) ?? [],
+    });
     const list = stagesByTemplate.get(row.template_id) ?? [];
     list.push(mapped);
     stagesByTemplate.set(row.template_id, list);
@@ -170,6 +207,16 @@ async function insertTemplateStagesGraph(template: ProcessTemplate) {
       template_id: stage.templateId,
       title: stage.title,
       position: stage.position,
+      min_people_count: stage.minPeopleCount ?? 1,
+      optimal_people_count: stage.optimalPeopleCount ?? null,
+      estimated_duration_days: stage.estimatedDurationDays ?? null,
+      estimated_labor_hours: stage.estimatedLaborHours ?? null,
+      default_labor_budget: stage.defaultLaborBudget ?? null,
+      default_material_budget: stage.defaultMaterialBudget ?? null,
+      default_risk_item_id: stage.defaultRiskItemId ?? null,
+      can_run_in_parallel: stage.canRunInParallel ?? false,
+      requires_leader: stage.requiresLeader ?? false,
+      allows_trainee: stage.allowsTrainee ?? true,
     });
     if (error) {
       throw new Error(error.message);
@@ -205,6 +252,42 @@ async function insertTemplateStagesGraph(template: ProcessTemplate) {
           throw new Error(itemsError.message);
         }
       }
+    }
+  }
+
+  // Drugi przebieg — wymagania i zależności wstawiamy po utworzeniu WSZYSTKICH etapów,
+  // bo zależność może wskazywać na etap dalszy w kolejności wstawiania.
+  for (const stage of template.stages) {
+    if (stage.requiredRoles?.length) {
+      const { error: rolesError } = await supabase.from("process_stage_role_requirements").insert(
+        stage.requiredRoles.map((requirement) => ({
+          stage_id: stage.id,
+          role_item_id: requirement.roleItemId,
+          min_count: requirement.minCount,
+        })),
+      );
+      if (rolesError) throw new Error(rolesError.message);
+    }
+
+    if (stage.requiredCompetencies?.length) {
+      const { error: competenciesError } = await supabase.from("process_stage_competency_requirements").insert(
+        stage.requiredCompetencies.map((requirement) => ({
+          stage_id: stage.id,
+          competency_item_id: requirement.competencyItemId,
+          min_level_item_id: requirement.minLevelItemId,
+        })),
+      );
+      if (competenciesError) throw new Error(competenciesError.message);
+    }
+
+    if (stage.dependsOnStageIds?.length) {
+      const { error: dependenciesError } = await supabase.from("process_stage_dependencies").insert(
+        stage.dependsOnStageIds.map((dependsOnStageId) => ({
+          stage_id: stage.id,
+          depends_on_stage_id: dependsOnStageId,
+        })),
+      );
+      if (dependenciesError) throw new Error(dependenciesError.message);
     }
   }
 }
