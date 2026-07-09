@@ -12,6 +12,27 @@ import {
 
 let inFlight: Promise<DictionaryItem[]> | null = null;
 
+// Memoizacja wg referencji `items`: `byKey` jest wołane bezpośrednio jako selektor
+// Zustand (`useDictionaryStore((state) => state.byKey(...))`). Bez cache zwracałoby
+// nową tablicę przy każdym renderze, co przy React 18/19 `useSyncExternalStore`
+// powoduje nieskończoną pętlę renderowania (React error #185).
+let byKeyCache: { items: DictionaryItem[]; results: Map<string, DictionaryItem[]> } | null = null;
+
+function memoizedByKey(items: DictionaryItem[], key: DictionaryKey, activeOnly: boolean): DictionaryItem[] {
+  if (!byKeyCache || byKeyCache.items !== items) {
+    byKeyCache = { items, results: new Map() };
+  }
+  const cacheKey = `${key}__${activeOnly}`;
+  const cached = byKeyCache.results.get(cacheKey);
+  if (cached) return cached;
+
+  const result = items
+    .filter((item) => item.dictionaryKey === key && (!activeOnly || item.isActive))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  byKeyCache.results.set(cacheKey, result);
+  return result;
+}
+
 type DictionaryStore = {
   items: DictionaryItem[];
   hydrated: boolean;
@@ -58,9 +79,7 @@ export const useDictionaryStore = create<DictionaryStore>((set, get) => ({
 
   byKey: (key, options) => {
     const activeOnly = options?.activeOnly ?? true;
-    return get()
-      .items.filter((item) => item.dictionaryKey === key && (!activeOnly || item.isActive))
-      .sort((a, b) => a.sortOrder - b.sortOrder);
+    return memoizedByKey(get().items, key, activeOnly);
   },
 
   itemLabel: (id) => {

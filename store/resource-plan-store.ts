@@ -15,6 +15,21 @@ function rangeKey(from: string, to: string) {
   return `${from}__${to}`;
 }
 
+// Memoizacja wg referencji `items`: `allItems` jest wołane bezpośrednio jako selektor
+// Zustand (`useResourcePlanStore((state) => state.allItems())`). Bez cache zwracałoby
+// nową tablicę przy każdym renderze, co przy React 18/19 `useSyncExternalStore`
+// powoduje nieskończoną pętlę renderowania (React error #185).
+let allItemsCache: { items: Record<string, ResourcePlanItem>; result: ResourcePlanItem[] } | null = null;
+
+function memoizedAllItems(items: Record<string, ResourcePlanItem>): ResourcePlanItem[] {
+  if (allItemsCache && allItemsCache.items === items) {
+    return allItemsCache.result;
+  }
+  const result = Object.values(items);
+  allItemsCache = { items, result };
+  return result;
+}
+
 type ResourcePlanStore = {
   items: Record<string, ResourcePlanItem>;
   loadedRanges: string[];
@@ -85,5 +100,5 @@ export const useResourcePlanStore = create<ResourcePlanStore>((set, get) => ({
     set({ items: next });
   },
 
-  allItems: () => Object.values(get().items),
+  allItems: () => memoizedAllItems(get().items),
 }));
