@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const fieldClassName =
-  "w-full rounded-xl border border-border bg-surface-muted px-3 text-sm text-foreground outline-none transition placeholder:text-muted/70 focus:border-accent/40 focus:bg-surface-elevated focus:ring-2 focus:ring-accent/20";
+  "w-full rounded-xl border border-border bg-surface-muted px-3 text-sm text-foreground outline-none transition placeholder:text-muted/70 focus:border-accent/40 focus:bg-surface-elevated focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-50";
 
 export const inputInvalidClassName =
   "border-rose-500/70 bg-rose-500/5 ring-1 ring-rose-500/30 focus:border-rose-500 focus:ring-rose-500/25";

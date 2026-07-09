@@ -46,6 +46,7 @@ export function ServiceLineItemsForm({
   serviceId,
   onChange,
   showWarrantyHours = false,
+  disabled = false,
 }: {
   title: string;
   items: ServiceLineItems;
@@ -53,6 +54,7 @@ export function ServiceLineItemsForm({
   serviceId: string;
   onChange: (items: ServiceLineItems) => void;
   showWarrantyHours?: boolean;
+  disabled?: boolean;
 }) {
   const zone = resolveKilometerZone(items.kilometersOneWay, zoneSettings);
   const trips = Math.max(1, items.tripCount || 1);
@@ -255,11 +257,16 @@ export function ServiceLineItemsForm({
         <RichTextarea
           value={items.materialsNote}
           onChange={(value) => patch("materialsNote", value)}
+          disabled={disabled}
         />
       </Field>
 
       <Field label="Notatka do raportu z prac">
-        <RichTextarea value={items.workReportNote} onChange={(value) => patch("workReportNote", value)} />
+        <RichTextarea
+          value={items.workReportNote}
+          onChange={(value) => patch("workReportNote", value)}
+          disabled={disabled}
+        />
       </Field>
 
       <ServicePhotosField

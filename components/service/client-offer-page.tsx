@@ -55,7 +55,7 @@ export function ClientOfferPage({ token }: { token: string }) {
     setError(null);
 
     try {
-      const response = await fetch(`/api/oferta/${token}`);
+      const response = await fetch(`/api/oferta/${token}`, { cache: "no-store" });
       const payload = await response.json();
 
       if (!response.ok) {

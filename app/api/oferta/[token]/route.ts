@@ -13,6 +13,15 @@ import {
   type ClientOfferAction,
 } from "@/lib/service/client-offer";
 
+// Ta trasa musi zawsze czytać aktualny stan oferty z bazy — link publiczny
+// pozostaje "żywy" aż do akceptacji klienta, więc wyłączamy jakiekolwiek
+// cache'owanie (Next.js / CDN / przeglądarka).
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
+const NO_STORE_HEADERS = { "Cache-Control": "no-store, must-revalidate" };
+
 const ACTIONS = Object.keys(CLIENT_OFFER_ACTION_LABELS) as ClientOfferAction[];
 
 function parseAction(value: unknown): ClientOfferAction | null {
@@ -30,7 +39,10 @@ export async function GET(
   try {
     const service = await fetchServiceByClientOfferToken(token);
     if (!service) {
-      return NextResponse.json({ error: "Nie znaleziono oferty." }, { status: 404 });
+      return NextResponse.json(
+        { error: "Nie znaleziono oferty." },
+        { status: 404, headers: NO_STORE_HEADERS },
+      );
     }
 
     const offer = service.clientOffer;
@@ -38,23 +50,26 @@ export async function GET(
     const canAskQuestion = isPublicOfferQuestionAvailable(service);
     const expired = isOfferExpired(offer.expiresAt);
 
-    return NextResponse.json({
-      service: getPublicOfferView(service),
-      offer: {
-        status: offer.status,
-        statusLabel: offer.status ? CLIENT_OFFER_STATUS_LABELS[offer.status] : null,
-        message: offer.message,
-        respondedAt: offer.respondedAt,
-        expiresAt: offer.expiresAt,
-        canRespond,
-        canAskQuestion,
-        isExpired: expired,
+    return NextResponse.json(
+      {
+        service: getPublicOfferView(service),
+        offer: {
+          status: offer.status,
+          statusLabel: offer.status ? CLIENT_OFFER_STATUS_LABELS[offer.status] : null,
+          message: offer.message,
+          respondedAt: offer.respondedAt,
+          expiresAt: offer.expiresAt,
+          canRespond,
+          canAskQuestion,
+          isExpired: expired,
+        },
       },
-    });
+      { headers: NO_STORE_HEADERS },
+    );
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Nie udało się pobrać oferty." },
-      { status: 500 },
+      { status: 500, headers: NO_STORE_HEADERS },
     );
   }
 }

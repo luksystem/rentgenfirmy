@@ -228,6 +228,7 @@ export function ServiceForm({
   );
   const clientBadge = useMemo(() => clientTabBadge(service), [service]);
   const settled = isServiceSettled(service);
+  const isOfferLocked = service.clientOffer.status === "accepted";
   const isDirty = useMemo(
     () => createServiceFormSnapshot(service, withoutProject) !== savedSnapshot,
     [savedSnapshot, service, withoutProject],
@@ -525,6 +526,16 @@ export function ServiceForm({
           </Card>
         ) : null}
 
+        {isOfferLocked && mainTab === "quote" ? (
+          <Card className="border-amber-500/30 bg-amber-500/10">
+            <CardContent className="py-3 text-sm text-amber-100">
+              Klient zaakceptował tę ofertę — stawki i przewidywane koszty są zablokowane, aby
+              wycena zgadzała się z tym, co klient zaakceptował. Rzeczywiste koszty uzupełnij w
+              zakładce „Rozliczenie”.
+            </CardContent>
+          </Card>
+        ) : null}
+
         {mainTab === "quote" && step === 0 ? (
           <Card className="min-w-0 overflow-hidden">
             <CardContent className="grid gap-4 py-5 sm:grid-cols-2">
@@ -627,36 +638,38 @@ export function ServiceForm({
         {mainTab === "quote" && step === 1 ? (
           <Card className="min-w-0 overflow-hidden">
             <CardContent className="grid gap-4 py-5 sm:grid-cols-2">
-              <p className="sm:col-span-2 text-sm text-muted">
-                Stawki i progi stref możesz edytować globalnie w{" "}
-                <Link href="/oferty/ustawienia" className="text-accent underline">
-                  ustawieniach stawek serwisu
-                </Link>
-                .
-              </p>
-              {(
-                [
-                  ["supervisionHourly", "Stawka godzinowa nadzoru"],
-                  ["installerHourly", "Stawka godzinowa instalatora"],
-                  ["helperHourly", "Stawka godzinowa pomocnika"],
-                  ["programmerHourly", "Stawka godzinowa programisty"],
-                  ["carPerKm", "Stawka auta za kilometr"],
-                  ["carHourly", "Stawka godziny pracownika w aucie"],
-                  ["accommodationCost", "Koszt noclegu"],
-                ] as const
-              ).map(([key, label]) => (
-                <Field key={key} label={label}>
-                  <NumericInput
-                    value={service.rates[key]}
-                    onChange={(value) =>
-                      setService({
-                        ...service,
-                        rates: { ...service.rates, [key]: value },
-                      })
-                    }
-                  />
-                </Field>
-              ))}
+              <fieldset disabled={isOfferLocked} className="contents">
+                <p className="sm:col-span-2 text-sm text-muted">
+                  Stawki i progi stref możesz edytować globalnie w{" "}
+                  <Link href="/oferty/ustawienia" className="text-accent underline">
+                    ustawieniach stawek serwisu
+                  </Link>
+                  .
+                </p>
+                {(
+                  [
+                    ["supervisionHourly", "Stawka godzinowa nadzoru"],
+                    ["installerHourly", "Stawka godzinowa instalatora"],
+                    ["helperHourly", "Stawka godzinowa pomocnika"],
+                    ["programmerHourly", "Stawka godzinowa programisty"],
+                    ["carPerKm", "Stawka auta za kilometr"],
+                    ["carHourly", "Stawka godziny pracownika w aucie"],
+                    ["accommodationCost", "Koszt noclegu"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <Field key={key} label={label}>
+                    <NumericInput
+                      value={service.rates[key]}
+                      onChange={(value) =>
+                        setService({
+                          ...service,
+                          rates: { ...service.rates, [key]: value },
+                        })
+                      }
+                    />
+                  </Field>
+                ))}
+              </fieldset>
             </CardContent>
           </Card>
         ) : null}
@@ -664,47 +677,50 @@ export function ServiceForm({
         {mainTab === "quote" && step === 2 ? (
           <Card className="min-w-0 overflow-hidden">
             <CardContent className="py-5">
-              <ServiceAiEstimatePanel
-                serviceType={service.serviceType}
-                clientId={service.clientId}
-                projectId={withoutProject ? null : service.projectId}
-                clientLocation={service.client.location}
-                rates={service.rates}
-                zoneSettings={service.zoneSettings}
-                discounts={service.estimateDiscounts}
-                existingRecord={service.aiEstimate}
-                onApply={({ estimate, aiEstimate, titleHint }) => {
-                  setService({
-                    ...service,
-                    estimate,
-                    aiEstimate,
-                    title: service.title.trim() || titleHint || service.title,
-                  });
-                }}
-              />
-              <div className="mt-6 border-t border-border/60 pt-6">
-              <ServiceLineItemsForm
-                title="Przewidywane koszty przed wyjazdem"
-                items={service.estimate}
-                zoneSettings={service.zoneSettings}
-                serviceId={service.id}
-                onChange={(estimate) => setService({ ...service, estimate })}
-              />
-              </div>
-              <div className="mt-6 grid gap-4 border-t border-border/60 pt-6">
-                <h3 className="text-sm font-semibold text-foreground">Rabaty przewidywanych kosztów</h3>
-                <ServiceDiscountsForm
+              <fieldset disabled={isOfferLocked} className="contents">
+                <ServiceAiEstimatePanel
+                  serviceType={service.serviceType}
+                  clientId={service.clientId}
+                  projectId={withoutProject ? null : service.projectId}
+                  clientLocation={service.client.location}
+                  rates={service.rates}
+                  zoneSettings={service.zoneSettings}
                   discounts={service.estimateDiscounts}
-                  onChange={(estimateDiscounts) => setService({ ...service, estimateDiscounts })}
+                  existingRecord={service.aiEstimate}
+                  onApply={({ estimate, aiEstimate, titleHint }) => {
+                    setService({
+                      ...service,
+                      estimate,
+                      aiEstimate,
+                      title: service.title.trim() || titleHint || service.title,
+                    });
+                  }}
                 />
-              </div>
-              <div className="mt-6 border-t border-border/60 pt-6">
-                <ServiceOptionalItemsForm
-                  items={service.optionalItems}
-                  mode="edit"
-                  onChange={(optionalItems) => setService({ ...service, optionalItems })}
+                <div className="mt-6 border-t border-border/60 pt-6">
+                <ServiceLineItemsForm
+                  title="Przewidywane koszty przed wyjazdem"
+                  items={service.estimate}
+                  zoneSettings={service.zoneSettings}
+                  serviceId={service.id}
+                  onChange={(estimate) => setService({ ...service, estimate })}
+                  disabled={isOfferLocked}
                 />
-              </div>
+                </div>
+                <div className="mt-6 grid gap-4 border-t border-border/60 pt-6">
+                  <h3 className="text-sm font-semibold text-foreground">Rabaty przewidywanych kosztów</h3>
+                  <ServiceDiscountsForm
+                    discounts={service.estimateDiscounts}
+                    onChange={(estimateDiscounts) => setService({ ...service, estimateDiscounts })}
+                  />
+                </div>
+                <div className="mt-6 border-t border-border/60 pt-6">
+                  <ServiceOptionalItemsForm
+                    items={service.optionalItems}
+                    mode="edit"
+                    onChange={(optionalItems) => setService({ ...service, optionalItems })}
+                  />
+                </div>
+              </fieldset>
               <div className="mt-6 border-t border-border/60 pt-6">
                 <ServiceCostBreakdownPanel
                   title="Podsumowanie przewidywanych kosztów"
