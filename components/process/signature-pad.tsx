@@ -69,6 +69,12 @@ export function SignaturePad({
     if (!ctx) {
       return;
     }
+    // Canvas nie jest domyślnie fokusowalny — po puszczeniu myszy focus wraca do <body>,
+    // co w oknach modalnych (Radix Dialog, FocusScope) wymusza przeniesienie fokusu
+    // z powrotem do dialogu i wywołuje przemalowanie, które potrafi "wyczyścić" widok
+    // canvasu (podpis znika po puszczeniu myszki — tylko na desktopie, dotyk tego nie robi).
+    // Trzymanie fokusu na samym canvasie przez cały gest zapobiega temu przeskokowi.
+    event.currentTarget.focus({ preventScroll: true });
     event.currentTarget.setPointerCapture(event.pointerId);
     drawingRef.current = true;
     const { x, y } = pointFromEvent(event);
@@ -120,7 +126,8 @@ export function SignaturePad({
       <div className="relative overflow-hidden rounded-xl border-2 border-dashed border-border/70 bg-white">
         <canvas
           ref={canvasRef}
-          style={{ height, touchAction: "none" }}
+          tabIndex={-1}
+          style={{ height, touchAction: "none", outline: "none" }}
           className="block w-full cursor-crosshair"
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}

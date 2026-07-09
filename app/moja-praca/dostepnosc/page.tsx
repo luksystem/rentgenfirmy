@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { CreateLeaveRequestDialog } from "@/components/leave/create-leave-request-dialog";
 import { LeaveStatusBadge } from "@/components/leave/leave-status-badge";
 import { formatDate } from "@/lib/utils";
-import { countLeaveDays } from "@/lib/leave/types";
+import { countLeaveDays, countLeaveWorkingDays } from "@/lib/leave/types";
 import { fetchLeaveCardLink } from "@/lib/supabase/leave-request-repository";
 import { useDictionaryStore } from "@/store/dictionary-store";
 import { useLeaveStore } from "@/store/leave-store";
@@ -89,8 +89,9 @@ export default function AvailabilityPage() {
                   </div>
                   <p className="mt-1 text-sm text-muted">
                     {formatDate(item.startDate)} — {formatDate(item.endDate)} ·{" "}
-                    {countLeaveDays(item.startDate, item.endDate)}{" "}
-                    {countLeaveDays(item.startDate, item.endDate) === 1 ? "dzień" : "dni"}
+                    {countLeaveWorkingDays(item.startDate, item.endDate)}{" "}
+                    {countLeaveWorkingDays(item.startDate, item.endDate) === 1 ? "dzień roboczy" : "dni roboczych"}{" "}
+                    ({countLeaveDays(item.startDate, item.endDate)} kalendarzowych)
                   </p>
                   {item.note ? <p className="mt-1 text-xs text-muted">„{item.note}”</p> : null}
                   {item.status === "rejected" && item.decisionNote ? (

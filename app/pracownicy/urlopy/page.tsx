@@ -10,7 +10,12 @@ import { LeaveStatusBadge } from "@/components/leave/leave-status-badge";
 import { LeaveDecisionDialog } from "@/components/leave/leave-decision-dialog";
 import { formatDate } from "@/lib/utils";
 import { getUserDisplayName, isAdministratorRole } from "@/lib/auth/types";
-import { countLeaveDays, LEAVE_REQUEST_STATUSES, LEAVE_REQUEST_STATUS_LABELS } from "@/lib/leave/types";
+import {
+  countLeaveDays,
+  countLeaveWorkingDays,
+  LEAVE_REQUEST_STATUSES,
+  LEAVE_REQUEST_STATUS_LABELS,
+} from "@/lib/leave/types";
 import type { LeaveRequest, LeaveRequestStatus } from "@/lib/leave/types";
 import { fetchLeaveCardLink } from "@/lib/supabase/leave-request-repository";
 import { useAuthStore } from "@/store/auth-store";
@@ -148,8 +153,9 @@ export default function EmployeeLeavesPage() {
                     </div>
                     <p className="mt-1 text-sm text-muted">
                       {leaveTypeName} · {formatDate(item.startDate)} — {formatDate(item.endDate)} ·{" "}
-                      {countLeaveDays(item.startDate, item.endDate)}{" "}
-                      {countLeaveDays(item.startDate, item.endDate) === 1 ? "dzień" : "dni"}
+                      {countLeaveWorkingDays(item.startDate, item.endDate)}{" "}
+                      {countLeaveWorkingDays(item.startDate, item.endDate) === 1 ? "dzień roboczy" : "dni roboczych"}{" "}
+                      ({countLeaveDays(item.startDate, item.endDate)} kalendarzowych)
                     </p>
                     {item.note ? <p className="mt-1 text-xs text-muted">„{item.note}”</p> : null}
                     {item.status === "rejected" && item.decisionNote ? (

@@ -5,6 +5,7 @@ import { useAgreementsHubRealtime } from "@/hooks/use-agreements-hub-realtime";
 import { useNotificationsRealtime } from "@/hooks/use-notifications-realtime";
 import { useAuthStore } from "@/store/auth-store";
 import { useAgreementHubStore } from "@/store/agreement-hub-store";
+import { useLeaveStore } from "@/store/leave-store";
 import { useNotificationStore } from "@/store/notification-store";
 import { useProcessStore } from "@/store/process-store";
 
@@ -24,6 +25,18 @@ export function NotificationsRealtimeSubscriber() {
     void refreshKanbanNewTaskCount();
     void refreshKanbanOverdueTaskCount();
     void refreshAgreementPendingCounts({ force: true });
+
+    // Wnioski urlopowe: odświeżamy cache tylko jeśli był już wczytany na tej stronie —
+    // dzięki temu decyzja przełożonego/administratora natychmiast pojawia się w historii
+    // pracownika (i odwrotnie, nowy wniosek u przełożonego), bez czekania na przeładowanie.
+    const leaveState = useLeaveStore.getState();
+    if (leaveState.myRequestsHydrated) {
+      void leaveState.ensureMyRequests({ force: true });
+    }
+    if (leaveState.allRequestsHydrated) {
+      void leaveState.ensureAllRequests({ force: true });
+    }
+    void leaveState.refreshPendingForMeCount();
   }, [
     profileId,
     refreshAgreementPendingCounts,

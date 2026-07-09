@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
 import { getUserDisplayName, isAdministratorRole } from "@/lib/auth/types";
-import { countLeaveDays } from "@/lib/leave/types";
+import { countLeaveDays, countLeaveWorkingDays } from "@/lib/leave/types";
 import { generateLeaveCardPdf } from "@/lib/leave/leave-card-pdf";
 import { dispatchLeaveRequestDecidedSms } from "@/lib/leave/leave-sms";
 import { createAllDayCalendarEvent } from "@/lib/google/calendar";
@@ -135,6 +135,7 @@ export async function POST(
 
     const signature = { imageDataUrl, signerName, signedAt: decidedAt };
     const dayCount = countLeaveDays(item.startDate, item.endDate);
+    const workingDayCount = countLeaveWorkingDays(item.startDate, item.endDate);
 
     const templateSettings = await fetchLeaveCardTemplateSettingsServer().catch(() => ({
       path: null,
@@ -150,6 +151,7 @@ export async function POST(
       startDate: item.startDate,
       endDate: item.endDate,
       dayCount,
+      workingDayCount,
       note: item.note,
       status: "approved",
       decidedByName,

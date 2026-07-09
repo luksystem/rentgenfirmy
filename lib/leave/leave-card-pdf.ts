@@ -37,6 +37,7 @@ export type LeaveCardPdfParams = {
   startDate: string;
   endDate: string;
   dayCount: number;
+  workingDayCount: number;
   note: string;
   status: "approved" | "rejected";
   decidedByName: string;
@@ -107,9 +108,9 @@ async function drawInfoAndSignatureBlock(
     ["Typ dostępności", params.leaveTypeName],
     [
       "Okres",
-      `${formatDate(params.startDate)} — ${formatDate(params.endDate)} (${params.dayCount} ${
-        params.dayCount === 1 ? "dzień" : "dni"
-      })`,
+      `${formatDate(params.startDate)} — ${formatDate(params.endDate)} (${params.workingDayCount} ${
+        params.workingDayCount === 1 ? "dzień roboczy" : "dni roboczych"
+      }, ${params.dayCount} kalendarzowych)`,
     ],
     ["Status", params.status === "approved" ? "Zaakceptowany" : "Odrzucony"],
     ["Decyzja podjęta przez", `${params.decidedByName} — ${formatDateTime(params.decidedAt)}`],
