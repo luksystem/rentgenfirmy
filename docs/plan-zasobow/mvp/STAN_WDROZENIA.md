@@ -115,7 +115,7 @@ Na życzenie doprecyzowano zakres przeciągania (pierwotne ograniczenie D10 zost
   po drag — pojawią się dopiero po otwarciu elementu w pełnym panelu edycji.
 - Brak synchronizacji sticky nagłówka dni w osi wertykalnej przy przewijaniu strony (tylko
   pierwsza kolumna jest sticky w poziomie) — do rozważenia przy dużej liczbie wierszy.
-- Brak przełącznika tygodnia/zoomu — tylko widok miesięczny (decyzja produktowa na start).
+- ~~Brak przełącznika tygodnia/zoomu~~ — dodano zoom miesiąc/kwartał/rok, patrz sekcja niżej.
 
 ## Etap 4 (rozszerzenie) — Szablony elementu planu ✅ Zrobione
 
@@ -135,6 +135,43 @@ zamiast wypełniania formularza od nowa:
   automatycznego zastosowania przy otwarciu z toolbara.
 - Szybkie dodawanie: w toolbarach widoku listy i Gantta (`Select` „Szybko z szablonu…”) —
   wybranie szablonu otwiera panel tworzenia z już zastosowanymi wartościami.
+
+### Aktualizacja: zoom Gantta (kwartał/rok) + responsywność mobilna ✅ Zrobione
+
+- **Zoom Gantta** — nowy przełącznik **Miesiąc** (domyślny) / **Kwartał** / **Rok** w toolbarze
+  Gantta, obok przełącznika grupowania wierszy:
+  - `lib/resource-plan/gantt-drag.ts`: `GanttZoom`, `getGanttPeriodRange(zoom, offset)` (zakres
+    dat bieżącego okresu), `formatGanttPeriodLabel` (etykieta „lipiec 2026” / „3. kwartał 2026” /
+    „2026”), `GANTT_ZOOM_DAY_WIDTH_PX` (40/14/5 px na dzień), `GANTT_ZOOM_SNAP_DAYS` (1/7/30 dni —
+    przy kwartale/roku kolumna dnia jest za wąska, by precyzyjnie chwycić konkretny dzień, więc
+    przeciąganie „przeskakuje” tydzień/miesiąc naraz), `groupGanttDaysByMonth` (grupowanie dni po
+    miesiącu do nagłówka, gdy pojedynczy dzień jest za wąski na numer).
+  - `resource-plan-gantt.tsx`: nawigacja „Poprzedni/Następny/Dziś” działa teraz w jednostce
+    aktualnego zoomu (miesiąc/kwartał/rok); zmiana zoomu resetuje przesunięcie okresu do
+    bieżącego. Nagłówek w widoku miesięcznym pokazuje numery dni (jak dotychczas); w
+    kwartale/roku — nazwy miesięcy rozciągnięte na odpowiadającą liczbę kolumn dnia. Kolor tła
+    weekendów/świąt w torach wierszy pozostaje na poziomie dnia niezależnie od zoomu.
+  - Ograniczenie: przy zoomie rocznym (5px/dzień) precyzyjne przeciąganie jest z natury trudniejsze
+    wizualnie — celowo skompensowane grubszym snapowaniem (30 dni), a nie osobną logiką
+    pozycjonowania.
+- **Responsywność mobilna (portret)** — pasek narzędzi Gantta i Listy (nawigacja okresu,
+  przełączniki grupowania/zoomu, szybki wybór szablonu, przycisk „Nowy element planu”) był
+  zbudowany z zagnieżdżonych `flex` bez zawijania — na wąskim telefonie w orientacji pionowej
+  wymuszał scroll/ściśnięcie zamiast obrócenia na poziomo. Naprawiono:
+  - Kontener toolbara: `flex-col` (pionowo, pod sobą) na mobile → `sm:flex-row` od ~640px.
+  - Przyciski „Poprzedni”/„Następny”: ikony `ChevronLeft`/`ChevronRight` zawsze widoczne, etykieta
+    tekstowa chowana na mobile (`hidden sm:inline`) — mniej miejsca na wąskim ekranie.
+  - Przełączniki grupowania/zoomu (`w-fit`), select szablonu i przycisk „Nowy element” pełnej
+    szerokości na mobile (`w-full sm:w-auto`) dla wygodnych celów dotykowych.
+  - Wiersze listy (`resource-plan-list.tsx`): usunięto `hidden sm:block`/`hidden md:block` na
+    zakresie dat i osobie odpowiedzialnej — te informacje były całkowicie niewidoczne na
+    telefonie; teraz zawijają się naturalnie (`flex-wrap`) razem z resztą wiersza.
+  - Panel boczny: wiersz wyboru szablonu (`Select` + przycisk „Zastosuj”) także `flex-col
+    sm:flex-row` — pozostała część formularza już wcześniej korzystała z `grid sm:grid-cols-2/3`,
+    więc na mobile była poprawnie jednokolumnowa.
+  - **Bez zmian, celowo:** sama siatka Gantta (`overflow-x-auto`) nadal przewija się w poziomie na
+    każdej szerokości ekranu — to standardowy, oczekiwany wzorzec dla wykresów Gantta (linia
+    czasu z natury wymaga szerokości większej niż ekran telefonu), nie błąd responsywności.
 
 ## Etap 5 — Walidacje ⚠️ Częściowo zrobione
 

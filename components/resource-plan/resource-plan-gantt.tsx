@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType, PointerEvent as ReactPointerEvent } from "react";
-import { AlertTriangle, Plus, X } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
@@ -14,14 +14,19 @@ import type { ResourcePlanItem } from "@/lib/resource-plan/types";
 import { resourcePlanItemToInput } from "@/lib/resource-plan/types";
 import { validateResourcePlanItem } from "@/lib/resource-plan/validations";
 import {
-  GANTT_DAY_WIDTH_PX,
   GANTT_DRAG_THRESHOLD_PX,
   GANTT_ROW_LANE_HEIGHT_PX,
+  GANTT_ZOOM_DAY_WIDTH_PX,
+  GANTT_ZOOM_SNAP_DAYS,
   applyGanttDrag,
   assignGanttLanes,
   dayOffsetPx,
+  formatGanttPeriodLabel,
+  getGanttPeriodRange,
+  groupGanttDaysByMonth,
   resolveGanttRowId,
   type GanttDragMode,
+  type GanttZoom,
 } from "@/lib/resource-plan/gantt-drag";
 import { useAppStore } from "@/store/app-store";
 import { useDictionaryStore } from "@/store/dictionary-store";
@@ -38,15 +43,13 @@ type GanttRow = {
   sublabel?: string;
 };
 
-const ROW_LABEL_WIDTH_PX = 180;
+const ROW_LABEL_WIDTH_PX = 140;
 
-function startOfMonth(offsetMonths: number) {
-  const date = new Date();
-  date.setDate(1);
-  date.setMonth(date.getMonth() + offsetMonths);
-  date.setHours(0, 0, 0, 0);
-  return date;
-}
+const ZOOM_OPTIONS: { key: GanttZoom; label: string }[] = [
+  { key: "month", label: "Miesiąc" },
+  { key: "quarter", label: "Kwartał" },
+  { key: "year", label: "Rok" },
+];
 
 function addDays(date: Date, days: number) {
   const next = new Date(date);
@@ -54,12 +57,9 @@ function addDays(date: Date, days: number) {
   return next;
 }
 
-function daysInMonth(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-}
-
 export function ResourcePlanGantt() {
-  const [monthOffset, setMonthOffset] = useState(0);
+  const [zoom, setZoom] = useState<GanttZoom>("month");
+  const [periodOffset, setPeriodOffset] = useState(0);
   const [groupBy, setGroupBy] = useState<GroupBy>("user");
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ResourcePlanItem | null>(null);
@@ -68,12 +68,25 @@ export function ResourcePlanGantt() {
   const [dragWarning, setDragWarning] = useState<string | null>(null);
   const [dragHoverRowId, setDragHoverRowId] = useState<string | null>(null);
 
-  const monthStart = useMemo(() => startOfMonth(monthOffset), [monthOffset]);
-  const totalDays = useMemo(() => daysInMonth(monthStart), [monthStart]);
+  const dayWidthPx = GANTT_ZOOM_DAY_WIDTH_PX[zoom];
+  const snapDays = GANTT_ZOOM_SNAP_DAYS[zoom];
+
+  function changeZoom(nextZoom: GanttZoom) {
+    setZoom(nextZoom);
+    setPeriodOffset(0);
+  }
+
+  const monthStart = useMemo(() => getGanttPeriodRange(zoom, periodOffset).start, [zoom, periodOffset]);
+  const periodEnd = useMemo(() => getGanttPeriodRange(zoom, periodOffset).end, [zoom, periodOffset]);
+  const totalDays = useMemo(
+    () => Math.round((periodEnd.getTime() - monthStart.getTime()) / (24 * 60 * 60 * 1000)),
+    [monthStart, periodEnd],
+  );
   const days = useMemo(() => Array.from({ length: totalDays }, (_, index) => addDays(monthStart, index)), [monthStart, totalDays]);
+  const monthGroups = useMemo(() => (zoom === "month" ? [] : groupGanttDaysByMonth(days)), [zoom, days]);
 
   const from = monthStart.toISOString();
-  const to = useMemo(() => new Date(addDays(monthStart, totalDays).getTime() - 1).toISOString(), [monthStart, totalDays]);
+  const to = useMemo(() => new Date(periodEnd.getTime() - 1).toISOString(), [periodEnd]);
 
   const ensureRange = useResourcePlanStore((state) => state.ensureRange);
   const updateItem = useResourcePlanStore((state) => state.updateItem);
@@ -138,7 +151,7 @@ export function ResourcePlanGantt() {
     return visibleItems.filter((item) => item.projectId === rowId);
   }
 
-  const monthLabel = new Intl.DateTimeFormat("pl-PL", { month: "long", year: "numeric" }).format(monthStart);
+  const periodLabel = formatGanttPeriodLabel(zoom, monthStart);
   const todayKey = new Date().toDateString();
 
   function openCreate(startIso?: string, templateId?: string) {
@@ -225,23 +238,42 @@ export function ResourcePlanGantt() {
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Button type="button" size="sm" variant="secondary" onClick={() => setMonthOffset((v) => v - 1)}>
-            ← Poprzedni
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" size="sm" variant="secondary" onClick={() => setPeriodOffset((v) => v - 1)}>
+            <ChevronLeft className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Poprzedni</span>
           </Button>
-          <span className="min-w-[140px] text-center text-sm font-medium capitalize text-foreground">{monthLabel}</span>
-          <Button type="button" size="sm" variant="secondary" onClick={() => setMonthOffset((v) => v + 1)}>
-            Następny →
+          <span className="min-w-[120px] flex-1 text-center text-sm font-medium capitalize text-foreground sm:flex-none">
+            {periodLabel}
+          </span>
+          <Button type="button" size="sm" variant="secondary" onClick={() => setPeriodOffset((v) => v + 1)}>
+            <span className="hidden sm:inline">Następny</span>
+            <ChevronRight className="h-4 w-4 sm:ml-1" />
           </Button>
-          {monthOffset !== 0 ? (
-            <Button type="button" size="sm" variant="ghost" onClick={() => setMonthOffset(0)}>
+          {periodOffset !== 0 ? (
+            <Button type="button" size="sm" variant="ghost" onClick={() => setPeriodOffset(0)}>
               Dziś
             </Button>
           ) : null}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1 rounded-2xl border border-border/70 bg-surface-muted/20 p-1">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex w-fit gap-1 rounded-2xl border border-border/70 bg-surface-muted/20 p-1">
+            {ZOOM_OPTIONS.map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => changeZoom(option.key)}
+                className={cn(
+                  "rounded-xl px-3 py-1.5 text-xs font-medium transition",
+                  zoom === option.key ? "bg-accent text-accent-foreground shadow-soft" : "text-muted hover:bg-surface-muted",
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex w-fit gap-1 rounded-2xl border border-border/70 bg-surface-muted/20 p-1">
             {(["user", "team", "project"] as const).map((key) => (
               <button
                 key={key}
@@ -256,27 +288,29 @@ export function ResourcePlanGantt() {
               </button>
             ))}
           </div>
-          {templateOptions.length > 0 ? (
-            <Select
-              value=""
-              className="h-9 w-auto"
-              onChange={(event) => {
-                const templateId = event.target.value;
-                if (templateId) openCreate(undefined, templateId);
-              }}
-            >
-              <option value="">Szybko z szablonu…</option>
-              {templateOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
-                </option>
-              ))}
-            </Select>
-          ) : null}
-          <Button type="button" onClick={() => openCreate()}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            Nowy element planu
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {templateOptions.length > 0 ? (
+              <Select
+                value=""
+                className="h-9 w-full sm:w-auto"
+                onChange={(event) => {
+                  const templateId = event.target.value;
+                  if (templateId) openCreate(undefined, templateId);
+                }}
+              >
+                <option value="">Szybko z szablonu…</option>
+                {templateOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </Select>
+            ) : null}
+            <Button type="button" className="w-full sm:w-auto" onClick={() => openCreate()}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Nowy element planu
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -305,7 +339,7 @@ export function ResourcePlanGantt() {
         </Card>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border/70 bg-surface">
-          <div style={{ minWidth: ROW_LABEL_WIDTH_PX + totalDays * GANTT_DAY_WIDTH_PX }}>
+          <div style={{ minWidth: ROW_LABEL_WIDTH_PX + totalDays * dayWidthPx }}>
             <div className="flex border-b border-border/60 bg-surface-muted/20">
               <div
                 className="sticky left-0 z-10 shrink-0 border-r border-border/60 bg-surface-muted/20 px-3 py-2 text-xs font-medium text-foreground"
@@ -313,27 +347,41 @@ export function ResourcePlanGantt() {
               >
                 {groupBy === "user" ? "Osoba" : groupBy === "team" ? "Zespół" : "Projekt"}
               </div>
-              <div className="flex">
-                {days.map((day) => {
-                  const isToday = day.toDateString() === todayKey;
-                  const holidayName = getPolishHolidayName(day);
-                  const isDayOff = day.getDay() === 0 || day.getDay() === 6 || Boolean(holidayName);
-                  return (
+              {zoom === "month" ? (
+                <div className="flex">
+                  {days.map((day) => {
+                    const isToday = day.toDateString() === todayKey;
+                    const holidayName = getPolishHolidayName(day);
+                    const isDayOff = day.getDay() === 0 || day.getDay() === 6 || Boolean(holidayName);
+                    return (
+                      <div
+                        key={day.toISOString()}
+                        style={{ width: dayWidthPx }}
+                        title={holidayName ?? undefined}
+                        className={cn(
+                          "shrink-0 border-r border-border/40 py-2 text-center text-[11px] text-muted",
+                          isDayOff && "bg-surface-muted/40 text-muted/70",
+                          isToday && "bg-accent/10 font-semibold text-accent",
+                        )}
+                      >
+                        {day.getDate()}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex">
+                  {monthGroups.map((group, index) => (
                     <div
-                      key={day.toISOString()}
-                      style={{ width: GANTT_DAY_WIDTH_PX }}
-                      title={holidayName ?? undefined}
-                      className={cn(
-                        "shrink-0 border-r border-border/40 py-2 text-center text-[11px] text-muted",
-                        isDayOff && "bg-surface-muted/40 text-muted/70",
-                        isToday && "bg-accent/10 font-semibold text-accent",
-                      )}
+                      key={`${group.label}-${index}`}
+                      style={{ width: group.count * dayWidthPx }}
+                      className="shrink-0 truncate border-r border-border/40 py-2 text-center text-[11px] font-medium capitalize text-muted"
                     >
-                      {day.getDate()}
+                      {group.label}
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {rows.map((row) => {
@@ -355,11 +403,11 @@ export function ResourcePlanGantt() {
                       dragHoverRowId === row.id && "bg-accent/10 ring-1 ring-inset ring-accent/40",
                     )}
                     data-gantt-row-id={row.id}
-                    style={{ width: totalDays * GANTT_DAY_WIDTH_PX, height: rowHeight }}
+                    style={{ width: totalDays * dayWidthPx, height: rowHeight }}
                     onDoubleClick={(event) => {
                       if (event.target !== event.currentTarget) return;
                       const rect = event.currentTarget.getBoundingClientRect();
-                      const dayIndex = Math.floor((event.clientX - rect.left) / GANTT_DAY_WIDTH_PX);
+                      const dayIndex = Math.floor((event.clientX - rect.left) / dayWidthPx);
                       openCreate(addDays(monthStart, dayIndex).toISOString());
                     }}
                   >
@@ -370,7 +418,7 @@ export function ResourcePlanGantt() {
                         return (
                           <div
                             key={day.toISOString()}
-                            style={{ width: GANTT_DAY_WIDTH_PX }}
+                            style={{ width: dayWidthPx }}
                             className={cn(
                               "h-full border-r border-border/20",
                               isDayOff && "bg-surface-muted/25",
@@ -389,6 +437,8 @@ export function ResourcePlanGantt() {
                           item={item}
                           rowId={row.id}
                           monthStart={monthStart}
+                          dayWidthPx={dayWidthPx}
+                          snapDays={snapDays}
                           laneIndex={laneById.get(item.id) ?? 0}
                           color={color}
                           Icon={Icon}
@@ -426,6 +476,8 @@ function GanttBlock({
   item,
   rowId,
   monthStart,
+  dayWidthPx,
+  snapDays,
   laneIndex,
   color,
   Icon,
@@ -438,6 +490,8 @@ function GanttBlock({
   item: ResourcePlanItem;
   rowId: string;
   monthStart: Date;
+  dayWidthPx: number;
+  snapDays: number;
   laneIndex: number;
   color: string;
   Icon: ComponentType<{ className?: string }>;
@@ -462,8 +516,8 @@ function GanttBlock({
   } | null>(null);
 
   const effective = draft ?? { startAt: item.startAt, endAt: item.endAt };
-  const left = dayOffsetPx(monthStart, effective.startAt, GANTT_DAY_WIDTH_PX);
-  const width = Math.max(dayOffsetPx(monthStart, effective.endAt, GANTT_DAY_WIDTH_PX) - left, 8);
+  const left = dayOffsetPx(monthStart, effective.startAt, dayWidthPx);
+  const width = Math.max(dayOffsetPx(monthStart, effective.endAt, dayWidthPx) - left, 8);
   const top = laneIndex * GANTT_ROW_LANE_HEIGHT_PX + 3;
   const height = GANTT_ROW_LANE_HEIGHT_PX - 6;
 
@@ -490,7 +544,8 @@ function GanttBlock({
     if (!drag.moved && Math.max(Math.abs(deltaX), Math.abs(deltaY)) < GANTT_DRAG_THRESHOLD_PX) return;
     drag.moved = true;
 
-    const deltaDays = Math.round(deltaX / GANTT_DAY_WIDTH_PX);
+    const rawDeltaDays = deltaX / dayWidthPx;
+    const deltaDays = Math.round(rawDeltaDays / snapDays) * snapDays;
     setDraft(
       applyGanttDrag({
         mode: drag.mode,

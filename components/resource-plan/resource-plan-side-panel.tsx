@@ -279,7 +279,7 @@ export function ResourcePlanSidePanel({
         <div className="grid flex-1 gap-4 overflow-y-auto pb-4 lg:grid-cols-[2fr_1fr]">
           <div className="grid gap-4">
             {templateOptions.length > 0 ? (
-              <div className="flex items-end gap-2 rounded-xl border border-border/60 bg-surface-muted/10 p-3">
+              <div className="flex flex-col gap-2 rounded-xl border border-border/60 bg-surface-muted/10 p-3 sm:flex-row sm:items-end">
                 <Field label="Szablon elementu planu" className="flex-1">
                   <Select value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.target.value)}>
                     <option value="">Wybierz szablon…</option>
@@ -294,6 +294,7 @@ export function ResourcePlanSidePanel({
                   type="button"
                   variant="secondary"
                   size="sm"
+                  className="w-full sm:w-auto"
                   disabled={!selectedTemplateId}
                   onClick={() => {
                     const template = templateOptions.find((option) => option.id === selectedTemplateId);

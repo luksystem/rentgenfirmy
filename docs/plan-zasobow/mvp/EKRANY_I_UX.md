@@ -48,13 +48,16 @@ strony (domyślnie **Gantt**). Oba czytają z tej samej warstwy danych
 ### 4.1. Widok Gantt (domyślny)
 
 `components/resource-plan/resource-plan-gantt.tsx`. Siatka: sticky pierwsza kolumna (etykieta
-wiersza), przewijana w poziomie oś dni bieżącego miesiąca, nawigacja miesiącami jak w liście.
+wiersza), przewijana w poziomie oś dni bieżącego okresu, nawigacja okresami jak w liście.
 
+- **Przełącznik zoomu** (pill): **Miesiąc** (domyślny, kolumny = dni z numerem) / **Kwartał** /
+  **Rok** (kolumny = dni bez etykiety, nagłówek grupuje po nazwie miesiąca — pojedynczy dzień jest
+  za wąski na numer). Zmiana zoomu resetuje nawigację do bieżącego okresu.
 - **Przełącznik grupowania wierszy** (pill, wzorem zakładek `dictionary-settings-page.tsx`):
   Osoby (domyślnie, z `useProcessStore().teamProfiles`) / Zespoły (słownik `team`) / Projekty
   (aktywne projekty, z podetykietą klienta).
 - **Kolumny dni** z wyróżnieniem weekendów i polskich świąt ustawowych (wyszarzone tło, nazwa
-  święta w tooltipie nagłówka) oraz dzisiejszego dnia (kolor akcentu).
+  święta w tooltipie nagłówka — tylko w zoomie miesięcznym) oraz dzisiejszego dnia (kolor akcentu).
 - **Bloki elementów planu** — kolor i ikona ze statusu (`plan_status`), tooltip (`title`) z
   tytułem, projektem, osobą odpowiedzialną, zespołem i ryzykiem. Pozycja i szerokość liczone
   proporcjonalnie do godzin (nie tylko całymi dniami), więc krótkie zadania w ciągu dnia widać
@@ -68,9 +71,10 @@ wiersza), przewijana w poziomie oś dni bieżącego miesiąca, nawigacja miesią
     projektu, zależnie od aktualnego grupowania) — wiersz-cel jest podświetlony w trakcie
     przeciągania, blok wizualnie „unosi się” nad wiersze,
   - przeciągnięcie 8px uchwytu na lewym/prawym brzegu → zmiana długości (rozciąganie),
-  - snapowanie do pełnych dni; puszczenie zapisuje przez `updateItem` i od razu przelicza
-    ostrzeżenia (`validateResourcePlanItem`), prezentowane w odznaczalnym żółtym banerze —
-    **nigdy nie blokuje zapisu**,
+  - snapowanie zależne od zoomu (pełne dni w miesiącu, tygodnie w kwartale, miesiące w roku —
+    kolumna dnia jest za wąska przy dużym oddaleniu, by chwycić konkretny dzień); puszczenie
+    zapisuje przez `updateItem` i od razu przelicza ostrzeżenia (`validateResourcePlanItem`),
+    prezentowane w odznaczalnym żółtym banerze — **nigdy nie blokuje zapisu**,
   - kliknięcie bez przeciągnięcia → otwiera `ResourcePlanSidePanel` w edycji,
   - dwuklik na pustym miejscu wiersza → nowy element z datą startu odpowiadającą kliknięciu.
 - Selektor „Szybko z szablonu…” + przycisk „Nowy element planu” — jak w widoku listy.
@@ -132,8 +136,22 @@ Przepływ:
 |---|---|---|
 | Kalendarz | `/plan-zasobow/kalendarz` | Widok miesiąc/tydzień, elementy planu jako wydarzenia. W aplikacji nie ma biblioteki kalendarza — do wyboru: własny komponent siatki (wzorem `process-milestone-dates-panel.tsx`, ale z rozkładem miesiąca) albo lekka biblioteka (do ustalenia z właścicielem produktu). |
 | Dashboard modułu | `/plan-zasobow/dashboard` | Karty KPI (Recharts) — obciążenie firmy/zespołu/osoby, liczba konfliktów, zadania zagrożone, wolna zdolność, nieprzypisane projekty/zadania, planowany budżet robocizny. Patrz `STAN_WDROZENIA.md` Etap 6. |
-| Gantt — zoom tydzień/kwartał | rozszerzenie `resource-plan-gantt.tsx` | Obecnie tylko widok miesięczny; przełącznik zakresu jak w widoku listy. |
+| ~~Gantt — zoom tydzień/kwartał~~ | ~~rozszerzenie `resource-plan-gantt.tsx`~~ | Zrobione — zoom miesiąc/kwartał/rok, patrz §4.1 i `STAN_WDROZENIA.md`. |
 
 Kalendarz i dashboard mogą reużyć istniejącą warstwę danych (`store/resource-plan-store.ts`,
 `lib/resource-plan/validations.ts`) bez zmian w modelu — to był jeden z celów budowy MVP jako
 listy/Gantta najpierw.
+
+## 7. Responsywność mobilna (portret)
+
+Toolbary Gantta i listy (`resource-plan-gantt.tsx`, `resource-plan-list.tsx`) oraz wiersz wyboru
+szablonu w panelu bocznym (`resource-plan-side-panel.tsx`) stosują wzorzec: `flex-col` (elementy
+pod sobą) na wąskim ekranie → `sm:flex-row` (elementy w rzędzie) od ~640px wzwyż. Przyciski
+nawigacji okresu chowają etykietę tekstową na mobile (widoczna tylko ikona chevron), a
+przełączniki/select/przycisk główny są pełnej szerokości na mobile dla łatwiejszego dotyku. Wiersze
+listy pokazują teraz zawsze zakres dat i osobę odpowiedzialną (wcześniej ukryte na wąskich
+ekranach) — zawijają się naturalnie razem z resztą treści wiersza.
+
+Sama siatka Gantta pozostaje przewijana w poziomie na każdej szerokości — to zamierzony wzorzec dla
+wykresów Gantta (linia czasu wymaga więcej miejsca niż szerokość ekranu telefonu), nie coś do
+„naprawienia” w pionie.

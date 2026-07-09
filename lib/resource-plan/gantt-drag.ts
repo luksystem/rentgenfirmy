@@ -10,6 +10,74 @@ export const GANTT_MIN_DURATION_MS = 30 * 60_000;
 
 export type GanttDragMode = "move" | "resize-start" | "resize-end";
 
+export type GanttZoom = "month" | "quarter" | "year";
+
+/** Szerokość kolumny dnia w pikselach zależnie od poziomu przybliżenia. */
+export const GANTT_ZOOM_DAY_WIDTH_PX: Record<GanttZoom, number> = {
+  month: GANTT_DAY_WIDTH_PX,
+  quarter: 14,
+  year: 5,
+};
+
+/**
+ * Granularność snapowania przeciągania (w dniach) zależna od zoomu — przy widoku kwartalnym/
+ * rocznym kolumny dnia są za wąskie, by precyzyjnie chwycić konkretny dzień, więc przeciąganie
+ * "przeskakuje" tydzień/miesiąc naraz. Dokładna korekta w dniach jest wciąż możliwa w widoku
+ * miesięcznym.
+ */
+export const GANTT_ZOOM_SNAP_DAYS: Record<GanttZoom, number> = {
+  month: 1,
+  quarter: 7,
+  year: 30,
+};
+
+/** Zakres dat (początek/koniec, wyłącznie) dla danego poziomu zoomu i przesunięcia okresu. */
+export function getGanttPeriodRange(zoom: GanttZoom, periodOffset: number): { start: Date; end: Date } {
+  const now = new Date();
+  if (zoom === "month") {
+    const start = new Date(now.getFullYear(), now.getMonth() + periodOffset, 1);
+    const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+    return { start, end };
+  }
+  if (zoom === "quarter") {
+    const currentQuarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+    const start = new Date(now.getFullYear(), currentQuarterStartMonth + periodOffset * 3, 1);
+    const end = new Date(start.getFullYear(), start.getMonth() + 3, 1);
+    return { start, end };
+  }
+  const start = new Date(now.getFullYear() + periodOffset, 0, 1);
+  const end = new Date(start.getFullYear() + 1, 0, 1);
+  return { start, end };
+}
+
+/** Etykieta bieżącego okresu do wyświetlenia w nawigacji nad Ganttem. */
+export function formatGanttPeriodLabel(zoom: GanttZoom, start: Date): string {
+  if (zoom === "month") {
+    return new Intl.DateTimeFormat("pl-PL", { month: "long", year: "numeric" }).format(start);
+  }
+  if (zoom === "quarter") {
+    const quarterNumber = Math.floor(start.getMonth() / 3) + 1;
+    return `${quarterNumber}. kwartał ${start.getFullYear()}`;
+  }
+  return String(start.getFullYear());
+}
+
+/** Grupuje kolumny dni po miesiącu — używane w nagłówku widoku kwartalnego/rocznego, gdzie
+ *  poszczególne dni są za wąskie, by pokazać numer dnia, więc nagłówek pokazuje nazwy miesięcy. */
+export function groupGanttDaysByMonth(days: Date[]): { label: string; count: number }[] {
+  const groups: { label: string; count: number }[] = [];
+  days.forEach((day) => {
+    const label = new Intl.DateTimeFormat("pl-PL", { month: "short", year: "numeric" }).format(day);
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) {
+      last.count += 1;
+    } else {
+      groups.push({ label, count: 1 });
+    }
+  });
+  return groups;
+}
+
 export function shiftIsoByDays(iso: string, deltaDays: number): string {
   const date = new Date(iso);
   date.setDate(date.getDate() + deltaDays);

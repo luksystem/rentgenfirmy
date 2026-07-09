@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Pencil, Plus } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
@@ -100,14 +100,18 @@ export function ResourcePlanList() {
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
           <Button type="button" size="sm" variant="secondary" onClick={() => setMonthOffset((v) => v - 1)}>
-            ← Poprzedni
+            <ChevronLeft className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Poprzedni</span>
           </Button>
-          <span className="min-w-[140px] text-center text-sm font-medium capitalize text-foreground">{monthLabel}</span>
+          <span className="min-w-[120px] flex-1 text-center text-sm font-medium capitalize text-foreground sm:flex-none">
+            {monthLabel}
+          </span>
           <Button type="button" size="sm" variant="secondary" onClick={() => setMonthOffset((v) => v + 1)}>
-            Następny →
+            <span className="hidden sm:inline">Następny</span>
+            <ChevronRight className="h-4 w-4 sm:ml-1" />
           </Button>
           {monthOffset !== 0 ? (
             <Button type="button" size="sm" variant="ghost" onClick={() => setMonthOffset(0)}>
@@ -115,11 +119,11 @@ export function ResourcePlanList() {
             </Button>
           ) : null}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           {templateOptions.length > 0 ? (
             <Select
               value=""
-              className="h-9 w-auto"
+              className="h-9 w-full sm:w-auto"
               onChange={(event) => {
                 const templateId = event.target.value;
                 if (templateId) openCreate(templateId);
@@ -133,7 +137,7 @@ export function ResourcePlanList() {
               ))}
             </Select>
           ) : null}
-          <Button type="button" onClick={() => openCreate()}>
+          <Button type="button" className="w-full sm:w-auto" onClick={() => openCreate()}>
             <Plus className="mr-1.5 h-4 w-4" />
             Nowy element planu
           </Button>
@@ -180,8 +184,8 @@ export function ResourcePlanList() {
                     {[project?.name, client?.fullName, workType?.name].filter(Boolean).join(" · ") || "—"}
                   </p>
                 </div>
-                <div className="hidden shrink-0 text-xs text-muted sm:block">{formatRange(item.startAt, item.endAt)}</div>
-                <div className="flex shrink-0 items-center gap-1.5">
+                <div className="shrink-0 text-xs text-muted">{formatRange(item.startAt, item.endAt)}</div>
+                <div className="flex shrink-0 flex-wrap items-center gap-1.5">
                   {status ? (
                     <span
                       className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium"
@@ -204,7 +208,7 @@ export function ResourcePlanList() {
                     <span className="rounded-full bg-surface-muted px-2 py-1 text-xs text-muted">{team.name}</span>
                   ) : null}
                 </div>
-                <div className="hidden w-40 shrink-0 truncate text-xs text-muted md:block">
+                <div className="shrink-0 max-w-[10rem] truncate text-xs text-muted">
                   {assignee ? getUserDisplayName(assignee) : "Brak osoby"}
                   {item.participants.length > 0 ? ` +${item.participants.length}` : ""}
                 </div>
