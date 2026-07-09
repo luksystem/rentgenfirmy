@@ -56,6 +56,11 @@ wiersza), przewijana w poziomie oś dni bieżącego okresu, nawigacja okresami j
 - **Przełącznik grupowania wierszy** (pill, wzorem zakładek `dictionary-settings-page.tsx`):
   Osoby (domyślnie, z `useProcessStore().teamProfiles`) / Zespoły (słownik `team`) / Projekty
   (aktywne projekty, z podetykietą klienta).
+- **Sortowanie wierszy w widoku Projekty** — projekty z elementami planu w aktualnie widocznym
+  okresie (miesiąc/kwartał/rok) są zawsze na górze; pozostałe (bez zadań w tym oknie czasowym)
+  poniżej, oddzielone poziomym separatorem z podpisem „Projekty bez elementów planu w tym
+  okresie”. Przełączenie okresu (nawigacja lub zoom) przelicza podział na nowo. Widoki Osoby/
+  Zespoły zachowują dotychczasową, stałą kolejność.
 - **Kolumny dni** z wyróżnieniem weekendów i polskich świąt ustawowych (wyszarzone tło, nazwa
   święta w tooltipie nagłówka — tylko w zoomie miesięcznym) oraz dzisiejszego dnia (kolor akcentu).
 - **Bloki elementów planu** — kolor i ikona ze statusu (`plan_status`), tooltip (`title`) z

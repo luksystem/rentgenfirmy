@@ -129,21 +129,35 @@ export function ResourcePlanGantt() {
 
   const profilesById = useMemo(() => Object.fromEntries(teamProfiles.map((profile) => [profile.id, profile])), [teamProfiles]);
 
-  const rows: GanttRow[] = useMemo(() => {
+  // Dla widoku projektów: te z elementami planu w aktualnie widocznym okresie idą na górę —
+  // łatwiej znaleźć "co się teraz dzieje" bez przeszukiwania całej (potencjalnie długiej) listy
+  // projektów. `activeRowCount` mówi renderowi, po którym wierszu wstawić separator.
+  const { rows, activeRowCount } = useMemo<{ rows: GanttRow[]; activeRowCount: number }>(() => {
     if (groupBy === "user") {
-      return teamProfiles.map((profile) => ({ id: profile.id, label: getUserDisplayName(profile) }));
+      return {
+        rows: teamProfiles.map((profile) => ({ id: profile.id, label: getUserDisplayName(profile) })),
+        activeRowCount: 0,
+      };
     }
     if (groupBy === "team") {
-      return teamOptions.map((team) => ({ id: team.id, label: team.name }));
+      return { rows: teamOptions.map((team) => ({ id: team.id, label: team.name })), activeRowCount: 0 };
     }
-    return projects
-      .filter((project) => project.isActive)
-      .map((project) => ({
-        id: project.id,
-        label: project.name,
-        sublabel: clients.find((client) => client.id === project.clientId)?.fullName,
-      }));
-  }, [groupBy, teamProfiles, teamOptions, projects, clients]);
+
+    const projectIdsWithVisibleItems = new Set(
+      visibleItems.map((item) => item.projectId).filter((id): id is string => Boolean(id)),
+    );
+    const projectRows = projects.filter((project) => project.isActive).map((project) => ({
+      id: project.id,
+      label: project.name,
+      sublabel: clients.find((client) => client.id === project.clientId)?.fullName,
+    }));
+    const withActiveItems: GanttRow[] = [];
+    const withoutActiveItems: GanttRow[] = [];
+    projectRows.forEach((row) => {
+      (projectIdsWithVisibleItems.has(row.id) ? withActiveItems : withoutActiveItems).push(row);
+    });
+    return { rows: [...withActiveItems, ...withoutActiveItems], activeRowCount: withActiveItems.length };
+  }, [groupBy, teamProfiles, teamOptions, projects, clients, visibleItems]);
 
   function itemsForRow(rowId: string): ResourcePlanItem[] {
     if (groupBy === "user") return visibleItems.filter((item) => item.assigneeId === rowId);
@@ -384,74 +398,85 @@ export function ResourcePlanGantt() {
               )}
             </div>
 
-            {rows.map((row) => {
+            {rows.map((row, rowIndex) => {
               const rowItems = itemsForRow(row.id);
               const { laneById, laneCount } = assignGanttLanes(rowItems);
               const rowHeight = laneCount * GANTT_ROW_LANE_HEIGHT_PX;
+              const showInactiveDivider =
+                groupBy === "project" && rowIndex === activeRowCount && activeRowCount > 0 && activeRowCount < rows.length;
               return (
-                <div key={row.id} className="flex border-b border-border/40 last:border-b-0">
-                  <div
-                    className="sticky left-0 z-10 flex shrink-0 flex-col justify-center border-r border-border/60 bg-surface px-3 py-2"
-                    style={{ width: ROW_LABEL_WIDTH_PX, minHeight: rowHeight }}
-                  >
-                    <span className="truncate text-xs font-medium text-foreground">{row.label}</span>
-                    {row.sublabel ? <span className="truncate text-[10px] text-muted">{row.sublabel}</span> : null}
-                  </div>
-                  <div
-                    className={cn(
-                      "relative transition-colors",
-                      dragHoverRowId === row.id && "bg-accent/10 ring-1 ring-inset ring-accent/40",
-                    )}
-                    data-gantt-row-id={row.id}
-                    style={{ width: totalDays * dayWidthPx, height: rowHeight }}
-                    onDoubleClick={(event) => {
-                      if (event.target !== event.currentTarget) return;
-                      const rect = event.currentTarget.getBoundingClientRect();
-                      const dayIndex = Math.floor((event.clientX - rect.left) / dayWidthPx);
-                      openCreate(addDays(monthStart, dayIndex).toISOString());
-                    }}
-                  >
-                    <div className="pointer-events-none absolute inset-0 flex">
-                      {days.map((day) => {
-                        const isToday = day.toDateString() === todayKey;
-                        const isDayOff = day.getDay() === 0 || day.getDay() === 6 || Boolean(getPolishHolidayName(day));
+                <div key={row.id}>
+                  {showInactiveDivider ? (
+                    <div className="flex items-center gap-2 border-y border-border/40 bg-surface-muted/15 px-3 py-1.5 text-[11px] text-muted">
+                      <span className="h-px flex-1 bg-border/50" />
+                      Projekty bez elementów planu w tym okresie
+                      <span className="h-px flex-1 bg-border/50" />
+                    </div>
+                  ) : null}
+                  <div className="flex border-b border-border/40 last:border-b-0">
+                    <div
+                      className="sticky left-0 z-10 flex shrink-0 flex-col justify-center border-r border-border/60 bg-surface px-3 py-2"
+                      style={{ width: ROW_LABEL_WIDTH_PX, minHeight: rowHeight }}
+                    >
+                      <span className="truncate text-xs font-medium text-foreground">{row.label}</span>
+                      {row.sublabel ? <span className="truncate text-[10px] text-muted">{row.sublabel}</span> : null}
+                    </div>
+                    <div
+                      className={cn(
+                        "relative transition-colors",
+                        dragHoverRowId === row.id && "bg-accent/10 ring-1 ring-inset ring-accent/40",
+                      )}
+                      data-gantt-row-id={row.id}
+                      style={{ width: totalDays * dayWidthPx, height: rowHeight }}
+                      onDoubleClick={(event) => {
+                        if (event.target !== event.currentTarget) return;
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        const dayIndex = Math.floor((event.clientX - rect.left) / dayWidthPx);
+                        openCreate(addDays(monthStart, dayIndex).toISOString());
+                      }}
+                    >
+                      <div className="pointer-events-none absolute inset-0 flex">
+                        {days.map((day) => {
+                          const isToday = day.toDateString() === todayKey;
+                          const isDayOff = day.getDay() === 0 || day.getDay() === 6 || Boolean(getPolishHolidayName(day));
+                          return (
+                            <div
+                              key={day.toISOString()}
+                              style={{ width: dayWidthPx }}
+                              className={cn(
+                                "h-full border-r border-border/20",
+                                isDayOff && "bg-surface-muted/25",
+                                isToday && "bg-accent/5",
+                              )}
+                            />
+                          );
+                        })}
+                      </div>
+
+                      {rowItems.map((item) => {
+                        const { color, Icon, label, tooltip } = describeItem(item);
                         return (
-                          <div
-                            key={day.toISOString()}
-                            style={{ width: dayWidthPx }}
-                            className={cn(
-                              "h-full border-r border-border/20",
-                              isDayOff && "bg-surface-muted/25",
-                              isToday && "bg-accent/5",
-                            )}
+                          <GanttBlock
+                            key={item.id}
+                            item={item}
+                            rowId={row.id}
+                            monthStart={monthStart}
+                            dayWidthPx={dayWidthPx}
+                            snapDays={snapDays}
+                            laneIndex={laneById.get(item.id) ?? 0}
+                            color={color}
+                            Icon={Icon}
+                            label={label}
+                            tooltip={tooltip}
+                            onOpen={() => openEdit(item)}
+                            onHoverRowChange={setDragHoverRowId}
+                            onDragCommit={(startAt, endAt, targetRowId) =>
+                              commitDrag(item, row.id, startAt, endAt, targetRowId)
+                            }
                           />
                         );
                       })}
                     </div>
-
-                    {rowItems.map((item) => {
-                      const { color, Icon, label, tooltip } = describeItem(item);
-                      return (
-                        <GanttBlock
-                          key={item.id}
-                          item={item}
-                          rowId={row.id}
-                          monthStart={monthStart}
-                          dayWidthPx={dayWidthPx}
-                          snapDays={snapDays}
-                          laneIndex={laneById.get(item.id) ?? 0}
-                          color={color}
-                          Icon={Icon}
-                          label={label}
-                          tooltip={tooltip}
-                          onOpen={() => openEdit(item)}
-                          onHoverRowChange={setDragHoverRowId}
-                          onDragCommit={(startAt, endAt, targetRowId) =>
-                            commitDrag(item, row.id, startAt, endAt, targetRowId)
-                          }
-                        />
-                      );
-                    })}
                   </div>
                 </div>
               );
