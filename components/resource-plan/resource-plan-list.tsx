@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select } from "@/components/ui/input";
 import { getUserDisplayName } from "@/lib/auth/types";
 import { resolveDictionaryIcon } from "@/lib/resource-plan/icon-options";
 import type { ResourcePlanItem } from "@/lib/resource-plan/types";
@@ -43,6 +44,7 @@ export function ResourcePlanList() {
   const [monthOffset, setMonthOffset] = useState(0);
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ResourcePlanItem | null>(null);
+  const [initialTemplateId, setInitialTemplateId] = useState<string | undefined>(undefined);
 
   const from = startOfMonthIso(monthOffset).toISOString();
   const to = endOfMonthIso(monthOffset).toISOString();
@@ -61,6 +63,7 @@ export function ResourcePlanList() {
   const riskOptions = useDictionaryStore((state) => state.byKey("risk_level"));
   const workTypeOptions = useDictionaryStore((state) => state.byKey("work_type"));
   const teamOptions = useDictionaryStore((state) => state.byKey("team"));
+  const templateOptions = useDictionaryStore((state) => state.byKey("plan_item_template"));
 
   useEffect(() => {
     void ensureDictionaries();
@@ -83,13 +86,15 @@ export function ResourcePlanList() {
     startOfMonthIso(monthOffset),
   );
 
-  function openCreate() {
+  function openCreate(templateId?: string) {
     setEditingItem(null);
+    setInitialTemplateId(templateId);
     setPanelOpen(true);
   }
 
   function openEdit(item: ResourcePlanItem) {
     setEditingItem(item);
+    setInitialTemplateId(undefined);
     setPanelOpen(true);
   }
 
@@ -110,10 +115,29 @@ export function ResourcePlanList() {
             </Button>
           ) : null}
         </div>
-        <Button type="button" onClick={openCreate}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          Nowy element planu
-        </Button>
+        <div className="flex items-center gap-2">
+          {templateOptions.length > 0 ? (
+            <Select
+              value=""
+              className="h-9 w-auto"
+              onChange={(event) => {
+                const templateId = event.target.value;
+                if (templateId) openCreate(templateId);
+              }}
+            >
+              <option value="">Szybko z szablonu…</option>
+              {templateOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </Select>
+          ) : null}
+          <Button type="button" onClick={() => openCreate()}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Nowy element planu
+          </Button>
+        </div>
       </div>
 
       {loading && visibleItems.length === 0 ? (
@@ -199,6 +223,7 @@ export function ResourcePlanList() {
         open={panelOpen}
         onOpenChange={setPanelOpen}
         editingItem={editingItem}
+        initialTemplateId={initialTemplateId}
         onSaved={() => setPanelOpen(false)}
       />
     </div>

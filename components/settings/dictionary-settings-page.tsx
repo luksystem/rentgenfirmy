@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Field, Input, Textarea } from "@/components/ui/input";
+import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
   DICTIONARY_DESCRIPTIONS,
@@ -14,6 +14,11 @@ import {
   type DictionaryKey,
 } from "@/lib/resource-plan/dictionary-types";
 import { ICON_OPTIONS, resolveDictionaryIcon } from "@/lib/resource-plan/icon-options";
+import {
+  readPlanItemTemplateMetadata,
+  writePlanItemTemplateMetadata,
+  type PlanItemTemplateMetadata,
+} from "@/lib/resource-plan/plan-item-template";
 import { useDictionaryStore } from "@/store/dictionary-store";
 
 const COLOR_SWATCHES = [
@@ -45,18 +50,27 @@ function DictionaryItemRow({
   const [draft, setDraft] = useState(item);
   const [expanded, setExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const isTemplate = item.dictionaryKey === "plan_item_template";
+  const [templateMeta, setTemplateMeta] = useState<PlanItemTemplateMetadata>(() =>
+    readPlanItemTemplateMetadata(item.metadata),
+  );
+  const workTypeOptions = useDictionaryStore((state) => state.byKey("work_type"));
+  const riskOptions = useDictionaryStore((state) => state.byKey("risk_level"));
 
   useEffect(() => {
     setDraft(item);
+    setTemplateMeta(readPlanItemTemplateMetadata(item.metadata));
   }, [item]);
 
   const Icon = resolveDictionaryIcon(draft.icon);
+  const originalTemplateMeta = readPlanItemTemplateMetadata(item.metadata);
   const dirty =
     draft.name !== item.name ||
     draft.description !== item.description ||
     draft.color !== item.color ||
     draft.icon !== item.icon ||
-    draft.isActive !== item.isActive;
+    draft.isActive !== item.isActive ||
+    (isTemplate && JSON.stringify(templateMeta) !== JSON.stringify(originalTemplateMeta));
 
   async function handleSave() {
     setSaving(true);
@@ -67,6 +81,7 @@ function DictionaryItemRow({
         color: draft.color,
         icon: draft.icon,
         isActive: draft.isActive,
+        ...(isTemplate ? { metadata: writePlanItemTemplateMetadata(templateMeta) } : {}),
       });
     } finally {
       setSaving(false);
@@ -180,6 +195,107 @@ function DictionaryItemRow({
               })}
             </div>
           </div>
+
+          {isTemplate ? (
+            <div className="grid gap-3 rounded-xl border border-border/60 bg-surface-muted/10 p-3">
+              <p className="text-sm font-medium text-foreground/90">
+                Podpowiedzi wypełniane automatycznie po wybraniu tego szablonu
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Typ pracy">
+                  <Select
+                    value={templateMeta.workTypeItemId ?? ""}
+                    onChange={(event) =>
+                      setTemplateMeta({ ...templateMeta, workTypeItemId: event.target.value || null })
+                    }
+                  >
+                    <option value="">Brak</option>
+                    {workTypeOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Planowane godziny">
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={templateMeta.plannedHours ?? ""}
+                    onChange={(event) =>
+                      setTemplateMeta({
+                        ...templateMeta,
+                        plannedHours: event.target.value === "" ? null : Number(event.target.value),
+                      })
+                    }
+                  />
+                </Field>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field label="Budżet robocizny">
+                  <Input
+                    type="number"
+                    min={0}
+                    value={templateMeta.laborBudget ?? ""}
+                    onChange={(event) =>
+                      setTemplateMeta({
+                        ...templateMeta,
+                        laborBudget: event.target.value === "" ? null : Number(event.target.value),
+                      })
+                    }
+                  />
+                </Field>
+                <Field label="Budżet materiałów">
+                  <Input
+                    type="number"
+                    min={0}
+                    value={templateMeta.materialBudget ?? ""}
+                    onChange={(event) =>
+                      setTemplateMeta({
+                        ...templateMeta,
+                        materialBudget: event.target.value === "" ? null : Number(event.target.value),
+                      })
+                    }
+                  />
+                </Field>
+                <Field label="Budżet dojazdu">
+                  <Input
+                    type="number"
+                    min={0}
+                    value={templateMeta.travelBudget ?? ""}
+                    onChange={(event) =>
+                      setTemplateMeta({
+                        ...templateMeta,
+                        travelBudget: event.target.value === "" ? null : Number(event.target.value),
+                      })
+                    }
+                  />
+                </Field>
+              </div>
+              <Field label="Domyślne ryzyko">
+                <Select
+                  value={templateMeta.riskItemId ?? ""}
+                  onChange={(event) => setTemplateMeta({ ...templateMeta, riskItemId: event.target.value || null })}
+                >
+                  <option value="">Brak</option>
+                  {riskOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Domyślne notatki">
+                <Textarea
+                  value={templateMeta.notes}
+                  onChange={(event) => setTemplateMeta({ ...templateMeta, notes: event.target.value })}
+                  rows={2}
+                />
+              </Field>
+            </div>
+          ) : null}
+
           <div className="flex justify-end">
             <Button type="button" disabled={!dirty || saving} onClick={() => void handleSave()}>
               {saving ? "Zapisywanie…" : "Zapisz"}
@@ -191,7 +307,7 @@ function DictionaryItemRow({
   );
 }
 
-function DictionarySection({ dictionaryKey }: { dictionaryKey: DictionaryKey }) {
+export function DictionarySection({ dictionaryKey }: { dictionaryKey: DictionaryKey }) {
   const items = useDictionaryStore((state) => state.byKey(dictionaryKey, { activeOnly: false }));
   const createItem = useDictionaryStore((state) => state.createItem);
   const updateItem = useDictionaryStore((state) => state.updateItem);

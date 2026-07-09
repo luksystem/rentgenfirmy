@@ -94,15 +94,47 @@
 - Wspólny mapper `resourcePlanItemToInput` (`lib/resource-plan/types.ts`) wydzielony z panelu
   bocznego, żeby Gantt i panel boczny nie duplikowały tej logiki.
 
-**Znane ograniczenia widoku Gantt (do doprecyzowania w kolejnych iteracjach):**
-- Przeciąganie zmienia tylko oś czasu — **nie** zmienia przypisania do wiersza (osoby/zespołu/
-  projektu). Przeniesienie między wierszami wymaga edycji w panelu bocznym.
+### Aktualizacja: przeciąganie między wierszami + święta ✅ Zrobione
+
+Na życzenie doprecyzowano zakres przeciągania (pierwotne ograniczenie D10 zostało zniesione):
+
+- **Przeciąganie między wierszami** (`resolveGanttRowId` w `gantt-drag.ts`) — chwycenie środka
+  bloku i przeniesienie go w pionie do innego wiersza zmienia przypisanie zgodnie z aktualnym
+  grupowaniem (osoba/zespół/projekt). Wiersz pod kursorem wykrywany przez `elementFromPoint` z
+  tymczasowym `pointer-events: none` na przeciąganym bloku (inaczej trafiałby sam w siebie).
+  Podczas przeciągania blok wizualnie „unosi się" nad wiersze (CSS `transform: translateY` +
+  `z-index`), a wiersz-cel jest podświetlony (`dragHoverRowId`). Przy zmianie projektu dodatkowo
+  resetowany jest `processStageId` i aktualizowany `clientId` (jak w panelu bocznym).
+- **Polskie święta ustawowe** (`lib/resource-plan/polish-holidays.ts`, algorytm Meeusa/Jonesa/
+  Butchera dla Wielkanocy) — wyszarzone w nagłówku i tle wierszy tak jak weekendy, z nazwą święta
+  w tooltipie nagłówka dnia.
+
+**Wciąż otwarte:**
 - Walidacja po przeciągnięciu nie ładuje definicji etapu procesu (`stage: null`), więc reguły
   „brak wymaganej roli/kompetencji/lidera/budżetu” (zależne od etapu) nie są sprawdzane od razu
   po drag — pojawią się dopiero po otwarciu elementu w pełnym panelu edycji.
 - Brak synchronizacji sticky nagłówka dni w osi wertykalnej przy przewijaniu strony (tylko
   pierwsza kolumna jest sticky w poziomie) — do rozważenia przy dużej liczbie wierszy.
 - Brak przełącznika tygodnia/zoomu — tylko widok miesięczny (decyzja produktowa na start).
+
+## Etap 4 (rozszerzenie) — Szablony elementu planu ✅ Zrobione
+
+Powtarzalne "gotowce" elementu planu (np. **Produkcja rozdzielni**) do szybkiego wyboru z listy
+zamiast wypełniania formularza od nowa:
+
+- Migracja `104_resource_plan_item_templates.sql` — nowy `dictionary_key = 'plan_item_template'`
+  w istniejącej generycznej tabeli `resource_dictionary_items` (bez nowej tabeli); bogatsze pola
+  szablonu (typ pracy, planowane godziny, budżety robocizny/materiałów/dojazdu, domyślne ryzyko,
+  domyślne notatki) w kolumnie `metadata` (jsonb). Seed demonstracyjny: „Produkcja rozdzielni”.
+- `lib/resource-plan/plan-item-template.ts` — typ `PlanItemTemplateMetadata` +
+  `readPlanItemTemplateMetadata`/`writePlanItemTemplateMetadata` (bezpieczne parsowanie jsonb).
+- Ustawienia (`dictionary-settings-page.tsx`) — zakładka „Szablony elementu planu” z dodatkowymi
+  polami (typ pracy, godziny, 3× budżet, ryzyko, notatki) widocznymi tylko dla tego słownika.
+- Panel boczny (`resource-plan-side-panel.tsx`) — selektor szablonu + przycisk „Zastosuj”
+  (nadpisuje tytuł i pola formularza wartościami z szablonu); dodatkowo `initialTemplateId` do
+  automatycznego zastosowania przy otwarciu z toolbara.
+- Szybkie dodawanie: w toolbarach widoku listy i Gantta (`Select` „Szybko z szablonu…”) —
+  wybranie szablonu otwiera panel tworzenia z już zastosowanymi wartościami.
 
 ## Etap 5 — Walidacje ⚠️ Częściowo zrobione
 

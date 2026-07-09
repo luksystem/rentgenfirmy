@@ -13,6 +13,8 @@ import { fetchProcessTemplateByProjectType, getOrCreateProjectProcess } from "@/
 import type { ResourcePlanItem, ResourcePlanItemInput, ResourcePlanParticipant } from "@/lib/resource-plan/types";
 import { resourcePlanItemToInput } from "@/lib/resource-plan/types";
 import { validateResourcePlanItem } from "@/lib/resource-plan/validations";
+import { readPlanItemTemplateMetadata } from "@/lib/resource-plan/plan-item-template";
+import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
 import { useDictionaryStore } from "@/store/dictionary-store";
 import { useResourcePlanStore } from "@/store/resource-plan-store";
 import { useUserResourceStore } from "@/store/user-resource-store";
@@ -65,12 +67,15 @@ export function ResourcePlanSidePanel({
   onOpenChange,
   editingItem,
   defaultStartIso,
+  initialTemplateId,
   onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editingItem: ResourcePlanItem | null;
   defaultStartIso?: string;
+  /** Szablon do automatycznego zastosowania przy otwarciu (szybkie dodawanie z toolbara). */
+  initialTemplateId?: string;
   onSaved?: (item: ResourcePlanItem) => void;
 }) {
   const projects = useAppStore((state) => state.projects);
@@ -102,13 +107,40 @@ export function ResourcePlanSidePanel({
   const [newParticipantId, setNewParticipantId] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+
+  const templateOptions = useDictionaryStore((state) => state.byKey("plan_item_template"));
+
+  function applyTemplate(template: DictionaryItem) {
+    const meta = readPlanItemTemplateMetadata(template.metadata);
+    setInput((current) => ({
+      ...current,
+      title: template.name,
+      workTypeItemId: meta.workTypeItemId,
+      plannedHours: meta.plannedHours ?? current.plannedHours,
+      laborBudget: meta.laborBudget,
+      materialBudget: meta.materialBudget,
+      travelBudget: meta.travelBudget,
+      riskItemId: meta.riskItemId,
+      riskNote: meta.riskItemId ? current.riskNote : "",
+      notes: meta.notes || current.notes,
+    }));
+  }
 
   useEffect(() => {
     if (!open) return;
     setInput(editingItem ? resourcePlanItemToInput(editingItem) : defaultInput(defaultStartIso));
+    setSelectedTemplateId("");
     void ensureDictionaries();
     void loadTeamProfiles();
   }, [open, editingItem, defaultStartIso, ensureDictionaries, loadTeamProfiles]);
+
+  useEffect(() => {
+    if (!open || editingItem || !initialTemplateId) return;
+    const template = templateOptions.find((option) => option.id === initialTemplateId);
+    if (template) applyTemplate(template);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editingItem, initialTemplateId, templateOptions.length]);
 
   useEffect(() => {
     const ids = input.assigneeId ? [input.assigneeId, ...input.participants.map((p) => p.userId)] : input.participants.map((p) => p.userId);
@@ -246,6 +278,33 @@ export function ResourcePlanSidePanel({
 
         <div className="grid flex-1 gap-4 overflow-y-auto pb-4 lg:grid-cols-[2fr_1fr]">
           <div className="grid gap-4">
+            {templateOptions.length > 0 ? (
+              <div className="flex items-end gap-2 rounded-xl border border-border/60 bg-surface-muted/10 p-3">
+                <Field label="Szablon elementu planu" className="flex-1">
+                  <Select value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.target.value)}>
+                    <option value="">Wybierz szablon…</option>
+                    {templateOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={!selectedTemplateId}
+                  onClick={() => {
+                    const template = templateOptions.find((option) => option.id === selectedTemplateId);
+                    if (template) applyTemplate(template);
+                  }}
+                >
+                  Zastosuj
+                </Button>
+              </div>
+            ) : null}
+
             <Field label="Tytuł">
               <Input value={input.title} onChange={(event) => setInput({ ...input, title: event.target.value })} />
             </Field>

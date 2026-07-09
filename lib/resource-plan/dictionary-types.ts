@@ -13,6 +13,8 @@ export const DICTIONARY_KEYS = [
   "risk_level",
   "absence_type",
   "budget_type",
+  "plan_item_template",
+  "leave_type",
 ] as const;
 
 export type DictionaryKey = (typeof DICTIONARY_KEYS)[number];
@@ -28,6 +30,8 @@ export const DICTIONARY_LABELS: Record<DictionaryKey, string> = {
   risk_level: "Poziomy ryzyka",
   absence_type: "Typy nieobecności",
   budget_type: "Typy budżetów",
+  plan_item_template: "Szablony elementu planu",
+  leave_type: "Typy dostępności / urlopów",
 };
 
 export const DICTIONARY_DESCRIPTIONS: Record<DictionaryKey, string> = {
@@ -41,6 +45,10 @@ export const DICTIONARY_DESCRIPTIONS: Record<DictionaryKey, string> = {
   risk_level: "Poziomy ryzyka etapów i elementów planu.",
   absence_type: "Rodzaje nieobecności użytkowników (urlop, choroba, delegacja...).",
   budget_type: "Kategorie budżetowe wykorzystywane w planowaniu kosztów.",
+  plan_item_template:
+    "Powtarzalne gotowce elementu planu (np. „Produkcja rozdzielni”) — szybki wybór z listy zamiast wypełniania od nowa.",
+  leave_type:
+    "Rodzaje wniosków w module „Moja praca” → Dostępność (urlop wypoczynkowy, zwolnienie lekarskie, urlop na żądanie...). Podlegają procesowi akceptacji przez przełożonego.",
 };
 
 export type DictionaryItem = {

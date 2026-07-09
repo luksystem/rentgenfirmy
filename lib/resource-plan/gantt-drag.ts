@@ -55,6 +55,21 @@ export function applyGanttDrag(params: {
 }
 
 /**
+ * Rozpoznaje wiersz (osoba/zespół/projekt) znajdujący się wizualnie pod kursorem — używane przy
+ * przeciąganiu kafelka między wierszami. Element przeciągany trzeba wykluczyć z testu trafień
+ * (tymczasowo `pointer-events: none`), bo inaczej `elementFromPoint` zwróci sam kafelek, a nie
+ * wiersz, który jest pod nim wizualnie (kafelek jedzie razem z kursorem przez CSS transform,
+ * więc jego pozycja w DOM się nie zmienia).
+ */
+export function resolveGanttRowId(clientX: number, clientY: number, excludeElement: HTMLElement | null): string | null {
+  const previousPointerEvents = excludeElement?.style.pointerEvents;
+  if (excludeElement) excludeElement.style.pointerEvents = "none";
+  const target = document.elementFromPoint(clientX, clientY);
+  if (excludeElement) excludeElement.style.pointerEvents = previousPointerEvents ?? "";
+  return target?.closest("[data-gantt-row-id]")?.getAttribute("data-gantt-row-id") ?? null;
+}
+
+/**
  * Przydział elementów do "torów" (lanes) w ramach jednego wiersza, tak by nakładające się
  * czasowo elementy renderowały się jedno pod drugim, a nie jedno na drugim — czyni konflikty
  * widoczne na pierwszy rzut oka, zamiast wymagać kliknięcia w każdy blok.

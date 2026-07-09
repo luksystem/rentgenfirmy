@@ -53,7 +53,8 @@ wiersza), przewijana w poziomie oś dni bieżącego miesiąca, nawigacja miesią
 - **Przełącznik grupowania wierszy** (pill, wzorem zakładek `dictionary-settings-page.tsx`):
   Osoby (domyślnie, z `useProcessStore().teamProfiles`) / Zespoły (słownik `team`) / Projekty
   (aktywne projekty, z podetykietą klienta).
-- **Kolumny dni** z wyróżnieniem weekendów (tło) i dzisiejszego dnia (kolor akcentu).
+- **Kolumny dni** z wyróżnieniem weekendów i polskich świąt ustawowych (wyszarzone tło, nazwa
+  święta w tooltipie nagłówka) oraz dzisiejszego dnia (kolor akcentu).
 - **Bloki elementów planu** — kolor i ikona ze statusu (`plan_status`), tooltip (`title`) z
   tytułem, projektem, osobą odpowiedzialną, zespołem i ryzykiem. Pozycja i szerokość liczone
   proporcjonalnie do godzin (nie tylko całymi dniami), więc krótkie zadania w ciągu dnia widać
@@ -62,14 +63,17 @@ wiersza), przewijana w poziomie oś dni bieżącego miesiąca, nawigacja miesią
   pod drugim (algorytm zachłanny `assignGanttLanes`), więc konflikt jest widoczny bez klikania.
 - **Interakcje** (Pointer Events, `setPointerCapture` — ten sam wzorzec co dotykowy drag w
   `kanban-task-card.tsx`):
-  - przeciągnięcie środka bloku → zmiana terminu (przesunięcie, zachowana długość),
+  - przeciągnięcie środka bloku w poziomie → zmiana terminu (przesunięcie, zachowana długość),
+  - przeciągnięcie środka bloku w pionie do innego wiersza → zmiana przypisania (osoby/zespołu/
+    projektu, zależnie od aktualnego grupowania) — wiersz-cel jest podświetlony w trakcie
+    przeciągania, blok wizualnie „unosi się” nad wiersze,
   - przeciągnięcie 8px uchwytu na lewym/prawym brzegu → zmiana długości (rozciąganie),
   - snapowanie do pełnych dni; puszczenie zapisuje przez `updateItem` i od razu przelicza
     ostrzeżenia (`validateResourcePlanItem`), prezentowane w odznaczalnym żółtym banerze —
     **nigdy nie blokuje zapisu**,
   - kliknięcie bez przeciągnięcia → otwiera `ResourcePlanSidePanel` w edycji,
   - dwuklik na pustym miejscu wiersza → nowy element z datą startu odpowiadającą kliknięciu.
-- Przycisk „Nowy element planu” — jak w widoku listy.
+- Selektor „Szybko z szablonu…” + przycisk „Nowy element planu” — jak w widoku listy.
 
 ### 4.2. Widok listy
 
@@ -85,8 +89,17 @@ wiersza), przewijana w poziomie oś dni bieżącego miesiąca, nawigacja miesią
   - osoba odpowiedzialna (`getUserDisplayName`) + licznik dodatkowych uczestników (`+N`),
   - ikona ostrzeżenia (`AlertTriangle`, żółta) gdy **brak** przypisanej osoby i uczestników,
     inaczej ikona edycji (`Pencil`).
-- Przycisk „Nowy element planu” otwiera panel w trybie tworzenia.
+- Selektor „Szybko z szablonu…” (widoczny, gdy istnieje ≥1 szablon) + przycisk „Nowy element
+  planu” otwierają panel w trybie tworzenia.
 - Stan pusty: karta z komunikatem „Brak zaplanowanych elementów w tym miesiącu.”
+
+### 4.3. Szablony elementu planu
+
+Zakładka „Szablony elementu planu” w `dictionary-settings-page.tsx` (osobne pola: typ pracy,
+planowane godziny, 3× budżet, domyślne ryzyko, domyślne notatki — poza standardowymi
+nazwą/opisem/kolorem/ikoną edytowanymi dla wszystkich słowników). W panelu bocznym i toolbarach
+Gantta/listy dostępny szybki wybór szablonu, który wypełnia formularz nowego elementu jednym
+kliknięciem (np. „Produkcja rozdzielni” — patrz `STAN_WDROZENIA.md`).
 
 ## 5. Panel boczny tworzenia/edycji elementu planu
 
@@ -119,7 +132,6 @@ Przepływ:
 |---|---|---|
 | Kalendarz | `/plan-zasobow/kalendarz` | Widok miesiąc/tydzień, elementy planu jako wydarzenia. W aplikacji nie ma biblioteki kalendarza — do wyboru: własny komponent siatki (wzorem `process-milestone-dates-panel.tsx`, ale z rozkładem miesiąca) albo lekka biblioteka (do ustalenia z właścicielem produktu). |
 | Dashboard modułu | `/plan-zasobow/dashboard` | Karty KPI (Recharts) — obciążenie firmy/zespołu/osoby, liczba konfliktów, zadania zagrożone, wolna zdolność, nieprzypisane projekty/zadania, planowany budżet robocizny. Patrz `STAN_WDROZENIA.md` Etap 6. |
-| Gantt — przeciąganie między wierszami | rozszerzenie `resource-plan-gantt.tsx` | Zmiana przypisania osoby/zespołu przez przeciągnięcie bloku do innego wiersza (obecnie zmienia tylko oś czasu — patrz `STAN_WDROZENIA.md`, znane ograniczenia). |
 | Gantt — zoom tydzień/kwartał | rozszerzenie `resource-plan-gantt.tsx` | Obecnie tylko widok miesięczny; przełącznik zakresu jak w widoku listy. |
 
 Kalendarz i dashboard mogą reużyć istniejącą warstwę danych (`store/resource-plan-store.ts`,

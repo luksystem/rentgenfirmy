@@ -150,8 +150,10 @@ manager = „koordynator”), zdefiniowana w `098_resource_plan_dictionaries.sql
 | UI admina | `components/admin/user-resource-profile-editor.tsx` (w `user-admin-panel.tsx`) | edycja ról/kompetencji/zespołów/certyfikatów/nieobecności użytkownika |
 | UI szablonu procesu | `components/process/process-stage-resource-panel.tsx` (w `process-template-editor.tsx`) | edycja wymagań zasobowych etapu |
 | UI planu | `components/resource-plan/resource-plan-list.tsx` + `resource-plan-side-panel.tsx` | widok listy + panel boczny tworzenia/edycji z ostrzeżeniami |
-| Logika drag/resize Gantta | `lib/resource-plan/gantt-drag.ts` | przeliczanie pikseli↔dni, snapowanie, przydział „torów” dla nakładających się elementów (`assignGanttLanes`) |
-| UI Gantta | `components/resource-plan/resource-plan-gantt.tsx` | widok Gantt (domyślny w `/plan-zasobow`) — przeciąganie/rozciąganie elementów na osi czasu, grupowanie wierszy (osoby/zespoły/projekty) |
+| Logika drag/resize Gantta | `lib/resource-plan/gantt-drag.ts` | przeliczanie pikseli↔dni, snapowanie, przydział „torów” dla nakładających się elementów (`assignGanttLanes`), wykrywanie wiersza pod kursorem (`resolveGanttRowId`) |
+| Polskie święta | `lib/resource-plan/polish-holidays.ts` | wyszarzenie dni ustawowo wolnych w Gantcie (algorytm liczony lokalnie, bez zależności zewnętrznej) |
+| Szablony elementu planu | `lib/resource-plan/plan-item-template.ts` | typ i (de)serializacja `metadata` pozycji słownika `plan_item_template` (typ pracy, godziny, budżety, ryzyko, notatki) |
+| UI Gantta | `components/resource-plan/resource-plan-gantt.tsx` | widok Gantt (domyślny w `/plan-zasobow`) — przeciąganie/rozciąganie elementów na osi czasu i między wierszami, grupowanie wierszy (osoby/zespoły/projekty), szybkie dodawanie z szablonu |
 
 ## 6. Model walidacji — ostrzeżenia, nie blokady (Etap 5)
 
@@ -177,8 +179,11 @@ ostrzeżeniami — koordynator może **świadomie** przejść dalej.
 | D7 | UI edytora słowników | Wzorzec `field-options-editor.tsx` (karty, sortowanie strzałkami), nie drag&drop — zgodnie z resztą aplikacji (brak biblioteki DnD poza natywnym HTML5 w Kanbanie). |
 | D8 | Panel boczny | Radix `Dialog` w wariancie fullscreen (wzorem `process-item-panel.tsx`), nie dedykowany Drawer/Sheet — taki komponent nie istnieje w aplikacji. |
 | D9 | Mechanizm drag w Gantcie | Pointer Events (`onPointerDown/Move/Up` + `setPointerCapture`) z pozycjonowaniem absolutnym w pikselach, nie natywny HTML5 Drag&Drop — HTML5 DnD nie daje płynnej, ciągłej informacji o pozycji podczas przeciągania (potrzebnej do dowolnego przesuwania/rozciągania na osi czasu), a Pointer Events już są używane w aplikacji do dotykowego przeciągania w Kanbanie (`kanban-task-card.tsx`). |
-| D10 | Zakres przeciągania w Gantcie | Przeciąganie zmienia tylko `startAt`/`endAt` (oś czasu), nie zmienia wiersza (osoby/zespołu/projektu) — zgodnie z pierwotnym zakresem prośby („przesuwanie na osi czasu”). Zmiana przypisania wymaga edycji w panelu bocznym. |
+| D10 | ~~Zakres przeciągania w Gantcie~~ (zmienione, patrz D12) | ~~Przeciąganie zmienia tylko `startAt`/`endAt`~~ — rozszerzone na życzenie o przeciąganie między wierszami. |
 | D11 | Snapowanie i grupowanie Gantta | Snapowanie do pełnych dni, domyślne grupowanie wierszy po osobach z przełącznikiem na zespoły/projekty, widok tylko miesięczny (bez zoomu tydzień/kwartał) — decyzje produktowe potwierdzone z właścicielem przed implementacją. |
+| D12 | Przeciąganie między wierszami | Wykrywanie wiersza pod kursorem przez `document.elementFromPoint` z tymczasowym `pointer-events: none` na przeciąganym bloku (żeby hit-test nie trafił w sam blok, który wizualnie „jedzie” z kursorem przez `transform: translateY`, a DOM-owo pozostaje w swoim oryginalnym wierszu — pozycjonowanie CSS bez portalu, bo żaden wiersz nie ma `overflow: hidden`). Zmiana wiersza = zmiana pola zależnego od aktualnego grupowania (assigneeId/teamItemId/projectId); zmiana projektu dodatkowo resetuje `processStageId` i przelicza `clientId`. |
+| D13 | Szablony elementu planu | Przechowywane jako pozycje istniejącego generycznego słownika (`dictionary_key = 'plan_item_template'`), nie nowa tabela — rozszerzone pola (typ pracy, godziny, budżety, ryzyko, notatki) w już istniejącej kolumnie `metadata` (jsonb). Wybrane, bo backend (repozytorium, store, CRUD, RLS) jest już w 100% generyczny i gotowy; jedyny koszt to niestandardowy formularz w ustawieniach dla tego jednego klucza słownika. |
+| D14 | Polskie święta w Gantcie | Wyliczane lokalnie (`lib/resource-plan/polish-holidays.ts`, algorytm Meeusa/Jonesa/Butchera dla Wielkanocy), nie z zewnętrznego API/biblioteki — święta ustawowe w Polsce zmieniają się rzadko i są w pełni wyznaczalne algorytmicznie, więc nie wymagają zależności sieciowej ani utrzymania tabeli dat. |
 
 ## 8. Co dalej
 

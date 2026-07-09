@@ -5,9 +5,11 @@ import type { ComponentType, PointerEvent as ReactPointerEvent } from "react";
 import { AlertTriangle, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { getUserDisplayName } from "@/lib/auth/types";
 import { resolveDictionaryIcon } from "@/lib/resource-plan/icon-options";
+import { getPolishHolidayName } from "@/lib/resource-plan/polish-holidays";
 import type { ResourcePlanItem } from "@/lib/resource-plan/types";
 import { resourcePlanItemToInput } from "@/lib/resource-plan/types";
 import { validateResourcePlanItem } from "@/lib/resource-plan/validations";
@@ -18,6 +20,7 @@ import {
   applyGanttDrag,
   assignGanttLanes,
   dayOffsetPx,
+  resolveGanttRowId,
   type GanttDragMode,
 } from "@/lib/resource-plan/gantt-drag";
 import { useAppStore } from "@/store/app-store";
@@ -61,7 +64,9 @@ export function ResourcePlanGantt() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ResourcePlanItem | null>(null);
   const [defaultStartIso, setDefaultStartIso] = useState<string | undefined>(undefined);
+  const [initialTemplateId, setInitialTemplateId] = useState<string | undefined>(undefined);
   const [dragWarning, setDragWarning] = useState<string | null>(null);
+  const [dragHoverRowId, setDragHoverRowId] = useState<string | null>(null);
 
   const monthStart = useMemo(() => startOfMonth(monthOffset), [monthOffset]);
   const totalDays = useMemo(() => daysInMonth(monthStart), [monthStart]);
@@ -85,6 +90,7 @@ export function ResourcePlanGantt() {
   const statusOptions = useDictionaryStore((state) => state.byKey("plan_status"));
   const riskOptions = useDictionaryStore((state) => state.byKey("risk_level"));
   const teamOptions = useDictionaryStore((state) => state.byKey("team"));
+  const templateOptions = useDictionaryStore((state) => state.byKey("plan_item_template"));
 
   const ensureProfiles = useUserResourceStore((state) => state.ensureProfiles);
   const resourceProfilesById = useUserResourceStore((state) => state.byUser);
@@ -135,21 +141,43 @@ export function ResourcePlanGantt() {
   const monthLabel = new Intl.DateTimeFormat("pl-PL", { month: "long", year: "numeric" }).format(monthStart);
   const todayKey = new Date().toDateString();
 
-  function openCreate(startIso?: string) {
+  function openCreate(startIso?: string, templateId?: string) {
     setEditingItem(null);
     setDefaultStartIso(startIso);
+    setInitialTemplateId(templateId);
     setPanelOpen(true);
   }
 
   function openEdit(item: ResourcePlanItem) {
     setEditingItem(item);
     setDefaultStartIso(undefined);
+    setInitialTemplateId(undefined);
     setPanelOpen(true);
   }
 
-  async function commitDrag(item: ResourcePlanItem, nextStartAt: string, nextEndAt: string) {
+  async function commitDrag(
+    item: ResourcePlanItem,
+    currentRowId: string,
+    nextStartAt: string,
+    nextEndAt: string,
+    targetRowId: string | null,
+  ) {
     const baseInput = resourcePlanItemToInput(item);
     const nextInput = { ...baseInput, startAt: nextStartAt, endAt: nextEndAt };
+
+    if (targetRowId && targetRowId !== currentRowId) {
+      if (groupBy === "user") {
+        nextInput.assigneeId = targetRowId;
+      } else if (groupBy === "team") {
+        nextInput.teamItemId = targetRowId;
+      } else {
+        const targetProject = projects.find((project) => project.id === targetRowId);
+        nextInput.projectId = targetRowId;
+        nextInput.clientId = targetProject?.clientId ?? null;
+        nextInput.processStageId = null;
+      }
+    }
+
     try {
       await updateItem(item.id, nextInput);
       const warnings = validateResourcePlanItem({
@@ -228,6 +256,23 @@ export function ResourcePlanGantt() {
               </button>
             ))}
           </div>
+          {templateOptions.length > 0 ? (
+            <Select
+              value=""
+              className="h-9 w-auto"
+              onChange={(event) => {
+                const templateId = event.target.value;
+                if (templateId) openCreate(undefined, templateId);
+              }}
+            >
+              <option value="">Szybko z szablonu…</option>
+              {templateOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </Select>
+          ) : null}
           <Button type="button" onClick={() => openCreate()}>
             <Plus className="mr-1.5 h-4 w-4" />
             Nowy element planu
@@ -246,8 +291,10 @@ export function ResourcePlanGantt() {
       ) : null}
 
       <p className="text-xs text-muted">
-        Przeciągnij blok, aby zmienić termin. Chwyć lewy/prawy brzeg, aby zmienić długość. Kliknięcie otwiera edycję,
-        dwuklik na pustym miejscu w wierszu tworzy nowy element z tą datą startu.
+        Przeciągnij blok w poziomie, aby zmienić termin, lub w pionie do innego wiersza, aby zmienić{" "}
+        {groupBy === "user" ? "osobę" : groupBy === "team" ? "zespół" : "projekt"}. Chwyć lewy/prawy brzeg, aby
+        zmienić długość. Kliknięcie otwiera edycję, dwuklik na pustym miejscu w wierszu tworzy nowy element z tą
+        datą startu.
       </p>
 
       {loading && visibleItems.length === 0 ? (
@@ -269,14 +316,16 @@ export function ResourcePlanGantt() {
               <div className="flex">
                 {days.map((day) => {
                   const isToday = day.toDateString() === todayKey;
-                  const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                  const holidayName = getPolishHolidayName(day);
+                  const isDayOff = day.getDay() === 0 || day.getDay() === 6 || Boolean(holidayName);
                   return (
                     <div
                       key={day.toISOString()}
                       style={{ width: GANTT_DAY_WIDTH_PX }}
+                      title={holidayName ?? undefined}
                       className={cn(
                         "shrink-0 border-r border-border/40 py-2 text-center text-[11px] text-muted",
-                        isWeekend && "bg-surface-muted/30",
+                        isDayOff && "bg-surface-muted/40 text-muted/70",
                         isToday && "bg-accent/10 font-semibold text-accent",
                       )}
                     >
@@ -301,7 +350,11 @@ export function ResourcePlanGantt() {
                     {row.sublabel ? <span className="truncate text-[10px] text-muted">{row.sublabel}</span> : null}
                   </div>
                   <div
-                    className="relative"
+                    className={cn(
+                      "relative transition-colors",
+                      dragHoverRowId === row.id && "bg-accent/10 ring-1 ring-inset ring-accent/40",
+                    )}
+                    data-gantt-row-id={row.id}
                     style={{ width: totalDays * GANTT_DAY_WIDTH_PX, height: rowHeight }}
                     onDoubleClick={(event) => {
                       if (event.target !== event.currentTarget) return;
@@ -313,14 +366,14 @@ export function ResourcePlanGantt() {
                     <div className="pointer-events-none absolute inset-0 flex">
                       {days.map((day) => {
                         const isToday = day.toDateString() === todayKey;
-                        const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                        const isDayOff = day.getDay() === 0 || day.getDay() === 6 || Boolean(getPolishHolidayName(day));
                         return (
                           <div
                             key={day.toISOString()}
                             style={{ width: GANTT_DAY_WIDTH_PX }}
                             className={cn(
                               "h-full border-r border-border/20",
-                              isWeekend && "bg-surface-muted/15",
+                              isDayOff && "bg-surface-muted/25",
                               isToday && "bg-accent/5",
                             )}
                           />
@@ -334,6 +387,7 @@ export function ResourcePlanGantt() {
                         <GanttBlock
                           key={item.id}
                           item={item}
+                          rowId={row.id}
                           monthStart={monthStart}
                           laneIndex={laneById.get(item.id) ?? 0}
                           color={color}
@@ -341,7 +395,10 @@ export function ResourcePlanGantt() {
                           label={label}
                           tooltip={tooltip}
                           onOpen={() => openEdit(item)}
-                          onDragCommit={(startAt, endAt) => commitDrag(item, startAt, endAt)}
+                          onHoverRowChange={setDragHoverRowId}
+                          onDragCommit={(startAt, endAt, targetRowId) =>
+                            commitDrag(item, row.id, startAt, endAt, targetRowId)
+                          }
                         />
                       );
                     })}
@@ -358,6 +415,7 @@ export function ResourcePlanGantt() {
         onOpenChange={setPanelOpen}
         editingItem={editingItem}
         defaultStartIso={defaultStartIso}
+        initialTemplateId={initialTemplateId}
         onSaved={() => setPanelOpen(false)}
       />
     </div>
@@ -366,6 +424,7 @@ export function ResourcePlanGantt() {
 
 function GanttBlock({
   item,
+  rowId,
   monthStart,
   laneIndex,
   color,
@@ -373,9 +432,11 @@ function GanttBlock({
   label,
   tooltip,
   onOpen,
+  onHoverRowChange,
   onDragCommit,
 }: {
   item: ResourcePlanItem;
+  rowId: string;
   monthStart: Date;
   laneIndex: number;
   color: string;
@@ -383,14 +444,18 @@ function GanttBlock({
   label: string;
   tooltip: string;
   onOpen: () => void;
-  onDragCommit: (startAt: string, endAt: string) => Promise<void>;
+  onHoverRowChange: (rowId: string | null) => void;
+  onDragCommit: (startAt: string, endAt: string, targetRowId: string | null) => Promise<void>;
 }) {
   const [draft, setDraft] = useState<{ startAt: string; endAt: string } | null>(null);
+  const [dragTranslateY, setDragTranslateY] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const blockRef = useRef<HTMLDivElement | null>(null);
   const dragInfoRef = useRef<{
     mode: GanttDragMode;
     pointerId: number;
     startClientX: number;
+    startClientY: number;
     originalStartAt: string;
     originalEndAt: string;
     moved: boolean;
@@ -409,6 +474,7 @@ function GanttBlock({
       mode,
       pointerId: event.pointerId,
       startClientX: event.clientX,
+      startClientY: event.clientY,
       originalStartAt: item.startAt,
       originalEndAt: item.endAt,
       moved: false,
@@ -419,10 +485,12 @@ function GanttBlock({
   function handlePointerMove(event: ReactPointerEvent<HTMLElement>) {
     const drag = dragInfoRef.current;
     if (!drag || event.pointerId !== drag.pointerId) return;
-    const deltaPx = event.clientX - drag.startClientX;
-    if (!drag.moved && Math.abs(deltaPx) < GANTT_DRAG_THRESHOLD_PX) return;
+    const deltaX = event.clientX - drag.startClientX;
+    const deltaY = drag.mode === "move" ? event.clientY - drag.startClientY : 0;
+    if (!drag.moved && Math.max(Math.abs(deltaX), Math.abs(deltaY)) < GANTT_DRAG_THRESHOLD_PX) return;
     drag.moved = true;
-    const deltaDays = Math.round(deltaPx / GANTT_DAY_WIDTH_PX);
+
+    const deltaDays = Math.round(deltaX / GANTT_DAY_WIDTH_PX);
     setDraft(
       applyGanttDrag({
         mode: drag.mode,
@@ -431,6 +499,12 @@ function GanttBlock({
         deltaDays,
       }),
     );
+
+    if (drag.mode === "move") {
+      setDragTranslateY(deltaY);
+      const hoveredRowId = resolveGanttRowId(event.clientX, event.clientY, blockRef.current);
+      onHoverRowChange(hoveredRowId);
+    }
   }
 
   async function handlePointerUp(event: ReactPointerEvent<HTMLElement>) {
@@ -438,6 +512,8 @@ function GanttBlock({
     if (!drag || event.pointerId !== drag.pointerId) return;
     dragInfoRef.current = null;
     setDragging(false);
+    setDragTranslateY(0);
+    onHoverRowChange(null);
     if ((event.target as Element).hasPointerCapture?.(event.pointerId)) {
       (event.target as Element).releasePointerCapture(event.pointerId);
     }
@@ -449,9 +525,13 @@ function GanttBlock({
     }
 
     const next = draft;
-    if (next && (next.startAt !== item.startAt || next.endAt !== item.endAt)) {
+    const targetRowId = drag.mode === "move" ? resolveGanttRowId(event.clientX, event.clientY, blockRef.current) : null;
+    const dateChanged = Boolean(next) && (next!.startAt !== item.startAt || next!.endAt !== item.endAt);
+    const rowChanged = Boolean(targetRowId) && targetRowId !== rowId;
+
+    if (dateChanged || rowChanged) {
       try {
-        await onDragCommit(next.startAt, next.endAt);
+        await onDragCommit(next?.startAt ?? item.startAt, next?.endAt ?? item.endAt, rowChanged ? targetRowId : null);
       } finally {
         setDraft(null);
       }
@@ -462,6 +542,7 @@ function GanttBlock({
 
   return (
     <div
+      ref={blockRef}
       className="absolute overflow-hidden rounded-md border px-1.5 text-[11px] font-medium shadow-sm select-none"
       style={{
         left,
@@ -473,6 +554,9 @@ function GanttBlock({
         color,
         cursor: dragging ? "grabbing" : "grab",
         touchAction: "none",
+        transform: dragTranslateY ? `translateY(${dragTranslateY}px)` : undefined,
+        zIndex: dragging ? 50 : undefined,
+        boxShadow: dragging ? "0 8px 20px -4px rgb(0 0 0 / 0.35)" : undefined,
       }}
       onPointerDown={(event) => beginDrag(event, "move")}
       onPointerMove={handlePointerMove}
