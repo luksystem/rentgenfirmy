@@ -30,6 +30,7 @@ import {
   Receipt,
   Settings,
   Shield,
+  Target,
   Users,
   CalendarRange,
   X,
@@ -114,6 +115,7 @@ const navGroupsBase: NavGroup[] = [
     items: [
       { href: "/przestrzenie", label: "Przestrzenie", icon: LayoutDashboard },
       { href: "/tablice-wdrozen", label: "Tablice wdrożeń", icon: LayoutGrid },
+      { href: "/tablice-celow", label: "Tablice celów", icon: Target },
       { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
     ],
   },
