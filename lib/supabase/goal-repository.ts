@@ -559,6 +559,24 @@ export async function fetchGoalLinkCounts(
   return out;
 }
 
+// ── AI-doradca ──────────────────────────────────────────────────────────────────
+
+/** Oznacza propozycję AI jako zaakceptowaną i wiąże ją z utworzonym celem (audyt trail). */
+export async function markGoalAiSuggestionAccepted(
+  suggestionId: string,
+  goalId: string,
+): Promise<void> {
+  const supabase = getSupabase();
+  const { error } = await supabase
+    .from("goal_ai_suggestions")
+    .update({ accepted: true, goal_id: goalId })
+    .eq("id", suggestionId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 // ── Rozliczenie i cykliczność ───────────────────────────────────────────────────
 
 export async function settleGoal(input: {
@@ -633,6 +651,24 @@ export async function settleGoal(input: {
         }),
       ),
     ]);
+
+    if (nextRecurringGoal.ownerId) {
+      // Powiadomienie jest efektem pobocznym — brak/błąd tabeli nie może zablokować rozliczenia celu.
+      try {
+        await getSupabase().from("user_notifications").insert({
+          id: crypto.randomUUID(),
+          profile_id: nextRecurringGoal.ownerId,
+          kind: "goal_recurring_created",
+          title: `Nowy okres celu «${nextRecurringGoal.name}» został utworzony`,
+          body: `Okres: ${nextRecurringGoal.periodStart} — ${nextRecurringGoal.periodEnd}.`,
+          link_url: `/tablice-celow/${nextRecurringGoal.boardId}/${nextRecurringGoal.id}`,
+          source_id: `goal_recurring_created:${nextRecurringGoal.id}`,
+          created_at: new Date().toISOString(),
+        });
+      } catch {
+        // ignorujemy błąd powiadomienia — nie blokuje rozliczenia celu
+      }
+    }
   }
 
   return { goal, nextRecurringGoal };

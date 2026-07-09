@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { GoalAiReviewPanel } from "@/components/goals/goal-ai-review-panel";
 import {
   GOAL_LEVEL_LABELS,
   GOAL_PERIOD_TYPE_LABELS,
@@ -62,6 +63,7 @@ const TABS: Array<{ key: TabKey; label: string }> = [
 export function GoalDetailView({ goalId }: { goalId: string }) {
   const profile = useAuthStore((state) => state.profile);
   const teamProfiles = useGoalStore((state) => state.teamProfiles);
+  const boards = useGoalStore((state) => state.boards);
   const getOwnerName = useGoalStore((state) => state.getOwnerName);
   const upsertGoalInStore = useGoalStore((state) => state.upsertGoalInStore);
 
@@ -164,6 +166,7 @@ export function GoalDetailView({ goalId }: { goalId: string }) {
           methodology={methodology}
           ownerName={getOwnerName(goal.ownerId)}
           teamProfiles={teamProfiles}
+          boardKind={boards.find((entry) => entry.id === goal.boardId)?.kind ?? ""}
           onChanged={syncGoal}
           currentProfileId={profile?.id ?? null}
         />
@@ -211,6 +214,7 @@ function OverviewTab({
   methodology,
   ownerName,
   teamProfiles,
+  boardKind,
   onChanged,
   currentProfileId,
 }: {
@@ -218,6 +222,7 @@ function OverviewTab({
   methodology: GoalMethodology | null;
   ownerName: string;
   teamProfiles: ReturnType<typeof useGoalStore.getState>["teamProfiles"];
+  boardKind: string;
   onChanged: (goal: Goal) => void;
   currentProfileId: string | null;
 }) {
@@ -230,6 +235,20 @@ function OverviewTab({
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function handleApplyAiStatusSuggestion(outcome: GoalReviewOutcome) {
+    const nextStatus: GoalStatus = outcome === "on_track" ? "in_progress" : "at_risk";
+    try {
+      const result = await updateGoalProgress(goal.id, {
+        status: nextStatus,
+        note: `AI (przegląd): sugerowany wynik — ${GOAL_REVIEW_OUTCOME_LABELS[outcome]}.`,
+        authorId: currentProfileId,
+      });
+      onChanged(result.goal);
+    } catch {
+      // brak akcji — użytkownik może wprowadzić zmianę statusu ręcznie w edycji
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -282,6 +301,16 @@ function OverviewTab({
               />
             </div>
             <p className="text-sm font-semibold text-foreground">{goal.progressPercent}% realizacji</p>
+
+            {goal.status !== "settled" && goal.status !== "cancelled" ? (
+              <GoalAiReviewPanel
+                goalId={goal.id}
+                description={goal.description}
+                level={goal.level}
+                boardKind={boardKind}
+                onApplyStatusSuggestion={handleApplyAiStatusSuggestion}
+              />
+            ) : null}
 
             {methodology ? (
               <div className="rounded-xl border border-border/70 bg-surface-muted/20 p-3">

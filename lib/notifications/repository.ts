@@ -1,4 +1,9 @@
-import type { MentionCandidate, UserNotification, UserNotificationKind } from "@/lib/notifications/types";
+import {
+  USER_NOTIFICATION_KINDS,
+  type MentionCandidate,
+  type UserNotification,
+  type UserNotificationKind,
+} from "@/lib/notifications/types";
 import { resolveMentionTargets } from "@/lib/notifications/mentions";
 import {
   NOTIFICATION_BODY_MAX_LENGTH,
@@ -22,20 +27,11 @@ type NotificationRow = {
 };
 
 function rowToNotification(row: NotificationRow): UserNotification {
-  const kind: UserNotification["kind"] =
-    row.kind === "kanban_mention"
-      ? "kanban_mention"
-      : row.kind === "warranty_expiring"
-        ? "warranty_expiring"
-        : row.kind === "agreement_client_created"
-          ? "agreement_client_created"
-          : row.kind === "client_stage_rating"
-            ? "client_stage_rating"
-            : row.kind === "service_intake_preliminary_offer"
-              ? "service_intake_preliminary_offer"
-              : row.kind === "inspection_billing_due"
-                ? "inspection_billing_due"
-                : "kanban_new_activity";
+  const kind: UserNotification["kind"] = (
+    USER_NOTIFICATION_KINDS as readonly string[]
+  ).includes(row.kind)
+    ? (row.kind as UserNotificationKind)
+    : "kanban_new_activity";
 
   return {
     id: row.id,

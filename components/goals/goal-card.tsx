@@ -3,12 +3,24 @@
 import { Calendar, ClipboardList, Repeat, ShieldAlert, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
+  GOAL_BOARD_COLUMNS,
   GOAL_LEVEL_LABELS,
   GOAL_PERIOD_TYPE_LABELS,
   GOAL_PRIORITY_LABELS,
+  GOAL_STATUS_LABELS,
   type Goal,
+  type GoalStatus,
 } from "@/lib/goals/types";
 import { cn, formatDate } from "@/lib/utils";
+
+const STATUS_SELECT_TONE: Record<GoalStatus, string> = {
+  planned: "border-border/70 bg-surface-muted/60 text-muted",
+  in_progress: "border-sky-500/40 bg-sky-500/10 text-sky-200",
+  at_risk: "border-rose-500/40 bg-rose-500/10 text-rose-200",
+  on_hold: "border-amber-500/40 bg-amber-500/10 text-amber-200",
+  settled: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
+  cancelled: "border-border/70 bg-surface-muted/60 text-muted",
+};
 
 type GoalCardMeta = {
   linkedTaskCount: number;
@@ -31,6 +43,7 @@ export function GoalCard({
   draggable,
   onDragStart,
   onDragEnd,
+  onStatusChange,
 }: {
   goal: Goal;
   meta?: GoalCardMeta;
@@ -39,6 +52,7 @@ export function GoalCard({
   draggable?: boolean;
   onDragStart?: (event: React.DragEvent) => void;
   onDragEnd?: () => void;
+  onStatusChange?: (status: GoalStatus) => void;
 }) {
   const reviewOverdue = meta?.nextReviewAt ? new Date(meta.nextReviewAt).getTime() < Date.now() : false;
 
@@ -64,6 +78,26 @@ export function GoalCard({
         />
       </div>
       <p className="mt-1 text-[11px] font-semibold text-muted">{goal.progressPercent}% realizacji</p>
+
+      {onStatusChange ? (
+        <select
+          value={goal.status}
+          draggable={false}
+          onClick={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
+          onChange={(event) => onStatusChange(event.target.value as GoalStatus)}
+          className={cn(
+            "mt-2 w-full cursor-pointer rounded-lg border px-2 py-1 text-[11px] font-semibold outline-none transition focus:ring-2 focus:ring-accent/20",
+            STATUS_SELECT_TONE[goal.status],
+          )}
+        >
+          {[...GOAL_BOARD_COLUMNS, "cancelled" as const].map((status) => (
+            <option key={status} value={status}>
+              {GOAL_STATUS_LABELS[status]}
+            </option>
+          ))}
+        </select>
+      ) : null}
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <Badge tone="blue">{GOAL_LEVEL_LABELS[goal.level]}</Badge>

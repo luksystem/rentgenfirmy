@@ -6,6 +6,10 @@ export const USER_NOTIFICATION_KINDS = [
   "client_stage_rating",
   "service_intake_preliminary_offer",
   "inspection_billing_due",
+  "goal_review_due",
+  "goal_period_ending",
+  "goal_at_risk",
+  "goal_recurring_created",
 ] as const;
 
 export type UserNotificationKind = (typeof USER_NOTIFICATION_KINDS)[number];

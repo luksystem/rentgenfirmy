@@ -5,9 +5,11 @@ import type { UserProfile } from "@/lib/auth/types";
 import { fetchTeamProfiles, profileToOptionLabel } from "@/lib/supabase/profile-repository";
 import {
   createGoalBoard,
+  deleteGoalBoard,
   fetchGoalBoardKinds,
   fetchGoalBoards,
   fetchGoalCountsByBoard,
+  updateGoalBoard,
 } from "@/lib/supabase/goal-board-repository";
 import { fetchGoalMethodologies } from "@/lib/supabase/goal-methodology-repository";
 import {
@@ -26,6 +28,13 @@ type GoalCardMeta = {
   openProblemCount: number;
   nextReviewAt: string | null;
 };
+
+// Stabilne referencje dla fallbacków w selektorach Zustand (np. `state.goalsByBoard[id] ?? EMPTY_GOALS`).
+// Literał `[]`/`{}` w selektorze tworzy nową referencję przy każdym wywołaniu, co przy
+// `useSyncExternalStore` (React 18/19) powoduje nieskończoną pętlę renderowania (React #185) —
+// patrz analogiczny fix w `store/resource-plan-store.ts` / `store/dictionary-store.ts`.
+export const EMPTY_GOALS: Goal[] = [];
+export const EMPTY_GOAL_CARD_META: Record<string, GoalCardMeta> = {};
 
 type GoalStore = {
   hydrated: boolean;
@@ -46,6 +55,8 @@ type GoalStore = {
   refresh: () => Promise<void>;
   ensureBoardGoals: (boardId: string, options?: { force?: boolean }) => Promise<void>;
   createBoard: (input: { kind: string; name: string; description?: string }) => Promise<GoalBoard>;
+  updateBoard: (boardId: string, input: { name?: string; description?: string }) => Promise<GoalBoard>;
+  removeBoard: (boardId: string) => Promise<void>;
   createGoal: (input: Parameters<typeof goalToInsertRow>[0]) => Promise<Goal>;
   removeGoal: (boardId: string, goalId: string) => Promise<void>;
   moveGoalStatus: (goal: Goal, status: GoalStatus, authorId: string | null) => Promise<void>;
@@ -152,6 +163,25 @@ export const useGoalStore = create<GoalStore>((set, get) => ({
     const board = await createGoalBoard(input);
     set({ boards: [board, ...get().boards] });
     return board;
+  },
+
+  updateBoard: async (boardId, input) => {
+    const updated = await updateGoalBoard(boardId, input);
+    set({ boards: get().boards.map((board) => (board.id === boardId ? updated : board)) });
+    return updated;
+  },
+
+  removeBoard: async (boardId) => {
+    await deleteGoalBoard(boardId);
+    const { [boardId]: _removedGoals, ...restGoalsByBoard } = get().goalsByBoard;
+    const { [boardId]: _removedMeta, ...restMeta } = get().goalCardMetaByBoard;
+    const { [boardId]: _removedCounts, ...restCounts } = get().boardCounts;
+    set({
+      boards: get().boards.filter((board) => board.id !== boardId),
+      goalsByBoard: restGoalsByBoard,
+      goalCardMetaByBoard: restMeta,
+      boardCounts: restCounts,
+    });
   },
 
   createGoal: async (input) => {

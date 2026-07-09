@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { GoalAiAdvisorPanel } from "@/components/goals/goal-ai-advisor-panel";
 import {
   GOAL_LEVEL_LABELS,
   GOAL_LEVELS,
@@ -18,11 +19,13 @@ import {
   GOAL_PERIOD_TYPES,
   GOAL_PRIORITIES,
   GOAL_PRIORITY_LABELS,
+  type GoalAiAdviceResponse,
   type GoalLevel,
   type GoalPeriodType,
   type GoalPriority,
 } from "@/lib/goals/types";
 import { profileToOptionLabel } from "@/lib/supabase/profile-repository";
+import { addGoalInitiative, upsertGoalKpi, markGoalAiSuggestionAccepted } from "@/lib/supabase/goal-repository";
 import { useAuthStore } from "@/store/auth-store";
 import { useGoalStore } from "@/store/goal-store";
 
@@ -58,7 +61,10 @@ export function CreateGoalDialog({ boardId }: { boardId: string }) {
   const profile = useAuthStore((state) => state.profile);
   const teamProfiles = useGoalStore((state) => state.teamProfiles);
   const methodologies = useGoalStore((state) => state.methodologies);
+  const boards = useGoalStore((state) => state.boards);
   const createGoal = useGoalStore((state) => state.createGoal);
+
+  const board = useMemo(() => boards.find((entry) => entry.id === boardId) ?? null, [boards, boardId]);
 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -72,6 +78,7 @@ export function CreateGoalDialog({ boardId }: { boardId: string }) {
   const [isRecurring, setIsRecurring] = useState(false);
   const [methodologyId, setMethodologyId] = useState("");
   const [methodologyFields, setMethodologyFields] = useState<Record<string, string>>({});
+  const [pendingAiAdvice, setPendingAiAdvice] = useState<GoalAiAdviceResponse | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +86,14 @@ export function CreateGoalDialog({ boardId }: { boardId: string }) {
     () => methodologies.find((entry) => entry.code === methodologyId) ?? null,
     [methodologies, methodologyId],
   );
+
+  function handleApplyAiAdvice(advice: GoalAiAdviceResponse) {
+    if (advice.recommendedMethodologyCode) {
+      setMethodologyId(advice.recommendedMethodologyCode);
+    }
+    setMethodologyFields((prev) => ({ ...prev, ...advice.structure.fields }));
+    setPendingAiAdvice(advice);
+  }
 
   function handlePeriodTypeChange(next: GoalPeriodType) {
     setPeriodType(next);
@@ -95,7 +110,7 @@ export function CreateGoalDialog({ boardId }: { boardId: string }) {
     setSaving(true);
     setError(null);
     try {
-      await createGoal({
+      const goal = await createGoal({
         boardId,
         level,
         name: name.trim(),
@@ -111,10 +126,52 @@ export function CreateGoalDialog({ boardId }: { boardId: string }) {
         isRecurring,
         createdBy: profile?.id ?? null,
       });
+
+      if (pendingAiAdvice) {
+        const structure = pendingAiAdvice.structure;
+        await Promise.all([
+          markGoalAiSuggestionAccepted(pendingAiAdvice.suggestionId, goal.id),
+          ...structure.kpis.map((kpi, index) =>
+            upsertGoalKpi({
+              goalId: goal.id,
+              name: kpi.name,
+              unit: kpi.unit,
+              targetValue: kpi.target,
+              currentValue: 0,
+              source: "system",
+              position: index,
+            }),
+          ),
+          ...structure.initiatives.map((title) =>
+            addGoalInitiative({ goalId: goal.id, kind: "initiative", title, source: "ai" }),
+          ),
+          ...structure.tasks.map((title) =>
+            addGoalInitiative({ goalId: goal.id, kind: "task", title, source: "ai" }),
+          ),
+          ...structure.resources.map((title) =>
+            addGoalInitiative({ goalId: goal.id, kind: "resource", title, source: "ai" }),
+          ),
+          ...(structure.budgetEstimate.amount > 0
+            ? [
+                addGoalInitiative({
+                  goalId: goal.id,
+                  kind: "budget",
+                  title: `Budżet: ${structure.budgetEstimate.amount} ${structure.budgetEstimate.currency}`,
+                  description: structure.budgetEstimate.note,
+                  estimatedValue: structure.budgetEstimate.amount,
+                  estimatedUnit: structure.budgetEstimate.currency,
+                  source: "ai" as const,
+                }),
+              ]
+            : []),
+        ]);
+      }
+
       setOpen(false);
       setName("");
       setDescription("");
       setMethodologyFields({});
+      setPendingAiAdvice(null);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Nie udało się utworzyć celu.");
     } finally {
@@ -146,6 +203,14 @@ export function CreateGoalDialog({ boardId }: { boardId: string }) {
               placeholder="Np. Chcemy skrócić czas realizacji projektu z 8 do 6 miesięcy."
             />
           </Field>
+
+          <GoalAiAdvisorPanel
+            description={`${name}\n${description}`.trim()}
+            level={level}
+            boardKind={board?.kind ?? ""}
+            methodologies={methodologies}
+            onApply={handleApplyAiAdvice}
+          />
 
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label="Poziom">

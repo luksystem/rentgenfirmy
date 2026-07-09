@@ -22,14 +22,14 @@ import { CreateGoalDialog } from "@/components/goals/create-goal-dialog";
 import { GOAL_BOARD_COLUMNS, GOAL_STATUS_LABELS, type Goal, type GoalStatus } from "@/lib/goals/types";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
-import { useGoalStore } from "@/store/goal-store";
+import { useGoalStore, EMPTY_GOALS, EMPTY_GOAL_CARD_META } from "@/store/goal-store";
 
 export function GoalBoardView({ boardId }: { boardId: string }) {
   const router = useRouter();
   const profile = useAuthStore((state) => state.profile);
   const board = useGoalStore((state) => state.boards.find((entry) => entry.id === boardId));
-  const goals = useGoalStore((state) => state.goalsByBoard[boardId] ?? []);
-  const meta = useGoalStore((state) => state.goalCardMetaByBoard[boardId] ?? {});
+  const goals = useGoalStore((state) => state.goalsByBoard[boardId] ?? EMPTY_GOALS);
+  const meta = useGoalStore((state) => state.goalCardMetaByBoard[boardId] ?? EMPTY_GOAL_CARD_META);
   const isLoading = useGoalStore((state) => state.loadingBoardIds[boardId] ?? false);
   const ensureBoardGoals = useGoalStore((state) => state.ensureBoardGoals);
   const moveGoalStatus = useGoalStore((state) => state.moveGoalStatus);
@@ -65,7 +65,7 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
 
   const maxColumnCount = Math.max(1, ...GOAL_BOARD_COLUMNS.map((status) => grouped.get(status)?.length ?? 0));
 
-  async function handleDrop(goalId: string, status: GoalStatus) {
+  async function handleStatusChange(goalId: string, status: GoalStatus) {
     const goal = goals.find((entry) => entry.id === goalId);
     if (!goal || goal.status === status) {
       return;
@@ -154,7 +154,7 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
                 event.preventDefault();
                 const goalId = event.dataTransfer.getData("text/plain") || dragGoalId;
                 if (goalId) {
-                  void handleDrop(goalId, column.id);
+                  void handleStatusChange(goalId, column.id);
                 }
               }}
             >
@@ -192,6 +192,7 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
                         setDragOverColumn(null);
                       }}
                       onOpen={() => router.push(`/tablice-celow/${boardId}/${goal.id}`)}
+                      onStatusChange={(status) => void handleStatusChange(goal.id, status)}
                     />
                   ))
                 )}

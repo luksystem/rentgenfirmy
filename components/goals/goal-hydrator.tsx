@@ -2,7 +2,10 @@
 
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { ensureGoalActivityNotifications } from "@/lib/notifications/goal-activity";
+import { useAuthStore } from "@/store/auth-store";
 import { useGoalStore } from "@/store/goal-store";
+import { useNotificationStore } from "@/store/notification-store";
 
 export function GoalHydrator({ children }: { children: React.ReactNode }) {
   const hydrate = useGoalStore((state) => state.hydrate);
@@ -13,6 +16,20 @@ export function GoalHydrator({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     void hydrate();
   }, [hydrate]);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+    void ensureGoalActivityNotifications()
+      .then(() => {
+        const profileId = useAuthStore.getState().profile?.id;
+        if (profileId) {
+          void useNotificationStore.getState().refreshFromRealtime(profileId);
+        }
+      })
+      .catch(() => undefined);
+  }, [hydrated]);
 
   if (isLoading && !hydrated) {
     return (

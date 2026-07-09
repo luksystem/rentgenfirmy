@@ -305,6 +305,38 @@ export type GoalInput = Omit<
   | "nextReviewAt"
 >;
 
+// ── AI-doradca (Faza 5, docs/cele/mvp/AI_I_METODOLOGIE.md) ─────────────────────
+
+export type GoalAiSuggestRequest = {
+  description: string;
+  trigger: "create" | "review";
+  goalId?: string;
+  boardKind?: string;
+  level?: GoalLevel;
+};
+
+export type GoalAiAdviceAlternative = { code: string; whenBetter: string };
+
+/** Sugerowana korekta w trakcie trwania celu (tylko trigger = "review", Faza 6). */
+export type GoalAiOngoingAdjustment = {
+  summary: string;
+  recommendedActions: string[];
+  statusSuggestion: GoalReviewOutcome | null;
+};
+
+/** Odpowiedź endpointu POST /api/goals/ai/suggest — surowa propozycja AI przed akceptacją. */
+export type GoalAiAdviceResponse = {
+  suggestionId: string;
+  recommendedMethodologyCode: string | null;
+  recommendedMethodologyName: string | null;
+  justification: string;
+  alternatives: GoalAiAdviceAlternative[];
+  isTooVague: boolean;
+  vagueWarningReason: string | null;
+  structure: GoalAiSuggestedStructure;
+  ongoingAdjustment: GoalAiOngoingAdjustment | null;
+};
+
 export function isGoalOverdue(goal: Pick<Goal, "periodEnd" | "status">) {
   if (goal.status === "settled" || goal.status === "cancelled") {
     return false;
