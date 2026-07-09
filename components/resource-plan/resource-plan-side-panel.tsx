@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Plus, ShieldAlert, Trash2 } from "lucide-react";
+import { AlertTriangle, Plus, ShieldAlert, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
@@ -13,6 +13,8 @@ import { fetchProcessTemplateByProjectType, getOrCreateProjectProcess } from "@/
 import type { ResourcePlanItem, ResourcePlanItemInput, ResourcePlanParticipant } from "@/lib/resource-plan/types";
 import { resourcePlanItemToInput } from "@/lib/resource-plan/types";
 import { validateResourcePlanItem } from "@/lib/resource-plan/validations";
+import type { ResourcePlanCandidate } from "@/lib/resource-plan/suggestions";
+import { getActiveSuggestionProvider } from "@/lib/resource-plan/suggestion-provider";
 import { readPlanItemTemplateMetadata } from "@/lib/resource-plan/plan-item-template";
 import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
 import { useDictionaryStore } from "@/store/dictionary-store";
@@ -147,6 +149,15 @@ export function ResourcePlanSidePanel({
     if (ids.length) void ensureProfiles(ids);
   }, [input.assigneeId, input.participants, ensureProfiles]);
 
+  // Do rankingu sugestii (Etap 7) potrzebujemy profili zasobowych całej wspólnej listy osób, nie
+  // tylko już przypisanych — zapytanie jest deduplikowane w `ensureProfiles`, więc kolejne otwarcia
+  // panelu nie generują powtórnych fetchy.
+  useEffect(() => {
+    if (!open) return;
+    const ids = teamProfiles.map((p) => p.id);
+    if (ids.length) void ensureProfiles(ids);
+  }, [open, teamProfiles, ensureProfiles]);
+
   useEffect(() => {
     if (!input.projectId) {
       setStageOptions([]);
@@ -196,6 +207,8 @@ export function ResourcePlanSidePanel({
     }));
   }
 
+  const profilesById = useMemo(() => Object.fromEntries(teamProfiles.map((p) => [p.id, p])), [teamProfiles]);
+
   const warnings = useMemo(
     () =>
       validateResourcePlanItem({
@@ -203,12 +216,45 @@ export function ResourcePlanSidePanel({
         editingId: editingItem?.id ?? null,
         otherItems: allPlanItems,
         stage,
-        profilesById: Object.fromEntries(teamProfiles.map((p) => [p.id, p])),
+        profilesById,
         resourceProfilesById,
         dictionaryItems,
       }),
-    [input, editingItem, allPlanItems, stage, teamProfiles, resourceProfilesById, dictionaryItems],
+    [input, editingItem, allPlanItems, stage, profilesById, resourceProfilesById, dictionaryItems],
   );
+
+  // Ranking kandydatów do przypisania jako osoba odpowiedzialna — pochodzi z aktywnego dostawcy
+  // sugestii (Etap 7: regułowy; Etap 8: punkt rozszerzenia pod AI, patrz `suggestion-provider.ts`).
+  // Interfejs dostawcy jest asynchroniczny, więc `useEffect` + `useState`, nie `useMemo`.
+  const [suggestions, setSuggestions] = useState<ResourcePlanCandidate[]>([]);
+  useEffect(() => {
+    if (!open) {
+      setSuggestions([]);
+      return;
+    }
+    let cancelled = false;
+    getActiveSuggestionProvider()
+      .getCandidates({
+        input,
+        editingId: editingItem?.id ?? null,
+        candidateUserIds: teamProfiles.map((p) => p.id),
+        otherItems: allPlanItems,
+        stage,
+        profilesById,
+        resourceProfilesById,
+        dictionaryItems,
+        limit: 5,
+      })
+      .then((result) => {
+        if (!cancelled) setSuggestions(result);
+      })
+      .catch(() => {
+        if (!cancelled) setSuggestions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, input, editingItem, teamProfiles, allPlanItems, stage, profilesById, resourceProfilesById, dictionaryItems]);
 
   const project = projects.find((p) => p.id === input.projectId) ?? null;
 
@@ -480,6 +526,49 @@ export function ResourcePlanSidePanel({
           </div>
 
           <div className="grid gap-4">
+            {suggestions.length > 0 ? (
+              <div className="grid gap-2 rounded-xl border border-border/60 bg-surface-muted/10 p-3">
+                <p className="flex items-center gap-1.5 text-sm font-medium text-foreground/90">
+                  <Sparkles className="h-4 w-4 text-accent" />
+                  Sugerowane osoby
+                </p>
+                <div className="grid gap-1.5">
+                  {suggestions.map((candidate) => (
+                    <button
+                      key={candidate.userId}
+                      type="button"
+                      title={candidate.reasons.join("\n")}
+                      onClick={() => setInput((current) => ({ ...current, assigneeId: candidate.userId }))}
+                      className={cn(
+                        "flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-left text-xs transition hover:bg-surface-muted/30",
+                        input.assigneeId === candidate.userId
+                          ? "border-accent/50 bg-accent/10"
+                          : "border-border/50 bg-transparent",
+                      )}
+                    >
+                      <span className="min-w-0 flex-1 truncate font-medium text-foreground">{candidate.name}</span>
+                      {candidate.isOnLeave ? <span className="shrink-0 text-rose-300">nieobecność</span> : null}
+                      {candidate.conflictCount > 0 ? (
+                        <span className="shrink-0 text-amber-300">{candidate.conflictCount} konfl.</span>
+                      ) : null}
+                      <span
+                        className={cn(
+                          "shrink-0 rounded-full px-2 py-0.5 font-semibold",
+                          candidate.score >= 80
+                            ? "bg-emerald-500/15 text-emerald-300"
+                            : candidate.score >= 50
+                              ? "bg-amber-500/15 text-amber-300"
+                              : "bg-rose-500/15 text-rose-300",
+                        )}
+                      >
+                        {candidate.score}%
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             <div className="grid gap-2">
               <p className="text-sm font-medium text-foreground/90">Osoba odpowiedzialna</p>
               <Select value={input.assigneeId ?? ""} onChange={(event) => setInput({ ...input, assigneeId: event.target.value || null })}>

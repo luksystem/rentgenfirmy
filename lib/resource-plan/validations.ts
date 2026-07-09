@@ -13,11 +13,13 @@ export type ResourcePlanWarning = {
   severity: "warning" | "danger";
 };
 
-function rangesOverlap(startA: string, endA: string, startB: string, endB: string) {
+// Eksportowane, żeby `lib/resource-plan/suggestions.ts` (Etap 7) mógł reużyć te same reguły
+// nakładania się terminów/godzin bez duplikowania logiki.
+export function rangesOverlap(startA: string, endA: string, startB: string, endB: string) {
   return startA < endB && startB < endA;
 }
 
-function hoursBetween(startAt: string, endAt: string) {
+export function hoursBetween(startAt: string, endAt: string) {
   return Math.max(0, (new Date(endAt).getTime() - new Date(startAt).getTime()) / 3_600_000);
 }
 
@@ -124,19 +126,24 @@ export function validateResourcePlanItem(params: {
       }
     });
 
-    (stage.requiredCompetencies ?? []).forEach((requirement) => {
-      const hasCompetency = involved.some((userId) =>
-        resourceProfilesById[userId]?.competencies.some((c) => c.competencyItemId === requirement.competencyItemId),
-      );
-      if (!hasCompetency) {
-        const competency = dictionaryItems.find((d) => d.id === requirement.competencyItemId);
-        warnings.push({
-          code: "missing_competency",
-          severity: "warning",
-          message: `Brak osoby z wymaganą kompetencją „${competency?.name ?? "—"}”.`,
-        });
-      }
-    });
+    // Etap dopuszczający ucznia/juniora (`allowsTrainee`) świadomie akceptuje brak wymaganej
+    // kompetencji u przypisanych osób — to nie przeoczenie, a celowe przyuczanie, więc nie
+    // ostrzegamy (w przeciwieństwie do wymaganych ról, które muszą być pokryte niezależnie).
+    if (!stage.allowsTrainee) {
+      (stage.requiredCompetencies ?? []).forEach((requirement) => {
+        const hasCompetency = involved.some((userId) =>
+          resourceProfilesById[userId]?.competencies.some((c) => c.competencyItemId === requirement.competencyItemId),
+        );
+        if (!hasCompetency) {
+          const competency = dictionaryItems.find((d) => d.id === requirement.competencyItemId);
+          warnings.push({
+            code: "missing_competency",
+            severity: "warning",
+            message: `Brak osoby z wymaganą kompetencją „${competency?.name ?? "—"}”.`,
+          });
+        }
+      });
+    }
 
     if (stage.requiresLeader) {
       const hasLeader = input.participants.some((p) => p.isLead);
@@ -211,7 +218,7 @@ export function validateResourcePlanItem(params: {
   return warnings;
 }
 
-function sameDay(a: string, b: string) {
+export function sameDay(a: string, b: string) {
   return new Date(a).toDateString() === new Date(b).toDateString();
 }
 
@@ -223,6 +230,6 @@ function startOfWeek(dateIso: string) {
   return date;
 }
 
-function sameWeek(a: string, b: string) {
+export function sameWeek(a: string, b: string) {
   return startOfWeek(a).getTime() === startOfWeek(b).getTime();
 }

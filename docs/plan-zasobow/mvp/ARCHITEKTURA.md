@@ -1,8 +1,8 @@
 # Architektura — Plan Zasobów
 
-> Status: **Etapy 1–4 wdrożone i wypchnięte na `main`** (fundament danych + MVP widoku listy).
-> Etapy 5–8 (dashboard, Gantt/kalendarz, sugestie regułowe, AI) — zaprojektowane częściowo
-> (walidacje ostrzegawcze już działają), pozostałe do zbudowania. Patrz `STAN_WDROZENIA.md`.
+> Status: **Etapy 1–8 wdrożone** (fundament danych, widoki Gantt/lista/kalendarz/dashboard,
+> walidacje, sugestie regułowe, punkt rozszerzenia pod AI). Patrz `STAN_WDROZENIA.md` po
+> szczegółowy status i pozostały dług techniczny.
 
 ## 1. Cel modułu
 
@@ -153,18 +153,29 @@ manager = „koordynator”), zdefiniowana w `098_resource_plan_dictionaries.sql
 | Logika drag/resize Gantta | `lib/resource-plan/gantt-drag.ts` | przeliczanie pikseli↔dni, snapowanie, przydział „torów” dla nakładających się elementów (`assignGanttLanes`), wykrywanie wiersza pod kursorem (`resolveGanttRowId`), zakres dat/etykieta/szerokość kolumny per poziom zoomu (`getGanttPeriodRange`, `formatGanttPeriodLabel`, `GANTT_ZOOM_DAY_WIDTH_PX`, `GANTT_ZOOM_SNAP_DAYS`), grupowanie dni po miesiącu do nagłówka (`groupGanttDaysByMonth`) |
 | Polskie święta | `lib/resource-plan/polish-holidays.ts` | wyszarzenie dni ustawowo wolnych w Gantcie (algorytm liczony lokalnie, bez zależności zewnętrznej) |
 | Szablony elementu planu | `lib/resource-plan/plan-item-template.ts` | typ i (de)serializacja `metadata` pozycji słownika `plan_item_template` (typ pracy, godziny, budżety, ryzyko, notatki) |
-| UI Gantta | `components/resource-plan/resource-plan-gantt.tsx` | widok Gantt (domyślny w `/plan-zasobow`) — przeciąganie/rozciąganie elementów na osi czasu i między wierszami, grupowanie wierszy (osoby/zespoły/projekty), zoom miesiąc/kwartał/rok, szybkie dodawanie z szablonu, responsywny pasek narzędzi (mobile-first) |
+| UI Gantta | `components/resource-plan/resource-plan-gantt.tsx` | widok Gantt (domyślny w `/plan-zasobow`) — przeciąganie/rozciąganie elementów na osi czasu i między wierszami, grupowanie wierszy (osoby/zespoły/projekty), zoom miesiąc/kwartał/rok, szybkie dodawanie z szablonu, responsywny pasek narzędzi (mobile-first), plakietka ostrzeżeń na bloku (Etap 5) |
+| UI kalendarza | `components/resource-plan/resource-plan-calendar.tsx` | widok Kalendarza (miesiąc/tydzień) — siatka dni z plakietkami elementów planu, weekendy/święta wyszarzone (reużywa `polish-holidays.ts`), klik na dzień → szybkie tworzenie z domyślną godziną 9:00 |
+| Agregaty dashboardu | `lib/resource-plan/dashboard-metrics.ts` | `computeResourcePlanDashboardMetrics()` — KPI, rozkład statusów, obciążenie/wolna zdolność per osoba, konflikty, nieprzypisane; liczone po stronie klienta z danych już wczytanych przez `useResourcePlanStore` (patrz D18) |
+| UI dashboardu | `components/resource-plan/resource-plan-dashboard.tsx` | widok Dashboard (Etap 6) — karty KPI (`MetricCard`), wykresy (`BarPanel`/`PiePanel` z `components/charts.tsx`), tabela obciążenia/wolnej zdolności, lista konfliktów i nieprzypisanych z linkiem do edycji |
+| Sugestie regułowe | `lib/resource-plan/suggestions.ts` | `suggestResourcePlanCandidates()` — ranking kandydatów do przypisania (role/kompetencje/poziom, dostępność, nieobecności, konflikty, obciążenie), czysta funkcja bez zależności od UI (Etap 7) |
+| Punkt rozszerzenia AI | `lib/resource-plan/suggestion-provider.ts` | `ResourcePlanSuggestionProvider` — interfejs dostawcy sugestii (async), `getActiveSuggestionProvider()`; dziś jedyny dostawca to silnik regułowy, przyszły dostawca AI implementuje ten sam interfejs (Etap 8) |
 
 ## 6. Model walidacji — ostrzeżenia, nie blokady (Etap 5)
 
 `validateResourcePlanItem()` (`lib/resource-plan/validations.ts`) zwraca listę
 `{ code, message, severity: "warning" | "danger" }`, **nigdy nie blokuje zapisu**. Sprawdzane
 warunki: konflikt terminów osoby/zespołu, przekroczenie dziennego/tygodniowego limitu godzin,
-brak wymaganej roli/kompetencji/lidera (z definicji etapu), brak przypisanej osoby, nachodzenie
-na zgłoszoną nieobecność, brak budżetu (gdy etap ma zdefiniowany budżet domyślny), wysokie
-ryzyko (najwyższy `sort_order` w słowniku `risk_level`). Panel boczny (`resource-plan-side-panel.tsx`)
-prezentuje ostrzeżenia i wymaga zaznaczenia `accepted_risk`, by zapisać element z aktywnymi
-ostrzeżeniami — koordynator może **świadomie** przejść dalej.
+brak wymaganej roli/kompetencji/lidera (z definicji etapu — kompetencje pomijane, gdy etap ma
+`allowsTrainee`), brak przypisanej osoby, nachodzenie na zgłoszoną nieobecność, brak budżetu
+(gdy etap ma zdefiniowany budżet domyślny), wysokie ryzyko (najwyższy `sort_order` w słowniku
+`risk_level`). Panel boczny (`resource-plan-side-panel.tsx`) prezentuje ostrzeżenia i wymaga
+zaznaczenia `accepted_risk`, by zapisać element z aktywnymi ostrzeżeniami — koordynator może
+**świadomie** przejść dalej.
+
+**Poza panelem edycji** (Gantt, lista, dashboard) te same ostrzeżenia są liczone ponownie z
+`stage: null` (bez ładowania snapshotu procesu per element) i pokazywane jako plakietka: liczba
+ostrzeżeń na karcie listy, ikonka na bloku Gantta, sekcja „Konflikty i ryzyka” na dashboardzie.
+Jedna funkcja waliduje wszędzie — brak duplikacji reguł.
 
 ## 7. Decyzje architektoniczne
 
@@ -186,8 +197,14 @@ ostrzeżeniami — koordynator może **świadomie** przejść dalej.
 | D14 | Polskie święta w Gantcie | Wyliczane lokalnie (`lib/resource-plan/polish-holidays.ts`, algorytm Meeusa/Jonesa/Butchera dla Wielkanocy), nie z zewnętrznego API/biblioteki — święta ustawowe w Polsce zmieniają się rzadko i są w pełni wyznaczalne algorytmicznie, więc nie wymagają zależności sieciowej ani utrzymania tabeli dat. |
 | D15 | Zoom Gantta (miesiąc/kwartał/rok) | Jedna spójna jednostka pozycjonowania — dzień — dla wszystkich poziomów zoomu; zmienia się tylko szerokość kolumny dnia (`GANTT_ZOOM_DAY_WIDTH_PX`: 40/14/5px) i granulacja snapowania przy przeciąganiu (`GANTT_ZOOM_SNAP_DAYS`: 1/7/30 dni) — unika duplikacji logiki pozycjonowania/drag dla każdego poziomu. Nagłówek w widoku miesięcznym pokazuje numery dni; w kwartale/roku dni są za wąskie na etykiety, więc nagłówek grupuje kolumny po miesiącu (`groupGanttDaysByMonth`). Zmiana zoomu resetuje przesunięcie okresu do „bieżącego”, żeby uniknąć nawigowania po nieintuicyjnych przesunięciach (np. „+3” miesiąca vs „+3” kwartału). |
 | D16 | Responsywność mobilna (Plan Zasobów) | Pasek narzędzi Gantta/Listy: `flex-col` na mobile → `sm:flex-row` od ~640px (zamiast jednego nieskładającego się rzędu, który wymuszał obrót telefonu do poziomu); przyciski nawigacji miesiąca/okresu chowają etykietę tekstową na mobile (`hidden sm:inline`), zostaje tylko ikona chevron — analogicznie w panelu bocznym (wiersz wyboru szablonu). Sama tabela Gantta pozostaje przewijana w poziomie na każdej szerokości (`overflow-x-auto`) — to zamierzony, standardowy wzorzec dla wykresów Gantta (linia czasu z natury wymaga szerokości), a nie błąd responsywności. |
+| D17 | Ostrzeżenia poza panelem edycji | Reużycie `validateResourcePlanItem()` w liście/Gantcie/dashboardzie (nie osobny, uproszczony silnik) — jedno źródło prawdy, plakietka pokazuje liczbę + tooltip z treścią. Koszt: przeliczanie ostrzeżeń dla każdego widocznego elementu przy każdym renderze listy (O(n²) względem liczby elementów w oknie) — świadomie zaakceptowane, bo skala miesięcznego okna (dziesiątki, nie tysiące elementów) nie uzasadnia buforowania/memoizacji na poziomie backendu. |
+| D18 | Dashboard — agregacja klient-side, nie SQL | Zamiast dedykowanego `resource-plan-history-repository.ts` (rozważanego pierwotnie), KPI/wykresy dashboardu (`lib/resource-plan/dashboard-metrics.ts`) liczone w JS z danych już wczytanych przez `useResourcePlanStore().ensureRange()` — analogicznie do wzorca `lib/domain.ts` używanego przez stronę główną/raport. Powód: skala danych MVP (plan pracy firmy w oknie miesiąca) nie uzasadnia osobnej warstwy agregacji SQL; jeśli liczba elementów planu znacząco wzrośnie, do przeniesienia na SQL analogicznie do zaplanowanego `goal-history-repository.ts` modułu Celów. |
+| D19 | Sugestie regułowe — punktacja | Start 100 pkt, kary za: brak wymaganej roli (-35/rolę), brak wymaganej kompetencji (-25/-8 gdy `allowsTrainee`), niższy poziom kompetencji niż wymagany (-15), niedostępność do planowania (-50), nieobecność w terminie (-60), konflikt terminu (-20/konflikt, max -40), przekroczenie limitu dziennego/tygodniowego (-15/-10); bonus +5 za członkostwo w wybranym zespole. Wynik przycięty do [0, 100]. Reguły w pełni wyjaśnialne (`reasons: string[]`) — koordynator widzi *dlaczego* dana osoba ma taki wynik, nie tylko liczbę. |
+| D20 | Interfejs dostawcy sugestii (przygotowanie pod AI) | `ResourcePlanSuggestionProvider.getCandidates()` jest **asynchroniczny** już teraz, mimo że silnik regułowy jest w praktyce synchroniczny (`Promise.resolve(...)`) — bo przyszły dostawca AI z natury wykonuje wywołanie sieciowe. UI (panel boczny) woła `getActiveSuggestionProvider()`, nie funkcję silnika regułowego bezpośrednio, więc podłączenie AI nie wymaga zmian w komponentach — tylko dodania nowego dostawcy w `suggestion-provider.ts` i przełączenia aktywnego. Wzorem `lib/audit/*` (silnik regułowy jako ground truth + osobna warstwa AI). |
+| D21 | Widok Kalendarza | Miesiąc/tydzień jako jeden komponent z przełącznikiem granularności, nie dwa osobne widoki — siatka 7 kolumn, w widoku miesięcznym dni spoza miesiąca przygaszone (`opacity-40`), w tygodniowym każda kolumna ma więcej miejsca na pozycje (bez siatki godzinowej — to rola Gantta, kalendarz to przegląd „co jest zaplanowane danego dnia”, nie precyzyjne planowanie godzinowe). |
 
 ## 8. Co dalej
 
-Patrz `STAN_WDROZENIA.md` — szczegółowy status Etapów 1–8 i rekomendowana kolejność dalszych prac
-(dashboard modułu, widok Gantt/RTM i kalendarza, sugestie regułowe, przygotowanie pod AI).
+Wszystkie 8 etapów pierwotnego planu są wdrożone. Pozostały dług techniczny i możliwe dalsze
+kierunki (testy automatyczne walidacji/sugestii, API route'y serwerowe, ewentualny dostawca AI)
+opisane w `STAN_WDROZENIA.md` §„Braki i dług techniczny”.

@@ -226,6 +226,28 @@ export function ResourcePlanGantt() {
     }
   }
 
+  // Ostrzeżenia liczone poza panelem edycji — mała plakietka na bloku Gantta (Etap 5, patrz
+  // ARCHITEKTURA.md §6). Bez kontekstu etapu procesu (`stage: null`) — Gantt nie ładuje snapshotu
+  // procesu per element, to samo ograniczenie co przy przeciąganiu.
+  const warningsByItemId = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof validateResourcePlanItem>>();
+    visibleItems.forEach((item) => {
+      map.set(
+        item.id,
+        validateResourcePlanItem({
+          input: resourcePlanItemToInput(item),
+          editingId: item.id,
+          otherItems: items,
+          stage: null,
+          profilesById,
+          resourceProfilesById,
+          dictionaryItems,
+        }),
+      );
+    });
+    return map;
+  }, [visibleItems, items, profilesById, resourceProfilesById, dictionaryItems]);
+
   function describeItem(item: ResourcePlanItem) {
     const status = statusOptions.find((option) => option.id === item.statusItemId);
     const risk = riskOptions.find((option) => option.id === item.riskItemId);
@@ -233,18 +255,22 @@ export function ResourcePlanGantt() {
     const assignee = profilesById[item.assigneeId ?? ""];
     const team = teamOptions.find((option) => option.id === item.teamItemId);
     const label = item.title || project?.name || "Element planu";
+    const warnings = warningsByItemId.get(item.id) ?? [];
     const tooltipParts = [
       label,
       project?.name,
       assignee ? getUserDisplayName(assignee) : null,
       team?.name,
       risk ? `Ryzyko: ${risk.name}` : null,
+      warnings.length > 0 ? `⚠ ${warnings.map((w) => w.message).join(" · ")}` : null,
     ].filter(Boolean);
     return {
       color: status?.color ?? "#64748b",
       Icon: resolveDictionaryIcon(status?.icon),
       label,
       tooltip: tooltipParts.join(" · "),
+      hasWarning: warnings.length > 0,
+      hasDanger: warnings.some((w) => w.severity === "danger"),
     };
   }
 
@@ -454,7 +480,7 @@ export function ResourcePlanGantt() {
                       </div>
 
                       {rowItems.map((item) => {
-                        const { color, Icon, label, tooltip } = describeItem(item);
+                        const { color, Icon, label, tooltip, hasWarning, hasDanger } = describeItem(item);
                         return (
                           <GanttBlock
                             key={item.id}
@@ -468,6 +494,8 @@ export function ResourcePlanGantt() {
                             Icon={Icon}
                             label={label}
                             tooltip={tooltip}
+                            hasWarning={hasWarning}
+                            hasDanger={hasDanger}
                             onOpen={() => openEdit(item)}
                             onHoverRowChange={setDragHoverRowId}
                             onDragCommit={(startAt, endAt, targetRowId) =>
@@ -508,6 +536,8 @@ function GanttBlock({
   Icon,
   label,
   tooltip,
+  hasWarning,
+  hasDanger,
   onOpen,
   onHoverRowChange,
   onDragCommit,
@@ -522,6 +552,8 @@ function GanttBlock({
   Icon: ComponentType<{ className?: string }>;
   label: string;
   tooltip: string;
+  hasWarning: boolean;
+  hasDanger: boolean;
   onOpen: () => void;
   onHoverRowChange: (rowId: string | null) => void;
   onDragCommit: (startAt: string, endAt: string, targetRowId: string | null) => Promise<void>;
@@ -652,6 +684,9 @@ function GanttBlock({
       <span className="flex h-full items-center gap-1 px-1">
         <Icon className="h-3 w-3 shrink-0" />
         <span className="truncate">{label}</span>
+        {hasWarning ? (
+          <AlertTriangle className={cn("h-3 w-3 shrink-0", hasDanger ? "text-rose-400" : "text-amber-400")} />
+        ) : null}
       </span>
       <span
         className="absolute inset-y-0 right-0 w-2 cursor-ew-resize"

@@ -1,8 +1,9 @@
 # Stan wdrożenia — Plan Zasobów
 
-> Odniesienie do pierwotnego planu 8 etapów. Etapy 1–4 są **zaimplementowane, zalintowane i
-> wypchnięte na `main`** (commity `ae3847b`, `ca408a8`). Etap 5 zaimplementowany częściowo
-> (silnik walidacji gotowy i zintegrowany z panelem edycji). Etapy 6–8 nie rozpoczęte.
+> Odniesienie do pierwotnego planu 8 etapów. **Wszystkie etapy 1–8 są zaimplementowane i
+> zalintowane.** Dodatkowo, poza pierwotnym planem, zbudowano widok Kalendarza (miesiąc/tydzień) —
+> patrz sekcja pod Etapem 4. Pozostały dług techniczny (testy automatyczne, API route'y
+> serwerowe) opisany w sekcji „Braki i dług techniczny” na końcu dokumentu.
 
 ## Etap 1 — Fundament danych (słowniki) ✅ Zrobione
 
@@ -173,7 +174,22 @@ zamiast wypełniania formularza od nowa:
     każdej szerokości ekranu — to standardowy, oczekiwany wzorzec dla wykresów Gantta (linia
     czasu z natury wymaga szerokości większej niż ekran telefonu), nie błąd responsywności.
 
-## Etap 5 — Walidacje ⚠️ Częściowo zrobione
+## Widok Kalendarza (poza pierwotnym planem 8 etapów) ✅ Zrobione
+
+Oryginalne wymagania UI wspominały Gantt/RTM, Kalendarz, Listę i Dashboard — Kalendarz nie był
+częścią numerowanego planu 8 etapów, ale domknięto go razem z Etapem 6.
+
+- `components/resource-plan/resource-plan-calendar.tsx` — jeden komponent z przełącznikiem
+  **Miesiąc** / **Tydzień** (nie dwa osobne widoki, patrz D21 w `ARCHITEKTURA.md`). Siatka 7
+  kolumn; w widoku miesięcznym dni spoza bieżącego miesiąca są przygaszone, dziś podświetlone
+  ramką. Weekendy/święta wyszarzone (reużycie `polish-holidays.ts` — ten sam algorytm co w
+  Gantcie).
+- Każdy dzień pokazuje plakietki elementów planu (kolor/ikona statusu, jak w liście/Gantcie),
+  przewijane w pionie, gdy nie mieszczą się w komórce. Klik na plakietkę → edycja; klik na numer
+  dnia → nowy element z domyślną godziną startu 9:00 tego dnia.
+- Dostępny jako czwarta zakładka w `/plan-zasobow` (obok Gantt/Lista/Dashboard).
+
+## Etap 5 — Walidacje ✅ Zrobione
 
 - ✅ Silnik `lib/resource-plan/validations.ts` (`validateResourcePlanItem`) — 10 reguł
   ostrzegawczych (konflikt osoby/zespołu, przekroczenie limitu godzin dziennych/tygodniowych,
@@ -181,50 +197,76 @@ zamiast wypełniania formularza od nowa:
   nieobecność, brak budżetu, wysokie ryzyko).
 - ✅ Zintegrowany z panelem edycji (`resource-plan-side-panel.tsx`) — ostrzeżenia widoczne w
   czasie rzeczywistym, checkbox `accepted_risk` wymagany do zapisu przy aktywnych ostrzeżeniach.
-- ❌ Brak: prezentacji ostrzeżeń **poza** panelem edycji (np. plakietka na karcie w widoku listy/
-  Gantt, osobny widok „Konflikty i ryzyka”).
-- ❌ Brak: reguły „brak lidera” nie uwzględnia jeszcze `allowsTrainee` (dopuszczenie ucznia bez
-  wymaganej kompetencji) — do doprecyzowania przy pracach nad sugestiami (Etap 7).
+- ✅ Prezentacja ostrzeżeń **poza** panelem edycji: plakietka z liczbą ostrzeżeń (kolor zależny od
+  obecności `severity: "danger"`) na karcie w widoku listy, mała ikonka na bloku w Gantcie
+  (tooltip z treścią), a osobna sekcja „Konflikty i ryzyka” trafiła do Dashboardu (Etap 6) —
+  klik na wpis otwiera element w panelu edycji.
+- ✅ Reguła „brak kompetencji” uwzględnia teraz `allowsTrainee` — gdy etap dopuszcza ucznia, brak
+  wymaganej kompetencji u przypisanej osoby nie generuje już ostrzeżenia (to świadomie
+  przyuczanie, nie przeoczenie).
 
-## Etap 6 — Dashboard modułu ❌ Nie zaczęte
+## Etap 6 — Dashboard modułu ✅ Zrobione
 
-Zakres z oryginalnego planu: obciążenie firmy/zespołu/osoby, liczba konfliktów, zadania
-zagrożone, wolna zdolność, nieprzypisane projekty/zadania, planowany budżet robocizny.
+- `lib/resource-plan/dashboard-metrics.ts` — `computeResourcePlanDashboardMetrics()`, agregacja
+  po stronie klienta z danych już wczytanych przez `useResourcePlanStore().ensureRange()` (patrz
+  D18 w `ARCHITEKTURA.md` — świadomie bez dedykowanego repozytorium SQL na poziomie MVP).
+  Liczy: sumę elementów/godzin/budżetów, listę nieprzypisanych (brak `assigneeId` i uczestników),
+  listę konfliktów (elementy z ostrzeżeniem `severity: "danger"` z tego samego silnika co Etap 5),
+  rozkład po statusie, obciążenie godzinowe per osoba z szacowaną wolną zdolnością (limit
+  tygodniowy × liczba tygodni okna).
+- `components/resource-plan/resource-plan-dashboard.tsx` — nawigacja miesiąc wstecz/w przód (jak
+  w liście), 5 kart KPI (`MetricCard`: elementy planu, planowane godziny, budżet robocizny,
+  nieprzypisane, konflikty — z kolorem tone zależnym od tego, czy liczba > 0), wykres słupkowy
+  „Obciążenie godzinowe per osoba” i kołowy „Elementy wg statusu” (`BarPanel`/`PiePanel` z
+  `components/charts.tsx` — istniejący, jedyny moduł wykresów w aplikacji), tabela
+  obciążenia/wolnej zdolności per osoba (plakietka „Przeciążenie” / „W normie” / „Brak limitu”),
+  lista konfliktów i lista nieprzypisanych — obie klikalne, otwierają `ResourcePlanSidePanel`.
+- Dostępny jako czwarta (teraz: obok Kalendarza, piąta) zakładka w `/plan-zasobow`.
 
-**Rekomendowany start:** nowy plik `lib/supabase/resource-plan-history-repository.ts` (wzorem
-`goal-history-repository.ts` z modułu Celów) z zapytaniami agregującymi po `assignee_id`/
-`team_item_id`/`status_item_id` w zadanym oknie czasowym; strona `/plan-zasobow/dashboard` z
-kartami KPI (Recharts — już w projekcie) + tabelą „nieprzypisane” (elementy planu bez
-`assignee_id` i bez uczestników).
+## Etap 7 — Sugestie regułowe (bez AI) ✅ Zrobione
 
-## Etap 7 — Sugestie regułowe (bez AI) ❌ Nie zaczęte
+- `lib/resource-plan/suggestions.ts` — `suggestResourcePlanCandidates()`, czysta funkcja o
+  sygnaturze zbliżonej do `validateResourcePlanItem` (te same dane: `profilesById`,
+  `resourceProfilesById`, `dictionaryItems`, `otherItems`, opcjonalny `stage`). Zwraca
+  rankingowaną listę kandydatów (`score` 0–100) z wyjaśnieniami (`reasons: string[]`) — patrz D19
+  w `ARCHITEKTURA.md` po pełną punktację. Sprawdza: role/kompetencje wymagane przez etap (z
+  uwzględnieniem poziomu kompetencji i `allowsTrainee`), `isAvailableForPlanning`, nieobecności w
+  terminie, konflikty terminów, przekroczenie dziennego/tygodniowego limitu godzin, bonus za
+  członkostwo w wybranym zespole.
+- UI: sekcja „Sugerowane osoby” w `resource-plan-side-panel.tsx`, nad wyborem osoby odpowiedzialnej
+  — do 5 kandydatów jako klikalne „chipy” z plakietką % dopasowania (zielona/żółta/czerwona),
+  liczbą konfliktów i informacją o nieobecności; klik ustawia `assigneeId`. Kandydaci to cała
+  lista `teamProfiles` (użytkownicy z dostępem do planowania), nie wymaga dodatkowego zapytania —
+  reużywa profile już ładowane przez panel.
 
-Zakres: dopasowanie po roli/kompetencji, poziomie kompetencji, dostępności, obciążeniu, braku
-konfliktów; prezentacja % dopasowania, brakujących kompetencji, najbliższej dostępności, ryzyk.
+## Etap 8 — Przygotowanie pod AI ✅ Zrobione (architektura, bez rzeczywistego dostawcy AI)
 
-**Rekomendowany start:** funkcja czysta `lib/resource-plan/suggestions.ts` (podobna sygnatura do
-`validateResourcePlanItem`, ale zwraca rankingowaną listę kandydatów z `profilesById`,
-`resourceProfilesById`, wymaganiami etapu i istniejącymi elementami planu do liczenia
-obciążenia/konfliktów) — reużywa tych samych danych, które już ładuje panel boczny.
+- `lib/resource-plan/suggestion-provider.ts` — interfejs `ResourcePlanSuggestionProvider`
+  (`id`, `label`, `description`, `getCandidates(params): Promise<ResourcePlanCandidate[]>`),
+  **asynchroniczny od początku** mimo że jedyny dziś dostawca (`ruleBasedSuggestionProvider`)
+  jest w praktyce synchroniczny — bo przyszły dostawca AI z natury wykonuje wywołanie sieciowe.
+  `getActiveSuggestionProvider()` — punkt, w którym docelowo przełączy się aktywny dostawca.
+- UI (`resource-plan-side-panel.tsx`) woła wyłącznie `getActiveSuggestionProvider().getCandidates(...)`,
+  nigdy silnika regułowego bezpośrednio — podłączenie przyszłego dostawcy AI (np. wywołanie
+  modelu z kontekstem projektu/etapu/zespołu, z fallbackiem do silnika regułowego przy błędzie)
+  nie wymaga żadnych zmian w komponentach.
+- Świadomie **nie** zaimplementowano rzeczywistego wywołania AI (brak zdefiniowanego przez
+  właściciela produktu wymogu co do konkretnego modelu/dostawcy) — zakres Etapu 8 z pierwotnego
+  planu to *przygotowanie architektury*, co jest zrobione; podłączenie realnego modelu to
+  osobna decyzja produktowa (wybór dostawcy, koszt, dane wejściowe) do podjęcia później.
 
-## Etap 8 — Przygotowanie pod AI ❌ Nie zaczęte
+## Braki i dług techniczny do domknięcia w kolejnych iteracjach
 
-Zakres: architektura pod przyszły Recommendation Engine / Capacity Planner / analizę nowych
-zleceń / sugerowane terminy i zespoły / analizę wpływu.
-
-**Rekomendowany start:** dopiero po Etapie 7 — silnik regułowy to naturalny „fallback” i punkt
-odniesienia (ground truth) dla przyszłych sugestii AI, analogicznie do wzorca
-`lib/audit/*` (silnik regułowy + osobna warstwa AI) i modułu Celów (`lib/ai/goal-methodology-advisor.ts`).
-
-## Braki i dług techniczny do domknięcia przy kolejnych etapach
-
-- Widoki Gantt/RTM, kalendarz i dashboard modułu (Etap 4 rozszerzenie + Etap 6) — obecnie tylko
-  lista.
 - Brak API route'ów `app/api/plan-zasobow/**` — obecnie repo/store wołane wprost z klienta
   (Supabase RLS chroni zapis). Do rozważenia przy potrzebie logiki serwerowej (np. webhooki,
-  generowanie sugestii AI po stronie serwera).
-- Brak testów automatycznych dla `validateResourcePlanItem` — zalecane przed rozbudową o kolejne
-  reguły (Etap 7 bazuje na tym samym module).
+  wywołanie AI po stronie serwera z ukrytym kluczem API).
+- Brak testów automatycznych dla `validateResourcePlanItem` i `suggestResourcePlanCandidates` —
+  zalecane przed dalszą rozbudową reguł (oba moduły współdzielą tę samą logikę nakładania się
+  terminów/godzin, wyeksportowaną z `validations.ts`).
+- Dashboard i plakietki ostrzeżeń w liście/Gantcie liczą `validateResourcePlanItem` dla każdego
+  widocznego elementu przy każdym renderze (O(n²) względem liczby elementów w oknie) — przyjęte
+  świadomie na skalę MVP (patrz D17/D18 w `ARCHITEKTURA.md`); do rewizji, jeśli liczba elementów
+  planu w jednym oknie czasowym znacząco wzrośnie (setki+).
 - Kolizja numeracji migracji z równoległą pracą nad modułem „Tablica Celów”
   (`098_goals_mvp.sql`, `099_goal_methodologies_seed.sql` używają tych samych numerów co
   `098_resource_plan_dictionaries.sql`/`099_resource_plan_user_extensions.sql`, mimo różnych

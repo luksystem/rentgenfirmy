@@ -8,8 +8,17 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ResourcePlanList } from "@/components/resource-plan/resource-plan-list";
 import { ResourcePlanGantt } from "@/components/resource-plan/resource-plan-gantt";
+import { ResourcePlanDashboard } from "@/components/resource-plan/resource-plan-dashboard";
+import { ResourcePlanCalendar } from "@/components/resource-plan/resource-plan-calendar";
 
-type ViewMode = "list" | "gantt";
+type ViewMode = "gantt" | "list" | "calendar" | "dashboard";
+
+const VIEW_LABELS: Record<ViewMode, string> = {
+  gantt: "Gantt",
+  list: "Lista",
+  calendar: "Kalendarz",
+  dashboard: "Dashboard",
+};
 
 export default function ResourcePlanPage() {
   const [view, setView] = useState<ViewMode>("gantt");
@@ -19,11 +28,11 @@ export default function ResourcePlanPage() {
       <PageHeader
         eyebrow="Plan Zasobów"
         title="Plan Zasobów"
-        description="Planowanie pracy zespołów i użytkowników — projekty, etapy procesu, obciążenie, ryzyka i budżety. Kalendarz i dashboard w kolejnych etapach."
+        description="Planowanie pracy zespołów i użytkowników — projekty, etapy procesu, obciążenie, ryzyka i budżety."
         action={
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex gap-1 rounded-2xl border border-border/70 bg-surface-muted/20 p-1">
-              {(["gantt", "list"] as const).map((mode) => (
+              {(["gantt", "list", "calendar", "dashboard"] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
@@ -33,7 +42,7 @@ export default function ResourcePlanPage() {
                     view === mode ? "bg-accent text-accent-foreground shadow-soft" : "text-muted hover:bg-surface-muted",
                   )}
                 >
-                  {mode === "gantt" ? "Gantt" : "Lista"}
+                  {VIEW_LABELS[mode]}
                 </button>
               ))}
             </div>
@@ -46,7 +55,15 @@ export default function ResourcePlanPage() {
           </div>
         }
       />
-      {view === "gantt" ? <ResourcePlanGantt /> : <ResourcePlanList />}
+      {view === "gantt" ? (
+        <ResourcePlanGantt />
+      ) : view === "list" ? (
+        <ResourcePlanList />
+      ) : view === "calendar" ? (
+        <ResourcePlanCalendar />
+      ) : (
+        <ResourcePlanDashboard />
+      )}
     </>
   );
 }

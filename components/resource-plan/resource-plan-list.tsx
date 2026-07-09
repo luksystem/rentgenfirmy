@@ -5,13 +5,16 @@ import { AlertTriangle, ChevronLeft, ChevronRight, Pencil, Plus } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { getUserDisplayName } from "@/lib/auth/types";
 import { resolveDictionaryIcon } from "@/lib/resource-plan/icon-options";
-import type { ResourcePlanItem } from "@/lib/resource-plan/types";
+import { resourcePlanItemToInput, type ResourcePlanItem } from "@/lib/resource-plan/types";
+import { validateResourcePlanItem } from "@/lib/resource-plan/validations";
 import { useAppStore } from "@/store/app-store";
 import { useDictionaryStore } from "@/store/dictionary-store";
 import { useProcessStore } from "@/store/process-store";
 import { useResourcePlanStore } from "@/store/resource-plan-store";
+import { useUserResourceStore } from "@/store/user-resource-store";
 import { ResourcePlanSidePanel } from "@/components/resource-plan/resource-plan-side-panel";
 
 function startOfMonthIso(offsetMonths = 0) {
@@ -59,11 +62,15 @@ export function ResourcePlanList() {
   const loadTeamProfiles = useProcessStore((state) => state.loadTeamProfiles);
 
   const ensureDictionaries = useDictionaryStore((state) => state.ensure);
+  const dictionaryItems = useDictionaryStore((state) => state.items);
   const statusOptions = useDictionaryStore((state) => state.byKey("plan_status"));
   const riskOptions = useDictionaryStore((state) => state.byKey("risk_level"));
   const workTypeOptions = useDictionaryStore((state) => state.byKey("work_type"));
   const teamOptions = useDictionaryStore((state) => state.byKey("team"));
   const templateOptions = useDictionaryStore((state) => state.byKey("plan_item_template"));
+
+  const ensureProfiles = useUserResourceStore((state) => state.ensureProfiles);
+  const resourceProfilesById = useUserResourceStore((state) => state.byUser);
 
   useEffect(() => {
     void ensureDictionaries();
@@ -81,6 +88,38 @@ export function ResourcePlanList() {
         .sort((a, b) => a.startAt.localeCompare(b.startAt)),
     [items, from, to],
   );
+
+  useEffect(() => {
+    const ids = new Set<string>();
+    visibleItems.forEach((item) => {
+      if (item.assigneeId) ids.add(item.assigneeId);
+      item.participants.forEach((p) => ids.add(p.userId));
+    });
+    if (ids.size > 0) void ensureProfiles([...ids]);
+  }, [visibleItems, ensureProfiles]);
+
+  const profilesById = useMemo(() => Object.fromEntries(teamProfiles.map((p) => [p.id, p])), [teamProfiles]);
+
+  // Ostrzeżenia liczone poza panelem edycji — plakietka na karcie listy (Etap 5, patrz ARCHITEKTURA.md §6).
+  // Bez kontekstu etapu procesu (`stage: null`), tak jak w Gantcie — nie ładujemy tu snapshotu procesu per wiersz.
+  const warningsByItemId = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof validateResourcePlanItem>>();
+    visibleItems.forEach((item) => {
+      map.set(
+        item.id,
+        validateResourcePlanItem({
+          input: resourcePlanItemToInput(item),
+          editingId: item.id,
+          otherItems: items,
+          stage: null,
+          profilesById,
+          resourceProfilesById,
+          dictionaryItems,
+        }),
+      );
+    });
+    return map;
+  }, [visibleItems, items, profilesById, resourceProfilesById, dictionaryItems]);
 
   const monthLabel = new Intl.DateTimeFormat("pl-PL", { month: "long", year: "numeric" }).format(
     startOfMonthIso(monthOffset),
@@ -164,6 +203,8 @@ export function ResourcePlanList() {
             const team = teamOptions.find((t) => t.id === item.teamItemId);
             const StatusIcon = resolveDictionaryIcon(status?.icon);
             const RiskIcon = resolveDictionaryIcon(risk?.icon);
+            const warnings = warningsByItemId.get(item.id) ?? [];
+            const hasDanger = warnings.some((w) => w.severity === "danger");
 
             return (
               <button
@@ -207,16 +248,24 @@ export function ResourcePlanList() {
                   {team ? (
                     <span className="rounded-full bg-surface-muted px-2 py-1 text-xs text-muted">{team.name}</span>
                   ) : null}
+                  {warnings.length > 0 ? (
+                    <span
+                      className={cn(
+                        "flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium",
+                        hasDanger ? "bg-rose-500/15 text-rose-300" : "bg-amber-500/15 text-amber-300",
+                      )}
+                      title={warnings.map((w) => w.message).join("\n")}
+                    >
+                      <AlertTriangle className="h-3 w-3" />
+                      {warnings.length}
+                    </span>
+                  ) : null}
                 </div>
                 <div className="shrink-0 max-w-[10rem] truncate text-xs text-muted">
                   {assignee ? getUserDisplayName(assignee) : "Brak osoby"}
                   {item.participants.length > 0 ? ` +${item.participants.length}` : ""}
                 </div>
-                {!item.assigneeId && item.participants.length === 0 ? (
-                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
-                ) : (
-                  <Pencil className="h-4 w-4 shrink-0 text-muted" />
-                )}
+                <Pencil className="h-4 w-4 shrink-0 text-muted" />
               </button>
             );
           })}
