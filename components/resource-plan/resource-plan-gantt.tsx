@@ -6,7 +6,7 @@ import { AlertTriangle, ChevronLeft, ChevronRight, Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { getUserDisplayName } from "@/lib/auth/types";
 import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
 import { resolveDictionaryIcon } from "@/lib/resource-plan/icon-options";
@@ -29,12 +29,37 @@ import {
   type GanttDragMode,
   type GanttZoom,
 } from "@/lib/resource-plan/gantt-drag";
+import type { LeaveRequest } from "@/lib/leave/types";
 import { useAppStore } from "@/store/app-store";
+import { useAuthStore } from "@/store/auth-store";
 import { useDictionaryStore } from "@/store/dictionary-store";
+import { useLeaveStore } from "@/store/leave-store";
 import { useProcessStore } from "@/store/process-store";
 import { useResourcePlanStore } from "@/store/resource-plan-store";
 import { useUserResourceStore } from "@/store/user-resource-store";
 import { ResourcePlanSidePanel } from "@/components/resource-plan/resource-plan-side-panel";
+import { LeavePlanningPreviewDialog } from "@/components/leave/leave-planning-preview-dialog";
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Wnioski urlopowe mają daty jako "YYYY-MM-DD" (dzień lokalny, bez godziny) — parsujemy
+ * je jako lokalną północ, żeby pasowały do siatki dni Gantta (też liczonej lokalnie),
+ * a nie jak `dayOffsetPx` (który robi `new Date(iso)`, czyli UTC dla samego "YYYY-MM-DD"). */
+function leaveDateToLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function leaveOffsetPx(monthStart: Date, dateStr: string, dayWidthPx: number, dayDelta = 0): number {
+  const date = leaveDateToLocalDate(dateStr);
+  return ((date.getTime() - monthStart.getTime()) / MS_PER_DAY + dayDelta) * dayWidthPx;
+}
+
+function leaveOverlapsRange(item: LeaveRequest, rangeStart: Date, rangeEnd: Date): boolean {
+  const start = leaveDateToLocalDate(item.startDate);
+  const endExclusive = new Date(leaveDateToLocalDate(item.endDate).getTime() + MS_PER_DAY);
+  return start.getTime() < rangeEnd.getTime() && endExclusive.getTime() > rangeStart.getTime();
+}
 
 type GroupBy = "user" | "team" | "project";
 
@@ -109,10 +134,18 @@ export function ResourcePlanGantt() {
   const ensureProfiles = useUserResourceStore((state) => state.ensureProfiles);
   const resourceProfilesById = useUserResourceStore((state) => state.byUser);
 
+  const currentProfileId = useAuthStore((state) => state.profile?.id);
+  const isAdmin = useAuthStore((state) => state.isAdministrator);
+  const ensurePlanningLeaveRequests = useLeaveStore((state) => state.ensurePlanningRequests);
+  const planningLeaveRequests = useLeaveStore((state) => state.planningRequests);
+  const leaveTypeLabel = useDictionaryStore((state) => state.itemLabel);
+  const [previewLeave, setPreviewLeave] = useState<LeaveRequest | null>(null);
+
   useEffect(() => {
     void ensureDictionaries();
     void loadTeamProfiles();
-  }, [ensureDictionaries, loadTeamProfiles]);
+    void ensurePlanningLeaveRequests();
+  }, [ensureDictionaries, loadTeamProfiles, ensurePlanningLeaveRequests]);
 
   useEffect(() => {
     void ensureRange(from, to);
@@ -129,6 +162,25 @@ export function ResourcePlanGantt() {
   );
 
   const profilesById = useMemo(() => Object.fromEntries(teamProfiles.map((profile) => [profile.id, profile])), [teamProfiles]);
+
+  // Urlopy (oczekujące + zaakceptowane) widoczne jako kolorowe pole na wierszu pracownika —
+  // tylko w widoku "Osoby", bo tylko tam wiersz odpowiada konkretnej osobie.
+  const leaveRequestsByRow = useMemo(() => {
+    const map = new Map<string, LeaveRequest[]>();
+    if (groupBy !== "user") return map;
+    planningLeaveRequests
+      .filter((item) => leaveOverlapsRange(item, monthStart, periodEnd))
+      .forEach((item) => {
+        const list = map.get(item.profileId) ?? [];
+        list.push(item);
+        map.set(item.profileId, list);
+      });
+    return map;
+  }, [planningLeaveRequests, groupBy, monthStart, periodEnd]);
+
+  function canDecideLeave(item: LeaveRequest) {
+    return isAdmin || (Boolean(currentProfileId) && item.supervisorId === currentProfileId);
+  }
 
   // Dla widoku projektów: te z elementami planu w aktualnie widocznym okresie idą na górę —
   // łatwiej znaleźć "co się teraz dzieje" bez przeszukiwania całej (potencjalnie długiej) listy
@@ -491,6 +543,19 @@ export function ResourcePlanGantt() {
                         })}
                       </div>
 
+                      {(leaveRequestsByRow.get(row.id) ?? []).map((leaveItem) => (
+                        <LeaveRequestBand
+                          key={leaveItem.id}
+                          item={leaveItem}
+                          monthStart={monthStart}
+                          totalWidthPx={totalDays * dayWidthPx}
+                          dayWidthPx={dayWidthPx}
+                          leaveTypeName={leaveTypeLabel(leaveItem.leaveTypeItemId)}
+                          canDecide={canDecideLeave(leaveItem)}
+                          onOpen={() => setPreviewLeave(leaveItem)}
+                        />
+                      ))}
+
                       {rowItems.map((item) => {
                         const { color, Icon, label, tooltip, hasWarning, hasDanger } = describeItem(item);
                         return (
@@ -536,6 +601,20 @@ export function ResourcePlanGantt() {
         initialTemplateId={initialTemplateId}
         onSaved={() => setPanelOpen(false)}
       />
+
+      {previewLeave ? (
+        <LeavePlanningPreviewDialog
+          item={previewLeave}
+          leaveTypeName={leaveTypeLabel(previewLeave.leaveTypeItemId)}
+          employeeName={profilesById[previewLeave.profileId] ? getUserDisplayName(profilesById[previewLeave.profileId]) : "—"}
+          isAdmin={isAdmin}
+          canDecide={canDecideLeave(previewLeave)}
+          open={Boolean(previewLeave)}
+          onOpenChange={(open) => {
+            if (!open) setPreviewLeave(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -752,5 +831,55 @@ function GanttBlock({
         onPointerUp={(event) => void handlePointerUp(event)}
       />
     </div>
+  );
+}
+
+/** Kolorowe pole urlopu na wierszu pracownika — zaakceptowany (zielony) i oczekujący
+ * (żółty, przerywana ramka) są widoczne dla wszystkich, ale kliknąć (i otworzyć okno
+ * decyzji) może tylko przełożony wnioskodawcy lub administrator (`canDecide`). */
+function LeaveRequestBand({
+  item,
+  monthStart,
+  totalWidthPx,
+  dayWidthPx,
+  leaveTypeName,
+  canDecide,
+  onOpen,
+}: {
+  item: LeaveRequest;
+  monthStart: Date;
+  totalWidthPx: number;
+  dayWidthPx: number;
+  leaveTypeName: string;
+  canDecide: boolean;
+  onOpen: () => void;
+}) {
+  const left = Math.max(leaveOffsetPx(monthStart, item.startDate, dayWidthPx, 0), 0);
+  const rawRight = leaveOffsetPx(monthStart, item.endDate, dayWidthPx, 1);
+  const right = Math.min(rawRight, totalWidthPx);
+  const width = Math.max(right - left, Math.min(dayWidthPx * 0.5, 6));
+  const isApproved = item.status === "approved";
+  const statusLabel = isApproved ? "Urlop zaakceptowany" : "Urlop — oczekuje na akceptację";
+
+  return (
+    <div
+      className={cn(
+        "absolute inset-y-1 rounded-md border",
+        isApproved
+          ? "border-emerald-500/50 bg-emerald-500/25"
+          : "border-amber-500/50 border-dashed bg-amber-500/20",
+        canDecide ? "cursor-pointer hover:brightness-125" : "cursor-default",
+      )}
+      style={{ left, width }}
+      title={`${statusLabel}: ${leaveTypeName}, ${formatDate(item.startDate)} – ${formatDate(item.endDate)}`}
+      onClick={
+        canDecide
+          ? (event) => {
+              event.stopPropagation();
+              onOpen();
+            }
+          : undefined
+      }
+    />
   );
 }

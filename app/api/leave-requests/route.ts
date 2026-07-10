@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
-import { getUserDisplayName, hasFullAppAccess } from "@/lib/auth/types";
+import { getUserDisplayName, hasFullAppAccess, isAdministratorRole } from "@/lib/auth/types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { mapLeaveRequestRow } from "@/lib/supabase/leave-request-server";
 import { mapProfileRow } from "@/lib/supabase/profile-mappers";
@@ -16,8 +16,42 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const statusFilter = url.searchParams.get("status");
     const profileIdParam = url.searchParams.get("profileId");
+    const scope = url.searchParams.get("scope");
 
     const admin = getSupabaseAdmin();
+    const isAdmin = isAdministratorRole(profile.role);
+
+    // Widok Planu Zasobów (Gantt) — urlopy wszystkich pracowników muszą być widoczne dla
+    // każdego, żeby dało się planować obciążenie, ale treść wniosku (notatka, powód
+    // odrzucenia, podpis) to wciąż informacja prywatna — widzi ją tylko sam wnioskujący,
+    // jego przełożony albo administrator. Reszta dostaje tylko daty/status/typ.
+    if (scope === "planning") {
+      const { data, error } = await admin
+        .from("leave_requests")
+        .select("*")
+        .in("status", ["pending", "approved"])
+        .order("start_date", { ascending: false });
+      if (error) {
+        throw new Error(error.message);
+      }
+      const items = (data ?? []).map((row) => {
+        const item = mapLeaveRequestRow(row);
+        const canSeeDetails = isAdmin || item.profileId === userId || item.supervisorId === userId;
+        return canSeeDetails
+          ? item
+          : {
+              ...item,
+              note: "",
+              decisionNote: "",
+              signature: null,
+              generatedPdfPath: null,
+              generatedPdfName: null,
+              googleCalendarEventId: null,
+            };
+      });
+      return NextResponse.json({ items });
+    }
+
     let query = admin.from("leave_requests").select("*").order("start_date", { ascending: false });
 
     if (statusFilter) {

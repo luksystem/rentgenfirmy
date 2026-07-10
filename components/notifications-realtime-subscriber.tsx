@@ -36,6 +36,9 @@ export function NotificationsRealtimeSubscriber() {
     if (leaveState.allRequestsHydrated) {
       void leaveState.ensureAllRequests({ force: true });
     }
+    if (leaveState.planningRequestsHydrated) {
+      void leaveState.ensurePlanningRequests({ force: true });
+    }
     void leaveState.refreshPendingForMeCount();
   }, [
     profileId,

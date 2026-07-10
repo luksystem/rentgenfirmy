@@ -39,6 +39,18 @@ export async function fetchAllLeaveRequests(options?: { profileId?: string }): P
   return payload.items;
 }
 
+/** Urlopy wszystkich pracowników (pending + approved) do widoku Planu Zasobów — dostępne
+ * dla każdego zalogowanego, ale treść wniosku jest zredagowana na serwerze dla osób, które
+ * nie są ani wnioskującym, ani jego przełożonym, ani administratorem (patrz app/api/leave-requests/route.ts). */
+export async function fetchPlanningLeaveRequests(): Promise<LeaveRequest[]> {
+  const response = await fetch("/api/leave-requests?scope=planning", { credentials: "include" });
+  const payload = await parseJsonResponse<{ items: LeaveRequest[] }>(
+    response,
+    "Nie udało się wczytać urlopów do planu zasobów.",
+  );
+  return payload.items;
+}
+
 export async function createLeaveRequest(input: LeaveRequestInput): Promise<LeaveRequest> {
   const response = await fetch("/api/leave-requests", {
     method: "POST",

@@ -12,6 +12,7 @@ import {
   fetchAllLeaveRequests,
   fetchMyLeaveRequests,
   fetchPendingLeaveRequestCount,
+  fetchPlanningLeaveRequests,
   revertLeaveRequest as revertLeaveRequestRepo,
 } from "@/lib/supabase/leave-request-repository";
 
@@ -20,6 +21,7 @@ export const EMPTY_LEAVE_REQUESTS: LeaveRequest[] = [];
 
 let myRequestsPromise: Promise<LeaveRequest[]> | null = null;
 let allRequestsPromise: Promise<LeaveRequest[]> | null = null;
+let planningRequestsPromise: Promise<LeaveRequest[]> | null = null;
 
 type LeaveStore = {
   myRequests: LeaveRequest[];
@@ -30,6 +32,12 @@ type LeaveStore = {
   allRequestsHydrated: boolean;
   allRequestsLoading: boolean;
 
+  // Urlopy wszystkich pracowników (pending + approved) do kolorowego tła w Gantcie Planu
+  // Zasobów — widoczne dla każdego, w przeciwieństwie do `allRequests` (tylko admin/manager).
+  planningRequests: LeaveRequest[];
+  planningRequestsHydrated: boolean;
+  planningRequestsLoading: boolean;
+
   teamProfiles: UserProfile[];
   pendingForMeCount: number;
 
@@ -37,6 +45,7 @@ type LeaveStore = {
 
   ensureMyRequests: (options?: { force?: boolean }) => Promise<LeaveRequest[]>;
   ensureAllRequests: (options?: { force?: boolean }) => Promise<LeaveRequest[]>;
+  ensurePlanningRequests: (options?: { force?: boolean }) => Promise<LeaveRequest[]>;
   refreshPendingForMeCount: () => Promise<number>;
   createRequest: (input: LeaveRequestInput) => Promise<LeaveRequest>;
   cancelRequest: (id: string) => Promise<void>;
@@ -55,6 +64,10 @@ export const useLeaveStore = create<LeaveStore>((set, get) => ({
   allRequests: EMPTY_LEAVE_REQUESTS,
   allRequestsHydrated: false,
   allRequestsLoading: false,
+
+  planningRequests: EMPTY_LEAVE_REQUESTS,
+  planningRequestsHydrated: false,
+  planningRequestsLoading: false,
 
   teamProfiles: [],
   pendingForMeCount: 0,
@@ -151,6 +164,51 @@ export const useLeaveStore = create<LeaveStore>((set, get) => ({
     }
   },
 
+  ensurePlanningRequests: async (options) => {
+    const force = options?.force ?? false;
+    const state = get();
+
+    if (state.planningRequestsHydrated && !force) {
+      return state.planningRequests;
+    }
+    if (planningRequestsPromise && !force) {
+      return planningRequestsPromise;
+    }
+
+    set({ planningRequestsLoading: !state.planningRequestsHydrated, error: null });
+
+    const promise = Promise.all([
+      fetchPlanningLeaveRequests(),
+      get().teamProfiles.length ? Promise.resolve(get().teamProfiles) : fetchTeamProfiles(),
+    ]).then(
+      ([items, teamProfiles]) => {
+        set({
+          planningRequests: items,
+          teamProfiles,
+          planningRequestsHydrated: true,
+          planningRequestsLoading: false,
+        });
+        return items;
+      },
+      (error: unknown) => {
+        set({
+          planningRequestsLoading: false,
+          error: error instanceof Error ? error.message : "Nie udało się wczytać urlopów do planu zasobów.",
+        });
+        throw error;
+      },
+    );
+
+    planningRequestsPromise = promise;
+    try {
+      return await promise;
+    } finally {
+      if (planningRequestsPromise === promise) {
+        planningRequestsPromise = null;
+      }
+    }
+  },
+
   refreshPendingForMeCount: async () => {
     try {
       const count = await fetchPendingLeaveRequestCount();
@@ -172,6 +230,7 @@ export const useLeaveStore = create<LeaveStore>((set, get) => ({
     set({
       myRequests: get().myRequests.filter((item) => item.id !== id),
       allRequests: get().allRequests.filter((item) => item.id !== id),
+      planningRequests: get().planningRequests.filter((item) => item.id !== id),
     });
   },
 
@@ -211,6 +270,7 @@ export const useLeaveStore = create<LeaveStore>((set, get) => ({
     set({
       myRequests: replace(get().myRequests),
       allRequests: replace(get().allRequests),
+      planningRequests: replace(get().planningRequests),
     });
   },
 }));
