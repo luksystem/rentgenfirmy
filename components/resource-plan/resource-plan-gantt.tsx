@@ -956,8 +956,11 @@ function GanttBlock({
     <div
       ref={blockRef}
       className={cn(
-        "absolute overflow-hidden rounded-md border px-1.5 text-[11px] font-medium shadow-sm select-none",
-        splitArmed && "ring-2 ring-dashed ring-accent",
+        "absolute rounded-md border px-1.5 text-[11px] font-medium shadow-sm select-none",
+        // Popover z potwierdzeniem podziału wystaje NAD kafelek (-top-9) — z `overflow-hidden`
+        // (normalny stan bloku, żeby długa etykieta się nie rozlewała) byłby wyrenderowany, ale
+        // wizualnie przycięty i niewidoczny. W trybie podziału potrzebny `overflow-visible`.
+        splitArmed ? "overflow-visible ring-2 ring-dashed ring-accent" : "overflow-hidden",
       )}
       style={{
         left,
