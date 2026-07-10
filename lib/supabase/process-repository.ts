@@ -206,6 +206,7 @@ async function insertTemplateStagesGraph(template: ProcessTemplate) {
       id: stage.id,
       template_id: stage.templateId,
       title: stage.title,
+      description: stage.description ?? "",
       position: stage.position,
       min_people_count: stage.minPeopleCount ?? 1,
       optimal_people_count: stage.optimalPeopleCount ?? null,

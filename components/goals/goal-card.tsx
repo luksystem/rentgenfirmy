@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Calendar, ClipboardList, Repeat, ShieldAlert, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -35,26 +36,178 @@ const PRIORITY_TONE: Record<Goal["priority"], "neutral" | "waiting" | "critical"
   critical: "critical",
 };
 
+/** Kolor daty docelowej wg zbliżania się terminu — zielony/neutralny -> żółty -> czerwony. */
+function dueDateToneClass(periodEnd: string, status: GoalStatus): string {
+  if (status === "settled" || status === "cancelled") {
+    return "text-muted";
+  }
+  const days = Math.ceil((new Date(periodEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  if (days < 0) return "text-rose-400 font-bold";
+  if (days <= 3) return "text-rose-300 font-semibold";
+  if (days <= 7) return "text-amber-300 font-semibold";
+  return "text-emerald-300/80";
+}
+
+function StatusSelect({
+  goal,
+  onStatusChange,
+  className,
+}: {
+  goal: Goal;
+  onStatusChange: (status: GoalStatus) => void;
+  className?: string;
+}) {
+  return (
+    <select
+      value={goal.status}
+      draggable={false}
+      onClick={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
+      onChange={(event) => onStatusChange(event.target.value as GoalStatus)}
+      className={cn(
+        "cursor-pointer rounded-lg border px-2 py-1 text-[11px] font-semibold outline-none transition focus:ring-2 focus:ring-accent/20",
+        STATUS_SELECT_TONE[goal.status],
+        className,
+      )}
+    >
+      {[...GOAL_BOARD_COLUMNS, "cancelled" as const].map((status) => (
+        <option key={status} value={status}>
+          {GOAL_STATUS_LABELS[status]}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function ProgressSlider({
+  progressPercent,
+  onProgressChange,
+}: {
+  progressPercent: number;
+  onProgressChange: (percent: number) => void;
+}) {
+  const [localValue, setLocalValue] = useState(progressPercent);
+
+  useEffect(() => {
+    setLocalValue(progressPercent);
+  }, [progressPercent]);
+
+  function commit() {
+    if (localValue !== progressPercent) {
+      onProgressChange(localValue);
+    }
+  }
+
+  return (
+    <input
+      type="range"
+      min={0}
+      max={100}
+      step={5}
+      value={localValue}
+      draggable={false}
+      onClick={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
+      onChange={(event) => setLocalValue(Number(event.target.value))}
+      onMouseUp={commit}
+      onTouchEnd={commit}
+      onKeyUp={commit}
+      className="h-1.5 w-full cursor-pointer accent-accent"
+    />
+  );
+}
+
+function DueDateInput({
+  goal,
+  onDueDateChange,
+  className,
+}: {
+  goal: Goal;
+  onDueDateChange: (date: string) => void;
+  className?: string;
+}) {
+  return (
+    <input
+      type="date"
+      value={goal.periodEnd.slice(0, 10)}
+      draggable={false}
+      onClick={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
+      onChange={(event) => event.target.value && onDueDateChange(event.target.value)}
+      className={cn(
+        "rounded-lg border border-border/60 bg-transparent px-1.5 py-0.5 text-[11px] outline-none",
+        dueDateToneClass(goal.periodEnd, goal.status),
+        className,
+      )}
+    />
+  );
+}
+
 export function GoalCard({
   goal,
   meta,
   ownerName,
   onOpen,
   draggable,
+  compact,
   onDragStart,
   onDragEnd,
   onStatusChange,
+  onProgressChange,
+  onDueDateChange,
 }: {
   goal: Goal;
   meta?: GoalCardMeta;
   ownerName: string;
   onOpen: () => void;
   draggable?: boolean;
+  compact?: boolean;
   onDragStart?: (event: React.DragEvent) => void;
   onDragEnd?: () => void;
   onStatusChange?: (status: GoalStatus) => void;
+  onProgressChange?: (percent: number) => void;
+  onDueDateChange?: (date: string) => void;
 }) {
   const reviewOverdue = meta?.nextReviewAt ? new Date(meta.nextReviewAt).getTime() < Date.now() : false;
+
+  if (compact) {
+    return (
+      <article
+        draggable={draggable}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        className="cursor-grab rounded-lg border border-border/70 bg-surface-muted/20 px-2.5 py-2 shadow-sm transition hover:border-accent/30 active:cursor-grabbing"
+      >
+        <div className="flex items-center gap-2">
+          <button type="button" className="min-w-0 flex-1 text-left" onClick={onOpen}>
+            <p className="truncate text-xs font-bold leading-tight text-foreground">{goal.name}</p>
+          </button>
+          {goal.isRecurring ? <Repeat className="h-3 w-3 shrink-0 text-sky-300" /> : null}
+          {onDueDateChange ? (
+            <DueDateInput goal={goal} onDueDateChange={onDueDateChange} className="shrink-0" />
+          ) : null}
+        </div>
+        <div className="mt-1.5 flex items-center gap-2">
+          {onProgressChange ? (
+            <div className="min-w-0 flex-1">
+              <ProgressSlider progressPercent={goal.progressPercent} onProgressChange={onProgressChange} />
+            </div>
+          ) : (
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-muted">
+              <div
+                className="h-full rounded-full bg-accent"
+                style={{ width: `${Math.min(100, Math.max(0, goal.progressPercent))}%` }}
+              />
+            </div>
+          )}
+          <span className="shrink-0 text-[10px] font-semibold text-muted">{goal.progressPercent}%</span>
+          {onStatusChange ? (
+            <StatusSelect goal={goal} onStatusChange={onStatusChange} className="shrink-0 !py-0.5 !text-[10px]" />
+          ) : null}
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article
@@ -71,33 +224,19 @@ export function GoalCard({
         <p className="mt-1 line-clamp-2 text-xs text-muted/80">{goal.description}</p>
       </button>
 
-      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
-        <div
-          className="h-full rounded-full bg-accent transition-all"
-          style={{ width: `${Math.min(100, Math.max(0, goal.progressPercent))}%` }}
-        />
-      </div>
+      {onProgressChange ? (
+        <ProgressSlider progressPercent={goal.progressPercent} onProgressChange={onProgressChange} />
+      ) : (
+        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
+          <div
+            className="h-full rounded-full bg-accent transition-all"
+            style={{ width: `${Math.min(100, Math.max(0, goal.progressPercent))}%` }}
+          />
+        </div>
+      )}
       <p className="mt-1 text-[11px] font-semibold text-muted">{goal.progressPercent}% realizacji</p>
 
-      {onStatusChange ? (
-        <select
-          value={goal.status}
-          draggable={false}
-          onClick={(event) => event.stopPropagation()}
-          onPointerDown={(event) => event.stopPropagation()}
-          onChange={(event) => onStatusChange(event.target.value as GoalStatus)}
-          className={cn(
-            "mt-2 w-full cursor-pointer rounded-lg border px-2 py-1 text-[11px] font-semibold outline-none transition focus:ring-2 focus:ring-accent/20",
-            STATUS_SELECT_TONE[goal.status],
-          )}
-        >
-          {[...GOAL_BOARD_COLUMNS, "cancelled" as const].map((status) => (
-            <option key={status} value={status}>
-              {GOAL_STATUS_LABELS[status]}
-            </option>
-          ))}
-        </select>
-      ) : null}
+      {onStatusChange ? <StatusSelect goal={goal} onStatusChange={onStatusChange} className="mt-2 w-full" /> : null}
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <Badge tone="blue">{GOAL_LEVEL_LABELS[goal.level]}</Badge>
@@ -110,25 +249,32 @@ export function GoalCard({
         {ownerName}
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted">
-        {meta && meta.linkedTaskCount > 0 ? (
-          <span className="flex items-center gap-1">
-            <ClipboardList className="h-3 w-3" />
-            {meta.linkedTaskCount} zadań
-          </span>
-        ) : null}
-        {meta && meta.openProblemCount > 0 ? (
-          <span className="flex items-center gap-1 text-rose-300">
-            <ShieldAlert className="h-3 w-3" />
-            {meta.openProblemCount} problemów
-          </span>
-        ) : null}
-        {meta?.nextReviewAt ? (
-          <span className={cn("flex items-center gap-1", reviewOverdue && "text-amber-300")}>
-            <Calendar className="h-3 w-3" />
-            Przegląd: {formatDate(meta.nextReviewAt)}
-          </span>
-        ) : null}
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted">
+        <div className="flex flex-wrap items-center gap-2">
+          {meta && meta.linkedTaskCount > 0 ? (
+            <span className="flex items-center gap-1">
+              <ClipboardList className="h-3 w-3" />
+              {meta.linkedTaskCount} zadań
+            </span>
+          ) : null}
+          {meta && meta.openProblemCount > 0 ? (
+            <span className="flex items-center gap-1 text-rose-300">
+              <ShieldAlert className="h-3 w-3" />
+              {meta.openProblemCount} problemów
+            </span>
+          ) : null}
+          {meta?.nextReviewAt ? (
+            <span className={cn("flex items-center gap-1", reviewOverdue && "text-amber-300")}>
+              <Calendar className="h-3 w-3" />
+              Przegląd: {formatDate(meta.nextReviewAt)}
+            </span>
+          ) : null}
+        </div>
+        {onDueDateChange ? (
+          <DueDateInput goal={goal} onDueDateChange={onDueDateChange} />
+        ) : (
+          <span>Termin: {formatDate(goal.periodEnd)}</span>
+        )}
       </div>
     </article>
   );

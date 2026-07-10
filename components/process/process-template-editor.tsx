@@ -7,7 +7,7 @@ import { ProcessPipeline } from "@/components/process/process-pipeline";
 import { ProcessStageResourcePanel } from "@/components/process/process-stage-resource-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Field, Input, Select } from "@/components/ui/input";
+import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { moveItem, removeAt, withPositions } from "@/lib/process/template-editor-utils";
 import { flattenChecklistLines, normalizeChecklistPayload } from "@/lib/process/item-payload";
 import {
@@ -274,6 +274,22 @@ export function ProcessTemplateEditor({
                     ...current,
                     stages: current.stages.map((entry) =>
                       entry.id === stage.id ? { ...entry, title: event.target.value } : entry,
+                    ),
+                  }))
+                }
+              />
+            </Field>
+
+            <Field label="Opis etapu (dla AI)">
+              <Textarea
+                value={stage.description ?? ""}
+                rows={2}
+                placeholder="Np. Etap wdrożenia — koncentruje się na montażu i konfiguracji urządzeń. Warto ustalać cele operacyjne dla instalatorów i kierownika projektu."
+                onChange={(event) =>
+                  setTemplate((current) => ({
+                    ...current,
+                    stages: current.stages.map((entry) =>
+                      entry.id === stage.id ? { ...entry, description: event.target.value } : entry,
                     ),
                   }))
                 }

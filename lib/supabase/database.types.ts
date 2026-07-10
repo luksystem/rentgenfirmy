@@ -1209,6 +1209,7 @@ export type ProcessStageRow = {
   id: string;
   template_id: string;
   title: string;
+  description: string;
   position: number;
   min_people_count: number;
   optimal_people_count: number | null;

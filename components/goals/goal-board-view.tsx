@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, RefreshCw, Target } from "lucide-react";
+import { Eye, EyeOff, LayoutGrid, List, Loader2, RefreshCw, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   KanbanDropPlaceholder,
@@ -23,6 +23,9 @@ import { GOAL_BOARD_COLUMNS, GOAL_STATUS_LABELS, type Goal, type GoalStatus } fr
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import { useGoalStore, EMPTY_GOALS, EMPTY_GOAL_CARD_META } from "@/store/goal-store";
+import { GoalAiBulkImportPanel } from "@/components/goals/goal-ai-bulk-import-panel";
+
+const DENSITY_STORAGE_KEY = "goals-card-density";
 
 export function GoalBoardView({ boardId }: { boardId: string }) {
   const router = useRouter();
@@ -33,20 +36,38 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
   const isLoading = useGoalStore((state) => state.loadingBoardIds[boardId] ?? false);
   const ensureBoardGoals = useGoalStore((state) => state.ensureBoardGoals);
   const moveGoalStatus = useGoalStore((state) => state.moveGoalStatus);
+  const updateGoalQuickFields = useGoalStore((state) => state.updateGoalQuickFields);
   const getOwnerName = useGoalStore((state) => state.getOwnerName);
 
   const [dragGoalId, setDragGoalId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<GoalStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showCancelled, setShowCancelled] = useState(false);
+  const [density, setDensity] = useState<"normal" | "slim">("normal");
 
   useEffect(() => {
     void ensureBoardGoals(boardId);
   }, [boardId, ensureBoardGoals]);
 
-  const columns = useMemo(
-    () => GOAL_BOARD_COLUMNS.map((status) => ({ id: status, title: GOAL_STATUS_LABELS[status] })),
-    [],
-  );
+  useEffect(() => {
+    const stored = window.localStorage.getItem(DENSITY_STORAGE_KEY);
+    if (stored === "slim" || stored === "normal") {
+      setDensity(stored);
+    }
+  }, []);
+
+  function handleDensityChange(next: "normal" | "slim") {
+    setDensity(next);
+    window.localStorage.setItem(DENSITY_STORAGE_KEY, next);
+  }
+
+  const columns = useMemo(() => {
+    const base = GOAL_BOARD_COLUMNS.map((status) => ({ id: status, title: GOAL_STATUS_LABELS[status] }));
+    if (showCancelled) {
+      base.push({ id: "cancelled" as GoalStatus, title: GOAL_STATUS_LABELS.cancelled });
+    }
+    return base;
+  }, [showCancelled]);
   const { activeColumnId, scrollerRef, scrollToColumn, setColumnRef } = useKanbanMobileColumns(columns);
 
   const grouped = useMemo(() => {
@@ -54,16 +75,19 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
     for (const status of GOAL_BOARD_COLUMNS) {
       map.set(status, []);
     }
+    if (showCancelled) {
+      map.set("cancelled", []);
+    }
     for (const goal of goals) {
-      if (goal.status === "cancelled") continue;
+      if (goal.status === "cancelled" && !showCancelled) continue;
       const bucket = map.get(goal.status) ?? [];
       bucket.push(goal);
       map.set(goal.status, bucket);
     }
     return map;
-  }, [goals]);
+  }, [goals, showCancelled]);
 
-  const maxColumnCount = Math.max(1, ...GOAL_BOARD_COLUMNS.map((status) => grouped.get(status)?.length ?? 0));
+  const maxColumnCount = Math.max(1, ...columns.map((column) => grouped.get(column.id)?.length ?? 0));
 
   async function handleStatusChange(goalId: string, status: GoalStatus) {
     const goal = goals.find((entry) => entry.id === goalId);
@@ -80,6 +104,22 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
     }
   }
 
+  async function handleProgressChange(goal: Goal, progressPercent: number) {
+    try {
+      await updateGoalQuickFields(goal, { progressPercent }, profile?.id ?? null);
+    } catch (progressError) {
+      setError(progressError instanceof Error ? progressError.message : "Nie udało się zmienić realizacji.");
+    }
+  }
+
+  async function handleDueDateChange(goal: Goal, periodEnd: string) {
+    try {
+      await updateGoalQuickFields(goal, { periodEnd }, profile?.id ?? null);
+    } catch (dueDateError) {
+      setError(dueDateError instanceof Error ? dueDateError.message : "Nie udało się zmienić daty.");
+    }
+  }
+
   if (!board) {
     return <p className="text-sm text-muted">Tablica nie została znaleziona.</p>;
   }
@@ -92,6 +132,39 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
           {goals.length} {goals.length === 1 ? "cel" : "celów"} na tablicy
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex items-center overflow-hidden rounded-lg border border-border/70">
+            <button
+              type="button"
+              onClick={() => handleDensityChange("normal")}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition",
+                density === "normal" ? "bg-accent text-accent-foreground" : "text-muted hover:bg-surface-muted",
+              )}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              Standard
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDensityChange("slim")}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition",
+                density === "slim" ? "bg-accent text-accent-foreground" : "text-muted hover:bg-surface-muted",
+              )}
+            >
+              <List className="h-3.5 w-3.5" />
+              Slim
+            </button>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCancelled((current) => !current)}
+          >
+            {showCancelled ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+            {showCancelled ? "Skryj anulowane" : "Pokaż anulowane"}
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -111,6 +184,12 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
       </div>
 
       {error ? <p className="mb-3 text-sm text-rose-400">{error}</p> : null}
+
+      <GoalAiBulkImportPanel
+        boardId={boardId}
+        boardKind={board.kind}
+        onCreated={() => void ensureBoardGoals(boardId, { force: true })}
+      />
 
       <KanbanMobileColumnNav
         columns={columns}
@@ -182,6 +261,7 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
                       meta={meta[goal.id]}
                       ownerName={getOwnerName(goal.ownerId)}
                       draggable
+                      compact={density === "slim"}
                       onDragStart={(event) => {
                         event.dataTransfer.effectAllowed = "move";
                         event.dataTransfer.setData("text/plain", goal.id);
@@ -193,6 +273,8 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
                       }}
                       onOpen={() => router.push(`/tablice-celow/${boardId}/${goal.id}`)}
                       onStatusChange={(status) => void handleStatusChange(goal.id, status)}
+                      onProgressChange={(percent) => void handleProgressChange(goal, percent)}
+                      onDueDateChange={(date) => void handleDueDateChange(goal, date)}
                     />
                   ))
                 )}

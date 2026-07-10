@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { GoalAiAdvisorPanel } from "@/components/goals/goal-ai-advisor-panel";
+import { ProjectSelectSearchable } from "@/components/goals/project-select-searchable";
 import {
   GOAL_LEVEL_LABELS,
   GOAL_LEVELS,
@@ -70,10 +71,15 @@ export function CreateGoalDialog({ boardId }: { boardId: string }) {
   const methodologies = useGoalStore((state) => state.methodologies);
   const boards = useGoalStore((state) => state.boards);
   const createGoal = useGoalStore((state) => state.createGoal);
+  const projectScope = useGoalStore((state) => state.moduleSettings.projectScope);
   const projects = useAppStore((state) => state.projects);
   const clients = useAppStore((state) => state.clients);
 
   const board = useMemo(() => boards.find((entry) => entry.id === boardId) ?? null, [boards, boardId]);
+  const selectableProjects = useMemo(
+    () => (projectScope === "active" ? projects.filter((entry) => entry.isActive) : projects),
+    [projects, projectScope],
+  );
 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -370,16 +376,12 @@ export function CreateGoalDialog({ boardId }: { boardId: string }) {
               Powiązania (opcjonalnie)
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Projekt">
-                <Select value={projectId} onChange={(event) => handleProjectChange(event.target.value)}>
-                  <option value="">— brak —</option>
-                  {projects.filter((entry) => entry.isActive).map((entry) => (
-                    <option key={entry.id} value={entry.id}>
-                      {entry.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
+              <ProjectSelectSearchable
+                projects={selectableProjects}
+                clients={clients}
+                value={projectId || null}
+                onChange={(nextId) => handleProjectChange(nextId ?? "")}
+              />
               <Field label="Klient">
                 <Select value={clientId} onChange={(event) => setClientId(event.target.value)}>
                   <option value="">— brak —</option>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BarChart3, BookOpen, History, LayoutGrid, Trash2 } from "lucide-react";
+import { BarChart3, BookOpen, History, LayoutGrid, Settings, Sparkles, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -102,6 +102,22 @@ export function GoalBoardHub() {
             <History className="h-4 w-4" />
             Historia i wnioski
           </Link>
+          <Link
+            href="/tablice-celow/asystent"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
+          >
+            <Sparkles className="h-4 w-4" />
+            Asystent wyznaczania celów
+          </Link>
+          {isAdmin ? (
+            <Link
+              href="/tablice-celow/ustawienia"
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
+            >
+              <Settings className="h-4 w-4" />
+              Ustawienia
+            </Link>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           {isAdmin ? <CreateGoalBoardKindDialog /> : null}

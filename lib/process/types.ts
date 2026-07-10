@@ -51,6 +51,8 @@ export type ProcessStage = {
   id: string;
   templateId: string;
   title: string;
+  /** Opis etapu (dla AI) — pomaga np. Asystentowi wyznaczania celów dobrać, jakie cele/dla jakiej roli ustalić. */
+  description?: string;
   position: number;
   milestones: ProcessMilestone[];
   /**

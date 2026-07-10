@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Loader2, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,7 +29,7 @@ import {
   type GoalStatus,
   type GoalUpdateEntry,
 } from "@/lib/goals/types";
-import { getUserDisplayName, hasFullAppAccess } from "@/lib/auth/types";
+import { getUserDisplayName, hasFullAppAccess, isAdministratorRole } from "@/lib/auth/types";
 import {
   addGoalComment,
   closeGoalReview,
@@ -63,11 +64,13 @@ const TABS: Array<{ key: TabKey; label: string }> = [
 ];
 
 export function GoalDetailView({ goalId }: { goalId: string }) {
+  const router = useRouter();
   const profile = useAuthStore((state) => state.profile);
   const teamProfiles = useGoalStore((state) => state.teamProfiles);
   const boards = useGoalStore((state) => state.boards);
   const getOwnerName = useGoalStore((state) => state.getOwnerName);
   const upsertGoalInStore = useGoalStore((state) => state.upsertGoalInStore);
+  const removeGoal = useGoalStore((state) => state.removeGoal);
 
   const [goal, setGoal] = useState<Goal | null>(null);
   const [methodology, setMethodology] = useState<GoalMethodology | null>(null);
@@ -78,6 +81,24 @@ export function GoalDetailView({ goalId }: { goalId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>("przeglad");
+  const [deleting, setDeleting] = useState(false);
+
+  const isAdmin = Boolean(profile && isAdministratorRole(profile.role));
+
+  async function handleDelete() {
+    if (!goal) return;
+    if (!window.confirm(`Usunąć cel „${goal.name}”? Tej operacji nie można odwrócić.`)) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await removeGoal(goal.boardId, goal.id);
+      router.push(`/tablice-celow/${goal.boardId}`);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Nie udało się usunąć celu.");
+      setDeleting(false);
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -136,12 +157,27 @@ export function GoalDetailView({ goalId }: { goalId: string }) {
     <div className="grid gap-4">
       {error ? <p className="text-sm text-rose-400">{error}</p> : null}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge tone="blue">{GOAL_LEVEL_LABELS[goal.level]}</Badge>
-        <Badge tone="neutral">{GOAL_STATUS_LABELS[goal.status]}</Badge>
-        <Badge tone="neutral">{GOAL_PRIORITY_LABELS[goal.priority]}</Badge>
-        <Badge tone="neutral">{GOAL_PERIOD_TYPE_LABELS[goal.periodType]}</Badge>
-        {goal.isRecurring ? <Badge tone="blue">Cykliczny</Badge> : null}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone="blue">{GOAL_LEVEL_LABELS[goal.level]}</Badge>
+          <Badge tone="neutral">{GOAL_STATUS_LABELS[goal.status]}</Badge>
+          <Badge tone="neutral">{GOAL_PRIORITY_LABELS[goal.priority]}</Badge>
+          <Badge tone="neutral">{GOAL_PERIOD_TYPE_LABELS[goal.periodType]}</Badge>
+          {goal.isRecurring ? <Badge tone="blue">Cykliczny</Badge> : null}
+        </div>
+        {isAdmin ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={deleting}
+            onClick={() => void handleDelete()}
+            className="text-rose-300 hover:bg-rose-500/10 hover:text-rose-200"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {deleting ? "Usuwanie..." : "Usuń cel"}
+          </Button>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap gap-1.5 border-b border-border/70 pb-2">
@@ -231,11 +267,14 @@ function OverviewTab({
   currentProfileId: string | null;
 }) {
   const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(goal.name);
   const [description, setDescription] = useState(goal.description);
   const [priority, setPriority] = useState(goal.priority);
   const [ownerId, setOwnerId] = useState(goal.ownerId ?? "");
   const [status, setStatus] = useState<GoalStatus>(goal.status);
   const [progress, setProgress] = useState(goal.progressPercent);
+  const [periodStart, setPeriodStart] = useState(goal.periodStart.slice(0, 10));
+  const [periodEnd, setPeriodEnd] = useState(goal.periodEnd.slice(0, 10));
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -255,13 +294,24 @@ function OverviewTab({
   }
 
   async function handleSave() {
+    if (!name.trim()) {
+      setError("Nazwa celu jest wymagana.");
+      return;
+    }
+    if (periodEnd < periodStart) {
+      setError("Data docelowa nie może być wcześniejsza niż data początkowa.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       const updated = await updateGoal(goal.id, {
+        name,
         description,
         priority,
         ownerId: ownerId || null,
+        periodStart,
+        periodEnd,
       });
       let final = updated;
       if (status !== goal.status || progress !== goal.progressPercent) {
@@ -342,9 +392,20 @@ function OverviewTab({
           </>
         ) : (
           <>
+            <Field label="Nazwa celu">
+              <Input value={name} onChange={(event) => setName(event.target.value)} />
+            </Field>
             <Field label="Opis">
               <Textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} />
             </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Data początkowa">
+                <Input type="date" value={periodStart} onChange={(event) => setPeriodStart(event.target.value)} />
+              </Field>
+              <Field label="Data docelowa">
+                <Input type="date" value={periodEnd} onChange={(event) => setPeriodEnd(event.target.value)} />
+              </Field>
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Priorytet">
                 <Select value={priority} onChange={(event) => setPriority(event.target.value as Goal["priority"])}>

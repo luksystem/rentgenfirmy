@@ -81,6 +81,7 @@ export function rowToProcessStage(
     id: row.id,
     templateId: row.template_id,
     title: row.title,
+    description: row.description ?? "",
     position: row.position,
     milestones: milestones.sort((a, b) => a.position - b.position),
     minPeopleCount: row.min_people_count ?? 1,

@@ -15,12 +15,15 @@ import {
   updateGoalBoardKind,
 } from "@/lib/supabase/goal-board-repository";
 import { fetchGoalMethodologies } from "@/lib/supabase/goal-methodology-repository";
+import { fetchGoalModuleSettings, saveGoalModuleSettings } from "@/lib/supabase/goal-settings-repository";
+import { defaultGoalModuleSettings, type GoalModuleSettings } from "@/lib/goals/module-settings";
 import {
   createGoal as createGoalRow,
   deleteGoal as deleteGoalRow,
   fetchGoalLinkCounts,
   fetchGoalsByBoard,
   fetchNextReviewByGoal,
+  updateGoal,
   updateGoalProgress,
 } from "@/lib/supabase/goal-repository";
 import type { goalToInsertRow } from "@/lib/supabase/goal-mappers";
@@ -49,6 +52,7 @@ type GoalStore = {
   methodologies: GoalMethodology[];
   teamProfiles: UserProfile[];
   boardCounts: Record<string, { total: number; atRisk: number; dueForReview: number }>;
+  moduleSettings: GoalModuleSettings;
 
   goalsByBoard: Record<string, Goal[]>;
   goalCardMetaByBoard: Record<string, Record<string, GoalCardMeta>>;
@@ -66,9 +70,15 @@ type GoalStore = {
     input: { label?: string; description?: string; icon?: string },
   ) => Promise<GoalBoardKind>;
   removeBoardKind: (code: string) => Promise<void>;
+  updateModuleSettings: (patch: Partial<GoalModuleSettings>) => Promise<void>;
   createGoal: (input: Parameters<typeof goalToInsertRow>[0]) => Promise<Goal>;
   removeGoal: (boardId: string, goalId: string) => Promise<void>;
   moveGoalStatus: (goal: Goal, status: GoalStatus, authorId: string | null) => Promise<void>;
+  updateGoalQuickFields: (
+    goal: Goal,
+    patch: { progressPercent?: number; periodEnd?: string },
+    authorId: string | null,
+  ) => Promise<void>;
   upsertGoalInStore: (goal: Goal) => void;
   getOwnerName: (profileId: string | null) => string;
 };
@@ -83,6 +93,7 @@ export const useGoalStore = create<GoalStore>((set, get) => ({
   methodologies: [],
   teamProfiles: [],
   boardCounts: {},
+  moduleSettings: defaultGoalModuleSettings(),
 
   goalsByBoard: {},
   goalCardMetaByBoard: {},
@@ -95,12 +106,13 @@ export const useGoalStore = create<GoalStore>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const [boardKinds, boards, methodologies, teamProfiles, boardCounts] = await Promise.all([
+      const [boardKinds, boards, methodologies, teamProfiles, boardCounts, moduleSettings] = await Promise.all([
         fetchGoalBoardKinds(),
         fetchGoalBoards(),
         fetchGoalMethodologies(),
         fetchTeamProfiles(),
         fetchGoalCountsByBoard(),
+        fetchGoalModuleSettings(),
       ]);
 
       set({
@@ -109,6 +121,7 @@ export const useGoalStore = create<GoalStore>((set, get) => ({
         methodologies,
         teamProfiles,
         boardCounts,
+        moduleSettings,
         hydrated: true,
         isLoading: false,
         error: null,
@@ -210,6 +223,12 @@ export const useGoalStore = create<GoalStore>((set, get) => ({
     set({ boardKinds: get().boardKinds.filter((kind) => kind.code !== code) });
   },
 
+  updateModuleSettings: async (patch) => {
+    const next = { ...get().moduleSettings, ...patch };
+    const saved = await saveGoalModuleSettings(next);
+    set({ moduleSettings: saved });
+  },
+
   createGoal: async (input) => {
     const goal = await createGoalRow(input);
     const boardGoals = get().goalsByBoard[input.boardId] ?? [];
@@ -247,6 +266,20 @@ export const useGoalStore = create<GoalStore>((set, get) => ({
   moveGoalStatus: async (goal, status, authorId) => {
     const { goal: updated } = await updateGoalProgress(goal.id, { status, authorId });
     get().upsertGoalInStore(updated);
+  },
+
+  updateGoalQuickFields: async (goal, patch, authorId) => {
+    if (patch.progressPercent !== undefined) {
+      const { goal: updated } = await updateGoalProgress(goal.id, {
+        progressPercent: patch.progressPercent,
+        authorId,
+      });
+      get().upsertGoalInStore(updated);
+    }
+    if (patch.periodEnd !== undefined) {
+      const updated = await updateGoal(goal.id, { periodEnd: patch.periodEnd });
+      get().upsertGoalInStore(updated);
+    }
   },
 
   upsertGoalInStore: (goal) => {
