@@ -8,7 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GoalBoardKindIcon } from "@/components/goals/goal-board-kind-icon";
 import { CreateGoalBoardDialog } from "@/components/goals/create-goal-board-dialog";
+import { CreateGoalBoardKindDialog } from "@/components/goals/create-goal-board-kind-dialog";
 import { EditGoalBoardDialog } from "@/components/goals/edit-goal-board-dialog";
+import { EditGoalBoardKindDialog } from "@/components/goals/edit-goal-board-kind-dialog";
 import { isAdministratorRole } from "@/lib/auth/types";
 import { useAuthStore } from "@/store/auth-store";
 import { useGoalStore } from "@/store/goal-store";
@@ -20,7 +22,9 @@ export function GoalBoardHub() {
   const boards = useGoalStore((state) => state.boards);
   const boardCounts = useGoalStore((state) => state.boardCounts);
   const removeBoard = useGoalStore((state) => state.removeBoard);
+  const removeBoardKind = useGoalStore((state) => state.removeBoardKind);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingKindCode, setDeletingKindCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function handleDeleteBoard(boardId: string, boardName: string) {
@@ -41,6 +45,23 @@ export function GoalBoardHub() {
       );
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleDeleteBoardKind(code: string, label: string) {
+    if (!window.confirm(`Usunąć kategorię „${label}”?`)) {
+      return;
+    }
+    setDeletingKindCode(code);
+    setError(null);
+    try {
+      await removeBoardKind(code);
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error ? deleteError.message : "Nie udało się usunąć kategorii.",
+      );
+    } finally {
+      setDeletingKindCode(null);
     }
   }
 
@@ -82,7 +103,10 @@ export function GoalBoardHub() {
             Historia i wnioski
           </Link>
         </div>
-        <CreateGoalBoardDialog boardKinds={boardKinds} />
+        <div className="flex flex-wrap gap-2">
+          {isAdmin ? <CreateGoalBoardKindDialog /> : null}
+          <CreateGoalBoardDialog boardKinds={boardKinds} />
+        </div>
       </div>
 
       {error ? <p className="text-sm text-rose-400">{error}</p> : null}
@@ -91,7 +115,7 @@ export function GoalBoardHub() {
         {boardKinds.map((kind) => {
           const kindBoards = boardsByKind.get(kind.code) ?? [];
           return (
-            <Card key={kind.code}>
+            <Card key={kind.code} className="group">
               <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface-muted text-accent">
@@ -102,9 +126,32 @@ export function GoalBoardHub() {
                     <p className="text-xs text-muted">{kind.description}</p>
                   </div>
                 </div>
-                {kind.visibility === "admin_only" ? (
-                  <Badge tone="critical">Tylko admin</Badge>
-                ) : null}
+                <div className="flex items-center gap-2">
+                  {kind.visibility === "admin_only" ? (
+                    <Badge tone="critical">Tylko admin</Badge>
+                  ) : null}
+                  {isAdmin ? (
+                    <div className="flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+                      <EditGoalBoardKindDialog kind={kind} />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-muted hover:text-rose-400"
+                        disabled={deletingKindCode === kind.code || kindBoards.length > 0}
+                        title={
+                          kindBoards.length > 0
+                            ? "Usuń najpierw wszystkie tablice tego typu"
+                            : "Usuń kategorię"
+                        }
+                        onClick={() => void handleDeleteBoardKind(kind.code, kind.label)}
+                        aria-label="Usuń kategorię"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
               </CardHeader>
               <CardContent className="pt-0">
                 {kindBoards.length === 0 ? (

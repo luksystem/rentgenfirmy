@@ -5,11 +5,14 @@ import type { UserProfile } from "@/lib/auth/types";
 import { fetchTeamProfiles, profileToOptionLabel } from "@/lib/supabase/profile-repository";
 import {
   createGoalBoard,
+  createGoalBoardKind,
   deleteGoalBoard,
+  deleteGoalBoardKind,
   fetchGoalBoardKinds,
   fetchGoalBoards,
   fetchGoalCountsByBoard,
   updateGoalBoard,
+  updateGoalBoardKind,
 } from "@/lib/supabase/goal-board-repository";
 import { fetchGoalMethodologies } from "@/lib/supabase/goal-methodology-repository";
 import {
@@ -57,6 +60,12 @@ type GoalStore = {
   createBoard: (input: { kind: string; name: string; description?: string }) => Promise<GoalBoard>;
   updateBoard: (boardId: string, input: { name?: string; description?: string }) => Promise<GoalBoard>;
   removeBoard: (boardId: string) => Promise<void>;
+  createBoardKind: (input: { label: string; description?: string; icon?: string }) => Promise<GoalBoardKind>;
+  updateBoardKind: (
+    code: string,
+    input: { label?: string; description?: string; icon?: string },
+  ) => Promise<GoalBoardKind>;
+  removeBoardKind: (code: string) => Promise<void>;
   createGoal: (input: Parameters<typeof goalToInsertRow>[0]) => Promise<Goal>;
   removeGoal: (boardId: string, goalId: string) => Promise<void>;
   moveGoalStatus: (goal: Goal, status: GoalStatus, authorId: string | null) => Promise<void>;
@@ -182,6 +191,23 @@ export const useGoalStore = create<GoalStore>((set, get) => ({
       goalCardMetaByBoard: restMeta,
       boardCounts: restCounts,
     });
+  },
+
+  createBoardKind: async (input) => {
+    const kind = await createGoalBoardKind(input);
+    set({ boardKinds: [...get().boardKinds, kind].sort((a, b) => a.sortOrder - b.sortOrder) });
+    return kind;
+  },
+
+  updateBoardKind: async (code, input) => {
+    const updated = await updateGoalBoardKind(code, input);
+    set({ boardKinds: get().boardKinds.map((kind) => (kind.code === code ? updated : kind)) });
+    return updated;
+  },
+
+  removeBoardKind: async (code) => {
+    await deleteGoalBoardKind(code);
+    set({ boardKinds: get().boardKinds.filter((kind) => kind.code !== code) });
   },
 
   createGoal: async (input) => {

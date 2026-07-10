@@ -25,6 +25,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   target: Target,
 };
 
+export const GOAL_BOARD_KIND_ICON_OPTIONS = Object.keys(ICON_MAP);
+
 export function GoalBoardKindIcon({ icon, className }: { icon: string; className?: string }) {
   const Icon = ICON_MAP[icon] ?? Target;
   return <Icon className={className} />;
