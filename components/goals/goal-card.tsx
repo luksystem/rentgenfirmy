@@ -201,9 +201,10 @@ export function GoalCard({
             </div>
           )}
           <span className="shrink-0 text-[10px] font-semibold text-muted">{goal.progressPercent}%</span>
-          {onStatusChange ? (
-            <StatusSelect goal={goal} onStatusChange={onStatusChange} className="shrink-0 !py-0.5 !text-[10px]" />
-          ) : null}
+          <span className="flex shrink-0 items-center gap-1 text-[10px] text-muted">
+            <User className="h-3 w-3" />
+            <span className="max-w-[96px] truncate">{ownerName}</span>
+          </span>
         </div>
       </article>
     );

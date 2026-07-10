@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff, LayoutGrid, List, Loader2, RefreshCw, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +18,8 @@ import {
 } from "@/lib/process/kanban-ui";
 import { GoalCard } from "@/components/goals/goal-card";
 import { CreateGoalDialog } from "@/components/goals/create-goal-dialog";
+import { GoalDetailDialog } from "@/components/goals/goal-detail-dialog";
+import { GoalSettlementGateDialog } from "@/components/goals/goal-settlement-gate-dialog";
 import { GOAL_BOARD_COLUMNS, GOAL_STATUS_LABELS, type Goal, type GoalStatus } from "@/lib/goals/types";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
@@ -28,7 +29,6 @@ import { GoalAiBulkImportPanel } from "@/components/goals/goal-ai-bulk-import-pa
 const DENSITY_STORAGE_KEY = "goals-card-density";
 
 export function GoalBoardView({ boardId }: { boardId: string }) {
-  const router = useRouter();
   const profile = useAuthStore((state) => state.profile);
   const board = useGoalStore((state) => state.boards.find((entry) => entry.id === boardId));
   const goals = useGoalStore((state) => state.goalsByBoard[boardId] ?? EMPTY_GOALS);
@@ -44,6 +44,8 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [showCancelled, setShowCancelled] = useState(false);
   const [density, setDensity] = useState<"normal" | "slim">("normal");
+  const [openGoal, setOpenGoal] = useState<Goal | null>(null);
+  const [settlementGateGoal, setSettlementGateGoal] = useState<Goal | null>(null);
 
   useEffect(() => {
     void ensureBoardGoals(boardId);
@@ -92,6 +94,14 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
   async function handleStatusChange(goalId: string, status: GoalStatus) {
     const goal = goals.find((entry) => entry.id === goalId);
     if (!goal || goal.status === status) {
+      return;
+    }
+    if (status === "settled" && goal.methodologyId) {
+      // Cel ma metodologię — zanim przejdzie do „Rozliczony”, wymagamy przeglądu
+      // kluczowych wyników i kryteriów sukcesu (patrz GoalSettlementGateDialog).
+      setSettlementGateGoal(goal);
+      setDragGoalId(null);
+      setDragOverColumn(null);
       return;
     }
     try {
@@ -271,7 +281,7 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
                         setDragGoalId(null);
                         setDragOverColumn(null);
                       }}
-                      onOpen={() => router.push(`/tablice-celow/${boardId}/${goal.id}`)}
+                      onOpen={() => setOpenGoal(goal)}
                       onStatusChange={(status) => void handleStatusChange(goal.id, status)}
                       onProgressChange={(percent) => void handleProgressChange(goal, percent)}
                       onDueDateChange={(date) => void handleDueDateChange(goal, date)}
@@ -283,6 +293,28 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
           );
         })}
       </div>
+
+      <GoalDetailDialog
+        goalId={openGoal?.id ?? null}
+        goalName={openGoal?.name}
+        open={Boolean(openGoal)}
+        onOpenChange={(next) => {
+          if (!next) setOpenGoal(null);
+        }}
+      />
+
+      <GoalSettlementGateDialog
+        goal={settlementGateGoal}
+        open={Boolean(settlementGateGoal)}
+        onOpenChange={(next) => {
+          if (!next) setSettlementGateGoal(null);
+        }}
+        currentProfileId={profile?.id ?? null}
+        onSettled={() => {
+          setSettlementGateGoal(null);
+          void ensureBoardGoals(boardId, { force: true });
+        }}
+      />
     </div>
   );
 }

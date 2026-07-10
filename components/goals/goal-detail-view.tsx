@@ -63,7 +63,7 @@ const TABS: Array<{ key: TabKey; label: string }> = [
   { key: "rozliczenie", label: "Rozliczenie" },
 ];
 
-export function GoalDetailView({ goalId }: { goalId: string }) {
+export function GoalDetailView({ goalId, onDeleted }: { goalId: string; onDeleted?: () => void }) {
   const router = useRouter();
   const profile = useAuthStore((state) => state.profile);
   const teamProfiles = useGoalStore((state) => state.teamProfiles);
@@ -93,7 +93,11 @@ export function GoalDetailView({ goalId }: { goalId: string }) {
     setDeleting(true);
     try {
       await removeGoal(goal.boardId, goal.id);
-      router.push(`/tablice-celow/${goal.boardId}`);
+      if (onDeleted) {
+        onDeleted();
+      } else {
+        router.push(`/tablice-celow/${goal.boardId}`);
+      }
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Nie udało się usunąć celu.");
       setDeleting(false);
