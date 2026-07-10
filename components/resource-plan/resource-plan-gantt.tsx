@@ -8,9 +8,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { getUserDisplayName } from "@/lib/auth/types";
+import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
 import { resolveDictionaryIcon } from "@/lib/resource-plan/icon-options";
 import { getPolishHolidayName } from "@/lib/resource-plan/polish-holidays";
-import type { ResourcePlanItem } from "@/lib/resource-plan/types";
+import type { ResourcePlanItem, ResourcePlanItemInput } from "@/lib/resource-plan/types";
 import { resourcePlanItemToInput } from "@/lib/resource-plan/types";
 import { validateResourcePlanItem } from "@/lib/resource-plan/validations";
 import {
@@ -182,6 +183,28 @@ export function ResourcePlanGantt() {
     setPanelOpen(true);
   }
 
+  async function saveItemChanges(item: ResourcePlanItem, nextInput: ResourcePlanItemInput) {
+    try {
+      await updateItem(item.id, nextInput);
+      const warnings = validateResourcePlanItem({
+        input: nextInput,
+        editingId: item.id,
+        otherItems: items,
+        stage: null,
+        profilesById,
+        resourceProfilesById,
+        dictionaryItems,
+      });
+      setDragWarning(
+        warnings.length === 0
+          ? null
+          : `${warnings[0].message}${warnings.length > 1 ? ` (+${warnings.length - 1} więcej ostrzeżeń)` : ""}`,
+      );
+    } catch (error) {
+      setDragWarning(error instanceof Error ? error.message : "Nie udało się zapisać zmian.");
+    }
+  }
+
   async function commitDrag(
     item: ResourcePlanItem,
     currentRowId: string,
@@ -205,25 +228,14 @@ export function ResourcePlanGantt() {
       }
     }
 
-    try {
-      await updateItem(item.id, nextInput);
-      const warnings = validateResourcePlanItem({
-        input: nextInput,
-        editingId: item.id,
-        otherItems: items,
-        stage: null,
-        profilesById,
-        resourceProfilesById,
-        dictionaryItems,
-      });
-      setDragWarning(
-        warnings.length === 0
-          ? null
-          : `${warnings[0].message}${warnings.length > 1 ? ` (+${warnings.length - 1} więcej ostrzeżeń)` : ""}`,
-      );
-    } catch (error) {
-      setDragWarning(error instanceof Error ? error.message : "Nie udało się zapisać nowego terminu.");
-    }
+    await saveItemChanges(item, nextInput);
+  }
+
+  // Szybka zmiana statusu/ryzyka bezpośrednio z kafelka Gantta (bez otwierania pełnego panelu
+  // edycji) — na życzenie, żeby nie trzeba było wchodzić w formularz dla dwóch najczęściej
+  // zmienianych pól.
+  function quickUpdateItem(item: ResourcePlanItem, patch: Partial<ResourcePlanItemInput>) {
+    void saveItemChanges(item, { ...resourcePlanItemToInput(item), ...patch });
   }
 
   // Ostrzeżenia liczone poza panelem edycji — mała plakietka na bloku Gantta (Etap 5, patrz
@@ -496,11 +508,14 @@ export function ResourcePlanGantt() {
                             tooltip={tooltip}
                             hasWarning={hasWarning}
                             hasDanger={hasDanger}
+                            statusOptions={statusOptions}
+                            riskOptions={riskOptions}
                             onOpen={() => openEdit(item)}
                             onHoverRowChange={setDragHoverRowId}
                             onDragCommit={(startAt, endAt, targetRowId) =>
                               commitDrag(item, row.id, startAt, endAt, targetRowId)
                             }
+                            onQuickUpdate={(patch) => quickUpdateItem(item, patch)}
                           />
                         );
                       })}
@@ -538,9 +553,12 @@ function GanttBlock({
   tooltip,
   hasWarning,
   hasDanger,
+  statusOptions,
+  riskOptions,
   onOpen,
   onHoverRowChange,
   onDragCommit,
+  onQuickUpdate,
 }: {
   item: ResourcePlanItem;
   rowId: string;
@@ -554,9 +572,12 @@ function GanttBlock({
   tooltip: string;
   hasWarning: boolean;
   hasDanger: boolean;
+  statusOptions: DictionaryItem[];
+  riskOptions: DictionaryItem[];
   onOpen: () => void;
   onHoverRowChange: (rowId: string | null) => void;
   onDragCommit: (startAt: string, endAt: string, targetRowId: string | null) => Promise<void>;
+  onQuickUpdate: (patch: { statusItemId?: string | null; riskItemId?: string | null }) => void;
 }) {
   const [draft, setDraft] = useState<{ startAt: string; endAt: string } | null>(null);
   const [dragTranslateY, setDragTranslateY] = useState(0);
@@ -683,7 +704,43 @@ function GanttBlock({
       />
       <span className="flex h-full items-center gap-1 px-1">
         <Icon className="h-3 w-3 shrink-0" />
+        {/* Szybka zmiana statusu/ryzyka bez otwierania panelu edycji — kolorowa "kropka" to
+            natywny <select>, żeby działało od razu na mobile (natywny picker) i bez nowej
+            zależności (brak Popover/DropdownMenu w projekcie). stopPropagation na pointerDown,
+            żeby nie wywołało przeciągania bloku (patrz `beginDrag`). */}
+        <select
+          value={item.statusItemId ?? ""}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+          onChange={(event) => onQuickUpdate({ statusItemId: event.target.value || null })}
+          title={`Status: ${statusOptions.find((option) => option.id === item.statusItemId)?.name ?? "brak"} — kliknij, aby zmienić`}
+          className="h-2.5 w-2.5 shrink-0 cursor-pointer appearance-none rounded-full border border-white/50"
+          style={{ backgroundColor: color }}
+        >
+          <option value="">Brak statusu</option>
+          {statusOptions.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.name}
+            </option>
+          ))}
+        </select>
         <span className="truncate">{label}</span>
+        <select
+          value={item.riskItemId ?? ""}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+          onChange={(event) => onQuickUpdate({ riskItemId: event.target.value || null })}
+          title={`Ryzyko: ${riskOptions.find((option) => option.id === item.riskItemId)?.name ?? "brak"} — kliknij, aby zmienić`}
+          className="h-2.5 w-2.5 shrink-0 cursor-pointer appearance-none rounded-full border border-dashed border-white/50"
+          style={{ backgroundColor: riskOptions.find((option) => option.id === item.riskItemId)?.color ?? "transparent" }}
+        >
+          <option value="">Brak ryzyka</option>
+          {riskOptions.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.name}
+            </option>
+          ))}
+        </select>
         {hasWarning ? (
           <AlertTriangle className={cn("h-3 w-3 shrink-0", hasDanger ? "text-rose-400" : "text-amber-400")} />
         ) : null}

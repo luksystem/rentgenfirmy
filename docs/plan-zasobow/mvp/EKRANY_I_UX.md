@@ -70,6 +70,12 @@ wiersza), przewijana w poziomie oś dni bieżącego okresu, nawigacja okresami j
   zadania w ciągu dnia widać jako węższe bloki. Mała ikonka ostrzeżenia (żółta/czerwona zależnie
   od `severity`) pojawia się przy etykiecie bloku, gdy `validateResourcePlanItem()` zwróci
   ostrzeżenia — ta sama reguła co plakietka w widoku listy.
+- **Szybka zmiana statusu i ryzyka na kafelku** — dwie małe kolorowe „kropki” po obu stronach
+  etykiety bloku (lewa = status, prawa z przerywaną obwódką = ryzyko), każda to natywny
+  `<select>` (bez dodatkowej zależności typu Popover) — kliknięcie otwiera listę wartości ze
+  słownika i zapisuje wybór od razu (`updateItem` + ponowne przeliczenie ostrzeżeń), bez
+  otwierania pełnego panelu edycji. `stopPropagation` na `pointerDown`/`click` chroni przed
+  wywołaniem przeciągania bloku.
 - **Tory (lanes)** — nakładające się czasowo elementy w tym samym wierszu renderują się jedno
   pod drugim (algorytm zachłanny `assignGanttLanes`), więc konflikt jest widoczny bez klikania.
 - **Interakcje** (Pointer Events, `setPointerCapture` — ten sam wzorzec co dotykowy drag w
