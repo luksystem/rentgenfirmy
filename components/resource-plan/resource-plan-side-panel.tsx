@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Plus, ShieldAlert, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, Plus, Scissors, ShieldAlert, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
@@ -10,8 +10,10 @@ import { getUserDisplayName } from "@/lib/auth/types";
 import type { ProcessStage } from "@/lib/process/types";
 import { ensureAnchoredTemplateSnapshot } from "@/lib/supabase/process-repository";
 import { fetchProcessTemplateByProjectType, getOrCreateProjectProcess } from "@/lib/supabase/process-repository";
+import { pickLinkedGroupSharedFields } from "@/lib/supabase/resource-plan-repository";
 import type { ResourcePlanItem, ResourcePlanItemInput, ResourcePlanParticipant } from "@/lib/resource-plan/types";
 import { resourcePlanItemToInput } from "@/lib/resource-plan/types";
+import { participantContributedHours, participantEffectiveRange } from "@/lib/resource-plan/participant-contribution";
 import { validateResourcePlanItem } from "@/lib/resource-plan/validations";
 import type { ResourcePlanCandidate } from "@/lib/resource-plan/suggestions";
 import { getActiveSuggestionProvider } from "@/lib/resource-plan/suggestion-provider";
@@ -60,6 +62,7 @@ function defaultInput(defaultStartIso?: string): ResourcePlanItemInput {
     travelBudget: null,
     notes: "",
     acceptedRisk: false,
+    linkedGroupId: null,
     participants: [],
   };
 }
@@ -95,6 +98,8 @@ export function ResourcePlanSidePanel({
 
   const createItem = useResourcePlanStore((state) => state.createItem);
   const updateItem = useResourcePlanStore((state) => state.updateItem);
+  const splitItem = useResourcePlanStore((state) => state.splitItem);
+  const applyToLinkedGroup = useResourcePlanStore((state) => state.applyToLinkedGroup);
   const allPlanItems = useResourcePlanStore((state) => state.allItems());
 
   const ensureProfiles = useUserResourceStore((state) => state.ensureProfiles);
@@ -110,6 +115,9 @@ export function ResourcePlanSidePanel({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [applySharedFieldsToGroup, setApplySharedFieldsToGroup] = useState(true);
+  const [splitDraftIso, setSplitDraftIso] = useState<string | null>(null);
+  const [splitting, setSplitting] = useState(false);
 
   const templateOptions = useDictionaryStore((state) => state.byKey("plan_item_template"));
 
@@ -133,6 +141,8 @@ export function ResourcePlanSidePanel({
     if (!open) return;
     setInput(editingItem ? resourcePlanItemToInput(editingItem) : defaultInput(defaultStartIso));
     setSelectedTemplateId("");
+    setSplitDraftIso(null);
+    setApplySharedFieldsToGroup(true);
     void ensureDictionaries();
     void loadTeamProfiles();
   }, [open, editingItem, defaultStartIso, ensureDictionaries, loadTeamProfiles]);
@@ -279,7 +289,14 @@ export function ResourcePlanSidePanel({
   function addParticipant() {
     if (!newParticipantId) return;
     if (input.participants.some((p) => p.userId === newParticipantId)) return;
-    const participant: ResourcePlanParticipant = { userId: newParticipantId, roleItemId: null, isLead: false };
+    const participant: ResourcePlanParticipant = {
+      userId: newParticipantId,
+      roleItemId: null,
+      isLead: false,
+      involvementPercent: 100,
+      startAt: null,
+      endAt: null,
+    };
     setInput((current) => ({ ...current, participants: [...current.participants, participant] }));
     setNewParticipantId("");
   }
@@ -295,6 +312,21 @@ export function ResourcePlanSidePanel({
     setInput((current) => ({ ...current, participants: current.participants.filter((p) => p.userId !== userId) }));
   }
 
+  async function handleSplit() {
+    if (!editingItem || !splitDraftIso) return;
+    setSplitting(true);
+    setError(null);
+    try {
+      await splitItem(editingItem, splitDraftIso);
+      onSaved?.(editingItem);
+      onOpenChange(false);
+    } catch (splitError) {
+      setError(splitError instanceof Error ? splitError.message : "Nie udało się podzielić przydziału.");
+    } finally {
+      setSplitting(false);
+    }
+  }
+
   async function handleSave() {
     setSaving(true);
     setError(null);
@@ -306,6 +338,9 @@ export function ResourcePlanSidePanel({
         return;
       }
       const saved = editingItem ? await updateItem(editingItem.id, input) : await createItem(input);
+      if (saved.linkedGroupId && applySharedFieldsToGroup) {
+        await applyToLinkedGroup(saved.linkedGroupId, saved.id, pickLinkedGroupSharedFields(input));
+      }
       onSaved?.(saved);
       onOpenChange(false);
     } catch (saveError) {
@@ -442,6 +477,56 @@ export function ResourcePlanSidePanel({
                 />
               </Field>
             </div>
+
+            {editingItem ? (
+              <div className="grid gap-2 rounded-xl border border-border/60 bg-surface-muted/10 p-3">
+                <p className="flex items-center gap-1.5 text-sm font-medium text-foreground/90">
+                  <Scissors className="h-4 w-4 text-muted" />
+                  Podziel przydział na dwie części
+                </p>
+                <p className="text-xs text-muted">
+                  Powstaną dwa elementy planu (ten sam „przydział” — te same pola wspólne,
+                  osobne terminy/godziny) połączone jako części jednej całości.
+                  {editingItem.linkedGroupId ? " Ten element już jest częścią podzielonego przydziału." : ""}
+                </p>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                  <Field label="Podziel w momencie" className="flex-1">
+                    <Input
+                      type="datetime-local"
+                      min={toLocalInputValue(input.startAt)}
+                      max={toLocalInputValue(input.endAt)}
+                      value={splitDraftIso ? toLocalInputValue(splitDraftIso) : ""}
+                      onChange={(event) =>
+                        setSplitDraftIso(event.target.value ? fromLocalInputValue(event.target.value) : null)
+                      }
+                    />
+                  </Field>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    disabled={
+                      !splitDraftIso || splitting || !(splitDraftIso > input.startAt && splitDraftIso < input.endAt)
+                    }
+                    onClick={() => void handleSplit()}
+                  >
+                    {splitting ? "Dzielenie…" : "Podziel"}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
+            {editingItem?.linkedGroupId ? (
+              <label className="flex items-center gap-2 text-xs text-muted">
+                <input
+                  type="checkbox"
+                  checked={applySharedFieldsToGroup}
+                  onChange={(event) => setApplySharedFieldsToGroup(event.target.checked)}
+                />
+                Zastosuj zmiany wspólnych pól (tytuł, status, ryzyko, notatki…) do innych części tego przydziału
+              </label>
+            ) : null}
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Planowane godziny">
@@ -586,22 +671,83 @@ export function ResourcePlanSidePanel({
               <div className="grid gap-2">
                 {input.participants.map((participant) => {
                   const profile = teamProfiles.find((p) => p.id === participant.userId);
+                  const hasCustomRange = Boolean(participant.startAt || participant.endAt);
+                  const effectiveRange = participantEffectiveRange(input, participant);
+                  const contributedHours = participantContributedHours(input, participant);
                   return (
-                    <div key={participant.userId} className="flex items-center gap-2 rounded-xl border border-border/60 bg-surface-muted/15 p-2">
-                      <span className="min-w-0 flex-1 truncate text-sm text-foreground">
-                        {profile ? getUserDisplayName(profile) : "—"}
-                      </span>
-                      <label className="flex items-center gap-1 text-xs text-muted">
-                        <input
-                          type="checkbox"
-                          checked={participant.isLead}
-                          onChange={(event) => updateParticipant(participant.userId, { isLead: event.target.checked })}
+                    <div key={participant.userId} className="grid gap-2 rounded-xl border border-border/60 bg-surface-muted/15 p-2">
+                      <div className="flex items-center gap-2">
+                        <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+                          {profile ? getUserDisplayName(profile) : "—"}
+                        </span>
+                        <label className="flex items-center gap-1 text-xs text-muted">
+                          <input
+                            type="checkbox"
+                            checked={participant.isLead}
+                            onChange={(event) => updateParticipant(participant.userId, { isLead: event.target.checked })}
+                          />
+                          Lider
+                        </label>
+                        <Button type="button" size="sm" variant="ghost" onClick={() => removeParticipant(participant.userId)}>
+                          <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                        <span>Zaangażowanie</span>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={100}
+                          value={participant.involvementPercent}
+                          className="h-7 w-16 px-2 text-xs"
+                          onChange={(event) => {
+                            const next = Math.min(100, Math.max(1, Number(event.target.value) || 1));
+                            updateParticipant(participant.userId, { involvementPercent: next });
+                          }}
                         />
-                        Lider
-                      </label>
-                      <Button type="button" size="sm" variant="ghost" onClick={() => removeParticipant(participant.userId)}>
-                        <Trash2 className="h-3.5 w-3.5 text-rose-400" />
-                      </Button>
+                        <span>% ≈ {contributedHours.toFixed(1)} h</span>
+                        <label className="ml-auto flex items-center gap-1">
+                          <input
+                            type="checkbox"
+                            checked={hasCustomRange}
+                            onChange={(event) =>
+                              updateParticipant(
+                                participant.userId,
+                                event.target.checked
+                                  ? { startAt: input.startAt, endAt: input.endAt }
+                                  : { startAt: null, endAt: null },
+                              )
+                            }
+                          />
+                          Własny zakres dat
+                        </label>
+                      </div>
+                      {hasCustomRange ? (
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <Field label="Od" className="text-xs">
+                            <Input
+                              type="datetime-local"
+                              min={toLocalInputValue(input.startAt)}
+                              max={toLocalInputValue(input.endAt)}
+                              value={toLocalInputValue(effectiveRange.startAt)}
+                              onChange={(event) =>
+                                updateParticipant(participant.userId, { startAt: fromLocalInputValue(event.target.value) })
+                              }
+                            />
+                          </Field>
+                          <Field label="Do" className="text-xs">
+                            <Input
+                              type="datetime-local"
+                              min={toLocalInputValue(input.startAt)}
+                              max={toLocalInputValue(input.endAt)}
+                              value={toLocalInputValue(effectiveRange.endAt)}
+                              onChange={(event) =>
+                                updateParticipant(participant.userId, { endAt: fromLocalInputValue(event.target.value) })
+                              }
+                            />
+                          </Field>
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}

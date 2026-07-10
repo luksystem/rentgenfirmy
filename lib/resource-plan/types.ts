@@ -4,6 +4,12 @@ export type ResourcePlanParticipant = {
   userId: string;
   roleItemId: string | null;
   isLead: boolean;
+  /** Procent godzin elementu przypisany tej osobie (1–100), np. 40h × 50% = 20h.
+   *  Domyślnie 100 (pełne zaangażowanie). Patrz lib/resource-plan/participant-contribution.ts. */
+  involvementPercent: number;
+  /** Własny zakres dat uczestnika — podzbiór startAt/endAt elementu. `null` = cały zakres elementu. */
+  startAt: string | null;
+  endAt: string | null;
 };
 
 export type ResourcePlanItem = {
@@ -32,6 +38,9 @@ export type ResourcePlanItem = {
   /** Koordynator świadomie zatwierdził wyjątek/ostrzeżenie (Etap 5 — nie blokujemy zapisu). */
   acceptedRisk: boolean;
   createdBy: string | null;
+  /** Elementy z tym samym linked_group_id to części jednego przydziału podzielonego w czasie
+   *  (np. przerwa w środku) — patrz splitResourcePlanItem w resource-plan-repository.ts. */
+  linkedGroupId: string | null;
   participants: ResourcePlanParticipant[];
   createdAt: string;
   updatedAt: string;
@@ -59,6 +68,7 @@ export type ResourcePlanItemInput = {
   travelBudget: number | null;
   notes: string;
   acceptedRisk: boolean;
+  linkedGroupId: string | null;
   participants: ResourcePlanParticipant[];
 };
 
@@ -94,6 +104,7 @@ export function resourcePlanItemToInput(item: ResourcePlanItem): ResourcePlanIte
     travelBudget: item.travelBudget,
     notes: item.notes,
     acceptedRisk: item.acceptedRisk,
+    linkedGroupId: item.linkedGroupId,
     participants: item.participants,
   };
 }

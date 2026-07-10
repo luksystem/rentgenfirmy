@@ -100,6 +100,19 @@ export function ResourcePlanList() {
 
   const profilesById = useMemo(() => Object.fromEntries(teamProfiles.map((p) => [p.id, p])), [teamProfiles]);
 
+  // Grupy podzielonych przydziałów (patrz splitResourcePlanItem) — do plakietki "część X/Y".
+  const linkedGroupMembersById = useMemo(() => {
+    const map = new Map<string, ResourcePlanItem[]>();
+    items.forEach((item) => {
+      if (!item.linkedGroupId) return;
+      const list = map.get(item.linkedGroupId) ?? [];
+      list.push(item);
+      map.set(item.linkedGroupId, list);
+    });
+    map.forEach((list) => list.sort((a, b) => a.startAt.localeCompare(b.startAt)));
+    return map;
+  }, [items]);
+
   // Ostrzeżenia liczone poza panelem edycji — plakietka na karcie listy (Etap 5, patrz ARCHITEKTURA.md §6).
   // Bez kontekstu etapu procesu (`stage: null`), tak jak w Gantcie — nie ładujemy tu snapshotu procesu per wiersz.
   const warningsByItemId = useMemo(() => {
@@ -205,6 +218,11 @@ export function ResourcePlanList() {
             const RiskIcon = resolveDictionaryIcon(risk?.icon);
             const warnings = warningsByItemId.get(item.id) ?? [];
             const hasDanger = warnings.some((w) => w.severity === "danger");
+            const groupMembers = item.linkedGroupId ? linkedGroupMembersById.get(item.linkedGroupId) ?? [item] : null;
+            const groupBadge =
+              groupMembers && groupMembers.length > 1
+                ? `${groupMembers.findIndex((m) => m.id === item.id) + 1}/${groupMembers.length}`
+                : null;
 
             return (
               <button
@@ -218,8 +236,16 @@ export function ResourcePlanList() {
                   style={{ backgroundColor: status?.color ?? "#64748b" }}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">
+                  <p className="flex items-center gap-1.5 truncate text-sm font-medium text-foreground">
                     {item.title || project?.name || "Element planu"}
+                    {groupBadge ? (
+                      <span
+                        className="shrink-0 rounded-full bg-surface-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted"
+                        title="Część podzielonego przydziału"
+                      >
+                        część {groupBadge}
+                      </span>
+                    ) : null}
                   </p>
                   <p className="truncate text-xs text-muted">
                     {[project?.name, client?.fullName, workType?.name].filter(Boolean).join(" · ") || "—"}

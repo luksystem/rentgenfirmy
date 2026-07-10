@@ -11,7 +11,12 @@ import { getUserDisplayName } from "@/lib/auth/types";
 import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
 import { resolveDictionaryIcon } from "@/lib/resource-plan/icon-options";
 import { getPolishHolidayName } from "@/lib/resource-plan/polish-holidays";
-import type { ResourcePlanItem, ResourcePlanItemInput } from "@/lib/resource-plan/types";
+import {
+  participantContributedHours,
+  participantEffectiveRange,
+  recalcInvolvementPercentAfterRangeChange,
+} from "@/lib/resource-plan/participant-contribution";
+import type { ResourcePlanItem, ResourcePlanItemInput, ResourcePlanParticipant } from "@/lib/resource-plan/types";
 import { resourcePlanItemToInput } from "@/lib/resource-plan/types";
 import { validateResourcePlanItem } from "@/lib/resource-plan/validations";
 import {
@@ -21,6 +26,7 @@ import {
   GANTT_ZOOM_SNAP_DAYS,
   applyGanttDrag,
   assignGanttLanes,
+  clampRangeToBounds,
   dayOffsetPx,
   formatGanttPeriodLabel,
   getGanttPeriodRange,
@@ -68,6 +74,20 @@ type GanttRow = {
   label: string;
   sublabel?: string;
 };
+
+/** Wpis w wierszu Gantta — albo główny blok elementu (osoba odpowiedzialna/zespół/projekt),
+ *  albo sub-blok osoby zaangażowanej (tylko w widoku "Osoby", na jej własnym wierszu) — patrz
+ *  `GanttParticipantBlock`. Wspólny `id/startAt/endAt` do `assignGanttLanes`. */
+type GanttRowEntry =
+  | { kind: "item"; id: string; startAt: string; endAt: string; item: ResourcePlanItem }
+  | {
+      kind: "participant";
+      id: string;
+      startAt: string;
+      endAt: string;
+      item: ResourcePlanItem;
+      participant: ResourcePlanParticipant;
+    };
 
 const ROW_LABEL_WIDTH_PX = 140;
 
@@ -212,10 +232,37 @@ export function ResourcePlanGantt() {
     return { rows: [...withActiveItems, ...withoutActiveItems], activeRowCount: withActiveItems.length };
   }, [groupBy, teamProfiles, teamOptions, projects, clients, visibleItems]);
 
-  function itemsForRow(rowId: string): ResourcePlanItem[] {
-    if (groupBy === "user") return visibleItems.filter((item) => item.assigneeId === rowId);
-    if (groupBy === "team") return visibleItems.filter((item) => item.teamItemId === rowId);
-    return visibleItems.filter((item) => item.projectId === rowId);
+  // Sub-bloki osób zaangażowanych — tylko w widoku "Osoby", na WŁASNYM wierszu uczestnika (nie
+  // osoby odpowiedzialnej), żeby "obłożenie" było widoczne u każdej zaangażowanej osoby (patrz
+  // opis w ARCHITEKTURA.md §D23). Poza widokiem "Osoby" wiersz nie odpowiada konkretnej osobie,
+  // więc sub-bloki nie mają sensu.
+  function entriesForRow(rowId: string): GanttRowEntry[] {
+    if (groupBy === "user") {
+      const entries: GanttRowEntry[] = [];
+      visibleItems.forEach((item) => {
+        if (item.assigneeId === rowId) {
+          entries.push({ kind: "item", id: item.id, startAt: item.startAt, endAt: item.endAt, item });
+        }
+        item.participants.forEach((participant) => {
+          if (participant.userId !== rowId || participant.userId === item.assigneeId) return;
+          const range = participantEffectiveRange(item, participant);
+          entries.push({
+            kind: "participant",
+            id: `${item.id}:participant:${participant.userId}`,
+            startAt: range.startAt,
+            endAt: range.endAt,
+            item,
+            participant,
+          });
+        });
+      });
+      return entries;
+    }
+    const filtered =
+      groupBy === "team"
+        ? visibleItems.filter((item) => item.teamItemId === rowId)
+        : visibleItems.filter((item) => item.projectId === rowId);
+    return filtered.map((item) => ({ kind: "item", id: item.id, startAt: item.startAt, endAt: item.endAt, item }));
   }
 
   const periodLabel = formatGanttPeriodLabel(zoom, monthStart);
@@ -290,6 +337,34 @@ export function ResourcePlanGantt() {
     void saveItemChanges(item, { ...resourcePlanItemToInput(item), ...patch });
   }
 
+  // Przeciąganie/rozciąganie sub-bloku osoby zaangażowanej — zmienia jej WŁASNY zakres dat
+  // (podzbiór zakresu elementu) i automatycznie przelicza % zaangażowania proporcjonalnie do
+  // zmiany długości okresu (Wariant C — patrz participant-contribution.ts i ARCHITEKTURA.md §D23).
+  async function commitParticipantRangeChange(
+    item: ResourcePlanItem,
+    participant: ResourcePlanParticipant,
+    nextStartAt: string,
+    nextEndAt: string,
+  ) {
+    const oldRange = participantEffectiveRange(item, participant);
+    const nextPercent = recalcInvolvementPercentAfterRangeChange({
+      oldStartAt: oldRange.startAt,
+      oldEndAt: oldRange.endAt,
+      newStartAt: nextStartAt,
+      newEndAt: nextEndAt,
+      oldPercent: participant.involvementPercent,
+    });
+    const nextInput: ResourcePlanItemInput = {
+      ...resourcePlanItemToInput(item),
+      participants: item.participants.map((p) =>
+        p.userId === participant.userId
+          ? { ...p, startAt: nextStartAt, endAt: nextEndAt, involvementPercent: nextPercent }
+          : p,
+      ),
+    };
+    await saveItemChanges(item, nextInput);
+  }
+
   // Ostrzeżenia liczone poza panelem edycji — mała plakietka na bloku Gantta (Etap 5, patrz
   // ARCHITEKTURA.md §6). Bez kontekstu etapu procesu (`stage: null`) — Gantt nie ładuje snapshotu
   // procesu per element, to samo ograniczenie co przy przeciąganiu.
@@ -312,6 +387,21 @@ export function ResourcePlanGantt() {
     return map;
   }, [visibleItems, items, profilesById, resourceProfilesById, dictionaryItems]);
 
+  // Elementy powiązane w ramach jednego "podzielonego przydziału" (patrz splitResourcePlanItem)
+  // — do plakietki "część X/Y" na bloku Gantta. Liczone z aktualnie wczytanych `items` (nie tylko
+  // widocznych), więc części poza aktualnym oknem czasowym nie są uwzględnione w liczniku.
+  const linkedGroupMembersById = useMemo(() => {
+    const map = new Map<string, ResourcePlanItem[]>();
+    items.forEach((item) => {
+      if (!item.linkedGroupId) return;
+      const list = map.get(item.linkedGroupId) ?? [];
+      list.push(item);
+      map.set(item.linkedGroupId, list);
+    });
+    map.forEach((list) => list.sort((a, b) => a.startAt.localeCompare(b.startAt)));
+    return map;
+  }, [items]);
+
   function describeItem(item: ResourcePlanItem) {
     const status = statusOptions.find((option) => option.id === item.statusItemId);
     const risk = riskOptions.find((option) => option.id === item.riskItemId);
@@ -320,18 +410,24 @@ export function ResourcePlanGantt() {
     const team = teamOptions.find((option) => option.id === item.teamItemId);
     const label = item.title || project?.name || "Element planu";
     const warnings = warningsByItemId.get(item.id) ?? [];
+    const groupMembers = item.linkedGroupId ? linkedGroupMembersById.get(item.linkedGroupId) ?? [item] : null;
+    const groupBadge = groupMembers && groupMembers.length > 1
+      ? `${groupMembers.findIndex((m) => m.id === item.id) + 1}/${groupMembers.length}`
+      : null;
     const tooltipParts = [
       label,
       project?.name,
       assignee ? getUserDisplayName(assignee) : null,
       team?.name,
       risk ? `Ryzyko: ${risk.name}` : null,
+      groupBadge ? `Część ${groupBadge} podzielonego przydziału` : null,
       warnings.length > 0 ? `⚠ ${warnings.map((w) => w.message).join(" · ")}` : null,
     ].filter(Boolean);
     return {
       color: status?.color ?? "#64748b",
       Icon: resolveDictionaryIcon(status?.icon),
       label,
+      groupBadge,
       tooltip: tooltipParts.join(" · "),
       hasWarning: warnings.length > 0,
       hasDanger: warnings.some((w) => w.severity === "danger"),
@@ -489,8 +585,8 @@ export function ResourcePlanGantt() {
             </div>
 
             {rows.map((row, rowIndex) => {
-              const rowItems = itemsForRow(row.id);
-              const { laneById, laneCount } = assignGanttLanes(rowItems);
+              const rowEntries = entriesForRow(row.id);
+              const { laneById, laneCount } = assignGanttLanes(rowEntries);
               const rowHeight = laneCount * GANTT_ROW_LANE_HEIGHT_PX;
               const showInactiveDivider =
                 groupBy === "project" && rowIndex === activeRowCount && activeRowCount > 0 && activeRowCount < rows.length;
@@ -556,8 +652,29 @@ export function ResourcePlanGantt() {
                         />
                       ))}
 
-                      {rowItems.map((item) => {
-                        const { color, Icon, label, tooltip, hasWarning, hasDanger } = describeItem(item);
+                      {rowEntries.map((entry) => {
+                        if (entry.kind === "participant") {
+                          const { item, participant } = entry;
+                          const hours = participantContributedHours(item, participant);
+                          const label = item.title || "Element planu";
+                          return (
+                            <GanttParticipantBlock
+                              key={entry.id}
+                              item={item}
+                              participant={participant}
+                              monthStart={monthStart}
+                              dayWidthPx={dayWidthPx}
+                              snapDays={snapDays}
+                              laneIndex={laneById.get(entry.id) ?? 0}
+                              label={label}
+                              tooltip={`${label} · zaangażowanie ${participant.involvementPercent}% ≈ ${hours.toFixed(1)}h`}
+                              onOpen={() => openEdit(item)}
+                              onRangeCommit={(startAt, endAt) => commitParticipantRangeChange(item, participant, startAt, endAt)}
+                            />
+                          );
+                        }
+                        const { item } = entry;
+                        const { color, Icon, label, tooltip, hasWarning, hasDanger, groupBadge } = describeItem(item);
                         return (
                           <GanttBlock
                             key={item.id}
@@ -566,10 +683,11 @@ export function ResourcePlanGantt() {
                             monthStart={monthStart}
                             dayWidthPx={dayWidthPx}
                             snapDays={snapDays}
-                            laneIndex={laneById.get(item.id) ?? 0}
+                            laneIndex={laneById.get(entry.id) ?? 0}
                             color={color}
                             Icon={Icon}
                             label={label}
+                            groupBadge={groupBadge}
                             tooltip={tooltip}
                             hasWarning={hasWarning}
                             hasDanger={hasDanger}
@@ -629,6 +747,7 @@ function GanttBlock({
   color,
   Icon,
   label,
+  groupBadge,
   tooltip,
   hasWarning,
   hasDanger,
@@ -648,6 +767,7 @@ function GanttBlock({
   color: string;
   Icon: ComponentType<{ className?: string }>;
   label: string;
+  groupBadge: string | null;
   tooltip: string;
   hasWarning: boolean;
   hasDanger: boolean;
@@ -804,6 +924,14 @@ function GanttBlock({
           ))}
         </select>
         <span className="truncate">{label}</span>
+        {groupBadge ? (
+          <span
+            className="shrink-0 rounded-full border border-white/40 px-1 text-[9px] font-semibold leading-none"
+            title="Część podzielonego przydziału"
+          >
+            {groupBadge}
+          </span>
+        ) : null}
         <select
           value={item.riskItemId ?? ""}
           onPointerDown={(event) => event.stopPropagation()}
@@ -823,6 +951,158 @@ function GanttBlock({
         {hasWarning ? (
           <AlertTriangle className={cn("h-3 w-3 shrink-0", hasDanger ? "text-rose-400" : "text-amber-400")} />
         ) : null}
+      </span>
+      <span
+        className="absolute inset-y-0 right-0 w-2 cursor-ew-resize"
+        onPointerDown={(event) => beginDrag(event, "resize-end")}
+        onPointerMove={handlePointerMove}
+        onPointerUp={(event) => void handlePointerUp(event)}
+      />
+    </div>
+  );
+}
+
+/**
+ * Sub-blok osoby zaangażowanej (poza osobą odpowiedzialną) — renderowany na WŁASNYM wierszu
+ * uczestnika w widoku "Osoby", żeby "obłożenie" było widoczne u każdej zaangażowanej osoby, nie
+ * tylko u osoby odpowiedzialnej. Węższy i przerywaną ramką odróżniony od głównego bloku.
+ * Przeciąganie/rozciąganie jest ograniczone do zakresu głównego elementu (`clampRangeToBounds`)
+ * i przy zmianie długości automatycznie przelicza % zaangażowania (Wariant C — patrz
+ * participant-contribution.ts) — bez cross-row dragging (osoba zaangażowana się nie zmienia tu,
+ * do tego służy panel edycji).
+ */
+function GanttParticipantBlock({
+  item,
+  participant,
+  monthStart,
+  dayWidthPx,
+  snapDays,
+  laneIndex,
+  label,
+  tooltip,
+  onOpen,
+  onRangeCommit,
+}: {
+  item: ResourcePlanItem;
+  participant: ResourcePlanParticipant;
+  monthStart: Date;
+  dayWidthPx: number;
+  snapDays: number;
+  laneIndex: number;
+  label: string;
+  tooltip: string;
+  onOpen: () => void;
+  onRangeCommit: (startAt: string, endAt: string) => Promise<void>;
+}) {
+  const bounds = { startAt: item.startAt, endAt: item.endAt };
+  const original = participantEffectiveRange(item, participant);
+  const [draft, setDraft] = useState<{ startAt: string; endAt: string } | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const dragInfoRef = useRef<{
+    mode: GanttDragMode;
+    pointerId: number;
+    startClientX: number;
+    originalStartAt: string;
+    originalEndAt: string;
+    moved: boolean;
+  } | null>(null);
+
+  const effective = draft ?? original;
+  const left = dayOffsetPx(monthStart, effective.startAt, dayWidthPx);
+  const width = Math.max(dayOffsetPx(monthStart, effective.endAt, dayWidthPx) - left, 6);
+  const top = laneIndex * GANTT_ROW_LANE_HEIGHT_PX + 3;
+  const height = GANTT_ROW_LANE_HEIGHT_PX - 6;
+
+  function beginDrag(event: ReactPointerEvent<HTMLElement>, mode: GanttDragMode) {
+    event.stopPropagation();
+    (event.target as Element).setPointerCapture(event.pointerId);
+    dragInfoRef.current = {
+      mode,
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      originalStartAt: original.startAt,
+      originalEndAt: original.endAt,
+      moved: false,
+    };
+    setDragging(true);
+  }
+
+  function handlePointerMove(event: ReactPointerEvent<HTMLElement>) {
+    const drag = dragInfoRef.current;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const deltaX = event.clientX - drag.startClientX;
+    if (!drag.moved && Math.abs(deltaX) < GANTT_DRAG_THRESHOLD_PX) return;
+    drag.moved = true;
+
+    const rawDeltaDays = deltaX / dayWidthPx;
+    const deltaDays = Math.round(rawDeltaDays / snapDays) * snapDays;
+    const next = applyGanttDrag({
+      mode: drag.mode,
+      originalStartAt: drag.originalStartAt,
+      originalEndAt: drag.originalEndAt,
+      deltaDays,
+    });
+    setDraft(clampRangeToBounds(drag.mode, next, bounds));
+  }
+
+  async function handlePointerUp(event: ReactPointerEvent<HTMLElement>) {
+    const drag = dragInfoRef.current;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    dragInfoRef.current = null;
+    setDragging(false);
+    if ((event.target as Element).hasPointerCapture?.(event.pointerId)) {
+      (event.target as Element).releasePointerCapture(event.pointerId);
+    }
+
+    if (!drag.moved) {
+      setDraft(null);
+      onOpen();
+      return;
+    }
+
+    const next = draft;
+    const changed = Boolean(next) && (next!.startAt !== original.startAt || next!.endAt !== original.endAt);
+    if (changed) {
+      try {
+        await onRangeCommit(next!.startAt, next!.endAt);
+      } finally {
+        setDraft(null);
+      }
+    } else {
+      setDraft(null);
+    }
+  }
+
+  return (
+    <div
+      className="absolute overflow-hidden rounded-md border border-dashed px-1.5 text-[10px] font-medium text-muted shadow-sm select-none"
+      style={{
+        left,
+        width,
+        top,
+        height,
+        backgroundColor: "rgb(148 163 184 / 0.12)",
+        borderColor: "rgb(148 163 184 / 0.5)",
+        cursor: dragging ? "grabbing" : "grab",
+        touchAction: "none",
+        zIndex: dragging ? 40 : undefined,
+      }}
+      onPointerDown={(event) => beginDrag(event, "move")}
+      onPointerMove={handlePointerMove}
+      onPointerUp={(event) => void handlePointerUp(event)}
+      title={tooltip}
+    >
+      <span
+        className="absolute inset-y-0 left-0 w-2 cursor-ew-resize"
+        onPointerDown={(event) => beginDrag(event, "resize-start")}
+        onPointerMove={handlePointerMove}
+        onPointerUp={(event) => void handlePointerUp(event)}
+      />
+      <span className="flex h-full items-center gap-1 truncate px-1">
+        <span className="shrink-0 rounded-full bg-surface-muted px-1 text-[9px] font-semibold">
+          {participant.involvementPercent}%
+        </span>
+        <span className="truncate">{label}</span>
       </span>
       <span
         className="absolute inset-y-0 right-0 w-2 cursor-ew-resize"

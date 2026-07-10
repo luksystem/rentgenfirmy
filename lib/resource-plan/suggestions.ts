@@ -10,6 +10,7 @@
 import type { ProcessStage } from "@/lib/process/types";
 import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
 import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
+import { userHoursInItem } from "@/lib/resource-plan/participant-contribution";
 import { hoursBetween, rangesOverlap, sameDay, sameWeek } from "@/lib/resource-plan/validations";
 import type { ResourcePlanItem, ResourcePlanItemInput } from "@/lib/resource-plan/types";
 import type { UserResourceProfile } from "@/lib/resource-plan/user-resource-types";
@@ -141,13 +142,15 @@ export function suggestResourcePlanCandidates(params: {
         reasons.push(`${conflicts.length} nakładające się zadanie(a) w tym terminie.`);
       }
 
+      // Godziny ważone % zaangażowania (patrz participant-contribution.ts) — jeśli kandydat
+      // jest w innym elemencie tylko np. 30% zaangażowany, wlicza się 30% jego godzin, nie 100%.
       const sameDayHours = others
         .filter(
           (other) =>
             sameDay(other.startAt, input.startAt) &&
             (other.assigneeId === userId || other.participants.some((p) => p.userId === userId)),
         )
-        .reduce((sum, other) => sum + (other.plannedHours ?? hoursBetween(other.startAt, other.endAt)), itemHours);
+        .reduce((sum, other) => sum + userHoursInItem(other, userId), itemHours);
       const exceedsDailyLimit = profile?.dailyHoursLimit != null && sameDayHours > profile.dailyHoursLimit;
       if (exceedsDailyLimit) {
         score -= 15;
@@ -160,7 +163,7 @@ export function suggestResourcePlanCandidates(params: {
             sameWeek(other.startAt, input.startAt) &&
             (other.assigneeId === userId || other.participants.some((p) => p.userId === userId)),
         )
-        .reduce((sum, other) => sum + (other.plannedHours ?? hoursBetween(other.startAt, other.endAt)), itemHours);
+        .reduce((sum, other) => sum + userHoursInItem(other, userId), itemHours);
       const exceedsWeeklyLimit = profile?.weeklyHoursLimit != null && sameWeekHours > profile.weeklyHoursLimit;
       if (exceedsWeeklyLimit) {
         score -= 10;

@@ -138,6 +138,45 @@ export function resolveGanttRowId(clientX: number, clientY: number, excludeEleme
 }
 
 /**
+ * Ogranicza wynik przeciągania/rozciągania sub-bloku uczestnika (patrz `resource-plan-gantt.tsx`)
+ * do granic zakresu głównego elementu — uczestnik nie może "wyjechać" poza termin przydziału,
+ * do którego jest zaangażowany. Przy przesuwaniu (`move`) zachowuje długość okresu (odbija się
+ * od granicy), przy rozciąganiu (`resize-*`) po prostu przycina wystającą krawędź.
+ */
+export function clampRangeToBounds(
+  mode: GanttDragMode,
+  draft: { startAt: string; endAt: string },
+  bounds: { startAt: string; endAt: string },
+): { startAt: string; endAt: string } {
+  const boundsStartMs = new Date(bounds.startAt).getTime();
+  const boundsEndMs = new Date(bounds.endAt).getTime();
+  let startMs = new Date(draft.startAt).getTime();
+  let endMs = new Date(draft.endAt).getTime();
+
+  if (mode === "move") {
+    const durationMs = endMs - startMs;
+    if (startMs < boundsStartMs) {
+      startMs = boundsStartMs;
+      endMs = startMs + durationMs;
+    }
+    if (endMs > boundsEndMs) {
+      endMs = boundsEndMs;
+      startMs = endMs - durationMs;
+    }
+  } else if (mode === "resize-start") {
+    startMs = Math.max(startMs, boundsStartMs);
+  } else {
+    endMs = Math.min(endMs, boundsEndMs);
+  }
+
+  startMs = Math.max(startMs, boundsStartMs);
+  endMs = Math.min(endMs, boundsEndMs);
+  if (endMs < startMs) endMs = startMs;
+
+  return { startAt: new Date(startMs).toISOString(), endAt: new Date(endMs).toISOString() };
+}
+
+/**
  * Przydział elementów do "torów" (lanes) w ramach jednego wiersza, tak by nakładające się
  * czasowo elementy renderowały się jedno pod drugim, a nie jedno na drugim — czyni konflikty
  * widoczne na pierwszy rzut oka, zamiast wymagać kliknięcia w każdy blok.

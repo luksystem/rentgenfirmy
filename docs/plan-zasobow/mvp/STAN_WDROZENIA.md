@@ -255,6 +255,40 @@ częścią numerowanego planu 8 etapów, ale domknięto go razem z Etapem 6.
   planu to *przygotowanie architektury*, co jest zrobione; podłączenie realnego modelu to
   osobna decyzja produktowa (wybór dostawcy, koszt, dane wejściowe) do podjęcia później.
 
+## % zaangażowania uczestników + podział przydziału na części (poza pierwotnym planem 8 etapów) ✅ Zrobione
+
+- Migracja `110_resource_plan_participant_percent_and_split.sql` — `resource_plan_item_participants`
+  zyskuje `involvement_percent` (1–100, domyślnie 100) i opcjonalny własny zakres `start_at`/`end_at`
+  (`NULL` = cały zakres elementu); `resource_plan_items` zyskuje `linked_group_id` (do podziału
+  przydziału na części — patrz D25 w `ARCHITEKTURA.md`).
+- `lib/resource-plan/participant-contribution.ts` — nowy, scentralizowany moduł: godziny uczestnika
+  wg % (`participantContributedHours`), efektywny zakres dat osoby w elemencie
+  (`userEffectiveRangeInItem`)/godziny (`userHoursInItem`), przeliczanie % po zmianie zakresu
+  suwakiem (`recalcInvolvementPercentAfterRangeChange`, Wariant C — patrz D23), clamp zakresu
+  uczestnika do zakresu elementu (`clampParticipantRangeToItem`).
+- `validations.ts` — konflikty terminów i limity godzin dziennych/tygodniowych liczone per-osoba
+  z użyciem jej efektywnego zakresu/godzin (nie pełnego zakresu/godzin elementu) — patrz D24.
+- `dashboard-metrics.ts` i `suggestions.ts` — obłożenie per osoba / godziny konkurencyjne kandydata
+  liczone tą samą funkcją (`userHoursInItem`), żeby wszystkie trzy miejsca (walidacje, dashboard,
+  sugestie) zgadzały się ze sobą.
+- `resource-plan-side-panel.tsx` — przy każdym uczestniku: pole „% zaangażowania” (przelicza
+  wyświetlane godziny na żywo) i przełącznik „Własny zakres dat” (dwa pola data/godzina, domyślnie
+  ukryte = dziedziczy zakres elementu). Sekcja „Podziel przydział na dwie części” (widoczna tylko
+  przy edycji istniejącego elementu) — wybór momentu podziału, przycisk „Podziel”; jeśli element
+  jest już częścią grupy, checkbox „Zastosuj zmiany wspólnych pól… do innych części”.
+- `resource-plan-gantt.tsx` — w widoku „Osoby” każdy uczestnik (poza osobą odpowiedzialną) ma
+  własny sub-blok na SWOIM wierszu (przerywana ramka, plakietka %), przeciągany/rozciągany
+  niezależnie od głównego bloku (ograniczony do zakresu elementu, `clampRangeToBounds`) —
+  rozciągnięcie automatycznie przelicza %. Główny blok i karta na liście pokazują plakietkę
+  „część X/Y” dla elementów z `linked_group_id`.
+- `lib/supabase/resource-plan-repository.ts` — `splitResourcePlanItem` (dzieli element w punkcie
+  czasu, `plannedHours` proporcjonalnie do długości), `fetchLinkedGroupItems`,
+  `applySharedFieldsToLinkedGroup`/`pickLinkedGroupSharedFields` (propagacja pól wspólnych).
+- Świadomie **nie** zrobione w tej iteracji: wizualne połączenie (linia/łącznik) między częściami
+  podzielonego przydziału w Gantcie — na razie tylko plakietka tekstowa „część X/Y” (patrz dług
+  techniczny niżej); sub-bloki uczestników nie wspierają przenoszenia między osobami (do tego
+  służy panel edycji — usunięcie/dodanie uczestnika).
+
 ## Braki i dług techniczny do domknięcia w kolejnych iteracjach
 
 - Brak API route'ów `app/api/plan-zasobow/**` — obecnie repo/store wołane wprost z klienta
@@ -271,3 +305,7 @@ częścią numerowanego planu 8 etapów, ale domknięto go razem z Etapem 6.
   (`098_goals_mvp.sql`, `099_goal_methodologies_seed.sql` używają tych samych numerów co
   `098_resource_plan_dictionaries.sql`/`099_resource_plan_user_extensions.sql`, mimo różnych
   nazw plików) — do przenumerowania przy commitowaniu tamtego modułu (patrz jego dokumentacja).
+- Części podzielonego przydziału (`linked_group_id`) nie są wizualnie połączone w Gantcie (linia/
+  łącznik) — tylko plakietka tekstowa „część X/Y” na każdym bloku i karcie listy. Licznik
+  „X/Y” liczy tylko części aktualnie wczytane do store'a (`ensureRange`) — części daleko poza
+  widocznym oknem czasowym nie są wliczone, dopóki użytkownik nie odwiedzi ich zakresu.

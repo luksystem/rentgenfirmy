@@ -78,6 +78,16 @@ wiersza), przewijana w poziomie oś dni bieżącego okresu, nawigacja okresami j
   wywołaniem przeciągania bloku.
 - **Tory (lanes)** — nakładające się czasowo elementy w tym samym wierszu renderują się jedno
   pod drugim (algorytm zachłanny `assignGanttLanes`), więc konflikt jest widoczny bez klikania.
+- **Sub-bloki osób zaangażowanych** (tylko w widoku Osoby) — każda osoba zaangażowana (poza
+  odpowiedzialną) ma własny, węższy blok z przerywaną obwódką na SWOIM wierszu, w zakresie dat,
+  jaki jej przypisano (cały zakres elementu albo własny, węższy — patrz panel edycji §5).
+  Plakietka pokazuje jej aktualny % zaangażowania. Blok da się przeciągać/rozciągać niezależnie
+  od głównego — ograniczony do zakresu głównego elementu (nie da się „wyjechać” poza termin
+  przydziału); rozciągnięcie automatycznie przelicza % (patrz D23 w `ARCHITEKTURA.md`). Kliknięcie
+  (bez przeciągnięcia) otwiera pełny panel edycji elementu.
+- **Plakietka „część X/Y”** — elementy powstałe z podziału jednego przydziału (§5, „Podział
+  przydziału na części”) mają na głównym bloku i na karcie listy małą plakietkę z numerem części
+  i łączną liczbą części w grupie (`linked_group_id`).
 - **Interakcje** (Pointer Events, `setPointerCapture` — ten sam wzorzec co dotykowy drag w
   `kanban-task-card.tsx`):
   - przeciągnięcie środka bloku w poziomie → zmiana terminu (przesunięcie, zachowana długość),
@@ -138,6 +148,17 @@ Przepływ:
    (select z profili zespołu — `useProcessStore().teamProfiles`), dodatkowi uczestnicy (multi,
    z opcjonalną rolą i flagą lidera), zespół, status, typ pracy, ryzyko + notatka ryzyka, trzy
    budżety (robocizna/materiały/dojazd), notatki.
+3a. **% zaangażowania uczestnika** — przy każdej osobie zaangażowanej: pole liczbowe 1–100%,
+   z przeliczanymi na żywo szacowanymi godzinami (`≈ X.X h` = godziny elementu × %, patrz D23 w
+   `ARCHITEKTURA.md`). Przełącznik **„Własny zakres dat”** (domyślnie wyłączony = uczestnik
+   dziedziczy cały zakres elementu) odsłania dwa pola data/godzina, ograniczone do zakresu elementu
+   — np. uczestnik zaangażowany tylko 2 z 5 dni zadania.
+3b. **Podział przydziału na części** — sekcja widoczna tylko przy edycji istniejącego elementu:
+   pole „Podziel w momencie” (data/godzina wewnątrz zakresu elementu) + przycisk „Podziel”, który
+   tworzy drugą część (ten sam „przydział” logicznie, dwa elementy techniczne — patrz D25).
+   Jeśli element już jest częścią podzielonego przydziału, dodatkowy checkbox „Zastosuj zmiany
+   wspólnych pól… do innych części” (domyślnie zaznaczony) propaguje tytuł/status/ryzyko/notatki
+   (nie terminy/godziny/budżety/uczestników) do pozostałych części przy zapisie.
 4. **Sugerowane osoby** (Etap 7) — nad wyborem osoby odpowiedzialnej, karta z do 5 klikalnymi
    „chipami” kandydatów (ranking `suggestResourcePlanCandidates()` przez
    `getActiveSuggestionProvider()`, patrz `ARCHITEKTURA.md` §5/D19/D20): imię i nazwisko,

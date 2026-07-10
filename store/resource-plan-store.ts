@@ -3,9 +3,12 @@
 import { create } from "zustand";
 import type { ResourcePlanItem, ResourcePlanItemInput } from "@/lib/resource-plan/types";
 import {
+  applySharedFieldsToLinkedGroup,
   createResourcePlanItem,
   deleteResourcePlanItem,
+  fetchLinkedGroupItems,
   fetchResourcePlanItemsInRange,
+  splitResourcePlanItem,
   updateResourcePlanItem,
 } from "@/lib/supabase/resource-plan-repository";
 
@@ -38,6 +41,10 @@ type ResourcePlanStore = {
   createItem: (input: ResourcePlanItemInput) => Promise<ResourcePlanItem>;
   updateItem: (id: string, input: ResourcePlanItemInput) => Promise<ResourcePlanItem>;
   removeItem: (id: string) => Promise<void>;
+  /** Dzieli element na dwie części (patrz `splitResourcePlanItem`) — obie trafiają do cache. */
+  splitItem: (item: ResourcePlanItem, splitAtIso: string) => Promise<{ updatedOriginal: ResourcePlanItem; created: ResourcePlanItem }>;
+  /** Propaguje "wspólne" pola (tytuł/status/ryzyko/notatki…) do innych części tej samej grupy. */
+  applyToLinkedGroup: (groupId: string, excludeId: string, patch: Partial<ResourcePlanItemInput>) => Promise<void>;
   allItems: () => ResourcePlanItem[];
 };
 
@@ -98,6 +105,28 @@ export const useResourcePlanStore = create<ResourcePlanStore>((set, get) => ({
     const next = { ...get().items };
     delete next[id];
     set({ items: next });
+  },
+
+  splitItem: async (item, splitAtIso) => {
+    const result = await splitResourcePlanItem(item, splitAtIso);
+    set({
+      items: {
+        ...get().items,
+        [result.updatedOriginal.id]: result.updatedOriginal,
+        [result.created.id]: result.created,
+      },
+    });
+    return result;
+  },
+
+  applyToLinkedGroup: async (groupId, excludeId, patch) => {
+    await applySharedFieldsToLinkedGroup(groupId, excludeId, patch);
+    const fetched = await fetchLinkedGroupItems(groupId);
+    const nextItems = { ...get().items };
+    fetched.forEach((sibling) => {
+      nextItems[sibling.id] = sibling;
+    });
+    set({ items: nextItems });
   },
 
   allItems: () => memoizedAllItems(get().items),

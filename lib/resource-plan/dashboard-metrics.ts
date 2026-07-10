@@ -7,6 +7,7 @@
 import { getUserDisplayName } from "@/lib/auth/types";
 import type { UserProfile } from "@/lib/auth/types";
 import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
+import { userHoursInItem } from "@/lib/resource-plan/participant-contribution";
 import type { ResourcePlanItem } from "@/lib/resource-plan/types";
 import { resourcePlanItemToInput } from "@/lib/resource-plan/types";
 import type { UserResourceProfile } from "@/lib/resource-plan/user-resource-types";
@@ -95,14 +96,17 @@ export function computeResourcePlanDashboardMetrics(params: {
     .sort((a, b) => b.count - a.count)
     .map((entry) => ({ name: entry.name, value: entry.count }));
 
+  // Godziny ważone % zaangażowania — osoba odpowiedzialna liczy się pełnymi godzinami
+  // elementu, osoba zaangażowana godzinami wynikającymi z jej % (patrz participant-contribution.ts),
+  // żeby obłożenie na dashboardzie odpowiadało realnemu obciążeniu, nie sumie pełnych godzin
+  // każdego elementu, w którym dana osoba w ogóle występuje.
   const hoursByUser = new Map<string, number>();
   items.forEach((item) => {
-    const hours = itemHours(item);
     const involved = new Set<string>();
     if (item.assigneeId) involved.add(item.assigneeId);
     item.participants.forEach((participant) => involved.add(participant.userId));
     involved.forEach((userId) => {
-      hoursByUser.set(userId, (hoursByUser.get(userId) ?? 0) + hours);
+      hoursByUser.set(userId, (hoursByUser.get(userId) ?? 0) + userHoursInItem(item, userId));
     });
   });
 

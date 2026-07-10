@@ -6,6 +6,7 @@ import type { ResourcePlanItem, ResourcePlanItemInput } from "@/lib/resource-pla
 import type { UserResourceProfile } from "@/lib/resource-plan/user-resource-types";
 import type { UserProfile } from "@/lib/auth/types";
 import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
+import { userEffectiveRangeInItem, userHoursInItem } from "@/lib/resource-plan/participant-contribution";
 
 export type ResourcePlanWarning = {
   code: string;
@@ -44,13 +45,18 @@ export function validateResourcePlanItem(params: {
   const involved = involvedUserIds(input);
   const others = otherItems.filter((item) => item.id !== editingId);
 
-  // 1-2. Konflikt terminów — osoba / zespół.
+  // 1-2. Konflikt terminów — osoba / zespół. Dla osoby zaangażowanej liczymy nakładanie się
+  // wg JEJ WŁASNEGO zakresu dat (może być węższy niż cały element — patrz participant-contribution.ts),
+  // nie całego zakresu elementu, żeby nie zgłaszać fałszywych konfliktów, gdy dana osoba jest
+  // zaangażowana tylko np. 2 dni z 5-dniowego zadania.
   const conflictingByUser = new Map<string, ResourcePlanItem[]>();
-  others.forEach((other) => {
-    if (!rangesOverlap(input.startAt, input.endAt, other.startAt, other.endAt)) return;
-    const otherUsers = involvedUserIds(other);
-    involved.forEach((userId) => {
-      if (otherUsers.includes(userId)) {
+  involved.forEach((userId) => {
+    const inputRange = userEffectiveRangeInItem(input, userId);
+    if (!inputRange) return;
+    others.forEach((other) => {
+      const otherRange = userEffectiveRangeInItem(other, userId);
+      if (!otherRange) return;
+      if (rangesOverlap(inputRange.startAt, inputRange.endAt, otherRange.startAt, otherRange.endAt)) {
         const list = conflictingByUser.get(userId) ?? [];
         list.push(other);
         conflictingByUser.set(userId, list);
@@ -80,14 +86,22 @@ export function validateResourcePlanItem(params: {
     }
   }
 
-  // 3. Przekroczony limit godzin (dziennie/tygodniowo) — suma godzin planowanych w tym samym oknie.
-  const itemHours = input.plannedHours ?? hoursBetween(input.startAt, input.endAt);
+  // 3. Przekroczony limit godzin (dziennie/tygodniowo) — suma godzin w tym samym oknie, ważona
+  // % zaangażowania: osoba odpowiedzialna liczy się pełnymi godzinami elementu, osoba
+  // zaangażowana godzinami wynikającymi z jej % (patrz participant-contribution.ts).
   involved.forEach((userId) => {
     const profile = profilesById[userId];
     if (!profile) return;
+    const inputRange = userEffectiveRangeInItem(input, userId);
+    if (!inputRange) return;
+    const inputHours = userHoursInItem(input, userId);
+
     const sameDayHours = others
-      .filter((other) => involvedUserIds(other).includes(userId) && sameDay(other.startAt, input.startAt))
-      .reduce((sum, other) => sum + (other.plannedHours ?? hoursBetween(other.startAt, other.endAt)), itemHours);
+      .filter((other) => {
+        const otherRange = userEffectiveRangeInItem(other, userId);
+        return Boolean(otherRange) && sameDay(otherRange!.startAt, inputRange.startAt);
+      })
+      .reduce((sum, other) => sum + userHoursInItem(other, userId), inputHours);
 
     if (profile.dailyHoursLimit != null && sameDayHours > profile.dailyHoursLimit) {
       warnings.push({
@@ -98,8 +112,11 @@ export function validateResourcePlanItem(params: {
     }
 
     const sameWeekHours = others
-      .filter((other) => involvedUserIds(other).includes(userId) && sameWeek(other.startAt, input.startAt))
-      .reduce((sum, other) => sum + (other.plannedHours ?? hoursBetween(other.startAt, other.endAt)), itemHours);
+      .filter((other) => {
+        const otherRange = userEffectiveRangeInItem(other, userId);
+        return Boolean(otherRange) && sameWeek(otherRange!.startAt, inputRange.startAt);
+      })
+      .reduce((sum, other) => sum + userHoursInItem(other, userId), inputHours);
 
     if (profile.weeklyHoursLimit != null && sameWeekHours > profile.weeklyHoursLimit) {
       warnings.push({

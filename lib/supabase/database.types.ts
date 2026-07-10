@@ -1156,6 +1156,8 @@ export type ResourcePlanItemRow = {
   notes: string;
   accepted_risk: boolean;
   created_by: string | null;
+  /** Elementy z tym samym linked_group_id to części jednego przydziału podzielonego w czasie. */
+  linked_group_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -1184,6 +1186,7 @@ export type ResourcePlanItemInsert = {
   notes?: string;
   accepted_risk?: boolean;
   created_by?: string | null;
+  linked_group_id?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -1196,6 +1199,11 @@ export type ResourcePlanItemParticipantRow = {
   user_id: string;
   role_item_id: string | null;
   is_lead: boolean;
+  /** Procent godzin elementu przypisany tej osobie — patrz participant-contribution.ts. */
+  involvement_percent: number;
+  /** Własny zakres dat uczestnika (podzbiór zakresu elementu) — NULL = cały zakres elementu. */
+  start_at: string | null;
+  end_at: string | null;
   created_at: string;
 };
 
@@ -1205,6 +1213,9 @@ export type ResourcePlanItemParticipantInsert = {
   user_id: string;
   role_item_id?: string | null;
   is_lead?: boolean;
+  involvement_percent?: number;
+  start_at?: string | null;
+  end_at?: string | null;
   created_at?: string;
 };
 

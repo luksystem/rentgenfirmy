@@ -6,6 +6,7 @@ import type {
   ResourcePlanItemUpdate,
 } from "@/lib/supabase/database.types";
 import type { ResourcePlanItem, ResourcePlanItemInput, ResourcePlanParticipant } from "@/lib/resource-plan/types";
+import { resourcePlanItemToInput } from "@/lib/resource-plan/types";
 
 function rowToItem(row: ResourcePlanItemRow, participants: ResourcePlanParticipant[]): ResourcePlanItem {
   return {
@@ -32,6 +33,7 @@ function rowToItem(row: ResourcePlanItemRow, participants: ResourcePlanParticipa
     notes: row.notes,
     acceptedRisk: row.accepted_risk,
     createdBy: row.created_by,
+    linkedGroupId: row.linked_group_id,
     participants,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -61,6 +63,7 @@ function inputToRow(input: ResourcePlanItemInput): ResourcePlanItemInsert {
     travel_budget: input.travelBudget,
     notes: input.notes.trim(),
     accepted_risk: input.acceptedRisk,
+    linked_group_id: input.linkedGroupId,
   };
 }
 
@@ -78,7 +81,14 @@ async function fetchParticipantsBatch(planItemIds: string[]): Promise<Map<string
 
   (data ?? []).forEach((row: ResourcePlanItemParticipantRow) => {
     const list = map.get(row.plan_item_id) ?? [];
-    list.push({ userId: row.user_id, roleItemId: row.role_item_id, isLead: row.is_lead });
+    list.push({
+      userId: row.user_id,
+      roleItemId: row.role_item_id,
+      isLead: row.is_lead,
+      involvementPercent: row.involvement_percent,
+      startAt: row.start_at,
+      endAt: row.end_at,
+    });
     map.set(row.plan_item_id, list);
   });
 
@@ -101,6 +111,9 @@ async function replaceParticipants(planItemId: string, participants: ResourcePla
       user_id: participant.userId,
       role_item_id: participant.roleItemId,
       is_lead: participant.isLead,
+      involvement_percent: participant.involvementPercent,
+      start_at: participant.startAt,
+      end_at: participant.endAt,
     })),
   );
   if (error) throw new Error(error.message);
@@ -171,4 +184,104 @@ export async function deleteResourcePlanItem(id: string): Promise<void> {
   const supabase = getSupabase();
   const { error } = await supabase.from("resource_plan_items").delete().eq("id", id);
   if (error) throw new Error(error.message);
+}
+
+/** Wszystkie części jednego podzielonego przydziału (patrz `splitResourcePlanItem`). */
+export async function fetchLinkedGroupItems(groupId: string): Promise<ResourcePlanItem[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("resource_plan_items")
+    .select("*")
+    .eq("linked_group_id", groupId)
+    .order("start_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  const rows = data ?? [];
+  const participantsByItem = await fetchParticipantsBatch(rows.map((row) => row.id));
+  return rows.map((row) => rowToItem(row, participantsByItem.get(row.id) ?? []));
+}
+
+/**
+ * Pola, które przy podziale przydziału na części (i przy późniejszej edycji jednej z nich)
+ * mają sens jako "wspólne" dla wszystkich części — reszta (terminy, godziny, budżety,
+ * uczestnicy) jest z natury inna dla każdej części, więc jej nie propagujemy.
+ */
+const LINKED_GROUP_SHARED_FIELD_KEYS = [
+  "title",
+  "projectId",
+  "clientId",
+  "processStageId",
+  "workTypeItemId",
+  "teamItemId",
+  "statusItemId",
+  "riskItemId",
+  "riskNote",
+  "notes",
+  "acceptedRisk",
+] as const satisfies readonly (keyof ResourcePlanItemInput)[];
+
+export function pickLinkedGroupSharedFields(input: ResourcePlanItemInput): Partial<ResourcePlanItemInput> {
+  const patch: Partial<ResourcePlanItemInput> = {};
+  LINKED_GROUP_SHARED_FIELD_KEYS.forEach((key) => {
+    (patch as Record<string, unknown>)[key] = input[key];
+  });
+  return patch;
+}
+
+/** Aktualizuje "wspólne" pola (patrz wyżej) we wszystkich innych częściach tej samej grupy —
+ *  na życzenie koordynatora (checkbox w panelu edycji), żeby podział na części nie oznaczał
+ *  ręcznej synchronizacji tytułu/statusu/ryzyka w kilku miejscach. */
+export async function applySharedFieldsToLinkedGroup(
+  groupId: string,
+  excludeId: string,
+  patch: Partial<ResourcePlanItemInput>,
+): Promise<void> {
+  const siblings = (await fetchLinkedGroupItems(groupId)).filter((sibling) => sibling.id !== excludeId);
+  await Promise.all(
+    siblings.map((sibling) => updateResourcePlanItem(sibling.id, { ...resourcePlanItemToInput(sibling), ...patch })),
+  );
+}
+
+/**
+ * Dzieli element planu na dwie części w punkcie `splitAtIso` (musi być wewnątrz zakresu),
+ * zachowując, że to "jeden przydział" — obie części dostają ten sam `linkedGroupId` (nowy,
+ * jeśli element jeszcze nie był częścią grupy). Godziny planowane są dzielone proporcjonalnie
+ * do długości nowych zakresów (edytowalne później niezależnie w każdej części). Uczestnicy
+ * (z własnymi % i zakresami) są kopiowani do obu części — koordynator dostosowuje je ręcznie,
+ * jeśli konkretna osoba brała udział tylko w jednej z części.
+ */
+export async function splitResourcePlanItem(
+  item: ResourcePlanItem,
+  splitAtIso: string,
+): Promise<{ updatedOriginal: ResourcePlanItem; created: ResourcePlanItem }> {
+  if (!(item.startAt < splitAtIso && splitAtIso < item.endAt)) {
+    throw new Error("Punkt podziału musi być wewnątrz zakresu przydziału.");
+  }
+
+  const groupId = item.linkedGroupId ?? crypto.randomUUID();
+  const totalMs = new Date(item.endAt).getTime() - new Date(item.startAt).getTime();
+  const firstMs = new Date(splitAtIso).getTime() - new Date(item.startAt).getTime();
+  const fraction = totalMs > 0 ? firstMs / totalMs : 0.5;
+
+  const baseInput = resourcePlanItemToInput(item);
+  const firstHours = item.plannedHours != null ? Math.round(item.plannedHours * fraction * 100) / 100 : null;
+  const secondHours =
+    item.plannedHours != null ? Math.round((item.plannedHours - (firstHours ?? 0)) * 100) / 100 : null;
+
+  const updatedOriginal = await updateResourcePlanItem(item.id, {
+    ...baseInput,
+    endAt: splitAtIso,
+    plannedHours: firstHours,
+    linkedGroupId: groupId,
+  });
+
+  const created = await createResourcePlanItem({
+    ...baseInput,
+    startAt: splitAtIso,
+    plannedHours: secondHours,
+    linkedGroupId: groupId,
+  });
+
+  return { updatedOriginal, created };
 }
