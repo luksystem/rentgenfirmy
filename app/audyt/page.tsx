@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { AuditSession } from "@/lib/audit/types";
 
 export default function AuditListPage() {
+  const router = useRouter();
   const [items, setItems] = useState<AuditSession[]>([]);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
@@ -45,11 +48,35 @@ export default function AuditListPage() {
     void load();
   }
 
+  async function createFromExample() {
+    setError(null);
+    setSeeding(true);
+    try {
+      const res = await fetch("/api/audit/seed-example", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Błąd");
+      router.push(`/audyt/${data.id}/udostepnianie`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Błąd");
+      setSeeding(false);
+    }
+  }
+
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif" }}>
       <h1>Audyty SRI</h1>
       <p>
         <Link href="/audyt/przyklad">→ Zobacz referencyjny audyt z raportem (przykład)</Link>
+      </p>
+      <p>
+        <button
+          type="button"
+          onClick={createFromExample}
+          disabled={seeding}
+          style={{ padding: "8px 14px", cursor: "pointer" }}
+        >
+          {seeding ? "Tworzenie…" : "Utwórz audyt z przykładu (do publicznego udostępnienia)"}
+        </button>
       </p>
 
       <form onSubmit={create} style={{ margin: "16px 0" }}>
