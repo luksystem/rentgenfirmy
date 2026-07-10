@@ -984,6 +984,18 @@ export type LeaveRequestInsert = {
 
 export type LeaveRequestUpdate = Partial<Omit<LeaveRequestInsert, "id" | "profile_id">>;
 
+export type UserNavFavoriteRow = {
+  user_id: string;
+  href: string;
+  created_at: string;
+};
+
+export type UserNavFavoriteInsert = {
+  user_id: string;
+  href: string;
+  created_at?: string;
+};
+
 export type UserOperationalRoleRow = {
   id: string;
   user_id: string;
@@ -2023,6 +2035,12 @@ export type Database = {
         Row: LeaveRequestRow;
         Insert: LeaveRequestInsert;
         Update: LeaveRequestUpdate;
+        Relationships: [];
+      };
+      user_nav_favorites: {
+        Row: UserNavFavoriteRow;
+        Insert: UserNavFavoriteInsert;
+        Update: Partial<UserNavFavoriteInsert>;
         Relationships: [];
       };
       process_templates: {

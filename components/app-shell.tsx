@@ -32,6 +32,7 @@ import {
   Receipt,
   Settings,
   Shield,
+  Star,
   Target,
   Timer,
   Users,
@@ -49,6 +50,7 @@ import { NotificationsRealtimeSubscriber } from "@/components/notifications-real
 import { QuickAddMenuList } from "@/components/quick-add-menu";
 import { useAuthStore } from "@/store/auth-store";
 import { useLeaveStore } from "@/store/leave-store";
+import { useNavFavoritesStore } from "@/store/nav-favorites-store";
 import { useProcessStore } from "@/store/process-store";
 
 type NavItem = {
@@ -187,6 +189,37 @@ function isNavItemActive(pathname: string, item: NavItem) {
   return pathname === href || (href !== "/" && pathname.startsWith(href));
 }
 
+function FavoriteToggle({
+  label,
+  favorite,
+  onToggle,
+}: {
+  label: string;
+  favorite: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={favorite ? `Usuń „${label}” z ulubionych` : `Dodaj „${label}” do ulubionych`}
+      aria-pressed={favorite}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onToggle();
+      }}
+      className={cn(
+        "shrink-0 rounded-lg p-1.5 transition hover:scale-105",
+        favorite
+          ? "text-amber-400 opacity-100"
+          : "text-current opacity-0 focus-visible:opacity-100 group-hover:opacity-50 group-focus-within:opacity-50 hover:!opacity-100 hover:!text-amber-300",
+      )}
+    >
+      <Star className={cn("h-3.5 w-3.5", favorite && "fill-current")} />
+    </button>
+  );
+}
+
 function NavLink({
   href,
   label,
@@ -198,6 +231,8 @@ function NavLink({
   newBadgeCount = 0,
   external = false,
   disabled = false,
+  favorite,
+  onToggleFavorite,
 }: {
   href: string;
   label: string;
@@ -209,6 +244,8 @@ function NavLink({
   newBadgeCount?: number;
   external?: boolean;
   disabled?: boolean;
+  favorite?: boolean;
+  onToggleFavorite?: () => void;
 }) {
   if (disabled) {
     return (
@@ -229,44 +266,61 @@ function NavLink({
     );
   }
 
+  const favoriteToggle = onToggleFavorite ? (
+    <FavoriteToggle label={label} favorite={Boolean(favorite)} onToggle={onToggleFavorite} />
+  ) : null;
+
   if (variant === "sheet") {
     return (
+      <div
+        className={cn(
+          "group flex items-center gap-1 rounded-2xl transition",
+          active
+            ? "bg-sidebar-accent-soft text-sidebar-accent"
+            : "border border-border bg-surface-muted text-muted hover:bg-surface-elevated hover:text-foreground",
+        )}
+      >
+        <Link
+          href={href}
+          target={external ? "_blank" : undefined}
+          rel={external ? "noreferrer" : undefined}
+          onClick={onClick}
+          className="flex flex-1 items-center gap-3 py-3 pl-4 text-sm font-medium"
+        >
+          <Icon className="h-4 w-4" />
+          <span className="flex-1">{label}</span>
+          <NavBadges overdueCount={overdueBadgeCount} newCount={newBadgeCount} />
+        </Link>
+        {favoriteToggle ? <div className="pr-3">{favoriteToggle}</div> : <div className="w-1" />}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "group flex items-center gap-1 rounded-xl transition",
+        active
+          ? "border-l-[3px] border-sidebar-accent bg-sidebar-accent-soft"
+          : "border-l-[3px] border-transparent hover:bg-white/5",
+      )}
+    >
       <Link
         href={href}
         target={external ? "_blank" : undefined}
         rel={external ? "noreferrer" : undefined}
         onClick={onClick}
         className={cn(
-          "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition",
-          active
-            ? "bg-sidebar-accent-soft text-sidebar-accent"
-            : "border border-border bg-surface-muted text-muted hover:bg-surface-elevated hover:text-foreground",
+          "flex flex-1 items-center gap-3 py-2.5 pl-[calc(0.75rem-3px)] text-sm font-medium",
+          active ? "text-sidebar-accent" : "text-sidebar-muted group-hover:text-sidebar-foreground",
         )}
       >
-      <Icon className="h-4 w-4" />
-      <span className="flex-1">{label}</span>
-      <NavBadges overdueCount={overdueBadgeCount} newCount={newBadgeCount} />
-    </Link>
-  );
-  }
-
-  return (
-    <Link
-      href={href}
-      target={external ? "_blank" : undefined}
-      rel={external ? "noreferrer" : undefined}
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
-        active
-          ? "border-l-[3px] border-sidebar-accent bg-sidebar-accent-soft pl-[calc(0.75rem-3px)] text-sidebar-accent"
-          : "border-l-[3px] border-transparent text-sidebar-muted hover:bg-white/5 hover:text-sidebar-foreground",
-      )}
-    >
-      <Icon className={cn("h-4 w-4", active && "text-sidebar-accent")} />
-      <span className="flex-1">{label}</span>
-      <NavBadges overdueCount={overdueBadgeCount} newCount={newBadgeCount} />
-    </Link>
+        <Icon className={cn("h-4 w-4", active && "text-sidebar-accent")} />
+        <span className="flex-1">{label}</span>
+        <NavBadges overdueCount={overdueBadgeCount} newCount={newBadgeCount} />
+      </Link>
+      {favoriteToggle ? <div className="pr-2">{favoriteToggle}</div> : <div className="w-1" />}
+    </div>
   );
 }
 
@@ -293,6 +347,10 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const refreshKanbanOverdueTaskCount = useProcessStore((state) => state.refreshKanbanOverdueTaskCount);
   const leavePendingForMeCount = useLeaveStore((state) => state.pendingForMeCount);
   const refreshLeavePendingForMeCount = useLeaveStore((state) => state.refreshPendingForMeCount);
+  const profileId = useAuthStore((state) => state.profile?.id);
+  const navFavoriteHrefs = useNavFavoritesStore((state) => state.hrefs);
+  const ensureNavFavorites = useNavFavoritesStore((state) => state.ensure);
+  const toggleNavFavorite = useNavFavoritesStore((state) => state.toggle);
   const [serviceIntakeNewCount, setServiceIntakeNewCount] = useState(0);
   const [serviceIntakeOverdueCount, setServiceIntakeOverdueCount] = useState(0);
   const [contactsNewCount, setContactsNewCount] = useState(0);
@@ -430,6 +488,21 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   useKanbanOverdueTasksRealtime(handleKanbanOverdueCountChange);
   useKanbanNewTasksRealtime(handleKanbanNewCountChange);
 
+  useEffect(() => {
+    if (profileId) {
+      void ensureNavFavorites();
+    }
+  }, [profileId, ensureNavFavorites]);
+
+  const handleToggleFavorite = useCallback(
+    (href: string) => {
+      void toggleNavFavorite(href).catch((error) => {
+        console.error("Nie udało się zapisać ulubionego elementu menu:", error);
+      });
+    },
+    [toggleNavFavorite],
+  );
+
   const kanbanBadges = useMemo(
     () => ({
       overdueBadgeCount: kanbanOverdueTaskCount,
@@ -475,7 +548,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
     return {};
   }
 
-  const navGroups = useMemo(() => {
+  const baseNavGroups = useMemo(() => {
     const groups = [...navGroupsBase];
 
     if (isAdministrator) {
@@ -488,6 +561,27 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
     return groups;
   }, [isAdministrator]);
 
+  const allNav = useMemo(() => baseNavGroups.flatMap((group) => group.items), [baseNavGroups]);
+
+  const favoriteHrefSet = useMemo(() => new Set(navFavoriteHrefs), [navFavoriteHrefs]);
+
+  const favoriteNavItems = useMemo(() => {
+    if (navFavoriteHrefs.length === 0) {
+      return [];
+    }
+    const byHref = new Map(allNav.map((item) => [item.href, item]));
+    return navFavoriteHrefs
+      .map((href) => byHref.get(href))
+      .filter((item): item is NavItem => item != null && !item.disabled);
+  }, [navFavoriteHrefs, allNav]);
+
+  const navGroups = useMemo(() => {
+    if (favoriteNavItems.length === 0) {
+      return baseNavGroups;
+    }
+    return [{ label: "Ulubione", items: favoriteNavItems }, ...baseNavGroups];
+  }, [baseNavGroups, favoriteNavItems]);
+
   const mobileSheetGroups = useMemo(
     () => navGroups.filter((group) => group.label !== "Główne"),
     [navGroups],
@@ -497,8 +591,6 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
     () => mobileSheetGroups.flatMap((group) => group.items),
     [mobileSheetGroups],
   );
-
-  const allNav = useMemo(() => navGroups.flatMap((group) => group.items), [navGroups]);
 
   const currentPage = allNav.find((item) => isNavItemActive(pathname, item));
 
@@ -528,10 +620,12 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
                 <div className="grid gap-0.5">
                   {group.items.map((item) => (
                     <NavLink
-                      key={item.href}
+                      key={`${group.label}-${item.href}`}
                       {...item}
                       active={isNavItemActive(pathname, item)}
                       disabled={item.disabled}
+                      favorite={favoriteHrefSet.has(item.href)}
+                      onToggleFavorite={() => handleToggleFavorite(item.href)}
                       {...navBadgesForItem(item.href)}
                     />
                   ))}
@@ -769,12 +863,14 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
                     <div className="grid gap-2">
                       {group.items.map((item) => (
                         <NavLink
-                          key={item.href}
+                          key={`${group.label}-${item.href}`}
                           {...item}
                           active={isNavItemActive(pathname, item)}
-                      disabled={item.disabled}
+                          disabled={item.disabled}
                           onClick={() => setMenuOpen(false)}
                           variant="sheet"
+                          favorite={favoriteHrefSet.has(item.href)}
+                          onToggleFavorite={() => handleToggleFavorite(item.href)}
                           {...navBadgesForItem(item.href)}
                         />
                       ))}
