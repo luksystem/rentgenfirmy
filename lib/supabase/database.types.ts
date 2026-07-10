@@ -1070,6 +1070,7 @@ export type UserAbsenceRow = {
   end_date: string;
   note: string;
   status: string;
+  leave_request_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -1082,6 +1083,7 @@ export type UserAbsenceInsert = {
   end_date: string;
   note?: string;
   status?: string;
+  leave_request_id?: string | null;
   created_at?: string;
   updated_at?: string;
 };

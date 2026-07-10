@@ -6,6 +6,7 @@ import { fetchLeaveRequestByIdServer, mapLeaveRequestRow } from "@/lib/supabase/
 import { mapProfileRow } from "@/lib/supabase/profile-mappers";
 import { deleteCalendarEvent } from "@/lib/google/calendar";
 import { dispatchLeaveRequestDecidedSms } from "@/lib/leave/leave-sms";
+import { removeLeaveAbsence } from "@/lib/leave/leave-absence-sync";
 import { createLeaveRequestDecidedNotificationServer } from "@/lib/notifications/server";
 
 /** Administrator cofa zaakceptowany urlop — zmienia status na odrzucony, usuwa wpis
@@ -52,6 +53,8 @@ export async function POST(
     if (error) {
       throw new Error(error.message);
     }
+
+    await removeLeaveAbsence(admin, id).catch(() => undefined);
 
     const [{ data: employeeRow }, { data: leaveTypeRow }] = await Promise.all([
       admin.from("profiles").select("*").eq("id", item.profileId).single(),

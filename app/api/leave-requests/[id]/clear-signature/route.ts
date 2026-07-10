@@ -4,6 +4,7 @@ import { jsonError } from "@/lib/auth/http-error";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { fetchLeaveRequestByIdServer, mapLeaveRequestRow } from "@/lib/supabase/leave-request-server";
 import { deleteCalendarEvent } from "@/lib/google/calendar";
+import { removeLeaveAbsence } from "@/lib/leave/leave-absence-sync";
 import { LEAVE_CARDS_BUCKET } from "@/lib/supabase/leave-card-repository";
 
 /** Administrator czyści podpis zaakceptowanego wniosku (jak w protokołach) — wniosek wraca do
@@ -28,6 +29,7 @@ export async function POST(
     if (item.generatedPdfPath) {
       await admin.storage.from(LEAVE_CARDS_BUCKET).remove([item.generatedPdfPath]).catch(() => undefined);
     }
+    await removeLeaveAbsence(admin, id).catch(() => undefined);
 
     const { data: updated, error } = await admin
       .from("leave_requests")

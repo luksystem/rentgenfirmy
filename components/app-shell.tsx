@@ -48,6 +48,7 @@ import { NotificationBell } from "@/components/notification-bell";
 import { NotificationsRealtimeSubscriber } from "@/components/notifications-realtime-subscriber";
 import { QuickAddMenuList } from "@/components/quick-add-menu";
 import { useAuthStore } from "@/store/auth-store";
+import { useLeaveStore } from "@/store/leave-store";
 import { useProcessStore } from "@/store/process-store";
 
 type NavItem = {
@@ -290,6 +291,8 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const kanbanOverdueTaskCount = useProcessStore((state) => state.kanbanOverdueTaskCount);
   const refreshKanbanNewTaskCount = useProcessStore((state) => state.refreshKanbanNewTaskCount);
   const refreshKanbanOverdueTaskCount = useProcessStore((state) => state.refreshKanbanOverdueTaskCount);
+  const leavePendingForMeCount = useLeaveStore((state) => state.pendingForMeCount);
+  const refreshLeavePendingForMeCount = useLeaveStore((state) => state.refreshPendingForMeCount);
   const [serviceIntakeNewCount, setServiceIntakeNewCount] = useState(0);
   const [serviceIntakeOverdueCount, setServiceIntakeOverdueCount] = useState(0);
   const [contactsNewCount, setContactsNewCount] = useState(0);
@@ -381,17 +384,20 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     void refreshKanbanOverdueTaskCount();
     void refreshKanbanNewTaskCount();
+    void refreshLeavePendingForMeCount();
     refreshServiceIntakeCounts();
     refreshContactsCounts();
     refreshIntakeOffersCounts();
     refreshInspectionsCounts();
     const interval = window.setInterval(() => {
+      void refreshLeavePendingForMeCount();
       refreshServiceIntakeCounts();
       refreshContactsCounts();
       refreshIntakeOffersCounts();
       refreshInspectionsCounts();
     }, 30000);
     const onFocus = () => {
+      void refreshLeavePendingForMeCount();
       refreshServiceIntakeCounts();
       refreshContactsCounts();
       refreshIntakeOffersCounts();
@@ -414,6 +420,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   }, [
     refreshKanbanNewTaskCount,
     refreshKanbanOverdueTaskCount,
+    refreshLeavePendingForMeCount,
     refreshContactsCounts,
     refreshIntakeOffersCounts,
     refreshInspectionsCounts,
@@ -461,6 +468,9 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
         newBadgeCount: planningApproachingCount,
         overdueBadgeCount: inspectionsPlanningOverdueCount,
       };
+    }
+    if (href === "/pracownicy") {
+      return { overdueBadgeCount: leavePendingForMeCount };
     }
     return {};
   }

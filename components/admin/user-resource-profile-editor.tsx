@@ -48,7 +48,6 @@ export function UserResourceProfileEditor({ userId }: { userId: string }) {
   const competencyOptions = useDictionaryStore((state) => state.byKey("competency"));
   const levelOptions = useDictionaryStore((state) => state.byKey("competency_level"));
   const teamOptions = useDictionaryStore((state) => state.byKey("team"));
-  const absenceTypeOptions = useDictionaryStore((state) => state.byKey("absence_type"));
 
   const ensureProfile = useUserResourceStore((state) => state.ensureProfile);
   const profile = useUserResourceStore((state) => state.byUser[userId]);
@@ -58,16 +57,11 @@ export function UserResourceProfileEditor({ userId }: { userId: string }) {
   const removeCompetency = useUserResourceStore((state) => state.removeCompetency);
   const addCertificate = useUserResourceStore((state) => state.addCertificate);
   const removeCertificate = useUserResourceStore((state) => state.removeCertificate);
-  const addAbsence = useUserResourceStore((state) => state.addAbsence);
-  const removeAbsence = useUserResourceStore((state) => state.removeAbsence);
 
   const [newCompetencyId, setNewCompetencyId] = useState("");
   const [newCompetencyLevelId, setNewCompetencyLevelId] = useState("");
   const [newCertName, setNewCertName] = useState("");
   const [newCertExpires, setNewCertExpires] = useState("");
-  const [newAbsenceTypeId, setNewAbsenceTypeId] = useState("");
-  const [newAbsenceStart, setNewAbsenceStart] = useState("");
-  const [newAbsenceEnd, setNewAbsenceEnd] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -120,23 +114,6 @@ export function UserResourceProfileEditor({ userId }: { userId: string }) {
       setNewCertExpires("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Błąd zapisu certyfikatu.");
-    }
-  }
-
-  async function handleAddAbsence() {
-    if (!newAbsenceStart || !newAbsenceEnd) return;
-    setError(null);
-    try {
-      await addAbsence(userId, {
-        absenceTypeItemId: newAbsenceTypeId || null,
-        startDate: newAbsenceStart,
-        endDate: newAbsenceEnd,
-      });
-      setNewAbsenceStart("");
-      setNewAbsenceEnd("");
-      setNewAbsenceTypeId("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Błąd zapisu nieobecności.");
     }
   }
 
@@ -294,65 +271,6 @@ export function UserResourceProfileEditor({ userId }: { userId: string }) {
             <Input type="date" value={newCertExpires} onChange={(event) => setNewCertExpires(event.target.value)} />
           </Field>
           <Button type="button" variant="secondary" disabled={!newCertName.trim()} onClick={() => void handleAddCertificate()}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Dodaj
-          </Button>
-        </div>
-      </section>
-
-      <section className="grid gap-3">
-        <p className="text-sm font-medium text-foreground/90">Nieobecności</p>
-        <div className="grid gap-2">
-          {profile.absences.map((absence) => {
-            const type = absenceTypeOptions.find((t) => t.id === absence.absenceTypeItemId);
-            return (
-              <div
-                key={absence.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-surface-muted/15 px-3 py-2"
-              >
-                <div className="flex items-center gap-2 text-sm text-foreground">
-                  {type ? (
-                    <span
-                      className="rounded-full px-2 py-0.5 text-xs font-medium"
-                      style={{ backgroundColor: `${type.color}22`, color: type.color }}
-                    >
-                      {type.name}
-                    </span>
-                  ) : null}
-                  <span>
-                    {absence.startDate} → {absence.endDate}
-                  </span>
-                </div>
-                <Button type="button" size="sm" variant="ghost" onClick={() => void removeAbsence(userId, absence.id)}>
-                  <Trash2 className="h-3.5 w-3.5 text-rose-400" />
-                </Button>
-              </div>
-            );
-          })}
-        </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <Field label="Typ" className="min-w-[160px]">
-            <Select value={newAbsenceTypeId} onChange={(event) => setNewAbsenceTypeId(event.target.value)}>
-              <option value="">Wybierz…</option>
-              {absenceTypeOptions.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Od">
-            <Input type="date" value={newAbsenceStart} onChange={(event) => setNewAbsenceStart(event.target.value)} />
-          </Field>
-          <Field label="Do">
-            <Input type="date" value={newAbsenceEnd} onChange={(event) => setNewAbsenceEnd(event.target.value)} />
-          </Field>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!newAbsenceStart || !newAbsenceEnd}
-            onClick={() => void handleAddAbsence()}
-          >
             <Plus className="mr-1.5 h-3.5 w-3.5" />
             Dodaj
           </Button>

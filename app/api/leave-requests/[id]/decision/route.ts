@@ -5,6 +5,7 @@ import { getUserDisplayName, isAdministratorRole } from "@/lib/auth/types";
 import { countLeaveDays, countLeaveWorkingDays } from "@/lib/leave/types";
 import { generateLeaveCardPdf } from "@/lib/leave/leave-card-pdf";
 import { dispatchLeaveRequestDecidedSms } from "@/lib/leave/leave-sms";
+import { syncApprovedLeaveAbsence } from "@/lib/leave/leave-absence-sync";
 import { createAllDayCalendarEvent } from "@/lib/google/calendar";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -197,6 +198,12 @@ export async function POST(
     if (updateError) {
       throw new Error(updateError.message);
     }
+
+    await syncApprovedLeaveAbsence(
+      admin,
+      { id, profileId: item.profileId, startDate: item.startDate, endDate: item.endDate },
+      leaveTypeName,
+    ).catch(() => undefined);
 
     await createLeaveRequestDecidedNotificationServer({
       leaveRequestId: id,
