@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ComponentType, PointerEvent as ReactPointerEvent } from "react";
-import { AlertTriangle, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
+import type { ComponentType, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Plus, Scissors, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
@@ -136,6 +136,7 @@ export function ResourcePlanGantt() {
 
   const ensureRange = useResourcePlanStore((state) => state.ensureRange);
   const updateItem = useResourcePlanStore((state) => state.updateItem);
+  const splitItem = useResourcePlanStore((state) => state.splitItem);
   const loading = useResourcePlanStore((state) => state.loading);
   const items = useResourcePlanStore((state) => state.allItems());
 
@@ -328,6 +329,33 @@ export function ResourcePlanGantt() {
     }
 
     await saveItemChanges(item, nextInput);
+
+    // "Zależność pociętych" (D26) — gdy włączona na tej grupie, przesunięcie/rozciągnięcie
+    // prawej krawędzi tego elementu przesuwa też wszystkie kolejne (późniejsze) części tej samej
+    // grupy o tę samą wartość, zachowując odstępy czasu między nimi. Delta liczona z `endAt`, bo
+    // działa jednolicie dla "move" (start i end przesuwają się razem) i "resize-end" (zmienia się
+    // tylko koniec) — "resize-start" naturalnie nie kaskaduje (delta końca = 0).
+    if (item.linkedGroupId && item.shiftWithLinkedGroup) {
+      const deltaMs = new Date(nextEndAt).getTime() - new Date(item.endAt).getTime();
+      if (deltaMs !== 0) {
+        const laterSiblings = items.filter(
+          (sibling) => sibling.linkedGroupId === item.linkedGroupId && sibling.id !== item.id && sibling.startAt > item.startAt,
+        );
+        await Promise.all(
+          laterSiblings.map((sibling) =>
+            saveItemChanges(sibling, {
+              ...resourcePlanItemToInput(sibling),
+              startAt: new Date(new Date(sibling.startAt).getTime() + deltaMs).toISOString(),
+              endAt: new Date(new Date(sibling.endAt).getTime() + deltaMs).toISOString(),
+            }),
+          ),
+        );
+      }
+    }
+  }
+
+  async function handleSplitFromGantt(item: ResourcePlanItem, splitAtIso: string) {
+    await splitItem(item, splitAtIso);
   }
 
   // Szybka zmiana statusu/ryzyka bezpośrednio z kafelka Gantta (bez otwierania pełnego panelu
@@ -699,6 +727,7 @@ export function ResourcePlanGantt() {
                               commitDrag(item, row.id, startAt, endAt, targetRowId)
                             }
                             onQuickUpdate={(patch) => quickUpdateItem(item, patch)}
+                            onSplitCommit={(splitAtIso) => handleSplitFromGantt(item, splitAtIso)}
                           />
                         );
                       })}
@@ -757,6 +786,7 @@ function GanttBlock({
   onHoverRowChange,
   onDragCommit,
   onQuickUpdate,
+  onSplitCommit,
 }: {
   item: ResourcePlanItem;
   rowId: string;
@@ -777,10 +807,16 @@ function GanttBlock({
   onHoverRowChange: (rowId: string | null) => void;
   onDragCommit: (startAt: string, endAt: string, targetRowId: string | null) => Promise<void>;
   onQuickUpdate: (patch: { statusItemId?: string | null; riskItemId?: string | null }) => void;
+  /** Podział na dwie części klikając w wybrane miejsce na kafelku (patrz UI niżej w tym komponencie). */
+  onSplitCommit: (splitAtIso: string) => Promise<void>;
 }) {
   const [draft, setDraft] = useState<{ startAt: string; endAt: string } | null>(null);
   const [dragTranslateY, setDragTranslateY] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [splitArmed, setSplitArmed] = useState(false);
+  const [splitPreviewIso, setSplitPreviewIso] = useState<string | null>(null);
+  const [splitting, setSplitting] = useState(false);
+  const [splitError, setSplitError] = useState<string | null>(null);
   const blockRef = useRef<HTMLDivElement | null>(null);
   const dragInfoRef = useRef<{
     mode: GanttDragMode;
@@ -799,6 +835,7 @@ function GanttBlock({
   const height = GANTT_ROW_LANE_HEIGHT_PX - 6;
 
   function beginDrag(event: ReactPointerEvent<HTMLElement>, mode: GanttDragMode) {
+    if (splitArmed) return;
     event.stopPropagation();
     (event.target as Element).setPointerCapture(event.pointerId);
     dragInfoRef.current = {
@@ -811,6 +848,49 @@ function GanttBlock({
       moved: false,
     };
     setDragging(true);
+  }
+
+  function exitSplitMode() {
+    setSplitArmed(false);
+    setSplitPreviewIso(null);
+    setSplitError(null);
+  }
+
+  // Podział przez kliknięcie na kafelku (D26) — po uzbrojeniu (ikonka nożyczek) każde kolejne
+  // kliknięcie w obrębie bloku wyznacza nową, przyciągniętą do siatki dni kandydacką linię
+  // podziału (kreska + popover z potwierdzeniem). `beginDrag` jest wyłączone, gdy uzbrojone, więc
+  // to kliknięcie nie konkuruje z przeciąganiem.
+  function handleBlockClick(event: ReactMouseEvent<HTMLDivElement>) {
+    if (!splitArmed || !blockRef.current) return;
+    event.stopPropagation();
+    const rect = blockRef.current.getBoundingClientRect();
+    const offsetWithinBlockPx = event.clientX - rect.left;
+    const totalOffsetPx = left + offsetWithinBlockPx;
+    const rawDay = totalOffsetPx / dayWidthPx;
+    const snappedDay = Math.round(rawDay / snapDays) * snapDays;
+    let candidateIso = addDays(monthStart, snappedDay).toISOString();
+    if (candidateIso <= item.startAt) candidateIso = new Date(new Date(item.startAt).getTime() + MS_PER_DAY).toISOString();
+    if (candidateIso >= item.endAt) candidateIso = new Date(new Date(item.endAt).getTime() - MS_PER_DAY).toISOString();
+    setSplitPreviewIso(candidateIso);
+    setSplitError(null);
+  }
+
+  async function confirmSplit() {
+    if (!splitPreviewIso) return;
+    if (!(splitPreviewIso > item.startAt && splitPreviewIso < item.endAt)) {
+      setSplitError("Przydział jest za krótki, aby podzielić go w tym miejscu.");
+      return;
+    }
+    setSplitting(true);
+    setSplitError(null);
+    try {
+      await onSplitCommit(splitPreviewIso);
+      exitSplitMode();
+    } catch (error) {
+      setSplitError(error instanceof Error ? error.message : "Nie udało się podzielić przydziału.");
+    } finally {
+      setSplitting(false);
+    }
   }
 
   function handlePointerMove(event: ReactPointerEvent<HTMLElement>) {
@@ -875,7 +955,10 @@ function GanttBlock({
   return (
     <div
       ref={blockRef}
-      className="absolute overflow-hidden rounded-md border px-1.5 text-[11px] font-medium shadow-sm select-none"
+      className={cn(
+        "absolute overflow-hidden rounded-md border px-1.5 text-[11px] font-medium shadow-sm select-none",
+        splitArmed && "ring-2 ring-dashed ring-accent",
+      )}
       style={{
         left,
         width,
@@ -884,16 +967,17 @@ function GanttBlock({
         backgroundColor: `${color}22`,
         borderColor: `${color}66`,
         color,
-        cursor: dragging ? "grabbing" : "grab",
+        cursor: splitArmed ? "crosshair" : dragging ? "grabbing" : "grab",
         touchAction: "none",
         transform: dragTranslateY ? `translateY(${dragTranslateY}px)` : undefined,
-        zIndex: dragging ? 50 : undefined,
+        zIndex: dragging || splitArmed ? 50 : undefined,
         boxShadow: dragging ? "0 8px 20px -4px rgb(0 0 0 / 0.35)" : undefined,
       }}
       onPointerDown={(event) => beginDrag(event, "move")}
       onPointerMove={handlePointerMove}
       onPointerUp={(event) => void handlePointerUp(event)}
-      title={tooltip}
+      onClick={handleBlockClick}
+      title={splitArmed ? "Kliknij w miejscu podziału" : tooltip}
     >
       <span
         className="absolute inset-y-0 left-0 w-2 cursor-ew-resize"
@@ -951,6 +1035,24 @@ function GanttBlock({
         {hasWarning ? (
           <AlertTriangle className={cn("h-3 w-3 shrink-0", hasDanger ? "text-rose-400" : "text-amber-400")} />
         ) : null}
+        <button
+          type="button"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            if (splitArmed) {
+              exitSplitMode();
+            } else {
+              setSplitArmed(true);
+              setSplitPreviewIso(null);
+              setSplitError(null);
+            }
+          }}
+          title={splitArmed ? "Zamknij podział" : "Podziel na dwie części — kliknij w miejscu podziału"}
+          className={cn("ml-auto shrink-0 rounded p-0.5", splitArmed ? "bg-accent/40 text-accent" : "hover:bg-white/10")}
+        >
+          <Scissors className="h-3 w-3" />
+        </button>
       </span>
       <span
         className="absolute inset-y-0 right-0 w-2 cursor-ew-resize"
@@ -958,6 +1060,41 @@ function GanttBlock({
         onPointerMove={handlePointerMove}
         onPointerUp={(event) => void handlePointerUp(event)}
       />
+      {splitArmed && splitPreviewIso ? (
+        <div
+          className="absolute inset-y-0 z-30 border-l-2 border-dashed border-accent"
+          style={{ left: dayOffsetPx(monthStart, splitPreviewIso, dayWidthPx) - left }}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="absolute -top-9 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1">
+            <div className="flex items-center gap-1 whitespace-nowrap rounded-lg border border-border/70 bg-surface px-1.5 py-1 text-[10px] font-normal text-foreground shadow-lg">
+              <span>Podzielić tutaj?</span>
+              <button
+                type="button"
+                disabled={splitting}
+                onClick={() => void confirmSplit()}
+                className="rounded bg-emerald-500/80 px-1.5 py-0.5 font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
+              >
+                ✓
+              </button>
+              <button
+                type="button"
+                disabled={splitting}
+                onClick={exitSplitMode}
+                className="rounded bg-surface-muted px-1.5 py-0.5 font-semibold text-muted hover:bg-surface-muted/70 disabled:opacity-60"
+              >
+                ✕
+              </button>
+            </div>
+            {splitError ? (
+              <div className="whitespace-nowrap rounded bg-rose-500/90 px-1.5 py-0.5 text-[9px] font-normal text-white">
+                {splitError}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -41,6 +41,9 @@ export type ResourcePlanItem = {
   /** Elementy z tym samym linked_group_id to części jednego przydziału podzielonego w czasie
    *  (np. przerwa w środku) — patrz splitResourcePlanItem w resource-plan-repository.ts. */
   linkedGroupId: string | null;
+  /** "Zależność pociętych" — gdy true, przesunięcie/rozciągnięcie w Gantcie przesuwa też kolejne
+   *  części tej samej grupy (patrz setLinkedGroupShiftEnabled). Ustawiane naraz na całej grupie. */
+  shiftWithLinkedGroup: boolean;
   participants: ResourcePlanParticipant[];
   createdAt: string;
   updatedAt: string;
@@ -69,6 +72,7 @@ export type ResourcePlanItemInput = {
   notes: string;
   acceptedRisk: boolean;
   linkedGroupId: string | null;
+  shiftWithLinkedGroup: boolean;
   participants: ResourcePlanParticipant[];
 };
 
@@ -105,6 +109,7 @@ export function resourcePlanItemToInput(item: ResourcePlanItem): ResourcePlanIte
     notes: item.notes,
     acceptedRisk: item.acceptedRisk,
     linkedGroupId: item.linkedGroupId,
+    shiftWithLinkedGroup: item.shiftWithLinkedGroup,
     participants: item.participants,
   };
 }

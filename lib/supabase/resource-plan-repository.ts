@@ -34,6 +34,7 @@ function rowToItem(row: ResourcePlanItemRow, participants: ResourcePlanParticipa
     acceptedRisk: row.accepted_risk,
     createdBy: row.created_by,
     linkedGroupId: row.linked_group_id,
+    shiftWithLinkedGroup: row.shift_with_linked_group,
     participants,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -64,6 +65,7 @@ function inputToRow(input: ResourcePlanItemInput): ResourcePlanItemInsert {
     notes: input.notes.trim(),
     accepted_risk: input.acceptedRisk,
     linked_group_id: input.linkedGroupId,
+    shift_with_linked_group: input.shiftWithLinkedGroup,
   };
 }
 
@@ -284,4 +286,62 @@ export async function splitResourcePlanItem(
   });
 
   return { updatedOriginal, created };
+}
+
+/**
+ * Odwraca podział — scala wszystkie części grupy `groupId` z powrotem w jeden element planu
+ * (przywrócenie do stanu pierwotnego). Zachowuje najstarszą część (najwcześniejszy `startAt`) jako
+ * "nośnik", rozciąga jej zakres na min(startAt)…max(endAt) całej grupy, sumuje `plannedHours`
+ * (jeśli wszystkie części mają podane godziny — inaczej `null`, bez zgadywania), łączy uczestników
+ * (deduplikacja po `userId`, pierwsze wystąpienie wygrywa) i usuwa pozostałe części.
+ */
+export async function mergeLinkedGroupItems(groupId: string): Promise<ResourcePlanItem> {
+  const members = await fetchLinkedGroupItems(groupId);
+  if (members.length === 0) throw new Error("Nie znaleziono elementów tej grupy.");
+  if (members.length === 1) return members[0];
+
+  const primary = members[0];
+  const rest = members.slice(1);
+
+  const mergedStartAt = members.reduce((min, m) => (m.startAt < min ? m.startAt : min), primary.startAt);
+  const mergedEndAt = members.reduce((max, m) => (m.endAt > max ? m.endAt : max), primary.endAt);
+  const allHoursKnown = members.every((m) => m.plannedHours != null);
+  const mergedHours = allHoursKnown
+    ? Math.round(members.reduce((sum, m) => sum + (m.plannedHours ?? 0), 0) * 100) / 100
+    : null;
+
+  const mergedParticipants: ResourcePlanParticipant[] = [];
+  const seenUserIds = new Set<string>();
+  members.forEach((member) => {
+    member.participants.forEach((participant) => {
+      if (seenUserIds.has(participant.userId)) return;
+      seenUserIds.add(participant.userId);
+      mergedParticipants.push(participant);
+    });
+  });
+
+  const merged = await updateResourcePlanItem(primary.id, {
+    ...resourcePlanItemToInput(primary),
+    startAt: mergedStartAt,
+    endAt: mergedEndAt,
+    plannedHours: mergedHours,
+    linkedGroupId: null,
+    shiftWithLinkedGroup: false,
+    participants: mergedParticipants,
+  });
+
+  await Promise.all(rest.map((sibling) => deleteResourcePlanItem(sibling.id)));
+
+  return merged;
+}
+
+/** Ustawia "zależność pociętych" (patrz migracja 111) na WSZYSTKICH częściach grupy naraz —
+ *  to jest ustawienie grupy, nie pojedynczej części, więc musi być zsynchronizowane. */
+export async function setLinkedGroupShiftEnabled(groupId: string, enabled: boolean): Promise<ResourcePlanItem[]> {
+  const members = await fetchLinkedGroupItems(groupId);
+  return Promise.all(
+    members.map((member) =>
+      updateResourcePlanItem(member.id, { ...resourcePlanItemToInput(member), shiftWithLinkedGroup: enabled }),
+    ),
+  );
 }

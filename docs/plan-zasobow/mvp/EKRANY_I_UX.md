@@ -88,6 +88,18 @@ wiersza), przewijana w poziomie oś dni bieżącego okresu, nawigacja okresami j
 - **Plakietka „część X/Y”** — elementy powstałe z podziału jednego przydziału (§5, „Podział
   przydziału na części”) mają na głównym bloku i na karcie listy małą plakietkę z numerem części
   i łączną liczbą części w grupie (`linked_group_id`).
+- **Podział przez kliknięcie na kafelku** — ikonka nożyczek na bloku (obok plakietek statusu/
+  ryzyka) uzbraja tryb podziału (obwódka bloku zmienia się na przerywaną w kolorze akcentu,
+  kursor na crosshair). W tym trybie przeciąganie/rozciąganie jest wyłączone; każde kliknięcie na
+  kafelku wyznacza nową, przyciągniętą do siatki dni (wg aktualnego zoomu) linię podziału z małym
+  popoverem „Podzielić tutaj? ✓ / ✕” tuż nad kreską. ✓ dzieli element (`splitItem`) i zamyka tryb;
+  ✕ (albo ponowne kliknięcie ikonki nożyczek) zamyka tryb bez zmian. Błąd (np. przydział za krótki,
+  by wybrać punkt w środku) pojawia się jako mały czerwony komunikat w popoverze.
+- **Kaskadowe przesunięcie pociętych części** — jeśli w panelu edycji włączono „Zależność
+  pociętych” (§5) dla grupy podzielonego przydziału, przesunięcie/rozciągnięcie prawej krawędzi
+  jednej części w Gantcie automatycznie przesuwa też wszystkie kolejne (późniejsze w czasie) części
+  tej samej grupy o tę samą wartość, zachowując odstępy między nimi (patrz D28 w
+  `ARCHITEKTURA.md`). Rozciąganie lewej krawędzi nie kaskaduje.
 - **Interakcje** (Pointer Events, `setPointerCapture` — ten sam wzorzec co dotykowy drag w
   `kanban-task-card.tsx`):
   - przeciągnięcie środka bloku w poziomie → zmiana terminu (przesunięcie, zachowana długość),
@@ -155,10 +167,16 @@ Przepływ:
    — np. uczestnik zaangażowany tylko 2 z 5 dni zadania.
 3b. **Podział przydziału na części** — sekcja widoczna tylko przy edycji istniejącego elementu:
    pole „Podziel w momencie” (data/godzina wewnątrz zakresu elementu) + przycisk „Podziel”, który
-   tworzy drugą część (ten sam „przydział” logicznie, dwa elementy techniczne — patrz D25).
-   Jeśli element już jest częścią podzielonego przydziału, dodatkowy checkbox „Zastosuj zmiany
-   wspólnych pól… do innych części” (domyślnie zaznaczony) propaguje tytuł/status/ryzyko/notatki
-   (nie terminy/godziny/budżety/uczestników) do pozostałych części przy zapisie.
+   tworzy drugą część (ten sam „przydział” logicznie, dwa elementy techniczne — patrz D25). Ten
+   sam podział da się też zrobić klikając bezpośrednio na kafelku w Gantcie (§4.1).
+   Jeśli element już jest częścią podzielonego przydziału, sekcja z licznikiem części pokazuje
+   dodatkowo: checkbox „Zastosuj zmiany wspólnych pól… do innych części” (domyślnie zaznaczony,
+   propaguje tytuł/status/ryzyko/notatki — nie terminy/godziny/budżety/uczestników — do pozostałych
+   części przy zapisie); checkbox „Włącz zależność pociętych” (zapisywany od razu, patrz D28 —
+   kaskadowe przesunięcie w Gantcie); przycisk „Scal części z powrotem w jeden przydział” (widoczny
+   tylko gdy grupa ma więcej niż jedną część) z inline potwierdzeniem tak/nie — odwraca podział:
+   zachowuje najstarszą część jako nośnik, rozciąga jej zakres na całą grupę, sumuje godziny (gdy
+   wszystkie znane) i łączy uczestników bez duplikatów (patrz D27).
 4. **Sugerowane osoby** (Etap 7) — nad wyborem osoby odpowiedzialnej, karta z do 5 klikalnymi
    „chipami” kandydatów (ranking `suggestResourcePlanCandidates()` przez
    `getActiveSuggestionProvider()`, patrz `ARCHITEKTURA.md` §5/D19/D20): imię i nazwisko,

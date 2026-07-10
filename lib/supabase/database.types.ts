@@ -1158,6 +1158,8 @@ export type ResourcePlanItemRow = {
   created_by: string | null;
   /** Elementy z tym samym linked_group_id to części jednego przydziału podzielonego w czasie. */
   linked_group_id: string | null;
+  /** "Zależność pociętych" — patrz setLinkedGroupShiftEnabled w resource-plan-repository.ts. */
+  shift_with_linked_group: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -1187,6 +1189,7 @@ export type ResourcePlanItemInsert = {
   accepted_risk?: boolean;
   created_by?: string | null;
   linked_group_id?: string | null;
+  shift_with_linked_group?: boolean;
   created_at?: string;
   updated_at?: string;
 };

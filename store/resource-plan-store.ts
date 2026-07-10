@@ -8,6 +8,8 @@ import {
   deleteResourcePlanItem,
   fetchLinkedGroupItems,
   fetchResourcePlanItemsInRange,
+  mergeLinkedGroupItems,
+  setLinkedGroupShiftEnabled as setLinkedGroupShiftEnabledRepo,
   splitResourcePlanItem,
   updateResourcePlanItem,
 } from "@/lib/supabase/resource-plan-repository";
@@ -45,6 +47,10 @@ type ResourcePlanStore = {
   splitItem: (item: ResourcePlanItem, splitAtIso: string) => Promise<{ updatedOriginal: ResourcePlanItem; created: ResourcePlanItem }>;
   /** Propaguje "wspólne" pola (tytuł/status/ryzyko/notatki…) do innych części tej samej grupy. */
   applyToLinkedGroup: (groupId: string, excludeId: string, patch: Partial<ResourcePlanItemInput>) => Promise<void>;
+  /** Scala wszystkie części grupy z powrotem w jeden element (odwrócenie podziału). */
+  mergeLinkedGroup: (groupId: string) => Promise<ResourcePlanItem>;
+  /** Włącza/wyłącza "zależność pociętych" na całej grupie naraz. */
+  setLinkedGroupShiftEnabled: (groupId: string, enabled: boolean) => Promise<void>;
   allItems: () => ResourcePlanItem[];
 };
 
@@ -125,6 +131,27 @@ export const useResourcePlanStore = create<ResourcePlanStore>((set, get) => ({
     const nextItems = { ...get().items };
     fetched.forEach((sibling) => {
       nextItems[sibling.id] = sibling;
+    });
+    set({ items: nextItems });
+  },
+
+  mergeLinkedGroup: async (groupId) => {
+    const before = get().allItems().filter((item) => item.linkedGroupId === groupId);
+    const merged = await mergeLinkedGroupItems(groupId);
+    const nextItems = { ...get().items };
+    before.forEach((item) => {
+      if (item.id !== merged.id) delete nextItems[item.id];
+    });
+    nextItems[merged.id] = merged;
+    set({ items: nextItems });
+    return merged;
+  },
+
+  setLinkedGroupShiftEnabled: async (groupId, enabled) => {
+    const updated = await setLinkedGroupShiftEnabledRepo(groupId, enabled);
+    const nextItems = { ...get().items };
+    updated.forEach((item) => {
+      nextItems[item.id] = item;
     });
     set({ items: nextItems });
   },

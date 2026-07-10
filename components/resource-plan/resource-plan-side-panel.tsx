@@ -63,6 +63,7 @@ function defaultInput(defaultStartIso?: string): ResourcePlanItemInput {
     notes: "",
     acceptedRisk: false,
     linkedGroupId: null,
+    shiftWithLinkedGroup: false,
     participants: [],
   };
 }
@@ -100,6 +101,8 @@ export function ResourcePlanSidePanel({
   const updateItem = useResourcePlanStore((state) => state.updateItem);
   const splitItem = useResourcePlanStore((state) => state.splitItem);
   const applyToLinkedGroup = useResourcePlanStore((state) => state.applyToLinkedGroup);
+  const mergeLinkedGroup = useResourcePlanStore((state) => state.mergeLinkedGroup);
+  const setLinkedGroupShiftEnabled = useResourcePlanStore((state) => state.setLinkedGroupShiftEnabled);
   const allPlanItems = useResourcePlanStore((state) => state.allItems());
 
   const ensureProfiles = useUserResourceStore((state) => state.ensureProfiles);
@@ -118,6 +121,9 @@ export function ResourcePlanSidePanel({
   const [applySharedFieldsToGroup, setApplySharedFieldsToGroup] = useState(true);
   const [splitDraftIso, setSplitDraftIso] = useState<string | null>(null);
   const [splitting, setSplitting] = useState(false);
+  const [confirmingMerge, setConfirmingMerge] = useState(false);
+  const [merging, setMerging] = useState(false);
+  const [shiftTogglePending, setShiftTogglePending] = useState(false);
 
   const templateOptions = useDictionaryStore((state) => state.byKey("plan_item_template"));
 
@@ -143,6 +149,7 @@ export function ResourcePlanSidePanel({
     setSelectedTemplateId("");
     setSplitDraftIso(null);
     setApplySharedFieldsToGroup(true);
+    setConfirmingMerge(false);
     void ensureDictionaries();
     void loadTeamProfiles();
   }, [open, editingItem, defaultStartIso, ensureDictionaries, loadTeamProfiles]);
@@ -312,6 +319,16 @@ export function ResourcePlanSidePanel({
     setInput((current) => ({ ...current, participants: current.participants.filter((p) => p.userId !== userId) }));
   }
 
+  const linkedGroupMembers = useMemo(
+    () =>
+      editingItem?.linkedGroupId
+        ? allPlanItems
+            .filter((planItem) => planItem.linkedGroupId === editingItem.linkedGroupId)
+            .sort((a, b) => a.startAt.localeCompare(b.startAt))
+        : [],
+    [allPlanItems, editingItem],
+  );
+
   async function handleSplit() {
     if (!editingItem || !splitDraftIso) return;
     setSplitting(true);
@@ -324,6 +341,35 @@ export function ResourcePlanSidePanel({
       setError(splitError instanceof Error ? splitError.message : "Nie udało się podzielić przydziału.");
     } finally {
       setSplitting(false);
+    }
+  }
+
+  async function handleMerge() {
+    if (!editingItem?.linkedGroupId) return;
+    setMerging(true);
+    setError(null);
+    try {
+      const merged = await mergeLinkedGroup(editingItem.linkedGroupId);
+      onSaved?.(merged);
+      onOpenChange(false);
+    } catch (mergeError) {
+      setError(mergeError instanceof Error ? mergeError.message : "Nie udało się scalić przydziału.");
+    } finally {
+      setMerging(false);
+      setConfirmingMerge(false);
+    }
+  }
+
+  async function handleToggleShift(enabled: boolean) {
+    if (!editingItem?.linkedGroupId) return;
+    setInput((current) => ({ ...current, shiftWithLinkedGroup: enabled }));
+    setShiftTogglePending(true);
+    try {
+      await setLinkedGroupShiftEnabled(editingItem.linkedGroupId, enabled);
+    } catch {
+      setInput((current) => ({ ...current, shiftWithLinkedGroup: !enabled }));
+    } finally {
+      setShiftTogglePending(false);
     }
   }
 
@@ -518,14 +564,55 @@ export function ResourcePlanSidePanel({
             ) : null}
 
             {editingItem?.linkedGroupId ? (
-              <label className="flex items-center gap-2 text-xs text-muted">
-                <input
-                  type="checkbox"
-                  checked={applySharedFieldsToGroup}
-                  onChange={(event) => setApplySharedFieldsToGroup(event.target.checked)}
-                />
-                Zastosuj zmiany wspólnych pól (tytuł, status, ryzyko, notatki…) do innych części tego przydziału
-              </label>
+              <div className="grid gap-2 rounded-xl border border-border/60 bg-surface-muted/10 p-3">
+                <p className="text-xs text-muted">
+                  Ten element jest częścią podzielonego przydziału ({linkedGroupMembers.length}{" "}
+                  {linkedGroupMembers.length === 1 ? "część" : "części"}).
+                </p>
+                <label className="flex items-center gap-2 text-xs text-muted">
+                  <input
+                    type="checkbox"
+                    checked={applySharedFieldsToGroup}
+                    onChange={(event) => setApplySharedFieldsToGroup(event.target.checked)}
+                  />
+                  Zastosuj zmiany wspólnych pól (tytuł, status, ryzyko, notatki…) do innych części tego przydziału
+                </label>
+                <label className="flex items-center gap-2 text-xs text-muted">
+                  <input
+                    type="checkbox"
+                    checked={input.shiftWithLinkedGroup}
+                    disabled={shiftTogglePending}
+                    onChange={(event) => void handleToggleShift(event.target.checked)}
+                  />
+                  Włącz zależność pociętych — przesunięcie/rozciągnięcie tej części w Gantcie przesunie też
+                  kolejne części, zachowując odstępy czasu
+                </label>
+                {linkedGroupMembers.length > 1 ? (
+                  confirmingMerge ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-amber-300">
+                        Scalić wszystkie {linkedGroupMembers.length} części z powrotem w jeden przydział?
+                      </span>
+                      <Button type="button" size="sm" variant="secondary" disabled={merging} onClick={() => void handleMerge()}>
+                        {merging ? "Scalanie…" : "Tak, scal"}
+                      </Button>
+                      <Button type="button" size="sm" variant="ghost" disabled={merging} onClick={() => setConfirmingMerge(false)}>
+                        Nie
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="w-fit"
+                      onClick={() => setConfirmingMerge(true)}
+                    >
+                      Scal części z powrotem w jeden przydział
+                    </Button>
+                  )
+                ) : null}
+              </div>
             ) : null}
 
             <div className="grid gap-3 sm:grid-cols-2">

@@ -289,6 +289,31 @@ częścią numerowanego planu 8 etapów, ale domknięto go razem z Etapem 6.
   techniczny niżej); sub-bloki uczestników nie wspierają przenoszenia między osobami (do tego
   służy panel edycji — usunięcie/dodanie uczestnika).
 
+## Podział przez kliknięcie na kafelku + scalanie + zależność pociętych (dalsze rozszerzenie) ✅ Zrobione
+
+- Migracja `111_resource_plan_linked_group_shift.sql` — `resource_plan_items` zyskuje
+  `shift_with_linked_group` (boolean, domyślnie `false`) — patrz D26–D28 w `ARCHITEKTURA.md`.
+- `resource-plan-gantt.tsx` (`GanttBlock`) — ikonka nożyczek uzbraja tryb podziału: kliknięcie na
+  kafelku liczy dzień pod kursorem (przyciągnięty do siatki `snapDays`), rysuje przerywaną kreskę
+  i popover z potwierdzeniem (✓ dzieli przez `splitItem`, ✕ zamyka tryb); błędy (np. przydział za
+  krótki) pokazują się w popoverze. Tryb podziału wyłącza przeciąganie/rozciąganie bloku na czas
+  wybierania punktu.
+- `lib/supabase/resource-plan-repository.ts` — `mergeLinkedGroupItems(groupId)` (scala WSZYSTKIE
+  części grupy z powrotem w jeden element: najstarsza część jako nośnik, zakres min/max, suma
+  godzin gdy wszystkie znane, złączeni uczestnicy bez duplikatów, pozostałe części usunięte) i
+  `setLinkedGroupShiftEnabled(groupId, enabled)` (ustawia flagę na WSZYSTKICH częściach grupy
+  naraz — to ustawienie grupy, nie pojedynczej części).
+- `store/resource-plan-store.ts` — akcje `mergeLinkedGroup`/`setLinkedGroupShiftEnabled`
+  aktualizujące cache po stronie klienta (usunięcie scalonych, patch flagi na wszystkich częściach).
+- `resource-plan-side-panel.tsx` — przy elemencie należącym do grupy: licznik części, checkbox
+  „Włącz zależność pociętych” (zapisywany od razu, nie czeka na „Zapisz”) i przycisk „Scal części
+  z powrotem w jeden przydział” z inline potwierdzeniem tak/nie (widoczny tylko gdy grupa ma >1
+  część).
+- `resource-plan-gantt.tsx` (`commitDrag`) — gdy `shiftWithLinkedGroup` jest włączone, po
+  zapisaniu zmiany danej części licząca delta `nextEndAt - item.endAt` jest stosowana do
+  WSZYSTKICH części z `startAt` późniejszym niż oryginalny `startAt` przesuwanej części,
+  zachowując odstępy czasu (patrz D28).
+
 ## Braki i dług techniczny do domknięcia w kolejnych iteracjach
 
 - Brak API route'ów `app/api/plan-zasobow/**` — obecnie repo/store wołane wprost z klienta
@@ -309,3 +334,12 @@ częścią numerowanego planu 8 etapów, ale domknięto go razem z Etapem 6.
   łącznik) — tylko plakietka tekstowa „część X/Y” na każdym bloku i karcie listy. Licznik
   „X/Y” liczy tylko części aktualnie wczytane do store'a (`ensureRange`) — części daleko poza
   widocznym oknem czasowym nie są wliczone, dopóki użytkownik nie odwiedzi ich zakresu.
+- Kaskadowe przesunięcie („zależność pociętych”, D28) działa tylko w Gantcie (`commitDrag`) — nie
+  w widoku Listy/Kalendarza, gdzie edycja terminów odbywa się przez panel boczny bez wywoływania
+  kaskady. Kaskada też nie sprawdza ostrzeżeń/konfliktów przesuwanych kolejnych części przed
+  zapisem — walidacja pokazuje się jako standardowe `dragWarning` po fakcie, tak jak przy zwykłym
+  przeciąganiu.
+- Podział przez kliknięcie na kafelku działa z granulacją dnia (przyciągnięty do `snapDays`
+  aktualnego zoomu) — przy zoomie kwartał/rok punkt podziału jest przyciągany do 7/30-dniowej
+  siatki, więc precyzyjny podział np. w połowie dnia wymaga przełączenia na widok miesięczny lub
+  wpisania konkretnej daty/godziny w panelu edycji.
