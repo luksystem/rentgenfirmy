@@ -17,6 +17,14 @@ export function buildRecommendations(input: AssessmentInput): AuditRecommendatio
     const capabilities = (rec.technical_recommendation?.functions_to_implement ?? []).map(
       (f) => f.capability,
     );
+    const targetLevel = rec.technical_recommendation?.target_level ?? rec.fl_max;
+    const gap = targetLevel - level;
+    const difficulty =
+      capabilities.length >= 5 || gap >= 3
+        ? "wysoki"
+        : capabilities.length >= 3 || gap === 2
+          ? "średni"
+          : "niski";
 
     out.push({
       code,
@@ -25,13 +33,14 @@ export function buildRecommendations(input: AssessmentInput): AuditRecommendatio
       domain: rec.domain,
       domainPl: rec.domain_pl,
       currentLevel: level,
-      targetLevel: rec.technical_recommendation?.target_level ?? rec.fl_max,
+      targetLevel,
       priority: rec.priority?.level ?? "Medium",
       priorityScore: rec.priority?.score ?? 0,
       rank: rec.ranking?.rank ?? 9999,
       expectedGainPercent: rec.expected_improvement?.total_expected_gain_percent ?? 0,
       gapDescription: rec.gap_description ?? "",
       capabilities,
+      difficulty,
     });
   }
 

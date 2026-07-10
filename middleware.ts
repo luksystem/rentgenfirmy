@@ -15,6 +15,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/przestrzen/") ||
     pathname.startsWith("/api/ustalenie/") ||
     pathname.startsWith("/api/zgloszenie/") ||
+    pathname.startsWith("/api/public/") ||
     pathname.startsWith("/api/sms/status-webhook");
 
   const {

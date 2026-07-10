@@ -105,6 +105,7 @@ const navGroupsBase: NavGroup[] = [
       { href: "/procesy", label: "Procesy", icon: GitBranch },
       { href: "/plan-zasobow", label: "Plan Zasobów", icon: CalendarRange },
       { href: "/projekty", label: "Projekty", icon: FolderKanban },
+      { href: "/audyt", label: "SRI Audyt", icon: Activity },
       { href: "/zlecenia", label: "Zlecenia", icon: ClipboardList },
       { href: "/dokumenty", label: "Dokumenty", icon: FileUp },
       { href: "/branze", label: "Katalog Branż", icon: HardHat },

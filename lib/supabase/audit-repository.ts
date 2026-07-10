@@ -33,6 +33,9 @@ type SessionRow = {
   methodology_version_id: string | null;
   building_type: BuildingType | null;
   climate_zone: ClimateZone | null;
+  building_address: string | null;
+  auditor_name: string | null;
+  audited_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -46,6 +49,9 @@ function mapSession(row: SessionRow): AuditSession {
     methodologyVersionId: row.methodology_version_id,
     buildingType: row.building_type,
     climateZone: row.climate_zone,
+    buildingAddress: row.building_address ?? null,
+    auditorName: row.auditor_name ?? null,
+    auditedAt: row.audited_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -118,14 +124,51 @@ export async function getAnswers(sessionId: string): Promise<Record<string, numb
   return out;
 }
 
+export type AnswerDetailRow = {
+  questionCode: string;
+  valueInt: number | null;
+  note: string | null;
+  verificationStatus: string | null;
+};
+
+export async function getAnswerDetails(sessionId: string): Promise<AnswerDetailRow[]> {
+  const { data, error } = await db()
+    .from("audit_answers")
+    .select("question_code, value_int, note, verification_status")
+    .eq("session_id", sessionId);
+  if (error) throw new Error(error.message);
+  return (
+    data as Array<{
+      question_code: string;
+      value_int: number | null;
+      note: string | null;
+      verification_status: string | null;
+    }>
+  ).map((r) => ({
+    questionCode: r.question_code,
+    valueInt: r.value_int,
+    note: r.note,
+    verificationStatus: r.verification_status,
+  }));
+}
+
+export type AnswerEntryInput = {
+  questionCode: string;
+  valueInt: number;
+  verificationStatus?: string | null;
+  note?: string | null;
+};
+
 export async function upsertAnswers(
   sessionId: string,
-  answers: Record<string, number>,
+  entries: AnswerEntryInput[],
 ): Promise<void> {
-  const rows = Object.entries(answers).map(([question_code, value_int]) => ({
+  const rows = entries.map((e) => ({
     session_id: sessionId,
-    question_code,
-    value_int,
+    question_code: e.questionCode,
+    value_int: e.valueInt,
+    verification_status: e.verificationStatus ?? null,
+    note: e.note ?? null,
     updated_at: new Date().toISOString(),
   }));
   if (rows.length === 0) return;
@@ -133,6 +176,35 @@ export async function upsertAnswers(
     .from("audit_answers")
     .upsert(rows, { onConflict: "session_id,question_code" });
   if (error) throw new Error(error.message);
+}
+
+export async function updateSessionMeta(
+  id: string,
+  meta: { buildingAddress?: string | null; auditorName?: string | null; auditedAt?: string | null },
+): Promise<AuditSession> {
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (meta.buildingAddress !== undefined) patch.building_address = meta.buildingAddress;
+  if (meta.auditorName !== undefined) patch.auditor_name = meta.auditorName;
+  if (meta.auditedAt !== undefined) patch.audited_at = meta.auditedAt;
+  const { data, error } = await db()
+    .from("audit_sessions")
+    .update(patch)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return mapSession(data as SessionRow);
+}
+
+export async function createEvidenceSignedUrl(
+  storagePath: string,
+  expiresIn = 3600,
+): Promise<string | null> {
+  const { data, error } = await db()
+    .storage.from(AUDIT_EVIDENCE_BUCKET)
+    .createSignedUrl(storagePath, expiresIn);
+  if (error) return null;
+  return data?.signedUrl ?? null;
 }
 
 export async function addEvidence(

@@ -18,22 +18,34 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 
     const body = (await request.json().catch(() => ({}))) as {
       answers?: Record<string, number>;
+      meta?: Record<string, { verificationStatus?: string | null; note?: string | null }>;
     };
     const incoming = body.answers ?? {};
+    const meta = body.meta ?? {};
+    const VALID_STATUS = ["confirmed", "uncertain", "to_verify", "no_data"];
 
     // walidacja wg katalogu metodologii
     const questions = buildQuestions(session.methodologyVersionId ?? DEFAULT_METHODOLOGY_ID);
     const flMaxByCode = new Map(questions.map((q) => [q.code, q.flMax]));
-    const clean: Record<string, number> = {};
+    const entries = [];
     for (const [code, level] of Object.entries(incoming)) {
       if (!flMaxByCode.has(code)) throw new HttpError(400, `Nieznany kod usługi: ${code}`);
       if (!Number.isInteger(level) || level < 0 || level > flMaxByCode.get(code)!) {
         throw new HttpError(400, `${code}: poziom poza zakresem 0..${flMaxByCode.get(code)}`);
       }
-      clean[code] = level;
+      const vs = meta[code]?.verificationStatus ?? null;
+      if (vs !== null && !VALID_STATUS.includes(vs)) {
+        throw new HttpError(400, `${code}: nieprawidłowy status weryfikacji`);
+      }
+      entries.push({
+        questionCode: code,
+        valueInt: level,
+        verificationStatus: vs,
+        note: meta[code]?.note ?? null,
+      });
     }
 
-    await upsertAnswers(id, clean);
+    await upsertAnswers(id, entries);
     if (session.status === "methodology_selected" || session.status === "completed") {
       await setStatus(id, "in_progress");
     }

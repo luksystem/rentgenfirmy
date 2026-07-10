@@ -36,6 +36,9 @@ export type AuditSession = {
   methodologyVersionId: string | null;
   buildingType: BuildingType | null;
   climateZone: ClimateZone | null;
+  buildingAddress: string | null;
+  auditorName: string | null;
+  auditedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -99,6 +102,7 @@ export type AuditRecommendation = {
   expectedGainPercent: number;
   gapDescription: string;
   capabilities: string[];
+  difficulty: string;
 };
 
 export type RoadmapStage = {
@@ -112,4 +116,116 @@ export type RoadmapStage = {
     priority: string;
     expectedGainPercent: number;
   }>;
+};
+
+// --- Model raportu (budowany server-side, konsumowany przez UI bez logiki SRI) ---
+
+export type ReportMeta = {
+  buildingName: string;
+  address: string | null;
+  auditedAt: string | null;
+  auditor: string | null;
+  methodologyVersionId: string;
+  buildingType: string;
+  buildingTypePl: string;
+  climateZone: string;
+  climateZonePl: string;
+};
+
+export type ReportScore = {
+  current: number;
+  potential: number;
+  classLabel: string;
+  classNumber: number;
+  potentialClassLabel: string;
+  potentialClassNumber: number;
+};
+
+export type ReportDomain = { code: string; namePl: string; current: number; potential: number };
+export type ReportCriterion = { code: string; namePl: string; current: number; potential: number };
+
+export type ReportRoadmapStage = RoadmapStage & {
+  predictedScore: number;
+  blockers: string[];
+  dependencies: string[];
+};
+
+export type ReportTechnicalService = {
+  code: string;
+  namePl: string;
+  domainPl: string;
+  fl: number;
+  flMax: number;
+  verificationStatus: string | null;
+};
+
+export type ReportEvidence = {
+  id: string;
+  questionCode: string | null;
+  caption: string | null;
+  url: string | null;
+  createdAt: string;
+};
+
+export type ReportViewModel = {
+  meta: ReportMeta;
+  score: ReportScore;
+  domains: ReportDomain[];
+  criteria: ReportCriterion[];
+  strengths: string[];
+  gaps: string[];
+  topRecommendations: AuditRecommendation[];
+  recommendations: AuditRecommendation[];
+  roadmap: ReportRoadmapStage[];
+  technical: { services: ReportTechnicalService[] };
+  attachments: { evidence: ReportEvidence[] };
+};
+
+export const REPORT_SECTION_KEYS = [
+  "overall_score",
+  "domains",
+  "criteria",
+  "recommendations",
+  "roadmap",
+  "photos",
+  "technical",
+  "client_data",
+] as const;
+export type ReportSectionKey = (typeof REPORT_SECTION_KEYS)[number];
+export type SectionVisibility = Record<ReportSectionKey, boolean>;
+
+export type ReportShare = {
+  id: string;
+  sessionId: string;
+  token: string;
+  hasPassword: boolean;
+  isActive: boolean;
+  expiresAt: string | null;
+  maxViews: number | null;
+  viewCount: number;
+  failedAttempts: number;
+  lockedUntil: string | null;
+  visibleSections: SectionVisibility;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ShareAccessLogEntry = {
+  id: string;
+  event: "view" | "password_ok" | "password_fail";
+  ipHash: string | null;
+  userAgent: string | null;
+  passwordOk: boolean | null;
+  accessedAt: string;
+};
+
+export const DEFAULT_SECTION_VISIBILITY: SectionVisibility = {
+  overall_score: true,
+  domains: true,
+  criteria: true,
+  recommendations: true,
+  roadmap: true,
+  photos: false,
+  technical: false,
+  client_data: false,
 };

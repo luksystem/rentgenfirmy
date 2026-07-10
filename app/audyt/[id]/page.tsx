@@ -1,6 +1,6 @@
-import { AuditWizard } from "@/components/audit/audit-wizard";
+import { AuditSurvey } from "@/components/audit/audit-survey";
 
 export default async function AuditDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <AuditWizard id={id} />;
+  return <AuditSurvey id={id} />;
 }
