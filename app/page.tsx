@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BarPanel, PiePanel } from "@/components/charts";
 import { HomeOperationsCharts } from "@/components/home/home-operations-charts";
@@ -18,6 +18,7 @@ import {
   projectsByStatus,
 } from "@/lib/domain";
 import { buildProjectsPageUrl } from "@/lib/projects-page-url";
+import { buildProjectClosingFlagsMap } from "@/lib/process/stage-helpers";
 import { formatTrendHelper } from "@/lib/report-insights";
 import { useAgreementHubStore } from "@/store/agreement-hub-store";
 import { useAppStore } from "@/store/app-store";
@@ -25,8 +26,19 @@ import { useProcessStore } from "@/store/process-store";
 
 export default function Home() {
   const { projects, interruptions, fieldOptions } = useAppStore();
-  const metrics = projectMetrics(projects, fieldOptions);
-  const report = generateWeeklyReport(projects, interruptions, fieldOptions);
+  const templates = useProcessStore((state) => state.templates);
+  const projectProcesses = useProcessStore((state) => state.projectProcesses);
+  const projectClosingFlags = useMemo(
+    () => buildProjectClosingFlagsMap(projects, projectProcesses, templates, fieldOptions),
+    [fieldOptions, projectProcesses, projects, templates],
+  );
+  const metrics = projectMetrics(projects, fieldOptions, projectClosingFlags);
+  const report = generateWeeklyReport(
+    projects,
+    interruptions,
+    fieldOptions,
+    projectClosingFlags,
+  );
   const { daily, weekly } = report.interruptionTrends;
 
   const kanbanOverdueTaskCount = useProcessStore((state) => state.kanbanOverdueTaskCount);

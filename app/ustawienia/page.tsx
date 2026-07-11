@@ -7,7 +7,6 @@ import {
   FieldOptionsEditor,
   FlowStatusesOptionsEditor,
   InterruptionTypesOptionsEditor,
-  StagesOptionsEditor,
 } from "@/components/field-options-editor";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -51,19 +50,6 @@ export default function SettingsPage() {
           isWaiting: status.isWaiting,
         }))
         .filter((status) => status.name),
-    }));
-    setSaved(false);
-  }
-
-  function updateStages(stages: FieldOptions["implementationStages"]) {
-    setDraft((current) => ({
-      ...current,
-      implementationStages: stages
-        .map((stage) => ({
-          name: stage.name.trim(),
-          forClosing: stage.forClosing,
-        }))
-        .filter((stage) => stage.name),
     }));
     setSaved(false);
   }
@@ -268,10 +254,20 @@ export default function SettingsPage() {
               onChange={updateFlowStatuses}
             />
 
-            <StagesOptionsEditor
-              items={draft.implementationStages}
-              onChange={updateStages}
-            />
+            <Card className="border border-border/80">
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+                <div>
+                  <p className="font-medium text-foreground">Etapy projektu</p>
+                  <p className="mt-1 text-sm text-muted">
+                    Etapy pochodzą z szablonu procesu przypisanego do typu projektu. Flaga „Etap
+                    zamykający” ustawiasz przy poszczególnych etapach w edytorze szablonu.
+                  </p>
+                </div>
+                <Button variant="secondary" asChild>
+                  <Link href="/procesy">Otwórz szablony procesów</Link>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
 

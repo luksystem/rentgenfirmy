@@ -3,7 +3,6 @@ import {
   isExternalBlockerReason,
   isInternalBlockerReason,
   isProjectClosed,
-  isProjectForClosing,
   isProjectInProgress,
   isProjectWaiting,
 } from "@/lib/field-options";
@@ -78,6 +77,7 @@ export function matchesProjectCategory(
   project: Project,
   category: ProjectCategoryFilterId,
   options: FieldOptions,
+  projectClosingFlags?: Map<string, boolean>,
 ) {
   switch (category) {
     case "active":
@@ -89,7 +89,7 @@ export function matchesProjectCategory(
     case "closed":
       return isProjectClosed(project, options);
     case "forClosing":
-      return isProjectForClosing(project, options);
+      return projectClosingFlags?.get(project.id) ?? false;
     case "inactive":
       return !project.isActive;
     case "critical":
@@ -121,6 +121,7 @@ export function filterProjectsByView(
   projects: Project[],
   filters: ProjectsViewFilters,
   options: FieldOptions,
+  projectClosingFlags?: Map<string, boolean>,
 ) {
   return projects.filter((project) => {
     const matchesType =
@@ -134,7 +135,7 @@ export function filterProjectsByView(
     const matchesCategories =
       filters.categories.length === 0 ||
       filters.categories.some((category) =>
-        matchesProjectCategory(project, category, options),
+        matchesProjectCategory(project, category, options, projectClosingFlags),
       );
     const matchesBlockerFaults =
       filters.blockerFaults.length === 0 ||

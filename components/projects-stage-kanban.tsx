@@ -11,29 +11,34 @@ import { Badge } from "@/components/ui/badge";
 import { KanbanDropPlaceholder, getKanbanColumnDropTargetClasses } from "@/components/process/kanban-drop-placeholder";
 import { isWithoutContact } from "@/lib/domain";
 import {
-  isProjectForClosing,
   isProjectWaiting,
-  stageNames,
   type FieldOptions,
 } from "@/lib/field-options";
-import { projectToInput } from "@/lib/supabase/mappers";
+import {
+  findStageByTitle,
+  mergeProcessStageTitles,
+  resolveProcessTemplateForProject,
+  resolveProjectActiveStageTitle,
+} from "@/lib/process/stage-helpers";
 import { filterProjectsByView, type ProjectsViewFilters } from "@/lib/projects-view-filters";
 import type { Project } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
+import { useProcessStore } from "@/store/process-store";
 
 export const PROJECTS_KANBAN_DRAG_HINT =
-  "Przesuń projekt na inny etap — etap w ustawieniach projektu zostanie zaktualizowany.";
+  "Przesuń projekt na inny etap — zaktualizuje to aktywny etap procesu projektu.";
 
 function ProjectKanbanHighlights({
   project,
   fieldOptions,
+  forClosing,
 }: {
   project: Project;
   fieldOptions: FieldOptions;
+  forClosing: boolean;
 }) {
   const waiting = isProjectWaiting(project, fieldOptions);
-  const forClosing = isProjectForClosing(project, fieldOptions);
   const noContact = isWithoutContact(project, fieldOptions);
   const critical = project.priority === "Krytyczny";
 
@@ -60,6 +65,7 @@ function ProjectKanbanHighlights({
 function ProjectKanbanCard({
   project,
   fieldOptions,
+  forClosing,
   isDragging,
   onDragStart,
   onDragEnd,
@@ -67,6 +73,7 @@ function ProjectKanbanCard({
 }: {
   project: Project;
   fieldOptions: FieldOptions;
+  forClosing: boolean;
   isDragging?: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
@@ -102,7 +109,11 @@ function ProjectKanbanCard({
           {project.nextStepOwner}
         </p>
       ) : null}
-      <ProjectKanbanHighlights project={project} fieldOptions={fieldOptions} />
+      <ProjectKanbanHighlights
+        project={project}
+        fieldOptions={fieldOptions}
+        forClosing={forClosing}
+      />
     </div>
   );
 }
@@ -111,38 +122,64 @@ function resolveProjectStageBucket(
   project: Project,
   stages: string[],
   pendingMove: { projectId: string; stage: string } | null,
+  activeStageTitle: string,
 ): string {
   if (pendingMove?.projectId === project.id) {
     return pendingMove.stage;
   }
 
-  return stages.includes(project.stage) ? project.stage : "Inne";
+  return stages.includes(activeStageTitle) ? activeStageTitle : "Inne";
 }
 
 export function ProjectsStageKanban({
   projects,
   fieldOptions,
   filters,
+  projectClosingFlags,
 }: {
   projects: Project[];
   fieldOptions: FieldOptions;
   filters: ProjectsViewFilters;
+  projectClosingFlags: Map<string, boolean>;
 }) {
   const { openProjectEdit } = useProjectEdit();
-  const updateProject = useAppStore((state) => state.updateProject);
+  const setProjectStage = useAppStore((state) => state.setProjectStage);
   const patchProjectFields = useAppStore((state) => state.patchProjectFields);
+  const templates = useProcessStore((state) => state.templates);
+  const projectProcesses = useProcessStore((state) => state.projectProcesses);
 
   const [dragProjectId, setDragProjectId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [pendingMove, setPendingMove] = useState<{ projectId: string; stage: string } | null>(null);
 
-  const stages = stageNames(fieldOptions);
   const filtered = useMemo(
-    () => filterProjectsByView(projects, filters, fieldOptions),
-    [fieldOptions, filters, projects],
+    () => filterProjectsByView(projects, filters, fieldOptions, projectClosingFlags),
+    [fieldOptions, filters, projectClosingFlags, projects],
   );
 
+  const relevantTemplates = useMemo(() => {
+    const types = new Set(filtered.map((project) => project.type));
+    return templates.filter((template) => types.has(template.projectType));
+  }, [filtered, templates]);
+
+  const stages = useMemo(
+    () => mergeProcessStageTitles(relevantTemplates),
+    [relevantTemplates],
+  );
   const columnKeys = useMemo(() => [...stages, "Inne"], [stages]);
+
+  const activeStageTitleByProjectId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const project of filtered) {
+      const template = resolveProcessTemplateForProject(project, projectProcesses, templates);
+      const process = projectProcesses[project.id];
+      map.set(
+        project.id,
+        resolveProjectActiveStageTitle(project, process, template),
+      );
+    }
+    return map;
+  }, [filtered, projectProcesses, templates]);
 
   const byStage = useMemo(() => {
     const grouped = new Map<string, Project[]>();
@@ -151,12 +188,18 @@ export function ProjectsStageKanban({
     }
 
     for (const project of filtered) {
-      const bucket = resolveProjectStageBucket(project, stages, pendingMove);
+      const activeStageTitle = activeStageTitleByProjectId.get(project.id) ?? project.stage;
+      const bucket = resolveProjectStageBucket(
+        project,
+        stages,
+        pendingMove,
+        activeStageTitle,
+      );
       grouped.get(bucket)?.push(project);
     }
 
     return grouped;
-  }, [columnKeys, filtered, pendingMove, stages]);
+  }, [activeStageTitleByProjectId, columnKeys, filtered, pendingMove, stages]);
 
   const dragProject = dragProjectId
     ? (filtered.find((project) => project.id === dragProjectId) ?? null)
@@ -166,6 +209,14 @@ export function ProjectsStageKanban({
     setDragProjectId(null);
     setDragOverStage(null);
   }, []);
+
+  const canDropProjectOnStage = useCallback(
+    (project: Project, targetStage: string) => {
+      const template = resolveProcessTemplateForProject(project, projectProcesses, templates);
+      return Boolean(findStageByTitle(template, targetStage));
+    },
+    [projectProcesses, templates],
+  );
 
   const handleDrop = useCallback(
     async (targetStage: string) => {
@@ -180,7 +231,13 @@ export function ProjectsStageKanban({
         return;
       }
 
-      const currentStage = resolveProjectStageBucket(project, stages, null);
+      if (!canDropProjectOnStage(project, targetStage)) {
+        clearDragState();
+        return;
+      }
+
+      const activeStageTitle = activeStageTitleByProjectId.get(project.id) ?? project.stage;
+      const currentStage = resolveProjectStageBucket(project, stages, null, activeStageTitle);
       if (currentStage === targetStage) {
         clearDragState();
         return;
@@ -194,17 +251,23 @@ export function ProjectsStageKanban({
       patchProjectFields(projectId, { stage: targetStage });
 
       try {
-        await updateProject(projectId, {
-          ...projectToInput(project),
-          stage: targetStage,
-        });
+        await setProjectStage(projectId, targetStage);
       } catch {
         patchProjectFields(projectId, { stage: previousStage });
       } finally {
         setPendingMove(null);
       }
     },
-    [clearDragState, dragProjectId, filtered, patchProjectFields, stages, updateProject],
+    [
+      activeStageTitleByProjectId,
+      canDropProjectOnStage,
+      clearDragState,
+      dragProjectId,
+      filtered,
+      patchProjectFields,
+      setProjectStage,
+      stages,
+    ],
   );
 
   return (
@@ -215,9 +278,15 @@ export function ProjectsStageKanban({
         {columnKeys.map((stage) => {
           const items = byStage.get(stage) ?? [];
           const isDropTarget = Boolean(
-            dragProjectId && dragOverStage === stage && stage !== "Inne",
+            dragProjectId &&
+              dragOverStage === stage &&
+              stage !== "Inne" &&
+              dragProject &&
+              canDropProjectOnStage(dragProject, stage),
           );
-          const canDrop = stage !== "Inne";
+          const canDrop =
+            stage !== "Inne" &&
+            Boolean(dragProject && canDropProjectOnStage(dragProject, stage));
 
           return (
             <div
@@ -270,6 +339,7 @@ export function ProjectsStageKanban({
                       key={project.id}
                       project={project}
                       fieldOptions={fieldOptions}
+                      forClosing={projectClosingFlags.get(project.id) ?? false}
                       isDragging={dragProjectId === project.id}
                       onDragStart={() => setDragProjectId(project.id)}
                       onDragEnd={clearDragState}

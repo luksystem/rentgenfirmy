@@ -3,7 +3,6 @@ import type { FieldOptions } from "@/lib/field-options";
 import {
   isClosedFlowStatus,
   isInProgressFlowStatus,
-  isProjectForClosing,
   isWaitingFlowStatus,
   isWaitingWithExternalBlocker,
   isWaitingWithInternalBlocker,
@@ -76,7 +75,11 @@ export function isWithoutContact(project: Project, options: FieldOptions) {
   );
 }
 
-export function projectMetrics(projects: Project[], options: FieldOptions) {
+export function projectMetrics(
+  projects: Project[],
+  options: FieldOptions,
+  projectClosingFlags?: Map<string, boolean>,
+) {
   return {
     all: projects.length,
     active: projects.filter((project) => project.isActive).length,
@@ -89,7 +92,7 @@ export function projectMetrics(projects: Project[], options: FieldOptions) {
     waitingExternal: projects.filter((project) =>
       isWaitingWithExternalBlocker(project, options),
     ).length,
-    closing: projects.filter((project) => isProjectForClosing(project, options)).length,
+    closing: projects.filter((project) => projectClosingFlags?.get(project.id) ?? false).length,
     noContact: projects.filter((project) => isWithoutContact(project, options)).length,
     critical: projects.filter((project) => project.priority === "Krytyczny").length,
   };
@@ -172,11 +175,12 @@ export function generateReport(
   interruptions: Interruption[],
   options: FieldOptions,
   period: ReportPeriod = createWeeklyPeriod(),
+  projectClosingFlags?: Map<string, boolean>,
 ): WeeklyReport {
   const periodInterruptions = filterInterruptionsByPeriod(interruptions, period);
   const periodInterruptionItems = interruptionsOnly(periodInterruptions);
   const periodFocusItems = focusBlocksOnly(periodInterruptions);
-  const metrics = projectMetrics(projects, options);
+  const metrics = projectMetrics(projects, options, projectClosingFlags);
   const blockers = projectsByBlocker(projects).sort((a, b) => b.value - a.value);
   const sources = interruptionsByType(periodInterruptions).sort((a, b) => b.value - a.value);
   const sortByPriority = (a: Project, b: Project) =>
@@ -208,7 +212,7 @@ export function generateReport(
       .filter((project) => isWaitingFlowStatus(project.flowStatus, options))
       .sort(sortByPriority),
     closingProjectsList: projects
-      .filter((project) => isProjectForClosing(project, options))
+      .filter((project) => projectClosingFlags?.get(project.id) ?? false)
       .sort(sortByPriority),
     blockersByReason: blockers,
     interruptionsByTypeChart: sources,
@@ -216,7 +220,13 @@ export function generateReport(
 
   return {
     ...baseReport,
-    quickWins: generateQuickWins(projects, periodInterruptionItems, options, baseReport),
+    quickWins: generateQuickWins(
+      projects,
+      periodInterruptionItems,
+      options,
+      baseReport,
+      projectClosingFlags,
+    ),
   };
 }
 
@@ -224,6 +234,13 @@ export function generateWeeklyReport(
   projects: Project[],
   interruptions: Interruption[],
   options: FieldOptions,
+  projectClosingFlags?: Map<string, boolean>,
 ): WeeklyReport {
-  return generateReport(projects, interruptions, options, createWeeklyPeriod());
+  return generateReport(
+    projects,
+    interruptions,
+    options,
+    createWeeklyPeriod(),
+    projectClosingFlags,
+  );
 }

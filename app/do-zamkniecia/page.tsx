@@ -1,15 +1,17 @@
 "use client";
 
+import { useMemo } from "react";
 import { useProjectClickHandlers, useProjectEdit } from "@/components/project-edit-provider";
 import { PageHeader } from "@/components/page-header";
 import { MobileField, MobileListCard } from "@/components/mobile-list-card";
 import { PriorityBadge, ProjectStatusBadge } from "@/components/project-status-badge";
 import { Card } from "@/components/ui/card";
 import { priorityWeight } from "@/lib/domain";
-import { isProjectForClosing } from "@/lib/field-options";
+import { buildProjectClosingFlagsMap } from "@/lib/process/stage-helpers";
 import type { Project } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
+import { useProcessStore } from "@/store/process-store";
 
 function ClosingProjectRow({ project }: { project: Project }) {
   const rowClick = useProjectClickHandlers(project, { asTableRow: true });
@@ -38,9 +40,17 @@ function ClosingProjectRow({ project }: { project: Project }) {
 export default function ClosingPage() {
   const projects = useAppStore((state) => state.projects);
   const fieldOptions = useAppStore((state) => state.fieldOptions);
+  const templates = useProcessStore((state) => state.templates);
+  const projectProcesses = useProcessStore((state) => state.projectProcesses);
   const { openProjectEdit } = useProjectEdit();
+
+  const projectClosingFlags = useMemo(
+    () => buildProjectClosingFlagsMap(projects, projectProcesses, templates, fieldOptions),
+    [fieldOptions, projectProcesses, projects, templates],
+  );
+
   const closingProjects = projects
-    .filter((project) => isProjectForClosing(project, fieldOptions))
+    .filter((project) => projectClosingFlags.get(project.id))
     .sort((a, b) => priorityWeight(b.priority) - priorityWeight(a.priority));
 
   return (
@@ -48,7 +58,7 @@ export default function ClosingPage() {
       <PageHeader
         eyebrow="Kontrola domknięć"
         title="Do zamknięcia"
-        description="Projekty ze statusem W trakcie lub Oczekujące na etapie oznaczonym jako do zamknięcia, posortowane najpierw po krytyczności."
+        description="Projekty ze statusem W trakcie lub Oczekujące na etapie procesu oznaczonym jako zamykający, posortowane najpierw po krytyczności."
       />
 
       <div className="grid gap-3 md:hidden">

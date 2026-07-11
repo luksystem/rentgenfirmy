@@ -9,7 +9,6 @@ import type {
   BlockerReasonOption,
   FlowStatusOption,
   InterruptionTypeOption,
-  StageOption,
   StringListFieldOptionKey,
 } from "@/lib/field-options";
 import { FIELD_OPTION_LABELS } from "@/lib/field-options";
@@ -582,130 +581,6 @@ export function FlowStatusesOptionsEditor({
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder="Nowy status..."
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                addItem();
-              }
-            }}
-          />
-          <Button type="button" variant="secondary" onClick={addItem}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-    </CollapsibleCard>
-  );
-}
-
-export function StagesOptionsEditor({
-  items,
-  onChange,
-}: {
-  items: StageOption[];
-  onChange: (items: StageOption[]) => void;
-}) {
-  const [draft, setDraft] = useState("");
-
-  function addItem() {
-    const name = draft.trim();
-    if (!name || items.some((item) => item.name === name)) {
-      return;
-    }
-
-    onChange([...items, { name, forClosing: false }]);
-    setDraft("");
-  }
-
-  function updateName(index: number, name: string) {
-    onChange(items.map((item, itemIndex) => (itemIndex === index ? { ...item, name } : item)));
-  }
-
-  function toggleClosing(index: number) {
-    onChange(
-      items.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, forClosing: !item.forClosing } : item,
-      ),
-    );
-  }
-
-  function removeItem(index: number) {
-    onChange(items.filter((_, itemIndex) => itemIndex !== index));
-  }
-
-  function moveItem(index: number, direction: -1 | 1) {
-    const nextIndex = index + direction;
-    if (nextIndex < 0 || nextIndex >= items.length) {
-      return;
-    }
-
-    const next = [...items];
-    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
-    onChange(next);
-  }
-
-  return (
-    <CollapsibleCard
-      title={FIELD_OPTION_LABELS.implementationStages}
-      summary={`${items.length} etapów — kliknij, aby rozwinąć`}
-    >
-        <p className="text-sm text-muted">
-          Zaznacz „Do zamknięcia” przy etapach finalizacji. Do widoku trafia projekt ze statusem W
-          trakcie lub Oczekujące na takim etapie.
-        </p>
-
-        {items.map((item, index) => (
-          <div key={`${item.name}-${index}`} className="flex flex-wrap items-center gap-2">
-            <Input
-              value={item.name}
-              onChange={(event) => updateName(index, event.target.value)}
-              className="min-w-[180px] flex-1"
-            />
-            <label className="flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3 py-2 text-sm whitespace-nowrap">
-              <input
-                type="checkbox"
-                checked={item.forClosing}
-                onChange={() => toggleClosing(index)}
-                className="h-4 w-4 rounded border-border bg-surface text-accent"
-              />
-              Do zamknięcia
-            </label>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => moveItem(index, -1)}
-              disabled={index === 0}
-              title="Przesuń w górę"
-            >
-              <ArrowUp className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => moveItem(index, 1)}
-              disabled={index === items.length - 1}
-              title="Przesuń w dół"
-            >
-              <ArrowDown className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              onClick={() => removeItem(index)}
-              title="Usuń"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
-
-        <div className="flex gap-2">
-          <Input
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder="Nowy etap..."
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();

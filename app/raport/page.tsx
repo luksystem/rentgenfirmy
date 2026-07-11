@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/input";
 import { generateReport } from "@/lib/domain";
+import { buildProjectClosingFlagsMap } from "@/lib/process/stage-helpers";
 import { exportElementToPdf } from "@/lib/export-report-pdf";
 import {
   createWeeklyPeriod,
@@ -17,6 +18,7 @@ import {
   type ReportPreset,
 } from "@/lib/report-period";
 import { useAppStore } from "@/store/app-store";
+import { useProcessStore } from "@/store/process-store";
 
 const presetLabels: Record<ReportPreset, string> = {
   weekly: "Ostatnie 7 dni",
@@ -27,6 +29,8 @@ const presetLabels: Record<ReportPreset, string> = {
 
 export default function ReportPage() {
   const { projects, interruptions, fieldOptions } = useAppStore();
+  const templates = useProcessStore((state) => state.templates);
+  const projectProcesses = useProcessStore((state) => state.projectProcesses);
   const defaultPeriod = createWeeklyPeriod();
   const [preset, setPreset] = useState<ReportPreset>("weekly");
   const [customStart, setCustomStart] = useState(defaultPeriod.startDate);
@@ -41,9 +45,21 @@ export default function ReportPage() {
     [preset, customStart, customEnd],
   );
 
+  const projectClosingFlags = useMemo(
+    () => buildProjectClosingFlagsMap(projects, projectProcesses, templates, fieldOptions),
+    [fieldOptions, projectProcesses, projects, templates],
+  );
+
   const report = useMemo(
-    () => generateReport(projects, interruptions, fieldOptions, period),
-    [projects, interruptions, fieldOptions, period],
+    () =>
+      generateReport(
+        projects,
+        interruptions,
+        fieldOptions,
+        period,
+        projectClosingFlags,
+      ),
+    [projects, interruptions, fieldOptions, period, projectClosingFlags],
   );
 
   function handleGenerate() {

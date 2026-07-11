@@ -53,6 +53,8 @@ export type ProcessStage = {
   title: string;
   /** Opis etapu (dla AI) — pomaga np. Asystentowi wyznaczania celów dobrać, jakie cele/dla jakiej roli ustalić. */
   description?: string;
+  /** Etap zamykający projekt — odpowiednik starej flagi „Do zamknięcia” z ustawień etapów. */
+  forClosing?: boolean;
   position: number;
   milestones: ProcessMilestone[];
   /**

@@ -92,6 +92,25 @@ export async function updateProjectRecord(
   return rowToProject(data);
 }
 
+export async function updateProjectStage(id: string, stage: string): Promise<Project> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("projects")
+    .update({
+      stage,
+      last_changed_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToProject(data);
+}
+
 export async function deleteProjectRecord(id: string): Promise<void> {
   const supabase = getSupabase();
   const { error } = await supabase.from("projects").delete().eq("id", id);

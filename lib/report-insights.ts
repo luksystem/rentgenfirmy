@@ -2,7 +2,6 @@ import { addDays, toISODate } from "@/lib/utils";
 import type { FieldOptions } from "@/lib/field-options";
 import {
   getInterruptionTypeSuggestion,
-  isProjectForClosing,
   isWaitingFlowStatus,
 } from "@/lib/field-options";
 import {
@@ -98,6 +97,7 @@ export function generateQuickWins(
   interruptions: Interruption[],
   options: FieldOptions,
   report: Omit<WeeklyReport, "quickWins">,
+  projectClosingFlags?: Map<string, boolean>,
 ): QuickWin[] {
   const wins: QuickWin[] = [];
   const nonClosedCount = projects.length - report.closedProjects;
@@ -172,7 +172,7 @@ export function generateQuickWins(
 
   const staleClosing = projects.filter(
     (project) =>
-      isProjectForClosing(project, options) &&
+      (projectClosingFlags?.get(project.id) ?? false) &&
       project.closeDeadline &&
       new Date(project.closeDeadline) < new Date(),
   );

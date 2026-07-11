@@ -32,6 +32,8 @@ export function parseProcessTemplateSnapshot(value: unknown): ProcessTemplate | 
         id: String(stage.id),
         templateId: String(stage.templateId ?? value.id),
         title: String(stage.title ?? ""),
+        description: String(stage.description ?? ""),
+        forClosing: stage.forClosing === true,
         position: Number(stage.position ?? 0),
         minPeopleCount: Number(stage.minPeopleCount ?? 1),
         optimalPeopleCount: stage.optimalPeopleCount == null ? null : Number(stage.optimalPeopleCount),

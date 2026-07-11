@@ -1247,6 +1247,7 @@ export type ProcessStageRow = {
   can_run_in_parallel: boolean;
   requires_leader: boolean;
   allows_trainee: boolean;
+  for_closing: boolean;
   created_at: string;
 };
 

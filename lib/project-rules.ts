@@ -12,7 +12,7 @@
  * - Projekt może być np. Oczekujący + Nieaktywny — świadomie odłożony
  * - Przerwania w nieaktywnych projektach warto monitorować osobno
  *
- * ETAP — flaga Do zamknięcia:
+ * ETAP — flaga „Etap zamykający” na etapie szablonu procesu:
  * - Wskazuje fazę finalizacji (wdrożenie, odbiór itd.)
  *
  * WIDOKI I LICZNIKI:
@@ -41,7 +41,7 @@ export const PROJECT_RULES = {
   activeField:
     "Checkbox Aktywny — czy zespół teraz pracuje nad projektem (niezależnie od statusu przepływu).",
   closingView:
-    "Do zamknięcia = status W trakcie lub Oczekujące + etap z flagą Do zamknięcia (bez wymogu Aktywny).",
+    "Do zamknięcia = status W trakcie lub Oczekujące + aktywny etap procesu z flagą Etap zamykający (bez wymogu Aktywny).",
   waitingView: "Oczekujące = status przepływu z flagą Oczekujące.",
   noContactView:
     "Bez kontaktu = przeterminowany kontakt, brak aktywności >14 dni, status ≠ Zamknięty.",

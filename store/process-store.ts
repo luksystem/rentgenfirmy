@@ -79,6 +79,8 @@ import {
   updateProjectProcessMilestoneDate,
 } from "@/lib/supabase/process-repository";
 import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
+import { updateProjectStage } from "@/lib/supabase/repository";
+import { useAppStore } from "@/store/app-store";
 
 const noteLinksLoadPromises = new Map<string, Promise<void>>();
 let protocolTemplatesLoadPromise: Promise<void> | null = null;
@@ -592,6 +594,20 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
     set((state) => ({
       projectProcesses: { ...state.projectProcesses, [projectId]: updated },
     }));
+
+    if (stageId) {
+      const template = resolveAnchoredProcessTemplate(
+        updated,
+        get().getTemplateByProjectType(
+          useAppStore.getState().projects.find((project) => project.id === projectId)?.type ?? "",
+        ),
+      );
+      const stageTitle = template?.stages.find((stage) => stage.id === stageId)?.title;
+      if (stageTitle) {
+        const syncedProject = await updateProjectStage(projectId, stageTitle);
+        useAppStore.getState().patchProjectFields(projectId, { stage: syncedProject.stage });
+      }
+    }
   },
 
   addProjectProcessItem: async (projectId, milestoneId, input) => {

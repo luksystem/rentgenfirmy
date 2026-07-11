@@ -1,8 +1,3 @@
-export type StageOption = {
-  name: string;
-  forClosing: boolean;
-};
-
 export type FlowStatusOption = {
   name: string;
   isInProgress: boolean;
@@ -50,7 +45,6 @@ import type { TradeCompanyItem } from "@/lib/trades/company-types";
 export type FieldOptions = {
   projectTypes: string[];
   flowStatuses: FlowStatusOption[];
-  implementationStages: StageOption[];
   nextStepOwners: string[];
   blockerReasons: BlockerReasonOption[];
   interruptionTypes: InterruptionTypeOption[];
@@ -63,23 +57,12 @@ export type FieldOptionKey = keyof FieldOptions;
 
 export type StringListFieldOptionKey = Exclude<
   FieldOptionKey,
-  | "implementationStages"
   | "flowStatuses"
   | "interruptionTypes"
   | "blockerReasons"
   | "tradeCatalogItems"
   | "tradeCompanies"
 >;
-
-const DEFAULT_STAGE_OPTIONS: StageOption[] = [
-  { name: "Projektowanie", forClosing: false },
-  { name: "Przygotowanie produkcji", forClosing: false },
-  { name: "Produkcja", forClosing: false },
-  { name: "Dostarczenie rozdzielni", forClosing: false },
-  { name: "Montaż", forClosing: false },
-  { name: "Oczekiwanie po instalacji", forClosing: false },
-  { name: "Wdrożenie i przekazanie", forClosing: true },
-];
 
 const LEGACY_WAITING_STATUS_NAMES = new Set([
   "Oczekuje na budowę",
@@ -152,7 +135,6 @@ const DEFAULT_INTERRUPTION_TYPE_OPTIONS: InterruptionTypeOption[] = [
 export const DEFAULT_FIELD_OPTIONS: FieldOptions = {
   projectTypes: ["Dom", "Sklep", "Serwis", "Inne"],
   flowStatuses: DEFAULT_FLOW_STATUS_OPTIONS,
-  implementationStages: DEFAULT_STAGE_OPTIONS,
   nextStepOwners: [
     "Łukasz",
     "Koordynator techniczny",
@@ -195,7 +177,6 @@ export const DEFAULT_FIELD_OPTIONS: FieldOptions = {
 export const FIELD_OPTION_LABELS: Record<FieldOptionKey, string> = {
   projectTypes: "Typ projektu",
   flowStatuses: "Status przepływu",
-  implementationStages: "Etap",
   nextStepOwners: "Właściciel kolejnego kroku",
   blockerReasons: "Powód blokady",
   interruptionTypes: "Typ przerwania",
@@ -214,7 +195,6 @@ export const CATALOG_FIELD_OPTION_KEYS: StringListFieldOptionKey[] = ["communica
 export const PROJECT_FIELD_OPTION_KEYS: FieldOptionKey[] = [
   ...PROJECT_STRING_FIELD_OPTION_KEYS,
   "flowStatuses",
-  "implementationStages",
 ];
 
 function normalizeInterruptionTypeOptions(input?: unknown): InterruptionTypeOption[] {
@@ -258,53 +238,6 @@ function normalizeInterruptionTypeOptions(input?: unknown): InterruptionTypeOpti
       return { name, suggestion };
     })
     .filter((item): item is InterruptionTypeOption => item !== null);
-}
-
-function normalizeStageOptions(input?: unknown): StageOption[] {
-  if (!Array.isArray(input) || input.length === 0) {
-    return DEFAULT_STAGE_OPTIONS.map((stage) => ({ ...stage }));
-  }
-
-  if (typeof input[0] === "string") {
-    const legacyClosingNames = new Set([
-      "Wdrożenie i przekazanie",
-      "Poprawki",
-      "Gotowy do odbioru",
-    ]);
-
-    return input
-      .map((value) => {
-        const name = String(value).trim();
-        return name
-          ? {
-              name,
-              forClosing: legacyClosingNames.has(name),
-            }
-          : null;
-      })
-      .filter((stage): stage is StageOption => stage !== null);
-  }
-
-  const seen = new Set<string>();
-
-  return input
-    .map((value) => {
-      if (!value || typeof value !== "object" || !("name" in value)) {
-        return null;
-      }
-
-      const name = String(value.name).trim();
-      if (!name || seen.has(name)) {
-        return null;
-      }
-
-      seen.add(name);
-      return {
-        name,
-        forClosing: Boolean((value as StageOption).forClosing),
-      };
-    })
-    .filter((stage): stage is StageOption => stage !== null);
 }
 
 function normalizeFlowStatusOptions(input?: unknown): FlowStatusOption[] {
@@ -567,7 +500,6 @@ export function normalizeFieldOptions(input?: Partial<FieldOptions> | null): Fie
   return {
     projectTypes: merge("projectTypes"),
     flowStatuses: normalizeFlowStatusOptions(input?.flowStatuses),
-    implementationStages: normalizeStageOptions(input?.implementationStages),
     nextStepOwners: merge("nextStepOwners"),
     blockerReasons: normalizeBlockerReasonOptions(input?.blockerReasons),
     interruptionTypes: normalizeInterruptionTypeOptions(input?.interruptionTypes),
@@ -653,16 +585,8 @@ export function getInterruptionTypeSuggestion(typeName: string, options: FieldOp
   return "Ustal właściciela i procedurę dla tego typu przerwań.";
 }
 
-export function stageNames(options: FieldOptions): string[] {
-  return options.implementationStages.map((stage) => stage.name);
-}
-
 export function flowStatusNames(options: FieldOptions): string[] {
   return options.flowStatuses.map((status) => status.name);
-}
-
-export function defaultStageName(options: FieldOptions) {
-  return stageNames(options)[0] ?? "Projektowanie";
 }
 
 export function defaultFlowStatus(options: FieldOptions) {
@@ -670,12 +594,6 @@ export function defaultFlowStatus(options: FieldOptions) {
     flowStatusNames(options).find((status) => !isClosedFlowStatus(status, options)) ??
     flowStatusNames(options)[0] ??
     "Oczekuje na budowę"
-  );
-}
-
-export function isClosingStage(stage: string, options: FieldOptions) {
-  return (
-    options.implementationStages.find((item) => item.name === stage)?.forClosing ?? false
   );
 }
 
@@ -712,17 +630,6 @@ export function isProjectInProgress(
   return isInProgressFlowStatus(project.flowStatus, options);
 }
 
-export function isProjectForClosing(
-  project: { flowStatus: string; stage: string },
-  options: FieldOptions,
-) {
-  const flowAllowsClosing =
-    isInProgressFlowStatus(project.flowStatus, options) ||
-    isWaitingFlowStatus(project.flowStatus, options);
-
-  return flowAllowsClosing && isClosingStage(project.stage, options);
-}
-
 export function pickOption<T extends string>(
   value: T | undefined,
   options: string[],
@@ -737,10 +644,6 @@ export function pickOption<T extends string>(
 
 export function getDefaultOptionsForKey(key: StringListFieldOptionKey) {
   return [...DEFAULT_FIELD_OPTIONS[key]];
-}
-
-export function getDefaultStageOptions() {
-  return DEFAULT_STAGE_OPTIONS.map((stage) => ({ ...stage }));
 }
 
 export function getDefaultFlowStatusOptions() {

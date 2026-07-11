@@ -1,21 +1,24 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type Resolver, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { ClientSelectWithCreate } from "@/components/client-select-with-create";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
+import {
+  defaultStageTitleFromTemplate,
+  stageTitlesFromTemplate,
+} from "@/lib/process/stage-helpers";
 import {
   defaultFlowStatus,
-  defaultStageName,
   blockerReasonNames,
   flowStatusNames,
   isClosedFlowStatus,
   isWaitingFlowStatus,
   pickOption,
-  stageNames,
   type FieldOptions,
 } from "@/lib/field-options";
 import { priorities, type Project, type ProjectInput } from "@/lib/types";
@@ -29,6 +32,7 @@ import {
 } from "@/lib/waiting-priority";
 import { zodStringOption } from "@/lib/zod-helpers";
 import { useAppStore } from "@/store/app-store";
+import { useProcessStore } from "@/store/process-store";
 
 type FormValues = {
   name: string;
@@ -54,7 +58,7 @@ type FormValues = {
   createdAt: string;
 };
 
-function createSchema(options: FieldOptions) {
+function createSchema(options: FieldOptions, stageOptions: string[]) {
   return z
     .object({
       name: z.string().min(2, "Podaj nazwę projektu"),
@@ -62,7 +66,7 @@ function createSchema(options: FieldOptions) {
       isActive: z.boolean(),
       type: zodStringOption(options.projectTypes, "Wybierz typ projektu"),
       flowStatus: zodStringOption(flowStatusNames(options), "Wybierz status przepływu"),
-      stage: zodStringOption(stageNames(options), "Wybierz etap"),
+      stage: zodStringOption(stageOptions, "Wybierz etap"),
       priority: z.enum(priorities),
       nextStepOwner: zodStringOption(options.nextStepOwners, "Wybierz właściciela kroku"),
       nextContactDate: z.string().min(1, "Podaj datę kontaktu"),
@@ -77,13 +81,13 @@ function createSchema(options: FieldOptions) {
       remainingHours: z.number().min(0).optional(),
       nextAction: z.string().optional(),
       closeDeadline: z.string().optional(),
-  waitingDependsOnUs: z.boolean(),
-  waitingIncreasesCostLater: z.boolean(),
-  waitingBlocksSettlement: z.boolean(),
-  systemHandoverAt: z.string().optional(),
-  warrantyDurationMonths: z.coerce.number().min(0).optional(),
-  createdAt: z.string().min(1, "Podaj datę utworzenia projektu"),
-})
+      waitingDependsOnUs: z.boolean(),
+      waitingIncreasesCostLater: z.boolean(),
+      waitingBlocksSettlement: z.boolean(),
+      systemHandoverAt: z.string().optional(),
+      warrantyDurationMonths: z.coerce.number().min(0).optional(),
+      createdAt: z.string().min(1, "Podaj datę utworzenia projektu"),
+    })
     .superRefine((value, ctx) => {
       const requiresBlocker =
         isWaitingFlowStatus(value.flowStatus, options) ||
@@ -101,14 +105,22 @@ function createSchema(options: FieldOptions) {
     });
 }
 
-export function projectToFormValues(project: Project, options: FieldOptions): FormValues {
+export function projectToFormValues(
+  project: Project,
+  options: FieldOptions,
+  stageOptions: string[],
+): FormValues {
   return {
     name: project.name,
     clientId: project.clientId ?? "",
     isActive: project.isActive,
     type: pickOption(project.type, options.projectTypes, "Dom"),
     flowStatus: pickOption(project.flowStatus, flowStatusNames(options), defaultFlowStatus(options)),
-    stage: pickOption(project.stage, stageNames(options), defaultStageName(options)),
+    stage: pickOption(
+      project.stage,
+      stageOptions,
+      defaultStageTitleFromTemplate(null) || stageOptions[0] || project.stage,
+    ),
     priority: project.priority,
     nextStepOwner: pickOption(project.nextStepOwner, options.nextStepOwners, "Łukasz"),
     nextContactDate: project.nextContactDate,
@@ -127,14 +139,18 @@ export function projectToFormValues(project: Project, options: FieldOptions): Fo
   };
 }
 
-function createDefaultValues(options: FieldOptions): FormValues {
+function createDefaultValues(
+  options: FieldOptions,
+  stageOptions: string[],
+  defaultStage: string,
+): FormValues {
   return {
     name: "",
     clientId: "",
     isActive: true,
     type: pickOption(undefined, options.projectTypes, "Dom"),
     flowStatus: defaultFlowStatus(options),
-    stage: defaultStageName(options),
+    stage: pickOption(undefined, stageOptions, defaultStage),
     priority: "Normalny",
     nextStepOwner: pickOption(undefined, options.nextStepOwners, "Łukasz"),
     nextContactDate: toISODate(new Date()),
@@ -197,28 +213,61 @@ export function ProjectForm({
   const fieldOptions = useAppStore((state) => state.fieldOptions);
   const clients = useAppStore((state) => state.clients);
   const addClient = useAppStore((state) => state.addClient);
-  const schema = useMemo(() => createSchema(fieldOptions), [fieldOptions]);
+  const templates = useProcessStore((state) => state.templates);
+  const projectProcesses = useProcessStore((state) => state.projectProcesses);
+  const ensureTemplateForProjectType = useProcessStore((state) => state.ensureTemplateForProjectType);
+  const ensureProjectProcess = useProcessStore((state) => state.ensureProjectProcess);
+  const [stageTemplateReady, setStageTemplateReady] = useState(false);
+
+  const resolveStageTemplate = useCallback(
+    (projectType: string) => {
+      if (project) {
+        const process = projectProcesses[project.id];
+        const liveTemplate = templates.find((template) => template.projectType === projectType);
+        return process
+          ? resolveAnchoredProcessTemplate(process, liveTemplate)
+          : (liveTemplate ?? null);
+      }
+
+      return templates.find((template) => template.projectType === projectType) ?? null;
+    },
+    [project, projectProcesses, templates],
+  );
+
+  const initialType = project?.type ?? pickOption(undefined, fieldOptions.projectTypes, "Dom");
+  const initialTemplate = resolveStageTemplate(initialType);
+  const initialStageOptions = stageTitlesFromTemplate(initialTemplate);
+  const initialDefaultStage = defaultStageTitleFromTemplate(initialTemplate);
+
+  const schema = useMemo(
+    () => createSchema(fieldOptions, initialStageOptions.length ? initialStageOptions : [initialDefaultStage]),
+    [fieldOptions, initialDefaultStage, initialStageOptions],
+  );
+
   const defaultValues = useMemo(() => {
+    const stageOptions = initialStageOptions.length ? initialStageOptions : [initialDefaultStage];
     const base = project
-      ? projectToFormValues(project, fieldOptions)
-      : createDefaultValues(fieldOptions);
+      ? projectToFormValues(project, fieldOptions, stageOptions)
+      : createDefaultValues(fieldOptions, stageOptions, initialDefaultStage);
     if (!project && defaultClientId) {
       return { ...base, clientId: defaultClientId };
     }
     return base;
-  }, [project, fieldOptions, defaultClientId]);
+  }, [project, fieldOptions, defaultClientId, initialDefaultStage, initialStageOptions]);
 
   const {
     register,
     handleSubmit,
     control,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema) as Resolver<FormValues>,
     defaultValues,
   });
 
+  const projectType = useWatch({ control, name: "type" });
   const flowStatus = useWatch({ control, name: "flowStatus" });
   const clientId = useWatch({ control, name: "clientId" });
   const waitingDependsOnUs = useWatch({ control, name: "waitingDependsOnUs" });
@@ -234,6 +283,55 @@ export function ProjectForm({
     typeof warrantyDurationMonths === "number" && Number.isFinite(warrantyDurationMonths)
       ? warrantyDurationMonths
       : undefined;
+
+  const stageTemplate = useMemo(
+    () => resolveStageTemplate(projectType),
+    [projectType, resolveStageTemplate],
+  );
+  const stageOptions = useMemo(() => {
+    const titles = stageTitlesFromTemplate(stageTemplate);
+    return titles.length ? titles : [defaultStageTitleFromTemplate(stageTemplate)];
+  }, [stageTemplate]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function ensureStageTemplate() {
+      if (!projectType) {
+        return;
+      }
+
+      try {
+        if (project) {
+          await ensureProjectProcess(project.id, projectType);
+        } else {
+          await ensureTemplateForProjectType(projectType);
+        }
+      } finally {
+        if (!cancelled) {
+          setStageTemplateReady(true);
+        }
+      }
+    }
+
+    setStageTemplateReady(false);
+    void ensureStageTemplate();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ensureProjectProcess, ensureTemplateForProjectType, project, projectType]);
+
+  useEffect(() => {
+    if (!stageTemplateReady || stageOptions.length === 0) {
+      return;
+    }
+
+    const currentStage = getValues("stage");
+    if (!stageOptions.includes(currentStage)) {
+      setValue("stage", stageOptions[0]);
+    }
+  }, [getValues, stageOptions, stageTemplateReady, setValue]);
 
   const isWaiting = isWaitingFlowStatus(flowStatus, fieldOptions);
   const waitingFlagCount = countWaitingFlags({
@@ -377,8 +475,8 @@ export function ProjectForm({
           </Select>
         </Field>
         <Field label="Etap" error={errors.stage?.message}>
-          <Select {...register("stage")}>
-            {stageNames(fieldOptions).map((stage) => (
+          <Select {...register("stage")} disabled={!stageTemplateReady}>
+            {stageOptions.map((stage) => (
               <option key={stage}>{stage}</option>
             ))}
           </Select>

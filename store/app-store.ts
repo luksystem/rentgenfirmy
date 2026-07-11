@@ -20,6 +20,9 @@ import {
   updateInterruptionRecord,
   updateProjectRecord,
 } from "@/lib/supabase/repository";
+import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
+import { findStageByTitle } from "@/lib/process/stage-helpers";
+import { useProcessStore } from "@/store/process-store";
 import { projectToInput } from "@/lib/supabase/mappers";
 import { computeWarrantyEndsAt } from "@/lib/project/warranty";
 import {
@@ -60,6 +63,7 @@ type AppState = {
   initialize: () => Promise<void>;
   addProject: (project: ProjectInput) => Promise<void>;
   updateProject: (id: string, project: ProjectInput) => Promise<void>;
+  setProjectStage: (projectId: string, stageTitle: string) => Promise<void>;
   patchProjectFields: (id: string, patch: Partial<Project>) => void;
   updateProjectWarrantySettings: (
     id: string,
@@ -136,8 +140,24 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     try {
       const created = await createProject(project);
+      const processStore = useProcessStore.getState();
+      await processStore.ensureProjectProcess(created.id, created.type);
+      const process = processStore.getProjectProcess(created.id);
+      const template = process
+        ? resolveAnchoredProcessTemplate(process, processStore.getTemplateByProjectType(created.type))
+        : null;
+      const stage =
+        findStageByTitle(template, created.stage) ??
+        template?.stages.slice().sort((left, right) => left.position - right.position)[0];
+
+      if (stage) {
+        await processStore.setActiveStage(created.id, stage.id);
+      }
+
+      const finalStage = stage?.title ?? created.stage;
+
       set((state) => ({
-        projects: [created, ...state.projects],
+        projects: [{ ...created, stage: finalStage }, ...state.projects],
         isSaving: false,
         error: null,
       }));
@@ -150,6 +170,27 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
+  setProjectStage: async (projectId, stageTitle) => {
+    const project = get().projects.find((item) => item.id === projectId);
+    if (!project) {
+      throw new Error("Projekt nie istnieje");
+    }
+
+    const processStore = useProcessStore.getState();
+    await processStore.ensureProjectProcess(projectId, project.type);
+    const process = processStore.getProjectProcess(projectId);
+    const template = process
+      ? resolveAnchoredProcessTemplate(process, processStore.getTemplateByProjectType(project.type))
+      : null;
+    const stage = findStageByTitle(template, stageTitle);
+
+    if (!stage) {
+      throw new Error(`Brak etapu „${stageTitle}” w procesie tego projektu.`);
+    }
+
+    await processStore.setActiveStage(projectId, stage.id);
+  },
+
   updateProject: async (id, project) => {
     const existing = get().projects.find((item) => item.id === id);
 
@@ -160,12 +201,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isSaving: true, error: null });
 
     try {
+      const stageChanged = project.stage !== existing.stage;
       const updated = await updateProjectRecord(id, project, existing);
       set((state) => ({
         projects: state.projects.map((item) => (item.id === id ? updated : item)),
         isSaving: false,
         error: null,
       }));
+
+      if (stageChanged) {
+        await get().setProjectStage(id, project.stage);
+      }
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : "Nie udało się zaktualizować projektu",

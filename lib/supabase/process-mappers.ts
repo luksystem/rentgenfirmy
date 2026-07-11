@@ -82,6 +82,7 @@ export function rowToProcessStage(
     templateId: row.template_id,
     title: row.title,
     description: row.description ?? "",
+    forClosing: Boolean(row.for_closing),
     position: row.position,
     milestones: milestones.sort((a, b) => a.position - b.position),
     minPeopleCount: row.min_people_count ?? 1,

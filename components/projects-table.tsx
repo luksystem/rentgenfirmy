@@ -35,7 +35,9 @@ import {
   type ProjectCategoryFilterId,
   type ProjectsViewFilters,
 } from "@/lib/projects-view-filters";
+import { buildProjectClosingFlagsMap } from "@/lib/process/stage-helpers";
 import { useAppStore } from "@/store/app-store";
+import { useProcessStore } from "@/store/process-store";
 import { formatDate } from "@/lib/utils";
 import { type FlowStatus, type NextStepOwner, type ProjectInput, type ProjectType } from "@/lib/types";
 
@@ -52,13 +54,20 @@ export function ProjectsTable() {
     updateProjectsViewFilters,
     isInitialized,
   } = useAppStore();
+  const templates = useProcessStore((state) => state.templates);
+  const projectProcesses = useProcessStore((state) => state.projectProcesses);
   const { openProjectEdit } = useProjectEdit();
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
 
+  const projectClosingFlags = useMemo(
+    () => buildProjectClosingFlagsMap(projects, projectProcesses, templates, fieldOptions),
+    [fieldOptions, projectProcesses, projects, templates],
+  );
+
   const filteredProjects = useMemo(
-    () => filterProjectsByView(projects, projectsViewFilters, fieldOptions),
-    [projects, projectsViewFilters, fieldOptions],
+    () => filterProjectsByView(projects, projectsViewFilters, fieldOptions, projectClosingFlags),
+    [projects, projectsViewFilters, fieldOptions, projectClosingFlags],
   );
 
   function updateViewFilters(patch: Partial<ProjectsViewFilters>) {
@@ -235,6 +244,7 @@ export function ProjectsTable() {
               projects={projects}
               fieldOptions={fieldOptions}
               filters={projectsViewFilters}
+              projectClosingFlags={projectClosingFlags}
             />
           </div>
         ) : (

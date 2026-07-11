@@ -296,6 +296,25 @@ export function ProcessTemplateEditor({
               />
             </Field>
 
+            <label className="flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3 py-2 text-sm">
+              <input
+                type="checkbox"
+                checked={Boolean(stage.forClosing)}
+                onChange={() =>
+                  setTemplate((current) => ({
+                    ...current,
+                    stages: current.stages.map((entry) =>
+                      entry.id === stage.id
+                        ? { ...entry, forClosing: !entry.forClosing }
+                        : entry,
+                    ),
+                  }))
+                }
+                className="h-4 w-4 rounded border-border bg-surface text-accent"
+              />
+              Etap zamykający projekt
+            </label>
+
             <ProcessStageResourcePanel
               stage={stage}
               otherStages={template.stages

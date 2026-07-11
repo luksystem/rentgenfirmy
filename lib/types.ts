@@ -9,9 +9,6 @@ export type { FieldOptions };
 
 export const projectTypes = DEFAULT_FIELD_OPTIONS.projectTypes;
 export const flowStatuses = DEFAULT_FIELD_OPTIONS.flowStatuses.map((status) => status.name);
-export const implementationStages = DEFAULT_FIELD_OPTIONS.implementationStages.map(
-  (stage) => stage.name,
-);
 export const nextStepOwners = DEFAULT_FIELD_OPTIONS.nextStepOwners;
 export const blockerReasons = DEFAULT_FIELD_OPTIONS.blockerReasons.map((item) => item.name);
 export const interruptionTypes = DEFAULT_FIELD_OPTIONS.interruptionTypes.map(
