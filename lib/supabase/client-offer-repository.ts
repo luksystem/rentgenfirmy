@@ -22,6 +22,7 @@ import {
   clientToServiceClient,
   convertContactToClientServer,
 } from "@/lib/supabase/contact-server";
+import { createClientOfferAcceptedNotifications } from "@/lib/notifications/client-offer-accepted";
 import { createWorkOrderFromAcceptedService, updateWorkOrderFromSettledService } from "@/lib/supabase/work-order-repository";
 
 function isOfferExpiredService(service: ServiceRecord) {
@@ -231,6 +232,13 @@ export async function respondToClientOffer(
 
   if (action === "accept") {
     await createWorkOrderFromAcceptedService(saved, now);
+    await createClientOfferAcceptedNotifications({
+      serviceId: saved.id,
+      clientName: saved.client.fullName,
+      serviceTitle: saved.title,
+      intakeReference: saved.intakeReference,
+      kind: "estimate",
+    }).catch(() => undefined);
   }
 
   return saved;
@@ -415,6 +423,13 @@ export async function respondToSettlementOffer(
 
   if (action === "accept") {
     await updateWorkOrderFromSettledService(saved, now);
+    await createClientOfferAcceptedNotifications({
+      serviceId: saved.id,
+      clientName: saved.client.fullName,
+      serviceTitle: saved.title,
+      intakeReference: saved.intakeReference,
+      kind: "settlement",
+    }).catch(() => undefined);
   }
 
   return saved;

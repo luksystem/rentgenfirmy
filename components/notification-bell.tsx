@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
+  BadgeCheck,
   Bell,
   CalendarClock,
   ClipboardCheck,
@@ -20,6 +21,8 @@ import { useAuthStore } from "@/store/auth-store";
 import { useAgreementHubStore } from "@/store/agreement-hub-store";
 import { useNotificationStore } from "@/store/notification-store";
 import { useProcessStore } from "@/store/process-store";
+import { SALES_NOTIFICATION_KINDS } from "@/lib/notifications/types";
+import type { UserNotification } from "@/lib/notifications/types";
 
 export function NotificationBell() {
   const profileId = useAuthStore((state) => state.profile?.id);
@@ -67,6 +70,13 @@ export function NotificationBell() {
   const hasInspectionsAlerts = inspectionsAlertCount > 0;
   const hasAgreementAlerts = agreementAlertCount > 0;
   const hasLeaveAlerts = leavePendingCount > 0;
+  const salesItems = items.filter((item) =>
+    (SALES_NOTIFICATION_KINDS as readonly string[]).includes(item.kind),
+  );
+  const otherItems = items.filter(
+    (item) => !(SALES_NOTIFICATION_KINDS as readonly string[]).includes(item.kind),
+  );
+  const hasSalesAlerts = salesItems.length > 0;
   const hasBadges = newBadgeCount > 0 || overdueBadgeCount > 0;
 
   const refreshBadge = useCallback(() => {
@@ -191,6 +201,62 @@ export function NotificationBell() {
 
   if (!profileId) {
     return null;
+  }
+
+  function renderNotificationItem(item: UserNotification, activeProfileId: string) {
+    return (
+      <Link
+        key={item.id}
+        href={item.linkUrl ?? "/tablice-wdrozen"}
+        onClick={() => {
+          void markRead(activeProfileId, item.id);
+          setOpen(false);
+          setPanelOpen(false);
+        }}
+        className="flex items-start gap-3 px-4 py-3 transition hover:bg-surface-muted/30"
+      >
+        {item.kind === "client_stage_rating" ? (
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-amber-500/35 bg-amber-500/10 text-amber-200">
+            <Star className="h-4 w-4" />
+          </span>
+        ) : item.kind === "service_intake_preliminary_offer" ? (
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-sky-500/35 bg-sky-500/10 text-sky-200">
+            <Sparkles className="h-4 w-4" />
+          </span>
+        ) : item.kind === "client_offer_accepted" || item.kind === "settlement_offer_accepted" ? (
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-emerald-500/35 bg-emerald-500/10 text-emerald-300">
+            <BadgeCheck className="h-4 w-4" />
+          </span>
+        ) : item.kind === "goal_review_due" ||
+          item.kind === "goal_period_ending" ||
+          item.kind === "goal_at_risk" ||
+          item.kind === "goal_recurring_created" ? (
+          <span
+            className={cn(
+              "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border",
+              item.kind === "goal_at_risk"
+                ? "border-rose-500/35 bg-rose-500/10 text-rose-300"
+                : "border-blue-500/35 bg-blue-500/10 text-blue-300",
+            )}
+          >
+            <Target className="h-4 w-4" />
+          </span>
+        ) : item.kind === "leave_request_created" || item.kind === "leave_request_decided" ? (
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-emerald-500/35 bg-emerald-500/10 text-emerald-300">
+            <PalmtreeIcon className="h-4 w-4" />
+          </span>
+        ) : null}
+        <span className="min-w-0 flex-1">
+          <p className="break-words text-sm font-medium leading-snug text-foreground">{item.title}</p>
+          {item.body ? (
+            <p className="mt-1.5 whitespace-pre-wrap break-words text-xs leading-relaxed text-muted">
+              {item.body}
+            </p>
+          ) : null}
+          <p className="mt-1.5 text-[10px] text-muted">{formatDate(item.createdAt)}</p>
+        </span>
+      </Link>
+    );
   }
 
   return (
@@ -501,77 +567,52 @@ export function NotificationBell() {
               </div>
             ) : null}
 
+            {hasSalesAlerts ? (
+              <div className="border-b border-border/60 bg-surface-muted/20">
+                <div className="flex items-center justify-between px-4 pb-1 pt-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Sprzedaż</p>
+                  <NavBadges newCount={salesItems.length} size="sm" />
+                </div>
+                {salesItems.map((item) => (
+                  <div key={item.id} className="border-b border-border/50 bg-accent/5">
+                    {renderNotificationItem(item, profileId)}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
             {loading ? (
               <p className="px-4 py-6 text-sm text-muted">Ładowanie…</p>
             ) : items.length === 0 &&
               !hasKanbanAlerts &&
               !hasAgreementAlerts &&
               !hasServiceAlerts &&
-              !hasLeaveAlerts ? (
+              !hasLeaveAlerts &&
+              !hasSalesAlerts ? (
               <p className="px-4 py-6 text-sm text-muted">Brak powiadomień.</p>
-            ) : items.length === 0 ? (
+            ) : otherItems.length === 0 ? (
               <p className="px-4 py-4 text-xs text-muted">Brak innych powiadomień.</p>
             ) : (
               <>
-                {unreadCount > 0 ? (
+                {otherItems.some((item) => !item.readAt) ? (
                   <div className="flex items-center justify-between border-b border-border/60 bg-surface-muted/20 px-4 py-2">
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
                       Inne powiadomienia
                     </p>
-                    <NavBadges newCount={unreadCount} size="sm" />
+                    <NavBadges
+                      newCount={otherItems.filter((item) => !item.readAt).length}
+                      size="sm"
+                    />
                   </div>
                 ) : null}
-                {items.map((item) => (
-                <Link
-                  key={item.id}
-                  href={item.linkUrl ?? "/tablice-wdrozen"}
-                  onClick={() => {
-                    void markRead(profileId, item.id);
-                    setOpen(false);
-                    setPanelOpen(false);
-                  }}
-                  className="block border-b border-border/50 bg-accent/5 px-4 py-3 transition hover:bg-surface-muted/30"
-                >
-                  <div className="flex items-start gap-3">
-                    {item.kind === "client_stage_rating" ? (
-                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-amber-500/35 bg-amber-500/10 text-amber-200">
-                        <Star className="h-4 w-4" />
-                      </span>
-                    ) : item.kind === "service_intake_preliminary_offer" ? (
-                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-sky-500/35 bg-sky-500/10 text-sky-200">
-                        <Sparkles className="h-4 w-4" />
-                      </span>
-                    ) : item.kind === "goal_review_due" ||
-                      item.kind === "goal_period_ending" ||
-                      item.kind === "goal_at_risk" ||
-                      item.kind === "goal_recurring_created" ? (
-                      <span
-                        className={cn(
-                          "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border",
-                          item.kind === "goal_at_risk"
-                            ? "border-rose-500/35 bg-rose-500/10 text-rose-300"
-                            : "border-blue-500/35 bg-blue-500/10 text-blue-300",
-                        )}
-                      >
-                        <Target className="h-4 w-4" />
-                      </span>
-                    ) : item.kind === "leave_request_created" || item.kind === "leave_request_decided" ? (
-                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-emerald-500/35 bg-emerald-500/10 text-emerald-300">
-                        <PalmtreeIcon className="h-4 w-4" />
-                      </span>
-                    ) : null}
-                    <span className="min-w-0 flex-1">
-                      <p className="break-words text-sm font-medium leading-snug text-foreground">{item.title}</p>
-                      {item.body ? (
-                        <p className="mt-1.5 whitespace-pre-wrap break-words text-xs leading-relaxed text-muted">
-                          {item.body}
-                        </p>
-                      ) : null}
-                      <p className="mt-1.5 text-[10px] text-muted">{formatDate(item.createdAt)}</p>
-                    </span>
+                {otherItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="border-b border-border/50 bg-accent/5"
+                  >
+                    {renderNotificationItem(item, profileId)}
                   </div>
-                </Link>
-              ))}
+                ))}
               </>
             )}
           </div>

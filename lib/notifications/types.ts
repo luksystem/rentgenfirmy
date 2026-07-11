@@ -12,7 +12,14 @@ export const USER_NOTIFICATION_KINDS = [
   "goal_recurring_created",
   "leave_request_created",
   "leave_request_decided",
+  "client_offer_accepted",
+  "settlement_offer_accepted",
 ] as const;
+
+export const SALES_NOTIFICATION_KINDS = [
+  "client_offer_accepted",
+  "settlement_offer_accepted",
+] as const satisfies readonly UserNotificationKind[];
 
 export type UserNotificationKind = (typeof USER_NOTIFICATION_KINDS)[number];
 
