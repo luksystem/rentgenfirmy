@@ -108,3 +108,5 @@ drop policy if exists "project_functionality_tasks_all" on public.project_functi
 create policy "project_functionality_surveys_all" on public.project_functionality_surveys for all using (true) with check (true);
 create policy "project_functionality_responses_all" on public.project_functionality_responses for all using (true) with check (true);
 create policy "project_functionality_tasks_all" on public.project_functionality_tasks for all using (true) with check (true);
+
+notify pgrst, 'reload schema';

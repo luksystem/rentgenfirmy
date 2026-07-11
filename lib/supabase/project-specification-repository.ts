@@ -76,11 +76,21 @@ export async function fetchSpecificationCatalog(force = false): Promise<Specific
   }
 
   const supabase = getSupabase();
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("specification_catalog_items")
     .select("*")
     .eq("is_active", true)
     .order("position", { ascending: true });
+
+  if (error?.message?.includes("client_functionality_items")) {
+    const fallback = await supabase
+      .from("specification_catalog_items")
+      .select("id, name, category, description, position, is_active, internal_acceptance_items, created_at")
+      .eq("is_active", true)
+      .order("position", { ascending: true });
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     throw new Error(error.message);

@@ -29,7 +29,7 @@ import {
   updateProjectFunctionalityTaskStatus,
   useFunctionalitySurveyStore,
 } from "@/store/project-functionality-survey-store";
-import { cn } from "@/lib/utils";
+import { formatFunctionalitySurveyError } from "@/lib/client-functionality/format-error";
 
 const STATUS_LABELS = {
   draft: "Szkic",
@@ -132,11 +132,7 @@ export function FunctionalitySurveyClientEmbed({
         setBundle(payload.bundle ?? null);
       } catch (loadError) {
         const message = loadError instanceof Error ? loadError.message : "Błąd ładowania.";
-        setError(
-          message.includes("does not exist") || message.includes("schema cache")
-            ? "Brak tabel ankiety w bazie — uruchom migrację 117_client_functionality_survey.sql w Supabase."
-            : message,
-        );
+        setError(formatFunctionalitySurveyError(message));
       } finally {
         setLoading(false);
       }
@@ -197,16 +193,9 @@ export function ProjectFunctionalitySurveyPanel({
       })
       .catch((loadError: unknown) => {
         const message = loadError instanceof Error ? loadError.message : "Błąd ładowania ankiety.";
-        setError(
-          message.includes("does not exist") || message.includes("schema cache")
-            ? "Brak tabel ankiety w bazie — uruchom migrację 117_client_functionality_survey.sql w Supabase."
-            : message,
-        );
+        setError(formatFunctionalitySurveyError(message));
       });
   }, [ensureBundle, projectId, readOnly, setBundle]);
-
-  const showMigrationHint =
-    Boolean(error?.includes("migrację 117")) && !bundle?.survey;
 
   const surveyUrl = useMemo(() => {
     if (!bundle?.survey?.publicToken || typeof window === "undefined") {
@@ -217,6 +206,7 @@ export function ProjectFunctionalitySurveyPanel({
 
   const answeredCount = bundle?.responses.length ?? 0;
   const questionCount = bundle?.questions.length ?? 0;
+  const showMigrationHint = Boolean(error) && !bundle?.survey && questionCount === 0;
   const pendingAi = aiDraft.filter((entry) => entry.status === "pending");
 
   const runAction = useCallback(
