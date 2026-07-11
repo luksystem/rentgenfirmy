@@ -131,7 +131,12 @@ export function FunctionalitySurveyClientEmbed({
         }
         setBundle(payload.bundle ?? null);
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Błąd ładowania.");
+        const message = loadError instanceof Error ? loadError.message : "Błąd ładowania.";
+        setError(
+          message.includes("does not exist") || message.includes("schema cache")
+            ? "Brak tabel ankiety w bazie — uruchom migrację 117_client_functionality_survey.sql w Supabase."
+            : message,
+        );
       } finally {
         setLoading(false);
       }
@@ -176,18 +181,27 @@ export function ProjectFunctionalitySurveyPanel({
   const [aiDraft, setAiDraft] = useState<FunctionalityAiSuggestion[]>([]);
 
   useEffect(() => {
-    void ensureBundle(projectId).then(async (loaded) => {
-      if (loaded.questions.length > 0 && !loaded.survey && !readOnly) {
-        try {
-          const result = await ensureProjectFunctionalitySurvey(projectId);
-          if (result.bundle) {
-            setBundle(projectId, result.bundle);
+    void ensureBundle(projectId)
+      .then(async (loaded) => {
+        if (loaded.questions.length > 0 && !loaded.survey && !readOnly) {
+          try {
+            const result = await ensureProjectFunctionalitySurvey(projectId);
+            if (result.bundle) {
+              setBundle(projectId, result.bundle);
+            }
+          } catch {
+            // ignore — user can create manually
           }
-        } catch {
-          // ignore — user can create manually
         }
-      }
-    });
+      })
+      .catch((loadError: unknown) => {
+        const message = loadError instanceof Error ? loadError.message : "Błąd ładowania ankiety.";
+        setError(
+          message.includes("does not exist") || message.includes("schema cache")
+            ? "Brak tabel ankiety w bazie — uruchom migrację 117_client_functionality_survey.sql w Supabase."
+            : message,
+        );
+      });
   }, [ensureBundle, projectId, readOnly, setBundle]);
 
   const surveyUrl = useMemo(() => {
@@ -230,12 +244,17 @@ export function ProjectFunctionalitySurveyPanel({
     setMessage("Skopiowano link ankiety.");
   }
 
-  if (loading && !bundle) {
+  if (loading && !bundle && !error) {
     return <p className="text-sm text-muted">Ładowanie ankiety funkcjonalności…</p>;
   }
 
   return (
     <div className="grid gap-4">
+      {error ? (
+        <Card>
+          <CardContent className="py-4 text-sm text-rose-600">{error}</CardContent>
+        </Card>
+      ) : null}
       <div>
         <h2 className="text-base font-semibold text-foreground">Ankieta funkcjonalności klienta</h2>
         <p className="mt-1 text-sm text-muted">
@@ -249,8 +268,26 @@ export function ProjectFunctionalitySurveyPanel({
 
       {!questionCount ? (
         <Card>
-          <CardContent className="py-6 text-sm text-muted">
-            Dodaj pozycje specyfikacji projektu (np. Oświetlenie, Rolety), aby wygenerować pytania ankiety.
+          <CardContent className="grid gap-2 py-6 text-sm text-muted">
+            <p className="font-medium text-foreground">Brak pytań ankiety dla tego projektu</p>
+            <p>
+              1. W zakładce <strong>Specyfikacja</strong> dodaj pozycje z katalogu (np. Oświetlenie,
+              Rolety) — nie tylko własne wpisy.
+            </p>
+            <p>
+              2. Pytania są w kodzie:{" "}
+              <code className="rounded bg-surface-muted px-1">lib/client-functionality/catalog-seeds.ts</code>{" "}
+              (4–5 na kategorię) i w{" "}
+              <a href="/ustawienia/specyfikacja" className="text-accent hover:underline">
+                Ustawienia → Katalog specyfikacji
+              </a>
+              .
+            </p>
+            <p>
+              3. Uruchom migrację{" "}
+              <code className="rounded bg-surface-muted px-1">117_client_functionality_survey.sql</code>{" "}
+              w Supabase, jeśli ankieta nie zapisuje odpowiedzi.
+            </p>
           </CardContent>
         </Card>
       ) : null}

@@ -148,9 +148,47 @@ async function fetchSpecificationCatalogServer(): Promise<SpecificationCatalogIt
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("specification_catalog_items")
-    .select("*")
+    .select(
+      "id, name, category, description, position, is_active, internal_acceptance_items, client_functionality_items, created_at",
+    )
     .eq("is_active", true)
     .order("position", { ascending: true });
+
+  if (error?.message?.includes("client_functionality_items")) {
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from("specification_catalog_items")
+      .select("id, name, category, description, position, is_active, internal_acceptance_items, created_at")
+      .eq("is_active", true)
+      .order("position", { ascending: true });
+
+    if (fallbackError) {
+      throw new Error(fallbackError.message);
+    }
+
+    return (fallbackData ?? []).map((row) => {
+      const catalogRow = row as {
+        id: string;
+        name: string;
+        category: string;
+        description: string;
+        position: number;
+        is_active: boolean;
+        internal_acceptance_items?: unknown;
+        created_at: string;
+      };
+      return {
+        id: catalogRow.id,
+        name: catalogRow.name,
+        category: catalogRow.category,
+        description: catalogRow.description,
+        position: catalogRow.position,
+        isActive: catalogRow.is_active,
+        internalAcceptanceItems: normalizeCatalogAcceptanceItems(catalogRow.internal_acceptance_items),
+        clientFunctionalityItems: [],
+        createdAt: catalogRow.created_at,
+      };
+    });
+  }
 
   if (error) {
     throw new Error(error.message);

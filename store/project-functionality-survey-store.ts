@@ -57,6 +57,12 @@ export const useFunctionalitySurveyStore = create<FunctionalitySurveyStore>((set
         });
         return bundle;
       })
+      .catch((error: unknown) => {
+        set({
+          loadingProjects: { ...get().loadingProjects, [projectId]: false },
+        });
+        throw error;
+      })
       .finally(() => {
         loadPromises.delete(projectId);
       });
