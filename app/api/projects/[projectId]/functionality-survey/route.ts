@@ -3,7 +3,6 @@ import { requireAuthenticatedProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
 import { suggestFunctionalityWithAi } from "@/lib/client-functionality/ai-suggestions";
 import {
-  completeFunctionalitySurvey,
   ensureFunctionalitySurvey,
   fetchFunctionalitySurveyBundle,
   regenerateFunctionalityTasks,

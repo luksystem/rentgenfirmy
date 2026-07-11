@@ -8,7 +8,6 @@ import {
   ClipboardList,
   Home,
   Loader2,
-  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
