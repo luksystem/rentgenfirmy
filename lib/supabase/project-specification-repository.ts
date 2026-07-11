@@ -4,6 +4,7 @@ import type {
   SpecificationCatalogInput,
   SpecificationCatalogItem,
 } from "@/lib/dashboard/specification-types";
+import { normalizeCatalogFunctionalityItems } from "@/lib/client-functionality/catalog-seeds";
 import { normalizeCatalogAcceptanceItems } from "@/lib/internal-acceptance/catalog-seeds";
 import { getSupabase } from "@/lib/supabase/client";
 
@@ -15,6 +16,7 @@ type CatalogRow = {
   position: number;
   is_active: boolean;
   internal_acceptance_items?: unknown;
+  client_functionality_items?: unknown;
   created_at: string;
 };
 
@@ -40,6 +42,7 @@ function rowToCatalog(row: CatalogRow): SpecificationCatalogItem {
     position: row.position,
     isActive: row.is_active,
     internalAcceptanceItems: normalizeCatalogAcceptanceItems(row.internal_acceptance_items),
+    clientFunctionalityItems: normalizeCatalogFunctionalityItems(row.client_functionality_items),
     createdAt: row.created_at,
   };
 }
@@ -200,6 +203,7 @@ export async function createSpecificationCatalogItem(input: SpecificationCatalog
       position,
       is_active: true,
       internal_acceptance_items: [],
+      client_functionality_items: [],
     })
     .select("*")
     .single();
@@ -261,6 +265,28 @@ export async function saveSpecificationCatalogAcceptanceItems(
     .from("specification_catalog_items")
     .update({
       internal_acceptance_items: items,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  invalidateSpecificationCatalogCache();
+  return rowToCatalog(data as CatalogRow);
+}
+
+export async function saveSpecificationCatalogFunctionalityItems(
+  id: string,
+  items: SpecificationCatalogItem["clientFunctionalityItems"],
+) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("specification_catalog_items")
+    .update({
+      client_functionality_items: items,
     })
     .eq("id", id)
     .select("*")

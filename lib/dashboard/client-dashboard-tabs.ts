@@ -12,6 +12,7 @@ export const CLIENT_DASHBOARD_TABS: ClientDashboardTab[] = [
   "offers",
   "inspections",
   "specification",
+  "functionality-survey",
   "trades",
   "satisfaction",
   "notes",

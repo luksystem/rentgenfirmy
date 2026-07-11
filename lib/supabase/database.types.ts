@@ -680,7 +680,47 @@ export type SpecificationCatalogItemRow = {
   position: number;
   is_active: boolean;
   internal_acceptance_items: unknown;
+  client_functionality_items: unknown;
   created_at: string;
+};
+
+export type ProjectFunctionalitySurveyRow = {
+  id: string;
+  project_id: string;
+  public_token: string;
+  status: "draft" | "sent" | "in_progress" | "completed";
+  ai_suggestions: unknown;
+  extra_questions: unknown;
+  client_name: string;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectFunctionalityResponseRow = {
+  id: string;
+  survey_id: string;
+  question_id: string;
+  catalog_item_id: string | null;
+  selected_option_ids: unknown;
+  custom_note: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectFunctionalityTaskRow = {
+  id: string;
+  survey_id: string;
+  question_id: string | null;
+  option_id: string | null;
+  title: string;
+  description: string;
+  category: string;
+  priority: "must" | "standard" | "optional";
+  status: "todo" | "in_progress" | "done";
+  source: "template" | "ai" | "manual";
+  created_at: string;
+  updated_at: string;
 };
 
 export type ProjectSpecificationItemRow = {
@@ -1935,6 +1975,27 @@ export type Database = {
         Insert: Partial<ProjectSpecificationItemRow> &
           Pick<ProjectSpecificationItemRow, "project_id" | "title">;
         Update: Partial<ProjectSpecificationItemRow>;
+        Relationships: [];
+      };
+      project_functionality_surveys: {
+        Row: ProjectFunctionalitySurveyRow;
+        Insert: Partial<ProjectFunctionalitySurveyRow> &
+          Pick<ProjectFunctionalitySurveyRow, "project_id">;
+        Update: Partial<ProjectFunctionalitySurveyRow>;
+        Relationships: [];
+      };
+      project_functionality_responses: {
+        Row: ProjectFunctionalityResponseRow;
+        Insert: Partial<ProjectFunctionalityResponseRow> &
+          Pick<ProjectFunctionalityResponseRow, "survey_id" | "question_id">;
+        Update: Partial<ProjectFunctionalityResponseRow>;
+        Relationships: [];
+      };
+      project_functionality_tasks: {
+        Row: ProjectFunctionalityTaskRow;
+        Insert: Partial<ProjectFunctionalityTaskRow> &
+          Pick<ProjectFunctionalityTaskRow, "survey_id" | "title">;
+        Update: Partial<ProjectFunctionalityTaskRow>;
         Relationships: [];
       };
       project_trades: {

@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import type { SpecificationCatalogItem } from "@/lib/dashboard/specification-types";
 import { seedCatalogAcceptanceItems } from "@/lib/internal-acceptance/catalog-seeds";
+import { seedCatalogFunctionalityItems, withFunctionalityItemPositions } from "@/lib/client-functionality/catalog-seeds";
 import { INTERNAL_ACCEPTANCE_CATEGORIES } from "@/lib/internal-acceptance/types";
 import {
   withStaticItemPositions,
@@ -17,6 +18,7 @@ import {
   deleteSpecificationCatalogItem,
   fetchSpecificationCatalog,
   saveSpecificationCatalogAcceptanceItems,
+  saveSpecificationCatalogFunctionalityItems,
   updateSpecificationCatalogItem,
 } from "@/lib/supabase/project-specification-repository";
 
@@ -53,6 +55,10 @@ export function SpecificationCatalogSettings() {
           internalAcceptanceItems: seedCatalogAcceptanceItems(
             entry.name,
             entry.internalAcceptanceItems,
+          ),
+          clientFunctionalityItems: seedCatalogFunctionalityItems(
+            entry.name,
+            entry.clientFunctionalityItems ?? [],
           ),
         }));
         setCatalog(withSeeds);
@@ -117,6 +123,7 @@ export function SpecificationCatalogSettings() {
       const withSeeds: SpecificationCatalogItem = {
         ...created,
         internalAcceptanceItems: seedCatalogAcceptanceItems(created.name, []),
+        clientFunctionalityItems: seedCatalogFunctionalityItems(created.name, []),
       };
       setCatalog((current) => [...current, withSeeds]);
       setDrafts((current) => ({ ...current, [created.id]: withSeeds }));
@@ -178,7 +185,18 @@ export function SpecificationCatalogSettings() {
         catalogId,
         normalizedItems,
       );
-      const merged = { ...updatedMeta, internalAcceptanceItems: updatedAcceptance.internalAcceptanceItems };
+      const normalizedFunctionality = withFunctionalityItemPositions(
+        draft.clientFunctionalityItems.map((item) => ({ ...item, position: 0 })),
+      );
+      const updatedFunctionality = await saveSpecificationCatalogFunctionalityItems(
+        catalogId,
+        normalizedFunctionality,
+      );
+      const merged = {
+        ...updatedMeta,
+        internalAcceptanceItems: updatedAcceptance.internalAcceptanceItems,
+        clientFunctionalityItems: updatedFunctionality.clientFunctionalityItems,
+      };
       setCatalog((current) => current.map((entry) => (entry.id === catalogId ? merged : entry)));
       setDrafts((current) => ({ ...current, [catalogId]: merged }));
       setMessage(`Zapisano „${merged.name}”.`);
@@ -250,7 +268,8 @@ export function SpecificationCatalogSettings() {
                     <div>
                       <p className="font-medium text-foreground">{draft.name}</p>
                       <p className="text-xs text-muted">
-                        {draft.internalAcceptanceItems.length} punktów odbioru wewnętrznego
+                        {draft.internalAcceptanceItems.length} punktów odbioru wewnętrznego ·{" "}
+                        {draft.clientFunctionalityItems.length} pytań ankiety klienta
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">

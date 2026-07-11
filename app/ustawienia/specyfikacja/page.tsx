@@ -10,8 +10,8 @@ export default function SpecificationCatalogSettingsPage() {
     <>
       <PageHeader
         eyebrow="Ustawienia"
-        title="Katalog specyfikacji i odbiór wewnętrzny"
-        description="Pozycje konfiguratora specyfikacji projektu oraz checklisty QA przypisane do każdej z nich."
+        title="Katalog specyfikacji, odbiór wewnętrzny i ankieta klienta"
+        description="Pozycje konfiguratora specyfikacji projektu, checklisty QA oraz pytania ankiety funkcjonalności dla klienta."
         action={
           <Button variant="secondary" asChild>
             <Link href="/ustawienia">Wróć do ustawień</Link>

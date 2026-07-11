@@ -6,6 +6,7 @@ import {
   Briefcase,
   Cable,
   ClipboardCheck,
+  ClipboardList,
   FileEdit,
   FileText,
   FolderOpen,
@@ -27,6 +28,7 @@ import { ProjectChangeRequestsPanel } from "@/components/dashboard/project-chang
 import { ProjectSatisfactionPanel } from "@/components/dashboard/project-satisfaction-panel";
 import { ProjectSatisfactionSummaryCard } from "@/components/dashboard/project-satisfaction-summary-card";
 import { ProjectSystemCredentialsPanel } from "@/components/dashboard/project-system-credentials-panel";
+import { ProjectFunctionalitySurveyPanel, FunctionalitySurveyClientEmbed } from "@/components/client-functionality/project-functionality-survey-panel";
 import { ProjectSpecificationPanel } from "@/components/dashboard/project-specification-panel";
 import { ProjectTradesPanel } from "@/components/dashboard/project-trades-panel";
 import { StageSatisfactionPrompt } from "@/components/dashboard/stage-satisfaction-prompt";
@@ -104,6 +106,7 @@ export type ClientDashboardTab =
   | "offers"
   | "inspections"
   | "specification"
+  | "functionality-survey"
   | "trades"
   | "satisfaction"
   | "notes"
@@ -127,6 +130,7 @@ const PUBLIC_CLIENT_TAB_CONFIG: Array<{
   { id: "offers", label: "Oferty", icon: Receipt },
   { id: "inspections", label: "Przeglądy", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
+  { id: "functionality-survey", label: "Ankieta funkcji", icon: ClipboardList },
   { id: "trades", label: "Branże", icon: HardHat },
   { id: "notes", label: "Notatki", icon: StickyNote },
   { id: "documentation", label: "Dokumentacja", icon: FolderOpen },
@@ -148,6 +152,7 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "offers", label: "Oferty", icon: Receipt },
   { id: "inspections", label: "Przeglądy", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
+  { id: "functionality-survey", label: "Ankieta funkcji", icon: ClipboardList },
   { id: "trades", label: "Branże", icon: HardHat },
   { id: "notes", label: "Notatki", icon: StickyNote },
   { id: "documentation", label: "Dokumentacja", icon: FolderOpen },
@@ -617,6 +622,7 @@ export function ClientDashboardView({
     if (tab.id === "changes" && !enableChangeRequests) return false;
     if (tab.id === "offers" && !enableOffers) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
+    if (tab.id === "functionality-survey" && !enableSpecification) return false;
     if (tab.id === "trades" && !enableTrades) return false;
     if (tab.id === "notes" && !enableMeetingNotes) return false;
     if (tab.id === "satisfaction" && !enableSatisfaction) return false;
@@ -631,6 +637,7 @@ export function ClientDashboardView({
     if (tab.id === "changes" && !enableChangeRequests) return false;
     if (tab.id === "offers" && !enableOffers) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
+    if (tab.id === "functionality-survey" && !enableSpecification) return false;
     if (tab.id === "trades" && !enableTrades) return false;
     if (tab.id === "notes" && !enableMeetingNotes) return false;
     if (tab.id === "satisfaction" && !enableSatisfaction) return false;
@@ -1018,6 +1025,21 @@ export function ClientDashboardView({
     );
   }
 
+  function renderFunctionalitySurveyPanel() {
+    return (
+      <div className="rounded-2xl border border-border/80 bg-surface p-4">
+        {readOnly ? (
+          <FunctionalitySurveyClientEmbed
+            projectId={selectedProject.id}
+            publicDashboardToken={publicDashboardToken}
+          />
+        ) : (
+          <ProjectFunctionalitySurveyPanel projectId={selectedProject.id} readOnly={false} />
+        )}
+      </div>
+    );
+  }
+
   function renderTradesPanel() {
     return (
       <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
@@ -1279,6 +1301,8 @@ export function ClientDashboardView({
         return hasClientInspections ? renderInspectionsPanel() : null;
       case "specification":
         return enableSpecification ? renderSpecificationPanel() : null;
+      case "functionality-survey":
+        return enableSpecification ? renderFunctionalitySurveyPanel() : null;
       case "trades":
         return enableTrades ? renderTradesPanel() : null;
       case "notes":

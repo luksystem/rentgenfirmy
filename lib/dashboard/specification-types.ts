@@ -6,6 +6,7 @@ export type SpecificationCatalogItem = {
   position: number;
   isActive: boolean;
   internalAcceptanceItems: import("@/lib/internal-acceptance/template-config").InternalAcceptanceTemplateStaticItem[];
+  clientFunctionalityItems: import("@/lib/client-functionality/types").ClientFunctionalityTemplateItem[];
   createdAt: string;
 };
 
