@@ -1,7 +1,8 @@
 import { formatPartyName } from "@/lib/party/display-name";
 import { getUserDisplayName } from "@/lib/auth/types";
 import { buildClientAddressLine } from "@/lib/dashboard/google-maps";
-import { intakePartyMatchesClient } from "@/lib/service-intake/name-match";
+import { intakePartyMatchesClient, type IntakePartyRecord } from "@/lib/service-intake/name-match";
+import { rowToContact } from "@/lib/supabase/contact-mappers";
 import {
   buildServiceIntakeStatusEmail,
   buildServiceIntakeSubmittedEmail,
@@ -110,20 +111,106 @@ async function fetchServiceRates() {
   };
 }
 
-async function findClientByEmail(email: string) {
+function clientRowToParty(row: {
+  first_name: string | null;
+  last_name: string;
+  location: string;
+}): IntakePartyRecord {
+  return {
+    firstName: row.first_name ?? "",
+    lastName: row.last_name ?? "",
+    location: row.location ?? "",
+  };
+}
+
+async function findClientsByEmail(email: string) {
   const supabase = getSupabaseAdmin();
   const normalized = normalizeEmail(email);
   const { data, error } = await supabase
     .from("clients")
     .select("*")
     .ilike("email", normalized)
-    .limit(5);
+    .limit(20);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return (data ?? []).find((row) => normalizeEmail(row.email ?? "") === normalized) ?? null;
+  return (data ?? []).filter((row) => normalizeEmail(row.email ?? "") === normalized);
+}
+
+async function findContactsByEmail(email: string) {
+  const supabase = getSupabaseAdmin();
+  const normalized = normalizeEmail(email);
+  const { data, error } = await supabase
+    .from("contacts")
+    .select("*")
+    .ilike("email", normalized)
+    .limit(20);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? [])
+    .map(rowToContact)
+    .filter((contact) => normalizeEmail(contact.email) === normalized);
+}
+
+async function fetchClientById(clientId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.from("clients").select("*").eq("id", clientId).maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data ?? null;
+}
+
+async function resolveVerifiedIntakeClient(
+  email: string,
+  party: { firstName: string; lastName: string },
+) {
+  const clients = await findClientsByEmail(email);
+  const contacts = await findContactsByEmail(email);
+
+  for (const client of clients) {
+    if (intakePartyMatchesClient(clientRowToParty(client), party)) {
+      return client;
+    }
+  }
+
+  for (const contact of contacts) {
+    if (
+      !intakePartyMatchesClient(
+        {
+          firstName: contact.firstName,
+          lastName: contact.lastName,
+          location: contact.location,
+        },
+        party,
+      )
+    ) {
+      continue;
+    }
+
+    if (contact.convertedClientId) {
+      const convertedClient = await fetchClientById(contact.convertedClientId);
+      if (convertedClient && normalizeEmail(convertedClient.email ?? "") === normalizeEmail(email)) {
+        return convertedClient;
+      }
+      if (convertedClient) {
+        return convertedClient;
+      }
+    }
+
+    if (clients.length > 0) {
+      return clients[0];
+    }
+  }
+
+  return null;
 }
 
 async function fetchClientProjects(clientId: string) {
@@ -339,20 +426,13 @@ export async function verifyServiceIntakeIdentity(input: {
     return null;
   }
 
-  const client = await findClientByEmail(email);
+  const client = await resolveVerifiedIntakeClient(email, party);
   if (!client) {
     return null;
   }
 
-  const clientParty = {
-    firstName: client.first_name ?? "",
-    lastName: client.last_name ?? "",
-  };
+  const clientParty = clientRowToParty(client);
   const clientDisplayName = formatPartyName(clientParty);
-
-  if (!intakePartyMatchesClient(clientParty, party)) {
-    return null;
-  }
 
   const projects = await fetchClientProjects(client.id);
   const rates = await fetchServiceRates();

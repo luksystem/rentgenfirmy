@@ -1,5 +1,11 @@
 import { formatPartyName } from "@/lib/party/display-name";
 
+export type IntakePartyRecord = {
+  firstName: string;
+  lastName: string;
+  location?: string;
+};
+
 function normalizePersonName(value: string) {
   return value
     .normalize("NFD")
@@ -65,46 +71,63 @@ export function namesMatch(expected: string, provided: string) {
 
 function fieldMatchesClientPart(expected: string, provided: string) {
   const trimmed = provided.trim();
-  if (!trimmed) {
+  if (!trimmed || !expected.trim()) {
     return false;
   }
 
   return namesMatch(expected, trimmed);
 }
 
+function clientSearchableParts(record: IntakePartyRecord) {
+  const parts = new Set<string>();
+  const first = record.firstName.trim();
+  const last = record.lastName.trim();
+  const location = record.location?.trim() ?? "";
+  const full = formatPartyName({ firstName: first, lastName: last });
+
+  for (const value of [first, last, full, location, `${first} ${last}`.trim(), `${last} ${first}`.trim()]) {
+    if (value) {
+      parts.add(value);
+    }
+  }
+
+  for (const token of nameTokens(`${first} ${last} ${location}`.trim())) {
+    parts.add(token);
+  }
+
+  return [...parts];
+}
+
+function providedNameValues(party: { firstName: string; lastName: string }) {
+  const first = party.firstName.trim();
+  const last = party.lastName.trim();
+  const combined = [first, last].filter(Boolean).join(" ").trim();
+
+  return [first, last, combined].filter(Boolean);
+}
+
 /** Wystarczy częściowe dopasowanie imienia lub nazwiska — nie trzeba podawać obu pól. */
 export function intakePartyMatchesClient(
-  client: { firstName: string; lastName: string },
+  client: IntakePartyRecord,
   party: { firstName: string; lastName: string },
 ) {
-  const providedFirst = party.firstName.trim();
-  const providedLast = party.lastName.trim();
-
-  if (!providedFirst && !providedLast) {
+  const providedValues = providedNameValues(party);
+  if (providedValues.length === 0) {
     return false;
   }
 
-  const clientFirst = client.firstName.trim();
-  const clientLast = client.lastName.trim();
-  const clientFull = formatPartyName(client);
-
-  const checks: boolean[] = [];
-
-  if (providedFirst) {
-    checks.push(
-      fieldMatchesClientPart(clientFirst, providedFirst) ||
-        fieldMatchesClientPart(clientLast, providedFirst) ||
-        fieldMatchesClientPart(clientFull, providedFirst),
-    );
+  const searchable = clientSearchableParts(client);
+  if (searchable.length === 0) {
+    return false;
   }
 
-  if (providedLast) {
-    checks.push(
-      fieldMatchesClientPart(clientLast, providedLast) ||
-        fieldMatchesClientPart(clientFirst, providedLast) ||
-        fieldMatchesClientPart(clientFull, providedLast),
-    );
+  for (const provided of providedValues) {
+    for (const expected of searchable) {
+      if (fieldMatchesClientPart(expected, provided)) {
+        return true;
+      }
+    }
   }
 
-  return checks.some(Boolean);
+  return false;
 }

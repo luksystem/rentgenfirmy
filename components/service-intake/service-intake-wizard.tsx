@@ -855,8 +855,7 @@ export function ServiceIntakeWizard() {
               <div>
                 <h2 className="text-lg font-semibold text-foreground">Potwierdź tożsamość</h2>
                 <p className="mt-1 text-sm text-muted">
-                  Podaj imię lub nazwisko powiązane z adresem {email}. Wystarczy częściowe dopasowanie
-                  — np. „Herna” dla „Hernacka”.
+                  Podaj imię lub nazwisko powiązane z adresem {email}. Wystarczy częściowe dopasowanie.
                 </p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
