@@ -30,6 +30,7 @@ import {
   useFunctionalitySurveyStore,
 } from "@/store/project-functionality-survey-store";
 import { formatFunctionalitySurveyError } from "@/lib/client-functionality/format-error";
+import { cn } from "@/lib/utils";
 
 const STATUS_LABELS = {
   draft: "Szkic",
