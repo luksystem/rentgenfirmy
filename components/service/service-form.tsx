@@ -739,7 +739,7 @@ export function ServiceForm({
               </div>
 
               {partyKind === "client" && service.clientId ? (
-                <div className="relative z-20 sm:col-span-2 grid gap-3 overflow-visible rounded-xl border border-border/80 p-3">
+                <div className="relative z-30 sm:col-span-2 grid gap-3 overflow-visible rounded-xl border border-border/80 p-3">
                   {!clientHasProjects ? (
                     <label className="flex items-center gap-2 text-sm">
                       <input
@@ -756,21 +756,26 @@ export function ServiceForm({
                       Oferta bez projektu
                     </label>
                   ) : null}
-                  {clientHasProjects ? (
-                    <ProjectSelectSearchable
-                      key={service.clientId ?? "no-client"}
-                      projects={clientProjects}
-                      clients={clients}
-                      value={service.projectId}
-                      onChange={(projectId) => setService({ ...service, projectId })}
-                      emptyLabel="Wybierz projekt klienta"
-                    />
-                  ) : (
+                  <ProjectSelectSearchable
+                    key={service.clientId ?? "no-client"}
+                    projects={clientProjects}
+                    clients={clients}
+                    value={withoutProject && !clientHasProjects ? null : service.projectId}
+                    disabled={withoutProject && !clientHasProjects}
+                    onChange={(projectId) => {
+                      if (projectId) {
+                        setWithoutProject(false);
+                      }
+                      setService({ ...service, projectId });
+                    }}
+                    emptyLabel="Wybierz projekt klienta"
+                  />
+                  {!clientHasProjects ? (
                     <p className="text-xs text-muted">
                       Ten klient nie ma jeszcze przypisanych projektów — zaznacz „Oferta bez
                       projektu” lub dodaj projekt w module Projekty.
                     </p>
-                  )}
+                  ) : null}
                 </div>
               ) : null}
             </CardContent>

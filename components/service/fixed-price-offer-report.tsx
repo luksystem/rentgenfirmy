@@ -34,11 +34,11 @@ export function FixedPriceOfferReport({
   return (
     <div
       className={cn(
-        "rounded-2xl border text-sm",
+        "min-w-0 max-w-full rounded-2xl border text-sm",
         isClient ? "border-zinc-800 bg-zinc-900/60 text-zinc-100" : "border-border bg-surface",
       )}
     >
-      <div className={cn("border-b px-6 py-5", isClient ? "border-zinc-800" : "border-border/80")}>
+      <div className={cn("border-b px-4 py-5 sm:px-6", isClient ? "border-zinc-800" : "border-border/80")}>
         <p
           className={cn(
             "text-[10px] font-bold uppercase tracking-[0.16em]",
@@ -57,7 +57,7 @@ export function FixedPriceOfferReport({
         </p>
       </div>
 
-      <div className="grid gap-8 px-6 py-6">
+      <div className="grid gap-8 px-4 py-6 sm:px-6">
         <section id="offer-scope" className="scroll-mt-24">
           <h3 className="text-base font-semibold">Zakres prac</h3>
           <div className="mt-3">
@@ -97,65 +97,115 @@ export function FixedPriceOfferReport({
                       Brak aktywnych pozycji w tej tabeli.
                     </p>
                   ) : (
-                    <div
-                      className={cn(
-                        "mt-4 overflow-x-auto rounded-xl border",
-                        isClient ? "border-zinc-700" : "border-border/60",
-                      )}
-                    >
-                      <table className="w-full min-w-[760px] text-left text-sm">
-                        <thead
-                          className={
-                            isClient ? "bg-zinc-950/60 text-zinc-500" : "bg-surface-muted text-muted"
-                          }
-                        >
-                          <tr>
-                            <th className="px-3 py-2">Pozycja</th>
-                            <th className="px-3 py-2">Ilość</th>
-                            <th className="px-3 py-2">J.m.</th>
-                            <th className="px-3 py-2 text-right">Cena netto</th>
-                            <th className="px-3 py-2 text-right">Rabat</th>
-                            <th className="px-3 py-2 text-right">Netto po rabacie</th>
-                          </tr>
-                        </thead>
-                        <tbody
-                          className={cn(
-                            "divide-y",
-                            isClient ? "divide-zinc-800" : "divide-border/50",
-                          )}
-                        >
-                          {activeRows.map((row) => (
-                            <tr key={row.id}>
-                              <td className="px-3 py-2">
-                                <p className="font-medium">{row.name}</p>
-                                {(row.showDescription || table.showProductDescriptions) &&
-                                row.description ? (
-                                  <p
-                                    className={cn(
-                                      "mt-1 text-xs",
-                                      isClient ? "text-zinc-500" : "text-muted",
-                                    )}
-                                  >
-                                    {row.description}
-                                  </p>
-                                ) : null}
-                              </td>
-                              <td className="px-3 py-2 tabular-nums">{row.quantity}</td>
-                              <td className="px-3 py-2">{row.unit}</td>
-                              <td className="px-3 py-2 text-right tabular-nums">
-                                {formatMoney(row.netUnitPrice)}
-                              </td>
-                              <td className="px-3 py-2 text-right tabular-nums">
-                                {row.percentDiscount > 0 ? `${row.percentDiscount}%` : "—"}
-                              </td>
-                              <td className="px-3 py-2 text-right tabular-nums">
-                                {formatMoney(computeFixedPriceRowNetValue(row))}
-                              </td>
+                    <>
+                      <div className="mt-4 grid gap-3 md:hidden">
+                        {activeRows.map((row) => (
+                          <div
+                            key={row.id}
+                            className={cn(
+                              "rounded-xl border px-3 py-3",
+                              isClient ? "border-zinc-700 bg-zinc-950/40" : "border-border/60 bg-surface-muted/20",
+                            )}
+                          >
+                            <p className="font-medium">{row.name}</p>
+                            {(row.showDescription || table.showProductDescriptions) && row.description ? (
+                              <p
+                                className={cn(
+                                  "mt-1 text-xs",
+                                  isClient ? "text-zinc-500" : "text-muted",
+                                )}
+                              >
+                                {row.description}
+                              </p>
+                            ) : null}
+                            <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                              <div>
+                                <dt className={isClient ? "text-zinc-500" : "text-muted"}>Ilość</dt>
+                                <dd className="mt-0.5 tabular-nums">
+                                  {row.quantity} {row.unit}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt className={isClient ? "text-zinc-500" : "text-muted"}>Cena netto</dt>
+                                <dd className="mt-0.5 tabular-nums">{formatMoney(row.netUnitPrice)}</dd>
+                              </div>
+                              <div>
+                                <dt className={isClient ? "text-zinc-500" : "text-muted"}>Rabat</dt>
+                                <dd className="mt-0.5 tabular-nums">
+                                  {row.percentDiscount > 0 ? `${row.percentDiscount}%` : "—"}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt className={isClient ? "text-zinc-500" : "text-muted"}>Netto po rabacie</dt>
+                                <dd className="mt-0.5 tabular-nums font-medium">
+                                  {formatMoney(computeFixedPriceRowNetValue(row))}
+                                </dd>
+                              </div>
+                            </dl>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div
+                        className={cn(
+                          "mt-4 hidden overflow-x-auto rounded-xl border md:block",
+                          isClient ? "border-zinc-700" : "border-border/60",
+                        )}
+                      >
+                        <table className="w-full min-w-[760px] text-left text-sm">
+                          <thead
+                            className={
+                              isClient ? "bg-zinc-950/60 text-zinc-500" : "bg-surface-muted text-muted"
+                            }
+                          >
+                            <tr>
+                              <th className="px-3 py-2">Pozycja</th>
+                              <th className="px-3 py-2">Ilość</th>
+                              <th className="px-3 py-2">J.m.</th>
+                              <th className="px-3 py-2 text-right">Cena netto</th>
+                              <th className="px-3 py-2 text-right">Rabat</th>
+                              <th className="px-3 py-2 text-right">Netto po rabacie</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                          </thead>
+                          <tbody
+                            className={cn(
+                              "divide-y",
+                              isClient ? "divide-zinc-800" : "divide-border/50",
+                            )}
+                          >
+                            {activeRows.map((row) => (
+                              <tr key={row.id}>
+                                <td className="px-3 py-2">
+                                  <p className="font-medium">{row.name}</p>
+                                  {(row.showDescription || table.showProductDescriptions) &&
+                                  row.description ? (
+                                    <p
+                                      className={cn(
+                                        "mt-1 text-xs",
+                                        isClient ? "text-zinc-500" : "text-muted",
+                                      )}
+                                    >
+                                      {row.description}
+                                    </p>
+                                  ) : null}
+                                </td>
+                                <td className="px-3 py-2 tabular-nums">{row.quantity}</td>
+                                <td className="px-3 py-2">{row.unit}</td>
+                                <td className="px-3 py-2 text-right tabular-nums">
+                                  {formatMoney(row.netUnitPrice)}
+                                </td>
+                                <td className="px-3 py-2 text-right tabular-nums">
+                                  {row.percentDiscount > 0 ? `${row.percentDiscount}%` : "—"}
+                                </td>
+                                <td className="px-3 py-2 text-right tabular-nums">
+                                  {formatMoney(computeFixedPriceRowNetValue(row))}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
                   )}
 
                   <div className="mt-3 flex flex-wrap gap-4 text-sm">

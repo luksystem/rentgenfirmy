@@ -188,7 +188,7 @@ export function ClientOfferPage({ token }: { token: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen overflow-x-hidden bg-zinc-950">
       {offer.canRespond ? (
         <div
           className="fixed inset-x-0 top-0 z-50 border-b border-zinc-700/80 bg-zinc-950/98 shadow-lg shadow-black/40 backdrop-blur-md"
@@ -388,7 +388,7 @@ export function ClientOfferPage({ token }: { token: string }) {
           <ClientOptionalItemsSummary items={service.optionalItems} />
         ) : null}
 
-        <div className="min-w-0 max-w-full overflow-hidden">
+        <div className="min-w-0 max-w-full">
           {isFixedPriceEstimate ? (
             <FixedPriceOfferReport
               service={service}

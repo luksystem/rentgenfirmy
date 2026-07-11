@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Search } from "lucide-react";
 import { Field, Input } from "@/components/ui/input";
 import { formatPartyName } from "@/lib/party/display-name";
@@ -12,6 +13,12 @@ function projectSearchText(project: Project, clientsById: Map<string, Client>) {
   const client = project.clientId ? clientsById.get(project.clientId) : null;
   return [project.name, client?.lastName, client?.firstName].filter(Boolean).join(" ").toLowerCase();
 }
+
+type DropdownPosition = {
+  top: number;
+  left: number;
+  width: number;
+};
 
 /** Wyszukiwalny picker projektu — filtruje po nazwie projektu i nazwie klienta (nie tylko lista rozwijana). */
 export function ProjectSelectSearchable({
@@ -35,7 +42,10 @@ export function ProjectSelectSearchable({
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState<DropdownPosition | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
 
   const clientsById = useMemo(() => new Map(clients.map((client) => [client.id, client])), [clients]);
 
@@ -54,13 +64,54 @@ export function ProjectSelectSearchable({
     return sortedProjects.filter((project) => projectSearchText(project, clientsById).includes(needle));
   }, [query, sortedProjects, clientsById]);
 
-  useEffect(() => {
-    if (!open) return;
-    function handlePointerDown(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
+  const updateDropdownPosition = () => {
+    const anchor = anchorRef.current;
+    if (!anchor) {
+      return;
     }
+
+    const rect = anchor.getBoundingClientRect();
+    setDropdownPosition({
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+    });
+  };
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setDropdownPosition(null);
+      return;
+    }
+
+    updateDropdownPosition();
+
+    const handleLayoutChange = () => updateDropdownPosition();
+    window.addEventListener("resize", handleLayoutChange);
+    window.addEventListener("scroll", handleLayoutChange, true);
+
+    return () => {
+      window.removeEventListener("resize", handleLayoutChange);
+      window.removeEventListener("scroll", handleLayoutChange, true);
+    };
+  }, [open, query]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (containerRef.current?.contains(target)) {
+        return;
+      }
+      if (dropdownRef.current?.contains(target)) {
+        return;
+      }
+      setOpen(false);
+    }
+
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [open]);
@@ -81,38 +132,20 @@ export function ProjectSelectSearchable({
     }
   }
 
-  return (
-    <Field label={label} className={cn("overflow-visible", className)}>
-      <div ref={containerRef} className="relative overflow-visible">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <Input
-            value={query}
-            disabled={disabled}
-            placeholder={emptyLabel}
-            className="pr-10"
-            onFocus={() => setOpen(true)}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setOpen(true);
-              if (!event.target.value.trim()) {
-                onChange(null);
-              }
+  const dropdown =
+    open && !disabled && dropdownPosition && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            ref={dropdownRef}
+            style={{
+              position: "fixed",
+              top: dropdownPosition.top,
+              left: dropdownPosition.left,
+              width: dropdownPosition.width,
+              zIndex: 250,
             }}
-          />
-          <button
-            type="button"
-            disabled={disabled}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted hover:bg-surface-muted"
-            onClick={() => setOpen((current) => !current)}
-            aria-label="Rozwiń listę projektów"
+            className="max-h-64 overflow-y-auto rounded-xl border border-border bg-surface-elevated p-1 shadow-card"
           >
-            <ChevronDown className={cn("h-4 w-4 transition", open && "rotate-180")} />
-          </button>
-        </div>
-
-        {open && !disabled ? (
-          <div className="absolute z-[100] mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-border bg-surface-elevated p-1 shadow-card">
             <button
               type="button"
               className="flex w-full rounded-lg px-3 py-2 text-left text-sm text-muted hover:bg-surface-muted"
@@ -147,8 +180,41 @@ export function ProjectSelectSearchable({
                 );
               })
             )}
-          </div>
-        ) : null}
+          </div>,
+          document.body,
+        )
+      : null;
+
+  return (
+    <Field label={label} className={cn("overflow-visible", className)}>
+      <div ref={containerRef} className="relative overflow-visible">
+        <div ref={anchorRef} className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+          <Input
+            value={query}
+            disabled={disabled}
+            placeholder={emptyLabel}
+            className="pr-10"
+            onFocus={() => setOpen(true)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setOpen(true);
+              if (!event.target.value.trim()) {
+                onChange(null);
+              }
+            }}
+          />
+          <button
+            type="button"
+            disabled={disabled}
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted hover:bg-surface-muted"
+            onClick={() => setOpen((current) => !current)}
+            aria-label="Rozwiń listę projektów"
+          >
+            <ChevronDown className={cn("h-4 w-4 transition", open && "rotate-180")} />
+          </button>
+        </div>
+        {dropdown}
       </div>
     </Field>
   );
