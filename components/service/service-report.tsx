@@ -464,12 +464,9 @@ export function ServiceReport({
   variant?: "internal" | "client";
   optionalItemSelection?: ReadonlySet<string>;
 }) {
-  if (service.pricingModel === "fixed_price") {
-    return <FixedPriceOfferReport service={service} variant={variant} />;
-  }
-
   const projects = useAppStore((state) => state.projects);
   const { profile: companyProfile } = useCompanyProfile();
+  const isFixedPrice = service.pricingModel === "fixed_price";
   const resolvedProjectName = resolveProjectLabel(service.projectId, projects, projectName);
   const settled = isServiceSettled(service);
   const meta = getServiceReportDocumentMeta(service);
@@ -512,6 +509,10 @@ export function ServiceReport({
   const handlePrint = useCallback(() => {
     void printServiceReport(service, resolvedProjectName, companyProfile);
   }, [companyProfile, resolvedProjectName, service]);
+
+  if (isFixedPrice) {
+    return <FixedPriceOfferReport service={service} variant={variant} />;
+  }
 
   const detailsTables = (
     <div className="grid gap-8">

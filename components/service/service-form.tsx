@@ -271,7 +271,6 @@ export function ServiceForm({
     () => (isFixedPrice ? QUOTE_STEPS.filter((step) => step.label !== "Stawki") : [...QUOTE_STEPS]),
     [isFixedPrice],
   );
-  const quoteStepCount = quoteSteps.length;
   const lastQuoteStep = isFixedPrice ? 2 : QUOTE_STEPS.length - 1;
   const clientHasProjects = clientProjects.length > 0;
 
