@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Plus, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -12,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { activeContacts, type Contact, type ContactInput } from "@/lib/contacts/types";
+import { ContactForm } from "@/components/contact-form";
 import { formatPartyName } from "@/lib/party/display-name";
 import { sortContactsByLastName } from "@/lib/sort/party-and-project";
 import { cn } from "@/lib/utils";
@@ -29,17 +29,6 @@ type ContactSelectWithCreateProps = {
   allowCreate?: boolean;
   allowManual?: boolean;
 };
-
-const emptyContactInput = (): ContactInput => ({
-  firstName: "",
-  lastName: "",
-  location: "",
-  addressStreet: "",
-  addressCity: "",
-  addressPostalCode: "",
-  email: "",
-  phone: "",
-});
 
 function contactSearchText(contact: Contact) {
   return [contact.firstName, contact.lastName, contact.location, contact.email, contact.phone, contact.addressCity]
@@ -66,7 +55,6 @@ export function ContactSelectWithCreate({
   allowManual = true,
 }: ContactSelectWithCreateProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [newContact, setNewContact] = useState<ContactInput>(emptyContactInput());
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -121,8 +109,8 @@ export function ContactSelectWithCreate({
     }
   }
 
-  async function handleCreateContact() {
-    if (!newContact.lastName.trim()) {
+  async function handleCreateContact(input: ContactInput) {
+    if (!input.lastName.trim()) {
       setError("Nazwisko kontaktu jest wymagane.");
       return;
     }
@@ -131,11 +119,10 @@ export function ContactSelectWithCreate({
     setError(null);
 
     try {
-      const created = await onCreateContact(newContact);
+      const created = await onCreateContact(input);
       onChange(created.id);
       setQuery(contactDisplayName(created));
       setDialogOpen(false);
-      setNewContact(emptyContactInput());
       setOpen(false);
     } catch {
       setError("Nie udało się dodać kontaktu.");
@@ -146,7 +133,6 @@ export function ContactSelectWithCreate({
 
   function openCreateDialog() {
     setOpen(false);
-    setNewContact(emptyContactInput());
     setDialogOpen(true);
   }
 
@@ -236,58 +222,20 @@ export function ContactSelectWithCreate({
       </Field>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nowy kontakt</DialogTitle>
             <DialogDescription>
-              Kontakt zostanie zapisany w module Kontakty i przypisany do tego wpisu.
+              Kontakt może później zostać przekształcony w klienta ręcznie lub po akceptacji oferty.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Imię">
-                <Input
-                  value={newContact.firstName}
-                  onChange={(event) =>
-                    setNewContact({ ...newContact, firstName: event.target.value })
-                  }
-                />
-              </Field>
-              <Field label="Nazwisko">
-                <Input
-                  value={newContact.lastName}
-                  onChange={(event) =>
-                    setNewContact({ ...newContact, lastName: event.target.value })
-                  }
-                />
-              </Field>
-            </div>
-            <Field label="Obiekt / lokalizacja">
-              <Input
-                value={newContact.location}
-                onChange={(event) =>
-                  setNewContact({ ...newContact, location: event.target.value })
-                }
-              />
-            </Field>
-            <Field label="E-mail">
-              <Input
-                type="email"
-                value={newContact.email}
-                onChange={(event) => setNewContact({ ...newContact, email: event.target.value })}
-              />
-            </Field>
-            <Field label="Telefon">
-              <Input
-                value={newContact.phone}
-                onChange={(event) => setNewContact({ ...newContact, phone: event.target.value })}
-              />
-            </Field>
-            {error ? <p className="text-sm text-rose-400">{error}</p> : null}
-            <Button type="button" disabled={isCreating} onClick={() => void handleCreateContact()}>
-              {isCreating ? "Zapisywanie…" : "Dodaj kontakt"}
-            </Button>
-          </div>
+          {error ? <p className="text-sm text-rose-400">{error}</p> : null}
+          <ContactForm
+            contact={null}
+            isSaving={isCreating}
+            onCancel={() => setDialogOpen(false)}
+            onSubmit={handleCreateContact}
+          />
         </DialogContent>
       </Dialog>
     </>

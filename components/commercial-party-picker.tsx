@@ -30,14 +30,29 @@ type CommercialPartyPickerProps = {
   mode?: "default" | "offer";
 };
 
-function PartySnapshotReadonly({ snapshot, label }: { snapshot: ServiceClient; label: string }) {
+function PartySnapshotReadonly({
+  snapshot,
+  label,
+  firstName,
+  lastName,
+}: {
+  snapshot: ServiceClient;
+  label: string;
+  firstName?: string;
+  lastName?: string;
+}) {
   return (
     <div className="grid gap-3 rounded-xl border border-border/80 bg-surface-muted/30 p-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted">Dane {label}</p>
-      <Field label="Imię i nazwisko">
-        <Input value={snapshot.fullName} readOnly />
-      </Field>
-      <Field label="Obiekt / lokalizacja">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Imię">
+          <Input value={firstName ?? ""} readOnly />
+        </Field>
+        <Field label="Nazwisko">
+          <Input value={lastName ?? snapshot.fullName} readOnly />
+        </Field>
+      </div>
+      <Field label="Obiekt / nazwa lokalizacji">
         <Input value={snapshot.location} readOnly />
       </Field>
       <Field label="E-mail">
@@ -100,6 +115,9 @@ export function CommercialPartyPicker({
 
   const linkedId = partyKind === "client" ? clientId : contactId;
   const snapshotLabel = partyKind === "client" ? "klienta" : "kontaktu";
+  const linkedClient = clientId ? clients.find((item) => item.id === clientId) : null;
+  const linkedContact = contactId ? contacts.find((item) => item.id === contactId) : null;
+  const linkedParty = partyKind === "client" ? linkedClient : linkedContact;
 
   return (
     <div className="grid gap-3">
@@ -152,8 +170,21 @@ export function CommercialPartyPicker({
         />
       )}
 
-      {isOfferMode && linkedId ? (
-        <PartySnapshotReadonly snapshot={partySnapshot} label={snapshotLabel} />
+      {isOfferMode ? (
+        linkedId ? (
+          <PartySnapshotReadonly
+            snapshot={partySnapshot}
+            label={snapshotLabel}
+            firstName={linkedParty?.firstName}
+            lastName={linkedParty?.lastName}
+          />
+        ) : (
+          <p className="rounded-xl border border-dashed border-border/80 bg-surface-muted/20 px-3 py-2 text-xs text-muted">
+            {partyKind === "client"
+              ? "Wybierz klienta z listy. Jeśli go nie ma w bazie, przełącz na zakładkę Kontakt i użyj «Dodaj nowy kontakt» u góry listy."
+              : "Wybierz kontakt z listy lub dodaj nowy kontakt u góry listy."}
+          </p>
+        )
       ) : (
         <>
           <Field label={`Imię i nazwisko ${snapshotLabel}`}>

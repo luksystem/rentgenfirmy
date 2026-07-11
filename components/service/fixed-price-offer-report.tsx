@@ -4,8 +4,10 @@ import {
   calculateFixedPriceBreakdown,
   computeFixedPriceRowNetValue,
 } from "@/lib/service/fixed-price";
+import { getServiceReportWorkNote } from "@/lib/service/report-document";
 import type { ServiceRecord } from "@/lib/service/types";
-import { cn, formatMoney } from "@/lib/utils";
+import { cn, formatDate, formatMoney } from "@/lib/utils";
+import { RichHtml } from "@/components/ui/rich-html";
 
 export function FixedPriceOfferReport({
   service,
@@ -18,7 +20,7 @@ export function FixedPriceOfferReport({
     service.fixedPriceTables,
     service.estimateDiscounts,
   );
-
+  const workNote = getServiceReportWorkNote(service, false);
   const isClient = variant === "client";
 
   return (
@@ -42,77 +44,142 @@ export function FixedPriceOfferReport({
           {service.client.fullName}
           {service.client.location ? ` · ${service.client.location}` : ""}
         </p>
+        <p className={cn("mt-2 text-xs", isClient ? "text-zinc-500" : "text-muted")}>
+          Data wyceny: {formatDate(service.updatedAt)}
+        </p>
       </div>
 
-      <div className="grid gap-6 px-6 py-6">
-        {breakdown.tables.map(({ table, netTotal, grossTotal, vatLines }) => {
-          const activeRows = table.rows.filter((row) => row.active && row.name.trim());
+      <div className="grid gap-8 px-6 py-6">
+        <section id="offer-scope" className="scroll-mt-24">
+          <h3 className="text-base font-semibold">Zakres prac</h3>
+          <div className="mt-3">
+            <RichHtml
+              html={workNote}
+              fallback="Brak opisu prac."
+              className={isClient ? "text-zinc-300" : "text-foreground"}
+            />
+          </div>
+        </section>
 
-          return (
-            <section key={table.id} id={`fixed-table-${table.id}`} className="scroll-mt-24">
-              <h3 className="text-base font-semibold">{table.title || "Tabela pozycji"}</h3>
-              {table.description ? (
-                <p className={cn("mt-1 whitespace-pre-wrap", isClient ? "text-zinc-400" : "text-muted")}>
-                  {table.description}
-                </p>
-              ) : null}
+        {breakdown.tables.length === 0 ? (
+          <p className={cn("text-sm", isClient ? "text-zinc-400" : "text-muted")}>
+            Brak zdefiniowanych tabel pozycji w ofercie ryczałtowej.
+          </p>
+        ) : (
+          <section id="offer-tables" className="scroll-mt-24 grid gap-8">
+            {breakdown.tables.map(({ table, netTotal, grossTotal, vatLines }) => {
+            const activeRows = table.rows.filter((row) => row.active && row.name.trim());
 
-              <div className="mt-4 overflow-x-auto rounded-xl border border-border/60">
-                <table className="w-full min-w-[520px] text-left text-sm">
-                  <thead className={isClient ? "bg-zinc-950/60 text-zinc-500" : "bg-surface-muted text-muted"}>
-                    <tr>
-                      <th className="px-3 py-2">Pozycja</th>
-                      <th className="px-3 py-2">Ilość</th>
-                      <th className="px-3 py-2 text-right">Netto</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/50">
-                    {activeRows.map((row) => (
-                      <tr key={row.id}>
-                        <td className="px-3 py-2">
-                          <p className="font-medium">{row.name}</p>
-                          {(row.showDescription || table.showProductDescriptions) && row.description ? (
-                            <p className={cn("mt-1 text-xs", isClient ? "text-zinc-500" : "text-muted")}>
-                              {row.description}
-                            </p>
-                          ) : null}
-                        </td>
-                        <td className="px-3 py-2">
-                          {row.quantity} {row.unit}
-                        </td>
-                        <td className="px-3 py-2 text-right tabular-nums">
-                          {formatMoney(computeFixedPriceRowNetValue(row))}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            return (
+              <div key={table.id} id={`offer-table-${table.id}`}>
+                <h3 className="text-base font-semibold">{table.title || "Tabela pozycji"}</h3>
+                {table.description ? (
+                  <p
+                    className={cn(
+                      "mt-1 whitespace-pre-wrap",
+                      isClient ? "text-zinc-400" : "text-muted",
+                    )}
+                  >
+                    {table.description}
+                  </p>
+                ) : null}
 
-              <div className="mt-3 flex flex-wrap gap-4 text-sm">
-                <span>
-                  Netto tabeli: <strong>{formatMoney(netTotal)}</strong>
-                </span>
-                {vatLines.map((line) => (
-                  <span key={line.vatRate}>
-                    VAT {line.vatRate}%: {formatMoney(line.vatAmount)}
+                {activeRows.length === 0 ? (
+                  <p className={cn("mt-3 text-sm", isClient ? "text-zinc-500" : "text-muted")}>
+                    Brak aktywnych pozycji w tej tabeli.
+                  </p>
+                ) : (
+                  <div
+                    className={cn(
+                      "mt-4 overflow-x-auto rounded-xl border",
+                      isClient ? "border-zinc-700" : "border-border/60",
+                    )}
+                  >
+                    <table className="w-full min-w-[640px] text-left text-sm">
+                      <thead
+                        className={
+                          isClient ? "bg-zinc-950/60 text-zinc-500" : "bg-surface-muted text-muted"
+                        }
+                      >
+                        <tr>
+                          <th className="px-3 py-2">Pozycja</th>
+                          <th className="px-3 py-2">Ilość</th>
+                          <th className="px-3 py-2">J.m.</th>
+                          <th className="px-3 py-2 text-right">Cena netto</th>
+                          <th className="px-3 py-2 text-right">Wartość netto</th>
+                        </tr>
+                      </thead>
+                      <tbody
+                        className={cn(
+                          "divide-y",
+                          isClient ? "divide-zinc-800" : "divide-border/50",
+                        )}
+                      >
+                        {activeRows.map((row) => (
+                          <tr key={row.id}>
+                            <td className="px-3 py-2">
+                              <p className="font-medium">{row.name}</p>
+                              {(row.showDescription || table.showProductDescriptions) &&
+                              row.description ? (
+                                <p
+                                  className={cn(
+                                    "mt-1 text-xs",
+                                    isClient ? "text-zinc-500" : "text-muted",
+                                  )}
+                                >
+                                  {row.description}
+                                </p>
+                              ) : null}
+                            </td>
+                            <td className="px-3 py-2 tabular-nums">{row.quantity}</td>
+                            <td className="px-3 py-2">{row.unit}</td>
+                            <td className="px-3 py-2 text-right tabular-nums">
+                              {formatMoney(row.netUnitPrice)}
+                            </td>
+                            <td className="px-3 py-2 text-right tabular-nums">
+                              {formatMoney(computeFixedPriceRowNetValue(row))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                <div className="mt-3 flex flex-wrap gap-4 text-sm">
+                  <span>
+                    Netto tabeli: <strong>{formatMoney(netTotal)}</strong>
                   </span>
-                ))}
-                <span>
-                  Brutto: <strong>{formatMoney(grossTotal)}</strong>
-                </span>
+                  {vatLines.map((line) => (
+                    <span key={line.vatRate}>
+                      VAT {line.vatRate}%: {formatMoney(line.vatAmount)}
+                    </span>
+                  ))}
+                  <span>
+                    Brutto tabeli: <strong>{formatMoney(grossTotal)}</strong>
+                  </span>
+                </div>
               </div>
-            </section>
-          );
-        })}
+            );
+          })}
+          </section>
+        )}
 
-        <div
+        <section
+          id="offer-summary"
           className={cn(
-            "rounded-xl border px-4 py-4",
+            "scroll-mt-24 rounded-xl border px-4 py-4",
             isClient ? "border-zinc-700 bg-zinc-950/50" : "border-border/80 bg-surface-muted/30",
           )}
         >
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">Podsumowanie</p>
+          <p
+            className={cn(
+              "text-[10px] font-bold uppercase tracking-[0.14em]",
+              isClient ? "text-zinc-500" : "text-muted",
+            )}
+          >
+            Podsumowanie oferty
+          </p>
           <div className="mt-3 grid gap-1 text-sm">
             <p>
               Netto: <span className="font-semibold">{formatMoney(breakdown.netTotal)}</span>
@@ -120,11 +187,9 @@ export function FixedPriceOfferReport({
             <p>
               VAT: <span className="font-semibold">{formatMoney(breakdown.vatTotal)}</span>
             </p>
-            <p className="text-lg font-bold">
-              Brutto: {formatMoney(breakdown.grossTotal)}
-            </p>
+            <p className="text-lg font-bold">Brutto: {formatMoney(breakdown.grossTotal)}</p>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

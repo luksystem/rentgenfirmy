@@ -47,6 +47,7 @@ export function ServiceLineItemsForm({
   onChange,
   showWarrantyHours = false,
   disabled = false,
+  materialsCostMode = "editable",
 }: {
   title: string;
   items: ServiceLineItems;
@@ -55,6 +56,7 @@ export function ServiceLineItemsForm({
   onChange: (items: ServiceLineItems) => void;
   showWarrantyHours?: boolean;
   disabled?: boolean;
+  materialsCostMode?: "editable" | "readonly" | "hidden";
 }) {
   const zone = resolveKilometerZone(items.kilometersOneWay, zoneSettings);
   const trips = Math.max(1, items.tripCount || 1);
@@ -195,17 +197,29 @@ export function ServiceLineItemsForm({
           </p>
         </Field>
 
-        <Field label="Koszt materiałów (PLN)">
-          <NumericInput
-            value={items.materialsCost}
-            onChange={(value) => patch("materialsCost", value)}
-          />
-          <BillableCheckbox
-            label="Do rozliczenia"
-            checked={items.billable.materials}
-            onChange={(v) => patchBillable("materials", v)}
-          />
-        </Field>
+        {materialsCostMode !== "hidden" ? (
+          <Field label="Koszt materiałów (PLN)">
+            {materialsCostMode === "readonly" ? (
+              <p className="rounded-lg border border-border/80 bg-surface-muted/30 px-3 py-2 text-sm tabular-nums">
+                {items.materialsCost.toLocaleString("pl-PL", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                <span className="text-xs text-muted">(suma z pozycji poniżej)</span>
+              </p>
+            ) : (
+              <NumericInput
+                value={items.materialsCost}
+                onChange={(value) => patch("materialsCost", value)}
+              />
+            )}
+            <BillableCheckbox
+              label="Do rozliczenia"
+              checked={items.billable.materials}
+              onChange={(v) => patchBillable("materials", v)}
+            />
+          </Field>
+        ) : null}
       </div>
 
       {showWarrantyHours ? (

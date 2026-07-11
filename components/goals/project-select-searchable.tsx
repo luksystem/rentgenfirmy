@@ -121,7 +121,13 @@ export function ProjectSelectSearchable({
               {emptyLabel}
             </button>
             {filteredProjects.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-muted">Brak wyników dla „{query.trim()}”.</p>
+              <p className="px-3 py-2 text-xs text-muted">
+                {query.trim()
+                  ? `Brak wyników dla „${query.trim()}”.`
+                  : projects.length === 0
+                    ? "Brak projektów do wyboru."
+                    : "Brak projektów pasujących do wyszukiwania."}
+              </p>
             ) : (
               filteredProjects.map((project) => {
                 const client = project.clientId ? clientsById.get(project.clientId) : null;

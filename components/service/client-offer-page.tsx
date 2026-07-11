@@ -18,6 +18,7 @@ import {
   getServiceCombinedBilling,
   getServiceReportDocumentMeta,
 } from "@/lib/service/report-document";
+import { hasActiveFixedPriceRows } from "@/lib/service/fixed-price";
 import { hasOptionalItems } from "@/lib/service/optional-items";
 import type { ServiceRecord } from "@/lib/service/types";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
@@ -35,11 +36,18 @@ type OfferMeta = {
 
 type OfferKind = "estimate" | "settlement";
 
-const SECTION_LINKS = [
+const HOURLY_SECTION_LINKS = [
   { href: "#offer-optional-items", label: "Opcje dodatkowe" },
   { href: "#offer-scope", label: "Zakres prac" },
   { href: "#offer-details", label: "Szczegóły" },
   { href: "#offer-pricing", label: "Wycena" },
+] as const;
+
+const FIXED_PRICE_SECTION_LINKS = [
+  { href: "#offer-optional-items", label: "Opcje dodatkowe" },
+  { href: "#offer-scope", label: "Zakres prac" },
+  { href: "#offer-tables", label: "Pozycje ryczałtu" },
+  { href: "#offer-summary", label: "Podsumowanie" },
 ] as const;
 
 export function ClientOfferPage({ token }: { token: string }) {
@@ -96,9 +104,14 @@ export function ClientOfferPage({ token }: { token: string }) {
   }, [offer?.canRespond, selectedOptionalIds, service]);
 
   const isSettlementView = offerKind === "settlement";
-  const isFixedPriceEstimate = !isSettlementView && service?.pricingModel === "fixed_price";
+  const isFixedPriceEstimate =
+    !isSettlementView &&
+    (service?.pricingModel === "fixed_price" ||
+      hasActiveFixedPriceRows(service?.fixedPriceTables ?? []));
   const showHourlyEstimateBanner =
-    !isSettlementView && service?.pricingModel === "hourly" && offer?.canRespond;
+    !isSettlementView && !isFixedPriceEstimate && offer?.canRespond;
+
+  const sectionLinks = isFixedPriceEstimate ? FIXED_PRICE_SECTION_LINKS : HOURLY_SECTION_LINKS;
 
   const showOptionalPicker = Boolean(
     service && offer?.canRespond && hasOptionalItems(service.optionalItems),
@@ -344,7 +357,7 @@ export function ClientOfferPage({ token }: { token: string }) {
           aria-label="Nawigacja po ofercie"
           className="flex flex-wrap gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-2"
         >
-          {SECTION_LINKS.filter((link) =>
+          {sectionLinks.filter((link) =>
             link.href === "#offer-optional-items"
               ? hasOptionalItems(service.optionalItems)
               : true,

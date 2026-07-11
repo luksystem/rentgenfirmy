@@ -21,6 +21,7 @@ import { NumericInput } from "@/components/ui/numeric-input";
 import { ServiceOptionalItemsForm } from "@/components/service/service-optional-items-form";
 import { ProjectSelectSearchable } from "@/components/goals/project-select-searchable";
 import { ServiceFixedPriceTablesForm } from "@/components/service/service-fixed-price-tables-form";
+import { FixedPriceOfferReport } from "@/components/service/fixed-price-offer-report";
 import { ServiceMaterialItemsForm } from "@/components/service/service-material-items-form";
 import { SettlementOfferPanel } from "@/components/service/settlement-offer-panel";
 import { useServiceDetailAutoRefresh } from "@/lib/hooks/use-service-detail-auto-refresh";
@@ -34,6 +35,7 @@ import {
 import { finalizeAiEstimateOnSettle } from "@/lib/service/finalize-ai-estimate-on-settle";
 import { isServiceSettled } from "@/lib/service/report-document";
 import { syncLineItemsMaterialsCost } from "@/lib/service/material-items";
+import { projectsForClient } from "@/lib/sort/party-and-project";
 import { createServiceFormSnapshot } from "@/lib/service/service-form-snapshot";
 import {
   SERVICE_PRICING_MODELS,
@@ -113,6 +115,27 @@ function initialStep(service: ServiceRecord) {
     return QUOTE_STEPS.length + SETTLEMENT_STEPS.length - 1;
   }
   return 0;
+}
+
+function getNextQuoteStep(step: number, isFixedPrice: boolean) {
+  if (isFixedPrice && step === 0) {
+    return 2;
+  }
+  return step + 1;
+}
+
+function getPrevQuoteStep(step: number, isFixedPrice: boolean) {
+  if (isFixedPrice && step === 2) {
+    return 0;
+  }
+  return step - 1;
+}
+
+function canAdvanceQuoteStep(step: number, isFixedPrice: boolean) {
+  if (isFixedPrice) {
+    return step < 2;
+  }
+  return step < QUOTE_STEPS.length - 1;
 }
 
 function ViewSwitchBar({
@@ -241,12 +264,7 @@ export function ServiceForm({
   const isFixedPrice = service.pricingModel === "fixed_price";
   const isOfferLocked = service.clientOffer.status === "accepted";
   const clientProjects = useMemo(
-    () =>
-      service.clientId
-        ? projects
-            .filter((project) => project.clientId === service.clientId)
-            .sort((a, b) => a.name.localeCompare(b.name, "pl"))
-        : [],
+    () => projectsForClient(projects, service.clientId),
     [projects, service.clientId],
   );
   const quoteSteps = useMemo(
@@ -254,6 +272,7 @@ export function ServiceForm({
     [isFixedPrice],
   );
   const quoteStepCount = quoteSteps.length;
+  const lastQuoteStep = isFixedPrice ? 2 : QUOTE_STEPS.length - 1;
   const clientHasProjects = clientProjects.length > 0;
 
   useEffect(() => {
@@ -307,6 +326,31 @@ export function ServiceForm({
 
     setStep(nextStep);
     setErrors([]);
+  }
+
+  function goToNextStep() {
+    if (mainTab === "quote") {
+      if (isFixedPrice && step === 2) {
+        return;
+      }
+      if (!isFixedPrice && step === QUOTE_STEPS.length - 1) {
+        goToStep(QUOTE_STEPS.length);
+        return;
+      }
+      goToStep(getNextQuoteStep(step, isFixedPrice));
+      return;
+    }
+
+    goToStep(step + 1);
+  }
+
+  function goToPrevStep() {
+    if (mainTab === "quote") {
+      goToStep(getPrevQuoteStep(step, isFixedPrice));
+      return;
+    }
+
+    goToStep(step - 1);
   }
 
   async function persistOffer(redirectTo?: string | null) {
@@ -684,38 +728,49 @@ export function ServiceForm({
                 />
               </div>
 
-              <div className="sm:col-span-2 grid gap-3 rounded-xl border border-border/80 p-3">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={withoutProject}
-                    disabled={partyKind === "client" && clientHasProjects}
-                    onChange={(e) => {
-                      setWithoutProject(e.target.checked);
-                      if (e.target.checked) {
-                        setService({ ...service, projectId: null });
-                      }
-                    }}
-                    className="h-4 w-4 rounded border-border"
-                  />
-                  Oferta bez projektu
-                </label>
-                {partyKind === "client" && clientHasProjects && withoutProject ? (
-                  <p className="text-xs text-amber-200">
-                    Ten klient ma przypisane projekty — wybierz projekt z listy poniżej.
-                  </p>
-                ) : null}
-                {!withoutProject ? (
-                  <ProjectSelectSearchable
-                    projects={clientProjects}
-                    clients={clients}
-                    value={service.projectId}
-                    onChange={(projectId) => setService({ ...service, projectId })}
-                    emptyLabel="Wybierz projekt klienta"
-                    disabled={!service.clientId}
-                  />
-                ) : null}
-              </div>
+              {partyKind === "client" ? (
+                <div className="sm:col-span-2 grid gap-3 rounded-xl border border-border/80 p-3">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={withoutProject}
+                      disabled={clientHasProjects}
+                      onChange={(e) => {
+                        setWithoutProject(e.target.checked);
+                        if (e.target.checked) {
+                          setService({ ...service, projectId: null });
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-border"
+                    />
+                    Oferta bez projektu
+                  </label>
+                  {clientHasProjects && withoutProject ? (
+                    <p className="text-xs text-amber-200">
+                      Ten klient ma przypisane projekty — wybierz projekt z listy poniżej.
+                    </p>
+                  ) : null}
+                  {!withoutProject ? (
+                    <>
+                      <ProjectSelectSearchable
+                        key={service.clientId ?? "no-client"}
+                        projects={clientProjects}
+                        clients={clients}
+                        value={service.projectId}
+                        onChange={(projectId) => setService({ ...service, projectId })}
+                        emptyLabel="Wybierz projekt klienta"
+                        disabled={!service.clientId}
+                      />
+                      {service.clientId && clientProjects.length === 0 ? (
+                        <p className="text-xs text-muted">
+                          Ten klient nie ma jeszcze przypisanych projektów — zaznacz „Oferta bez
+                          projektu” lub dodaj projekt w module Projekty.
+                        </p>
+                      ) : null}
+                    </>
+                  ) : null}
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         ) : null}
@@ -800,6 +855,7 @@ export function ServiceForm({
                     setService({ ...service, estimate: syncLineItemsMaterialsCost(estimate) })
                   }
                   disabled={isOfferLocked}
+                  materialsCostMode="readonly"
                 />
                 </div>
                 <div className="mt-6 border-t border-border/60 pt-6">
@@ -868,6 +924,7 @@ export function ServiceForm({
                 onChange={(actual) =>
                   setService({ ...service, actual: syncLineItemsMaterialsCost(actual) })
                 }
+                materialsCostMode="readonly"
               />
               <div className="mt-6 border-t border-border/60 pt-6">
                 <ServiceMaterialItemsForm
@@ -1012,7 +1069,11 @@ export function ServiceForm({
               </CardContent>
             </Card>
             <div className="min-w-0 max-w-full overflow-hidden">
-              <ServiceReport service={service} projectName={projectName} />
+              {isFixedPrice ? (
+                <FixedPriceOfferReport service={service} variant="internal" />
+              ) : (
+                <ServiceReport service={service} projectName={projectName} />
+              )}
             </div>
           </div>
         ) : null}
@@ -1020,13 +1081,14 @@ export function ServiceForm({
         <div className="sticky bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] z-20 min-w-0 max-w-full rounded-xl border border-border/80 bg-background/95 p-2 backdrop-blur sm:p-3 xl:bottom-0">
           <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
             {(mainTab === "quote" || mainTab === "settlement") && step > 0 ? (
-              <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => goToStep(step - 1)}>
+              <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={goToPrevStep}>
                 Wstecz
               </Button>
             ) : null}
-            {(mainTab === "quote" || mainTab === "settlement") &&
-            step < QUOTE_STEPS.length + SETTLEMENT_STEPS.length - 1 ? (
-              <Button type="button" className="w-full sm:w-auto" onClick={() => goToStep(step + 1)}>
+            {(mainTab === "quote" && canAdvanceQuoteStep(step, isFixedPrice)) ||
+            (mainTab === "settlement" &&
+              step < QUOTE_STEPS.length + SETTLEMENT_STEPS.length - 1) ? (
+              <Button type="button" className="w-full sm:w-auto" onClick={goToNextStep}>
                 Dalej
               </Button>
             ) : null}
@@ -1038,7 +1100,7 @@ export function ServiceForm({
                 {isSaving ? "Zapisywanie…" : "Rozlicz i zapisz"}
               </Button>
             ) : null}
-            {mainTab === "quote" && step === quoteStepCount - 1 ? (
+            {mainTab === "quote" && step === lastQuoteStep ? (
               <Button type="button" variant="outline" className="col-span-2 w-full sm:col-span-1 sm:w-auto" onClick={() => switchMainTab("client")}>
                 Wyślij klientowi →
               </Button>

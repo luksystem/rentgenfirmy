@@ -1,5 +1,7 @@
+import type { ServiceMaterialItem } from "@/lib/service/types";
 import type { ServiceWorkTimeBreakdown } from "@/lib/service/report-document";
 import type { ServiceWarrantyHours } from "@/lib/service/types";
+import { sumMaterialItemsCost } from "@/lib/service/material-items";
 import { formatCount, formatHours, formatMoney } from "@/lib/utils";
 
 export type ReportCompareRow = {
@@ -90,6 +92,59 @@ export function buildMaterialsCompareRows(
       group: true,
     },
   ];
+}
+
+export function buildMaterialItemsCompareRows(
+  predictedItems: ServiceMaterialItem[],
+  actualItems: ServiceMaterialItem[],
+): ReportCompareRow[] {
+  const predictedVisible = predictedItems.filter(
+    (item) => item.billable && (item.title.trim() || item.netAmount > 0),
+  );
+  const actualById = new Map(actualItems.map((item) => [item.id, item]));
+
+  if (predictedVisible.length === 0) {
+    const actualVisible = actualItems.filter(
+      (item) => item.billable && (item.title.trim() || item.netAmount > 0),
+    );
+    if (actualVisible.length === 0) {
+      return buildMaterialsCompareRows(0, 0);
+    }
+
+    return [
+      ...actualVisible.map((item) => ({
+        label: item.title.trim() || "Materiał",
+        predicted: "—",
+        settled: formatMoney(item.netAmount),
+        detail: true,
+      })),
+      {
+        label: "Suma materiałów",
+        predicted: "—",
+        settled: formatMoney(sumMaterialItemsCost(actualVisible)),
+        group: true,
+      },
+    ];
+  }
+
+  const rows: ReportCompareRow[] = predictedVisible.map((item) => {
+    const actual = actualById.get(item.id);
+    return {
+      label: item.title.trim() || "Materiał",
+      predicted: formatMoney(item.netAmount),
+      settled: actual ? formatMoney(actual.netAmount) : "—",
+      detail: true,
+    };
+  });
+
+  rows.push({
+    label: "Suma materiałów",
+    predicted: formatMoney(sumMaterialItemsCost(predictedVisible)),
+    settled: formatMoney(sumMaterialItemsCost(actualItems)),
+    group: true,
+  });
+
+  return rows;
 }
 
 export function buildAccommodationsCompareRows(

@@ -31,11 +31,14 @@ import {
 } from "@/lib/service/optional-items";
 import {
   buildAccommodationsCompareRows,
+  buildMaterialItemsCompareRows,
   buildMaterialsCompareRows,
   buildTripCountCompareRows,
   buildWorkTimeCompareRows,
   type ReportCompareRow,
 } from "@/lib/service/report-compare-rows";
+import { hasMaterialItems } from "@/lib/service/material-items";
+import { FixedPriceOfferReport } from "@/components/service/fixed-price-offer-report";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
 import type { ServiceCostBreakdown, ServiceDiscounts, ServiceRecord } from "@/lib/service/types";
 import { useAppStore } from "@/store/app-store";
@@ -461,6 +464,10 @@ export function ServiceReport({
   variant?: "internal" | "client";
   optionalItemSelection?: ReadonlySet<string>;
 }) {
+  if (service.pricingModel === "fixed_price") {
+    return <FixedPriceOfferReport service={service} variant={variant} />;
+  }
+
   const projects = useAppStore((state) => state.projects);
   const { profile: companyProfile } = useCompanyProfile();
   const resolvedProjectName = resolveProjectLabel(service.projectId, projects, projectName);
@@ -486,10 +493,13 @@ export function ServiceReport({
       meta.showDetailedCosts,
     ),
   ];
-  const materialsRows = buildMaterialsCompareRows(
-    quantitySections.predicted.materialsCost,
-    quantitySections.actual.materialsCost,
-  );
+  const materialsRows =
+    hasMaterialItems(service.estimate.materialItems) || hasMaterialItems(service.actual.materialItems)
+      ? buildMaterialItemsCompareRows(service.estimate.materialItems, service.actual.materialItems)
+      : buildMaterialsCompareRows(
+          quantitySections.predicted.materialsCost,
+          quantitySections.actual.materialsCost,
+        );
   const accommodationsRows = buildAccommodationsCompareRows(
     quantitySections.predicted.accommodations,
     quantitySections.actual.accommodations,
