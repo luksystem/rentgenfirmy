@@ -15,8 +15,8 @@ import {
   generateTasksFromResponses,
   mergeAiTasksIntoSurvey,
 } from "@/lib/client-functionality/generator";
-import { normalizeCatalogFunctionalityItems } from "@/lib/client-functionality/catalog-seeds";
-import { normalizeCatalogAcceptanceItems } from "@/lib/internal-acceptance/catalog-seeds";
+import { normalizeCatalogFunctionalityItems, seedCatalogFunctionalityItems } from "@/lib/client-functionality/catalog-seeds";
+import { normalizeCatalogAcceptanceItems, seedCatalogAcceptanceItems } from "@/lib/internal-acceptance/catalog-seeds";
 import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
 import type { SpecificationCatalogItem } from "@/lib/dashboard/specification-types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -183,8 +183,11 @@ async function fetchSpecificationCatalogServer(): Promise<SpecificationCatalogIt
         description: catalogRow.description,
         position: catalogRow.position,
         isActive: catalogRow.is_active,
-        internalAcceptanceItems: normalizeCatalogAcceptanceItems(catalogRow.internal_acceptance_items),
-        clientFunctionalityItems: [],
+        internalAcceptanceItems: seedCatalogAcceptanceItems(
+          catalogRow.name,
+          normalizeCatalogAcceptanceItems(catalogRow.internal_acceptance_items),
+        ),
+        clientFunctionalityItems: seedCatalogFunctionalityItems(catalogRow.name, []),
         createdAt: catalogRow.created_at,
       };
     });
@@ -213,8 +216,14 @@ async function fetchSpecificationCatalogServer(): Promise<SpecificationCatalogIt
       description: catalogRow.description,
       position: catalogRow.position,
       isActive: catalogRow.is_active,
-      internalAcceptanceItems: normalizeCatalogAcceptanceItems(catalogRow.internal_acceptance_items),
-      clientFunctionalityItems: normalizeCatalogFunctionalityItems(catalogRow.client_functionality_items),
+      internalAcceptanceItems: seedCatalogAcceptanceItems(
+        catalogRow.name,
+        normalizeCatalogAcceptanceItems(catalogRow.internal_acceptance_items),
+      ),
+      clientFunctionalityItems: seedCatalogFunctionalityItems(
+        catalogRow.name,
+        normalizeCatalogFunctionalityItems(catalogRow.client_functionality_items),
+      ),
       createdAt: catalogRow.created_at,
     };
   });

@@ -4,8 +4,8 @@ import type {
   SpecificationCatalogInput,
   SpecificationCatalogItem,
 } from "@/lib/dashboard/specification-types";
-import { normalizeCatalogFunctionalityItems } from "@/lib/client-functionality/catalog-seeds";
-import { normalizeCatalogAcceptanceItems } from "@/lib/internal-acceptance/catalog-seeds";
+import { normalizeCatalogFunctionalityItems, seedCatalogFunctionalityItems } from "@/lib/client-functionality/catalog-seeds";
+import { normalizeCatalogAcceptanceItems, seedCatalogAcceptanceItems } from "@/lib/internal-acceptance/catalog-seeds";
 import { getSupabase } from "@/lib/supabase/client";
 
 type CatalogRow = {
@@ -41,8 +41,14 @@ function rowToCatalog(row: CatalogRow): SpecificationCatalogItem {
     description: row.description,
     position: row.position,
     isActive: row.is_active,
-    internalAcceptanceItems: normalizeCatalogAcceptanceItems(row.internal_acceptance_items),
-    clientFunctionalityItems: normalizeCatalogFunctionalityItems(row.client_functionality_items),
+    internalAcceptanceItems: seedCatalogAcceptanceItems(
+      row.name,
+      normalizeCatalogAcceptanceItems(row.internal_acceptance_items),
+    ),
+    clientFunctionalityItems: seedCatalogFunctionalityItems(
+      row.name,
+      normalizeCatalogFunctionalityItems(row.client_functionality_items),
+    ),
     createdAt: row.created_at,
   };
 }

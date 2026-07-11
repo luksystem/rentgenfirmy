@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import type { SpecificationCatalogItem } from "@/lib/dashboard/specification-types";
+import type { ClientFunctionalityTemplateItem } from "@/lib/client-functionality/types";
 import { seedCatalogAcceptanceItems } from "@/lib/internal-acceptance/catalog-seeds";
 import { seedCatalogFunctionalityItems, withFunctionalityItemPositions } from "@/lib/client-functionality/catalog-seeds";
 import { INTERNAL_ACCEPTANCE_CATEGORIES } from "@/lib/internal-acceptance/types";
@@ -20,6 +21,7 @@ import {
   saveSpecificationCatalogAcceptanceItems,
   saveSpecificationCatalogFunctionalityItems,
   updateSpecificationCatalogItem,
+  invalidateSpecificationCatalogCache,
 } from "@/lib/supabase/project-specification-repository";
 
 const PRIORITY_OPTIONS = [
@@ -27,6 +29,18 @@ const PRIORITY_OPTIONS = [
   { value: "normal", label: "Normalny" },
   { value: "optional", label: "Opcjonalny" },
 ] as const;
+
+function moveFunctionalityItem(
+  items: ClientFunctionalityTemplateItem[],
+  index: number,
+  direction: "up" | "down",
+) {
+  const targetIndex = direction === "up" ? index - 1 : index + 1;
+  if (targetIndex < 0 || targetIndex >= items.length) return items;
+  const next = [...items];
+  [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+  return withFunctionalityItemPositions(next);
+}
 
 function moveItem(items: InternalAcceptanceTemplateStaticItem[], index: number, direction: "up" | "down") {
   const targetIndex = direction === "up" ? index - 1 : index + 1;
@@ -75,6 +89,56 @@ export function SpecificationCatalogSettings() {
       ...current,
       [id]: { ...current[id], ...patch },
     }));
+  }
+
+  function updateFunctionalityItem(
+    catalogId: string,
+    itemId: string,
+    patch: Partial<ClientFunctionalityTemplateItem>,
+  ) {
+    const draft = drafts[catalogId];
+    if (!draft) return;
+    updateDraft(catalogId, {
+      clientFunctionalityItems: draft.clientFunctionalityItems.map((item) =>
+        item.id === itemId ? { ...item, ...patch } : item,
+      ),
+    });
+  }
+
+  function restoreFunctionalitySeed(catalogId: string) {
+    const draft = drafts[catalogId];
+    if (!draft) return;
+    updateDraft(catalogId, {
+      clientFunctionalityItems: seedCatalogFunctionalityItems(draft.name, []),
+    });
+    setMessage(`Przywrócono domyślne pytania ankiety dla „${draft.name}”. Kliknij Zapisz, aby trwale zapisać w bazie.`);
+  }
+
+  async function handleSaveAllDefaultFunctionalityQuestions() {
+    setMessage(null);
+    setError(null);
+    let saved = 0;
+    try {
+      for (const entry of catalog) {
+        const draft = drafts[entry.id] ?? entry;
+        const seeded = seedCatalogFunctionalityItems(draft.name, draft.clientFunctionalityItems);
+        if (!seeded.length) continue;
+        await saveSpecificationCatalogFunctionalityItems(entry.id, seeded);
+        saved += 1;
+        setDrafts((current) => ({
+          ...current,
+          [entry.id]: { ...draft, clientFunctionalityItems: seeded },
+        }));
+      }
+      invalidateSpecificationCatalogCache();
+      setMessage(
+        saved
+          ? `Zapisano domyślne pytania ankiety dla ${saved} pozycji katalogu.`
+          : "Brak pozycji z domyślnymi pytaniami — sprawdź nazwy w katalogu.",
+      );
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Błąd zapisu pytań ankiety.");
+    }
   }
 
   function updateAcceptanceItem(
@@ -223,12 +287,17 @@ export function SpecificationCatalogSettings() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted">
           Te pozycje widoczne są w konfiguratorze specyfikacji projektu. Dla każdej zdefiniuj checklistę
-          odbioru wewnętrznego — gdy klient ma np. Oświetlenie w specyfikacji, punkty trafią do Quality Gate.
+          odbioru wewnętrznego oraz pytania ankiety funkcjonalności dla klienta przed wdrożeniem.
         </p>
+        <div className="flex flex-wrap gap-2">
         <Button type="button" disabled={creating} onClick={() => void handleAddCatalogItem()}>
           <Plus className="mr-1.5 h-4 w-4" />
           {creating ? "Dodawanie…" : "Dodaj pozycję katalogu"}
         </Button>
+        <Button type="button" variant="secondary" onClick={() => void handleSaveAllDefaultFunctionalityQuestions()}>
+          Zapisz domyślne pytania ankiety do bazy
+        </Button>
+        </div>
       </div>
 
       {catalog.length === 0 ? (
@@ -279,7 +348,7 @@ export function SpecificationCatalogSettings() {
                         variant="secondary"
                         onClick={() => setExpandedId(expanded ? null : entry.id)}
                       >
-                        {expanded ? "Zwiń" : "Edytuj pozycję i odbiór"}
+                        {expanded ? "Zwiń" : "Edytuj pozycję, odbiór i ankietę"}
                       </Button>
                       <Button
                         type="button"
@@ -479,6 +548,99 @@ export function SpecificationCatalogSettings() {
                           <Plus className="mr-1.5 h-3.5 w-3.5" />
                           Dodaj punkt odbioru
                         </Button>
+                      </div>
+
+                      <div className="grid gap-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-medium text-foreground">Pytania ankiety klienta</p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => restoreFunctionalitySeed(entry.id)}
+                          >
+                            Przywróć domyślne pytania
+                          </Button>
+                        </div>
+                        {draft.clientFunctionalityItems.length === 0 ? (
+                          <p className="rounded-xl border border-dashed border-border/70 bg-surface/30 p-3 text-sm text-muted">
+                            Brak pytań dla nazwy „{draft.name}”. Domyślne pytania działają tylko gdy nazwa
+                            pozycji katalogu dokładnie pasuje (np. „Oświetlenie”, „Rolety / żaluzje”). Kliknij
+                            „Przywróć domyślne pytania” lub zmień nazwę pozycji.
+                          </p>
+                        ) : null}
+                        {draft.clientFunctionalityItems.map((item, index) => (
+                          <div
+                            key={item.id}
+                            className="grid gap-3 rounded-xl border border-violet-200/50 bg-violet-50/30 p-3 dark:border-violet-900/40 dark:bg-violet-950/20"
+                          >
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                disabled={index === 0}
+                                onClick={() =>
+                                  updateDraft(entry.id, {
+                                    clientFunctionalityItems: moveFunctionalityItem(
+                                      draft.clientFunctionalityItems,
+                                      index,
+                                      "up",
+                                    ),
+                                  })
+                                }
+                              >
+                                <ArrowUp className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                disabled={index === draft.clientFunctionalityItems.length - 1}
+                                onClick={() =>
+                                  updateDraft(entry.id, {
+                                    clientFunctionalityItems: moveFunctionalityItem(
+                                      draft.clientFunctionalityItems,
+                                      index,
+                                      "down",
+                                    ),
+                                  })
+                                }
+                              >
+                                <ArrowDown className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                            <Field label={`Pytanie ${index + 1}`}>
+                              <Input
+                                value={item.title}
+                                onChange={(event) =>
+                                  updateFunctionalityItem(entry.id, item.id, { title: event.target.value })
+                                }
+                              />
+                            </Field>
+                            {item.description ? (
+                              <p className="text-xs text-muted">{item.description}</p>
+                            ) : null}
+                            <div className="text-sm">
+                              <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">
+                                Opcje odpowiedzi
+                              </p>
+                              <ul className="grid gap-1">
+                                {item.options.map((option) => (
+                                  <li
+                                    key={option.id}
+                                    className="rounded-lg border border-border/60 bg-background/70 px-3 py-2 text-sm"
+                                  >
+                                    {option.label}
+                                    {option.generatesTask ? (
+                                      <span className="ml-2 text-xs text-violet-600">→ zadanie wdrożeniowe</span>
+                                    ) : null}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        ))}
                       </div>
 
                       <Button
