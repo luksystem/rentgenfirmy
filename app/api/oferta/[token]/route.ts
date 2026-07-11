@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import {
-  fetchServiceByClientOfferToken,
+  fetchServiceByPublicOfferToken,
   getPublicOfferView,
+  getPublicSettlementView,
   isPublicOfferAvailable,
   isPublicOfferQuestionAvailable,
+  isPublicSettlementOfferAvailable,
+  isPublicSettlementOfferQuestionAvailable,
   respondToClientOffer,
+  respondToSettlementOffer,
 } from "@/lib/supabase/client-offer-repository";
 import { isOfferExpired } from "@/lib/service/offer-validity";
 import {
@@ -13,9 +17,6 @@ import {
   type ClientOfferAction,
 } from "@/lib/service/client-offer";
 
-// Ta trasa musi zawsze czytać aktualny stan oferty z bazy — link publiczny
-// pozostaje "żywy" aż do akceptacji klienta, więc wyłączamy jakiekolwiek
-// cache'owanie (Next.js / CDN / przeglądarka).
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
@@ -37,22 +38,32 @@ export async function GET(
   const { token } = await context.params;
 
   try {
-    const service = await fetchServiceByClientOfferToken(token);
-    if (!service) {
+    const lookup = await fetchServiceByPublicOfferToken(token);
+    if (!lookup) {
       return NextResponse.json(
         { error: "Nie znaleziono oferty." },
         { status: 404, headers: NO_STORE_HEADERS },
       );
     }
 
-    const offer = service.clientOffer;
-    const canRespond = isPublicOfferAvailable(service);
-    const canAskQuestion = isPublicOfferQuestionAvailable(service);
+    const { kind, service } = lookup;
+    const offer = kind === "settlement" ? service.settlementOffer : service.clientOffer;
+    const canRespond =
+      kind === "settlement"
+        ? isPublicSettlementOfferAvailable(service)
+        : isPublicOfferAvailable(service);
+    const canAskQuestion =
+      kind === "settlement"
+        ? isPublicSettlementOfferQuestionAvailable(service)
+        : isPublicOfferQuestionAvailable(service);
     const expired = isOfferExpired(offer.expiresAt);
+    const publicService =
+      kind === "settlement" ? getPublicSettlementView(service) : getPublicOfferView(service);
 
     return NextResponse.json(
       {
-        service: getPublicOfferView(service),
+        kind,
+        service: publicService,
         offer: {
           status: offer.status,
           statusLabel: offer.status ? CLIENT_OFFER_STATUS_LABELS[offer.status] : null,
@@ -99,11 +110,22 @@ export async function POST(
   }
 
   try {
-    const service = await respondToClientOffer(token, action, message, selectedOptionalItemIds);
-    const offer = service.clientOffer;
+    const lookup = await fetchServiceByPublicOfferToken(token);
+    if (!lookup) {
+      return NextResponse.json({ error: "Nie znaleziono oferty." }, { status: 404 });
+    }
+
+    const service =
+      lookup.kind === "settlement"
+        ? await respondToSettlementOffer(token, action, message)
+        : await respondToClientOffer(token, action, message, selectedOptionalItemIds);
+
+    const offer =
+      lookup.kind === "settlement" ? service.settlementOffer : service.clientOffer;
 
     return NextResponse.json({
       ok: true,
+      kind: lookup.kind,
       offer: {
         status: offer.status,
         statusLabel: offer.status ? CLIENT_OFFER_STATUS_LABELS[offer.status] : null,

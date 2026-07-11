@@ -1,3 +1,4 @@
+import { formatPartyName } from "@/lib/party/display-name";
 import type {
   AgreementActionPendingCounts,
   AgreementHubEntry,
@@ -69,7 +70,7 @@ async function loadAgreementHubSnapshotFromDb(): Promise<AgreementHubSnapshot> {
   if (clientIds.length) {
     const { data: clients, error: clientsError } = await supabase
       .from("clients")
-      .select("id, full_name")
+      .select("id, first_name, last_name")
       .in("id", clientIds);
 
     if (clientsError) {
@@ -77,7 +78,13 @@ async function loadAgreementHubSnapshotFromDb(): Promise<AgreementHubSnapshot> {
     }
 
     for (const client of clients ?? []) {
-      clientNames.set(client.id as string, (client.full_name as string)?.trim() || "Klient");
+      clientNames.set(
+        client.id as string,
+        formatPartyName({
+          firstName: (client.first_name as string | undefined) ?? "",
+          lastName: (client.last_name as string | undefined) ?? "",
+        }) || "Klient",
+      );
     }
   }
 

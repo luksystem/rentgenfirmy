@@ -53,20 +53,30 @@ function makeService(
     | "clientOffer"
     | "clientOfferHistory"
     | "clientOfferAcceptedDocument"
+    | "settlementOffer"
+    | "settlementOfferHistory"
+    | "settlementOfferAcceptedDocument"
     | "aiEstimate"
     | "optionalItems"
     | "intakeReference"
     | "reviewedAt"
+    | "pricingModel"
+    | "fixedPriceTables"
   > & {
     id: string;
     createdAt: string;
     clientOffer?: ServiceRecord["clientOffer"];
     clientOfferHistory?: ServiceRecord["clientOfferHistory"];
     clientOfferAcceptedDocument?: ServiceRecord["clientOfferAcceptedDocument"];
+    settlementOffer?: ServiceRecord["settlementOffer"];
+    settlementOfferHistory?: ServiceRecord["settlementOfferHistory"];
+    settlementOfferAcceptedDocument?: ServiceRecord["settlementOfferAcceptedDocument"];
     aiEstimate?: ServiceRecord["aiEstimate"];
     optionalItems?: ServiceRecord["optionalItems"];
     intakeReference?: ServiceRecord["intakeReference"];
     reviewedAt?: ServiceRecord["reviewedAt"];
+    pricingModel?: ServiceRecord["pricingModel"];
+    fixedPriceTables?: ServiceRecord["fixedPriceTables"];
   },
 ): ServiceRecord {
   const emptyOffer: ServiceRecord["clientOffer"] = {
@@ -80,10 +90,15 @@ function makeService(
 
   return {
     ...partial,
+    pricingModel: partial.pricingModel ?? "hourly",
+    fixedPriceTables: partial.fixedPriceTables ?? [],
     optionalItems: partial.optionalItems ?? [],
     clientOffer: partial.clientOffer ?? emptyOffer,
     clientOfferHistory: partial.clientOfferHistory ?? [],
     clientOfferAcceptedDocument: partial.clientOfferAcceptedDocument ?? null,
+    settlementOffer: partial.settlementOffer ?? { ...emptyOffer },
+    settlementOfferHistory: partial.settlementOfferHistory ?? [],
+    settlementOfferAcceptedDocument: partial.settlementOfferAcceptedDocument ?? null,
     aiEstimate: partial.aiEstimate ?? null,
     intakeReference: partial.intakeReference ?? null,
     reviewedAt: partial.reviewedAt ?? null,
@@ -108,6 +123,11 @@ export function createSampleServices(): ServiceRecord[] {
       | "optionalItems"
       | "intakeReference"
       | "reviewedAt"
+      | "pricingModel"
+      | "fixedPriceTables"
+      | "settlementOffer"
+      | "settlementOfferHistory"
+      | "settlementOfferAcceptedDocument"
     >
   > = [
     {

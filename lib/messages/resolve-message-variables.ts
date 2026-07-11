@@ -1,4 +1,5 @@
 import { getUserDisplayName } from "@/lib/auth/types";
+import { formatPartyName } from "@/lib/party/display-name";
 import { absoluteAppUrl, getAppBaseUrl } from "@/lib/messages/app-url";
 import type { SmsRuleTrigger } from "@/lib/sms/sms-rules";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -22,13 +23,18 @@ async function fetchClientFields(
 ) {
   const { data } = await supabase
     .from("clients")
-    .select("phone, full_name, email, location")
+    .select("phone, first_name, last_name, email, location")
     .eq("id", clientId)
     .maybeSingle();
 
+  const firstName = data?.first_name?.trim() ?? "";
+  const lastName = data?.last_name?.trim() ?? "";
+
   return {
     phone: data?.phone?.trim() ?? "",
-    fullName: data?.full_name?.trim() ?? "",
+    firstName,
+    lastName,
+    fullName: formatPartyName({ firstName, lastName }),
     email: data?.email?.trim() ?? "",
     location: data?.location?.trim() ?? "",
   };
@@ -155,6 +161,8 @@ export async function resolveMessageTemplateVariables(
   if (context.clientId) {
     const client = await fetchClientFields(supabase, context.clientId);
     phone ||= client.phone;
+    firstName ||= client.firstName;
+    lastName ||= client.lastName;
     fullName ||= client.fullName;
     email ||= client.email;
     location ||= client.location;

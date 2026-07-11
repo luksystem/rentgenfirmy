@@ -34,7 +34,7 @@ export function filterContacts(contacts: Contact[], filters: ContactListFilters)
     }
 
     if (nameQuery) {
-      const nameHaystack = [contact.fullName, contact.externalId, contact.location]
+      const nameHaystack = [contact.firstName, contact.lastName, contact.externalId, contact.location]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();

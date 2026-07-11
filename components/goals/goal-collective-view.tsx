@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Loader2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/input";
+import { formatPartyName } from "@/lib/party/display-name";
 import { fetchAllGoals } from "@/lib/supabase/goal-repository";
 import {
   GOAL_LEVEL_LABELS,
@@ -72,7 +73,11 @@ export function GoalCollectiveView({
     [projects, contextProjectId],
   );
   const contextClientName = useMemo(
-    () => (contextClientId ? clients.find((entry) => entry.id === contextClientId)?.fullName ?? null : null),
+    () => {
+      if (!contextClientId) return null;
+      const client = clients.find((entry) => entry.id === contextClientId);
+      return client ? formatPartyName(client) : null;
+    },
     [clients, contextClientId],
   );
 

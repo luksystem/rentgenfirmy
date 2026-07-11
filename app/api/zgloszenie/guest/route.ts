@@ -6,18 +6,29 @@ export async function POST(request: Request) {
     const body = (await request.json()) as {
       sessionToken?: string;
       email?: string;
+      firstName?: string;
+      lastName?: string;
       fullName?: string;
     };
 
     const email = body.email?.trim().toLowerCase() ?? "";
+    const firstName = body.firstName?.trim() ?? "";
+    const lastName = body.lastName?.trim() ?? "";
     const fullName = body.fullName?.trim() ?? "";
     const sessionToken = body.sessionToken?.trim() ?? "";
+    const hasName = Boolean(lastName || fullName);
 
-    if (!sessionToken || !email || !fullName) {
+    if (!sessionToken || !email || !hasName) {
       return NextResponse.json({ error: "Uzupełnij wszystkie pola." }, { status: 400 });
     }
 
-    const result = await createGuestIntakeSession({ sessionToken, email, fullName });
+    const result = await createGuestIntakeSession({
+      sessionToken,
+      email,
+      firstName,
+      lastName,
+      fullName,
+    });
 
     return NextResponse.json({
       ok: true,

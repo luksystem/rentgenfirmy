@@ -1,4 +1,5 @@
 import { hasBillableLineItem } from "@/lib/service/calculate-service-cost";
+import { hasActiveFixedPriceRows } from "@/lib/service/fixed-price";
 import type { ServiceRecord } from "@/lib/service/types";
 
 export function validateService(service: ServiceRecord): string[] {
@@ -10,6 +11,10 @@ export function validateService(service: ServiceRecord): string[] {
 
   if (!service.serviceType) {
     errors.push("Typ serwisu jest wymagany.");
+  }
+
+  if (!service.clientId && !service.contactId) {
+    errors.push("Wybierz klienta lub kontakt z listy.");
   }
 
   if (!service.client.fullName.trim()) {
@@ -24,7 +29,11 @@ export function validateService(service: ServiceRecord): string[] {
     errors.push("Podaj e-mail lub telefon klienta.");
   }
 
-  if (!hasBillableLineItem(service.estimate) && !hasBillableLineItem(service.actual)) {
+  if (service.pricingModel === "fixed_price") {
+    if (!hasActiveFixedPriceRows(service.fixedPriceTables)) {
+      errors.push("Dodaj przynajmniej jedną aktywną pozycję w tabeli fixed price.");
+    }
+  } else if (!hasBillableLineItem(service.estimate) && !hasBillableLineItem(service.actual)) {
     const hasOptional = service.optionalItems.some(
       (item) => item.title.trim() && item.netAmount > 0,
     );

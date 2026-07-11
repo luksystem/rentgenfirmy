@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import type { ProjectTelemetrySnapshot } from "@/lib/integrations/types";
+import { formatPartyName } from "@/lib/party/display-name";
 import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
 import { clientHasGeocodableAddress, formatClientAddress, buildClientGeocodeFingerprint } from "@/lib/clients/client-location";
@@ -92,7 +93,7 @@ function ClientMapPopup({
   return (
     <div className="min-w-[220px] max-w-[280px] text-sm text-foreground">
       <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600">Smart Home / BMS</p>
-      <p className="mt-1 text-base font-semibold leading-snug">{client.fullName}</p>
+      <p className="mt-1 text-base font-semibold leading-snug">{formatPartyName(client)}</p>
       {address ? <p className="mt-1 text-xs leading-relaxed text-muted">{address}</p> : null}
 
       {client.phone || client.email ? (
@@ -408,7 +409,7 @@ export function ClientsMapView({ clients }: { clients: Client[] }) {
               <ul className="mt-2 grid gap-1 text-xs text-muted">
                 {notFoundClients.map((client) => (
                   <li key={client.id}>
-                    {client.fullName} — {formatClientAddress(client) || client.location || "brak adresu"}
+                    {formatPartyName(client)} — {formatClientAddress(client) || client.location || "brak adresu"}
                   </li>
                 ))}
               </ul>
@@ -421,7 +422,7 @@ export function ClientsMapView({ clients }: { clients: Client[] }) {
                 {missingAddressClients.map((client) => (
                   <li key={client.id}>
                     <Link href={`/przestrzenie/klient/${client.id}`} className="hover:text-foreground">
-                      {client.fullName}
+                      {formatPartyName(client)}
                     </Link>
                   </li>
                 ))}

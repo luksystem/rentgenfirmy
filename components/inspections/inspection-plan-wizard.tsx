@@ -21,6 +21,7 @@ import {
 } from "@/lib/inspections/types";
 import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
+import { formatPartyName } from "@/lib/party/display-name";
 import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -240,7 +241,7 @@ export function InspectionPlanWizard({
             Zaplanuj przeglądy
           </DialogTitle>
           <DialogDescription>
-            {client?.fullName ?? "Klient"} — cykliczne przeglądy trafią na tablicę „Wstępnie
+            {client ? formatPartyName(client) : "Klient"} — cykliczne przeglądy trafią na tablicę „Wstępnie
             zaplanowane”.
           </DialogDescription>
         </DialogHeader>

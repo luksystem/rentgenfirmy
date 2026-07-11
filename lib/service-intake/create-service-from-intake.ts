@@ -1,3 +1,4 @@
+import { partyToServiceClientName } from "@/lib/party/display-name";
 import type { ServiceAiEstimateRecord } from "@/lib/service/ai-estimate-types";
 import type { ServiceIntakeWorkPreference } from "@/lib/service-intake/types";
 import { defaultClientOfferExpiry } from "@/lib/service/offer-validity";
@@ -87,7 +88,7 @@ export async function createServiceFromIntakePreliminaryAcceptance(input: {
     clientId: input.clientId,
     contactId: null,
     client: {
-      fullName: client.fullName || input.contactFullName,
+      fullName: partyToServiceClientName(client) || input.contactFullName.trim(),
       location: client.location,
       email: client.email || input.contactEmail,
       phone: client.phone || input.contactPhone || "",
@@ -113,6 +114,18 @@ export async function createServiceFromIntakePreliminaryAcceptance(input: {
     },
     clientOfferHistory: [],
     clientOfferAcceptedDocument: null,
+    pricingModel: "hourly",
+    fixedPriceTables: [],
+    settlementOffer: {
+      token: null,
+      expiresAt: defaultClientOfferExpiry(),
+      status: null,
+      message: null,
+      respondedAt: null,
+      lastClientMessage: null,
+    },
+    settlementOfferHistory: [],
+    settlementOfferAcceptedDocument: null,
     aiEstimate: {
       ...input.aiEstimateRecord,
       appliedAt: now,

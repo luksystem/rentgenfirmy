@@ -1,3 +1,4 @@
+import { formatPartyName } from "@/lib/party/display-name";
 import { getUserDisplayName } from "@/lib/auth/types";
 import { buildClientAddressLine } from "@/lib/dashboard/google-maps";
 import {
@@ -145,12 +146,13 @@ export async function listInspections(input?: {
     clientIds.length
       ? supabase
           .from("clients")
-          .select("id, full_name, address_street, address_city, address_postal_code, location")
+          .select("id, first_name, last_name, address_street, address_city, address_postal_code, location")
           .in("id", clientIds)
       : Promise.resolve({
           data: [] as Array<{
             id: string;
-            full_name: string;
+            first_name: string;
+            last_name: string;
             address_street: string | null;
             address_city: string | null;
             address_postal_code: string | null;
@@ -162,7 +164,12 @@ export async function listInspections(input?: {
       : Promise.resolve({ data: [] as Array<{ id: string; name: string }> }),
   ]);
 
-  const clientMap = new Map((clients ?? []).map((row) => [row.id, row.full_name]));
+  const clientMap = new Map(
+    (clients ?? []).map((row) => [
+      row.id,
+      formatPartyName({ firstName: row.first_name ?? "", lastName: row.last_name }),
+    ]),
+  );
   const clientAddressMap = new Map(
     (clients ?? []).map((row) => [
       row.id,
@@ -201,7 +208,7 @@ export async function getInspectionById(id: string): Promise<InspectionRecord | 
     await Promise.all([
       supabase
         .from("clients")
-        .select("full_name, address_street, address_city, address_postal_code, location")
+        .select("first_name, last_name, address_street, address_city, address_postal_code, location")
         .eq("id", data.client_id)
         .maybeSingle(),
       data.project_id
@@ -220,7 +227,12 @@ export async function getInspectionById(id: string): Promise<InspectionRecord | 
     ]);
 
   const record = rowToInspection(data, {
-    clientName: client?.full_name ?? null,
+    clientName: client
+      ? formatPartyName({
+          firstName: client.first_name ?? "",
+          lastName: client.last_name ?? "",
+        })
+      : null,
     clientAddress: client
       ? buildClientAddressLine({
           addressStreet: client.address_street ?? "",

@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { formatPartyName } from "@/lib/party/display-name";
 import { isContactConverted, isContactUnhandled, type Contact, type ContactInput } from "@/lib/contacts/types";
 import { cn, formatDateTime } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
@@ -96,7 +97,7 @@ export function ContactsTable({ contacts }: { contacts: Contact[] }) {
   async function handleConvert(contact: Contact) {
     if (
       !window.confirm(
-        `Przekształcić kontakt „${contact.fullName}” w klienta? Pojawi się w sekcji Klienci.`,
+        `Przekształcić kontakt „${formatPartyName(contact)}” w klienta? Pojawi się w sekcji Klienci.`,
       )
     ) {
       return;
@@ -127,7 +128,8 @@ export function ContactsTable({ contacts }: { contacts: Contact[] }) {
           <table className="w-full min-w-[860px] text-left text-sm">
             <thead className="bg-surface-muted text-xs uppercase tracking-wide text-muted">
               <tr>
-                <th className="px-4 py-3">Kontakt</th>
+                <th className="px-4 py-3">Imię</th>
+                <th className="px-4 py-3">Nazwisko</th>
                 <th className="px-4 py-3">Lokalizacja</th>
                 <th className="px-4 py-3">Dane kontaktowe</th>
                 <th className="px-4 py-3">Status</th>
@@ -137,7 +139,7 @@ export function ContactsTable({ contacts }: { contacts: Contact[] }) {
             <tbody className="divide-y divide-border/60">
               {contacts.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted">
+                  <td colSpan={6} className="px-4 py-8 text-center text-muted">
                     Brak kontaktów pasujących do filtrów.
                   </td>
                 </tr>
@@ -154,9 +156,10 @@ export function ContactsTable({ contacts }: { contacts: Contact[] }) {
                         unhandled && "bg-emerald-500/5",
                       )}
                     >
+                      <td className="px-4 py-3">{contact.firstName || "—"}</td>
                       <td className="px-4 py-3 font-medium">
                         <span className="inline-flex items-center gap-2">
-                          {contact.fullName || "—"}
+                          {contact.lastName || "—"}
                           {unhandled ? (
                             <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
                               Nowy
@@ -267,7 +270,7 @@ export function ContactsTable({ contacts }: { contacts: Contact[] }) {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Historia kontaktu</DialogTitle>
-            <DialogDescription>{activeContact?.fullName}</DialogDescription>
+            <DialogDescription>{activeContact ? formatPartyName(activeContact) : null}</DialogDescription>
           </DialogHeader>
           <div className="grid max-h-[420px] gap-3 overflow-y-auto">
             {(activeContact?.history ?? []).length === 0 ? (

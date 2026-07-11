@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { formatPartyName } from "@/lib/party/display-name";
 import type { GoalAssistantDraft } from "@/lib/ai/goal-project-assistant";
 import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
 import {
@@ -123,7 +124,7 @@ export function GoalSettingAssistant() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectName: project.name,
-          clientName: client?.fullName ?? null,
+          clientName: client ? formatPartyName(client) : null,
           projectType: project.type,
           stageTitle,
           stageDescription,
@@ -235,7 +236,7 @@ export function GoalSettingAssistant() {
                   <div>
                     <p className="text-sm font-semibold text-foreground">
                       {project.name}
-                      {client ? <span className="text-muted"> · {client.fullName}</span> : null}
+                      {client ? <span className="text-muted"> · {formatPartyName(client)}</span> : null}
                     </p>
                     <p className="text-xs text-muted">
                       Aktywny etap: {stageTitle ?? "nieustalony"}

@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { Client, ClientInput } from "@/lib/service/types";
+import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 
 type DialogMode = "create" | "edit" | null;
@@ -89,7 +90,8 @@ export function ClientsTable({ clients }: { clients: Client[] }) {
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="bg-surface-muted text-xs uppercase tracking-wide text-muted">
               <tr>
-                <th className="px-4 py-3">Klient</th>
+                <th className="px-4 py-3">Imię</th>
+                <th className="px-4 py-3">Nazwisko</th>
                 <th className="px-4 py-3">Lokalizacja</th>
                 <th className="px-4 py-3">Kontakt</th>
                 <th className="px-4 py-3">ID zewnętrzne</th>
@@ -99,18 +101,34 @@ export function ClientsTable({ clients }: { clients: Client[] }) {
             <tbody className="divide-y divide-border/60">
               {clients.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted">
+                  <td colSpan={6} className="px-4 py-8 text-center text-muted">
                     Brak klientów pasujących do filtrów.
                   </td>
                 </tr>
               ) : (
-                clients.map((client) => (
+                clients.map((client) => {
+                  const hasProjects = projects.some((project) => project.clientId === client.id);
+
+                  return (
                   <tr
                     key={client.id}
-                    className="cursor-pointer hover:bg-surface-muted/60"
+                    className={cn(
+                      "cursor-pointer hover:bg-surface-muted/60",
+                      !hasProjects && "bg-amber-500/8 hover:bg-amber-500/12",
+                    )}
                     onClick={() => openClientSpace(client.id)}
                   >
-                    <td className="px-4 py-3 font-medium">{client.fullName || "—"}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span>{client.firstName || "—"}</span>
+                        {!hasProjects ? (
+                          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+                            Brak projektu
+                          </span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 font-medium">{client.lastName || "—"}</td>
                     <td className="px-4 py-3">{client.location || "—"}</td>
                     <td className="px-4 py-3">
                       {[client.email, client.phone].filter(Boolean).join(" · ") || "—"}
@@ -151,7 +169,8 @@ export function ClientsTable({ clients }: { clients: Client[] }) {
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

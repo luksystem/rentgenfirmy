@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 
+import { splitPartyFullName } from "@/lib/party/display-name";
+
 type IntakeSessionPayload = {
   kind: "session";
   email: string;
@@ -10,14 +12,18 @@ type IntakeVerifiedPayload = {
   kind: "verified";
   email: string;
   clientId: string;
-  fullName: string;
+  firstName: string;
+  lastName: string;
+  fullName?: string;
   exp: number;
 };
 
 type IntakeGuestPayload = {
   kind: "guest";
   email: string;
-  fullName: string;
+  firstName: string;
+  lastName: string;
+  fullName?: string;
   exp: number;
 };
 
@@ -94,25 +100,60 @@ export function readIntakeSessionToken(token: string) {
   return payload;
 }
 
+function normalizeGuestOrVerifiedNames(payload: {
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+}) {
+  if (payload.firstName !== undefined || payload.lastName !== undefined) {
+    return {
+      firstName: payload.firstName?.trim() ?? "",
+      lastName: payload.lastName?.trim() ?? "",
+    };
+  }
+
+  return splitPartyFullName(payload.fullName ?? "");
+}
+
+export function intakeTokenFullName(payload: {
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+}) {
+  const { firstName, lastName } = normalizeGuestOrVerifiedNames(payload);
+  return [firstName, lastName].filter(Boolean).join(" ").trim();
+}
+
 export function createIntakeVerifiedToken(input: {
   email: string;
   clientId: string;
-  fullName: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
 }) {
+  const { firstName, lastName } = normalizeGuestOrVerifiedNames(input);
   return signPayload({
     kind: "verified",
     email: input.email.trim().toLowerCase(),
     clientId: input.clientId,
-    fullName: input.fullName.trim(),
+    firstName,
+    lastName,
     exp: Date.now() + VERIFIED_TTL_MS,
   });
 }
 
-export function createIntakeGuestToken(input: { email: string; fullName: string }) {
+export function createIntakeGuestToken(input: {
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+}) {
+  const { firstName, lastName } = normalizeGuestOrVerifiedNames(input);
   return signPayload({
     kind: "guest",
     email: input.email.trim().toLowerCase(),
-    fullName: input.fullName.trim(),
+    firstName,
+    lastName,
     exp: Date.now() + VERIFIED_TTL_MS,
   });
 }
@@ -122,7 +163,8 @@ export function readIntakeGuestToken(token: string) {
   if (!payload || payload.kind !== "guest") {
     return null;
   }
-  return payload;
+  const { firstName, lastName } = normalizeGuestOrVerifiedNames(payload);
+  return { ...payload, firstName, lastName, fullName: intakeTokenFullName(payload) };
 }
 
 export function readIntakeAuthToken(
@@ -146,5 +188,6 @@ export function readIntakeVerifiedToken(token: string) {
   if (!payload || payload.kind !== "verified") {
     return null;
   }
-  return payload;
+  const { firstName, lastName } = normalizeGuestOrVerifiedNames(payload);
+  return { ...payload, firstName, lastName, fullName: intakeTokenFullName(payload) };
 }

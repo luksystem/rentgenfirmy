@@ -96,7 +96,7 @@ export async function POST(request: Request) {
 
       const formattedAddress = formatGuestContactAddress(contactAddress);
       const client = buildGuestServiceClient({
-        fullName: auth.fullName,
+        fullName: auth.fullName || [auth.firstName, auth.lastName].filter(Boolean).join(" "),
         email: auth.email,
         phone: body.contactPhone?.trim() ?? "",
         address: contactAddress,

@@ -12,7 +12,7 @@ export async function fetchContacts(): Promise<Contact[]> {
   const { data, error } = await supabase
     .from("contacts")
     .select("*")
-    .order("full_name", { ascending: true });
+    .order("last_name", { ascending: true });
 
   if (error) {
     throw new Error(error.message);

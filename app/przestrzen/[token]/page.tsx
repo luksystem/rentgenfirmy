@@ -14,6 +14,7 @@ import type { ProjectDashboardContent } from "@/lib/dashboard/content-types";
 import type { DashboardPublicAccessInfo } from "@/lib/dashboard/types";
 import type { DashboardSpace } from "@/lib/dashboard/types";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
+import { formatPartyName } from "@/lib/party/display-name";
 import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
 
@@ -434,7 +435,7 @@ function PublicDashboardPageContent() {
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
             Dashboard klienta
           </p>
-          <h1 className="mt-2 text-2xl font-semibold text-foreground">{client.fullName}</h1>
+          <h1 className="mt-2 text-2xl font-semibold text-foreground">{formatPartyName(client)}</h1>
           <p className="mt-1 text-sm text-muted">Wspólna przestrzeń projektu — widok dla klienta.</p>
         </div>
 
@@ -469,7 +470,7 @@ function PublicDashboardPageContent() {
           showPublicLink={false}
           readOnly
           enableContent={features.content}
-          clientAuthorName={client.fullName}
+          clientAuthorName={formatPartyName(client)}
           enableAgreements={features.agreements}
           enableChangeRequests={features.changeRequests}
           enableOffers={features.offers}

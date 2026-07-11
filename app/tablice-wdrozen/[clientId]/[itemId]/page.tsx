@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
 import { findProcessItemInTemplate } from "@/lib/process/template-lookup";
 import { filterHubEntriesByClient, useKanbanCacheStore } from "@/store/kanban-cache-store";
+import { formatPartyName } from "@/lib/party/display-name";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useProcessStore } from "@/store/process-store";
@@ -42,7 +43,8 @@ export default function KanbanHubBoardPage() {
     if (clientId === "__none__") {
       return "Bez klienta";
     }
-    return clients.find((client) => client.id === clientId)?.fullName ?? "Klient";
+    const client = clients.find((entry) => entry.id === clientId);
+    return client ? formatPartyName(client) : "Klient";
   }, [clientId, clients]);
 
   const templateItem = useMemo(() => {

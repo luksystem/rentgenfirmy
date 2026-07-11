@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { calculateServiceCost } from "@/lib/service/calculate-service-cost";
+import { calculateFixedPriceBreakdown } from "@/lib/service/fixed-price";
 import { DEFAULT_SERVICE_SETTINGS } from "@/lib/service/defaults";
 import { defaultClientOfferExpiry } from "@/lib/service/offer-validity";
 import {
@@ -40,6 +41,34 @@ type ServiceStore = {
 };
 
 export function buildServiceCosts(service: ServiceRecord) {
+  if (service.pricingModel === "fixed_price") {
+    const estimateBreakdown = calculateFixedPriceBreakdown(
+      service.fixedPriceTables,
+      service.estimateDiscounts,
+    );
+    const estimate = {
+      kilometerZone: 0,
+      suggestedCarHoursFromZone: 0,
+      categories: {
+        car: 0,
+        carHours: 0,
+        labor: estimateBreakdown.netTotal,
+        materials: 0,
+        accommodations: 0,
+      },
+      subtotalBeforeDiscount: estimateBreakdown.netTotal,
+      percentDiscountAmount: 0,
+      materialsPercentDiscountAmount: 0,
+      totalDiscountAmount: 0,
+      totalDiscountPercentOfSubtotal: 0,
+      netTotal: estimateBreakdown.netTotal,
+      vatAmount: estimateBreakdown.vatTotal,
+      grossTotal: estimateBreakdown.grossTotal,
+    };
+
+    return { estimate, actual: estimate };
+  }
+
   const estimate = calculateServiceCost(
     service.estimate,
     service.rates,
@@ -230,6 +259,18 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
       },
       clientOfferHistory: [],
       clientOfferAcceptedDocument: null,
+      settlementOffer: {
+        token: null,
+        expiresAt: defaultClientOfferExpiry(),
+        status: null,
+        message: null,
+        respondedAt: null,
+        lastClientMessage: null,
+      },
+      settlementOfferHistory: [],
+      settlementOfferAcceptedDocument: null,
+      pricingModel: "hourly",
+      fixedPriceTables: [],
       aiEstimate: null,
       intakeReference: null,
       reviewedAt: null,
@@ -311,6 +352,18 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
       },
       clientOfferHistory: [],
       clientOfferAcceptedDocument: null,
+      settlementOffer: {
+        token: null,
+        expiresAt: defaultClientOfferExpiry(),
+        status: null,
+        message: null,
+        respondedAt: null,
+        lastClientMessage: null,
+      },
+      settlementOfferHistory: [],
+      settlementOfferAcceptedDocument: null,
+      pricingModel: "hourly",
+      fixedPriceTables: [],
       aiEstimate: null,
       intakeReference: null,
       reviewedAt: null,

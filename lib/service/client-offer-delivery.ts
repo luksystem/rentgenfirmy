@@ -2,26 +2,38 @@ import type { ServiceRecord } from "@/lib/service/types";
 import { formatDate } from "@/lib/utils";
 import { getClientOfferUrl } from "@/lib/service/client-offer";
 
-export function buildClientOfferEmailContent(service: ServiceRecord, offerUrl: string) {
+export function buildClientOfferEmailContent(
+  service: ServiceRecord,
+  offerUrl: string,
+  kind: "estimate" | "settlement" = "estimate",
+) {
   const clientName = service.client.fullName.trim() || "Państwo";
   const location = service.client.location.trim();
 
-  const subject = `Wycena serwisu: ${service.title}`;
+  const subject =
+    kind === "settlement"
+      ? `Rozliczenie serwisu: ${service.title}`
+      : `Wycena serwisu: ${service.title}`;
+
+  const intro =
+    kind === "settlement"
+      ? "Przesyłamy rozliczenie kosztów rzeczywistych po wykonaniu prac do Państwa akceptacji."
+      : "Przesyłamy wycenę serwisu do Państwa akceptacji.";
 
   const body = [
     `Dzień dobry ${clientName},`,
     "",
-    "Przesyłamy wycenę serwisu do Państwa akceptacji.",
+    intro,
     "",
     `Zgłoszenie: ${service.title}`,
     location ? `Obiekt: ${location}` : null,
     "",
-    "Link do oferty (ważny 30 dni):",
+    kind === "settlement" ? "Link do rozliczenia (ważny 30 dni):" : "Link do oferty (ważny 30 dni):",
     offerUrl,
     "",
     "W linku można:",
-    "• zaakceptować ofertę,",
-    "• odrzucić ofertę,",
+    kind === "settlement" ? "• zaakceptować rozliczenie," : "• zaakceptować ofertę,",
+    kind === "settlement" ? "• odrzucić rozliczenie," : "• odrzucić ofertę,",
     "• wysłać wiadomość z prośbą o negocjację.",
     "",
     "Pozdrawiamy,",
@@ -33,13 +45,17 @@ export function buildClientOfferEmailContent(service: ServiceRecord, offerUrl: s
   return { subject, body };
 }
 
-export function buildClientOfferMailtoUrl(service: ServiceRecord, offerUrl: string) {
+export function buildClientOfferMailtoUrl(
+  service: ServiceRecord,
+  offerUrl: string,
+  kind: "estimate" | "settlement" = "estimate",
+) {
   const email = service.client.email.trim();
   if (!email) {
     return null;
   }
 
-  const { subject, body } = buildClientOfferEmailContent(service, offerUrl);
+  const { subject, body } = buildClientOfferEmailContent(service, offerUrl, kind);
 
   return `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }

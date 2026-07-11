@@ -1,3 +1,4 @@
+import { formatPartyName } from "@/lib/party/display-name";
 import {
   KANBAN_HUB_NO_CLIENT_ID,
   type KanbanHubBoardEntry,
@@ -89,7 +90,7 @@ async function loadKanbanHubGraphFromDb(): Promise<HubGraph> {
   if (clientIds.length) {
     const { data: clients, error: clientsError } = await supabase
       .from("clients")
-      .select("id, full_name")
+      .select("id, first_name, last_name")
       .in("id", clientIds);
 
     if (clientsError) {
@@ -97,7 +98,13 @@ async function loadKanbanHubGraphFromDb(): Promise<HubGraph> {
     }
 
     for (const client of clients ?? []) {
-      clientNames.set(client.id as string, (client.full_name as string)?.trim() || "Klient");
+      clientNames.set(
+        client.id as string,
+        formatPartyName({
+          firstName: (client.first_name as string | undefined) ?? "",
+          lastName: (client.last_name as string | undefined) ?? "",
+        }) || "Klient",
+      );
     }
   }
 

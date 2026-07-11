@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CommercialPartyPicker, type CommercialPartyKind } from "@/components/commercial-party-picker";
@@ -19,6 +19,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { ServiceOptionalItemsForm } from "@/components/service/service-optional-items-form";
+import { ProjectSelectSearchable } from "@/components/goals/project-select-searchable";
+import { ServiceFixedPriceTablesForm } from "@/components/service/service-fixed-price-tables-form";
+import { ServiceMaterialItemsForm } from "@/components/service/service-material-items-form";
+import { SettlementOfferPanel } from "@/components/service/settlement-offer-panel";
 import { useServiceDetailAutoRefresh } from "@/lib/hooks/use-service-detail-auto-refresh";
 import { buildCombinedBilling } from "@/lib/service/optional-items";
 import { useUnsavedChangesGuard } from "@/lib/hooks/use-unsaved-changes-guard";
@@ -29,8 +33,14 @@ import {
 } from "@/lib/service/copy-estimate-to-actual";
 import { finalizeAiEstimateOnSettle } from "@/lib/service/finalize-ai-estimate-on-settle";
 import { isServiceSettled } from "@/lib/service/report-document";
+import { syncLineItemsMaterialsCost } from "@/lib/service/material-items";
 import { createServiceFormSnapshot } from "@/lib/service/service-form-snapshot";
-import { SERVICE_STATUSES, SERVICE_TYPES, type ServiceRecord } from "@/lib/service/types";
+import {
+  SERVICE_PRICING_MODELS,
+  SERVICE_STATUSES,
+  SERVICE_TYPES,
+  type ServiceRecord,
+} from "@/lib/service/types";
 import { validateService } from "@/lib/service/validate";
 import { cn, formatMoney } from "@/lib/utils";
 import { buildServiceCosts, useServiceStore } from "@/store/service-store";
@@ -228,7 +238,34 @@ export function ServiceForm({
   );
   const clientBadge = useMemo(() => clientTabBadge(service), [service]);
   const settled = isServiceSettled(service);
+  const isFixedPrice = service.pricingModel === "fixed_price";
   const isOfferLocked = service.clientOffer.status === "accepted";
+  const clientProjects = useMemo(
+    () =>
+      service.clientId
+        ? projects
+            .filter((project) => project.clientId === service.clientId)
+            .sort((a, b) => a.name.localeCompare(b.name, "pl"))
+        : [],
+    [projects, service.clientId],
+  );
+  const quoteSteps = useMemo(
+    () => (isFixedPrice ? QUOTE_STEPS.filter((step) => step.label !== "Stawki") : [...QUOTE_STEPS]),
+    [isFixedPrice],
+  );
+  const quoteStepCount = quoteSteps.length;
+  const clientHasProjects = clientProjects.length > 0;
+
+  useEffect(() => {
+    if (partyKind === "client" && clientHasProjects && withoutProject) {
+      setWithoutProject(false);
+    }
+  }, [partyKind, clientHasProjects, withoutProject]);
+
+  const visibleMainTabs = useMemo(
+    () => MAIN_TABS.filter((tab) => !(isFixedPrice && tab.id === "settlement")),
+    [isFixedPrice],
+  );
   const isDirty = useMemo(
     () => createServiceFormSnapshot(service, withoutProject) !== savedSnapshot,
     [savedSnapshot, service, withoutProject],
@@ -244,7 +281,7 @@ export function ServiceForm({
     ? projects.find((p) => p.id === service.projectId)?.name
     : undefined;
 
-  const activeMainTab = MAIN_TABS.find((tab) => tab.id === mainTab)!;
+  const activeMainTab = visibleMainTabs.find((tab) => tab.id === mainTab) ?? visibleMainTabs[0]!;
   const quoteStepIndex = mainTab === "quote" ? step : -1;
   const settlementStepIndex = mainTab === "settlement" ? step - QUOTE_STEPS.length : -1;
 
@@ -365,7 +402,7 @@ export function ServiceForm({
     router.push(href);
   }
 
-  const subSteps = mainTab === "quote" ? QUOTE_STEPS : mainTab === "settlement" ? SETTLEMENT_STEPS : [];
+  const subSteps = mainTab === "quote" ? quoteSteps : mainTab === "settlement" ? SETTLEMENT_STEPS : [];
   const subStepIndex = mainTab === "quote" ? quoteStepIndex : settlementStepIndex;
   const subStepFullLabel =
     subStepIndex >= 0 && subSteps[subStepIndex] ? subSteps[subStepIndex].full : null;
@@ -452,7 +489,7 @@ export function ServiceForm({
             mobileScroll
             columnsClassName="sm:grid-cols-4"
           >
-            {MAIN_TABS.map((tab) => (
+            {visibleMainTabs.map((tab) => (
               <ViewSwitchButton
                 key={tab.id}
                 active={mainTab === tab.id}
@@ -479,12 +516,22 @@ export function ServiceForm({
               variant="secondary"
               mobileScroll
               columnsClassName={
-                mainTab === "quote" ? "sm:grid-cols-3" : "sm:grid-cols-2"
+                mainTab === "quote"
+                  ? isFixedPrice
+                    ? "sm:grid-cols-2"
+                    : "sm:grid-cols-3"
+                  : "sm:grid-cols-2"
               }
             >
               {subSteps.map((item, index) => {
                 const absoluteStep =
-                  mainTab === "quote" ? index : QUOTE_STEPS.length + index;
+                  mainTab === "quote"
+                    ? isFixedPrice
+                      ? index === 0
+                        ? 0
+                        : 2
+                      : index
+                    : QUOTE_STEPS.length + index;
                 const isActive = subStepIndex === index;
 
                 return (
@@ -510,6 +557,12 @@ export function ServiceForm({
             <CardContent className="py-3 text-sm text-emerald-200">
               Oferta rozliczona i zapisana — nie musisz klikać „Zapisz”. Możesz jeszcze edytować
               koszty rzeczywiste, wtedy użyj „Zapisz rozliczenie”.
+              {!isFixedPrice ? (
+                <span className="mt-2 block">
+                  Wyślij klientowi link rozliczenia w zakładce „Klient” — po akceptacji zlecenie
+                  zostanie zaktualizowane kosztami rzeczywistymi.
+                </span>
+              ) : null}
             </CardContent>
           </Card>
         ) : null}
@@ -560,6 +613,32 @@ export function ServiceForm({
                   ))}
                 </Select>
               </Field>
+              <Field label="Model wyceny">
+                <Select
+                  value={service.pricingModel}
+                  disabled={isOfferLocked}
+                  onChange={(e) => {
+                    const pricingModel = e.target.value as ServiceRecord["pricingModel"];
+                    setService({
+                      ...service,
+                      pricingModel,
+                      fixedPriceTables:
+                        pricingModel === "fixed_price" && service.fixedPriceTables.length === 0
+                          ? []
+                          : service.fixedPriceTables,
+                    });
+                    if (pricingModel === "fixed_price") {
+                      setMainTab("quote");
+                    }
+                  }}
+                >
+                  {SERVICE_PRICING_MODELS.map((model) => (
+                    <option key={model} value={model}>
+                      {model === "hourly" ? "Według stawek godzinowych" : "Fixed price (ryczałt)"}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
               <Field label="Status oferty">
                 <Select
                   value={service.status}
@@ -578,13 +657,15 @@ export function ServiceForm({
 
               <div className="sm:col-span-2">
                 <CommercialPartyPicker
+                  mode="offer"
                   partyKind={partyKind}
                   onPartyKindChange={(kind) => {
                     setPartyKind(kind);
+                    setWithoutProject(!service.projectId);
                     if (kind === "client") {
-                      setService({ ...service, contactId: null });
+                      setService({ ...service, contactId: null, projectId: null });
                     } else {
-                      setService({ ...service, clientId: null });
+                      setService({ ...service, clientId: null, projectId: null });
                     }
                   }}
                   clients={clients}
@@ -593,10 +674,10 @@ export function ServiceForm({
                   contactId={service.contactId}
                   partySnapshot={service.client}
                   onSelectClient={(clientId, snapshot) =>
-                    setService({ ...service, clientId, contactId: null, client: snapshot })
+                    setService({ ...service, clientId, contactId: null, client: snapshot, projectId: null })
                   }
                   onSelectContact={(contactId, snapshot) =>
-                    setService({ ...service, contactId, clientId: null, client: snapshot })
+                    setService({ ...service, contactId, clientId: null, client: snapshot, projectId: null })
                   }
                   onCreateClient={addClient}
                   onCreateContact={addContact}
@@ -608,34 +689,38 @@ export function ServiceForm({
                   <input
                     type="checkbox"
                     checked={withoutProject}
-                    onChange={(e) => setWithoutProject(e.target.checked)}
+                    disabled={partyKind === "client" && clientHasProjects}
+                    onChange={(e) => {
+                      setWithoutProject(e.target.checked);
+                      if (e.target.checked) {
+                        setService({ ...service, projectId: null });
+                      }
+                    }}
                     className="h-4 w-4 rounded border-border"
                   />
                   Oferta bez projektu
                 </label>
+                {partyKind === "client" && clientHasProjects && withoutProject ? (
+                  <p className="text-xs text-amber-200">
+                    Ten klient ma przypisane projekty — wybierz projekt z listy poniżej.
+                  </p>
+                ) : null}
                 {!withoutProject ? (
-                  <Field label="Projekt">
-                    <Select
-                      value={service.projectId ?? ""}
-                      onChange={(e) =>
-                        setService({ ...service, projectId: e.target.value || null })
-                      }
-                    >
-                      <option value="">Wybierz projekt</option>
-                      {projects.map((project) => (
-                        <option key={project.id} value={project.id}>
-                          {project.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
+                  <ProjectSelectSearchable
+                    projects={clientProjects}
+                    clients={clients}
+                    value={service.projectId}
+                    onChange={(projectId) => setService({ ...service, projectId })}
+                    emptyLabel="Wybierz projekt klienta"
+                    disabled={!service.clientId}
+                  />
                 ) : null}
               </div>
             </CardContent>
           </Card>
         ) : null}
 
-        {mainTab === "quote" && step === 1 ? (
+        {mainTab === "quote" && step === 1 && !isFixedPrice ? (
           <Card className="min-w-0 overflow-hidden">
             <CardContent className="grid gap-4 py-5 sm:grid-cols-2">
               <fieldset disabled={isOfferLocked} className="contents">
@@ -678,6 +763,15 @@ export function ServiceForm({
           <Card className="min-w-0 overflow-hidden">
             <CardContent className="py-5">
               <fieldset disabled={isOfferLocked} className="contents">
+                {isFixedPrice ? (
+                  <ServiceFixedPriceTablesForm
+                    tables={service.fixedPriceTables}
+                    defaultVat={service.estimateDiscounts.vatRate}
+                    onChange={(fixedPriceTables) => setService({ ...service, fixedPriceTables })}
+                    disabled={isOfferLocked}
+                  />
+                ) : (
+                  <>
                 <ServiceAiEstimatePanel
                   serviceType={service.serviceType}
                   clientId={service.clientId}
@@ -702,9 +796,26 @@ export function ServiceForm({
                   items={service.estimate}
                   zoneSettings={service.zoneSettings}
                   serviceId={service.id}
-                  onChange={(estimate) => setService({ ...service, estimate })}
+                  onChange={(estimate) =>
+                    setService({ ...service, estimate: syncLineItemsMaterialsCost(estimate) })
+                  }
                   disabled={isOfferLocked}
                 />
+                </div>
+                <div className="mt-6 border-t border-border/60 pt-6">
+                  <ServiceMaterialItemsForm
+                    items={service.estimate.materialItems}
+                    disabled={isOfferLocked}
+                    onChange={(materialItems) =>
+                      setService({
+                        ...service,
+                        estimate: syncLineItemsMaterialsCost({
+                          ...service.estimate,
+                          materialItems,
+                        }),
+                      })
+                    }
+                  />
                 </div>
                 <div className="mt-6 grid gap-4 border-t border-border/60 pt-6">
                   <h3 className="text-sm font-semibold text-foreground">Rabaty przewidywanych kosztów</h3>
@@ -720,6 +831,8 @@ export function ServiceForm({
                     onChange={(optionalItems) => setService({ ...service, optionalItems })}
                   />
                 </div>
+                  </>
+                )}
               </fieldset>
               <div className="mt-6 border-t border-border/60 pt-6">
                 <ServiceCostBreakdownPanel
@@ -743,7 +856,7 @@ export function ServiceForm({
           </Card>
         ) : null}
 
-        {mainTab === "settlement" && step === QUOTE_STEPS.length ? (
+        {mainTab === "settlement" && !isFixedPrice && step === QUOTE_STEPS.length ? (
           <Card className="min-w-0 overflow-hidden">
             <CardContent className="py-5">
               <ServiceLineItemsForm
@@ -752,8 +865,24 @@ export function ServiceForm({
                 zoneSettings={service.zoneSettings}
                 serviceId={service.id}
                 showWarrantyHours
-                onChange={(actual) => setService({ ...service, actual })}
+                onChange={(actual) =>
+                  setService({ ...service, actual: syncLineItemsMaterialsCost(actual) })
+                }
               />
+              <div className="mt-6 border-t border-border/60 pt-6">
+                <ServiceMaterialItemsForm
+                  items={service.actual.materialItems}
+                  onChange={(materialItems) =>
+                    setService({
+                      ...service,
+                      actual: syncLineItemsMaterialsCost({
+                        ...service.actual,
+                        materialItems,
+                      }),
+                    })
+                  }
+                />
+              </div>
               <div className="mt-6 grid gap-4 border-t border-border/60 pt-6">
                 <h3 className="text-sm font-semibold text-foreground">Rabaty rozliczenia</h3>
                 <ServiceDiscountsForm
@@ -790,7 +919,7 @@ export function ServiceForm({
           </Card>
         ) : null}
 
-        {mainTab === "settlement" && step === QUOTE_STEPS.length + 1 ? (
+        {mainTab === "settlement" && !isFixedPrice && step === QUOTE_STEPS.length + 1 ? (
           <div className="grid gap-4">
             {service.showEstimateComparison ? (
               <ServiceComparisonTable
@@ -835,6 +964,7 @@ export function ServiceForm({
           <div className="grid gap-4">
             <OfferValidityField service={service} onChange={setService} />
             <ClientOfferPanel service={service} onServiceUpdated={handleServiceUpdated} />
+            <SettlementOfferPanel service={service} onServiceUpdated={handleServiceUpdated} />
             <ClientOfferHistoryPanel service={service} />
           </div>
         ) : null}
@@ -903,12 +1033,12 @@ export function ServiceForm({
             <Button type="button" variant="secondary" disabled={isSaving} className="w-full sm:w-auto" onClick={() => save()}>
               {isSaving ? "Zapisywanie…" : settled ? "Zapisz rozliczenie" : "Zapisz"}
             </Button>
-            {!settled && (mainTab === "settlement" || mainTab === "preview") ? (
+            {!settled && !isFixedPrice && (mainTab === "settlement" || mainTab === "preview") ? (
               <Button type="button" disabled={isSaving} className="col-span-2 w-full sm:col-span-1 sm:w-auto" onClick={() => void settle()}>
                 {isSaving ? "Zapisywanie…" : "Rozlicz i zapisz"}
               </Button>
             ) : null}
-            {mainTab === "quote" && step === QUOTE_STEPS.length - 1 ? (
+            {mainTab === "quote" && step === quoteStepCount - 1 ? (
               <Button type="button" variant="outline" className="col-span-2 w-full sm:col-span-1 sm:w-auto" onClick={() => switchMainTab("client")}>
                 Wyślij klientowi →
               </Button>

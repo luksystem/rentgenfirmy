@@ -5,6 +5,7 @@ import { AlertTriangle, Plus, Scissors, ShieldAlert, Sparkles, Trash2 } from "lu
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { formatPartyName } from "@/lib/party/display-name";
 import { cn } from "@/lib/utils";
 import { getUserDisplayName } from "@/lib/auth/types";
 import type { ProcessStage } from "@/lib/process/types";
@@ -451,7 +452,10 @@ export function ResourcePlanSidePanel({
               <Field label="Klient">
                 <Input
                   disabled
-                  value={clients.find((c) => c.id === input.clientId)?.fullName ?? (project ? "—" : "")}
+                  value={(() => {
+                    const client = clients.find((c) => c.id === input.clientId);
+                    return client ? formatPartyName(client) : project ? "—" : "";
+                  })()}
                 />
               </Field>
             </div>

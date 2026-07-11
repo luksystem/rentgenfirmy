@@ -19,6 +19,7 @@ import {
   deleteProjectDocument,
   fetchProjectDocuments,
 } from "@/lib/supabase/project-document-repository";
+import { formatPartyName } from "@/lib/party/display-name";
 import { useAppStore } from "@/store/app-store";
 import { cn, formatDateTime } from "@/lib/utils";
 
@@ -56,7 +57,7 @@ export function ProjectDocumentList() {
   );
 
   const clientNames = useMemo(
-    () => new Map(clients.map((client) => [client.id, client.fullName])),
+    () => new Map(clients.map((client) => [client.id, formatPartyName(client)])),
     [clients],
   );
 
@@ -120,7 +121,7 @@ export function ProjectDocumentList() {
           <option value={ALL}>Wszyscy</option>
           {clients.map((client) => (
             <option key={client.id} value={client.id}>
-              {client.fullName}
+              {formatPartyName(client)}
             </option>
           ))}
         </Select>

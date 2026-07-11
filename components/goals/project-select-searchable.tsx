@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
 import { Field, Input } from "@/components/ui/input";
+import { formatPartyName } from "@/lib/party/display-name";
 import type { Project } from "@/lib/types";
 import type { Client } from "@/lib/service/types";
 import { cn } from "@/lib/utils";
 
 function projectSearchText(project: Project, clientsById: Map<string, Client>) {
   const client = project.clientId ? clientsById.get(project.clientId) : null;
-  return [project.name, client?.fullName].filter(Boolean).join(" ").toLowerCase();
+  return [project.name, client?.lastName, client?.firstName].filter(Boolean).join(" ").toLowerCase();
 }
 
 /** Wyszukiwalny picker projektu — filtruje po nazwie projektu i nazwie klienta (nie tylko lista rozwijana). */
@@ -135,7 +136,7 @@ export function ProjectSelectSearchable({
                     onClick={() => selectProject(project.id)}
                   >
                     <span className="font-medium">{project.name}</span>
-                    {client?.fullName ? <span className="text-xs text-muted">{client.fullName}</span> : null}
+                    {client ? <span className="text-xs text-muted">{formatPartyName(client)}</span> : null}
                   </button>
                 );
               })

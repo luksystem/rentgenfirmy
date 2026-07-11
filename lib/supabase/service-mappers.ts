@@ -3,8 +3,9 @@ import {
   CLIENT_OFFER_STATUSES,
   type ClientOfferStatus,
 } from "@/lib/service/client-offer";
-import { normalizeClientOfferHistory } from "@/lib/service/client-offer-history";
+import { normalizeClientOfferHistory, normalizeSettlementOfferHistory } from "@/lib/service/client-offer-history";
 import { normalizeClientOfferAcceptedDocument } from "@/lib/service/client-offer-snapshot";
+import { normalizeFixedPriceTables } from "@/lib/service/fixed-price";
 import { normalizeOptionalItems } from "@/lib/service/optional-items";
 import { normalizeLineItemsFromJson } from "@/lib/service/normalize-line-items";
 import {
@@ -18,6 +19,7 @@ import {
   type ServiceRates,
   type KilometerZoneSettings,
   type ServiceRecord,
+  type ServicePricingModel,
 } from "@/lib/service/types";
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -136,6 +138,21 @@ function normalizeClientOfferStatus(value: unknown): ClientOfferStatus | null {
     : null;
 }
 
+function normalizePricingModel(value: unknown): ServicePricingModel {
+  return value === "fixed_price" ? "fixed_price" : "hourly";
+}
+
+function normalizeSettlementOffer(row: ServiceRow): ServiceRecord["settlementOffer"] {
+  return {
+    token: row.settlement_offer_token ?? null,
+    expiresAt: row.settlement_offer_expires_at ?? null,
+    status: normalizeClientOfferStatus(row.settlement_offer_status),
+    message: row.settlement_offer_message ?? null,
+    respondedAt: row.settlement_offer_responded_at ?? null,
+    lastClientMessage: row.settlement_offer_last_client_message ?? null,
+  };
+}
+
 function normalizeClientOffer(row: ServiceRow): ServiceRecord["clientOffer"] {
   return {
     token: row.client_offer_token ?? null,
@@ -174,10 +191,17 @@ export function rowToService(row: ServiceRow): ServiceRecord {
     actual: normalizeLineItemsFromJson(row.actual),
     aiEstimate: normalizeServiceAiEstimateRecord(row.ai_estimate),
     optionalItems: normalizeOptionalItems(row.optional_items),
+    pricingModel: normalizePricingModel(row.pricing_model),
+    fixedPriceTables: normalizeFixedPriceTables(row.fixed_price_tables),
     clientOffer: normalizeClientOffer(row),
     clientOfferHistory: normalizeClientOfferHistory(row.client_offer_history),
     clientOfferAcceptedDocument: normalizeClientOfferAcceptedDocument(
       row.client_offer_accepted_document,
+    ),
+    settlementOffer: normalizeSettlementOffer(row),
+    settlementOfferHistory: normalizeSettlementOfferHistory(row.settlement_offer_history),
+    settlementOfferAcceptedDocument: normalizeClientOfferAcceptedDocument(
+      row.settlement_offer_accepted_document,
     ),
     intakeReference: row.intake_reference ?? null,
     reviewedAt: row.reviewed_at ?? null,
@@ -207,6 +231,8 @@ export function serviceToInsert(service: ServiceRecord): ServiceInsert {
     estimate: service.estimate as Record<string, unknown>,
     actual: service.actual as Record<string, unknown>,
     optional_items: service.optionalItems as Record<string, unknown>[],
+    pricing_model: service.pricingModel,
+    fixed_price_tables: service.fixedPriceTables as Record<string, unknown>[],
     client_offer_token: service.clientOffer.token,
     client_offer_expires_at: service.clientOffer.expiresAt,
     client_offer_status: service.clientOffer.status,
@@ -215,6 +241,14 @@ export function serviceToInsert(service: ServiceRecord): ServiceInsert {
     client_offer_last_client_message: service.clientOffer.lastClientMessage,
     client_offer_history: service.clientOfferHistory,
     client_offer_accepted_document: service.clientOfferAcceptedDocument,
+    settlement_offer_token: service.settlementOffer.token,
+    settlement_offer_expires_at: service.settlementOffer.expiresAt,
+    settlement_offer_status: service.settlementOffer.status,
+    settlement_offer_message: service.settlementOffer.message,
+    settlement_offer_responded_at: service.settlementOffer.respondedAt,
+    settlement_offer_last_client_message: service.settlementOffer.lastClientMessage,
+    settlement_offer_history: service.settlementOfferHistory,
+    settlement_offer_accepted_document: service.settlementOfferAcceptedDocument,
     ai_estimate: service.aiEstimate ? serializeServiceAiEstimateRecord(service.aiEstimate) : null,
     intake_reference: service.intakeReference,
     reviewed_at: service.reviewedAt,

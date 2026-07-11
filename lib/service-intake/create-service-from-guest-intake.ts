@@ -1,7 +1,8 @@
 import type { ServiceAiEstimateRecord } from "@/lib/service/ai-estimate-types";
 import type { ServiceIntakeWorkPreference } from "@/lib/service-intake/types";
 import { defaultClientOfferExpiry } from "@/lib/service/offer-validity";
-import type { Contact } from "@/lib/contacts/types";
+import { contactToServiceClient, type Contact } from "@/lib/contacts/types";
+import { formatPartyName } from "@/lib/party/display-name";
 import type { ServiceLineItems, ServiceRecord, ServiceType } from "@/lib/service/types";
 import { emptyLineItems } from "@/lib/service/types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -38,7 +39,7 @@ export async function createServiceFromGuestIntake(input: {
     .join(", ");
   const title = taskNames
     ? `Prośba o ofertę: ${taskNames}`
-    : `Prośba o ofertę — ${input.contact.fullName}`;
+    : `Prośba o ofertę — ${formatPartyName(input.contact)}`;
 
   const preferenceNote = input.workPreference
     ? `Preferencja klienta: ${WORK_PREFERENCE_LABELS[input.workPreference]}.`
@@ -65,12 +66,7 @@ export async function createServiceFromGuestIntake(input: {
     projectId: null,
     clientId: null,
     contactId: input.contact.id,
-    client: {
-      fullName: input.contact.fullName,
-      location: input.contact.location,
-      email: input.contact.email,
-      phone: input.contact.phone,
-    },
+    client: contactToServiceClient(input.contact),
     title,
     serviceType: input.serviceTypeHint,
     rates: { ...settings.rates },
@@ -92,6 +88,18 @@ export async function createServiceFromGuestIntake(input: {
     },
     clientOfferHistory: [],
     clientOfferAcceptedDocument: null,
+    pricingModel: "hourly",
+    fixedPriceTables: [],
+    settlementOffer: {
+      token: null,
+      expiresAt: defaultClientOfferExpiry(),
+      status: null,
+      message: null,
+      respondedAt: null,
+      lastClientMessage: null,
+    },
+    settlementOfferHistory: [],
+    settlementOfferAcceptedDocument: null,
     aiEstimate: {
       ...input.aiEstimateRecord,
       appliedAt: now,

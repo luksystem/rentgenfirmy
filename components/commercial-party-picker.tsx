@@ -27,7 +27,28 @@ type CommercialPartyPickerProps = {
   onCreateClient: (input: ClientInput) => Promise<Client>;
   onCreateContact: (input: ContactInput) => Promise<Contact>;
   disabled?: boolean;
+  mode?: "default" | "offer";
 };
+
+function PartySnapshotReadonly({ snapshot, label }: { snapshot: ServiceClient; label: string }) {
+  return (
+    <div className="grid gap-3 rounded-xl border border-border/80 bg-surface-muted/30 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">Dane {label}</p>
+      <Field label="Imię i nazwisko">
+        <Input value={snapshot.fullName} readOnly />
+      </Field>
+      <Field label="Obiekt / lokalizacja">
+        <Input value={snapshot.location} readOnly />
+      </Field>
+      <Field label="E-mail">
+        <Input value={snapshot.email} readOnly />
+      </Field>
+      <Field label="Telefon">
+        <Input value={snapshot.phone} readOnly />
+      </Field>
+    </div>
+  );
+}
 
 export function CommercialPartyPicker({
   partyKind,
@@ -42,7 +63,10 @@ export function CommercialPartyPicker({
   onCreateClient,
   onCreateContact,
   disabled = false,
+  mode = "default",
 }: CommercialPartyPickerProps) {
+  const isOfferMode = mode === "offer";
+
   function switchKind(nextKind: CommercialPartyKind) {
     if (nextKind === partyKind) {
       return;
@@ -109,8 +133,10 @@ export function CommercialPartyPicker({
           value={clientId}
           onChange={handleClientChange}
           onCreateClient={onCreateClient}
-          emptyLabel="Wpisz dane ręcznie"
+          emptyLabel={isOfferMode ? "Wybierz klienta" : "Wpisz dane ręcznie"}
           disabled={disabled}
+          allowManual={!isOfferMode}
+          allowCreate={!isOfferMode}
         />
       ) : (
         <ContactSelectWithCreate
@@ -118,56 +144,66 @@ export function CommercialPartyPicker({
           value={contactId}
           onChange={handleContactChange}
           onCreateContact={onCreateContact}
-          emptyLabel="Wpisz dane ręcznie"
+          emptyLabel={isOfferMode ? "Wybierz kontakt" : "Wpisz dane ręcznie"}
           disabled={disabled}
+          allowManual={!isOfferMode}
+          allowCreate
+          createButtonPosition={isOfferMode ? "top" : "bottom"}
         />
       )}
 
-      <Field label={`Imię i nazwisko ${snapshotLabel}`}>
-        <Input
-          value={partySnapshot.fullName}
-          disabled={Boolean(linkedId) || disabled}
-          onChange={(event) =>
-            partyKind === "client"
-              ? onSelectClient(clientId, { ...partySnapshot, fullName: event.target.value })
-              : onSelectContact(contactId, { ...partySnapshot, fullName: event.target.value })
-          }
-        />
-      </Field>
-      <Field label="Obiekt / lokalizacja">
-        <Input
-          value={partySnapshot.location}
-          disabled={Boolean(linkedId) || disabled}
-          onChange={(event) =>
-            partyKind === "client"
-              ? onSelectClient(clientId, { ...partySnapshot, location: event.target.value })
-              : onSelectContact(contactId, { ...partySnapshot, location: event.target.value })
-          }
-        />
-      </Field>
-      <Field label="E-mail">
-        <Input
-          type="email"
-          value={partySnapshot.email}
-          disabled={Boolean(linkedId) || disabled}
-          onChange={(event) =>
-            partyKind === "client"
-              ? onSelectClient(clientId, { ...partySnapshot, email: event.target.value })
-              : onSelectContact(contactId, { ...partySnapshot, email: event.target.value })
-          }
-        />
-      </Field>
-      <Field label="Telefon">
-        <Input
-          value={partySnapshot.phone}
-          disabled={Boolean(linkedId) || disabled}
-          onChange={(event) =>
-            partyKind === "client"
-              ? onSelectClient(clientId, { ...partySnapshot, phone: event.target.value })
-              : onSelectContact(contactId, { ...partySnapshot, phone: event.target.value })
-          }
-        />
-      </Field>
+      {isOfferMode && linkedId ? (
+        <PartySnapshotReadonly snapshot={partySnapshot} label={snapshotLabel} />
+      ) : (
+        <>
+          <Field label={`Imię i nazwisko ${snapshotLabel}`}>
+            <Input
+              value={partySnapshot.fullName}
+              disabled={Boolean(linkedId) || disabled}
+              onChange={(event) =>
+                partyKind === "client"
+                  ? onSelectClient(clientId, { ...partySnapshot, fullName: event.target.value })
+                  : onSelectContact(contactId, { ...partySnapshot, fullName: event.target.value })
+              }
+            />
+          </Field>
+          <Field label="Obiekt / lokalizacja">
+            <Input
+              value={partySnapshot.location}
+              disabled={Boolean(linkedId) || disabled}
+              onChange={(event) =>
+                partyKind === "client"
+                  ? onSelectClient(clientId, { ...partySnapshot, location: event.target.value })
+                  : onSelectContact(contactId, { ...partySnapshot, location: event.target.value })
+              }
+            />
+          </Field>
+          <Field label="E-mail">
+            <Input
+              type="email"
+              value={partySnapshot.email}
+              disabled={Boolean(linkedId) || disabled}
+              onChange={(event) =>
+                partyKind === "client"
+                  ? onSelectClient(clientId, { ...partySnapshot, email: event.target.value })
+                  : onSelectContact(contactId, { ...partySnapshot, email: event.target.value })
+              }
+            />
+          </Field>
+          <Field label="Telefon">
+            <Input
+              value={partySnapshot.phone}
+              disabled={Boolean(linkedId) || disabled}
+              onChange={(event) =>
+                partyKind === "client"
+                  ? onSelectClient(clientId, { ...partySnapshot, phone: event.target.value })
+                  : onSelectContact(contactId, { ...partySnapshot, phone: event.target.value })
+              }
+            />
+          </Field>
+        </>
+      )}
+
       {partyKind === "contact" ? (
         <p className="text-xs text-muted">
           Po akceptacji oferty przez kontakt zostanie on automatycznie przekształcony w klienta i

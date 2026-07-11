@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/input";
 import { projectToInput } from "@/lib/supabase/mappers";
+import { formatPartyName } from "@/lib/party/display-name";
 import type { Client } from "@/lib/service/types";
 import type { Project, ProjectInput } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -177,7 +178,7 @@ export function ClientProjectsPanel({
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Nowy projekt dla {client.fullName}</DialogTitle>
+            <DialogTitle>Nowy projekt dla {formatPartyName(client)}</DialogTitle>
             <DialogDescription>
               Projekt zostanie utworzony i automatycznie przypisany do tego klienta.
             </DialogDescription>

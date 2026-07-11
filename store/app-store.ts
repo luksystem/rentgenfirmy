@@ -43,6 +43,8 @@ import {
 } from "@/lib/supabase/contact-repository";
 import { fetchFieldOptions, saveFieldOptions } from "@/lib/supabase/settings-repository";
 import type { Contact, ContactInput } from "@/lib/contacts/types";
+import { formatPartyName } from "@/lib/party/display-name";
+import { sortClientsByLastName, sortContactsByLastName } from "@/lib/sort/party-and-project";
 import type { Client, ClientInput } from "@/lib/service/types";
 import type { Interruption, Project, ProjectInput } from "@/lib/types";
 
@@ -379,9 +381,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const created = await createClientRecord(input);
       set((state) => ({
-        clients: [...state.clients, created].sort((a, b) =>
-          a.fullName.localeCompare(b.fullName, "pl"),
-        ),
+        clients: sortClientsByLastName([...state.clients, created]),
         isSaving: false,
         error: null,
       }));
@@ -395,7 +395,9 @@ export const useAppStore = create<AppState>((set, get) => ({
           context: {
             clientId: created.id,
             phone: created.phone,
-            fullName: created.fullName,
+            firstName: created.firstName,
+            lastName: created.lastName,
+            fullName: formatPartyName(created),
             email: created.email,
             location: created.location,
           },
@@ -418,9 +420,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const updated = await updateClientRecord(id, input);
       set((state) => ({
-        clients: state.clients
-          .map((item) => (item.id === id ? updated : item))
-          .sort((a, b) => a.fullName.localeCompare(b.fullName, "pl")),
+        clients: sortClientsByLastName(
+          state.clients.map((item) => (item.id === id ? updated : item)),
+        ),
         isSaving: false,
         error: null,
       }));
@@ -461,9 +463,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const created = await createContactRecord(input);
       set((state) => ({
-        contacts: [...state.contacts, created].sort((a, b) =>
-          a.fullName.localeCompare(b.fullName, "pl"),
-        ),
+        contacts: sortContactsByLastName([...state.contacts, created]),
         isSaving: false,
         error: null,
       }));
@@ -483,9 +483,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const updated = await updateContactRecord(id, input);
       set((state) => ({
-        contacts: state.contacts
-          .map((item) => (item.id === id ? updated : item))
-          .sort((a, b) => a.fullName.localeCompare(b.fullName, "pl")),
+        contacts: sortContactsByLastName(
+          state.contacts.map((item) => (item.id === id ? updated : item)),
+        ),
         isSaving: false,
         error: null,
       }));
@@ -584,12 +584,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       const contact = payload.contact as Contact;
 
       set((state) => ({
-        clients: [...state.clients.filter((item) => item.id !== client.id), client].sort((a, b) =>
-          a.fullName.localeCompare(b.fullName, "pl"),
+        clients: sortClientsByLastName([
+          ...state.clients.filter((item) => item.id !== client.id),
+          client,
+        ]),
+        contacts: sortContactsByLastName(
+          state.contacts.map((item) => (item.id === contact.id ? contact : item)),
         ),
-        contacts: state.contacts
-          .map((item) => (item.id === contact.id ? contact : item))
-          .sort((a, b) => a.fullName.localeCompare(b.fullName, "pl")),
         isSaving: false,
         error: null,
       }));

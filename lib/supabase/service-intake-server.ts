@@ -1,3 +1,4 @@
+import { formatPartyName } from "@/lib/party/display-name";
 import { getUserDisplayName } from "@/lib/auth/types";
 import { buildClientAddressLine } from "@/lib/dashboard/google-maps";
 import { namesMatch } from "@/lib/service-intake/name-match";
@@ -12,6 +13,7 @@ import { sendTransactionalEmail } from "@/lib/email/send";
 import {
   createIntakeGuestToken,
   createIntakeVerifiedToken,
+  intakeTokenFullName,
   readIntakeGuestToken,
   readIntakeSessionToken,
   readIntakeVerifiedToken,
@@ -296,20 +298,55 @@ async function notifyServiceIntakeStatusChange(record: ServiceIntakeRecord) {
   ]);
 }
 
+function resolveIntakePartyName(input: {
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+}) {
+  if (input.firstName?.trim() || input.lastName?.trim()) {
+    return {
+      firstName: input.firstName?.trim() ?? "",
+      lastName: input.lastName?.trim() ?? "",
+      fullName: intakeTokenFullName(input),
+    };
+  }
+
+  const fullName = input.fullName?.trim() ?? "";
+  const spaceIdx = fullName.indexOf(" ");
+  if (spaceIdx === -1) {
+    return { firstName: "", lastName: fullName, fullName };
+  }
+
+  return {
+    firstName: fullName.slice(0, spaceIdx).trim(),
+    lastName: fullName.slice(spaceIdx + 1).trim() || fullName,
+    fullName,
+  };
+}
+
 export async function verifyServiceIntakeIdentity(input: {
   sessionToken: string;
   email: string;
-  fullName: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
 }): Promise<ServiceIntakeVerifyResult | null> {
   const session = readIntakeSessionToken(input.sessionToken);
   const email = normalizeEmail(input.email);
+  const party = resolveIntakePartyName(input);
 
   if (!session || session.email !== email) {
     return null;
   }
 
   const client = await findClientByEmail(email);
-  if (!client || !namesMatch(client.full_name ?? "", input.fullName)) {
+  const clientDisplayName = client
+    ? formatPartyName({
+        firstName: client.first_name ?? "",
+        lastName: client.last_name ?? "",
+      })
+    : "";
+  if (!client || !namesMatch(clientDisplayName, party.fullName)) {
     return null;
   }
 
@@ -320,9 +357,10 @@ export async function verifyServiceIntakeIdentity(input: {
     verificationToken: createIntakeVerifiedToken({
       email,
       clientId: client.id,
-      fullName: input.fullName.trim(),
+      firstName: party.firstName,
+      lastName: party.lastName,
     }),
-    clientDisplayName: client.full_name ?? input.fullName.trim(),
+    clientDisplayName: clientDisplayName || party.fullName,
     projects: projects.map(projectToIntakeOption),
     rates,
   };
@@ -331,25 +369,31 @@ export async function verifyServiceIntakeIdentity(input: {
 export async function createGuestIntakeSession(input: {
   sessionToken: string;
   email: string;
-  fullName: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
 }): Promise<ServiceIntakeVerifyResult> {
   const session = readIntakeSessionToken(input.sessionToken);
   const email = normalizeEmail(input.email);
+  const party = resolveIntakePartyName(input);
 
   if (!session || session.email !== email) {
     throw new Error("Sesja wygasła. Odśwież stronę i zacznij od początku.");
   }
 
-  const fullName = input.fullName.trim();
-  if (!fullName) {
+  if (!party.fullName) {
     throw new Error("Podaj imię i nazwisko.");
   }
 
   const rates = await fetchServiceRates();
 
   return {
-    verificationToken: createIntakeGuestToken({ email, fullName }),
-    clientDisplayName: fullName,
+    verificationToken: createIntakeGuestToken({
+      email,
+      firstName: party.firstName,
+      lastName: party.lastName,
+    }),
+    clientDisplayName: party.fullName,
     isGuest: true,
     projects: [],
     rates,
@@ -449,7 +493,8 @@ export async function submitGuestServiceIntakeRequest(input: {
   }
 
   const { contact, reusedExisting } = await resolveContactFromIntakeAdmin({
-    fullName: guest.fullName,
+    firstName: guest.firstName,
+    lastName: guest.lastName,
     location,
     addressStreet: contactAddress.addressStreet,
     addressCity: contactAddress.addressCity,
@@ -866,12 +911,13 @@ export async function listServiceIntakeRequests(options?: {
     clientIds.length
       ? supabase
           .from("clients")
-          .select("id, full_name, address_street, address_city, address_postal_code, location")
+          .select("id, first_name, last_name, address_street, address_city, address_postal_code, location")
           .in("id", clientIds)
       : Promise.resolve({
           data: [] as Array<{
             id: string;
-            full_name: string;
+            first_name: string;
+            last_name: string;
             address_street: string | null;
             address_city: string | null;
             address_postal_code: string | null;
@@ -883,7 +929,12 @@ export async function listServiceIntakeRequests(options?: {
       : Promise.resolve({ data: [] as Array<{ id: string; name: string }> }),
   ]);
 
-  const clientMap = new Map((clients ?? []).map((row) => [row.id, row.full_name]));
+  const clientMap = new Map(
+    (clients ?? []).map((row) => [
+      row.id,
+      formatPartyName({ firstName: row.first_name ?? "", lastName: row.last_name }),
+    ]),
+  );
   const clientAddressMap = new Map(
     (clients ?? []).map((row) => [
       row.id,
@@ -1125,7 +1176,7 @@ export async function getServiceIntakeThreadById(id: string): Promise<ServiceInt
     intake.clientId
       ? supabase
           .from("clients")
-          .select("full_name, address_street, address_city, address_postal_code, location")
+          .select("first_name, last_name, address_street, address_city, address_postal_code, location")
           .eq("id", intake.clientId)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -1146,7 +1197,12 @@ export async function getServiceIntakeThreadById(id: string): Promise<ServiceInt
   return {
     intake: {
       ...intake,
-      clientName: clientResult.data?.full_name ?? intake.clientName ?? null,
+      clientName: clientResult.data
+        ? formatPartyName({
+            firstName: clientResult.data.first_name ?? "",
+            lastName: clientResult.data.last_name ?? "",
+          })
+        : intake.clientName ?? null,
       projectName: projectResult.data?.name ?? intake.projectName ?? null,
       clientAddress: clientAddress || (intake.clientAddress ?? null),
     },

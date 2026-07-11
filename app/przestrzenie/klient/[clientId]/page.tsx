@@ -7,6 +7,7 @@ import { ClientDashboardView, type ClientDashboardTab } from "@/components/dashb
 import { DashboardSpaceShell } from "@/components/dashboard/dashboard-space-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { formatPartyName } from "@/lib/party/display-name";
 import { isClientDashboardTab } from "@/lib/dashboard/client-dashboard-tabs";
 import { useAuthStore } from "@/store/auth-store";
 import { useAppStore } from "@/store/app-store";
@@ -176,13 +177,22 @@ function ClientDashboardPageContent() {
   return (
     <DashboardSpaceShell
       kind="client"
-      title={client.fullName}
+      title={formatPartyName(client)}
       description={`Dashboard współpracy z klientem${clientProjects.length > 1 ? " — przełącz projekt w panelu bocznym" : ""}.`}
       backHref="/przestrzenie"
       compactMobile
     >
       {!processHydrated ? (
         <p className="mb-4 text-sm text-muted">Ładowanie danych procesu…</p>
+      ) : null}
+
+      {clientProjects.length === 0 ? (
+        <Card className="mb-4 border-amber-500/30 bg-amber-500/10">
+          <CardContent className="py-4 text-sm text-amber-100">
+            Ten klient nie ma jeszcze przypisanych projektów. Dodaj projekt w module projektów, aby
+            uruchomić pełny dashboard współpracy.
+          </CardContent>
+        </Card>
       ) : null}
 
       <ClientDashboardView

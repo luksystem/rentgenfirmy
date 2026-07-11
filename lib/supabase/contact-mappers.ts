@@ -9,7 +9,8 @@ import type {
 export function rowToContact(row: ContactRow): Contact {
   return {
     id: row.id,
-    fullName: row.full_name,
+    firstName: row.first_name ?? "",
+    lastName: row.last_name,
     location: row.location,
     addressStreet: row.address_street ?? "",
     addressCity: row.address_city ?? "",
@@ -40,7 +41,8 @@ export function contactInputToInsert(
   const now = new Date().toISOString();
 
   return {
-    full_name: input.fullName.trim(),
+    first_name: input.firstName.trim(),
+    last_name: input.lastName.trim(),
     location: input.location.trim(),
     address_street: input.addressStreet.trim(),
     address_city: input.addressCity.trim(),
@@ -59,7 +61,8 @@ export function contactInputToInsert(
 export function contactToInsert(contact: Contact): ContactInsert {
   return {
     id: contact.id,
-    full_name: contact.fullName,
+    first_name: contact.firstName,
+    last_name: contact.lastName,
     location: contact.location,
     address_street: contact.addressStreet,
     address_city: contact.addressCity,

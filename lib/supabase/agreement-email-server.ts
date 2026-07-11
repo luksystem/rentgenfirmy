@@ -1,3 +1,4 @@
+import { formatPartyName } from "@/lib/party/display-name";
 import {
   agreementToEmailEntry,
   buildAgreementDeliveryEmail,
@@ -138,7 +139,7 @@ async function fetchProjectContext(projectId: string) {
   if (project.client_id) {
     const { data: client, error: clientError } = await supabase
       .from("clients")
-      .select("full_name, email")
+      .select("first_name, last_name, email")
       .eq("id", project.client_id)
       .maybeSingle();
 
@@ -147,7 +148,11 @@ async function fetchProjectContext(projectId: string) {
     }
 
     clientEmail = String(client?.email ?? "").trim();
-    clientName = String(client?.full_name ?? "").trim() || clientName;
+    clientName =
+      formatPartyName({
+        firstName: String(client?.first_name ?? "").trim(),
+        lastName: String(client?.last_name ?? "").trim(),
+      }) || clientName;
   }
 
   const { data: trades, error: tradesError } = await supabase

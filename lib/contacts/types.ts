@@ -1,4 +1,5 @@
-import { clientToServiceClient, type ClientInput, type ServiceClient } from "@/lib/service/types";
+import { partyToServiceClientName } from "@/lib/party/display-name";
+import type { ClientInput, ServiceClient } from "@/lib/service/types";
 
 export const CONTACT_CONVERSION_SOURCES = ["manual", "offer_accepted"] as const;
 export type ContactConversionSource = (typeof CONTACT_CONVERSION_SOURCES)[number];
@@ -24,7 +25,8 @@ export type ContactHistoryEntry = {
 
 export type Contact = {
   id: string;
-  fullName: string;
+  firstName: string;
+  lastName: string;
   location: string;
   addressStreet: string;
   addressCity: string;
@@ -55,9 +57,14 @@ export type ContactInput = Omit<
 >;
 
 export function contactToServiceClient(
-  contact: Pick<Contact, "fullName" | "location" | "email" | "phone">,
+  contact: Pick<Contact, "firstName" | "lastName" | "location" | "email" | "phone">,
 ): ServiceClient {
-  return clientToServiceClient(contact);
+  return {
+    fullName: partyToServiceClientName(contact),
+    location: contact.location,
+    email: contact.email,
+    phone: contact.phone,
+  };
 }
 
 export function contactToClientInput(contact: Contact): ClientInput {
@@ -67,7 +74,8 @@ export function contactToClientInput(contact: Contact): ClientInput {
   ].filter(Boolean);
 
   return {
-    fullName: contact.fullName,
+    firstName: contact.firstName,
+    lastName: contact.lastName,
     location: contact.location,
     addressStreet: contact.addressStreet,
     addressCity: contact.addressCity,

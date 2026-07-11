@@ -1,3 +1,4 @@
+import { formatPartyName } from "@/lib/party/display-name";
 import { rowToClient } from "@/lib/supabase/client-mappers";
 import { rowToProject } from "@/lib/supabase/mappers";
 import { rowToProjectProcess } from "@/lib/supabase/process-mappers";
@@ -438,10 +439,15 @@ export async function fetchDashboardPublicMeta(token: string) {
   if (access.clientId) {
     const { data } = await supabase
       .from("clients")
-      .select("full_name")
+      .select("first_name, last_name")
       .eq("id", access.clientId)
       .maybeSingle();
-    clientName = (data?.full_name as string | undefined) ?? null;
+    clientName = data
+      ? formatPartyName({
+          firstName: (data.first_name as string | undefined) ?? "",
+          lastName: (data.last_name as string | undefined) ?? "",
+        })
+      : null;
   }
 
   return {

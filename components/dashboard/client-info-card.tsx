@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ExternalLink, Mail, MapPin, Pencil, Phone } from "lucide-react";
 import { ClientForm } from "@/components/client-form";
 import { buildClientAddressLine, getClientGoogleMapsUrl } from "@/lib/dashboard/google-maps";
+import { formatPartyName } from "@/lib/party/display-name";
 import type { Client, ClientInput } from "@/lib/service/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,7 +60,7 @@ export function ClientInfoCard({
         </CardHeader>
         <CardContent className="grid min-w-0 gap-3 text-sm">
           <div className="min-w-0">
-            <p className="break-words font-medium text-foreground">{client.fullName}</p>
+            <p className="break-words font-medium text-foreground">{formatPartyName(client)}</p>
             {client.location ? (
               <p className="break-words text-muted">Obiekt: {client.location}</p>
             ) : null}

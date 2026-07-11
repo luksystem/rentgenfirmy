@@ -4,7 +4,8 @@ import type { Client, ClientInput } from "@/lib/service/types";
 export function rowToClient(row: ClientRow): Client {
   return {
     id: row.id,
-    fullName: row.full_name,
+    firstName: row.first_name ?? "",
+    lastName: row.last_name,
     location: row.location,
     addressStreet: row.address_street ?? "",
     addressCity: row.address_city ?? "",
@@ -25,7 +26,8 @@ export function clientInputToInsert(
   const now = new Date().toISOString();
 
   return {
-    full_name: input.fullName.trim(),
+    first_name: input.firstName.trim(),
+    last_name: input.lastName.trim(),
     location: input.location.trim(),
     address_street: input.addressStreet.trim(),
     address_city: input.addressCity.trim(),
@@ -42,7 +44,8 @@ export function clientInputToInsert(
 export function clientToInsert(client: Client): ClientInsert {
   return {
     id: client.id,
-    full_name: client.fullName,
+    first_name: client.firstName,
+    last_name: client.lastName,
     location: client.location,
     address_street: client.addressStreet,
     address_city: client.addressCity,

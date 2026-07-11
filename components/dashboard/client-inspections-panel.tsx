@@ -7,6 +7,7 @@ import { InspectionPlanWizard } from "@/components/inspections/inspection-plan-w
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { INSPECTION_STATUS_LABELS, type InspectionRecord } from "@/lib/inspections/types";
+import { formatPartyName } from "@/lib/party/display-name";
 import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
@@ -64,7 +65,7 @@ export function ClientInspectionsPanel({
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted">
-          Cykliczne przeglądy serwisowe dla <strong className="text-foreground">{client.fullName}</strong>
+          Cykliczne przeglądy serwisowe dla <strong className="text-foreground">{formatPartyName(client)}</strong>
         </p>
         <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" onClick={() => setPlanOpen(true)}>

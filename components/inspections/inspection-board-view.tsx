@@ -13,6 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { formatPartyName } from "@/lib/party/display-name";
+import { sortClientsByLastName } from "@/lib/sort/party-and-project";
 import type { Client } from "@/lib/service/types";
 import { useAppStore } from "@/store/app-store";
 
@@ -24,7 +26,7 @@ export function InspectionBoardView() {
   const [helpOpen, setHelpOpen] = useState(false);
 
   const sortedClients = useMemo(
-    () => [...clients].sort((left, right) => left.fullName.localeCompare(right.fullName, "pl")),
+    () => sortClientsByLastName(clients),
     [clients],
   );
 
@@ -77,7 +79,7 @@ export function InspectionBoardView() {
                     className="w-full rounded-xl border border-border/70 px-3 py-2.5 text-left text-sm transition hover:border-accent/40 hover:bg-surface-muted/40"
                     onClick={() => startPlanning(client)}
                   >
-                    <span className="font-medium text-foreground">{client.fullName || "—"}</span>
+                    <span className="font-medium text-foreground">{formatPartyName(client)}</span>
                     {client.location ? (
                       <span className="mt-0.5 block text-xs text-muted">{client.location}</span>
                     ) : null}

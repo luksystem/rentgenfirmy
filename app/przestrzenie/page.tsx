@@ -18,6 +18,7 @@ import {
   getInternalDashboardHref,
   GLOBAL_DASHBOARD_KINDS,
 } from "@/lib/dashboard/types";
+import { formatPartyName } from "@/lib/party/display-name";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useDashboardStore } from "@/store/dashboard-store";
@@ -121,7 +122,7 @@ export default function DashboardHubPage() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">{project.name}</CardTitle>
                     <p className="text-sm text-muted">
-                      {client?.fullName ?? "Klient"} · {project.type} · {project.stage}
+                      {client ? formatPartyName(client) : "Klient"} · {project.type} · {project.stage}
                     </p>
                   </CardHeader>
                   <CardContent className="flex flex-wrap gap-2">

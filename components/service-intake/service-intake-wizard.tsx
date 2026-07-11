@@ -68,7 +68,8 @@ type WizardStep =
 
 type WizardFieldKey =
   | "email"
-  | "fullName"
+  | "firstName"
+  | "lastName"
   | "project"
   | "description"
   | "contactPhone"
@@ -201,7 +202,8 @@ function CafePriorityLegend() {
 export function ServiceIntakeWizard() {
   const [step, setStep] = useState<WizardStep>("email");
   const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [verification, setVerification] = useState<ServiceIntakeVerifyResult | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -358,8 +360,11 @@ export function ServiceIntakeWizard() {
 
   function validateVerifyStep(): boolean {
     const errors: WizardFieldErrors = {};
-    if (!fullName.trim()) {
-      errors.fullName = "Podaj imię i nazwisko.";
+    if (!firstName.trim()) {
+      errors.firstName = "Podaj imię.";
+    }
+    if (!lastName.trim()) {
+      errors.lastName = "Podaj nazwisko.";
     }
     return applyFieldErrors(errors);
   }
@@ -616,7 +621,7 @@ export function ServiceIntakeWizard() {
       const response = await fetch("/api/zgloszenie/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionToken, email, fullName }),
+        body: JSON.stringify({ sessionToken, email, firstName, lastName }),
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -656,7 +661,7 @@ export function ServiceIntakeWizard() {
       const response = await fetch("/api/zgloszenie/guest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionToken, email, fullName }),
+        body: JSON.stringify({ sessionToken, email, firstName, lastName }),
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -856,22 +861,40 @@ export function ServiceIntakeWizard() {
                   bazie klientów.
                 </p>
               </div>
-              <Field
-                label="Imię i nazwisko"
-                error={fieldErrors.fullName}
-                invalid={Boolean(fieldErrors.fullName)}
-              >
-                <Input
-                  value={fullName}
-                  invalid={Boolean(fieldErrors.fullName)}
-                  onChange={(event) => {
-                    setFullName(event.target.value);
-                    clearFieldError("fullName");
-                    setVerifyFailureMessage(null);
-                  }}
-                  placeholder="Jan Kowalski"
-                />
-              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  label="Imię"
+                  error={fieldErrors.firstName}
+                  invalid={Boolean(fieldErrors.firstName)}
+                >
+                  <Input
+                    value={firstName}
+                    invalid={Boolean(fieldErrors.firstName)}
+                    onChange={(event) => {
+                      setFirstName(event.target.value);
+                      clearFieldError("firstName");
+                      setVerifyFailureMessage(null);
+                    }}
+                    placeholder="Jan"
+                  />
+                </Field>
+                <Field
+                  label="Nazwisko"
+                  error={fieldErrors.lastName}
+                  invalid={Boolean(fieldErrors.lastName)}
+                >
+                  <Input
+                    value={lastName}
+                    invalid={Boolean(fieldErrors.lastName)}
+                    onChange={(event) => {
+                      setLastName(event.target.value);
+                      clearFieldError("lastName");
+                      setVerifyFailureMessage(null);
+                    }}
+                    placeholder="Kowalski"
+                  />
+                </Field>
+              </div>
 
               {verifyFailureMessage ? (
                 <div className="grid gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">

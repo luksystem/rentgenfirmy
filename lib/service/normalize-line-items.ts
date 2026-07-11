@@ -1,3 +1,7 @@
+import {
+  ensureMaterialItemsFromLegacyCost,
+  normalizeMaterialItems,
+} from "@/lib/service/material-items";
 import { normalizeServicePhotos } from "@/lib/service/service-photos";
 import { normalizeWarrantyHours } from "@/lib/service/warranty-hours";
 import { emptyLineItems, type ServiceLineItems } from "@/lib/service/types";
@@ -42,7 +46,7 @@ function normalizeBillable(value: unknown): ServiceLineItems["billable"] {
 export function normalizeLineItemsFromJson(value: unknown): ServiceLineItems {
   const data = asObject(value);
 
-  return {
+  return ensureMaterialItemsFromLegacyCost({
     accommodations: asNumber(data.accommodations),
     supervisionHours: asNumber(data.supervisionHours),
     programmerHours: asNumber(data.programmerHours),
@@ -52,10 +56,11 @@ export function normalizeLineItemsFromJson(value: unknown): ServiceLineItems {
     kilometersOneWay: asNumber(data.kilometersOneWay),
     tripCount: Math.max(1, asNumber(data.tripCount, 1)),
     materialsCost: asNumber(data.materialsCost),
+    materialItems: normalizeMaterialItems(data.materialItems),
     materialsNote: typeof data.materialsNote === "string" ? data.materialsNote : "",
     workReportNote: typeof data.workReportNote === "string" ? data.workReportNote : "",
     photos: normalizeServicePhotos(data.photos),
     billable: normalizeBillable(data.billable),
     warrantyHours: normalizeWarrantyHours(data.warrantyHours),
-  };
+  });
 }

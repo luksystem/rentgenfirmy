@@ -1,3 +1,4 @@
+import { formatPartyName } from "@/lib/party/display-name";
 import type { TradeCompanyWithProjects } from "@/lib/trades/company-types";
 import { mergeTradeCompaniesWithProjects, projectTradeToCompanyItem } from "@/lib/trades/company-pool";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -20,7 +21,8 @@ type ProjectRow = {
 
 type ClientRow = {
   id: string;
-  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
 };
 
 export async function listTradeCompaniesFromProjects(): Promise<TradeCompanyWithProjects[]> {
@@ -60,7 +62,7 @@ export async function listTradeCompaniesFromProjects(): Promise<TradeCompanyWith
   if (clientIds.length) {
     const { data: clients, error: clientsError } = await supabase
       .from("clients")
-      .select("id, full_name")
+      .select("id, first_name, last_name")
       .in("id", clientIds);
 
     if (clientsError) {
@@ -68,7 +70,13 @@ export async function listTradeCompaniesFromProjects(): Promise<TradeCompanyWith
     }
 
     for (const client of (clients ?? []) as ClientRow[]) {
-      clientMap.set(client.id, client.full_name?.trim() || "Klient");
+      clientMap.set(
+        client.id,
+        formatPartyName({
+          firstName: client.first_name?.trim() ?? "",
+          lastName: client.last_name?.trim() ?? "",
+        }) || "Klient",
+      );
     }
   }
 

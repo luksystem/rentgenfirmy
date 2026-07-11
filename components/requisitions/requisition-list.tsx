@@ -25,6 +25,7 @@ import {
   fetchRequisitions,
   updateRequisitionStatus,
 } from "@/lib/supabase/requisition-repository";
+import { formatPartyName } from "@/lib/party/display-name";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
 import { cn, formatDateTime } from "@/lib/utils";
@@ -54,7 +55,7 @@ export function RequisitionList() {
   );
 
   const clientNames = useMemo(
-    () => new Map(clients.map((client) => [client.id, client.fullName])),
+    () => new Map(clients.map((client) => [client.id, formatPartyName(client)])),
     [clients],
   );
 

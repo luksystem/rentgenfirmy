@@ -1,3 +1,4 @@
+import { sumMaterialItemsCost } from "@/lib/service/material-items";
 import { effectiveLineItemsForCost } from "@/lib/service/warranty-hours";
 import { resolveKilometerZone } from "@/lib/service/kilometer-zone";
 import type {
@@ -74,6 +75,10 @@ function materialsCost(items: ServiceLineItems) {
   const billable = effectiveLineItemsForCost(items);
   if (!billable.billable.materials) {
     return 0;
+  }
+
+  if (billable.materialItems.length > 0) {
+    return sumMaterialItemsCost(billable.materialItems);
   }
 
   return roundMoney(billable.materialsCost);

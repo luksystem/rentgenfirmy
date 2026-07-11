@@ -5,7 +5,8 @@ import {
 } from "@/lib/service/client-offer";
 import { isOfferExpired, resolveClientOfferExpiresAt } from "@/lib/service/offer-validity";
 import { appendClientOfferHistory } from "@/lib/service/client-offer-history";
-import { getPublicOfferView } from "@/lib/service/client-offer-public-view";
+import { appendSettlementOfferHistory } from "@/lib/service/client-offer-history";
+import { getPublicOfferView, getPublicSettlementView } from "@/lib/service/client-offer-public-view";
 import { buildAcceptedOfferDocument } from "@/lib/service/client-offer-snapshot";
 import {
   applyClientOptionalSelection,
@@ -21,7 +22,7 @@ import {
   clientToServiceClient,
   convertContactToClientServer,
 } from "@/lib/supabase/contact-server";
-import { createWorkOrderFromAcceptedService } from "@/lib/supabase/work-order-repository";
+import { createWorkOrderFromAcceptedService, updateWorkOrderFromSettledService } from "@/lib/supabase/work-order-repository";
 
 function isOfferExpiredService(service: ServiceRecord) {
   return isOfferExpired(service.clientOffer.expiresAt);
@@ -235,7 +236,191 @@ export async function respondToClientOffer(
   return saved;
 }
 
-export { getPublicOfferView } from "@/lib/service/client-offer-public-view";
+function isSettlementOfferExpiredService(service: ServiceRecord) {
+  return isOfferExpired(service.settlementOffer.expiresAt);
+}
+
+export async function fetchServiceBySettlementOfferToken(
+  token: string,
+): Promise<ServiceRecord | null> {
+  const supabase = getSupabaseServer();
+  const { data, error } = await supabase
+    .from("services")
+    .select("*")
+    .eq("settlement_offer_token", token)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data ? rowToService(data) : null;
+}
+
+export type PublicOfferLookup = {
+  kind: "estimate" | "settlement";
+  service: ServiceRecord;
+};
+
+export async function fetchServiceByPublicOfferToken(
+  token: string,
+): Promise<PublicOfferLookup | null> {
+  const estimate = await fetchServiceByClientOfferToken(token);
+  if (estimate) {
+    return { kind: "estimate", service: estimate };
+  }
+
+  const settlement = await fetchServiceBySettlementOfferToken(token);
+  if (settlement) {
+    return { kind: "settlement", service: settlement };
+  }
+
+  return null;
+}
+
+export async function regenerateSettlementOfferForService(
+  service: ServiceRecord,
+): Promise<ServiceRecord> {
+  const supabase = getSupabase();
+  const token = crypto.randomUUID();
+  const previousFeedback =
+    service.settlementOffer.status === "negotiation" && service.settlementOffer.message
+      ? service.settlementOffer.message
+      : service.settlementOffer.lastClientMessage;
+  const historyType = service.settlementOffer.token ? "link_regenerated" : "link_generated";
+
+  const updated: ServiceRecord = {
+    ...service,
+    updatedAt: new Date().toISOString(),
+    settlementOfferHistory: appendSettlementOfferHistory(service.settlementOfferHistory, {
+      type: historyType,
+      offerStatus: "pending",
+    }),
+    settlementOffer: {
+      token,
+      expiresAt: resolveClientOfferExpiresAt(service.settlementOffer.expiresAt),
+      status: "pending",
+      message: null,
+      respondedAt: null,
+      lastClientMessage: previousFeedback,
+    },
+  };
+
+  const { data, error } = await supabase
+    .from("services")
+    .upsert(serviceToInsert(updated), { onConflict: "id" })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToService(data);
+}
+
+export async function generateSettlementOfferForService(
+  service: ServiceRecord,
+): Promise<ServiceRecord> {
+  if (service.settlementOffer.status === "accepted") {
+    throw new Error("Nie można wygenerować nowego linku — rozliczenie zostało zaakceptowane.");
+  }
+
+  if (service.settlementOffer.token) {
+    return regenerateSettlementOfferForService(service);
+  }
+
+  return regenerateSettlementOfferForService({
+    ...service,
+    settlementOffer: {
+      ...service.settlementOffer,
+      token: null,
+    },
+  });
+}
+
+export async function respondToSettlementOffer(
+  token: string,
+  action: ClientOfferAction,
+  message?: string,
+): Promise<ServiceRecord> {
+  const supabase = getSupabaseServer();
+  const service = await fetchServiceBySettlementOfferToken(token);
+
+  if (!service) {
+    throw new Error("Nie znaleziono rozliczenia.");
+  }
+
+  if (action !== "negotiate" && isSettlementOfferExpiredService(service)) {
+    throw new Error("Rozliczenie straciło ważność — akceptacja i odrzucenie nie są już możliwe.");
+  }
+
+  if (service.settlementOffer.status && service.settlementOffer.status !== "pending") {
+    throw new Error("Rozliczenie ma już zapisaną decyzję klienta.");
+  }
+
+  if (action === "negotiate" && !message?.trim()) {
+    throw new Error("Wiadomość jest wymagana przy konsultacji.");
+  }
+
+  const now = new Date().toISOString();
+  const offerStatus = offerStatusAfterClientOfferAction(action);
+  const clientMessage = message?.trim() || null;
+
+  const serviceForSave: ServiceRecord = {
+    ...service,
+    updatedAt: now,
+    settlementOfferHistory: appendSettlementOfferHistory(service.settlementOfferHistory, {
+      type: historyTypeForAction(action),
+      message: clientMessage,
+      offerStatus,
+      at: now,
+    }),
+    settlementOffer: {
+      ...service.settlementOffer,
+      status: offerStatus,
+      message: clientMessage,
+      respondedAt: now,
+      lastClientMessage: clientMessage ?? service.settlementOffer.lastClientMessage,
+    },
+  };
+
+  const companyProfile =
+    action === "accept" ? await resolveCompanyProfileDocumentServer() : null;
+
+  const updated: ServiceRecord = {
+    ...serviceForSave,
+    settlementOfferAcceptedDocument:
+      action === "accept"
+        ? buildAcceptedOfferDocument(
+            getPublicSettlementView(serviceForSave),
+            now,
+            undefined,
+            companyProfile ?? undefined,
+          )
+        : service.settlementOfferAcceptedDocument,
+  };
+
+  const { data, error } = await supabase
+    .from("services")
+    .upsert(serviceToInsert(updated), { onConflict: "id" })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const saved = rowToService(data);
+
+  if (action === "accept") {
+    await updateWorkOrderFromSettledService(saved, now);
+  }
+
+  return saved;
+}
+
+export { getPublicOfferView, getPublicSettlementView } from "@/lib/service/client-offer-public-view";
 
 export function isPublicOfferAvailable(service: ServiceRecord) {
   return (
@@ -250,5 +435,21 @@ export function isPublicOfferQuestionAvailable(service: ServiceRecord) {
     Boolean(service.clientOffer.token) &&
     service.clientOffer.status === "pending" &&
     isOfferExpiredService(service)
+  );
+}
+
+export function isPublicSettlementOfferAvailable(service: ServiceRecord) {
+  return (
+    Boolean(service.settlementOffer.token) &&
+    service.settlementOffer.status === "pending" &&
+    !isSettlementOfferExpiredService(service)
+  );
+}
+
+export function isPublicSettlementOfferQuestionAvailable(service: ServiceRecord) {
+  return (
+    Boolean(service.settlementOffer.token) &&
+    service.settlementOffer.status === "pending" &&
+    isSettlementOfferExpiredService(service)
   );
 }

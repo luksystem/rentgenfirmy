@@ -175,9 +175,13 @@ export function WorkOrderList() {
         <>
       <div className="grid gap-3 md:hidden">
         {filteredOrders.map((order) => {
-          const projectLabel = order.projectId
-            ? projectNames.get(order.projectId) ?? "—"
-            : "Bez projektu";
+          const projectLabel = order.projectId ? (
+            projectNames.get(order.projectId) ?? "—"
+          ) : (
+            <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted">
+              Bez projektu
+            </span>
+          );
 
           return (
             <Card
@@ -271,9 +275,13 @@ export function WorkOrderList() {
             </thead>
             <tbody className="divide-y divide-border/60">
               {filteredOrders.map((order) => {
-                const projectLabel = order.projectId
-                  ? projectNames.get(order.projectId) ?? "—"
-                  : "Bez projektu";
+                const projectLabel = order.projectId ? (
+                  projectNames.get(order.projectId) ?? "—"
+                ) : (
+                  <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted">
+                    Bez projektu
+                  </span>
+                );
 
                 return (
                   <tr key={order.id} className={cn(statusRowClass(order.status))}>

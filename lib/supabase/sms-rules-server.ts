@@ -126,12 +126,13 @@ export async function dispatchSmsRules(
 }
 
 export async function dispatchClientCreatedSms(
-  client: Pick<Client, "id" | "phone" | "fullName" | "email" | "location">,
+  client: Pick<Client, "id" | "phone" | "firstName" | "lastName" | "email" | "location">,
 ) {
   return dispatchSmsRules("client_created", {
     clientId: client.id,
     phone: client.phone,
-    fullName: client.fullName,
+    firstName: client.firstName,
+    lastName: client.lastName,
     email: client.email,
     location: client.location,
   });

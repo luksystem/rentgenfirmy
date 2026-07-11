@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { splitPartyFullName } from "@/lib/party/display-name";
 import { clientInputToInsert, rowToClient } from "@/lib/supabase/client-mappers";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import type { ClientInput } from "@/lib/service/types";
@@ -13,19 +14,34 @@ function parseClientBody(body: unknown): ClientInput | null {
   }
 
   const data = body as Record<string, unknown>;
-  const fullName =
-    typeof data.fullName === "string"
-      ? data.fullName
-      : typeof data.full_name === "string"
-        ? data.full_name
+
+  let firstName =
+    typeof data.firstName === "string"
+      ? data.firstName
+      : typeof data.first_name === "string"
+        ? data.first_name
         : "";
 
-  if (!fullName.trim()) {
+  let lastName =
+    typeof data.lastName === "string"
+      ? data.lastName
+      : typeof data.last_name === "string"
+        ? data.last_name
+        : "";
+
+  if (!lastName.trim() && typeof data.fullName === "string" && data.fullName.trim()) {
+    const split = splitPartyFullName(data.fullName);
+    firstName = split.firstName;
+    lastName = split.lastName;
+  }
+
+  if (!lastName.trim()) {
     return null;
   }
 
   return {
-    fullName,
+    firstName,
+    lastName,
     location: typeof data.location === "string" ? data.location : "",
     addressStreet:
       typeof data.addressStreet === "string"
@@ -86,7 +102,7 @@ export async function POST(request: Request) {
 
   const input = parseClientBody(body);
   if (!input) {
-    return NextResponse.json({ error: "fullName is required" }, { status: 400 });
+    return NextResponse.json({ error: "lastName is required" }, { status: 400 });
   }
 
   try {

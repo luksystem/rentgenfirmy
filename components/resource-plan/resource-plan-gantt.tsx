@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
 import { cn, formatDate } from "@/lib/utils";
+import { formatPartyName } from "@/lib/party/display-name";
 import { getUserDisplayName } from "@/lib/auth/types";
 import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
 import { resolveDictionaryIcon } from "@/lib/resource-plan/icon-options";
@@ -223,7 +224,10 @@ export function ResourcePlanGantt() {
     const projectRows = projects.filter((project) => project.isActive).map((project) => ({
       id: project.id,
       label: project.name,
-      sublabel: clients.find((client) => client.id === project.clientId)?.fullName,
+      sublabel: (() => {
+        const client = clients.find((entry) => entry.id === project.clientId);
+        return client ? formatPartyName(client) : undefined;
+      })(),
     }));
     const withActiveItems: GanttRow[] = [];
     const withoutActiveItems: GanttRow[] = [];

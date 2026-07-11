@@ -1,4 +1,5 @@
 import { buildClientAddressLine } from "@/lib/dashboard/google-maps";
+import { splitPartyFullName } from "@/lib/party/display-name";
 import type { Client } from "@/lib/service/types";
 
 export type GuestContactAddress = {
@@ -66,11 +67,13 @@ export function buildGuestServiceClient(input: {
 }): Client {
   const address = normalizeGuestContactAddress(input.address);
   const location = formatGuestContactAddress(address);
+  const { firstName, lastName } = splitPartyFullName(input.fullName);
   const now = new Date().toISOString();
 
   return {
     id: "guest",
-    fullName: input.fullName,
+    firstName,
+    lastName,
     location,
     addressStreet: address.addressStreet,
     addressCity: address.addressCity,

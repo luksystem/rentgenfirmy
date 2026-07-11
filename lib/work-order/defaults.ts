@@ -1,6 +1,7 @@
 import { calculateServiceCost } from "@/lib/service/calculate-service-cost";
-import { getPublicOfferView } from "@/lib/service/client-offer-public-view";
+import { getPublicOfferView, getPublicSettlementView } from "@/lib/service/client-offer-public-view";
 import { buildAcceptedOfferDocument } from "@/lib/service/client-offer-snapshot";
+import { getServiceCombinedBilling } from "@/lib/service/report-document";
 import type { ServiceRecord } from "@/lib/service/types";
 import type { WorkOrderInput, WorkOrderRecord } from "@/lib/work-order/types";
 
@@ -21,6 +22,36 @@ export function resolveAcceptedOfferDocument(
   }
 
   return buildAcceptedOfferDocument(getPublicOfferView(service), acceptedAt);
+}
+
+export function buildWorkOrderFromSettledService(
+  service: ServiceRecord,
+  acceptedAt: string,
+): WorkOrderInput {
+  const view = getPublicSettlementView(service);
+  const combined = getServiceCombinedBilling(view);
+
+  return {
+    source: "accepted_offer",
+    serviceId: service.id,
+    projectId: service.projectId,
+    clientId: service.clientId,
+    status: existingWorkOrderStatusAfterSettlement(),
+    title: service.title,
+    serviceType: service.serviceType,
+    client: { ...service.client },
+    notes: "",
+    acceptedAt,
+    offerGrossTotal:
+      service.settlementOfferAcceptedDocument?.grossTotal ?? combined.grossTotal,
+    acceptedOfferDocument:
+      service.settlementOfferAcceptedDocument ??
+      buildAcceptedOfferDocument(view, acceptedAt),
+  };
+}
+
+function existingWorkOrderStatusAfterSettlement(): WorkOrderRecord["status"] {
+  return "Zrealizowane";
 }
 
 export function buildWorkOrderFromAcceptedService(

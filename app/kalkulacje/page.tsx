@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { COMMERCIAL_MODULES } from "@/lib/modules/commercial-modules";
 import { useAppStore } from "@/store/app-store";
+import { formatPartyName } from "@/lib/party/display-name";
 import { contactToServiceClient } from "@/lib/contacts/types";
 import { clientToServiceClient } from "@/lib/service/types";
 
@@ -23,11 +24,11 @@ function SalesCalculationsContent() {
   const linkedClient = clientId ? clients.find((entry) => entry.id === clientId) : null;
   const linkedContact = contactId ? contacts.find((entry) => entry.id === contactId) : null;
   const linkedParty = linkedClient
-    ? { kind: "Klient" as const, name: linkedClient.fullName, snapshot: clientToServiceClient(linkedClient) }
+    ? { kind: "Klient" as const, name: formatPartyName(linkedClient), snapshot: clientToServiceClient(linkedClient) }
     : linkedContact
       ? {
           kind: "Kontakt" as const,
-          name: linkedContact.fullName,
+          name: formatPartyName(linkedContact),
           snapshot: contactToServiceClient(linkedContact),
         }
       : null;

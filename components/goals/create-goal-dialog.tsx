@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { formatPartyName } from "@/lib/party/display-name";
 import { GoalAiAdvisorPanel } from "@/components/goals/goal-ai-advisor-panel";
 import { ProjectSelectSearchable } from "@/components/goals/project-select-searchable";
 import {
@@ -387,7 +388,7 @@ export function CreateGoalDialog({ boardId }: { boardId: string }) {
                   <option value="">— brak —</option>
                   {clients.map((entry) => (
                     <option key={entry.id} value={entry.id}>
-                      {entry.fullName}
+                      {formatPartyName(entry)}
                     </option>
                   ))}
                 </Select>

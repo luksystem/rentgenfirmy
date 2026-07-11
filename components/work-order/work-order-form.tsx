@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AcceptedOfferPdfButton } from "@/components/work-order/accepted-offer-pdf-button";
 import { ClientPicker } from "@/components/client-picker";
+import { ProjectSelectSearchable } from "@/components/goals/project-select-searchable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
@@ -29,6 +30,17 @@ export function WorkOrderForm({ initialOrder }: { initialOrder: WorkOrderRecord 
   const [order, setOrder] = useState(initialOrder);
   const [withoutProject, setWithoutProject] = useState(!initialOrder.projectId);
   const [errors, setErrors] = useState<string[]>([]);
+
+  const clientProjects = useMemo(
+    () =>
+      order.clientId
+        ? projects
+            .filter((project) => project.clientId === order.clientId)
+            .sort((a, b) => a.name.localeCompare(b.name, "pl"))
+        : [],
+    [order.clientId, projects],
+  );
+  const clientHasProjects = clientProjects.length > 0;
 
   async function save() {
     const payload: WorkOrderRecord = {
@@ -142,35 +154,33 @@ export function WorkOrderForm({ initialOrder }: { initialOrder: WorkOrderRecord 
             <input
               type="checkbox"
               checked={withoutProject}
+              disabled={clientHasProjects}
               onChange={(event) => {
                 setWithoutProject(event.target.checked);
                 if (event.target.checked) {
                   setOrder({ ...order, projectId: null });
                 }
               }}
+              className="h-4 w-4 rounded border-border"
             />
             Zlecenie bez projektu
           </label>
 
+          {clientHasProjects && withoutProject ? (
+            <p className="text-xs text-amber-200">
+              Ten klient ma przypisane projekty — wybierz projekt z listy poniżej.
+            </p>
+          ) : null}
+
           {!withoutProject ? (
-            <Field label="Projekt">
-              <Select
-                value={order.projectId ?? ""}
-                onChange={(event) =>
-                  setOrder({
-                    ...order,
-                    projectId: event.target.value || null,
-                  })
-                }
-              >
-                <option value="">Wybierz projekt</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+            <ProjectSelectSearchable
+              projects={clientProjects}
+              clients={clients}
+              value={order.projectId}
+              onChange={(projectId) => setOrder({ ...order, projectId })}
+              emptyLabel="Wybierz projekt klienta"
+              disabled={!order.clientId}
+            />
           ) : null}
         </div>
 

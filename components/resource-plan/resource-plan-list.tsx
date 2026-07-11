@@ -5,6 +5,7 @@ import { AlertTriangle, ChevronLeft, ChevronRight, Pencil, Plus } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
+import { formatPartyName } from "@/lib/party/display-name";
 import { cn } from "@/lib/utils";
 import { getUserDisplayName } from "@/lib/auth/types";
 import { resolveDictionaryIcon } from "@/lib/resource-plan/icon-options";
@@ -248,7 +249,7 @@ export function ResourcePlanList() {
                     ) : null}
                   </p>
                   <p className="truncate text-xs text-muted">
-                    {[project?.name, client?.fullName, workType?.name].filter(Boolean).join(" · ") || "—"}
+                    {[project?.name, client ? formatPartyName(client) : null, workType?.name].filter(Boolean).join(" · ") || "—"}
                   </p>
                 </div>
                 <div className="shrink-0 text-xs text-muted">{formatRange(item.startAt, item.endAt)}</div>

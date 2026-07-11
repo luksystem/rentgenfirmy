@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { formatPartyName } from "@/lib/party/display-name";
 import {
   parseDashboardSessionValue,
   DASHBOARD_PUBLIC_SESSION_COOKIE,
@@ -44,7 +45,7 @@ export async function GET(
 
     return NextResponse.json({
       ...payload,
-      authorName: sessionValid && session ? session.authorName : payload.client.fullName,
+      authorName: sessionValid && session ? session.authorName : formatPartyName(payload.client),
     });
   } catch (error) {
     return NextResponse.json(

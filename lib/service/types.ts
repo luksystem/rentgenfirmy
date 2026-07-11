@@ -1,3 +1,4 @@
+import { partyToServiceClientName } from "@/lib/party/display-name";
 import type { ServiceAiEstimateRecord } from "@/lib/service/ai-estimate-types";
 import type { ClientOfferStatus } from "@/lib/service/client-offer";
 import type { ClientOfferAcceptedDocument } from "@/lib/service/client-offer-snapshot";
@@ -56,6 +57,15 @@ export type ServiceWarrantyHours = {
   carHours: number;
 };
 
+export type ServiceMaterialItem = {
+  id: string;
+  title: string;
+  description: string;
+  netAmount: number;
+  vatRate: VatRate;
+  billable: boolean;
+};
+
 export type ServiceLineItems = {
   accommodations: number;
   supervisionHours: number;
@@ -66,6 +76,7 @@ export type ServiceLineItems = {
   kilometersOneWay: number;
   tripCount: number;
   materialsCost: number;
+  materialItems: ServiceMaterialItem[];
   materialsNote: string;
   workReportNote: string;
   photos: ServicePhoto[];
@@ -106,9 +117,35 @@ export type ServiceClient = {
   phone: string;
 };
 
+export const SERVICE_PRICING_MODELS = ["hourly", "fixed_price"] as const;
+export type ServicePricingModel = (typeof SERVICE_PRICING_MODELS)[number];
+
+export type ServiceFixedPriceRow = {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  netUnitPrice: number;
+  netValue: number;
+  vatRate: VatRate | null;
+  active: boolean;
+  showDescription: boolean;
+  productId: string | null;
+  description: string;
+};
+
+export type ServiceFixedPriceTable = {
+  id: string;
+  title: string;
+  description: string;
+  showProductDescriptions: boolean;
+  rows: ServiceFixedPriceRow[];
+};
+
 export type Client = {
   id: string;
-  fullName: string;
+  firstName: string;
+  lastName: string;
   location: string;
   addressStreet: string;
   addressCity: string;
@@ -123,9 +160,11 @@ export type Client = {
 
 export type ClientInput = Omit<Client, "id" | "createdAt" | "updatedAt">;
 
-export function clientToServiceClient(client: Pick<Client, "fullName" | "location" | "email" | "phone">): ServiceClient {
+export function clientToServiceClient(
+  client: Pick<Client, "firstName" | "lastName" | "location" | "email" | "phone">,
+): ServiceClient {
   return {
-    fullName: client.fullName,
+    fullName: partyToServiceClientName(client),
     location: client.location,
     email: client.email,
     phone: client.phone,
@@ -164,6 +203,8 @@ export type ServiceRecord = {
   estimate: ServiceLineItems;
   actual: ServiceLineItems;
   optionalItems: ServiceOptionalItem[];
+  pricingModel: ServicePricingModel;
+  fixedPriceTables: ServiceFixedPriceTable[];
   clientOffer: {
     token: string | null;
     expiresAt: string | null;
@@ -174,6 +215,16 @@ export type ServiceRecord = {
   };
   clientOfferHistory: ClientOfferHistoryEntry[];
   clientOfferAcceptedDocument: ClientOfferAcceptedDocument | null;
+  settlementOffer: {
+    token: string | null;
+    expiresAt: string | null;
+    status: ClientOfferStatus | null;
+    message: string | null;
+    respondedAt: string | null;
+    lastClientMessage: string | null;
+  };
+  settlementOfferHistory: ClientOfferHistoryEntry[];
+  settlementOfferAcceptedDocument: ClientOfferAcceptedDocument | null;
   aiEstimate: ServiceAiEstimateRecord | null;
   /** Numer zgłoszenia z formularza /zgloszenie — null dla ofert dodanych ręcznie. */
   intakeReference: string | null;
@@ -253,6 +304,7 @@ export function emptyLineItems(billable: BillableFlags = EMPTY_BILLABLE): Servic
     kilometersOneWay: 0,
     tripCount: 1,
     materialsCost: 0,
+    materialItems: [],
     materialsNote: "",
     workReportNote: "",
     photos: [],

@@ -1,5 +1,6 @@
 import {
   buildWorkOrderFromAcceptedService,
+  buildWorkOrderFromSettledService,
   resolveAcceptedAt,
 } from "@/lib/work-order/defaults";
 import type { ServiceRecord } from "@/lib/service/types";
@@ -141,4 +142,39 @@ export async function createWorkOrderFromAcceptedServiceClient(
   }
 
   return insertWorkOrderFromAcceptedService(getSupabase(), service);
+}
+
+export async function updateWorkOrderFromSettledService(
+  service: ServiceRecord,
+  acceptedAt?: string,
+): Promise<WorkOrderRecord | null> {
+  const supabase = getSupabaseServer();
+  const existing = await fetchWorkOrderByServiceIdFrom(supabase, service.id);
+
+  if (!existing) {
+    return null;
+  }
+
+  const resolvedAcceptedAt = acceptedAt ?? new Date().toISOString();
+  const input = buildWorkOrderFromSettledService(service, resolvedAcceptedAt);
+  const order: WorkOrderRecord = {
+    ...existing,
+    ...input,
+    id: existing.id,
+    createdAt: existing.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from("work_orders")
+    .update(workOrderToInsert(order))
+    .eq("id", existing.id)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToWorkOrder(data);
 }

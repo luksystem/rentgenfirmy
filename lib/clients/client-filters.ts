@@ -24,7 +24,7 @@ export function filterClients(clients: Client[], filters: ClientListFilters) {
 
   return clients.filter((client) => {
     if (nameQuery) {
-      const nameHaystack = [client.fullName, client.externalId, client.location]
+      const nameHaystack = [client.firstName, client.lastName, client.externalId, client.location]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();

@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { filterHubEntriesByClient, useKanbanCacheStore } from "@/store/kanban-cache-store";
+import { formatPartyName } from "@/lib/party/display-name";
 import { useAppStore } from "@/store/app-store";
 
 export default function KanbanHubClientPage() {
@@ -29,7 +30,7 @@ export default function KanbanHubClientPage() {
     if (clientId === "__none__") {
       return "Bez klienta";
     }
-    return clients.find((client) => client.id === clientId)?.fullName ?? "Klient";
+    return formatPartyName(clients.find((client) => client.id === clientId) ?? { firstName: "", lastName: "Klient" });
   }, [clientId, clients]);
 
   useEffect(() => {

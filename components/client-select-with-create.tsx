@@ -11,6 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { formatPartyName } from "@/lib/party/display-name";
+import { sortClientsByLastName } from "@/lib/sort/party-and-project";
 import type { Client, ClientInput } from "@/lib/service/types";
 import { cn } from "@/lib/utils";
 
@@ -23,10 +25,14 @@ type ClientSelectWithCreateProps = {
   label?: string;
   disabled?: boolean;
   className?: string;
+  createButtonPosition?: "top" | "bottom";
+  allowCreate?: boolean;
+  allowManual?: boolean;
 };
 
 const emptyClientInput = (): ClientInput => ({
-  fullName: "",
+  firstName: "",
+  lastName: "",
   location: "",
   addressStreet: "",
   addressCity: "",
@@ -36,10 +42,14 @@ const emptyClientInput = (): ClientInput => ({
 });
 
 function clientSearchText(client: Client) {
-  return [client.fullName, client.location, client.email, client.phone, client.addressCity]
+  return [client.firstName, client.lastName, client.location, client.email, client.phone, client.addressCity]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
+}
+
+function clientDisplayName(client: Client) {
+  return formatPartyName(client);
 }
 
 export function ClientSelectWithCreate({
@@ -51,6 +61,9 @@ export function ClientSelectWithCreate({
   label = "Klient",
   disabled = false,
   className,
+  createButtonPosition = "bottom",
+  allowCreate = true,
+  allowManual = true,
 }: ClientSelectWithCreateProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newClient, setNewClient] = useState<ClientInput>(emptyClientInput);
@@ -60,10 +73,7 @@ export function ClientSelectWithCreate({
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const sortedClients = useMemo(
-    () => [...clients].sort((a, b) => a.fullName.localeCompare(b.fullName, "pl")),
-    [clients],
-  );
+  const sortedClients = useMemo(() => sortClientsByLastName(clients), [clients]);
 
   const selectedClient = useMemo(
     () => sortedClients.find((client) => client.id === value) ?? null,
@@ -95,7 +105,7 @@ export function ClientSelectWithCreate({
 
   useEffect(() => {
     if (selectedClient) {
-      setQuery(selectedClient.fullName);
+      setQuery(clientDisplayName(selectedClient));
     } else if (!open) {
       setQuery("");
     }
@@ -110,8 +120,8 @@ export function ClientSelectWithCreate({
   }
 
   async function handleCreateClient() {
-    if (!newClient.fullName.trim()) {
-      setError("Imię i nazwisko klienta jest wymagane.");
+    if (!newClient.lastName.trim()) {
+      setError("Nazwisko klienta jest wymagane.");
       return;
     }
 
@@ -121,7 +131,7 @@ export function ClientSelectWithCreate({
     try {
       const created = await onCreateClient(newClient);
       onChange(created.id);
-      setQuery(created.fullName);
+      setQuery(clientDisplayName(created));
       setDialogOpen(false);
       setNewClient(emptyClientInput());
       setOpen(false);
@@ -131,6 +141,26 @@ export function ClientSelectWithCreate({
       setIsCreating(false);
     }
   }
+
+  function openCreateDialog() {
+    setOpen(false);
+    setNewClient(emptyClientInput());
+    setDialogOpen(true);
+  }
+
+  const createButton = allowCreate ? (
+    <button
+      type="button"
+      className={cn(
+        "flex w-full items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-left text-sm text-accent hover:bg-accent/5",
+        createButtonPosition === "bottom" && "mt-1",
+      )}
+      onClick={openCreateDialog}
+    >
+      <Plus className="h-4 w-4" />
+      Dodaj nowego klienta
+    </button>
+  ) : null;
 
   return (
     <>
@@ -165,13 +195,16 @@ export function ClientSelectWithCreate({
 
           {open && !disabled ? (
             <div className="absolute z-40 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-border bg-surface-elevated p-1 shadow-card">
-              <button
-                type="button"
-                className="flex w-full rounded-lg px-3 py-2 text-left text-sm text-muted hover:bg-surface-muted"
-                onClick={() => selectClient(null)}
-              >
-                {emptyLabel}
-              </button>
+              {createButtonPosition === "top" ? createButton : null}
+              {allowManual ? (
+                <button
+                  type="button"
+                  className="flex w-full rounded-lg px-3 py-2 text-left text-sm text-muted hover:bg-surface-muted"
+                  onClick={() => selectClient(null)}
+                >
+                  {emptyLabel}
+                </button>
+              ) : null}
               {filteredClients.length === 0 ? (
                 <p className="px-3 py-2 text-xs text-muted">Brak wyników dla „{query.trim()}”.</p>
               ) : (
@@ -185,7 +218,7 @@ export function ClientSelectWithCreate({
                     )}
                     onClick={() => selectClient(client.id)}
                   >
-                    <span className="font-medium">{client.fullName}</span>
+                    <span className="font-medium">{clientDisplayName(client)}</span>
                     {client.location || client.email ? (
                       <span className="text-xs text-muted">
                         {[client.location, client.email].filter(Boolean).join(" · ")}
@@ -194,18 +227,7 @@ export function ClientSelectWithCreate({
                   </button>
                 ))
               )}
-              <button
-                type="button"
-                className="mt-1 flex w-full items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-left text-sm text-accent hover:bg-accent/5"
-                onClick={() => {
-                  setOpen(false);
-                  setNewClient(emptyClientInput());
-                  setDialogOpen(true);
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                Dodaj nowego klienta
-              </button>
+              {createButtonPosition === "bottom" ? createButton : null}
             </div>
           ) : null}
         </div>
@@ -220,14 +242,24 @@ export function ClientSelectWithCreate({
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3">
-            <Field label="Imię i nazwisko">
-              <Input
-                value={newClient.fullName}
-                onChange={(event) =>
-                  setNewClient({ ...newClient, fullName: event.target.value })
-                }
-              />
-            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Imię">
+                <Input
+                  value={newClient.firstName}
+                  onChange={(event) =>
+                    setNewClient({ ...newClient, firstName: event.target.value })
+                  }
+                />
+              </Field>
+              <Field label="Nazwisko">
+                <Input
+                  value={newClient.lastName}
+                  onChange={(event) =>
+                    setNewClient({ ...newClient, lastName: event.target.value })
+                  }
+                />
+              </Field>
+            </div>
             <Field label="Obiekt / lokalizacja">
               <Input
                 value={newClient.location}

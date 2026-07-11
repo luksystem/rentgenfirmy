@@ -1,5 +1,6 @@
 import { appendContactHistory, createContactHistoryEntry } from "@/lib/contacts/history";
 import { isContactConverted, type Contact, type ContactInput } from "@/lib/contacts/types";
+import { splitPartyFullName } from "@/lib/party/display-name";
 import { contactInputToInsert, rowToContact } from "@/lib/supabase/contact-mappers";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -55,7 +56,8 @@ function mergeIntakeIntoExistingContact(
       : intakeNotes || existingNotes;
 
   return {
-    fullName: existing.fullName.trim() || input.fullName.trim(),
+    firstName: existing.firstName.trim() || input.firstName.trim(),
+    lastName: existing.lastName.trim() || input.lastName.trim(),
     location: existing.location.trim() || input.location.trim(),
     addressStreet: existing.addressStreet.trim() || input.addressStreet.trim(),
     addressCity: existing.addressCity.trim() || input.addressCity.trim(),
@@ -102,16 +104,33 @@ async function linkExistingContactFromIntakeAdmin(
   return rowToContact(data);
 }
 
+function normalizeIntakeContactInput(
+  input:
+    | (ContactInput & { intakeReference?: string })
+    | (Omit<ContactInput, "firstName" | "lastName"> & { fullName: string; intakeReference?: string }),
+): ContactInput & { intakeReference?: string } {
+  if ("fullName" in input) {
+    const { fullName, ...rest } = input;
+    return { ...rest, ...splitPartyFullName(fullName) };
+  }
+
+  return input;
+}
+
 export async function resolveContactFromIntakeAdmin(
-  input: ContactInput & { intakeReference?: string },
+  input:
+    | (ContactInput & { intakeReference?: string })
+    | (Omit<ContactInput, "firstName" | "lastName"> & { fullName: string; intakeReference?: string }),
 ): Promise<{ contact: Contact; reusedExisting: boolean }> {
-  const existing = await findContactByEmailAdmin(input.email);
+  const normalizedInput = normalizeIntakeContactInput(input);
+
+  const existing = await findContactByEmailAdmin(normalizedInput.email);
   if (existing && !isContactConverted(existing)) {
-    const contact = await linkExistingContactFromIntakeAdmin(existing, input);
+    const contact = await linkExistingContactFromIntakeAdmin(existing, normalizedInput);
     return { contact, reusedExisting: true };
   }
 
-  const contact = await createContactFromIntakeAdmin(input);
+  const contact = await createContactFromIntakeAdmin(normalizedInput);
   return { contact, reusedExisting: false };
 }
 
@@ -133,7 +152,8 @@ export async function createContactFromIntakeAdmin(
     .insert(
       contactInputToInsert(
         {
-          fullName: input.fullName,
+          firstName: input.firstName,
+          lastName: input.lastName,
           location: input.location,
           addressStreet: input.addressStreet,
           addressCity: input.addressCity,

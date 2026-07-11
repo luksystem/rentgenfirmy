@@ -16,7 +16,8 @@ export function ContactForm({
   onCancel?: () => void;
 }) {
   const defaults: ContactInput = {
-    fullName: contact?.fullName ?? "",
+    firstName: contact?.firstName ?? "",
+    lastName: contact?.lastName ?? "",
     location: contact?.location ?? "",
     addressStreet: contact?.addressStreet ?? "",
     addressCity: contact?.addressCity ?? "",
@@ -32,7 +33,8 @@ export function ContactForm({
     const form = new FormData(event.currentTarget);
 
     await onSubmit({
-      fullName: String(form.get("fullName") ?? ""),
+      firstName: String(form.get("firstName") ?? ""),
+      lastName: String(form.get("lastName") ?? ""),
       location: String(form.get("location") ?? ""),
       addressStreet: String(form.get("addressStreet") ?? ""),
       addressCity: String(form.get("addressCity") ?? ""),
@@ -46,9 +48,14 @@ export function ContactForm({
 
   return (
     <form className="grid gap-3" onSubmit={(event) => void handleSubmit(event)}>
-      <Field label="Imię i nazwisko">
-        <Input name="fullName" defaultValue={defaults.fullName} required />
-      </Field>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Imię">
+          <Input name="firstName" defaultValue={defaults.firstName} />
+        </Field>
+        <Field label="Nazwisko">
+          <Input name="lastName" defaultValue={defaults.lastName} required />
+        </Field>
+      </div>
       <Field label="Obiekt / nazwa lokalizacji">
         <Input name="location" defaultValue={defaults.location} />
       </Field>

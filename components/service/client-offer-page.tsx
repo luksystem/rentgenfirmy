@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { FixedPriceOfferReport } from "@/components/service/fixed-price-offer-report";
 import { ServiceReport } from "@/components/service/service-report";
 import {
   ClientOptionalItemsPicker,
@@ -32,6 +33,8 @@ type OfferMeta = {
   isExpired: boolean;
 };
 
+type OfferKind = "estimate" | "settlement";
+
 const SECTION_LINKS = [
   { href: "#offer-optional-items", label: "Opcje dodatkowe" },
   { href: "#offer-scope", label: "Zakres prac" },
@@ -42,6 +45,7 @@ const SECTION_LINKS = [
 export function ClientOfferPage({ token }: { token: string }) {
   const [service, setService] = useState<ServiceRecord | null>(null);
   const [offer, setOffer] = useState<OfferMeta | null>(null);
+  const [offerKind, setOfferKind] = useState<OfferKind>("estimate");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [negotiationMessage, setNegotiationMessage] = useState("");
@@ -64,6 +68,7 @@ export function ClientOfferPage({ token }: { token: string }) {
 
       setService(payload.service as ServiceRecord);
       setOffer(payload.offer as OfferMeta);
+      setOfferKind((payload.kind as OfferKind) ?? "estimate");
       const loaded = payload.service as ServiceRecord;
       setSelectedOptionalIds(
         new Set(loaded.optionalItems.filter((item) => item.clientSelected).map((item) => item.id)),
@@ -89,6 +94,11 @@ export function ClientOfferPage({ token }: { token: string }) {
     const meta = getServiceReportDocumentMeta(service);
     return { combined, meta };
   }, [offer?.canRespond, selectedOptionalIds, service]);
+
+  const isSettlementView = offerKind === "settlement";
+  const isFixedPriceEstimate = !isSettlementView && service?.pricingModel === "fixed_price";
+  const showHourlyEstimateBanner =
+    !isSettlementView && service?.pricingModel === "hourly" && offer?.canRespond;
 
   const showOptionalPicker = Boolean(
     service && offer?.canRespond && hasOptionalItems(service.optionalItems),
@@ -124,9 +134,13 @@ export function ClientOfferPage({ token }: { token: string }) {
       await loadOffer();
       setSuccess(
         action === "accept"
-          ? "Dziękujemy — oferta została zaakceptowana."
+          ? isSettlementView
+            ? "Dziękujemy — rozliczenie zostało zaakceptowane."
+            : "Dziękujemy — oferta została zaakceptowana."
           : action === "reject"
-            ? "Oferta została odrzucona."
+            ? isSettlementView
+              ? "Rozliczenie zostało odrzucone."
+              : "Oferta została odrzucona."
             : "Wiadomość negocjacyjna została wysłana.",
       );
     } catch (submitError) {
@@ -240,7 +254,7 @@ export function ClientOfferPage({ token }: { token: string }) {
       <div className="mx-auto grid w-full min-w-0 max-w-4xl gap-4 sm:gap-5">
         <header className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 sm:p-6">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">
-            Rentgen firmy · wycena serwisu
+            Rentgen firmy · {isSettlementView ? "rozliczenie serwisu" : "wycena serwisu"}
           </p>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
@@ -316,6 +330,16 @@ export function ClientOfferPage({ token }: { token: string }) {
           </div>
         )}
 
+        {showHourlyEstimateBanner ? (
+          <Card className="border-sky-500/30 bg-sky-500/10">
+            <CardContent className="py-4 text-sm text-sky-100">
+              To wstępna wycena na podstawie stawek godzinowych i przewidywanych kosztów przed
+              wyjazdem. Po wykonaniu prac otrzymasz osobny link z rozliczeniem kosztów
+              rzeczywistych.
+            </CardContent>
+          </Card>
+        ) : null}
+
         <nav
           aria-label="Nawigacja po ofercie"
           className="flex flex-wrap gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-2"
@@ -352,11 +376,15 @@ export function ClientOfferPage({ token }: { token: string }) {
         ) : null}
 
         <div className="min-w-0 max-w-full overflow-hidden">
-          <ServiceReport
-            service={service}
-            variant="client"
-            optionalItemSelection={offer.canRespond ? selectedOptionalIds : undefined}
-          />
+          {isFixedPriceEstimate ? (
+            <FixedPriceOfferReport service={service} variant="client" />
+          ) : (
+            <ServiceReport
+              service={service}
+              variant="client"
+              optionalItemSelection={offer.canRespond ? selectedOptionalIds : undefined}
+            />
+          )}
         </div>
 
         {offer.canAskQuestion ? (

@@ -85,6 +85,27 @@ export function appendClientOfferHistory(
   ];
 }
 
+export type SettlementOfferHistoryEntry = ClientOfferHistoryEntry;
+
+export const SETTLEMENT_OFFER_HISTORY_TYPES = CLIENT_OFFER_HISTORY_TYPES;
+
+export const SETTLEMENT_OFFER_HISTORY_LABELS: Record<ClientOfferHistoryEntryType, string> = {
+  link_generated: "Wygenerowano link rozliczenia",
+  link_regenerated: "Wygenerowano nowy link rozliczenia",
+  client_accepted: "Klient zaakceptował rozliczenie",
+  client_rejected: "Klient odrzucił rozliczenie",
+  client_negotiation: "Klient prosi o konsultację rozliczenia",
+};
+
+export const normalizeSettlementOfferHistory = normalizeClientOfferHistory;
+
+export function appendSettlementOfferHistory(
+  history: SettlementOfferHistoryEntry[],
+  entry: Omit<SettlementOfferHistoryEntry, "id" | "at"> & { at?: string; id?: string },
+): SettlementOfferHistoryEntry[] {
+  return appendClientOfferHistory(history, entry);
+}
+
 export function getServiceOfferListTone(service: ServiceRecord): ServiceOfferListTone | null {
   const offerStatus = service.clientOffer.status;
 

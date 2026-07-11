@@ -99,13 +99,24 @@ export type ServiceRow = {
   ai_estimate?: unknown;
   intake_reference?: string | null;
   reviewed_at?: string | null;
+  pricing_model?: string;
+  fixed_price_tables?: unknown;
+  settlement_offer_token?: string | null;
+  settlement_offer_expires_at?: string | null;
+  settlement_offer_status?: string | null;
+  settlement_offer_message?: string | null;
+  settlement_offer_responded_at?: string | null;
+  settlement_offer_last_client_message?: string | null;
+  settlement_offer_history?: unknown;
+  settlement_offer_accepted_document?: unknown;
   created_at: string;
   updated_at: string;
 };
 
 export type ClientRow = {
   id: string;
-  full_name: string;
+  first_name: string;
+  last_name: string;
   location: string;
   address_street: string;
   address_city: string;
@@ -120,7 +131,8 @@ export type ClientRow = {
 
 export type ContactRow = {
   id: string;
-  full_name: string;
+  first_name: string;
+  last_name: string;
   location: string;
   address_street: string;
   address_city: string;
@@ -139,7 +151,7 @@ export type ContactRow = {
 };
 
 export type ContactInsert = Partial<ContactRow> &
-  Pick<ContactRow, "full_name"> & {
+  Pick<ContactRow, "last_name"> & {
     history?: unknown;
   };
 
@@ -147,7 +159,8 @@ export type ContactUpdate = Partial<ContactRow>;
 
 export type ClientInsert = {
   id?: string;
-  full_name: string;
+  first_name?: string;
+  last_name: string;
   location?: string;
   address_street?: string;
   address_city?: string;
@@ -854,6 +867,16 @@ export type ServiceInsert = {
   ai_estimate?: unknown;
   intake_reference?: string | null;
   reviewed_at?: string | null;
+  pricing_model?: string;
+  fixed_price_tables?: unknown;
+  settlement_offer_token?: string | null;
+  settlement_offer_expires_at?: string | null;
+  settlement_offer_status?: string | null;
+  settlement_offer_message?: string | null;
+  settlement_offer_responded_at?: string | null;
+  settlement_offer_last_client_message?: string | null;
+  settlement_offer_history?: unknown;
+  settlement_offer_accepted_document?: unknown;
   created_at?: string;
   updated_at?: string;
 };

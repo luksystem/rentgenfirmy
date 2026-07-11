@@ -12,6 +12,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { activeContacts, type Contact, type ContactInput } from "@/lib/contacts/types";
+import { formatPartyName } from "@/lib/party/display-name";
+import { sortContactsByLastName } from "@/lib/sort/party-and-project";
 import { cn } from "@/lib/utils";
 
 type ContactSelectWithCreateProps = {
@@ -23,10 +25,14 @@ type ContactSelectWithCreateProps = {
   label?: string;
   disabled?: boolean;
   className?: string;
+  createButtonPosition?: "top" | "bottom";
+  allowCreate?: boolean;
+  allowManual?: boolean;
 };
 
 const emptyContactInput = (): ContactInput => ({
-  fullName: "",
+  firstName: "",
+  lastName: "",
   location: "",
   addressStreet: "",
   addressCity: "",
@@ -36,10 +42,14 @@ const emptyContactInput = (): ContactInput => ({
 });
 
 function contactSearchText(contact: Contact) {
-  return [contact.fullName, contact.location, contact.email, contact.phone, contact.addressCity]
+  return [contact.firstName, contact.lastName, contact.location, contact.email, contact.phone, contact.addressCity]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
+}
+
+function contactDisplayName(contact: Contact) {
+  return formatPartyName(contact);
 }
 
 export function ContactSelectWithCreate({
@@ -51,6 +61,9 @@ export function ContactSelectWithCreate({
   label = "Kontakt",
   disabled = false,
   className,
+  createButtonPosition = "bottom",
+  allowCreate = true,
+  allowManual = true,
 }: ContactSelectWithCreateProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newContact, setNewContact] = useState<ContactInput>(emptyContactInput());
@@ -62,10 +75,7 @@ export function ContactSelectWithCreate({
 
   const selectableContacts = useMemo(() => activeContacts(contacts), [contacts]);
 
-  const sortedContacts = useMemo(
-    () => [...selectableContacts].sort((a, b) => a.fullName.localeCompare(b.fullName, "pl")),
-    [selectableContacts],
-  );
+  const sortedContacts = useMemo(() => sortContactsByLastName(selectableContacts), [selectableContacts]);
 
   const selectedContact = useMemo(
     () => sortedContacts.find((contact) => contact.id === value) ?? null,
@@ -97,7 +107,7 @@ export function ContactSelectWithCreate({
 
   useEffect(() => {
     if (selectedContact) {
-      setQuery(selectedContact.fullName);
+      setQuery(contactDisplayName(selectedContact));
     } else if (!open) {
       setQuery("");
     }
@@ -112,8 +122,8 @@ export function ContactSelectWithCreate({
   }
 
   async function handleCreateContact() {
-    if (!newContact.fullName.trim()) {
-      setError("Imię i nazwisko kontaktu jest wymagane.");
+    if (!newContact.lastName.trim()) {
+      setError("Nazwisko kontaktu jest wymagane.");
       return;
     }
 
@@ -123,7 +133,7 @@ export function ContactSelectWithCreate({
     try {
       const created = await onCreateContact(newContact);
       onChange(created.id);
-      setQuery(created.fullName);
+      setQuery(contactDisplayName(created));
       setDialogOpen(false);
       setNewContact(emptyContactInput());
       setOpen(false);
@@ -133,6 +143,26 @@ export function ContactSelectWithCreate({
       setIsCreating(false);
     }
   }
+
+  function openCreateDialog() {
+    setOpen(false);
+    setNewContact(emptyContactInput());
+    setDialogOpen(true);
+  }
+
+  const createButton = allowCreate ? (
+    <button
+      type="button"
+      className={cn(
+        "flex w-full items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-left text-sm text-accent hover:bg-accent/5",
+        createButtonPosition === "bottom" && "mt-1",
+      )}
+      onClick={openCreateDialog}
+    >
+      <Plus className="h-4 w-4" />
+      Dodaj nowy kontakt
+    </button>
+  ) : null;
 
   return (
     <>
@@ -167,13 +197,16 @@ export function ContactSelectWithCreate({
 
           {open && !disabled ? (
             <div className="absolute z-40 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-border bg-surface-elevated p-1 shadow-card">
-              <button
-                type="button"
-                className="flex w-full rounded-lg px-3 py-2 text-left text-sm text-muted hover:bg-surface-muted"
-                onClick={() => selectContact(null)}
-              >
-                {emptyLabel}
-              </button>
+              {createButtonPosition === "top" ? createButton : null}
+              {allowManual ? (
+                <button
+                  type="button"
+                  className="flex w-full rounded-lg px-3 py-2 text-left text-sm text-muted hover:bg-surface-muted"
+                  onClick={() => selectContact(null)}
+                >
+                  {emptyLabel}
+                </button>
+              ) : null}
               {filteredContacts.length === 0 ? (
                 <p className="px-3 py-2 text-xs text-muted">Brak wyników dla „{query.trim()}”.</p>
               ) : (
@@ -187,7 +220,7 @@ export function ContactSelectWithCreate({
                     )}
                     onClick={() => selectContact(contact.id)}
                   >
-                    <span className="font-medium">{contact.fullName}</span>
+                    <span className="font-medium">{contactDisplayName(contact)}</span>
                     {contact.location || contact.email ? (
                       <span className="text-xs text-muted">
                         {[contact.location, contact.email].filter(Boolean).join(" · ")}
@@ -196,18 +229,7 @@ export function ContactSelectWithCreate({
                   </button>
                 ))
               )}
-              <button
-                type="button"
-                className="mt-1 flex w-full items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-left text-sm text-accent hover:bg-accent/5"
-                onClick={() => {
-                  setOpen(false);
-                  setNewContact(emptyContactInput());
-                  setDialogOpen(true);
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                Dodaj nowy kontakt
-              </button>
+              {createButtonPosition === "bottom" ? createButton : null}
             </div>
           ) : null}
         </div>
@@ -222,14 +244,24 @@ export function ContactSelectWithCreate({
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3">
-            <Field label="Imię i nazwisko">
-              <Input
-                value={newContact.fullName}
-                onChange={(event) =>
-                  setNewContact({ ...newContact, fullName: event.target.value })
-                }
-              />
-            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Imię">
+                <Input
+                  value={newContact.firstName}
+                  onChange={(event) =>
+                    setNewContact({ ...newContact, firstName: event.target.value })
+                  }
+                />
+              </Field>
+              <Field label="Nazwisko">
+                <Input
+                  value={newContact.lastName}
+                  onChange={(event) =>
+                    setNewContact({ ...newContact, lastName: event.target.value })
+                  }
+                />
+              </Field>
+            </div>
             <Field label="Obiekt / lokalizacja">
               <Input
                 value={newContact.location}

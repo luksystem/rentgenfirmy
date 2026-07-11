@@ -1,3 +1,4 @@
+import { formatPartyName } from "@/lib/party/display-name";
 import type {
   KanbanAuthorSide,
   KanbanBoard,
@@ -514,7 +515,7 @@ export async function fetchKanbanPublicContext(projectProcessItemId: string) {
   if (projectInfo.clientId) {
     const { data: client, error: clientError } = await supabase
       .from("clients")
-      .select("full_name")
+      .select("first_name, last_name")
       .eq("id", projectInfo.clientId)
       .maybeSingle();
 
@@ -522,7 +523,12 @@ export async function fetchKanbanPublicContext(projectProcessItemId: string) {
       throw new Error(clientError.message);
     }
 
-    clientName = client?.full_name?.trim() || null;
+    clientName = client
+      ? formatPartyName({
+          firstName: client.first_name?.trim() ?? "",
+          lastName: client.last_name?.trim() ?? "",
+        }) || null
+      : null;
   }
 
   return {
