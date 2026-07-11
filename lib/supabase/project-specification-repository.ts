@@ -76,27 +76,36 @@ export async function fetchSpecificationCatalog(force = false): Promise<Specific
   }
 
   const supabase = getSupabase();
-  let { data, error } = await supabase
+  const primary = await supabase
     .from("specification_catalog_items")
     .select("*")
     .eq("is_active", true)
     .order("position", { ascending: true });
 
-  if (error?.message?.includes("client_functionality_items")) {
+  let rows: CatalogRow[];
+
+  if (primary.error?.message?.includes("client_functionality_items")) {
     const fallback = await supabase
       .from("specification_catalog_items")
       .select("id, name, category, description, position, is_active, internal_acceptance_items, created_at")
       .eq("is_active", true)
       .order("position", { ascending: true });
-    data = fallback.data;
-    error = fallback.error;
+
+    if (fallback.error) {
+      throw new Error(fallback.error.message);
+    }
+
+    rows = (fallback.data ?? []).map((row) => ({
+      ...row,
+      client_functionality_items: undefined,
+    }));
+  } else if (primary.error) {
+    throw new Error(primary.error.message);
+  } else {
+    rows = (primary.data ?? []) as CatalogRow[];
   }
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  catalogCache = (data ?? []).map((row) => rowToCatalog(row as CatalogRow));
+  catalogCache = rows.map((row) => rowToCatalog(row));
   return catalogCache;
 }
 
