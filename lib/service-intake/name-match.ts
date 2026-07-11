@@ -1,3 +1,5 @@
+import { formatPartyName } from "@/lib/party/display-name";
+
 function normalizePersonName(value: string) {
   return value
     .normalize("NFD")
@@ -59,4 +61,50 @@ export function namesMatch(expected: string, provided: string) {
   }
 
   return tokensOverlap(expectedTokens, providedTokens);
+}
+
+function fieldMatchesClientPart(expected: string, provided: string) {
+  const trimmed = provided.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  return namesMatch(expected, trimmed);
+}
+
+/** Wystarczy częściowe dopasowanie imienia lub nazwiska — nie trzeba podawać obu pól. */
+export function intakePartyMatchesClient(
+  client: { firstName: string; lastName: string },
+  party: { firstName: string; lastName: string },
+) {
+  const providedFirst = party.firstName.trim();
+  const providedLast = party.lastName.trim();
+
+  if (!providedFirst && !providedLast) {
+    return false;
+  }
+
+  const clientFirst = client.firstName.trim();
+  const clientLast = client.lastName.trim();
+  const clientFull = formatPartyName(client);
+
+  const checks: boolean[] = [];
+
+  if (providedFirst) {
+    checks.push(
+      fieldMatchesClientPart(clientFirst, providedFirst) ||
+        fieldMatchesClientPart(clientLast, providedFirst) ||
+        fieldMatchesClientPart(clientFull, providedFirst),
+    );
+  }
+
+  if (providedLast) {
+    checks.push(
+      fieldMatchesClientPart(clientLast, providedLast) ||
+        fieldMatchesClientPart(clientFirst, providedLast) ||
+        fieldMatchesClientPart(clientFull, providedLast),
+    );
+  }
+
+  return checks.some(Boolean);
 }

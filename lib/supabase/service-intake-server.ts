@@ -1,7 +1,7 @@
 import { formatPartyName } from "@/lib/party/display-name";
 import { getUserDisplayName } from "@/lib/auth/types";
 import { buildClientAddressLine } from "@/lib/dashboard/google-maps";
-import { namesMatch } from "@/lib/service-intake/name-match";
+import { intakePartyMatchesClient } from "@/lib/service-intake/name-match";
 import {
   buildServiceIntakeStatusEmail,
   buildServiceIntakeSubmittedEmail,
@@ -340,13 +340,17 @@ export async function verifyServiceIntakeIdentity(input: {
   }
 
   const client = await findClientByEmail(email);
-  const clientDisplayName = client
-    ? formatPartyName({
-        firstName: client.first_name ?? "",
-        lastName: client.last_name ?? "",
-      })
-    : "";
-  if (!client || !namesMatch(clientDisplayName, party.fullName)) {
+  if (!client) {
+    return null;
+  }
+
+  const clientParty = {
+    firstName: client.first_name ?? "",
+    lastName: client.last_name ?? "",
+  };
+  const clientDisplayName = formatPartyName(clientParty);
+
+  if (!intakePartyMatchesClient(clientParty, party)) {
     return null;
   }
 
@@ -381,8 +385,8 @@ export async function createGuestIntakeSession(input: {
     throw new Error("Sesja wygasła. Odśwież stronę i zacznij od początku.");
   }
 
-  if (!party.fullName) {
-    throw new Error("Podaj imię i nazwisko.");
+  if (!party.firstName.trim() && !party.lastName.trim()) {
+    throw new Error("Podaj imię lub nazwisko.");
   }
 
   const rates = await fetchServiceRates();

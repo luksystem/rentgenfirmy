@@ -16,10 +16,10 @@ export async function POST(request: Request) {
     const lastName = body.lastName?.trim() ?? "";
     const fullName = body.fullName?.trim() ?? "";
     const sessionToken = body.sessionToken?.trim() ?? "";
-    const hasName = Boolean(lastName || fullName);
+    const hasName = Boolean(firstName || lastName || fullName);
 
     if (!sessionToken || !email || !hasName) {
-      return NextResponse.json({ error: "Uzupełnij wszystkie pola." }, { status: 400 });
+      return NextResponse.json({ error: "Podaj e-mail oraz imię lub nazwisko." }, { status: 400 });
     }
 
     const result = await verifyServiceIntakeIdentity({

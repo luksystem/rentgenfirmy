@@ -360,11 +360,9 @@ export function ServiceIntakeWizard() {
 
   function validateVerifyStep(): boolean {
     const errors: WizardFieldErrors = {};
-    if (!firstName.trim()) {
-      errors.firstName = "Podaj imię.";
-    }
-    if (!lastName.trim()) {
-      errors.lastName = "Podaj nazwisko.";
+    if (!firstName.trim() && !lastName.trim()) {
+      errors.firstName = "Podaj imię lub nazwisko.";
+      errors.lastName = "Podaj imię lub nazwisko.";
     }
     return applyFieldErrors(errors);
   }
@@ -857,13 +855,13 @@ export function ServiceIntakeWizard() {
               <div>
                 <h2 className="text-lg font-semibold text-foreground">Potwierdź tożsamość</h2>
                 <p className="mt-1 text-sm text-muted">
-                  Podaj imię i nazwisko ({email}). Wystarczy częściowe dopasowanie do danych w naszej
-                  bazie klientów.
+                  Podaj imię lub nazwisko powiązane z adresem {email}. Wystarczy częściowe dopasowanie
+                  — np. „Herna” dla „Hernacka”.
                 </p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field
-                  label="Imię"
+                  label="Imię (opcjonalnie)"
                   error={fieldErrors.firstName}
                   invalid={Boolean(fieldErrors.firstName)}
                 >
@@ -879,7 +877,7 @@ export function ServiceIntakeWizard() {
                   />
                 </Field>
                 <Field
-                  label="Nazwisko"
+                  label="Nazwisko (opcjonalnie)"
                   error={fieldErrors.lastName}
                   invalid={Boolean(fieldErrors.lastName)}
                 >
