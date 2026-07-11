@@ -126,6 +126,8 @@ export type ServiceFixedPriceRow = {
   quantity: number;
   unit: string;
   netUnitPrice: number;
+  /** Rabat % na pozycję (0–100). */
+  percentDiscount: number;
   netValue: number;
   vatRate: VatRate | null;
   active: boolean;

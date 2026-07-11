@@ -1,5 +1,6 @@
 import {
   VAT_RATES,
+  type ServiceCostBreakdown,
   type ServiceDiscounts,
   type ServiceFixedPriceRow,
   type ServiceFixedPriceTable,
@@ -21,8 +22,22 @@ function asNumber(value: unknown, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-export function computeFixedPriceRowNetValue(row: Pick<ServiceFixedPriceRow, "quantity" | "netUnitPrice">) {
+function clampPercent(value: number) {
+  return Math.min(100, Math.max(0, value));
+}
+
+export function computeFixedPriceRowGrossNet(
+  row: Pick<ServiceFixedPriceRow, "quantity" | "netUnitPrice">,
+) {
   return roundMoney(Math.max(0, row.quantity) * Math.max(0, row.netUnitPrice));
+}
+
+export function computeFixedPriceRowNetValue(
+  row: Pick<ServiceFixedPriceRow, "quantity" | "netUnitPrice" | "percentDiscount">,
+) {
+  const grossNet = computeFixedPriceRowGrossNet(row);
+  const discount = clampPercent(row.percentDiscount ?? 0);
+  return roundMoney(grossNet * (1 - discount / 100));
 }
 
 export function createFixedPriceRow(): ServiceFixedPriceRow {
@@ -32,6 +47,7 @@ export function createFixedPriceRow(): ServiceFixedPriceRow {
     quantity: 1,
     unit: "szt.",
     netUnitPrice: 0,
+    percentDiscount: 0,
     netValue: 0,
     vatRate: null,
     active: true,
@@ -64,19 +80,26 @@ export function normalizeFixedPriceRow(value: unknown): ServiceFixedPriceRow | n
 
   const quantity = Math.max(0, asNumber(data.quantity, 1));
   const netUnitPrice = Math.max(0, asNumber(data.netUnitPrice));
+  const percentDiscount = clampPercent(asNumber(data.percentDiscount));
 
-  return {
+  const row = {
     id,
     name: typeof data.name === "string" ? data.name : "",
     quantity,
     unit: typeof data.unit === "string" ? data.unit : "szt.",
     netUnitPrice,
-    netValue: computeFixedPriceRowNetValue({ quantity, netUnitPrice }),
+    percentDiscount,
+    netValue: 0,
     vatRate,
     active: data.active !== false,
     showDescription: data.showDescription === true,
     productId: typeof data.productId === "string" ? data.productId : null,
     description: typeof data.description === "string" ? data.description : "",
+  } satisfies ServiceFixedPriceRow;
+
+  return {
+    ...row,
+    netValue: computeFixedPriceRowNetValue(row),
   };
 }
 
@@ -115,6 +138,8 @@ export type FixedPriceVatLine = {
 
 export type FixedPriceTableBreakdown = {
   table: ServiceFixedPriceTable;
+  grossNetTotal: number;
+  rowDiscountAmount: number;
   netTotal: number;
   vatLines: FixedPriceVatLine[];
   grossTotal: number;
@@ -122,6 +147,13 @@ export type FixedPriceTableBreakdown = {
 
 export type FixedPriceBreakdown = {
   tables: FixedPriceTableBreakdown[];
+  grossNetTotal: number;
+  rowDiscountAmount: number;
+  netBeforeOfferDiscount: number;
+  percentDiscountAmount: number;
+  specialDiscountAmount: number;
+  totalDiscountAmount: number;
+  totalDiscountPercentOfTotal: number;
   netTotal: number;
   vatTotal: number;
   grossTotal: number;
@@ -136,9 +168,13 @@ export function calculateFixedPriceTableBreakdown(
   defaultVat: VatRate,
 ): FixedPriceTableBreakdown {
   const activeRows = table.rows.filter((row) => row.active && row.name.trim());
+  const grossNetTotal = roundMoney(
+    activeRows.reduce((sum, row) => sum + computeFixedPriceRowGrossNet(row), 0),
+  );
   const netTotal = roundMoney(
     activeRows.reduce((sum, row) => sum + computeFixedPriceRowNetValue(row), 0),
   );
+  const rowDiscountAmount = roundMoney(Math.max(0, grossNetTotal - netTotal));
 
   const vatBuckets = new Map<VatRate, number>();
   for (const row of activeRows) {
@@ -159,7 +195,7 @@ export function calculateFixedPriceTableBreakdown(
 
   const grossTotal = roundMoney(vatLines.reduce((sum, line) => sum + line.grossAmount, 0));
 
-  return { table, netTotal, vatLines, grossTotal };
+  return { table, grossNetTotal, rowDiscountAmount, netTotal, vatLines, grossTotal };
 }
 
 export function hasActiveFixedPriceRows(tables: ServiceFixedPriceTable[]) {
@@ -177,15 +213,26 @@ export function calculateFixedPriceBreakdown(
     calculateFixedPriceTableBreakdown(table, defaultVat),
   );
 
-  const netBeforeDiscount = roundMoney(tableBreakdowns.reduce((sum, t) => sum + t.netTotal, 0));
+  const grossNetTotal = roundMoney(tableBreakdowns.reduce((sum, t) => sum + t.grossNetTotal, 0));
+  const rowDiscountAmount = roundMoney(tableBreakdowns.reduce((sum, t) => sum + t.rowDiscountAmount, 0));
+  const netBeforeOfferDiscount = roundMoney(tableBreakdowns.reduce((sum, t) => sum + t.netTotal, 0));
+
   const percentDiscountAmount = roundMoney(
-    (netBeforeDiscount * Math.max(0, discounts.percentDiscount)) / 100,
+    (netBeforeOfferDiscount * clampPercent(discounts.percentDiscount)) / 100,
   );
-  const netAfterDiscount = roundMoney(
-    Math.max(0, netBeforeDiscount - percentDiscountAmount - Math.max(0, discounts.specialDiscountPln)),
+  const specialDiscountAmount = roundMoney(Math.max(0, discounts.specialDiscountPln));
+  const netAfterOfferDiscount = roundMoney(
+    Math.max(0, netBeforeOfferDiscount - percentDiscountAmount - specialDiscountAmount),
   );
 
-  const discountRatio = netBeforeDiscount > 0 ? netAfterDiscount / netBeforeDiscount : 1;
+  const totalDiscountAmount = roundMoney(
+    rowDiscountAmount + percentDiscountAmount + specialDiscountAmount,
+  );
+  const totalDiscountPercentOfTotal =
+    grossNetTotal > 0 ? roundMoney((totalDiscountAmount / grossNetTotal) * 100) : 0;
+
+  const discountRatio =
+    netBeforeOfferDiscount > 0 ? netAfterOfferDiscount / netBeforeOfferDiscount : 1;
 
   const vatLines: FixedPriceVatLine[] = [];
   for (const table of tableBreakdowns) {
@@ -208,14 +255,45 @@ export function calculateFixedPriceBreakdown(
     }
   }
 
-  const netTotal = netAfterDiscount;
+  const netTotal = netAfterOfferDiscount;
   const vatTotal = roundMoney(vatLines.reduce((sum, line) => sum + line.vatAmount, 0));
   const grossTotal = roundMoney(netTotal + vatTotal);
 
   return {
     tables: tableBreakdowns,
+    grossNetTotal,
+    rowDiscountAmount,
+    netBeforeOfferDiscount,
+    percentDiscountAmount,
+    specialDiscountAmount,
+    totalDiscountAmount,
+    totalDiscountPercentOfTotal,
     netTotal,
     vatTotal,
     grossTotal,
+  };
+}
+
+export function fixedPriceBreakdownToServiceCost(
+  breakdown: FixedPriceBreakdown,
+): ServiceCostBreakdown {
+  return {
+    kilometerZone: 0,
+    suggestedCarHoursFromZone: 0,
+    categories: {
+      car: 0,
+      carHours: 0,
+      labor: breakdown.netTotal,
+      materials: 0,
+      accommodations: 0,
+    },
+    subtotalBeforeDiscount: breakdown.grossNetTotal,
+    percentDiscountAmount: breakdown.percentDiscountAmount,
+    materialsPercentDiscountAmount: 0,
+    totalDiscountAmount: breakdown.totalDiscountAmount,
+    totalDiscountPercentOfSubtotal: breakdown.totalDiscountPercentOfTotal,
+    netTotal: breakdown.netTotal,
+    vatAmount: breakdown.vatTotal,
+    grossTotal: breakdown.grossTotal,
   };
 }

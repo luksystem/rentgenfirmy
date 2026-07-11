@@ -22,6 +22,7 @@ import { ServiceOptionalItemsForm } from "@/components/service/service-optional-
 import { ProjectSelectSearchable } from "@/components/goals/project-select-searchable";
 import { ServiceFixedPriceTablesForm } from "@/components/service/service-fixed-price-tables-form";
 import { FixedPriceOfferReport } from "@/components/service/fixed-price-offer-report";
+import { FixedPriceSummaryPanel } from "@/components/service/fixed-price-summary-panel";
 import { ServiceMaterialItemsForm } from "@/components/service/service-material-items-form";
 import { SettlementOfferPanel } from "@/components/service/settlement-offer-panel";
 import { useServiceDetailAutoRefresh } from "@/lib/hooks/use-service-detail-auto-refresh";
@@ -633,7 +634,7 @@ export function ServiceForm({
         ) : null}
 
         {mainTab === "quote" && step === 0 ? (
-          <Card className="min-w-0 overflow-hidden">
+          <Card className="min-w-0 overflow-visible">
             <CardContent className="grid gap-4 py-5 sm:grid-cols-2">
               <Field label="Tytuł oferty / zgłoszenia" className="sm:col-span-2">
                 <Input
@@ -716,9 +717,19 @@ export function ServiceForm({
                   clientId={service.clientId}
                   contactId={service.contactId}
                   partySnapshot={service.client}
-                  onSelectClient={(clientId, snapshot) =>
-                    setService({ ...service, clientId, contactId: null, client: snapshot, projectId: null })
-                  }
+                  onSelectClient={(clientId, snapshot) => {
+                    const nextClientProjects = projectsForClient(projects, clientId);
+                    if (nextClientProjects.length > 0) {
+                      setWithoutProject(false);
+                    }
+                    setService({
+                      ...service,
+                      clientId,
+                      contactId: null,
+                      client: snapshot,
+                      projectId: null,
+                    });
+                  }}
                   onSelectContact={(contactId, snapshot) =>
                     setService({ ...service, contactId, clientId: null, client: snapshot, projectId: null })
                   }
@@ -727,47 +738,39 @@ export function ServiceForm({
                 />
               </div>
 
-              {partyKind === "client" ? (
-                <div className="sm:col-span-2 grid gap-3 rounded-xl border border-border/80 p-3">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={withoutProject}
-                      disabled={clientHasProjects}
-                      onChange={(e) => {
-                        setWithoutProject(e.target.checked);
-                        if (e.target.checked) {
-                          setService({ ...service, projectId: null });
-                        }
-                      }}
-                      className="h-4 w-4 rounded border-border"
-                    />
-                    Oferta bez projektu
-                  </label>
-                  {clientHasProjects && withoutProject ? (
-                    <p className="text-xs text-amber-200">
-                      Ten klient ma przypisane projekty — wybierz projekt z listy poniżej.
-                    </p>
-                  ) : null}
-                  {!withoutProject ? (
-                    <>
-                      <ProjectSelectSearchable
-                        key={service.clientId ?? "no-client"}
-                        projects={clientProjects}
-                        clients={clients}
-                        value={service.projectId}
-                        onChange={(projectId) => setService({ ...service, projectId })}
-                        emptyLabel="Wybierz projekt klienta"
-                        disabled={!service.clientId}
+              {partyKind === "client" && service.clientId ? (
+                <div className="relative z-20 sm:col-span-2 grid gap-3 overflow-visible rounded-xl border border-border/80 p-3">
+                  {!clientHasProjects ? (
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={withoutProject}
+                        onChange={(e) => {
+                          setWithoutProject(e.target.checked);
+                          if (e.target.checked) {
+                            setService({ ...service, projectId: null });
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-border"
                       />
-                      {service.clientId && clientProjects.length === 0 ? (
-                        <p className="text-xs text-muted">
-                          Ten klient nie ma jeszcze przypisanych projektów — zaznacz „Oferta bez
-                          projektu” lub dodaj projekt w module Projekty.
-                        </p>
-                      ) : null}
-                    </>
+                      Oferta bez projektu
+                    </label>
                   ) : null}
+                  {clientHasProjects ? (
+                    <ProjectSelectSearchable
+                      key={service.clientId ?? "no-client"}
+                      projects={clientProjects}
+                      clients={clients}
+                      value={service.projectId}
+                      onChange={(projectId) => setService({ ...service, projectId })}
+                      emptyLabel="Wybierz projekt klienta"
+                    />
+                  ) : (
+                    <p className="text-xs text-muted">
+                      Ten klient nie ma jeszcze przypisanych projektów — zaznacz „Oferta bez
+                      projektu” lub dodaj projekt w module Projekty.
+                    </p>
+                  )}
                 </div>
               ) : null}
             </CardContent>
@@ -818,12 +821,33 @@ export function ServiceForm({
             <CardContent className="py-5">
               <fieldset disabled={isOfferLocked} className="contents">
                 {isFixedPrice ? (
-                  <ServiceFixedPriceTablesForm
-                    tables={service.fixedPriceTables}
-                    defaultVat={service.estimateDiscounts.vatRate}
-                    onChange={(fixedPriceTables) => setService({ ...service, fixedPriceTables })}
-                    disabled={isOfferLocked}
-                  />
+                  <>
+                    <ServiceFixedPriceTablesForm
+                      tables={service.fixedPriceTables}
+                      defaultVat={service.estimateDiscounts.vatRate}
+                      onChange={(fixedPriceTables) => setService({ ...service, fixedPriceTables })}
+                      disabled={isOfferLocked}
+                    />
+                    <div className="mt-6 grid gap-4 border-t border-border/60 pt-6">
+                      <h3 className="text-sm font-semibold text-foreground">Rabaty i VAT oferty</h3>
+                      <p className="text-xs text-muted">
+                        Domyślna stawka VAT stosuje się do pozycji bez własnej stawki. Rabat specjalny
+                        obniża całą ofertę po rabatach na pozycjach.
+                      </p>
+                      <ServiceDiscountsForm
+                        mode="fixed_price"
+                        discounts={service.estimateDiscounts}
+                        onChange={(estimateDiscounts) => setService({ ...service, estimateDiscounts })}
+                      />
+                    </div>
+                    <div className="mt-6 border-t border-border/60 pt-6">
+                      <ServiceOptionalItemsForm
+                        items={service.optionalItems}
+                        mode="edit"
+                        onChange={(optionalItems) => setService({ ...service, optionalItems })}
+                      />
+                    </div>
+                  </>
                 ) : (
                   <>
                 <ServiceAiEstimatePanel
@@ -890,6 +914,14 @@ export function ServiceForm({
                 )}
               </fieldset>
               <div className="mt-6 border-t border-border/60 pt-6">
+                {isFixedPrice ? (
+                  <FixedPriceSummaryPanel
+                    tables={service.fixedPriceTables}
+                    discounts={service.estimateDiscounts}
+                    optionalGrossTotal={quoteBilling.optional.grossTotal}
+                  />
+                ) : (
+                  <>
                 <ServiceCostBreakdownPanel
                   title="Podsumowanie przewidywanych kosztów"
                   breakdown={costs.estimate}
@@ -906,6 +938,8 @@ export function ServiceForm({
                     .
                   </p>
                 ) : null}
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>

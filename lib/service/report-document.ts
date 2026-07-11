@@ -1,5 +1,8 @@
 import { calculateServiceCost } from "@/lib/service/calculate-service-cost";
-import { calculateFixedPriceBreakdown } from "@/lib/service/fixed-price";
+import {
+  calculateFixedPriceBreakdown,
+  fixedPriceBreakdownToServiceCost,
+} from "@/lib/service/fixed-price";
 import { buildCombinedBilling } from "@/lib/service/optional-items";
 import { hasWarrantyHours } from "@/lib/service/warranty-hours";
 import { buildWarrantyHoursReportRows } from "@/lib/service/report-compare-rows";
@@ -76,25 +79,7 @@ export function getServiceCombinedBilling(
       service.fixedPriceTables,
       service.estimateDiscounts,
     );
-    const base = {
-      kilometerZone: 0,
-      suggestedCarHoursFromZone: 0,
-      categories: {
-        car: 0,
-        carHours: 0,
-        labor: breakdown.netTotal,
-        materials: 0,
-        accommodations: 0,
-      },
-      subtotalBeforeDiscount: breakdown.netTotal,
-      percentDiscountAmount: 0,
-      materialsPercentDiscountAmount: 0,
-      totalDiscountAmount: 0,
-      totalDiscountPercentOfSubtotal: 0,
-      netTotal: breakdown.netTotal,
-      vatAmount: breakdown.vatTotal,
-      grossTotal: breakdown.grossTotal,
-    } satisfies ServiceCostBreakdown;
+    const base = fixedPriceBreakdownToServiceCost(breakdown);
 
     return buildCombinedBilling(service, base, clientPreviewSelection);
   }

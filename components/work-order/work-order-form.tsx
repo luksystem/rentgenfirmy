@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AcceptedOfferPdfButton } from "@/components/work-order/accepted-offer-pdf-button";
@@ -15,6 +15,7 @@ import {
   type WorkOrderRecord,
 } from "@/lib/work-order/types";
 import { validateWorkOrder } from "@/lib/work-order/validate";
+import { projectsForClient } from "@/lib/sort/party-and-project";
 import { useAppStore } from "@/store/app-store";
 import { useWorkOrderStore } from "@/store/work-order-store";
 import { formatDate, formatMoney } from "@/lib/utils";
@@ -32,15 +33,16 @@ export function WorkOrderForm({ initialOrder }: { initialOrder: WorkOrderRecord 
   const [errors, setErrors] = useState<string[]>([]);
 
   const clientProjects = useMemo(
-    () =>
-      order.clientId
-        ? projects
-            .filter((project) => project.clientId === order.clientId)
-            .sort((a, b) => a.name.localeCompare(b.name, "pl"))
-        : [],
+    () => projectsForClient(projects, order.clientId),
     [order.clientId, projects],
   );
   const clientHasProjects = clientProjects.length > 0;
+
+  useEffect(() => {
+    if (order.clientId && clientHasProjects && withoutProject) {
+      setWithoutProject(false);
+    }
+  }, [order.clientId, clientHasProjects, withoutProject]);
 
   async function save() {
     const payload: WorkOrderRecord = {
@@ -66,7 +68,7 @@ export function WorkOrderForm({ initialOrder }: { initialOrder: WorkOrderRecord 
   const fromOffer = order.source === "accepted_offer";
 
   return (
-    <Card>
+    <Card className="overflow-visible">
       <CardContent className="grid gap-4 py-5">
         {fromOffer ? (
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm">
@@ -142,47 +144,52 @@ export function WorkOrderForm({ initialOrder }: { initialOrder: WorkOrderRecord 
             clients={clients}
             clientId={order.clientId}
             clientSnapshot={order.client}
-            onSelectClient={(clientId, snapshot) =>
-              setOrder({ ...order, clientId, client: snapshot })
-            }
+            onSelectClient={(clientId, snapshot) => {
+              const nextClientProjects = projectsForClient(projects, clientId);
+              if (nextClientProjects.length > 0) {
+                setWithoutProject(false);
+              }
+              setOrder({ ...order, clientId, client: snapshot, projectId: null });
+            }}
             onCreateClient={addClient}
           />
         </div>
 
-        <div className="grid gap-3 rounded-xl border border-border/80 bg-surface-muted/30 p-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={withoutProject}
-              disabled={clientHasProjects}
-              onChange={(event) => {
-                setWithoutProject(event.target.checked);
-                if (event.target.checked) {
-                  setOrder({ ...order, projectId: null });
-                }
-              }}
-              className="h-4 w-4 rounded border-border"
-            />
-            Zlecenie bez projektu
-          </label>
+        {order.clientId ? (
+          <div className="relative z-20 grid gap-3 overflow-visible rounded-xl border border-border/80 bg-surface-muted/30 p-4">
+            {!clientHasProjects ? (
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={withoutProject}
+                  onChange={(event) => {
+                    setWithoutProject(event.target.checked);
+                    if (event.target.checked) {
+                      setOrder({ ...order, projectId: null });
+                    }
+                  }}
+                  className="h-4 w-4 rounded border-border"
+                />
+                Zlecenie bez projektu
+              </label>
+            ) : null}
 
-          {clientHasProjects && withoutProject ? (
-            <p className="text-xs text-amber-200">
-              Ten klient ma przypisane projekty — wybierz projekt z listy poniżej.
-            </p>
-          ) : null}
-
-          {!withoutProject ? (
-            <ProjectSelectSearchable
-              projects={clientProjects}
-              clients={clients}
-              value={order.projectId}
-              onChange={(projectId) => setOrder({ ...order, projectId })}
-              emptyLabel="Wybierz projekt klienta"
-              disabled={!order.clientId}
-            />
-          ) : null}
-        </div>
+            {clientHasProjects ? (
+              <ProjectSelectSearchable
+                key={order.clientId ?? "no-client"}
+                projects={clientProjects}
+                clients={clients}
+                value={order.projectId}
+                onChange={(projectId) => setOrder({ ...order, projectId })}
+                emptyLabel="Wybierz projekt klienta"
+              />
+            ) : (
+              <p className="text-xs text-muted">
+                Ten klient nie ma przypisanych projektów — zostaw zaznaczone „Zlecenie bez projektu”.
+              </p>
+            )}
+          </div>
+        ) : null}
 
         <Field label="Notatki">
           <Textarea

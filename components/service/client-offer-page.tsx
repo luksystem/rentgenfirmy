@@ -390,7 +390,11 @@ export function ClientOfferPage({ token }: { token: string }) {
 
         <div className="min-w-0 max-w-full overflow-hidden">
           {isFixedPriceEstimate ? (
-            <FixedPriceOfferReport service={service} variant="client" />
+            <FixedPriceOfferReport
+              service={service}
+              variant="client"
+              optionalItemSelection={offer.canRespond ? selectedOptionalIds : undefined}
+            />
           ) : (
             <ServiceReport
               service={service}

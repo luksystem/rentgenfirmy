@@ -2,7 +2,10 @@
 
 import { create } from "zustand";
 import { calculateServiceCost } from "@/lib/service/calculate-service-cost";
-import { calculateFixedPriceBreakdown } from "@/lib/service/fixed-price";
+import {
+  calculateFixedPriceBreakdown,
+  fixedPriceBreakdownToServiceCost,
+} from "@/lib/service/fixed-price";
 import { DEFAULT_SERVICE_SETTINGS } from "@/lib/service/defaults";
 import { defaultClientOfferExpiry } from "@/lib/service/offer-validity";
 import {
@@ -46,25 +49,7 @@ export function buildServiceCosts(service: ServiceRecord) {
       service.fixedPriceTables,
       service.estimateDiscounts,
     );
-    const estimate = {
-      kilometerZone: 0,
-      suggestedCarHoursFromZone: 0,
-      categories: {
-        car: 0,
-        carHours: 0,
-        labor: estimateBreakdown.netTotal,
-        materials: 0,
-        accommodations: 0,
-      },
-      subtotalBeforeDiscount: estimateBreakdown.netTotal,
-      percentDiscountAmount: 0,
-      materialsPercentDiscountAmount: 0,
-      totalDiscountAmount: 0,
-      totalDiscountPercentOfSubtotal: 0,
-      netTotal: estimateBreakdown.netTotal,
-      vatAmount: estimateBreakdown.vatTotal,
-      grossTotal: estimateBreakdown.grossTotal,
-    };
+    const estimate = fixedPriceBreakdownToServiceCost(estimateBreakdown);
 
     return { estimate, actual: estimate };
   }

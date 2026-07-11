@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import {
+  computeFixedPriceRowGrossNet,
   computeFixedPriceRowNetValue,
 } from "@/lib/service/fixed-price";
 import { VAT_RATES, type ServiceFixedPriceRow, type VatRate } from "@/lib/service/types";
@@ -24,7 +25,15 @@ export function ServiceFixedPriceTableRow({
   onRemove: () => void;
   disabled?: boolean;
 }) {
+  const grossNet = computeFixedPriceRowGrossNet(row);
   const netValue = computeFixedPriceRowNetValue(row);
+
+  function patchRow(next: ServiceFixedPriceRow) {
+    onChange({
+      ...next,
+      netValue: computeFixedPriceRowNetValue(next),
+    });
+  }
 
   return (
     <div
@@ -65,13 +74,7 @@ export function ServiceFixedPriceTableRow({
           <NumericInput
             value={row.quantity}
             disabled={disabled}
-            onChange={(quantity) =>
-              onChange({
-                ...row,
-                quantity,
-                netValue: computeFixedPriceRowNetValue({ quantity, netUnitPrice: row.netUnitPrice }),
-              })
-            }
+            onChange={(quantity) => patchRow({ ...row, quantity })}
           />
         </Field>
         <Field label="Jednostka">
@@ -85,12 +88,15 @@ export function ServiceFixedPriceTableRow({
           <NumericInput
             value={row.netUnitPrice}
             disabled={disabled}
-            onChange={(netUnitPrice) =>
-              onChange({
-                ...row,
-                netUnitPrice,
-                netValue: computeFixedPriceRowNetValue({ quantity: row.quantity, netUnitPrice }),
-              })
+            onChange={(netUnitPrice) => patchRow({ ...row, netUnitPrice })}
+          />
+        </Field>
+        <Field label="Rabat pozycji (%)">
+          <NumericInput
+            value={row.percentDiscount}
+            disabled={disabled}
+            onChange={(percentDiscount) =>
+              patchRow({ ...row, percentDiscount: Math.min(100, Math.max(0, percentDiscount)) })
             }
           />
         </Field>
@@ -149,9 +155,16 @@ export function ServiceFixedPriceTableRow({
         Wybierz produkt z bazy (wkrótce)
       </Button>
 
-      <p className="text-sm text-muted">
-        Wartość netto: <span className="font-semibold text-foreground">{formatMoney(netValue)}</span>
-      </p>
+      <div className="grid gap-1 rounded-lg border border-border/60 bg-surface-muted/20 px-3 py-2 text-sm">
+        <p className="text-muted">
+          Wartość przed rabatem:{" "}
+          <span className="font-medium text-foreground tabular-nums">{formatMoney(grossNet)}</span>
+        </p>
+        <p>
+          Wartość netto po rabacie:{" "}
+          <span className="font-semibold text-foreground tabular-nums">{formatMoney(netValue)}</span>
+        </p>
+      </div>
     </div>
   );
 }

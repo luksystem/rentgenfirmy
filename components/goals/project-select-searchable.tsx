@@ -82,8 +82,8 @@ export function ProjectSelectSearchable({
   }
 
   return (
-    <Field label={label} className={className}>
-      <div ref={containerRef} className="relative">
+    <Field label={label} className={cn("overflow-visible", className)}>
+      <div ref={containerRef} className="relative overflow-visible">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <Input
@@ -112,7 +112,7 @@ export function ProjectSelectSearchable({
         </div>
 
         {open && !disabled ? (
-          <div className="absolute z-40 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-border bg-surface-elevated p-1 shadow-card">
+          <div className="absolute z-[100] mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-border bg-surface-elevated p-1 shadow-card">
             <button
               type="button"
               className="flex w-full rounded-lg px-3 py-2 text-left text-sm text-muted hover:bg-surface-muted"
