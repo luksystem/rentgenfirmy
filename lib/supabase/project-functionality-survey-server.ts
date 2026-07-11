@@ -19,6 +19,7 @@ import { normalizeCatalogFunctionalityItems, seedCatalogFunctionalityItems } fro
 import { normalizeCatalogAcceptanceItems, seedCatalogAcceptanceItems } from "@/lib/internal-acceptance/catalog-seeds";
 import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
 import type { SpecificationCatalogItem } from "@/lib/dashboard/specification-types";
+import { formatPartyName } from "@/lib/party/display-name";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 type SurveyRow = {
@@ -124,7 +125,7 @@ async function fetchProjectMeta(projectId: string) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("projects")
-    .select("id, name, client_id, clients(name)")
+    .select("id, name, client_id, clients(first_name, last_name)")
     .eq("id", projectId)
     .maybeSingle();
 
@@ -132,11 +133,18 @@ async function fetchProjectMeta(projectId: string) {
     throw new Error(error.message);
   }
 
-  const row = data as { name?: string; clients?: { name?: string } | { name?: string }[] | null } | null;
+  const row = data as {
+    name?: string;
+    clients?: { first_name?: string; last_name?: string } | { first_name?: string; last_name?: string }[] | null;
+  } | null;
   const clients = row?.clients;
-  const clientName = Array.isArray(clients)
-    ? String(clients[0]?.name ?? "")
-    : String(clients?.name ?? "");
+  const clientRow = Array.isArray(clients) ? clients[0] : clients;
+  const clientName = clientRow
+    ? formatPartyName({
+        firstName: String(clientRow.first_name ?? ""),
+        lastName: String(clientRow.last_name ?? ""),
+      })
+    : "";
 
   return {
     projectName: String(row?.name ?? "Projekt"),
