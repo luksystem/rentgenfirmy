@@ -13,6 +13,26 @@ import type {
   FunctionalityTaskPriority,
 } from "@/lib/client-functionality/types";
 
+function resolveCatalogEntry(
+  spec: ProjectSpecificationItem,
+  catalog: SpecificationCatalogItem[],
+  catalogById: Map<string, SpecificationCatalogItem>,
+): SpecificationCatalogItem | null {
+  if (spec.catalogItemId) {
+    const byId = catalogById.get(spec.catalogItemId);
+    if (byId) {
+      return byId;
+    }
+  }
+
+  const normalizedTitle = spec.title.trim().toLowerCase();
+  return (
+    catalog.find((entry) => entry.name.trim().toLowerCase() === normalizedTitle) ??
+    catalog.find((entry) => normalizedTitle.includes(entry.name.trim().toLowerCase())) ??
+    null
+  );
+}
+
 export function buildSurveyQuestions(
   specItems: ProjectSpecificationItem[],
   catalog: SpecificationCatalogItem[],
@@ -21,15 +41,14 @@ export function buildSurveyQuestions(
   const catalogById = new Map(catalog.map((entry) => [entry.id, entry]));
   const questions: FunctionalitySurveyQuestion[] = [];
   const seenQuestionIds = new Set<string>();
+  const linkedCatalogIds = new Set<string>();
 
   for (const spec of specItems) {
-    if (!spec.catalogItemId) {
-      continue;
-    }
-    const catalogEntry = catalogById.get(spec.catalogItemId);
+    const catalogEntry = resolveCatalogEntry(spec, catalog, catalogById);
     if (!catalogEntry) {
       continue;
     }
+    linkedCatalogIds.add(catalogEntry.id);
 
     const templateItems = seedCatalogFunctionalityItems(
       catalogEntry.name,
@@ -37,7 +56,7 @@ export function buildSurveyQuestions(
     );
 
     for (const item of templateItems) {
-      const questionId = `${spec.catalogItemId}:${item.id}`;
+      const questionId = `${catalogEntry.id}:${item.id}`;
       if (seenQuestionIds.has(questionId)) {
         continue;
       }
@@ -45,14 +64,14 @@ export function buildSurveyQuestions(
       questions.push({
         ...item,
         id: questionId,
-        catalogItemId: spec.catalogItemId,
+        catalogItemId: catalogEntry.id,
         catalogItemName: catalogEntry.name,
-        sectionKey: spec.catalogItemId,
+        sectionKey: catalogEntry.id,
       });
     }
   }
 
-  if (specItems.filter((item) => item.catalogItemId).length >= 2) {
+  if (linkedCatalogIds.size >= 2) {
     for (const item of withFunctionalityItemPositions(GLOBAL_AUTOMATION_FUNCTIONALITY_SEEDS)) {
       const questionId = `global:${item.id}`;
       if (seenQuestionIds.has(questionId)) {

@@ -183,6 +183,7 @@ export function ProjectFunctionalitySurveyPanel({
   useEffect(() => {
     void ensureBundle(projectId)
       .then(async (loaded) => {
+        setError(null);
         if (loaded.questions.length > 0 && !loaded.survey && !readOnly) {
           try {
             const result = await ensureProjectFunctionalitySurvey(projectId);
@@ -203,6 +204,9 @@ export function ProjectFunctionalitySurveyPanel({
         );
       });
   }, [ensureBundle, projectId, readOnly, setBundle]);
+
+  const showMigrationHint =
+    Boolean(error?.includes("migrację 117")) && !bundle?.survey;
 
   const surveyUrl = useMemo(() => {
     if (!bundle?.survey?.publicToken || typeof window === "undefined") {
@@ -250,7 +254,7 @@ export function ProjectFunctionalitySurveyPanel({
 
   return (
     <div className="grid gap-4">
-      {error ? (
+      {showMigrationHint ? (
         <Card>
           <CardContent className="py-4 text-sm text-rose-600">{error}</CardContent>
         </Card>
@@ -263,7 +267,7 @@ export function ProjectFunctionalitySurveyPanel({
         </p>
       </div>
 
-      {error ? <p className="text-sm text-rose-600">{error}</p> : null}
+      {error && !showMigrationHint ? <p className="text-sm text-rose-600">{error}</p> : null}
       {message ? <p className="text-sm text-emerald-600">{message}</p> : null}
 
       {!questionCount ? (
@@ -272,8 +276,14 @@ export function ProjectFunctionalitySurveyPanel({
             <p className="font-medium text-foreground">Brak pytań ankiety dla tego projektu</p>
             <p>
               1. W zakładce <strong>Specyfikacja</strong> dodaj pozycje z katalogu (np. Oświetlenie,
-              Rolety) — nie tylko własne wpisy.
+              Rolety) — kliknij przycisk przy nazwie systemu, nie wpisuj ręcznie własnej pozycji.
             </p>
+            {bundle?.survey ? (
+              <p className="text-emerald-700">
+                Ankieta jest utworzona (status: {STATUS_LABELS[bundle.survey.status]}). Po dodaniu
+                specyfikacji kliknij <strong>Odśwież ankietę</strong> poniżej.
+              </p>
+            ) : null}
             <p>
               2. Pytania są w kodzie:{" "}
               <code className="rounded bg-surface-muted px-1">lib/client-functionality/catalog-seeds.ts</code>{" "}

@@ -3,30 +3,46 @@
 alter table public.specification_catalog_items
   add column if not exists client_functionality_items jsonb not null default '[]'::jsonb;
 
-create type public.functionality_survey_status as enum (
-  'draft',
-  'sent',
-  'in_progress',
-  'completed'
-);
+do $$ begin
+  create type public.functionality_survey_status as enum (
+    'draft',
+    'sent',
+    'in_progress',
+    'completed'
+  );
+exception
+  when duplicate_object then null;
+end $$;
 
-create type public.functionality_task_status as enum (
-  'todo',
-  'in_progress',
-  'done'
-);
+do $$ begin
+  create type public.functionality_task_status as enum (
+    'todo',
+    'in_progress',
+    'done'
+  );
+exception
+  when duplicate_object then null;
+end $$;
 
-create type public.functionality_task_source as enum (
-  'template',
-  'ai',
-  'manual'
-);
+do $$ begin
+  create type public.functionality_task_source as enum (
+    'template',
+    'ai',
+    'manual'
+  );
+exception
+  when duplicate_object then null;
+end $$;
 
-create type public.functionality_task_priority as enum (
-  'must',
-  'standard',
-  'optional'
-);
+do $$ begin
+  create type public.functionality_task_priority as enum (
+    'must',
+    'standard',
+    'optional'
+  );
+exception
+  when duplicate_object then null;
+end $$;
 
 create table if not exists public.project_functionality_surveys (
   id uuid primary key default gen_random_uuid(),
