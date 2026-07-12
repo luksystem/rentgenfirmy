@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { formatDurationMinutes, parseDurationInput } from "@/lib/time-tracking/format";
 import { findOverlapMessage, rangesOverlap } from "@/lib/time-tracking/overlap";
 import { buildWeekTimeReport } from "@/lib/time-tracking/reports";
+import { resolveTimesheetPeriod } from "@/lib/time-tracking/timesheet-period";
+import {
+  canApproveTimesheetStatus,
+  canSubmitTimesheetStatus,
+  collectTimesheetSubmitIssues,
+} from "@/lib/time-tracking/timesheet-validation";
 import { validateTimeEntryInput } from "@/lib/time-tracking/validation";
 import type { TimeCategory, TimeEntryType, TimeEntryView } from "@/lib/time-tracking/types";
 
@@ -117,5 +123,58 @@ describe("week report", () => {
     expect(report.workMinutes).toBe(120);
     expect(report.billableMinutes).toBe(120);
     expect(report.byCategory[0]?.categoryName).toBe("Projekt");
+  });
+});
+
+describe("timesheet period", () => {
+  it("resolves week range from monday to sunday", () => {
+    const range = resolveTimesheetPeriod("week", new Date("2026-07-15T12:00:00"));
+    expect(range.dateFrom).toBe("2026-07-13");
+    expect(range.dateTo).toBe("2026-07-19");
+  });
+
+  it("resolves month range", () => {
+    const range = resolveTimesheetPeriod("month", new Date("2026-07-15T12:00:00"));
+    expect(range.dateFrom).toBe("2026-07-01");
+    expect(range.dateTo).toBe("2026-07-31");
+  });
+});
+
+describe("timesheet validation", () => {
+  it("allows submit only for draft or rejected", () => {
+    expect(canSubmitTimesheetStatus("draft")).toBe(true);
+    expect(canSubmitTimesheetStatus("rejected")).toBe(true);
+    expect(canSubmitTimesheetStatus("submitted")).toBe(false);
+    expect(canApproveTimesheetStatus("submitted")).toBe(true);
+  });
+
+  it("collects issues for invalid draft entries", () => {
+    const entries = [
+      {
+        id: "e1",
+        date: "2026-07-12",
+        status: "draft",
+        durationMinutes: 60,
+        categoryId: projectCategory.id,
+        entryTypeId: workType.id,
+        categoryName: "Projekt",
+        entryTypeName: "Praca",
+        description: "",
+        billable: false,
+        projectId: null,
+        clientId: null,
+        workItemId: null,
+        serviceId: null,
+        remoteWork: false,
+        delegation: false,
+        breakMinutes: 0,
+        startTime: null,
+        endTime: null,
+      },
+    ] as TimeEntryView[];
+
+    const issues = collectTimesheetSubmitIssues(entries, [projectCategory], [workType]);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toMatch(/projekt/i);
   });
 });

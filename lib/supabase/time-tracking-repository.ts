@@ -3,11 +3,16 @@
 import type {
   ActiveTimerView,
   CreateTimeEntryInput,
+  EnsureTimesheetInput,
+  RejectTimesheetInput,
   StartTimerInput,
   StopTimerInput,
+  SubmitTimesheetInput,
   TimeEntryFilters,
   TimeEntryLog,
   TimeEntryView,
+  TimesheetFilters,
+  TimesheetView,
   TimeTrackingMeta,
   UpdateTimeEntryInput,
 } from "@/lib/time-tracking/types";
@@ -27,6 +32,18 @@ function buildQuery(filters: TimeEntryFilters = {}): string {
   if (filters.userId) params.set("userId", filters.userId);
   if (filters.projectId) params.set("projectId", filters.projectId);
   if (filters.status) params.set("status", filters.status);
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+function buildTimesheetQuery(filters: TimesheetFilters = {}, ensure = false): string {
+  const params = new URLSearchParams();
+  if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+  if (filters.dateTo) params.set("dateTo", filters.dateTo);
+  if (filters.userId) params.set("userId", filters.userId);
+  if (filters.status) params.set("status", filters.status);
+  if (filters.periodType) params.set("periodType", filters.periodType);
+  if (ensure) params.set("ensure", "1");
   const query = params.toString();
   return query ? `?${query}` : "";
 }
@@ -168,4 +185,78 @@ export async function fetchTimeEntryLogs(entryId: string): Promise<TimeEntryLog[
     "Nie udało się wczytać historii wpisu.",
   );
   return payload.logs;
+}
+
+export async function fetchTimesheets(filters?: TimesheetFilters): Promise<TimesheetView[]> {
+  const response = await fetch(`/api/time-tracking/timesheets${buildTimesheetQuery(filters)}`, {
+    credentials: "include",
+  });
+  const payload = await parseJsonResponse<{ timesheets: TimesheetView[] }>(
+    response,
+    "Nie udało się wczytać arkuszy czasu.",
+  );
+  return payload.timesheets;
+}
+
+export async function ensureTimesheet(input: EnsureTimesheetInput): Promise<TimesheetView> {
+  const response = await fetch(
+    `/api/time-tracking/timesheets${buildTimesheetQuery(
+      {
+        dateFrom: input.dateFrom,
+        dateTo: input.dateTo,
+        periodType: input.periodType,
+        userId: input.userId,
+      },
+      true,
+    )}`,
+    { credentials: "include" },
+  );
+  const payload = await parseJsonResponse<{ timesheet: TimesheetView }>(
+    response,
+    "Nie udało się przygotować arkusza czasu.",
+  );
+  return payload.timesheet;
+}
+
+export async function submitTimesheet(
+  id: string,
+  input: SubmitTimesheetInput = {},
+): Promise<TimesheetView> {
+  const response = await fetch(`/api/time-tracking/timesheets/${id}/submit`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const payload = await parseJsonResponse<{ timesheet: TimesheetView }>(
+    response,
+    "Nie udało się wysłać arkusza do akceptacji.",
+  );
+  return payload.timesheet;
+}
+
+export async function approveTimesheet(id: string): Promise<TimesheetView> {
+  const response = await fetch(`/api/time-tracking/timesheets/${id}/approve`, {
+    method: "POST",
+    credentials: "include",
+  });
+  const payload = await parseJsonResponse<{ timesheet: TimesheetView }>(
+    response,
+    "Nie udało się zaakceptować arkusza.",
+  );
+  return payload.timesheet;
+}
+
+export async function rejectTimesheet(id: string, input: RejectTimesheetInput): Promise<TimesheetView> {
+  const response = await fetch(`/api/time-tracking/timesheets/${id}/reject`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const payload = await parseJsonResponse<{ timesheet: TimesheetView }>(
+    response,
+    "Nie udało się odrzucić arkusza.",
+  );
+  return payload.timesheet;
 }

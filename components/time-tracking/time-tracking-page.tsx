@@ -10,6 +10,8 @@ import { TimeEntryFormDialog } from "@/components/time-tracking/time-entry-form-
 import { TimeEntryHistoryDialog } from "@/components/time-tracking/time-entry-history-dialog";
 import { TimeEntryList } from "@/components/time-tracking/time-entry-list";
 import { TimeTimerPanel } from "@/components/time-tracking/time-timer-panel";
+import { TimeTimesheetApprovalPanel } from "@/components/time-tracking/time-timesheet-approval-panel";
+import { TimeTimesheetPanel } from "@/components/time-tracking/time-timesheet-panel";
 import { TimeWeekReport } from "@/components/time-tracking/time-week-report";
 import {
   endOfWeekSunday,
@@ -18,7 +20,8 @@ import {
   toDateInputValue,
 } from "@/lib/time-tracking/format";
 import type { TimeEntryView } from "@/lib/time-tracking/types";
-import { useTimeTrackingStore } from "@/store/time-tracking-store";
+import { useAuthStore } from "@/store/auth-store";
+import { useCanViewTeamTimeEntries, useTimeTrackingStore } from "@/store/time-tracking-store";
 
 function shiftWeek(dateFrom: string, direction: -1 | 1) {
   const start = new Date(`${dateFrom}T12:00:00`);
@@ -40,6 +43,18 @@ export function TimeTrackingPage() {
   const ensureEntries = useTimeTrackingStore((state) => state.ensureEntries);
   const setFilters = useTimeTrackingStore((state) => state.setFilters);
   const removeEntry = useTimeTrackingStore((state) => state.removeEntry);
+  const currentTimesheet = useTimeTrackingStore((state) => state.currentTimesheet);
+  const timesheetLoading = useTimeTrackingStore((state) => state.timesheetLoading);
+  const ensureCurrentTimesheet = useTimeTrackingStore((state) => state.ensureCurrentTimesheet);
+  const submitCurrentTimesheet = useTimeTrackingStore((state) => state.submitCurrentTimesheet);
+  const pendingTimesheets = useTimeTrackingStore((state) => state.pendingTimesheets);
+  const pendingTimesheetsLoading = useTimeTrackingStore((state) => state.pendingTimesheetsLoading);
+  const ensurePendingTimesheets = useTimeTrackingStore((state) => state.ensurePendingTimesheets);
+  const approveTimesheetById = useTimeTrackingStore((state) => state.approveTimesheetById);
+  const rejectTimesheetById = useTimeTrackingStore((state) => state.rejectTimesheetById);
+
+  const role = useAuthStore((state) => state.profile?.role);
+  const canManageTeam = useCanViewTeamTimeEntries(role);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimeEntryView | null>(null);
@@ -49,11 +64,19 @@ export function TimeTrackingPage() {
     void ensureMeta();
     void ensureEntries();
     void useTimeTrackingStore.getState().ensureTimer();
-  }, [ensureMeta, ensureEntries]);
+    void ensureCurrentTimesheet();
+    if (canManageTeam) {
+      void ensurePendingTimesheets();
+    }
+  }, [ensureMeta, ensureEntries, ensureCurrentTimesheet, ensurePendingTimesheets, canManageTeam]);
 
   useEffect(() => {
     void ensureEntries({ force: true, showLoading: false });
-  }, [filters.dateFrom, filters.dateTo, ensureEntries]);
+    void ensureCurrentTimesheet({ force: true, showLoading: false });
+    if (canManageTeam) {
+      void ensurePendingTimesheets({ force: true, showLoading: false });
+    }
+  }, [filters.dateFrom, filters.dateTo, ensureEntries, ensureCurrentTimesheet, ensurePendingTimesheets, canManageTeam]);
 
   const weekTotalMinutes = useMemo(
     () => entries.reduce((sum, entry) => sum + entry.durationMinutes, 0),
@@ -99,6 +122,21 @@ export function TimeTrackingPage() {
 
       <div className="mb-6 grid gap-4">
         <TimeTimerPanel />
+        <TimeTimesheetPanel
+          timesheet={currentTimesheet}
+          loading={timesheetLoading}
+          onSubmit={async (employeeComment) => {
+            await submitCurrentTimesheet({ employeeComment });
+          }}
+        />
+        {canManageTeam ? (
+          <TimeTimesheetApprovalPanel
+            timesheets={pendingTimesheets}
+            loading={pendingTimesheetsLoading}
+            onApprove={approveTimesheetById}
+            onReject={rejectTimesheetById}
+          />
+        ) : null}
         <TimeWeekReport entries={entries} />
       </div>
 

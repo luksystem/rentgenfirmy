@@ -6,26 +6,36 @@ import { endOfWeekSunday, startOfWeekMonday, toDateInputValue } from "@/lib/time
 import type {
   ActiveTimerView,
   CreateTimeEntryInput,
+  EnsureTimesheetInput,
+  RejectTimesheetInput,
   StartTimerInput,
   StopTimerInput,
+  SubmitTimesheetInput,
   TimeEntryFilters,
   TimeEntryLog,
   TimeEntryView,
+  TimesheetFilters,
+  TimesheetView,
   TimeTrackingMeta,
   UpdateTimeEntryInput,
 } from "@/lib/time-tracking/types";
 import {
+  approveTimesheet,
   cancelTimer,
   createTimeEntry,
   deleteTimeEntry,
+  ensureTimesheet,
   fetchActiveTimer,
   fetchTimeEntries,
   fetchTimeEntryLogs,
+  fetchTimesheets,
   fetchTimeTrackingMeta,
   pauseTimer,
+  rejectTimesheet,
   resumeTimer,
   startTimer,
   stopTimer,
+  submitTimesheet,
   updateTimeEntry,
 } from "@/lib/supabase/time-tracking-repository";
 
@@ -42,6 +52,9 @@ let metaPromise: Promise<TimeTrackingMeta> | null = null;
 let entriesPromise: Promise<TimeEntryView[]> | null = null;
 let entriesPromiseKey = "";
 let timerPromise: Promise<ActiveTimerView | null> | null = null;
+let timesheetPromise: Promise<TimesheetView | null> | null = null;
+let timesheetPromiseKey = "";
+let pendingTimesheetsPromise: Promise<TimesheetView[]> | null = null;
 
 function buildEntriesKey(filters: TimeEntryFilters) {
   return JSON.stringify(filters);
@@ -61,9 +74,19 @@ type TimeTrackingStore = {
   timerHydrated: boolean;
   timerLoading: boolean;
 
+  currentTimesheet: TimesheetView | null;
+  timesheetHydrated: boolean;
+  timesheetLoading: boolean;
+
+  pendingTimesheets: TimesheetView[];
+  pendingTimesheetsHydrated: boolean;
+  pendingTimesheetsLoading: boolean;
+
   ensureMeta: (options?: EnsureTimeEntriesOptions) => Promise<TimeTrackingMeta>;
   ensureEntries: (options?: EnsureTimeEntriesOptions) => Promise<TimeEntryView[]>;
   ensureTimer: (options?: EnsureTimeEntriesOptions) => Promise<ActiveTimerView | null>;
+  ensureCurrentTimesheet: (options?: EnsureTimeEntriesOptions) => Promise<TimesheetView | null>;
+  ensurePendingTimesheets: (options?: EnsureTimeEntriesOptions) => Promise<TimesheetView[]>;
   setFilters: (patch: Partial<TimeEntryFilters>) => void;
   createEntry: (input: CreateTimeEntryInput) => Promise<TimeEntryView>;
   updateEntry: (id: string, input: UpdateTimeEntryInput) => Promise<TimeEntryView>;
@@ -74,6 +97,9 @@ type TimeTrackingStore = {
   stopActiveTimer: (input?: StopTimerInput) => Promise<TimeEntryView>;
   cancelActiveTimer: () => Promise<void>;
   fetchEntryLogs: (entryId: string) => Promise<TimeEntryLog[]>;
+  submitCurrentTimesheet: (input?: SubmitTimesheetInput) => Promise<TimesheetView>;
+  approveTimesheetById: (id: string) => Promise<TimesheetView>;
+  rejectTimesheetById: (id: string, input: RejectTimesheetInput) => Promise<TimesheetView>;
   invalidate: () => void;
 };
 
@@ -93,6 +119,14 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
   activeTimer: null,
   timerHydrated: false,
   timerLoading: false,
+
+  currentTimesheet: null,
+  timesheetHydrated: false,
+  timesheetLoading: false,
+
+  pendingTimesheets: [],
+  pendingTimesheetsHydrated: false,
+  pendingTimesheetsLoading: false,
 
   ensureMeta: async (options = {}) => {
     const { force = false, showLoading = !get().metaHydrated } = options;
@@ -182,10 +216,91 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
     return timerPromise;
   },
 
+  ensureCurrentTimesheet: async (options = {}) => {
+    const { force = false, showLoading = !get().timesheetHydrated } = options;
+    const filters = get().filters;
+    if (!filters.dateFrom || !filters.dateTo) {
+      return null;
+    }
+
+    const key = `${filters.dateFrom}|${filters.dateTo}`;
+    if (!force && get().timesheetHydrated && timesheetPromiseKey === key) {
+      return get().currentTimesheet;
+    }
+    if (!force && timesheetPromise && timesheetPromiseKey === key) {
+      return timesheetPromise;
+    }
+
+    if (showLoading) {
+      set({ timesheetLoading: true });
+    }
+
+    timesheetPromiseKey = key;
+    const input: EnsureTimesheetInput = {
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+      periodType: "week",
+    };
+
+    timesheetPromise = ensureTimesheet(input)
+      .then((timesheet) => {
+        set({ currentTimesheet: timesheet, timesheetHydrated: true, timesheetLoading: false });
+        timesheetPromise = null;
+        return timesheet;
+      })
+      .catch((error) => {
+        set({ timesheetLoading: false });
+        timesheetPromise = null;
+        throw error;
+      });
+
+    return timesheetPromise;
+  },
+
+  ensurePendingTimesheets: async (options = {}) => {
+    const { force = false, showLoading = !get().pendingTimesheetsHydrated } = options;
+    if (!force && get().pendingTimesheetsHydrated) {
+      return get().pendingTimesheets;
+    }
+    if (!force && pendingTimesheetsPromise) {
+      return pendingTimesheetsPromise;
+    }
+
+    if (showLoading) {
+      set({ pendingTimesheetsLoading: true });
+    }
+
+    const filters = get().filters;
+    pendingTimesheetsPromise = fetchTimesheets({
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+      status: "submitted",
+      periodType: "week",
+    })
+      .then((timesheets) => {
+        set({
+          pendingTimesheets: timesheets,
+          pendingTimesheetsHydrated: true,
+          pendingTimesheetsLoading: false,
+        });
+        pendingTimesheetsPromise = null;
+        return timesheets;
+      })
+      .catch((error) => {
+        set({ pendingTimesheetsLoading: false });
+        pendingTimesheetsPromise = null;
+        throw error;
+      });
+
+    return pendingTimesheetsPromise;
+  },
+
   setFilters: (patch) => {
     set((state) => ({
       filters: { ...state.filters, ...patch },
       entriesHydrated: false,
+      timesheetHydrated: false,
+      pendingTimesheetsHydrated: false,
     }));
   },
 
@@ -249,11 +364,48 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
 
   fetchEntryLogs: async (entryId) => fetchTimeEntryLogs(entryId),
 
+  submitCurrentTimesheet: async (input) => {
+    const sheet = get().currentTimesheet;
+    if (!sheet) {
+      throw new Error("Brak arkusza czasu dla wybranego tygodnia.");
+    }
+    const timesheet = await submitTimesheet(sheet.id, input);
+    set({ currentTimesheet: timesheet, timesheetHydrated: true });
+    await get().ensureEntries({ force: true, showLoading: false });
+    await get().ensurePendingTimesheets({ force: true, showLoading: false });
+    return timesheet;
+  },
+
+  approveTimesheetById: async (id) => {
+    const timesheet = await approveTimesheet(id);
+    set((state) => ({
+      pendingTimesheets: state.pendingTimesheets.filter((item) => item.id !== id),
+      currentTimesheet:
+        state.currentTimesheet?.id === id ? timesheet : state.currentTimesheet,
+    }));
+    await get().ensureEntries({ force: true, showLoading: false });
+    return timesheet;
+  },
+
+  rejectTimesheetById: async (id, input) => {
+    const timesheet = await rejectTimesheet(id, input);
+    set((state) => ({
+      pendingTimesheets: state.pendingTimesheets.filter((item) => item.id !== id),
+      currentTimesheet:
+        state.currentTimesheet?.id === id ? timesheet : state.currentTimesheet,
+    }));
+    await get().ensureEntries({ force: true, showLoading: false });
+    return timesheet;
+  },
+
   invalidate: () => {
     metaPromise = null;
     entriesPromise = null;
     entriesPromiseKey = "";
     timerPromise = null;
+    timesheetPromise = null;
+    timesheetPromiseKey = "";
+    pendingTimesheetsPromise = null;
     set({
       meta: null,
       metaHydrated: false,
@@ -261,6 +413,10 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
       entriesHydrated: false,
       activeTimer: null,
       timerHydrated: false,
+      currentTimesheet: null,
+      timesheetHydrated: false,
+      pendingTimesheets: [],
+      pendingTimesheetsHydrated: false,
     });
   },
 }));

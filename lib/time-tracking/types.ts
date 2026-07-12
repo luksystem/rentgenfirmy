@@ -1,5 +1,9 @@
 export type TimeEntryStatus = "draft" | "submitted" | "approved" | "rejected" | "locked";
 
+export type TimesheetPeriodType = "week" | "month";
+
+export type TimesheetStatus = TimeEntryStatus;
+
 export type TimeEntryCreatedFrom = "manual" | "timer" | "plan" | "mission" | "leave" | "import";
 
 export type TimeCategory = {
@@ -179,6 +183,65 @@ export const TIME_ENTRY_STATUS_LABELS: Record<TimeEntryStatus, string> = {
   locked: "Zablokowany",
 };
 
+export const TIMESHEET_STATUS_LABELS: Record<TimesheetStatus, string> = TIME_ENTRY_STATUS_LABELS;
+
+export const TIMESHEET_PERIOD_LABELS: Record<TimesheetPeriodType, string> = {
+  week: "Tydzień",
+  month: "Miesiąc",
+};
+
+export type Timesheet = {
+  id: string;
+  userId: string;
+  periodType: TimesheetPeriodType;
+  dateFrom: string;
+  dateTo: string;
+  status: TimesheetStatus;
+  submittedAt: string | null;
+  approvedById: string | null;
+  approvedAt: string | null;
+  employeeComment: string;
+  managerComment: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TimesheetView = Timesheet & {
+  userDisplayName: string;
+  totalMinutes: number;
+  entryCount: number;
+  draftEntryCount: number;
+  submittedEntryCount: number;
+  approvedEntryCount: number;
+};
+
+export type TimesheetFilters = {
+  dateFrom?: string;
+  dateTo?: string;
+  userId?: string;
+  status?: TimesheetStatus;
+  periodType?: TimesheetPeriodType;
+};
+
+export type EnsureTimesheetInput = {
+  periodType?: TimesheetPeriodType;
+  dateFrom: string;
+  dateTo: string;
+  userId?: string;
+};
+
+export type SubmitTimesheetInput = {
+  employeeComment?: string;
+};
+
+export type RejectTimesheetInput = {
+  managerComment: string;
+};
+
 export function isEditableTimeEntryStatus(status: TimeEntryStatus) {
+  return status === "draft" || status === "rejected";
+}
+
+export function isEditableTimesheetStatus(status: TimesheetStatus) {
   return status === "draft" || status === "rejected";
 }
