@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, CalendarRange } from "lucide-react";
+import { AlertTriangle, CalendarRange, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Select, Textarea } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import {
   type WorkPlanView,
 } from "@/lib/my-work/plan-types";
 import { formatDate } from "@/lib/utils";
+import { fetchWorkRiskAnalysisAi } from "@/lib/supabase/my-work-repository";
 
 export function MyWorkWeekPlanPanel({
   plan,
@@ -40,6 +41,7 @@ export function MyWorkWeekPlanPanel({
   const [riskNotes, setRiskNotes] = useState("");
   const [selectedUserId, setSelectedUserId] = useState(teamOptions[0]?.id ?? "");
   const [busy, setBusy] = useState(false);
+  const [analyzingRisks, setAnalyzingRisks] = useState(false);
 
   if (!plan && !canManage) {
     return null;
@@ -59,6 +61,21 @@ export function MyWorkWeekPlanPanel({
       window.alert(error instanceof Error ? error.message : "Nie udało się potwierdzić planu.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleAnalyzeRisks() {
+    setAnalyzingRisks(true);
+    try {
+      const result = await fetchWorkRiskAnalysisAi();
+      setRiskNotes(result.riskNotes);
+      if (!comment.trim() && result.recommendations[0]) {
+        setComment(result.recommendations[0]!);
+      }
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Nie udało się przeanalizować ryzyk.");
+    } finally {
+      setAnalyzingRisks(false);
     }
   }
 
@@ -183,13 +200,25 @@ export function MyWorkWeekPlanPanel({
           <Field label="Zagrożenia / ryzyka">
             <Textarea value={riskNotes} onChange={(event) => setRiskNotes(event.target.value)} rows={3} />
           </Field>
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setAckOpen(false)}>
-              Anuluj
+          <div className="flex justify-between gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={analyzingRisks}
+              onClick={() => void handleAnalyzeRisks()}
+            >
+              <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+              {analyzingRisks ? "Analizuję…" : "Analiza ryzyk AI"}
             </Button>
-            <Button onClick={() => void handleAcknowledge()} disabled={busy}>
-              Potwierdź
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => setAckOpen(false)}>
+                Anuluj
+              </Button>
+              <Button onClick={() => void handleAcknowledge()} disabled={busy}>
+                Potwierdź
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -11,6 +11,7 @@ import type {
   WorkItemFilters,
   WorkItemView,
 } from "@/lib/my-work/types";
+import type { WorkDashboardMetrics } from "@/lib/my-work/dashboard-metrics";
 import type {
   AcknowledgeWeekPlanInput,
   CreateWeekPlanInput,
@@ -35,6 +36,7 @@ import {
   completeWorkItem,
   createWorkItem,
   deleteWorkItem,
+  fetchMyWorkDashboardMetrics,
   fetchMyWorkItems,
   fetchWorkItemDetail,
   recordWorkItemAcceptance,
@@ -53,6 +55,7 @@ let myItemsPromise: Promise<WorkItemView[]> | null = null;
 let teamItemsPromise: Promise<WorkItemView[]> | null = null;
 let dayContextPromise: Promise<WorkDayContext> | null = null;
 let weekPlanPromise: Promise<WorkPlanView | null> | null = null;
+let dashboardPromise: Promise<WorkDashboardMetrics> | null = null;
 
 type MyWorkStore = {
   myItems: WorkItemView[];
@@ -77,6 +80,10 @@ type MyWorkStore = {
   weekPlan: WorkPlanView | null;
   weekPlanHydrated: boolean;
   weekPlanLoading: boolean;
+
+  dashboardMetrics: WorkDashboardMetrics | null;
+  dashboardHydrated: boolean;
+  dashboardLoading: boolean;
 
   error: string | null;
 
@@ -110,6 +117,7 @@ type MyWorkStore = {
   copyPreviousWeekPlan: (assignedUserId: string) => Promise<WorkPlanView>;
   reportObstacle: (input: ReportObstacleInput) => Promise<void>;
   requestTakeover: (id: string, comment?: string) => Promise<void>;
+  ensureDashboardMetrics: (options?: { force?: boolean }) => Promise<WorkDashboardMetrics>;
 };
 
 export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
@@ -135,6 +143,10 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
   weekPlan: null,
   weekPlanHydrated: false,
   weekPlanLoading: false,
+
+  dashboardMetrics: null,
+  dashboardHydrated: false,
+  dashboardLoading: false,
 
   error: null,
 
@@ -417,6 +429,40 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
   requestTakeover: async (id, comment) => {
     const detail = await requestWorkItemTakeover(id, comment);
     get().replaceFromDetail(detail);
+  },
+
+  ensureDashboardMetrics: async (options) => {
+    const { dashboardHydrated, dashboardMetrics } = get();
+    if (dashboardHydrated && dashboardMetrics && !options?.force) {
+      return dashboardMetrics;
+    }
+    if (!options?.force && dashboardPromise) {
+      return dashboardPromise;
+    }
+
+    set({ dashboardLoading: true, error: null });
+    dashboardPromise = fetchMyWorkDashboardMetrics()
+      .then((metrics) => {
+        set({
+          dashboardMetrics: metrics,
+          dashboardHydrated: true,
+          dashboardLoading: false,
+          error: null,
+        });
+        return metrics;
+      })
+      .catch((error: unknown) => {
+        set({
+          dashboardLoading: false,
+          error: error instanceof Error ? error.message : "Błąd pulpitu managera.",
+        });
+        throw error;
+      })
+      .finally(() => {
+        dashboardPromise = null;
+      });
+
+    return dashboardPromise;
   },
 }));
 

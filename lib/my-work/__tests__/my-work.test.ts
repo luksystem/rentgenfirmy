@@ -156,3 +156,26 @@ describe("status mappers", () => {
     expect(mapFunctionalityTaskPriority("must")).toBe("urgent");
   });
 });
+
+describe("dashboard metrics", () => {
+  it("aggregates overdue and reaction queues", async () => {
+    const { computeMyWorkDashboardMetrics } = await import("@/lib/my-work/dashboard-metrics");
+    const metrics = computeMyWorkDashboardMetrics({
+      items: [
+        mockItem({ id: "1", status: "pending_ack", assignedUserId: "user-1" }),
+        mockItem({
+          id: "2",
+          status: "in_progress",
+          dueDate: "2020-01-01",
+          assignedUserId: "user-2",
+        }),
+      ],
+      obstacles: [],
+      weekPlans: [],
+      profilesById: {},
+    });
+    expect(metrics.totalOpen).toBe(2);
+    expect(metrics.overdueCount).toBe(1);
+    expect(metrics.pendingAckCount).toBe(1);
+  });
+});

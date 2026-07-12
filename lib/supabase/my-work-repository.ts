@@ -1,6 +1,12 @@
 "use client";
 
 import type {
+  WorkDaySummaryAiResponse,
+  WorkRiskAnalysisResponse,
+  WorkTaskAiSuggestionsResponse,
+} from "@/lib/my-work/ai-types";
+import type { WorkDashboardMetrics } from "@/lib/my-work/dashboard-metrics";
+import type {
   CreateWorkItemInput,
   UpdateWorkItemInput,
   WorkItemAcceptanceInput,
@@ -210,4 +216,44 @@ export async function requestWorkItemTakeover(id: string, comment?: string): Pro
     "Nie udało się wysłać prośby o przejęcie.",
   );
   return payload.detail;
+}
+
+export async function fetchWorkDaySummaryAi(sessionDate?: string): Promise<WorkDaySummaryAiResponse> {
+  const response = await fetch("/api/my-work/ai/day-summary", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionDate }),
+  });
+  return parseJsonResponse(response, "Nie udało się wygenerować szkicu podsumowania.");
+}
+
+export async function fetchWorkTaskSuggestionsAi(input?: {
+  assignedUserId?: string;
+  contextNote?: string;
+}): Promise<WorkTaskAiSuggestionsResponse> {
+  const response = await fetch("/api/my-work/ai/suggest-tasks", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input ?? {}),
+  });
+  return parseJsonResponse(response, "Nie udało się pobrać sugestii zadań.");
+}
+
+export async function fetchWorkRiskAnalysisAi(): Promise<WorkRiskAnalysisResponse> {
+  const response = await fetch("/api/my-work/ai/analyze-risks", {
+    method: "POST",
+    credentials: "include",
+  });
+  return parseJsonResponse(response, "Nie udało się przeanalizować ryzyk planu.");
+}
+
+export async function fetchMyWorkDashboardMetrics(): Promise<WorkDashboardMetrics> {
+  const response = await fetch("/api/my-work/dashboard", { credentials: "include" });
+  const payload = await parseJsonResponse<{ metrics: WorkDashboardMetrics }>(
+    response,
+    "Nie udało się wczytać pulpitu managera.",
+  );
+  return payload.metrics;
 }

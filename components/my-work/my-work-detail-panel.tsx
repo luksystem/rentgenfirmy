@@ -123,6 +123,13 @@ export function MyWorkDetailPanel({
             </section>
           ) : null}
 
+          {item.aiGenerated && item.aiSuggestionReason ? (
+            <section className="rounded-lg border border-accent/30 bg-accent/5 px-3 py-2">
+              <h3 className="font-medium text-accent">Sugestia AI</h3>
+              <p className="mt-1 text-muted">{item.aiSuggestionReason}</p>
+            </section>
+          ) : null}
+
           {item.sourceLinkUrl ? (
             <Link
               href={item.sourceLinkUrl}

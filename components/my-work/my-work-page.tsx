@@ -198,8 +198,12 @@ export function MyWorkPage() {
         onStartDay={async () => {
           await startDay();
         }}
-        onEndDay={async (comment, carryOverUnfinished) => {
-          await endDay({ employeeComment: comment, carryOverUnfinished });
+        onEndDay={async (input) => {
+          await endDay({
+            employeeComment: input.employeeComment,
+            carryOverUnfinished: input.carryOverUnfinished,
+            aiDraft: input.aiDraft,
+          });
         }}
       />
 

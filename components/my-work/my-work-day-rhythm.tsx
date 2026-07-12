@@ -17,7 +17,11 @@ export function MyWorkDayRhythm({
   context: WorkDayContext | null;
   loading?: boolean;
   onStartDay: () => Promise<void>;
-  onEndDay: (comment: string, carryOverUnfinished: boolean) => Promise<void>;
+  onEndDay: (input: {
+    employeeComment: string;
+    carryOverUnfinished: boolean;
+    aiDraft?: string;
+  }) => Promise<void>;
 }) {
   const [starting, setStarting] = useState(false);
   const [endOpen, setEndOpen] = useState(false);

@@ -2,9 +2,10 @@
 
 ## Przygotowanie
 
-1. Uruchom migracje `120`, `121`, `122` w Supabase.
+1. Uruchom migracje `120`–`124` w Supabase.
 2. Opcjonalnie: `supabase/seed/work_items_demo.sql`.
 3. Zaloguj się jako **manager** i **pracownik** (dwa konta).
+4. Dla testów AI: ustaw `OPENAI_API_KEY` (bez klucza działa fallback reguł).
 
 ## Scenariusz 1: Manager tworzy i wysyła zadanie
 
@@ -47,3 +48,40 @@
 1. Pracownik przy zadaniu do zapoznania wybiera **Zgłaszam brak** + komentarz.
 2. Manager dostaje powiadomienie `work_item_obstacle_reported`.
 3. Zadanie ma status **Zgłoszone zagrożenie** / widoczną przeszkodę.
+
+## Scenariusz 7: Rytm dnia i podsumowanie AI
+
+1. Pracownik → **Rozpoczynam dzień**.
+2. Na koniec dnia → **Podsumuj dzień** → **Wygeneruj szkic AI**.
+3. Edytuj tekst i **Zakończ dzień** (opcjonalnie: przenieś niewykonane na jutro).
+4. Sprawdź w bazie `work_summaries.ai_draft` (jeśli użyto AI).
+
+## Scenariusz 8: Plan tygodnia i analiza ryzyk
+
+1. Manager tworzy/wysyła plan tygodnia dla pracownika.
+2. Pracownik otwiera potwierdzenie planu → **Analiza ryzyk AI**.
+3. Uzupełnione pole zagrożeń → **Potwierdź**.
+
+## Scenariusz 9: Sugestie AI zadań (manager)
+
+1. Manager → **Nowe zadanie** → **Zaproponuj zadania** (panel AI).
+2. **Użyj sugestii** — pola formularza się wypełniają, badge AI po utworzeniu.
+3. Filtr **Sugestie AI** na liście pokazuje utworzone zadanie.
+
+## Scenariusz 10: Agregacja z innych modułów
+
+1. Utwórz zgłoszenie serwisowe / element procesu / zadanie ankiety z assignee.
+2. Pracownik → **Odśwież** na liście zadań.
+3. Zadanie pojawia się z odpowiednim źródłem i linkiem **Przejdź do źródła**.
+
+## Scenariusz 11: Pulpit managera
+
+1. Manager → **Moja praca → Pulpit**.
+2. Sprawdź KPI (zaległe, weryfikacja, przeszkody).
+3. Kliknij pozycję w **Wymaga reakcji** — przejście do zadania.
+
+## Scenariusz 12: Edycja i przejęcie zadania
+
+1. Manager edytuje zadanie ręczne (**Edytuj zadanie**).
+2. Osoba wspierająca na zadaniu widzi **Poproś o przejęcie**.
+3. Manager/assignee dostaje powiadomienie `work_item_takeover_requested`.

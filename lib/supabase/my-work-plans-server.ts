@@ -432,7 +432,7 @@ export async function endDaySessionServer(
       date_to: sessionDate,
       work_plan_id: sessionRow.work_plan_id,
       employee_comment: input.employeeComment.trim(),
-      ai_draft: "",
+      ai_draft: input.aiDraft?.trim() ?? "",
       submitted_at: now,
       created_at: now,
     });
@@ -442,7 +442,11 @@ export async function endDaySessionServer(
   } else {
     await admin
       .from("work_summaries")
-      .update({ employee_comment: input.employeeComment.trim(), submitted_at: now })
+      .update({
+        employee_comment: input.employeeComment.trim(),
+        ai_draft: input.aiDraft?.trim() ?? "",
+        submitted_at: now,
+      })
       .eq("id", existingSummary.id);
   }
 

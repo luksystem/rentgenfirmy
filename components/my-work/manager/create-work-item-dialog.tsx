@@ -15,6 +15,8 @@ import {
   managerFormValuesToCreateInput,
   WorkItemManagerForm,
 } from "@/components/my-work/manager/work-item-manager-form";
+import { MyWorkAiSuggestionsPanel } from "@/components/my-work/my-work-ai-suggestions-panel";
+import type { WorkTaskAiSuggestion } from "@/lib/my-work/ai-types";
 import { useAppStore } from "@/store/app-store";
 import { useMyWorkStore } from "@/store/my-work-store";
 
@@ -48,6 +50,8 @@ export function CreateWorkItemDialog() {
         managerFormValuesToCreateInput(values, {
           clientId: project?.clientId ?? null,
           sendImmediately,
+          aiGenerated: values.aiGenerated,
+          aiSuggestionReason: values.aiSuggestionReason,
         }),
       );
       setOpen(false);
@@ -58,6 +62,19 @@ export function CreateWorkItemDialog() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function applyAiSuggestion(suggestion: WorkTaskAiSuggestion) {
+    setValues((current) => ({
+      ...current,
+      title: suggestion.title,
+      description: suggestion.description,
+      expectedResult: suggestion.expectedResult,
+      priority: suggestion.priority,
+      dueDate: suggestion.dueDate ?? current.dueDate,
+      aiGenerated: true,
+      aiSuggestionReason: suggestion.reason,
+    }));
   }
 
   return (
@@ -79,6 +96,11 @@ export function CreateWorkItemDialog() {
           teamProfiles={teamProfiles}
           projects={projects}
           clients={clients}
+        />
+
+        <MyWorkAiSuggestionsPanel
+          assignedUserId={values.assignedUserId || undefined}
+          onApply={applyAiSuggestion}
         />
 
         <label className="flex items-center gap-2 text-sm">

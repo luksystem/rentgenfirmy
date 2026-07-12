@@ -101,6 +101,7 @@ export type StartDayInput = {
 export type EndDayInput = {
   sessionDate?: string;
   employeeComment: string;
+  aiDraft?: string;
   carryOverUnfinished?: boolean;
 };
 

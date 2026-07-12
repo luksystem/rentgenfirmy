@@ -445,6 +445,8 @@ export async function createManualWorkItemServer(
     priority: input.priority ?? "normal",
     status,
     sent_at: input.sendImmediately ? now : null,
+    ai_generated: input.aiGenerated ?? false,
+    ai_suggestion_reason: input.aiSuggestionReason?.trim() ?? "",
     created_at: now,
     updated_at: now,
   });

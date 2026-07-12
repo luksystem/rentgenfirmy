@@ -28,6 +28,8 @@ export type WorkItemManagerFormValues = {
   plannedEnd: string;
   estimatedMinutes: string;
   priority: CreateWorkItemInput["priority"];
+  aiGenerated?: boolean;
+  aiSuggestionReason?: string;
 };
 
 export const EMPTY_WORK_ITEM_MANAGER_FORM: WorkItemManagerFormValues = {
@@ -44,6 +46,8 @@ export const EMPTY_WORK_ITEM_MANAGER_FORM: WorkItemManagerFormValues = {
   plannedEnd: "",
   estimatedMinutes: "",
   priority: "normal",
+  aiGenerated: false,
+  aiSuggestionReason: "",
 };
 
 export function workItemToManagerFormValues(item: WorkItemView): WorkItemManagerFormValues {
@@ -66,7 +70,12 @@ export function workItemToManagerFormValues(item: WorkItemView): WorkItemManager
 
 export function managerFormValuesToCreateInput(
   values: WorkItemManagerFormValues,
-  options: { clientId?: string | null; sendImmediately?: boolean },
+  options: {
+    clientId?: string | null;
+    sendImmediately?: boolean;
+    aiGenerated?: boolean;
+    aiSuggestionReason?: string;
+  },
 ): CreateWorkItemInput {
   return {
     assignedUserId: values.assignedUserId,
@@ -84,6 +93,8 @@ export function managerFormValuesToCreateInput(
     estimatedMinutes: values.estimatedMinutes ? Number(values.estimatedMinutes) : null,
     priority: values.priority,
     sendImmediately: options.sendImmediately,
+    aiGenerated: options.aiGenerated ?? values.aiGenerated,
+    aiSuggestionReason: options.aiSuggestionReason ?? values.aiSuggestionReason,
   };
 }
 

@@ -198,6 +198,8 @@ export type CreateWorkItemInput = {
   priority?: WorkItemPriority;
   supportingUserIds?: string[];
   sendImmediately?: boolean;
+  aiGenerated?: boolean;
+  aiSuggestionReason?: string;
 };
 
 export type UpdateWorkItemInput = {

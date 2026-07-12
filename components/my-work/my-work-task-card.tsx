@@ -77,6 +77,9 @@ export function MyWorkTaskCard({
         {item.sourceTypeMeta ? (
           <span className="rounded bg-surface-muted px-1.5 py-0.5">{item.sourceTypeMeta.label}</span>
         ) : null}
+        {item.aiGenerated ? (
+          <span className="rounded bg-accent/15 px-1.5 py-0.5 text-accent">AI</span>
+        ) : null}
       </div>
 
       <div className="mt-2 flex items-center gap-2 text-xs text-muted">
