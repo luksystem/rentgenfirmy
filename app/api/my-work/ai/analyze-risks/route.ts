@@ -13,7 +13,7 @@ export async function POST() {
     const admin = getSupabaseAdmin();
     const [items, plan] = await Promise.all([
       fetchWorkItemsForUser(admin, profile.id, profile, { scope: "my", syncKanban: false }),
-      fetchCurrentWeekPlanServer(admin, profile.id),
+      fetchCurrentWeekPlanServer(admin, profile.id, profile),
     ]);
 
     const result = await analyzeWorkPlanRisks({

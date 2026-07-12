@@ -72,6 +72,8 @@ export function MyWorkEditWeekPlanDialog({
     return null;
   }
 
+  const activePlan = plan;
+
   function refreshFromTasks() {
     setItems(
       availableTasks
@@ -80,9 +82,9 @@ export function MyWorkEditWeekPlanDialog({
           workItemId: task.id,
           title: task.title,
           plannedDate: clampDateToRange(
-            task.dueDate ?? task.plannedEnd ?? plan!.dateFrom,
-            plan!.dateFrom,
-            plan!.dateTo,
+            task.dueDate ?? task.plannedEnd ?? activePlan.dateFrom,
+            activePlan.dateFrom,
+            activePlan.dateTo,
           ),
         })),
     );
@@ -95,9 +97,9 @@ export function MyWorkEditWeekPlanDialog({
         workItemId: task.id,
         title: task.title,
         plannedDate: clampDateToRange(
-          task.dueDate ?? task.plannedEnd ?? plan.dateFrom,
-          plan.dateFrom,
-          plan.dateTo,
+          task.dueDate ?? task.plannedEnd ?? activePlan.dateFrom,
+          activePlan.dateFrom,
+          activePlan.dateTo,
         ),
       },
     ]);

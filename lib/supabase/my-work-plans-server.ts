@@ -298,7 +298,6 @@ export async function fetchDayContextServer(
   sessionDate = toDateKey(),
 ): Promise<WorkDayContext> {
   const workItems = await fetchWorkItemsForUser(admin, userId, profile, { scope: "my" });
-  const workItemsById = new Map(workItems.map((item) => [item.id, item]));
 
   const { data: sessionRow } = await admin
     .from("work_day_sessions")
