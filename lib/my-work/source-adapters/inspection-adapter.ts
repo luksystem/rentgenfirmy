@@ -1,5 +1,4 @@
 import { resolveInspectionSourceLink } from "@/lib/my-work/link-resolver";
-import type { WorkItem } from "@/lib/my-work/types";
 import type { WorkItemPatch, WorkItemSourceAdapter } from "@/lib/my-work/source-adapters/types";
 
 export const inspectionWorkItemAdapter: WorkItemSourceAdapter = {
