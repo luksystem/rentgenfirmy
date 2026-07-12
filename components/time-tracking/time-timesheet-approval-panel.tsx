@@ -16,7 +16,7 @@ import {
 import { Field, Textarea } from "@/components/ui/input";
 import { formatDurationMinutes } from "@/lib/time-tracking/format";
 import { formatTimesheetPeriodLabel } from "@/lib/time-tracking/timesheet-period";
-import type { TimesheetView } from "@/lib/time-tracking/types";
+import type { TimesheetView, RejectTimesheetInput } from "@/lib/time-tracking/types";
 
 export function TimeTimesheetApprovalPanel({
   timesheets,
@@ -26,8 +26,8 @@ export function TimeTimesheetApprovalPanel({
 }: {
   timesheets: TimesheetView[];
   loading: boolean;
-  onApprove: (id: string) => Promise<void>;
-  onReject: (id: string, managerComment: string) => Promise<void>;
+  onApprove: (id: string) => Promise<unknown>;
+  onReject: (id: string, input: RejectTimesheetInput) => Promise<unknown>;
 }) {
   const [rejectTarget, setRejectTarget] = useState<TimesheetView | null>(null);
   const [rejectComment, setRejectComment] = useState("");
@@ -63,7 +63,7 @@ export function TimeTimesheetApprovalPanel({
 
     setBusyId(rejectTarget.id);
     try {
-      await onReject(rejectTarget.id, rejectComment.trim());
+      await onReject(rejectTarget.id, { managerComment: rejectComment.trim() });
       setRejectTarget(null);
       setRejectComment("");
     } catch (error) {

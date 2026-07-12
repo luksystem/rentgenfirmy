@@ -133,8 +133,12 @@ export function TimeTrackingPage() {
           <TimeTimesheetApprovalPanel
             timesheets={pendingTimesheets}
             loading={pendingTimesheetsLoading}
-            onApprove={approveTimesheetById}
-            onReject={rejectTimesheetById}
+            onApprove={async (id) => {
+              await approveTimesheetById(id);
+            }}
+            onReject={async (id, input) => {
+              await rejectTimesheetById(id, input);
+            }}
           />
         ) : null}
         <TimeWeekReport entries={entries} />
