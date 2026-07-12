@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MyWorkEndDayDialog } from "@/components/my-work/my-work-end-day-dialog";
 import type { WorkDayContext } from "@/lib/my-work/plan-types";
+import { workItemProjectLabel } from "@/lib/my-work/display-labels";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -94,6 +95,8 @@ export function MyWorkDayRhythm({
               {context.dayPlan.items.map((entry) => {
                 const workItemId = entry.workItemId;
                 const canOpen = Boolean(workItemId && onOpenItem);
+                const projectLabel = workItemProjectLabel(entry.workItem?.projectName);
+                const hasProject = Boolean(entry.workItem?.projectName?.trim());
                 return (
                   <li key={entry.id}>
                     <button
@@ -107,8 +110,16 @@ export function MyWorkDayRhythm({
                       )}
                     >
                       <span className="font-medium">{entry.workItem?.title ?? "Zadanie"}</span>
+                      <p
+                        className={cn(
+                          "mt-0.5 truncate text-xs",
+                          hasProject ? "text-foreground/80" : "italic text-muted",
+                        )}
+                      >
+                        {projectLabel}
+                      </p>
                       {entry.carriedOver ? (
-                        <span className="ml-2 text-xs text-amber-700">przeniesione</span>
+                        <span className="mt-1 inline-block text-xs text-amber-700">przeniesione</span>
                       ) : null}
                     </button>
                   </li>

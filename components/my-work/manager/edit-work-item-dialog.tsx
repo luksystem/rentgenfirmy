@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,8 @@ import type { WorkItemView } from "@/lib/my-work/types";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useMyWorkStore } from "@/store/my-work-store";
+import { fetchProjectAccessibleProfiles } from "@/lib/supabase/project-access-repository";
+import type { UserProfile } from "@/lib/auth/types";
 
 export function EditWorkItemDialog({
   item,
@@ -39,6 +41,7 @@ export function EditWorkItemDialog({
 
   const [values, setValues] = useState(EMPTY_WORK_ITEM_MANAGER_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [assigneeProfiles, setAssigneeProfiles] = useState<UserProfile[]>([]);
 
   useEffect(() => {
     if (open && item) {
@@ -46,6 +49,38 @@ export function EditWorkItemDialog({
       void loadTeamProfiles();
     }
   }, [open, item, loadTeamProfiles]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    if (!values.projectId) {
+      setAssigneeProfiles(teamProfiles);
+      return;
+    }
+    let cancelled = false;
+    void fetchProjectAccessibleProfiles(values.projectId)
+      .then((profiles) => {
+        if (!cancelled) {
+          setAssigneeProfiles(profiles);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAssigneeProfiles([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, values.projectId, teamProfiles]);
+
+  const visibleAssigneeProfiles = useMemo(() => {
+    if (!values.projectId) {
+      return teamProfiles;
+    }
+    return assigneeProfiles;
+  }, [assigneeProfiles, teamProfiles, values.projectId]);
 
   if (!item) return null;
 
@@ -119,7 +154,7 @@ export function EditWorkItemDialog({
         <WorkItemManagerForm
           values={values}
           onChange={(patch) => setValues((current) => ({ ...current, ...patch }))}
-          teamProfiles={teamProfiles}
+          teamProfiles={visibleAssigneeProfiles}
           projects={projects}
           clients={clients}
           isManualSource={isManual}

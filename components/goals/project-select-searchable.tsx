@@ -30,6 +30,7 @@ export function ProjectSelectSearchable({
   label = "Projekt",
   disabled = false,
   className,
+  dropdownZIndex = 200,
 }: {
   projects: Project[];
   clients: Client[];
@@ -39,6 +40,7 @@ export function ProjectSelectSearchable({
   label?: string;
   disabled?: boolean;
   className?: string;
+  dropdownZIndex?: number;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -145,7 +147,10 @@ export function ProjectSelectSearchable({
   function selectProject(projectId: string | null) {
     onChange(projectId);
     setOpen(false);
-    if (!projectId) {
+    if (projectId) {
+      const project = sortedProjects.find((item) => item.id === projectId);
+      setQuery(project?.name ?? "");
+    } else {
       setQuery("");
     }
   }
@@ -155,18 +160,21 @@ export function ProjectSelectSearchable({
       ? createPortal(
           <div
             ref={dropdownRef}
+            data-project-select-dropdown
             style={{
               position: "fixed",
               top: dropdownPosition.top,
               left: dropdownPosition.left,
               width: dropdownPosition.width,
-              zIndex: 250,
+              zIndex: dropdownZIndex,
             }}
             className="max-h-64 overflow-y-auto rounded-xl border border-border bg-surface-elevated p-1 shadow-card"
+            onMouseDown={(event) => event.preventDefault()}
           >
             <button
               type="button"
               className="flex w-full rounded-lg px-3 py-2 text-left text-sm text-muted hover:bg-surface-muted"
+              onMouseDown={(event) => event.preventDefault()}
               onClick={() => selectProject(null)}
             >
               {emptyLabel}
@@ -190,6 +198,7 @@ export function ProjectSelectSearchable({
                       "flex w-full flex-col rounded-lg px-3 py-2 text-left text-sm hover:bg-surface-muted",
                       value === project.id && "bg-accent/10 text-foreground",
                     )}
+                    onMouseDown={(event) => event.preventDefault()}
                     onClick={() => selectProject(project.id)}
                   >
                     <span className="font-medium">{project.name}</span>

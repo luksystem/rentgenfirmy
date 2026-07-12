@@ -61,10 +61,16 @@ export async function endDaySession(input: EndDayInput): Promise<WorkDayContext>
   return payload.context;
 }
 
-export async function fetchCurrentWeekPlan(assignedUserId?: string | null): Promise<WorkPlanView | null> {
+export async function fetchCurrentWeekPlan(
+  assignedUserId?: string | null,
+  referenceDate?: string | null,
+): Promise<WorkPlanView | null> {
   const params = new URLSearchParams();
   if (assignedUserId) {
     params.set("assignedUserId", assignedUserId);
+  }
+  if (referenceDate) {
+    params.set("referenceDate", referenceDate);
   }
   const query = params.toString();
   const response = await fetch(`/api/my-work/plans/week${query ? `?${query}` : ""}`, {
@@ -134,12 +140,15 @@ export async function acknowledgeWeekPlan(
   return payload.plan;
 }
 
-export async function copyWeekPlanFromPrevious(assignedUserId: string): Promise<WorkPlanView> {
+export async function copyWeekPlanFromPrevious(
+  assignedUserId: string,
+  referenceDate?: string | null,
+): Promise<WorkPlanView> {
   const response = await fetch("/api/my-work/plans/week/copy-previous", {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ assignedUserId }),
+    body: JSON.stringify({ assignedUserId, referenceDate }),
   });
   const payload = await parseJsonResponse<{ plan: WorkPlanView }>(
     response,

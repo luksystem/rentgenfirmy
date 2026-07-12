@@ -14,6 +14,7 @@ import {
 } from "@/lib/auth/types";
 import { ADMIN_SETUP_ERROR_CODE, ADMIN_SETUP_STEPS } from "@/lib/auth/admin-setup";
 import { UserResourceProfileEditor } from "@/components/admin/user-resource-profile-editor";
+import { UserProjectAccessEditor } from "@/components/admin/user-project-access-editor";
 
 type UserFormState = UserProfileInput & {
   password: string;
@@ -586,11 +587,18 @@ export function UserAdminPanel() {
         </Card>
 
         {isEditing && selectedUser ? (
-          <Card className="xl:col-span-2">
-            <CardContent className="py-6">
-              <UserResourceProfileEditor userId={selectedUser.id} />
-            </CardContent>
-          </Card>
+          <>
+            <Card className="xl:col-span-2">
+              <CardContent className="py-6">
+                <UserResourceProfileEditor userId={selectedUser.id} />
+              </CardContent>
+            </Card>
+            <Card className="xl:col-span-2">
+              <CardContent className="py-6">
+                <UserProjectAccessEditor user={selectedUser} />
+              </CardContent>
+            </Card>
+          </>
         ) : null}
       </div>
     </>

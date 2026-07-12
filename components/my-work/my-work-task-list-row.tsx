@@ -8,6 +8,7 @@ import {
 } from "@/lib/my-work/types";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
+import { workItemProjectLabel } from "@/lib/my-work/display-labels";
 
 const PRIORITY_DOT: Record<string, string> = {
   low: "bg-slate-400",
@@ -17,9 +18,7 @@ const PRIORITY_DOT: Record<string, string> = {
 };
 
 function listMetaLine(item: WorkItemView) {
-  return [item.projectName, item.clientName, item.sourceTypeMeta?.label]
-    .filter(Boolean)
-    .join(" · ");
+  return [item.clientName, item.sourceTypeMeta?.label].filter(Boolean).join(" · ");
 }
 
 export function MyWorkTaskListRow({
@@ -41,6 +40,8 @@ export function MyWorkTaskListRow({
     item.status !== "verified";
   const meta = listMetaLine(item);
   const statusLabel = WORK_ITEM_STATUS_LABELS[item.status];
+  const projectLabel = workItemProjectLabel(item.projectName);
+  const hasProject = Boolean(item.projectName?.trim());
 
   return (
     <button
@@ -68,12 +69,30 @@ export function MyWorkTaskListRow({
             </span>
           ) : null}
         </div>
+        <p
+          className={cn(
+            "truncate text-[11px] sm:hidden",
+            hasProject ? "font-medium text-foreground/80" : "italic text-muted",
+          )}
+        >
+          {projectLabel}
+        </p>
         {meta ? (
           <p className="truncate text-[11px] text-muted sm:hidden">{meta}</p>
         ) : null}
       </div>
 
-      <p className="hidden max-w-[30%] truncate text-xs text-muted sm:block">{meta || "—"}</p>
+      <p
+        className={cn(
+          "hidden max-w-[11rem] shrink-0 truncate text-xs sm:block",
+          hasProject ? "font-medium text-foreground/85" : "italic text-muted",
+        )}
+        title={projectLabel}
+      >
+        {projectLabel}
+      </p>
+
+      <p className="hidden max-w-[22%] truncate text-xs text-muted lg:block">{meta || "—"}</p>
 
       <span
         className={cn(

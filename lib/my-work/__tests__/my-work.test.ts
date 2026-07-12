@@ -16,6 +16,7 @@ import {
   mapServiceIntakePriority,
   mapServiceIntakeStatus,
 } from "@/lib/my-work/source-adapters/status-mappers";
+import { mapWorkItemStatusToPlanStatusName } from "@/lib/my-work/source-adapters/resource-plan-status-sync";
 import { resolveAgreementSourceLink } from "@/lib/my-work/link-resolver";
 import type { WorkItemView } from "@/lib/my-work/types";
 
@@ -163,6 +164,9 @@ describe("status mappers", () => {
     expect(mapResourcePlanStatusName("Zagrożone")).toBe("risk_reported");
     expect(mapFunctionalityTaskStatus("done")).toBe("verified");
     expect(mapFunctionalityTaskPriority("must")).toBe("urgent");
+    expect(mapWorkItemStatusToPlanStatusName("in_progress")).toBe("W realizacji");
+    expect(mapWorkItemStatusToPlanStatusName("verified")).toBe("Zakończone");
+    expect(mapWorkItemStatusToPlanStatusName("blocked")).toBe("Wstrzymane");
   });
 });
 

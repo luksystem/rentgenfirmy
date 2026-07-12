@@ -48,6 +48,7 @@ type AgreementRow = {
   communication_protocols?: string[] | null;
   acceptance_deadline_stage_id?: string | null;
   blocks_next_stage?: boolean | null;
+  responsible_user_id?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -97,6 +98,7 @@ export function rowToAgreement(row: AgreementRow): ProjectClientAgreement {
       : [],
     acceptanceDeadlineStageId: row.acceptance_deadline_stage_id ?? null,
     blocksNextStage: Boolean(row.blocks_next_stage),
+    responsibleUserId: row.responsible_user_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

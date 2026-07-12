@@ -24,6 +24,8 @@ export type UserProfile = {
   isAvailableForPlanning: boolean;
   /** Przełożony — odbiorca wniosków urlopowych. Wymagany dla wszystkich ról poza administratorem. */
   supervisorId: string | null;
+  /** Gdy true (domyślnie): dostęp do wszystkich projektów. Administrator zawsze ma pełny dostęp. */
+  allProjectsAccess: boolean;
   createdAt: string;
   updatedAt: string;
 };

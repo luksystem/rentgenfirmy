@@ -8,6 +8,7 @@ import {
 } from "@/lib/my-work/types";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
+import { workItemProjectLabel } from "@/lib/my-work/display-labels";
 
 const PRIORITY_DOT: Record<string, string> = {
   low: "bg-slate-400",
@@ -34,6 +35,8 @@ export function MyWorkTaskCard({
     item.status === "sent" ||
     item.status === "pending_ack" ||
     item.status === "needs_clarification";
+  const projectLabel = workItemProjectLabel(item.projectName);
+  const hasProject = Boolean(item.projectName?.trim());
 
   return (
     <button
@@ -54,9 +57,15 @@ export function MyWorkTaskCard({
         />
         <div className="min-w-0 flex-1">
           <p className="font-medium text-foreground line-clamp-2">{item.title}</p>
-          {item.projectName ? (
-            <p className="mt-0.5 truncate text-xs text-muted">{item.projectName}</p>
-          ) : null}
+          <p
+            className={cn(
+              "mt-0.5 truncate text-xs",
+              hasProject ? "font-medium text-foreground/85" : "italic text-muted",
+            )}
+            title={projectLabel}
+          >
+            {projectLabel}
+          </p>
           {item.clientName ? (
             <p className="truncate text-xs text-muted">{item.clientName}</p>
           ) : null}

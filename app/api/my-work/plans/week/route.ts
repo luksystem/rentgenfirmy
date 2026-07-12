@@ -14,10 +14,12 @@ export async function GET(request: Request) {
     const { userId, profile } = await requireAuthenticatedProfile();
     const url = new URL(request.url);
     const assignedUserId = url.searchParams.get("assignedUserId");
+    const referenceDate = url.searchParams.get("referenceDate");
 
     const admin = getSupabaseAdmin();
     const plan = await fetchCurrentWeekPlanServer(admin, userId, profile, {
       assignedUserId,
+      referenceDate,
     });
     return NextResponse.json({ plan });
   } catch (error) {

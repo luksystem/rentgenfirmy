@@ -47,6 +47,8 @@ export type ProjectClientAgreement = {
   acceptanceDeadlineStageId: string | null;
   /** Jeśli true i ustalenie nie jest w pełni zaakceptowane, blokuje wybrany etap i wszystkie po nim. */
   blocksNextStage: boolean;
+  /** Osoba odpowiedzialna po stronie zespołu — otrzymuje zadanie w Moja praca. */
+  responsibleUserId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -65,6 +67,7 @@ export type ProjectAgreementInput = {
   approverRoles?: import("@/lib/dashboard/agreement-collaboration-types").AgreementApproverRoleInput[];
   acceptanceDeadlineStageId?: string | null;
   blocksNextStage?: boolean;
+  responsibleUserId?: string | null;
 };
 
 export function normalizeAgreementOptionalDate(value: string | null | undefined): string | null {

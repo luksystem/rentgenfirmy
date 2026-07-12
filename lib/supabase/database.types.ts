@@ -235,6 +235,7 @@ export type ProjectClientAgreementRow = {
   communication_protocols: string[] | null;
   acceptance_deadline_stage_id: string | null;
   blocks_next_stage: boolean;
+  responsible_user_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -265,6 +266,7 @@ export type ProjectClientAgreementInsert = {
   communication_protocols?: string[] | null;
   acceptance_deadline_stage_id?: string | null;
   blocks_next_stage?: boolean;
+  responsible_user_id?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -981,6 +983,7 @@ export type ProfileRow = {
   cost_rate: number | null;
   is_available_for_planning: boolean;
   supervisor_id: string | null;
+  all_projects_access: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -999,6 +1002,7 @@ export type ProfileInsert = {
   cost_rate?: number | null;
   is_available_for_planning?: boolean;
   supervisor_id?: string | null;
+  all_projects_access?: boolean;
   created_at?: string;
   updated_at?: string;
 };

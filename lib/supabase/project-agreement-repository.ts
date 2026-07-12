@@ -13,8 +13,22 @@ import {
   fetchAgreementApproverRoles,
 } from "@/lib/supabase/project-agreement-collaboration-repository";
 import { getSupabase } from "@/lib/supabase/client";
+import { fetchProjectAccessibleProfiles } from "@/lib/supabase/project-access-repository";
 
 type AgreementRow = Parameters<typeof rowToAgreement>[0];
+
+async function assertResponsibleUserHasProjectAccess(
+  projectId: string,
+  responsibleUserId: string | null | undefined,
+) {
+  if (!responsibleUserId) {
+    return;
+  }
+  const profiles = await fetchProjectAccessibleProfiles(projectId);
+  if (!profiles.some((profile) => profile.id === responsibleUserId)) {
+    throw new Error("Osoba odpowiedzialna musi mieć dostęp do tego projektu.");
+  }
+}
 
 export async function fetchProjectAgreements(projectId: string): Promise<ProjectClientAgreement[]> {
   const supabase = getSupabase();
@@ -38,6 +52,7 @@ export async function createProjectAgreement(
   author: { name: string; side: "team" | "client" },
 ) {
   const normalized = normalizeProjectAgreementInput(input);
+  await assertResponsibleUserHasProjectAccess(projectId, normalized.responsibleUserId);
   const supabase = getSupabase();
   const now = new Date().toISOString();
   const { data: lastRow } = await supabase
@@ -67,6 +82,7 @@ export async function createProjectAgreement(
       communication_protocols: normalized.communicationProtocols ?? [],
       acceptance_deadline_stage_id: normalized.acceptanceDeadlineStageId ?? null,
       blocks_next_stage: normalized.blocksNextStage ?? false,
+      responsible_user_id: normalized.responsibleUserId ?? null,
       created_by_name: author.name.trim() || "Zespół",
       created_by_side: author.side,
       position,
@@ -112,6 +128,17 @@ export async function updateProjectAgreement(
 ) {
   const normalized = normalizeProjectAgreementInput(input);
   const supabase = getSupabase();
+  const { data: existingRow } = await supabase
+    .from("project_client_agreements")
+    .select("project_id")
+    .eq("id", agreementId)
+    .maybeSingle();
+  if (existingRow?.project_id) {
+    await assertResponsibleUserHasProjectAccess(
+      existingRow.project_id as string,
+      normalized.responsibleUserId,
+    );
+  }
   const { data, error } = await supabase
     .from("project_client_agreements")
     .update({
@@ -126,6 +153,7 @@ export async function updateProjectAgreement(
       communication_protocols: normalized.communicationProtocols ?? [],
       acceptance_deadline_stage_id: normalized.acceptanceDeadlineStageId ?? null,
       blocks_next_stage: normalized.blocksNextStage ?? false,
+      responsible_user_id: normalized.responsibleUserId ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", agreementId)

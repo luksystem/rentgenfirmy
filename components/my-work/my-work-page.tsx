@@ -19,6 +19,7 @@ import { EditWorkItemDialog } from "@/components/my-work/manager/edit-work-item-
 import { filterWorkItems } from "@/lib/my-work/section-filters";
 import { defaultStatusForKanbanColumn, type KanbanColumnGroupId } from "@/lib/my-work/state-machine";
 import { isTerminalWorkItemStatus } from "@/lib/my-work/types";
+import { weekRangeFromMonday } from "@/lib/my-work/week-range";
 import { profileToOptionLabel } from "@/lib/supabase/profile-repository";
 import { useAuthStore } from "@/store/auth-store";
 import { useCanManageWorkItems, useMyWorkStore } from "@/store/my-work-store";
@@ -128,19 +129,8 @@ export function MyWorkPage() {
 
   const loading = myItemsLoading && !myItemsHydrated;
 
-  function weekRangeFromMonday(reference = new Date()) {
-    const date = new Date(reference);
-    const day = date.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    date.setDate(date.getDate() + diff);
-    const from = date.toISOString().slice(0, 10);
-    const end = new Date(date);
-    end.setDate(end.getDate() + 6);
-    return { from, to: end.toISOString().slice(0, 10) };
-  }
-
-  async function handleCreateWeekDraft(assignedUserId: string) {
-    const { from, to } = weekRangeFromMonday();
+  async function handleCreateWeekDraft(assignedUserId: string, referenceDate: string) {
+    const { from, to } = weekRangeFromMonday(referenceDate);
     const itemsForUser = (canManage ? teamItems : myItems).filter(
       (item) => item.assignedUserId === assignedUserId && !isTerminalWorkItemStatus(item.status),
     );
@@ -234,12 +224,12 @@ export function MyWorkPage() {
         onSend={async (planId) => {
           await sendWeekPlanById(planId);
         }}
-        onCopyPrevious={async (assignedUserId) => {
-          await copyPreviousWeekPlan(assignedUserId);
+        onCopyPrevious={async (assignedUserId, referenceDate) => {
+          await copyPreviousWeekPlan(assignedUserId, referenceDate);
         }}
         onCreateDraft={handleCreateWeekDraft}
-        onLoadForUser={async (assignedUserId) => {
-          await ensureWeekPlan({ force: true, assignedUserId });
+        onLoadForUser={async (assignedUserId, referenceDate) => {
+          await ensureWeekPlan({ force: true, assignedUserId, referenceDate });
         }}
         onOpenItem={(id) => void openItem(id)}
         onUpdatePlan={async (planId, input) => {

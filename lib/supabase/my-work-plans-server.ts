@@ -27,34 +27,11 @@ import {
   fetchWorkItemsForUser,
   mapWorkItemRow,
 } from "@/lib/supabase/my-work-server";
+import { addDays, currentWeekMonday, toDateKey, weekRangeFromMonday } from "@/lib/my-work/week-range";
 
 type AdminClient = SupabaseClient;
 
 const DAY_PLAN_SECTIONS: ListSectionId[] = ["today", "overdue", "pending_ack", "in_progress"];
-
-function toDateKey(value: Date | string = new Date()) {
-  if (typeof value === "string") {
-    return value.slice(0, 10);
-  }
-  return value.toISOString().slice(0, 10);
-}
-
-function addDays(dateKey: string, days: number) {
-  const date = new Date(`${dateKey}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
-function weekRangeFromMonday(dateKey: string) {
-  const date = new Date(`${dateKey}T12:00:00`);
-  const day = date.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  date.setDate(date.getDate() + diff);
-  const from = date.toISOString().slice(0, 10);
-  const end = new Date(date);
-  end.setDate(end.getDate() + 6);
-  return { from, to: end.toISOString().slice(0, 10) };
-}
 
 function mapPlanRow(row: {
   id: string;
@@ -778,14 +755,15 @@ export async function fetchCurrentWeekPlanServer(
   admin: AdminClient,
   userId: string,
   profile: UserProfile,
-  options?: { assignedUserId?: string | null },
+  options?: { assignedUserId?: string | null; referenceDate?: string | null },
 ): Promise<WorkPlanView | null> {
   const targetUserId = options?.assignedUserId ?? userId;
   if (targetUserId !== userId) {
     await assertCanManagePlanForUser(admin, profile, targetUserId);
   }
 
-  const { from, to } = weekRangeFromMonday(toDateKey());
+  const referenceDate = options?.referenceDate ?? currentWeekMonday();
+  const { from, to } = weekRangeFromMonday(referenceDate);
   const { data, error } = await admin
     .from("work_plans")
     .select("*")

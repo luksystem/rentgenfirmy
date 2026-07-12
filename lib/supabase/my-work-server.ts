@@ -26,8 +26,24 @@ import {
 import { assertWorkItemStatusTransition } from "@/lib/my-work/state-machine";
 import { resolveSourceLinkForItem } from "@/lib/my-work/link-resolver";
 import { mapProfileRow } from "@/lib/supabase/profile-mappers";
+import { assertAssigneeHasProjectAccessServer } from "@/lib/supabase/project-access-server";
+import type { WorkItemPatch } from "@/lib/my-work/source-adapters/types";
 
 type AdminClient = SupabaseClient;
+
+async function syncWorkItemPatchToSource(
+  admin: AdminClient,
+  item: WorkItem,
+  patch: WorkItemPatch,
+) {
+  if (item.sourceType === "manual" || !item.sourceId) {
+    return;
+  }
+  const adapter = getWorkItemSourceAdapter(item.sourceType);
+  if (adapter) {
+    await adapter.syncToSource(admin, item, patch);
+  }
+}
 
 type WorkItemRow = {
   id: string;
@@ -423,6 +439,9 @@ export async function createManualWorkItemServer(
     throw new Error("Tylko manager lub administrator może tworzyć zadania.");
   }
 
+  const projectId = input.projectId ?? null;
+  await assertAssigneeHasProjectAccessServer(admin, input.assignedUserId, projectId);
+
   const now = new Date().toISOString();
   const id = crypto.randomUUID();
   const status: WorkItemStatus = input.sendImmediately ? "pending_ack" : "draft";
@@ -573,6 +592,12 @@ export async function updateWorkItemServer(
     throw new Error("Brak pól do aktualizacji.");
   }
 
+  const nextProjectId =
+    input.projectId !== undefined ? input.projectId : item.projectId;
+  const nextAssigneeId =
+    input.assignedUserId !== undefined ? input.assignedUserId : item.assignedUserId;
+  await assertAssigneeHasProjectAccessServer(admin, nextAssigneeId, nextProjectId);
+
   if (changedFields.length > 0) {
     const { error } = await admin.from("work_items").update(updatePayload).eq("id", id);
     if (error) {
@@ -594,10 +619,10 @@ export async function updateWorkItemServer(
   }
 
   if (item.sourceType !== "manual" && item.sourceId) {
-    const adapter = getWorkItemSourceAdapter(item.sourceType);
-    if (adapter) {
-      await adapter.syncToSource(admin, item, mapUpdateInputToWorkItemPatch(input));
-    }
+    await syncWorkItemPatchToSource(admin, item, {
+      ...mapUpdateInputToWorkItemPatch(input),
+      status: input.status ?? item.status,
+    });
   }
 
   await appendWorkItemLog(admin, {
@@ -620,6 +645,7 @@ function mapUpdateInputToWorkItemPatch(input: UpdateWorkItemInput) {
     projectId: input.projectId,
     clientId: input.clientId,
     processStageId: input.processStageId,
+    status: input.status,
   };
 }
 
@@ -748,6 +774,8 @@ export async function recordWorkItemAcceptanceServer(
     throw new Error(error.message);
   }
 
+  await syncWorkItemPatchToSource(admin, detail.item, { status: newStatus });
+
   await appendWorkItemLog(admin, {
     workItemId: id,
     userId: actor.id,
@@ -798,12 +826,10 @@ export async function completeWorkItemServer(
     throw new Error(error.message);
   }
 
-  const adapter = getWorkItemSourceAdapter(detail.item.sourceType);
-  if (adapter && detail.item.sourceId) {
-    await adapter.syncToSource(admin, detail.item, {
-      completedAt: input.outcome === "done" ? now : null,
-    });
-  }
+  await syncWorkItemPatchToSource(admin, detail.item, {
+    status: newStatus,
+    completedAt: input.outcome === "done" ? now : null,
+  });
 
   await appendWorkItemLog(admin, {
     workItemId: id,
@@ -857,6 +883,8 @@ export async function verifyWorkItemServer(admin: AdminClient, id: string, actor
     throw new Error(error.message);
   }
 
+  await syncWorkItemPatchToSource(admin, detail.item, { status: "verified", completedAt: now });
+
   await appendWorkItemLog(admin, { workItemId: id, userId: actor.id, action: "verified" });
   return fetchWorkItemDetail(admin, id, actor.id, actor);
 }
@@ -884,6 +912,8 @@ export async function updateWorkItemStatusServer(
   if (error) {
     throw new Error(error.message);
   }
+
+  await syncWorkItemPatchToSource(admin, detail.item, { status });
 
   await appendWorkItemLog(admin, { workItemId: id, userId: actor.id, action: `status:${status}` });
   return fetchWorkItemDetail(admin, id, actor.id, actor);

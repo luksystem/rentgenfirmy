@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CalendarRange, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,6 +22,7 @@ import { fetchWorkRiskAnalysisAi } from "@/lib/supabase/my-work-repository";
 import { MyWorkEditWeekPlanDialog } from "@/components/my-work/my-work-edit-week-plan-dialog";
 import type { UpdateWeekPlanInput } from "@/lib/my-work/plan-types";
 import type { WorkItemView } from "@/lib/my-work/types";
+import { buildWeekPlanOptions, currentWeekMonday } from "@/lib/my-work/week-range";
 
 export function MyWorkWeekPlanPanel({
   plan,
@@ -41,9 +42,9 @@ export function MyWorkWeekPlanPanel({
   teamOptions: { id: string; label: string }[];
   onAcknowledge: (comment: string, riskNotes: string) => Promise<void>;
   onSend: (planId: string) => Promise<void>;
-  onCopyPrevious: (assignedUserId: string) => Promise<void>;
-  onCreateDraft: (assignedUserId: string) => Promise<void>;
-  onLoadForUser?: (assignedUserId: string) => Promise<void>;
+  onCopyPrevious: (assignedUserId: string, referenceDate: string) => Promise<void>;
+  onCreateDraft: (assignedUserId: string, referenceDate: string) => Promise<void>;
+  onLoadForUser?: (assignedUserId: string, referenceDate: string) => Promise<void>;
   onOpenItem?: (workItemId: string) => void;
   onUpdatePlan?: (planId: string, input: UpdateWeekPlanInput) => Promise<void>;
   availableTasks?: WorkItemView[];
@@ -53,8 +54,10 @@ export function MyWorkWeekPlanPanel({
   const [comment, setComment] = useState("");
   const [riskNotes, setRiskNotes] = useState("");
   const [selectedUserId, setSelectedUserId] = useState(teamOptions[0]?.id ?? "");
+  const [selectedWeekStart, setSelectedWeekStart] = useState(currentWeekMonday());
   const [busy, setBusy] = useState(false);
   const [analyzingRisks, setAnalyzingRisks] = useState(false);
+  const weekOptions = useMemo(() => buildWeekPlanOptions(8), []);
 
   useEffect(() => {
     if (!teamOptions.length) {
@@ -71,8 +74,8 @@ export function MyWorkWeekPlanPanel({
     if (!userId) {
       return;
     }
-    void onLoadForUser(userId);
-  }, [canManage, onLoadForUser, selectedUserId, teamOptions]);
+    void onLoadForUser(userId, selectedWeekStart);
+  }, [canManage, onLoadForUser, selectedUserId, selectedWeekStart, teamOptions]);
 
   if (!plan && !canManage) {
     return null;
@@ -134,7 +137,7 @@ export function MyWorkWeekPlanPanel({
                 <p className="mt-1 text-xs text-muted">{plan.items.length} pozycji w planie</p>
               </>
             ) : (
-              <p className="mt-1 text-sm text-muted">Brak planu na bieżący tydzień.</p>
+              <p className="mt-1 text-sm text-muted">Brak planu na wybrany tydzień.</p>
             )}
           </div>
 
@@ -146,6 +149,18 @@ export function MyWorkWeekPlanPanel({
             ) : null}
             {canManage ? (
               <>
+                <Field label="Tydzień" className="min-w-[220px]">
+                  <Select
+                    value={selectedWeekStart}
+                    onChange={(event) => setSelectedWeekStart(event.target.value)}
+                  >
+                    {weekOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
                 {teamOptions.length ? (
                   <Field label="Pracownik" className="min-w-[180px]">
                     <Select
@@ -172,11 +187,11 @@ export function MyWorkWeekPlanPanel({
                   title={
                     canCopyPrevious
                       ? undefined
-                      : "Plan na bieżący tydzień już istnieje — kopiowanie jest niedostępne."
+                      : "Plan na wybrany tydzień już istnieje — kopiowanie jest niedostępne."
                   }
                   onClick={() => {
                     setBusy(true);
-                    void onCopyPrevious(selectedUserId)
+                    void onCopyPrevious(selectedUserId, selectedWeekStart)
                       .catch((error) =>
                         window.alert(error instanceof Error ? error.message : "Błąd kopiowania planu."),
                       )
@@ -191,7 +206,7 @@ export function MyWorkWeekPlanPanel({
                     disabled={!selectedUserId || busy}
                     onClick={() => {
                       setBusy(true);
-                      void onCreateDraft(selectedUserId)
+                      void onCreateDraft(selectedUserId, selectedWeekStart)
                         .catch((error) =>
                           window.alert(error instanceof Error ? error.message : "Błąd tworzenia planu."),
                         )
@@ -231,14 +246,14 @@ export function MyWorkWeekPlanPanel({
 
         {canManage && planIsLocked ? (
           <p className="mt-3 text-xs text-muted">
-            Plan na ten tydzień jest {WORK_PLAN_STATUS_LABELS[plan!.status].toLowerCase()}. Użyj{" "}
+            Plan na wybrany tydzień jest {WORK_PLAN_STATUS_LABELS[plan!.status].toLowerCase()}. Użyj{" "}
             <strong>Edytuj plan</strong>, aby zmienić pozycje i wysłać zaktualizowaną wersję.
           </p>
         ) : null}
 
         {canManage && !plan ? (
           <p className="mt-3 text-xs text-muted">
-            Brak planu na bieżący tydzień. Użyj <strong>Utwórz ze zadań</strong> (z aktywnych
+            Brak planu na wybrany tydzień. Użyj <strong>Utwórz ze zadań</strong> (z aktywnych
             zleceń pracownika) lub <strong>Kopiuj z poprzedniego tygodnia</strong>.
           </p>
         ) : null}

@@ -132,14 +132,11 @@ export async function syncServiceIntakesToWorkItems(admin: AdminClient, userId: 
   }
 }
 
-export async function syncAgreementsToWorkItems(admin: AdminClient, userId: string, profile: UserProfile) {
-  if (!canManagerWorkItems(profile.role)) {
-    return;
-  }
-
+export async function syncAgreementsToWorkItems(admin: AdminClient, userId: string, managerId: string | null) {
   const { data: agreements, error } = await admin
     .from("project_client_agreements")
-    .select("id, project_id, title, body, status, active_version_id, public_token")
+    .select("id, project_id, title, body, status, active_version_id, responsible_user_id")
+    .eq("responsible_user_id", userId)
     .eq("status", "pending_client")
     .not("active_version_id", "is", null);
 
@@ -204,7 +201,7 @@ export async function syncAgreementsToWorkItems(admin: AdminClient, userId: stri
       sourceType: "project_agreement",
       sourceId: row.id as string,
       assignedUserId: userId,
-      managerId: userId,
+      managerId,
       mirror,
       status: mapAgreementStatus(row.status as string),
     });
@@ -388,6 +385,6 @@ export async function syncAllWorkItemSources(
     syncInspectionsToWorkItems(admin, userId, managerId),
     syncResourcePlanItemsToWorkItems(admin, userId, managerId),
     syncFunctionalityTasksToWorkItems(admin, userId, managerId),
-    syncAgreementsToWorkItems(admin, userId, profile),
+    syncAgreementsToWorkItems(admin, userId, managerId),
   ]);
 }

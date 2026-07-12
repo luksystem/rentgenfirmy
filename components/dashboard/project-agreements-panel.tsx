@@ -44,6 +44,9 @@ import { findTradeCatalogItem } from "@/lib/field-options";
 import { createPublicClientAgreement } from "@/lib/dashboard/public-agreement-client";
 import { useAgreementApprovalHint } from "@/hooks/use-agreement-approval-hint";
 import { fetchAgreementApproverRoles } from "@/lib/supabase/project-agreement-collaboration-repository";
+import { fetchProjectAccessibleProfiles } from "@/lib/supabase/project-access-repository";
+import { profileToOptionLabel } from "@/lib/supabase/profile-repository";
+import type { UserProfile } from "@/lib/auth/types";
 import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
 import { cn, formatDate } from "@/lib/utils";
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
@@ -83,6 +86,7 @@ function emptyInput(): ProjectAgreementInput {
     ],
     acceptanceDeadlineStageId: null,
     blocksNextStage: false,
+    responsibleUserId: null,
   };
 }
 
@@ -104,6 +108,7 @@ function agreementToInput(agreement: ProjectClientAgreement): ProjectAgreementIn
     ],
     acceptanceDeadlineStageId: agreement.acceptanceDeadlineStageId,
     blocksNextStage: agreement.blocksNextStage,
+    responsibleUserId: agreement.responsibleUserId,
   };
 }
 
@@ -579,6 +584,28 @@ export function ProjectAgreementsPanel({
   const [form, setForm] = useState<ProjectAgreementInput>(emptyInput());
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [projectAccessibleProfiles, setProjectAccessibleProfiles] = useState<UserProfile[]>([]);
+
+  useEffect(() => {
+    if (!dialogOpen || mode !== "team") {
+      return;
+    }
+    let cancelled = false;
+    void fetchProjectAccessibleProfiles(projectId)
+      .then((profiles) => {
+        if (!cancelled) {
+          setProjectAccessibleProfiles(profiles);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setProjectAccessibleProfiles([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dialogOpen, mode, projectId]);
 
   useEffect(() => {
     void ensureAgreements(projectId);
@@ -942,6 +969,31 @@ export function ProjectAgreementsPanel({
                     }))
                   }
                 />
+              </Field>
+            ) : null}
+            {mode === "team" ? (
+              <Field label="Osoba odpowiedzialna (Moja praca)">
+                <select
+                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  value={form.responsibleUserId ?? ""}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      responsibleUserId: event.target.value || null,
+                    }))
+                  }
+                >
+                  <option value="">Brak — bez zadania w Moja praca</option>
+                  {projectAccessibleProfiles.map((profile) => (
+                    <option key={profile.id} value={profile.id}>
+                      {profileToOptionLabel(profile)}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-muted">
+                  Osoba odpowiedzialna otrzyma zadanie w Moja praca, gdy ustalenie wymaga akceptacji
+                  zespołu. Lista obejmuje tylko użytkowników z dostępem do tego projektu.
+                </p>
               </Field>
             ) : null}
             <Field label="Opis ustaleń">

@@ -12,6 +12,7 @@ import type {
   WorkItemView,
 } from "@/lib/my-work/types";
 import type { WorkDashboardMetrics } from "@/lib/my-work/dashboard-metrics";
+import { currentWeekMonday } from "@/lib/my-work/week-range";
 import type {
   AcknowledgeWeekPlanInput,
   CreateWeekPlanInput,
@@ -66,7 +67,7 @@ let myItemsPromise: Promise<WorkItemView[]> | null = null;
 let teamItemsPromise: Promise<WorkItemView[]> | null = null;
 let dayContextPromise: Promise<WorkDayContext> | null = null;
 let weekPlanPromise: Promise<WorkPlanView | null> | null = null;
-let weekPlanPromiseUserId: string | null = null;
+let weekPlanPromiseKey: string | null = null;
 let dashboardPromise: Promise<WorkDashboardMetrics> | null = null;
 
 type MyWorkStore = {
@@ -93,6 +94,7 @@ type MyWorkStore = {
   weekPlanHydrated: boolean;
   weekPlanLoading: boolean;
   weekPlanForUserId: string | null;
+  weekPlanReferenceDate: string | null;
 
   dashboardMetrics: WorkDashboardMetrics | null;
   dashboardHydrated: boolean;
@@ -126,11 +128,12 @@ type MyWorkStore = {
   ensureWeekPlan: (options?: {
     force?: boolean;
     assignedUserId?: string | null;
+    referenceDate?: string | null;
   }) => Promise<WorkPlanView | null>;
   createWeekPlanForUser: (input: CreateWeekPlanInput) => Promise<WorkPlanView>;
   sendWeekPlanById: (planId: string) => Promise<WorkPlanView>;
   acknowledgeWeekPlanById: (planId: string, input: AcknowledgeWeekPlanInput) => Promise<WorkPlanView>;
-  copyPreviousWeekPlan: (assignedUserId: string) => Promise<WorkPlanView>;
+  copyPreviousWeekPlan: (assignedUserId: string, referenceDate?: string | null) => Promise<WorkPlanView>;
   updateWeekPlanById: (planId: string, input: UpdateWeekPlanInput) => Promise<WorkPlanView>;
   reportObstacle: (input: ReportObstacleInput) => Promise<void>;
   requestTakeover: (id: string, comment?: string) => Promise<void>;
@@ -161,6 +164,7 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
   weekPlanHydrated: false,
   weekPlanLoading: false,
   weekPlanForUserId: null,
+  weekPlanReferenceDate: null,
 
   dashboardMetrics: null,
   dashboardHydrated: false,
@@ -414,24 +418,28 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
 
   ensureWeekPlan: async (options) => {
     const targetUserId = options?.assignedUserId ?? null;
-    const { weekPlanHydrated, weekPlan, weekPlanForUserId } = get();
+    const referenceDate = options?.referenceDate ?? get().weekPlanReferenceDate ?? currentWeekMonday();
+    const promiseKey = `${targetUserId ?? "self"}:${referenceDate}`;
+    const { weekPlanHydrated, weekPlan, weekPlanForUserId, weekPlanReferenceDate: cachedWeek } = get();
     const sameUser = weekPlanForUserId === targetUserId;
-    if (weekPlanHydrated && sameUser && !options?.force) {
+    const sameWeek = cachedWeek === referenceDate;
+    if (weekPlanHydrated && sameUser && sameWeek && !options?.force) {
       return weekPlan;
     }
-    if (!options?.force && weekPlanPromise && weekPlanPromiseUserId === targetUserId) {
+    if (!options?.force && weekPlanPromise && weekPlanPromiseKey === promiseKey) {
       return weekPlanPromise;
     }
 
     set({ weekPlanLoading: true, error: null });
-    weekPlanPromiseUserId = targetUserId;
-    weekPlanPromise = fetchCurrentWeekPlan(targetUserId)
+    weekPlanPromiseKey = promiseKey;
+    weekPlanPromise = fetchCurrentWeekPlan(targetUserId, referenceDate)
       .then((plan) => {
         set({
           weekPlan: plan,
           weekPlanHydrated: true,
           weekPlanLoading: false,
           weekPlanForUserId: targetUserId,
+          weekPlanReferenceDate: referenceDate,
         });
         return plan;
       })
@@ -444,7 +452,7 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
       })
       .finally(() => {
         weekPlanPromise = null;
-        weekPlanPromiseUserId = null;
+        weekPlanPromiseKey = null;
       });
 
     return weekPlanPromise;
@@ -452,31 +460,56 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
 
   createWeekPlanForUser: async (input) => {
     const plan = await createWeekPlan(input);
-    set({ weekPlan: plan, weekPlanHydrated: true, weekPlanForUserId: input.assignedUserId });
+    set({
+      weekPlan: plan,
+      weekPlanHydrated: true,
+      weekPlanForUserId: input.assignedUserId,
+      weekPlanReferenceDate: input.dateFrom,
+    });
     return plan;
   },
 
   sendWeekPlanById: async (planId) => {
     const plan = await sendWeekPlan(planId);
-    set({ weekPlan: plan, weekPlanHydrated: true, weekPlanForUserId: plan.assignedUserId });
+    set({
+      weekPlan: plan,
+      weekPlanHydrated: true,
+      weekPlanForUserId: plan.assignedUserId,
+      weekPlanReferenceDate: plan.dateFrom,
+    });
     return plan;
   },
 
   acknowledgeWeekPlanById: async (planId, input) => {
     const plan = await acknowledgeWeekPlan(planId, input);
-    set({ weekPlan: plan, weekPlanHydrated: true, weekPlanForUserId: plan.assignedUserId });
+    set({
+      weekPlan: plan,
+      weekPlanHydrated: true,
+      weekPlanForUserId: plan.assignedUserId,
+      weekPlanReferenceDate: plan.dateFrom,
+    });
     return plan;
   },
 
-  copyPreviousWeekPlan: async (assignedUserId) => {
-    const plan = await copyWeekPlanFromPrevious(assignedUserId);
-    set({ weekPlan: plan, weekPlanHydrated: true, weekPlanForUserId: assignedUserId });
+  copyPreviousWeekPlan: async (assignedUserId, referenceDate) => {
+    const plan = await copyWeekPlanFromPrevious(assignedUserId, referenceDate);
+    set({
+      weekPlan: plan,
+      weekPlanHydrated: true,
+      weekPlanForUserId: assignedUserId,
+      weekPlanReferenceDate: plan.dateFrom,
+    });
     return plan;
   },
 
   updateWeekPlanById: async (planId, input) => {
     const plan = await updateWeekPlan(planId, input);
-    set({ weekPlan: plan, weekPlanHydrated: true, weekPlanForUserId: plan.assignedUserId });
+    set({
+      weekPlan: plan,
+      weekPlanHydrated: true,
+      weekPlanForUserId: plan.assignedUserId,
+      weekPlanReferenceDate: plan.dateFrom,
+    });
     return plan;
   },
 

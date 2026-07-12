@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -86,6 +86,7 @@ export function TimeEntryFormDialog({
 
   const [values, setValues] = useState<TimeEntryFormValues>(() => emptyForm(defaultDate));
   const [submitting, setSubmitting] = useState(false);
+  const formInitializedRef = useRef(false);
 
   const categories = meta?.categories ?? [];
   const entryTypes = meta?.entryTypes ?? [];
@@ -107,25 +108,34 @@ export function TimeEntryFormDialog({
 
   useEffect(() => {
     if (!open) {
+      formInitializedRef.current = false;
       return;
     }
+    if (formInitializedRef.current) {
+      return;
+    }
+    if (!entry && (categories.length === 0 || entryTypes.length === 0)) {
+      return;
+    }
+
+    formInitializedRef.current = true;
+
     if (entry) {
       setValues(entryToFormValues(entry));
       return;
     }
+
     const defaultCategory = categories[0];
     const defaultType =
       entryTypes.find((item) => item.name === "Praca") ?? entryTypes[0];
-    setValues(
-      emptyForm(
+    setValues({
+      ...emptyForm(
         defaultDate,
         defaultCategory?.id ?? "",
         defaultType?.id ?? "",
       ),
-    );
-    if (defaultCategory?.defaultBillable) {
-      setValues((current) => ({ ...current, billable: true }));
-    }
+      billable: defaultCategory?.defaultBillable ?? false,
+    });
   }, [open, entry, defaultDate, categories, entryTypes]);
 
   function handleCategoryChange(categoryId: string) {
@@ -181,7 +191,15 @@ export function TimeEntryFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent
+        className="max-w-lg"
+        onInteractOutside={(event) => {
+          const target = event.target as HTMLElement | null;
+          if (target?.closest("[data-project-select-dropdown]")) {
+            event.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{entry ? "Edytuj wpis czasu" : "Dodaj czas pracy"}</DialogTitle>
           <DialogDescription>

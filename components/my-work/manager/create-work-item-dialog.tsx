@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,12 +19,15 @@ import { MyWorkAiSuggestionsPanel } from "@/components/my-work/my-work-ai-sugges
 import type { WorkTaskAiSuggestion } from "@/lib/my-work/ai-types";
 import { useAppStore } from "@/store/app-store";
 import { useMyWorkStore } from "@/store/my-work-store";
+import { fetchProjectAccessibleProfiles } from "@/lib/supabase/project-access-repository";
+import type { UserProfile } from "@/lib/auth/types";
 
 export function CreateWorkItemDialog() {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [sendImmediately, setSendImmediately] = useState(true);
   const [values, setValues] = useState(EMPTY_WORK_ITEM_MANAGER_FORM);
+  const [assigneeProfiles, setAssigneeProfiles] = useState<UserProfile[]>([]);
 
   const projects = useAppStore((state) => state.projects);
   const clients = useAppStore((state) => state.clients);
@@ -37,6 +40,38 @@ export function CreateWorkItemDialog() {
       void loadTeamProfiles();
     }
   }, [open, loadTeamProfiles]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    if (!values.projectId) {
+      setAssigneeProfiles(teamProfiles);
+      return;
+    }
+    let cancelled = false;
+    void fetchProjectAccessibleProfiles(values.projectId)
+      .then((profiles) => {
+        if (!cancelled) {
+          setAssigneeProfiles(profiles);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAssigneeProfiles([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, values.projectId, teamProfiles]);
+
+  const visibleAssigneeProfiles = useMemo(() => {
+    if (!values.projectId) {
+      return teamProfiles;
+    }
+    return assigneeProfiles;
+  }, [assigneeProfiles, teamProfiles, values.projectId]);
 
   async function handleSubmit() {
     if (!values.assignedUserId || !values.title.trim()) {
@@ -93,7 +128,7 @@ export function CreateWorkItemDialog() {
         <WorkItemManagerForm
           values={values}
           onChange={(patch) => setValues((current) => ({ ...current, ...patch }))}
-          teamProfiles={teamProfiles}
+          teamProfiles={visibleAssigneeProfiles}
           projects={projects}
           clients={clients}
         />
