@@ -43,6 +43,7 @@ export type KanbanTask = {
   position: number;
   closedAt: string | null;
   assigneeName: string | null;
+  assigneeId: string | null;
   createdBySide: KanbanAuthorSide;
   isNewForTeam: boolean;
   createdAt: string;

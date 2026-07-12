@@ -14,6 +14,13 @@ export const USER_NOTIFICATION_KINDS = [
   "leave_request_decided",
   "client_offer_accepted",
   "settlement_offer_accepted",
+  "work_item_assigned",
+  "work_item_sent",
+  "work_item_changed",
+  "work_item_acceptance_needed",
+  "work_item_obstacle_reported",
+  "work_item_overdue",
+  "work_item_verification_needed",
 ] as const;
 
 export const SALES_NOTIFICATION_KINDS = [

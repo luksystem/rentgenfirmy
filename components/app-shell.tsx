@@ -75,7 +75,7 @@ const navGroupsBase: NavGroup[] = [
   {
     label: "Moja praca",
     items: [
-      { href: "/moja-praca/zadania", label: "Zadania", icon: ListTodo, disabled: true },
+      { href: "/moja-praca/zadania", label: "Zadania", icon: ListTodo },
       { href: "/moja-praca/czas-pracy", label: "Czas pracy", icon: Timer, disabled: true },
       { href: "/moja-praca/dostepnosc", label: "Dostępność", icon: PalmtreeIcon },
     ],

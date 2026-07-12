@@ -50,6 +50,7 @@ type TaskRow = {
   position: number;
   closed_at: string | null;
   assignee_name: string | null;
+  assignee_id: string | null;
   created_by_side: string;
   is_new_for_team: boolean;
   created_at: string;
@@ -115,6 +116,7 @@ function rowToTask(row: TaskRow): KanbanTask {
     position: row.position,
     closedAt: row.closed_at,
     assigneeName: row.assignee_name?.trim() || null,
+    assigneeId: row.assignee_id ?? null,
     createdBySide: isAuthorSide(row.created_by_side) ? row.created_by_side : "team",
     isNewForTeam: row.is_new_for_team,
     createdAt: row.created_at,
@@ -741,7 +743,7 @@ export async function moveKanbanTask(taskId: string, columnId: string, position:
 
 export async function updateKanbanTask(
   taskId: string,
-  patch: Partial<Pick<KanbanTask, "title" | "description" | "priority" | "dueDate" | "assigneeName">>,
+  patch: Partial<Pick<KanbanTask, "title" | "description" | "priority" | "dueDate" | "assigneeName" | "assigneeId">>,
 ) {
   const supabase = getSupabase();
   const payload: Record<string, unknown> = {
@@ -762,6 +764,9 @@ export async function updateKanbanTask(
   }
   if (patch.assigneeName !== undefined) {
     payload.assignee_name = patch.assigneeName?.trim() || null;
+  }
+  if (patch.assigneeId !== undefined) {
+    payload.assignee_id = patch.assigneeId;
   }
 
   const { data, error } = await supabase
