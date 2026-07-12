@@ -128,6 +128,14 @@ describe("section-filters", () => {
     ).toBe(true);
     expect(itemMatchesListSection(item, "in_progress", today)).toBe(false);
   });
+
+  it("matches cancelled section only for cancelled items", () => {
+    const cancelled = mockItem({ status: "cancelled" });
+    const active = mockItem({ status: "in_progress" });
+    expect(itemMatchesListSection(cancelled, "cancelled", today)).toBe(true);
+    expect(itemMatchesListSection(cancelled, "today", today)).toBe(false);
+    expect(itemMatchesListSection(active, "cancelled", today)).toBe(false);
+  });
 });
 
 describe("status mappers", () => {
@@ -194,5 +202,17 @@ describe("agreement source links", () => {
 
   it("falls back to agreements hub without client context", () => {
     expect(resolveAgreementSourceLink("agr-1")).toBe("/tablice-wdrozen/ustalenia");
+  });
+});
+
+describe("sortWorkItemsStable", () => {
+  it("orders by due date then title", async () => {
+    const { sortWorkItemsStable } = await import("@/lib/my-work/sort-work-items");
+    const sorted = sortWorkItemsStable([
+      mockItem({ id: "b", title: "Beta", dueDate: "2026-07-15" }),
+      mockItem({ id: "a", title: "Alfa", dueDate: "2026-07-15" }),
+      mockItem({ id: "c", title: "Gamma", dueDate: null }),
+    ]);
+    expect(sorted.map((item) => item.id)).toEqual(["a", "b", "c"]);
   });
 });

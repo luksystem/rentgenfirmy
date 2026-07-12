@@ -64,6 +64,7 @@ export function MyWorkPage() {
   const sendWeekPlanById = useMyWorkStore((state) => state.sendWeekPlanById);
   const copyPreviousWeekPlan = useMyWorkStore((state) => state.copyPreviousWeekPlan);
   const createWeekPlanForUser = useMyWorkStore((state) => state.createWeekPlanForUser);
+  const updateWeekPlanById = useMyWorkStore((state) => state.updateWeekPlanById);
   const reportObstacle = useMyWorkStore((state) => state.reportObstacle);
   const requestTakeover = useMyWorkStore((state) => state.requestTakeover);
 
@@ -77,7 +78,9 @@ export function MyWorkPage() {
   useEffect(() => {
     void ensureMyItems();
     void ensureDayContext();
-    void ensureWeekPlan();
+    if (!canManage) {
+      void ensureWeekPlan();
+    }
     if (canManage) {
       void ensureTeamItems();
       void loadTeamProfiles();
@@ -114,6 +117,14 @@ export function MyWorkPage() {
     () => teamProfiles.map((entry) => ({ id: entry.id, label: profileToOptionLabel(entry) })),
     [teamProfiles],
   );
+
+  const weekPlanTasks = useMemo(() => {
+    const assignedUserId = weekPlan?.assignedUserId;
+    if (!assignedUserId) {
+      return [];
+    }
+    return teamItems.filter((item) => item.assignedUserId === assignedUserId);
+  }, [teamItems, weekPlan?.assignedUserId]);
 
   const loading = myItemsLoading && !myItemsHydrated;
 
@@ -187,7 +198,11 @@ export function MyWorkPage() {
             Kanban
           </Button>
         </div>
-        <Button variant="secondary" size="sm" onClick={() => void ensureMyItems({ force: true })}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => void ensureMyItems({ force: true, showLoading: false, sync: true })}
+        >
           Odśwież
         </Button>
       </div>
@@ -205,6 +220,7 @@ export function MyWorkPage() {
             aiDraft: input.aiDraft,
           });
         }}
+        onOpenItem={(id) => void openItem(id)}
       />
 
       <MyWorkWeekPlanPanel
@@ -222,6 +238,14 @@ export function MyWorkPage() {
           await copyPreviousWeekPlan(assignedUserId);
         }}
         onCreateDraft={handleCreateWeekDraft}
+        onLoadForUser={async (assignedUserId) => {
+          await ensureWeekPlan({ force: true, assignedUserId });
+        }}
+        onOpenItem={(id) => void openItem(id)}
+        onUpdatePlan={async (planId, input) => {
+          await updateWeekPlanById(planId, input);
+        }}
+        availableTasks={weekPlanTasks}
       />
 
       <div className="mb-6">

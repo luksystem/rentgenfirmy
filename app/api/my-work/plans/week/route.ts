@@ -9,11 +9,16 @@ import {
 } from "@/lib/supabase/my-work-plans-server";
 import { createWorkItemSentNotificationServer } from "@/lib/notifications/work-item-notifications";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const { userId } = await requireAuthenticatedProfile();
+    const { userId, profile } = await requireAuthenticatedProfile();
+    const url = new URL(request.url);
+    const assignedUserId = url.searchParams.get("assignedUserId");
+
     const admin = getSupabaseAdmin();
-    const plan = await fetchCurrentWeekPlanServer(admin, userId);
+    const plan = await fetchCurrentWeekPlanServer(admin, userId, profile, {
+      assignedUserId,
+    });
     return NextResponse.json({ plan });
   } catch (error) {
     return jsonError(error);

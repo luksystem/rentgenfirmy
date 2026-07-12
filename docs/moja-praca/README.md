@@ -6,6 +6,8 @@ Moduł **Moja praca** to osobisty pulpit operacyjny pracownika i managera w Rent
 
 | Plik | Opis |
 |------|------|
+| [INSTRUKCJA_PRACOWNIK.md](./INSTRUKCJA_PRACOWNIK.md) | Obsługa zadań, rytm dnia, plan tygodnia — dla wykonawcy |
+| [INSTRUKCJA_MANAGER.md](./INSTRUKCJA_MANAGER.md) | Tworzenie zadań, pulpit, weryfikacja, plany — dla managera |
 | [ARCHITEKTURA.md](./ARCHITEKTURA.md) | Model danych, warstwy, adaptery, uprawnienia |
 | [STAN_WDROZENIA.md](./STAN_WDROZENIA.md) | Co jest wdrożone (Etapy 1–5) |
 | [TEST_RECZNY.md](./TEST_RECZNY.md) | Scenariusze testów manualnych |

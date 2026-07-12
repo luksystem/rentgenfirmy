@@ -11,7 +11,8 @@ export type ListSectionId =
   | "pending_verification"
   | "in_progress"
   | "needs_comment"
-  | "completed";
+  | "completed"
+  | "cancelled";
 
 export const LIST_SECTIONS: { id: ListSectionId; label: string }[] = [
   { id: "today", label: "Dzisiaj" },
@@ -24,6 +25,7 @@ export const LIST_SECTIONS: { id: ListSectionId; label: string }[] = [
   { id: "in_progress", label: "W realizacji" },
   { id: "needs_comment", label: "Do skomentowania" },
   { id: "completed", label: "Wykonane" },
+  { id: "cancelled", label: "Anulowane" },
 ];
 
 const IN_PROGRESS_STATUSES: WorkItemStatus[] = [
@@ -130,6 +132,8 @@ export function itemMatchesListSection(
       weekAgo.setDate(weekAgo.getDate() - 7);
       return completedKey >= weekAgo.toISOString().slice(0, 10);
     }
+    case "cancelled":
+      return item.status === "cancelled";
     default:
       return false;
   }

@@ -119,6 +119,17 @@ export type CreateWeekPlanInput = {
   sendImmediately?: boolean;
 };
 
+export type UpdateWeekPlanInput = {
+  managerComment?: string;
+  items: {
+    workItemId: string;
+    plannedDate: string;
+    sortOrder?: number;
+    managerComment?: string;
+  }[];
+  sendImmediately?: boolean;
+};
+
 export type AcknowledgeWeekPlanInput = {
   comment?: string;
   riskNotes?: string;

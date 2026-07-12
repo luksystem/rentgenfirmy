@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, CalendarRange, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,7 +17,11 @@ import {
   type WorkPlanView,
 } from "@/lib/my-work/plan-types";
 import { formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { fetchWorkRiskAnalysisAi } from "@/lib/supabase/my-work-repository";
+import { MyWorkEditWeekPlanDialog } from "@/components/my-work/my-work-edit-week-plan-dialog";
+import type { UpdateWeekPlanInput } from "@/lib/my-work/plan-types";
+import type { WorkItemView } from "@/lib/my-work/types";
 
 export function MyWorkWeekPlanPanel({
   plan,
@@ -27,6 +31,10 @@ export function MyWorkWeekPlanPanel({
   onSend,
   onCopyPrevious,
   onCreateDraft,
+  onLoadForUser,
+  onOpenItem,
+  onUpdatePlan,
+  availableTasks = [],
 }: {
   plan: WorkPlanView | null;
   canManage: boolean;
@@ -35,13 +43,36 @@ export function MyWorkWeekPlanPanel({
   onSend: (planId: string) => Promise<void>;
   onCopyPrevious: (assignedUserId: string) => Promise<void>;
   onCreateDraft: (assignedUserId: string) => Promise<void>;
+  onLoadForUser?: (assignedUserId: string) => Promise<void>;
+  onOpenItem?: (workItemId: string) => void;
+  onUpdatePlan?: (planId: string, input: UpdateWeekPlanInput) => Promise<void>;
+  availableTasks?: WorkItemView[];
 }) {
   const [ackOpen, setAckOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [comment, setComment] = useState("");
   const [riskNotes, setRiskNotes] = useState("");
   const [selectedUserId, setSelectedUserId] = useState(teamOptions[0]?.id ?? "");
   const [busy, setBusy] = useState(false);
   const [analyzingRisks, setAnalyzingRisks] = useState(false);
+
+  useEffect(() => {
+    if (!teamOptions.length) {
+      return;
+    }
+    setSelectedUserId((current) => current || teamOptions[0]!.id);
+  }, [teamOptions]);
+
+  useEffect(() => {
+    if (!canManage || !onLoadForUser) {
+      return;
+    }
+    const userId = selectedUserId || teamOptions[0]?.id;
+    if (!userId) {
+      return;
+    }
+    void onLoadForUser(userId);
+  }, [canManage, onLoadForUser, selectedUserId, teamOptions]);
 
   if (!plan && !canManage) {
     return null;
@@ -49,6 +80,9 @@ export function MyWorkWeekPlanPanel({
 
   const needsAck = plan?.status === "sent";
   const isDraft = plan?.status === "draft";
+  const planIsLocked = Boolean(plan && !isDraft);
+  const canCreateFromTasks = !plan || isDraft;
+  const canCopyPrevious = !plan;
 
   async function handleAcknowledge() {
     setBusy(true);
@@ -126,10 +160,20 @@ export function MyWorkWeekPlanPanel({
                     </Select>
                   </Field>
                 ) : null}
+                {plan ? (
+                  <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)}>
+                    Edytuj plan
+                  </Button>
+                ) : null}
                 <Button
                   size="sm"
                   variant="secondary"
-                  disabled={!selectedUserId || busy}
+                  disabled={!selectedUserId || busy || !canCopyPrevious}
+                  title={
+                    canCopyPrevious
+                      ? undefined
+                      : "Plan na bieżący tydzień już istnieje — kopiowanie jest niedostępne."
+                  }
                   onClick={() => {
                     setBusy(true);
                     void onCopyPrevious(selectedUserId)
@@ -141,7 +185,7 @@ export function MyWorkWeekPlanPanel({
                 >
                   Kopiuj z poprzedniego tygodnia
                 </Button>
-                {!plan ? (
+                {canCreateFromTasks ? (
                   <Button
                     size="sm"
                     disabled={!selectedUserId || busy}
@@ -154,7 +198,7 @@ export function MyWorkWeekPlanPanel({
                         .finally(() => setBusy(false));
                     }}
                   >
-                    Utwórz szkic
+                    {isDraft ? "Odśwież ze zadań" : "Utwórz ze zadań"}
                   </Button>
                 ) : null}
                 {isDraft && plan ? (
@@ -184,7 +228,62 @@ export function MyWorkWeekPlanPanel({
             Manager wysłał plan — potwierdź zapoznanie lub zgłoś zagrożenia.
           </p>
         ) : null}
+
+        {canManage && planIsLocked ? (
+          <p className="mt-3 text-xs text-muted">
+            Plan na ten tydzień jest {WORK_PLAN_STATUS_LABELS[plan!.status].toLowerCase()}. Użyj{" "}
+            <strong>Edytuj plan</strong>, aby zmienić pozycje i wysłać zaktualizowaną wersję.
+          </p>
+        ) : null}
+
+        {canManage && !plan ? (
+          <p className="mt-3 text-xs text-muted">
+            Brak planu na bieżący tydzień. Użyj <strong>Utwórz ze zadań</strong> (z aktywnych
+            zleceń pracownika) lub <strong>Kopiuj z poprzedniego tygodnia</strong>.
+          </p>
+        ) : null}
+
+        {plan?.items.length ? (
+          <ul className="mt-3 grid gap-1.5 sm:grid-cols-2">
+            {plan.items.map((entry) => {
+              const workItemId = entry.workItemId;
+              const canOpen = Boolean(workItemId && onOpenItem);
+              return (
+                <li key={entry.id}>
+                  <button
+                    type="button"
+                    disabled={!canOpen}
+                    onClick={() => workItemId && onOpenItem?.(workItemId)}
+                    className={cn(
+                      "w-full rounded-lg border border-border/70 bg-surface px-3 py-2 text-left text-sm transition",
+                      canOpen && "hover:border-border-strong hover:bg-surface-muted/40",
+                      !canOpen && "cursor-default opacity-60",
+                    )}
+                  >
+                    <span className="font-medium">{entry.workItem?.title ?? "Zadanie"}</span>
+                    <span className="ml-2 text-xs text-muted">{formatDate(entry.plannedDate)}</span>
+                    {entry.carriedOver ? (
+                      <span className="ml-2 text-xs text-amber-700">przeniesione</span>
+                    ) : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
       </Card>
+
+      {plan && onUpdatePlan ? (
+        <MyWorkEditWeekPlanDialog
+          plan={plan}
+          availableTasks={availableTasks}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          onSave={async (input) => {
+            await onUpdatePlan(plan.id, input);
+          }}
+        />
+      ) : null}
 
       <Dialog open={ackOpen} onOpenChange={setAckOpen}>
         <DialogContent>

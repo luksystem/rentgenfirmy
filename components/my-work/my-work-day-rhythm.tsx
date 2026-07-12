@@ -7,12 +7,14 @@ import { Card } from "@/components/ui/card";
 import { MyWorkEndDayDialog } from "@/components/my-work/my-work-end-day-dialog";
 import type { WorkDayContext } from "@/lib/my-work/plan-types";
 import { formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 export function MyWorkDayRhythm({
   context,
   loading,
   onStartDay,
   onEndDay,
+  onOpenItem,
 }: {
   context: WorkDayContext | null;
   loading?: boolean;
@@ -22,6 +24,7 @@ export function MyWorkDayRhythm({
     carryOverUnfinished: boolean;
     aiDraft?: string;
   }) => Promise<void>;
+  onOpenItem?: (workItemId: string) => void;
 }) {
   const [starting, setStarting] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
@@ -88,17 +91,29 @@ export function MyWorkDayRhythm({
           <div className="mt-4 border-t border-border/60 pt-4">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Plan na dziś</p>
             <ul className="grid gap-1.5 sm:grid-cols-2">
-              {context.dayPlan.items.map((entry) => (
-                <li
-                  key={entry.id}
-                  className="rounded-lg border border-border/70 bg-surface px-3 py-2 text-sm"
-                >
-                  <span className="font-medium">{entry.workItem?.title ?? "Zadanie"}</span>
-                  {entry.carriedOver ? (
-                    <span className="ml-2 text-xs text-amber-700">przeniesione</span>
-                  ) : null}
-                </li>
-              ))}
+              {context.dayPlan.items.map((entry) => {
+                const workItemId = entry.workItemId;
+                const canOpen = Boolean(workItemId && onOpenItem);
+                return (
+                  <li key={entry.id}>
+                    <button
+                      type="button"
+                      disabled={!canOpen}
+                      onClick={() => workItemId && onOpenItem?.(workItemId)}
+                      className={cn(
+                        "w-full rounded-lg border border-border/70 bg-surface px-3 py-2 text-left text-sm transition",
+                        canOpen && "hover:border-border-strong hover:bg-surface-muted/40",
+                        !canOpen && "cursor-default opacity-60",
+                      )}
+                    >
+                      <span className="font-medium">{entry.workItem?.title ?? "Zadanie"}</span>
+                      {entry.carriedOver ? (
+                        <span className="ml-2 text-xs text-amber-700">przeniesione</span>
+                      ) : null}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ) : null}

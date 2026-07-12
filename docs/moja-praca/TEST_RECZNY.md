@@ -52,9 +52,17 @@
 ## Scenariusz 7: Rytm dnia i podsumowanie AI
 
 1. Pracownik → **Rozpoczynam dzień**.
-2. Na koniec dnia → **Podsumuj dzień** → **Wygeneruj szkic AI**.
-3. Edytuj tekst i **Zakończ dzień** (opcjonalnie: przenieś niewykonane na jutro).
-4. Sprawdź w bazie `work_summaries.ai_draft` (jeśli użyto AI).
+2. W **Plan na dziś** kliknij pozycję — otwiera się panel szczegółów zadania.
+3. Na koniec dnia → **Podsumuj dzień** → **Wygeneruj szkic AI**.
+4. Edytuj tekst i **Zakończ dzień** (opcjonalnie: przenieś niewykonane na jutro).
+5. Sprawdź w bazie `work_summaries.ai_draft` (jeśli użyto AI).
+
+## Scenariusz 7b: Anulowane zadanie znika z planu dnia
+
+1. Manager anuluje zadanie, które było w planie dnia pracownika.
+2. Pracownik (dzień już rozpoczęty) → odśwież stronę **Zadania** lub poczekaj na odświeżenie kontekstu.
+3. Anulowane zadanie **nie** powinno być w **Plan na dziś** (ani jako puste „Zadanie”).
+4. Na liście aktywnych zadań anulowanego wpisu też nie ma.
 
 ## Scenariusz 8: Plan tygodnia i analiza ryzyk
 
@@ -85,3 +93,11 @@
 1. Manager edytuje zadanie ręczne (**Edytuj zadanie**).
 2. Osoba wspierająca na zadaniu widzi **Poproś o przejęcie**.
 3. Manager/assignee dostaje powiadomienie `work_item_takeover_requested`.
+
+## Scenariusz 13: Anulowane zadania i usuwanie trwałe
+
+1. Manager anuluje zadanie ręczne (**Edytuj zadanie** → **Anuluj zadanie**).
+2. Manager / admin → **Zadania** → sekcja **Anulowane** (lub filtr statusu **Anulowane**).
+3. Otwórz anulowane zadanie → **Edytuj zadanie**.
+4. Jako **administrator**: przycisk **Usuń trwale** (tylko zadanie ręczne).
+5. Jako manager (bez roli admin): przycisku **Usuń trwale** nie ma — tylko podgląd archiwum.

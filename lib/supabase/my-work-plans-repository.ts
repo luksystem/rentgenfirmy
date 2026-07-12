@@ -6,6 +6,7 @@ import type {
   EndDayInput,
   ReportObstacleInput,
   StartDayInput,
+  UpdateWeekPlanInput,
   WorkDayContext,
   WorkPlanView,
 } from "@/lib/my-work/plan-types";
@@ -60,8 +61,15 @@ export async function endDaySession(input: EndDayInput): Promise<WorkDayContext>
   return payload.context;
 }
 
-export async function fetchCurrentWeekPlan(): Promise<WorkPlanView | null> {
-  const response = await fetch("/api/my-work/plans/week", { credentials: "include" });
+export async function fetchCurrentWeekPlan(assignedUserId?: string | null): Promise<WorkPlanView | null> {
+  const params = new URLSearchParams();
+  if (assignedUserId) {
+    params.set("assignedUserId", assignedUserId);
+  }
+  const query = params.toString();
+  const response = await fetch(`/api/my-work/plans/week${query ? `?${query}` : ""}`, {
+    credentials: "include",
+  });
   const payload = await parseJsonResponse<{ plan: WorkPlanView | null }>(
     response,
     "Nie udało się wczytać planu tygodnia.",
@@ -79,6 +87,20 @@ export async function createWeekPlan(input: CreateWeekPlanInput): Promise<WorkPl
   const payload = await parseJsonResponse<{ plan: WorkPlanView }>(
     response,
     "Nie udało się utworzyć planu tygodnia.",
+  );
+  return payload.plan;
+}
+
+export async function updateWeekPlan(planId: string, input: UpdateWeekPlanInput): Promise<WorkPlanView> {
+  const response = await fetch(`/api/my-work/plans/${planId}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const payload = await parseJsonResponse<{ plan: WorkPlanView }>(
+    response,
+    "Nie udało się zapisać planu tygodnia.",
   );
   return payload.plan;
 }

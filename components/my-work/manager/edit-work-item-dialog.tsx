@@ -52,6 +52,7 @@ export function EditWorkItemDialog({
   const currentItem = item;
   const isManual = currentItem.sourceType === "manual";
   const isAdmin = profile?.role === "administrator";
+  const isCancelled = currentItem.status === "cancelled";
   const canHardDelete =
     isAdmin && isManual && (currentItem.status === "draft" || currentItem.status === "cancelled");
 
@@ -126,15 +127,17 @@ export function EditWorkItemDialog({
 
         <div className="flex flex-wrap justify-between gap-2">
           <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="text-destructive"
-              disabled={submitting}
-              onClick={() => void handleCancelTask()}
-            >
-              Anuluj zadanie
-            </Button>
+            {!isCancelled ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="text-destructive"
+                disabled={submitting}
+                onClick={() => void handleCancelTask()}
+              >
+                Anuluj zadanie
+              </Button>
+            ) : null}
             {canHardDelete ? (
               <Button
                 type="button"

@@ -358,13 +358,18 @@ export async function fetchWorkItemsForUser(
   }
 
   const { data, error } = await query
-    .neq("status", "cancelled")
-    .order("due_date", { ascending: true, nullsFirst: false });
+    .order("due_date", { ascending: true, nullsFirst: false })
+    .order("title", { ascending: true })
+    .order("created_at", { ascending: true });
   if (error) {
     throw new Error(error.message);
   }
 
-  const rows = (data ?? []) as WorkItemRow[];
+  let rows = (data ?? []) as WorkItemRow[];
+  if (!canManageWorkItems(profile)) {
+    rows = rows.filter((row) => row.status !== "cancelled");
+  }
+
   const supportingMap = await fetchSupportingMap(
     admin,
     rows.map((r) => r.id),

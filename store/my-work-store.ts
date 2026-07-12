@@ -17,6 +17,7 @@ import type {
   CreateWeekPlanInput,
   EndDayInput,
   ReportObstacleInput,
+  UpdateWeekPlanInput,
   WorkDayContext,
   WorkPlanView,
 } from "@/lib/my-work/plan-types";
@@ -30,6 +31,7 @@ import {
   reportObstacle,
   sendWeekPlan,
   startDaySession,
+  updateWeekPlan,
 } from "@/lib/supabase/my-work-plans-repository";
 import {
   addWorkItemComment,
@@ -48,6 +50,15 @@ import {
   requestWorkItemTakeover,
 } from "@/lib/supabase/my-work-repository";
 import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
+import { sortWorkItemsStable } from "@/lib/my-work/sort-work-items";
+
+export type EnsureMyWorkItemsOptions = {
+  force?: boolean;
+  /** Domyślnie true tylko przy pierwszym ładowaniu; false = odświeżenie w tle bez spinnera. */
+  showLoading?: boolean;
+  /** Domyślnie true; ustaw false przy pollingu, żeby nie uruchamiać pełnego sync co 10 s. */
+  sync?: boolean;
+};
 
 export const EMPTY_WORK_ITEMS: WorkItemView[] = [];
 
@@ -55,6 +66,7 @@ let myItemsPromise: Promise<WorkItemView[]> | null = null;
 let teamItemsPromise: Promise<WorkItemView[]> | null = null;
 let dayContextPromise: Promise<WorkDayContext> | null = null;
 let weekPlanPromise: Promise<WorkPlanView | null> | null = null;
+let weekPlanPromiseUserId: string | null = null;
 let dashboardPromise: Promise<WorkDashboardMetrics> | null = null;
 
 type MyWorkStore = {
@@ -80,6 +92,7 @@ type MyWorkStore = {
   weekPlan: WorkPlanView | null;
   weekPlanHydrated: boolean;
   weekPlanLoading: boolean;
+  weekPlanForUserId: string | null;
 
   dashboardMetrics: WorkDashboardMetrics | null;
   dashboardHydrated: boolean;
@@ -87,8 +100,8 @@ type MyWorkStore = {
 
   error: string | null;
 
-  ensureMyItems: (options?: { force?: boolean }) => Promise<WorkItemView[]>;
-  ensureTeamItems: (options?: { force?: boolean }) => Promise<WorkItemView[]>;
+  ensureMyItems: (options?: EnsureMyWorkItemsOptions) => Promise<WorkItemView[]>;
+  ensureTeamItems: (options?: EnsureMyWorkItemsOptions) => Promise<WorkItemView[]>;
   loadTeamProfiles: () => Promise<UserProfile[]>;
   setFilters: (filters: Partial<WorkItemFilters>) => void;
   setViewMode: (mode: "list" | "kanban") => void;
@@ -110,11 +123,15 @@ type MyWorkStore = {
   ensureDayContext: (options?: { force?: boolean; sessionDate?: string }) => Promise<WorkDayContext>;
   startDay: () => Promise<WorkDayContext>;
   endDay: (input: EndDayInput) => Promise<WorkDayContext>;
-  ensureWeekPlan: (options?: { force?: boolean }) => Promise<WorkPlanView | null>;
+  ensureWeekPlan: (options?: {
+    force?: boolean;
+    assignedUserId?: string | null;
+  }) => Promise<WorkPlanView | null>;
   createWeekPlanForUser: (input: CreateWeekPlanInput) => Promise<WorkPlanView>;
   sendWeekPlanById: (planId: string) => Promise<WorkPlanView>;
   acknowledgeWeekPlanById: (planId: string, input: AcknowledgeWeekPlanInput) => Promise<WorkPlanView>;
   copyPreviousWeekPlan: (assignedUserId: string) => Promise<WorkPlanView>;
+  updateWeekPlanById: (planId: string, input: UpdateWeekPlanInput) => Promise<WorkPlanView>;
   reportObstacle: (input: ReportObstacleInput) => Promise<void>;
   requestTakeover: (id: string, comment?: string) => Promise<void>;
   ensureDashboardMetrics: (options?: { force?: boolean }) => Promise<WorkDashboardMetrics>;
@@ -143,6 +160,7 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
   weekPlan: null,
   weekPlanHydrated: false,
   weekPlanLoading: false,
+  weekPlanForUserId: null,
 
   dashboardMetrics: null,
   dashboardHydrated: false,
@@ -152,21 +170,33 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
 
   ensureMyItems: async (options) => {
     const { myItemsHydrated, myItems } = get();
-    if (myItemsHydrated && !options?.force && myItems.length >= 0) {
-      if (!options?.force) {
-        return myItems;
-      }
+    if (myItemsHydrated && !options?.force) {
+      return myItems;
     }
+
+    const showLoading = options?.showLoading ?? !myItemsHydrated;
+    const sync = options?.sync ?? true;
 
     if (!options?.force && myItemsPromise) {
       return myItemsPromise;
     }
+    if (options?.force && !showLoading && myItemsPromise) {
+      return myItemsPromise;
+    }
 
-    set({ myItemsLoading: true, error: null });
-    myItemsPromise = fetchMyWorkItems({ scope: "my" })
+    if (showLoading) {
+      set({ myItemsLoading: true, error: null });
+    }
+
+    myItemsPromise = fetchMyWorkItems({ scope: "my", sync })
       .then((items) => {
-        set({ myItems: items, myItemsHydrated: true, myItemsLoading: false });
-        return items;
+        const sorted = sortWorkItemsStable(items);
+        set({
+          myItems: sorted,
+          myItemsHydrated: true,
+          myItemsLoading: false,
+        });
+        return sorted;
       })
       .catch((error: unknown) => {
         set({
@@ -188,15 +218,29 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
       return teamItems;
     }
 
+    const showLoading = options?.showLoading ?? !teamItemsHydrated;
+    const sync = options?.sync ?? true;
+
     if (!options?.force && teamItemsPromise) {
       return teamItemsPromise;
     }
+    if (options?.force && !showLoading && teamItemsPromise) {
+      return teamItemsPromise;
+    }
 
-    set({ teamItemsLoading: true, error: null });
-    teamItemsPromise = fetchMyWorkItems({ scope: "team" })
+    if (showLoading) {
+      set({ teamItemsLoading: true, error: null });
+    }
+
+    teamItemsPromise = fetchMyWorkItems({ scope: "team", sync })
       .then((items) => {
-        set({ teamItems: items, teamItemsHydrated: true, teamItemsLoading: false });
-        return items;
+        const sorted = sortWorkItemsStable(items);
+        set({
+          teamItems: sorted,
+          teamItemsHydrated: true,
+          teamItemsLoading: false,
+        });
+        return sorted;
       })
       .catch((error: unknown) => {
         set({
@@ -369,18 +413,26 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
   },
 
   ensureWeekPlan: async (options) => {
-    const { weekPlanHydrated, weekPlan } = get();
-    if (weekPlanHydrated && !options?.force) {
+    const targetUserId = options?.assignedUserId ?? null;
+    const { weekPlanHydrated, weekPlan, weekPlanForUserId } = get();
+    const sameUser = weekPlanForUserId === targetUserId;
+    if (weekPlanHydrated && sameUser && !options?.force) {
       return weekPlan;
     }
-    if (!options?.force && weekPlanPromise) {
+    if (!options?.force && weekPlanPromise && weekPlanPromiseUserId === targetUserId) {
       return weekPlanPromise;
     }
 
     set({ weekPlanLoading: true, error: null });
-    weekPlanPromise = fetchCurrentWeekPlan()
+    weekPlanPromiseUserId = targetUserId;
+    weekPlanPromise = fetchCurrentWeekPlan(targetUserId)
       .then((plan) => {
-        set({ weekPlan: plan, weekPlanHydrated: true, weekPlanLoading: false });
+        set({
+          weekPlan: plan,
+          weekPlanHydrated: true,
+          weekPlanLoading: false,
+          weekPlanForUserId: targetUserId,
+        });
         return plan;
       })
       .catch((error: unknown) => {
@@ -392,6 +444,7 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
       })
       .finally(() => {
         weekPlanPromise = null;
+        weekPlanPromiseUserId = null;
       });
 
     return weekPlanPromise;
@@ -399,25 +452,31 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
 
   createWeekPlanForUser: async (input) => {
     const plan = await createWeekPlan(input);
-    set({ weekPlan: plan, weekPlanHydrated: true });
+    set({ weekPlan: plan, weekPlanHydrated: true, weekPlanForUserId: input.assignedUserId });
     return plan;
   },
 
   sendWeekPlanById: async (planId) => {
     const plan = await sendWeekPlan(planId);
-    set({ weekPlan: plan, weekPlanHydrated: true });
+    set({ weekPlan: plan, weekPlanHydrated: true, weekPlanForUserId: plan.assignedUserId });
     return plan;
   },
 
   acknowledgeWeekPlanById: async (planId, input) => {
     const plan = await acknowledgeWeekPlan(planId, input);
-    set({ weekPlan: plan, weekPlanHydrated: true });
+    set({ weekPlan: plan, weekPlanHydrated: true, weekPlanForUserId: plan.assignedUserId });
     return plan;
   },
 
   copyPreviousWeekPlan: async (assignedUserId) => {
     const plan = await copyWeekPlanFromPrevious(assignedUserId);
-    set({ weekPlan: plan, weekPlanHydrated: true });
+    set({ weekPlan: plan, weekPlanHydrated: true, weekPlanForUserId: assignedUserId });
+    return plan;
+  },
+
+  updateWeekPlanById: async (planId, input) => {
+    const plan = await updateWeekPlan(planId, input);
+    set({ weekPlan: plan, weekPlanHydrated: true, weekPlanForUserId: plan.assignedUserId });
     return plan;
   },
 

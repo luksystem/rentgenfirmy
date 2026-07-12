@@ -11,6 +11,7 @@ import type {
   EndDayInput,
   ReportObstacleInput,
   StartDayInput,
+  UpdateWeekPlanInput,
   WorkDayContext,
   WorkDaySession,
   WorkPlanItemView,
@@ -265,8 +266,29 @@ async function ensureDayPlan(
     }
   }
 
+  const validIds = new Set(candidateItems.map((item) => item.id));
+  const stalePlanItemIds = (currentItems ?? [])
+    .filter((row) => !validIds.has(row.work_item_id as string))
+    .map((row) => row.id as string);
+  if (stalePlanItemIds.length) {
+    const { error: pruneError } = await admin
+      .from("work_plan_items")
+      .delete()
+      .in("id", stalePlanItemIds);
+    if (pruneError) {
+      throw new Error(pruneError.message);
+    }
+  }
+
   const workItemsById = new Map(workItems.map((item) => [item.id, item]));
-  return fetchPlanWithItems(admin, planId, workItemsById);
+  const plan = await fetchPlanWithItems(admin, planId, workItemsById);
+  if (!plan) {
+    throw new Error("Nie udało się wczytać planu dnia.");
+  }
+  return {
+    ...plan,
+    items: plan.items.filter((entry) => entry.workItem != null),
+  };
 }
 
 export async function fetchDayContextServer(
@@ -303,7 +325,7 @@ export async function fetchDayContextServer(
 
   let dayPlan: WorkPlanView | null = null;
   if (planRow) {
-    dayPlan = await fetchPlanWithItems(admin, planRow.id, workItemsById);
+    dayPlan = await ensureDayPlan(admin, userId, sessionDate, workItems);
   }
 
   return {
@@ -486,9 +508,75 @@ export async function createWeekPlanServer(
 ): Promise<WorkPlanView> {
   await assertCanManagePlanForUser(admin, manager, input.assignedUserId);
 
-  const planId = crypto.randomUUID();
   const now = new Date().toISOString();
   const status = input.sendImmediately ? "sent" : "draft";
+
+  const { data: existing, error: existingError } = await admin
+    .from("work_plans")
+    .select("*")
+    .eq("assigned_user_id", input.assignedUserId)
+    .eq("period_type", "week")
+    .eq("date_from", input.dateFrom)
+    .eq("date_to", input.dateTo)
+    .maybeSingle();
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+
+  if (existing) {
+    if (existing.status !== "draft") {
+      throw new Error(
+        "Plan na ten tydzień już został wysłany lub potwierdzony. Nie można utworzyć nowego szkicu.",
+      );
+    }
+
+    const { error: updateError } = await admin
+      .from("work_plans")
+      .update({
+        manager_id: manager.id,
+        manager_comment: input.managerComment?.trim() ?? existing.manager_comment,
+        updated_at: now,
+      })
+      .eq("id", existing.id);
+    if (updateError) {
+      throw new Error(updateError.message);
+    }
+
+    const { error: deleteItemsError } = await admin
+      .from("work_plan_items")
+      .delete()
+      .eq("work_plan_id", existing.id);
+    if (deleteItemsError) {
+      throw new Error(deleteItemsError.message);
+    }
+
+    if (input.items.length) {
+      const { error: itemsError } = await admin.from("work_plan_items").insert(
+        input.items.map((item, index) => ({
+          id: crypto.randomUUID(),
+          work_plan_id: existing.id,
+          work_item_id: item.workItemId,
+          assigned_user_id: input.assignedUserId,
+          planned_date: item.plannedDate,
+          sort_order: item.sortOrder ?? index * 10,
+          manager_comment: item.managerComment?.trim() ?? "",
+          carried_over: false,
+          created_at: now,
+        })),
+      );
+      if (itemsError) {
+        throw new Error(itemsError.message);
+      }
+    }
+
+    const plan = await fetchPlanWithItems(admin, existing.id);
+    if (!plan) {
+      throw new Error("Nie udało się zaktualizować planu tygodnia.");
+    }
+    return plan;
+  }
+
+  const planId = crypto.randomUUID();
 
   const { error: planError } = await admin.from("work_plans").insert({
     id: planId,
@@ -532,6 +620,84 @@ export async function createWeekPlanServer(
   const plan = await fetchPlanWithItems(admin, planId);
   if (!plan) {
     throw new Error("Nie udało się utworzyć planu tygodnia.");
+  }
+  return plan;
+}
+
+export async function updateWeekPlanServer(
+  admin: AdminClient,
+  planId: string,
+  manager: UserProfile,
+  input: UpdateWeekPlanInput,
+): Promise<WorkPlanView> {
+  const existing = await fetchPlanWithItems(admin, planId);
+  if (!existing) {
+    throw new Error("Plan nie istnieje.");
+  }
+  if (existing.periodType !== "week") {
+    throw new Error("Edycja dotyczy tylko planów tygodniowych.");
+  }
+  if (existing.managerId !== manager.id && manager.role !== "administrator") {
+    throw new Error("Brak uprawnień do edycji tego planu.");
+  }
+  await assertCanManagePlanForUser(admin, manager, existing.assignedUserId);
+
+  const now = new Date().toISOString();
+  const sendImmediately = input.sendImmediately === true;
+
+  const { error: updateError } = await admin
+    .from("work_plans")
+    .update({
+      manager_id: manager.id,
+      manager_comment: input.managerComment?.trim() ?? existing.managerComment,
+      status: sendImmediately ? "sent" : "draft",
+      sent_at: sendImmediately ? now : null,
+      acknowledged_at: null,
+      acknowledgement_due_at: sendImmediately
+        ? new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString()
+        : null,
+      updated_at: now,
+    })
+    .eq("id", planId);
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  const { error: deleteItemsError } = await admin
+    .from("work_plan_items")
+    .delete()
+    .eq("work_plan_id", planId);
+  if (deleteItemsError) {
+    throw new Error(deleteItemsError.message);
+  }
+
+  if (input.items.length) {
+    const { error: itemsError } = await admin.from("work_plan_items").insert(
+      input.items.map((item, index) => ({
+        id: crypto.randomUUID(),
+        work_plan_id: planId,
+        work_item_id: item.workItemId,
+        assigned_user_id: existing.assignedUserId,
+        planned_date: item.plannedDate,
+        sort_order: item.sortOrder ?? index * 10,
+        manager_comment: item.managerComment?.trim() ?? "",
+        carried_over: false,
+        created_at: now,
+      })),
+    );
+    if (itemsError) {
+      throw new Error(itemsError.message);
+    }
+  }
+
+  const workItems = await fetchWorkItemsForUser(admin, existing.assignedUserId, manager, {
+    scope: "my",
+    syncKanban: false,
+  });
+  const workItemsById = new Map(workItems.map((item) => [item.id, item]));
+  const plan = await fetchPlanWithItems(admin, planId, workItemsById);
+  if (!plan) {
+    throw new Error("Nie udało się zapisać planu tygodnia.");
   }
   return plan;
 }
@@ -612,12 +778,19 @@ export async function acknowledgeWeekPlanServer(
 export async function fetchCurrentWeekPlanServer(
   admin: AdminClient,
   userId: string,
+  profile: UserProfile,
+  options?: { assignedUserId?: string | null },
 ): Promise<WorkPlanView | null> {
+  const targetUserId = options?.assignedUserId ?? userId;
+  if (targetUserId !== userId) {
+    await assertCanManagePlanForUser(admin, profile, targetUserId);
+  }
+
   const { from, to } = weekRangeFromMonday(toDateKey());
   const { data, error } = await admin
     .from("work_plans")
     .select("*")
-    .eq("assigned_user_id", userId)
+    .eq("assigned_user_id", targetUserId)
     .eq("period_type", "week")
     .eq("date_from", from)
     .eq("date_to", to)
@@ -628,7 +801,12 @@ export async function fetchCurrentWeekPlanServer(
   if (!data) {
     return null;
   }
-  return fetchPlanWithItems(admin, data.id);
+  const workItems = await fetchWorkItemsForUser(admin, targetUserId, profile, {
+    scope: "my",
+    syncKanban: false,
+  });
+  const workItemsById = new Map(workItems.map((item) => [item.id, item]));
+  return fetchPlanWithItems(admin, data.id, workItemsById);
 }
 
 export async function copyWeekPlanFromPreviousServer(
