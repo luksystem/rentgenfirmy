@@ -78,8 +78,10 @@ export function mapResourcePlanStatusName(name: string | null | undefined): Work
       return "risk_reported";
     case "W realizacji":
       return "in_progress";
+    case "Planowane":
+      return "pending_ack";
     default:
-      return "planned";
+      return "pending_ack";
   }
 }
 

@@ -31,6 +31,18 @@ import type { WorkItemPatch } from "@/lib/my-work/source-adapters/types";
 
 type AdminClient = SupabaseClient;
 
+async function fetchActiveTeamMemberIds(admin: AdminClient) {
+  const { data, error } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("is_active", true)
+    .in("role", ["administrator", "manager", "pracownik"]);
+  if (error) {
+    throw new Error(error.message);
+  }
+  return (data ?? []).map((row) => row.id as string);
+}
+
 async function syncWorkItemPatchToSource(
   admin: AdminClient,
   item: WorkItem,
@@ -348,13 +360,23 @@ export async function fetchWorkItemsForUser(
   profile: UserProfile,
   options?: { scope?: "my" | "team"; assignedUserId?: string | null; syncKanban?: boolean },
 ): Promise<WorkItemView[]> {
+  const scope = options?.scope ?? "my";
+
   if (options?.syncKanban !== false) {
-    await syncAllWorkItemSources(admin, userId, profile);
+    if (scope === "team" && canManageWorkItems(profile)) {
+      const syncUserIds = options?.assignedUserId
+        ? [options.assignedUserId]
+        : await fetchActiveTeamMemberIds(admin);
+      await Promise.all(
+        syncUserIds.map((syncUserId) => syncAllWorkItemSources(admin, syncUserId, profile)),
+      );
+    } else {
+      await syncAllWorkItemSources(admin, userId, profile);
+    }
   }
 
   let query = admin.from("work_items").select("*");
 
-  const scope = options?.scope ?? "my";
   if (scope === "team" && canManageWorkItems(profile)) {
     if (options?.assignedUserId) {
       query = query.eq("assigned_user_id", options.assignedUserId);

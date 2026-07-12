@@ -184,6 +184,7 @@ export function filterWorkItems(items: WorkItemView[], filters: {
   ownOnly?: boolean;
   sharedOnly?: boolean;
   aiGeneratedOnly?: boolean;
+  assignedUserId?: string | null;
   currentUserId?: string | null;
 }) {
   return items.filter((item) => {
@@ -192,6 +193,7 @@ export function filterWorkItems(items: WorkItemView[], filters: {
     if (filters.status && item.status !== filters.status) return false;
     if (filters.priority && item.priority !== filters.priority) return false;
     if (filters.sourceType && item.sourceType !== filters.sourceType) return false;
+    if (filters.assignedUserId && item.assignedUserId !== filters.assignedUserId) return false;
     if (filters.overdueOnly && !itemIsOverdue(item)) return false;
     if (filters.needsReactionOnly && !itemNeedsReaction(item)) return false;
     if (filters.aiGeneratedOnly && !item.aiGenerated) return false;

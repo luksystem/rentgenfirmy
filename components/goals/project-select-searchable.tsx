@@ -174,8 +174,11 @@ export function ProjectSelectSearchable({
             <button
               type="button"
               className="flex w-full rounded-lg px-3 py-2 text-left text-sm text-muted hover:bg-surface-muted"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => selectProject(null)}
+              onMouseDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                selectProject(null);
+              }}
             >
               {emptyLabel}
             </button>
@@ -198,8 +201,11 @@ export function ProjectSelectSearchable({
                       "flex w-full flex-col rounded-lg px-3 py-2 text-left text-sm hover:bg-surface-muted",
                       value === project.id && "bg-accent/10 text-foreground",
                     )}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => selectProject(project.id)}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      selectProject(project.id);
+                    }}
                   >
                     <span className="font-medium">{project.name}</span>
                     {client ? <span className="text-xs text-muted">{formatPartyName(client)}</span> : null}
@@ -224,9 +230,14 @@ export function ProjectSelectSearchable({
             className="pr-10"
             onFocus={() => setOpen(true)}
             onChange={(event) => {
-              setQuery(event.target.value);
+              const nextQuery = event.target.value;
+              setQuery(nextQuery);
               setOpen(true);
-              if (!event.target.value.trim()) {
+              if (!nextQuery.trim()) {
+                onChange(null);
+                return;
+              }
+              if (value && selectedProject && nextQuery !== selectedProject.name) {
                 onChange(null);
               }
             }}

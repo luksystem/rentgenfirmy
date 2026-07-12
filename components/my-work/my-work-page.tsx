@@ -89,6 +89,17 @@ export function MyWorkPage() {
   }, [ensureMyItems, ensureTeamItems, ensureDayContext, ensureWeekPlan, canManage, loadTeamProfiles]);
 
   useEffect(() => {
+    if (!teamView || !canManage) {
+      return;
+    }
+    void ensureTeamItems({
+      force: true,
+      assignedUserId: filters.assignedUserId ?? undefined,
+      showLoading: false,
+    });
+  }, [teamView, canManage, filters.assignedUserId, ensureTeamItems]);
+
+  useEffect(() => {
     const itemId = searchParams.get("item");
     if (itemId) {
       void selectItem(itemId).then(() => setDetailOpen(true));
@@ -191,7 +202,13 @@ export function MyWorkPage() {
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => void ensureMyItems({ force: true, showLoading: false, sync: true })}
+          onClick={() => {
+            if (teamView && canManage) {
+              void ensureTeamItems({ force: true, showLoading: false, sync: true });
+            } else {
+              void ensureMyItems({ force: true, showLoading: false, sync: true });
+            }
+          }}
         >
           Odśwież
         </Button>

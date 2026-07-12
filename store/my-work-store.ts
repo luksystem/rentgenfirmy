@@ -59,6 +59,8 @@ export type EnsureMyWorkItemsOptions = {
   showLoading?: boolean;
   /** Domyślnie true; ustaw false przy pollingu, żeby nie uruchamiać pełnego sync co 10 s. */
   sync?: boolean;
+  /** Przy widoku zespołu: sync i opcjonalnie fetch tylko dla wybranego pracownika. */
+  assignedUserId?: string | null;
 };
 
 export const EMPTY_WORK_ITEMS: WorkItemView[] = [];
@@ -236,7 +238,11 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
       set({ teamItemsLoading: true, error: null });
     }
 
-    teamItemsPromise = fetchMyWorkItems({ scope: "team", sync })
+    teamItemsPromise = fetchMyWorkItems({
+      scope: "team",
+      sync,
+      assignedUserId: options?.assignedUserId ?? undefined,
+    })
       .then((items) => {
         const sorted = sortWorkItemsStable(items);
         set({

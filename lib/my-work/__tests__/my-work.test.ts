@@ -5,7 +5,7 @@ import {
   kanbanColumnForStatus,
   statusesForKanbanColumn,
 } from "@/lib/my-work/state-machine";
-import { itemIsOverdue, itemMatchesListSection } from "@/lib/my-work/section-filters";
+import { itemIsOverdue, itemMatchesListSection, filterWorkItems } from "@/lib/my-work/section-filters";
 import {
   mapAgreementStatus,
   mapFunctionalityTaskPriority,
@@ -137,6 +137,16 @@ describe("section-filters", () => {
     expect(itemMatchesListSection(cancelled, "today", today)).toBe(false);
     expect(itemMatchesListSection(active, "cancelled", today)).toBe(false);
   });
+
+  it("filters items by assigned user", () => {
+    const items = [
+      mockItem({ id: "a", assignedUserId: "user-1" }),
+      mockItem({ id: "b", assignedUserId: "user-2" }),
+    ];
+    const filtered = filterWorkItems(items, { assignedUserId: "user-2" });
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0]?.id).toBe("b");
+  });
 });
 
 describe("status mappers", () => {
@@ -161,6 +171,7 @@ describe("status mappers", () => {
 
   it("maps resource plan and functionality task statuses", () => {
     expect(mapResourcePlanStatusName("W realizacji")).toBe("in_progress");
+    expect(mapResourcePlanStatusName("Planowane")).toBe("pending_ack");
     expect(mapResourcePlanStatusName("Zagrożone")).toBe("risk_reported");
     expect(mapFunctionalityTaskStatus("done")).toBe("verified");
     expect(mapFunctionalityTaskPriority("must")).toBe("urgent");
