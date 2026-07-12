@@ -51,7 +51,7 @@ Link: `/moja-praca/zadania?item={id}`
 
 ## Kolejne etapy
 
-- **Etap 2**: `work_plans`, plany dnia/tygodnia, przeszkody, podsumowania
+- **Etap 2** ✅ (wdrożony): `work_plans`, plany dnia/tygodnia, przeszkody (`work_obstacles`), podsumowania (`work_summaries`), sesje dnia (`work_day_sessions`). Migracja `123_my_work_plans.sql`.
 - **Etap 3**: adaptery checklist, serwis, ustalenia
 - **Etap 4**: AI sugestie i ryzyka
 - **Etap 5**: dashboard managera

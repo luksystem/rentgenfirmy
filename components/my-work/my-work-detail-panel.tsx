@@ -30,6 +30,7 @@ export function MyWorkDetailPanel({
   onVerify,
   onSend,
   onComment,
+  onReportObstacle,
 }: {
   detail: WorkItemDetail | null;
   open: boolean;
@@ -40,6 +41,7 @@ export function MyWorkDetailPanel({
   onVerify: () => Promise<void>;
   onSend: () => Promise<void>;
   onComment: (body: string) => Promise<void>;
+  onReportObstacle?: () => void;
 }) {
   const profile = useAuthStore((state) => state.profile);
   const canManage = useCanManageWorkItems(profile?.role);
@@ -187,6 +189,11 @@ export function MyWorkDetailPanel({
           {canComplete ? (
             <Button variant="secondary" onClick={onComplete}>
               Podsumuj wykonanie
+            </Button>
+          ) : null}
+          {isAssignee && canComplete && onReportObstacle ? (
+            <Button variant="outline" onClick={onReportObstacle}>
+              Zgłoś przeszkodę
             </Button>
           ) : null}
           {canVerify ? (

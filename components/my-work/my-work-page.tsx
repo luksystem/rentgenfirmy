@@ -11,9 +11,13 @@ import { MyWorkFilters } from "@/components/my-work/my-work-filters";
 import { MyWorkDetailPanel } from "@/components/my-work/my-work-detail-panel";
 import { MyWorkAcceptanceDialog } from "@/components/my-work/my-work-acceptance-dialog";
 import { MyWorkCompleteDialog } from "@/components/my-work/my-work-complete-dialog";
+import { MyWorkDayRhythm } from "@/components/my-work/my-work-day-rhythm";
+import { MyWorkObstacleDialog } from "@/components/my-work/my-work-obstacle-dialog";
+import { MyWorkWeekPlanPanel } from "@/components/my-work/my-work-week-plan-panel";
 import { CreateWorkItemDialog } from "@/components/my-work/manager/create-work-item-dialog";
 import { filterWorkItems } from "@/lib/my-work/section-filters";
 import { defaultStatusForKanbanColumn, type KanbanColumnGroupId } from "@/lib/my-work/state-machine";
+import { isTerminalWorkItemStatus } from "@/lib/my-work/types";
 import { profileToOptionLabel } from "@/lib/supabase/profile-repository";
 import { useAuthStore } from "@/store/auth-store";
 import { useCanManageWorkItems, useMyWorkStore } from "@/store/my-work-store";
@@ -47,18 +51,35 @@ export function MyWorkPage() {
   const loadTeamProfiles = useMyWorkStore((state) => state.loadTeamProfiles);
   const teamProfiles = useMyWorkStore((state) => state.teamProfiles);
 
+  const dayContext = useMyWorkStore((state) => state.dayContext);
+  const dayContextLoading = useMyWorkStore((state) => state.dayContextLoading);
+  const ensureDayContext = useMyWorkStore((state) => state.ensureDayContext);
+  const startDay = useMyWorkStore((state) => state.startDay);
+  const endDay = useMyWorkStore((state) => state.endDay);
+
+  const weekPlan = useMyWorkStore((state) => state.weekPlan);
+  const ensureWeekPlan = useMyWorkStore((state) => state.ensureWeekPlan);
+  const acknowledgeWeekPlanById = useMyWorkStore((state) => state.acknowledgeWeekPlanById);
+  const sendWeekPlanById = useMyWorkStore((state) => state.sendWeekPlanById);
+  const copyPreviousWeekPlan = useMyWorkStore((state) => state.copyPreviousWeekPlan);
+  const createWeekPlanForUser = useMyWorkStore((state) => state.createWeekPlanForUser);
+  const reportObstacle = useMyWorkStore((state) => state.reportObstacle);
+
   const [detailOpen, setDetailOpen] = useState(false);
   const [acceptOpen, setAcceptOpen] = useState(false);
   const [completeOpen, setCompleteOpen] = useState(false);
+  const [obstacleOpen, setObstacleOpen] = useState(false);
   const [teamView, setTeamView] = useState(false);
 
   useEffect(() => {
     void ensureMyItems();
+    void ensureDayContext();
+    void ensureWeekPlan();
     if (canManage) {
       void ensureTeamItems();
       void loadTeamProfiles();
     }
-  }, [ensureMyItems, ensureTeamItems, canManage, loadTeamProfiles]);
+  }, [ensureMyItems, ensureTeamItems, ensureDayContext, ensureWeekPlan, canManage, loadTeamProfiles]);
 
   useEffect(() => {
     const itemId = searchParams.get("item");
@@ -92,6 +113,35 @@ export function MyWorkPage() {
   );
 
   const loading = myItemsLoading && !myItemsHydrated;
+
+  function weekRangeFromMonday(reference = new Date()) {
+    const date = new Date(reference);
+    const day = date.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    date.setDate(date.getDate() + diff);
+    const from = date.toISOString().slice(0, 10);
+    const end = new Date(date);
+    end.setDate(end.getDate() + 6);
+    return { from, to: end.toISOString().slice(0, 10) };
+  }
+
+  async function handleCreateWeekDraft(assignedUserId: string) {
+    const { from, to } = weekRangeFromMonday();
+    const itemsForUser = (canManage ? teamItems : myItems).filter(
+      (item) => item.assignedUserId === assignedUserId && !isTerminalWorkItemStatus(item.status),
+    );
+    await createWeekPlanForUser({
+      assignedUserId,
+      dateFrom: from,
+      dateTo: to,
+      items: itemsForUser.map((item, index) => ({
+        workItemId: item.id,
+        plannedDate: item.dueDate ?? item.plannedEnd ?? from,
+        sortOrder: index * 10,
+      })),
+      sendImmediately: false,
+    });
+  }
 
   return (
     <>
@@ -139,6 +189,34 @@ export function MyWorkPage() {
         </Button>
       </div>
 
+      <MyWorkDayRhythm
+        context={dayContext}
+        loading={dayContextLoading}
+        onStartDay={async () => {
+          await startDay();
+        }}
+        onEndDay={async (comment, carryOverUnfinished) => {
+          await endDay({ employeeComment: comment, carryOverUnfinished });
+        }}
+      />
+
+      <MyWorkWeekPlanPanel
+        plan={weekPlan}
+        canManage={canManage}
+        teamOptions={teamOptions}
+        onAcknowledge={async (comment, riskNotes) => {
+          if (!weekPlan) return;
+          await acknowledgeWeekPlanById(weekPlan.id, { comment, riskNotes });
+        }}
+        onSend={async (planId) => {
+          await sendWeekPlanById(planId);
+        }}
+        onCopyPrevious={async (assignedUserId) => {
+          await copyPreviousWeekPlan(assignedUserId);
+        }}
+        onCreateDraft={handleCreateWeekDraft}
+      />
+
       <div className="mb-6">
         <MyWorkFilters
           filters={filters}
@@ -185,6 +263,7 @@ export function MyWorkPage() {
         onComment={async (body) => {
           if (selectedDetail) await commentOnItem(selectedDetail.item.id, body);
         }}
+        onReportObstacle={() => setObstacleOpen(true)}
       />
 
       <MyWorkAcceptanceDialog
@@ -212,6 +291,21 @@ export function MyWorkPage() {
             outcome,
             comment,
             workDescription,
+          });
+        }}
+      />
+
+      <MyWorkObstacleDialog
+        item={selectedDetail?.item ?? null}
+        open={obstacleOpen}
+        onOpenChange={setObstacleOpen}
+        onSubmit={async (obstacleType, description) => {
+          if (!selectedDetail) return;
+          await reportObstacle({
+            workItemId: selectedDetail.item.id,
+            projectId: selectedDetail.item.projectId,
+            obstacleType,
+            description,
           });
         }}
       />

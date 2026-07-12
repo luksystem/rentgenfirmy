@@ -10,6 +10,25 @@ import type {
   WorkItemFilters,
   WorkItemView,
 } from "@/lib/my-work/types";
+import type {
+  AcknowledgeWeekPlanInput,
+  CreateWeekPlanInput,
+  EndDayInput,
+  ReportObstacleInput,
+  WorkDayContext,
+  WorkPlanView,
+} from "@/lib/my-work/plan-types";
+import {
+  acknowledgeWeekPlan,
+  copyWeekPlanFromPrevious,
+  createWeekPlan,
+  endDaySession,
+  fetchCurrentWeekPlan,
+  fetchDayContext,
+  reportObstacle,
+  sendWeekPlan,
+  startDaySession,
+} from "@/lib/supabase/my-work-plans-repository";
 import {
   addWorkItemComment,
   completeWorkItem,
@@ -28,6 +47,8 @@ export const EMPTY_WORK_ITEMS: WorkItemView[] = [];
 
 let myItemsPromise: Promise<WorkItemView[]> | null = null;
 let teamItemsPromise: Promise<WorkItemView[]> | null = null;
+let dayContextPromise: Promise<WorkDayContext> | null = null;
+let weekPlanPromise: Promise<WorkPlanView | null> | null = null;
 
 type MyWorkStore = {
   myItems: WorkItemView[];
@@ -44,6 +65,14 @@ type MyWorkStore = {
   selectedItemId: string | null;
   selectedDetail: WorkItemDetail | null;
   detailLoading: boolean;
+
+  dayContext: WorkDayContext | null;
+  dayContextHydrated: boolean;
+  dayContextLoading: boolean;
+
+  weekPlan: WorkPlanView | null;
+  weekPlanHydrated: boolean;
+  weekPlanLoading: boolean;
 
   error: string | null;
 
@@ -63,6 +92,16 @@ type MyWorkStore = {
   startItem: (id: string) => Promise<void>;
   moveItemStatus: (id: string, status: string) => Promise<void>;
   commentOnItem: (id: string, body: string) => Promise<void>;
+
+  ensureDayContext: (options?: { force?: boolean; sessionDate?: string }) => Promise<WorkDayContext>;
+  startDay: () => Promise<WorkDayContext>;
+  endDay: (input: EndDayInput) => Promise<WorkDayContext>;
+  ensureWeekPlan: (options?: { force?: boolean }) => Promise<WorkPlanView | null>;
+  createWeekPlanForUser: (input: CreateWeekPlanInput) => Promise<WorkPlanView>;
+  sendWeekPlanById: (planId: string) => Promise<WorkPlanView>;
+  acknowledgeWeekPlanById: (planId: string, input: AcknowledgeWeekPlanInput) => Promise<WorkPlanView>;
+  copyPreviousWeekPlan: (assignedUserId: string) => Promise<WorkPlanView>;
+  reportObstacle: (input: ReportObstacleInput) => Promise<void>;
 };
 
 export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
@@ -80,6 +119,14 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
   selectedItemId: null,
   selectedDetail: null,
   detailLoading: false,
+
+  dayContext: null,
+  dayContextHydrated: false,
+  dayContextLoading: false,
+
+  weekPlan: null,
+  weekPlanHydrated: false,
+  weekPlanLoading: false,
 
   error: null,
 
@@ -236,6 +283,107 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
   commentOnItem: async (id, body) => {
     const detail = await addWorkItemComment(id, body);
     get().replaceFromDetail(detail);
+  },
+
+  ensureDayContext: async (options) => {
+    const { dayContextHydrated, dayContext } = get();
+    if (dayContextHydrated && !options?.force) {
+      return dayContext!;
+    }
+    if (!options?.force && dayContextPromise) {
+      return dayContextPromise;
+    }
+
+    set({ dayContextLoading: true, error: null });
+    dayContextPromise = fetchDayContext(options?.sessionDate)
+      .then((context) => {
+        set({ dayContext: context, dayContextHydrated: true, dayContextLoading: false });
+        return context;
+      })
+      .catch((error: unknown) => {
+        set({
+          error: error instanceof Error ? error.message : "Błąd wczytywania kontekstu dnia.",
+          dayContextLoading: false,
+        });
+        throw error;
+      })
+      .finally(() => {
+        dayContextPromise = null;
+      });
+
+    return dayContextPromise;
+  },
+
+  startDay: async () => {
+    const context = await startDaySession({ confirmPlan: true });
+    set({ dayContext: context, dayContextHydrated: true });
+    await get().ensureMyItems({ force: true });
+    return context;
+  },
+
+  endDay: async (input) => {
+    const context = await endDaySession(input);
+    set({ dayContext: context, dayContextHydrated: true });
+    await get().ensureMyItems({ force: true });
+    return context;
+  },
+
+  ensureWeekPlan: async (options) => {
+    const { weekPlanHydrated, weekPlan } = get();
+    if (weekPlanHydrated && !options?.force) {
+      return weekPlan;
+    }
+    if (!options?.force && weekPlanPromise) {
+      return weekPlanPromise;
+    }
+
+    set({ weekPlanLoading: true, error: null });
+    weekPlanPromise = fetchCurrentWeekPlan()
+      .then((plan) => {
+        set({ weekPlan: plan, weekPlanHydrated: true, weekPlanLoading: false });
+        return plan;
+      })
+      .catch((error: unknown) => {
+        set({
+          error: error instanceof Error ? error.message : "Błąd wczytywania planu tygodnia.",
+          weekPlanLoading: false,
+        });
+        throw error;
+      })
+      .finally(() => {
+        weekPlanPromise = null;
+      });
+
+    return weekPlanPromise;
+  },
+
+  createWeekPlanForUser: async (input) => {
+    const plan = await createWeekPlan(input);
+    set({ weekPlan: plan, weekPlanHydrated: true });
+    return plan;
+  },
+
+  sendWeekPlanById: async (planId) => {
+    const plan = await sendWeekPlan(planId);
+    set({ weekPlan: plan, weekPlanHydrated: true });
+    return plan;
+  },
+
+  acknowledgeWeekPlanById: async (planId, input) => {
+    const plan = await acknowledgeWeekPlan(planId, input);
+    set({ weekPlan: plan, weekPlanHydrated: true });
+    return plan;
+  },
+
+  copyPreviousWeekPlan: async (assignedUserId) => {
+    const plan = await copyWeekPlanFromPrevious(assignedUserId);
+    set({ weekPlan: plan, weekPlanHydrated: true });
+    return plan;
+  },
+
+  reportObstacle: async (input) => {
+    await reportObstacle(input);
+    await get().ensureMyItems({ force: true });
   },
 }));
 
