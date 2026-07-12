@@ -8,6 +8,8 @@ export type ListSectionId =
   | "overdue"
   | "blocked"
   | "pending_ack"
+  | "pending_verification"
+  | "in_progress"
   | "needs_comment"
   | "completed";
 
@@ -18,9 +20,25 @@ export const LIST_SECTIONS: { id: ListSectionId; label: string }[] = [
   { id: "overdue", label: "Zaległe" },
   { id: "blocked", label: "Zablokowane" },
   { id: "pending_ack", label: "Do zapoznania" },
+  { id: "pending_verification", label: "Do weryfikacji" },
+  { id: "in_progress", label: "W realizacji" },
   { id: "needs_comment", label: "Do skomentowania" },
   { id: "completed", label: "Wykonane" },
 ];
+
+const IN_PROGRESS_STATUSES: WorkItemStatus[] = [
+  "accepted",
+  "in_progress",
+  "risk_reported",
+  "deferred",
+  "planned",
+];
+
+const VERIFICATION_STATUSES: WorkItemStatus[] = ["done", "pending_verification"];
+
+export type ListSectionContext = {
+  showVerificationSection?: boolean;
+};
 
 function toDateKey(value: string | null | undefined) {
   if (!value) {
@@ -63,7 +81,12 @@ function effectiveDueDate(item: WorkItemView) {
   return item.plannedEnd ?? item.dueDate;
 }
 
-export function itemMatchesListSection(item: WorkItemView, sectionId: ListSectionId, now = new Date()) {
+export function itemMatchesListSection(
+  item: WorkItemView,
+  sectionId: ListSectionId,
+  now = new Date(),
+  context: ListSectionContext = {},
+) {
   const dueKey = toDateKey(effectiveDueDate(item));
   const today = todayKey(now);
   const tomorrow = tomorrowKey(now);
@@ -81,6 +104,13 @@ export function itemMatchesListSection(item: WorkItemView, sectionId: ListSectio
       return item.status === "blocked";
     case "pending_ack":
       return item.status === "sent" || item.status === "pending_ack";
+    case "pending_verification":
+      if (!context.showVerificationSection) {
+        return false;
+      }
+      return VERIFICATION_STATUSES.includes(item.status);
+    case "in_progress":
+      return IN_PROGRESS_STATUSES.includes(item.status) && !isTerminalWorkItemStatus(item.status);
     case "needs_comment":
       return (
         item.unreadCommentCount > 0 ||
@@ -105,14 +135,18 @@ export function itemMatchesListSection(item: WorkItemView, sectionId: ListSectio
   }
 }
 
-export function groupItemsByListSection(items: WorkItemView[], now = new Date()) {
+export function groupItemsByListSection(
+  items: WorkItemView[],
+  now = new Date(),
+  context: ListSectionContext = {},
+) {
   const grouped = new Map<ListSectionId, WorkItemView[]>();
   for (const section of LIST_SECTIONS) {
     grouped.set(section.id, []);
   }
   for (const item of items) {
     for (const section of LIST_SECTIONS) {
-      if (itemMatchesListSection(item, section.id, now)) {
+      if (itemMatchesListSection(item, section.id, now, context)) {
         grouped.get(section.id)!.push(item);
       }
     }

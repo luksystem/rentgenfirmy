@@ -226,6 +226,20 @@ export type WorkItemFilters = {
   assignedUserId?: string | null;
 };
 
+export const EMPTY_WORK_ITEM_FILTERS: WorkItemFilters = {
+  projectId: null,
+  clientId: null,
+  status: null,
+  priority: null,
+  sourceType: null,
+  overdueOnly: false,
+  needsReactionOnly: false,
+  ownOnly: false,
+  sharedOnly: false,
+  aiGeneratedOnly: false,
+  assignedUserId: null,
+};
+
 export function workItemLinkUrl(workItemId: string) {
   return `/moja-praca/zadania?item=${workItemId}`;
 }

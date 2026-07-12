@@ -17,6 +17,7 @@ import {
   type CreateWorkItemInput,
 } from "@/lib/my-work/types";
 import { profileToOptionLabel } from "@/lib/supabase/profile-repository";
+import { ProjectSelectSearchable } from "@/components/goals/project-select-searchable";
 import { useAppStore } from "@/store/app-store";
 import { useMyWorkStore } from "@/store/my-work-store";
 
@@ -24,6 +25,7 @@ export function CreateWorkItemDialog() {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const projects = useAppStore((state) => state.projects);
+  const clients = useAppStore((state) => state.clients);
   const createItem = useMyWorkStore((state) => state.createItem);
   const loadTeamProfiles = useMyWorkStore((state) => state.loadTeamProfiles);
   const teamProfiles = useMyWorkStore((state) => state.teamProfiles);
@@ -44,14 +46,6 @@ export function CreateWorkItemDialog() {
       void loadTeamProfiles();
     }
   }, [open, loadTeamProfiles]);
-
-  useEffect(() => {
-    if (!projectId) return;
-    const project = projects.find((entry) => entry.id === projectId);
-    if (project?.clientId) {
-      // auto-fill handled via submit
-    }
-  }, [projectId, projects]);
 
   async function handleSubmit() {
     if (!assignedUserId || !title.trim()) {
@@ -113,16 +107,14 @@ export function CreateWorkItemDialog() {
             </Select>
           </Field>
 
-          <Field label="Projekt (opcjonalnie)">
-            <Select value={projectId} onChange={(event) => setProjectId(event.target.value)}>
-              <option value="">Bez projektu</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
+          <ProjectSelectSearchable
+            projects={projects}
+            clients={clients}
+            value={projectId || null}
+            onChange={(id) => setProjectId(id ?? "")}
+            emptyLabel="Bez projektu"
+            label="Projekt (opcjonalnie)"
+          />
 
           <Field label="Nazwa zadania">
             <Input value={title} onChange={(event) => setTitle(event.target.value)} />

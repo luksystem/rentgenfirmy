@@ -49,7 +49,25 @@ export function ProjectSelectSearchable({
 
   const clientsById = useMemo(() => new Map(clients.map((client) => [client.id, client])), [clients]);
 
-  const sortedProjects = useMemo(() => [...projects].sort((a, b) => a.name.localeCompare(b.name, "pl")), [projects]);
+  const sortedProjects = useMemo(() => {
+    return [...projects].sort((a, b) => {
+      const clientA = a.clientId ? clientsById.get(a.clientId) : null;
+      const clientB = b.clientId ? clientsById.get(b.clientId) : null;
+      const lastNameCompare = (clientA?.lastName ?? "").localeCompare(clientB?.lastName ?? "", "pl", {
+        sensitivity: "base",
+      });
+      if (lastNameCompare !== 0) {
+        return lastNameCompare;
+      }
+      const firstNameCompare = (clientA?.firstName ?? "").localeCompare(clientB?.firstName ?? "", "pl", {
+        sensitivity: "base",
+      });
+      if (firstNameCompare !== 0) {
+        return firstNameCompare;
+      }
+      return a.name.localeCompare(b.name, "pl", { sensitivity: "base" });
+    });
+  }, [projects, clientsById]);
 
   const selectedProject = useMemo(
     () => sortedProjects.find((project) => project.id === value) ?? null,

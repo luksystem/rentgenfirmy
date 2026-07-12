@@ -151,7 +151,11 @@ export function MyWorkPage() {
       {loading ? (
         <p className="text-sm text-muted">Wczytywanie zadań…</p>
       ) : viewMode === "list" ? (
-        <MyWorkListView items={filteredItems} onOpenItem={(id) => void openItem(id)} />
+        <MyWorkListView
+          items={filteredItems}
+          onOpenItem={(id) => void openItem(id)}
+          showVerificationSection={canManage}
+        />
       ) : (
         <MyWorkKanbanView
           items={filteredItems}

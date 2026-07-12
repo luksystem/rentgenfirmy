@@ -1,8 +1,10 @@
 "use client";
 
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
+import { ProjectSelectSearchable } from "@/components/goals/project-select-searchable";
 import { Field, Select } from "@/components/ui/input";
 import {
+  EMPTY_WORK_ITEM_FILTERS,
   WORK_ITEM_PRIORITIES,
   WORK_ITEM_PRIORITY_LABELS,
   WORK_ITEM_STATUSES,
@@ -24,22 +26,22 @@ export function MyWorkFilters({
 }) {
   const projects = useAppStore((state) => state.projects);
   const clients = useAppStore((state) => state.clients);
+  const activeCount = countActiveFilters(filters);
+
+  function clearFilters() {
+    onChange(EMPTY_WORK_ITEM_FILTERS);
+  }
 
   const content = (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <Field label="Projekt">
-        <Select
-          value={filters.projectId ?? ""}
-          onChange={(event) => onChange({ projectId: event.target.value || null })}
-        >
-          <option value="">Wszystkie</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </Select>
-      </Field>
+      <ProjectSelectSearchable
+        projects={projects}
+        clients={clients}
+        value={filters.projectId ?? null}
+        onChange={(projectId) => onChange({ projectId })}
+        label="Projekt"
+        emptyLabel="Wszystkie"
+      />
 
       <Field label="Klient">
         <Select
@@ -133,7 +135,12 @@ export function MyWorkFilters({
   );
 
   return (
-    <MobileFiltersPanel title="Filtry zadań" activeCount={countActiveFilters(filters)}>
+    <MobileFiltersPanel
+      title="Filtry zadań"
+      activeCount={activeCount}
+      onClear={clearFilters}
+      clearLabel="Wyczyść filtry"
+    >
       {content}
     </MobileFiltersPanel>
   );

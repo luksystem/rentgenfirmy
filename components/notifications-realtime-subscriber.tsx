@@ -8,6 +8,7 @@ import { useAgreementHubStore } from "@/store/agreement-hub-store";
 import { useLeaveStore } from "@/store/leave-store";
 import { useNotificationStore } from "@/store/notification-store";
 import { useProcessStore } from "@/store/process-store";
+import { useMyWorkStore } from "@/store/my-work-store";
 
 /** Jedna subskrypcja realtime na całą aplikację (unika konfliktu przy dwóch dzwonkach w shellu). */
 export function NotificationsRealtimeSubscriber() {
@@ -40,6 +41,14 @@ export function NotificationsRealtimeSubscriber() {
       void leaveState.ensurePlanningRequests({ force: true });
     }
     void leaveState.refreshPendingForMeCount();
+
+    const myWorkState = useMyWorkStore.getState();
+    if (myWorkState.myItemsHydrated) {
+      void myWorkState.ensureMyItems({ force: true });
+    }
+    if (myWorkState.teamItemsHydrated) {
+      void myWorkState.ensureTeamItems({ force: true });
+    }
   }, [
     profileId,
     refreshAgreementPendingCounts,

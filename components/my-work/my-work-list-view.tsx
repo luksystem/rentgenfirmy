@@ -7,11 +7,13 @@ import { MyWorkTaskCard } from "@/components/my-work/my-work-task-card";
 export function MyWorkListView({
   items,
   onOpenItem,
+  showVerificationSection = false,
 }: {
   items: WorkItemView[];
   onOpenItem: (id: string) => void;
+  showVerificationSection?: boolean;
 }) {
-  const grouped = groupItemsByListSection(items);
+  const grouped = groupItemsByListSection(items, new Date(), { showVerificationSection });
 
   const nonEmptySections = LIST_SECTIONS.filter((section) => (grouped.get(section.id)?.length ?? 0) > 0);
 

@@ -97,4 +97,24 @@ describe("section-filters", () => {
     const item = mockItem({ status: "pending_ack" });
     expect(itemMatchesListSection(item, "pending_ack", today)).toBe(true);
   });
+
+  it("matches in_progress section without due date", () => {
+    const item = mockItem({ status: "in_progress", dueDate: null });
+    expect(itemMatchesListSection(item, "in_progress", today)).toBe(true);
+    expect(itemMatchesListSection(item, "today", today)).toBe(false);
+  });
+
+  it("matches accepted status in in_progress section", () => {
+    const item = mockItem({ status: "accepted", dueDate: "2026-12-01" });
+    expect(itemMatchesListSection(item, "in_progress", today)).toBe(true);
+  });
+
+  it("matches pending_verification section for managers only", () => {
+    const item = mockItem({ status: "pending_verification" });
+    expect(itemMatchesListSection(item, "pending_verification", today)).toBe(false);
+    expect(
+      itemMatchesListSection(item, "pending_verification", today, { showVerificationSection: true }),
+    ).toBe(true);
+    expect(itemMatchesListSection(item, "in_progress", today)).toBe(false);
+  });
 });
