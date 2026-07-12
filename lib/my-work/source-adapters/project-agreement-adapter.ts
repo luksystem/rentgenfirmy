@@ -13,7 +13,10 @@ export const projectAgreementWorkItemAdapter: WorkItemSourceAdapter = {
     // Akceptacja ustaleń odbywa się w module Ustaleń — brak prostego PATCH z Moja praca.
   },
 
-  resolveSourceLink(workItem: Pick<WorkItem, "sourceId">) {
-    return resolveAgreementSourceLink(workItem.sourceId);
+  resolveSourceLink(workItem: Pick<WorkItem, "sourceId" | "projectId" | "clientId">) {
+    return resolveAgreementSourceLink(workItem.sourceId, {
+      projectId: workItem.projectId,
+      clientId: workItem.clientId,
+    });
   },
 };

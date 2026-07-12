@@ -24,7 +24,7 @@ export interface WorkItemSourceAdapter {
   sourceType: string;
   fetchMirror(admin: SupabaseClient, sourceId: string): Promise<WorkItemMirrorFields>;
   syncToSource(admin: SupabaseClient, workItem: WorkItem, patch: WorkItemPatch): Promise<void>;
-  resolveSourceLink(workItem: Pick<WorkItem, "sourceType" | "sourceId" | "projectId">): string | null;
+  resolveSourceLink(workItem: Pick<WorkItem, "sourceType" | "sourceId" | "projectId" | "clientId">): string | null;
   inferInitialStatus?(mirror: WorkItemMirrorFields): WorkItem["status"];
 }
 

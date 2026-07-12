@@ -16,6 +16,7 @@ import {
   mapServiceIntakePriority,
   mapServiceIntakeStatus,
 } from "@/lib/my-work/source-adapters/status-mappers";
+import { resolveAgreementSourceLink } from "@/lib/my-work/link-resolver";
 import type { WorkItemView } from "@/lib/my-work/types";
 
 function mockItem(overrides: Partial<WorkItemView>): WorkItemView {
@@ -177,5 +178,21 @@ describe("dashboard metrics", () => {
     expect(metrics.totalOpen).toBe(2);
     expect(metrics.overdueCount).toBe(1);
     expect(metrics.pendingAckCount).toBe(1);
+  });
+});
+
+describe("agreement source links", () => {
+  it("builds client dashboard deep link when client and project are known", () => {
+    const href = resolveAgreementSourceLink("agr-1", {
+      clientId: "client-1",
+      projectId: "proj-1",
+    });
+    expect(href).toBe(
+      "/przestrzenie/klient/client-1?project=proj-1&tab=agreements&agreement=agr-1",
+    );
+  });
+
+  it("falls back to agreements hub without client context", () => {
+    expect(resolveAgreementSourceLink("agr-1")).toBe("/tablice-wdrozen/ustalenia");
   });
 });

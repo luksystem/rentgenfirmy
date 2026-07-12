@@ -25,11 +25,24 @@ export function resolveServiceIntakeSourceLink() {
   return "/oferty/zgloszenia";
 }
 
-export function resolveAgreementSourceLink(agreementId: string | null) {
+export function resolveAgreementSourceLink(
+  agreementId: string | null,
+  options?: { projectId?: string | null; clientId?: string | null },
+) {
   if (!agreementId) {
-    return "/ustalenia";
+    return "/tablice-wdrozen/ustalenia";
   }
-  return `/ustalenia?agreement=${agreementId}`;
+
+  if (options?.clientId && options?.projectId) {
+    const params = new URLSearchParams({
+      project: options.projectId,
+      tab: "agreements",
+      agreement: agreementId,
+    });
+    return `/przestrzenie/klient/${options.clientId}?${params.toString()}`;
+  }
+
+  return "/tablice-wdrozen/ustalenia";
 }
 
 export function resolveInspectionSourceLink() {
@@ -50,7 +63,9 @@ export function resolveFunctionalityTaskSourceLink(projectId: string | null) {
   return `/projekty/${projectId}`;
 }
 
-export function resolveSourceLinkForItem(item: Pick<WorkItem, "sourceType" | "sourceId" | "projectId">) {
+export function resolveSourceLinkForItem(
+  item: Pick<WorkItem, "sourceType" | "sourceId" | "projectId" | "clientId">,
+) {
   const adapter = getWorkItemSourceAdapter(item.sourceType);
   if (adapter) {
     return adapter.resolveSourceLink(item);
