@@ -6,6 +6,16 @@ import {
   statusesForKanbanColumn,
 } from "@/lib/my-work/state-machine";
 import { itemIsOverdue, itemMatchesListSection } from "@/lib/my-work/section-filters";
+import {
+  mapAgreementStatus,
+  mapFunctionalityTaskPriority,
+  mapFunctionalityTaskStatus,
+  mapInspectionStatus,
+  mapProcessItemStatus,
+  mapResourcePlanStatusName,
+  mapServiceIntakePriority,
+  mapServiceIntakeStatus,
+} from "@/lib/my-work/source-adapters/status-mappers";
 import type { WorkItemView } from "@/lib/my-work/types";
 
 function mockItem(overrides: Partial<WorkItemView>): WorkItemView {
@@ -116,5 +126,33 @@ describe("section-filters", () => {
       itemMatchesListSection(item, "pending_verification", today, { showVerificationSection: true }),
     ).toBe(true);
     expect(itemMatchesListSection(item, "in_progress", today)).toBe(false);
+  });
+});
+
+describe("status mappers", () => {
+  it("maps process item statuses", () => {
+    expect(mapProcessItemStatus("open")).toBe("pending_ack");
+    expect(mapProcessItemStatus("in_progress")).toBe("in_progress");
+    expect(mapProcessItemStatus("completed")).toBe("verified");
+  });
+
+  it("maps service intake statuses and priorities", () => {
+    expect(mapServiceIntakeStatus("new")).toBe("pending_ack");
+    expect(mapServiceIntakeStatus("converted")).toBe("verified");
+    expect(mapServiceIntakePriority("c")).toBe("urgent");
+    expect(mapServiceIntakePriority(null)).toBe("normal");
+  });
+
+  it("maps agreement and inspection statuses", () => {
+    expect(mapAgreementStatus("accepted")).toBe("verified");
+    expect(mapAgreementStatus("rejected")).toBe("not_done");
+    expect(mapInspectionStatus("completed")).toBe("pending_verification");
+  });
+
+  it("maps resource plan and functionality task statuses", () => {
+    expect(mapResourcePlanStatusName("W realizacji")).toBe("in_progress");
+    expect(mapResourcePlanStatusName("Zagrożone")).toBe("risk_reported");
+    expect(mapFunctionalityTaskStatus("done")).toBe("verified");
+    expect(mapFunctionalityTaskPriority("must")).toBe("urgent");
   });
 });

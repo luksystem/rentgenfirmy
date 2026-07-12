@@ -192,10 +192,32 @@ export type CreateWorkItemInput = {
   requiredMaterials?: string;
   requiredInfo?: string;
   dueDate?: string | null;
+  plannedStart?: string | null;
+  plannedEnd?: string | null;
   estimatedMinutes?: number | null;
   priority?: WorkItemPriority;
   supportingUserIds?: string[];
   sendImmediately?: boolean;
+};
+
+export type UpdateWorkItemInput = {
+  assignedUserId?: string;
+  projectId?: string | null;
+  clientId?: string | null;
+  processStageId?: string | null;
+  title?: string;
+  description?: string;
+  expectedResult?: string;
+  completionCriteria?: string;
+  requiredMaterials?: string;
+  requiredInfo?: string;
+  dueDate?: string | null;
+  plannedStart?: string | null;
+  plannedEnd?: string | null;
+  estimatedMinutes?: number | null;
+  priority?: WorkItemPriority;
+  supportingUserIds?: string[];
+  status?: WorkItemStatus;
 };
 
 export type WorkItemAcceptanceInput = {

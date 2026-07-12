@@ -115,6 +115,7 @@ export const kanbanTaskWorkItemAdapter: WorkItemSourceAdapter = {
     if (patch.dueDate !== undefined) payload.due_date = patch.dueDate;
     if (patch.priority !== undefined) payload.priority = patch.priority;
     if (patch.completedAt !== undefined) payload.closed_at = patch.completedAt;
+    if (patch.assignedUserId !== undefined) payload.assignee_id = patch.assignedUserId;
 
     if (Object.keys(payload).length === 0) {
       return;

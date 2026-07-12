@@ -18,14 +18,28 @@ Moduł agreguje zadania operacyjne użytkownika jako **wewnętrzne zlecenia** (`
 
 Migracje: `120_kanban_task_assignee_id.sql`, `121_my_work_items.sql`, `122_my_work_notifications.sql`.
 
-## Adaptery źródeł (Etap 1)
+## Adaptery źródeł
 
 | `source_type` | Adapter | Sync |
 |---------------|---------|------|
 | `manual` | `manual-adapter.ts` | Pełna kontrola na `work_items` |
 | `kanban_task` | `kanban-task-adapter.ts` | Lustro z `process_kanban_tasks` |
+| `process_item` | `process-item-adapter.ts` | Checklisty / protokoły / rozliczenia |
+| `service_intake` | `service-intake-adapter.ts` | Zgłoszenia serwisowe |
+| `project_agreement` | `project-agreement-adapter.ts` | Ustalenia (akceptacja zespołu) |
+| `inspection` | `inspection-adapter.ts` | Przeglądy serwisowe |
+| `resource_plan_item` | `resource-plan-item-adapter.ts` | Plan zasobów |
+| `functionality_task` | `functionality-task-adapter.ts` | Zadania ankiety funkcjonalności |
 
-Agregacja Kanban: przy `ensureMyItems()` serwer upsertuje `work_items` dla otwartych kart z `assignee_id = bieżący użytkownik`.
+Agregacja: przy `ensureMyItems()` serwer wywołuje `syncAllWorkItemSources()` (Kanban, proces, serwis, ustalenia, przeglądy, plan zasobów, funkcjonalność).
+
+Migracje: `120`–`124` (ostatnia: katalog źródeł Etap 3 + `assignee_id` na `project_functionality_tasks`).
+
+## Kolejne etapy
+
+- **Etap 2** ✅: plany dnia/tygodnia, przeszkody, podsumowania
+- **Etap 3** ✅: pełna agregacja modułów + prośba o przejęcie zadania
+- **Etap 4**: AI sugestie i ryzyka
 
 ## Warstwy aplikacji
 
@@ -49,9 +63,4 @@ Nowe `kind` w `user_notifications`: `work_item_assigned`, `work_item_sent`, `wor
 
 Link: `/moja-praca/zadania?item={id}`
 
-## Kolejne etapy
-
-- **Etap 2** ✅ (wdrożony): `work_plans`, plany dnia/tygodnia, przeszkody (`work_obstacles`), podsumowania (`work_summaries`), sesje dnia (`work_day_sessions`). Migracja `123_my_work_plans.sql`.
-- **Etap 3**: adaptery checklist, serwis, ustalenia
-- **Etap 4**: AI sugestie i ryzyka
 - **Etap 5**: dashboard managera

@@ -89,3 +89,18 @@ export async function createWorkItemVerificationNeededNotificationServer(input: 
     workItemId: input.workItemId,
   });
 }
+
+export async function createWorkItemTakeoverRequestedNotificationServer(input: {
+  workItemId: string;
+  title: string;
+  recipientProfileId: string;
+  requesterName: string;
+}) {
+  await insertWorkItemNotification({
+    profileId: input.recipientProfileId,
+    kind: "work_item_takeover_requested",
+    title: `${input.requesterName} — prośba o przejęcie zadania`,
+    body: input.title,
+    workItemId: input.workItemId,
+  });
+}

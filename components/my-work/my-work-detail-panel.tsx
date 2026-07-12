@@ -17,6 +17,7 @@ import {
   type WorkItemDetail,
 } from "@/lib/my-work/types";
 import { formatDate } from "@/lib/utils";
+import { canEditWorkItem } from "@/lib/my-work/permissions";
 import { useAuthStore } from "@/store/auth-store";
 import { useCanManageWorkItems } from "@/store/my-work-store";
 
@@ -31,6 +32,8 @@ export function MyWorkDetailPanel({
   onSend,
   onComment,
   onReportObstacle,
+  onEdit,
+  onRequestTakeover,
 }: {
   detail: WorkItemDetail | null;
   open: boolean;
@@ -42,6 +45,8 @@ export function MyWorkDetailPanel({
   onSend: () => Promise<void>;
   onComment: (body: string) => Promise<void>;
   onReportObstacle?: () => void;
+  onEdit?: () => void;
+  onRequestTakeover?: () => Promise<void>;
 }) {
   const profile = useAuthStore((state) => state.profile);
   const canManage = useCanManageWorkItems(profile?.role);
@@ -56,6 +61,8 @@ export function MyWorkDetailPanel({
     isAssignee && ["accepted", "in_progress", "blocked", "risk_reported"].includes(item.status);
   const canVerify = canManage && item.status === "pending_verification";
   const canSend = canManage && (item.status === "draft" || item.status === "planned");
+  const canEdit = profile ? canEditWorkItem(profile, item) : false;
+  const canRequestTakeover = Boolean(item.isSupporting && !isAssignee && onRequestTakeover);
 
   async function handleComment() {
     if (!commentBody.trim()) return;
@@ -178,6 +185,11 @@ export function MyWorkDetailPanel({
         </div>
 
         <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+          {canEdit && onEdit ? (
+            <Button variant="outline" onClick={onEdit}>
+              Edytuj zadanie
+            </Button>
+          ) : null}
           {canAccept ? (
             <Button onClick={onAccept}>Przyjmij zadanie</Button>
           ) : null}
@@ -194,6 +206,14 @@ export function MyWorkDetailPanel({
           {isAssignee && canComplete && onReportObstacle ? (
             <Button variant="outline" onClick={onReportObstacle}>
               Zgłoś przeszkodę
+            </Button>
+          ) : null}
+          {canRequestTakeover ? (
+            <Button
+              variant="outline"
+              onClick={() => void onRequestTakeover?.()}
+            >
+              Poproś o przejęcie
             </Button>
           ) : null}
           {canVerify ? (

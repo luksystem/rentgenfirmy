@@ -2,6 +2,7 @@
 
 import type {
   CreateWorkItemInput,
+  UpdateWorkItemInput,
   WorkItemAcceptanceInput,
   WorkItemCompleteInput,
   WorkItemDetail,
@@ -134,6 +135,31 @@ export async function updateWorkItemStatus(
   return payload.detail;
 }
 
+export async function updateWorkItem(id: string, input: UpdateWorkItemInput): Promise<WorkItemDetail> {
+  const response = await fetch(`/api/my-work/items/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const payload = await parseJsonResponse<{ detail: WorkItemDetail }>(
+    response,
+    "Nie udało się zapisać zmian zadania.",
+  );
+  return payload.detail;
+}
+
+export async function deleteWorkItem(id: string, options?: { hard?: boolean }): Promise<void> {
+  const params = new URLSearchParams();
+  if (options?.hard) params.set("hard", "true");
+  const query = params.toString();
+  const response = await fetch(`/api/my-work/items/${id}${query ? `?${query}` : ""}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  await parseJsonResponse<{ deleted: boolean }>(response, "Nie udało się usunąć zadania.");
+}
+
 export async function addWorkItemComment(id: string, body: string): Promise<WorkItemDetail> {
   const response = await fetch(`/api/my-work/items/${id}/comments`, {
     method: "POST",
@@ -168,6 +194,20 @@ export async function startWorkItem(id: string): Promise<WorkItemDetail> {
   const payload = await parseJsonResponse<{ detail: WorkItemDetail }>(
     response,
     "Nie udało się rozpocząć zadania.",
+  );
+  return payload.detail;
+}
+
+export async function requestWorkItemTakeover(id: string, comment?: string): Promise<WorkItemDetail> {
+  const response = await fetch(`/api/my-work/items/${id}/takeover-request`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ comment }),
+  });
+  const payload = await parseJsonResponse<{ detail: WorkItemDetail }>(
+    response,
+    "Nie udało się wysłać prośby o przejęcie.",
   );
   return payload.detail;
 }

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
-import type { WorkItemStatus } from "@/lib/my-work/types";
+import type { UpdateWorkItemInput, WorkItemStatus } from "@/lib/my-work/types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
+  deleteWorkItemServer,
   fetchWorkItemDetail,
+  updateWorkItemServer,
   updateWorkItemStatusServer,
 } from "@/lib/supabase/my-work-server";
 
@@ -29,14 +31,33 @@ export async function PATCH(request: Request, context: RouteContext) {
   try {
     const { profile } = await requireAuthenticatedProfile();
     const { id } = await context.params;
-    const body = (await request.json()) as { status?: WorkItemStatus };
-    if (!body.status) {
-      return NextResponse.json({ error: "Brak statusu." }, { status: 400 });
-    }
-
+    const body = (await request.json()) as UpdateWorkItemInput & { status?: WorkItemStatus };
     const admin = getSupabaseAdmin();
-    const detail = await updateWorkItemStatusServer(admin, id, body.status, profile);
+
+    const isStatusOnly =
+      body.status &&
+      Object.keys(body).filter((key) => key !== "status" && body[key as keyof typeof body] !== undefined)
+        .length === 0;
+
+    const detail = isStatusOnly
+      ? await updateWorkItemStatusServer(admin, id, body.status!, profile)
+      : await updateWorkItemServer(admin, id, body, profile);
+
     return NextResponse.json({ detail });
+  } catch (error) {
+    return jsonError(error);
+  }
+}
+
+export async function DELETE(request: Request, context: RouteContext) {
+  try {
+    const { profile } = await requireAuthenticatedProfile();
+    const { id } = await context.params;
+    const url = new URL(request.url);
+    const hard = url.searchParams.get("hard") === "true";
+    const admin = getSupabaseAdmin();
+    const result = await deleteWorkItemServer(admin, id, profile, { hard });
+    return NextResponse.json(result);
   } catch (error) {
     return jsonError(error);
   }

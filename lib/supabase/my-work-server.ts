@@ -1,10 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getUserDisplayName, hasFullAppAccess, type UserProfile } from "@/lib/auth/types";
+import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
+import { canDeleteWorkItem, canEditWorkItem, canManagerWorkItems } from "@/lib/my-work/permissions";
 import { getWorkItemSourceAdapter } from "@/lib/my-work/source-adapters/registry";
-import {
-  fetchOpenKanbanTasksForUser,
-  kanbanTaskWorkItemAdapter,
-} from "@/lib/my-work/source-adapters/kanban-task-adapter";
+import { syncAllWorkItemSources } from "@/lib/supabase/my-work-sync";
 import {
   acceptanceActionToStatus,
   completeOutcomeToStatus,
@@ -21,6 +19,8 @@ import {
   type WorkItemSourceTypeMeta,
   type WorkItemStatus,
   type WorkItemView,
+  type UpdateWorkItemInput,
+  isTerminalWorkItemStatus,
   workItemLinkUrl,
 } from "@/lib/my-work/types";
 import { assertWorkItemStatusTransition } from "@/lib/my-work/state-machine";
@@ -175,8 +175,10 @@ function mapAcceptanceRow(row: {
 }
 
 export function canManageWorkItems(profile: UserProfile) {
-  return hasFullAppAccess(profile.role);
+  return canManagerWorkItems(profile.role);
 }
+
+export { canDeleteWorkItem, canEditWorkItem };
 
 export async function canViewWorkItem(
   admin: AdminClient,
@@ -324,49 +326,6 @@ async function enrichWorkItems(
   }));
 }
 
-export async function syncKanbanTasksToWorkItems(admin: AdminClient, userId: string, managerId: string | null) {
-  const kanbanTasks = await fetchOpenKanbanTasksForUser(admin, userId);
-  const now = new Date().toISOString();
-
-  for (const task of kanbanTasks) {
-    const mirror = await kanbanTaskWorkItemAdapter.fetchMirror(admin, task.id);
-    const status = kanbanTaskWorkItemAdapter.inferInitialStatus?.(mirror) ?? "in_progress";
-
-    const { data: existing } = await admin
-      .from("work_items")
-      .select("id")
-      .eq("source_type", "kanban_task")
-      .eq("source_id", task.id)
-      .eq("assigned_user_id", userId)
-      .maybeSingle();
-
-    const payload = {
-      source_type: "kanban_task",
-      source_id: task.id,
-      project_id: mirror.projectId ?? null,
-      client_id: mirror.clientId ?? null,
-      assigned_user_id: userId,
-      manager_id: managerId,
-      title: mirror.title ?? "",
-      description: mirror.description ?? "",
-      due_date: mirror.dueDate ?? null,
-      priority: mirror.priority ?? "normal",
-      status,
-      updated_at: now,
-    };
-
-    if (existing?.id) {
-      await admin.from("work_items").update(payload).eq("id", existing.id);
-    } else {
-      await admin.from("work_items").insert({
-        id: crypto.randomUUID(),
-        ...payload,
-        created_at: now,
-      });
-    }
-  }
-}
-
 export async function fetchWorkItemsForUser(
   admin: AdminClient,
   userId: string,
@@ -374,7 +333,7 @@ export async function fetchWorkItemsForUser(
   options?: { scope?: "my" | "team"; assignedUserId?: string | null; syncKanban?: boolean },
 ): Promise<WorkItemView[]> {
   if (options?.syncKanban !== false) {
-    await syncKanbanTasksToWorkItems(admin, userId, canManageWorkItems(profile) ? userId : null);
+    await syncAllWorkItemSources(admin, userId, profile);
   }
 
   let query = admin.from("work_items").select("*");
@@ -398,7 +357,9 @@ export async function fetchWorkItemsForUser(
     }
   }
 
-  const { data, error } = await query.order("due_date", { ascending: true, nullsFirst: false });
+  const { data, error } = await query
+    .neq("status", "cancelled")
+    .order("due_date", { ascending: true, nullsFirst: false });
   if (error) {
     throw new Error(error.message);
   }
@@ -478,6 +439,8 @@ export async function createManualWorkItemServer(
     required_materials: input.requiredMaterials?.trim() ?? "",
     required_info: input.requiredInfo?.trim() ?? "",
     due_date: input.dueDate ?? null,
+    planned_start: input.plannedStart ?? null,
+    planned_end: input.plannedEnd ?? null,
     estimated_minutes: input.estimatedMinutes ?? null,
     priority: input.priority ?? "normal",
     status,
@@ -506,6 +469,203 @@ export async function createManualWorkItemServer(
 
   const detail = await fetchWorkItemDetail(admin, id, actor.id, actor);
   return detail!.item;
+}
+
+export async function updateWorkItemServer(
+  admin: AdminClient,
+  id: string,
+  input: UpdateWorkItemInput,
+  actor: UserProfile,
+) {
+  const detail = await fetchWorkItemDetail(admin, id, actor.id, actor);
+  if (!detail) {
+    throw new Error("Nie znaleziono zadania.");
+  }
+
+  const item = detail.item;
+  if (!canEditWorkItem(actor, item)) {
+    throw new Error("Brak uprawnień do edycji tego zadania.");
+  }
+
+  const now = new Date().toISOString();
+  const isManual = item.sourceType === "manual";
+  const updatePayload: Record<string, unknown> = { updated_at: now };
+  const changedFields: string[] = [];
+
+  if (input.title !== undefined && input.title.trim()) {
+    updatePayload.title = input.title.trim();
+    changedFields.push("title");
+  }
+  if (input.description !== undefined) {
+    updatePayload.description = input.description.trim();
+    changedFields.push("description");
+  }
+  if (input.dueDate !== undefined) {
+    updatePayload.due_date = input.dueDate;
+    changedFields.push("due_date");
+  }
+  if (input.plannedStart !== undefined) {
+    updatePayload.planned_start = input.plannedStart;
+    changedFields.push("planned_start");
+  }
+  if (input.plannedEnd !== undefined) {
+    updatePayload.planned_end = input.plannedEnd;
+    changedFields.push("planned_end");
+  }
+  if (input.estimatedMinutes !== undefined) {
+    updatePayload.estimated_minutes = input.estimatedMinutes;
+    changedFields.push("estimated_minutes");
+  }
+  if (input.priority !== undefined) {
+    updatePayload.priority = input.priority;
+    changedFields.push("priority");
+  }
+  if (input.assignedUserId !== undefined) {
+    updatePayload.assigned_user_id = input.assignedUserId;
+    changedFields.push("assigned_user_id");
+  }
+  if (input.projectId !== undefined) {
+    updatePayload.project_id = input.projectId;
+    changedFields.push("project_id");
+  }
+  if (input.clientId !== undefined) {
+    updatePayload.client_id = input.clientId;
+    changedFields.push("client_id");
+  }
+  if (input.processStageId !== undefined) {
+    updatePayload.process_stage_id = input.processStageId;
+    changedFields.push("process_stage_id");
+  }
+
+  if (isManual) {
+    if (input.expectedResult !== undefined) {
+      updatePayload.expected_result = input.expectedResult.trim();
+      changedFields.push("expected_result");
+    }
+    if (input.completionCriteria !== undefined) {
+      updatePayload.completion_criteria = input.completionCriteria.trim();
+      changedFields.push("completion_criteria");
+    }
+    if (input.requiredMaterials !== undefined) {
+      updatePayload.required_materials = input.requiredMaterials.trim();
+      changedFields.push("required_materials");
+    }
+    if (input.requiredInfo !== undefined) {
+      updatePayload.required_info = input.requiredInfo.trim();
+      changedFields.push("required_info");
+    }
+  }
+
+  if (input.status !== undefined && input.status !== item.status) {
+    assertWorkItemStatusTransition(item.status, input.status);
+    updatePayload.status = input.status;
+    changedFields.push("status");
+  }
+
+  if (changedFields.length === 0 && input.supportingUserIds === undefined) {
+    throw new Error("Brak pól do aktualizacji.");
+  }
+
+  if (changedFields.length > 0) {
+    const { error } = await admin.from("work_items").update(updatePayload).eq("id", id);
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  if (input.supportingUserIds !== undefined && isManual) {
+    await admin.from("work_item_supporting_users").delete().eq("work_item_id", id);
+    if (input.supportingUserIds.length) {
+      await admin.from("work_item_supporting_users").insert(
+        input.supportingUserIds.map((userId) => ({
+          work_item_id: id,
+          user_id: userId,
+        })),
+      );
+    }
+    changedFields.push("supporting_users");
+  }
+
+  if (item.sourceType !== "manual" && item.sourceId) {
+    const adapter = getWorkItemSourceAdapter(item.sourceType);
+    if (adapter) {
+      await adapter.syncToSource(admin, item, mapUpdateInputToWorkItemPatch(input));
+    }
+  }
+
+  await appendWorkItemLog(admin, {
+    workItemId: id,
+    userId: actor.id,
+    action: "updated",
+    metadata: { fields: changedFields },
+  });
+
+  return fetchWorkItemDetail(admin, id, actor.id, actor);
+}
+
+function mapUpdateInputToWorkItemPatch(input: UpdateWorkItemInput) {
+  return {
+    title: input.title,
+    description: input.description,
+    dueDate: input.dueDate,
+    priority: input.priority,
+    assignedUserId: input.assignedUserId,
+    projectId: input.projectId,
+    clientId: input.clientId,
+    processStageId: input.processStageId,
+  };
+}
+
+export async function deleteWorkItemServer(
+  admin: AdminClient,
+  id: string,
+  actor: UserProfile,
+  options?: { hard?: boolean },
+) {
+  const detail = await fetchWorkItemDetail(admin, id, actor.id, actor);
+  if (!detail) {
+    throw new Error("Nie znaleziono zadania.");
+  }
+
+  const item = detail.item;
+  if (!canDeleteWorkItem(actor, item)) {
+    throw new Error("Brak uprawnień do usunięcia tego zadania.");
+  }
+
+  const hardDeleteAllowed =
+    options?.hard === true &&
+    actor.role === "administrator" &&
+    item.sourceType === "manual" &&
+    (item.status === "draft" || item.status === "cancelled");
+
+  if (hardDeleteAllowed) {
+    const { error } = await admin.from("work_items").delete().eq("id", id);
+    if (error) {
+      throw new Error(error.message);
+    }
+    return { deleted: true, hard: true };
+  }
+
+  if (isTerminalWorkItemStatus(item.status)) {
+    throw new Error("Nie można anulować zadania w tym statusie.");
+  }
+
+  const now = new Date().toISOString();
+  const { error } = await admin
+    .from("work_items")
+    .update({ status: "cancelled", updated_at: now })
+    .eq("id", id);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await appendWorkItemLog(admin, {
+    workItemId: id,
+    userId: actor.id,
+    action: "cancelled",
+  });
+
+  return { deleted: true, hard: false };
 }
 
 export async function sendWorkItemServer(admin: AdminClient, id: string, actor: UserProfile) {
@@ -758,4 +918,43 @@ export async function addWorkItemCommentServer(
 
 export async function startWorkItemServer(admin: AdminClient, id: string, actor: UserProfile) {
   return updateWorkItemStatusServer(admin, id, "in_progress", actor);
+}
+
+export async function requestWorkItemTakeoverServer(
+  admin: AdminClient,
+  id: string,
+  actor: UserProfile,
+  comment?: string,
+) {
+  const detail = await fetchWorkItemDetail(admin, id, actor.id, actor);
+  if (!detail) {
+    throw new Error("Nie znaleziono zadania.");
+  }
+
+  if (detail.item.assignedUserId === actor.id) {
+    throw new Error("To zadanie jest już przypisane do Ciebie.");
+  }
+
+  const canRequest =
+    detail.item.isSupporting ||
+    detail.item.supportingUserIds.includes(actor.id) ||
+    canManageWorkItems(actor);
+
+  if (!canRequest) {
+    throw new Error("Brak uprawnień do prośby o przejęcie tego zadania.");
+  }
+
+  const recipientId = detail.item.managerId ?? detail.item.assignedUserId;
+  await appendWorkItemLog(admin, {
+    workItemId: id,
+    userId: actor.id,
+    action: "takeover_requested",
+    metadata: { comment: comment?.trim() ?? "", recipientId },
+  });
+
+  return {
+    detail,
+    recipientId,
+    requesterName: getUserDisplayName(actor),
+  };
 }

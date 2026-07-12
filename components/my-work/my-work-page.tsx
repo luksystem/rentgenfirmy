@@ -15,6 +15,7 @@ import { MyWorkDayRhythm } from "@/components/my-work/my-work-day-rhythm";
 import { MyWorkObstacleDialog } from "@/components/my-work/my-work-obstacle-dialog";
 import { MyWorkWeekPlanPanel } from "@/components/my-work/my-work-week-plan-panel";
 import { CreateWorkItemDialog } from "@/components/my-work/manager/create-work-item-dialog";
+import { EditWorkItemDialog } from "@/components/my-work/manager/edit-work-item-dialog";
 import { filterWorkItems } from "@/lib/my-work/section-filters";
 import { defaultStatusForKanbanColumn, type KanbanColumnGroupId } from "@/lib/my-work/state-machine";
 import { isTerminalWorkItemStatus } from "@/lib/my-work/types";
@@ -64,11 +65,13 @@ export function MyWorkPage() {
   const copyPreviousWeekPlan = useMyWorkStore((state) => state.copyPreviousWeekPlan);
   const createWeekPlanForUser = useMyWorkStore((state) => state.createWeekPlanForUser);
   const reportObstacle = useMyWorkStore((state) => state.reportObstacle);
+  const requestTakeover = useMyWorkStore((state) => state.requestTakeover);
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [acceptOpen, setAcceptOpen] = useState(false);
   const [completeOpen, setCompleteOpen] = useState(false);
   const [obstacleOpen, setObstacleOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [teamView, setTeamView] = useState(false);
 
   useEffect(() => {
@@ -264,6 +267,20 @@ export function MyWorkPage() {
           if (selectedDetail) await commentOnItem(selectedDetail.item.id, body);
         }}
         onReportObstacle={() => setObstacleOpen(true)}
+        onEdit={() => {
+          setDetailOpen(false);
+          setEditOpen(true);
+        }}
+        onRequestTakeover={async () => {
+          if (!selectedDetail) return;
+          const comment = window.prompt("Opcjonalny komentarz do prośby o przejęcie:") ?? "";
+          try {
+            await requestTakeover(selectedDetail.item.id, comment || undefined);
+            window.alert("Prośba o przejęcie została wysłana.");
+          } catch (error) {
+            window.alert(error instanceof Error ? error.message : "Nie udało się wysłać prośby.");
+          }
+        }}
       />
 
       <MyWorkAcceptanceDialog
@@ -308,6 +325,12 @@ export function MyWorkPage() {
             description,
           });
         }}
+      />
+
+      <EditWorkItemDialog
+        item={selectedDetail?.item ?? null}
+        open={editOpen}
+        onOpenChange={setEditOpen}
       />
 
       {detailLoading ? null : null}

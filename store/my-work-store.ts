@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { hasFullAppAccess, type UserProfile, type UserRole } from "@/lib/auth/types";
 import type {
   CreateWorkItemInput,
+  UpdateWorkItemInput,
   WorkItemAcceptanceInput,
   WorkItemCompleteInput,
   WorkItemDetail,
@@ -33,13 +34,16 @@ import {
   addWorkItemComment,
   completeWorkItem,
   createWorkItem,
+  deleteWorkItem,
   fetchMyWorkItems,
   fetchWorkItemDetail,
   recordWorkItemAcceptance,
   sendWorkItem,
   startWorkItem,
+  updateWorkItem,
   updateWorkItemStatus,
   verifyWorkItem,
+  requestWorkItemTakeover,
 } from "@/lib/supabase/my-work-repository";
 import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 
@@ -92,6 +96,9 @@ type MyWorkStore = {
   startItem: (id: string) => Promise<void>;
   moveItemStatus: (id: string, status: string) => Promise<void>;
   commentOnItem: (id: string, body: string) => Promise<void>;
+  updateItem: (id: string, input: UpdateWorkItemInput) => Promise<void>;
+  deleteItem: (id: string, options?: { hard?: boolean }) => Promise<void>;
+  removeItem: (id: string) => void;
 
   ensureDayContext: (options?: { force?: boolean; sessionDate?: string }) => Promise<WorkDayContext>;
   startDay: () => Promise<WorkDayContext>;
@@ -102,6 +109,7 @@ type MyWorkStore = {
   acknowledgeWeekPlanById: (planId: string, input: AcknowledgeWeekPlanInput) => Promise<WorkPlanView>;
   copyPreviousWeekPlan: (assignedUserId: string) => Promise<WorkPlanView>;
   reportObstacle: (input: ReportObstacleInput) => Promise<void>;
+  requestTakeover: (id: string, comment?: string) => Promise<void>;
 };
 
 export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
@@ -285,6 +293,26 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
     get().replaceFromDetail(detail);
   },
 
+  updateItem: async (id, input) => {
+    const detail = await updateWorkItem(id, input);
+    get().replaceFromDetail(detail);
+  },
+
+  deleteItem: async (id, options) => {
+    await deleteWorkItem(id, options);
+    get().removeItem(id);
+    if (get().selectedItemId === id) {
+      set({ selectedItemId: null, selectedDetail: null });
+    }
+  },
+
+  removeItem: (id) => {
+    set((state) => ({
+      myItems: state.myItems.filter((entry) => entry.id !== id),
+      teamItems: state.teamItems.filter((entry) => entry.id !== id),
+    }));
+  },
+
   ensureDayContext: async (options) => {
     const { dayContextHydrated, dayContext } = get();
     if (dayContextHydrated && !options?.force) {
@@ -384,6 +412,11 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
   reportObstacle: async (input) => {
     await reportObstacle(input);
     await get().ensureMyItems({ force: true });
+  },
+
+  requestTakeover: async (id, comment) => {
+    const detail = await requestWorkItemTakeover(id, comment);
+    get().replaceFromDetail(detail);
   },
 }));
 
