@@ -241,7 +241,7 @@ async function ensureDayPlan(
   const candidateItems = workItems.filter((item) => itemBelongsInDayPlan(item, new Date(`${sessionDate}T12:00:00`)));
   const { data: currentItems } = await admin
     .from("work_plan_items")
-    .select("work_item_id")
+    .select("id, work_item_id")
     .eq("work_plan_id", planId);
   const existingIds = new Set((currentItems ?? []).map((row) => row.work_item_id));
 

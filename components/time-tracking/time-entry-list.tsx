@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { History, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,10 +29,12 @@ export function TimeEntryList({
   entries,
   onEdit,
   onDelete,
+  onHistory,
 }: {
   entries: TimeEntryView[];
   onEdit: (entry: TimeEntryView) => void;
   onDelete: (entry: TimeEntryView) => void;
+  onHistory: (entry: TimeEntryView) => void;
 }) {
   const grouped = entries.reduce<Record<string, TimeEntryView[]>>((acc, entry) => {
     const key = entry.date;
@@ -106,6 +108,15 @@ export function TimeEntryList({
                             type="button"
                             variant="outline"
                             size="sm"
+                            onClick={() => onHistory(entry)}
+                          >
+                            <History className="mr-1.5 h-3.5 w-3.5" />
+                            Historia
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
                             onClick={() => onEdit(entry)}
                           >
                             <Pencil className="mr-1.5 h-3.5 w-3.5" />
@@ -121,7 +132,19 @@ export function TimeEntryList({
                             Usuń
                           </Button>
                         </div>
-                      ) : null}
+                      ) : (
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onHistory(entry)}
+                          >
+                            <History className="mr-1.5 h-3.5 w-3.5" />
+                            Historia
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 );

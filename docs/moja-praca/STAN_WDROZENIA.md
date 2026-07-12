@@ -66,8 +66,7 @@ Ostatnia aktualizacja: Etapy 1–5 (zadania + plany + agregacja + AI + pulpit).
 
 | Element | Status |
 |---------|--------|
-| `/moja-praca/czas-pracy` — Etap 2 (wpisy ręczne) | 🟡 w toku |
-| Timer Start/Stop | 🔲 Etap 3 |
+| `/moja-praca/czas-pracy` — Etap 2–3 (wpisy + timer) | 🟡 w toku |
 | Arkusz tygodniowy + akceptacja | 🔲 Etap 4–5 |
 | Integracja z planowaniem / urlopami | 🔲 Etap 6 |
 | Realtime na pulpicie managera | 🔲 opcjonalnie |

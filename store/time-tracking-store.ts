@@ -4,17 +4,28 @@ import { create } from "zustand";
 import { hasFullAppAccess, type UserRole } from "@/lib/auth/types";
 import { endOfWeekSunday, startOfWeekMonday, toDateInputValue } from "@/lib/time-tracking/format";
 import type {
+  ActiveTimerView,
   CreateTimeEntryInput,
+  StartTimerInput,
+  StopTimerInput,
   TimeEntryFilters,
+  TimeEntryLog,
   TimeEntryView,
   TimeTrackingMeta,
   UpdateTimeEntryInput,
 } from "@/lib/time-tracking/types";
 import {
+  cancelTimer,
   createTimeEntry,
   deleteTimeEntry,
+  fetchActiveTimer,
   fetchTimeEntries,
+  fetchTimeEntryLogs,
   fetchTimeTrackingMeta,
+  pauseTimer,
+  resumeTimer,
+  startTimer,
+  stopTimer,
   updateTimeEntry,
 } from "@/lib/supabase/time-tracking-repository";
 
@@ -30,6 +41,7 @@ const defaultWeekEnd = toDateInputValue(endOfWeekSunday(startOfWeekMonday(today)
 let metaPromise: Promise<TimeTrackingMeta> | null = null;
 let entriesPromise: Promise<TimeEntryView[]> | null = null;
 let entriesPromiseKey = "";
+let timerPromise: Promise<ActiveTimerView | null> | null = null;
 
 function buildEntriesKey(filters: TimeEntryFilters) {
   return JSON.stringify(filters);
@@ -45,12 +57,23 @@ type TimeTrackingStore = {
   entriesLoading: boolean;
   filters: TimeEntryFilters;
 
+  activeTimer: ActiveTimerView | null;
+  timerHydrated: boolean;
+  timerLoading: boolean;
+
   ensureMeta: (options?: EnsureTimeEntriesOptions) => Promise<TimeTrackingMeta>;
   ensureEntries: (options?: EnsureTimeEntriesOptions) => Promise<TimeEntryView[]>;
+  ensureTimer: (options?: EnsureTimeEntriesOptions) => Promise<ActiveTimerView | null>;
   setFilters: (patch: Partial<TimeEntryFilters>) => void;
   createEntry: (input: CreateTimeEntryInput) => Promise<TimeEntryView>;
   updateEntry: (id: string, input: UpdateTimeEntryInput) => Promise<TimeEntryView>;
   removeEntry: (id: string) => Promise<void>;
+  startActiveTimer: (input: StartTimerInput) => Promise<ActiveTimerView>;
+  pauseActiveTimer: () => Promise<ActiveTimerView>;
+  resumeActiveTimer: () => Promise<ActiveTimerView>;
+  stopActiveTimer: (input?: StopTimerInput) => Promise<TimeEntryView>;
+  cancelActiveTimer: () => Promise<void>;
+  fetchEntryLogs: (entryId: string) => Promise<TimeEntryLog[]>;
   invalidate: () => void;
 };
 
@@ -66,6 +89,10 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
     dateFrom: defaultWeekStart,
     dateTo: defaultWeekEnd,
   },
+
+  activeTimer: null,
+  timerHydrated: false,
+  timerLoading: false,
 
   ensureMeta: async (options = {}) => {
     const { force = false, showLoading = !get().metaHydrated } = options;
@@ -127,6 +154,34 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
     return entriesPromise;
   },
 
+  ensureTimer: async (options = {}) => {
+    const { force = false, showLoading = !get().timerHydrated } = options;
+    if (!force && get().timerHydrated) {
+      return get().activeTimer;
+    }
+    if (!force && timerPromise) {
+      return timerPromise;
+    }
+
+    if (showLoading) {
+      set({ timerLoading: true });
+    }
+
+    timerPromise = fetchActiveTimer()
+      .then((timer) => {
+        set({ activeTimer: timer, timerHydrated: true, timerLoading: false });
+        timerPromise = null;
+        return timer;
+      })
+      .catch((error) => {
+        set({ timerLoading: false });
+        timerPromise = null;
+        throw error;
+      });
+
+    return timerPromise;
+  },
+
   setFilters: (patch) => {
     set((state) => ({
       filters: { ...state.filters, ...patch },
@@ -158,15 +213,54 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
     }));
   },
 
+  startActiveTimer: async (input) => {
+    const timer = await startTimer(input);
+    set({ activeTimer: timer, timerHydrated: true });
+    return timer;
+  },
+
+  pauseActiveTimer: async () => {
+    const timer = await pauseTimer();
+    set({ activeTimer: timer, timerHydrated: true });
+    return timer;
+  },
+
+  resumeActiveTimer: async () => {
+    const timer = await resumeTimer();
+    set({ activeTimer: timer, timerHydrated: true });
+    return timer;
+  },
+
+  stopActiveTimer: async (input) => {
+    const entry = await stopTimer(input);
+    set((state) => ({
+      activeTimer: null,
+      timerHydrated: true,
+      entries: [entry, ...state.entries.filter((item) => item.id !== entry.id)],
+      entriesHydrated: true,
+    }));
+    return entry;
+  },
+
+  cancelActiveTimer: async () => {
+    await cancelTimer();
+    set({ activeTimer: null, timerHydrated: true });
+  },
+
+  fetchEntryLogs: async (entryId) => fetchTimeEntryLogs(entryId),
+
   invalidate: () => {
     metaPromise = null;
     entriesPromise = null;
     entriesPromiseKey = "";
+    timerPromise = null;
     set({
       meta: null,
       metaHydrated: false,
       entries: [],
       entriesHydrated: false,
+      activeTimer: null,
+      timerHydrated: false,
     });
   },
 }));

@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/input";
 import { TimeEntryFormDialog } from "@/components/time-tracking/time-entry-form-dialog";
+import { TimeEntryHistoryDialog } from "@/components/time-tracking/time-entry-history-dialog";
 import { TimeEntryList } from "@/components/time-tracking/time-entry-list";
+import { TimeTimerPanel } from "@/components/time-tracking/time-timer-panel";
+import { TimeWeekReport } from "@/components/time-tracking/time-week-report";
 import {
   endOfWeekSunday,
   formatDurationMinutes,
@@ -40,10 +43,12 @@ export function TimeTrackingPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimeEntryView | null>(null);
+  const [historyEntry, setHistoryEntry] = useState<TimeEntryView | null>(null);
 
   useEffect(() => {
     void ensureMeta();
     void ensureEntries();
+    void useTimeTrackingStore.getState().ensureTimer();
   }, [ensureMeta, ensureEntries]);
 
   useEffect(() => {
@@ -91,6 +96,11 @@ export function TimeTrackingPage() {
           </Button>
         }
       />
+
+      <div className="mb-6 grid gap-4">
+        <TimeTimerPanel />
+        <TimeWeekReport entries={entries} />
+      </div>
 
       <div className="mb-6 grid gap-4 lg:grid-cols-[1fr_auto]">
         <Card>
@@ -169,8 +179,26 @@ export function TimeTrackingPage() {
       {entriesLoading && !entriesHydrated ? (
         <p className="text-sm text-muted">Wczytywanie wpisów czasu…</p>
       ) : (
-        <TimeEntryList entries={entries} onEdit={openEdit} onDelete={handleDelete} />
+        <TimeEntryList
+          entries={entries}
+          onEdit={openEdit}
+          onDelete={handleDelete}
+          onHistory={(entry) => setHistoryEntry(entry)}
+        />
       )}
+
+      <TimeEntryHistoryDialog
+        open={Boolean(historyEntry)}
+        onOpenChange={(open) => {
+          if (!open) setHistoryEntry(null);
+        }}
+        entryId={historyEntry?.id ?? null}
+        entryLabel={
+          historyEntry
+            ? `${historyEntry.categoryName} · ${formatDurationMinutes(historyEntry.durationMinutes)}`
+            : ""
+        }
+      />
 
       <TimeEntryFormDialog
         open={formOpen}

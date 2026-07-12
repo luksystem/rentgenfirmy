@@ -8,12 +8,22 @@ import {
   canViewTeamTimeEntries,
 } from "@/lib/time-tracking/permissions";
 import { validateTimeEntryInput } from "@/lib/time-tracking/validation";
+import {
+  entryToRange,
+  findOverlapMessage,
+  LONG_TIMER_WARNING_MINUTES,
+} from "@/lib/time-tracking/overlap";
 import type {
+  ActiveTimer,
+  ActiveTimerView,
   CreateTimeEntryInput,
+  StartTimerInput,
+  StopTimerInput,
   TimeCategory,
   TimeEntry,
   TimeEntryCreatedFrom,
   TimeEntryFilters,
+  TimeEntryLog,
   TimeEntryStatus,
   TimeEntryType,
   TimeEntryView,
@@ -51,6 +61,111 @@ type TimeEntryRow = {
   created_at: string;
   updated_at: string;
 };
+
+type ActiveTimerRow = {
+  id: string;
+  user_id: string;
+  started_at: string;
+  date: string;
+  category_id: string;
+  entry_type_id: string;
+  description: string;
+  billable: boolean;
+  project_id: string | null;
+  client_id: string | null;
+  work_item_id: string | null;
+  service_id: string | null;
+  remote_work: boolean;
+  delegation: boolean;
+  break_minutes: number;
+  paused_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function mapActiveTimerRow(row: ActiveTimerRow): ActiveTimer {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    startedAt: row.started_at,
+    date: row.date,
+    categoryId: row.category_id,
+    entryTypeId: row.entry_type_id,
+    description: row.description,
+    billable: row.billable,
+    projectId: row.project_id,
+    clientId: row.client_id,
+    workItemId: row.work_item_id,
+    serviceId: row.service_id,
+    remoteWork: row.remote_work,
+    delegation: row.delegation,
+    breakMinutes: row.break_minutes,
+    pausedAt: row.paused_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function computeElapsedMinutes(timer: ActiveTimer, now = new Date()): number {
+  const startedAt = new Date(timer.startedAt).getTime();
+  const pausedAt = timer.pausedAt ? new Date(timer.pausedAt).getTime() : null;
+  const endMs = pausedAt ?? now.getTime();
+  const grossMinutes = Math.max(0, Math.floor((endMs - startedAt) / 60_000));
+  return Math.max(1, grossMinutes - timer.breakMinutes);
+}
+
+async function assertNoTimeOverlap(
+  admin: AdminClient,
+  userId: string,
+  date: string,
+  startTime: string | null,
+  endTime: string | null,
+  excludeEntryId?: string,
+) {
+  const candidate = entryToRange(startTime, endTime);
+  if (!candidate) {
+    return;
+  }
+
+  const { data, error } = await admin
+    .from("time_entries")
+    .select("id, start_time, end_time")
+    .eq("user_id", userId)
+    .eq("date", date)
+    .not("start_time", "is", null)
+    .not("end_time", "is", null);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const overlap = findOverlapMessage(
+    candidate,
+    (data ?? []).map((row) => ({
+      id: row.id as string,
+      startTime: row.start_time as string | null,
+      endTime: row.end_time as string | null,
+    })),
+    excludeEntryId,
+  );
+
+  if (overlap) {
+    throw new Error(overlap);
+  }
+}
+
+function formatTimeFromDate(date: Date): string {
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00`;
+}
+
+function toDateKey(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 function mapCategoryRow(row: {
   id: string;
@@ -344,6 +459,7 @@ export async function createTimeEntryServer(
   admin: AdminClient,
   actor: UserProfile,
   input: CreateTimeEntryInput,
+  options?: { createdFrom?: TimeEntryCreatedFrom },
 ): Promise<TimeEntryView> {
   const targetUserId = input.userId ?? actor.id;
   if (!canCreateTimeEntryForUser(actor, targetUserId)) {
@@ -360,6 +476,14 @@ export async function createTimeEntryServer(
   if (validationError) {
     throw new Error(validationError);
   }
+
+  await assertNoTimeOverlap(
+    admin,
+    targetUserId,
+    input.date,
+    input.startTime ?? null,
+    input.endTime ?? null,
+  );
 
   const clientId = await resolveClientIdFromProject(admin, input.projectId, input.clientId);
   const costRateSnapshot = await loadCostRateSnapshot(admin, targetUserId);
@@ -385,7 +509,7 @@ export async function createTimeEntryServer(
     delegation: input.delegation ?? false,
     cost_rate_snapshot: costRateSnapshot,
     status: "draft",
-    created_from: "manual",
+    created_from: options?.createdFrom ?? "manual",
   };
 
   const { data, error } = await admin
@@ -462,6 +586,15 @@ export async function updateTimeEntryServer(
   if (validationError) {
     throw new Error(validationError);
   }
+
+  await assertNoTimeOverlap(
+    admin,
+    entry.userId,
+    merged.date,
+    merged.startTime ?? null,
+    merged.endTime ?? null,
+    entryId,
+  );
 
   const clientId = await resolveClientIdFromProject(admin, merged.projectId, merged.clientId);
   const billable = entryType.allowsBillable ? merged.billable : false;
@@ -572,4 +705,284 @@ export async function fetchTimeEntryByIdServer(
 
   const views = await resolveEntryViews(admin, [data as TimeEntryRow]);
   return views[0] ?? null;
+}
+
+async function resolveActiveTimerView(
+  admin: AdminClient,
+  row: ActiveTimerRow,
+): Promise<ActiveTimerView> {
+  const timer = mapActiveTimerRow(row);
+  const elapsedMinutes = computeElapsedMinutes(timer);
+
+  const [categories, types, projects, workItems] = await Promise.all([
+    admin.from("time_categories").select("id, name, color").eq("id", row.category_id).maybeSingle(),
+    admin.from("time_entry_types").select("id, name").eq("id", row.entry_type_id).maybeSingle(),
+    row.project_id
+      ? admin.from("projects").select("id, name").eq("id", row.project_id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    row.work_item_id
+      ? admin.from("work_items").select("id, title").eq("id", row.work_item_id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+
+  if (categories.error) throw new Error(categories.error.message);
+  if (types.error) throw new Error(types.error.message);
+  if (projects.error) throw new Error(projects.error.message);
+  if (workItems.error) throw new Error(workItems.error.message);
+
+  return {
+    ...timer,
+    categoryName: categories.data?.name ?? "—",
+    categoryColor: categories.data?.color ?? "#64748b",
+    entryTypeName: types.data?.name ?? "—",
+    projectName: projects.data?.name ?? null,
+    workItemTitle: workItems.data?.title ?? null,
+    elapsedMinutes,
+    isLongRunning: elapsedMinutes >= LONG_TIMER_WARNING_MINUTES,
+  };
+}
+
+export async function fetchActiveTimerServer(
+  admin: AdminClient,
+  userId: string,
+): Promise<ActiveTimerView | null> {
+  const { data, error } = await admin
+    .from("active_timers")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  if (!data) {
+    return null;
+  }
+
+  return resolveActiveTimerView(admin, data as ActiveTimerRow);
+}
+
+export async function startTimerServer(
+  admin: AdminClient,
+  actor: UserProfile,
+  input: StartTimerInput,
+): Promise<ActiveTimerView> {
+  const existing = await fetchActiveTimerServer(admin, actor.id);
+  if (existing) {
+    throw new Error("Masz już uruchomiony timer. Zatrzymaj go przed rozpoczęciem nowego.");
+  }
+
+  const { category, entryType } = await loadCategoryAndType(
+    admin,
+    input.categoryId,
+    input.entryTypeId,
+  );
+
+  const needsProject = category.requiresProject || entryType.requiresProject;
+  if (needsProject && !input.projectId && !input.serviceId) {
+    throw new Error("Dla tej kategorii wybierz projekt lub zgłoszenie serwisowe.");
+  }
+
+  const clientId = await resolveClientIdFromProject(admin, input.projectId, input.clientId);
+  const billable =
+    input.billable ?? (entryType.allowsBillable ? category.defaultBillable : false);
+
+  const { data, error } = await admin
+    .from("active_timers")
+    .insert({
+      user_id: actor.id,
+      date: input.date ?? toDateKey(),
+      category_id: input.categoryId,
+      entry_type_id: input.entryTypeId,
+      description: input.description?.trim() ?? "",
+      billable: entryType.allowsBillable ? billable : false,
+      project_id: input.projectId ?? null,
+      client_id: clientId,
+      work_item_id: input.workItemId ?? null,
+      service_id: input.serviceId ?? null,
+      remote_work: input.remoteWork ?? false,
+      delegation: input.delegation ?? false,
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return resolveActiveTimerView(admin, data as ActiveTimerRow);
+}
+
+export async function pauseTimerServer(
+  admin: AdminClient,
+  actor: UserProfile,
+): Promise<ActiveTimerView> {
+  const { data: existing, error: fetchError } = await admin
+    .from("active_timers")
+    .select("*")
+    .eq("user_id", actor.id)
+    .maybeSingle();
+
+  if (fetchError) throw new Error(fetchError.message);
+  if (!existing) throw new Error("Brak aktywnego timera.");
+  if (existing.paused_at) throw new Error("Timer jest już wstrzymany.");
+
+  const { data, error } = await admin
+    .from("active_timers")
+    .update({ paused_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("user_id", actor.id)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return resolveActiveTimerView(admin, data as ActiveTimerRow);
+}
+
+export async function resumeTimerServer(
+  admin: AdminClient,
+  actor: UserProfile,
+): Promise<ActiveTimerView> {
+  const { data: existing, error: fetchError } = await admin
+    .from("active_timers")
+    .select("*")
+    .eq("user_id", actor.id)
+    .maybeSingle();
+
+  if (fetchError) throw new Error(fetchError.message);
+  if (!existing) throw new Error("Brak aktywnego timera.");
+  if (!existing.paused_at) throw new Error("Timer nie jest wstrzymany.");
+
+  const pausedMs = Date.now() - new Date(existing.paused_at).getTime();
+  const pausedMinutes = Math.max(0, Math.floor(pausedMs / 60_000));
+
+  const { data, error } = await admin
+    .from("active_timers")
+    .update({
+      paused_at: null,
+      break_minutes: (existing.break_minutes ?? 0) + pausedMinutes,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", actor.id)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return resolveActiveTimerView(admin, data as ActiveTimerRow);
+}
+
+export async function stopTimerServer(
+  admin: AdminClient,
+  actor: UserProfile,
+  input: StopTimerInput = {},
+): Promise<TimeEntryView> {
+  const { data: existing, error: fetchError } = await admin
+    .from("active_timers")
+    .select("*")
+    .eq("user_id", actor.id)
+    .maybeSingle();
+
+  if (fetchError) throw new Error(fetchError.message);
+  if (!existing) throw new Error("Brak aktywnego timera.");
+
+  const timer = mapActiveTimerRow(existing as ActiveTimerRow);
+  const now = new Date();
+  const breakMinutes = (input.breakMinutes ?? 0) + timer.breakMinutes;
+  const startedDate = new Date(timer.startedAt);
+  const grossMinutes = Math.max(
+    0,
+    Math.floor((now.getTime() - startedDate.getTime()) / 60_000),
+  );
+  const durationMinutes = Math.max(1, grossMinutes - breakMinutes);
+
+  const startTime = formatTimeFromDate(startedDate);
+  const endTime = formatTimeFromDate(now);
+
+  const entry = await createTimeEntryServer(
+    admin,
+    actor,
+    {
+      date: timer.date,
+      startTime,
+      endTime,
+      durationMinutes,
+      breakMinutes,
+      categoryId: timer.categoryId,
+      entryTypeId: timer.entryTypeId,
+      description: input.description?.trim() || timer.description,
+      billable: timer.billable,
+      projectId: timer.projectId,
+      clientId: timer.clientId,
+      workItemId: timer.workItemId,
+      serviceId: timer.serviceId,
+      remoteWork: timer.remoteWork,
+      delegation: timer.delegation,
+    },
+    { createdFrom: "timer" },
+  );
+
+  const { error: deleteError } = await admin
+    .from("active_timers")
+    .delete()
+    .eq("user_id", actor.id);
+
+  if (deleteError) {
+    throw new Error(deleteError.message);
+  }
+
+  return entry;
+}
+
+export async function cancelTimerServer(
+  admin: AdminClient,
+  actor: UserProfile,
+): Promise<void> {
+  const { error } = await admin.from("active_timers").delete().eq("user_id", actor.id);
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+function mapTimeEntryLogRow(row: {
+  id: string;
+  time_entry_id: string;
+  action: string;
+  user_id: string | null;
+  old_value: Record<string, unknown> | null;
+  new_value: Record<string, unknown> | null;
+  comment: string;
+  created_at: string;
+}): TimeEntryLog {
+  return {
+    id: row.id,
+    timeEntryId: row.time_entry_id,
+    action: row.action,
+    userId: row.user_id,
+    oldValue: row.old_value,
+    newValue: row.new_value,
+    comment: row.comment,
+    createdAt: row.created_at,
+  };
+}
+
+export async function fetchTimeEntryLogsServer(
+  admin: AdminClient,
+  actor: UserProfile,
+  entryId: string,
+): Promise<TimeEntryLog[]> {
+  const entry = await fetchTimeEntryByIdServer(admin, actor, entryId);
+  if (!entry) {
+    throw new Error("Wpis czasu nie istnieje.");
+  }
+
+  const { data, error } = await admin
+    .from("time_entry_logs")
+    .select("*")
+    .eq("time_entry_id", entryId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row) => mapTimeEntryLogRow(row as Parameters<typeof mapTimeEntryLogRow>[0]));
 }
