@@ -81,10 +81,13 @@ import { isIntegrationOperator } from "@/lib/auth/types";
 import { useAuthStore } from "@/store/auth-store";
 import { useProjectAgreementsRealtime } from "@/hooks/use-project-agreements-realtime";
 import { useProjectChangeRequestsRealtime } from "@/hooks/use-project-change-requests-realtime";
+import { useProjectDashboardRealtime } from "@/hooks/use-project-dashboard-realtime";
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
 import { useProjectChangeRequestStore } from "@/store/project-change-request-store";
 import { useProjectSatisfactionStore } from "@/store/project-satisfaction-store";
 import { useProjectSpecificationStore } from "@/store/project-specification-store";
+import { useProjectTradeStore } from "@/store/project-trade-store";
+import { useFunctionalitySurveyStore } from "@/store/project-functionality-survey-store";
 import { useAppStore } from "@/store/app-store";
 
 const EMPTY_SATISFACTION: ProjectSatisfactionBundle = {
@@ -559,6 +562,40 @@ export function ClientDashboardView({
 
   useProjectChangeRequestsRealtime(selectedProjectId, refreshChangeRequestsFromServer, {
     enabled: enableChangeRequests,
+  });
+
+  const ensureTrades = useProjectTradeStore((state) => state.ensureTrades);
+  const ensureFunctionalityBundle = useFunctionalitySurveyStore((state) => state.ensureBundle);
+
+  const refreshClientDashboardDataFromServer = useCallback(() => {
+    if (!selectedProjectId || readOnly) {
+      return;
+    }
+    if (enableTrades) {
+      void ensureTrades(selectedProjectId, { force: true });
+    }
+    if (enableSatisfaction) {
+      void ensureSatisfaction(selectedProjectId, { force: true });
+    }
+    if (enableSpecification) {
+      void ensureFunctionalityBundle(selectedProjectId, { force: true });
+    }
+  }, [
+    enableSatisfaction,
+    enableSpecification,
+    enableTrades,
+    ensureFunctionalityBundle,
+    ensureSatisfaction,
+    ensureTrades,
+    readOnly,
+    selectedProjectId,
+  ]);
+
+  useProjectDashboardRealtime(selectedProjectId, refreshClientDashboardDataFromServer, {
+    enabled:
+      !readOnly &&
+      Boolean(selectedProjectId) &&
+      (enableTrades || enableSatisfaction || enableSpecification),
   });
 
   useEffect(() => {

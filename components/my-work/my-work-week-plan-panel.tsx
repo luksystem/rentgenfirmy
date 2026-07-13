@@ -23,6 +23,7 @@ import { MyWorkEditWeekPlanDialog } from "@/components/my-work/my-work-edit-week
 import type { UpdateWeekPlanInput } from "@/lib/my-work/plan-types";
 import type { WorkItemView } from "@/lib/my-work/types";
 import { buildWeekPlanOptions, currentWeekMonday } from "@/lib/my-work/week-range";
+import { workItemProjectLabel } from "@/lib/my-work/display-labels";
 
 export function MyWorkWeekPlanPanel({
   plan,
@@ -67,7 +68,7 @@ export function MyWorkWeekPlanPanel({
   }, [teamOptions]);
 
   useEffect(() => {
-    if (!canManage || !onLoadForUser) {
+    if (!canManage || !onLoadForUser || editOpen) {
       return;
     }
     const userId = selectedUserId || teamOptions[0]?.id;
@@ -75,7 +76,7 @@ export function MyWorkWeekPlanPanel({
       return;
     }
     void onLoadForUser(userId, selectedWeekStart);
-  }, [canManage, onLoadForUser, selectedUserId, selectedWeekStart, teamOptions]);
+  }, [canManage, onLoadForUser, selectedUserId, selectedWeekStart, teamOptions, editOpen]);
 
   if (!plan && !canManage) {
     return null;
@@ -263,6 +264,8 @@ export function MyWorkWeekPlanPanel({
             {plan.items.map((entry) => {
               const workItemId = entry.workItemId;
               const canOpen = Boolean(workItemId && onOpenItem);
+              const projectLabel = workItemProjectLabel(entry.workItem?.projectName);
+              const hasProject = Boolean(entry.workItem?.projectName?.trim());
               return (
                 <li key={entry.id}>
                   <button
@@ -277,8 +280,16 @@ export function MyWorkWeekPlanPanel({
                   >
                     <span className="font-medium">{entry.workItem?.title ?? "Zadanie"}</span>
                     <span className="ml-2 text-xs text-muted">{formatDate(entry.plannedDate)}</span>
+                    <p
+                      className={cn(
+                        "mt-0.5 truncate text-xs",
+                        hasProject ? "text-foreground/80" : "italic text-muted",
+                      )}
+                    >
+                      {projectLabel}
+                    </p>
                     {entry.carriedOver ? (
-                      <span className="ml-2 text-xs text-amber-700">przeniesione</span>
+                      <span className="mt-1 inline-block text-xs text-amber-700">przeniesione</span>
                     ) : null}
                   </button>
                 </li>

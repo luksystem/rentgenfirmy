@@ -152,6 +152,7 @@ export function groupItemsByListSection(
     for (const section of LIST_SECTIONS) {
       if (itemMatchesListSection(item, section.id, now, context)) {
         grouped.get(section.id)!.push(item);
+        break;
       }
     }
   }

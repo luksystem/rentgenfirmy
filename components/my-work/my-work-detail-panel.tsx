@@ -14,8 +14,10 @@ import { Field, Textarea } from "@/components/ui/input";
 import {
   WORK_ITEM_PRIORITY_LABELS,
   WORK_ITEM_STATUS_LABELS,
+  WORK_ITEM_ACCEPTANCE_ACTION_LABELS,
   type WorkItemDetail,
 } from "@/lib/my-work/types";
+import { workItemLogActionLabel } from "@/lib/my-work/display-labels";
 import { formatDate } from "@/lib/utils";
 import { canEditWorkItem } from "@/lib/my-work/permissions";
 import { useAuthStore } from "@/store/auth-store";
@@ -169,7 +171,7 @@ export function MyWorkDetailPanel({
               <div className="grid gap-2">
                 {acceptances.map((entry) => (
                   <div key={entry.id} className="rounded-lg bg-surface-muted px-3 py-2 text-xs text-muted">
-                    {entry.action} · {formatDate(entry.createdAt)}
+                    {WORK_ITEM_ACCEPTANCE_ACTION_LABELS[entry.action]} · {formatDate(entry.createdAt)}
                     {entry.comment ? <p className="mt-1">{entry.comment}</p> : null}
                   </div>
                 ))}
@@ -183,7 +185,7 @@ export function MyWorkDetailPanel({
               <div className="grid gap-1 text-xs text-muted">
                 {logs.slice(0, 8).map((log) => (
                   <p key={log.id}>
-                    {log.action} · {formatDate(log.createdAt)}
+                    {workItemLogActionLabel(log.action)} · {formatDate(log.createdAt)}
                   </p>
                 ))}
               </div>

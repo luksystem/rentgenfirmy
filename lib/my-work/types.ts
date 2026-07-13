@@ -84,6 +84,14 @@ export const WORK_ITEM_COMPLETE_OUTCOMES = [
 
 export type WorkItemCompleteOutcome = (typeof WORK_ITEM_COMPLETE_OUTCOMES)[number];
 
+export const WORK_ITEM_COMPLETE_OUTCOME_LABELS: Record<WorkItemCompleteOutcome, string> = {
+  done: "Wykonane",
+  partial: "Częściowo wykonane",
+  not_done: "Niewykonane",
+  deferred: "Przełożone",
+  blocked: "Zgłoszono przeszkodę",
+};
+
 export type WorkItemSourceTypeMeta = {
   code: string;
   label: string;

@@ -5,7 +5,8 @@ import {
   kanbanColumnForStatus,
   statusesForKanbanColumn,
 } from "@/lib/my-work/state-machine";
-import { itemIsOverdue, itemMatchesListSection, filterWorkItems } from "@/lib/my-work/section-filters";
+import { workItemLogActionLabel } from "@/lib/my-work/display-labels";
+import { itemIsOverdue, itemMatchesListSection, filterWorkItems, groupItemsByListSection } from "@/lib/my-work/section-filters";
 import {
   mapAgreementStatus,
   mapFunctionalityTaskPriority,
@@ -146,6 +147,30 @@ describe("section-filters", () => {
     const filtered = filterWorkItems(items, { assignedUserId: "user-2" });
     expect(filtered).toHaveLength(1);
     expect(filtered[0]?.id).toBe("b");
+  });
+
+  it("assigns each item to only one list section", () => {
+    const monday = new Date("2026-07-13T12:00:00Z");
+    const items = [
+      mockItem({ id: "week", dueDate: "2026-07-18", status: "in_progress" }),
+      mockItem({ id: "overdue", dueDate: "2026-07-11", status: "in_progress" }),
+    ];
+    const grouped = groupItemsByListSection(items, monday);
+    const sectionCounts = [...grouped.values()].flat();
+    expect(sectionCounts).toHaveLength(2);
+    expect(grouped.get("this_week")?.map((item) => item.id)).toEqual(["week"]);
+    expect(grouped.get("overdue")?.map((item) => item.id)).toEqual(["overdue"]);
+    expect(grouped.get("in_progress")).toEqual([]);
+  });
+});
+
+describe("display labels", () => {
+  it("translates work item log actions to Polish", () => {
+    expect(workItemLogActionLabel("comment_added")).toBe("Dodano komentarz");
+    expect(workItemLogActionLabel("comment-added")).toBe("Dodano komentarz");
+    expect(workItemLogActionLabel("acceptance:accept")).toBe("Przyjęcie: Przyjmuję");
+    expect(workItemLogActionLabel("complete:done")).toBe("Podsumowanie: Wykonane");
+    expect(workItemLogActionLabel("status:in_progress")).toBe("Zmiana statusu: W realizacji");
   });
 });
 

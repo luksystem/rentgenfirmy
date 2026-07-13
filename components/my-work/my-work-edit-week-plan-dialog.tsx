@@ -56,7 +56,7 @@ export function MyWorkEditWeekPlanDialog({
         plannedDate: entry.plannedDate,
       })),
     );
-  }, [open, plan]);
+  }, [open, plan?.id]);
 
   const selectedIds = useMemo(() => new Set(items.map((item) => item.workItemId)), [items]);
 

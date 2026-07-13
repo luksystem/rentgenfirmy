@@ -169,21 +169,26 @@ export function KanbanTaskCardView({
         )}
         title={`Priorytet: ${KANBAN_PRIORITY_LABELS[task.priority]}`}
       />
-      {activity?.isStale && !isClosed ? (
-        <span className="absolute left-3 top-3 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-200">
-          {activity.staleDays}d bez ruchu
-        </span>
-      ) : null}
       <KanbanAttachmentPreview attachments={attachments} />
-      {showProjectLabel && projectName ? (
-        <p className="mb-1 truncate text-[10px] font-medium uppercase tracking-wide text-accent/80">{projectName}</p>
+      {(showProjectLabel && projectName) || (activity?.isStale && !isClosed) ? (
+        <div className="mb-1 flex min-w-0 flex-col gap-0.5 pr-4">
+          {showProjectLabel && projectName ? (
+            <p className="truncate text-[10px] font-medium uppercase tracking-wide text-accent/80">
+              {projectName}
+            </p>
+          ) : null}
+          {activity?.isStale && !isClosed ? (
+            <span className="inline-flex w-fit rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-200">
+              {activity.staleDays}d bez ruchu
+            </span>
+          ) : null}
+        </div>
       ) : null}
       <p
         className={cn(
           "font-medium leading-snug",
           isClosed ? "text-foreground/75 line-through decoration-foreground/40" : "text-foreground",
           showChevron ? "pr-8" : "pr-4",
-          activity?.isStale && !isClosed ? "pt-4" : null,
         )}
       >
         {task.title}

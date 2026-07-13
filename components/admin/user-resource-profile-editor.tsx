@@ -190,10 +190,10 @@ export function UserResourceProfileEditor({ userId }: { userId: string }) {
             return (
               <div
                 key={competency.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-surface-muted/15 px-3 py-2"
+                className="flex flex-col gap-2 rounded-xl border border-border/60 bg-surface-muted/15 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
               >
-                <span className="text-sm text-foreground">{meta?.name ?? "—"}</span>
-                <div className="flex items-center gap-2">
+                <span className="min-w-0 text-sm text-foreground">{meta?.name ?? "—"}</span>
+                <div className="flex items-center justify-between gap-2 sm:justify-end">
                   {level ? (
                     <span
                       className="rounded-full px-2 py-0.5 text-xs font-medium"
@@ -215,8 +215,8 @@ export function UserResourceProfileEditor({ userId }: { userId: string }) {
             );
           })}
         </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <Field label="Kompetencja" className="min-w-[180px] flex-1">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+          <Field label="Kompetencja" className="min-w-0">
             <Select value={newCompetencyId} onChange={(event) => setNewCompetencyId(event.target.value)}>
               <option value="">Wybierz…</option>
               {competencyOptions
@@ -228,7 +228,7 @@ export function UserResourceProfileEditor({ userId }: { userId: string }) {
                 ))}
             </Select>
           </Field>
-          <Field label="Poziom" className="min-w-[160px]">
+          <Field label="Poziom" className="min-w-0">
             <Select value={newCompetencyLevelId} onChange={(event) => setNewCompetencyLevelId(event.target.value)}>
               <option value="">Bez poziomu</option>
               {levelOptions.map((level) => (
@@ -238,7 +238,13 @@ export function UserResourceProfileEditor({ userId }: { userId: string }) {
               ))}
             </Select>
           </Field>
-          <Button type="button" variant="secondary" disabled={!newCompetencyId} onClick={() => void handleAddCompetency()}>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!newCompetencyId}
+            className="w-full sm:w-auto lg:self-end"
+            onClick={() => void handleAddCompetency()}
+          >
             <Plus className="mr-1.5 h-3.5 w-3.5" />
             Dodaj
           </Button>
@@ -251,9 +257,9 @@ export function UserResourceProfileEditor({ userId }: { userId: string }) {
           {profile.certificates.map((cert) => (
             <div
               key={cert.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-surface-muted/15 px-3 py-2"
+              className="flex flex-col gap-2 rounded-xl border border-border/60 bg-surface-muted/15 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
             >
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm text-foreground">{cert.name}</p>
                 {cert.expiresAt ? <p className="text-xs text-muted">Wygasa: {cert.expiresAt}</p> : null}
               </div>
@@ -263,14 +269,20 @@ export function UserResourceProfileEditor({ userId }: { userId: string }) {
             </div>
           ))}
         </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <Field label="Nazwa certyfikatu" className="min-w-[200px] flex-1">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+          <Field label="Nazwa certyfikatu" className="min-w-0">
             <Input value={newCertName} onChange={(event) => setNewCertName(event.target.value)} />
           </Field>
-          <Field label="Data wygaśnięcia" className="min-w-[160px]">
+          <Field label="Data wygaśnięcia" className="min-w-0">
             <Input type="date" value={newCertExpires} onChange={(event) => setNewCertExpires(event.target.value)} />
           </Field>
-          <Button type="button" variant="secondary" disabled={!newCertName.trim()} onClick={() => void handleAddCertificate()}>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!newCertName.trim()}
+            className="w-full sm:w-auto lg:self-end"
+            onClick={() => void handleAddCertificate()}
+          >
             <Plus className="mr-1.5 h-3.5 w-3.5" />
             Dodaj
           </Button>

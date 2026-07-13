@@ -138,6 +138,13 @@ export function MyWorkPage() {
     return teamItems.filter((item) => item.assignedUserId === assignedUserId);
   }, [teamItems, weekPlan?.assignedUserId]);
 
+  const loadWeekPlanForUser = useCallback(
+    async (assignedUserId: string, referenceDate: string) => {
+      await ensureWeekPlan({ force: true, assignedUserId, referenceDate });
+    },
+    [ensureWeekPlan],
+  );
+
   const loading = myItemsLoading && !myItemsHydrated;
 
   async function handleCreateWeekDraft(assignedUserId: string, referenceDate: string) {
@@ -245,9 +252,7 @@ export function MyWorkPage() {
           await copyPreviousWeekPlan(assignedUserId, referenceDate);
         }}
         onCreateDraft={handleCreateWeekDraft}
-        onLoadForUser={async (assignedUserId, referenceDate) => {
-          await ensureWeekPlan({ force: true, assignedUserId, referenceDate });
-        }}
+        onLoadForUser={loadWeekPlanForUser}
         onOpenItem={(id) => void openItem(id)}
         onUpdatePlan={async (planId, input) => {
           await updateWeekPlanById(planId, input);

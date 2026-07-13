@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
+import { MobileField, MobileListCard } from "@/components/mobile-list-card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
@@ -15,6 +18,7 @@ import {
 import { ADMIN_SETUP_ERROR_CODE, ADMIN_SETUP_STEPS } from "@/lib/auth/admin-setup";
 import { UserResourceProfileEditor } from "@/components/admin/user-resource-profile-editor";
 import { UserProjectAccessEditor } from "@/components/admin/user-project-access-editor";
+import { cn } from "@/lib/utils";
 
 type UserFormState = UserProfileInput & {
   password: string;
@@ -67,6 +71,7 @@ export function UserAdminPanel() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [setupRequired, setSetupRequired] = useState(false);
+  const [mobileView, setMobileView] = useState<"list" | "detail">("list");
 
   const isEditing = selectedId !== null;
   const selectedUser = useMemo(
@@ -106,12 +111,21 @@ export function UserAdminPanel() {
     void loadUsers();
   }, [loadUsers]);
 
+  function openMobileDetail() {
+    setMobileView("detail");
+  }
+
+  function closeMobileDetail() {
+    setMobileView("list");
+  }
+
   function startCreate() {
     setSelectedId(null);
     setForm(emptyForm());
     setPasswordDraft("");
     setMessage(null);
     setError(null);
+    openMobileDetail();
   }
 
   function startEdit(user: UserProfile) {
@@ -120,6 +134,7 @@ export function UserAdminPanel() {
     setPasswordDraft("");
     setMessage(null);
     setError(null);
+    openMobileDetail();
   }
 
   async function saveUser() {
@@ -192,6 +207,7 @@ export function UserAdminPanel() {
       }
 
       startCreate();
+      closeMobileDetail();
       await loadUsers();
       setMessage("Użytkownik został usunięty.");
     } catch (deleteError) {
@@ -298,50 +314,84 @@ export function UserAdminPanel() {
         </div>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
-        <Card>
+      <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+        <Card className={cn(mobileView === "detail" && "hidden lg:block")}>
           <CardContent className="py-4">
             {isLoading ? (
               <p className="text-sm text-muted">Ładowanie użytkowników...</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-muted">
-                      <th className="px-2 py-2 font-medium">Imię i nazwisko</th>
-                      <th className="px-2 py-2 font-medium">E-mail</th>
-                      <th className="px-2 py-2 font-medium">Telefon</th>
-                      <th className="px-2 py-2 font-medium">Rola</th>
-                      <th className="px-2 py-2 font-medium">Aktywny</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((user) => (
-                      <tr
-                        key={user.id}
-                        className={`cursor-pointer border-b border-border/60 transition hover:bg-surface-muted ${
-                          selectedId === user.id ? "bg-surface-muted" : ""
-                        }`}
-                        onClick={() => startEdit(user)}
-                      >
-                        <td className="px-2 py-3">
-                          {user.firstName} {user.lastName}
-                        </td>
-                        <td className="px-2 py-3">{user.email}</td>
-                        <td className="px-2 py-3">{user.phone || "—"}</td>
-                        <td className="px-2 py-3">{USER_ROLE_LABELS[user.role]}</td>
-                        <td className="px-2 py-3">{user.isActive ? "Tak" : "Nie"}</td>
+              <>
+                <div className="grid gap-3 md:hidden">
+                  {users.map((user) => (
+                    <MobileListCard
+                      key={user.id}
+                      title={`${user.firstName} ${user.lastName}`.trim() || user.email}
+                      subtitle={user.email}
+                      onClick={() => startEdit(user)}
+                      accent={user.isActive ? "green" : "default"}
+                      badges={
+                        <>
+                          <Badge tone={user.isActive ? "active" : "neutral"}>
+                            {user.isActive ? "Aktywny" : "Nieaktywny"}
+                          </Badge>
+                          <Badge tone="blue">{USER_ROLE_LABELS[user.role]}</Badge>
+                        </>
+                      }
+                    >
+                      <MobileField label="Telefon" value={user.phone || "—"} />
+                      <MobileField label="Rola" value={USER_ROLE_LABELS[user.role]} stack />
+                    </MobileListCard>
+                  ))}
+                  {!users.length ? (
+                    <p className="py-4 text-center text-sm text-muted">Brak użytkowników.</p>
+                  ) : null}
+                </div>
+
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-left text-muted">
+                        <th className="px-2 py-2 font-medium">Imię i nazwisko</th>
+                        <th className="px-2 py-2 font-medium">E-mail</th>
+                        <th className="px-2 py-2 font-medium">Telefon</th>
+                        <th className="px-2 py-2 font-medium">Rola</th>
+                        <th className="px-2 py-2 font-medium">Aktywny</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {users.map((user) => (
+                        <tr
+                          key={user.id}
+                          className={`cursor-pointer border-b border-border/60 transition hover:bg-surface-muted ${
+                            selectedId === user.id ? "bg-surface-muted" : ""
+                          }`}
+                          onClick={() => startEdit(user)}
+                        >
+                          <td className="px-2 py-3">
+                            {user.firstName} {user.lastName}
+                          </td>
+                          <td className="px-2 py-3">{user.email}</td>
+                          <td className="px-2 py-3">{user.phone || "—"}</td>
+                          <td className="px-2 py-3">{USER_ROLE_LABELS[user.role]}</td>
+                          <td className="px-2 py-3">{user.isActive ? "Tak" : "Nie"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={cn(mobileView === "list" && "hidden lg:block")}>
           <CardContent className="grid gap-4 py-6">
+            <div className="flex items-center gap-3 lg:hidden">
+              <Button type="button" variant="ghost" size="sm" onClick={closeMobileDetail}>
+                <ArrowLeft className="mr-1.5 h-4 w-4" />
+                Lista
+              </Button>
+            </div>
             <h2 className="text-lg font-semibold">
               {isEditing ? "Edycja użytkownika" : "Nowy użytkownik"}
             </h2>
@@ -588,12 +638,12 @@ export function UserAdminPanel() {
 
         {isEditing && selectedUser ? (
           <>
-            <Card className="xl:col-span-2">
+            <Card className={cn("lg:col-span-2", mobileView === "list" && "hidden lg:block")}>
               <CardContent className="py-6">
                 <UserResourceProfileEditor userId={selectedUser.id} />
               </CardContent>
             </Card>
-            <Card className="xl:col-span-2">
+            <Card className={cn("lg:col-span-2", mobileView === "list" && "hidden lg:block")}>
               <CardContent className="py-6">
                 <UserProjectAccessEditor user={selectedUser} />
               </CardContent>
