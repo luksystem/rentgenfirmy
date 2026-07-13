@@ -247,8 +247,8 @@ export function ResourcePlanSidePanel({
       materialBudget: current.materialBudget ?? selectedStage.defaultMaterialBudget ?? current.materialBudget,
       riskItemId: current.riskItemId ?? selectedStage.defaultRiskItemId ?? current.riskItemId,
       requiredCompetencies:
-        current.requiredCompetencies.length > 0
-          ? current.requiredCompetencies
+        (current.requiredCompetencies ?? []).length > 0
+          ? current.requiredCompetencies ?? []
           : (selectedStage.requiredCompetencies ?? []).map((requirement) => ({
               competencyItemId: requirement.competencyItemId,
               minLevelItemId: requirement.minLevelItemId,

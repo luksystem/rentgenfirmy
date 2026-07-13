@@ -120,6 +120,6 @@ export function resourcePlanItemToInput(item: ResourcePlanItem): ResourcePlanIte
     linkedGroupId: item.linkedGroupId,
     shiftWithLinkedGroup: item.shiftWithLinkedGroup,
     participants: item.participants,
-    requiredCompetencies: item.requiredCompetencies,
+    requiredCompetencies: item.requiredCompetencies ?? [],
   };
 }

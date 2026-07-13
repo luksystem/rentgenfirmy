@@ -11,6 +11,10 @@ import {
 
 const loadPromises = new Map<string, Promise<TaskChecklistItem[]>>();
 
+/** Stała referencja — `itemsFor(null)` / brak wpisu w cache nie może zwracać `[]` inline,
+ *  bo Zustand selektor wołany w każdym renderze dałby nową tablicę → React error #185. */
+const EMPTY_TASK_CHECKLIST_ITEMS: TaskChecklistItem[] = [];
+
 export function taskChecklistParentKey(parent: TaskChecklistParent) {
   return `${parent.kind}:${parent.id}`;
 }
@@ -40,9 +44,9 @@ export const useTaskChecklistStore = create<TaskChecklistStore>((set, get) => ({
 
   itemsFor: (parent) => {
     if (!parent) {
-      return [];
+      return EMPTY_TASK_CHECKLIST_ITEMS;
     }
-    return get().itemsByKey[taskChecklistParentKey(parent)] ?? [];
+    return get().itemsByKey[taskChecklistParentKey(parent)] ?? EMPTY_TASK_CHECKLIST_ITEMS;
   },
 
   isLoadingFor: (parent) => {
