@@ -56,11 +56,59 @@ export function resolveEffectiveProcessItemStatus(row: ProcessItemSyncRow): Proj
   return deriveProcessItemStatus(kind, payload, rawStatus);
 }
 
-function resolveProcessItemTitle(
-  row: ProcessItemSyncRow,
+export function resolveProcessItemTitle(
+  templateItemId: string,
   titleByTemplate: Map<string, string>,
+  kind?: string,
 ) {
-  return titleByTemplate.get(row.template_item_id) ?? `Element procesu (${row.kind})`;
+  const title = titleByTemplate.get(templateItemId)?.trim();
+  if (title) {
+    return title;
+  }
+  return kind ? `Element procesu (${kind})` : "Element procesu";
+}
+
+async function fetchProcessItemTitleMap(admin: AdminClient, templateIds: string[]) {
+  if (!templateIds.length) {
+    return new Map<string, string>();
+  }
+
+  const { data: items, error } = await admin
+    .from("process_items")
+    .select("id, title, element_id")
+    .in("id", templateIds);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const elementIds = [
+    ...new Set(
+      (items ?? [])
+        .map((row) => row.element_id as string | null)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ];
+
+  const { data: elements, error: elementsError } = elementIds.length
+    ? await admin.from("process_elements").select("id, title").in("id", elementIds)
+    : { data: [], error: null };
+  if (elementsError) {
+    throw new Error(elementsError.message);
+  }
+
+  const elementTitleById = new Map(
+    (elements ?? []).map((row) => [row.id as string, row.title as string]),
+  );
+
+  return new Map(
+    (items ?? []).map((row) => {
+      const elementTitle = row.element_id
+        ? elementTitleById.get(row.element_id as string)
+        : undefined;
+      const title = (elementTitle ?? (row.title as string | undefined))?.trim();
+      return [row.id as string, title ?? ""];
+    }),
+  );
 }
 
 async function updateProjectProcessCompletionServer(
@@ -216,20 +264,15 @@ export async function syncWorkItemsFromProcessItemServer(admin: AdminClient, pro
     return;
   }
 
-  const [{ data: template }, { data: project }] = await Promise.all([
-    admin.from("process_items").select("id, title").eq("id", typedRow.template_item_id).maybeSingle(),
+  const [{ data: project }, titleByTemplate] = await Promise.all([
     admin.from("projects").select("id, client_id").eq("id", typedRow.project_id).maybeSingle(),
+    fetchProcessItemTitleMap(admin, [typedRow.template_item_id]),
   ]);
-
-  const titleByTemplate = new Map<string, string>();
-  if (template?.id) {
-    titleByTemplate.set(template.id as string, template.title as string);
-  }
 
   const effectiveStatus = resolveEffectiveProcessItemStatus(typedRow);
   const workStatus = mapProcessItemStatus(effectiveStatus);
   const mirror: WorkItemMirrorFields = {
-    title: resolveProcessItemTitle(typedRow, titleByTemplate),
+    title: resolveProcessItemTitle(typedRow.template_item_id, titleByTemplate, typedRow.kind),
     description: "",
     projectId: typedRow.project_id,
     clientId: (project?.client_id as string | null) ?? null,
@@ -270,16 +313,12 @@ export async function syncProcessItemsToWorkItemsServer(
   const templateIds = [...new Set(rows.map((row) => row.template_item_id))];
   const projectIds = [...new Set(rows.map((row) => row.project_id))];
 
-  const [{ data: templates }, { data: projects }] = await Promise.all([
-    templateIds.length
-      ? admin.from("process_items").select("id, title").in("id", templateIds)
-      : Promise.resolve({ data: [] }),
+  const [{ data: projects }, titleByTemplate] = await Promise.all([
     projectIds.length
       ? admin.from("projects").select("id, client_id").in("id", projectIds)
       : Promise.resolve({ data: [] }),
+    fetchProcessItemTitleMap(admin, templateIds),
   ]);
-
-  const titleByTemplate = new Map((templates ?? []).map((row) => [row.id as string, row.title as string]));
   const clientByProject = new Map((projects ?? []).map((row) => [row.id as string, row.client_id as string | null]));
 
   await Promise.all(
@@ -290,7 +329,7 @@ export async function syncProcessItemsToWorkItemsServer(
     const effectiveStatus = resolveEffectiveProcessItemStatus(row);
     const workStatus = mapProcessItemStatus(effectiveStatus);
     const mirror: WorkItemMirrorFields = {
-      title: resolveProcessItemTitle(row, titleByTemplate),
+      title: resolveProcessItemTitle(row.template_item_id, titleByTemplate, row.kind),
       description: "",
       projectId: row.project_id,
       clientId: clientByProject.get(row.project_id) ?? null,

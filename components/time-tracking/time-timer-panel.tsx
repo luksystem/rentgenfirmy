@@ -52,8 +52,8 @@ export function TimeTimerPanel() {
     description: "",
   });
 
-  const categories = meta?.categories ?? [];
-  const entryTypes = meta?.entryTypes ?? [];
+  const categories = useMemo(() => meta?.categories ?? [], [meta?.categories]);
+  const entryTypes = useMemo(() => meta?.entryTypes ?? [], [meta?.entryTypes]);
   const workType = useMemo(
     () => entryTypes.find((item) => item.name === "Praca") ?? entryTypes[0],
     [entryTypes],

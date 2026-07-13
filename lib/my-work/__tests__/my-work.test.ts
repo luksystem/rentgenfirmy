@@ -25,7 +25,7 @@ import {
   mapWorkItemStatusToProcessItemStatus,
   shouldMarkProcessItemCompleted,
 } from "@/lib/my-work/source-adapters/process-status-sync";
-import { resolveEffectiveProcessItemStatus } from "@/lib/supabase/process-work-item-sync-server";
+import { resolveEffectiveProcessItemStatus, resolveProcessItemTitle } from "@/lib/supabase/process-work-item-sync-server";
 import { normalizeChecklistPayload } from "@/lib/process/item-payload";
 import type { WorkItemView } from "@/lib/my-work/types";
 
@@ -353,5 +353,13 @@ describe("process ↔ work item sync", () => {
     expect(mapWorkItemStatusToProcessItemStatus("verified")).toBe("completed");
     expect(mapWorkItemStatusToProcessItemStatus("in_progress")).toBe("in_progress");
     expect(shouldMarkProcessItemCompleted("pending_verification")).toBe(true);
+  });
+
+  it("uses process element title for work item mirror", () => {
+    const titleByTemplate = new Map([["t1", "Lista materiałów"]]);
+    expect(resolveProcessItemTitle("t1", titleByTemplate, "checklist")).toBe("Lista materiałów");
+    expect(resolveProcessItemTitle("missing", titleByTemplate, "checklist")).toBe(
+      "Element procesu (checklist)",
+    );
   });
 });

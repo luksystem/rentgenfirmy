@@ -37,7 +37,7 @@ export function TradeCatalogSettings() {
     } catch {
       setCompanyPool([]);
     }
-  }, [fieldOptions.tradeCompanies]);
+  }, []);
 
   useEffect(() => {
     setCategories(fieldOptions.tradeCatalogItems);

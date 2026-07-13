@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -497,93 +497,99 @@ export function ServiceIntakeWizard() {
     }
   }
 
-  async function fetchAiEstimate(options?: { clarifications?: string; isRecalculate?: boolean }) {
-    if (!verification || description.trim().length < 10) {
-      return;
-    }
-    if (isGuestMode) {
-      if (!guestAddressComplete) {
+  const fetchAiEstimate = useCallback(
+    async (options?: { clarifications?: string; isRecalculate?: boolean }) => {
+      if (!verification || description.trim().length < 10) {
         return;
       }
-    } else if (!selectedProjectId) {
-      return;
-    }
-
-    const clarifications = options?.clarifications ?? estimateClarifications;
-
-    if (options?.isRecalculate) {
-      setRecalculatingEstimate(true);
-    } else {
-      setEstimateLoading(true);
-    }
-    setEstimateError(null);
-
-    try {
-      const response = await fetch("/api/zgloszenie/estimate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          verificationToken: verification.verificationToken,
-          projectId: isGuestMode ? undefined : selectedProjectId,
-          description,
-          requestType,
-          priority: isServiceRequest ? priority : null,
-          postWarrantyAction: requiresActionStep ? postWarrantyAction : null,
-          contactAddress: isGuestMode ? guestContactAddress : undefined,
-          contactPhone: isGuestMode ? contactPhone : undefined,
-          isNewContact: isGuestMode,
-          estimateClarifications: clarifications.trim() || undefined,
-        }),
-      });
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Nie udało się oszacować kosztów.");
+      if (isGuestMode) {
+        if (!guestAddressComplete) {
+          return;
+        }
+      } else if (!selectedProjectId) {
+        return;
       }
 
-      const estimate = payload.estimate as IntakeAiEstimatePublic;
-      setAiEstimate(estimate);
-      setAiEstimateSnapshot(payload.snapshot as ServiceIntakeAiEstimateSnapshot);
+      const clarifications = options?.clarifications ?? estimateClarifications;
 
-      const suggested: ServiceIntakeWorkPreference =
-        postWarrantyAction === "on_site"
-          ? "on_site"
-          : postWarrantyAction === "remote"
-            ? "remote"
-            : estimate.suggestedWorkMode === "remote"
+      if (options?.isRecalculate) {
+        setRecalculatingEstimate(true);
+      } else {
+        setEstimateLoading(true);
+      }
+      setEstimateError(null);
+
+      try {
+        const response = await fetch("/api/zgloszenie/estimate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            verificationToken: verification.verificationToken,
+            projectId: isGuestMode ? undefined : selectedProjectId,
+            description,
+            requestType,
+            priority: isServiceRequest ? priority : null,
+            postWarrantyAction: requiresActionStep ? postWarrantyAction : null,
+            contactAddress: isGuestMode ? guestContactAddress : undefined,
+            contactPhone: isGuestMode ? contactPhone : undefined,
+            isNewContact: isGuestMode,
+            estimateClarifications: clarifications.trim() || undefined,
+          }),
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.error ?? "Nie udało się oszacować kosztów.");
+        }
+
+        const estimate = payload.estimate as IntakeAiEstimatePublic;
+        setAiEstimate(estimate);
+        setAiEstimateSnapshot(payload.snapshot as ServiceIntakeAiEstimateSnapshot);
+
+        const suggested: ServiceIntakeWorkPreference =
+          postWarrantyAction === "on_site"
+            ? "on_site"
+            : postWarrantyAction === "remote"
               ? "remote"
-              : estimate.suggestedWorkMode === "on_site"
-                ? "on_site"
-                : "either";
-      setWorkPreference((current) => current ?? suggested);
-      setPreliminaryAccepted(false);
-    } catch (estimateErr) {
-      setEstimateError(
-        estimateErr instanceof Error ? estimateErr.message : "Nie udało się oszacować kosztów.",
-      );
-      setAiEstimate(null);
-      setAiEstimateSnapshot(null);
-    } finally {
-      setEstimateLoading(false);
-      setRecalculatingEstimate(false);
-    }
-  }
+              : estimate.suggestedWorkMode === "remote"
+                ? "remote"
+                : estimate.suggestedWorkMode === "on_site"
+                  ? "on_site"
+                  : "either";
+        setWorkPreference((current) => current ?? suggested);
+        setPreliminaryAccepted(false);
+      } catch (estimateErr) {
+        setEstimateError(
+          estimateErr instanceof Error ? estimateErr.message : "Nie udało się oszacować kosztów.",
+        );
+        setAiEstimate(null);
+        setAiEstimateSnapshot(null);
+      } finally {
+        setEstimateLoading(false);
+        setRecalculatingEstimate(false);
+      }
+    },
+    [
+      contactPhone,
+      description,
+      estimateClarifications,
+      guestAddressComplete,
+      guestContactAddress,
+      isGuestMode,
+      isServiceRequest,
+      postWarrantyAction,
+      priority,
+      requestType,
+      requiresActionStep,
+      selectedProjectId,
+      verification,
+    ],
+  );
 
   useEffect(() => {
     if (step === "estimate") {
       void fetchAiEstimate();
     }
-  }, [
-    step,
-    priority,
-    requestType,
-    postWarrantyAction,
-    isServiceRequest,
-    isGuestMode,
-    guestAddressStreet,
-    guestAddressCity,
-    guestAddressPostalCode,
-    contactPhone,
-  ]);
+  }, [fetchAiEstimate, step]);
 
   async function handleStart() {
     setLoading(true);

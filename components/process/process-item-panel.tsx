@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { CheckCircle2, FileCheck2, Lock, LayoutGrid, Receipt, ShieldCheck, StickyNote } from "lucide-react";
 import { ProcessChecklistBoard } from "@/components/process/process-checklist-board";
 import { ProcessInternalAcceptanceBoard } from "@/components/process/process-internal-acceptance-board";
@@ -106,7 +106,10 @@ export function ProcessItemPanel({
   });
 
   const resolvedInstance = item ? instance ?? storeInstance : undefined;
-  const checklistPayload = resolvedInstance?.payload ?? { sections: [] };
+  const checklistPayload = useMemo(
+    () => resolvedInstance?.payload ?? { sections: [] },
+    [resolvedInstance?.payload],
+  );
   const structurePayload = normalizeChecklistPayload(structureDraft ?? checklistPayload);
 
   const handleSaveStructure = useCallback(async () => {

@@ -36,15 +36,14 @@ type ClientsViewMode = "list" | "map";
 export function ClientsView() {
   const allClients = useAppStore((state) => state.clients);
   const projects = useAppStore((state) => state.projects);
-  const fieldOptions = useAppStore((state) => state.fieldOptions);
   const [view, setView] = useState<ClientsViewMode>("list");
   const [mapMounted, setMapMounted] = useState(false);
   const [filters, setFilters] = useState<ClientListFilters>(EMPTY_CLIENT_LIST_FILTERS);
 
   const filteredClients = useMemo(() => {
     const filtered = filterClients(allClients, filters, projects);
-    return sortClientsByActivity(filtered, projects, fieldOptions);
-  }, [allClients, fieldOptions, filters, projects]);
+    return sortClientsByActivity(filtered, projects);
+  }, [allClients, filters, projects]);
 
   const activeFilterCount = countActiveClientListFilters(filters);
 

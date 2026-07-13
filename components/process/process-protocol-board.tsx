@@ -199,7 +199,7 @@ export function ProcessProtocolBoard({
       setFieldValues(protocol.fieldValues);
       setNotes(protocol.notes);
     }
-  }, [protocol?.id, protocol?.updatedAt]);
+  }, [protocol]);
 
   const template = protocolTemplates.find((entry) => entry.id === protocol?.protocolTemplateId) ?? null;
 
@@ -209,7 +209,7 @@ export function ProcessProtocolBoard({
     } else {
       setReferencePdfUrl(null);
     }
-  }, [template?.id, template?.referencePdfPath]);
+  }, [template?.id, template?.referencePdfPath, template?.source]);
 
   const annotationPathsKey = useMemo(
     () => (protocol?.annotations ?? []).map((entry) => `${entry.page}:${entry.imagePath}`).join("|"),
