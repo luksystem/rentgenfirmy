@@ -91,16 +91,9 @@ export function getClientActivityTier(
 export function sortClientsByActivity(
   clients: Client[],
   projects: Project[],
-  fieldOptions: FieldOptions,
+  _fieldOptions: FieldOptions,
 ) {
   return [...clients].sort((left, right) => {
-    const tierDiff =
-      getClientActivityTier(right, projects, fieldOptions) -
-      getClientActivityTier(left, projects, fieldOptions);
-    if (tierDiff !== 0) {
-      return tierDiff;
-    }
-
     const timeDiff = getClientLastActivityAt(right, projects) - getClientLastActivityAt(left, projects);
     if (timeDiff !== 0) {
       return timeDiff;

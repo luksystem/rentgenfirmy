@@ -122,6 +122,8 @@ export function ClientsView() {
           <span className="font-medium text-foreground">{filteredClients.length}</span>
           {" · "}
           {allClients.length} w bazie
+          {" · "}
+          sortowanie: ostatnia zmiana klienta lub projektu
         </p>
       </div>
 
