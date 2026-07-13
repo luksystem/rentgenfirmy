@@ -37,6 +37,8 @@ function fromLocalInputValue(value: string) {
   return new Date(value).toISOString();
 }
 
+const projectStagesCache = new Map<string, ProcessStage[]>();
+
 function defaultInput(defaultStartIso?: string): ResourcePlanItemInput {
   const start = defaultStartIso ? new Date(defaultStartIso) : new Date();
   start.setMinutes(0, 0, 0);
@@ -193,6 +195,13 @@ export function ResourcePlanSidePanel({
     const project = projects.find((p) => p.id === input.projectId);
     if (!project) return;
 
+    const cachedStages = projectStagesCache.get(input.projectId);
+    if (cachedStages) {
+      setStageOptions(cachedStages);
+      setStage(cachedStages.find((entry) => entry.id === input.processStageId) ?? null);
+      return;
+    }
+
     let cancelled = false;
     setLoadingStages(true);
     (async () => {
@@ -206,6 +215,7 @@ export function ResourcePlanSidePanel({
             : process;
         if (cancelled) return;
         const stages = anchored.templateSnapshot?.stages ?? liveTemplate?.stages ?? [];
+        projectStagesCache.set(input.projectId, stages);
         setStageOptions(stages);
         const matched = stages.find((s) => s.id === input.processStageId) ?? null;
         setStage(matched);

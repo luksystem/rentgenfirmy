@@ -146,7 +146,7 @@ type MyWorkStore = {
   updateWeekPlanById: (planId: string, input: UpdateWeekPlanInput) => Promise<WorkPlanView>;
   reportObstacle: (input: ReportObstacleInput) => Promise<void>;
   requestTakeover: (id: string, comment?: string) => Promise<void>;
-  ensureDashboardMetrics: (options?: { force?: boolean }) => Promise<WorkDashboardMetrics>;
+  ensureDashboardMetrics: (options?: { force?: boolean; showLoading?: boolean }) => Promise<WorkDashboardMetrics>;
 };
 
 export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
@@ -294,7 +294,12 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
       set({ selectedItemId: null, selectedDetail: null });
       return null;
     }
-    set({ selectedItemId: id, detailLoading: true });
+    if (get().selectedDetail?.item.id === id) {
+      set({ selectedItemId: id });
+      return get().selectedDetail;
+    }
+    const showDetailLoading = !get().selectedDetail;
+    set({ selectedItemId: id, detailLoading: showDetailLoading });
     try {
       const detail = await fetchWorkItemDetail(id);
       set({ selectedDetail: detail, detailLoading: false });
@@ -568,7 +573,11 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
       return dashboardPromise;
     }
 
-    set({ dashboardLoading: true, error: null });
+    const showLoading = options?.showLoading ?? !dashboardHydrated;
+    if (showLoading) {
+      set({ dashboardLoading: true, error: null });
+    }
+
     dashboardPromise = fetchMyWorkDashboardMetrics()
       .then((metrics) => {
         set({

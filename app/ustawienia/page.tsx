@@ -19,11 +19,13 @@ import {
 } from "@/lib/field-options";
 import { PROJECT_RULES } from "@/lib/project-rules";
 import { useAppStore } from "@/store/app-store";
+import { useAuthStore } from "@/store/auth-store";
 
 export default function SettingsPage() {
   const fieldOptions = useAppStore((state) => state.fieldOptions);
   const updateFieldOptions = useAppStore((state) => state.updateFieldOptions);
   const isSaving = useAppStore((state) => state.isSaving);
+  const isAdministrator = useAuthStore((state) => state.isAdministrator);
   const [draft, setDraft] = useState<FieldOptions>(fieldOptions);
   const [saved, setSaved] = useState(false);
 
@@ -206,6 +208,23 @@ export default function SettingsPage() {
           </Button>
         </CardContent>
       </Card>
+
+      {isAdministrator ? (
+        <Card className="mb-6 border border-border/80">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+            <div>
+              <p className="font-medium text-foreground">Uprawnienia ról</p>
+              <p className="mt-1 text-sm text-muted">
+                Macierz dostępu do menu i akcji (podgląd, tworzenie, edycja…) dla wszystkich ról:
+                administrator, manager, pracownik, podwykonawca, klient, gość.
+              </p>
+            </div>
+            <Button variant="secondary" asChild>
+              <Link href="/ustawienia/uprawnienia">Otwórz manager uprawnień</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card className="mb-6 border border-border bg-surface-muted">
         <CardContent className="grid gap-3 py-4 text-sm text-muted">

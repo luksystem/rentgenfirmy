@@ -69,6 +69,8 @@ export function ResourcePlanCalendar() {
 
   const ensureRange = useResourcePlanStore((state) => state.ensureRange);
   const loading = useResourcePlanStore((state) => state.loading);
+  const hydrated = useResourcePlanStore((state) => state.hydrated);
+  const showInitialLoading = loading && !hydrated;
   const items = useResourcePlanStore((state) => state.allItems());
 
   const projects = useAppStore((state) => state.projects);
@@ -172,7 +174,7 @@ export function ResourcePlanCalendar() {
         </div>
       </div>
 
-      {loading && items.length === 0 ? (
+      {showInitialLoading ? (
         <p className="text-sm text-muted">Ładowanie planu…</p>
       ) : (
         <div className="grid grid-cols-7 gap-1.5 sm:gap-2">

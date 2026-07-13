@@ -56,6 +56,8 @@ export function ResourcePlanList() {
   const ensureRange = useResourcePlanStore((state) => state.ensureRange);
   const updateItem = useResourcePlanStore((state) => state.updateItem);
   const loading = useResourcePlanStore((state) => state.loading);
+  const hydrated = useResourcePlanStore((state) => state.hydrated);
+  const showInitialLoading = loading && !hydrated;
   const items = useResourcePlanStore((state) => state.allItems());
 
   const projects = useAppStore((state) => state.projects);
@@ -217,7 +219,7 @@ export function ResourcePlanList() {
         </div>
       </div>
 
-      {loading && visibleItems.length === 0 ? (
+      {showInitialLoading ? (
         <p className="text-sm text-muted">Ładowanie planu…</p>
       ) : visibleItems.length === 0 ? (
         <Card>

@@ -39,8 +39,13 @@ function memoizedAllItems(items: Record<string, ResourcePlanItem>): ResourcePlan
 type ResourcePlanStore = {
   items: Record<string, ResourcePlanItem>;
   loadedRanges: string[];
+  hydrated: boolean;
   loading: boolean;
-  ensureRange: (from: string, to: string, options?: { force?: boolean }) => Promise<ResourcePlanItem[]>;
+  ensureRange: (
+    from: string,
+    to: string,
+    options?: { force?: boolean; showLoading?: boolean },
+  ) => Promise<ResourcePlanItem[]>;
   createItem: (input: ResourcePlanItemInput) => Promise<ResourcePlanItem>;
   updateItem: (id: string, input: ResourcePlanItemInput) => Promise<ResourcePlanItem>;
   removeItem: (id: string) => Promise<void>;
@@ -58,11 +63,15 @@ type ResourcePlanStore = {
 export const useResourcePlanStore = create<ResourcePlanStore>((set, get) => ({
   items: {},
   loadedRanges: [],
+  hydrated: false,
   loading: false,
 
   ensureRange: async (from, to, options) => {
     const force = options?.force ?? false;
     const key = rangeKey(from, to);
+    const hydrated = get().hydrated;
+    const showLoading = options?.showLoading ?? !hydrated;
+
     if (get().loadedRanges.includes(key) && !force) {
       return get().allItems();
     }
@@ -73,7 +82,10 @@ export const useResourcePlanStore = create<ResourcePlanStore>((set, get) => ({
       return get().allItems();
     }
 
-    set({ loading: true });
+    if (showLoading) {
+      set({ loading: true });
+    }
+
     const promise = fetchResourcePlanItemsInRange(from, to)
       .then((fetched) => {
         const nextItems = { ...get().items };
@@ -82,9 +94,16 @@ export const useResourcePlanStore = create<ResourcePlanStore>((set, get) => ({
         });
         set({
           items: nextItems,
-          loadedRanges: [...get().loadedRanges, key],
+          loadedRanges: get().loadedRanges.includes(key)
+            ? get().loadedRanges
+            : [...get().loadedRanges, key],
+          hydrated: true,
           loading: false,
         });
+      })
+      .catch((error) => {
+        set({ loading: false });
+        throw error;
       })
       .finally(() => {
         loadPromises.delete(key);

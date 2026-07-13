@@ -1,17 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { TaskChecklistItem, TaskChecklistParent } from "@/lib/task-checklist/types";
 import {
-  createTaskChecklistItem,
-  deleteTaskChecklistItem,
-  fetchTaskChecklistItems,
-  updateTaskChecklistItem,
-} from "@/lib/supabase/task-checklist-repository";
+  createTaskChecklistItemCached,
+  deleteTaskChecklistItemCached,
+  taskChecklistParentKey,
+  updateTaskChecklistItemCached,
+  useTaskChecklistStore,
+} from "@/store/task-checklist-store";
 
 export function TaskChecklistPanel({
   parent,
@@ -22,41 +23,29 @@ export function TaskChecklistPanel({
   disabled?: boolean;
   className?: string;
 }) {
-  const [items, setItems] = useState<TaskChecklistItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const ensureItems = useTaskChecklistStore((state) => state.ensureItems);
+  const items = useTaskChecklistStore((state) => state.itemsFor(parent));
+  const loading = useTaskChecklistStore((state) => state.isLoadingFor(parent));
+
   const [newTitle, setNewTitle] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadItems = useCallback(async () => {
+  useEffect(() => {
     if (!parent) {
-      setItems([]);
       return;
     }
-    setLoading(true);
-    setError(null);
-    try {
-      const next = await fetchTaskChecklistItems(parent);
-      setItems(next);
-    } catch (loadError) {
+    void ensureItems(parent).catch((loadError) => {
       setError(loadError instanceof Error ? loadError.message : "Nie udało się wczytać podzadań.");
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [parent]);
-
-  useEffect(() => {
-    void loadItems();
-  }, [loadItems]);
+    });
+  }, [ensureItems, parent]);
 
   async function handleAdd() {
     if (!parent || !newTitle.trim() || disabled) return;
     setSubmitting(true);
     setError(null);
     try {
-      const item = await createTaskChecklistItem({ parent, title: newTitle.trim() });
-      setItems((current) => [...current, item]);
+      await createTaskChecklistItemCached(parent, newTitle.trim());
       setNewTitle("");
     } catch (addError) {
       setError(addError instanceof Error ? addError.message : "Nie udało się dodać podzadania.");
@@ -66,36 +55,30 @@ export function TaskChecklistPanel({
   }
 
   async function handleToggle(item: TaskChecklistItem) {
-    if (disabled) return;
+    if (!parent || disabled) return;
     setError(null);
     const nextCompleted = !item.isCompleted;
-    setItems((current) =>
-      current.map((entry) =>
-        entry.id === item.id ? { ...entry, isCompleted: nextCompleted } : entry,
-      ),
-    );
+    useTaskChecklistStore.getState().replaceItem(parent, { ...item, isCompleted: nextCompleted });
     try {
-      const updated = await updateTaskChecklistItem(item.id, { isCompleted: nextCompleted });
-      setItems((current) => current.map((entry) => (entry.id === item.id ? updated : entry)));
+      await updateTaskChecklistItemCached(parent, item.id, { isCompleted: nextCompleted });
     } catch (toggleError) {
-      setItems((current) =>
-        current.map((entry) =>
-          entry.id === item.id ? { ...entry, isCompleted: item.isCompleted } : entry,
-        ),
-      );
+      useTaskChecklistStore.getState().replaceItem(parent, item);
       setError(toggleError instanceof Error ? toggleError.message : "Nie udało się zaktualizować podzadania.");
     }
   }
 
   async function handleDelete(item: TaskChecklistItem) {
-    if (disabled) return;
+    if (!parent || disabled) return;
     setError(null);
-    const previous = items;
-    setItems((current) => current.filter((entry) => entry.id !== item.id));
+    const key = taskChecklistParentKey(parent);
+    const previous = useTaskChecklistStore.getState().itemsFor(parent);
+    useTaskChecklistStore.getState().removeItem(parent, item.id);
     try {
-      await deleteTaskChecklistItem(item.id);
+      await deleteTaskChecklistItemCached(parent, item.id);
     } catch (deleteError) {
-      setItems(previous);
+      useTaskChecklistStore.setState((state) => ({
+        itemsByKey: { ...state.itemsByKey, [key]: previous },
+      }));
       setError(deleteError instanceof Error ? deleteError.message : "Nie udało się usunąć podzadania.");
     }
   }

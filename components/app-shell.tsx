@@ -44,6 +44,8 @@ import { cn } from "@/lib/utils";
 import { isPublicAppRoute } from "@/lib/auth/routes";
 import { useKanbanNewTasksRealtime, useKanbanOverdueTasksRealtime } from "@/hooks/use-kanban-realtime";
 import { COMMERCIAL_MODULES } from "@/lib/modules/commercial-modules";
+import { NAV_MODULE_GROUPS, type NavModuleKey } from "@/lib/navigation/nav-modules";
+import { canAccessNavModule } from "@/lib/navigation/role-nav-permissions";
 import { NavBadges } from "@/components/nav-badges";
 import { NotificationBell } from "@/components/notification-bell";
 import { NotificationsRealtimeSubscriber } from "@/components/notifications-realtime-subscriber";
@@ -52,8 +54,10 @@ import { useAuthStore } from "@/store/auth-store";
 import { useLeaveStore } from "@/store/leave-store";
 import { useNavFavoritesStore } from "@/store/nav-favorites-store";
 import { useProcessStore } from "@/store/process-store";
+import { useRoleNavPermissionsStore } from "@/store/role-nav-permissions-store";
 
 type NavItem = {
+  key?: NavModuleKey;
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -67,114 +71,64 @@ type NavGroup = {
   items: NavItem[];
 };
 
-const navGroupsBase: NavGroup[] = [
-  {
-    label: "Główne",
-    items: [{ href: "/", label: "Start", icon: Home }],
-  },
-  {
-    label: "Moja praca",
-    items: [
-      { href: "/moja-praca/zadania", label: "Zadania", icon: ListTodo },
-      { href: "/moja-praca/pulpit", label: "Pulpit", icon: LayoutDashboard },
-      { href: "/moja-praca/czas-pracy", label: "Czas pracy", icon: Timer },
-      { href: "/moja-praca/dostepnosc", label: "Dostępność", icon: PalmtreeIcon },
-    ],
-  },
-  {
-    label: "Sprzedaż",
-    items: [
-      { href: "/kontakty", label: "Kontakty", icon: Contact },
-      {
-        href: COMMERCIAL_MODULES.serviceSettlement.href,
-        label: "Szybkie Oferty",
-        icon: COMMERCIAL_MODULES.serviceSettlement.icon,
-        activeExcludePrefixes: ["/oferty/zgloszenia"],
-      },
-      {
-        href: COMMERCIAL_MODULES.salesCalculations.href,
-        label: COMMERCIAL_MODULES.salesCalculations.label,
-        icon: COMMERCIAL_MODULES.salesCalculations.icon,
-      },
-      { href: "/faktury", label: "Faktury", icon: Receipt },
-    ],
-  },
-  {
-    label: "Projekty",
-    items: [
-      { href: "/klienci", label: "Klienci", icon: Users },
-      { href: "/procesy", label: "Procesy", icon: GitBranch },
-      { href: "/plan-zasobow", label: "Plan Zasobów", icon: CalendarRange },
-      { href: "/projekty", label: "Projekty", icon: FolderKanban },
-      { href: "/audyt", label: "SRI Audyt", icon: Activity },
-      { href: "/zlecenia", label: "Zlecenia", icon: ClipboardList },
-      { href: "/dokumenty", label: "Dokumenty", icon: FileUp },
-      { href: "/branze", label: "Katalog Branż", icon: HardHat },
-    ],
-  },
-  {
-    label: "Serwisy",
-    items: [
-      { href: "/przeglady", label: "Przeglądy", icon: ClipboardCheck },
-      { href: "/oferty/zgloszenia", label: "Zgłoszenia", icon: Inbox },
-      { href: "/baza-wiedzy", label: "Baza wiedzy", icon: BookOpen },
-      { href: "/oferty/ustawienia", label: "Stawki serwisu", icon: Settings },
-      {
-        href: "/zgloszenie",
-        label: "Formularz klienta",
-        icon: ExternalLink,
-        external: true,
-      },
-    ],
-  },
-  {
-    label: "Przestrzenie",
-    items: [
-      { href: "/przestrzenie", label: "Przestrzenie", icon: LayoutDashboard },
-      { href: "/tablice-wdrozen", label: "Tablice wdrożeń", icon: LayoutGrid },
-      { href: "/tablice-celow", label: "Tablice celów", icon: Target },
-      { href: "/przerwania", label: "Przerwania", icon: PhoneCall },
-      { href: "/pracownicy", label: "Pracownicy", icon: Users2 },
-    ],
-  },
-  {
-    label: "Raporty",
-    items: [{ href: "/raport", label: "Raport", icon: BarChart3 }],
-  },
-  {
-    label: "Widoki",
-    items: [
-      { href: "/do-zamkniecia", label: "Do zamknięcia", icon: CheckCircle2 },
-      { href: "/bez-kontaktu", label: "Bez kontaktu", icon: Clock3 },
-      { href: "/oczekujace", label: "Oczekujące", icon: PauseCircle },
-    ],
-  },
-  {
-    label: "Ustawienia",
-    items: [
-      { href: "/ustawienia", label: "Ustawienia", icon: Settings },
-      { href: "/konto/haslo", label: "Zmiana hasła", icon: Key },
-    ],
-  },
-];
+const NAV_MODULE_ICONS: Record<NavModuleKey, React.ComponentType<{ className?: string }>> = {
+  start: Home,
+  "my-work-tasks": ListTodo,
+  "my-work-dashboard": LayoutDashboard,
+  "my-work-time": Timer,
+  "my-work-availability": PalmtreeIcon,
+  contacts: Contact,
+  "service-offers": COMMERCIAL_MODULES.serviceSettlement.icon,
+  "sales-calculations": COMMERCIAL_MODULES.salesCalculations.icon,
+  invoices: Receipt,
+  clients: Users,
+  processes: GitBranch,
+  "resource-plan": CalendarRange,
+  projects: FolderKanban,
+  audit: Activity,
+  "work-orders": ClipboardList,
+  documents: FileUp,
+  "trades-catalog": HardHat,
+  inspections: ClipboardCheck,
+  "service-requests": Inbox,
+  "knowledge-base": BookOpen,
+  "service-rates": Settings,
+  "client-form": ExternalLink,
+  spaces: LayoutDashboard,
+  "implementation-boards": LayoutGrid,
+  "goal-boards": Target,
+  interruptions: PhoneCall,
+  employees: Users2,
+  reports: BarChart3,
+  "view-to-close": CheckCircle2,
+  "view-no-contact": Clock3,
+  "view-waiting": PauseCircle,
+  settings: Settings,
+  "change-password": Key,
+};
 
-const glowneNav = navGroupsBase.find((group) => group.label === "Główne")?.items ?? [];
-const projektyNav =
-  navGroupsBase.find((group) => group.label === "Projekty")?.items.find((item) => item.href === "/projekty") ??
-  null;
-const klienciNav =
-  navGroupsBase.find((group) => group.label === "Projekty")?.items.find((item) => item.href === "/klienci") ??
-  null;
-const mobileBottomNav: NavItem[] = [
-  glowneNav.find((item) => item.href === "/") ?? { href: "/", label: "Start", icon: Home },
-  ...(projektyNav ? [projektyNav] : []),
-];
-const mobileNavLeft = mobileBottomNav.slice(0, 2);
-const mobileNavRight = klienciNav ? [klienciNav] : [];
-const mobilePrimaryHrefs = new Set([
-  ...mobileNavLeft.map((item) => item.href),
-  ...mobileNavRight.map((item) => item.href),
-]);
+const navGroupsBase: NavGroup[] = NAV_MODULE_GROUPS.map((group) => ({
+  label: group.label,
+  items: group.modules.map((module) => ({
+    key: module.key,
+    href: module.href,
+    label: module.label,
+    icon: NAV_MODULE_ICONS[module.key],
+    external: module.external,
+    activeExcludePrefixes: module.activeExcludePrefixes,
+  })),
+}));
+
+function buildMobileNavSlots(allNav: NavItem[]) {
+  const byHref = new Map(allNav.map((item) => [item.href, item]));
+  const left = [byHref.get("/"), byHref.get("/projekty")].filter(
+    (item): item is NavItem => item != null,
+  );
+  const clients = byHref.get("/klienci");
+  const right = clients ? [clients] : [];
+  const primaryHrefs = new Set([...left.map((item) => item.href), ...right.map((item) => item.href)]);
+  return { left, right, primaryHrefs };
+}
 
 function isNavItemActive(pathname: string, item: NavItem) {
   if (item.disabled) {
@@ -341,6 +295,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const isAdministrator = useAuthStore((state) => state.isAdministrator);
+  const profileRole = useAuthStore((state) => state.profile?.role);
   const displayName = useAuthStore((state) => state.displayName);
   const signOut = useAuthStore((state) => state.signOut);
   const kanbanNewTaskCount = useProcessStore((state) => state.kanbanNewTaskCount);
@@ -353,6 +308,8 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const navFavoriteHrefs = useNavFavoritesStore((state) => state.hrefs);
   const ensureNavFavorites = useNavFavoritesStore((state) => state.ensure);
   const toggleNavFavorite = useNavFavoritesStore((state) => state.toggle);
+  const navPermissionsConfig = useRoleNavPermissionsStore((state) => state.config);
+  const hydrateNavPermissions = useRoleNavPermissionsStore((state) => state.hydrate);
   const [serviceIntakeNewCount, setServiceIntakeNewCount] = useState(0);
   const [serviceIntakeOverdueCount, setServiceIntakeOverdueCount] = useState(0);
   const [contactsNewCount, setContactsNewCount] = useState(0);
@@ -493,8 +450,9 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (profileId) {
       void ensureNavFavorites();
+      void hydrateNavPermissions();
     }
-  }, [profileId, ensureNavFavorites]);
+  }, [profileId, ensureNavFavorites, hydrateNavPermissions]);
 
   const handleToggleFavorite = useCallback(
     (href: string) => {
@@ -551,7 +509,17 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   }
 
   const baseNavGroups = useMemo(() => {
-    const groups = [...navGroupsBase];
+    const groups = navGroupsBase
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => {
+          if (!profileRole || !item.key) {
+            return true;
+          }
+          return canAccessNavModule(profileRole, item.key, navPermissionsConfig);
+        }),
+      }))
+      .filter((group) => group.items.length > 0);
 
     if (isAdministrator) {
       groups.push({
@@ -561,9 +529,14 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
     }
 
     return groups;
-  }, [isAdministrator]);
+  }, [isAdministrator, profileRole, navPermissionsConfig]);
 
   const allNav = useMemo(() => baseNavGroups.flatMap((group) => group.items), [baseNavGroups]);
+
+  const { left: mobileNavLeft, right: mobileNavRight, primaryHrefs: mobilePrimaryHrefs } = useMemo(
+    () => buildMobileNavSlots(allNav),
+    [allNav],
+  );
 
   const favoriteHrefSet = useMemo(() => new Set(navFavoriteHrefs), [navFavoriteHrefs]);
 
@@ -720,6 +693,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
                 </Link>
               );
             })}
+            {mobileNavLeft.length < 2 ? <div aria-hidden /> : null}
 
             <div className="flex justify-center">
               <button
@@ -739,30 +713,34 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
               </button>
             </div>
 
-            {mobileNavRight.map((item) => {
-              const Icon = item.icon;
-              const active = isNavItemActive(pathname, item);
+            {mobileNavRight.length > 0 ? (
+              mobileNavRight.map((item) => {
+                const Icon = item.icon;
+                const active = isNavItemActive(pathname, item);
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMenuOpen(false)}
-                  className={cn(
-                    "flex flex-col items-center gap-0.5 rounded-2xl px-2 py-2 text-[10px] font-medium transition",
-                    active ? "text-sidebar-accent" : "text-sidebar-muted",
-                  )}
-                >
-                  <Icon className="h-5 w-5" />
-                  {item.label}
-                  {active ? (
-                    <span className="h-1 w-1 rounded-full bg-sidebar-accent" aria-hidden />
-                  ) : (
-                    <span className="h-1 w-1" aria-hidden />
-                  )}
-                </Link>
-              );
-            })}
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMenuOpen(false)}
+                    className={cn(
+                      "flex flex-col items-center gap-0.5 rounded-2xl px-2 py-2 text-[10px] font-medium transition",
+                      active ? "text-sidebar-accent" : "text-sidebar-muted",
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
+                    {item.label}
+                    {active ? (
+                      <span className="h-1 w-1 rounded-full bg-sidebar-accent" aria-hidden />
+                    ) : (
+                      <span className="h-1 w-1" aria-hidden />
+                    )}
+                  </Link>
+                );
+              })
+            ) : (
+              <div aria-hidden />
+            )}
 
             <button
               type="button"

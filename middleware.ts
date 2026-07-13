@@ -1,6 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isAdminRoute, isPublicAppRoute } from "@/lib/auth/routes";
+import {
+  canAccessPathByNavPermissions,
+  isAdminRoute,
+  isPublicAppRoute,
+  shouldCheckNavModuleAccess,
+} from "@/lib/auth/routes";
+import { normalizeRoleNavPermissionsConfig, ROLE_NAV_PERMISSIONS_SETTINGS_ID } from "@/lib/navigation/role-nav-permissions";
 import { updateSession } from "@/lib/supabase/middleware";
+import type { UserRole } from "@/lib/auth/types";
 
 export async function middleware(request: NextRequest) {
   const { supabase, supabaseResponse } = await updateSession(request);
@@ -62,6 +69,23 @@ export async function middleware(request: NextRequest) {
 
   if (pathname.startsWith("/api/admin/") && profile.role !== "administrator") {
     return NextResponse.json({ error: "Brak uprawnień administratora." }, { status: 403 });
+  }
+
+  if (shouldCheckNavModuleAccess(pathname)) {
+    const { data: settingsRow } = await supabase
+      .from("app_settings")
+      .select("data")
+      .eq("id", ROLE_NAV_PERMISSIONS_SETTINGS_ID)
+      .maybeSingle();
+
+    const navConfig = normalizeRoleNavPermissionsConfig(settingsRow?.data);
+    const role = profile.role as UserRole;
+
+    if (!canAccessPathByNavPermissions(pathname, role, navConfig)) {
+      const homeUrl = request.nextUrl.clone();
+      homeUrl.pathname = "/";
+      return NextResponse.redirect(homeUrl);
+    }
   }
 
   return supabaseResponse;

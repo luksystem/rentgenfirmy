@@ -142,7 +142,7 @@ export function MyWorkPage() {
 
   const loadWeekPlanForUser = useCallback(
     async (assignedUserId: string, referenceDate: string) => {
-      await ensureWeekPlan({ force: true, assignedUserId, referenceDate });
+      await ensureWeekPlan({ force: true, assignedUserId, referenceDate, showLoading: false });
     },
     [ensureWeekPlan],
   );

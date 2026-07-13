@@ -27,7 +27,7 @@ export function MyWorkManagerDashboard() {
     return (
       <div className="rounded-xl border border-border p-6 text-sm text-muted">
         Nie udało się wczytać metryk pulpitu.
-        <Button variant="secondary" size="sm" className="ml-3" onClick={() => void ensureDashboard({ force: true })}>
+        <Button variant="secondary" size="sm" className="ml-3" onClick={() => void ensureDashboard({ force: true, showLoading: true })}>
           Spróbuj ponownie
         </Button>
       </div>
