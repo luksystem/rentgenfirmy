@@ -21,6 +21,50 @@ export async function fetchProcessElements() {
   return (data ?? []).map(rowToProcessElement);
 }
 
+export type ProcessElementPlacement = {
+  processItemId: string;
+  itemTitle: string;
+  milestoneTitle: string;
+  stageTitle: string;
+  projectType: string;
+  templateName: string;
+};
+
+export async function fetchProcessElementPlacements(elementId: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("process_items")
+    .select(
+      "id, title, process_milestones(title, process_stages(title, process_templates(project_type, name)))",
+    )
+    .eq("element_id", elementId)
+    .order("title", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row) => {
+    const milestone = row.process_milestones as {
+      title?: string;
+      process_stages?: {
+        title?: string;
+        process_templates?: { project_type?: string; name?: string };
+      };
+    } | null;
+    const stage = milestone?.process_stages;
+    const template = stage?.process_templates;
+    return {
+      processItemId: row.id,
+      itemTitle: row.title,
+      milestoneTitle: milestone?.title ?? "—",
+      stageTitle: stage?.title ?? "—",
+      projectType: template?.project_type ?? "—",
+      templateName: template?.name ?? "—",
+    } satisfies ProcessElementPlacement;
+  });
+}
+
 export async function fetchProcessElementById(id: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase
@@ -100,7 +144,18 @@ export async function deleteProcessElement(id: string) {
   }
 
   if ((count ?? 0) > 0) {
-    throw new Error("Nie można usunąć elementu używanego w szablonie procesu.");
+    const placements = await fetchProcessElementPlacements(id);
+    const summary = placements
+      .map(
+        (placement) =>
+          `${placement.projectType} → ${placement.stageTitle} → ${placement.milestoneTitle}`,
+      )
+      .join("; ");
+    throw new Error(
+      summary
+        ? `Nie można usunąć elementu używanego w szablonie procesu: ${summary}.`
+        : "Nie można usunąć elementu używanego w szablonie procesu.",
+    );
   }
 
   const { error } = await supabase.from("process_elements").delete().eq("id", id);

@@ -7,6 +7,7 @@ import { ProcessElementEditor } from "@/components/process/process-element-edito
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { fetchProcessElementPlacements, type ProcessElementPlacement } from "@/lib/supabase/process-element-repository";
 import { useAppStore } from "@/store/app-store";
 import { useProcessStore } from "@/store/process-store";
 
@@ -20,13 +21,20 @@ export default function ProcessElementPage() {
   const saveElement = useProcessStore((state) => state.saveElement);
   const removeElement = useProcessStore((state) => state.removeElement);
   const [ready, setReady] = useState(false);
+  const [placements, setPlacements] = useState<ProcessElementPlacement[]>([]);
 
   useEffect(() => {
     void (async () => {
       await hydrate(projectTypes);
+      try {
+        const loaded = await fetchProcessElementPlacements(elementId);
+        setPlacements(loaded);
+      } catch {
+        setPlacements([]);
+      }
       setReady(true);
     })();
-  }, [hydrate, projectTypes]);
+  }, [elementId, hydrate, projectTypes]);
 
   const element = elements.find((entry) => entry.id === elementId);
 
@@ -62,6 +70,7 @@ export default function ProcessElementPage() {
       <ProcessElementEditor
         key={element.updatedAt}
         initialElement={element}
+        placements={placements}
         onSave={saveElement}
         onDelete={async () => {
           await removeElement(element.id);

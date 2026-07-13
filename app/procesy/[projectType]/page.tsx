@@ -91,7 +91,7 @@ export default function ProcessTemplatePage() {
       />
 
       <ProcessTemplateEditor
-        key={template.updatedAt}
+        key={`${template.id}-${template.updatedAt}-${template.stages.map((s) => s.id).join(",")}`}
         initialTemplate={template}
         elements={elements}
         onSave={saveTemplate}

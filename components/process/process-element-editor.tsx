@@ -15,6 +15,7 @@ import {
   prepareChecklistPayloadForSave,
   templatePayloadFromTitle,
 } from "@/lib/process/item-payload";
+import type { ProcessElementPlacement } from "@/lib/supabase/process-element-repository";
 import {
   PROCESS_ITEM_KINDS,
   PROCESS_ITEM_KIND_LABELS,
@@ -24,10 +25,12 @@ import {
 
 export function ProcessElementEditor({
   initialElement,
+  placements = [],
   onSave,
   onDelete,
 }: {
   initialElement: ProcessElement;
+  placements?: ProcessElementPlacement[];
   onSave: (element: ProcessElement) => Promise<void>;
   onDelete?: () => Promise<void>;
 }) {
@@ -87,7 +90,38 @@ export function ProcessElementEditor({
   }
 
   return (
-    <Card>
+    <div className="grid gap-4">
+      {placements.length > 0 ? (
+        <Card className="border-amber-500/30">
+          <CardContent className="grid gap-3 py-5">
+            <p className="text-sm font-medium text-foreground">Używany w szablonach procesu</p>
+            <p className="text-sm text-muted">
+              Aby usunąć element z katalogu, najpierw usuń go z poniższych miejsc w edytorze szablonu
+              i zapisz szablon.
+            </p>
+            <ul className="grid gap-2 text-sm">
+              {placements.map((placement) => (
+                <li key={placement.processItemId}>
+                  <Link
+                    href={`/procesy/${encodeURIComponent(placement.projectType)}`}
+                    className="text-accent underline-offset-2 hover:underline"
+                  >
+                    {placement.projectType}
+                  </Link>
+                  {" → "}
+                  <span className="text-foreground">{placement.stageTitle}</span>
+                  {" → "}
+                  <span className="text-muted">{placement.milestoneTitle}</span>
+                  {" · "}
+                  <span className="text-muted">{placement.itemTitle}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Card>
       <CardContent className="grid gap-4 py-5">
         <Field label="Nazwa elementu">
           <Input
@@ -196,5 +230,6 @@ export function ProcessElementEditor({
         {error ? <p className="text-sm text-rose-400">{error}</p> : null}
       </CardContent>
     </Card>
+    </div>
   );
 }

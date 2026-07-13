@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { ProcessPipeline } from "@/components/process/process-pipeline";
 import { ProcessStageResourcePanel } from "@/components/process/process-stage-resource-panel";
@@ -28,6 +28,10 @@ export function ProcessTemplateEditor({
 }) {
   const [template, setTemplate] = useState(initialTemplate);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setTemplate(initialTemplate);
+  }, [initialTemplate]);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pickerElementId, setPickerElementId] = useState(elements[0]?.id ?? "");
