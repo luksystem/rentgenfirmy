@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -65,13 +65,6 @@ function entryToFormValues(entry: TimeEntryView): TimeEntryFormValues {
   };
 }
 
-function keepProjectDropdownOpen(event: Event) {
-  const target = event.target as HTMLElement | null;
-  if (target?.closest("[data-project-select-dropdown]")) {
-    event.preventDefault();
-  }
-}
-
 export function TimeEntryFormDialog({
   open,
   onOpenChange,
@@ -93,9 +86,10 @@ export function TimeEntryFormDialog({
 
   const [values, setValues] = useState<TimeEntryFormValues>(() => emptyForm(defaultDate));
   const [submitting, setSubmitting] = useState(false);
+  const defaultsAppliedRef = useRef(false);
 
-  const categories = meta?.categories ?? [];
-  const entryTypes = meta?.entryTypes ?? [];
+  const categories = useMemo(() => meta?.categories ?? [], [meta?.categories]);
+  const entryTypes = useMemo(() => meta?.entryTypes ?? [], [meta?.entryTypes]);
 
   const selectedCategory = useMemo(
     () => categories.find((item) => item.id === values.categoryId),
@@ -114,12 +108,18 @@ export function TimeEntryFormDialog({
 
   useEffect(() => {
     if (!open) {
+      defaultsAppliedRef.current = false;
       setValues(emptyForm(defaultDate));
       return;
     }
 
     if (entry) {
       setValues(entryToFormValues(entry));
+      defaultsAppliedRef.current = true;
+      return;
+    }
+
+    if (defaultsAppliedRef.current) {
       return;
     }
 
@@ -130,6 +130,7 @@ export function TimeEntryFormDialog({
     const defaultCategory = categories[0];
     const defaultType = entryTypes.find((item) => item.name === "Praca") ?? entryTypes[0];
 
+    defaultsAppliedRef.current = true;
     setValues((current) => ({
       ...current,
       date: current.date || defaultDate,
@@ -140,7 +141,7 @@ export function TimeEntryFormDialog({
           ? current.billable
           : (defaultCategory?.defaultBillable ?? current.billable),
     }));
-  }, [open, entry?.id, defaultDate, categories, entryTypes]);
+  }, [open, entry, defaultDate, categories, entryTypes]);
 
   function handleCategoryChange(categoryId: string) {
     const category = categories.find((item) => item.id === categoryId);
@@ -195,12 +196,7 @@ export function TimeEntryFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-w-lg"
-        onPointerDownOutside={keepProjectDropdownOpen}
-        onInteractOutside={keepProjectDropdownOpen}
-        onFocusOutside={keepProjectDropdownOpen}
-      >
+      <DialogContent className="max-w-lg overflow-visible">
         <DialogHeader>
           <DialogTitle>{entry ? "Edytuj wpis czasu" : "Dodaj czas pracy"}</DialogTitle>
           <DialogDescription>
@@ -261,16 +257,18 @@ export function TimeEntryFormDialog({
             </Field>
           </div>
 
-          <ProjectSelectSearchable
-            projects={projects}
-            clients={clients}
-            value={values.projectId || null}
-            onChange={(projectId) =>
-              setValues((current) => ({ ...current, projectId: projectId ?? "" }))
-            }
-            label={requiresProject ? "Projekt *" : "Projekt"}
-            dropdownZIndex={2000}
-          />
+          <div className="relative z-20 overflow-visible">
+            <ProjectSelectSearchable
+              projects={projects}
+              clients={clients}
+              value={values.projectId || null}
+              onChange={(projectId) =>
+                setValues((current) => ({ ...current, projectId: projectId ?? "" }))
+              }
+              label={requiresProject ? "Projekt *" : "Projekt"}
+              usePortal={false}
+            />
+          </div>
 
           <Field label={selectedEntryType?.requiresDescription ? "Opis *" : "Opis"}>
             <Textarea

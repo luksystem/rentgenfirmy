@@ -31,6 +31,7 @@ export function ProjectSelectSearchable({
   disabled = false,
   className,
   dropdownZIndex = 200,
+  usePortal = true,
 }: {
   projects: Project[];
   clients: Client[];
@@ -41,6 +42,8 @@ export function ProjectSelectSearchable({
   disabled?: boolean;
   className?: string;
   dropdownZIndex?: number;
+  /** W dialogach ustaw false — dropdown zostaje w drzewie DOM modala i działa poprawnie. */
+  usePortal?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -48,6 +51,7 @@ export function ProjectSelectSearchable({
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
+  const skipQuerySyncRef = useRef(false);
 
   const clientsById = useMemo(() => new Map(clients.map((client) => [client.id, client])), [clients]);
 
@@ -99,7 +103,7 @@ export function ProjectSelectSearchable({
   };
 
   useLayoutEffect(() => {
-    if (!open) {
+    if (!open || !usePortal) {
       setDropdownPosition(null);
       return;
     }
@@ -114,7 +118,7 @@ export function ProjectSelectSearchable({
       window.removeEventListener("resize", handleLayoutChange);
       window.removeEventListener("scroll", handleLayoutChange, true);
     };
-  }, [open, query]);
+  }, [open, query, usePortal]);
 
   useEffect(() => {
     if (!open) {
@@ -137,6 +141,10 @@ export function ProjectSelectSearchable({
   }, [open]);
 
   useEffect(() => {
+    if (skipQuerySyncRef.current) {
+      skipQuerySyncRef.current = false;
+      return;
+    }
     if (selectedProject) {
       setQuery(selectedProject.name);
     } else if (!open) {
@@ -145,6 +153,7 @@ export function ProjectSelectSearchable({
   }, [open, selectedProject]);
 
   function selectProject(projectId: string | null) {
+    skipQuerySyncRef.current = true;
     onChange(projectId);
     setOpen(false);
     if (projectId) {
@@ -155,68 +164,79 @@ export function ProjectSelectSearchable({
     }
   }
 
-  const dropdown =
-    open && !disabled && dropdownPosition && typeof document !== "undefined"
-      ? createPortal(
-          <div
-            ref={dropdownRef}
-            data-project-select-dropdown
-            style={{
-              position: "fixed",
-              top: dropdownPosition.top,
-              left: dropdownPosition.left,
-              width: dropdownPosition.width,
-              zIndex: dropdownZIndex,
-            }}
-            className="max-h-64 overflow-y-auto rounded-xl border border-border bg-surface-elevated p-1 shadow-card"
-            onMouseDown={(event) => event.preventDefault()}
-          >
+  const dropdownList = (
+    <>
+      <button
+        type="button"
+        className="flex w-full rounded-lg px-3 py-2 text-left text-sm text-muted hover:bg-surface-muted"
+        onMouseDown={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          selectProject(null);
+        }}
+      >
+        {emptyLabel}
+      </button>
+      {filteredProjects.length === 0 ? (
+        <p className="px-3 py-2 text-xs text-muted">
+          {query.trim()
+            ? `Brak wyników dla „${query.trim()}”.`
+            : projects.length === 0
+              ? "Brak projektów do wyboru."
+              : "Brak projektów pasujących do wyszukiwania."}
+        </p>
+      ) : (
+        filteredProjects.map((project) => {
+          const client = project.clientId ? clientsById.get(project.clientId) : null;
+          return (
             <button
+              key={project.id}
               type="button"
-              className="flex w-full rounded-lg px-3 py-2 text-left text-sm text-muted hover:bg-surface-muted"
+              className={cn(
+                "flex w-full flex-col rounded-lg px-3 py-2 text-left text-sm hover:bg-surface-muted",
+                value === project.id && "bg-accent/10 text-foreground",
+              )}
               onMouseDown={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                selectProject(null);
+                selectProject(project.id);
               }}
             >
-              {emptyLabel}
+              <span className="font-medium">{project.name}</span>
+              {client ? <span className="text-xs text-muted">{formatPartyName(client)}</span> : null}
             </button>
-            {filteredProjects.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-muted">
-                {query.trim()
-                  ? `Brak wyników dla „${query.trim()}”.`
-                  : projects.length === 0
-                    ? "Brak projektów do wyboru."
-                    : "Brak projektów pasujących do wyszukiwania."}
-              </p>
-            ) : (
-              filteredProjects.map((project) => {
-                const client = project.clientId ? clientsById.get(project.clientId) : null;
-                return (
-                  <button
-                    key={project.id}
-                    type="button"
-                    className={cn(
-                      "flex w-full flex-col rounded-lg px-3 py-2 text-left text-sm hover:bg-surface-muted",
-                      value === project.id && "bg-accent/10 text-foreground",
-                    )}
-                    onMouseDown={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      selectProject(project.id);
-                    }}
-                  >
-                    <span className="font-medium">{project.name}</span>
-                    {client ? <span className="text-xs text-muted">{formatPartyName(client)}</span> : null}
-                  </button>
-                );
-              })
-            )}
-          </div>,
-          document.body,
-        )
-      : null;
+          );
+        })
+      )}
+    </>
+  );
+
+  const dropdown =
+    open && !disabled ? (
+      <div
+        ref={dropdownRef}
+        data-project-select-dropdown
+        style={
+          usePortal && dropdownPosition
+            ? {
+                position: "fixed",
+                top: dropdownPosition.top,
+                left: dropdownPosition.left,
+                width: dropdownPosition.width,
+                zIndex: dropdownZIndex,
+                pointerEvents: "auto",
+              }
+            : undefined
+        }
+        className={cn(
+          "max-h-64 overflow-y-auto rounded-xl border border-border bg-surface-elevated p-1 shadow-card",
+          !usePortal && "absolute left-0 right-0 top-full z-[100] mt-1",
+        )}
+        onMouseDown={(event) => event.preventDefault()}
+      >
+        {dropdownList}
+      </div>
+    ) : null;
 
   return (
     <Field label={label} className={cn("overflow-visible", className)}>
@@ -246,13 +266,20 @@ export function ProjectSelectSearchable({
             type="button"
             disabled={disabled}
             className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted hover:bg-surface-muted"
-            onClick={() => setOpen((current) => !current)}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              setOpen((current) => !current);
+            }}
             aria-label="Rozwiń listę projektów"
           >
             <ChevronDown className={cn("h-4 w-4 transition", open && "rotate-180")} />
           </button>
         </div>
-        {dropdown}
+        {usePortal && dropdownPosition && typeof document !== "undefined"
+          ? createPortal(dropdown, document.body)
+          : !usePortal
+            ? dropdown
+            : null}
       </div>
     </Field>
   );
