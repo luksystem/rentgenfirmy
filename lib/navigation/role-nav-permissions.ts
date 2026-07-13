@@ -1,7 +1,6 @@
 import { isAdministratorRole, type UserRole } from "@/lib/auth/types";
 import {
   CONFIGURABLE_ROLES,
-  DEFAULT_ROLE_NAV_ACCESS,
   DEFAULT_ROLE_PERMISSIONS,
 } from "@/lib/navigation/role-nav-defaults";
 import { ALL_NAV_MODULE_KEYS, type NavModuleKey } from "@/lib/navigation/nav-modules";

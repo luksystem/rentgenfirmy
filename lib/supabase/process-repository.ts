@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildTemplateForProjectType } from "@/lib/process/template-factory";
 import {
   cloneProcessTemplate,
@@ -12,7 +13,6 @@ import type {
   ProjectProcess,
 } from "@/lib/process/types";
 import { getSupabase } from "@/lib/supabase/client";
-import { fetchProcessElements } from "@/lib/supabase/process-element-repository";
 import { ensureProjectProcessItems } from "@/lib/supabase/process-item-repository";
 import {
   projectProcessToUpdate,
@@ -22,9 +22,26 @@ import {
   rowToProcessTemplate,
   rowToProjectProcess,
 } from "@/lib/supabase/process-mappers";
+import { rowToProcessElement } from "@/lib/supabase/process-element-mappers";
 
-async function fetchTemplatesGraph(): Promise<ProcessTemplate[]> {
-  const supabase = getSupabase();
+type DbClient = SupabaseClient;
+
+async function fetchProcessElementsWithClient(supabase: DbClient) {
+  const { data, error } = await supabase
+    .from("process_elements")
+    .select("*")
+    .order("title", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map(rowToProcessElement);
+}
+
+export async function fetchTemplatesGraphWithClient(
+  supabase: DbClient = getSupabase(),
+): Promise<ProcessTemplate[]> {
 
   const { data: templates, error: templatesError } = await supabase
     .from("process_templates")
@@ -112,7 +129,7 @@ async function fetchTemplatesGraph(): Promise<ProcessTemplate[]> {
     throw new Error(itemsError.message);
   }
 
-  const elements = await fetchProcessElements();
+  const elements = await fetchProcessElementsWithClient(supabase);
   const elementsById = new Map(elements.map((element) => [element.id, element]));
 
   const itemsByMilestone = new Map<string, ReturnType<typeof rowToProcessItem>[]>();
@@ -149,11 +166,19 @@ async function fetchTemplatesGraph(): Promise<ProcessTemplate[]> {
 }
 
 export async function fetchProcessTemplates() {
-  return fetchTemplatesGraph();
+  return fetchTemplatesGraphWithClient();
 }
 
 export async function fetchProcessTemplateByProjectType(projectType: string) {
-  const templates = await fetchTemplatesGraph();
+  const templates = await fetchTemplatesGraphWithClient();
+  return templates.find((template) => template.projectType === projectType) ?? null;
+}
+
+export async function fetchProcessTemplateByProjectTypeWithClient(
+  supabase: DbClient,
+  projectType: string,
+) {
+  const templates = await fetchTemplatesGraphWithClient(supabase);
   return templates.find((template) => template.projectType === projectType) ?? null;
 }
 
@@ -306,7 +331,7 @@ export async function ensureProcessTemplateForProjectType(projectType: string) {
 }
 
 export async function ensureDefaultProcessTemplates(projectTypes: string[]) {
-  const existing = await fetchTemplatesGraph();
+  const existing = await fetchTemplatesGraphWithClient();
   const existingTypes = new Set(existing.map((template) => template.projectType));
 
   for (const projectType of projectTypes) {
@@ -318,7 +343,7 @@ export async function ensureDefaultProcessTemplates(projectTypes: string[]) {
     existingTypes.add(projectType);
   }
 
-  return fetchTemplatesGraph();
+  return fetchTemplatesGraphWithClient();
 }
 
 export async function fetchProjectProcess(projectId: string) {

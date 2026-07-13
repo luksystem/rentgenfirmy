@@ -339,15 +339,15 @@ export function resolveNavModuleForPath(pathname: string): NavModuleDefinition |
     ADMIN_ONLY_NAV_MODULE,
   ];
 
-  for (const module of candidates) {
-    for (const prefix of module.routePrefixes) {
+  for (const navModule of candidates) {
+    for (const prefix of navModule.routePrefixes) {
       const matches =
         prefix === "/"
           ? pathname === "/"
           : pathname === prefix || pathname.startsWith(`${prefix}/`);
 
       if (matches && prefix.length > bestLength) {
-        best = module;
+        best = navModule;
         bestLength = prefix.length;
       }
     }

@@ -51,14 +51,14 @@ export function canAccessPathByNavPermissions(
     return true;
   }
 
-  const module = resolveNavModuleForPath(pathname);
-  if (!module) {
+  const navModule = resolveNavModuleForPath(pathname);
+  if (!navModule) {
     return true;
   }
 
-  if (module.routePrefixes.some((prefix) => prefix === "/admin" || prefix.startsWith("/admin"))) {
+  if (navModule.routePrefixes.some((prefix) => prefix === "/admin" || prefix.startsWith("/admin"))) {
     return isAdministratorRole(role);
   }
 
-  return canAccessNavModule(role, module.key as NavModuleKey, config);
+  return canAccessNavModule(role, navModule.key as NavModuleKey, config);
 }
