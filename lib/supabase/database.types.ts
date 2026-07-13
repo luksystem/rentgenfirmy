@@ -1010,6 +1010,38 @@ export type ProfileInsert = {
 
 export type ProfileUpdate = Partial<Omit<ProfileInsert, "id">>;
 
+export type PushSubscriptionRow = {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  user_agent: string | null;
+  device_name: string | null;
+  platform: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+  last_used_at: string | null;
+};
+
+export type PushSubscriptionInsert = {
+  id?: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  user_agent?: string | null;
+  device_name?: string | null;
+  platform?: string | null;
+  active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  last_used_at?: string | null;
+};
+
+export type PushSubscriptionUpdate = Partial<PushSubscriptionInsert>;
+
 export type LeaveRequestRow = {
   id: string;
   profile_id: string;
@@ -1287,6 +1319,22 @@ export type ResourcePlanItemParticipantInsert = {
   involvement_percent?: number;
   start_at?: string | null;
   end_at?: string | null;
+  created_at?: string;
+};
+
+export type ResourcePlanItemCompetencyRequirementRow = {
+  id: string;
+  plan_item_id: string;
+  competency_item_id: string;
+  min_level_item_id: string | null;
+  created_at: string;
+};
+
+export type ResourcePlanItemCompetencyRequirementInsert = {
+  id?: string;
+  plan_item_id: string;
+  competency_item_id: string;
+  min_level_item_id?: string | null;
   created_at?: string;
 };
 
@@ -1945,6 +1993,12 @@ export type Database = {
         Update: Partial<ResourcePlanItemParticipantInsert>;
         Relationships: [];
       };
+      resource_plan_item_competency_requirements: {
+        Row: ResourcePlanItemCompetencyRequirementRow;
+        Insert: ResourcePlanItemCompetencyRequirementInsert;
+        Update: Partial<ResourcePlanItemCompetencyRequirementInsert>;
+        Relationships: [];
+      };
       user_operational_roles: {
         Row: UserOperationalRoleRow;
         Insert: UserOperationalRoleInsert;
@@ -2139,6 +2193,12 @@ export type Database = {
         Row: LeaveRequestRow;
         Insert: LeaveRequestInsert;
         Update: LeaveRequestUpdate;
+        Relationships: [];
+      };
+      push_subscriptions: {
+        Row: PushSubscriptionRow;
+        Insert: PushSubscriptionInsert;
+        Update: PushSubscriptionUpdate;
         Relationships: [];
       };
       user_nav_favorites: {

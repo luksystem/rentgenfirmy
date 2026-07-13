@@ -19,6 +19,7 @@ import {
   writePlanItemTemplateMetadata,
   type PlanItemTemplateMetadata,
 } from "@/lib/resource-plan/plan-item-template";
+import { ResourcePlanCompetencyRequirementsEditor } from "@/components/resource-plan/resource-plan-competency-requirements-editor";
 import { useDictionaryStore } from "@/store/dictionary-store";
 
 const COLOR_SWATCHES = [
@@ -293,6 +294,11 @@ function DictionaryItemRow({
                   rows={2}
                 />
               </Field>
+              <ResourcePlanCompetencyRequirementsEditor
+                value={templateMeta.requiredCompetencies}
+                onChange={(requiredCompetencies) => setTemplateMeta({ ...templateMeta, requiredCompetencies })}
+                description="Po wybraniu szablonu w planie zasobów te kompetencje trafią do przydziału i będą używane przy sugestiach osób."
+              />
             </div>
           ) : null}
 

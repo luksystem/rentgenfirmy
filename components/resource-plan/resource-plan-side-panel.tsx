@@ -19,6 +19,7 @@ import { validateResourcePlanItem } from "@/lib/resource-plan/validations";
 import type { ResourcePlanCandidate } from "@/lib/resource-plan/suggestions";
 import { getActiveSuggestionProvider } from "@/lib/resource-plan/suggestion-provider";
 import { TaskChecklistPanel } from "@/components/task-checklist/task-checklist-panel";
+import { ResourcePlanCompetencyRequirementsEditor } from "@/components/resource-plan/resource-plan-competency-requirements-editor";
 import { readPlanItemTemplateMetadata } from "@/lib/resource-plan/plan-item-template";
 import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
 import { useDictionaryStore } from "@/store/dictionary-store";
@@ -69,6 +70,7 @@ function defaultInput(defaultStartIso?: string): ResourcePlanItemInput {
     linkedGroupId: null,
     shiftWithLinkedGroup: false,
     participants: [],
+    requiredCompetencies: [],
   };
 }
 
@@ -100,6 +102,8 @@ export function ResourcePlanSidePanel({
   const riskOptions = useDictionaryStore((state) => state.byKey("risk_level"));
   const teamOptions = useDictionaryStore((state) => state.byKey("team"));
   const roleOptions = useDictionaryStore((state) => state.byKey("operational_role"));
+  const competencyOptions = useDictionaryStore((state) => state.byKey("competency"));
+  const competencyLevelOptions = useDictionaryStore((state) => state.byKey("competency_level"));
 
   const createItem = useResourcePlanStore((state) => state.createItem);
   const updateItem = useResourcePlanStore((state) => state.updateItem);
@@ -151,6 +155,7 @@ export function ResourcePlanSidePanel({
       riskItemId: meta.riskItemId,
       riskNote: meta.riskItemId ? current.riskNote : "",
       notes: meta.notes || current.notes,
+      requiredCompetencies: meta.requiredCompetencies,
     }));
   }
 
@@ -187,15 +192,16 @@ export function ResourcePlanSidePanel({
   }, [open, teamProfiles, ensureProfiles]);
 
   useEffect(() => {
-    if (!input.projectId) {
+    const projectId = input.projectId;
+    if (!projectId) {
       setStageOptions([]);
       setStage(null);
       return;
     }
-    const project = projects.find((p) => p.id === input.projectId);
+    const project = projects.find((p) => p.id === projectId);
     if (!project) return;
 
-    const cachedStages = projectStagesCache.get(input.projectId);
+    const cachedStages = projectStagesCache.get(projectId);
     if (cachedStages) {
       setStageOptions(cachedStages);
       setStage(cachedStages.find((entry) => entry.id === input.processStageId) ?? null);
@@ -215,7 +221,7 @@ export function ResourcePlanSidePanel({
             : process;
         if (cancelled) return;
         const stages = anchored.templateSnapshot?.stages ?? liveTemplate?.stages ?? [];
-        projectStagesCache.set(input.projectId, stages);
+        projectStagesCache.set(projectId, stages);
         setStageOptions(stages);
         const matched = stages.find((s) => s.id === input.processStageId) ?? null;
         setStage(matched);
@@ -240,6 +246,13 @@ export function ResourcePlanSidePanel({
       laborBudget: current.laborBudget ?? selectedStage.defaultLaborBudget ?? current.laborBudget,
       materialBudget: current.materialBudget ?? selectedStage.defaultMaterialBudget ?? current.materialBudget,
       riskItemId: current.riskItemId ?? selectedStage.defaultRiskItemId ?? current.riskItemId,
+      requiredCompetencies:
+        current.requiredCompetencies.length > 0
+          ? current.requiredCompetencies
+          : (selectedStage.requiredCompetencies ?? []).map((requirement) => ({
+              competencyItemId: requirement.competencyItemId,
+              minLevelItemId: requirement.minLevelItemId,
+            })),
     }));
   }
 
@@ -523,8 +536,25 @@ export function ResourcePlanSidePanel({
                       .map((r) => roleOptions.find((o) => o.id === r.roleItemId)?.name ?? "—")
                       .join(", ")}`
                   : ""}
+                {(stage.requiredCompetencies ?? []).length > 0
+                  ? ` · kompetencje: ${(stage.requiredCompetencies ?? [])
+                      .map((requirement) => {
+                        const name =
+                          competencyOptions.find((option) => option.id === requirement.competencyItemId)?.name ?? "—";
+                        const level = competencyLevelOptions.find(
+                          (option) => option.id === requirement.minLevelItemId,
+                        )?.name;
+                        return level ? `${name} (min. ${level})` : name;
+                      })
+                      .join(", ")}`
+                  : ""}
               </div>
             ) : null}
+
+            <ResourcePlanCompetencyRequirementsEditor
+              value={input.requiredCompetencies}
+              onChange={(requiredCompetencies) => setInput({ ...input, requiredCompetencies })}
+            />
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Typ pracy">
@@ -758,29 +788,45 @@ export function ResourcePlanSidePanel({
                       title={candidate.reasons.join("\n")}
                       onClick={() => setInput((current) => ({ ...current, assigneeId: candidate.userId }))}
                       className={cn(
-                        "flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-left text-xs transition hover:bg-surface-muted/30",
+                        "flex flex-col gap-1 rounded-lg border px-2.5 py-1.5 text-left text-xs transition hover:bg-surface-muted/30",
                         input.assigneeId === candidate.userId
                           ? "border-accent/50 bg-accent/10"
                           : "border-border/50 bg-transparent",
                       )}
                     >
-                      <span className="min-w-0 flex-1 truncate font-medium text-foreground">{candidate.name}</span>
-                      {candidate.isOnLeave ? <span className="shrink-0 text-rose-300">nieobecność</span> : null}
-                      {candidate.conflictCount > 0 ? (
-                        <span className="shrink-0 text-amber-300">{candidate.conflictCount} konfl.</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 flex-1 truncate font-medium text-foreground">{candidate.name}</span>
+                        {candidate.isOnLeave ? <span className="shrink-0 text-rose-300">nieobecność</span> : null}
+                        {candidate.conflictCount > 0 ? (
+                          <span className="shrink-0 text-amber-300">{candidate.conflictCount} konfl.</span>
+                        ) : null}
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full px-2 py-0.5 font-semibold",
+                            candidate.score >= 80
+                              ? "bg-emerald-500/15 text-emerald-300"
+                              : candidate.score >= 50
+                                ? "bg-amber-500/15 text-amber-300"
+                                : "bg-rose-500/15 text-rose-300",
+                          )}
+                        >
+                          {candidate.score}%
+                        </span>
+                      </div>
+                      {candidate.matchedCompetencyNames.length > 0 || candidate.missingCompetencyNames.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 text-[10px]">
+                          {candidate.matchedCompetencyNames.map((name) => (
+                            <span key={`match-${candidate.userId}-${name}`} className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-emerald-300">
+                              ✓ {name}
+                            </span>
+                          ))}
+                          {candidate.missingCompetencyNames.map((name) => (
+                            <span key={`miss-${candidate.userId}-${name}`} className="rounded bg-rose-500/10 px-1.5 py-0.5 text-rose-300">
+                              ✗ {name}
+                            </span>
+                          ))}
+                        </div>
                       ) : null}
-                      <span
-                        className={cn(
-                          "shrink-0 rounded-full px-2 py-0.5 font-semibold",
-                          candidate.score >= 80
-                            ? "bg-emerald-500/15 text-emerald-300"
-                            : candidate.score >= 50
-                              ? "bg-amber-500/15 text-amber-300"
-                              : "bg-rose-500/15 text-rose-300",
-                        )}
-                      >
-                        {candidate.score}%
-                      </span>
                     </button>
                   ))}
                 </div>

@@ -10,6 +10,10 @@
 import type { ProcessStage } from "@/lib/process/types";
 import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
 import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
+import {
+  resolveEffectiveCompetencyRequirements,
+  scoreUserCompetencyMatch,
+} from "@/lib/resource-plan/competency-requirements";
 import { userHoursInItem } from "@/lib/resource-plan/participant-contribution";
 import { hoursBetween, rangesOverlap, sameDay, sameWeek } from "@/lib/resource-plan/validations";
 import type { ResourcePlanItem, ResourcePlanItemInput } from "@/lib/resource-plan/types";
@@ -35,16 +39,11 @@ export type ResourcePlanCandidate = {
   reasons: string[];
 };
 
-function competencyLevelSortOrder(dictionaryItems: DictionaryItem[], levelItemId: string | null) {
-  if (!levelItemId) return null;
-  return dictionaryItems.find((d) => d.id === levelItemId)?.sortOrder ?? null;
-}
-
 /**
  * Rankuje potencjalnych kandydatów (`candidateUserIds`) do przypisania do elementu planu, na
- * podstawie ról/kompetencji wymaganych przez etap procesu, dostępności, nieobecności, obciążenia
- * godzinowego i istniejących konfliktów terminów. Bez AI — czyste reguły, w pełni wyjaśnialne
- * (`reasons`).
+ * podstawie ról/kompetencji wymaganych przez etap procesu i sam element planu, dostępności,
+ * nieobecności, obciążenia godzinowego i istniejących konfliktów terminów. Bez AI — czyste reguły,
+ * w pełni wyjaśnialne (`reasons`).
  */
 export function suggestResourcePlanCandidates(params: {
   input: ResourcePlanItemInput;
@@ -71,6 +70,11 @@ export function suggestResourcePlanCandidates(params: {
 
   const others = otherItems.filter((item) => item.id !== editingId);
   const itemHours = input.plannedHours ?? hoursBetween(input.startAt, input.endAt);
+  const effectiveCompetencies = resolveEffectiveCompetencyRequirements({
+    itemRequirements: input.requiredCompetencies ?? [],
+    stage,
+    dictionaryItems,
+  });
 
   const candidates: ResourcePlanCandidate[] = candidateUserIds
     .filter((userId, index, arr) => arr.indexOf(userId) === index)
@@ -96,25 +100,16 @@ export function suggestResourcePlanCandidates(params: {
 
       const matchedCompetencyNames: string[] = [];
       const missingCompetencyNames: string[] = [];
-      (stage?.requiredCompetencies ?? []).forEach((requirement) => {
-        const competency = dictionaryItems.find((d) => d.id === requirement.competencyItemId);
-        const owned = resourceProfile?.competencies.find((c) => c.competencyItemId === requirement.competencyItemId);
-        if (!owned) {
-          missingCompetencyNames.push(competency?.name ?? "—");
-          score -= stage?.allowsTrainee ? 8 : 25;
-          if (stage?.allowsTrainee) reasons.push(`Brak kompetencji „${competency?.name ?? "—"}” — etap dopuszcza ucznia.`);
-          return;
-        }
-        const requiredLevel = competencyLevelSortOrder(dictionaryItems, requirement.minLevelItemId);
-        const ownedLevel = competencyLevelSortOrder(dictionaryItems, owned.levelItemId);
-        if (requiredLevel !== null && (ownedLevel === null || ownedLevel < requiredLevel)) {
-          score -= 15;
-          reasons.push(`Kompetencja „${competency?.name ?? "—"}” na niższym poziomie niż wymagany.`);
-          missingCompetencyNames.push(`${competency?.name ?? "—"} (niższy poziom)`);
-        } else {
-          matchedCompetencyNames.push(competency?.name ?? "—");
-        }
+      const competencyMatch = scoreUserCompetencyMatch({
+        requirements: effectiveCompetencies,
+        resourceProfile,
+        dictionaryItems,
+        stageAllowsTrainee: stage?.allowsTrainee ?? false,
       });
+      score -= competencyMatch.scorePenalty;
+      matchedCompetencyNames.push(...competencyMatch.matchedNames);
+      missingCompetencyNames.push(...competencyMatch.missingNames);
+      reasons.push(...competencyMatch.reasons);
 
       const isAvailableForPlanning = profile?.isAvailableForPlanning ?? true;
       if (!isAvailableForPlanning) {
@@ -176,7 +171,7 @@ export function suggestResourcePlanCandidates(params: {
       }
 
       if (reasons.length === 0) {
-        reasons.push("Spełnia wszystkie wymagania etapu, brak konfliktów i przekroczeń limitów.");
+        reasons.push("Spełnia wszystkie wymagane kompetencje, brak konfliktów i przekroczeń limitów.");
       }
 
       return {

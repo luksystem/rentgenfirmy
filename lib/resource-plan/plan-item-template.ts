@@ -3,6 +3,7 @@
 // (`dictionary_key = 'plan_item_template'`), a ich rozszerzone pola w kolumnie `metadata`.
 
 import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
+import type { ResourcePlanCompetencyRequirement } from "@/lib/resource-plan/types";
 
 export type PlanItemTemplateMetadata = {
   workTypeItemId: string | null;
@@ -12,6 +13,7 @@ export type PlanItemTemplateMetadata = {
   travelBudget: number | null;
   riskItemId: string | null;
   notes: string;
+  requiredCompetencies: ResourcePlanCompetencyRequirement[];
 };
 
 export const EMPTY_PLAN_ITEM_TEMPLATE_METADATA: PlanItemTemplateMetadata = {
@@ -22,6 +24,7 @@ export const EMPTY_PLAN_ITEM_TEMPLATE_METADATA: PlanItemTemplateMetadata = {
   travelBudget: null,
   riskItemId: null,
   notes: "",
+  requiredCompetencies: [],
 };
 
 function readNullableString(value: unknown): string | null {
@@ -30,6 +33,22 @@ function readNullableString(value: unknown): string | null {
 
 function readNullableNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function readCompetencyRequirements(value: unknown): ResourcePlanCompetencyRequirement[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") return null;
+      const record = entry as Record<string, unknown>;
+      const competencyItemId = readNullableString(record.competencyItemId);
+      if (!competencyItemId) return null;
+      return {
+        competencyItemId,
+        minLevelItemId: readNullableString(record.minLevelItemId),
+      };
+    })
+    .filter((entry): entry is ResourcePlanCompetencyRequirement => entry !== null);
 }
 
 export function readPlanItemTemplateMetadata(metadata: Record<string, unknown>): PlanItemTemplateMetadata {
@@ -41,6 +60,7 @@ export function readPlanItemTemplateMetadata(metadata: Record<string, unknown>):
     travelBudget: readNullableNumber(metadata.travelBudget),
     riskItemId: readNullableString(metadata.riskItemId),
     notes: typeof metadata.notes === "string" ? metadata.notes : "",
+    requiredCompetencies: readCompetencyRequirements(metadata.requiredCompetencies),
   };
 }
 
@@ -57,6 +77,7 @@ export function describePlanItemTemplate(
   const parts = [
     meta.plannedHours ? `${meta.plannedHours}h` : null,
     options.workTypeName ?? null,
+    meta.requiredCompetencies.length > 0 ? `${meta.requiredCompetencies.length} komp.` : null,
     options.riskName ? `Ryzyko: ${options.riskName}` : null,
   ].filter(Boolean);
   return parts.join(" · ");

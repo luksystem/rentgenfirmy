@@ -1,5 +1,11 @@
 // Etap 4 modułu Plan Zasobów — element planu (Gantt/RTM, kalendarz, lista, dashboard).
 
+/** Wymagana kompetencja na elemencie planu lub w szablonie elementu planu. */
+export type ResourcePlanCompetencyRequirement = {
+  competencyItemId: string;
+  minLevelItemId: string | null;
+};
+
 export type ResourcePlanParticipant = {
   userId: string;
   roleItemId: string | null;
@@ -45,6 +51,8 @@ export type ResourcePlanItem = {
    *  części tej samej grupy (patrz setLinkedGroupShiftEnabled). Ustawiane naraz na całej grupie. */
   shiftWithLinkedGroup: boolean;
   participants: ResourcePlanParticipant[];
+  /** Wymagane kompetencje tego przydziału (słownik `competency` + opcjonalny min. poziom). */
+  requiredCompetencies: ResourcePlanCompetencyRequirement[];
   createdAt: string;
   updatedAt: string;
 };
@@ -74,6 +82,7 @@ export type ResourcePlanItemInput = {
   linkedGroupId: string | null;
   shiftWithLinkedGroup: boolean;
   participants: ResourcePlanParticipant[];
+  requiredCompetencies: ResourcePlanCompetencyRequirement[];
 };
 
 export type ResourcePlanFilters = {
@@ -111,5 +120,6 @@ export function resourcePlanItemToInput(item: ResourcePlanItem): ResourcePlanIte
     linkedGroupId: item.linkedGroupId,
     shiftWithLinkedGroup: item.shiftWithLinkedGroup,
     participants: item.participants,
+    requiredCompetencies: item.requiredCompetencies,
   };
 }

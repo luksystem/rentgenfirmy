@@ -6,6 +6,10 @@ import type { ResourcePlanItem, ResourcePlanItemInput } from "@/lib/resource-pla
 import type { UserResourceProfile } from "@/lib/resource-plan/user-resource-types";
 import type { UserProfile } from "@/lib/auth/types";
 import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
+import {
+  resolveEffectiveCompetencyRequirements,
+  scoreUserCompetencyMatch,
+} from "@/lib/resource-plan/competency-requirements";
 import { userEffectiveRangeInItem, userHoursInItem } from "@/lib/resource-plan/participant-contribution";
 
 export type ResourcePlanWarning = {
@@ -143,25 +147,6 @@ export function validateResourcePlanItem(params: {
       }
     });
 
-    // Etap dopuszczający ucznia/juniora (`allowsTrainee`) świadomie akceptuje brak wymaganej
-    // kompetencji u przypisanych osób — to nie przeoczenie, a celowe przyuczanie, więc nie
-    // ostrzegamy (w przeciwieństwie do wymaganych ról, które muszą być pokryte niezależnie).
-    if (!stage.allowsTrainee) {
-      (stage.requiredCompetencies ?? []).forEach((requirement) => {
-        const hasCompetency = involved.some((userId) =>
-          resourceProfilesById[userId]?.competencies.some((c) => c.competencyItemId === requirement.competencyItemId),
-        );
-        if (!hasCompetency) {
-          const competency = dictionaryItems.find((d) => d.id === requirement.competencyItemId);
-          warnings.push({
-            code: "missing_competency",
-            severity: "warning",
-            message: `Brak osoby z wymaganą kompetencją „${competency?.name ?? "—"}”.`,
-          });
-        }
-      });
-    }
-
     if (stage.requiresLeader) {
       const hasLeader = input.participants.some((p) => p.isLead);
       if (!hasLeader && !input.assigneeId) {
@@ -174,7 +159,39 @@ export function validateResourcePlanItem(params: {
     }
   }
 
-  // 7. Brak przypisanej osoby.
+  // 5. Wymagane kompetencje — z etapu procesu i/lub z samego elementu planu.
+  const effectiveCompetencies = resolveEffectiveCompetencyRequirements({
+    itemRequirements: input.requiredCompetencies ?? [],
+    stage,
+    dictionaryItems,
+  });
+  effectiveCompetencies.forEach((requirement) => {
+    if (requirement.fromStage && stage?.allowsTrainee) return;
+
+    const covered = involved.some((userId) => {
+      const match = scoreUserCompetencyMatch({
+        requirements: [requirement],
+        resourceProfile: resourceProfilesById[userId],
+        dictionaryItems,
+        stageAllowsTrainee: stage?.allowsTrainee ?? false,
+      });
+      return match.missingNames.length === 0;
+    });
+
+    if (!covered) {
+      const competency = dictionaryItems.find((d) => d.id === requirement.competencyItemId);
+      const level = dictionaryItems.find((d) => d.id === requirement.minLevelItemId);
+      warnings.push({
+        code: "missing_competency",
+        severity: "warning",
+        message: level
+          ? `Brak osoby z wymaganą kompetencją „${competency?.name ?? "—"}” (min. ${level.name}).`
+          : `Brak osoby z wymaganą kompetencją „${competency?.name ?? "—"}”.`,
+      });
+    }
+  });
+
+  // 6. (poprzednio 7) Brak przypisanej osoby.
   if (!input.assigneeId && input.participants.length === 0) {
     warnings.push({
       code: "no_assignee",

@@ -1,14 +1,42 @@
 import { getSupabase } from "@/lib/supabase/client";
 import type {
+  ResourcePlanItemCompetencyRequirementRow,
   ResourcePlanItemInsert,
   ResourcePlanItemParticipantRow,
   ResourcePlanItemRow,
   ResourcePlanItemUpdate,
 } from "@/lib/supabase/database.types";
-import type { ResourcePlanItem, ResourcePlanItemInput, ResourcePlanParticipant } from "@/lib/resource-plan/types";
+import type {
+  ResourcePlanCompetencyRequirement,
+  ResourcePlanItem,
+  ResourcePlanItemInput,
+  ResourcePlanParticipant,
+} from "@/lib/resource-plan/types";
+
+function mergeCompetencyRequirementLists(
+  lists: ResourcePlanCompetencyRequirement[][],
+): ResourcePlanCompetencyRequirement[] {
+  const map = new Map<string, ResourcePlanCompetencyRequirement>();
+  lists.flat().forEach((requirement) => {
+    const existing = map.get(requirement.competencyItemId);
+    if (!existing) {
+      map.set(requirement.competencyItemId, requirement);
+      return;
+    }
+    map.set(requirement.competencyItemId, {
+      competencyItemId: requirement.competencyItemId,
+      minLevelItemId: existing.minLevelItemId ?? requirement.minLevelItemId,
+    });
+  });
+  return Array.from(map.values());
+}
 import { resourcePlanItemToInput } from "@/lib/resource-plan/types";
 
-function rowToItem(row: ResourcePlanItemRow, participants: ResourcePlanParticipant[]): ResourcePlanItem {
+function rowToItem(
+  row: ResourcePlanItemRow,
+  participants: ResourcePlanParticipant[],
+  requiredCompetencies: ResourcePlanCompetencyRequirement[],
+): ResourcePlanItem {
   return {
     id: row.id,
     projectId: row.project_id,
@@ -36,6 +64,7 @@ function rowToItem(row: ResourcePlanItemRow, participants: ResourcePlanParticipa
     linkedGroupId: row.linked_group_id,
     shiftWithLinkedGroup: row.shift_with_linked_group,
     participants,
+    requiredCompetencies,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -121,6 +150,69 @@ async function replaceParticipants(planItemId: string, participants: ResourcePla
   if (error) throw new Error(error.message);
 }
 
+async function fetchCompetencyRequirementsBatch(
+  planItemIds: string[],
+): Promise<Map<string, ResourcePlanCompetencyRequirement[]>> {
+  const map = new Map<string, ResourcePlanCompetencyRequirement[]>();
+  if (planItemIds.length === 0) return map;
+
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("resource_plan_item_competency_requirements")
+    .select("*")
+    .in("plan_item_id", planItemIds);
+
+  if (error) throw new Error(error.message);
+
+  (data ?? []).forEach((row: ResourcePlanItemCompetencyRequirementRow) => {
+    const list = map.get(row.plan_item_id) ?? [];
+    list.push({
+      competencyItemId: row.competency_item_id,
+      minLevelItemId: row.min_level_item_id,
+    });
+    map.set(row.plan_item_id, list);
+  });
+
+  return map;
+}
+
+async function replaceCompetencyRequirements(
+  planItemId: string,
+  requirements: ResourcePlanCompetencyRequirement[],
+) {
+  const supabase = getSupabase();
+  const { error: deleteError } = await supabase
+    .from("resource_plan_item_competency_requirements")
+    .delete()
+    .eq("plan_item_id", planItemId);
+  if (deleteError) throw new Error(deleteError.message);
+
+  if (requirements.length === 0) return;
+
+  const { error } = await supabase.from("resource_plan_item_competency_requirements").insert(
+    requirements.map((requirement) => ({
+      plan_item_id: planItemId,
+      competency_item_id: requirement.competencyItemId,
+      min_level_item_id: requirement.minLevelItemId,
+    })),
+  );
+  if (error) throw new Error(error.message);
+}
+
+function mapRowsToItems(
+  rows: ResourcePlanItemRow[],
+  participantsByItem: Map<string, ResourcePlanParticipant[]>,
+  competenciesByItem: Map<string, ResourcePlanCompetencyRequirement[]>,
+): ResourcePlanItem[] {
+  return rows.map((row) =>
+    rowToItem(
+      row,
+      participantsByItem.get(row.id) ?? [],
+      competenciesByItem.get(row.id) ?? [],
+    ),
+  );
+}
+
 /** Elementy planu nachodzące na zakres dat (do Gantt/kalendarza/listy/walidacji konfliktów). */
 export async function fetchResourcePlanItemsInRange(fromIso: string, toIso: string): Promise<ResourcePlanItem[]> {
   const supabase = getSupabase();
@@ -134,8 +226,12 @@ export async function fetchResourcePlanItemsInRange(fromIso: string, toIso: stri
   if (error) throw new Error(error.message);
 
   const rows = data ?? [];
-  const participantsByItem = await fetchParticipantsBatch(rows.map((row) => row.id));
-  return rows.map((row) => rowToItem(row, participantsByItem.get(row.id) ?? []));
+  const ids = rows.map((row) => row.id);
+  const [participantsByItem, competenciesByItem] = await Promise.all([
+    fetchParticipantsBatch(ids),
+    fetchCompetencyRequirementsBatch(ids),
+  ]);
+  return mapRowsToItems(rows, participantsByItem, competenciesByItem);
 }
 
 export async function fetchResourcePlanItemsForProject(projectId: string): Promise<ResourcePlanItem[]> {
@@ -149,8 +245,12 @@ export async function fetchResourcePlanItemsForProject(projectId: string): Promi
   if (error) throw new Error(error.message);
 
   const rows = data ?? [];
-  const participantsByItem = await fetchParticipantsBatch(rows.map((row) => row.id));
-  return rows.map((row) => rowToItem(row, participantsByItem.get(row.id) ?? []));
+  const ids = rows.map((row) => row.id);
+  const [participantsByItem, competenciesByItem] = await Promise.all([
+    fetchParticipantsBatch(ids),
+    fetchCompetencyRequirementsBatch(ids),
+  ]);
+  return mapRowsToItems(rows, participantsByItem, competenciesByItem);
 }
 
 export async function createResourcePlanItem(input: ResourcePlanItemInput): Promise<ResourcePlanItem> {
@@ -168,7 +268,8 @@ export async function createResourcePlanItem(input: ResourcePlanItemInput): Prom
   if (error) throw new Error(error.message);
 
   await replaceParticipants(data.id, input.participants);
-  return rowToItem(data, input.participants);
+  await replaceCompetencyRequirements(data.id, input.requiredCompetencies);
+  return rowToItem(data, input.participants, input.requiredCompetencies);
 }
 
 export async function updateResourcePlanItem(id: string, input: ResourcePlanItemInput): Promise<ResourcePlanItem> {
@@ -179,7 +280,8 @@ export async function updateResourcePlanItem(id: string, input: ResourcePlanItem
   if (error) throw new Error(error.message);
 
   await replaceParticipants(id, input.participants);
-  return rowToItem(data, input.participants);
+  await replaceCompetencyRequirements(id, input.requiredCompetencies);
+  return rowToItem(data, input.participants, input.requiredCompetencies);
 }
 
 export async function deleteResourcePlanItem(id: string): Promise<void> {
@@ -200,8 +302,12 @@ export async function fetchLinkedGroupItems(groupId: string): Promise<ResourcePl
   if (error) throw new Error(error.message);
 
   const rows = data ?? [];
-  const participantsByItem = await fetchParticipantsBatch(rows.map((row) => row.id));
-  return rows.map((row) => rowToItem(row, participantsByItem.get(row.id) ?? []));
+  const ids = rows.map((row) => row.id);
+  const [participantsByItem, competenciesByItem] = await Promise.all([
+    fetchParticipantsBatch(ids),
+    fetchCompetencyRequirementsBatch(ids),
+  ]);
+  return mapRowsToItems(rows, participantsByItem, competenciesByItem);
 }
 
 /**
@@ -221,6 +327,7 @@ const LINKED_GROUP_SHARED_FIELD_KEYS = [
   "riskNote",
   "notes",
   "acceptedRisk",
+  "requiredCompetencies",
 ] as const satisfies readonly (keyof ResourcePlanItemInput)[];
 
 export function pickLinkedGroupSharedFields(input: ResourcePlanItemInput): Partial<ResourcePlanItemInput> {
@@ -320,6 +427,8 @@ export async function mergeLinkedGroupItems(groupId: string): Promise<ResourcePl
     });
   });
 
+  const mergedCompetencies = mergeCompetencyRequirementLists(members.map((member) => member.requiredCompetencies));
+
   const merged = await updateResourcePlanItem(primary.id, {
     ...resourcePlanItemToInput(primary),
     startAt: mergedStartAt,
@@ -328,6 +437,7 @@ export async function mergeLinkedGroupItems(groupId: string): Promise<ResourcePl
     linkedGroupId: null,
     shiftWithLinkedGroup: false,
     participants: mergedParticipants,
+    requiredCompetencies: mergedCompetencies,
   });
 
   await Promise.all(rest.map((sibling) => deleteResourcePlanItem(sibling.id)));
