@@ -121,20 +121,46 @@ export async function upsertPushSubscription(
     platform: input.subscription.platform ?? null,
     active: true,
     updated_at: now,
-    last_used_at: null,
   };
+
+  const existing = await fetchPushSubscriptionByEndpoint(supabase, input.subscription.endpoint);
+
+  if (existing) {
+    const { data, error } = await supabase
+      .from("push_subscriptions")
+      .update(row)
+      .eq("endpoint", input.subscription.endpoint)
+      .select("*")
+      .single();
+
+    if (error) {
+      throw mapPushSubscriptionError(error.message);
+    }
+
+    return mapRow(data as PushSubscriptionRow);
+  }
 
   const { data, error } = await supabase
     .from("push_subscriptions")
-    .upsert(row, { onConflict: "endpoint" })
+    .insert({ ...row, created_at: now, last_used_at: null })
     .select("*")
     .single();
 
   if (error) {
-    throw new Error(error.message);
+    throw mapPushSubscriptionError(error.message);
   }
 
   return mapRow(data as PushSubscriptionRow);
+}
+
+export function mapPushSubscriptionError(message: string) {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("push_subscriptions") && normalized.includes("does not exist")) {
+    return new Error(
+      "Tabela push_subscriptions nie istnieje. Uruchom migrację 133_push_subscriptions.sql w Supabase.",
+    );
+  }
+  return new Error(message);
 }
 
 export async function deactivatePushSubscription(

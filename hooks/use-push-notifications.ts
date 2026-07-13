@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { urlBase64ToUint8Array, getVapidPublicKey } from "@/lib/push/vapid";
+import { getClientVapidPublicKey } from "@/lib/push/vapid-client";
+import { urlBase64ToUint8Array } from "@/lib/push/vapid";
 
 export type PushPermissionState = NotificationPermission | "unsupported";
 
@@ -9,6 +10,7 @@ export type PushSubscriptionStatus = {
   subscribed: boolean;
   endpoint: string | null;
   activeDeviceCount: number;
+  vapidConfigured: boolean;
 };
 
 function detectIos() {
@@ -61,6 +63,32 @@ async function registerServiceWorker() {
   return registration;
 }
 
+async function saveSubscriptionOnBackend(body: ReturnType<typeof subscriptionToPayload>) {
+  const response = await fetch("/api/push/subscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const payload = (await response.json()) as { error?: string };
+
+  if (!response.ok) {
+    throw new Error(payload.error ?? "Nie udało się zapisać subskrypcji.");
+  }
+}
+
+function isSubscriptionKeyMismatchError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("applicationserverkey") ||
+    message.includes("invalid key") ||
+    message.includes("domexception") ||
+    message.includes("abort")
+  );
+}
+
 export function usePushNotifications() {
   const [isSupported] = useState(detectBrowserSupport);
   const [permission, setPermission] = useState<PushPermissionState>(() =>
@@ -70,13 +98,14 @@ export function usePushNotifications() {
     subscribed: false,
     endpoint: null,
     activeDeviceCount: 0,
+    vapidConfigured: false,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isIos = useMemo(() => detectIos(), []);
   const isStandalone = useMemo(() => detectStandalone(), []);
-  const vapidPublicKey = useMemo(() => getVapidPublicKey(), []);
+  const vapidPublicKey = useMemo(() => getClientVapidPublicKey(), []);
 
   const refreshStatus = useCallback(async () => {
     if (!isSupported) {
@@ -96,24 +125,45 @@ export function usePushNotifications() {
         error?: string;
         currentDeviceSubscribed?: boolean;
         activeDeviceCount?: number;
+        vapidConfigured?: boolean;
       };
 
       if (!response.ok) {
         throw new Error(payload.error ?? "Nie udało się pobrać statusu push.");
       }
 
+      const currentPermission = Notification.permission;
+      setPermission(currentPermission);
+
+      let subscribed = Boolean(payload.currentDeviceSubscribed);
+
+      if (
+        !subscribed &&
+        currentPermission === "granted" &&
+        subscription &&
+        payload.vapidConfigured &&
+        vapidPublicKey
+      ) {
+        try {
+          await saveSubscriptionOnBackend(subscriptionToPayload(subscription));
+          subscribed = true;
+        } catch {
+          // Użytkownik włączy ręcznie — nie pokazujemy błędu przy auto-sync.
+        }
+      }
+
       setStatus({
-        subscribed: Boolean(payload.currentDeviceSubscribed),
+        subscribed,
         endpoint,
         activeDeviceCount: payload.activeDeviceCount ?? 0,
+        vapidConfigured: Boolean(payload.vapidConfigured),
       });
-      setPermission(Notification.permission);
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : "Błąd synchronizacji push.");
     } finally {
       setLoading(false);
     }
-  }, [isSupported]);
+  }, [isSupported, vapidPublicKey]);
 
   useEffect(() => {
     void refreshStatus();
@@ -124,7 +174,9 @@ export function usePushNotifications() {
       throw new Error("Ta przeglądarka nie obsługuje Web Push.");
     }
     if (!vapidPublicKey) {
-      throw new Error("Brak klucza VAPID po stronie aplikacji.");
+      throw new Error(
+        "Brak klucza VAPID (NEXT_PUBLIC_VAPID_PUBLIC_KEY). Zrestartuj serwer dev po uzupełnieniu .env.local.",
+      );
     }
 
     setLoading(true);
@@ -141,25 +193,37 @@ export function usePushNotifications() {
       const registration = await registerServiceWorker();
       let subscription = await registration.pushManager.getSubscription();
 
-      if (!subscription) {
+      if (subscription) {
+        try {
+          await saveSubscriptionOnBackend(subscriptionToPayload(subscription));
+          await refreshStatus();
+          return;
+        } catch (syncError) {
+          if (!isSubscriptionKeyMismatchError(syncError)) {
+            throw syncError;
+          }
+          await subscription.unsubscribe();
+          subscription = null;
+        }
+      }
+
+      try {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        });
+      } catch (subscribeError) {
+        const existing = await registration.pushManager.getSubscription();
+        if (existing) {
+          await existing.unsubscribe();
+        }
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
         });
       }
 
-      const body = subscriptionToPayload(subscription);
-      const response = await fetch("/api/push/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const payload = (await response.json()) as { error?: string };
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Nie udało się zapisać subskrypcji.");
-      }
-
+      await saveSubscriptionOnBackend(subscriptionToPayload(subscription));
       await refreshStatus();
     } catch (subscribeError) {
       const message =
@@ -239,6 +303,7 @@ export function usePushNotifications() {
     error,
     isIos,
     isStandalone,
+    vapidPublicKey,
     subscribe,
     unsubscribe,
     sendTestNotification,

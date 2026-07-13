@@ -48,7 +48,7 @@ describe("push payload validation", () => {
   it("builds fixed test payload", () => {
     const payload = buildTestPushPayload();
     expect(payload.title).toContain("Test");
-    expect(payload.url).toBe("/moja-praca/powiadomienia");
+    expect(payload.url).toBe("/ustawienia/powiadomienia");
   });
 });
 

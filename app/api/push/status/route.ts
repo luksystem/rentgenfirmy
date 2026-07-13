@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
 import { createClient } from "@/lib/supabase/server-auth";
-import { fetchPushSubscriptionByEndpoint } from "@/lib/push/subscription-repository";
+import { fetchPushSubscriptionByEndpoint, mapPushSubscriptionError } from "@/lib/push/subscription-repository";
 import { isVapidConfigured } from "@/lib/push/vapid";
 
 export async function GET(request: Request) {
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
       .eq("active", true);
 
     if (countError) {
-      throw new Error(countError.message);
+      throw mapPushSubscriptionError(countError.message);
     }
 
     let currentDeviceSubscribed = false;

@@ -1,15 +1,5 @@
-import { PageHeader } from "@/components/page-header";
-import { PushNotificationsSettings } from "@/components/push/push-notifications-settings";
+import { redirect } from "next/navigation";
 
-export default function PushNotificationsPage() {
-  return (
-    <>
-      <PageHeader
-        eyebrow="Moja praca"
-        title="Powiadomienia push"
-        description="Zarządzaj powiadomieniami systemowymi na tym urządzeniu. Subskrypcja pozostaje aktywna po wylogowaniu — powiadomienia trafiają na Twoje konto, nie na sesję przeglądarki."
-      />
-      <PushNotificationsSettings />
-    </>
-  );
+export default function MojaPracaPowiadomieniaRedirectPage() {
+  redirect("/ustawienia/powiadomienia");
 }

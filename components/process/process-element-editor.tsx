@@ -97,7 +97,9 @@ export function ProcessElementEditor({
             <p className="text-sm font-medium text-foreground">Używany w szablonach procesu</p>
             <p className="text-sm text-muted">
               Aby usunąć element z katalogu, najpierw usuń go z poniższych miejsc w edytorze szablonu
-              i zapisz szablon.
+              i zapisz szablon. Jeśli wpis wskazuje na{" "}
+              <strong className="font-medium text-amber-300">szablon nieużywany</strong>, to stary
+              duplikat typu projektu (np. „Dom” vs „DOM”) — nie ten, którego używasz w projektach.
             </p>
             <ul className="grid gap-2 text-sm">
               {placements.map((placement) => (
@@ -108,6 +110,9 @@ export function ProcessElementEditor({
                   >
                     {placement.projectType}
                   </Link>
+                  {placement.anchoredProjectCount === 0 ? (
+                    <span className="ml-1 text-amber-400">(szablon nieużywany)</span>
+                  ) : null}
                   {" → "}
                   <span className="text-foreground">{placement.stageTitle}</span>
                   {" → "}

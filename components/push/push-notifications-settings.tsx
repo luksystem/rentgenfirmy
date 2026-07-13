@@ -14,6 +14,7 @@ export function PushNotificationsSettings() {
     error,
     isIos,
     isStandalone,
+    vapidPublicKey,
     subscribe,
     unsubscribe,
     sendTestNotification,
@@ -31,6 +32,7 @@ export function PushNotificationsSettings() {
 
   const denied = permission === "denied";
   const active = status.subscribed && permission === "granted";
+  const missingVapid = !vapidPublicKey || !status.vapidConfigured;
 
   return (
     <Card className="border border-border/80">
@@ -58,6 +60,16 @@ export function PushNotificationsSettings() {
             ) : null}
           </div>
         </div>
+
+        {missingVapid ? (
+          <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-100">
+            <p className="font-medium">Brak konfiguracji VAPID</p>
+            <p className="mt-1">
+              Uzupełnij klucze w <code className="text-xs">.env.local</code> (lokalnie) lub Vercel
+              (produkcja), a następnie zrestartuj serwer: <code className="text-xs">npm run dev</code>.
+            </p>
+          </div>
+        ) : null}
 
         {isIos && !isStandalone ? (
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
@@ -100,7 +112,10 @@ export function PushNotificationsSettings() {
             </div>
           </div>
         ) : (
-          <Button disabled={loading || (isIos && !isStandalone)} onClick={() => void subscribe()}>
+          <Button
+            disabled={loading || missingVapid || (isIos && !isStandalone)}
+            onClick={() => void subscribe()}
+          >
             {loading ? "Włączanie..." : "Włącz powiadomienia"}
           </Button>
         )}

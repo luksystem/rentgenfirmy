@@ -47,7 +47,7 @@ export function buildTestPushPayload(): PushPayload {
   return {
     title: "Test powiadomienia push",
     body: "Powiadomienia Web Push działają poprawnie na tym urządzeniu.",
-    url: "/moja-praca/powiadomienia",
+    url: "/ustawienia/powiadomienia",
     tag: "push-test",
   };
 }

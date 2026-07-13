@@ -13,6 +13,18 @@ import type {
   ResourcePlanParticipant,
 } from "@/lib/resource-plan/types";
 
+/** Migracja 134 musi być wdrożona, żeby kompetencje działały — bez niej odczyt planu
+ *  nadal działa (pusta lista wymagań), żeby nie „znikały” istniejące przydziały. */
+function isMissingCompetencyRequirementsTableError(error: { message?: string; code?: string }) {
+  const message = error.message ?? "";
+  return (
+    error.code === "PGRST205" ||
+    error.code === "42P01" ||
+    message.includes("resource_plan_item_competency_requirements") ||
+    message.includes("Could not find the table")
+  );
+}
+
 function mergeCompetencyRequirementLists(
   lists: ResourcePlanCompetencyRequirement[][],
 ): ResourcePlanCompetencyRequirement[] {
@@ -162,7 +174,10 @@ async function fetchCompetencyRequirementsBatch(
     .select("*")
     .in("plan_item_id", planItemIds);
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (isMissingCompetencyRequirementsTableError(error)) return map;
+    throw new Error(error.message);
+  }
 
   (data ?? []).forEach((row: ResourcePlanItemCompetencyRequirementRow) => {
     const list = map.get(row.plan_item_id) ?? [];
@@ -185,7 +200,15 @@ async function replaceCompetencyRequirements(
     .from("resource_plan_item_competency_requirements")
     .delete()
     .eq("plan_item_id", planItemId);
-  if (deleteError) throw new Error(deleteError.message);
+  if (deleteError) {
+    if (isMissingCompetencyRequirementsTableError(deleteError)) {
+      if (requirements.length === 0) return;
+      throw new Error(
+        "Brak tabeli kompetencji przydziału w bazie — uruchom migrację 134_resource_plan_item_competency_requirements.sql w Supabase.",
+      );
+    }
+    throw new Error(deleteError.message);
+  }
 
   if (requirements.length === 0) return;
 
@@ -196,7 +219,14 @@ async function replaceCompetencyRequirements(
       min_level_item_id: requirement.minLevelItemId,
     })),
   );
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (isMissingCompetencyRequirementsTableError(error)) {
+      throw new Error(
+        "Brak tabeli kompetencji przydziału w bazie — uruchom migrację 134_resource_plan_item_competency_requirements.sql w Supabase.",
+      );
+    }
+    throw new Error(error.message);
+  }
 }
 
 function mapRowsToItems(

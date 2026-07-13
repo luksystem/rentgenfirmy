@@ -28,6 +28,8 @@ export type ProcessElementPlacement = {
   stageTitle: string;
   projectType: string;
   templateName: string;
+  templateId: string;
+  anchoredProjectCount: number;
 };
 
 export async function fetchProcessElementPlacements(elementId: string) {
@@ -35,7 +37,7 @@ export async function fetchProcessElementPlacements(elementId: string) {
   const { data, error } = await supabase
     .from("process_items")
     .select(
-      "id, title, process_milestones(title, process_stages(title, process_templates(project_type, name)))",
+      "id, title, process_milestones(title, process_stages(title, template_id, process_templates(id, project_type, name)))",
     )
     .eq("element_id", elementId)
     .order("title", { ascending: true });
@@ -44,16 +46,50 @@ export async function fetchProcessElementPlacements(elementId: string) {
     throw new Error(error.message);
   }
 
+  const templateIds = [
+    ...new Set(
+      (data ?? [])
+        .map((row) => {
+          const milestone = row.process_milestones as {
+            process_stages?: { template_id?: string };
+          } | null;
+          return milestone?.process_stages?.template_id;
+        })
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  const anchoredByTemplate = new Map<string, number>();
+  if (templateIds.length) {
+    const { data: anchoredRows, error: anchoredError } = await supabase
+      .from("project_processes")
+      .select("template_id")
+      .in("template_id", templateIds);
+
+    if (anchoredError) {
+      throw new Error(anchoredError.message);
+    }
+
+    for (const row of anchoredRows ?? []) {
+      anchoredByTemplate.set(
+        row.template_id,
+        (anchoredByTemplate.get(row.template_id) ?? 0) + 1,
+      );
+    }
+  }
+
   return (data ?? []).map((row) => {
     const milestone = row.process_milestones as {
       title?: string;
       process_stages?: {
         title?: string;
-        process_templates?: { project_type?: string; name?: string };
+        template_id?: string;
+        process_templates?: { id?: string; project_type?: string; name?: string };
       };
     } | null;
     const stage = milestone?.process_stages;
     const template = stage?.process_templates;
+    const templateId = stage?.template_id ?? template?.id ?? "";
     return {
       processItemId: row.id,
       itemTitle: row.title,
@@ -61,6 +97,8 @@ export async function fetchProcessElementPlacements(elementId: string) {
       stageTitle: stage?.title ?? "—",
       projectType: template?.project_type ?? "—",
       templateName: template?.name ?? "—",
+      templateId,
+      anchoredProjectCount: anchoredByTemplate.get(templateId) ?? 0,
     } satisfies ProcessElementPlacement;
   });
 }
@@ -146,10 +184,11 @@ export async function deleteProcessElement(id: string) {
   if ((count ?? 0) > 0) {
     const placements = await fetchProcessElementPlacements(id);
     const summary = placements
-      .map(
-        (placement) =>
-          `${placement.projectType} → ${placement.stageTitle} → ${placement.milestoneTitle}`,
-      )
+      .map((placement) => {
+        const unused =
+          placement.anchoredProjectCount === 0 ? " (szablon nieużywany — można usunąć)" : "";
+        return `${placement.projectType} → ${placement.stageTitle} → ${placement.milestoneTitle}${unused}`;
+      })
       .join("; ");
     throw new Error(
       summary
