@@ -21,6 +21,7 @@ export const WORK_ITEM_LOG_ACTION_LABELS: Record<string, string> = {
   verified: "Zweryfikowano wykonanie",
   comment_added: "Dodano komentarz",
   takeover_requested: "Wysłano prośbę o przejęcie",
+  "complete:allocation": "Zakończono przydział z planowania",
 };
 
 function isWorkItemAcceptanceAction(value: string): value is WorkItemAcceptanceAction {

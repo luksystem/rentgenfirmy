@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Plus, Scissors, ShieldAlert, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Plus, Scissors, ShieldAlert, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { participantContributedHours, participantEffectiveRange } from "@/lib/re
 import { validateResourcePlanItem } from "@/lib/resource-plan/validations";
 import type { ResourcePlanCandidate } from "@/lib/resource-plan/suggestions";
 import { getActiveSuggestionProvider } from "@/lib/resource-plan/suggestion-provider";
+import { TaskChecklistPanel } from "@/components/task-checklist/task-checklist-panel";
 import { readPlanItemTemplateMetadata } from "@/lib/resource-plan/plan-item-template";
 import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
 import { useDictionaryStore } from "@/store/dictionary-store";
@@ -127,6 +128,13 @@ export function ResourcePlanSidePanel({
   const [shiftTogglePending, setShiftTogglePending] = useState(false);
 
   const templateOptions = useDictionaryStore((state) => state.byKey("plan_item_template"));
+  const completedStatus = useMemo(
+    () => statusOptions.find((option) => option.name === "Zakończone") ?? null,
+    [statusOptions],
+  );
+  const isAlreadyCompleted = Boolean(
+    completedStatus && (input.statusItemId === completedStatus.id || editingItem?.statusItemId === completedStatus.id),
+  );
 
   function applyTemplate(template: DictionaryItem) {
     const meta = readPlanItemTemplateMetadata(template.metadata);
@@ -371,6 +379,26 @@ export function ResourcePlanSidePanel({
       setInput((current) => ({ ...current, shiftWithLinkedGroup: !enabled }));
     } finally {
       setShiftTogglePending(false);
+    }
+  }
+
+  async function handleMarkCompleted() {
+    if (!editingItem || !completedStatus) {
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const saved = await updateItem(editingItem.id, {
+        ...input,
+        statusItemId: completedStatus.id,
+      });
+      onSaved?.(saved);
+      onOpenChange(false);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Nie udało się zakończyć przydziału.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -699,6 +727,10 @@ export function ResourcePlanSidePanel({
             <Field label="Notatki">
               <Textarea value={input.notes} onChange={(event) => setInput({ ...input, notes: event.target.value })} rows={3} />
             </Field>
+
+            <TaskChecklistPanel
+              parent={editingItem ? { kind: "resource_plan_item", id: editingItem.id } : null}
+            />
           </div>
 
           <div className="grid gap-4">
@@ -899,7 +931,18 @@ export function ResourcePlanSidePanel({
 
         {error ? <p className="text-sm text-rose-400">{error}</p> : null}
 
-        <div className="flex justify-end gap-2 border-t border-border/60 pt-3">
+        <div className="flex flex-wrap justify-end gap-2 border-t border-border/60 pt-3">
+          {editingItem && completedStatus && !isAlreadyCompleted ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={saving}
+              onClick={() => void handleMarkCompleted()}
+            >
+              <CheckCircle2 className="mr-1.5 h-4 w-4" />
+              Oznacz jako zakończone
+            </Button>
+          ) : null}
           <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
             Anuluj
           </Button>

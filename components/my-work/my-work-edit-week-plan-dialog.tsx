@@ -13,11 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import type { UpdateWeekPlanInput, WorkPlanView } from "@/lib/my-work/plan-types";
 import { isTerminalWorkItemStatus, type WorkItemView } from "@/lib/my-work/types";
-import { formatDate } from "@/lib/utils";
+import { workItemProjectLabel } from "@/lib/my-work/display-labels";
+import { cn, formatDate } from "@/lib/utils";
 
 type EditablePlanItem = {
   workItemId: string;
   title: string;
+  projectName: string | null;
   plannedDate: string;
 };
 
@@ -53,6 +55,7 @@ export function MyWorkEditWeekPlanDialog({
       plan.items.map((entry) => ({
         workItemId: entry.workItemId,
         title: entry.workItem?.title ?? "Zadanie",
+        projectName: entry.workItem?.projectName ?? null,
         plannedDate: entry.plannedDate,
       })),
     );
@@ -81,6 +84,7 @@ export function MyWorkEditWeekPlanDialog({
         .map((task) => ({
           workItemId: task.id,
           title: task.title,
+          projectName: task.projectName,
           plannedDate: clampDateToRange(
             task.dueDate ?? task.plannedEnd ?? activePlan.dateFrom,
             activePlan.dateFrom,
@@ -96,6 +100,7 @@ export function MyWorkEditWeekPlanDialog({
       {
         workItemId: task.id,
         title: task.title,
+        projectName: task.projectName,
         plannedDate: clampDateToRange(
           task.dueDate ?? task.plannedEnd ?? activePlan.dateFrom,
           activePlan.dateFrom,
@@ -156,12 +161,25 @@ export function MyWorkEditWeekPlanDialog({
           {!items.length ? (
             <p className="px-2 py-4 text-center text-sm text-muted">Brak pozycji w planie.</p>
           ) : (
-            items.map((item) => (
+            items.map((item) => {
+              const projectLabel = workItemProjectLabel(item.projectName);
+              const hasProject = Boolean(item.projectName?.trim());
+              return (
               <div
                 key={item.workItemId}
                 className="flex flex-wrap items-center gap-2 rounded-md border border-border/60 bg-surface px-2 py-1.5"
               >
-                <span className="min-w-0 flex-1 text-sm font-medium">{item.title}</span>
+                <div className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium">{item.title}</span>
+                  <span
+                    className={cn(
+                      "block truncate text-xs",
+                      hasProject ? "text-foreground/80" : "italic text-muted",
+                    )}
+                  >
+                    {projectLabel}
+                  </span>
+                </div>
                 <Input
                   type="date"
                   className="w-[150px]"
@@ -196,7 +214,8 @@ export function MyWorkEditWeekPlanDialog({
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-            ))
+            );
+            })
           )}
         </div>
 
@@ -204,17 +223,31 @@ export function MyWorkEditWeekPlanDialog({
           <div>
             <p className="mb-2 text-sm font-medium text-foreground">Dodaj z zadań pracownika</p>
             <div className="max-h-36 space-y-1 overflow-y-auto rounded-lg border border-border/80 p-2">
-              {addableTasks.map((task) => (
+              {addableTasks.map((task) => {
+                const projectLabel = workItemProjectLabel(task.projectName);
+                const hasProject = Boolean(task.projectName?.trim());
+                return (
                 <button
                   key={task.id}
                   type="button"
                   className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-surface-muted/50"
                   onClick={() => addTask(task)}
                 >
-                  <span className="truncate">{task.title}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{task.title}</span>
+                    <span
+                      className={cn(
+                        "block truncate text-xs",
+                        hasProject ? "text-foreground/80" : "italic text-muted",
+                      )}
+                    >
+                      {projectLabel}
+                    </span>
+                  </span>
                   <Plus className="h-4 w-4 shrink-0 text-muted" />
                 </button>
-              ))}
+              );
+              })}
             </div>
           </div>
         ) : null}

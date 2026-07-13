@@ -36,6 +36,7 @@ import {
   type ProjectsViewFilters,
 } from "@/lib/projects-view-filters";
 import { buildProjectClosingFlagsMap } from "@/lib/process/stage-helpers";
+import { sortProjectsByActivity } from "@/lib/sort/activity-sort";
 import { useAppStore } from "@/store/app-store";
 import { useProcessStore } from "@/store/process-store";
 import { formatDate } from "@/lib/utils";
@@ -65,10 +66,15 @@ export function ProjectsTable() {
     [fieldOptions, projectProcesses, projects, templates],
   );
 
-  const filteredProjects = useMemo(
-    () => filterProjectsByView(projects, projectsViewFilters, fieldOptions, projectClosingFlags),
-    [projects, projectsViewFilters, fieldOptions, projectClosingFlags],
-  );
+  const filteredProjects = useMemo(() => {
+    const filtered = filterProjectsByView(
+      projects,
+      projectsViewFilters,
+      fieldOptions,
+      projectClosingFlags,
+    );
+    return sortProjectsByActivity(filtered, fieldOptions);
+  }, [projects, projectsViewFilters, fieldOptions, projectClosingFlags]);
 
   function updateViewFilters(patch: Partial<ProjectsViewFilters>) {
     updateProjectsViewFilters({ ...projectsViewFilters, ...patch });

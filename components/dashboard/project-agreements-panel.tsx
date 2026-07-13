@@ -126,6 +126,24 @@ function sanitizeApproverRoles(roles: AgreementApproverRoleInput[] | undefined) 
   );
 }
 
+function confirmAgreementDelete(agreement: ProjectClientAgreement) {
+  const title = agreement.title.trim() || "bez tytułu";
+  if (agreement.status === "accepted" || agreement.status === "rejected") {
+    return window.confirm(
+      `Usunąć ustalenie „${title}"? Ma już odpowiedź klienta — operacji nie można cofnąć.`,
+    );
+  }
+  if (agreement.status === "pending_client") {
+    return window.confirm(
+      `Usunąć ustalenie „${title}"? Oczekuje na akceptację klienta.`,
+    );
+  }
+  if (agreement.status === "draft") {
+    return window.confirm(`Usunąć szkic ustalenia „${title}"?`);
+  }
+  return window.confirm(`Usunąć ustalenie „${title}"?`);
+}
+
 function hasIncompleteApproverRole(roles: AgreementApproverRoleInput[] | undefined) {
   return (roles ?? []).some(
     (role) => !role.isTeamRole && !role.isClientRole && !role.label.trim(),
@@ -153,6 +171,8 @@ function AgreementCard({
   defaultExpanded = false,
   publicDashboardToken,
   projectId,
+  responsibleLabel,
+  showMissingResponsibleBadge = false,
   blockingStageLabel,
 }: {
   agreement: ProjectClientAgreement;
@@ -174,6 +194,10 @@ function AgreementCard({
   defaultExpanded?: boolean;
   publicDashboardToken?: string;
   projectId?: string;
+  /** Nazwa osoby odpowiedzialnej — etykieta na liście ustaleń. */
+  responsibleLabel?: string | null;
+  /** Czy pokazać ostrzeżenie o braku osoby odpowiedzialnej (widok zespołu). */
+  showMissingResponsibleBadge?: boolean;
   /** Nazwa etapu procesu blokowanego przez to ustalenie — pokazuje kłódkę na karcie. */
   blockingStageLabel?: string | null;
 }) {
@@ -208,6 +232,17 @@ function AgreementCard({
         subtitle={meta.subtitle}
         statusLabel={meta.statusLabel}
         statusTone={meta.statusTone}
+        headerBadges={
+          responsibleLabel ? (
+            <span className="rounded-full border border-border/70 bg-surface-muted/30 px-2.5 py-0.5 text-[10px] font-medium text-foreground/85">
+              {responsibleLabel}
+            </span>
+          ) : showMissingResponsibleBadge ? (
+            <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-medium text-amber-200">
+              Brak odpowiedzialnego
+            </span>
+          ) : null
+        }
         hint={approvalHint ?? meta.hint}
         defaultExpanded={defaultExpanded}
         banner={
@@ -587,7 +622,7 @@ export function ProjectAgreementsPanel({
   const [projectAccessibleProfiles, setProjectAccessibleProfiles] = useState<UserProfile[]>([]);
 
   useEffect(() => {
-    if (!dialogOpen || mode !== "team") {
+    if (mode !== "team") {
       return;
     }
     let cancelled = false;
@@ -605,7 +640,15 @@ export function ProjectAgreementsPanel({
     return () => {
       cancelled = true;
     };
-  }, [dialogOpen, mode, projectId]);
+  }, [mode, projectId]);
+
+  const responsibleLabelByUserId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const profile of projectAccessibleProfiles) {
+      map.set(profile.id, profileToOptionLabel(profile));
+    }
+    return map;
+  }, [projectAccessibleProfiles]);
 
   useEffect(() => {
     void ensureAgreements(projectId);
@@ -686,6 +729,11 @@ export function ProjectAgreementsPanel({
 
     if (!form.title.trim()) {
       setSaveError("Podaj tytuł ustalenia.");
+      return;
+    }
+
+    if (mode === "team" && !publicDashboardToken && !form.responsibleUserId) {
+      setSaveError("Wybierz osobę odpowiedzialną.");
       return;
     }
 
@@ -786,15 +834,11 @@ export function ProjectAgreementsPanel({
 
   async function handleDelete(id: string) {
     const existing = agreements.find((entry) => entry.id === id);
-    if (
-      existing &&
-      (existing.status === "accepted" || existing.status === "rejected") &&
-      !window.confirm("To ustalenie ma już odpowiedź klienta. Na pewno usunąć?")
-    ) {
+    if (!existing || !confirmAgreementDelete(existing)) {
       return;
     }
 
-    if (existing?.status === "draft") {
+    if (existing.status === "draft") {
       await removeDraft(projectId, id);
     } else {
       await removeAgreement(projectId, id);
@@ -904,6 +948,12 @@ export function ProjectAgreementsPanel({
                 ? (stageLabelById.get(agreement.acceptanceDeadlineStageId) ?? null)
                 : null
             }
+            responsibleLabel={
+              agreement.responsibleUserId
+                ? (responsibleLabelByUserId.get(agreement.responsibleUserId) ?? "Osoba odpowiedzialna")
+                : null
+            }
+            showMissingResponsibleBadge={mode === "team"}
           />
         ))}
       </div>
@@ -972,18 +1022,28 @@ export function ProjectAgreementsPanel({
               </Field>
             ) : null}
             {mode === "team" ? (
-              <Field label="Osoba odpowiedzialna (Moja praca)">
+              <Field
+                label="Osoba odpowiedzialna (Moja praca) *"
+                error={
+                  saveError === "Wybierz osobę odpowiedzialną." ? saveError : undefined
+                }
+                invalid={saveError === "Wybierz osobę odpowiedzialną."}
+              >
                 <select
                   className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.responsibleUserId ?? ""}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const responsibleUserId = event.target.value || null;
                     setForm((current) => ({
                       ...current,
-                      responsibleUserId: event.target.value || null,
-                    }))
-                  }
+                      responsibleUserId,
+                    }));
+                    if (responsibleUserId && saveError === "Wybierz osobę odpowiedzialną.") {
+                      setSaveError(null);
+                    }
+                  }}
                 >
-                  <option value="">Brak — bez zadania w Moja praca</option>
+                  <option value="">— wybierz osobę odpowiedzialną —</option>
                   {projectAccessibleProfiles.map((profile) => (
                     <option key={profile.id} value={profile.id}>
                       {profileToOptionLabel(profile)}

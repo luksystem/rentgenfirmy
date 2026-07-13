@@ -112,6 +112,18 @@ export async function completeWorkItem(
   return payload.detail;
 }
 
+export async function completeAllocationWorkItem(id: string): Promise<WorkItemDetail> {
+  const response = await fetch(`/api/my-work/items/${id}/complete-allocation`, {
+    method: "POST",
+    credentials: "include",
+  });
+  const payload = await parseJsonResponse<{ detail: WorkItemDetail }>(
+    response,
+    "Nie udało się zakończyć przydziału.",
+  );
+  return payload.detail;
+}
+
 export async function verifyWorkItem(id: string): Promise<WorkItemDetail> {
   const response = await fetch(`/api/my-work/items/${id}/verify`, {
     method: "POST",
@@ -256,4 +268,12 @@ export async function fetchMyWorkDashboardMetrics(): Promise<WorkDashboardMetric
     "Nie udało się wczytać pulpitu managera.",
   );
   return payload.metrics;
+}
+
+export async function syncProcessItemWorkItems(processItemId: string): Promise<void> {
+  const response = await fetch(`/api/my-work/process-items/${processItemId}/sync`, {
+    method: "POST",
+    credentials: "include",
+  });
+  await parseJsonResponse<{ ok: boolean }>(response, "Nie udało się zsynchronizować elementu procesu z zadaniami.");
 }

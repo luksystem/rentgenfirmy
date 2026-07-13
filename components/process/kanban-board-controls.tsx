@@ -18,19 +18,24 @@ export function KanbanBoardControls({
   filters,
   sortMode,
   assigneeOptions,
+  assigneeFilterOptions,
   projectOptions = [],
   onFiltersChange,
   onSortModeChange,
 }: {
   filters: KanbanBoardFilters;
   sortMode: KanbanColumnSortMode;
-  assigneeOptions: string[];
+  assigneeOptions?: string[];
+  assigneeFilterOptions?: Array<{ value: string; label: string }>;
   projectOptions?: Array<{ id: string; name: string }>;
   onFiltersChange: (filters: KanbanBoardFilters) => void;
   onSortModeChange: (sortMode: KanbanColumnSortMode) => void;
 }) {
   const activeCount = countActiveKanbanBoardFilters(filters);
   const showProjectFilter = projectOptions.length > 0;
+  const assigneeChoices =
+    assigneeFilterOptions ??
+    (assigneeOptions ?? []).map((option) => ({ value: option, label: option }));
 
   return (
     <MobileFiltersPanel
@@ -95,9 +100,9 @@ export function KanbanBoardControls({
           >
             <option value="all">Wszyscy</option>
             <option value="unassigned">Nieprzypisane</option>
-            {assigneeOptions.map((assignee) => (
-              <option key={assignee} value={assignee}>
-                {assignee}
+            {assigneeChoices.map((assignee) => (
+              <option key={assignee.value} value={assignee.value}>
+                {assignee.label}
               </option>
             ))}
           </Select>

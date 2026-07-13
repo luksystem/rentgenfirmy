@@ -32,6 +32,11 @@ export function resolveMentionTargets(text: string, candidates: MentionCandidate
     if (!mentionNames.includes(key) || seen.has(key)) {
       continue;
     }
+    if (candidate.kind === "role" || candidate.roleItemId) {
+      seen.add(key);
+      targets.push(candidate);
+      continue;
+    }
     if (!candidate.profileId) {
       continue;
     }

@@ -13,6 +13,7 @@ export function AgreementCollapsibleShell({
   subtitle,
   statusLabel,
   statusTone,
+  headerBadges,
   hint,
   banner,
   preview,
@@ -25,6 +26,8 @@ export function AgreementCollapsibleShell({
   subtitle?: string;
   statusLabel: string;
   statusTone: AgreementStatusBadgeTone;
+  /** Dodatkowe etykiety obok statusu (np. osoba odpowiedzialna). */
+  headerBadges?: React.ReactNode;
   hint?: string | null;
   /** Zawsze widoczne, niezależnie od stanu zwinięcia (np. ostrzeżenie o blokadzie etapu). */
   banner?: React.ReactNode;
@@ -67,15 +70,18 @@ export function AgreementCollapsibleShell({
         )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <p className="break-words font-medium text-foreground">{title}</p>
-            <span
-              className={cn(
-                "shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                AGREEMENT_STATUS_BADGE_CLASS[statusTone],
-              )}
-            >
-              {statusLabel}
-            </span>
+            <p className="min-w-0 flex-1 break-words font-medium text-foreground">{title}</p>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+              {headerBadges}
+              <span
+                className={cn(
+                  "rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                  AGREEMENT_STATUS_BADGE_CLASS[statusTone],
+                )}
+              >
+                {statusLabel}
+              </span>
+            </div>
           </div>
           {subtitle ? (
             <p className="mt-0.5 break-words text-xs text-muted">{subtitle}</p>

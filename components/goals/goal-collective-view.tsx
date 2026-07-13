@@ -3,16 +3,29 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Loader2, X } from "lucide-react";
+import { Loader2, Target, X } from "lucide-react";
+import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/input";
 import { formatPartyName } from "@/lib/party/display-name";
+import {
+  collectGoalBoardOwnerOptions,
+  countActiveGoalCollectiveFilters,
+  EMPTY_GOAL_COLLECTIVE_FILTERS,
+  filterGoalsForCollective,
+  readStoredGoalCollectiveFilters,
+  writeStoredGoalCollectiveFilters,
+  type GoalCollectiveFilters,
+} from "@/lib/goals/goal-board-filters";
 import { fetchAllGoals } from "@/lib/supabase/goal-repository";
 import {
   GOAL_LEVEL_LABELS,
-  GOAL_STATUS_LABELS,
+  GOAL_PRIORITIES,
+  GOAL_PRIORITY_LABELS,
   GOAL_STATUSES,
+  GOAL_STATUS_LABELS,
   type Goal,
+  type GoalPriority,
   type GoalStatus,
 } from "@/lib/goals/types";
 import { formatDate } from "@/lib/utils";
@@ -34,8 +47,6 @@ export function GoalCollectiveView({
   const clients = useAppStore((state) => state.clients);
   const searchParams = useSearchParams();
 
-  // Widok bywa osadzany poza `/tablice-celow` (np. zakładka „Cele” w dashboardzie klienta),
-  // gdzie `GoalHydrator` nie jest zamontowany — dociągamy katalog tablic/metodologii samodzielnie.
   useEffect(() => {
     void hydrateGoalStore();
   }, [hydrateGoalStore]);
@@ -43,8 +54,7 @@ export function GoalCollectiveView({
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<GoalStatus | "all">("all");
-  const [boardFilter, setBoardFilter] = useState<string>("all");
+  const [filters, setFilters] = useState<GoalCollectiveFilters>(EMPTY_GOAL_COLLECTIVE_FILTERS);
   const [contextProjectId, setContextProjectId] = useState<string | null>(
     fixedProjectId ?? searchParams?.get("projectId") ?? null,
   );
@@ -52,6 +62,14 @@ export function GoalCollectiveView({
     fixedClientId ?? searchParams?.get("clientId") ?? null,
   );
   const canClearContext = !fixedProjectId && !fixedClientId;
+
+  useEffect(() => {
+    setFilters(readStoredGoalCollectiveFilters());
+  }, []);
+
+  useEffect(() => {
+    writeStoredGoalCollectiveFilters(filters);
+  }, [filters]);
 
   useEffect(() => {
     void (async () => {
@@ -68,26 +86,30 @@ export function GoalCollectiveView({
 
   const boardsById = useMemo(() => new Map(boards.map((board) => [board.id, board])), [boards]);
   const kindsByCode = useMemo(() => new Map(boardKinds.map((kind) => [kind.code, kind])), [boardKinds]);
+  const ownerOptions = useMemo(
+    () => collectGoalBoardOwnerOptions(goals, getOwnerName),
+    [goals, getOwnerName],
+  );
   const contextProjectName = useMemo(
     () => (contextProjectId ? projects.find((entry) => entry.id === contextProjectId)?.name ?? null : null),
     [projects, contextProjectId],
   );
-  const contextClientName = useMemo(
-    () => {
-      if (!contextClientId) return null;
-      const client = clients.find((entry) => entry.id === contextClientId);
-      return client ? formatPartyName(client) : null;
-    },
-    [clients, contextClientId],
+  const contextClientName = useMemo(() => {
+    if (!contextClientId) return null;
+    const client = clients.find((entry) => entry.id === contextClientId);
+    return client ? formatPartyName(client) : null;
+  }, [clients, contextClientId]);
+
+  const filtered = useMemo(
+    () =>
+      filterGoalsForCollective(goals, filters, {
+        projectId: contextProjectId,
+        clientId: contextClientId,
+      }),
+    [goals, filters, contextProjectId, contextClientId],
   );
 
-  const filtered = goals.filter((goal) => {
-    if (statusFilter !== "all" && goal.status !== statusFilter) return false;
-    if (boardFilter !== "all" && goal.boardId !== boardFilter) return false;
-    if (contextProjectId && goal.projectId !== contextProjectId) return false;
-    if (contextClientId && goal.clientId !== contextClientId) return false;
-    return true;
-  });
+  const activeFilterCount = countActiveGoalCollectiveFilters(filters);
 
   if (loading) {
     return (
@@ -104,6 +126,15 @@ export function GoalCollectiveView({
 
   return (
     <div className="grid gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm text-muted">
+          <Target className="h-4 w-4" />
+          {filtered.length === goals.length
+            ? `${goals.length} ${goals.length === 1 ? "cel" : "celów"}`
+            : `${filtered.length} z ${goals.length} ${goals.length === 1 ? "cela" : "celów"}`}
+        </div>
+      </div>
+
       {contextProjectId || contextClientId ? (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-foreground/90">
           <span className="font-medium">Filtr kontekstowy:</span>
@@ -129,11 +160,28 @@ export function GoalCollectiveView({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap gap-3">
+      <MobileFiltersPanel
+        activeCount={activeFilterCount}
+        onClear={() => setFilters(EMPTY_GOAL_COLLECTIVE_FILTERS)}
+      >
         <Select
-          value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value as GoalStatus | "all")}
-          className="w-auto"
+          value={filters.ownerId}
+          onChange={(event) => setFilters((current) => ({ ...current, ownerId: event.target.value }))}
+          className="w-full md:w-auto"
+        >
+          <option value="all">Wszyscy pracownicy</option>
+          {ownerOptions.map((owner) => (
+            <option key={owner.id} value={owner.id}>
+              {owner.name}
+            </option>
+          ))}
+        </Select>
+        <Select
+          value={filters.status}
+          onChange={(event) =>
+            setFilters((current) => ({ ...current, status: event.target.value as GoalStatus | "all" }))
+          }
+          className="w-full md:w-auto"
         >
           <option value="all">Wszystkie statusy</option>
           {GOAL_STATUSES.map((status) => (
@@ -142,7 +190,25 @@ export function GoalCollectiveView({
             </option>
           ))}
         </Select>
-        <Select value={boardFilter} onChange={(event) => setBoardFilter(event.target.value)} className="w-auto">
+        <Select
+          value={filters.priority}
+          onChange={(event) =>
+            setFilters((current) => ({ ...current, priority: event.target.value as GoalPriority | "all" }))
+          }
+          className="w-full md:w-auto"
+        >
+          <option value="all">Wszystkie priorytety</option>
+          {GOAL_PRIORITIES.map((priority) => (
+            <option key={priority} value={priority}>
+              {GOAL_PRIORITY_LABELS[priority]}
+            </option>
+          ))}
+        </Select>
+        <Select
+          value={filters.boardId}
+          onChange={(event) => setFilters((current) => ({ ...current, boardId: event.target.value }))}
+          className="w-full md:w-auto"
+        >
           <option value="all">Wszystkie tablice</option>
           {boards.map((board) => (
             <option key={board.id} value={board.id}>
@@ -150,16 +216,17 @@ export function GoalCollectiveView({
             </option>
           ))}
         </Select>
-      </div>
+      </MobileFiltersPanel>
 
       <div className="overflow-x-auto rounded-2xl border border-border">
-        <table className="w-full min-w-[720px] text-sm">
+        <table className="w-full min-w-[800px] text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-muted/40 text-left text-xs uppercase tracking-wide text-muted">
               <th className="px-3 py-2">Cel</th>
               <th className="px-3 py-2">Tablica</th>
               <th className="px-3 py-2">Poziom</th>
               <th className="px-3 py-2">Właściciel</th>
+              <th className="px-3 py-2">Priorytet</th>
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Realizacja</th>
               <th className="px-3 py-2">Okres</th>
@@ -184,6 +251,7 @@ export function GoalCollectiveView({
                   </td>
                   <td className="px-3 py-2 text-muted">{GOAL_LEVEL_LABELS[goal.level]}</td>
                   <td className="px-3 py-2 text-muted">{getOwnerName(goal.ownerId)}</td>
+                  <td className="px-3 py-2 text-muted">{GOAL_PRIORITY_LABELS[goal.priority]}</td>
                   <td className="px-3 py-2">
                     <Badge tone={goal.status === "at_risk" ? "critical" : "neutral"}>
                       {GOAL_STATUS_LABELS[goal.status]}
@@ -198,7 +266,7 @@ export function GoalCollectiveView({
             })}
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-sm text-muted">
+                <td colSpan={8} className="px-3 py-6 text-center text-sm text-muted">
                   Brak celów spełniających wybrane filtry.
                 </td>
               </tr>

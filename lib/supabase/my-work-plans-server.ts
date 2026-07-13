@@ -28,6 +28,11 @@ import {
   mapWorkItemRow,
 } from "@/lib/supabase/my-work-server";
 import { addDays, currentWeekMonday, toDateKey, weekRangeFromMonday } from "@/lib/my-work/week-range";
+import {
+  computeDayPlanSyncChanges,
+  WEEK_PLAN_DAY_SYNC_STATUSES,
+  type WeekPlanItemRef,
+} from "@/lib/my-work/plan-sync";
 
 type AdminClient = SupabaseClient;
 
@@ -136,6 +141,136 @@ function itemBelongsInDayPlan(item: WorkItemView, reference = new Date()) {
   return DAY_PLAN_SECTIONS.some((section) => itemMatchesListSection(item, section, reference));
 }
 
+async function fetchWeekPlanWorkItemIdsForDate(
+  admin: AdminClient,
+  userId: string,
+  sessionDate: string,
+) {
+  const { from, to } = weekRangeFromMonday(sessionDate);
+  const { data: weekPlan, error } = await admin
+    .from("work_plans")
+    .select("id, status")
+    .eq("assigned_user_id", userId)
+    .eq("period_type", "week")
+    .eq("date_from", from)
+    .eq("date_to", to)
+    .maybeSingle();
+  if (error) {
+    throw new Error(error.message);
+  }
+  if (
+    !weekPlan ||
+    !WEEK_PLAN_DAY_SYNC_STATUSES.includes(
+      weekPlan.status as (typeof WEEK_PLAN_DAY_SYNC_STATUSES)[number],
+    )
+  ) {
+    return null;
+  }
+
+  const { data: weekItems, error: itemsError } = await admin
+    .from("work_plan_items")
+    .select("work_item_id")
+    .eq("work_plan_id", weekPlan.id)
+    .eq("planned_date", sessionDate);
+  if (itemsError) {
+    throw new Error(itemsError.message);
+  }
+
+  return new Set((weekItems ?? []).map((row) => row.work_item_id as string));
+}
+
+function toWeekPlanItemRefs(
+  items: { workItemId: string; plannedDate: string; sortOrder?: number }[],
+): WeekPlanItemRef[] {
+  return items.map((item) => ({
+    workItemId: item.workItemId,
+    plannedDate: item.plannedDate,
+    sortOrder: item.sortOrder,
+  }));
+}
+
+async function applyDayPlanSyncFromWeekPlanChanges(
+  admin: AdminClient,
+  assignedUserId: string,
+  oldItems: WeekPlanItemRef[],
+  newItems: WeekPlanItemRef[],
+) {
+  const changes = computeDayPlanSyncChanges(oldItems, newItems);
+  if (!changes.length) {
+    return;
+  }
+
+  const now = new Date().toISOString();
+
+  for (const change of changes) {
+    const { data: dayPlan, error: dayPlanError } = await admin
+      .from("work_plans")
+      .select("id")
+      .eq("assigned_user_id", assignedUserId)
+      .eq("period_type", "day")
+      .eq("date_from", change.date)
+      .maybeSingle();
+    if (dayPlanError) {
+      throw new Error(dayPlanError.message);
+    }
+    if (!dayPlan?.id) {
+      continue;
+    }
+
+    const { data: existingDayItems, error: existingError } = await admin
+      .from("work_plan_items")
+      .select("id, work_item_id")
+      .eq("work_plan_id", dayPlan.id);
+    if (existingError) {
+      throw new Error(existingError.message);
+    }
+
+    const allowedIds = new Set(change.reconcileToNewIds);
+    const staleDayItemIds = (existingDayItems ?? [])
+      .filter((row) => !allowedIds.has(row.work_item_id as string))
+      .map((row) => row.id as string);
+
+    if (staleDayItemIds.length) {
+      const { error: deleteError } = await admin
+        .from("work_plan_items")
+        .delete()
+        .in("id", staleDayItemIds);
+      if (deleteError) {
+        throw new Error(deleteError.message);
+      }
+    }
+
+    const existingIds = new Set(
+      (existingDayItems ?? [])
+        .map((row) => row.work_item_id as string)
+        .filter((id) => allowedIds.has(id)),
+    );
+
+    if (change.addedItems.length) {
+      const inserts = change.addedItems
+        .filter((item) => !existingIds.has(item.workItemId))
+        .map((item, index) => ({
+          id: crypto.randomUUID(),
+          work_plan_id: dayPlan.id,
+          work_item_id: item.workItemId,
+          assigned_user_id: assignedUserId,
+          planned_date: change.date,
+          sort_order: item.sortOrder ?? index * 10,
+          manager_comment: "",
+          carried_over: false,
+          created_at: now,
+        }));
+
+      if (inserts.length) {
+        const { error: insertError } = await admin.from("work_plan_items").insert(inserts);
+        if (insertError) {
+          throw new Error(insertError.message);
+        }
+      }
+    }
+  }
+}
+
 async function fetchPlanItems(
   admin: AdminClient,
   planId: string,
@@ -215,14 +350,25 @@ async function ensureDayPlan(
     throw new Error("Nie udało się utworzyć planu dnia.");
   }
 
-  const candidateItems = workItems.filter((item) => itemBelongsInDayPlan(item, new Date(`${sessionDate}T12:00:00`)));
+  const candidateItems = (async () => {
+    const weekPlanIds = await fetchWeekPlanWorkItemIdsForDate(admin, userId, sessionDate);
+    const reference = new Date(`${sessionDate}T12:00:00`);
+    if (weekPlanIds) {
+      return workItems.filter(
+        (item) => weekPlanIds.has(item.id) && !isTerminalWorkItemStatus(item.status),
+      );
+    }
+    return workItems.filter((item) => itemBelongsInDayPlan(item, reference));
+  })();
+
+  const resolvedCandidateItems = await candidateItems;
   const { data: currentItems } = await admin
     .from("work_plan_items")
     .select("id, work_item_id")
     .eq("work_plan_id", planId);
   const existingIds = new Set((currentItems ?? []).map((row) => row.work_item_id));
 
-  const inserts = candidateItems
+  const inserts = resolvedCandidateItems
     .filter((item) => !existingIds.has(item.id))
     .map((item, index) => ({
       id: crypto.randomUUID(),
@@ -243,7 +389,7 @@ async function ensureDayPlan(
     }
   }
 
-  const validIds = new Set(candidateItems.map((item) => item.id));
+  const validIds = new Set(resolvedCandidateItems.map((item) => item.id));
   const stalePlanItemIds = (currentItems ?? [])
     .filter((row) => !validIds.has(row.work_item_id as string))
     .map((row) => row.id as string);
@@ -506,6 +652,14 @@ export async function createWeekPlanServer(
       );
     }
 
+    const oldItems = toWeekPlanItemRefs(
+      (await fetchPlanItems(admin, existing.id)).map((entry) => ({
+        workItemId: entry.workItemId,
+        plannedDate: entry.plannedDate,
+        sortOrder: entry.sortOrder,
+      })),
+    );
+
     const { error: updateError } = await admin
       .from("work_plans")
       .update({
@@ -549,6 +703,12 @@ export async function createWeekPlanServer(
     if (!plan) {
       throw new Error("Nie udało się zaktualizować planu tygodnia.");
     }
+    await applyDayPlanSyncFromWeekPlanChanges(
+      admin,
+      input.assignedUserId,
+      oldItems,
+      toWeekPlanItemRefs(input.items),
+    );
     return plan;
   }
 
@@ -597,6 +757,12 @@ export async function createWeekPlanServer(
   if (!plan) {
     throw new Error("Nie udało się utworzyć planu tygodnia.");
   }
+  await applyDayPlanSyncFromWeekPlanChanges(
+    admin,
+    input.assignedUserId,
+    [],
+    toWeekPlanItemRefs(input.items),
+  );
   return plan;
 }
 
@@ -620,6 +786,13 @@ export async function updateWeekPlanServer(
 
   const now = new Date().toISOString();
   const sendImmediately = input.sendImmediately === true;
+  const oldItems = toWeekPlanItemRefs(
+    existing.items.map((entry) => ({
+      workItemId: entry.workItemId,
+      plannedDate: entry.plannedDate,
+      sortOrder: entry.sortOrder,
+    })),
+  );
 
   const { error: updateError } = await admin
     .from("work_plans")
@@ -675,6 +848,12 @@ export async function updateWeekPlanServer(
   if (!plan) {
     throw new Error("Nie udało się zapisać planu tygodnia.");
   }
+  await applyDayPlanSyncFromWeekPlanChanges(
+    admin,
+    existing.assignedUserId,
+    oldItems,
+    toWeekPlanItemRefs(input.items),
+  );
   return plan;
 }
 

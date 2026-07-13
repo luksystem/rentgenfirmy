@@ -20,8 +20,12 @@ type AgreementRow = Parameters<typeof rowToAgreement>[0];
 async function assertResponsibleUserHasProjectAccess(
   projectId: string,
   responsibleUserId: string | null | undefined,
+  options?: { required?: boolean },
 ) {
   if (!responsibleUserId) {
+    if (options?.required) {
+      throw new Error("Wybierz osobę odpowiedzialną.");
+    }
     return;
   }
   const profiles = await fetchProjectAccessibleProfiles(projectId);
@@ -52,7 +56,9 @@ export async function createProjectAgreement(
   author: { name: string; side: "team" | "client" },
 ) {
   const normalized = normalizeProjectAgreementInput(input);
-  await assertResponsibleUserHasProjectAccess(projectId, normalized.responsibleUserId);
+  await assertResponsibleUserHasProjectAccess(projectId, normalized.responsibleUserId, {
+    required: author.side === "team",
+  });
   const supabase = getSupabase();
   const now = new Date().toISOString();
   const { data: lastRow } = await supabase
@@ -137,6 +143,7 @@ export async function updateProjectAgreement(
     await assertResponsibleUserHasProjectAccess(
       existingRow.project_id as string,
       normalized.responsibleUserId,
+      { required: true },
     );
   }
   const { data, error } = await supabase

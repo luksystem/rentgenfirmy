@@ -6,6 +6,8 @@ import {
   statusesForKanbanColumn,
 } from "@/lib/my-work/state-machine";
 import { workItemLogActionLabel } from "@/lib/my-work/display-labels";
+import { resolveAgreementSourceLink } from "@/lib/my-work/link-resolver";
+import { computeDayPlanSyncChanges } from "@/lib/my-work/plan-sync";
 import { itemIsOverdue, itemMatchesListSection, filterWorkItems, groupItemsByListSection } from "@/lib/my-work/section-filters";
 import {
   mapAgreementStatus,
@@ -18,7 +20,13 @@ import {
   mapServiceIntakeStatus,
 } from "@/lib/my-work/source-adapters/status-mappers";
 import { mapWorkItemStatusToPlanStatusName } from "@/lib/my-work/source-adapters/resource-plan-status-sync";
-import { resolveAgreementSourceLink } from "@/lib/my-work/link-resolver";
+import { findOrphanedWorkItemIds } from "@/lib/my-work/orphan-work-items";
+import {
+  mapWorkItemStatusToProcessItemStatus,
+  shouldMarkProcessItemCompleted,
+} from "@/lib/my-work/source-adapters/process-status-sync";
+import { resolveEffectiveProcessItemStatus } from "@/lib/supabase/process-work-item-sync-server";
+import { normalizeChecklistPayload } from "@/lib/process/item-payload";
 import type { WorkItemView } from "@/lib/my-work/types";
 
 function mockItem(overrides: Partial<WorkItemView>): WorkItemView {
@@ -164,6 +172,33 @@ describe("section-filters", () => {
   });
 });
 
+describe("plan sync", () => {
+  it("detects removed and added week plan items for a day", () => {
+    const changes = computeDayPlanSyncChanges(
+      [
+        { workItemId: "a", plannedDate: "2026-07-13" },
+        { workItemId: "b", plannedDate: "2026-07-13" },
+      ],
+      [{ workItemId: "a", plannedDate: "2026-07-13" }],
+    );
+    expect(changes).toHaveLength(1);
+    expect(changes[0]?.date).toBe("2026-07-13");
+    expect(changes[0]?.removedWorkItemIds).toEqual(["b"]);
+    expect(changes[0]?.reconcileToNewIds).toEqual(["a"]);
+  });
+
+  it("reconciles day plan when week plan is first sent for today", () => {
+    const changes = computeDayPlanSyncChanges(
+      [],
+      [
+        { workItemId: "a", plannedDate: "2026-07-13" },
+        { workItemId: "b", plannedDate: "2026-07-13" },
+      ],
+    );
+    expect(changes[0]?.reconcileToNewIds).toEqual(["a", "b"]);
+  });
+});
+
 describe("display labels", () => {
   it("translates work item log actions to Polish", () => {
     expect(workItemLogActionLabel("comment_added")).toBe("Dodano komentarz");
@@ -254,5 +289,69 @@ describe("sortWorkItemsStable", () => {
       mockItem({ id: "c", title: "Gamma", dueDate: null }),
     ]);
     expect(sorted.map((item) => item.id)).toEqual(["a", "b", "c"]);
+  });
+});
+
+describe("orphan work items", () => {
+  it("marks work items whose source row was deleted", () => {
+    const existing = new Map<string, Set<string>>([
+      ["process_item", new Set(["proc-1"])],
+    ]);
+    const orphanIds = findOrphanedWorkItemIds(
+      [
+        {
+          id: "wi-1",
+          sourceType: "process_item",
+          sourceId: "proc-1",
+          status: "pending_ack",
+        },
+        {
+          id: "wi-2",
+          sourceType: "process_item",
+          sourceId: "proc-deleted",
+          status: "planned",
+        },
+        {
+          id: "wi-3",
+          sourceType: "process_item",
+          sourceId: "proc-done",
+          status: "verified",
+        },
+      ],
+      existing,
+    );
+    expect(orphanIds).toEqual(["wi-2"]);
+  });
+});
+
+describe("process ↔ work item sync", () => {
+  it("derives completed status from checklist progress", () => {
+    const payload = normalizeChecklistPayload({
+      sections: [
+        {
+          id: "s1",
+          name: "Sekcja",
+          position: 0,
+          lines: [{ id: "l1", text: "Krok", checked: true, status: "PASSED" }],
+        },
+      ],
+    });
+    const status = resolveEffectiveProcessItemStatus({
+      id: "ppi-1",
+      project_id: "p1",
+      template_item_id: "t1",
+      kind: "checklist",
+      status: "open",
+      assignee_id: "u1",
+      payload,
+      signed_at: null,
+    });
+    expect(status).toBe("completed");
+  });
+
+  it("maps work item completion back to process completed", () => {
+    expect(mapWorkItemStatusToProcessItemStatus("verified")).toBe("completed");
+    expect(mapWorkItemStatusToProcessItemStatus("in_progress")).toBe("in_progress");
+    expect(shouldMarkProcessItemCompleted("pending_verification")).toBe(true);
   });
 });

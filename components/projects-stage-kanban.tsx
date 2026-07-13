@@ -21,6 +21,7 @@ import {
   resolveProjectActiveStageTitle,
 } from "@/lib/process/stage-helpers";
 import { filterProjectsByView, type ProjectsViewFilters } from "@/lib/projects-view-filters";
+import { sortProjectsByActivity } from "@/lib/sort/activity-sort";
 import type { Project } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
@@ -152,10 +153,10 @@ export function ProjectsStageKanban({
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [pendingMove, setPendingMove] = useState<{ projectId: string; stage: string } | null>(null);
 
-  const filtered = useMemo(
-    () => filterProjectsByView(projects, filters, fieldOptions, projectClosingFlags),
-    [fieldOptions, filters, projectClosingFlags, projects],
-  );
+  const filtered = useMemo(() => {
+    const matched = filterProjectsByView(projects, filters, fieldOptions, projectClosingFlags);
+    return sortProjectsByActivity(matched, fieldOptions);
+  }, [fieldOptions, filters, projectClosingFlags, projects]);
 
   const relevantTemplates = useMemo(() => {
     const types = new Set(filtered.map((project) => project.type));

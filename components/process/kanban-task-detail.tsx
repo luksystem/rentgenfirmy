@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { History, Pencil, Trash2, X } from "lucide-react";
 import { KanbanPriorityPicker } from "@/components/process/kanban-task-card";
+import {
+  KanbanTaskAssigneeFields,
+  type KanbanTaskAssigneeValue,
+} from "@/components/process/kanban-task-assignee-fields";
 import { KanbanAssigneePicker } from "@/components/process/kanban-board-controls";
 import { KanbanAttachmentGallery, type KanbanAttachmentUploadOptions } from "@/components/process/kanban-attachment-gallery";
 import { Button } from "@/components/ui/button";
@@ -27,6 +31,10 @@ import type {
   KanbanTaskReaction,
 } from "@/lib/process/kanban-types";
 import { isOwnKanbanComment } from "@/lib/process/kanban-types";
+import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
+import type { UserResourceProfile } from "@/lib/resource-plan/user-resource-types";
+import type { UserProfile } from "@/lib/auth/types";
+import { getOperationalRoleName } from "@/lib/kanban/task-assignee";
 
 export function KanbanTaskDetailModal({
   task,
@@ -44,6 +52,10 @@ export function KanbanTaskDetailModal({
   onMoveToColumn,
   assigneeOptions = [],
   mentionOptions = [],
+  teamProfiles = [],
+  userResourcesByUserId = {},
+  roleOptions = [],
+  useProfileAssignee = false,
   commentDraft,
   onCommentDraftChange,
   onClose,
@@ -72,11 +84,17 @@ export function KanbanTaskDetailModal({
   onMoveToColumn?: (columnId: string) => Promise<void>;
   assigneeOptions?: string[];
   mentionOptions?: string[];
+  teamProfiles?: UserProfile[];
+  userResourcesByUserId?: Record<string, UserResourceProfile>;
+  roleOptions?: DictionaryItem[];
+  useProfileAssignee?: boolean;
   commentDraft: string;
   onCommentDraftChange: (value: string) => void;
   onClose: () => void;
   onSave: (
-    patch: Partial<Pick<KanbanTask, "title" | "description" | "priority" | "dueDate" | "assigneeName">>,
+    patch: Partial<
+      Pick<KanbanTask, "title" | "description" | "priority" | "dueDate" | "assigneeName" | "assigneeId" | "roleItemId">
+    >,
   ) => Promise<void>;
   onCloseTask: (closed: boolean) => Promise<void>;
   onDelete?: () => Promise<void>;
@@ -92,6 +110,11 @@ export function KanbanTaskDetailModal({
   const [priority, setPriority] = useState(task.priority);
   const [dueDate, setDueDate] = useState(milestoneDateToInput(task.dueDate));
   const [assigneeName, setAssigneeName] = useState(task.assigneeName ?? "");
+  const [assigneeValue, setAssigneeValue] = useState<KanbanTaskAssigneeValue>({
+    roleItemId: task.roleItemId ?? null,
+    assigneeId: task.assigneeId ?? null,
+    assigneeName: task.assigneeName ?? null,
+  });
   const [stageId, setStageId] = useState(currentColumnId ?? task.columnId);
   const [isSaving, setIsSaving] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -116,23 +139,47 @@ export function KanbanTaskDetailModal({
       title: title.trim(),
       description,
       priority,
-      assigneeName: assigneeName.trim() || null,
+      ...(useProfileAssignee
+        ? {
+            roleItemId: assigneeValue.roleItemId,
+            assigneeId: assigneeValue.assigneeId,
+            assigneeName:
+              assigneeValue.assigneeName ??
+              getOperationalRoleName(assigneeValue.roleItemId, roleOptions),
+          }
+        : { assigneeName: assigneeName.trim() || null }),
       ...(showDueDate ? { dueDate: dueDate.trim() || null } : {}),
     }),
-    [assigneeName, description, dueDate, priority, showDueDate, title],
+    [assigneeName, assigneeValue, description, dueDate, priority, roleOptions, showDueDate, title, useProfileAssignee],
   );
 
   const hasUnsavedTaskChanges = useCallback(() => {
     const payload = getTaskSavePayload();
     const currentDueDate = milestoneDateToInput(task.dueDate);
+    const assigneeChanged = useProfileAssignee
+      ? assigneeValue.roleItemId !== (task.roleItemId ?? null) ||
+        assigneeValue.assigneeId !== (task.assigneeId ?? null) ||
+        (assigneeValue.assigneeName ??
+          getOperationalRoleName(assigneeValue.roleItemId, roleOptions) ??
+          null) !== (task.assigneeName ?? null)
+      : assigneeName.trim() !== (task.assigneeName ?? "");
+
     return (
       payload.title !== task.title ||
       payload.description !== task.description ||
       payload.priority !== task.priority ||
-      payload.assigneeName !== (task.assigneeName ?? null) ||
+      assigneeChanged ||
       (showDueDate && (payload.dueDate ?? null) !== (currentDueDate || null))
     );
-  }, [getTaskSavePayload, showDueDate, task]);
+  }, [
+    assigneeName,
+    assigneeValue,
+    getTaskSavePayload,
+    roleOptions,
+    showDueDate,
+    task,
+    useProfileAssignee,
+  ]);
 
   const flushPendingChanges = useCallback(async () => {
     if (isFlushingRef.current) {
@@ -192,6 +239,11 @@ export function KanbanTaskDetailModal({
     setPriority(task.priority);
     setDueDate(milestoneDateToInput(task.dueDate));
     setAssigneeName(task.assigneeName ?? "");
+    setAssigneeValue({
+      roleItemId: task.roleItemId ?? null,
+      assigneeId: task.assigneeId ?? null,
+      assigneeName: task.assigneeName ?? null,
+    });
     setStageId(currentColumnId ?? task.columnId);
     setError(null);
     setIsClosing(false);
@@ -374,7 +426,16 @@ export function KanbanTaskDetailModal({
           />
         </Field>
 
-        {assigneeOptions.length > 0 ? (
+        {useProfileAssignee ? (
+          <KanbanTaskAssigneeFields
+            value={assigneeValue}
+            teamProfiles={teamProfiles}
+            userResourcesByUserId={userResourcesByUserId}
+            roleOptions={roleOptions}
+            disabled={isSaving || isMoving}
+            onChange={setAssigneeValue}
+          />
+        ) : assigneeOptions.length > 0 ? (
           <Field label="Odpowiedzialny">
             <KanbanAssigneePicker
               value={assigneeName || null}
@@ -642,7 +703,7 @@ export function KanbanTaskDetailModal({
               value={commentDraft}
               mentionOptions={mentionOptions}
               disabled={isCommentSubmitting}
-              placeholder={`Komentarz (${authorName})… użyj @ aby oznaczyć`}
+              placeholder={`Komentarz (${authorName})… użyj @ aby oznaczyć osobę lub rolę`}
               onChange={onCommentDraftChange}
             />
           ) : (

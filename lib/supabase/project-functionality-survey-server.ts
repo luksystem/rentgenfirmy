@@ -19,8 +19,10 @@ import { normalizeCatalogFunctionalityItems, seedCatalogFunctionalityItems } fro
 import { normalizeCatalogAcceptanceItems, seedCatalogAcceptanceItems } from "@/lib/internal-acceptance/catalog-seeds";
 import type { ProjectSpecificationItem } from "@/lib/dashboard/specification-types";
 import type { SpecificationCatalogItem } from "@/lib/dashboard/specification-types";
+import type { UserProfile } from "@/lib/auth/types";
 import { formatPartyName } from "@/lib/party/display-name";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { fetchAccessibleProjectIdsForUserServer } from "@/lib/supabase/project-access-server";
 
 type SurveyRow = {
   id: string;
@@ -31,6 +33,7 @@ type SurveyRow = {
   extra_questions: unknown;
   client_name: string;
   completed_at: string | null;
+  team_reviewed_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -84,6 +87,7 @@ function rowToSurvey(row: SurveyRow): FunctionalitySurvey {
       : [],
     clientName: row.client_name,
     completedAt: row.completed_at,
+    teamReviewedAt: row.team_reviewed_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -340,14 +344,29 @@ export async function updateFunctionalitySurveyStatus(
   patch?: { clientName?: string; completedAt?: string | null },
 ) {
   const supabase = getSupabaseAdmin();
+  const updatePayload: {
+    status: FunctionalitySurveyStatus;
+    updated_at: string;
+    client_name?: string;
+    completed_at?: string | null;
+    team_reviewed_at?: null;
+  } = {
+    status,
+    updated_at: new Date().toISOString(),
+  };
+  if (patch?.clientName !== undefined) {
+    updatePayload.client_name = patch.clientName;
+  }
+  if (patch?.completedAt !== undefined) {
+    updatePayload.completed_at = patch.completedAt;
+  }
+  if (status === "completed") {
+    updatePayload.team_reviewed_at = null;
+  }
+
   const { data, error } = await supabase
     .from("project_functionality_surveys")
-    .update({
-      status,
-      client_name: patch?.clientName,
-      completed_at: patch?.completedAt,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq("id", surveyId)
     .select("*")
     .single();
@@ -619,4 +638,104 @@ export async function completeFunctionalitySurvey(
     completedAt: new Date().toISOString(),
   });
   return regenerateFunctionalityTasks(projectId);
+}
+
+export type FunctionalitySurveyPendingReviewEntry = {
+  surveyId: string;
+  projectId: string;
+  projectName: string;
+  clientId: string | null;
+  clientName: string;
+  completedAt: string | null;
+};
+
+export async function markFunctionalitySurveyTeamReviewed(surveyId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("project_functionality_surveys")
+    .update({
+      team_reviewed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", surveyId)
+    .eq("status", "completed")
+    .is("team_reviewed_at", null)
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingTableError(error.message) || error.message.includes("team_reviewed_at")) {
+      return null;
+    }
+    throw new Error(error.message);
+  }
+
+  return data ? rowToSurvey(data as SurveyRow) : null;
+}
+
+export async function countPendingFunctionalitySurveyReviews(
+  profile: Pick<UserProfile, "id" | "role"> & { allProjectsAccess?: boolean | null },
+) {
+  const supabase = getSupabaseAdmin();
+  const accessible = await fetchAccessibleProjectIdsForUserServer(supabase, profile);
+
+  let query = supabase
+    .from("project_functionality_surveys")
+    .select("id, project_id, completed_at, projects(name, client_id, clients(first_name, last_name))")
+    .eq("status", "completed")
+    .is("team_reviewed_at", null)
+    .order("completed_at", { ascending: false });
+
+  if (accessible !== "all") {
+    if (accessible.length === 0) {
+      return { pendingReviewCount: 0, latest: null };
+    }
+    query = query.in("project_id", accessible);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    if (isMissingTableError(error.message) || error.message.includes("team_reviewed_at")) {
+      return { pendingReviewCount: 0, latest: null };
+    }
+    throw new Error(error.message);
+  }
+
+  const rows = (data ?? []) as Array<{
+    id: string;
+    project_id: string;
+    completed_at: string | null;
+    projects?: {
+      name?: string;
+      client_id?: string | null;
+      clients?: { first_name?: string; last_name?: string } | { first_name?: string; last_name?: string }[] | null;
+    } | null;
+  }>;
+
+  const latestRow = rows[0];
+  let latest: FunctionalitySurveyPendingReviewEntry | null = null;
+  if (latestRow) {
+    const project = latestRow.projects;
+    const clients = project?.clients;
+    const clientRow = Array.isArray(clients) ? clients[0] : clients;
+    latest = {
+      surveyId: latestRow.id,
+      projectId: latestRow.project_id,
+      projectName: String(project?.name ?? "Projekt"),
+      clientId: (project?.client_id as string | null) ?? null,
+      clientName: clientRow
+        ? formatPartyName({
+            firstName: String(clientRow.first_name ?? ""),
+            lastName: String(clientRow.last_name ?? ""),
+          })
+        : "",
+      completedAt: latestRow.completed_at,
+    };
+  }
+
+  return {
+    pendingReviewCount: rows.length,
+    latest,
+  };
 }

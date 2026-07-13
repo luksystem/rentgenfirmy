@@ -46,4 +46,6 @@ export type UserNotification = {
 export type MentionCandidate = {
   profileId: string | null;
   name: string;
+  kind?: "user" | "role";
+  roleItemId?: string | null;
 };

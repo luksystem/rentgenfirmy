@@ -5,6 +5,7 @@ import { suggestFunctionalityWithAi } from "@/lib/client-functionality/ai-sugges
 import {
   ensureFunctionalitySurvey,
   fetchFunctionalitySurveyBundle,
+  markFunctionalitySurveyTeamReviewed,
   regenerateFunctionalityTasks,
   updateFunctionalitySurveyAiSuggestions,
   updateFunctionalitySurveyExtraQuestions,
@@ -136,6 +137,15 @@ export async function POST(
         }
         const task = await updateFunctionalityTaskStatus(taskId, status);
         return NextResponse.json({ task });
+      }
+      case "mark_reviewed": {
+        const bundle = await fetchFunctionalitySurveyBundle(projectId);
+        if (!bundle.survey) {
+          return NextResponse.json({ error: "Brak ankiety." }, { status: 404 });
+        }
+        await markFunctionalitySurveyTeamReviewed(bundle.survey.id);
+        const nextBundle = await fetchFunctionalitySurveyBundle(projectId);
+        return NextResponse.json({ bundle: nextBundle });
       }
       default:
         return NextResponse.json({ error: "Nieobsługiwana operacja." }, { status: 400 });

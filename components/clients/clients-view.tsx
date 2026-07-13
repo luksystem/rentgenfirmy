@@ -6,13 +6,16 @@ import { List, MapPin } from "lucide-react";
 import { ClientsTable } from "@/components/clients-table";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input, Select } from "@/components/ui/input";
 import {
+  CLIENT_PROJECT_FILTER_OPTIONS,
   countActiveClientListFilters,
   EMPTY_CLIENT_LIST_FILTERS,
   filterClients,
   type ClientListFilters,
+  type ClientProjectFilter,
 } from "@/lib/clients/client-filters";
+import { sortClientsByActivity } from "@/lib/sort/activity-sort";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 
@@ -32,14 +35,16 @@ type ClientsViewMode = "list" | "map";
 
 export function ClientsView() {
   const allClients = useAppStore((state) => state.clients);
+  const projects = useAppStore((state) => state.projects);
+  const fieldOptions = useAppStore((state) => state.fieldOptions);
   const [view, setView] = useState<ClientsViewMode>("list");
   const [mapMounted, setMapMounted] = useState(false);
   const [filters, setFilters] = useState<ClientListFilters>(EMPTY_CLIENT_LIST_FILTERS);
 
-  const filteredClients = useMemo(
-    () => filterClients(allClients, filters),
-    [allClients, filters],
-  );
+  const filteredClients = useMemo(() => {
+    const filtered = filterClients(allClients, filters, projects);
+    return sortClientsByActivity(filtered, projects, fieldOptions);
+  }, [allClients, fieldOptions, filters, projects]);
 
   const activeFilterCount = countActiveClientListFilters(filters);
 
@@ -82,7 +87,7 @@ export function ClientsView() {
           activeCount={activeFilterCount}
           onClear={() => setFilters(EMPTY_CLIENT_LIST_FILTERS)}
         >
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             <Input
               type="search"
               value={filters.nameQuery}
@@ -97,6 +102,19 @@ export function ClientsView() {
               placeholder="Szukaj po adresie…"
               aria-label="Szukaj po adresie"
             />
+            <Select
+              value={filters.projectFilter}
+              onChange={(event) =>
+                updateFilters({ projectFilter: event.target.value as ClientProjectFilter })
+              }
+              aria-label="Filtr przypisania projektu"
+            >
+              {CLIENT_PROJECT_FILTER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
           </div>
         </MobileFiltersPanel>
         <p className="mt-2 text-sm text-muted">

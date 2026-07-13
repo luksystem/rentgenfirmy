@@ -16,19 +16,46 @@ export async function createKanbanMentionNotificationsServer(input: {
   candidates: MentionCandidate[];
   linkUrl?: string;
 }) {
-  const targets = resolveMentionTargets(input.body, input.candidates).filter(
+  const mentionTargets = resolveMentionTargets(input.body, input.candidates).filter(
     (target) => normalizeAuthor(target.name) !== normalizeAuthor(input.authorName),
   );
 
-  if (!targets.length) {
+  if (!mentionTargets.length) {
     return;
   }
 
+  const profileIds = new Set<string>();
   const supabase = getSupabaseAdmin();
+  for (const target of mentionTargets) {
+    if (target.kind === "role" || target.roleItemId) {
+      if (!target.roleItemId) {
+        continue;
+      }
+      const { data, error } = await supabase
+        .from("user_operational_roles")
+        .select("user_id")
+        .eq("role_item_id", target.roleItemId);
+      if (error) {
+        throw new Error(error.message);
+      }
+      for (const row of data ?? []) {
+        profileIds.add(row.user_id as string);
+      }
+      continue;
+    }
+    if (target.profileId) {
+      profileIds.add(target.profileId);
+    }
+  }
+
+  if (!profileIds.size) {
+    return;
+  }
+
   const excerpt = input.body.trim().slice(0, NOTIFICATION_BODY_MAX_LENGTH);
-  const rows = targets.map((target) => ({
+  const rows = [...profileIds].map((profileId) => ({
     id: crypto.randomUUID(),
-    profile_id: target.profileId!,
+    profile_id: profileId,
     kind: "kanban_mention" as UserNotificationKind,
     title: `${input.authorName} oznaczył Cię w Kanbanie`,
     body: `${input.taskTitle}: ${excerpt}`,

@@ -30,6 +30,7 @@ import {
   type KanbanBoardFilters,
   type KanbanColumnSortMode,
 } from "@/lib/process/kanban-task-meta";
+import { collectKanbanAssigneeFilterOptions } from "@/lib/kanban/task-assignee";
 import {
   canMoveTaskToMergedColumn,
   getKanbanTaskProjectKey,
@@ -56,7 +57,10 @@ import {
   updateKanbanTask,
 } from "@/lib/supabase/kanban-repository";
 import { useKanbanCacheStore } from "@/store/kanban-cache-store";
+import { useDictionaryStore } from "@/store/dictionary-store";
 import { useProcessStore } from "@/store/process-store";
+import { fetchUserResourceProfilesBatch } from "@/lib/supabase/user-resource-repository";
+import type { UserResourceProfile } from "@/lib/resource-plan/user-resource-types";
 
 export function AggregatedKanbanBoard({
   authorSide,
@@ -68,12 +72,31 @@ export function AggregatedKanbanBoard({
   const fieldOptions = useAppStore((state) => state.fieldOptions);
   const teamProfiles = useProcessStore((state) => state.teamProfiles);
   const loadTeamProfiles = useProcessStore((state) => state.loadTeamProfiles);
+  const ensureDictionaries = useDictionaryStore((state) => state.ensure);
+  const roleOptions = useDictionaryStore((state) => state.byKey("operational_role"));
+  const [userResourcesByUserId, setUserResourcesByUserId] = useState<Record<string, UserResourceProfile>>({});
 
   useEffect(() => {
     if (authorSide === "team") {
       void loadTeamProfiles();
+      void ensureDictionaries();
     }
-  }, [authorSide, loadTeamProfiles]);
+  }, [authorSide, loadTeamProfiles, ensureDictionaries]);
+
+  useEffect(() => {
+    if (authorSide !== "team" || teamProfiles.length === 0) {
+      return;
+    }
+    let cancelled = false;
+    void fetchUserResourceProfilesBatch(teamProfiles.map((profile) => profile.id)).then((batch) => {
+      if (!cancelled) {
+        setUserResourcesByUserId(batch);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authorSide, teamProfiles]);
   const cachedMergedView = useKanbanCacheStore((state) => state.mergedView);
   const ensureAllBoards = useKanbanCacheStore((state) => state.ensureAllBoards);
   const setCachedBoard = useKanbanCacheStore((state) => state.setBoard);
@@ -159,9 +182,25 @@ export function AggregatedKanbanBoard({
     () => (board ? collectKanbanAssigneeOptions(board.tasks, fieldOptions.nextStepOwners) : []),
     [board, fieldOptions.nextStepOwners],
   );
+  const assigneeFilterOptions = useMemo(
+    () =>
+      board && authorSide === "team"
+        ? collectKanbanAssigneeFilterOptions(board.tasks, teamProfiles, roleOptions)
+        : assigneeOptions.map((option) => ({ value: option, label: option })),
+    [assigneeOptions, authorSide, board, roleOptions, teamProfiles],
+  );
+  const filterContext = useMemo(
+    () => (authorSide === "team" ? { teamProfiles, roleOptions } : undefined),
+    [authorSide, roleOptions, teamProfiles],
+  );
   const mentionCandidates = useMemo(
-    () => buildKanbanMentionCandidates(teamProfiles, assigneeOptions),
-    [assigneeOptions, teamProfiles],
+    () =>
+      buildKanbanMentionCandidates(
+        teamProfiles,
+        authorSide === "client" ? assigneeOptions : [],
+        authorSide === "team" ? roleOptions : [],
+      ),
+    [assigneeOptions, authorSide, roleOptions, teamProfiles],
   );
   const mentionOptions = useMemo(
     () => buildKanbanMentionOptionNames(mentionCandidates),
@@ -252,7 +291,7 @@ export function AggregatedKanbanBoard({
       if (!matchesProjectFilter(task.id)) {
         return false;
       }
-      return matchesKanbanBoardFilters(task, filters);
+      return matchesKanbanBoardFilters(task, filters, filterContext);
     });
   }
 
@@ -330,7 +369,7 @@ export function AggregatedKanbanBoard({
       <KanbanBoardControls
         filters={filters}
         sortMode={sortMode}
-        assigneeOptions={assigneeOptions}
+        assigneeFilterOptions={assigneeFilterOptions}
         projectOptions={projectOptions}
         onFiltersChange={setFilters}
         onSortModeChange={setSortMode}
@@ -504,6 +543,10 @@ export function AggregatedKanbanBoard({
           authorSide={authorSide}
           assigneeOptions={assigneeOptions}
           mentionOptions={mentionOptions}
+          teamProfiles={teamProfiles}
+          userResourcesByUserId={userResourcesByUserId}
+          roleOptions={roleOptions}
+          useProfileAssignee={authorSide === "team"}
           canDelete={authorSide === "team"}
           columns={board.columns.map((column) => ({ id: column.id, title: column.title }))}
           currentColumnId={activeTask.columnId}

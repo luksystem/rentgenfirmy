@@ -1,4 +1,4 @@
-import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
+import { getUserDisplayName, STAFF_ROLES, type UserProfile } from "@/lib/auth/types";
 import { getSupabase } from "@/lib/supabase/client";
 import { mapProfileRow } from "@/lib/supabase/profile-mappers";
 
@@ -8,7 +8,7 @@ export async function fetchTeamProfiles(): Promise<UserProfile[]> {
     .from("profiles")
     .select("*")
     .eq("is_active", true)
-    .in("role", ["administrator", "manager", "pracownik"])
+    .in("role", [...STAFF_ROLES])
     .order("last_name", { ascending: true });
 
   if (error) {

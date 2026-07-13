@@ -13,6 +13,7 @@ import {
   splitResourcePlanItem,
   updateResourcePlanItem,
 } from "@/lib/supabase/resource-plan-repository";
+import { syncResourcePlanItemToWorkItems } from "@/lib/supabase/resource-plan-work-sync-repository";
 
 const loadPromises = new Map<string, Promise<void>>();
 
@@ -97,12 +98,14 @@ export const useResourcePlanStore = create<ResourcePlanStore>((set, get) => ({
   createItem: async (input) => {
     const created = await createResourcePlanItem(input);
     set({ items: { ...get().items, [created.id]: created } });
+    void syncResourcePlanItemToWorkItems(created.id).catch(() => undefined);
     return created;
   },
 
   updateItem: async (id, input) => {
     const updated = await updateResourcePlanItem(id, input);
     set({ items: { ...get().items, [id]: updated } });
+    void syncResourcePlanItemToWorkItems(id).catch(() => undefined);
     return updated;
   },
 

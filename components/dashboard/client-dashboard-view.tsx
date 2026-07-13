@@ -7,6 +7,7 @@ import {
   Cable,
   ClipboardCheck,
   ClipboardList,
+  Clock,
   FileEdit,
   FileText,
   FolderOpen,
@@ -20,6 +21,7 @@ import {
   Star,
   StickyNote,
   Target,
+  Users,
 } from "lucide-react";
 import { GoalCollectiveView } from "@/components/goals/goal-collective-view";
 import { ClientInspectionsPanel } from "@/components/dashboard/client-inspections-panel";
@@ -42,6 +44,8 @@ import { ClientDashboardHome } from "@/components/dashboard/client-dashboard-hom
 import { ClientDashboardOverview } from "@/components/dashboard/client-dashboard-overview";
 import { ClientInfoCard } from "@/components/dashboard/client-info-card";
 import { ProjectContentPanel } from "@/components/dashboard/project-content-panel";
+import { ProjectTimeTrackingPanel } from "@/components/dashboard/project-time-tracking-panel";
+import { ProjectUsersPanel } from "@/components/dashboard/project-users-panel";
 import { ProcessPipeline } from "@/components/process/process-pipeline";
 import { ProjectProcessPipelineSection } from "@/components/process/project-process-pipeline-section";
 import { PublicKanbanEmbedded } from "@/components/process/public-kanban-embedded";
@@ -87,7 +91,8 @@ import { useProjectChangeRequestStore } from "@/store/project-change-request-sto
 import { useProjectSatisfactionStore } from "@/store/project-satisfaction-store";
 import { useProjectSpecificationStore } from "@/store/project-specification-store";
 import { useProjectTradeStore } from "@/store/project-trade-store";
-import { useFunctionalitySurveyStore } from "@/store/project-functionality-survey-store";
+import { useFunctionalitySurveyStore, markProjectFunctionalitySurveyReviewed } from "@/store/project-functionality-survey-store";
+import { isFunctionalitySurveyPendingTeamReview } from "@/lib/client-functionality/survey-status";
 import { useAppStore } from "@/store/app-store";
 
 const EMPTY_SATISFACTION: ProjectSatisfactionBundle = {
@@ -115,7 +120,9 @@ export type ClientDashboardTab =
   | "notes"
   | "documentation"
   | "credentials"
-  | "links";
+  | "links"
+  | "time-tracking"
+  | "project-users";
 
 const EMPTY_AGREEMENTS: ProjectClientAgreement[] = [];
 const EMPTY_CHANGE_REQUESTS: ProjectChangeRequest[] = [];
@@ -176,9 +183,23 @@ const TEAM_INTEGRATIONS_TAB = {
   icon: Cable,
 };
 
+const TEAM_TIME_TRACKING_TAB = {
+  id: "time-tracking" as const,
+  label: "Czas pracy",
+  icon: Clock,
+};
+
+const TEAM_PROJECT_USERS_TAB = {
+  id: "project-users" as const,
+  label: "Użytkownicy",
+  icon: Users,
+};
+
 const teamTabsWithProject = [
   TEAM_MAIN_TAB_CONFIG[0],
   TEAM_PROJECT_TAB,
+  TEAM_TIME_TRACKING_TAB,
+  TEAM_PROJECT_USERS_TAB,
   TEAM_INTEGRATIONS_TAB,
   ...TEAM_MAIN_TAB_CONFIG.slice(1),
 ];
@@ -566,6 +587,50 @@ export function ClientDashboardView({
 
   const ensureTrades = useProjectTradeStore((state) => state.ensureTrades);
   const ensureFunctionalityBundle = useFunctionalitySurveyStore((state) => state.ensureBundle);
+  const setFunctionalityBundle = useFunctionalitySurveyStore((state) => state.setBundle);
+  const functionalityBundle = useFunctionalitySurveyStore(
+    (state) => state.byProject[selectedProjectId] ?? null,
+  );
+
+  useEffect(() => {
+    if (!enableSpecification || !selectedProjectId || readOnly) {
+      return;
+    }
+    void ensureFunctionalityBundle(selectedProjectId);
+  }, [enableSpecification, ensureFunctionalityBundle, readOnly, selectedProjectId]);
+
+  const pendingFunctionalitySurveyCount = useMemo(() => {
+    if (readOnly || !enableSpecification) {
+      return 0;
+    }
+    return isFunctionalitySurveyPendingTeamReview(functionalityBundle?.survey) ? 1 : 0;
+  }, [enableSpecification, functionalityBundle?.survey, readOnly]);
+
+  useEffect(() => {
+    if (
+      readOnly ||
+      activeTab !== "functionality-survey" ||
+      !selectedProjectId ||
+      !isFunctionalitySurveyPendingTeamReview(functionalityBundle?.survey)
+    ) {
+      return;
+    }
+
+    void markProjectFunctionalitySurveyReviewed(selectedProjectId)
+      .then((result) => {
+        if (result.bundle) {
+          setFunctionalityBundle(selectedProjectId, result.bundle);
+        }
+        window.dispatchEvent(new Event("functionality-survey-count-changed"));
+      })
+      .catch(() => undefined);
+  }, [
+    activeTab,
+    functionalityBundle?.survey,
+    readOnly,
+    selectedProjectId,
+    setFunctionalityBundle,
+  ]);
 
   const refreshClientDashboardDataFromServer = useCallback(() => {
     if (!selectedProjectId || readOnly) {
@@ -578,7 +643,9 @@ export function ClientDashboardView({
       void ensureSatisfaction(selectedProjectId, { force: true });
     }
     if (enableSpecification) {
-      void ensureFunctionalityBundle(selectedProjectId, { force: true });
+      void ensureFunctionalityBundle(selectedProjectId, { force: true }).then(() => {
+        window.dispatchEvent(new Event("functionality-survey-count-changed"));
+      });
     }
   }, [
     enableSatisfaction,
@@ -1153,6 +1220,28 @@ export function ClientDashboardView({
     );
   }
 
+  function renderTimeTrackingPanel() {
+    return (
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
+        <h2 className="mb-3 text-base font-semibold text-foreground">Czas pracy</h2>
+        <p className="mb-4 text-sm text-muted">
+          Wszystkie wpisy czasu pracy zarejestrowane w tym projekcie — z podsumowaniem według etapów
+          procesu i łącznym czasem.
+        </p>
+        <ProjectTimeTrackingPanel projectId={selectedProject.id} />
+      </div>
+    );
+  }
+
+  function renderProjectUsersPanel() {
+    return (
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
+        <h2 className="mb-3 text-base font-semibold text-foreground">Użytkownicy projektu</h2>
+        <ProjectUsersPanel projectId={selectedProject.id} />
+      </div>
+    );
+  }
+
   function renderCredentialsPanel() {
     if (!enableCredentials) {
       return (
@@ -1183,6 +1272,9 @@ export function ClientDashboardView({
     }
     if (tabId === "offers") {
       return pendingOffersCount ?? 0;
+    }
+    if (tabId === "functionality-survey" && !readOnly) {
+      return pendingFunctionalitySurveyCount;
     }
     if (tabId === "notes" && readOnly) {
       return meetingNotes.filter(
@@ -1352,6 +1444,10 @@ export function ClientDashboardView({
         return renderCredentialsPanel();
       case "links":
         return renderLinksSection();
+      case "time-tracking":
+        return !readOnly ? renderTimeTrackingPanel() : null;
+      case "project-users":
+        return !readOnly ? renderProjectUsersPanel() : null;
       default:
         return null;
     }

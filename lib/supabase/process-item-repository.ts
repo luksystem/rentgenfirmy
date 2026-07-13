@@ -16,6 +16,7 @@ import {
   rowToProjectProcessItem,
 } from "@/lib/supabase/process-item-mappers";
 import { updateProjectProcessCompletion } from "@/lib/supabase/process-repository";
+import { syncProcessItemWorkItems } from "@/lib/supabase/my-work-repository";
 
 export async function fetchProjectProcessItem(projectId: string, templateItemId: string) {
   const row = await getProjectProcessItemRow(projectId, templateItemId);
@@ -167,6 +168,8 @@ export async function saveProjectProcessItemChecklist(
     actorName,
   );
 
+  void syncProcessItemWorkItems(row.id).catch(() => undefined);
+
   return rowToProjectProcessItem(row);
 }
 
@@ -190,6 +193,8 @@ export async function assignProjectProcessItem(
   if (error) {
     throw new Error(error.message);
   }
+
+  void syncProcessItemWorkItems(data.id).catch(() => undefined);
 
   return rowToProjectProcessItem(data);
 }
@@ -258,6 +263,8 @@ export async function signProjectProcessItem(
   }
 
   await updateProjectProcessCompletion(projectId, templateItemId, true, signer.name);
+
+  void syncProcessItemWorkItems(data.id).catch(() => undefined);
 
   return rowToProjectProcessItem(data);
 }

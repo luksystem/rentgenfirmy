@@ -59,6 +59,8 @@ export type FunctionalitySurvey = {
   extraQuestions: ClientFunctionalityTemplateItem[];
   clientName: string;
   completedAt: string | null;
+  /** Kiedy zespół oznaczył wypełnioną ankietę jako przejrzane — badge znika. */
+  teamReviewedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };

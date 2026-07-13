@@ -5,6 +5,7 @@ import {
   type UserNotificationKind,
 } from "@/lib/notifications/types";
 import { resolveMentionTargets } from "@/lib/notifications/mentions";
+import { fetchProfileIdsByOperationalRole } from "@/lib/supabase/user-resource-repository";
 import {
   NOTIFICATION_BODY_MAX_LENGTH,
   buildKanbanNewActivityRows,
@@ -127,19 +128,40 @@ export async function createKanbanMentionNotifications(input: {
   candidates: MentionCandidate[];
   linkUrl?: string;
 }) {
-  const targets = resolveMentionTargets(input.body, input.candidates).filter(
+  const mentionTargets = resolveMentionTargets(input.body, input.candidates).filter(
     (target) => normalizeAuthor(target.name) !== normalizeAuthor(input.authorName),
   );
 
-  if (!targets.length) {
+  if (!mentionTargets.length) {
+    return;
+  }
+
+  const profileIds = new Set<string>();
+  for (const target of mentionTargets) {
+    if (target.kind === "role" || target.roleItemId) {
+      if (!target.roleItemId) {
+        continue;
+      }
+      const roleProfileIds = await fetchProfileIdsByOperationalRole(target.roleItemId);
+      for (const profileId of roleProfileIds) {
+        profileIds.add(profileId);
+      }
+      continue;
+    }
+    if (target.profileId) {
+      profileIds.add(target.profileId);
+    }
+  }
+
+  if (!profileIds.size) {
     return;
   }
 
   const supabase = getSupabase();
   const excerpt = input.body.trim().slice(0, NOTIFICATION_BODY_MAX_LENGTH);
-  const rows = targets.map((target) => ({
+  const rows = [...profileIds].map((profileId) => ({
     id: crypto.randomUUID(),
-    profile_id: target.profileId!,
+    profile_id: profileId,
     kind: "kanban_mention" as UserNotificationKind,
     title: `${input.authorName} oznaczył Cię w Kanbanie`,
     body: `${input.taskTitle}: ${excerpt}`,

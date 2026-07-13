@@ -37,6 +37,7 @@ import {
 import {
   addWorkItemComment,
   completeWorkItem,
+  completeAllocationWorkItem,
   createWorkItem,
   deleteWorkItem,
   fetchMyWorkDashboardMetrics,
@@ -116,6 +117,7 @@ type MyWorkStore = {
   sendItem: (id: string) => Promise<void>;
   acceptItem: (id: string, input: WorkItemAcceptanceInput) => Promise<void>;
   completeItem: (id: string, input: WorkItemCompleteInput) => Promise<void>;
+  completeAllocation: (id: string) => Promise<void>;
   verifyItem: (id: string) => Promise<void>;
   startItem: (id: string) => Promise<void>;
   moveItemStatus: (id: string, status: string) => Promise<void>;
@@ -124,13 +126,18 @@ type MyWorkStore = {
   deleteItem: (id: string, options?: { hard?: boolean }) => Promise<void>;
   removeItem: (id: string) => void;
 
-  ensureDayContext: (options?: { force?: boolean; sessionDate?: string }) => Promise<WorkDayContext>;
+  ensureDayContext: (options?: {
+    force?: boolean;
+    sessionDate?: string;
+    showLoading?: boolean;
+  }) => Promise<WorkDayContext>;
   startDay: () => Promise<WorkDayContext>;
   endDay: (input: EndDayInput) => Promise<WorkDayContext>;
   ensureWeekPlan: (options?: {
     force?: boolean;
     assignedUserId?: string | null;
     referenceDate?: string | null;
+    showLoading?: boolean;
   }) => Promise<WorkPlanView | null>;
   createWeekPlanForUser: (input: CreateWeekPlanInput) => Promise<WorkPlanView>;
   sendWeekPlanById: (planId: string) => Promise<WorkPlanView>;
@@ -339,6 +346,12 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
     get().replaceFromDetail(detail);
   },
 
+  completeAllocation: async (id) => {
+    const detail = await completeAllocationWorkItem(id);
+    get().replaceFromDetail(detail);
+    await get().ensureMyItems({ force: true, showLoading: false, sync: false });
+  },
+
   verifyItem: async (id) => {
     const detail = await verifyWorkItem(id);
     get().replaceFromDetail(detail);
@@ -384,11 +397,20 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
     if (dayContextHydrated && !options?.force) {
       return dayContext!;
     }
+
+    const showLoading = options?.showLoading ?? !dayContextHydrated;
+
     if (!options?.force && dayContextPromise) {
       return dayContextPromise;
     }
+    if (options?.force && !showLoading && dayContextPromise) {
+      return dayContextPromise;
+    }
 
-    set({ dayContextLoading: true, error: null });
+    if (showLoading) {
+      set({ dayContextLoading: true, error: null });
+    }
+
     dayContextPromise = fetchDayContext(options?.sessionDate)
       .then((context) => {
         set({ dayContext: context, dayContextHydrated: true, dayContextLoading: false });
@@ -432,11 +454,19 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
     if (weekPlanHydrated && sameUser && sameWeek && !options?.force) {
       return weekPlan;
     }
+    const showLoading = options?.showLoading ?? !(weekPlanHydrated && sameUser && sameWeek);
+
     if (!options?.force && weekPlanPromise && weekPlanPromiseKey === promiseKey) {
       return weekPlanPromise;
     }
+    if (options?.force && !showLoading && weekPlanPromise && weekPlanPromiseKey === promiseKey) {
+      return weekPlanPromise;
+    }
 
-    set({ weekPlanLoading: true, error: null });
+    if (showLoading) {
+      set({ weekPlanLoading: true, error: null });
+    }
+
     weekPlanPromiseKey = promiseKey;
     weekPlanPromise = fetchCurrentWeekPlan(targetUserId, referenceDate)
       .then((plan) => {

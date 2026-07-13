@@ -372,17 +372,28 @@ export function CreateGoalDialog({ boardId }: { boardId: string }) {
             Cel cykliczny — po rozliczeniu automatycznie utwórz następny okres
           </label>
 
-          <div className="grid gap-3 rounded-xl border border-border/70 bg-surface-muted/20 p-3">
+          <div className="grid gap-3 overflow-visible rounded-xl border border-border/70 bg-surface-muted/20 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">
               Powiązania (opcjonalnie)
             </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <ProjectSelectSearchable
-                projects={selectableProjects}
-                clients={clients}
-                value={projectId || null}
-                onChange={(nextId) => handleProjectChange(nextId ?? "")}
-              />
+            <div className="grid gap-3 overflow-visible sm:grid-cols-2">
+              <div className="relative z-20 overflow-visible">
+                <ProjectSelectSearchable
+                  projects={selectableProjects}
+                  clients={clients}
+                  value={projectId || null}
+                  onChange={(nextId) => handleProjectChange(nextId ?? "")}
+                  usePortal={false}
+                />
+                {selectableProjects.length === 0 ? (
+                  <p className="mt-1 text-xs font-normal text-muted">
+                    Brak projektów do wyboru
+                    {projectScope === "active"
+                      ? " (w ustawieniach modułu możesz włączyć także nieaktywne projekty)."
+                      : "."}
+                  </p>
+                ) : null}
+              </div>
               <Field label="Klient">
                 <Select value={clientId} onChange={(event) => setClientId(event.target.value)}>
                   <option value="">— brak —</option>
@@ -399,7 +410,15 @@ export function CreateGoalDialog({ boardId }: { boardId: string }) {
                   disabled={!projectId || loadingStages}
                   onChange={(event) => handleStageChange(event.target.value)}
                 >
-                  <option value="">{loadingStages ? "Ładowanie..." : "— brak —"}</option>
+                  <option value="">
+                    {!projectId
+                      ? "Wybierz projekt"
+                      : loadingStages
+                        ? "Ładowanie..."
+                        : stageOptions.length === 0
+                          ? "Brak etapów w procesie"
+                          : "— brak —"}
+                  </option>
                   {stageOptions.map((stage) => (
                     <option key={stage.id} value={stage.id}>
                       {stage.title}

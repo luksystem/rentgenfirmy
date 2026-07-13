@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { UserProfile } from "@/lib/auth/types";
+import { STAFF_ROLES, type UserProfile } from "@/lib/auth/types";
 import { profileHasAllProjectsAccess, roleHasImplicitAllProjects } from "@/lib/project-access/rules";
 import type { ProfileProjectAccessState } from "@/lib/project-access/types";
 import { mapProfileRow } from "@/lib/supabase/profile-mappers";
@@ -131,7 +131,7 @@ export async function fetchProfilesWithProjectAccessServer(
     .from("profiles")
     .select("*")
     .eq("is_active", true)
-    .in("role", ["administrator", "manager", "pracownik"])
+    .in("role", [...STAFF_ROLES])
     .order("last_name");
   if (error) {
     throw new Error(error.message);

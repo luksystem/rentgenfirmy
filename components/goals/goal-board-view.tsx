@@ -16,17 +16,65 @@ import {
   KANBAN_MOBILE_COLUMN_SHELL_CLASS,
   KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS,
 } from "@/lib/process/kanban-ui";
+import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { GoalCard } from "@/components/goals/goal-card";
 import { CreateGoalDialog } from "@/components/goals/create-goal-dialog";
 import { GoalDetailDialog } from "@/components/goals/goal-detail-dialog";
 import { GoalSettlementGateDialog } from "@/components/goals/goal-settlement-gate-dialog";
-import { GOAL_BOARD_COLUMNS, GOAL_STATUS_LABELS, type Goal, type GoalStatus } from "@/lib/goals/types";
+import { Select } from "@/components/ui/input";
+import {
+  collectGoalBoardOwnerOptions,
+  countActiveGoalBoardFilters,
+  EMPTY_GOAL_BOARD_FILTERS,
+  filterGoalsForBoard,
+  type GoalBoardFilters,
+} from "@/lib/goals/goal-board-filters";
+import {
+  GOAL_BOARD_COLUMNS,
+  GOAL_PRIORITIES,
+  GOAL_PRIORITY_LABELS,
+  GOAL_STATUSES,
+  GOAL_STATUS_LABELS,
+  type Goal,
+  type GoalPriority,
+  type GoalStatus,
+} from "@/lib/goals/types";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import { useGoalStore, EMPTY_GOALS, EMPTY_GOAL_CARD_META } from "@/store/goal-store";
 import { GoalAiBulkImportPanel } from "@/components/goals/goal-ai-bulk-import-panel";
 
 const DENSITY_STORAGE_KEY = "goals-card-density";
+
+function goalBoardFiltersStorageKey(boardId: string) {
+  return `goal-board-filters:${boardId}`;
+}
+
+function readStoredGoalBoardFilters(boardId: string): GoalBoardFilters {
+  if (typeof window === "undefined") {
+    return EMPTY_GOAL_BOARD_FILTERS;
+  }
+  try {
+    const raw = window.localStorage.getItem(goalBoardFiltersStorageKey(boardId));
+    if (!raw) {
+      return EMPTY_GOAL_BOARD_FILTERS;
+    }
+    const parsed = JSON.parse(raw) as Partial<GoalBoardFilters>;
+    return {
+      ownerId: typeof parsed.ownerId === "string" ? parsed.ownerId : "all",
+      status:
+        parsed.status === "all" || (parsed.status && GOAL_STATUSES.includes(parsed.status))
+          ? (parsed.status ?? "all")
+          : "all",
+      priority:
+        parsed.priority === "all" || (parsed.priority && GOAL_PRIORITIES.includes(parsed.priority))
+          ? (parsed.priority ?? "all")
+          : "all",
+    };
+  } catch {
+    return EMPTY_GOAL_BOARD_FILTERS;
+  }
+}
 
 export function GoalBoardView({ boardId }: { boardId: string }) {
   const profile = useAuthStore((state) => state.profile);
@@ -43,6 +91,7 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
   const [dragOverColumn, setDragOverColumn] = useState<GoalStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCancelled, setShowCancelled] = useState(false);
+  const [filters, setFilters] = useState<GoalBoardFilters>(EMPTY_GOAL_BOARD_FILTERS);
   const [density, setDensity] = useState<"normal" | "slim">("normal");
   const [openGoal, setOpenGoal] = useState<Goal | null>(null);
   const [settlementGateGoal, setSettlementGateGoal] = useState<Goal | null>(null);
@@ -58,18 +107,37 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
     }
   }, []);
 
+  useEffect(() => {
+    setFilters(readStoredGoalBoardFilters(boardId));
+  }, [boardId]);
+
+  useEffect(() => {
+    window.localStorage.setItem(goalBoardFiltersStorageKey(boardId), JSON.stringify(filters));
+  }, [boardId, filters]);
+
   function handleDensityChange(next: "normal" | "slim") {
     setDensity(next);
     window.localStorage.setItem(DENSITY_STORAGE_KEY, next);
   }
 
+  const activeFilterCount = countActiveGoalBoardFilters(filters);
+  const ownerOptions = useMemo(
+    () => collectGoalBoardOwnerOptions(goals, getOwnerName),
+    [goals, getOwnerName],
+  );
+  const filteredGoals = useMemo(
+    () => filterGoalsForBoard(goals, filters, { showCancelled }),
+    [goals, filters, showCancelled],
+  );
+  const showCancelledColumn = showCancelled || filters.status === "cancelled";
+
   const columns = useMemo(() => {
     const base = GOAL_BOARD_COLUMNS.map((status) => ({ id: status, title: GOAL_STATUS_LABELS[status] }));
-    if (showCancelled) {
+    if (showCancelledColumn) {
       base.push({ id: "cancelled" as GoalStatus, title: GOAL_STATUS_LABELS.cancelled });
     }
     return base;
-  }, [showCancelled]);
+  }, [showCancelledColumn]);
   const { activeColumnId, scrollerRef, scrollToColumn, setColumnRef } = useKanbanMobileColumns(columns);
 
   const grouped = useMemo(() => {
@@ -77,17 +145,16 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
     for (const status of GOAL_BOARD_COLUMNS) {
       map.set(status, []);
     }
-    if (showCancelled) {
+    if (showCancelledColumn) {
       map.set("cancelled", []);
     }
-    for (const goal of goals) {
-      if (goal.status === "cancelled" && !showCancelled) continue;
+    for (const goal of filteredGoals) {
       const bucket = map.get(goal.status) ?? [];
       bucket.push(goal);
       map.set(goal.status, bucket);
     }
     return map;
-  }, [goals, showCancelled]);
+  }, [filteredGoals, showCancelledColumn]);
 
   const maxColumnCount = Math.max(1, ...columns.map((column) => grouped.get(column.id)?.length ?? 0));
 
@@ -139,7 +206,9 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm text-muted">
           <Target className="h-4 w-4" />
-          {goals.length} {goals.length === 1 ? "cel" : "celów"} na tablicy
+          {filteredGoals.length === goals.length
+            ? `${goals.length} ${goals.length === 1 ? "cel" : "celów"} na tablicy`
+            : `${filteredGoals.length} z ${goals.length} ${goals.length === 1 ? "cela" : "celów"}`}
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center overflow-hidden rounded-lg border border-border/70">
@@ -194,6 +263,53 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
       </div>
 
       {error ? <p className="mb-3 text-sm text-rose-400">{error}</p> : null}
+
+      <MobileFiltersPanel
+        activeCount={activeFilterCount}
+        onClear={() => setFilters(EMPTY_GOAL_BOARD_FILTERS)}
+        className="mb-3"
+      >
+        <Select
+          value={filters.ownerId}
+          onChange={(event) => setFilters((current) => ({ ...current, ownerId: event.target.value }))}
+          className="w-full md:w-auto"
+        >
+          <option value="all">Wszyscy pracownicy</option>
+          {ownerOptions.map((owner) => (
+            <option key={owner.id} value={owner.id}>
+              {owner.name}
+            </option>
+          ))}
+        </Select>
+        <Select
+          value={filters.status}
+          onChange={(event) =>
+            setFilters((current) => ({ ...current, status: event.target.value as GoalStatus | "all" }))
+          }
+          className="w-full md:w-auto"
+        >
+          <option value="all">Wszystkie statusy</option>
+          {GOAL_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {GOAL_STATUS_LABELS[status]}
+            </option>
+          ))}
+        </Select>
+        <Select
+          value={filters.priority}
+          onChange={(event) =>
+            setFilters((current) => ({ ...current, priority: event.target.value as GoalPriority | "all" }))
+          }
+          className="w-full md:w-auto"
+        >
+          <option value="all">Wszystkie priorytety</option>
+          {GOAL_PRIORITIES.map((priority) => (
+            <option key={priority} value={priority}>
+              {GOAL_PRIORITY_LABELS[priority]}
+            </option>
+          ))}
+        </Select>
+      </MobileFiltersPanel>
 
       <GoalAiBulkImportPanel
         boardId={boardId}

@@ -695,6 +695,7 @@ export type ProjectFunctionalitySurveyRow = {
   extra_questions: unknown;
   client_name: string;
   completed_at: string | null;
+  team_reviewed_at?: string | null;
   created_at: string;
   updated_at: string;
 };

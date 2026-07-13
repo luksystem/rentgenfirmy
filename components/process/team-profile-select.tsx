@@ -1,10 +1,10 @@
 "use client";
 
 import { Select } from "@/components/ui/input";
-import { USER_ROLE_LABELS, getUserDisplayName, type UserProfile, type UserRole } from "@/lib/auth/types";
+import { STAFF_ROLES, USER_ROLE_LABELS, getUserDisplayName, type UserProfile } from "@/lib/auth/types";
 import { profileToOptionLabel } from "@/lib/supabase/profile-repository";
 
-const TEAM_ROLES: UserRole[] = ["administrator", "manager", "pracownik"];
+const TEAM_ROLES = STAFF_ROLES;
 
 export function teamProfileOptionLabel(profile: UserProfile) {
   return `${profileToOptionLabel(profile)} · ${USER_ROLE_LABELS[profile.role]}`;

@@ -101,6 +101,20 @@ export async function fetchUserResourceProfile(userId: string): Promise<UserReso
   return batch[userId] ?? { roleItemIds: [], competencies: [], teams: [], certificates: [], absences: [] };
 }
 
+export async function fetchProfileIdsByOperationalRole(roleItemId: string): Promise<string[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("user_operational_roles")
+    .select("user_id")
+    .eq("role_item_id", roleItemId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return [...new Set((data ?? []).map((row) => row.user_id as string))];
+}
+
 export async function setUserOperationalRoles(userId: string, roleItemIds: string[]): Promise<void> {
   const supabase = getSupabase();
   const { error: deleteError } = await supabase.from("user_operational_roles").delete().eq("user_id", userId);

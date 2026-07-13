@@ -126,3 +126,11 @@ export async function updateProjectFunctionalityTaskStatus(
 ) {
   return postSurveyAction(projectId, "task_status", { taskId, status });
 }
+
+export async function markProjectFunctionalitySurveyReviewed(projectId: string) {
+  const payload = await postSurveyAction(projectId, "mark_reviewed");
+  if (payload.bundle) {
+    useFunctionalitySurveyStore.getState().setBundle(projectId, payload.bundle);
+  }
+  return payload;
+}

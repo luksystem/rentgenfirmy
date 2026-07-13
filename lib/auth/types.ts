@@ -2,11 +2,22 @@ export const USER_ROLES = [
   "administrator",
   "manager",
   "pracownik",
+  "podwykonawca",
   "klient",
   "gosc",
 ] as const;
 
 export type UserRole = (typeof USER_ROLES)[number];
+
+/** Role wewnętrzne — przypisywanie do projektów, zadań i list zespołu. */
+export const STAFF_ROLES = [
+  "administrator",
+  "manager",
+  "pracownik",
+  "podwykonawca",
+] as const satisfies readonly UserRole[];
+
+export type StaffRole = (typeof STAFF_ROLES)[number];
 
 export type UserProfile = {
   id: string;
@@ -49,6 +60,7 @@ export const USER_ROLE_LABELS: Record<UserRole, string> = {
   administrator: "Administrator",
   manager: "Manager",
   pracownik: "Pracownik",
+  podwykonawca: "Podwykonawca",
   klient: "Klient",
   gosc: "Gość",
 };

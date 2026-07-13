@@ -6,6 +6,9 @@ import type {
   KanbanTaskEvent,
 } from "@/lib/process/kanban-types";
 import { getMilestoneDateStatus } from "@/lib/process/dates";
+import { matchesKanbanAssigneeFilter } from "@/lib/kanban/task-assignee";
+import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
+import type { UserProfile } from "@/lib/auth/types";
 
 export const KANBAN_STALE_DAYS = 7;
 
@@ -97,13 +100,30 @@ export function buildKanbanTaskActivityMap(board: Pick<KanbanBoard, "tasks" | "c
   return map;
 }
 
-export function matchesKanbanBoardFilters(task: KanbanTask, filters: KanbanBoardFilters) {
+export function matchesKanbanBoardFilters(
+  task: KanbanTask,
+  filters: KanbanBoardFilters,
+  context?: { teamProfiles?: UserProfile[]; roleOptions?: DictionaryItem[] },
+) {
   if (filters.priority !== "all" && task.priority !== filters.priority) {
     return false;
   }
 
+  if (filters.assignee === "all") {
+    return true;
+  }
+
+  if (context?.teamProfiles && context?.roleOptions) {
+    return matchesKanbanAssigneeFilter(
+      task,
+      filters.assignee,
+      context.roleOptions,
+      context.teamProfiles,
+    );
+  }
+
   if (filters.assignee === "unassigned") {
-    return !task.assigneeName?.trim();
+    return !task.assigneeName?.trim() && !task.assigneeId && !task.roleItemId;
   }
 
   if (filters.assignee !== "all" && task.assigneeName !== filters.assignee) {

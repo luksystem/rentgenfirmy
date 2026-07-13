@@ -8,6 +8,7 @@ import {
   Bell,
   CalendarClock,
   ClipboardCheck,
+  ClipboardList,
   PalmtreeIcon,
   Sparkles,
   Star,
@@ -47,6 +48,10 @@ export function NotificationBell() {
   const [inspectionsPlanningCount, setInspectionsPlanningCount] = useState(0);
   const [inspectionsBillingCount, setInspectionsBillingCount] = useState(0);
   const [leavePendingCount, setLeavePendingCount] = useState(0);
+  const [functionalitySurveyPendingCount, setFunctionalitySurveyPendingCount] = useState(0);
+  const [functionalitySurveyLatestHref, setFunctionalitySurveyLatestHref] = useState<string | null>(
+    null,
+  );
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   const kanbanAlertCount = kanbanNewTaskCount + kanbanOverdueTaskCount;
@@ -63,13 +68,15 @@ export function NotificationBell() {
     serviceNewCount +
     inspectionsPlanningCount +
     inspectionsBillingCount +
-    leavePendingCount;
+    leavePendingCount +
+    functionalitySurveyPendingCount;
   const overdueBadgeCount = kanbanOverdueTaskCount + serviceOverdueCount;
   const hasKanbanAlerts = kanbanAlertCount > 0;
   const hasServiceAlerts = serviceAlertCount > 0;
   const hasInspectionsAlerts = inspectionsAlertCount > 0;
   const hasAgreementAlerts = agreementAlertCount > 0;
   const hasLeaveAlerts = leavePendingCount > 0;
+  const hasFunctionalitySurveyAlerts = functionalitySurveyPendingCount > 0;
   const salesItems = items.filter((item) =>
     (SALES_NOTIFICATION_KINDS as readonly string[]).includes(item.kind),
   );
@@ -134,6 +141,36 @@ export function NotificationBell() {
         setLeavePendingCount(payload.pendingForMeCount ?? 0);
       })
       .catch(() => setLeavePendingCount(0));
+    void fetch("/api/functionality-survey/counts", { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) {
+          return;
+        }
+        const payload = (await response.json()) as {
+          pendingReviewCount?: number;
+          latest?: {
+            projectId: string;
+            clientId: string | null;
+          } | null;
+        };
+        setFunctionalitySurveyPendingCount(payload.pendingReviewCount ?? 0);
+        const latest = payload.latest;
+        if (latest?.clientId) {
+          const params = new URLSearchParams({
+            project: latest.projectId,
+            tab: "functionality-survey",
+          });
+          setFunctionalitySurveyLatestHref(
+            `/przestrzenie/klient/${latest.clientId}?${params.toString()}`,
+          );
+        } else {
+          setFunctionalitySurveyLatestHref("/przestrzenie");
+        }
+      })
+      .catch(() => {
+        setFunctionalitySurveyPendingCount(0);
+        setFunctionalitySurveyLatestHref(null);
+      });
     if (open) {
       void loadNotifications(profileId);
     }
@@ -168,8 +205,48 @@ export function NotificationBell() {
         });
     }
 
+    function onFunctionalitySurveyCountChanged() {
+      void fetch("/api/functionality-survey/counts", { credentials: "include" })
+        .then(async (response) => {
+          if (!response.ok) {
+            return;
+          }
+          const payload = (await response.json()) as {
+            pendingReviewCount?: number;
+            latest?: {
+              projectId: string;
+              clientId: string | null;
+            } | null;
+          };
+          setFunctionalitySurveyPendingCount(payload.pendingReviewCount ?? 0);
+          const latest = payload.latest;
+          if (latest?.clientId) {
+            const params = new URLSearchParams({
+              project: latest.projectId,
+              tab: "functionality-survey",
+            });
+            setFunctionalitySurveyLatestHref(
+              `/przestrzenie/klient/${latest.clientId}?${params.toString()}`,
+            );
+          } else {
+            setFunctionalitySurveyLatestHref("/przestrzenie");
+          }
+        })
+        .catch(() => {
+          setFunctionalitySurveyPendingCount(0);
+          setFunctionalitySurveyLatestHref(null);
+        });
+    }
+
     window.addEventListener("inspections-count-changed", onInspectionsCountChanged);
-    return () => window.removeEventListener("inspections-count-changed", onInspectionsCountChanged);
+    window.addEventListener("functionality-survey-count-changed", onFunctionalitySurveyCountChanged);
+    return () => {
+      window.removeEventListener("inspections-count-changed", onInspectionsCountChanged);
+      window.removeEventListener(
+        "functionality-survey-count-changed",
+        onFunctionalitySurveyCountChanged,
+      );
+    };
   }, []);
 
   useEffect(() => {
@@ -411,6 +488,34 @@ export function NotificationBell() {
               </div>
             ) : null}
 
+            {hasFunctionalitySurveyAlerts ? (
+              <div className="border-b border-border/60 bg-surface-muted/20">
+                <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                  Ankiety funkcji
+                </p>
+                <Link
+                  href={functionalitySurveyLatestHref ?? "/przestrzenie"}
+                  onClick={() => setOpen(false)}
+                  className="flex items-start gap-3 px-4 py-3 transition hover:bg-surface-muted/30"
+                >
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-violet-500/35 bg-violet-500/10 text-violet-200">
+                    <ClipboardList className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">Klient wypełnił ankietę</p>
+                      <NavBadges newCount={functionalitySurveyPendingCount} size="sm" />
+                    </div>
+                    <p className="mt-1 break-words text-xs leading-relaxed text-muted">
+                      {functionalitySurveyPendingCount === 1
+                        ? "1 ankieta funkcji czeka na przejrzenie przez zespół."
+                        : `${functionalitySurveyPendingCount} ankiet funkcji czeka na przejrzenie przez zespół.`}
+                    </p>
+                  </span>
+                </Link>
+              </div>
+            ) : null}
+
             {hasKanbanAlerts ? (
               <div className="border-b border-border/60 bg-surface-muted/20">
                 <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wide text-muted">
@@ -588,6 +693,7 @@ export function NotificationBell() {
               !hasAgreementAlerts &&
               !hasServiceAlerts &&
               !hasLeaveAlerts &&
+              !hasFunctionalitySurveyAlerts &&
               !hasSalesAlerts ? (
               <p className="px-4 py-6 text-sm text-muted">Brak powiadomień.</p>
             ) : otherItems.length === 0 ? (

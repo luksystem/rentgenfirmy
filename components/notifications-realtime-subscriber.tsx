@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useAgreementsHubRealtime } from "@/hooks/use-agreements-hub-realtime";
 import { useNotificationsRealtime } from "@/hooks/use-notifications-realtime";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/auth-store";
 import { useAgreementHubStore } from "@/store/agreement-hub-store";
 import { useLeaveStore } from "@/store/leave-store";
@@ -79,6 +80,28 @@ export function NotificationsRealtimeSubscriber() {
 
   useNotificationsRealtime(profileId, refresh);
   useAgreementsHubRealtime(refresh);
+
+  useEffect(() => {
+    if (!profileId || !isSupabaseConfigured()) {
+      return;
+    }
+
+    const supabase = getSupabase();
+    const channel = supabase
+      .channel("functionality-survey-alerts")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "project_functionality_surveys" },
+        () => {
+          window.dispatchEvent(new Event("functionality-survey-count-changed"));
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [profileId]);
 
   return null;
 }

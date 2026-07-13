@@ -14,6 +14,7 @@ import { MyWorkCompleteDialog } from "@/components/my-work/my-work-complete-dial
 import { MyWorkDayRhythm } from "@/components/my-work/my-work-day-rhythm";
 import { MyWorkObstacleDialog } from "@/components/my-work/my-work-obstacle-dialog";
 import { MyWorkWeekPlanPanel } from "@/components/my-work/my-work-week-plan-panel";
+import { MyWorkPlansPoller } from "@/components/my-work/my-work-plans-poller";
 import { CreateWorkItemDialog } from "@/components/my-work/manager/create-work-item-dialog";
 import { EditWorkItemDialog } from "@/components/my-work/manager/edit-work-item-dialog";
 import { filterWorkItems } from "@/lib/my-work/section-filters";
@@ -45,6 +46,7 @@ export function MyWorkPage() {
   const selectItem = useMyWorkStore((state) => state.selectItem);
   const acceptItem = useMyWorkStore((state) => state.acceptItem);
   const completeItem = useMyWorkStore((state) => state.completeItem);
+  const completeAllocation = useMyWorkStore((state) => state.completeAllocation);
   const startItem = useMyWorkStore((state) => state.startItem);
   const verifyItem = useMyWorkStore((state) => state.verifyItem);
   const sendItem = useMyWorkStore((state) => state.sendItem);
@@ -167,6 +169,7 @@ export function MyWorkPage() {
 
   return (
     <>
+      <MyWorkPlansPoller />
       <PageHeader
         eyebrow="Moja praca"
         title="Zadania"
@@ -319,6 +322,15 @@ export function MyWorkPage() {
             window.alert("Prośba o przejęcie została wysłana.");
           } catch (error) {
             window.alert(error instanceof Error ? error.message : "Nie udało się wysłać prośby.");
+          }
+        }}
+        onCompleteAllocation={async () => {
+          if (!selectedDetail) return;
+          try {
+            await completeAllocation(selectedDetail.item.id);
+            setDetailOpen(false);
+          } catch (error) {
+            window.alert(error instanceof Error ? error.message : "Nie udało się zakończyć przydziału.");
           }
         }}
       />

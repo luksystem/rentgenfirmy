@@ -1,13 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { UserProfile } from "@/lib/auth/types";
 import { kanbanTaskWorkItemAdapter } from "@/lib/my-work/source-adapters/kanban-task-adapter";
-import { upsertWorkItemFromMirror } from "@/lib/my-work/source-adapters/sync-helpers";
+import { upsertWorkItemFromMirror, cancelOrphanedSyncedWorkItems } from "@/lib/my-work/source-adapters/sync-helpers";
 import {
   mapAgreementStatus,
   mapFunctionalityTaskPriority,
   mapFunctionalityTaskStatus,
   mapInspectionStatus,
-  mapProcessItemStatus,
   mapResourcePlanStatusName,
   mapServiceIntakePriority,
   mapServiceIntakeStatus,
@@ -15,6 +14,10 @@ import {
 import type { WorkItemMirrorFields } from "@/lib/my-work/source-adapters/types";
 import { canManagerWorkItems } from "@/lib/my-work/permissions";
 import { fetchOpenKanbanTasksForUser } from "@/lib/my-work/source-adapters/kanban-task-adapter";
+import {
+  cancelMisassignedProcessItemWorkItemsForUser,
+  syncProcessItemsToWorkItemsServer,
+} from "@/lib/supabase/process-work-item-sync-server";
 
 type AdminClient = SupabaseClient;
 
@@ -49,54 +52,58 @@ export async function syncKanbanTasksToWorkItems(admin: AdminClient, userId: str
       status,
     });
   }
-}
 
-export async function syncProcessItemsToWorkItems(admin: AdminClient, userId: string, managerId: string | null) {
-  const { data, error } = await admin
-    .from("project_process_items")
-    .select("id, project_id, template_item_id, kind, status, assignee_id, payload")
-    .eq("assignee_id", userId)
-    .neq("status", "completed")
-    .neq("kind", "kanban");
+  const { data: staleItems, error: staleError } = await admin
+    .from("work_items")
+    .select("id, source_id")
+    .eq("assigned_user_id", userId)
+    .eq("source_type", "kanban_task")
+    .neq("status", "cancelled");
 
-  if (error) {
-    throw new Error(error.message);
+  if (staleError) {
+    throw new Error(staleError.message);
   }
 
-  const rows = data ?? [];
-  if (!rows.length) {
+  if (!staleItems?.length) {
     return;
   }
 
-  const templateIds = [...new Set(rows.map((row) => row.template_item_id as string))];
-  const projectIds = [...new Set(rows.map((row) => row.project_id as string))];
+  const sourceIds = staleItems.map((row) => row.source_id as string);
+  const { data: sourceRows, error: sourceError } = await admin
+    .from("process_kanban_tasks")
+    .select("id, assignee_id, closed_at")
+    .in("id", sourceIds);
 
-  const [{ data: templates }, { data: projects }] = await Promise.all([
-    admin.from("process_items").select("id, title").in("id", templateIds),
-    admin.from("projects").select("id, client_id").in("id", projectIds),
-  ]);
-
-  const titleByTemplate = new Map((templates ?? []).map((row) => [row.id as string, row.title as string]));
-  const clientByProject = new Map((projects ?? []).map((row) => [row.id as string, row.client_id as string | null]));
-
-  for (const row of rows) {
-    const mirror: WorkItemMirrorFields = {
-      title: titleByTemplate.get(row.template_item_id as string) ?? `Element procesu (${row.kind})`,
-      description: typeof row.payload === "object" ? "" : String(row.payload ?? ""),
-      projectId: row.project_id as string,
-      clientId: clientByProject.get(row.project_id as string) ?? null,
-      assignedUserId: userId,
-      status: mapProcessItemStatus(row.status as string),
-    };
-    await upsertWorkItemFromMirror(admin, {
-      sourceType: "process_item",
-      sourceId: row.id as string,
-      assignedUserId: userId,
-      managerId,
-      mirror,
-      status: mapProcessItemStatus(row.status as string),
-    });
+  if (sourceError) {
+    throw new Error(sourceError.message);
   }
+
+  const sourceById = new Map((sourceRows ?? []).map((row) => [row.id as string, row]));
+  const now = new Date().toISOString();
+  const orphanIds = staleItems
+    .filter((item) => {
+      const source = sourceById.get(item.source_id as string);
+      return !source || source.assignee_id !== userId || source.closed_at;
+    })
+    .map((item) => item.id as string);
+
+  if (!orphanIds.length) {
+    return;
+  }
+
+  const { error: cancelError } = await admin
+    .from("work_items")
+    .update({ status: "cancelled", updated_at: now })
+    .in("id", orphanIds);
+
+  if (cancelError) {
+    throw new Error(cancelError.message);
+  }
+}
+
+export async function syncProcessItemsToWorkItems(admin: AdminClient, userId: string, managerId: string | null) {
+  await syncProcessItemsToWorkItemsServer(admin, userId, managerId);
+  await cancelMisassignedProcessItemWorkItemsForUser(admin, userId);
 }
 
 export async function syncServiceIntakesToWorkItems(admin: AdminClient, userId: string, managerId: string | null) {
@@ -296,10 +303,28 @@ export async function syncResourcePlanItemsToWorkItems(admin: AdminClient, userI
   }
 
   for (const row of merged.values()) {
-    if (completedStatusId && row.status_item_id === completedStatusId) {
+    const statusName = row.status_item_id ? statusNameById.get(row.status_item_id as string) : null;
+    const isCompleted = Boolean(completedStatusId && row.status_item_id === completedStatusId);
+
+    if (isCompleted) {
+      const now = new Date().toISOString();
+      const { error: completeError } = await admin
+        .from("work_items")
+        .update({
+          status: "verified",
+          completed_at: now,
+          verified_at: now,
+          updated_at: now,
+        })
+        .eq("source_type", "resource_plan_item")
+        .eq("source_id", row.id as string)
+        .eq("assigned_user_id", userId);
+      if (completeError) {
+        throw new Error(completeError.message);
+      }
       continue;
     }
-    const statusName = row.status_item_id ? statusNameById.get(row.status_item_id as string) : null;
+
     const mirror: WorkItemMirrorFields = {
       title: row.title as string,
       description: row.notes as string,
@@ -387,4 +412,5 @@ export async function syncAllWorkItemSources(
     syncFunctionalityTasksToWorkItems(admin, userId, managerId),
     syncAgreementsToWorkItems(admin, userId, managerId),
   ]);
+  await cancelOrphanedSyncedWorkItems(admin, userId);
 }

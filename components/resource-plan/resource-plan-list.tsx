@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ChevronLeft, ChevronRight, Pencil, Plus } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
@@ -54,6 +54,7 @@ export function ResourcePlanList() {
   const to = endOfMonthIso(monthOffset).toISOString();
 
   const ensureRange = useResourcePlanStore((state) => state.ensureRange);
+  const updateItem = useResourcePlanStore((state) => state.updateItem);
   const loading = useResourcePlanStore((state) => state.loading);
   const items = useResourcePlanStore((state) => state.allItems());
 
@@ -138,6 +139,25 @@ export function ResourcePlanList() {
   const monthLabel = new Intl.DateTimeFormat("pl-PL", { month: "long", year: "numeric" }).format(
     startOfMonthIso(monthOffset),
   );
+  const completedStatus = useMemo(
+    () => statusOptions.find((option) => option.name === "Zakończone") ?? null,
+    [statusOptions],
+  );
+
+  async function markItemCompleted(item: ResourcePlanItem, event: React.MouseEvent) {
+    event.stopPropagation();
+    if (!completedStatus || item.statusItemId === completedStatus.id) {
+      return;
+    }
+    try {
+      await updateItem(item.id, {
+        ...resourcePlanItemToInput(item),
+        statusItemId: completedStatus.id,
+      });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Nie udało się zakończyć przydziału.");
+    }
+  }
 
   function openCreate(templateId?: string) {
     setEditingItem(null);
@@ -226,12 +246,15 @@ export function ResourcePlanList() {
                 : null;
 
             return (
-              <button
+              <div
                 key={item.id}
-                type="button"
-                onClick={() => openEdit(item)}
-                className="flex w-full flex-wrap items-center gap-3 rounded-xl border border-border/70 bg-surface p-3 text-left transition hover:bg-surface-muted/40"
+                className="flex items-center gap-1 rounded-xl border border-border/70 bg-surface p-1 transition hover:bg-surface-muted/20"
               >
+                <button
+                  type="button"
+                  onClick={() => openEdit(item)}
+                  className="flex min-w-0 flex-1 flex-wrap items-center gap-3 rounded-lg p-2 text-left"
+                >
                 <span
                   className="h-9 w-1.5 shrink-0 rounded-full"
                   style={{ backgroundColor: status?.color ?? "#64748b" }}
@@ -293,7 +316,20 @@ export function ResourcePlanList() {
                   {item.participants.length > 0 ? ` +${item.participants.length}` : ""}
                 </div>
                 <Pencil className="h-4 w-4 shrink-0 text-muted" />
-              </button>
+                </button>
+                {completedStatus && status?.name !== "Zakończone" ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="shrink-0"
+                    title="Oznacz jako zakończone"
+                    onClick={(event) => void markItemCompleted(item, event)}
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                  </Button>
+                ) : null}
+              </div>
             );
           })}
         </div>

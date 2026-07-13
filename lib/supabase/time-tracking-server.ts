@@ -1,5 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { hasFullAppAccess, type UserProfile } from "@/lib/auth/types";
+import { getUserDisplayName, hasFullAppAccess, type UserProfile } from "@/lib/auth/types";
+import { parseProcessTemplateSnapshot } from "@/lib/process/anchored-template";
+import {
+  buildProjectTimeSummary,
+  resolveProcessStageTitle,
+  type ProjectTimeEntryRow,
+  type ProjectTimeSummary,
+} from "@/lib/time-tracking/project-time-summary";
+import { assertUserCanAccessProjectServer } from "@/lib/supabase/project-access-server";
 import {
   assertEditableStatus,
   canCreateTimeEntryForUser,
@@ -985,4 +993,84 @@ export async function fetchTimeEntryLogsServer(
   }
 
   return (data ?? []).map((row) => mapTimeEntryLogRow(row as Parameters<typeof mapTimeEntryLogRow>[0]));
+}
+
+async function fetchProjectStageTitleMap(admin: AdminClient, projectId: string) {
+  const { data, error } = await admin
+    .from("project_processes")
+    .select("template_snapshot")
+    .eq("project_id", projectId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const snapshot = parseProcessTemplateSnapshot(
+    (data as { template_snapshot?: unknown } | null)?.template_snapshot,
+  );
+  const map = new Map<string, string>();
+  for (const stage of snapshot?.stages ?? []) {
+    map.set(stage.id, stage.title);
+  }
+  return {
+    titleById: map,
+    orderedStages: (snapshot?.stages ?? []).map((stage) => ({ id: stage.id, title: stage.title })),
+  };
+}
+
+export async function fetchProjectTimeTrackingServer(
+  admin: AdminClient,
+  actor: UserProfile,
+  projectId: string,
+): Promise<{ entries: ProjectTimeEntryRow[]; summary: ProjectTimeSummary }> {
+  await assertUserCanAccessProjectServer(admin, actor, projectId);
+
+  const { data, error } = await admin
+    .from("time_entries")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("date", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const rows = (data ?? []) as TimeEntryRow[];
+  const [baseViews, stageMeta] = await Promise.all([
+    resolveEntryViews(admin, rows),
+    fetchProjectStageTitleMap(admin, projectId),
+  ]);
+
+  const userIds = [...new Set(rows.map((row) => row.user_id))];
+  const { data: profileRows, error: profileError } = userIds.length
+    ? await admin.from("profiles").select("id, first_name, last_name, email").in("id", userIds)
+    : { data: [], error: null };
+
+  if (profileError) {
+    throw new Error(profileError.message);
+  }
+
+  const userNameById = new Map(
+    (profileRows ?? []).map((row) => [
+      row.id as string,
+      getUserDisplayName({
+        firstName: String(row.first_name ?? ""),
+        lastName: String(row.last_name ?? ""),
+        email: String(row.email ?? ""),
+      }),
+    ]),
+  );
+
+  const entries: ProjectTimeEntryRow[] = baseViews.map((entry) => ({
+    ...entry,
+    userDisplayName: userNameById.get(entry.userId) ?? "Użytkownik",
+    processStageTitle: resolveProcessStageTitle(entry.processStageId, stageMeta.titleById),
+  }));
+
+  return {
+    entries,
+    summary: buildProjectTimeSummary(entries, stageMeta.orderedStages),
+  };
 }

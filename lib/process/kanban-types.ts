@@ -44,6 +44,7 @@ export type KanbanTask = {
   closedAt: string | null;
   assigneeName: string | null;
   assigneeId: string | null;
+  roleItemId: string | null;
   createdBySide: KanbanAuthorSide;
   isNewForTeam: boolean;
   createdAt: string;

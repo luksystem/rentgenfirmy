@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
+import { getUserDisplayName, STAFF_ROLES, type UserProfile } from "@/lib/auth/types";
 import { canDeleteWorkItem, canEditWorkItem, canManagerWorkItems } from "@/lib/my-work/permissions";
 import { getWorkItemSourceAdapter } from "@/lib/my-work/source-adapters/registry";
 import { syncAllWorkItemSources } from "@/lib/supabase/my-work-sync";
@@ -36,7 +36,7 @@ async function fetchActiveTeamMemberIds(admin: AdminClient) {
     .from("profiles")
     .select("id")
     .eq("is_active", true)
-    .in("role", ["administrator", "manager", "pracownik"]);
+    .in("role", [...STAFF_ROLES]);
   if (error) {
     throw new Error(error.message);
   }
@@ -1016,4 +1016,62 @@ export async function requestWorkItemTakeoverServer(
     recipientId,
     requesterName: getUserDisplayName(actor),
   };
+}
+
+export async function completeAllocationWorkItemServer(
+  admin: AdminClient,
+  workItemId: string,
+  actor: UserProfile,
+) {
+  const detail = await fetchWorkItemDetail(admin, workItemId, actor.id, actor);
+  if (!detail) {
+    throw new Error("Nie znaleziono zadania.");
+  }
+  if (detail.item.sourceType !== "resource_plan_item") {
+    throw new Error("To działanie dotyczy tylko przydziałów z planowania zasobów.");
+  }
+  if (isTerminalWorkItemStatus(detail.item.status)) {
+    throw new Error("Ten przydział jest już zakończony.");
+  }
+
+  const isAssignee = detail.item.assignedUserId === actor.id;
+  const isManager = canManageWorkItems(actor);
+  if (!isAssignee && !isManager) {
+    throw new Error("Brak uprawnień do zakończenia tego przydziału.");
+  }
+
+  const now = new Date().toISOString();
+  const targetStatus: WorkItemStatus =
+    isManager && (detail.item.status === "pending_verification" || !isAssignee)
+      ? "verified"
+      : "pending_verification";
+
+  const updatePayload: Record<string, unknown> = {
+    status: targetStatus,
+    completed_at: now,
+    updated_at: now,
+  };
+  if (targetStatus === "verified") {
+    updatePayload.verified_at = now;
+    updatePayload.verified_by_id = actor.id;
+  }
+
+  const { error } = await admin.from("work_items").update(updatePayload).eq("id", workItemId);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await syncWorkItemPatchToSource(admin, detail.item, {
+    status: targetStatus,
+    completedAt: now,
+  });
+
+  await appendWorkItemLog(admin, {
+    workItemId,
+    userId: actor.id,
+    action: "complete:allocation",
+    metadata: { targetStatus },
+  });
+
+  return fetchWorkItemDetail(admin, workItemId, actor.id, actor);
 }

@@ -19,6 +19,8 @@ export const CLIENT_DASHBOARD_TABS: ClientDashboardTab[] = [
   "documentation",
   "credentials",
   "links",
+  "time-tracking",
+  "project-users",
 ];
 
 export function isClientDashboardTab(value: string | null): value is ClientDashboardTab {

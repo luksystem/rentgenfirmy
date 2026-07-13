@@ -40,6 +40,7 @@ export function mapProfileInputToInsert(
     cost_rate: input.costRate ?? null,
     is_available_for_planning: input.isAvailableForPlanning ?? true,
     supervisor_id: input.supervisorId ?? null,
+    all_projects_access: input.role === "podwykonawca" ? false : undefined,
   };
 }
 

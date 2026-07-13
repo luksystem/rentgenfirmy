@@ -12,9 +12,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/input";
 import {
+  isTerminalWorkItemStatus,
+  WORK_ITEM_ACCEPTANCE_ACTION_LABELS,
   WORK_ITEM_PRIORITY_LABELS,
   WORK_ITEM_STATUS_LABELS,
-  WORK_ITEM_ACCEPTANCE_ACTION_LABELS,
   type WorkItemDetail,
 } from "@/lib/my-work/types";
 import { workItemLogActionLabel } from "@/lib/my-work/display-labels";
@@ -22,6 +23,8 @@ import { formatDate } from "@/lib/utils";
 import { canEditWorkItem } from "@/lib/my-work/permissions";
 import { useAuthStore } from "@/store/auth-store";
 import { useCanManageWorkItems } from "@/store/my-work-store";
+import { TaskChecklistPanel } from "@/components/task-checklist/task-checklist-panel";
+import type { TaskChecklistParent } from "@/lib/task-checklist/types";
 
 export function MyWorkDetailPanel({
   detail,
@@ -36,6 +39,7 @@ export function MyWorkDetailPanel({
   onReportObstacle,
   onEdit,
   onRequestTakeover,
+  onCompleteAllocation,
 }: {
   detail: WorkItemDetail | null;
   open: boolean;
@@ -49,6 +53,7 @@ export function MyWorkDetailPanel({
   onReportObstacle?: () => void;
   onEdit?: () => void;
   onRequestTakeover?: () => Promise<void>;
+  onCompleteAllocation?: () => Promise<void>;
 }) {
   const profile = useAuthStore((state) => state.profile);
   const canManage = useCanManageWorkItems(profile?.role);
@@ -65,6 +70,19 @@ export function MyWorkDetailPanel({
   const canSend = canManage && (item.status === "draft" || item.status === "planned");
   const canEdit = profile ? canEditWorkItem(profile, item) : false;
   const canRequestTakeover = Boolean(item.isSupporting && !isAssignee && onRequestTakeover);
+  const isResourcePlanAllocation = item.sourceType === "resource_plan_item";
+  const canCompleteAllocation =
+    Boolean(onCompleteAllocation) &&
+    isResourcePlanAllocation &&
+    !isTerminalWorkItemStatus(item.status) &&
+    (isAssignee || canManage);
+
+  const checklistParent: TaskChecklistParent | null =
+    item.sourceType === "manual"
+      ? { kind: "work_item", id: item.id }
+      : item.sourceType === "resource_plan_item" && item.sourceId
+        ? { kind: "resource_plan_item", id: item.sourceId }
+        : null;
 
   async function handleComment() {
     if (!commentBody.trim()) return;
@@ -142,6 +160,8 @@ export function MyWorkDetailPanel({
             </Link>
           ) : null}
 
+          {checklistParent ? <TaskChecklistPanel parent={checklistParent} /> : null}
+
           <section>
             <h3 className="mb-2 font-medium text-foreground">Komentarze</h3>
             <div className="grid gap-2">
@@ -205,6 +225,13 @@ export function MyWorkDetailPanel({
           {isAssignee && item.status === "accepted" ? (
             <Button variant="secondary" onClick={() => void onStart()}>
               Rozpocznij realizację
+            </Button>
+          ) : null}
+          {canCompleteAllocation ? (
+            <Button onClick={() => void onCompleteAllocation?.()}>
+              {canManage && item.status === "pending_verification"
+                ? "Zatwierdź przydział"
+                : "Zakończ przydział"}
             </Button>
           ) : null}
           {canComplete ? (
