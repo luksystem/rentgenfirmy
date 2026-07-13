@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ProcessElement, ProcessTemplate } from "@/lib/process/types";
 import { rowToProcessElement } from "@/lib/supabase/process-element-mappers";
 import {
@@ -8,8 +9,9 @@ import {
 } from "@/lib/supabase/process-mappers";
 import { getSupabaseServer } from "@/lib/supabase/server";
 
-async function fetchProcessElementsServer(): Promise<ProcessElement[]> {
-  const supabase = getSupabaseServer();
+type DbClient = SupabaseClient;
+
+async function fetchProcessElementsWithClient(supabase: DbClient): Promise<ProcessElement[]> {
   const { data, error } = await supabase
     .from("process_elements")
     .select("*")
@@ -22,8 +24,9 @@ async function fetchProcessElementsServer(): Promise<ProcessElement[]> {
   return (data ?? []).map(rowToProcessElement);
 }
 
-async function fetchTemplatesGraphServer(): Promise<ProcessTemplate[]> {
-  const supabase = getSupabaseServer();
+export async function fetchTemplatesGraphWithClient(
+  supabase: DbClient = getSupabaseServer(),
+): Promise<ProcessTemplate[]> {
 
   const { data: templates, error: templatesError } = await supabase
     .from("process_templates")
@@ -78,7 +81,7 @@ async function fetchTemplatesGraphServer(): Promise<ProcessTemplate[]> {
     throw new Error(itemsError.message);
   }
 
-  const elements = await fetchProcessElementsServer();
+  const elements = await fetchProcessElementsWithClient(supabase);
   const elementsById = new Map(elements.map((element) => [element.id, element]));
 
   const itemsByMilestone = new Map<string, ReturnType<typeof rowToProcessItem>[]>();
@@ -110,7 +113,10 @@ async function fetchTemplatesGraphServer(): Promise<ProcessTemplate[]> {
   );
 }
 
-export async function fetchProcessTemplateByProjectTypeServer(projectType: string) {
-  const templates = await fetchTemplatesGraphServer();
+export async function fetchProcessTemplateByProjectTypeServer(
+  projectType: string,
+  supabase: DbClient = getSupabaseServer(),
+) {
+  const templates = await fetchTemplatesGraphWithClient(supabase);
   return templates.find((template) => template.projectType === projectType) ?? null;
 }

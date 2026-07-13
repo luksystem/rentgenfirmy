@@ -722,6 +722,15 @@ export function NotificationBell() {
               </>
             )}
           </div>
+          <div className="border-t border-border/70 px-4 py-2.5">
+            <Link
+              href="/moja-praca/powiadomienia"
+              onClick={() => setOpen(false)}
+              className="text-xs text-accent hover:underline"
+            >
+              Ustawienia powiadomień push
+            </Link>
+          </div>
         </div>
       ) : null}
     </div>

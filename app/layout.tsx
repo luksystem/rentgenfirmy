@@ -18,6 +18,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Rentgen firmy",
   description: "Przepływ projektów Smart Home / BMS / Automatyka Budynkowa",
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport = {
