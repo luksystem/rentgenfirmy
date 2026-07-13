@@ -32,6 +32,19 @@ export type ProcessElementPlacement = {
   anchoredProjectCount: number;
 };
 
+type ProcessItemPlacementRow = {
+  id: string;
+  title: string;
+  process_milestones: {
+    title?: string;
+    process_stages?: {
+      title?: string;
+      template_id?: string;
+      process_templates?: { id?: string; project_type?: string; name?: string };
+    };
+  } | null;
+};
+
 export async function fetchProcessElementPlacements(elementId: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase
@@ -46,15 +59,12 @@ export async function fetchProcessElementPlacements(elementId: string) {
     throw new Error(error.message);
   }
 
+  const rows = (data ?? []) as ProcessItemPlacementRow[];
+
   const templateIds = [
     ...new Set(
-      (data ?? [])
-        .map((row) => {
-          const milestone = row.process_milestones as {
-            process_stages?: { template_id?: string };
-          } | null;
-          return milestone?.process_stages?.template_id;
-        })
+      rows
+        .map((row) => row.process_milestones?.process_stages?.template_id)
         .filter((id): id is string => Boolean(id)),
     ),
   ];
@@ -78,15 +88,8 @@ export async function fetchProcessElementPlacements(elementId: string) {
     }
   }
 
-  return (data ?? []).map((row) => {
-    const milestone = row.process_milestones as {
-      title?: string;
-      process_stages?: {
-        title?: string;
-        template_id?: string;
-        process_templates?: { id?: string; project_type?: string; name?: string };
-      };
-    } | null;
+  return rows.map((row) => {
+    const milestone = row.process_milestones;
     const stage = milestone?.process_stages;
     const template = stage?.process_templates;
     const templateId = stage?.template_id ?? template?.id ?? "";
