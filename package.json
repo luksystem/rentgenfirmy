@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "postinstall": "node scripts/copy-pdf-worker.mjs",
     "seed:admin": "node --env-file=.env.local scripts/seed-admin.mjs",
-    "sync:process-templates": "npx tsx --env-file=.env.local scripts/sync-process-templates.ts"
+    "sync:process-templates": "npx tsx --env-file=.env.local scripts/sync-process-templates.ts",
+    "seed:viz-demo": "npx tsx --env-file=.env.local scripts/seed-viz-demo-telemetry.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
