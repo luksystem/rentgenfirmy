@@ -37,6 +37,9 @@ export async function listVizAlarmRules(dashboardId: string) {
     .order("name");
 
   if (error) {
+    if (error.message.toLowerCase().includes("does not exist")) {
+      return [];
+    }
     throw new Error(error.message);
   }
 
@@ -130,6 +133,9 @@ export async function fetchActiveWorkProjectIds(projectIds: string[]) {
     .gte("end_at", now);
 
   if (error) {
+    if (error.message.toLowerCase().includes("does not exist")) {
+      return new Set<string>();
+    }
     throw new Error(error.message);
   }
 

@@ -64,7 +64,8 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
         method: refresh ? "POST" : "GET",
       });
       if (!response.ok) {
-        throw new Error("Nie udało się pobrać danych dashboardu.");
+        const payload = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(payload.error ?? "Nie udało się pobrać danych dashboardu.");
       }
       const data = (await response.json()) as LiveResponse;
       setLive(data);
