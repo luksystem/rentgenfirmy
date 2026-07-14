@@ -19,6 +19,10 @@ import { VIZ_SERVICE_CONTRACT_STATUS_LABELS } from "@/lib/viz/types";
 import type { VizDashboardProject } from "@/lib/viz/types";
 import type { VizStoreLiveSnapshot } from "@/lib/viz/viz-telemetry-server";
 import { VizProjectContactsPanel } from "@/components/viz/viz-project-contacts-panel";
+import { VizSetpointControl } from "@/components/viz/viz-setpoint-control";
+import { VizEnergyPanel } from "@/components/viz/viz-energy-panel";
+import { VizControlHistoryPanel } from "@/components/viz/viz-control-history-panel";
+import type { VizDashboardPermissions } from "@/lib/viz/types";
 
 const STORE_TABS = [
   "Podsumowanie",
@@ -44,6 +48,7 @@ type VizStoreDetailTabsProps = {
 export function VizStoreDetailTabs({ dashboardId, project }: VizStoreDetailTabsProps) {
   const [activeTab, setActiveTab] = useState<StoreTab>("Podsumowanie");
   const [snapshot, setSnapshot] = useState<VizStoreLiveSnapshot | null>(null);
+  const [permissions, setPermissions] = useState<VizDashboardPermissions | null>(null);
   const [isLoadingLive, setIsLoadingLive] = useState(true);
 
   const projectId = project?.projectId ?? null;
@@ -71,6 +76,17 @@ export function VizStoreDetailTabs({ dashboardId, project }: VizStoreDetailTabsP
     void loadLive();
   }, [loadLive]);
 
+  useEffect(() => {
+    async function loadSession() {
+      const response = await fetch(`/api/viz/dashboards/${dashboardId}/session`);
+      if (response.ok) {
+        const data = (await response.json()) as { permissions: VizDashboardPermissions };
+        setPermissions(data.permissions);
+      }
+    }
+    void loadSession();
+  }, [dashboardId]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -96,6 +112,8 @@ export function VizStoreDetailTabs({ dashboardId, project }: VizStoreDetailTabsP
           snapshot={snapshot}
           isLoading={isLoadingLive}
           dashboardId={dashboardId}
+          permissions={permissions}
+          onSetpointSent={() => void loadLive()}
         />
       ) : activeTab === "Serwis" && projectId ? (
         <VizStoreServiceTab projectId={projectId} />
@@ -107,6 +125,15 @@ export function VizStoreDetailTabs({ dashboardId, project }: VizStoreDetailTabsP
         <VizProjectContactsPanel dashboardId={dashboardId} projectId={projectId} />
       ) : activeTab === "Alarmy" ? (
         <VizStoreAlarmsTab snapshot={snapshot} isLoading={isLoadingLive} dashboardId={dashboardId} />
+      ) : activeTab === "Energia" && projectId ? (
+        <VizEnergyPanel
+          dashboardId={dashboardId}
+          projectId={projectId}
+          canUpload={permissions?.uploadInvoices === true}
+          canAnalyze={permissions?.analyzeInvoices === true}
+        />
+      ) : activeTab === "Historia sterowania" && projectId ? (
+        <VizControlHistoryPanel dashboardId={dashboardId} projectId={projectId} />
       ) : (
         <Card className="p-6 text-sm text-muted">
           <p className="font-medium text-foreground">{activeTab}</p>
@@ -124,11 +151,15 @@ function VizStoreSummaryTab({
   snapshot,
   isLoading,
   dashboardId,
+  permissions,
+  onSetpointSent,
 }: {
   project: VizDashboardProject | null;
   snapshot: VizStoreLiveSnapshot | null;
   isLoading: boolean;
   dashboardId: string;
+  permissions: VizDashboardPermissions | null;
+  onSetpointSent: () => void;
 }) {
   if (!project) {
     return <Card className="p-6 text-sm text-muted">Nie znaleziono sklepu w tym dashboardzie.</Card>;
@@ -200,6 +231,18 @@ function VizStoreSummaryTab({
           </div>
         )}
       </Card>
+
+      {project?.projectId ? (
+        <div className="md:col-span-2">
+          <VizSetpointControl
+            dashboardId={dashboardId}
+            projectId={project.projectId}
+            currentValue={snapshot?.roles.store_setpoint?.displayValue ?? null}
+            canControl={permissions?.controlSetpoint === true}
+            onSuccess={onSetpointSent}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

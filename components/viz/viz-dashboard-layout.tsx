@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { VizDashboardNav } from "@/components/viz/viz-dashboard-nav";
-import type { VizDashboard } from "@/lib/viz/types";
+import type { VizDashboard, VizDashboardPermissions } from "@/lib/viz/types";
 import { useVizStore } from "@/store/viz-store";
 
 type VizDashboardLayoutProps = {
@@ -11,10 +11,16 @@ type VizDashboardLayoutProps = {
   children: React.ReactNode;
 };
 
+type DashboardSession = {
+  permissions: VizDashboardPermissions;
+  canManage: boolean;
+};
+
 export function VizDashboardLayout({ dashboardId, children }: VizDashboardLayoutProps) {
   const cached = useVizStore((s) => s.getDashboardById(dashboardId));
   const hydrate = useVizStore((s) => s.hydrate);
   const [dashboard, setDashboard] = useState<VizDashboard | null>(cached ?? null);
+  const [session, setSession] = useState<DashboardSession | null>(null);
   const [isLoading, setIsLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,19 +32,30 @@ export function VizDashboardLayout({ dashboardId, children }: VizDashboardLayout
     if (cached) {
       setDashboard(cached);
       setIsLoading(false);
-      return;
     }
 
     async function load() {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/viz/dashboards/${dashboardId}`);
-        if (!response.ok) {
-          throw new Error("Dashboard nie istnieje lub brak dostępu.");
+        const [dashboardRes, sessionRes] = await Promise.all([
+          cached ? Promise.resolve(null) : fetch(`/api/viz/dashboards/${dashboardId}`),
+          fetch(`/api/viz/dashboards/${dashboardId}/session`),
+        ]);
+
+        if (!cached) {
+          if (!dashboardRes?.ok) {
+            throw new Error("Dashboard nie istnieje lub brak dostępu.");
+          }
+          const data = (await dashboardRes.json()) as { dashboard: VizDashboard };
+          setDashboard(data.dashboard);
         }
-        const data = (await response.json()) as { dashboard: VizDashboard };
-        setDashboard(data.dashboard);
+
+        if (!sessionRes.ok) {
+          throw new Error("Brak dostępu do dashboardu.");
+        }
+        const sessionData = (await sessionRes.json()) as DashboardSession;
+        setSession(sessionData);
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Błąd ładowania.");
       } finally {
@@ -64,7 +81,12 @@ export function VizDashboardLayout({ dashboardId, children }: VizDashboardLayout
 
   return (
     <div>
-      <VizDashboardNav dashboardId={dashboard.id} dashboardName={dashboard.name} />
+      <VizDashboardNav
+        dashboardId={dashboard.id}
+        dashboardName={dashboard.name}
+        permissions={session?.permissions}
+        canManage={session?.canManage}
+      />
       {children}
     </div>
   );

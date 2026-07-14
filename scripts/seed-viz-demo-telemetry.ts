@@ -406,7 +406,7 @@ async function main() {
     if (historyBatch.length) {
       const { error: historyError } = await supabase
         .from("viz_variable_readings_history")
-        .insert(historyBatch);
+        .insert(historyBatch as never);
       if (historyError) {
         throw new Error(historyError.message);
       }

@@ -314,3 +314,29 @@ export async function readLoxoneVirtualInputState(params: LoxoneFetchParams) {
     temperature: result.numericValue ?? 0,
   };
 }
+
+export async function writeLoxonePointValue(
+  params: LoxoneFetchParams,
+  sourceKey: string,
+  value: number | string,
+) {
+  const pointName = sourceKey.trim();
+  if (!pointName) {
+    throw new Error("Brak nazwy punktu Loxone (source_key).");
+  }
+
+  const encodedName = encodeURIComponent(pointName);
+  const encodedValue = encodeURIComponent(String(value));
+  const baseUrl = await resolveLoxoneBaseUrl(params);
+  const { data, latencyMs } = await loxoneRequest(
+    baseUrl,
+    `/jdev/sps/io/${encodedName}/${encodedValue}`,
+    params,
+  );
+
+  return {
+    baseUrl,
+    latencyMs,
+    rawPayload: data,
+  };
+}

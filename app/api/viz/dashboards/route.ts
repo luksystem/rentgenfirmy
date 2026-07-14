@@ -9,13 +9,15 @@ import {
   listVizIntegratedSystems,
   listVizVariableRoles,
 } from "@/lib/supabase/viz-server";
+import { listAccessibleVizDashboardIds } from "@/lib/viz/viz-auth-server";
 import { VIZ_DASHBOARD_STATUSES, type VizDashboardStatus } from "@/lib/viz/types";
 
 export async function GET() {
   try {
-    await requireAuthenticatedProfile();
+    const { userId, profile } = await requireAuthenticatedProfile();
+    const accessibleIds = await listAccessibleVizDashboardIds(userId, profile.role);
     const [dashboards, templates, systems, variableRoles] = await Promise.all([
-      listVizDashboards(),
+      listVizDashboards({ dashboardIds: accessibleIds }),
       listVizDashboardTemplates(),
       listVizIntegratedSystems(),
       listVizVariableRoles(),

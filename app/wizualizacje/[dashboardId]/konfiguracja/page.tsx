@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { VizDashboardConfigForm } from "@/components/viz/viz-dashboard-config-form";
 import { VizAlarmRulesConfig } from "@/components/viz/viz-alarm-rules-config";
+import { VizDashboardAccessConfig } from "@/components/viz/viz-dashboard-access-config";
 import { VizDashboardLayout } from "@/components/viz/viz-dashboard-layout";
 import type { VizDashboard } from "@/lib/viz/types";
 
@@ -47,6 +48,10 @@ export default function VizDashboardConfigPage({
           <div>
             <h2 className="mb-3 text-base font-semibold">Reguły alarmów i progów</h2>
             <VizAlarmRulesConfig dashboardId={dashboardId} />
+          </div>
+          <div>
+            <h2 className="mb-3 text-base font-semibold">Dostęp użytkowników</h2>
+            <VizDashboardAccessConfig dashboardId={dashboardId} />
           </div>
         </div>
       ) : null}

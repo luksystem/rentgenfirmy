@@ -56,12 +56,18 @@ export async function listVizDashboardTemplates() {
   return (data ?? []).map(rowToVizDashboardTemplate);
 }
 
-export async function listVizDashboards() {
+export async function listVizDashboards(options?: { dashboardIds?: string[] | null }) {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("viz_dashboards")
-    .select("*")
-    .order("updated_at", { ascending: false });
+  let query = supabase.from("viz_dashboards").select("*").order("updated_at", { ascending: false });
+
+  if (options?.dashboardIds) {
+    if (!options.dashboardIds.length) {
+      return [];
+    }
+    query = query.in("id", options.dashboardIds);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(error.message);

@@ -836,6 +836,42 @@ export type VizAlarmRuleRow = {
   updated_at: string;
 };
 
+export type VizControlCommandRow = {
+  id: string;
+  dashboard_id: string;
+  project_id: string;
+  mapping_id: string | null;
+  role_code: string | null;
+  command_type: string;
+  requested_value: number;
+  previous_value: number | null;
+  status: string;
+  error_message: string | null;
+  requested_by_user_id: string | null;
+  requested_by_name: string;
+  processed_at: string | null;
+  created_at: string;
+};
+
+export type VizEnergyInvoiceRow = {
+  id: string;
+  dashboard_id: string;
+  project_id: string;
+  document_id: string;
+  billing_period_start: string | null;
+  billing_period_end: string | null;
+  total_kwh: number | null;
+  total_cost_pln: number | null;
+  supplier_name: string | null;
+  analysis_status: string;
+  analysis_json: Record<string, unknown>;
+  analyzed_at: string | null;
+  uploaded_by_user_id: string | null;
+  uploaded_by_name: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ServiceIntakeRequestRow = {
   id: string;
   reference_number: string;
@@ -2888,6 +2924,20 @@ export type Database = {
         Insert: Partial<VizAlarmRuleRow> &
           Pick<VizAlarmRuleRow, "dashboard_id" | "role_code" | "name" | "threshold_numeric">;
         Update: Partial<VizAlarmRuleRow>;
+        Relationships: [];
+      };
+      viz_control_commands: {
+        Row: VizControlCommandRow;
+        Insert: Partial<VizControlCommandRow> &
+          Pick<VizControlCommandRow, "dashboard_id" | "project_id" | "requested_value">;
+        Update: Partial<VizControlCommandRow>;
+        Relationships: [];
+      };
+      viz_energy_invoices: {
+        Row: VizEnergyInvoiceRow;
+        Insert: Partial<VizEnergyInvoiceRow> &
+          Pick<VizEnergyInvoiceRow, "dashboard_id" | "project_id" | "document_id">;
+        Update: Partial<VizEnergyInvoiceRow>;
         Relationships: [];
       };
     };
