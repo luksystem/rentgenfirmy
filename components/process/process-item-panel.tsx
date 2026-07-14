@@ -159,6 +159,12 @@ export function ProcessItemPanel({
   const isFullscreen = item.kind === "kanban" || (interactive && isBoardItem);
   const showMobileNavPadding = interactive && isBoardItem;
 
+  const isChecklistInteractive =
+    item.kind === "checklist" && !isInternalAcceptance && interactive && Boolean(onSaveChecklist);
+  const showResponsible =
+    interactive && resolvedInstance && onAssign && onSign && item.kind !== "kanban" && !isInternalAcceptance;
+  const responsibleKey = `${resolvedInstance?.id ?? "new"}-${resolvedInstance?.updatedAt ?? ""}`;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent fullscreen={isFullscreen}>
@@ -182,53 +188,16 @@ export function ProcessItemPanel({
             showMobileNavPadding && "pb-24",
           )}
         >
-          {interactive && resolvedInstance && !isInternalAcceptance ? (
-            <label
-              className={cn(
-                "flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm",
-                resolvedInstance.blocksNextStage
-                  ? "border-rose-500/40 bg-rose-500/10"
-                  : "border-border/70 bg-surface-muted/20",
-              )}
-            >
-              <input
-                type="checkbox"
-                className="mt-0.5"
-                checked={resolvedInstance.blocksNextStage}
-                disabled={blockingSaving}
-                onChange={(event) => void handleToggleBlocksNextStage(event.target.checked)}
-              />
-              <span className="min-w-0">
-                <span className="flex items-center gap-1.5 font-medium text-foreground">
-                  <Lock className="h-3.5 w-3.5 shrink-0 text-rose-400" />
-                  Blokuj kolejny etap
-                </span>
-                <span className="mt-0.5 block text-[11px] text-muted">
-                  Jeśli ten element nie zostanie ukończony, kolejny etap procesu (i wszystkie po
-                  nim) będzie zablokowany.
-                </span>
-              </span>
-            </label>
-          ) : null}
-
-          {interactive && resolvedInstance && item.kind !== "kanban" ? (
-            <ProcessPublicLinkControls
-              projectProcessItemId={resolvedInstance.id}
-              kind={item.kind}
-              isInternalAcceptance={isInternalAcceptance}
-              defaultOpen={false}
-            />
-          ) : null}
-
-          {interactive && resolvedInstance && onAssign && onSign && item.kind !== "kanban" && !isInternalAcceptance ? (
+          {showResponsible && isChecklistInteractive ? (
             <ProcessItemResponsibleSection
-              key={`${resolvedInstance.id}-${resolvedInstance.updatedAt}`}
-              instance={resolvedInstance}
+              key={`assignee-${responsibleKey}`}
+              part="assignee"
+              instance={resolvedInstance!}
               teamProfiles={teamProfiles}
               currentUserId={currentUserId}
               canManageAssignment={canManageAssignment}
-              onAssign={onAssign}
-              onSign={onSign}
+              onAssign={onAssign!}
+              onSign={onSign!}
             />
           ) : null}
 
@@ -244,8 +213,33 @@ export function ProcessItemPanel({
             />
           ) : null}
 
-          {item.kind === "checklist" && !isInternalAcceptance && interactive && onSaveChecklist ? (
+          {isChecklistInteractive ? (
             <>
+              <ProcessChecklistBoard
+                key={`${item.id}-${resolvedInstance?.updatedAt ?? "new"}-checklist`}
+                initialPayload={checklistPayload}
+                projectProcessItemId={resolvedInstance?.id}
+                actorId={currentUserId}
+                actorName={actorName}
+                teamProfiles={teamProfiles}
+                defaultAssigneeId={resolvedInstance?.assigneeId}
+                defaultAssigneeName={resolvedInstance?.assigneeName}
+                onSave={onSaveChecklist}
+              />
+
+              {showResponsible ? (
+                <ProcessItemResponsibleSection
+                  key={`signature-${responsibleKey}`}
+                  part="signature"
+                  instance={resolvedInstance!}
+                  teamProfiles={teamProfiles}
+                  currentUserId={currentUserId}
+                  canManageAssignment={canManageAssignment}
+                  onAssign={onAssign!}
+                  onSign={onSign!}
+                />
+              ) : null}
+
               {canEditChecklistStructure ? (
                 <div className="rounded-xl border border-border/70 bg-surface-muted/25 p-3">
                   <button
@@ -275,18 +269,93 @@ export function ProcessItemPanel({
                   ) : null}
                 </div>
               ) : null}
-              <ProcessChecklistBoard
-                key={`${item.id}-${resolvedInstance?.updatedAt ?? "new"}-checklist`}
-                initialPayload={checklistPayload}
-                projectProcessItemId={resolvedInstance?.id}
-                actorId={currentUserId}
-                actorName={actorName}
-                teamProfiles={teamProfiles}
-                defaultAssigneeId={resolvedInstance?.assigneeId}
-                defaultAssigneeName={resolvedInstance?.assigneeName}
-                onSave={onSaveChecklist}
+
+              {resolvedInstance ? (
+                <label
+                  className={cn(
+                    "flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm",
+                    resolvedInstance.blocksNextStage
+                      ? "border-rose-500/40 bg-rose-500/10"
+                      : "border-border/70 bg-surface-muted/20",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={resolvedInstance.blocksNextStage}
+                    disabled={blockingSaving}
+                    onChange={(event) => void handleToggleBlocksNextStage(event.target.checked)}
+                  />
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-1.5 font-medium text-foreground">
+                      <Lock className="h-3.5 w-3.5 shrink-0 text-rose-400" />
+                      Blokuj kolejny etap
+                    </span>
+                    <span className="mt-0.5 block text-[11px] text-muted">
+                      Jeśli ten element nie zostanie ukończony, kolejny etap procesu (i wszystkie po
+                      nim) będzie zablokowany.
+                    </span>
+                  </span>
+                </label>
+              ) : null}
+
+              <ProcessPublicLinkControls
+                projectProcessItemId={resolvedInstance!.id}
+                kind={item.kind}
+                isInternalAcceptance={isInternalAcceptance}
+                defaultOpen={false}
               />
             </>
+          ) : null}
+
+          {showResponsible && !isChecklistInteractive ? (
+            <ProcessItemResponsibleSection
+              key={`responsible-${responsibleKey}`}
+              instance={resolvedInstance!}
+              teamProfiles={teamProfiles}
+              currentUserId={currentUserId}
+              canManageAssignment={canManageAssignment}
+              onAssign={onAssign!}
+              onSign={onSign!}
+            />
+          ) : null}
+
+          {interactive && resolvedInstance && !isInternalAcceptance && !isChecklistInteractive ? (
+            <label
+              className={cn(
+                "flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm",
+                resolvedInstance.blocksNextStage
+                  ? "border-rose-500/40 bg-rose-500/10"
+                  : "border-border/70 bg-surface-muted/20",
+              )}
+            >
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={resolvedInstance.blocksNextStage}
+                disabled={blockingSaving}
+                onChange={(event) => void handleToggleBlocksNextStage(event.target.checked)}
+              />
+              <span className="min-w-0">
+                <span className="flex items-center gap-1.5 font-medium text-foreground">
+                  <Lock className="h-3.5 w-3.5 shrink-0 text-rose-400" />
+                  Blokuj kolejny etap
+                </span>
+                <span className="mt-0.5 block text-[11px] text-muted">
+                  Jeśli ten element nie zostanie ukończony, kolejny etap procesu (i wszystkie po
+                  nim) będzie zablokowany.
+                </span>
+              </span>
+            </label>
+          ) : null}
+
+          {interactive && resolvedInstance && item.kind !== "kanban" && !isChecklistInteractive ? (
+            <ProcessPublicLinkControls
+              projectProcessItemId={resolvedInstance.id}
+              kind={item.kind}
+              isInternalAcceptance={isInternalAcceptance}
+              defaultOpen={false}
+            />
           ) : null}
 
           {item.kind === "checklist" && !isInternalAcceptance && !interactive ? (
