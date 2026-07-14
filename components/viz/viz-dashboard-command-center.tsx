@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { VizBulkSetpointControl } from "@/components/viz/viz-bulk-setpoint-control";
 import { VizActiveAlarmsPanel } from "@/components/viz/viz-active-alarms-panel";
+import { VizNetworkSystemsMatrix } from "@/components/viz/viz-network-systems-matrix";
 import { VizChartRenderer } from "@/components/viz/viz-chart-renderer";
 import { VizDashboardMap } from "@/components/viz/viz-dashboard-map";
 import { VizEnergyTrendWidget } from "@/components/viz/viz-energy-trend-widget";
@@ -137,6 +138,8 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
           void ensureLive(dashboardId, { force: true, showLoading: false });
         }}
       />
+
+      <VizNetworkSystemsMatrix dashboardId={dashboardId} snapshots={snapshots} />
 
       <VizDashboardMap dashboardId={dashboardId} snapshots={snapshots} />
 
