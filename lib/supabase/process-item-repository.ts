@@ -1,13 +1,16 @@
 import {
-  cloneTemplatePayloadForProject,
   deriveProcessItemStatus,
   emptyChecklistPayload,
+  hasChecklistLines,
+  isEmptyChecklistPayload,
   normalizeChecklistPayload,
+  projectChecklistPayloadFromTemplate,
   validateChecklistDocumentationRules,
 } from "@/lib/process/item-payload";
 import type { ChecklistItemPayload, ProcessTemplate } from "@/lib/process/types";
 import { flattenProcessItems } from "@/lib/process/types";
 import { getSupabase } from "@/lib/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   projectProcessItemAssigneeUpdate,
   projectProcessItemBlockingUpdate,
@@ -58,6 +61,43 @@ export async function fetchProjectProcessItems(projectId: string) {
   return (data ?? []).map(rowToProjectProcessItem);
 }
 
+export async function backfillEmptyChecklistInstances(
+  supabase: SupabaseClient,
+  projectId: string,
+  template: ProcessTemplate,
+) {
+  const existing = await fetchProjectProcessItems(projectId);
+  const templateById = new Map(flattenProcessItems(template).map((item) => [item.id, item]));
+  const now = new Date().toISOString();
+
+  await Promise.all(
+    existing.map(async (row) => {
+      if (row.kind !== "checklist" || row.status === "completed") {
+        return;
+      }
+      if (!isEmptyChecklistPayload(row.payload)) {
+        return;
+      }
+      const templateItem = templateById.get(row.templateItemId);
+      if (!templateItem || !hasChecklistLines(templateItem.defaultPayload)) {
+        return;
+      }
+
+      const { error } = await supabase
+        .from("project_process_items")
+        .update({
+          payload: projectChecklistPayloadFromTemplate(templateItem.defaultPayload),
+          updated_at: now,
+        })
+        .eq("id", row.id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+    }),
+  );
+}
+
 export async function ensureProjectProcessItems(projectId: string, template: ProcessTemplate) {
   const existing = await fetchProjectProcessItems(projectId);
   const existingIds = new Set(existing.map((item) => item.templateItemId));
@@ -65,7 +105,8 @@ export async function ensureProjectProcessItems(projectId: string, template: Pro
   const missing = templateItems.filter((item) => !existingIds.has(item.id));
 
   if (!missing.length) {
-    return existing;
+    await backfillEmptyChecklistInstances(getSupabase(), projectId, template);
+    return fetchProjectProcessItems(projectId);
   }
 
   const supabase = getSupabase();
@@ -83,9 +124,7 @@ export async function ensureProjectProcessItems(projectId: string, template: Pro
         is_internal_acceptance: item.isInternalAcceptance ?? false,
         payload:
           item.kind === "checklist"
-            ? cloneTemplatePayloadForProject(
-                "lines" in item.defaultPayload ? item.defaultPayload : emptyChecklistPayload(),
-              )
+            ? projectChecklistPayloadFromTemplate(item.defaultPayload)
             : emptyChecklistPayload(),
         status: "open",
         created_at: now,
@@ -98,6 +137,7 @@ export async function ensureProjectProcessItems(projectId: string, template: Pro
     throw new Error(error.message);
   }
 
+  await backfillEmptyChecklistInstances(supabase, projectId, template);
   return fetchProjectProcessItems(projectId);
 }
 

@@ -5,12 +5,13 @@ import {
   collectTemplateMilestoneIds,
 } from "@/lib/process/anchored-template";
 import {
-  cloneTemplatePayloadForProject,
   emptyChecklistPayload,
+  projectChecklistPayloadFromTemplate,
 } from "@/lib/process/item-payload";
 import type { ProcessItemCompletion, ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import { flattenProcessItems } from "@/lib/process/types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { backfillEmptyChecklistInstances } from "@/lib/supabase/process-item-repository";
 import { projectProcessToUpdate, rowToProjectProcess } from "@/lib/supabase/process-mappers";
 import { fetchProcessTemplateByProjectTypeWithClient } from "@/lib/supabase/process-repository";
 
@@ -65,6 +66,7 @@ async function ensureProjectProcessItemsAdmin(
   const missing = templateItems.filter((item) => !existingIds.has(item.id));
 
   if (!missing.length) {
+    await backfillEmptyChecklistInstances(admin, projectId, template);
     return 0;
   }
 
@@ -77,9 +79,7 @@ async function ensureProjectProcessItemsAdmin(
       is_internal_acceptance: item.isInternalAcceptance ?? false,
       payload:
         item.kind === "checklist"
-          ? cloneTemplatePayloadForProject(
-              "lines" in item.defaultPayload ? item.defaultPayload : emptyChecklistPayload(),
-            )
+          ? projectChecklistPayloadFromTemplate(item.defaultPayload)
           : emptyChecklistPayload(),
       status: "open",
       created_at: now,
@@ -92,6 +92,7 @@ async function ensureProjectProcessItemsAdmin(
     throw new Error(error.message);
   }
 
+  await backfillEmptyChecklistInstances(admin, projectId, template);
   return missing.length;
 }
 

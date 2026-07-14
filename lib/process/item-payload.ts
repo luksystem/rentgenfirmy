@@ -93,6 +93,23 @@ export function cloneTemplatePayloadForProject(templatePayload: ChecklistItemPay
   };
 }
 
+export function hasChecklistLines(payload: unknown): boolean {
+  return flattenChecklistLines(normalizeChecklistPayload(payload)).length > 0;
+}
+
+export function isEmptyChecklistPayload(payload: unknown): boolean {
+  return !hasChecklistLines(payload);
+}
+
+/** Kopiuje punkty z szablonu (sections lub legacy lines) do nowej instancji projektu. */
+export function projectChecklistPayloadFromTemplate(defaultPayload: unknown): ChecklistItemPayload {
+  const normalized = normalizeChecklistPayload(defaultPayload);
+  if (!hasChecklistLines(normalized)) {
+    return emptyChecklistPayload();
+  }
+  return cloneTemplatePayloadForProject(normalized);
+}
+
 export function resolveElementDefaultPayload(
   kind: ProcessItemKind,
   raw: unknown,

@@ -34,7 +34,7 @@ import {
   getProcessItemVisualState,
   PROCESS_ITEM_VISUAL_CLASSES,
 } from "@/lib/process/item-completion-state";
-import { checklistProgress } from "@/lib/process/item-payload";
+import { checklistProgress, hasChecklistLines } from "@/lib/process/item-payload";
 import { canOpenProcessItem } from "@/lib/process/item-access";
 import {
   buildAgreementBlockSources,
@@ -516,7 +516,7 @@ export function ProcessPipeline({
                             const checklistStats =
                               item.kind === "checklist" && instance
                                 ? checklistProgress(instance.payload)
-                                : item.kind === "checklist" && !interactive && "lines" in item.defaultPayload
+                                : item.kind === "checklist" && !interactive && hasChecklistLines(item.defaultPayload)
                                   ? checklistProgress(item.defaultPayload)
                                   : null;
                             const kindLabel = item.isInternalAcceptance
