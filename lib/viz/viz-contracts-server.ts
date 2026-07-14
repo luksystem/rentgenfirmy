@@ -6,6 +6,7 @@ import type {
   VizProjectHoursSummary,
   VizServiceContract,
   VizServiceContractInput,
+  VizServiceContractProjectTermInput,
   VizServiceContractRateVersion,
   VizServiceContractRateVersionInput,
 } from "@/lib/viz/contract-types";
@@ -146,6 +147,9 @@ export async function listVizServiceContracts(dashboardId: string): Promise<VizS
     .order("name");
 
   if (error) {
+    if (error.message.toLowerCase().includes("does not exist")) {
+      return [];
+    }
     throw new Error(error.message);
   }
 
@@ -229,6 +233,42 @@ export async function createVizServiceContractRateVersion(input: VizServiceContr
   }
 
   return rowToRateVersion(data as RateVersionRow);
+}
+
+export async function upsertVizServiceContractProjectTerm(input: VizServiceContractProjectTermInput) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("viz_service_contract_project_terms")
+    .upsert(
+      {
+        contract_id: input.contractId,
+        project_id: input.projectId,
+        monthly_hours_override: input.monthlyHoursOverride ?? null,
+        contract_status_override: input.contractStatusOverride ?? null,
+        notes: input.notes?.trim() || null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "contract_id,project_id" },
+    )
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const row = data as ProjectTermRow;
+  return {
+    id: row.id,
+    contractId: row.contract_id,
+    projectId: row.project_id,
+    monthlyHoursOverride:
+      row.monthly_hours_override != null ? Number(row.monthly_hours_override) : null,
+    contractStatusOverride: row.contract_status_override as VizServiceContractStatus | null,
+    notes: row.notes,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
 export async function deleteVizServiceContract(contractId: string) {

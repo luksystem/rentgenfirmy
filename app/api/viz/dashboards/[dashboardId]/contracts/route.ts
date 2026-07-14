@@ -3,6 +3,7 @@ import { requireAuthenticatedProfile } from "@/lib/auth/api-auth";
 import { HttpError } from "@/lib/auth/http-error";
 import type {
   VizServiceContractInput,
+  VizServiceContractProjectTermInput,
   VizServiceContractRateVersionInput,
 } from "@/lib/viz/contract-types";
 import {
@@ -11,6 +12,7 @@ import {
   deleteVizServiceContract,
   listVizServiceContracts,
   summarizeDashboardBillableHours,
+  upsertVizServiceContractProjectTerm,
 } from "@/lib/viz/viz-contracts-server";
 import { VIZ_SERVICE_CONTRACT_STATUSES } from "@/lib/viz/types";
 
@@ -46,7 +48,16 @@ export async function POST(request: Request, context: RouteContext) {
     const { dashboardId } = await context.params;
     const body = (await request.json()) as
       | ({ kind: "contract" } & VizServiceContractInput)
-      | ({ kind: "rateVersion" } & VizServiceContractRateVersionInput);
+      | ({ kind: "rateVersion" } & VizServiceContractRateVersionInput)
+      | ({ kind: "projectTerm" } & VizServiceContractProjectTermInput);
+
+    if (body.kind === "projectTerm") {
+      if (!body.contractId || !body.projectId) {
+        return NextResponse.json({ error: "Wymagane contractId i projectId." }, { status: 400 });
+      }
+      const term = await upsertVizServiceContractProjectTerm(body);
+      return NextResponse.json({ term }, { status: 201 });
+    }
 
     if (body.kind === "rateVersion") {
       if (!body.contractId || !body.versionLabel?.trim() || !body.validFrom) {

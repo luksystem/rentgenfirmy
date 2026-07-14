@@ -23,7 +23,7 @@ import {
   storeTabHref,
   type StoreTab,
 } from "@/lib/viz/store-tab-slugs";
-import { VIZ_SERVICE_CONTRACT_STATUS_LABELS } from "@/lib/viz/types";
+import { VizStoreContractPanel } from "@/components/viz/viz-store-contract-panel";
 import type { VizDashboardProject } from "@/lib/viz/types";
 import type { VizStoreLiveSnapshot } from "@/lib/viz/viz-telemetry-server";
 import { VizProjectContactsPanel } from "@/components/viz/viz-project-contacts-panel";
@@ -34,7 +34,10 @@ import { VizStoreVariablesPanel } from "@/components/viz/viz-store-variables-pan
 import { VizStoreChartsPanel } from "@/components/viz/viz-store-charts-panel";
 import { VizStoreSystemsPanel } from "@/components/viz/viz-store-systems-panel";
 import { VizScrollTabBar } from "@/components/viz/viz-scroll-tab-bar";
-import type { VizDashboardPermissions } from "@/lib/viz/types";
+import {
+  VIZ_SERVICE_CONTRACT_STATUS_LABELS,
+  type VizDashboardPermissions,
+} from "@/lib/viz/types";
 import { LIVE_POLL_MS, useVizDashboardCacheStore } from "@/store/viz-dashboard-cache-store";
 
 type VizStoreDetailTabsProps = {
@@ -143,7 +146,13 @@ function renderStoreTabContent({
         />
       );
     case "Umowa serwisowa":
-      return <VizStoreContractTab project={project} dashboardId={dashboardId} />;
+      return (
+        <VizStoreContractPanel
+          dashboardId={dashboardId}
+          projectId={projectId}
+          project={project}
+        />
+      );
     case "Kontakty":
       return <VizProjectContactsPanel dashboardId={dashboardId} projectId={projectId} />;
     case "Alarmy":
@@ -295,38 +304,6 @@ function VizStoreSummaryTab({
         />
       </div>
     </div>
-  );
-}
-
-function VizStoreContractTab({
-  project,
-  dashboardId,
-}: {
-  project: VizDashboardProject | null;
-  dashboardId: string;
-}) {
-  if (!project) {
-    return (
-      <Card className="flex items-center gap-2 p-6 text-sm text-muted">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Ładowanie danych umowy…
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="p-6 text-sm">
-      <p className="font-medium">Status umowy (metadane projektu w dashboardzie)</p>
-      <p className="mt-2 text-2xl font-semibold">
-        {VIZ_SERVICE_CONTRACT_STATUS_LABELS[project.serviceContractStatus]}
-      </p>
-      <Link
-        href={`/wizualizacje/${dashboardId}/umowy`}
-        className="mt-4 inline-block text-accent hover:underline"
-      >
-        Przejdź do modułu umów serwisowych
-      </Link>
-    </Card>
   );
 }
 

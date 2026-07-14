@@ -63,6 +63,14 @@ export type VizServiceContractRateVersionInput = {
   notes?: string | null;
 };
 
+export type VizServiceContractProjectTermInput = {
+  contractId: string;
+  projectId: string;
+  monthlyHoursOverride?: number | null;
+  contractStatusOverride?: VizServiceContractStatus | null;
+  notes?: string | null;
+};
+
 export type VizProjectHoursSummary = {
   projectId: string;
   projectLabel: string;
