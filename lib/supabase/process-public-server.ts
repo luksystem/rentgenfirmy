@@ -13,6 +13,8 @@ export type PublicProcessItemPayload = {
   projectId: string;
   templateItemId: string;
   projectProcessItemId: string;
+  assigneeId: string | null;
+  assigneeName: string | null;
 };
 
 export async function fetchPublicProcessItemByToken(
@@ -53,5 +55,7 @@ export async function fetchPublicProcessItemByToken(
     projectId: instance.projectId,
     templateItemId: instance.templateItemId,
     projectProcessItemId: instance.id,
+    assigneeId: instance.assigneeId,
+    assigneeName: instance.assigneeName,
   };
 }

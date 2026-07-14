@@ -74,6 +74,8 @@ export default function PublicProcessElementPage({
           projectProcessItemId={item.projectProcessItemId}
           actorName="Gość"
           publicToken={token}
+          defaultAssigneeId={item.assigneeId}
+          defaultAssigneeName={item.assigneeName}
         />
       ) : (
         <p className="text-sm text-muted">Ten typ elementu nie ma jeszcze publicznego widoku interaktywnego.</p>

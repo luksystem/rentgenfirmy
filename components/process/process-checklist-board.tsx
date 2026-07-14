@@ -17,6 +17,7 @@ import {
   checklistLineStatus,
   checklistProgress,
   getChecklistDocumentationBlockReason,
+  getChecklistLineAssignee,
   getChecklistSections,
   isChecklistLineComplete,
   normalizeChecklistPayload,
@@ -72,6 +73,8 @@ export function ProcessChecklistBoard({
   teamProfiles = [],
   publicToken,
   projectProcessItemId,
+  defaultAssigneeId = null,
+  defaultAssigneeName = null,
   onSave,
 }: {
   initialPayload: ChecklistItemPayload;
@@ -81,6 +84,9 @@ export function ProcessChecklistBoard({
   teamProfiles?: UserProfile[];
   publicToken?: string;
   projectProcessItemId?: string;
+  /** Osoba odpowiedzialna za całą checklistę — punkty bez własnego przypisania ją dziedziczą. */
+  defaultAssigneeId?: string | null;
+  defaultAssigneeName?: string | null;
   onSave?: (payload: ChecklistItemPayload) => Promise<void>;
 }) {
   const [payload, setPayload] = useState(() => normalizeChecklistPayload(initialPayload));
@@ -114,6 +120,10 @@ export function ProcessChecklistBoard({
 
   const sections = useMemo(() => getChecklistSections(payload), [payload]);
   const progress = checklistProgress(payload);
+  const defaultAssignee = useMemo(
+    () => ({ assigneeId: defaultAssigneeId, assigneeName: defaultAssigneeName }),
+    [defaultAssigneeId, defaultAssigneeName],
+  );
 
   const activeEntry = useMemo(() => {
     for (const section of sections) {
@@ -196,6 +206,7 @@ export function ProcessChecklistBoard({
               {section.lines.map((line) => {
                 const status = checklistLineStatus(line);
                 const styles = INTERNAL_ACCEPTANCE_STATUS_STYLES[status];
+                const assignee = getChecklistLineAssignee(line, defaultAssignee);
                 return (
                   <button
                     key={line.id}
@@ -232,10 +243,12 @@ export function ProcessChecklistBoard({
                         {INTERNAL_ACCEPTANCE_STATUS_LABELS[status]}
                       </span>
                     </div>
-                    {line.assigneeName || line.checkedAt ? (
+                    {assignee.assigneeName || line.checkedAt ? (
                       <p className="mt-1 pl-4 text-[11px] text-muted/80">
-                        {line.assigneeName ? `Odp.: ${line.assigneeName}` : null}
-                        {line.assigneeName && line.checkedAt ? " · " : null}
+                        {assignee.assigneeName
+                          ? `Odp.: ${assignee.assigneeName}${assignee.inherited ? " (checklista)" : ""}`
+                          : null}
+                        {assignee.assigneeName && line.checkedAt ? " · " : null}
                         {line.checkedAt ? formatDateTime(line.checkedAt) : null}
                       </p>
                     ) : null}
@@ -267,6 +280,8 @@ export function ProcessChecklistBoard({
         line={activeEntry?.line ?? null}
         open={activeLineId !== null}
         teamProfiles={teamProfiles}
+        defaultAssigneeId={defaultAssigneeId}
+        defaultAssigneeName={defaultAssigneeName}
         onOpenChange={(open) => {
           if (!open) {
             setActiveLineId(null);

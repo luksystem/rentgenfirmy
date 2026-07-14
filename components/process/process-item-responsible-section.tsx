@@ -100,6 +100,11 @@ export function ProcessItemResponsibleSection({
         {instance.assigneeName ? (
           <p className="text-sm text-muted">
             Przypisano: <strong className="text-foreground">{instance.assigneeName}</strong>
+            {instance.kind === "checklist" ? (
+              <span className="mt-1 block text-xs font-normal">
+                Punkty checklisty bez własnej osoby dziedziczą tę odpowiedzialność.
+              </span>
+            ) : null}
           </p>
         ) : null}
 

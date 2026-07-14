@@ -101,6 +101,34 @@ export function isEmptyChecklistPayload(payload: unknown): boolean {
   return !hasChecklistLines(payload);
 }
 
+export type ChecklistLineAssignee = {
+  assigneeId: string | null;
+  assigneeName: string | null;
+  /** true gdy brak przypisania na punkcie — używana osoba z całej checklisty */
+  inherited: boolean;
+};
+
+export function getChecklistLineAssignee(
+  line: ChecklistLine,
+  defaultAssignee?: { assigneeId: string | null; assigneeName: string | null } | null,
+): ChecklistLineAssignee {
+  if (line.assigneeId) {
+    return {
+      assigneeId: line.assigneeId,
+      assigneeName: line.assigneeName ?? null,
+      inherited: false,
+    };
+  }
+  if (defaultAssignee?.assigneeId) {
+    return {
+      assigneeId: defaultAssignee.assigneeId,
+      assigneeName: defaultAssignee.assigneeName ?? null,
+      inherited: true,
+    };
+  }
+  return { assigneeId: null, assigneeName: null, inherited: false };
+}
+
 /** Kopiuje punkty z szablonu (sections lub legacy lines) do nowej instancji projektu. */
 export function projectChecklistPayloadFromTemplate(defaultPayload: unknown): ChecklistItemPayload {
   const normalized = normalizeChecklistPayload(defaultPayload);

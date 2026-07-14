@@ -41,6 +41,8 @@ export function ChecklistItemDialog({
   readOnly,
   saving,
   teamProfiles = [],
+  defaultAssigneeId = null,
+  defaultAssigneeName = null,
   onStatusChange,
   onFieldChange,
   onLocalFieldChange,
@@ -53,6 +55,8 @@ export function ChecklistItemDialog({
   readOnly?: boolean;
   saving?: boolean;
   teamProfiles?: UserProfile[];
+  defaultAssigneeId?: string | null;
+  defaultAssigneeName?: string | null;
   onStatusChange: (status: InternalAcceptanceStatus) => void;
   onFieldChange: (patch: Partial<ChecklistLine>) => void;
   onLocalFieldChange: (patch: Partial<ChecklistLine>) => void;
@@ -67,6 +71,10 @@ export function ChecklistItemDialog({
   const currentStyles = INTERNAL_ACCEPTANCE_STATUS_STYLES[status];
   const passedBlockedReason =
     documentationBlockReason ?? getChecklistDocumentationBlockReason(line, "PASSED");
+  const hasLineOverride = Boolean(line.assigneeId);
+  const effectiveAssigneeId = line.assigneeId ?? defaultAssigneeId ?? "";
+  const effectiveAssigneeName =
+    line.assigneeName ?? (line.assigneeId ? null : defaultAssigneeName) ?? null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -141,22 +149,45 @@ export function ChecklistItemDialog({
             ) : null}
 
             {!readOnly ? (
-              <Field label="Osoba odpowiedzialna">
-                <TeamProfileSelect
-                  value={line.assigneeId ?? ""}
-                  teamProfiles={teamProfiles}
-                  disabled={saving}
-                  onChange={(profileId, profile) => {
-                    onFieldChange({
-                      assigneeId: profileId || undefined,
-                      assigneeName: profile ? getUserDisplayName(profile) : undefined,
-                    });
-                  }}
-                />
-              </Field>
-            ) : line.assigneeName ? (
+              <div className="grid gap-1.5">
+                <Field label="Osoba odpowiedzialna">
+                  <TeamProfileSelect
+                    value={effectiveAssigneeId}
+                    teamProfiles={teamProfiles}
+                    disabled={saving}
+                    placeholder={
+                      defaultAssigneeId ? "Domyślnie (checklista)" : "— wybierz osobę —"
+                    }
+                    onChange={(profileId, profile) => {
+                      if (!profileId || (defaultAssigneeId && profileId === defaultAssigneeId)) {
+                        onFieldChange({
+                          assigneeId: undefined,
+                          assigneeName: undefined,
+                        });
+                        return;
+                      }
+                      onFieldChange({
+                        assigneeId: profileId,
+                        assigneeName: profile ? getUserDisplayName(profile) : undefined,
+                      });
+                    }}
+                  />
+                </Field>
+                {defaultAssigneeId ? (
+                  <p className="text-xs text-muted">
+                    {hasLineOverride
+                      ? "Wybierz pustą opcję lub osobę z checklisty, aby wrócić do domyślnego przypisania."
+                      : "Domyślnie jak cała checklista — wybierz inną osobę, aby nadpisać tylko ten punkt."}
+                  </p>
+                ) : null}
+              </div>
+            ) : effectiveAssigneeName ? (
               <p className="text-sm text-muted">
-                Odpowiedzialny: <span className="text-foreground">{line.assigneeName}</span>
+                Odpowiedzialny:{" "}
+                <span className="text-foreground">
+                  {effectiveAssigneeName}
+                  {!hasLineOverride && defaultAssigneeId ? " (checklista)" : ""}
+                </span>
               </p>
             ) : null}
 

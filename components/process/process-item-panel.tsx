@@ -282,13 +282,20 @@ export function ProcessItemPanel({
                 actorId={currentUserId}
                 actorName={actorName}
                 teamProfiles={teamProfiles}
+                defaultAssigneeId={resolvedInstance?.assigneeId}
+                defaultAssigneeName={resolvedInstance?.assigneeName}
                 onSave={onSaveChecklist}
               />
             </>
           ) : null}
 
           {item.kind === "checklist" && !isInternalAcceptance && !interactive ? (
-            <ProcessChecklistBoard initialPayload={checklistPayload} readOnly />
+            <ProcessChecklistBoard
+              initialPayload={checklistPayload}
+              readOnly
+              defaultAssigneeId={resolvedInstance?.assigneeId}
+              defaultAssigneeName={resolvedInstance?.assigneeName}
+            />
           ) : null}
 
           {item.kind === "kanban" && interactive && resolvedInstance ? (
