@@ -34,7 +34,10 @@ function rowToSnapshot(row: TelemetryRow): ProjectTelemetrySnapshot {
 export async function insertProjectTelemetry(input: {
   projectId: string;
   integrationId: string;
+  integrationVariableId?: string | null;
   temperature?: number | null;
+  numericValue?: number | null;
+  textValue?: string | null;
   humidity?: number | null;
   setpoint?: number | null;
   alarmStatus?: string | null;
@@ -45,13 +48,17 @@ export async function insertProjectTelemetry(input: {
 }) {
   const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
+  const numericValue = input.numericValue ?? input.temperature ?? null;
   const { data, error } = await supabase
     .from("project_telemetry")
     .insert({
       id: crypto.randomUUID(),
       project_id: input.projectId,
       integration_id: input.integrationId,
-      temperature: input.temperature ?? null,
+      integration_variable_id: input.integrationVariableId ?? null,
+      temperature: input.temperature ?? numericValue,
+      numeric_value: numericValue,
+      text_value: input.textValue ?? null,
       humidity: input.humidity ?? null,
       setpoint: input.setpoint ?? null,
       alarm_status: input.alarmStatus ?? null,

@@ -89,6 +89,7 @@ const NAV_MODULE_ICONS: Record<NavModuleKey, React.ComponentType<{ className?: s
   "work-orders": ClipboardList,
   documents: FileUp,
   "trades-catalog": HardHat,
+  visualizations: BarChart3,
   inspections: ClipboardCheck,
   "service-requests": Inbox,
   "knowledge-base": BookOpen,

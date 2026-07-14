@@ -548,7 +548,10 @@ export type ProjectTelemetryRow = {
   id: string;
   project_id: string;
   integration_id: string;
+  integration_variable_id: string | null;
   temperature: number | null;
+  numeric_value: number | null;
+  text_value: string | null;
   humidity: number | null;
   setpoint: number | null;
   alarm_status: string | null;
@@ -568,6 +571,164 @@ export type ProjectIntegrationAuditLogRow = {
   actor_name: string;
   changes_json: Record<string, unknown>;
   metadata_json: Record<string, unknown>;
+  created_at: string;
+};
+
+export type VizDashboardTemplateRow = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  default_layout_json: Record<string, unknown>;
+  is_system: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VizDashboardRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  template_slug: string | null;
+  client_id: string | null;
+  status: string;
+  layout_json: Record<string, unknown>;
+  settings_json: Record<string, unknown>;
+  created_by_user_id: string | null;
+  created_by_name: string;
+  updated_by_user_id: string | null;
+  updated_by_name: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VizDashboardProjectRow = {
+  id: string;
+  dashboard_id: string;
+  project_id: string;
+  display_name: string | null;
+  bms_commissioned_at: string | null;
+  is_active_in_dashboard: boolean;
+  sort_order: number;
+  lat_override: number | null;
+  lng_override: number | null;
+  service_contract_status: string;
+  metadata_json: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VizIntegratedSystemRow = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type VizProjectSystemStatusRow = {
+  id: string;
+  dashboard_id: string;
+  project_id: string;
+  system_id: string;
+  status: string;
+  integration_scope: string | null;
+  notes: string | null;
+  updated_at: string;
+};
+
+export type VizVariableRoleRow = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  default_unit: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type VizVariableMappingRow = {
+  id: string;
+  dashboard_id: string;
+  project_id: string;
+  integration_id: string | null;
+  integration_variable_id: string | null;
+  source_key: string | null;
+  role_code: string;
+  display_name: string | null;
+  unit: string | null;
+  display_format: string | null;
+  decimal_places: number;
+  multiplier: number;
+  offset_value: number;
+  text_value_map: Record<string, unknown>;
+  inverted: boolean;
+  writable: boolean;
+  min_value: number | null;
+  max_value: number | null;
+  data_quality: string;
+  collection_interval_seconds: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VizDashboardAccessRow = {
+  id: string;
+  dashboard_id: string;
+  profile_id: string;
+  access_role: string;
+  permissions_json: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectIntegrationVariableRow = {
+  id: string;
+  integration_id: string;
+  project_id: string;
+  name: string;
+  source_key: string;
+  location_label: string | null;
+  value_kind: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VizVariableCurrentValueRow = {
+  id: string;
+  dashboard_id: string;
+  project_id: string;
+  mapping_id: string;
+  integration_variable_id: string | null;
+  role_code: string;
+  numeric_value: number | null;
+  text_value: string | null;
+  display_value: string | null;
+  unit: string | null;
+  data_quality: string;
+  measured_at: string | null;
+  last_successful_read_at: string | null;
+  raw_payload_json: Record<string, unknown>;
+  updated_at: string;
+};
+
+export type VizVariableReadingHistoryRow = {
+  id: string;
+  dashboard_id: string;
+  project_id: string;
+  mapping_id: string;
+  integration_variable_id: string | null;
+  role_code: string;
+  numeric_value: number | null;
+  text_value: string | null;
+  data_quality: string;
+  measured_at: string;
+  raw_payload_json: Record<string, unknown>;
   created_at: string;
 };
 
@@ -2496,6 +2657,82 @@ export type Database = {
         Row: GoalAiSuggestionRow;
         Insert: Partial<GoalAiSuggestionRow> & Pick<GoalAiSuggestionRow, "input_description">;
         Update: Partial<GoalAiSuggestionRow>;
+        Relationships: [];
+      };
+      viz_dashboard_templates: {
+        Row: VizDashboardTemplateRow;
+        Insert: Partial<VizDashboardTemplateRow> & Pick<VizDashboardTemplateRow, "slug" | "name">;
+        Update: Partial<VizDashboardTemplateRow>;
+        Relationships: [];
+      };
+      viz_dashboards: {
+        Row: VizDashboardRow;
+        Insert: Partial<VizDashboardRow> & Pick<VizDashboardRow, "name" | "created_by_name">;
+        Update: Partial<VizDashboardRow>;
+        Relationships: [];
+      };
+      viz_dashboard_projects: {
+        Row: VizDashboardProjectRow;
+        Insert: Partial<VizDashboardProjectRow> &
+          Pick<VizDashboardProjectRow, "dashboard_id" | "project_id">;
+        Update: Partial<VizDashboardProjectRow>;
+        Relationships: [];
+      };
+      viz_integrated_systems: {
+        Row: VizIntegratedSystemRow;
+        Insert: Partial<VizIntegratedSystemRow> & Pick<VizIntegratedSystemRow, "code" | "name">;
+        Update: Partial<VizIntegratedSystemRow>;
+        Relationships: [];
+      };
+      viz_project_system_status: {
+        Row: VizProjectSystemStatusRow;
+        Insert: Partial<VizProjectSystemStatusRow> &
+          Pick<VizProjectSystemStatusRow, "dashboard_id" | "project_id" | "system_id">;
+        Update: Partial<VizProjectSystemStatusRow>;
+        Relationships: [];
+      };
+      viz_variable_roles: {
+        Row: VizVariableRoleRow;
+        Insert: Partial<VizVariableRoleRow> & Pick<VizVariableRoleRow, "code" | "name">;
+        Update: Partial<VizVariableRoleRow>;
+        Relationships: [];
+      };
+      viz_variable_mappings: {
+        Row: VizVariableMappingRow;
+        Insert: Partial<VizVariableMappingRow> &
+          Pick<VizVariableMappingRow, "dashboard_id" | "project_id" | "role_code">;
+        Update: Partial<VizVariableMappingRow>;
+        Relationships: [];
+      };
+      viz_dashboard_access: {
+        Row: VizDashboardAccessRow;
+        Insert: Partial<VizDashboardAccessRow> &
+          Pick<VizDashboardAccessRow, "dashboard_id" | "profile_id">;
+        Update: Partial<VizDashboardAccessRow>;
+        Relationships: [];
+      };
+      project_integration_variables: {
+        Row: ProjectIntegrationVariableRow;
+        Insert: Partial<ProjectIntegrationVariableRow> &
+          Pick<ProjectIntegrationVariableRow, "integration_id" | "project_id" | "name" | "source_key">;
+        Update: Partial<ProjectIntegrationVariableRow>;
+        Relationships: [];
+      };
+      viz_variable_current_values: {
+        Row: VizVariableCurrentValueRow;
+        Insert: Partial<VizVariableCurrentValueRow> &
+          Pick<VizVariableCurrentValueRow, "dashboard_id" | "project_id" | "mapping_id" | "role_code">;
+        Update: Partial<VizVariableCurrentValueRow>;
+        Relationships: [];
+      };
+      viz_variable_readings_history: {
+        Row: VizVariableReadingHistoryRow;
+        Insert: Partial<VizVariableReadingHistoryRow> &
+          Pick<
+            VizVariableReadingHistoryRow,
+            "dashboard_id" | "project_id" | "mapping_id" | "role_code" | "measured_at"
+          >;
+        Update: Partial<VizVariableReadingHistoryRow>;
         Relationships: [];
       };
     };

@@ -257,11 +257,13 @@ export async function testLoxoneConnection(params: LoxoneFetchParams) {
   };
 }
 
-export async function readLoxoneVirtualInputState(params: LoxoneFetchParams) {
-  const config = params.config;
-  const pointName = config.virtualInputName?.trim();
+export async function readLoxonePointState(
+  params: LoxoneFetchParams,
+  sourceKey: string,
+) {
+  const pointName = sourceKey.trim();
   if (!pointName) {
-    throw new Error("Brak nazwy Virtual Input w konfiguracji integracji.");
+    throw new Error("Brak nazwy punktu Loxone (source_key).");
   }
 
   const baseUrl = await resolveLoxoneBaseUrl(params);
@@ -280,17 +282,35 @@ export async function readLoxoneVirtualInputState(params: LoxoneFetchParams) {
         ? Number.parseFloat(rawValue.replace(",", "."))
         : Number.NaN;
 
-  if (Number.isNaN(numeric)) {
-    throw new Error(
-      `Nie udało się odczytać wartości z punktu „${pointName}” (odpowiedź: ${String(rawValue)}).`,
-    );
-  }
+  const textValue = typeof rawValue === "string" ? rawValue : null;
 
   return {
     baseUrl,
     latencyMs,
-    temperature: numeric,
+    numericValue: Number.isNaN(numeric) ? null : numeric,
+    textValue,
+    temperature: Number.isNaN(numeric) ? null : numeric,
     rawValue,
     rawPayload: data,
+  };
+}
+
+export async function readLoxoneVirtualInputState(params: LoxoneFetchParams) {
+  const config = params.config;
+  const pointName = config.virtualInputName?.trim();
+  if (!pointName) {
+    throw new Error("Brak nazwy Virtual Input w konfiguracji integracji.");
+  }
+
+  const result = await readLoxonePointState(params, pointName);
+  if (result.numericValue == null && result.textValue == null) {
+    throw new Error(
+      `Nie udało się odczytać wartości z punktu „${pointName}” (odpowiedź: ${String(result.rawValue)}).`,
+    );
+  }
+
+  return {
+    ...result,
+    temperature: result.numericValue ?? 0,
   };
 }

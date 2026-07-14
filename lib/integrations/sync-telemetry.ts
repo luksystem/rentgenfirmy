@@ -1,6 +1,6 @@
 import type { IntegrationMeta, IntegrationTestResult } from "@/lib/integrations/types";
 import {
-  readLoxoneVirtualInputState,
+  readLoxonePointState,
   testLoxoneConnection,
   type LoxoneFetchParams,
 } from "@/lib/integrations/loxone-client";
@@ -11,6 +11,10 @@ import {
   markIntegrationSyncResult,
   revealIntegrationPassword,
 } from "@/lib/supabase/project-integrations-repository";
+import {
+  ensureLegacyLoxoneVariable,
+  listIntegrationVariables,
+} from "@/lib/supabase/project-integration-variables-repository";
 import { insertProjectTelemetry } from "@/lib/supabase/project-telemetry-repository";
 
 function toLoxoneParams(
@@ -24,6 +28,57 @@ function toLoxoneParams(
     config: integration.configJson as LoxoneIntegrationConfig,
     loginUsername: integration.loginUsername,
     password,
+  };
+}
+
+async function resolveSyncVariables(integration: IntegrationMeta) {
+  let variables = await listIntegrationVariables(integration.id);
+  if (!variables.length) {
+    const config = integration.configJson as LoxoneIntegrationConfig;
+    const legacy = await ensureLegacyLoxoneVariable(integration.id, integration.projectId, {
+      virtualInputName: config.virtualInputName,
+      locationLabel: config.locationLabel,
+      integrationName: integration.name,
+    });
+    if (legacy) {
+      variables = [legacy];
+    }
+  }
+  return variables.filter((variable) => variable.isActive);
+}
+
+async function readAndStoreVariable(
+  integration: IntegrationMeta,
+  params: LoxoneFetchParams,
+  variable: Awaited<ReturnType<typeof listIntegrationVariables>>[number],
+) {
+  const reading = await readLoxonePointState(params, variable.sourceKey);
+  const measuredAt = new Date().toISOString();
+  const numericValue = reading.numericValue;
+  const textValue = reading.textValue;
+
+  if (numericValue == null && !textValue) {
+    throw new Error(`Brak wartości dla punktu „${variable.sourceKey}”.`);
+  }
+
+  await insertProjectTelemetry({
+    projectId: integration.projectId,
+    integrationId: integration.id,
+    integrationVariableId: variable.id,
+    temperature: numericValue,
+    numericValue,
+    textValue,
+    onlineStatus: true,
+    sourceName: variable.locationLabel?.trim() || variable.name,
+    measuredAt,
+    rawPayloadJson: reading.rawPayload as Record<string, unknown>,
+  });
+
+  return {
+    variableId: variable.id,
+    sourceKey: variable.sourceKey,
+    numericValue,
+    textValue,
   };
 }
 
@@ -46,36 +101,36 @@ export async function testIntegrationConnection(
   try {
     const params = toLoxoneParams(integration, password);
     const connection = await testLoxoneConnection(params);
-    const config = integration.configJson as LoxoneIntegrationConfig;
-    const reading = await readLoxoneVirtualInputState(params);
-    const measuredAt = new Date().toISOString();
-    const value = reading.temperature;
+    const variables = await resolveSyncVariables(integration);
+    if (!variables.length) {
+      throw new Error("Dodaj co najmniej jedną zmienną (punkt Loxone) do integracji.");
+    }
 
-    await insertProjectTelemetry({
-      projectId: integration.projectId,
-      integrationId: integration.id,
-      temperature: value,
-      onlineStatus: true,
-      sourceName: config.locationLabel?.trim() || integration.name,
-      measuredAt,
-      rawPayloadJson: reading.rawPayload as Record<string, unknown>,
-    });
+    const readings = [];
+    for (const variable of variables) {
+      readings.push(await readAndStoreVariable(integration, params, variable));
+    }
 
     await markIntegrationSyncResult(integrationId, { ok: true });
 
+    const first = readings[0];
     const valueLabel =
-      value === 0 || value === 1 ? `stan ${value}` : `${value.toFixed(1)}°C`;
+      first.numericValue == null
+        ? (first.textValue ?? "—")
+        : first.numericValue === 0 || first.numericValue === 1
+          ? `stan ${first.numericValue}`
+          : `${first.numericValue.toFixed(1)}`;
 
     const payload: IntegrationTestResult = {
       ok: true,
-      latencyMs: connection.latencyMs + reading.latencyMs,
+      latencyMs: connection.latencyMs,
       online: true,
-      message: `Połączenie działa. Odczyt: ${valueLabel}.`,
+      message: `Połączenie działa. Odczyt ${readings.length} zmiennych (pierwsza: ${valueLabel}).`,
       details: {
         ...connection.details,
-        value,
-        rawValue: reading.rawValue,
-        baseUrl: reading.baseUrl,
+        variablesRead: readings.length,
+        readings,
+        baseUrl: connection.details?.baseUrl,
       },
     };
 
@@ -85,7 +140,7 @@ export async function testIntegrationConnection(
       action: "test_connection",
       actorUserId: actor?.userId ?? null,
       actorName: actor?.name ?? "System",
-      metadataJson: { ok: true, latencyMs: payload.latencyMs, value },
+      metadataJson: { ok: true, latencyMs: payload.latencyMs, variablesRead: readings.length },
     });
 
     return payload;
@@ -125,22 +180,46 @@ export async function syncIntegrationTelemetry(
     return { skipped: true as const };
   }
 
-  const config = integration.configJson as LoxoneIntegrationConfig;
   const password = await revealIntegrationPassword(integrationId);
+  const params = toLoxoneParams(integration, password);
 
   try {
-    const result = await readLoxoneVirtualInputState(toLoxoneParams(integration, password));
-    const measuredAt = new Date().toISOString();
+    const variables = await resolveSyncVariables(integration);
+    if (!variables.length) {
+      await markIntegrationSyncResult(integrationId, {
+        ok: false,
+        error: "Brak aktywnych zmiennych do synchronizacji.",
+      });
+      return { ok: false as const, error: "Brak aktywnych zmiennych." };
+    }
 
-    await insertProjectTelemetry({
-      projectId: integration.projectId,
-      integrationId: integration.id,
-      temperature: result.temperature,
-      onlineStatus: true,
-      sourceName: config.locationLabel?.trim() || integration.name,
-      measuredAt,
-      rawPayloadJson: result.rawPayload as Record<string, unknown>,
-    });
+    const readings = [];
+    const errors: string[] = [];
+
+    for (const variable of variables) {
+      try {
+        readings.push(await readAndStoreVariable(integration, params, variable));
+      } catch (variableError) {
+        errors.push(
+          `${variable.sourceKey}: ${
+            variableError instanceof Error ? variableError.message : "Błąd odczytu"
+          }`,
+        );
+      }
+    }
+
+    if (!readings.length) {
+      const message = errors.join("; ") || "Błąd synchronizacji wszystkich zmiennych.";
+      await markIntegrationSyncResult(integrationId, { ok: false, error: message });
+      await appendIntegrationAuditLog({
+        integrationId,
+        projectId: integration.projectId,
+        action: "sync_failure",
+        actorName,
+        metadataJson: { message, errors },
+      });
+      return { ok: false as const, error: message };
+    }
 
     await markIntegrationSyncResult(integrationId, { ok: true });
     await appendIntegrationAuditLog({
@@ -149,12 +228,17 @@ export async function syncIntegrationTelemetry(
       action: "sync_success",
       actorName,
       metadataJson: {
-        temperature: result.temperature,
-        sourceName: config.locationLabel,
+        variablesRead: readings.length,
+        variableErrors: errors,
+        readings,
       },
     });
 
-    return { ok: true as const, temperature: result.temperature };
+    return {
+      ok: true as const,
+      variablesRead: readings.length,
+      partialErrors: errors.length ? errors : undefined,
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Błąd synchronizacji.";
     await markIntegrationSyncResult(integrationId, { ok: false, error: message });

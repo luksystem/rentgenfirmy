@@ -45,6 +45,7 @@ export const NAV_MODULE_SUPPORTED_ACTIONS: Record<NavModuleKey, PermissionAction
   "work-orders": CRUD,
   documents: CRUD,
   "trades-catalog": CRUD,
+  visualizations: CRUD,
   inspections: CRUD,
   "service-requests": CRUD,
   "knowledge-base": CRUD,

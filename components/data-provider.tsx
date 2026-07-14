@@ -13,6 +13,7 @@ import { ProcessHydrator } from "@/components/process/process-hydrator";
 import { KanbanCacheHydrator } from "@/components/process/kanban-cache-hydrator";
 import { DashboardHydrator } from "@/components/dashboard/dashboard-hydrator";
 import { MyWorkHydrator } from "@/components/my-work/my-work-hydrator";
+import { VizHydrator } from "@/components/viz/viz-hydrator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -101,6 +102,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=twoj-anon-key`}
       <KanbanCacheHydrator>
         <DashboardHydrator>
           <MyWorkHydrator>
+            <VizHydrator>
           <>
             {error ? (
               <div className="panel-danger mb-4 rounded-xl border px-4 py-3 text-sm text-rose-300">
@@ -109,6 +111,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=twoj-anon-key`}
             ) : null}
             <ProjectEditProvider>{children}</ProjectEditProvider>
           </>
+            </VizHydrator>
           </MyWorkHydrator>
         </DashboardHydrator>
       </KanbanCacheHydrator>

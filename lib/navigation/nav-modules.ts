@@ -18,6 +18,7 @@ export type NavModuleKey =
   | "work-orders"
   | "documents"
   | "trades-catalog"
+  | "visualizations"
   | "inspections"
   | "service-requests"
   | "knowledge-base"
@@ -176,6 +177,12 @@ export const NAV_MODULE_GROUPS: NavModuleGroupDefinition[] = [
         label: "Katalog Branż",
         href: "/branze",
         routePrefixes: ["/branze"],
+      },
+      {
+        key: "visualizations",
+        label: "Wizualizacje",
+        href: "/wizualizacje",
+        routePrefixes: ["/wizualizacje"],
       },
     ],
   },

@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import { useIntegrationsStore } from "@/store/integrations-store";
 import { isIntegrationOperator } from "@/lib/auth/types";
+import { IntegrationVariablesPanel } from "@/components/project/integration-variables-panel";
 
 function emptyLoxoneConfig(): LoxoneIntegrationConfig {
   return {
@@ -235,7 +236,7 @@ function IntegrationFormFields({
             HTTPS (Miniserver Gen 2+)
           </label>
 
-          <Field label="Nazwa Virtual Input (temperatura) *">
+          <Field label="Nazwa Virtual Input (pierwsza zmienna) *">
             <Input
               value={loxoneConfig.virtualInputName ?? ""}
               placeholder="np. TempSalon"
@@ -243,7 +244,7 @@ function IntegrationFormFields({
             />
           </Field>
 
-          <Field label="Lokalizacja w budynku *">
+          <Field label="Lokalizacja w budynku (pierwsza zmienna) *">
             <Input
               value={loxoneConfig.locationLabel ?? ""}
               placeholder="np. Parter — salon"
@@ -487,6 +488,10 @@ function IntegrationCard({
         </div>
       </div>
 
+      {integration.integrationType === "loxone" ? (
+        <IntegrationVariablesPanel integrationId={integration.id} canManage={canManage} />
+      ) : null}
+
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
@@ -582,9 +587,8 @@ export function ProjectIntegrationsTab({ projectId }: { projectId: string }) {
             Połączenia techniczne
           </p>
           <p className="mt-1 text-xs text-muted">
-            Loxone: odczyt Virtual Input (cyfrowe 0/1; analogowe — temperatura — wkrótce). Odczyt co
-            5 minut (Supabase cron). Hasła nie są zwracane do
-            przeglądarki po zapisie.
+            Loxone: wiele punktów odczytu na integrację (Virtual Input). Odczyt co 5 minut (Supabase
+            cron). Hasła nie są zwracane do przeglądarki po zapisie.
           </p>
         </div>
         {canManage ? (

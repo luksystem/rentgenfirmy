@@ -3,6 +3,7 @@ import {
   decryptCredentialSecret,
   encryptCredentialSecret,
 } from "@/lib/security/credentials-crypto";
+import { ensureLegacyLoxoneVariable } from "@/lib/supabase/project-integration-variables-repository";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { ProjectIntegrationRow } from "@/lib/supabase/database.types";
 
@@ -62,17 +63,19 @@ function rowToMeta(row: IntegrationRow): IntegrationMeta {
   };
 }
 
-function validateLoxoneConfig(config: Record<string, unknown>) {
-  const virtualInputName =
-    typeof config.virtualInputName === "string" ? config.virtualInputName.trim() : "";
+function validateLoxoneConfig(config: Record<string, unknown>, hasVariables = false) {
   const locationLabel =
     typeof config.locationLabel === "string" ? config.locationLabel.trim() : "";
 
-  if (!virtualInputName) {
-    throw new Error("Podaj nazwę Virtual Input (punkt temperatury).");
-  }
-  if (!locationLabel) {
-    throw new Error("Podaj lokalizację w budynku.");
+  if (!hasVariables) {
+    const virtualInputName =
+      typeof config.virtualInputName === "string" ? config.virtualInputName.trim() : "";
+    if (!virtualInputName) {
+      throw new Error("Dodaj co najmniej jedną zmienną Loxone lub podaj Virtual Input w konfiguracji.");
+    }
+    if (!locationLabel) {
+      throw new Error("Podaj lokalizację w budynku (dla pierwszej zmiennej).");
+    }
   }
 }
 
@@ -258,6 +261,15 @@ export async function createProjectIntegration(
     },
   });
 
+  if (input.integrationType === "loxone") {
+    const loxoneConfig = configJson as { virtualInputName?: string; locationLabel?: string };
+    await ensureLegacyLoxoneVariable(integrationId, projectId, {
+      virtualInputName: loxoneConfig.virtualInputName,
+      locationLabel: loxoneConfig.locationLabel,
+      integrationName: name,
+    });
+  }
+
   return rowToMeta(data as IntegrationRow);
 }
 
@@ -354,6 +366,15 @@ export async function updateProjectIntegration(
       passwordChanged: Boolean(input.password?.trim()),
     },
   });
+
+  if (integrationType === "loxone") {
+    const loxoneConfig = configJson as { virtualInputName?: string; locationLabel?: string };
+    await ensureLegacyLoxoneVariable(integrationId, existing.projectId, {
+      virtualInputName: loxoneConfig.virtualInputName,
+      locationLabel: loxoneConfig.locationLabel,
+      integrationName: payload.name ?? existing.name,
+    });
+  }
 
   return rowToMeta(data as IntegrationRow);
 }
