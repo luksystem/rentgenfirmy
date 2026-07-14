@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { VizDashboardCommandCenter } from "@/components/viz/viz-dashboard-command-center";
 import { VizDashboardLayout } from "@/components/viz/viz-dashboard-layout";
-import type { VizDashboard } from "@/lib/viz/types";
+import { useVizStore } from "@/store/viz-store";
 
 export default function VizDashboardPage({
   params,
@@ -29,18 +29,12 @@ export default function VizDashboardPage({
 }
 
 function DashboardHeader({ dashboardId }: { dashboardId: string }) {
-  const [dashboard, setDashboard] = useState<VizDashboard | null>(null);
+  const dashboard = useVizStore((s) => s.getDashboardById(dashboardId));
+  const hydrate = useVizStore((s) => s.hydrate);
 
   useEffect(() => {
-    async function load() {
-      const response = await fetch(`/api/viz/dashboards/${dashboardId}`);
-      if (response.ok) {
-        const data = (await response.json()) as { dashboard: VizDashboard };
-        setDashboard(data.dashboard);
-      }
-    }
-    void load();
-  }, [dashboardId]);
+    void hydrate();
+  }, [hydrate]);
 
   if (!dashboard) {
     return null;

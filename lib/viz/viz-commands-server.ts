@@ -65,6 +65,69 @@ async function buildLoxoneParams(integrationId: string): Promise<LoxoneFetchPara
   };
 }
 
+export async function createVizBulkSetpointCommands(input: {
+  dashboardId: string;
+  projectIds: string[];
+  value: number;
+  requestedByUserId: string;
+  requestedByName: string;
+}) {
+  if (!input.projectIds.length) {
+    throw new Error("Brak sklepów do sterowania setpointem.");
+  }
+
+  const results = await Promise.allSettled(
+    input.projectIds.map((projectId) =>
+      createVizSetpointCommand({
+        dashboardId: input.dashboardId,
+        projectId,
+        value: input.value,
+        requestedByUserId: input.requestedByUserId,
+        requestedByName: input.requestedByName,
+      }),
+    ),
+  );
+
+  const commands: VizControlCommand[] = [];
+  const failures: Array<{ projectId: string; error: string }> = [];
+
+  results.forEach((result, index) => {
+    const projectId = input.projectIds[index];
+    if (result.status === "fulfilled") {
+      commands.push(result.value);
+      return;
+    }
+
+    failures.push({
+      projectId,
+      error: result.reason instanceof Error ? result.reason.message : "Nieznany błąd.",
+    });
+  });
+
+  return {
+    commands,
+    succeeded: commands.length,
+    failed: failures.length,
+    failures,
+  };
+}
+
+export async function listWritableSetpointProjectIds(dashboardId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("viz_variable_mappings")
+    .select("project_id")
+    .eq("dashboard_id", dashboardId)
+    .eq("role_code", "store_setpoint")
+    .eq("writable", true);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return [...new Set((data ?? []).map((row) => row.project_id as string))];
+}
+
 export async function listVizControlCommands(input: {
   dashboardId: string;
   projectId?: string;

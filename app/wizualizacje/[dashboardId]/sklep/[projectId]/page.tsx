@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
@@ -52,7 +52,13 @@ export default function VizStoreDetailPage({
         </Link>
       </Card>
 
-      <VizStoreDetailTabs dashboardId={ids.dashboardId} project={project} />
+      <Suspense fallback={<p className="text-sm text-muted">Ładowanie zakładek…</p>}>
+        <VizStoreDetailTabs
+          dashboardId={ids.dashboardId}
+          projectId={ids.projectId}
+          project={project}
+        />
+      </Suspense>
     </VizDashboardLayout>
   );
 }

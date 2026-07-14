@@ -6,31 +6,17 @@ import { Loader2, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { VizBulkSetpointControl } from "@/components/viz/viz-bulk-setpoint-control";
 import { VizChartRenderer } from "@/components/viz/viz-chart-renderer";
 import { VizDashboardMap } from "@/components/viz/viz-dashboard-map";
 import { VizEnergyTrendWidget } from "@/components/viz/viz-energy-trend-widget";
-import type { VizDashboardChart } from "@/lib/viz/chart-types";
-import type { VizStoreLiveSnapshot } from "@/lib/viz/viz-telemetry-server";
 import { formatEnergyKwh } from "@/lib/viz/energy-kpi";
+import { STORE_QUICK_LINK_TABS, storeTabHref } from "@/lib/viz/store-tab-slugs";
+import type { VizStoreLiveSnapshot } from "@/lib/viz/viz-telemetry-server";
+import { LIVE_POLL_MS, useVizDashboardCacheStore } from "@/store/viz-dashboard-cache-store";
 
 type VizDashboardCommandCenterProps = {
   dashboardId: string;
-};
-
-type LiveResponse = {
-  snapshots: VizStoreLiveSnapshot[];
-  kpi: {
-    storeCount: number;
-    onlineCount: number;
-    offlineCount: number;
-    alarmCount: number;
-    openServiceRequests: number;
-    avgTemperature: number | null;
-    storesWithEnergyReading: number;
-    totalEnergyKwh: number | null;
-    avgEnergyKwh: number | null;
-    energyInvoiceCount: number;
-  };
 };
 
 function statusTone(snapshot: VizStoreLiveSnapshot): "active" | "waiting" | "critical" | "closed" | "blue" | "neutral" {
@@ -38,55 +24,51 @@ function statusTone(snapshot: VizStoreLiveSnapshot): "active" | "waiting" | "cri
 }
 
 export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCenterProps) {
-  const [live, setLive] = useState<LiveResponse | null>(null);
-  const [widgetCharts, setWidgetCharts] = useState<VizDashboardChart[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const live = useVizDashboardCacheStore((s) => s.getLive(dashboardId));
+  const widgetCharts = useVizDashboardCacheStore((s) => s.getWidgetCharts(dashboardId));
+  const session = useVizDashboardCacheStore((s) => s.getSession(dashboardId));
+  const isLoading = useVizDashboardCacheStore((s) => s.isLiveLoading(dashboardId));
+  const ensureLive = useVizDashboardCacheStore((s) => s.ensureLive);
+  const ensureSession = useVizDashboardCacheStore((s) => s.ensureSession);
+  const ensureWidgetCharts = useVizDashboardCacheStore((s) => s.ensureWidgetCharts);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadCharts = useCallback(async () => {
-    try {
-      const response = await fetch(`/api/viz/dashboards/${dashboardId}/charts`);
-      if (!response.ok) {
-        return;
+  const load = useCallback(
+    async (refresh = false) => {
+      if (refresh) {
+        setIsRefreshing(true);
       }
-      const data = (await response.json()) as { charts: VizDashboardChart[] };
-      setWidgetCharts(data.charts.filter((chart) => chart.isWidget));
-    } catch {
-      setWidgetCharts([]);
-    }
-  }, [dashboardId]);
+      setError(null);
 
-  const load = useCallback(async (refresh = false) => {
-    if (refresh) {
-      setIsRefreshing(true);
-    } else {
-      setIsLoading(true);
-    }
-    setError(null);
-
-    try {
-      const response = await fetch(`/api/viz/dashboards/${dashboardId}/live`, {
-        method: refresh ? "POST" : "GET",
-      });
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(payload.error ?? "Nie udało się pobrać danych dashboardu.");
+      try {
+        const data = await ensureLive(dashboardId, {
+          force: refresh,
+          showLoading: !live,
+        });
+        if (!data && !live) {
+          throw new Error("Nie udało się pobrać danych dashboardu.");
+        }
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : "Błąd ładowania.");
+      } finally {
+        setIsRefreshing(false);
       }
-      const data = (await response.json()) as LiveResponse;
-      setLive(data);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Błąd ładowania.");
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [dashboardId]);
+    },
+    [dashboardId, ensureLive, live],
+  );
 
   useEffect(() => {
-    void load();
-    void loadCharts();
-  }, [load, loadCharts]);
+    void ensureSession(dashboardId);
+    void load(false);
+    void ensureWidgetCharts(dashboardId);
+
+    const interval = window.setInterval(() => {
+      void ensureLive(dashboardId, { force: true, showLoading: false });
+    }, LIVE_POLL_MS);
+
+    return () => window.clearInterval(interval);
+  }, [dashboardId, ensureLive, ensureSession, ensureWidgetCharts, load]);
 
   if (isLoading && !live) {
     return (
@@ -136,6 +118,13 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
         </Button>
       </div>
 
+      <VizBulkSetpointControl
+        dashboardId={dashboardId}
+        snapshots={snapshots}
+        canControl={session?.permissions.controlSetpoint === true}
+        onSuccess={() => void ensureLive(dashboardId, { force: true, showLoading: false })}
+      />
+
       <VizDashboardMap dashboardId={dashboardId} snapshots={snapshots} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -178,6 +167,7 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
                 <th className="px-3 py-2 font-medium">Setpoint</th>
                 <th className="px-3 py-2 font-medium">Zgłoszenia</th>
                 <th className="px-3 py-2 font-medium">Ostatni odczyt</th>
+                <th className="px-3 py-2 font-medium">Zakładki</th>
               </tr>
             </thead>
             <tbody>
@@ -206,6 +196,19 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
                     {store.lastReadAt
                       ? new Date(store.lastReadAt).toLocaleString("pl-PL")
                       : "—"}
+                  </td>
+                  <td className="px-3 py-3">
+                    <div className="flex flex-wrap gap-1.5">
+                      {STORE_QUICK_LINK_TABS.map((tab) => (
+                        <Link
+                          key={tab}
+                          href={storeTabHref(dashboardId, store.projectId, tab)}
+                          className="rounded-full border border-border bg-surface-muted px-2 py-0.5 text-xs text-muted hover:border-accent/40 hover:text-accent"
+                        >
+                          {tab}
+                        </Link>
+                      ))}
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -15,6 +16,12 @@ import {
   type ServiceIntakeRecord,
 } from "@/lib/service-intake/types";
 import { VIZ_ALARM_CONDITION_LABELS } from "@/lib/viz/project-contact-types";
+import {
+  STORE_TABS,
+  storeTabFromSlug,
+  storeTabHref,
+  type StoreTab,
+} from "@/lib/viz/store-tab-slugs";
 import { VIZ_SERVICE_CONTRACT_STATUS_LABELS } from "@/lib/viz/types";
 import type { VizDashboardProject } from "@/lib/viz/types";
 import type { VizStoreLiveSnapshot } from "@/lib/viz/viz-telemetry-server";
@@ -25,148 +32,159 @@ import { VizControlHistoryPanel } from "@/components/viz/viz-control-history-pan
 import { VizStoreVariablesPanel } from "@/components/viz/viz-store-variables-panel";
 import { VizStoreChartsPanel } from "@/components/viz/viz-store-charts-panel";
 import { VizStoreSystemsPanel } from "@/components/viz/viz-store-systems-panel";
+import { VizScrollTabBar } from "@/components/viz/viz-scroll-tab-bar";
 import type { VizDashboardPermissions } from "@/lib/viz/types";
-
-const STORE_TABS = [
-  "Podsumowanie",
-  "Serwis",
-  "Przeglądy",
-  "Umowa serwisowa",
-  "Kontakty",
-  "Zmienne",
-  "Wykresy",
-  "Alarmy",
-  "Energia",
-  "Potencjał rozbudowy",
-  "Historia sterowania",
-] as const;
-
-type StoreTab = (typeof STORE_TABS)[number];
+import { LIVE_POLL_MS, useVizDashboardCacheStore } from "@/store/viz-dashboard-cache-store";
 
 type VizStoreDetailTabsProps = {
   dashboardId: string;
+  projectId: string;
   project: VizDashboardProject | null;
 };
 
-export function VizStoreDetailTabs({ dashboardId, project }: VizStoreDetailTabsProps) {
-  const [activeTab, setActiveTab] = useState<StoreTab>("Podsumowanie");
-  const [snapshot, setSnapshot] = useState<VizStoreLiveSnapshot | null>(null);
-  const [permissions, setPermissions] = useState<VizDashboardPermissions | null>(null);
-  const [canManage, setCanManage] = useState(false);
-  const [isLoadingLive, setIsLoadingLive] = useState(true);
+export function VizStoreDetailTabs({ dashboardId, projectId, project }: VizStoreDetailTabsProps) {
+  const searchParams = useSearchParams();
+  const activeTab = storeTabFromSlug(searchParams.get("tab"));
+  const live = useVizDashboardCacheStore((s) => s.getLive(dashboardId));
+  const cachedSession = useVizDashboardCacheStore((s) => s.getSession(dashboardId));
+  const ensureLive = useVizDashboardCacheStore((s) => s.ensureLive);
+  const ensureSession = useVizDashboardCacheStore((s) => s.ensureSession);
+  const isLoadingLive = useVizDashboardCacheStore((s) => s.isLiveLoading(dashboardId));
 
-  const projectId = project?.projectId ?? null;
+  const snapshot =
+    live?.snapshots.find((item) => item.projectId === projectId) ?? null;
+  const permissions = cachedSession?.permissions ?? null;
+  const canManage = cachedSession?.canManage === true;
 
-  const loadLive = useCallback(async () => {
-    if (!projectId) {
-      setSnapshot(null);
-      setIsLoadingLive(false);
-      return;
-    }
-
-    setIsLoadingLive(true);
-    try {
-      const response = await fetch(`/api/viz/dashboards/${dashboardId}/live`);
-      if (response.ok) {
-        const data = (await response.json()) as { snapshots: VizStoreLiveSnapshot[] };
-        setSnapshot(data.snapshots.find((item) => item.projectId === projectId) ?? null);
-      }
-    } finally {
-      setIsLoadingLive(false);
-    }
-  }, [dashboardId, projectId]);
+  const tabItems = useMemo(
+    () =>
+      STORE_TABS.map((tab) => ({
+        id: tab,
+        label: tab,
+        href: storeTabHref(dashboardId, projectId, tab),
+      })),
+    [dashboardId, projectId],
+  );
 
   useEffect(() => {
-    void loadLive();
-  }, [loadLive]);
+    void ensureSession(dashboardId);
+    void ensureLive(dashboardId, { showLoading: !live });
 
-  useEffect(() => {
-    async function loadSession() {
-      const response = await fetch(`/api/viz/dashboards/${dashboardId}/session`);
-      if (response.ok) {
-        const data = (await response.json()) as {
-          permissions: VizDashboardPermissions;
-          canManage?: boolean;
-        };
-        setPermissions(data.permissions);
-        setCanManage(data.canManage === true);
-      }
-    }
-    void loadSession();
-  }, [dashboardId]);
+    const interval = window.setInterval(() => {
+      void ensureLive(dashboardId, { force: true, showLoading: false });
+    }, LIVE_POLL_MS);
+
+    return () => window.clearInterval(interval);
+  }, [dashboardId, ensureLive, ensureSession, live]);
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {STORE_TABS.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setActiveTab(tab)}
-            className={`rounded-full border px-3 py-1.5 text-sm transition ${
-              activeTab === tab
-                ? "border-accent bg-accent/15 text-accent"
-                : "border-border bg-surface-muted text-muted hover:text-foreground"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      <VizScrollTabBar tabs={tabItems} activeId={activeTab} />
 
-      {activeTab === "Podsumowanie" ? (
+      {renderStoreTabContent({
+        activeTab,
+        dashboardId,
+        projectId,
+        project,
+        snapshot,
+        permissions,
+        canManage,
+        isLoadingLive,
+        onSetpointSent: () =>
+          void ensureLive(dashboardId, { force: true, showLoading: false }),
+      })}
+    </div>
+  );
+}
+
+function renderStoreTabContent({
+  activeTab,
+  dashboardId,
+  projectId,
+  project,
+  snapshot,
+  permissions,
+  canManage,
+  isLoadingLive,
+  onSetpointSent,
+}: {
+  activeTab: StoreTab;
+  dashboardId: string;
+  projectId: string;
+  project: VizDashboardProject | null;
+  snapshot: VizStoreLiveSnapshot | null;
+  permissions: VizDashboardPermissions | null;
+  canManage: boolean;
+  isLoadingLive: boolean;
+  onSetpointSent: () => void;
+}) {
+  switch (activeTab) {
+    case "Podsumowanie":
+      return (
         <VizStoreSummaryTab
           project={project}
           snapshot={snapshot}
           isLoading={isLoadingLive}
           dashboardId={dashboardId}
+          projectId={projectId}
           permissions={permissions}
-          onSetpointSent={() => void loadLive()}
+          onSetpointSent={onSetpointSent}
         />
-      ) : activeTab === "Serwis" && projectId ? (
-        <VizStoreServiceTab projectId={projectId} />
-      ) : activeTab === "Przeglądy" && project ? (
-        <VizStoreInspectionsTab projectId={project.projectId} clientId={project.clientId} />
-      ) : activeTab === "Umowa serwisowa" ? (
-        <VizStoreContractTab project={project} dashboardId={dashboardId} />
-      ) : activeTab === "Kontakty" && projectId ? (
-        <VizProjectContactsPanel dashboardId={dashboardId} projectId={projectId} />
-      ) : activeTab === "Alarmy" ? (
-        <VizStoreAlarmsTab snapshot={snapshot} isLoading={isLoadingLive} dashboardId={dashboardId} />
-      ) : activeTab === "Energia" && projectId ? (
+      );
+    case "Serwis":
+      return <VizStoreServiceTab projectId={projectId} />;
+    case "Przeglądy":
+      return (
+        <VizStoreInspectionsTab
+          projectId={projectId}
+          clientId={project?.clientId ?? null}
+        />
+      );
+    case "Umowa serwisowa":
+      return <VizStoreContractTab project={project} dashboardId={dashboardId} />;
+    case "Kontakty":
+      return <VizProjectContactsPanel dashboardId={dashboardId} projectId={projectId} />;
+    case "Alarmy":
+      return (
+        <VizStoreAlarmsTab
+          snapshot={snapshot}
+          isLoading={isLoadingLive}
+          dashboardId={dashboardId}
+        />
+      );
+    case "Energia":
+      return (
         <VizEnergyPanel
           dashboardId={dashboardId}
           projectId={projectId}
           canUpload={permissions?.uploadInvoices === true}
           canAnalyze={permissions?.analyzeInvoices === true}
         />
-      ) : activeTab === "Historia sterowania" && projectId ? (
-        <VizControlHistoryPanel dashboardId={dashboardId} projectId={projectId} />
-      ) : activeTab === "Zmienne" && projectId ? (
+      );
+    case "Historia sterowania":
+      return <VizControlHistoryPanel dashboardId={dashboardId} projectId={projectId} />;
+    case "Zmienne":
+      return (
         <VizStoreVariablesPanel
           dashboardId={dashboardId}
           projectId={projectId}
           snapshot={snapshot}
           isLoadingSnapshot={isLoadingLive}
         />
-      ) : activeTab === "Wykresy" && projectId ? (
-        <VizStoreChartsPanel dashboardId={dashboardId} projectId={projectId} />
-      ) : activeTab === "Potencjał rozbudowy" && projectId ? (
+      );
+    case "Wykresy":
+      return <VizStoreChartsPanel dashboardId={dashboardId} projectId={projectId} />;
+    case "Potencjał rozbudowy":
+      return (
         <VizStoreSystemsPanel
           dashboardId={dashboardId}
           projectId={projectId}
           canEdit={canManage}
         />
-      ) : (
-        <Card className="p-6 text-sm text-muted">
-          <p className="font-medium text-foreground">{activeTab}</p>
-          <p className="mt-2">
-            Ta zakładka zostanie uzupełniona w kolejnych etapach wdrożenia modułu Wizualizacje.
-          </p>
-        </Card>
-      )}
-    </div>
-  );
+      );
+    default:
+      return null;
+  }
 }
 
 function VizStoreSummaryTab({
@@ -174,6 +192,7 @@ function VizStoreSummaryTab({
   snapshot,
   isLoading,
   dashboardId,
+  projectId,
   permissions,
   onSetpointSent,
 }: {
@@ -181,11 +200,17 @@ function VizStoreSummaryTab({
   snapshot: VizStoreLiveSnapshot | null;
   isLoading: boolean;
   dashboardId: string;
+  projectId: string;
   permissions: VizDashboardPermissions | null;
   onSetpointSent: () => void;
 }) {
   if (!project) {
-    return <Card className="p-6 text-sm text-muted">Nie znaleziono sklepu w tym dashboardzie.</Card>;
+    return (
+      <Card className="flex items-center gap-2 p-6 text-sm text-muted">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Ładowanie metadanych sklepu…
+      </Card>
+    );
   }
 
   return (
@@ -255,17 +280,15 @@ function VizStoreSummaryTab({
         )}
       </Card>
 
-      {project?.projectId ? (
-        <div className="md:col-span-2">
-          <VizSetpointControl
-            dashboardId={dashboardId}
-            projectId={project.projectId}
-            currentValue={snapshot?.roles.store_setpoint?.displayValue ?? null}
-            canControl={permissions?.controlSetpoint === true}
-            onSuccess={onSetpointSent}
-          />
-        </div>
-      ) : null}
+      <div className="md:col-span-2">
+        <VizSetpointControl
+          dashboardId={dashboardId}
+          projectId={projectId}
+          currentValue={snapshot?.roles.store_setpoint?.displayValue ?? null}
+          canControl={permissions?.controlSetpoint === true}
+          onSuccess={onSetpointSent}
+        />
+      </div>
     </div>
   );
 }
@@ -278,7 +301,12 @@ function VizStoreContractTab({
   dashboardId: string;
 }) {
   if (!project) {
-    return null;
+    return (
+      <Card className="flex items-center gap-2 p-6 text-sm text-muted">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Ładowanie danych umowy…
+      </Card>
+    );
   }
 
   return (

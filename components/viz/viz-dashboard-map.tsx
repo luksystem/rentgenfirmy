@@ -10,6 +10,7 @@ import { clientHasGeocodableAddress } from "@/lib/clients/client-location";
 import { geocodeClientsSequential } from "@/lib/clients/geocode-client";
 import type { VizStoreLiveSnapshot } from "@/lib/viz/viz-telemetry-server";
 import { getVizStoreMarkerIcon } from "@/lib/viz/store-marker-icon";
+import { STORE_QUICK_LINK_TABS, storeTabHref } from "@/lib/viz/store-tab-slugs";
 import { useAppStore } from "@/store/app-store";
 import "leaflet/dist/leaflet.css";
 
@@ -158,6 +159,17 @@ export function VizDashboardMap({ dashboardId, snapshots }: VizDashboardMapProps
                   >
                     Szczegóły sklepu
                   </Link>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {STORE_QUICK_LINK_TABS.map((tab) => (
+                      <Link
+                        key={tab}
+                        href={storeTabHref(dashboardId, store.projectId, tab)}
+                        className="rounded border border-border px-1.5 py-0.5 text-[10px] text-muted hover:text-accent"
+                      >
+                        {tab}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               </Popup>
             </Marker>
