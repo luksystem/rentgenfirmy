@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
-import { Card } from "@/components/ui/card";
 import { VizDashboardLayout } from "@/components/viz/viz-dashboard-layout";
+import { VizTravelCalculator } from "@/components/viz/viz-travel-calculator";
 
 export default function VizTravelCalculatorPage({
   params,
@@ -24,12 +24,9 @@ export default function VizTravelCalculatorPage({
     <VizDashboardLayout dashboardId={dashboardId}>
       <PageHeader
         title="Kalkulator dojazdu"
-        description="Niezależny kalkulator kosztu wyjazdu serwisowego z własnymi ustawieniami i snapshotami."
+        description="Niezależny kalkulator kosztu wyjazdu serwisowego z własnymi snapshotami."
       />
-      <Card className="p-6 text-sm text-muted">
-        Kalkulator zostanie skopiowany ze Szybkich ofert (z testami porównawczymi) w Etapie 4.
-        Lokalizacja docelowa będzie pobierana z klienta projektu.
-      </Card>
+      <VizTravelCalculator dashboardId={dashboardId} />
     </VizDashboardLayout>
   );
 }

@@ -745,6 +745,66 @@ export type VizDashboardChartRow = {
   updated_at: string;
 };
 
+export type VizServiceContractRow = {
+  id: string;
+  dashboard_id: string;
+  name: string;
+  contract_type: string;
+  monthly_hours_budget: number | null;
+  sla_response_hours: number | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VizServiceContractRateVersionRow = {
+  id: string;
+  contract_id: string;
+  version_label: string;
+  valid_from: string;
+  valid_until: string | null;
+  rates_json: Record<string, unknown>;
+  zone_settings_json: Record<string, unknown>;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VizServiceContractProjectTermRow = {
+  id: string;
+  contract_id: string;
+  project_id: string;
+  monthly_hours_override: number | null;
+  contract_status_override: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VizTravelCalcSnapshotRow = {
+  id: string;
+  dashboard_id: string;
+  project_id: string;
+  label: string | null;
+  company_address: string;
+  client_address: string;
+  one_way_km: number;
+  trip_count: number;
+  zone: number;
+  car_km_cost: number;
+  car_hours_cost: number;
+  total_travel_cost: number;
+  rates_json: Record<string, unknown>;
+  zone_settings_json: Record<string, unknown>;
+  input_json: Record<string, unknown>;
+  created_by_user_id: string | null;
+  created_by_name: string;
+  created_at: string;
+};
+
 export type ServiceIntakeRequestRow = {
   id: string;
   reference_number: string;
@@ -2753,6 +2813,37 @@ export type Database = {
         Insert: Partial<VizDashboardChartRow> &
           Pick<VizDashboardChartRow, "dashboard_id" | "name">;
         Update: Partial<VizDashboardChartRow>;
+        Relationships: [];
+      };
+      viz_service_contracts: {
+        Row: VizServiceContractRow;
+        Insert: Partial<VizServiceContractRow> &
+          Pick<VizServiceContractRow, "dashboard_id" | "name">;
+        Update: Partial<VizServiceContractRow>;
+        Relationships: [];
+      };
+      viz_service_contract_rate_versions: {
+        Row: VizServiceContractRateVersionRow;
+        Insert: Partial<VizServiceContractRateVersionRow> &
+          Pick<VizServiceContractRateVersionRow, "contract_id" | "version_label" | "valid_from">;
+        Update: Partial<VizServiceContractRateVersionRow>;
+        Relationships: [];
+      };
+      viz_service_contract_project_terms: {
+        Row: VizServiceContractProjectTermRow;
+        Insert: Partial<VizServiceContractProjectTermRow> &
+          Pick<VizServiceContractProjectTermRow, "contract_id" | "project_id">;
+        Update: Partial<VizServiceContractProjectTermRow>;
+        Relationships: [];
+      };
+      viz_travel_calc_snapshots: {
+        Row: VizTravelCalcSnapshotRow;
+        Insert: Partial<VizTravelCalcSnapshotRow> &
+          Pick<
+            VizTravelCalcSnapshotRow,
+            "dashboard_id" | "project_id" | "company_address" | "client_address" | "created_by_name"
+          >;
+        Update: Partial<VizTravelCalcSnapshotRow>;
         Relationships: [];
       };
     };

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { VizDashboardLayout } from "@/components/viz/viz-dashboard-layout";
+import { VizStoreDetailTabs } from "@/components/viz/viz-store-detail-tabs";
 import type { VizDashboardProject } from "@/lib/viz/types";
 
 export default function VizStoreDetailPage({
@@ -51,26 +52,7 @@ export default function VizStoreDetailPage({
         </Link>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {[
-          "Podsumowanie",
-          "Zmienne",
-          "Wykresy",
-          "Alarmy",
-          "Energia",
-          "Serwis",
-          "Umowa serwisowa",
-          "Przeglądy",
-          "Kontakty",
-          "Potencjał rozbudowy",
-          "Historia sterowania",
-        ].map((tab) => (
-          <Card key={tab} className="p-4 text-sm text-muted">
-            <p className="font-medium text-foreground">{tab}</p>
-            <p className="mt-1">Zakładka zostanie uzupełniona w kolejnych etapach wdrożenia.</p>
-          </Card>
-        ))}
-      </div>
+      <VizStoreDetailTabs dashboardId={ids.dashboardId} project={project} />
     </VizDashboardLayout>
   );
 }

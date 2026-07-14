@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
-import { Card } from "@/components/ui/card";
+import { VizContractsPanel } from "@/components/viz/viz-contracts-panel";
 import { VizDashboardLayout } from "@/components/viz/viz-dashboard-layout";
 
 export default function VizContractsPage({
@@ -24,11 +24,9 @@ export default function VizContractsPage({
     <VizDashboardLayout dashboardId={dashboardId}>
       <PageHeader
         title="Umowy serwisowe"
-        description="Umowy sieciowe, budżety godzin, stawki wersjonowane i wyjątki per sklep."
+        description="Umowy sieciowe, budżety godzin, stawki wersjonowane i agregacja czasu pracy."
       />
-      <Card className="p-6 text-sm text-muted">
-        Moduł umów serwisowych zostanie dodany w Etapie 4 wraz z integracją modułu czasu pracy.
-      </Card>
+      <VizContractsPanel dashboardId={dashboardId} />
     </VizDashboardLayout>
   );
 }
