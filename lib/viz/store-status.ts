@@ -30,6 +30,7 @@ export type VizStoreStatusInput = {
   workInProgress: boolean;
   staleMinutes: number | null;
   staleThresholdMinutes?: number;
+  externalWarning?: boolean;
 };
 
 export type VizStoreStatus = {
@@ -66,6 +67,7 @@ export function resolveVizStoreStatus(input: VizStoreStatusInput): VizStoreStatu
   if (
     input.dataQuality === "stale" ||
     input.dataQuality === "read_error" ||
+    input.externalWarning ||
     (input.staleMinutes != null && input.staleMinutes > staleThreshold)
   ) {
     return { code: "warning", label: VIZ_STORE_STATUS_LABELS.warning, tone: "waiting" };

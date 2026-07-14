@@ -805,6 +805,37 @@ export type VizTravelCalcSnapshotRow = {
   created_at: string;
 };
 
+export type ProjectContactRow = {
+  id: string;
+  project_id: string;
+  contact_id: string | null;
+  role_code: string;
+  display_name: string | null;
+  email: string | null;
+  phone: string | null;
+  notes: string | null;
+  is_primary: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VizAlarmRuleRow = {
+  id: string;
+  dashboard_id: string;
+  project_id: string | null;
+  role_code: string;
+  condition: string;
+  threshold_numeric: number;
+  severity: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ServiceIntakeRequestRow = {
   id: string;
   reference_number: string;
@@ -2844,6 +2875,19 @@ export type Database = {
             "dashboard_id" | "project_id" | "company_address" | "client_address" | "created_by_name"
           >;
         Update: Partial<VizTravelCalcSnapshotRow>;
+        Relationships: [];
+      };
+      project_contacts: {
+        Row: ProjectContactRow;
+        Insert: Partial<ProjectContactRow> & Pick<ProjectContactRow, "project_id" | "role_code">;
+        Update: Partial<ProjectContactRow>;
+        Relationships: [];
+      };
+      viz_alarm_rules: {
+        Row: VizAlarmRuleRow;
+        Insert: Partial<VizAlarmRuleRow> &
+          Pick<VizAlarmRuleRow, "dashboard_id" | "role_code" | "name" | "threshold_numeric">;
+        Update: Partial<VizAlarmRuleRow>;
         Relationships: [];
       };
     };

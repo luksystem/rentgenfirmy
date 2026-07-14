@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { VizDashboardConfigForm } from "@/components/viz/viz-dashboard-config-form";
+import { VizAlarmRulesConfig } from "@/components/viz/viz-alarm-rules-config";
 import { VizDashboardLayout } from "@/components/viz/viz-dashboard-layout";
 import type { VizDashboard } from "@/lib/viz/types";
 
@@ -40,7 +41,15 @@ export default function VizDashboardConfigPage({
         title="Konfiguracja dashboardu"
         description="Nazwa, status publikacji, klient i przypisane projekty."
       />
-      {dashboard ? <VizDashboardConfigForm dashboard={dashboard} /> : null}
+      {dashboard ? (
+        <div className="space-y-6">
+          <VizDashboardConfigForm dashboard={dashboard} />
+          <div>
+            <h2 className="mb-3 text-base font-semibold">Reguły alarmów i progów</h2>
+            <VizAlarmRulesConfig dashboardId={dashboardId} />
+          </div>
+        </div>
+      ) : null}
     </VizDashboardLayout>
   );
 }

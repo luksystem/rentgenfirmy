@@ -14,9 +14,11 @@ import {
   SERVICE_INTAKE_STATUS_LABELS,
   type ServiceIntakeRecord,
 } from "@/lib/service-intake/types";
+import { VIZ_ALARM_CONDITION_LABELS } from "@/lib/viz/project-contact-types";
 import { VIZ_SERVICE_CONTRACT_STATUS_LABELS } from "@/lib/viz/types";
 import type { VizDashboardProject } from "@/lib/viz/types";
 import type { VizStoreLiveSnapshot } from "@/lib/viz/viz-telemetry-server";
+import { VizProjectContactsPanel } from "@/components/viz/viz-project-contacts-panel";
 
 const STORE_TABS = [
   "Podsumowanie",
@@ -101,6 +103,10 @@ export function VizStoreDetailTabs({ dashboardId, project }: VizStoreDetailTabsP
         <VizStoreInspectionsTab projectId={project.projectId} clientId={project.clientId} />
       ) : activeTab === "Umowa serwisowa" ? (
         <VizStoreContractTab project={project} dashboardId={dashboardId} />
+      ) : activeTab === "Kontakty" && projectId ? (
+        <VizProjectContactsPanel dashboardId={dashboardId} projectId={projectId} />
+      ) : activeTab === "Alarmy" ? (
+        <VizStoreAlarmsTab snapshot={snapshot} isLoading={isLoadingLive} dashboardId={dashboardId} />
       ) : (
         <Card className="p-6 text-sm text-muted">
           <p className="font-medium text-foreground">{activeTab}</p>
@@ -166,6 +172,9 @@ function VizStoreSummaryTab({
         ) : (
           <div className="space-y-3 text-sm">
             <Badge tone={snapshot.status.tone}>{snapshot.status.label}</Badge>
+            {snapshot.workInProgress ? (
+              <Badge tone="blue">Prowadzone prace (plan zasobów)</Badge>
+            ) : null}
             <dl className="space-y-2">
               <div className="flex justify-between gap-4">
                 <dt className="text-muted">Temperatura</dt>
@@ -219,6 +228,62 @@ function VizStoreContractTab({
         Przejdź do modułu umów serwisowych
       </Link>
     </Card>
+  );
+}
+
+function VizStoreAlarmsTab({
+  snapshot,
+  isLoading,
+  dashboardId,
+}: {
+  snapshot: VizStoreLiveSnapshot | null;
+  isLoading: boolean;
+  dashboardId: string;
+}) {
+  if (isLoading) {
+    return (
+      <Card className="flex items-center gap-2 p-6 text-sm text-muted">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Ładowanie alarmów…
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-5">
+        <h3 className="mb-3 font-semibold">Aktywne reguły dashboardu</h3>
+        {!snapshot?.activeAlarms?.length ? (
+          <p className="text-sm text-muted">
+            Brak aktywnych reguł progów dla tego sklepu. Alarmy z telemetrii Loxone nadal mogą
+            wpływać na status.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {snapshot.activeAlarms.map((alarm) => (
+              <div
+                key={alarm.ruleId}
+                className="rounded-xl border border-border bg-surface-muted/40 px-3 py-2 text-sm"
+              >
+                <p className="font-medium">
+                  {alarm.ruleName} · {alarm.severity === "alarm" ? "Alarm" : "Ostrzeżenie"}
+                </p>
+                <p className="text-muted">
+                  {alarm.roleCode}: {alarm.numericValue}{" "}
+                  {VIZ_ALARM_CONDITION_LABELS[alarm.condition]} {alarm.thresholdNumeric}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+        <Link
+          href={`/wizualizacje/${dashboardId}/konfiguracja`}
+          className="mt-4 inline-block text-sm text-accent hover:underline"
+        >
+          Konfiguruj reguły alarmów
+        </Link>
+      </Card>
+    </div>
   );
 }
 

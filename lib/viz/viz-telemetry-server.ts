@@ -2,6 +2,12 @@ import type { IntegrationVariableTelemetry } from "@/lib/integrations/integratio
 import { listLatestTelemetryForVariables } from "@/lib/supabase/project-integration-variables-repository";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { formatMappedValue, minutesSince, resolveVizStoreStatus } from "@/lib/viz/store-status";
+import type { VizAlarmEvaluation } from "@/lib/viz/project-contact-types";
+import {
+  evaluateProjectAlarmRules,
+  fetchActiveWorkProjectIds,
+  listVizAlarmRules,
+} from "@/lib/viz/viz-alarm-rules-server";
 import type { VizDataQuality, VizVariableMapping } from "@/lib/viz/types";
 import { listVizDashboardProjects, listVizVariableMappings } from "@/lib/supabase/viz-server";
 
@@ -132,14 +138,17 @@ export type VizStoreLiveSnapshot = {
   >;
   openServiceRequests: number;
   lastReadAt: string | null;
+  workInProgress: boolean;
+  activeAlarms: VizAlarmEvaluation[];
 };
 
 export async function getVizDashboardLiveSnapshots(dashboardId: string) {
   await refreshVizDashboardTelemetry(dashboardId);
 
-  const [projects, mappings] = await Promise.all([
+  const [projects, mappings, alarmRules] = await Promise.all([
     listVizDashboardProjects(dashboardId),
     listVizVariableMappings(dashboardId),
+    listVizAlarmRules(dashboardId),
   ]);
 
   const supabase = getSupabaseAdmin();
@@ -151,6 +160,7 @@ export async function getVizDashboardLiveSnapshots(dashboardId: string) {
   const valuesByMapping = new Map((currentValues ?? []).map((row) => [row.mapping_id as string, row]));
 
   const projectIds = projects.map((p) => p.projectId);
+  const workInProgressProjectIds = await fetchActiveWorkProjectIds(projectIds);
   const { data: serviceIntakes } = projectIds.length
     ? await supabase
         .from("service_intake_requests")
@@ -215,18 +225,36 @@ export async function getVizDashboardLiveSnapshots(dashboardId: string) {
       }
 
       const openServiceRequests = openRequestsByProject.get(project.projectId) ?? 0;
-      const activeAlarmCount = roles.active_alarm_count?.numericValue ?? null;
+      const telemetryAlarmCount = roles.active_alarm_count?.numericValue ?? null;
       const systemErrorCount = roles.system_error_count?.numericValue ?? null;
+
+      const roleNumericValues = Object.fromEntries(
+        Object.entries(roles).map(([roleCode, role]) => [roleCode, role.numericValue]),
+      ) as Record<string, number | null | undefined>;
+
+      const activeAlarms = evaluateProjectAlarmRules({
+        rules: alarmRules,
+        projectId: project.projectId,
+        roleValues: roleNumericValues,
+      });
+
+      const hasRuleAlarm = activeAlarms.some((item) => item.severity === "alarm");
+      const hasRuleWarning = activeAlarms.some((item) => item.severity === "warning");
+      const effectiveAlarmCount = Math.max(
+        telemetryAlarmCount ?? 0,
+        hasRuleAlarm ? 1 : 0,
+      );
 
       const status = resolveVizStoreStatus({
         hasMappings: projectMappings.some((m) => Boolean(m.integrationVariableId)),
         miniserverOnline,
         dataQuality: worstQuality,
-        activeAlarmCount,
+        activeAlarmCount: effectiveAlarmCount,
         systemErrorCount,
         openServiceRequests,
-        workInProgress: false,
+        workInProgress: workInProgressProjectIds.has(project.projectId),
         staleMinutes: minutesSince(lastReadAt),
+        externalWarning: hasRuleWarning && !hasRuleAlarm && (telemetryAlarmCount ?? 0) <= 0,
       });
 
       return {
@@ -241,6 +269,8 @@ export async function getVizDashboardLiveSnapshots(dashboardId: string) {
         roles,
         openServiceRequests,
         lastReadAt,
+        workInProgress: workInProgressProjectIds.has(project.projectId),
+        activeAlarms,
       };
     });
 
