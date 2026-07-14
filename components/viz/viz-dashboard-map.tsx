@@ -23,6 +23,11 @@ type PlacedStore = VizStoreLiveSnapshot & {
 
 function MapBounds({ points }: { points: Array<[number, number]> }) {
   const map = useMap();
+  const pointsKey = useMemo(
+    () => points.map(([lat, lng]) => `${lat.toFixed(5)}:${lng.toFixed(5)}`).join("|"),
+    [points],
+  );
+
   useEffect(() => {
     if (!points.length) {
       map.setView(POLAND_CENTER, 6);
@@ -33,7 +38,7 @@ function MapBounds({ points }: { points: Array<[number, number]> }) {
       return;
     }
     map.fitBounds(points, { padding: [48, 48], maxZoom: 11 });
-  }, [map, points]);
+  }, [map, points, pointsKey]);
   return null;
 }
 
@@ -106,7 +111,10 @@ export function VizDashboardMap({ dashboardId, snapshots }: VizDashboardMapProps
     };
   }, [snapshots, clientsById]);
 
-  const points = placed.map((store) => [store.lat, store.lng] as [number, number]);
+  const points = useMemo(
+    () => placed.map((store) => [store.lat, store.lng] as [number, number]),
+    [placed],
+  );
   const missingCount = snapshots.length - placed.length;
 
   return (

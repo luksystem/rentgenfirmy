@@ -7,6 +7,8 @@ import type { VizDashboardPermissions } from "@/lib/viz/types";
 
 const LIVE_POLL_MS = 60_000;
 
+const EMPTY_WIDGET_CHARTS: VizDashboardChart[] = [];
+
 type DashboardSession = {
   permissions: VizDashboardPermissions;
   canManage: boolean;
@@ -52,6 +54,30 @@ async function fetchLive(dashboardId: string, refresh = false) {
   return response.json() as Promise<VizDashboardLiveResponse>;
 }
 
+function normalizeLiveResponse(data: VizDashboardLiveResponse): VizDashboardLiveResponse {
+  const snapshots = (data.snapshots ?? []).map((snapshot) => ({
+    ...snapshot,
+    activeAlarms: snapshot.activeAlarms ?? [],
+  }));
+
+  return {
+    snapshots,
+    kpi: {
+      storeCount: data.kpi?.storeCount ?? snapshots.length,
+      onlineCount: data.kpi?.onlineCount ?? 0,
+      offlineCount: data.kpi?.offlineCount ?? 0,
+      alarmCount: data.kpi?.alarmCount ?? 0,
+      unacknowledgedAlarmCount: data.kpi?.unacknowledgedAlarmCount ?? data.kpi?.alarmCount ?? 0,
+      openServiceRequests: data.kpi?.openServiceRequests ?? 0,
+      avgTemperature: data.kpi?.avgTemperature ?? null,
+      storesWithEnergyReading: data.kpi?.storesWithEnergyReading ?? 0,
+      totalEnergyKwh: data.kpi?.totalEnergyKwh ?? null,
+      avgEnergyKwh: data.kpi?.avgEnergyKwh ?? null,
+      energyInvoiceCount: data.kpi?.energyInvoiceCount ?? 0,
+    },
+  };
+}
+
 async function fetchSession(dashboardId: string) {
   const response = await fetch(`/api/viz/dashboards/${dashboardId}/session`);
   if (!response.ok) {
@@ -81,7 +107,8 @@ export const useVizDashboardCacheStore = create<VizDashboardCacheStore>((set, ge
 
   getLive: (dashboardId) => get().liveByDashboard[dashboardId] ?? null,
   getSession: (dashboardId) => get().sessionByDashboard[dashboardId] ?? null,
-  getWidgetCharts: (dashboardId) => get().widgetChartsByDashboard[dashboardId] ?? [],
+  getWidgetCharts: (dashboardId) =>
+    get().widgetChartsByDashboard[dashboardId] ?? EMPTY_WIDGET_CHARTS,
   isLiveLoading: (dashboardId) => get().liveLoadingByDashboard[dashboardId] === true,
 
   ensureLive: async (dashboardId, options) => {
@@ -106,7 +133,7 @@ export const useVizDashboardCacheStore = create<VizDashboardCacheStore>((set, ge
 
     const promise = (async () => {
       try {
-        const data = await fetchLive(dashboardId, force);
+        const data = normalizeLiveResponse(await fetchLive(dashboardId, force));
         set((state) => ({
           liveByDashboard: { ...state.liveByDashboard, [dashboardId]: data },
           liveLoadingByDashboard: { ...state.liveLoadingByDashboard, [dashboardId]: false },

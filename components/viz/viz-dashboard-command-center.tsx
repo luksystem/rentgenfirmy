@@ -30,48 +30,48 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
   const session = useVizDashboardCacheStore((s) => s.getSession(dashboardId));
   const isLoading = useVizDashboardCacheStore((s) => s.isLiveLoading(dashboardId));
   const ensureLive = useVizDashboardCacheStore((s) => s.ensureLive);
-  const ensureSession = useVizDashboardCacheStore((s) => s.ensureSession);
-  const ensureWidgetCharts = useVizDashboardCacheStore((s) => s.ensureWidgetCharts);
   const invalidateLive = useVizDashboardCacheStore((s) => s.invalidateLive);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(
-    async (refresh = false) => {
-      if (refresh) {
-        setIsRefreshing(true);
-      }
-      setError(null);
+  const load = useCallback(async (refresh = false) => {
+    if (refresh) {
+      setIsRefreshing(true);
+    }
+    setError(null);
 
-      try {
-        const hasCachedLive = Boolean(useVizDashboardCacheStore.getState().getLive(dashboardId));
-        const data = await ensureLive(dashboardId, {
+    try {
+      const hasCachedLive = Boolean(useVizDashboardCacheStore.getState().getLive(dashboardId));
+      const data = await useVizDashboardCacheStore
+        .getState()
+        .ensureLive(dashboardId, {
           force: refresh,
           showLoading: refresh ? false : !hasCachedLive,
         });
-        if (!data && !hasCachedLive) {
-          throw new Error("Nie udało się pobrać danych dashboardu.");
-        }
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Błąd ładowania.");
-      } finally {
-        setIsRefreshing(false);
+      if (!data && !hasCachedLive) {
+        throw new Error("Nie udało się pobrać danych dashboardu.");
       }
-    },
-    [dashboardId, ensureLive],
-  );
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Błąd ładowania.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [dashboardId]);
 
   useEffect(() => {
-    void ensureSession(dashboardId);
+    const store = useVizDashboardCacheStore.getState();
+    void store.ensureSession(dashboardId);
     void load(false);
-    void ensureWidgetCharts(dashboardId);
+    void store.ensureWidgetCharts(dashboardId);
 
     const interval = window.setInterval(() => {
-      void ensureLive(dashboardId, { force: true, showLoading: false });
+      void useVizDashboardCacheStore
+        .getState()
+        .ensureLive(dashboardId, { force: true, showLoading: false });
     }, LIVE_POLL_MS);
 
     return () => window.clearInterval(interval);
-  }, [dashboardId, ensureLive, ensureSession, ensureWidgetCharts, load]);
+  }, [dashboardId, load]);
 
   if (isLoading && !live) {
     return (
@@ -153,7 +153,7 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
         <KpiCard label="Z alarmami" value={String(kpi.alarmCount)} />
         <KpiCard
           label="Alarmy bez potwierdzenia"
-          value={String(kpi.unacknowledgedAlarmCount)}
+          value={String(kpi.unacknowledgedAlarmCount ?? 0)}
         />
         <KpiCard label="Otwarte zgłoszenia" value={String(kpi.openServiceRequests)} />
         <KpiCard
