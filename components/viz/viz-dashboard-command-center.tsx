@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { VizChartRenderer } from "@/components/viz/viz-chart-renderer";
+import { VizDashboardMap } from "@/components/viz/viz-dashboard-map";
+import type { VizDashboardChart } from "@/lib/viz/chart-types";
 import type { VizStoreLiveSnapshot } from "@/lib/viz/viz-telemetry-server";
 
 type VizDashboardCommandCenterProps = {
@@ -30,9 +33,23 @@ function statusTone(snapshot: VizStoreLiveSnapshot): "active" | "waiting" | "cri
 
 export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCenterProps) {
   const [live, setLive] = useState<LiveResponse | null>(null);
+  const [widgetCharts, setWidgetCharts] = useState<VizDashboardChart[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const loadCharts = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/viz/dashboards/${dashboardId}/charts`);
+      if (!response.ok) {
+        return;
+      }
+      const data = (await response.json()) as { charts: VizDashboardChart[] };
+      setWidgetCharts(data.charts.filter((chart) => chart.isWidget));
+    } catch {
+      setWidgetCharts([]);
+    }
+  }, [dashboardId]);
 
   const load = useCallback(async (refresh = false) => {
     if (refresh) {
@@ -61,7 +78,8 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
 
   useEffect(() => {
     void load();
-  }, [load]);
+    void loadCharts();
+  }, [load, loadCharts]);
 
   if (isLoading && !live) {
     return (
@@ -110,6 +128,8 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
           Odśwież
         </Button>
       </div>
+
+      <VizDashboardMap dashboardId={dashboardId} snapshots={snapshots} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Sklepy" value={String(kpi.storeCount)} />
@@ -174,16 +194,32 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
         </div>
       </Card>
 
-      <Card className="flex items-start gap-3 border-amber-500/20 bg-amber-500/5 p-4 text-sm">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
-        <div>
-          <p className="font-medium text-amber-100">Etap 2 — dane na żywo z telemetrii</p>
-          <p className="mt-1 text-muted">
-            Mapa, wykresy historyczne i reguły alarmów będą w Etapie 3. Zgłoszenia serwisowe
-            pochodzą z istniejącego modułu (statusy new/in_review).
-          </p>
+      {widgetCharts.length > 0 ? (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-base font-semibold">Wykresy</h2>
+            <Link
+              href={`/wizualizacje/${dashboardId}/wykresy`}
+              className="text-sm text-accent hover:underline"
+            >
+              Konfiguruj wykresy
+            </Link>
+          </div>
+          <div className="grid gap-4 xl:grid-cols-2">
+            {widgetCharts.map((chart) => (
+              <VizChartRenderer key={chart.id} dashboardId={dashboardId} chart={chart} />
+            ))}
+          </div>
         </div>
-      </Card>
+      ) : (
+        <Card className="p-4 text-sm text-muted">
+          Brak widgetów wykresów.{" "}
+          <Link href={`/wizualizacje/${dashboardId}/wykresy`} className="text-accent hover:underline">
+            Dodaj wykresy
+          </Link>{" "}
+          i włącz opcję „Pokaż jako widget”.
+        </Card>
+      )}
     </div>
   );
 }

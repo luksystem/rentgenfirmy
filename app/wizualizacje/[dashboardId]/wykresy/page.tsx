@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
-import { Card } from "@/components/ui/card";
+import { VizChartsConfig } from "@/components/viz/viz-charts-config";
 import { VizDashboardLayout } from "@/components/viz/viz-dashboard-layout";
 
 export default function VizChartsConfigPage({
@@ -26,10 +26,7 @@ export default function VizChartsConfigPage({
         title="Konfiguracja wykresów"
         description="Tworzenie wykresów liniowych, obszarowych i porównawczych bez edycji kodu."
       />
-      <Card className="p-6 text-sm text-muted">
-        Konfigurator wykresów zostanie udostępniony w Etapie 3 (wykres pojedynczego sklepu i
-        porównawczy wielu sklepów).
-      </Card>
+      <VizChartsConfig dashboardId={dashboardId} />
     </VizDashboardLayout>
   );
 }

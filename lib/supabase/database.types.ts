@@ -732,6 +732,19 @@ export type VizVariableReadingHistoryRow = {
   created_at: string;
 };
 
+export type VizDashboardChartRow = {
+  id: string;
+  dashboard_id: string;
+  name: string;
+  description: string | null;
+  chart_type: string;
+  config_json: Record<string, unknown>;
+  sort_order: number;
+  is_widget: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ServiceIntakeRequestRow = {
   id: string;
   reference_number: string;
@@ -2733,6 +2746,13 @@ export type Database = {
             "dashboard_id" | "project_id" | "mapping_id" | "role_code" | "measured_at"
           >;
         Update: Partial<VizVariableReadingHistoryRow>;
+        Relationships: [];
+      };
+      viz_dashboard_charts: {
+        Row: VizDashboardChartRow;
+        Insert: Partial<VizDashboardChartRow> &
+          Pick<VizDashboardChartRow, "dashboard_id" | "name">;
+        Update: Partial<VizDashboardChartRow>;
         Relationships: [];
       };
     };

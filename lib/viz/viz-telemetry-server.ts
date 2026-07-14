@@ -114,6 +114,7 @@ export async function refreshVizDashboardTelemetry(dashboardId: string) {
 
 export type VizStoreLiveSnapshot = {
   projectId: string;
+  clientId: string | null;
   displayName: string | null;
   projectName: string | null;
   clientAddress: string | null;
@@ -230,6 +231,7 @@ export async function getVizDashboardLiveSnapshots(dashboardId: string) {
 
       return {
         projectId: project.projectId,
+        clientId: project.clientId,
         displayName: project.displayName,
         projectName: project.projectName,
         clientAddress: project.clientAddress,
