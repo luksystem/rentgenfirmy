@@ -8,6 +8,7 @@ type AnalyzeEnergyInvoiceInput = {
   totalKwh?: number | null;
   totalCostPln?: number | null;
   supplierName?: string | null;
+  pdfExcerpt?: string | null;
 };
 
 function extractJsonObject(content: string): unknown {
@@ -62,6 +63,8 @@ function buildRuleBasedAnalysis(input: AnalyzeEnergyInvoiceInput): VizEnergyInvo
     },
     confidence: input.totalKwh != null && input.totalCostPln != null ? "medium" : "low",
     provider: "rules",
+    pdfExcerpt: input.pdfExcerpt ?? null,
+    extractedFromPdf: Boolean(input.pdfExcerpt),
   };
 }
 
@@ -76,7 +79,7 @@ export async function analyzeEnergyInvoice(
   const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
   const system = `Jesteś analitykiem faktur energii dla obiektów handlowych BMS.
 Zwróć JSON: { "summary": string, "anomalies": string[], "recommendations": string[], "extractedFields": { "totalKwh": number|null, "totalCostPln": number|null, "supplierName": string|null, "billingPeriodStart": "YYYY-MM-DD"|null, "billingPeriodEnd": "YYYY-MM-DD"|null }, "confidence": "low"|"medium"|"high" }.
-Analizuj metadane faktury — nie masz treści PDF, tylko pola użytkownika.`;
+Analizuj metadane faktury oraz opcjonalny fragment tekstu PDF.`;
 
   const user = [
     `Tytuł: ${input.title}`,
@@ -86,6 +89,7 @@ Analizuj metadane faktury — nie masz treści PDF, tylko pola użytkownika.`;
     input.billingPeriodEnd ? `Okres do: ${input.billingPeriodEnd}` : null,
     input.totalKwh != null ? `kWh: ${input.totalKwh}` : null,
     input.totalCostPln != null ? `Koszt PLN: ${input.totalCostPln}` : null,
+    input.pdfExcerpt ? `Fragment PDF:\n${input.pdfExcerpt.slice(0, 3000)}` : null,
   ]
     .filter(Boolean)
     .join("\n");
@@ -154,6 +158,8 @@ Analizuj metadane faktury — nie masz treści PDF, tylko pola użytkownika.`;
           ? parsed.confidence
           : "medium",
       provider: "openai",
+      pdfExcerpt: input.pdfExcerpt ?? null,
+      extractedFromPdf: Boolean(input.pdfExcerpt),
     };
   } catch {
     return buildRuleBasedAnalysis(input);

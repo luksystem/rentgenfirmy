@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { VizChartRenderer } from "@/components/viz/viz-chart-renderer";
 import { VizDashboardMap } from "@/components/viz/viz-dashboard-map";
+import { VizEnergyTrendWidget } from "@/components/viz/viz-energy-trend-widget";
 import type { VizDashboardChart } from "@/lib/viz/chart-types";
 import type { VizStoreLiveSnapshot } from "@/lib/viz/viz-telemetry-server";
 import { formatEnergyKwh } from "@/lib/viz/energy-kpi";
@@ -159,6 +160,10 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
         />
         <KpiCard label="Faktury energii" value={String(kpi.energyInvoiceCount)} />
       </div>
+
+      {kpi.energyInvoiceCount > 0 ? (
+        <VizEnergyTrendWidget dashboardId={dashboardId} compact />
+      ) : null}
 
       <Card className="p-5">
         <h2 className="mb-4 text-base font-semibold">Macierz sklepów</h2>

@@ -5,6 +5,7 @@ import { HttpError } from "@/lib/auth/http-error";
 import { listVizDashboardProjects } from "@/lib/supabase/viz-server";
 import {
   analyzeVizEnergyInvoice,
+  getVizEnergySummary,
   listVizEnergyInvoices,
   uploadVizEnergyInvoice,
 } from "@/lib/viz/viz-energy-server";
@@ -20,6 +21,11 @@ export async function GET(request: Request, context: RouteContext) {
 
     const url = new URL(request.url);
     const projectId = url.searchParams.get("projectId")?.trim() || undefined;
+
+    if (url.searchParams.get("summary") === "1") {
+      const summary = await getVizEnergySummary({ dashboardId, projectId });
+      return NextResponse.json(summary);
+    }
 
     const invoices = await listVizEnergyInvoices({ dashboardId, projectId });
     return NextResponse.json({ invoices });

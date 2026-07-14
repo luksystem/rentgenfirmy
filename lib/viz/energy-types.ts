@@ -1,3 +1,5 @@
+import type { EnergyPeriodComparison, EnergyTrendPoint } from "@/lib/viz/energy-comparison";
+
 export type VizEnergyAnalysisStatus = "none" | "pending" | "completed" | "failed";
 
 export type VizEnergyInvoiceAnalysis = {
@@ -13,6 +15,13 @@ export type VizEnergyInvoiceAnalysis = {
   };
   confidence: "low" | "medium" | "high";
   provider: "rules" | "openai";
+  pdfExcerpt?: string | null;
+  extractedFromPdf?: boolean;
+};
+
+export type VizEnergySummary = {
+  trend: EnergyTrendPoint[];
+  comparisons: EnergyPeriodComparison[];
 };
 
 export type VizEnergyInvoice = {

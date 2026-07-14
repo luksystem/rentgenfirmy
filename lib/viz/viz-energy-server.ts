@@ -1,11 +1,19 @@
 import { PROJECT_DOCUMENTS_BUCKET, PROJECT_DOCUMENTS_SIGNED_URL_TTL_SEC, validateProjectDocumentFile } from "@/lib/documents/attachments";
 import { analyzeEnergyInvoice } from "@/lib/ai/viz-energy-invoice-analyzer";
+import { extractTextFromPdfBuffer } from "@/lib/knowledge/text-extraction";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { VizEnergyInvoiceRow } from "@/lib/supabase/database.types";
+import { buildEnergyComparisons, buildEnergyTrend } from "@/lib/viz/energy-comparison";
+import {
+  excerptPdfText,
+  mergeEnergyFields,
+  parseEnergyFieldsFromPdfText,
+} from "@/lib/viz/energy-invoice-extract";
 import type {
   VizEnergyInvoice,
   VizEnergyInvoiceAnalysis,
   VizEnergyInvoiceInput,
+  VizEnergySummary,
 } from "@/lib/viz/energy-types";
 
 function asAnalysis(value: unknown): VizEnergyInvoiceAnalysis | null {
@@ -105,9 +113,38 @@ export async function listVizEnergyInvoices(input: {
     }),
   );
 
-  return (data ?? []).map((row, index) =>
+  return rows.map((row, index) =>
     rowToInvoice(row, documentById.get(row.document_id), urls[index]),
   );
+}
+
+export async function getVizEnergySummary(input: {
+  dashboardId: string;
+  projectId?: string;
+}): Promise<VizEnergySummary> {
+  const invoices = await listVizEnergyInvoices(input);
+  const trend = buildEnergyTrend(invoices);
+  const comparisons = buildEnergyComparisons(invoices);
+  return { trend, comparisons };
+}
+
+async function downloadPdfText(storagePath: string | null) {
+  if (!storagePath) {
+    return null;
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.storage
+    .from(PROJECT_DOCUMENTS_BUCKET)
+    .download(storagePath);
+
+  if (error || !data) {
+    return null;
+  }
+
+  const buffer = Buffer.from(await data.arrayBuffer());
+  const text = await extractTextFromPdfBuffer(buffer);
+  return excerptPdfText(text);
 }
 
 export async function countVizEnergyInvoices(dashboardId: string) {
@@ -252,14 +289,32 @@ export async function analyzeVizEnergyInvoice(invoiceId: string) {
     .eq("id", invoiceId);
 
   try {
+    const pdfExcerpt = await downloadPdfText(document?.storage_path ?? null);
+    const manualFields = {
+      totalKwh: row.total_kwh != null ? Number(row.total_kwh) : null,
+      totalCostPln: row.total_cost_pln != null ? Number(row.total_cost_pln) : null,
+      billingPeriodStart: row.billing_period_start,
+      billingPeriodEnd: row.billing_period_end,
+      supplierName: row.supplier_name,
+    };
+    const pdfFields = pdfExcerpt ? parseEnergyFieldsFromPdfText(pdfExcerpt) : {
+      totalKwh: null,
+      totalCostPln: null,
+      billingPeriodStart: null,
+      billingPeriodEnd: null,
+      supplierName: null,
+    };
+    const merged = mergeEnergyFields(manualFields, pdfFields);
+
     const analysis = await analyzeEnergyInvoice({
       title: document?.title ?? "Faktura energii",
       description: document?.description,
-      billingPeriodStart: row.billing_period_start,
-      billingPeriodEnd: row.billing_period_end,
-      totalKwh: row.total_kwh != null ? Number(row.total_kwh) : null,
-      totalCostPln: row.total_cost_pln != null ? Number(row.total_cost_pln) : null,
-      supplierName: row.supplier_name,
+      billingPeriodStart: merged.billingPeriodStart,
+      billingPeriodEnd: merged.billingPeriodEnd,
+      totalKwh: merged.totalKwh,
+      totalCostPln: merged.totalCostPln,
+      supplierName: merged.supplierName,
+      pdfExcerpt,
     });
 
     const { data: updated, error: updateError } = await supabase

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { VizEnergyInvoice } from "@/lib/viz/energy-types";
+import { VizEnergyTrendWidget } from "@/components/viz/viz-energy-trend-widget";
 
 type VizEnergyPanelProps = {
   dashboardId: string;
@@ -135,6 +136,7 @@ export function VizEnergyPanel({
 
   return (
     <div className="space-y-4">
+      <VizEnergyTrendWidget dashboardId={dashboardId} projectId={projectId} />
       {canUpload ? (
         <Card className="p-5">
           <h3 className="mb-3 font-semibold">Dodaj fakturę energii (PDF)</h3>
