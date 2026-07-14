@@ -25,22 +25,52 @@ export function filterHistoryPoints(
   );
 }
 
-export function buildMultiSeriesRows(points: VizHistoryPoint[], roleNameByCode?: Map<string, string>) {
+export function buildMultiSeriesRows(
+  points: VizHistoryPoint[],
+  roleNameByCode?: Map<string, string>,
+  periodHours = 24,
+) {
+  const bucketMs = resolveChartBucketMs(periodHours);
   const byTime = new Map<string, Record<string, string | number | null>>();
 
-  for (const point of points) {
+  const sortedPoints = [...points].sort((a, b) => a.measuredAt.localeCompare(b.measuredAt));
+
+  for (const point of sortedPoints) {
+    const bucketKey = bucketMeasuredAt(point.measuredAt, bucketMs);
     const seriesKey = historySeriesKey(point, roleNameByCode);
-    const row = byTime.get(point.measuredAt) ?? {
-      time: point.measuredAt,
-      label: formatTimeLabel(point.measuredAt),
+    const row = byTime.get(bucketKey) ?? {
+      time: bucketKey,
+      label: formatTimeLabel(bucketKey),
     };
     row[seriesKey] = point.numericValue;
-    byTime.set(point.measuredAt, row);
+    byTime.set(bucketKey, row);
   }
 
   return Array.from(byTime.values()).sort((a, b) =>
     String(a.time).localeCompare(String(b.time)),
   );
+}
+
+/** Wyrównuje odczyty wielu sklepów do wspólnych punktów osi X. */
+export function resolveChartBucketMs(periodHours: number) {
+  if (periodHours <= 6) {
+    return 5 * 60 * 1000;
+  }
+  if (periodHours <= 24) {
+    return 15 * 60 * 1000;
+  }
+  if (periodHours <= 168) {
+    return 60 * 60 * 1000;
+  }
+  return 4 * 60 * 60 * 1000;
+}
+
+export function bucketMeasuredAt(iso: string, bucketMs: number) {
+  const ms = new Date(iso).getTime();
+  if (Number.isNaN(ms)) {
+    return iso;
+  }
+  return new Date(Math.floor(ms / bucketMs) * bucketMs).toISOString();
 }
 
 export function uniqueSeriesKeys(points: VizHistoryPoint[], roleNameByCode?: Map<string, string>) {

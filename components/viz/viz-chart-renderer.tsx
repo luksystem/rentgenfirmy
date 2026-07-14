@@ -173,8 +173,8 @@ export function VizChartRenderer({
   );
 
   const rows = useMemo(
-    () => buildMultiSeriesRows(filteredPoints, roleNameByCode),
-    [filteredPoints, roleNameByCode],
+    () => buildMultiSeriesRows(filteredPoints, roleNameByCode, config.periodHours),
+    [filteredPoints, roleNameByCode, config.periodHours],
   );
 
   const axisPlan = useMemo(
@@ -232,15 +232,19 @@ export function VizChartRenderer({
   const missingProjects =
     config.projectIds.length - new Set(points.map((p) => p.projectId)).size;
 
-  function renderSeries(chartType: VizDashboardChart["chartType"], yAxisId?: string) {
+  function renderSeries(chartType: VizDashboardChart["chartType"]) {
     return seriesLabels.map((label, index) => {
       const color = seriesColor(label, index, config.seriesColors);
-      const axis = axisPlan.dualAxis
+      const yAxisId = axisPlan.dualAxis
         ? axisPlan.rightSeries.includes(label)
           ? "right"
           : "left"
-        : yAxisId;
-      const common = { key: label, dataKey: label, yAxisId: axis };
+        : undefined;
+      const common = {
+        key: label,
+        dataKey: label,
+        ...(yAxisId ? { yAxisId } : {}),
+      };
 
       if (chartType === "bar") {
         return <Bar {...common} fill={color} />;
@@ -253,10 +257,20 @@ export function VizChartRenderer({
             stroke={color}
             fill={color}
             fillOpacity={0.15}
+            connectNulls
           />
         );
       }
-      return <Line {...common} type="monotone" stroke={color} dot={false} strokeWidth={2} />;
+      return (
+        <Line
+          {...common}
+          type="monotone"
+          stroke={color}
+          dot={false}
+          strokeWidth={2}
+          connectNulls
+        />
+      );
     });
   }
 
@@ -275,7 +289,7 @@ export function VizChartRenderer({
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
         <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={24} />
         <YAxis
-          yAxisId="left"
+          {...(axisPlan.dualAxis ? { yAxisId: "left" } : {})}
           domain={[config.yAxisMin ?? "auto", config.yAxisMax ?? "auto"]}
           tick={{ fontSize: 11 }}
           label={

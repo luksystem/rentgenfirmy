@@ -17,6 +17,7 @@ import {
 } from "@/lib/viz/chart-types";
 import type { VizDashboardProject } from "@/lib/viz/types";
 import { useVizStore } from "@/store/viz-store";
+import { useVizDashboardCacheStore } from "@/store/viz-dashboard-cache-store";
 import { VizChartRenderer } from "@/components/viz/viz-chart-renderer";
 
 type VizChartsConfigProps = {
@@ -33,6 +34,24 @@ type ChartFormState = {
   config: VizChartConfig;
   isWidget: boolean;
 };
+
+function chartConfigForForm(config: VizChartConfig): VizChartConfig {
+  const normalized = normalizeChartConfig(config);
+  return {
+    ...normalized,
+    enabledProjectIds: [...normalized.projectIds],
+    enabledRoleCodes: [...normalized.roleCodes],
+  };
+}
+
+function chartConfigForSave(config: VizChartConfig): VizChartConfig {
+  const normalized = normalizeChartConfig(config);
+  return {
+    ...normalized,
+    enabledProjectIds: [...normalized.projectIds],
+    enabledRoleCodes: [...normalized.roleCodes],
+  };
+}
 
 function emptyForm(): ChartFormState {
   return {
@@ -139,11 +158,12 @@ export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
       name: chart.name,
       description: chart.description ?? "",
       chartType: chart.chartType,
-      config: normalizeChartConfig(chart.config),
+      config: chartConfigForForm(chart.config),
       isWidget: chart.isWidget,
     });
     setMessage(null);
     setError(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function cancelEdit() {
@@ -161,21 +181,20 @@ export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
       name: form.name.trim(),
       description: form.description.trim() || null,
       chartType: form.chartType,
-      config: normalizeChartConfig(form.config),
+      config: chartConfigForSave(form.config),
       isWidget: form.isWidget,
     };
 
+    const wasEditing = Boolean(editingChartId);
+
     try {
-      const response = await fetch(
-        editingChartId
-          ? `/api/viz/dashboards/${dashboardId}/charts`
-          : `/api/viz/dashboards/${dashboardId}/charts`,
-        {
-          method: editingChartId ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(editingChartId ? { id: editingChartId, ...payload } : payload),
-        },
-      );
+      const response = await fetch(`/api/viz/dashboards/${dashboardId}/charts`, {
+        method: wasEditing ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          wasEditing ? { id: editingChartId, ...payload } : payload,
+        ),
+      });
 
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as { error?: string };
@@ -184,8 +203,9 @@ export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
 
       setEditingChartId(null);
       setForm(emptyForm());
-      setMessage(editingChartId ? "Wykres zaktualizowany." : "Wykres został dodany.");
+      setMessage(wasEditing ? "Wykres zaktualizowany." : "Wykres został dodany.");
       await loadData();
+      void useVizDashboardCacheStore.getState().ensureWidgetCharts(dashboardId, { force: true });
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Błąd zapisu.");
     } finally {
