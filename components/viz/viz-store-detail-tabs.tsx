@@ -23,6 +23,7 @@ import {
   storeTabHref,
   type StoreTab,
 } from "@/lib/viz/store-tab-slugs";
+import { filterStoreTabsForPermissions } from "@/lib/viz/store-tab-permissions";
 import { VizStoreContractPanel } from "@/components/viz/viz-store-contract-panel";
 import type { VizDashboardProject } from "@/lib/viz/types";
 import type { VizStoreLiveSnapshot } from "@/lib/viz/viz-telemetry-server";
@@ -60,15 +61,14 @@ export function VizStoreDetailTabs({ dashboardId, projectId, project }: VizStore
   const permissions = cachedSession?.permissions ?? null;
   const canManage = cachedSession?.canManage === true;
 
-  const tabItems = useMemo(
-    () =>
-      STORE_TABS.map((tab) => ({
-        id: tab,
-        label: tab,
-        href: storeTabHref(dashboardId, projectId, tab),
-      })),
-    [dashboardId, projectId],
-  );
+  const tabItems = useMemo(() => {
+    const allowedTabs = filterStoreTabsForPermissions(STORE_TABS, permissions, canManage);
+    return allowedTabs.map((tab) => ({
+      id: tab,
+      label: tab,
+      href: storeTabHref(dashboardId, projectId, tab),
+    }));
+  }, [dashboardId, projectId, permissions, canManage]);
 
   useEffect(() => {
     void ensureSession(dashboardId);
@@ -134,6 +134,7 @@ function renderStoreTabContent({
           projectId={projectId}
           permissions={permissions}
           onSetpointSent={onSetpointSent}
+          canManage={canManage}
         />
       );
     case "Serwis":
@@ -146,6 +147,13 @@ function renderStoreTabContent({
         />
       );
     case "Umowa serwisowa":
+      if (permissions?.viewContract !== true) {
+        return (
+          <Card className="p-6 text-sm text-muted">
+            Brak uprawnień do podglądu umowy serwisowej.
+          </Card>
+        );
+      }
       return (
         <VizStoreContractPanel
           dashboardId={dashboardId}
@@ -209,6 +217,7 @@ function VizStoreSummaryTab({
   projectId,
   permissions,
   onSetpointSent,
+  canManage,
 }: {
   project: VizDashboardProject | null;
   snapshot: VizStoreLiveSnapshot | null;
@@ -217,6 +226,7 @@ function VizStoreSummaryTab({
   projectId: string;
   permissions: VizDashboardPermissions | null;
   onSetpointSent: () => void;
+  canManage: boolean;
 }) {
   if (!project) {
     return (
@@ -245,12 +255,14 @@ function VizStoreSummaryTab({
             <dd>{VIZ_SERVICE_CONTRACT_STATUS_LABELS[project.serviceContractStatus]}</dd>
           </div>
         </dl>
-        <Link
-          href={`/wizualizacje/${dashboardId}/konfiguracja`}
-          className="mt-4 inline-block text-sm text-accent hover:underline"
-        >
-          Edytuj w konfiguracji
-        </Link>
+        {canManage ? (
+          <Link
+            href={`/wizualizacje/${dashboardId}/konfiguracja`}
+            className="mt-4 inline-block text-sm text-accent hover:underline"
+          >
+            Edytuj w konfiguracji
+          </Link>
+        ) : null}
       </Card>
 
       <Card className="p-5">
@@ -294,15 +306,17 @@ function VizStoreSummaryTab({
         )}
       </Card>
 
-      <div className="md:col-span-2">
-        <VizSetpointControl
-          dashboardId={dashboardId}
-          projectId={projectId}
-          currentValue={snapshot?.roles.store_setpoint?.displayValue ?? null}
-          canControl={permissions?.controlSetpoint === true}
-          onSuccess={onSetpointSent}
-        />
-      </div>
+      {permissions?.controlSetpoint === true ? (
+        <div className="md:col-span-2">
+          <VizSetpointControl
+            dashboardId={dashboardId}
+            projectId={projectId}
+            currentValue={snapshot?.roles.store_setpoint?.displayValue ?? null}
+            canControl={permissions?.controlSetpoint === true}
+            onSuccess={onSetpointSent}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

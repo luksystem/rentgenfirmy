@@ -389,6 +389,23 @@ export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
           </div>
           <div className="md:col-span-2 flex items-center gap-2">
             <input
+              id="viz-chart-dual-axis"
+              type="checkbox"
+              checked={form.config.dualAxis === true}
+              onChange={(e) =>
+                setForm((current) => ({
+                  ...current,
+                  config: { ...current.config, dualAxis: e.target.checked },
+                }))
+              }
+              className="h-4 w-4 rounded border-border"
+            />
+            <label htmlFor="viz-chart-dual-axis" className="text-sm">
+              Dwie osie Y (np. °C i kWh przy różnych jednostkach)
+            </label>
+          </div>
+          <div className="md:col-span-2 flex items-center gap-2">
+            <input
               id="viz-chart-widget"
               type="checkbox"
               checked={form.isWidget}

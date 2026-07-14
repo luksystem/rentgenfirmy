@@ -24,6 +24,14 @@ export type VizChartConfig = {
   yAxisMax?: number | null;
   unit?: string | null;
   seriesColors?: Record<string, string>;
+  /** Zapisany stan toggles sklepów (puste = wszystkie z projectIds). */
+  enabledProjectIds?: string[];
+  /** Zapisany stan toggles zmiennych (puste = wszystkie z roleCodes). */
+  enabledRoleCodes?: string[];
+  /** Wymuś podwójną oś Y przy różnych jednostkach. */
+  dualAxis?: boolean;
+  /** Nadpisanie jednostek per rola (np. energy_total → kWh). */
+  roleUnits?: Record<string, string>;
 };
 
 export type VizDashboardChart = {
@@ -95,6 +103,17 @@ export function normalizeChartConfig(value: unknown): VizChartConfig {
     seriesColors:
       raw.seriesColors && typeof raw.seriesColors === "object" && !Array.isArray(raw.seriesColors)
         ? (raw.seriesColors as Record<string, string>)
+        : undefined,
+    enabledProjectIds: Array.isArray(raw.enabledProjectIds)
+      ? raw.enabledProjectIds.filter((id): id is string => typeof id === "string")
+      : undefined,
+    enabledRoleCodes: Array.isArray(raw.enabledRoleCodes)
+      ? raw.enabledRoleCodes.filter((code): code is string => typeof code === "string")
+      : undefined,
+    dualAxis: raw.dualAxis === true,
+    roleUnits:
+      raw.roleUnits && typeof raw.roleUnits === "object" && !Array.isArray(raw.roleUnits)
+        ? (raw.roleUnits as Record<string, string>)
         : undefined,
   };
 }

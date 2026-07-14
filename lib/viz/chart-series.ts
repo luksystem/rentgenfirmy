@@ -55,6 +55,116 @@ export function uniqueRoleCodes(points: VizHistoryPoint[]) {
   return [...new Set(points.map((point) => point.roleCode))];
 }
 
+export function parseSeriesRoleCode(
+  seriesKey: string,
+  roleNameByCode?: Map<string, string>,
+): string | null {
+  const separatorIndex = seriesKey.lastIndexOf(" · ");
+  if (separatorIndex < 0) {
+    return null;
+  }
+  const roleLabel = seriesKey.slice(separatorIndex + 3);
+  if (!roleNameByCode) {
+    return roleLabel;
+  }
+  for (const [code, name] of roleNameByCode.entries()) {
+    if (name === roleLabel || code === roleLabel) {
+      return code;
+    }
+  }
+  return roleLabel;
+}
+
+export function resolveRoleUnit(
+  roleCode: string,
+  roleUnitByCode: Map<string, string | null | undefined>,
+  configRoleUnits?: Record<string, string>,
+): string | null {
+  const override = configRoleUnits?.[roleCode];
+  if (override) {
+    return override;
+  }
+  const fromRole = roleUnitByCode.get(roleCode);
+  return fromRole ?? null;
+}
+
+export type VizChartAxisPlan = {
+  dualAxis: boolean;
+  leftSeries: string[];
+  rightSeries: string[];
+  leftUnit: string | null;
+  rightUnit: string | null;
+};
+
+export function buildChartAxisPlan(input: {
+  seriesKeys: string[];
+  roleNameByCode: Map<string, string>;
+  roleUnitByCode: Map<string, string | null | undefined>;
+  configRoleUnits?: Record<string, string>;
+  dualAxis?: boolean;
+}): VizChartAxisPlan {
+  const unitBySeries = new Map<string, string | null>();
+
+  for (const seriesKey of input.seriesKeys) {
+    const roleCode = parseSeriesRoleCode(seriesKey, input.roleNameByCode);
+    const unit =
+      roleCode != null
+        ? resolveRoleUnit(roleCode, input.roleUnitByCode, input.configRoleUnits)
+        : null;
+    unitBySeries.set(seriesKey, unit);
+  }
+
+  const distinctUnits = [
+    ...new Set(
+      [...unitBySeries.values()].filter((unit): unit is string => Boolean(unit?.trim())),
+    ),
+  ];
+
+  const shouldDualAxis = input.dualAxis === true || distinctUnits.length > 1;
+  if (!shouldDualAxis || input.seriesKeys.length <= 1) {
+    return {
+      dualAxis: false,
+      leftSeries: input.seriesKeys,
+      rightSeries: [],
+      leftUnit: distinctUnits[0] ?? null,
+      rightUnit: null,
+    };
+  }
+
+  const leftUnit = distinctUnits[0] ?? null;
+  const rightUnit = distinctUnits[1] ?? null;
+  const leftSeries: string[] = [];
+  const rightSeries: string[] = [];
+
+  for (const seriesKey of input.seriesKeys) {
+    const unit = unitBySeries.get(seriesKey) ?? null;
+    if (unit === rightUnit) {
+      rightSeries.push(seriesKey);
+    } else {
+      leftSeries.push(seriesKey);
+    }
+  }
+
+  if (!rightSeries.length) {
+    const pivot = Math.ceil(input.seriesKeys.length / 2);
+    return {
+      dualAxis: true,
+      leftSeries: input.seriesKeys.slice(0, pivot),
+      rightSeries: input.seriesKeys.slice(pivot),
+      leftUnit,
+      rightUnit: rightUnit ?? leftUnit,
+    };
+  }
+
+  return {
+    dualAxis: true,
+    leftSeries,
+    rightSeries,
+    leftUnit,
+    rightUnit,
+  };
+}
+
 function formatTimeLabel(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {

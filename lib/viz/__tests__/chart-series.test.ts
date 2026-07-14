@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMultiSeriesRows, filterHistoryPoints } from "@/lib/viz/chart-series";
+import { buildChartAxisPlan, buildMultiSeriesRows, filterHistoryPoints } from "@/lib/viz/chart-series";
 import { normalizeChartConfig } from "@/lib/viz/chart-types";
 import type { VizHistoryPoint } from "@/lib/viz/chart-types";
 
@@ -50,6 +50,25 @@ describe("chart-series", () => {
     );
     expect(filtered).toHaveLength(1);
     expect(filtered[0]?.roleCode).toBe("store_setpoint");
+  });
+
+  it("assigns dual axis when units differ", () => {
+    const roleNameByCode = new Map([
+      ["store_temperature", "Temperatura sklepu"],
+      ["energy_total", "Energia całkowita"],
+    ]);
+    const roleUnitByCode = new Map([
+      ["store_temperature", "°C"],
+      ["energy_total", "kWh"],
+    ]);
+    const plan = buildChartAxisPlan({
+      seriesKeys: ["DOM · Temperatura sklepu", "DOM · Energia całkowita"],
+      roleNameByCode,
+      roleUnitByCode,
+    });
+    expect(plan.dualAxis).toBe(true);
+    expect(plan.leftUnit).toBe("°C");
+    expect(plan.rightUnit).toBe("kWh");
   });
 });
 

@@ -2,18 +2,20 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, FileDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { VizBulkSetpointControl } from "@/components/viz/viz-bulk-setpoint-control";
 import { VizActiveAlarmsPanel } from "@/components/viz/viz-active-alarms-panel";
 import { VizNetworkSystemsMatrix } from "@/components/viz/viz-network-systems-matrix";
+import { VizServiceSlaPanel } from "@/components/viz/viz-service-sla-panel";
 import { VizChartRenderer } from "@/components/viz/viz-chart-renderer";
 import { VizDashboardMap } from "@/components/viz/viz-dashboard-map";
 import { VizEnergyTrendWidget } from "@/components/viz/viz-energy-trend-widget";
 import { formatEnergyKwh } from "@/lib/viz/energy-kpi";
 import { STORE_QUICK_LINK_TABS, storeTabHref } from "@/lib/viz/store-tab-slugs";
+import { shouldShowOperatorPanels } from "@/lib/viz/store-tab-permissions";
 import type { VizStoreLiveSnapshot } from "@/lib/viz/viz-telemetry-server";
 import { LIVE_POLL_MS, useVizDashboardCacheStore } from "@/store/viz-dashboard-cache-store";
 
@@ -99,35 +101,56 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
   }
 
   const { kpi, snapshots } = live;
+  const showOperatorPanels = shouldShowOperatorPanels({
+    accessRole: session?.accessRole,
+    canManage: session?.canManage,
+    permissions: session?.permissions,
+  });
+  const canPersistChartToggles = session?.permissions?.configure === true;
+  const clientQuickTabs = showOperatorPanels
+    ? STORE_QUICK_LINK_TABS
+    : (["Wykresy", "Alarmy", "Energia"] as const);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted">
-          Dane z ostatniego sync telemetrii. Brak mapowania = „—”, nie zero.
+          {showOperatorPanels
+            ? "Dane z ostatniego sync telemetrii. Brak mapowania = „—”, nie zero."
+            : "Widok klienta — podsumowanie sieci sklepów i statusów operacyjnych."}
         </p>
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          disabled={isRefreshing}
-          onClick={() => void load(true)}
-        >
-          {isRefreshing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4" />
-          )}
-          Odśwież
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" variant="secondary" asChild>
+            <a href={`/api/viz/dashboards/${dashboardId}/report`} download>
+              <FileDown className="h-4 w-4" />
+              Raport PDF
+            </a>
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={isRefreshing}
+            onClick={() => void load(true)}
+          >
+            {isRefreshing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            Odśwież
+          </Button>
+        </div>
       </div>
 
-      <VizBulkSetpointControl
-        dashboardId={dashboardId}
-        snapshots={snapshots}
-        canControl={session?.permissions.controlSetpoint === true}
-        onSuccess={() => void ensureLive(dashboardId, { force: true, showLoading: false })}
-      />
+      {showOperatorPanels ? (
+        <VizBulkSetpointControl
+          dashboardId={dashboardId}
+          snapshots={snapshots}
+          canControl={session?.permissions.controlSetpoint === true}
+          onSuccess={() => void ensureLive(dashboardId, { force: true, showLoading: false })}
+        />
+      ) : null}
 
       <VizActiveAlarmsPanel
         dashboardId={dashboardId}
@@ -139,7 +162,11 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
         }}
       />
 
-      <VizNetworkSystemsMatrix dashboardId={dashboardId} snapshots={snapshots} />
+      {showOperatorPanels ? (
+        <VizNetworkSystemsMatrix dashboardId={dashboardId} snapshots={snapshots} />
+      ) : null}
+
+      <VizServiceSlaPanel dashboardId={dashboardId} />
 
       <VizDashboardMap dashboardId={dashboardId} snapshots={snapshots} />
 
@@ -154,10 +181,12 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
           }
         />
         <KpiCard label="Z alarmami" value={String(kpi.alarmCount)} />
-        <KpiCard
-          label="Alarmy bez potwierdzenia"
-          value={String(kpi.unacknowledgedAlarmCount ?? 0)}
-        />
+        {showOperatorPanels ? (
+          <KpiCard
+            label="Alarmy bez potwierdzenia"
+            value={String(kpi.unacknowledgedAlarmCount ?? 0)}
+          />
+        ) : null}
         <KpiCard label="Otwarte zgłoszenia" value={String(kpi.openServiceRequests)} />
         <KpiCard
           label="Energia (suma odczytów)"
@@ -170,7 +199,7 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
         <KpiCard label="Faktury energii" value={String(kpi.energyInvoiceCount)} />
       </div>
 
-      {kpi.energyInvoiceCount > 0 ? (
+      {kpi.energyInvoiceCount > 0 && session?.permissions?.viewEnergy !== false ? (
         <VizEnergyTrendWidget dashboardId={dashboardId} compact />
       ) : null}
 
@@ -219,7 +248,7 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
                   </td>
                   <td className="px-3 py-3">
                     <div className="flex flex-wrap gap-1.5">
-                      {STORE_QUICK_LINK_TABS.map((tab) => (
+                      {clientQuickTabs.map((tab) => (
                         <Link
                           key={tab}
                           href={storeTabHref(dashboardId, store.projectId, tab)}
@@ -250,11 +279,16 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
           </div>
           <div className="grid gap-4 xl:grid-cols-2">
             {widgetCharts.map((chart) => (
-              <VizChartRenderer key={chart.id} dashboardId={dashboardId} chart={chart} />
+              <VizChartRenderer
+                key={chart.id}
+                dashboardId={dashboardId}
+                chart={chart}
+                canPersistToggles={canPersistChartToggles}
+              />
             ))}
           </div>
         </div>
-      ) : (
+      ) : showOperatorPanels ? (
         <Card className="p-4 text-sm text-muted">
           Brak widgetów wykresów.{" "}
           <Link href={`/wizualizacje/${dashboardId}/wykresy`} className="text-accent hover:underline">
@@ -262,7 +296,7 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
           </Link>{" "}
           i włącz opcję „Pokaż jako widget”.
         </Card>
-      )}
+      ) : null}
     </div>
   );
 }
