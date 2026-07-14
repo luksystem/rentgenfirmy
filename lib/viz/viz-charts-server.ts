@@ -7,6 +7,7 @@ import type {
   VizDashboardChartInput,
   VizHistoryPoint,
 } from "@/lib/viz/chart-types";
+import { normalizeChartConfig } from "@/lib/viz/chart-types";
 import { listVizDashboardProjects, listVizVariableMappings } from "@/lib/supabase/viz-server";
 
 type ChartRow = {
@@ -23,32 +24,7 @@ type ChartRow = {
 };
 
 function parseChartConfig(value: unknown): VizChartConfig {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {
-      mode: "single",
-      roleCode: "store_temperature",
-      projectIds: [],
-      periodHours: 24,
-    };
-  }
-  const raw = value as Record<string, unknown>;
-  return {
-    mode: raw.mode === "compare" ? "compare" : "single",
-    roleCode: typeof raw.roleCode === "string" ? raw.roleCode : "store_temperature",
-    projectIds: Array.isArray(raw.projectIds)
-      ? raw.projectIds.filter((id): id is string => typeof id === "string")
-      : [],
-    periodHours: typeof raw.periodHours === "number" ? raw.periodHours : 24,
-    showLegend: raw.showLegend !== false,
-    showTooltip: raw.showTooltip !== false,
-    yAxisMin: typeof raw.yAxisMin === "number" ? raw.yAxisMin : null,
-    yAxisMax: typeof raw.yAxisMax === "number" ? raw.yAxisMax : null,
-    unit: typeof raw.unit === "string" ? raw.unit : null,
-    seriesColors:
-      raw.seriesColors && typeof raw.seriesColors === "object" && !Array.isArray(raw.seriesColors)
-        ? (raw.seriesColors as Record<string, string>)
-        : undefined,
-  };
+  return normalizeChartConfig(value);
 }
 
 function rowToChart(row: ChartRow): VizDashboardChart {
@@ -87,6 +63,7 @@ export async function listVizDashboardCharts(dashboardId: string) {
 
 export async function createVizDashboardChart(dashboardId: string, input: VizDashboardChartInput) {
   const supabase = getSupabaseAdmin();
+  const config = normalizeChartConfig(input.config);
   const { data, error } = await supabase
     .from("viz_dashboard_charts")
     .insert({
@@ -94,7 +71,7 @@ export async function createVizDashboardChart(dashboardId: string, input: VizDas
       name: input.name.trim(),
       description: input.description?.trim() || null,
       chart_type: input.chartType ?? "line",
-      config_json: input.config,
+      config_json: config,
       sort_order: input.sortOrder ?? 0,
       is_widget: input.isWidget ?? true,
     })
@@ -115,7 +92,7 @@ export async function updateVizDashboardChart(chartId: string, input: Partial<Vi
   if (input.name !== undefined) payload.name = input.name.trim();
   if (input.description !== undefined) payload.description = input.description?.trim() || null;
   if (input.chartType !== undefined) payload.chart_type = input.chartType;
-  if (input.config !== undefined) payload.config_json = input.config;
+  if (input.config !== undefined) payload.config_json = normalizeChartConfig(input.config);
   if (input.sortOrder !== undefined) payload.sort_order = input.sortOrder;
   if (input.isWidget !== undefined) payload.is_widget = input.isWidget;
 
@@ -144,11 +121,16 @@ export async function deleteVizDashboardChart(chartId: string) {
 export async function queryVizChartHistory(
   dashboardId: string,
   options: {
-    roleCode: string;
+    roleCodes: string[];
     projectIds: string[];
     periodHours: number;
   },
 ): Promise<VizHistoryPoint[]> {
+  const roleCodes = [...new Set(options.roleCodes.filter(Boolean))];
+  if (!roleCodes.length || !options.projectIds.length) {
+    return [];
+  }
+
   const since = new Date(Date.now() - options.periodHours * 60 * 60 * 1000).toISOString();
 
   const [projects, mappings] = await Promise.all([
@@ -162,7 +144,7 @@ export async function queryVizChartHistory(
 
   const relevantMappings = mappings.filter(
     (m) =>
-      m.roleCode === options.roleCode &&
+      roleCodes.includes(m.roleCode) &&
       options.projectIds.includes(m.projectId) &&
       m.integrationVariableId,
   );

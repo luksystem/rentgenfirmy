@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import {
   VIZ_CHART_MODES,
   VIZ_CHART_PERIODS,
   VIZ_CHART_TYPES,
+  normalizeChartConfig,
   type VizChartConfig,
   type VizChartType,
   type VizDashboardChart,
@@ -25,6 +26,24 @@ type VizChartsConfigProps = {
 const selectClassName =
   "h-10 w-full rounded-xl border border-border bg-surface-muted px-3 text-sm";
 
+type ChartFormState = {
+  name: string;
+  description: string;
+  chartType: VizChartType;
+  config: VizChartConfig;
+  isWidget: boolean;
+};
+
+function emptyForm(): ChartFormState {
+  return {
+    name: "",
+    description: "",
+    chartType: "line",
+    config: { ...DEFAULT_VIZ_CHART_CONFIG },
+    isWidget: true,
+  };
+}
+
 export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
   const variableRoles = useVizStore((s) => s.variableRoles);
   const ensureViz = useVizStore((s) => s.hydrate);
@@ -35,12 +54,8 @@ export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [chartType, setChartType] = useState<VizChartType>("line");
-  const [config, setConfig] = useState<VizChartConfig>({ ...DEFAULT_VIZ_CHART_CONFIG });
-  const [isWidget, setIsWidget] = useState(true);
+  const [editingChartId, setEditingChartId] = useState<string | null>(null);
+  const [form, setForm] = useState<ChartFormState>(emptyForm);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -59,7 +74,12 @@ export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
       const chartsData = (await chartsRes.json()) as { charts: VizDashboardChart[] };
 
       setProjects(projectsData.projects);
-      setCharts(chartsData.charts);
+      setCharts(
+        chartsData.charts.map((chart) => ({
+          ...chart,
+          config: normalizeChartConfig(chart.config),
+        })),
+      );
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Błąd ładowania.");
     } finally {
@@ -73,50 +93,98 @@ export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
   }, [ensureViz, loadData]);
 
   function toggleProject(projectId: string) {
-    setConfig((current) => {
-      const exists = current.projectIds.includes(projectId);
-      if (current.mode === "single") {
-        return { ...current, projectIds: exists ? [] : [projectId] };
+    setForm((current) => {
+      const exists = current.config.projectIds.includes(projectId);
+      if (current.config.mode === "single") {
+        return {
+          ...current,
+          config: {
+            ...current.config,
+            projectIds: exists ? [] : [projectId],
+          },
+        };
       }
       return {
         ...current,
-        projectIds: exists
-          ? current.projectIds.filter((id) => id !== projectId)
-          : [...current.projectIds, projectId],
+        config: {
+          ...current.config,
+          projectIds: exists
+            ? current.config.projectIds.filter((id) => id !== projectId)
+            : [...current.config.projectIds, projectId],
+        },
       };
     });
   }
 
-  async function handleCreate(event: React.FormEvent) {
+  function toggleRole(roleCode: string) {
+    setForm((current) => {
+      const exists = current.config.roleCodes.includes(roleCode);
+      const roleCodes = exists
+        ? current.config.roleCodes.filter((code) => code !== roleCode)
+        : [...current.config.roleCodes, roleCode];
+      return {
+        ...current,
+        config: {
+          ...current.config,
+          roleCodes,
+          roleCode: roleCodes[0],
+        },
+      };
+    });
+  }
+
+  function startEdit(chart: VizDashboardChart) {
+    setEditingChartId(chart.id);
+    setForm({
+      name: chart.name,
+      description: chart.description ?? "",
+      chartType: chart.chartType,
+      config: normalizeChartConfig(chart.config),
+      isWidget: chart.isWidget,
+    });
+    setMessage(null);
+    setError(null);
+  }
+
+  function cancelEdit() {
+    setEditingChartId(null);
+    setForm(emptyForm());
+  }
+
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setIsSaving(true);
     setError(null);
     setMessage(null);
 
+    const payload = {
+      name: form.name.trim(),
+      description: form.description.trim() || null,
+      chartType: form.chartType,
+      config: normalizeChartConfig(form.config),
+      isWidget: form.isWidget,
+    };
+
     try {
-      const response = await fetch(`/api/viz/dashboards/${dashboardId}/charts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          description: description.trim() || null,
-          chartType,
-          config,
-          isWidget,
-        }),
-      });
+      const response = await fetch(
+        editingChartId
+          ? `/api/viz/dashboards/${dashboardId}/charts`
+          : `/api/viz/dashboards/${dashboardId}/charts`,
+        {
+          method: editingChartId ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(editingChartId ? { id: editingChartId, ...payload } : payload),
+        },
+      );
 
       if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(payload.error ?? "Nie udało się utworzyć wykresu.");
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? "Nie udało się zapisać wykresu.");
       }
 
-      setName("");
-      setDescription("");
-      setChartType("line");
-      setConfig({ ...DEFAULT_VIZ_CHART_CONFIG });
-      setIsWidget(true);
-      setMessage("Wykres został dodany.");
+      setEditingChartId(null);
+      setForm(emptyForm());
+      setMessage(editingChartId ? "Wykres zaktualizowany." : "Wykres został dodany.");
       await loadData();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Błąd zapisu.");
@@ -139,6 +207,9 @@ export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
       if (!response.ok) {
         throw new Error("Nie udało się usunąć wykresu.");
       }
+      if (editingChartId === chartId) {
+        cancelEdit();
+      }
       await loadData();
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Błąd usuwania.");
@@ -157,22 +228,44 @@ export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
   return (
     <div className="space-y-6">
       <Card className="p-5">
-        <h2 className="mb-4 text-base font-semibold">Nowy wykres</h2>
-        <form onSubmit={(e) => void handleCreate(e)} className="grid gap-4 md:grid-cols-2">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold">
+            {editingChartId ? "Edycja wykresu" : "Nowy wykres"}
+          </h2>
+          {editingChartId ? (
+            <Button type="button" size="sm" variant="secondary" onClick={cancelEdit}>
+              <X className="h-4 w-4" />
+              Anuluj
+            </Button>
+          ) : null}
+        </div>
+        <form onSubmit={(e) => void handleSubmit(e)} className="grid gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
             <label className="mb-1.5 block text-sm font-medium">Nazwa</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} required />
+            <Input
+              value={form.name}
+              onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))}
+              required
+            />
           </div>
           <div className="md:col-span-2">
             <label className="mb-1.5 block text-sm font-medium">Opis (opcjonalnie)</label>
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Input
+              value={form.description}
+              onChange={(e) => setForm((current) => ({ ...current, description: e.target.value }))}
+            />
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium">Typ wykresu</label>
             <select
               className={selectClassName}
-              value={chartType}
-              onChange={(e) => setChartType(e.target.value as VizChartType)}
+              value={form.chartType}
+              onChange={(e) =>
+                setForm((current) => ({
+                  ...current,
+                  chartType: e.target.value as VizChartType,
+                }))
+              }
             >
               {VIZ_CHART_TYPES.filter((type) => type !== "mixed").map((type) => (
                 <option key={type} value={type}>
@@ -182,35 +275,27 @@ export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
             </select>
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium">Tryb</label>
+            <label className="mb-1.5 block text-sm font-medium">Tryb sklepów</label>
             <select
               className={selectClassName}
-              value={config.mode}
+              value={form.config.mode}
               onChange={(e) =>
-                setConfig((current) => ({
+                setForm((current) => ({
                   ...current,
-                  mode: e.target.value as VizChartConfig["mode"],
-                  projectIds: [],
+                  config: {
+                    ...current.config,
+                    mode: e.target.value as VizChartConfig["mode"],
+                    projectIds:
+                      e.target.value === "single" && current.config.projectIds.length > 1
+                        ? [current.config.projectIds[0]!]
+                        : current.config.projectIds,
+                  },
                 }))
               }
             >
               {VIZ_CHART_MODES.map((mode) => (
                 <option key={mode} value={mode}>
-                  {mode === "single" ? "Jeden sklep" : "Porównanie sklepów"}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">Rola zmiennej</label>
-            <select
-              className={selectClassName}
-              value={config.roleCode}
-              onChange={(e) => setConfig((current) => ({ ...current, roleCode: e.target.value }))}
-            >
-              {variableRoles.map((role) => (
-                <option key={role.code} value={role.code}>
-                  {role.name}
+                  {mode === "single" ? "Jeden sklep" : "Wiele sklepów (różne kolory)"}
                 </option>
               ))}
             </select>
@@ -219,11 +304,11 @@ export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
             <label className="mb-1.5 block text-sm font-medium">Okres</label>
             <select
               className={selectClassName}
-              value={config.periodHours}
+              value={form.config.periodHours}
               onChange={(e) =>
-                setConfig((current) => ({
+                setForm((current) => ({
                   ...current,
-                  periodHours: Number(e.target.value),
+                  config: { ...current.config, periodHours: Number(e.target.value) },
                 }))
               }
             >
@@ -234,16 +319,56 @@ export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
               ))}
             </select>
           </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">Oś Y min (opcjonalnie)</label>
+            <Input
+              type="number"
+              value={form.config.yAxisMin ?? ""}
+              onChange={(e) =>
+                setForm((current) => ({
+                  ...current,
+                  config: {
+                    ...current.config,
+                    yAxisMin: e.target.value ? Number(e.target.value) : null,
+                  },
+                }))
+              }
+            />
+          </div>
           <div className="md:col-span-2">
             <label className="mb-2 block text-sm font-medium">
-              Sklepy ({config.mode === "single" ? "wybierz jeden" : "wybierz wiele"})
+              Zmienne ({form.config.roleCodes.length} wybrane)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {variableRoles.map((role) => {
+                const selected = form.config.roleCodes.includes(role.code);
+                return (
+                  <button
+                    key={role.code}
+                    type="button"
+                    onClick={() => toggleRole(role.code)}
+                    className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                      selected
+                        ? "border-accent bg-accent/15 text-accent"
+                        : "border-border bg-surface-muted text-muted hover:text-foreground"
+                    }`}
+                  >
+                    {role.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="md:col-span-2">
+            <label className="mb-2 block text-sm font-medium">
+              Sklepy ({form.config.mode === "single" ? "wybierz jeden" : "wybierz wiele"})
             </label>
             {!projects.length ? (
               <p className="text-sm text-muted">Najpierw przypisz sklepy w konfiguracji dashboardu.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {projects.map((project) => {
-                  const selected = config.projectIds.includes(project.projectId);
+                  const selected = form.config.projectIds.includes(project.projectId);
                   return (
                     <button
                       key={project.projectId}
@@ -266,8 +391,8 @@ export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
             <input
               id="viz-chart-widget"
               type="checkbox"
-              checked={isWidget}
-              onChange={(e) => setIsWidget(e.target.checked)}
+              checked={form.isWidget}
+              onChange={(e) => setForm((current) => ({ ...current, isWidget: e.target.checked }))}
               className="h-4 w-4 rounded border-border"
             />
             <label htmlFor="viz-chart-widget" className="text-sm">
@@ -275,9 +400,18 @@ export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
             </label>
           </div>
           <div className="md:col-span-2">
-            <Button type="submit" disabled={isSaving || !config.projectIds.length}>
-              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              Dodaj wykres
+            <Button
+              type="submit"
+              disabled={isSaving || !form.config.projectIds.length || !form.config.roleCodes.length}
+            >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : editingChartId ? (
+                <Pencil className="h-4 w-4" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              {editingChartId ? "Zapisz zmiany" : "Dodaj wykres"}
             </Button>
           </div>
         </form>
@@ -296,19 +430,26 @@ export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
                 <div>
                   <p className="font-medium">{chart.name}</p>
                   <p className="text-xs text-muted">
-                    {chart.chartType} · {chart.config.mode === "single" ? "1 sklep" : "porównanie"} ·
+                    {chart.chartType} · {chart.config.roleCodes.length} zmiennych ·{" "}
+                    {chart.config.projectIds.length} sklepów ·
                     {chart.isWidget ? " widget" : " tylko ta strona"}
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => void handleDelete(chart.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Usuń
-                </Button>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" variant="secondary" onClick={() => startEdit(chart)}>
+                    <Pencil className="h-4 w-4" />
+                    Edytuj
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => void handleDelete(chart.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Usuń
+                  </Button>
+                </div>
               </div>
               <VizChartRenderer dashboardId={dashboardId} chart={chart} />
             </div>

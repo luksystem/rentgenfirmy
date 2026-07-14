@@ -17,15 +17,21 @@ function chartIncludesProject(chart: VizDashboardChart, projectId: string) {
 }
 
 function chartForProject(chart: VizDashboardChart, projectId: string): VizDashboardChart {
-  if (chart.config.projectIds.includes(projectId)) {
-    return chart;
-  }
+  const config = {
+    ...chart.config,
+    projectIds: chart.config.projectIds.includes(projectId)
+      ? [projectId]
+      : [projectId],
+    roleCodes: chart.config.roleCodes?.length
+      ? chart.config.roleCodes
+      : chart.config.roleCode
+        ? [chart.config.roleCode]
+        : ["store_temperature"],
+  };
+
   return {
     ...chart,
-    config: {
-      ...chart.config,
-      projectIds: [projectId],
-    },
+    config,
   };
 }
 

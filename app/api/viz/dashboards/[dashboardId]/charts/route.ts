@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/api-auth";
 import { HttpError } from "@/lib/auth/http-error";
-import { VIZ_CHART_TYPES, type VizDashboardChartInput } from "@/lib/viz/chart-types";
+import { VIZ_CHART_TYPES, normalizeChartConfig, type VizDashboardChartInput } from "@/lib/viz/chart-types";
 import {
   createVizDashboardChart,
   deleteVizDashboardChart,
@@ -19,16 +19,17 @@ export async function GET(request: Request, context: RouteContext) {
     const url = new URL(request.url);
 
     if (url.searchParams.get("history") === "1") {
-      const roleCode = url.searchParams.get("roleCode")?.trim();
+      const roleCodesParam = url.searchParams.get("roleCodes") ?? url.searchParams.get("roleCode");
+      const roleCodes = roleCodesParam?.split(",").map((code) => code.trim()).filter(Boolean) ?? [];
       const projectIds = url.searchParams.get("projectIds")?.split(",").filter(Boolean) ?? [];
       const periodHours = Number(url.searchParams.get("periodHours") ?? "24");
 
-      if (!roleCode || !projectIds.length) {
-        return NextResponse.json({ error: "Wymagane roleCode i projectIds." }, { status: 400 });
+      if (!roleCodes.length || !projectIds.length) {
+        return NextResponse.json({ error: "Wymagane roleCodes i projectIds." }, { status: 400 });
       }
 
       const points = await queryVizChartHistory(dashboardId, {
-        roleCode,
+        roleCodes,
         projectIds,
         periodHours: Number.isFinite(periodHours) ? periodHours : 24,
       });
@@ -55,15 +56,16 @@ export async function POST(request: Request, context: RouteContext) {
     const { dashboardId } = await context.params;
     const body = (await request.json()) as VizDashboardChartInput;
 
-    if (!body.name?.trim() || !body.config?.roleCode) {
-      return NextResponse.json({ error: "Nazwa i rola są wymagane." }, { status: 400 });
+    const config = body.config ? normalizeChartConfig(body.config) : undefined;
+    if (!body.name?.trim() || !config?.roleCodes.length) {
+      return NextResponse.json({ error: "Nazwa i co najmniej jedna rola są wymagane." }, { status: 400 });
     }
 
     if (body.chartType && !VIZ_CHART_TYPES.includes(body.chartType)) {
       return NextResponse.json({ error: "Nieprawidłowy typ wykresu." }, { status: 400 });
     }
 
-    const chart = await createVizDashboardChart(dashboardId, body);
+    const chart = await createVizDashboardChart(dashboardId, { ...body, config });
     return NextResponse.json({ chart }, { status: 201 });
   } catch (error) {
     if (error instanceof HttpError) {
@@ -85,7 +87,14 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Brak identyfikatora wykresu." }, { status: 400 });
     }
 
-    const chart = await updateVizDashboardChart(body.id, body);
+    if (body.chartType && !VIZ_CHART_TYPES.includes(body.chartType)) {
+      return NextResponse.json({ error: "Nieprawidłowy typ wykresu." }, { status: 400 });
+    }
+
+    const chart = await updateVizDashboardChart(body.id, {
+      ...body,
+      config: body.config ? normalizeChartConfig(body.config) : undefined,
+    });
     return NextResponse.json({ chart });
   } catch (error) {
     if (error instanceof HttpError) {
