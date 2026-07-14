@@ -91,6 +91,16 @@ export type VizAlarmRuleInput = {
   sortOrder?: number;
 };
 
+export type VizAlarmAcknowledgement = {
+  id: string;
+  dashboardId: string;
+  projectId: string;
+  ruleId: string;
+  acknowledgedBy: string;
+  acknowledgedAt: string;
+  note: string | null;
+};
+
 export type VizAlarmEvaluation = {
   ruleId: string;
   ruleName: string;
@@ -99,4 +109,5 @@ export type VizAlarmEvaluation = {
   numericValue: number;
   thresholdNumeric: number;
   condition: VizAlarmCondition;
+  acknowledgement?: VizAlarmAcknowledgement | null;
 };

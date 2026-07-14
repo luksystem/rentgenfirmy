@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   INSPECTION_STATUS_LABELS,
@@ -151,6 +152,9 @@ function renderStoreTabContent({
           snapshot={snapshot}
           isLoading={isLoadingLive}
           dashboardId={dashboardId}
+          projectId={projectId}
+          canAcknowledge={permissions?.acknowledgeAlarms === true}
+          onAcknowledged={onSetpointSent}
         />
       );
     case "Energia":
@@ -330,11 +334,41 @@ function VizStoreAlarmsTab({
   snapshot,
   isLoading,
   dashboardId,
+  projectId,
+  canAcknowledge,
+  onAcknowledged,
 }: {
   snapshot: VizStoreLiveSnapshot | null;
   isLoading: boolean;
   dashboardId: string;
+  projectId: string;
+  canAcknowledge: boolean;
+  onAcknowledged: () => void;
 }) {
+  const [pendingRuleId, setPendingRuleId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function acknowledgeRule(ruleId: string) {
+    setPendingRuleId(ruleId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/viz/dashboards/${dashboardId}/alarms/acknowledge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, ruleId }),
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(payload.error ?? "Nie udało się potwierdzić alarmu.");
+      }
+      onAcknowledged();
+    } catch (ackError) {
+      setError(ackError instanceof Error ? ackError.message : "Błąd potwierdzania.");
+    } finally {
+      setPendingRuleId(null);
+    }
+  }
+
   if (isLoading) {
     return (
       <Card className="flex items-center gap-2 p-6 text-sm text-muted">
@@ -348,6 +382,7 @@ function VizStoreAlarmsTab({
     <div className="space-y-4">
       <Card className="p-5">
         <h3 className="mb-3 font-semibold">Aktywne reguły dashboardu</h3>
+        {error ? <p className="mb-3 text-sm text-rose-300">{error}</p> : null}
         {!snapshot?.activeAlarms?.length ? (
           <p className="text-sm text-muted">
             Brak aktywnych reguł progów dla tego sklepu. Alarmy z telemetrii Loxone nadal mogą
@@ -358,15 +393,42 @@ function VizStoreAlarmsTab({
             {snapshot.activeAlarms.map((alarm) => (
               <div
                 key={alarm.ruleId}
-                className="rounded-xl border border-border bg-surface-muted/40 px-3 py-2 text-sm"
+                className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border bg-surface-muted/40 px-3 py-2 text-sm"
               >
-                <p className="font-medium">
-                  {alarm.ruleName} · {alarm.severity === "alarm" ? "Alarm" : "Ostrzeżenie"}
-                </p>
-                <p className="text-muted">
-                  {alarm.roleCode}: {alarm.numericValue}{" "}
-                  {VIZ_ALARM_CONDITION_LABELS[alarm.condition]} {alarm.thresholdNumeric}
-                </p>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">
+                      {alarm.ruleName} · {alarm.severity === "alarm" ? "Alarm" : "Ostrzeżenie"}
+                    </p>
+                    {alarm.acknowledgement ? <Badge tone="active">Potwierdzony</Badge> : null}
+                  </div>
+                  <p className="text-muted">
+                    {alarm.roleCode}: {alarm.numericValue}{" "}
+                    {VIZ_ALARM_CONDITION_LABELS[alarm.condition]} {alarm.thresholdNumeric}
+                  </p>
+                  {alarm.acknowledgement ? (
+                    <p className="mt-1 text-xs text-muted">
+                      Potwierdzono{" "}
+                      {new Date(alarm.acknowledgement.acknowledgedAt).toLocaleString("pl-PL")}
+                    </p>
+                  ) : null}
+                </div>
+                {canAcknowledge && !alarm.acknowledgement ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={pendingRuleId === alarm.ruleId}
+                    onClick={() => void acknowledgeRule(alarm.ruleId)}
+                  >
+                    {pendingRuleId === alarm.ruleId ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4" />
+                    )}
+                    Potwierdź
+                  </Button>
+                ) : null}
               </div>
             ))}
           </div>

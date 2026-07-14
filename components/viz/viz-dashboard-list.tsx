@@ -10,6 +10,7 @@ import { VizCreateDashboardDialog } from "@/components/viz/viz-create-dashboard-
 import { VIZ_DASHBOARD_STATUS_LABELS, type VizDashboardStatus } from "@/lib/viz/types";
 import { useVizStore } from "@/store/viz-store";
 import { useAppStore } from "@/store/app-store";
+import { useAuthStore } from "@/store/auth-store";
 
 function statusTone(status: VizDashboardStatus): "active" | "waiting" | "closed" {
   if (status === "active") return "active";
@@ -24,7 +25,14 @@ export function VizDashboardList() {
   const error = useVizStore((s) => s.error);
   const ensure = useVizStore((s) => s.hydrate);
   const clients = useAppStore((s) => s.clients);
+  const profile = useAuthStore((s) => s.profile);
   const [createOpen, setCreateOpen] = useState(false);
+
+  const canCreateDashboard =
+    profile?.role === "administrator" ||
+    profile?.role === "manager" ||
+    profile?.role === "pracownik" ||
+    profile?.role === "podwykonawca";
 
   const loading = isLoading && !hydrated;
 
@@ -56,10 +64,12 @@ export function VizDashboardList() {
         <p className="text-sm text-muted">
           {loading ? "Ładowanie dashboardów…" : `${dashboards.length} dashboardów`}
         </p>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Nowy dashboard
-        </Button>
+        {canCreateDashboard ? (
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Nowy dashboard
+          </Button>
+        ) : null}
       </div>
 
       {loading ? (
@@ -73,13 +83,17 @@ export function VizDashboardList() {
           <div>
             <p className="font-medium text-foreground">Brak dashboardów</p>
             <p className="mt-1 max-w-md text-sm text-muted">
-              Utwórz pierwszy dashboard BMS, wybierz szablon Decathlon i przypisz projekty sklepów.
+              {canCreateDashboard
+                ? "Utwórz pierwszy dashboard BMS, wybierz szablon Decathlon i przypisz projekty sklepów."
+                : "Nie masz jeszcze przypisanych dashboardów. Skontaktuj się z administratorem Luksystem."}
             </p>
           </div>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Utwórz dashboard
-          </Button>
+          {canCreateDashboard ? (
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Utwórz dashboard
+            </Button>
+          ) : null}
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -141,7 +155,9 @@ export function VizDashboardList() {
         </div>
       )}
 
-      <VizCreateDashboardDialog open={createOpen} onOpenChange={setCreateOpen} />
+      {canCreateDashboard ? (
+        <VizCreateDashboardDialog open={createOpen} onOpenChange={setCreateOpen} />
+      ) : null}
     </>
   );
 }

@@ -10,6 +10,11 @@ import {
   fetchActiveWorkProjectIds,
   listVizAlarmRules,
 } from "@/lib/viz/viz-alarm-rules-server";
+import {
+  attachAlarmAcknowledgements,
+  pruneStaleVizAlarmAcknowledgements,
+} from "@/lib/viz/viz-alarm-acknowledgements-server";
+import { countUnacknowledgedAlarms } from "@/lib/viz/alarm-display";
 import type { VizDataQuality, VizVariableMapping } from "@/lib/viz/types";
 import { listVizDashboardProjects, listVizVariableMappings } from "@/lib/supabase/viz-server";
 
@@ -292,14 +297,19 @@ export async function getVizDashboardLiveSnapshots(dashboardId: string) {
   const energyFromSnapshots = aggregateEnergyFromSnapshots(snapshots);
   const invoiceCount = await countVizEnergyInvoices(dashboardId);
 
+  const activeAcknowledgements = await pruneStaleVizAlarmAcknowledgements(dashboardId, snapshots);
+  const enrichedSnapshots = attachAlarmAcknowledgements(snapshots, activeAcknowledgements);
+  const unacknowledgedAlarmCount = countUnacknowledgedAlarms(enrichedSnapshots);
+
   return {
-    snapshots,
+    snapshots: enrichedSnapshots,
     kpi: {
-      storeCount: snapshots.length,
+      storeCount: enrichedSnapshots.length,
       onlineCount,
       offlineCount,
       alarmCount,
-      openServiceRequests: snapshots.reduce((sum, s) => sum + s.openServiceRequests, 0),
+      unacknowledgedAlarmCount,
+      openServiceRequests: enrichedSnapshots.reduce((sum, s) => sum + s.openServiceRequests, 0),
       avgTemperature,
       storesWithEnergyReading: energyFromSnapshots.storesWithEnergyReading,
       totalEnergyKwh: energyFromSnapshots.totalEnergyKwh,

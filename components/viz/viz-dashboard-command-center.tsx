@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { VizBulkSetpointControl } from "@/components/viz/viz-bulk-setpoint-control";
+import { VizActiveAlarmsPanel } from "@/components/viz/viz-active-alarms-panel";
 import { VizChartRenderer } from "@/components/viz/viz-chart-renderer";
 import { VizDashboardMap } from "@/components/viz/viz-dashboard-map";
 import { VizEnergyTrendWidget } from "@/components/viz/viz-energy-trend-widget";
@@ -31,6 +32,7 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
   const ensureLive = useVizDashboardCacheStore((s) => s.ensureLive);
   const ensureSession = useVizDashboardCacheStore((s) => s.ensureSession);
   const ensureWidgetCharts = useVizDashboardCacheStore((s) => s.ensureWidgetCharts);
+  const invalidateLive = useVizDashboardCacheStore((s) => s.invalidateLive);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -126,6 +128,16 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
         onSuccess={() => void ensureLive(dashboardId, { force: true, showLoading: false })}
       />
 
+      <VizActiveAlarmsPanel
+        dashboardId={dashboardId}
+        snapshots={snapshots}
+        canAcknowledge={session?.permissions.acknowledgeAlarms === true}
+        onAcknowledged={() => {
+          invalidateLive(dashboardId);
+          void ensureLive(dashboardId, { force: true, showLoading: false });
+        }}
+      />
+
       <VizDashboardMap dashboardId={dashboardId} snapshots={snapshots} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -139,6 +151,10 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
           }
         />
         <KpiCard label="Z alarmami" value={String(kpi.alarmCount)} />
+        <KpiCard
+          label="Alarmy bez potwierdzenia"
+          value={String(kpi.unacknowledgedAlarmCount)}
+        />
         <KpiCard label="Otwarte zgłoszenia" value={String(kpi.openServiceRequests)} />
         <KpiCard
           label="Energia (suma odczytów)"

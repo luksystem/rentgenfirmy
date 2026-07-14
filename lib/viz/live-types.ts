@@ -5,6 +5,7 @@ export type VizDashboardLiveKpi = {
   onlineCount: number;
   offlineCount: number;
   alarmCount: number;
+  unacknowledgedAlarmCount: number;
   openServiceRequests: number;
   avgTemperature: number | null;
   storesWithEnergyReading: number;

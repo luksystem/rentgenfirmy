@@ -836,6 +836,17 @@ export type VizAlarmRuleRow = {
   updated_at: string;
 };
 
+export type VizAlarmAcknowledgementRow = {
+  id: string;
+  dashboard_id: string;
+  project_id: string;
+  rule_id: string;
+  acknowledged_by: string;
+  acknowledged_at: string;
+  note: string | null;
+  created_at: string;
+};
+
 export type VizControlCommandRow = {
   id: string;
   dashboard_id: string;
@@ -2924,6 +2935,16 @@ export type Database = {
         Insert: Partial<VizAlarmRuleRow> &
           Pick<VizAlarmRuleRow, "dashboard_id" | "role_code" | "name" | "threshold_numeric">;
         Update: Partial<VizAlarmRuleRow>;
+        Relationships: [];
+      };
+      viz_alarm_acknowledgements: {
+        Row: VizAlarmAcknowledgementRow;
+        Insert: Partial<VizAlarmAcknowledgementRow> &
+          Pick<
+            VizAlarmAcknowledgementRow,
+            "dashboard_id" | "project_id" | "rule_id" | "acknowledged_by"
+          >;
+        Update: Partial<VizAlarmAcknowledgementRow>;
         Relationships: [];
       };
       viz_control_commands: {
