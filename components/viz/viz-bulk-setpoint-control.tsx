@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -29,10 +29,12 @@ export function VizBulkSetpointControl({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const syncedInitialRef = useRef(false);
 
   useEffect(() => {
-    if (avgSetpoint != null) {
+    if (!syncedInitialRef.current && avgSetpoint != null) {
       setValue(avgSetpoint);
+      syncedInitialRef.current = true;
     }
   }, [avgSetpoint]);
 

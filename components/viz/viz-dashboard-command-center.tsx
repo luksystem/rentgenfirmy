@@ -42,11 +42,12 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
       setError(null);
 
       try {
+        const hasCachedLive = Boolean(useVizDashboardCacheStore.getState().getLive(dashboardId));
         const data = await ensureLive(dashboardId, {
           force: refresh,
-          showLoading: !live,
+          showLoading: refresh ? false : !hasCachedLive,
         });
-        if (!data && !live) {
+        if (!data && !hasCachedLive) {
           throw new Error("Nie udało się pobrać danych dashboardu.");
         }
       } catch (loadError) {
@@ -55,7 +56,7 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
         setIsRefreshing(false);
       }
     },
-    [dashboardId, ensureLive, live],
+    [dashboardId, ensureLive],
   );
 
   useEffect(() => {

@@ -66,8 +66,8 @@ async function fetchWidgetCharts(dashboardId: string) {
   if (!response.ok) {
     return [];
   }
-  const data = (await response.json()) as { charts: VizDashboardChart[] };
-  return data.charts.filter((chart) => chart.isWidget);
+  const data = (await response.json()) as { charts?: VizDashboardChart[] };
+  return (data.charts ?? []).filter((chart) => chart.isWidget);
 }
 
 export const useVizDashboardCacheStore = create<VizDashboardCacheStore>((set, get) => ({
@@ -171,7 +171,7 @@ export const useVizDashboardCacheStore = create<VizDashboardCacheStore>((set, ge
     const force = options?.force ?? false;
     const cached = get().widgetChartsByDashboard[dashboardId];
 
-    if (cached.length && !force) {
+    if (cached !== undefined && !force) {
       return cached;
     }
 

@@ -68,14 +68,15 @@ export function VizStoreDetailTabs({ dashboardId, projectId, project }: VizStore
 
   useEffect(() => {
     void ensureSession(dashboardId);
-    void ensureLive(dashboardId, { showLoading: !live });
+    const hasCachedLive = Boolean(useVizDashboardCacheStore.getState().getLive(dashboardId));
+    void ensureLive(dashboardId, { showLoading: !hasCachedLive });
 
     const interval = window.setInterval(() => {
       void ensureLive(dashboardId, { force: true, showLoading: false });
     }, LIVE_POLL_MS);
 
     return () => window.clearInterval(interval);
-  }, [dashboardId, ensureLive, ensureSession, live]);
+  }, [dashboardId, ensureLive, ensureSession]);
 
   return (
     <div className="space-y-4">
