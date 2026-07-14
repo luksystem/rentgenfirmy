@@ -3,6 +3,8 @@ import { listLatestTelemetryForVariables } from "@/lib/supabase/project-integrat
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { formatMappedValue, minutesSince, resolveVizStoreStatus } from "@/lib/viz/store-status";
 import type { VizAlarmEvaluation } from "@/lib/viz/project-contact-types";
+import { aggregateEnergyFromSnapshots } from "@/lib/viz/energy-kpi";
+import { countVizEnergyInvoices } from "@/lib/viz/viz-energy-server";
 import {
   evaluateProjectAlarmRules,
   fetchActiveWorkProjectIds,
@@ -287,6 +289,9 @@ export async function getVizDashboardLiveSnapshots(dashboardId: string) {
       ? temperatureValues.reduce((sum, value) => sum + value, 0) / temperatureValues.length
       : null;
 
+  const energyFromSnapshots = aggregateEnergyFromSnapshots(snapshots);
+  const invoiceCount = await countVizEnergyInvoices(dashboardId);
+
   return {
     snapshots,
     kpi: {
@@ -296,6 +301,10 @@ export async function getVizDashboardLiveSnapshots(dashboardId: string) {
       alarmCount,
       openServiceRequests: snapshots.reduce((sum, s) => sum + s.openServiceRequests, 0),
       avgTemperature,
+      storesWithEnergyReading: energyFromSnapshots.storesWithEnergyReading,
+      totalEnergyKwh: energyFromSnapshots.totalEnergyKwh,
+      avgEnergyKwh: energyFromSnapshots.avgEnergyKwh,
+      energyInvoiceCount: invoiceCount,
     },
   };
 }

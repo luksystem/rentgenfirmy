@@ -76,6 +76,9 @@ export async function listVizDashboardCharts(dashboardId: string) {
     .order("name");
 
   if (error) {
+    if (error.message.toLowerCase().includes("does not exist")) {
+      return [];
+    }
     throw new Error(error.message);
   }
 

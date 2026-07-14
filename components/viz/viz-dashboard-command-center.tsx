@@ -10,6 +10,7 @@ import { VizChartRenderer } from "@/components/viz/viz-chart-renderer";
 import { VizDashboardMap } from "@/components/viz/viz-dashboard-map";
 import type { VizDashboardChart } from "@/lib/viz/chart-types";
 import type { VizStoreLiveSnapshot } from "@/lib/viz/viz-telemetry-server";
+import { formatEnergyKwh } from "@/lib/viz/energy-kpi";
 
 type VizDashboardCommandCenterProps = {
   dashboardId: string;
@@ -24,6 +25,10 @@ type LiveResponse = {
     alarmCount: number;
     openServiceRequests: number;
     avgTemperature: number | null;
+    storesWithEnergyReading: number;
+    totalEnergyKwh: number | null;
+    avgEnergyKwh: number | null;
+    energyInvoiceCount: number;
   };
 };
 
@@ -144,6 +149,15 @@ export function VizDashboardCommandCenter({ dashboardId }: VizDashboardCommandCe
         />
         <KpiCard label="Z alarmami" value={String(kpi.alarmCount)} />
         <KpiCard label="Otwarte zgłoszenia" value={String(kpi.openServiceRequests)} />
+        <KpiCard
+          label="Energia (suma odczytów)"
+          value={formatEnergyKwh(kpi.totalEnergyKwh)}
+        />
+        <KpiCard
+          label="Sklepy z odczytem energii"
+          value={String(kpi.storesWithEnergyReading)}
+        />
+        <KpiCard label="Faktury energii" value={String(kpi.energyInvoiceCount)} />
       </div>
 
       <Card className="p-5">

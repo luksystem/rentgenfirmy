@@ -22,6 +22,9 @@ import { VizProjectContactsPanel } from "@/components/viz/viz-project-contacts-p
 import { VizSetpointControl } from "@/components/viz/viz-setpoint-control";
 import { VizEnergyPanel } from "@/components/viz/viz-energy-panel";
 import { VizControlHistoryPanel } from "@/components/viz/viz-control-history-panel";
+import { VizStoreVariablesPanel } from "@/components/viz/viz-store-variables-panel";
+import { VizStoreChartsPanel } from "@/components/viz/viz-store-charts-panel";
+import { VizStoreSystemsPanel } from "@/components/viz/viz-store-systems-panel";
 import type { VizDashboardPermissions } from "@/lib/viz/types";
 
 const STORE_TABS = [
@@ -49,6 +52,7 @@ export function VizStoreDetailTabs({ dashboardId, project }: VizStoreDetailTabsP
   const [activeTab, setActiveTab] = useState<StoreTab>("Podsumowanie");
   const [snapshot, setSnapshot] = useState<VizStoreLiveSnapshot | null>(null);
   const [permissions, setPermissions] = useState<VizDashboardPermissions | null>(null);
+  const [canManage, setCanManage] = useState(false);
   const [isLoadingLive, setIsLoadingLive] = useState(true);
 
   const projectId = project?.projectId ?? null;
@@ -80,8 +84,12 @@ export function VizStoreDetailTabs({ dashboardId, project }: VizStoreDetailTabsP
     async function loadSession() {
       const response = await fetch(`/api/viz/dashboards/${dashboardId}/session`);
       if (response.ok) {
-        const data = (await response.json()) as { permissions: VizDashboardPermissions };
+        const data = (await response.json()) as {
+          permissions: VizDashboardPermissions;
+          canManage?: boolean;
+        };
         setPermissions(data.permissions);
+        setCanManage(data.canManage === true);
       }
     }
     void loadSession();
@@ -134,6 +142,21 @@ export function VizStoreDetailTabs({ dashboardId, project }: VizStoreDetailTabsP
         />
       ) : activeTab === "Historia sterowania" && projectId ? (
         <VizControlHistoryPanel dashboardId={dashboardId} projectId={projectId} />
+      ) : activeTab === "Zmienne" && projectId ? (
+        <VizStoreVariablesPanel
+          dashboardId={dashboardId}
+          projectId={projectId}
+          snapshot={snapshot}
+          isLoadingSnapshot={isLoadingLive}
+        />
+      ) : activeTab === "Wykresy" && projectId ? (
+        <VizStoreChartsPanel dashboardId={dashboardId} projectId={projectId} />
+      ) : activeTab === "Potencjał rozbudowy" && projectId ? (
+        <VizStoreSystemsPanel
+          dashboardId={dashboardId}
+          projectId={projectId}
+          canEdit={canManage}
+        />
       ) : (
         <Card className="p-6 text-sm text-muted">
           <p className="font-medium text-foreground">{activeTab}</p>

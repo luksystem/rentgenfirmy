@@ -105,9 +105,26 @@ export async function listVizEnergyInvoices(input: {
     }),
   );
 
-  return rows.map((row, index) =>
+  return (data ?? []).map((row, index) =>
     rowToInvoice(row, documentById.get(row.document_id), urls[index]),
   );
+}
+
+export async function countVizEnergyInvoices(dashboardId: string) {
+  const supabase = getSupabaseAdmin();
+  const { count, error } = await supabase
+    .from("viz_energy_invoices")
+    .select("id", { count: "exact", head: true })
+    .eq("dashboard_id", dashboardId);
+
+  if (error) {
+    if (error.message.toLowerCase().includes("does not exist")) {
+      return 0;
+    }
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
 }
 
 export async function uploadVizEnergyInvoice(input: {

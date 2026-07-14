@@ -565,6 +565,9 @@ export async function listVizProjectSystemStatuses(dashboardId: string, projectI
 
   const { data, error } = await query;
   if (error) {
+    if (error.message.toLowerCase().includes("does not exist")) {
+      return [];
+    }
     throw new Error(error.message);
   }
 
