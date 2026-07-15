@@ -108,9 +108,12 @@ export function ReviewMeetingWizard({ initialBoardId }: { initialBoardId?: strin
     };
   }, [boardId, activeGoals, profile?.id]);
 
-  const effectiveMinutes = customMinutes.trim()
-    ? Math.max(15, Number(customMinutes) || 15)
-    : plannedMinutes;
+  const effectiveMinutes = (() => {
+    if (!customMinutes.trim()) return plannedMinutes;
+    const parsed = Number(customMinutes);
+    if (!Number.isFinite(parsed)) return plannedMinutes;
+    return Math.max(15, parsed);
+  })();
 
   const allocation = useMemo(() => {
     return allocateReviewMeetingSlots({
@@ -271,6 +274,15 @@ export function ReviewMeetingWizard({ initialBoardId }: { initialBoardId?: strin
                   value={customMinutes}
                   onChange={(e) => setCustomMinutes(e.target.value)}
                   placeholder="np. 75"
+                  onBlur={() => {
+                    if (customMinutes.trim() === "") return;
+                    const parsed = Number(customMinutes);
+                    if (!Number.isFinite(parsed)) {
+                      setCustomMinutes("");
+                      return;
+                    }
+                    setCustomMinutes(String(Math.max(15, parsed)));
+                  }}
                 />
               </Field>
             </div>
@@ -323,9 +335,23 @@ export function ReviewMeetingWizard({ initialBoardId }: { initialBoardId?: strin
                 <Input
                   type="number"
                   min={15}
-                  value={customMinutes || plannedMinutes}
-                  onChange={(e) => {
-                    setCustomMinutes(e.target.value);
+                  value={customMinutes}
+                  placeholder={String(plannedMinutes)}
+                  onChange={(e) => setCustomMinutes(e.target.value)}
+                  onFocus={() => {
+                    if (customMinutes === "") setCustomMinutes(String(plannedMinutes));
+                  }}
+                  onBlur={() => {
+                    if (customMinutes.trim() === "") {
+                      setCustomMinutes(String(plannedMinutes));
+                      return;
+                    }
+                    const parsed = Number(customMinutes);
+                    if (!Number.isFinite(parsed)) {
+                      setCustomMinutes(String(plannedMinutes));
+                      return;
+                    }
+                    setCustomMinutes(String(Math.max(15, parsed)));
                   }}
                 />
               </Field>

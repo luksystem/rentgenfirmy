@@ -19,6 +19,7 @@ import {
 import { fetchGoalKpis } from "@/lib/supabase/goal-repository";
 import { fetchGoalMethodologyByCode } from "@/lib/supabase/goal-methodology-repository";
 import { ReviewMeetingTaskForm } from "@/components/goals/review-meeting/review-meeting-task-form";
+import { useDraftNumber } from "@/hooks/use-draft-number";
 import { cn } from "@/lib/utils";
 
 const SUCCESS_FIELD_HINTS = [
@@ -78,6 +79,11 @@ export function ReviewMeetingGoalPanel({
 }) {
   const [methodology, setMethodology] = useState<GoalMethodology | null>(null);
   const [kpis, setKpis] = useState<GoalKpi[]>([]);
+  const progressInput = useDraftNumber(progressPercent, onProgressChange, {
+    min: 0,
+    max: 100,
+    emptyFallback: 0,
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -145,8 +151,9 @@ export function ReviewMeetingGoalPanel({
             type="number"
             min={0}
             max={100}
-            value={progressPercent}
-            onChange={(e) => onProgressChange(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+            value={progressInput.value}
+            onChange={(e) => progressInput.onChange(e.target.value)}
+            onBlur={progressInput.onBlur}
           />
         </Field>
       </div>

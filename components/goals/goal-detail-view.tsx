@@ -10,6 +10,7 @@ import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { GoalAiReviewPanel } from "@/components/goals/goal-ai-review-panel";
 import { GoalLinksPanel } from "@/components/goals/goal-links-panel";
 import { UserIdentity } from "@/components/user-avatar";
+import { useDraftNumber } from "@/hooks/use-draft-number";
 import { getUserDisplayName, hasFullAppAccess, isAdministratorRole, type UserProfile } from "@/lib/auth/types";
 import {
   GOAL_LEVEL_LABELS,
@@ -281,6 +282,11 @@ function OverviewTab({
   const [ownerId, setOwnerId] = useState(goal.ownerId ?? "");
   const [status, setStatus] = useState<GoalStatus>(goal.status);
   const [progress, setProgress] = useState(goal.progressPercent);
+  const progressInput = useDraftNumber(progress, setProgress, {
+    min: 0,
+    max: 100,
+    emptyFallback: 0,
+  });
   const [periodStart, setPeriodStart] = useState(goal.periodStart.slice(0, 10));
   const [periodEnd, setPeriodEnd] = useState(goal.periodEnd.slice(0, 10));
   const [note, setNote] = useState("");
@@ -448,8 +454,9 @@ function OverviewTab({
                   type="number"
                   min={0}
                   max={100}
-                  value={progress}
-                  onChange={(event) => setProgress(Number(event.target.value))}
+                  value={progressInput.value}
+                  onChange={(event) => progressInput.onChange(event.target.value)}
+                  onBlur={progressInput.onBlur}
                 />
               </Field>
             </div>
