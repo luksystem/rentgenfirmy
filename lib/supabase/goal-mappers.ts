@@ -8,6 +8,9 @@ import type {
   GoalLinkRow,
   GoalMethodologyRow,
   GoalParticipantRow,
+  GoalReviewMeetingActionRow,
+  GoalReviewMeetingItemRow,
+  GoalReviewMeetingRow,
   GoalReviewRow,
   GoalRow,
   GoalUpdateRow,
@@ -29,6 +32,12 @@ import type {
   GoalPeriodType,
   GoalPriority,
   GoalReview,
+  GoalReviewMeeting,
+  GoalReviewMeetingAction,
+  GoalReviewMeetingItem,
+  GoalReviewMeetingItemStatus,
+  GoalReviewMeetingStatus,
+  GoalReviewOutcome,
   GoalSettlementStatus,
   GoalStatus,
   GoalUpdateEntry,
@@ -288,6 +297,63 @@ export function rowToGoalAiSuggestion(row: GoalAiSuggestionRow): GoalAiSuggestio
     structure,
     vagueWarning: row.vague_warning,
     accepted: row.accepted,
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+  };
+}
+
+function parseParticipantIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is string => typeof entry === "string" && entry.length > 0);
+}
+
+export function rowToGoalReviewMeeting(row: GoalReviewMeetingRow): GoalReviewMeeting {
+  return {
+    id: row.id,
+    boardId: row.board_id,
+    facilitatorId: row.facilitator_id,
+    plannedMinutes: row.planned_minutes,
+    summaryBufferSeconds: row.summary_buffer_seconds,
+    status: row.status as GoalReviewMeetingStatus,
+    participantIds: parseParticipantIds(row.participant_ids),
+    aiSummary: row.ai_summary,
+    startedAt: row.started_at,
+    completedAt: row.completed_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function rowToGoalReviewMeetingItem(row: GoalReviewMeetingItemRow): GoalReviewMeetingItem {
+  return {
+    id: row.id,
+    meetingId: row.meeting_id,
+    goalId: row.goal_id,
+    sortOrder: row.sort_order,
+    plannedSeconds: row.planned_seconds,
+    deepDive: row.deep_dive,
+    actualSeconds: row.actual_seconds,
+    remainingSeconds: row.remaining_seconds,
+    outcome: (row.outcome as GoalReviewOutcome | null) ?? null,
+    notes: row.notes ?? "",
+    status: row.status as GoalReviewMeetingItemStatus,
+    goalReviewId: row.goal_review_id,
+    startedAt: row.started_at,
+    completedAt: row.completed_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function rowToGoalReviewMeetingAction(row: GoalReviewMeetingActionRow): GoalReviewMeetingAction {
+  return {
+    id: row.id,
+    meetingId: row.meeting_id,
+    goalId: row.goal_id,
+    itemId: row.item_id,
+    initiativeId: row.initiative_id,
+    kanbanTaskId: row.kanban_task_id,
+    title: row.title,
     createdBy: row.created_by,
     createdAt: row.created_at,
   };

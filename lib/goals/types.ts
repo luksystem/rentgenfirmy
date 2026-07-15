@@ -93,6 +93,76 @@ export const GOAL_REVIEW_OUTCOME_LABELS: Record<GoalReviewOutcome, string> = {
   off_track: "Poza planem",
 };
 
+export const GOAL_REVIEW_MEETING_STATUSES = [
+  "draft",
+  "in_progress",
+  "completed",
+  "cancelled",
+] as const;
+export type GoalReviewMeetingStatus = (typeof GOAL_REVIEW_MEETING_STATUSES)[number];
+
+export const GOAL_REVIEW_MEETING_STATUS_LABELS: Record<GoalReviewMeetingStatus, string> = {
+  draft: "Szkic",
+  in_progress: "W trakcie",
+  completed: "Zakończone",
+  cancelled: "Anulowane",
+};
+
+export const GOAL_REVIEW_MEETING_ITEM_STATUSES = ["pending", "active", "done", "skipped"] as const;
+export type GoalReviewMeetingItemStatus = (typeof GOAL_REVIEW_MEETING_ITEM_STATUSES)[number];
+
+export type GoalReviewMeeting = {
+  id: string;
+  boardId: string;
+  facilitatorId: string | null;
+  plannedMinutes: number;
+  summaryBufferSeconds: number;
+  status: GoalReviewMeetingStatus;
+  participantIds: string[];
+  aiSummary: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GoalReviewMeetingItem = {
+  id: string;
+  meetingId: string;
+  goalId: string;
+  sortOrder: number;
+  plannedSeconds: number;
+  deepDive: boolean;
+  actualSeconds: number | null;
+  remainingSeconds: number | null;
+  outcome: GoalReviewOutcome | null;
+  notes: string;
+  status: GoalReviewMeetingItemStatus;
+  goalReviewId: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GoalReviewMeetingAction = {
+  id: string;
+  meetingId: string;
+  goalId: string;
+  itemId: string | null;
+  initiativeId: string | null;
+  kanbanTaskId: string | null;
+  title: string;
+  createdBy: string | null;
+  createdAt: string;
+};
+
+export type GoalReviewMeetingWithDetails = GoalReviewMeeting & {
+  items: GoalReviewMeetingItem[];
+  actions: GoalReviewMeetingAction[];
+  boardName?: string;
+};
+
 export const GOAL_BOARD_KIND_VISIBILITIES = ["all", "admin_only"] as const;
 export type GoalBoardKindVisibility = (typeof GOAL_BOARD_KIND_VISIBILITIES)[number];
 

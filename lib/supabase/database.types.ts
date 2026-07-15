@@ -2021,6 +2021,52 @@ export type GoalLinkRow = {
   created_at: string;
 };
 
+export type GoalReviewMeetingRow = {
+  id: string;
+  board_id: string;
+  facilitator_id: string | null;
+  planned_minutes: number;
+  summary_buffer_seconds: number;
+  status: string;
+  participant_ids: unknown;
+  ai_summary: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GoalReviewMeetingItemRow = {
+  id: string;
+  meeting_id: string;
+  goal_id: string;
+  sort_order: number;
+  planned_seconds: number;
+  deep_dive: boolean;
+  actual_seconds: number | null;
+  remaining_seconds: number | null;
+  outcome: string | null;
+  notes: string;
+  status: string;
+  goal_review_id: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GoalReviewMeetingActionRow = {
+  id: string;
+  meeting_id: string;
+  goal_id: string;
+  item_id: string | null;
+  initiative_id: string | null;
+  kanban_task_id: string | null;
+  title: string;
+  created_by: string | null;
+  created_at: string;
+};
+
 export type GoalAiSuggestionRow = {
   id: string;
   goal_id: string | null;
@@ -2808,6 +2854,27 @@ export type Database = {
         Row: GoalAiSuggestionRow;
         Insert: Partial<GoalAiSuggestionRow> & Pick<GoalAiSuggestionRow, "input_description">;
         Update: Partial<GoalAiSuggestionRow>;
+        Relationships: [];
+      };
+      goal_review_meetings: {
+        Row: GoalReviewMeetingRow;
+        Insert: Partial<GoalReviewMeetingRow> &
+          Pick<GoalReviewMeetingRow, "board_id" | "planned_minutes">;
+        Update: Partial<GoalReviewMeetingRow>;
+        Relationships: [];
+      };
+      goal_review_meeting_items: {
+        Row: GoalReviewMeetingItemRow;
+        Insert: Partial<GoalReviewMeetingItemRow> &
+          Pick<GoalReviewMeetingItemRow, "meeting_id" | "goal_id" | "planned_seconds">;
+        Update: Partial<GoalReviewMeetingItemRow>;
+        Relationships: [];
+      };
+      goal_review_meeting_actions: {
+        Row: GoalReviewMeetingActionRow;
+        Insert: Partial<GoalReviewMeetingActionRow> &
+          Pick<GoalReviewMeetingActionRow, "meeting_id" | "goal_id" | "title">;
+        Update: Partial<GoalReviewMeetingActionRow>;
         Relationships: [];
       };
       viz_dashboard_templates: {

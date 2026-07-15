@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Eye, EyeOff, LayoutGrid, List, Loader2, RefreshCw, Target } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   KanbanDropPlaceholder,
@@ -257,6 +258,9 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
               <RefreshCw className="mr-2 h-4 w-4" />
             )}
             Odśwież
+          </Button>
+          <Button type="button" variant="outline" size="sm" asChild>
+            <Link href={`/tablice-celow/przeglad?boardId=${boardId}`}>Przegląd celów</Link>
           </Button>
           <CreateGoalDialog boardId={boardId} />
         </div>

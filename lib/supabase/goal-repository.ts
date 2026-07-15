@@ -475,11 +475,16 @@ export async function addGoalInitiative(input: {
 export async function updateGoalInitiativeStatus(
   id: string,
   status: GoalInitiative["status"],
+  convertedTaskId?: string | null,
 ): Promise<GoalInitiative> {
   const supabase = getSupabase();
+  const payload: { status: string; converted_task_id?: string | null } = { status };
+  if (convertedTaskId !== undefined) {
+    payload.converted_task_id = convertedTaskId;
+  }
   const { data, error } = await supabase
     .from("goal_initiatives")
-    .update({ status })
+    .update(payload)
     .eq("id", id)
     .select("*")
     .single();
