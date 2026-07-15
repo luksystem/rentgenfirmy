@@ -241,17 +241,17 @@ export function VizChartRenderer({
           : "left"
         : undefined;
       const common = {
-        key: label,
         dataKey: label,
         ...(yAxisId ? { yAxisId } : {}),
       };
 
       if (chartType === "bar") {
-        return <Bar {...common} fill={color} />;
+        return <Bar key={label} {...common} fill={color} />;
       }
       if (chartType === "area") {
         return (
           <Area
+            key={label}
             {...common}
             type="monotone"
             stroke={color}
@@ -263,6 +263,7 @@ export function VizChartRenderer({
       }
       return (
         <Line
+          key={label}
           {...common}
           type="monotone"
           stroke={color}

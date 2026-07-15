@@ -5,7 +5,6 @@ import {
   rowToGoalReviewMeetingItem,
 } from "@/lib/supabase/goal-mappers";
 import type {
-  GoalReviewMeeting,
   GoalReviewMeetingAction,
   GoalReviewMeetingItem,
   GoalReviewMeetingItemStatus,

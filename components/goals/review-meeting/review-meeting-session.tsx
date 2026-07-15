@@ -129,9 +129,11 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
     }
   }, [activeItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Countdown timer
+  // Countdown timer — zależymy od id/status, nie całego obiektu (unika resetu przy re-fetch)
+  const activeItemId = activeItem?.id;
+  const activeItemStatus = activeItem?.status;
   useEffect(() => {
-    if (!activeItem || activeItem.status === "done") return;
+    if (!activeItemId || activeItemStatus === "done") return;
     const timer = setInterval(() => {
       setRemainingSeconds((prev) => {
         const next = Math.max(0, prev - 1);
@@ -144,7 +146,7 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [activeItem?.id, activeItem?.status]);
+  }, [activeItemId, activeItemStatus]);
 
   const persistNotes = useCallback(
     (value: string) => {
