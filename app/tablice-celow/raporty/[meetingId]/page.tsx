@@ -12,7 +12,7 @@ export default async function GoalReviewReportDetailPage({
       <PageHeader
         eyebrow="Raporty"
         title="Raport przeglądu celów"
-        description="Zarchiwizowane podsumowanie SI, notatki i zadania ze spotkania."
+        description="Zarchiwizowane podsumowanie AI, notatki i zadania ze spotkania."
       />
       <GoalReviewReportDetail meetingId={meetingId} />
     </>

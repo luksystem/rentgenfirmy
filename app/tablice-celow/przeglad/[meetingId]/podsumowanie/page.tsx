@@ -14,7 +14,7 @@ export default async function GoalReviewMeetingSummaryPage({
       <PageHeader
         eyebrow="Przegląd celów"
         title="Podsumowanie spotkania"
-        description="SI przygotuje raport z notatek, ocen i zadań — potem trafi do archiwum Raporty."
+        description="AI przygotuje raport z notatek, ocen i zadań — potem trafi do archiwum Raporty."
         action={
           <Link
             href="/tablice-celow/raporty"

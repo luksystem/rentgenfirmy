@@ -259,7 +259,12 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
             )}
             Odśwież
           </Button>
-          <Button type="button" variant="outline" size="sm" asChild>
+          <Button
+            type="button"
+            size="sm"
+            asChild
+            className="border-emerald-500/40 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 hover:text-emerald-200"
+          >
             <Link href={`/tablice-celow/przeglad?boardId=${boardId}`}>Przegląd celów</Link>
           </Button>
           <CreateGoalDialog boardId={boardId} />

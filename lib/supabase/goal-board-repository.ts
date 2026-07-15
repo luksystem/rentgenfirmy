@@ -1,7 +1,7 @@
 import { getSupabase } from "@/lib/supabase/client";
 import { rowToGoalBoard, rowToGoalBoardKind } from "@/lib/supabase/goal-mappers";
 import type { GoalBoardKindRow, GoalBoardRow } from "@/lib/supabase/database.types";
-import type { GoalBoard, GoalBoardKind } from "@/lib/goals/types";
+import type { GoalBoard, GoalBoardKind, GoalPeriodType } from "@/lib/goals/types";
 
 export async function fetchGoalBoardKinds(): Promise<GoalBoardKind[]> {
   const supabase = getSupabase();
@@ -170,12 +170,25 @@ export async function createGoalBoard(input: {
 
 export async function updateGoalBoard(
   id: string,
-  input: { name?: string; description?: string },
+  input: {
+    name?: string;
+    description?: string;
+    reviewFrequency?: GoalPeriodType | null;
+    reviewWeekday?: number | null;
+    reviewResponsibleId?: string | null;
+    reviewNotify?: boolean;
+  },
 ): Promise<GoalBoard> {
   const supabase = getSupabase();
   const payload: Partial<GoalBoardRow> = { updated_at: new Date().toISOString() };
   if (input.name !== undefined) payload.name = input.name.trim();
   if (input.description !== undefined) payload.description = input.description.trim();
+  if (input.reviewFrequency !== undefined) payload.review_frequency = input.reviewFrequency;
+  if (input.reviewWeekday !== undefined) payload.review_weekday = input.reviewWeekday;
+  if (input.reviewResponsibleId !== undefined) {
+    payload.review_responsible_id = input.reviewResponsibleId;
+  }
+  if (input.reviewNotify !== undefined) payload.review_notify = input.reviewNotify;
 
   const { data, error } = await supabase
     .from("goal_boards")

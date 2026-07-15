@@ -339,8 +339,23 @@ export async function addMeetingAction(input: {
 export async function completeGoalReviewMeeting(input: {
   meetingId: string;
   aiSummary: string;
+  actualDurationSeconds?: number | null;
 }): Promise<GoalReviewMeetingWithDetails> {
   const supabase = getSupabase();
+  const detailsBefore = await fetchGoalReviewMeetingWithDetails(input.meetingId);
+  const fromItems =
+    detailsBefore?.items.reduce((sum, item) => sum + (item.actualSeconds ?? 0), 0) ?? 0;
+  const fromWallClock =
+    detailsBefore?.startedAt
+      ? Math.max(
+          0,
+          Math.round((Date.now() - new Date(detailsBefore.startedAt).getTime()) / 1000),
+        )
+      : 0;
+  const actualDurationSeconds =
+    input.actualDurationSeconds ??
+    (fromItems > 0 ? fromItems : fromWallClock > 0 ? fromWallClock : null);
+
   const { error } = await supabase
     .from("goal_review_meetings")
     .update({
@@ -348,6 +363,7 @@ export async function completeGoalReviewMeeting(input: {
       ai_summary: input.aiSummary,
       completed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      actual_duration_seconds: actualDurationSeconds,
     })
     .eq("id", input.meetingId);
 

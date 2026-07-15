@@ -56,6 +56,14 @@ export function rowToGoalBoardKind(row: GoalBoardKindRow): GoalBoardKind {
 }
 
 export function rowToGoalBoard(row: GoalBoardRow): GoalBoard {
+  const frequency =
+    row.review_frequency === "daily" ||
+    row.review_frequency === "weekly" ||
+    row.review_frequency === "monthly" ||
+    row.review_frequency === "quarterly" ||
+    row.review_frequency === "annual"
+      ? row.review_frequency
+      : null;
   return {
     id: row.id,
     kind: row.kind,
@@ -64,6 +72,10 @@ export function rowToGoalBoard(row: GoalBoardRow): GoalBoard {
     createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    reviewFrequency: frequency,
+    reviewWeekday: row.review_weekday ?? null,
+    reviewResponsibleId: row.review_responsible_id ?? null,
+    reviewNotify: row.review_notify ?? true,
   };
 }
 
@@ -319,6 +331,7 @@ export function rowToGoalReviewMeeting(row: GoalReviewMeetingRow): GoalReviewMee
     aiSummary: row.ai_summary,
     startedAt: row.started_at,
     completedAt: row.completed_at,
+    actualDurationSeconds: row.actual_duration_seconds ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

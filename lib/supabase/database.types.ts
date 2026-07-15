@@ -1893,6 +1893,10 @@ export type GoalBoardRow = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  review_frequency: string | null;
+  review_weekday: number | null;
+  review_responsible_id: string | null;
+  review_notify: boolean;
 };
 
 export type GoalMethodologyRow = {
@@ -2032,6 +2036,7 @@ export type GoalReviewMeetingRow = {
   ai_summary: string | null;
   started_at: string | null;
   completed_at: string | null;
+  actual_duration_seconds: number | null;
   created_at: string;
   updated_at: string;
 };

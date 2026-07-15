@@ -22,6 +22,30 @@ function daysBetween(fromIso: string, toIso: string) {
   return (to - from) / (1000 * 60 * 60 * 24);
 }
 
+function isBoardReviewDueToday(input: {
+  frequency: string;
+  weekday: number | null;
+  todayWeekday: number;
+  todayDayOfMonth: number;
+}) {
+  switch (input.frequency) {
+    case "daily":
+      return true;
+    case "weekly":
+      return input.weekday == null || input.weekday === input.todayWeekday;
+    case "monthly":
+      return input.todayDayOfMonth === 1;
+    case "quarterly": {
+      const month = new Date().getMonth();
+      return input.todayDayOfMonth === 1 && month % 3 === 0;
+    }
+    case "annual":
+      return input.todayDayOfMonth === 1 && new Date().getMonth() === 0;
+    default:
+      return false;
+  }
+}
+
 /**
  * Sprawdza aktywne cele i tworzy powiadomienia dla właścicieli (D8, Faza 6):
  * zbliżający się przegląd, koniec okresu, zagrożenie/niski progres. Idempotentne —
@@ -133,6 +157,44 @@ export async function ensureGoalActivityNotifications(): Promise<void> {
         source_id: sourceId,
       });
     }
+  }
+
+  // Harmonogram przeglądu tablicy — powiadomienie dla osoby odpowiedzialnej w dniu przeglądu
+  try {
+    const { data: boardRows } = await supabase
+      .from("goal_boards")
+      .select("id, name, review_frequency, review_weekday, review_responsible_id, review_notify")
+      .eq("review_notify", true)
+      .not("review_frequency", "is", null)
+      .not("review_responsible_id", "is", null);
+
+    const today = new Date();
+    const todayKey = today.toISOString().slice(0, 10);
+    const weekday = today.getDay(); // 0=Sun
+
+    for (const board of boardRows ?? []) {
+      if (!board.review_responsible_id || !board.review_frequency) continue;
+      const dueToday = isBoardReviewDueToday({
+        frequency: board.review_frequency,
+        weekday: board.review_weekday,
+        todayWeekday: weekday,
+        todayDayOfMonth: today.getDate(),
+      });
+      if (!dueToday) continue;
+
+      const sourceId = `goal_board_review_due:${board.id}:${todayKey}`;
+      candidateSourceIds.push(sourceId);
+      pendingRows.push({
+        profile_id: board.review_responsible_id,
+        kind: "goal_review_due",
+        title: `Dziś przegląd tablicy «${board.name}»`,
+        body: "Zaplanowany przegląd celów na tej tablicy — uruchom Przegląd celów.",
+        link_url: `/tablice-celow/przeglad?boardId=${board.id}`,
+        source_id: sourceId,
+      });
+    }
+  } catch {
+    // Kolumny harmonogramu mogą jeszcze nie istnieć przed migracją 145 — pomiń
   }
 
   if (pendingRows.length === 0) {

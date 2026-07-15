@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getUserDisplayName } from "@/lib/auth/types";
+import { GoalSettlementGateDialog } from "@/components/goals/goal-settlement-gate-dialog";
 import {
   GOAL_REVIEW_OUTCOME_LABELS,
   type Goal,
@@ -29,6 +29,7 @@ import {
 import {
   closeGoalReview,
   scheduleGoalReview,
+  updateGoal,
   updateGoalProgress,
 } from "@/lib/supabase/goal-repository";
 import {
@@ -49,7 +50,9 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
   const teamProfiles = useGoalStore((s) => s.teamProfiles);
   const goalsByBoard = useGoalStore((s) => s.goalsByBoard);
   const ensureBoardGoals = useGoalStore((s) => s.ensureBoardGoals);
+  const upsertGoalInStore = useGoalStore((s) => s.upsertGoalInStore);
   const hydrate = useGoalStore((s) => s.hydrate);
+  const getOwnerName = useGoalStore((s) => s.getOwnerName);
 
   const ensureMeeting = useGoalReviewMeetingStore((s) => s.ensureMeeting);
   const setActiveMeeting = useGoalReviewMeetingStore((s) => s.setActiveMeeting);
@@ -60,15 +63,19 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
   const [notes, setNotes] = useState("");
   const [outcome, setOutcome] = useState<GoalReviewOutcome | null>(null);
   const [goalStatus, setGoalStatus] = useState<GoalStatus>("in_progress");
+  const [progressPercent, setProgressPercent] = useState(0);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [summaryBuffer, setSummaryBuffer] = useState(600);
   const [timeUpOpen, setTimeUpOpen] = useState(false);
   const [advancing, setAdvancing] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [settleOpen, setSettleOpen] = useState(false);
 
   const remainingRef = useRef(0);
   const notesSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const elapsedRef = useRef(0);
+  const topRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     void hydrate();
@@ -77,7 +84,7 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
 
   useEffect(() => {
     if (meeting?.boardId) {
-      void ensureBoardGoals(meeting.boardId);
+      void ensureBoardGoals(meeting.boardId, { force: true });
     }
   }, [meeting?.boardId, ensureBoardGoals]);
 
@@ -98,25 +105,23 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
   }, [boardGoals]);
 
   const activeGoal = activeItem ? goalById.get(activeItem.goalId) ?? null : null;
+  const ownerName = getOwnerName(ownerId);
 
-  const ownerName = useMemo(() => {
-    if (!activeGoal?.ownerId) return "Brak właściciela";
-    const member = teamProfiles.find((p) => p.id === activeGoal.ownerId);
-    return member ? getUserDisplayName(member) : "Nieznany";
-  }, [activeGoal?.ownerId, teamProfiles]);
-
-  // Sync local state when active item changes
   useEffect(() => {
     if (!activeItem || !activeGoal) return;
     setNotes(activeItem.notes ?? "");
     setOutcome(activeItem.outcome);
-    setGoalStatus(activeGoal.status);
+    setGoalStatus(activeGoal.status === "settled" ? "settled" : activeGoal.status);
+    setProgressPercent(activeGoal.progressPercent);
+    setOwnerId(activeGoal.ownerId);
     const startRemaining = activeItem.remainingSeconds ?? activeItem.plannedSeconds;
     setRemainingSeconds(startRemaining);
     remainingRef.current = startRemaining;
     elapsedRef.current = 0;
     setSummaryBuffer(meeting?.summaryBufferSeconds ?? 600);
     setTimeUpOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
     if (activeItem.status === "pending") {
       void activateMeetingItem(activeItem.id, startRemaining).then((updated) => {
@@ -129,7 +134,6 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
     }
   }, [activeItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Countdown timer — zależymy od id/status, nie całego obiektu (unika resetu przy re-fetch)
   const activeItemId = activeItem?.id;
   const activeItemStatus = activeItem?.status;
   useEffect(() => {
@@ -139,9 +143,7 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
         const next = Math.max(0, prev - 1);
         remainingRef.current = next;
         elapsedRef.current += 1;
-        if (next === 0) {
-          setTimeUpOpen(true);
-        }
+        if (next === 0) setTimeUpOpen(true);
         return next;
       });
     }, 1000);
@@ -161,8 +163,7 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
   );
 
   async function refreshMeeting(): Promise<GoalReviewMeetingWithDetails | null> {
-    const next = await ensureMeeting(meetingId, { force: true });
-    return next;
+    return ensureMeeting(meetingId, { force: true });
   }
 
   async function finishCurrentItemAndAdvance(options?: { skipOutcomeCheck?: boolean }) {
@@ -184,16 +185,23 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
       const actualSeconds = Math.max(1, elapsedRef.current);
       const unusedSeconds = Math.max(0, remainingRef.current);
 
-      if (goalStatus !== activeGoal.status) {
-        await updateGoalProgress(activeGoal.id, {
-          status: goalStatus,
-          progressPercent: activeGoal.progressPercent,
+      const statusChanged = goalStatus !== activeGoal.status && goalStatus !== "settled";
+      const progressChanged = progressPercent !== activeGoal.progressPercent;
+      if (statusChanged || progressChanged) {
+        const { goal: updated } = await updateGoalProgress(activeGoal.id, {
+          status: statusChanged ? goalStatus : undefined,
+          progressPercent,
           authorId: profile?.id ?? null,
-          note: `Zmiana statusu podczas przeglądu: ${GOAL_REVIEW_OUTCOME_LABELS[outcome]}`,
+          note: `Aktualizacja podczas przeglądu: ${GOAL_REVIEW_OUTCOME_LABELS[outcome]}`,
         });
+        upsertGoalInStore(updated);
       }
 
-      // Close / create goal_review record
+      if (ownerId !== activeGoal.ownerId) {
+        const updated = await updateGoal(activeGoal.id, { ownerId });
+        upsertGoalInStore(updated);
+      }
+
       const scheduled = await scheduleGoalReview({
         goalId: activeGoal.id,
         scheduledAt: new Date().toISOString(),
@@ -204,7 +212,7 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
         id: scheduled.id,
         closedBy: profile?.id ?? null,
         outcome,
-        progressSnapshot: activeGoal.progressPercent,
+        progressSnapshot: progressPercent,
         note: notes.trim() || undefined,
       });
 
@@ -216,7 +224,6 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
         goalReviewId: closed.id,
       });
 
-      // Redistribute unused time to remaining pending items
       const remainingItems = meeting.items.filter(
         (item) =>
           item.id !== activeItem.id &&
@@ -243,6 +250,8 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
           }),
         );
       }
+
+      await ensureBoardGoals(meeting.boardId, { force: true });
 
       const nextMeeting = await refreshMeeting();
       if (!nextMeeting) return;
@@ -322,7 +331,7 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
           type="button"
           onClick={() => router.push(`/tablice-celow/przeglad/${meetingId}/podsumowanie`)}
         >
-          Podsumowanie SI
+          Podsumowanie AI
         </Button>
       </div>
     );
@@ -333,17 +342,20 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
   const extraAvailable = canTakeExtraTime(summaryBuffer);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="sticky top-0 z-10 -mx-1 space-y-3 rounded-2xl border border-border bg-background/95 px-4 py-4 backdrop-blur">
+    <div ref={topRef} className="mx-auto max-w-3xl space-y-6">
+      <div className="sticky top-0 z-20 -mx-1 space-y-2 rounded-2xl border border-border bg-background/95 px-4 py-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-xs text-muted">
               Cel {doneCount + 1} / {totalCount}
               {activeItem.deepDive ? " · deep-dive" : ""}
             </p>
-            <h2 className="text-xl font-semibold tracking-tight text-foreground">{activeGoal.name}</h2>
+            <h2 className="truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+              {activeGoal.name}
+            </h2>
+            <p className="truncate text-xs text-muted">Właściciel: {ownerName}</p>
           </div>
-          <div className="text-right">
+          <div className="shrink-0 text-right">
             <p
               className={`font-mono text-3xl font-semibold tabular-nums ${
                 remainingSeconds <= 30 ? "text-rose-400" : "text-foreground"
@@ -352,7 +364,7 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
               {formatTimerSeconds(remainingSeconds)}
             </p>
             <p className="text-xs text-muted">
-              Bufor podsumowania: {formatTimerSeconds(summaryBuffer)}
+              Bufor: {formatTimerSeconds(summaryBuffer)}
             </p>
           </div>
         </div>
@@ -362,7 +374,8 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
             style={{
               width: `${Math.min(
                 100,
-                ((activeItem.plannedSeconds - remainingSeconds) / Math.max(1, activeItem.plannedSeconds)) *
+                ((activeItem.plannedSeconds - remainingSeconds) /
+                  Math.max(1, activeItem.plannedSeconds)) *
                   100,
               )}%`,
             }}
@@ -378,17 +391,23 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
         goal={activeGoal}
         ownerName={ownerName}
         currentProfileId={profile?.id ?? null}
+        teamProfiles={teamProfiles}
         notes={notes}
         onNotesChange={persistNotes}
         outcome={outcome}
         onOutcomeChange={setOutcome}
         goalStatus={goalStatus}
         onGoalStatusChange={setGoalStatus}
+        progressPercent={progressPercent}
+        onProgressChange={setProgressPercent}
+        ownerId={ownerId}
+        onOwnerChange={setOwnerId}
+        onRequestSettle={() => setSettleOpen(true)}
         onTaskCreated={() => void refreshMeeting()}
       />
 
       <div className="flex flex-wrap justify-between gap-2 border-t border-border pt-4">
-        <p className="text-xs text-muted self-center">
+        <p className="self-center text-xs text-muted">
           Wcześniejsze „Dalej” zwraca niewykorzystany czas do pozostałych celów.
         </p>
         <Button
@@ -432,6 +451,17 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <GoalSettlementGateDialog
+        goal={activeGoal}
+        open={settleOpen}
+        onOpenChange={setSettleOpen}
+        currentProfileId={profile?.id ?? null}
+        onSettled={() => {
+          setGoalStatus("settled");
+          void ensureBoardGoals(meeting.boardId, { force: true });
+        }}
+      />
     </div>
   );
 }

@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { Field, Select, Textarea } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
 import {
   GOAL_REVIEW_OUTCOME_LABELS,
   GOAL_REVIEW_OUTCOMES,
@@ -41,12 +43,18 @@ export function ReviewMeetingGoalPanel({
   goal,
   ownerName,
   currentProfileId,
+  teamProfiles,
   notes,
   onNotesChange,
   outcome,
   onOutcomeChange,
   goalStatus,
   onGoalStatusChange,
+  progressPercent,
+  onProgressChange,
+  ownerId,
+  onOwnerChange,
+  onRequestSettle,
   onTaskCreated,
 }: {
   meetingId: string;
@@ -54,12 +62,18 @@ export function ReviewMeetingGoalPanel({
   goal: Goal;
   ownerName: string;
   currentProfileId: string | null;
+  teamProfiles: UserProfile[];
   notes: string;
   onNotesChange: (notes: string) => void;
   outcome: GoalReviewOutcome | null;
   onOutcomeChange: (outcome: GoalReviewOutcome) => void;
   goalStatus: GoalStatus;
   onGoalStatusChange: (status: GoalStatus) => void;
+  progressPercent: number;
+  onProgressChange: (value: number) => void;
+  ownerId: string | null;
+  onOwnerChange: (ownerId: string | null) => void;
+  onRequestSettle: () => void;
   onTaskCreated: () => void;
 }) {
   const [methodology, setMethodology] = useState<GoalMethodology | null>(null);
@@ -98,7 +112,7 @@ export function ReviewMeetingGoalPanel({
     return preferred.length > 0 ? preferred : methodology.fieldSchema;
   }, [methodology]);
 
-  const isOwner = Boolean(currentProfileId && goal.ownerId === currentProfileId);
+  const isOwner = Boolean(currentProfileId && ownerId === currentProfileId);
 
   return (
     <div className="space-y-5">
@@ -112,6 +126,31 @@ export function ReviewMeetingGoalPanel({
         )}
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Właściciel (można zmienić)">
+          <Select
+            value={ownerId ?? ""}
+            onChange={(e) => onOwnerChange(e.target.value || null)}
+          >
+            <option value="">Brak właściciela</option>
+            {teamProfiles.map((member) => (
+              <option key={member.id} value={member.id}>
+                {getUserDisplayName(member)}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Postęp (%)">
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            value={progressPercent}
+            onChange={(e) => onProgressChange(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+          />
+        </Field>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-border px-3 py-2">
           <p className="text-xs text-muted">Status</p>
@@ -119,7 +158,7 @@ export function ReviewMeetingGoalPanel({
         </div>
         <div className="rounded-xl border border-border px-3 py-2">
           <p className="text-xs text-muted">Realizacja</p>
-          <p className="text-sm font-medium">{goal.progressPercent}%</p>
+          <p className="text-sm font-medium">{progressPercent}%</p>
         </div>
         <div className="rounded-xl border border-border px-3 py-2">
           <p className="text-xs text-muted">Okres</p>
@@ -191,17 +230,29 @@ export function ReviewMeetingGoalPanel({
         </Field>
         <Field label="Status celu (opcjonalna zmiana)">
           <Select
-            value={goalStatus}
-            onChange={(e) => onGoalStatusChange(e.target.value as GoalStatus)}
+            value={goalStatus === "settled" ? "settled" : goalStatus}
+            onChange={(e) => {
+              const next = e.target.value as GoalStatus | "settle_gate";
+              if (next === "settle_gate" || next === "settled") {
+                onRequestSettle();
+                return;
+              }
+              onGoalStatusChange(next);
+            }}
           >
             {(["planned", "in_progress", "at_risk", "on_hold"] as GoalStatus[]).map((status) => (
               <option key={status} value={status}>
                 {GOAL_STATUS_LABELS[status]}
               </option>
             ))}
+            <option value="settle_gate">{GOAL_STATUS_LABELS.settled}…</option>
           </Select>
         </Field>
       </div>
+
+      <Button type="button" variant="outline" size="sm" onClick={onRequestSettle}>
+        Rozlicz cel (etap „Rozliczony”)
+      </Button>
 
       <Field
         label={

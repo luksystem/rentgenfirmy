@@ -123,6 +123,12 @@ export async function POST(request: Request) {
     });
 
     const now = new Date().toISOString();
+    const fromItems = items.reduce((sum, item) => sum + (item.actualSeconds ?? 0), 0);
+    const fromWallClock = meeting.startedAt
+      ? Math.max(0, Math.round((Date.now() - new Date(meeting.startedAt).getTime()) / 1000))
+      : 0;
+    const actualDurationSeconds = fromItems > 0 ? fromItems : fromWallClock > 0 ? fromWallClock : null;
+
     const { error: completeError } = await admin
       .from("goal_review_meetings")
       .update({
@@ -130,12 +136,17 @@ export async function POST(request: Request) {
         ai_summary: summary,
         completed_at: now,
         updated_at: now,
+        actual_duration_seconds: actualDurationSeconds,
       })
       .eq("id", meetingId);
 
     if (completeError) throw new Error(completeError.message);
 
-    return NextResponse.json({ summary, meetingId });
+    return NextResponse.json({
+      summary,
+      meetingId,
+      actualDurationSeconds,
+    });
   } catch (error) {
     return NextResponse.json(
       {

@@ -13,7 +13,7 @@ export default async function GoalReviewMeetingWizardPage({
     <>
       <PageHeader
         eyebrow="Tablice celów"
-        title="Asystent przeglądu celów"
+        title="Przegląd celów"
         description="Kreator spotkania: uczestnicy, czas, deep-dive, potem fokus na jeden cel z timerem."
         action={
           <Link

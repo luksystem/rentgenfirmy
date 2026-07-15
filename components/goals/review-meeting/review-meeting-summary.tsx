@@ -5,8 +5,27 @@ import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GOAL_REVIEW_OUTCOME_LABELS, type GoalReviewOutcome } from "@/lib/goals/types";
+import { formatTimerSeconds } from "@/lib/goals/review-meeting-timing";
 import { useGoalReviewMeetingStore } from "@/store/goal-review-meeting-store";
 import { useGoalStore, EMPTY_GOALS } from "@/store/goal-store";
+
+function meetingActualSeconds(meeting: {
+  actualDurationSeconds: number | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  items: Array<{ actualSeconds: number | null }>;
+}) {
+  if (meeting.actualDurationSeconds != null && meeting.actualDurationSeconds > 0) {
+    return meeting.actualDurationSeconds;
+  }
+  const fromItems = meeting.items.reduce((sum, item) => sum + (item.actualSeconds ?? 0), 0);
+  if (fromItems > 0) return fromItems;
+  if (meeting.startedAt) {
+    const end = meeting.completedAt ? new Date(meeting.completedAt).getTime() : Date.now();
+    return Math.max(0, Math.round((end - new Date(meeting.startedAt).getTime()) / 1000));
+  }
+  return 0;
+}
 
 export function ReviewMeetingSummary({ meetingId }: { meetingId: string }) {
   const ensureMeeting = useGoalReviewMeetingStore((s) => s.ensureMeeting);
@@ -76,6 +95,16 @@ export function ReviewMeetingSummary({ meetingId }: { meetingId: string }) {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="rounded-xl border border-border p-4">
+        <p className="text-sm font-medium">Czas przeglądu</p>
+        <p className="mt-1 text-2xl font-semibold tabular-nums">
+          {formatTimerSeconds(meetingActualSeconds(meeting))}
+        </p>
+        <p className="text-xs text-muted">
+          plan {meeting.plannedMinutes} min · zapisany w historii raportu
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-border p-4">
         <p className="mb-2 text-sm font-medium">Omówione cele</p>
         <ul className="space-y-2 text-sm">
           {meeting.items.map((item) => (
@@ -117,12 +146,12 @@ export function ReviewMeetingSummary({ meetingId }: { meetingId: string }) {
       {!summary ? (
         <Button type="button" disabled={generating} onClick={() => void handleGenerate()}>
           {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          Wygeneruj podsumowanie SI i zapisz raport
+          Wygeneruj podsumowanie AI i zapisz raport
         </Button>
       ) : (
         <div className="space-y-4">
           <div className="rounded-xl border border-accent/30 bg-accent/5 p-4">
-            <p className="mb-2 text-sm font-semibold text-accent">Podsumowanie SI</p>
+            <p className="mb-2 text-sm font-semibold text-accent">Podsumowanie AI</p>
             <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm">
               {summary}
             </div>

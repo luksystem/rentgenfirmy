@@ -62,7 +62,17 @@ type GoalStore = {
   refresh: () => Promise<void>;
   ensureBoardGoals: (boardId: string, options?: { force?: boolean }) => Promise<void>;
   createBoard: (input: { kind: string; name: string; description?: string }) => Promise<GoalBoard>;
-  updateBoard: (boardId: string, input: { name?: string; description?: string }) => Promise<GoalBoard>;
+  updateBoard: (
+    boardId: string,
+    input: {
+      name?: string;
+      description?: string;
+      reviewFrequency?: import("@/lib/goals/types").GoalPeriodType | null;
+      reviewWeekday?: number | null;
+      reviewResponsibleId?: string | null;
+      reviewNotify?: boolean;
+    },
+  ) => Promise<GoalBoard>;
   removeBoard: (boardId: string) => Promise<void>;
   createBoardKind: (input: { label: string; description?: string; icon?: string }) => Promise<GoalBoardKind>;
   updateBoardKind: (

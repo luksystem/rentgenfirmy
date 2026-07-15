@@ -4,8 +4,31 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { Select } from "@/components/ui/input";
+import { formatTimerSeconds } from "@/lib/goals/review-meeting-timing";
 import { useGoalReviewMeetingStore, EMPTY_REVIEW_REPORTS } from "@/store/goal-review-meeting-store";
 import { useGoalStore } from "@/store/goal-store";
+
+function reportActualSeconds(report: {
+  actualDurationSeconds: number | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  items: Array<{ actualSeconds: number | null }>;
+}) {
+  if (report.actualDurationSeconds != null && report.actualDurationSeconds > 0) {
+    return report.actualDurationSeconds;
+  }
+  const fromItems = report.items.reduce((sum, item) => sum + (item.actualSeconds ?? 0), 0);
+  if (fromItems > 0) return fromItems;
+  if (report.startedAt && report.completedAt) {
+    return Math.max(
+      0,
+      Math.round(
+        (new Date(report.completedAt).getTime() - new Date(report.startedAt).getTime()) / 1000,
+      ),
+    );
+  }
+  return 0;
+}
 
 export function GoalReviewReportsList() {
   const hydrate = useGoalStore((s) => s.hydrate);
@@ -65,7 +88,8 @@ export function GoalReviewReportsList() {
                     {report.completedAt
                       ? new Date(report.completedAt).toLocaleString("pl-PL")
                       : "—"}{" "}
-                    · {report.items.length} celów · {report.actions.length} zadań
+                    · czas {formatTimerSeconds(reportActualSeconds(report))} · {report.items.length}{" "}
+                    celów · {report.actions.length} zadań
                   </span>
                 </span>
                 <span className="text-xs text-accent">Zobacz →</span>

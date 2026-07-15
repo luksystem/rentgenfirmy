@@ -183,8 +183,8 @@ export function GoalsHistoryInsights() {
           {ranking.length === 0 ? (
             <p className="text-sm text-muted">Brak rozliczonych celów — ranking pojawi się po pierwszych rozliczeniach.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] text-sm">
+            <div className="overflow-x-auto -mx-1 px-1 md:mx-0 md:px-0">
+              <table className="hidden w-full min-w-[560px] text-sm md:table">
                 <thead>
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                     <th className="px-3 py-2">Osoba</th>
@@ -212,6 +212,25 @@ export function GoalsHistoryInsights() {
                   ))}
                 </tbody>
               </table>
+              <div className="grid gap-2 md:hidden">
+                {ranking.map((row) => (
+                  <div
+                    key={row.ownerId}
+                    className="rounded-xl border border-border/60 bg-surface-muted/20 px-3 py-2.5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="min-w-0 truncate font-medium">{row.name}</p>
+                      <Badge tone={row.successRate >= 70 ? "active" : row.successRate >= 40 ? "waiting" : "critical"}>
+                        {row.successRate}%
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-xs text-muted">
+                      {row.achieved} osiągnięte · {row.partially} częściowo · {row.notAchieved} nie · łącznie{" "}
+                      {row.total}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </CardContent>
@@ -226,10 +245,10 @@ export function GoalsHistoryInsights() {
             <div className="flex h-full items-center justify-center text-sm text-muted">Brak danych</div>
           ) : (
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-              <LineChart data={trend} margin={{ left: -16, right: 8, top: 8 }}>
+              <LineChart data={trend} margin={{ left: 0, right: 4, top: 8, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#27272a" />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#a1a1aa" }} />
-                <YAxis tick={{ fontSize: 11, fill: "#a1a1aa" }} unit="%" domain={[0, 100]} />
+                <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#a1a1aa" }} interval="preserveStartEnd" />
+                <YAxis width={36} tick={{ fontSize: 10, fill: "#a1a1aa" }} unit="%" domain={[0, 100]} />
                 <Tooltip
                   formatter={(value) => [`${value}%`, "% osiągniętych"] as [string, string]}
                   contentStyle={{
@@ -255,9 +274,12 @@ export function GoalsHistoryInsights() {
             <p className="text-sm text-muted">Brak danych o zespole.</p>
           ) : (
             creationActivity.map((row) => (
-              <div key={row.name} className="flex items-center justify-between gap-3 text-sm">
-                <span className="text-foreground/90">{row.name}</span>
-                <span className={row.count === 0 ? "text-rose-400" : "text-muted"}>
+              <div
+                key={row.name}
+                className="flex flex-col gap-0.5 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+              >
+                <span className="min-w-0 truncate text-foreground/90">{row.name}</span>
+                <span className={row.count === 0 ? "shrink-0 text-rose-400" : "shrink-0 text-muted"}>
                   {row.count === 0 ? "nie ustalił żadnego celu" : `${row.count} utworzonych celów`}
                 </span>
               </div>
@@ -271,8 +293,8 @@ export function GoalsHistoryInsights() {
           <CardTitle>Cele niedowiezione ({notAchievedGoals.length})</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3">
-          <div className="flex flex-wrap gap-2">
-            <Field label="Tablica" className="w-auto min-w-[10rem]">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Tablica" className="w-full min-w-0">
               <Select value={boardFilter} onChange={(event) => setBoardFilter(event.target.value)}>
                 <option value="all">Wszystkie</option>
                 {boards.map((board) => (
@@ -282,7 +304,7 @@ export function GoalsHistoryInsights() {
                 ))}
               </Select>
             </Field>
-            <Field label="Poziom" className="w-auto min-w-[8rem]">
+            <Field label="Poziom" className="w-full min-w-0">
               <Select value={levelFilter} onChange={(event) => setLevelFilter(event.target.value)}>
                 <option value="all">Wszystkie</option>
                 {GOAL_LEVELS.map((level) => (
@@ -292,7 +314,7 @@ export function GoalsHistoryInsights() {
                 ))}
               </Select>
             </Field>
-            <Field label="Okres" className="w-auto min-w-[8rem]">
+            <Field label="Okres" className="w-full min-w-0">
               <Select value={periodFilter} onChange={(event) => setPeriodFilter(event.target.value)}>
                 <option value="all">Wszystkie</option>
                 {GOAL_PERIOD_TYPES.map((period) => (
@@ -302,7 +324,7 @@ export function GoalsHistoryInsights() {
                 ))}
               </Select>
             </Field>
-            <Field label="Właściciel" className="w-auto min-w-[10rem]">
+            <Field label="Właściciel" className="w-full min-w-0">
               <Select value={ownerFilter} onChange={(event) => setOwnerFilter(event.target.value)}>
                 <option value="all">Wszyscy</option>
                 {teamProfiles.map((profile) => (

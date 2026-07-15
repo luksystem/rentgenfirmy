@@ -122,6 +122,7 @@ export type GoalReviewMeeting = {
   aiSummary: string | null;
   startedAt: string | null;
   completedAt: string | null;
+  actualDurationSeconds: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -184,6 +185,10 @@ export type GoalBoard = {
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
+  reviewFrequency: GoalPeriodType | null;
+  reviewWeekday: number | null;
+  reviewResponsibleId: string | null;
+  reviewNotify: boolean;
 };
 
 export type GoalMethodology = {
