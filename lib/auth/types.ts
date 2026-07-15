@@ -37,6 +37,10 @@ export type UserProfile = {
   supervisorId: string | null;
   /** Gdy true (domyślnie): dostęp do wszystkich projektów. Administrator zawsze ma pełny dostęp. */
   allProjectsAccess: boolean;
+  /** Publiczny URL awatara (opcjonalnie). */
+  avatarUrl: string | null;
+  /** Krótka notatka „O mnie”. */
+  aboutMe: string;
   createdAt: string;
   updatedAt: string;
 };

@@ -1297,6 +1297,8 @@ export type ProfileRow = {
   is_available_for_planning: boolean;
   supervisor_id: string | null;
   all_projects_access: boolean;
+  avatar_url: string | null;
+  about_me: string;
   created_at: string;
   updated_at: string;
 };
@@ -1316,6 +1318,8 @@ export type ProfileInsert = {
   is_available_for_planning?: boolean;
   supervisor_id?: string | null;
   all_projects_access?: boolean;
+  avatar_url?: string | null;
+  about_me?: string;
   created_at?: string;
   updated_at?: string;
 };

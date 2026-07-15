@@ -17,6 +17,8 @@ export function mapProfileRow(row: ProfileRow): UserProfile {
     isAvailableForPlanning: row.is_available_for_planning,
     supervisorId: row.supervisor_id,
     allProjectsAccess: row.all_projects_access !== false,
+    avatarUrl: row.avatar_url ?? null,
+    aboutMe: row.about_me ?? "",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

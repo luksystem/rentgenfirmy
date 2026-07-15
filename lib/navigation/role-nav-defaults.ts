@@ -21,6 +21,7 @@ const PODWYKONAWCA_NAV_ACCESS: NavModuleKey[] = [
   "projects",
   "work-orders",
   "documents",
+  "account-settings",
   "change-password",
 ];
 
@@ -30,7 +31,7 @@ export const DEFAULT_ROLE_NAV_ACCESS: Record<UserRole, NavModuleKey[]> = {
   manager: FULL_NAV_ACCESS,
   pracownik: FULL_NAV_ACCESS,
   podwykonawca: PODWYKONAWCA_NAV_ACCESS,
-  klient: ["visualizations", "change-password"],
+  klient: ["visualizations", "account-settings", "change-password"],
   gosc: [],
 };
 

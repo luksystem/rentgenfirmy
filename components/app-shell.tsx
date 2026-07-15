@@ -35,6 +35,7 @@ import {
   Star,
   Target,
   Timer,
+  UserCircle,
   Users,
   Users2,
   CalendarRange,
@@ -48,6 +49,7 @@ import { NAV_MODULE_GROUPS, type NavModuleKey } from "@/lib/navigation/nav-modul
 import { canAccessNavModule } from "@/lib/navigation/role-nav-permissions";
 import { NavBadges } from "@/components/nav-badges";
 import { NotificationBell } from "@/components/notification-bell";
+import { UserAvatar } from "@/components/user-avatar";
 import { NotificationsRealtimeSubscriber } from "@/components/notifications-realtime-subscriber";
 import { QuickAddMenuList } from "@/components/quick-add-menu";
 import { useAuthStore } from "@/store/auth-store";
@@ -105,6 +107,7 @@ const NAV_MODULE_ICONS: Record<NavModuleKey, React.ComponentType<{ className?: s
   "view-no-contact": Clock3,
   "view-waiting": PauseCircle,
   settings: Settings,
+  "account-settings": UserCircle,
   "change-password": Key,
 };
 
@@ -296,6 +299,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const isAdministrator = useAuthStore((state) => state.isAdministrator);
+  const profile = useAuthStore((state) => state.profile);
   const profileRole = useAuthStore((state) => state.profile?.role);
   const displayName = useAuthStore((state) => state.displayName);
   const signOut = useAuthStore((state) => state.signOut);
@@ -613,7 +617,15 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
 
         <div className="shrink-0 border-t border-sidebar-border p-5 pt-4">
           <div className="grid gap-2">
-            <p className="px-3 text-xs text-sidebar-muted">{displayName || "Użytkownik"}</p>
+            <Link
+              href="/konto"
+              className="flex items-center gap-2 rounded-xl px-3 py-2 transition hover:bg-white/5"
+            >
+              <UserAvatar profile={profile} size="sm" />
+              <span className="min-w-0 truncate text-xs text-sidebar-muted">
+                {displayName || "Użytkownik"}
+              </span>
+            </Link>
             <button
               type="button"
               onClick={() => void signOut().then(() => window.location.assign("/logowanie"))}

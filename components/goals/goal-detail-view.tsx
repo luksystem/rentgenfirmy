@@ -9,6 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { GoalAiReviewPanel } from "@/components/goals/goal-ai-review-panel";
 import { GoalLinksPanel } from "@/components/goals/goal-links-panel";
+import { UserIdentity } from "@/components/user-avatar";
+import { getUserDisplayName, hasFullAppAccess, isAdministratorRole, type UserProfile } from "@/lib/auth/types";
 import {
   GOAL_LEVEL_LABELS,
   GOAL_PERIOD_TYPE_LABELS,
@@ -23,13 +25,13 @@ import {
   type Goal,
   type GoalComment,
   type GoalKpi,
+  type GoalMethodology,
   type GoalReview,
   type GoalReviewOutcome,
   type GoalSettlementStatus,
   type GoalStatus,
   type GoalUpdateEntry,
 } from "@/lib/goals/types";
-import { getUserDisplayName, hasFullAppAccess, isAdministratorRole } from "@/lib/auth/types";
 import {
   addGoalComment,
   closeGoalReview,
@@ -49,7 +51,6 @@ import { fetchGoalMethodologyByCode } from "@/lib/supabase/goal-methodology-repo
 import { cn, formatDate, formatDateTime } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import { useGoalStore } from "@/store/goal-store";
-import type { GoalMethodology } from "@/lib/goals/types";
 
 type TabKey = "przeglad" | "kpi" | "historia" | "komentarze" | "przeglady" | "powiazania" | "rozliczenie";
 
@@ -222,7 +223,9 @@ export function GoalDetailView({ goalId, onDeleted }: { goalId: string; onDelete
         />
       ) : null}
 
-      {tab === "historia" ? <HistoryTab updates={updates} getOwnerName={getOwnerName} /> : null}
+      {tab === "historia" ? (
+        <HistoryTab updates={updates} teamProfiles={teamProfiles} getOwnerName={getOwnerName} />
+      ) : null}
 
       {tab === "komentarze" ? (
         <CommentsTab
@@ -230,6 +233,7 @@ export function GoalDetailView({ goalId, onDeleted }: { goalId: string; onDelete
           comments={comments}
           authorId={profile?.id ?? null}
           authorName={profile ? getUserDisplayName(profile) : "Użytkownik"}
+          teamProfiles={teamProfiles}
           onChanged={async () => setComments(await fetchGoalComments(goal.id))}
         />
       ) : null}
@@ -558,29 +562,41 @@ function KpiTab({
 
 function HistoryTab({
   updates,
+  teamProfiles,
   getOwnerName,
 }: {
   updates: GoalUpdateEntry[];
+  teamProfiles: UserProfile[];
   getOwnerName: (id: string | null) => string;
 }) {
   return (
     <Card>
       <CardContent className="grid gap-3">
         {updates.length === 0 ? <p className="text-sm text-muted">Brak zapisanej historii zmian.</p> : null}
-        {updates.map((entry) => (
-          <div key={entry.id} className="rounded-xl border border-border/70 bg-surface-muted/20 p-3 text-sm">
-            <p className="text-xs text-muted">{formatDateTime(entry.createdAt)} — {getOwnerName(entry.authorId)}</p>
-            <p className="mt-1 text-foreground/90">
-              {entry.previousStatus !== entry.newStatus && entry.newStatus ? (
-                <>Status: {GOAL_STATUS_LABELS[entry.previousStatus as GoalStatus] ?? "—"} → {GOAL_STATUS_LABELS[entry.newStatus]}. </>
-              ) : null}
-              {entry.previousProgress !== entry.newProgress ? (
-                <>Realizacja: {entry.previousProgress ?? 0}% → {entry.newProgress ?? 0}%.</>
-              ) : null}
-            </p>
-            {entry.note ? <p className="mt-1 text-muted">{entry.note}</p> : null}
-          </div>
-        ))}
+        {updates.map((entry) => {
+          const authorProfile = entry.authorId
+            ? teamProfiles.find((member) => member.id === entry.authorId) ?? null
+            : null;
+          return (
+            <div key={entry.id} className="rounded-xl border border-border/70 bg-surface-muted/20 p-3 text-sm">
+              <UserIdentity
+                profile={authorProfile}
+                name={getOwnerName(entry.authorId)}
+                size="xs"
+                subtitle={formatDateTime(entry.createdAt)}
+              />
+              <p className="mt-2 text-foreground/90">
+                {entry.previousStatus !== entry.newStatus && entry.newStatus ? (
+                  <>Status: {GOAL_STATUS_LABELS[entry.previousStatus as GoalStatus] ?? "—"} → {GOAL_STATUS_LABELS[entry.newStatus]}. </>
+                ) : null}
+                {entry.previousProgress !== entry.newProgress ? (
+                  <>Realizacja: {entry.previousProgress ?? 0}% → {entry.newProgress ?? 0}%.</>
+                ) : null}
+              </p>
+              {entry.note ? <p className="mt-1 text-muted">{entry.note}</p> : null}
+            </div>
+          );
+        })}
       </CardContent>
     </Card>
   );
@@ -591,12 +607,14 @@ function CommentsTab({
   comments,
   authorId,
   authorName,
+  teamProfiles,
   onChanged,
 }: {
   goalId: string;
   comments: GoalComment[];
   authorId: string | null;
   authorName: string;
+  teamProfiles: UserProfile[];
   onChanged: () => Promise<void>;
 }) {
   const [body, setBody] = useState("");
@@ -618,14 +636,20 @@ function CommentsTab({
     <Card>
       <CardContent className="grid gap-3">
         {comments.length === 0 ? <p className="text-sm text-muted">Brak komentarzy.</p> : null}
-        {comments.map((comment) => (
-          <div key={comment.id} className="rounded-xl border border-border/70 bg-surface-muted/20 p-3 text-sm">
-            <p className="text-xs text-muted">
-              {comment.authorName} · {formatDateTime(comment.createdAt)}
-            </p>
-            <p className="mt-1 text-foreground/90">{comment.body}</p>
-          </div>
-        ))}
+        {comments.map((comment) => {
+          const authorProfile = teamProfiles.find((member) => member.id === comment.authorId) ?? null;
+          return (
+            <div key={comment.id} className="rounded-xl border border-border/70 bg-surface-muted/20 p-3 text-sm">
+              <UserIdentity
+                profile={authorProfile}
+                name={comment.authorName}
+                size="xs"
+                subtitle={formatDateTime(comment.createdAt)}
+              />
+              <p className="mt-2 text-foreground/90">{comment.body}</p>
+            </div>
+          );
+        })}
         <div className="flex gap-2 border-t border-border/60 pt-3">
           <Textarea
             value={body}

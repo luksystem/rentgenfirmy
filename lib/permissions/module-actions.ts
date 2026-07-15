@@ -62,6 +62,7 @@ export const NAV_MODULE_SUPPORTED_ACTIONS: Record<NavModuleKey, PermissionAction
   "view-waiting": VIEW_ONLY,
   settings: ["view", "manage_settings"],
   "change-password": VIEW_ONLY,
+  "account-settings": VIEW_ONLY,
 };
 
 export function getSupportedActionsForModule(moduleKey: NavModuleKey): PermissionActionKey[] {

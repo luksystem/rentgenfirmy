@@ -34,7 +34,10 @@ import { isOwnKanbanComment } from "@/lib/process/kanban-types";
 import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
 import type { UserResourceProfile } from "@/lib/resource-plan/user-resource-types";
 import type { UserProfile } from "@/lib/auth/types";
+import { getUserDisplayName } from "@/lib/auth/types";
 import { getOperationalRoleName } from "@/lib/kanban/task-assignee";
+import { UserIdentity } from "@/components/user-avatar";
+import { useAuthStore } from "@/store/auth-store";
 
 export function KanbanTaskDetailModal({
   task,
@@ -131,6 +134,14 @@ export function KanbanTaskDetailModal({
   const [error, setError] = useState<string | null>(null);
   const [isClosingModal, setIsClosingModal] = useState(false);
   const isFlushingRef = useRef(false);
+  const authProfile = useAuthStore((state) => state.profile);
+
+  function resolveCommentProfile(name: string) {
+    const fromTeam = teamProfiles.find((member) => getUserDisplayName(member) === name);
+    if (fromTeam) return fromTeam;
+    if (authProfile && getUserDisplayName(authProfile) === name) return authProfile;
+    return null;
+  }
 
   const taskSyncKey = useMemo(() => `${task.id}:${task.updatedAt}`, [task.id, task.updatedAt]);
 
@@ -608,9 +619,14 @@ export function KanbanTaskDetailModal({
             {taskEvents.map((event) => (
               <div key={event.id} className="rounded-xl border border-border/60 bg-surface/40 px-3 py-2 text-sm">
                 <p className="font-medium text-foreground">{KANBAN_TASK_EVENT_LABELS[event.eventType]}</p>
-                <p className="mt-1 text-xs text-muted">
-                  {formatKanbanEventDate(event.createdAt)} · {formatKanbanEventAuthor(event)}
-                </p>
+                <div className="mt-1">
+                  <UserIdentity
+                    profile={resolveCommentProfile(formatKanbanEventAuthor(event))}
+                    name={formatKanbanEventAuthor(event)}
+                    size="xs"
+                    subtitle={formatKanbanEventDate(event.createdAt)}
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -628,9 +644,12 @@ export function KanbanTaskDetailModal({
                 return (
                   <div key={comment.id} className="rounded-xl border border-border/60 bg-surface/50 px-3 py-2 text-sm">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-xs text-muted">
-                        {comment.authorName} · {comment.authorSide === "client" ? "Klient" : "Zespół"}
-                      </p>
+                      <UserIdentity
+                        profile={resolveCommentProfile(comment.authorName)}
+                        name={comment.authorName}
+                        size="xs"
+                        subtitle={comment.authorSide === "client" ? "Klient" : "Zespół"}
+                      />
                       {isOwn && onUpdateComment && onDeleteComment ? (
                         <div className="flex shrink-0 gap-1">
                           <button

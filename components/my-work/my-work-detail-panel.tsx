@@ -21,8 +21,9 @@ import {
 import { workItemLogActionLabel } from "@/lib/my-work/display-labels";
 import { formatDate } from "@/lib/utils";
 import { canEditWorkItem } from "@/lib/my-work/permissions";
+import { UserIdentity } from "@/components/user-avatar";
 import { useAuthStore } from "@/store/auth-store";
-import { useCanManageWorkItems } from "@/store/my-work-store";
+import { useCanManageWorkItems, useMyWorkStore } from "@/store/my-work-store";
 import { TaskChecklistPanel } from "@/components/task-checklist/task-checklist-panel";
 import type { TaskChecklistParent } from "@/lib/task-checklist/types";
 
@@ -56,6 +57,7 @@ export function MyWorkDetailPanel({
   onCompleteAllocation?: () => Promise<void>;
 }) {
   const profile = useAuthStore((state) => state.profile);
+  const teamProfiles = useMyWorkStore((state) => state.teamProfiles);
   const canManage = useCanManageWorkItems(profile?.role);
   const [commentBody, setCommentBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -165,14 +167,24 @@ export function MyWorkDetailPanel({
           <section>
             <h3 className="mb-2 font-medium text-foreground">Komentarze</h3>
             <div className="grid gap-2">
-              {comments.map((comment) => (
-                <div key={comment.id} className="rounded-lg bg-surface-muted px-3 py-2">
-                  <p className="text-xs text-muted">
-                    {comment.authorName} · {formatDate(comment.createdAt)}
-                  </p>
-                  <p className="mt-1 whitespace-pre-wrap">{comment.body}</p>
-                </div>
-              ))}
+              {comments.map((comment) => {
+                const authorProfile =
+                  (comment.authorId
+                    ? teamProfiles.find((member) => member.id === comment.authorId)
+                    : null) ??
+                  (profile && comment.authorId === profile.id ? profile : null);
+                return (
+                  <div key={comment.id} className="rounded-lg bg-surface-muted px-3 py-2">
+                    <UserIdentity
+                      profile={authorProfile}
+                      name={comment.authorName}
+                      size="xs"
+                      subtitle={formatDate(comment.createdAt)}
+                    />
+                    <p className="mt-2 whitespace-pre-wrap">{comment.body}</p>
+                  </div>
+                );
+              })}
               {!comments.length ? <p className="text-muted">Brak komentarzy.</p> : null}
             </div>
             <div className="mt-3 grid gap-2">

@@ -34,6 +34,7 @@ export type NavModuleKey =
   | "view-no-contact"
   | "view-waiting"
   | "settings"
+  | "account-settings"
   | "change-password";
 
 export type NavModuleDefinition = {
@@ -305,6 +306,13 @@ export const NAV_MODULE_GROUPS: NavModuleGroupDefinition[] = [
         href: "/ustawienia",
         routePrefixes: ["/ustawienia"],
         activeExcludePrefixes: ["/ustawienia/uprawnienia"],
+      },
+      {
+        key: "account-settings",
+        label: "Ustawienia konta",
+        href: "/konto",
+        routePrefixes: ["/konto"],
+        activeExcludePrefixes: ["/konto/haslo"],
       },
       {
         key: "change-password",
