@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { BarChart3, BookOpen, ClipboardList, FileText, History, LayoutGrid, Settings, Sparkles, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,10 +65,18 @@ export function GoalBoardHub() {
     }
   }
 
-  const boardsByKind = new Map<string, typeof boards>();
-  for (const board of boards) {
-    boardsByKind.set(board.kind, [...(boardsByKind.get(board.kind) ?? []), board]);
-  }
+  const boardsByKind = useMemo(() => {
+    const map = new Map<string, typeof boards>();
+    for (const board of boards) {
+      map.set(board.kind, [...(map.get(board.kind) ?? []), board]);
+    }
+    return map;
+  }, [boards]);
+
+  const kindLabelByCode = useMemo(
+    () => new Map(boardKinds.map((kind) => [kind.code, kind.label])),
+    [boardKinds],
+  );
 
   return (
     <div className="grid gap-6">
@@ -141,33 +149,98 @@ export function GoalBoardHub() {
 
       {error ? <p className="text-sm text-rose-400">{error}</p> : null}
 
-      <div className="grid gap-4">
+      <section className="grid gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Wszystkie tablice</h2>
+          <p className="text-xs text-muted">Szybki dostęp bez podziału na kategorie</p>
+        </div>
+        {boards.length === 0 ? (
+          <p className="text-sm text-muted">Brak tablic — utwórz pierwszą.</p>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {boards.map((board) => {
+              const counts = boardCounts[board.id];
+              return (
+                <div
+                  key={board.id}
+                  className="relative rounded-xl border border-border/70 bg-surface-muted/30 p-3 transition hover:border-accent/40 hover:bg-surface-muted/50"
+                >
+                  <Link href={`/tablice-celow/${board.id}`} className="block">
+                    <p className="truncate pr-14 text-sm font-semibold text-foreground">
+                      {board.name}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted">
+                      {kindLabelByCode.get(board.kind) ?? board.kind}
+                    </p>
+                    {board.description ? (
+                      <p className="mt-0.5 line-clamp-2 text-xs text-muted">{board.description}</p>
+                    ) : null}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <Badge tone="neutral">{counts?.total ?? 0} celów</Badge>
+                      {counts && counts.atRisk > 0 ? (
+                        <Badge tone="critical">{counts.atRisk} zagrożonych</Badge>
+                      ) : null}
+                      {counts && counts.dueForReview > 0 ? (
+                        <Badge tone="waiting">{counts.dueForReview} do przeglądu</Badge>
+                      ) : null}
+                    </div>
+                  </Link>
+                  {isAdmin ? (
+                    <div className="absolute right-1.5 top-1.5 z-10 flex items-center gap-0.5 rounded-lg border border-border/60 bg-background/90 p-0.5 shadow-sm">
+                      <EditGoalBoardDialog board={board} />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-muted hover:text-rose-400"
+                        disabled={deletingId === board.id}
+                        onClick={() => void handleDeleteBoard(board.id, board.name)}
+                        aria-label="Usuń tablicę"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="grid gap-4">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Według kategorii</h2>
+          <p className="text-xs text-muted">Tablice pogrupowane po typie</p>
+        </div>
         {boardKinds.map((kind) => {
           const kindBoards = boardsByKind.get(kind.code) ?? [];
           return (
-            <Card key={kind.code} className="group">
-              <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface-muted text-accent">
+            <Card key={kind.code}>
+              <CardHeader className="flex flex-row items-start justify-between gap-3 pb-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-muted text-accent">
                     <GoalBoardKindIcon icon={kind.icon} className="h-4.5 w-4.5" />
                   </div>
-                  <div>
-                    <CardTitle>{kind.label}</CardTitle>
+                  <div className="min-w-0">
+                    <CardTitle className="truncate pr-2">{kind.label}</CardTitle>
                     <p className="text-xs text-muted">{kind.description}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-1">
                   {kind.visibility === "admin_only" ? (
-                    <Badge tone="critical">Tylko admin</Badge>
+                    <Badge tone="critical" className="hidden sm:inline-flex">
+                      Tylko admin
+                    </Badge>
                   ) : null}
                   {isAdmin ? (
-                    <div className="flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+                    <div className="flex items-center gap-0.5 rounded-lg border border-border/60 bg-surface-muted/50 p-0.5">
                       <EditGoalBoardKindDialog kind={kind} />
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 p-0 text-muted hover:text-rose-400"
+                        className="h-8 w-8 p-0 text-muted hover:text-rose-400"
                         disabled={deletingKindCode === kind.code || kindBoards.length > 0}
                         title={
                           kindBoards.length > 0
@@ -193,14 +266,16 @@ export function GoalBoardHub() {
                       return (
                         <div
                           key={board.id}
-                          className="group relative rounded-xl border border-border/70 bg-surface-muted/30 p-3 transition hover:border-accent/40 hover:bg-surface-muted/50"
+                          className="relative rounded-xl border border-border/70 bg-surface-muted/30 p-3 transition hover:border-accent/40 hover:bg-surface-muted/50"
                         >
                           <Link href={`/tablice-celow/${board.id}`} className="block">
-                            <p className="truncate pr-12 text-sm font-semibold text-foreground">
+                            <p className="truncate pr-14 text-sm font-semibold text-foreground">
                               {board.name}
                             </p>
                             {board.description ? (
-                              <p className="mt-0.5 line-clamp-2 text-xs text-muted">{board.description}</p>
+                              <p className="mt-0.5 line-clamp-2 text-xs text-muted">
+                                {board.description}
+                              </p>
                             ) : null}
                             <div className="mt-2 flex flex-wrap items-center gap-2">
                               <Badge tone="neutral">{counts?.total ?? 0} celów</Badge>
@@ -213,13 +288,13 @@ export function GoalBoardHub() {
                             </div>
                           </Link>
                           {isAdmin ? (
-                            <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+                            <div className="absolute right-1.5 top-1.5 z-10 flex items-center gap-0.5 rounded-lg border border-border/60 bg-background/90 p-0.5 shadow-sm">
                               <EditGoalBoardDialog board={board} />
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 w-7 p-0 text-muted hover:text-rose-400"
+                                className="h-8 w-8 p-0 text-muted hover:text-rose-400"
                                 disabled={deletingId === board.id}
                                 onClick={() => void handleDeleteBoard(board.id, board.name)}
                                 aria-label="Usuń tablicę"
@@ -237,7 +312,7 @@ export function GoalBoardHub() {
             </Card>
           );
         })}
-      </div>
+      </section>
     </div>
   );
 }

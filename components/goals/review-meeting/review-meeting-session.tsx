@@ -340,46 +340,66 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
   const doneCount = meeting.items.filter((item) => item.status === "done").length;
   const totalCount = meeting.items.length;
   const extraAvailable = canTakeExtraTime(summaryBuffer);
+  const timerUrgent = remainingSeconds <= 30;
 
   return (
     <div ref={topRef} className="mx-auto max-w-3xl space-y-6">
-      <div className="sticky top-0 z-20 -mx-1 space-y-2 rounded-2xl border border-border bg-background/95 px-4 py-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs text-muted">
-              Cel {doneCount + 1} / {totalCount}
-              {activeItem.deepDive ? " · deep-dive" : ""}
-            </p>
-            <h2 className="truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-              {activeGoal.name}
-            </h2>
-            <p className="truncate text-xs text-muted">Właściciel: {ownerName}</p>
+      {/* Spacer pod fixed bar — wysokość zbliżona do paska + offset nagłówka app */}
+      <div className="h-[7.5rem] shrink-0 sm:h-[6.75rem]" aria-hidden />
+
+      <div className="fixed inset-x-0 top-14 z-40 px-4 sm:px-5 xl:left-72 xl:top-16 xl:px-8">
+        <div
+          className={`mx-auto max-w-3xl space-y-2 rounded-2xl border-2 px-4 py-3 shadow-lg backdrop-blur-md ${
+            timerUrgent
+              ? "border-rose-400/80 bg-rose-950/95 text-rose-50"
+              : "border-emerald-400/70 bg-emerald-950/95 text-emerald-50"
+          }`}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className={`text-xs ${timerUrgent ? "text-rose-200/90" : "text-emerald-200/90"}`}>
+                Cel {doneCount + 1} / {totalCount}
+                {activeItem.deepDive ? " · deep-dive" : ""}
+              </p>
+              <h2 className="truncate text-lg font-semibold tracking-tight sm:text-xl">
+                {activeGoal.name}
+              </h2>
+              <p className={`truncate text-xs ${timerUrgent ? "text-rose-200/80" : "text-emerald-200/80"}`}>
+                Właściciel: {ownerName}
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p
+                className={`font-mono text-3xl font-semibold tabular-nums ${
+                  timerUrgent ? "text-rose-200" : "text-white"
+                }`}
+              >
+                {formatTimerSeconds(remainingSeconds)}
+              </p>
+              <p className={`text-xs ${timerUrgent ? "text-rose-200/80" : "text-emerald-200/80"}`}>
+                Bufor: {formatTimerSeconds(summaryBuffer)}
+              </p>
+            </div>
           </div>
-          <div className="shrink-0 text-right">
-            <p
-              className={`font-mono text-3xl font-semibold tabular-nums ${
-                remainingSeconds <= 30 ? "text-rose-400" : "text-foreground"
-              }`}
-            >
-              {formatTimerSeconds(remainingSeconds)}
-            </p>
-            <p className="text-xs text-muted">
-              Bufor: {formatTimerSeconds(summaryBuffer)}
-            </p>
-          </div>
-        </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-surface-muted">
           <div
-            className="h-full bg-accent transition-[width] duration-1000"
-            style={{
-              width: `${Math.min(
-                100,
-                ((activeItem.plannedSeconds - remainingSeconds) /
-                  Math.max(1, activeItem.plannedSeconds)) *
+            className={`h-1.5 overflow-hidden rounded-full ${
+              timerUrgent ? "bg-rose-900/80" : "bg-emerald-900/80"
+            }`}
+          >
+            <div
+              className={`h-full transition-[width] duration-1000 ${
+                timerUrgent ? "bg-rose-400" : "bg-emerald-400"
+              }`}
+              style={{
+                width: `${Math.min(
                   100,
-              )}%`,
-            }}
-          />
+                  ((activeItem.plannedSeconds - remainingSeconds) /
+                    Math.max(1, activeItem.plannedSeconds)) *
+                    100,
+                )}%`,
+              }}
+            />
+          </div>
         </div>
       </div>
 
