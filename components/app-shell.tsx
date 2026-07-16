@@ -645,7 +645,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
             </p>
             <p className="truncate text-xs text-muted">Smart Home / BMS</p>
           </div>
-          <NotificationBell />
+          <NotificationBell role="primary" />
         </header>
 
         <header className="sticky top-0 z-20 border-b border-border bg-background/80 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl xl:hidden">
@@ -659,7 +659,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
               </p>
               <p className="truncate text-xs text-muted">Smart Home / BMS</p>
             </div>
-            <NotificationBell />
+            <NotificationBell role="secondary" />
           </div>
         </header>
 

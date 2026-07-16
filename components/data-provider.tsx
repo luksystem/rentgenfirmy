@@ -8,12 +8,12 @@ import { ensureWarrantyExpiringNotifications } from "@/lib/notifications/warrant
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useNotificationStore } from "@/store/notification-store";
+import { BrandLoadingInline } from "@/components/brand-loading";
 import { ProjectEditProvider } from "@/components/project-edit-provider";
 import { ProcessHydrator } from "@/components/process/process-hydrator";
 import { KanbanCacheHydrator } from "@/components/process/kanban-cache-hydrator";
 import { DashboardHydrator } from "@/components/dashboard/dashboard-hydrator";
 import { MyWorkHydrator } from "@/components/my-work/my-work-hydrator";
-import { VizHydrator } from "@/components/viz/viz-hydrator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -73,45 +73,35 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=twoj-anon-key`}
     );
   }
 
-  if (isLoading && !isInitialized) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted">
-        Ładowanie danych z Supabase...
-      </div>
-    );
-  }
-
-  if (error && !isInitialized) {
-    return (
-      <Card className="mx-auto mt-10 max-w-2xl border-rose-500/30">
-        <CardContent className="grid gap-4 py-8">
-          <h2 className="text-xl font-semibold text-rose-300">Błąd połączenia</h2>
-          <p className="text-sm text-muted">{error}</p>
-          <p className="text-sm text-muted">
-            Upewnij się, że uruchomiłeś skrypt SQL z{" "}
-            <code className="rounded bg-surface-muted px-1.5 py-0.5 text-foreground">supabase/schema.sql</code>.
-          </p>
-          <Button onClick={() => void initialize()}>Spróbuj ponownie</Button>
-        </CardContent>
-      </Card>
-    );
-  }
+  const showBootBanner = !isInitialized && isLoading;
+  const showBootError = Boolean(error && !isInitialized);
 
   return (
     <ProcessHydrator>
       <KanbanCacheHydrator>
         <DashboardHydrator>
           <MyWorkHydrator>
-            <VizHydrator>
-          <>
-            {error ? (
-              <div className="panel-danger mb-4 rounded-xl border px-4 py-3 text-sm text-rose-300">
-                {error}
-              </div>
-            ) : null}
-            <ProjectEditProvider>{children}</ProjectEditProvider>
-          </>
-            </VizHydrator>
+            <>
+              {showBootBanner ? (
+                <div className="mb-4 rounded-xl border border-border/70 bg-surface-muted/30 px-4 py-3">
+                  <BrandLoadingInline label="Ładowanie danych w tle…" />
+                </div>
+              ) : null}
+              {showBootError ? (
+                <div className="panel-danger mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm text-rose-300">
+                  <span>{error}</span>
+                  <Button type="button" size="sm" variant="outline" onClick={() => void initialize()}>
+                    Spróbuj ponownie
+                  </Button>
+                </div>
+              ) : null}
+              {error && isInitialized ? (
+                <div className="panel-danger mb-4 rounded-xl border px-4 py-3 text-sm text-rose-300">
+                  {error}
+                </div>
+              ) : null}
+              <ProjectEditProvider>{children}</ProjectEditProvider>
+            </>
           </MyWorkHydrator>
         </DashboardHydrator>
       </KanbanCacheHydrator>

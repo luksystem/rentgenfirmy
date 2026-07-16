@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import {
   Briefcase,
   Building2,
@@ -19,6 +20,10 @@ import {
   GLOBAL_DASHBOARD_KINDS,
 } from "@/lib/dashboard/types";
 import { formatPartyName } from "@/lib/party/display-name";
+import {
+  ensureEmployeeDashboardSpace,
+  ensureGlobalDashboardSpaces,
+} from "@/lib/supabase/dashboard-repository";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useDashboardStore } from "@/store/dashboard-store";
@@ -34,9 +39,28 @@ export default function DashboardHubPage() {
   const projects = useAppStore((state) => state.projects);
   const clients = useAppStore((state) => state.clients);
   const profile = useAuthStore((state) => state.profile);
+  const displayName = useAuthStore((state) => state.displayName);
   const spaces = useDashboardStore((state) => state.spaces);
   const isLoading = useDashboardStore((state) => state.isLoading);
   const hydrated = useDashboardStore((state) => state.hydrated);
+  const hydrate = useDashboardStore((state) => state.hydrate);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        await ensureGlobalDashboardSpaces();
+        if (profile?.id) {
+          await ensureEmployeeDashboardSpace({
+            profileId: profile.id,
+            displayName: displayName || profile.email || "Pracownik",
+          });
+        }
+        await hydrate({ force: true });
+      } catch {
+        // Hub działa też na samej liście z cache — ensure jest best-effort.
+      }
+    })();
+  }, [displayName, hydrate, profile?.email, profile?.id]);
 
   const projectsWithClient = projects.filter((project) => project.clientId);
 

@@ -25,7 +25,11 @@ import { useProcessStore } from "@/store/process-store";
 import { SALES_NOTIFICATION_KINDS } from "@/lib/notifications/types";
 import type { UserNotification } from "@/lib/notifications/types";
 
-export function NotificationBell() {
+/**
+ * `primary` — ładuje badge’e API przy mount (tylko jedna instancja w shellu).
+ * `secondary` — tylko UI; liczniki kanban/unread biorą ze store (już odświeżane przez realtime).
+ */
+export function NotificationBell({ role = "primary" }: { role?: "primary" | "secondary" }) {
   const profileId = useAuthStore((state) => state.profile?.id);
   const unreadCount = useNotificationStore((state) => state.unreadCount);
   const items = useNotificationStore((state) => state.items);
@@ -250,11 +254,11 @@ export function NotificationBell() {
   }, []);
 
   useEffect(() => {
-    if (!profileId) {
+    if (!profileId || role !== "primary") {
       return;
     }
     refreshBadge();
-  }, [profileId, refreshBadge]);
+  }, [profileId, refreshBadge, role]);
 
   useEffect(() => {
     if (!open || !profileId) {

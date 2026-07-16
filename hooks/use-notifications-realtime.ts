@@ -3,9 +3,18 @@
 import { useEffect, useRef } from "react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 
-const POLL_INTERVAL_MS = 10_000;
+const POLL_INTERVAL_MS = 30_000;
 
-export function useNotificationsRealtime(profileId: string | undefined, onRefresh: () => void) {
+type RefreshMode = "light" | "full";
+
+/**
+ * Realtime + okresowy poll. Poll i eventy DB → light; focus/visibility → full.
+ * onRefresh(mode) pozwala ograniczyć fan-out ciężkich store’ów.
+ */
+export function useNotificationsRealtime(
+  profileId: string | undefined,
+  onRefresh: (mode?: RefreshMode) => void,
+) {
   const onRefreshRef = useRef(onRefresh);
   onRefreshRef.current = onRefresh;
 
@@ -14,11 +23,11 @@ export function useNotificationsRealtime(profileId: string | undefined, onRefres
       return;
     }
 
-    const refresh = () => {
-      onRefreshRef.current();
+    const refresh = (mode: RefreshMode = "full") => {
+      onRefreshRef.current(mode);
     };
 
-    refresh();
+    refresh("full");
 
     const supabase = getSupabase();
     const channelName = `user-notifications-${profileId}-${crypto.randomUUID()}`;
@@ -33,25 +42,29 @@ export function useNotificationsRealtime(profileId: string | undefined, onRefres
           filter: `profile_id=eq.${profileId}`,
         },
         () => {
-          refresh();
+          refresh("light");
         },
       )
       .subscribe();
 
-    const intervalId = window.setInterval(refresh, POLL_INTERVAL_MS);
+    const intervalId = window.setInterval(() => refresh("light"), POLL_INTERVAL_MS);
 
     function handleVisibilityChange() {
       if (document.visibilityState === "visible") {
-        refresh();
+        refresh("full");
       }
     }
 
-    window.addEventListener("focus", refresh);
+    function handleFocus() {
+      refresh("full");
+    }
+
+    window.addEventListener("focus", handleFocus);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       window.clearInterval(intervalId);
-      window.removeEventListener("focus", refresh);
+      window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       void supabase.removeChannel(channel);
     };

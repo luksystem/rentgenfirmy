@@ -245,6 +245,8 @@ type ProcessStore = {
   replaceProjectProcessItem: (projectId: string, item: ProjectProcessItem) => void;
 };
 
+let hydratePromise: Promise<void> | null = null;
+
 export const useProcessStore = create<ProcessStore>((set, get) => ({
   templates: [],
   elements: [],
@@ -262,34 +264,56 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
   error: null,
 
   hydrate: async (projectTypes) => {
-    set({ isLoading: true, error: null });
-    try {
-      await ensureDefaultProcessTemplates(projectTypes);
-      const [templates, processes, elements, kanbanNewTaskCount, kanbanOverdueTaskCount] = await Promise.all([
-        fetchProcessTemplates(),
-        fetchProjectProcesses(),
-        fetchProcessElements(),
-        countNewKanbanTasksForTeam().catch(() => 0),
-        countOverdueKanbanTasks().catch(() => 0),
-      ]);
-      set({
-        templates,
-        elements,
-        kanbanNewTaskCount,
-        kanbanOverdueTaskCount,
-        projectProcesses: Object.fromEntries(processes.map((process) => [process.projectId, process])),
-        hydrated: true,
-        isLoading: false,
-      });
-    } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : "Błąd ładowania procesów.",
-        isLoading: false,
-      });
+    const state = get();
+    if (state.hydrated) {
+      return;
     }
+    if (hydratePromise) {
+      return hydratePromise;
+    }
+
+    const showLoading = state.templates.length === 0;
+    if (showLoading) {
+      set({ isLoading: true, error: null });
+    }
+
+    hydratePromise = (async () => {
+      try {
+        await ensureDefaultProcessTemplates(projectTypes);
+        const [templates, processes, elements, kanbanNewTaskCount, kanbanOverdueTaskCount] =
+          await Promise.all([
+            fetchProcessTemplates(),
+            fetchProjectProcesses(),
+            fetchProcessElements(),
+            countNewKanbanTasksForTeam().catch(() => 0),
+            countOverdueKanbanTasks().catch(() => 0),
+          ]);
+        set({
+          templates,
+          elements,
+          kanbanNewTaskCount,
+          kanbanOverdueTaskCount,
+          projectProcesses: Object.fromEntries(processes.map((process) => [process.projectId, process])),
+          hydrated: true,
+          isLoading: false,
+          error: null,
+        });
+      } catch (error) {
+        set({
+          error: error instanceof Error ? error.message : "Błąd ładowania procesów.",
+          isLoading: false,
+        });
+      } finally {
+        hydratePromise = null;
+      }
+    })();
+
+    return hydratePromise;
   },
 
   refresh: async (projectTypes) => {
+    hydratePromise = null;
+    set({ hydrated: false });
     await get().hydrate(projectTypes);
   },
 

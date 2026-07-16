@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { BrandLoading } from "@/components/brand-loading";
 import { Button } from "@/components/ui/button";
 import { ensureGoalActivityNotifications } from "@/lib/notifications/goal-activity";
 import { useAuthStore } from "@/store/auth-store";
@@ -32,11 +33,7 @@ export function GoalHydrator({ children }: { children: React.ReactNode }) {
   }, [hydrated]);
 
   if (isLoading && !hydrated) {
-    return (
-      <div className="flex min-h-[30vh] items-center justify-center text-sm text-muted">
-        Ładowanie modułu Tablic celów...
-      </div>
-    );
+    return <BrandLoading className="min-h-[30vh]" label="Ładowanie modułu Tablic celów…" />;
   }
 
   if (error && !hydrated) {

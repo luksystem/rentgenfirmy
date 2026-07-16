@@ -37,27 +37,36 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   hydrate: async (options) => {
     const force = options?.force ?? false;
     const state = get();
+    const ensureProjects = options?.projects;
 
-    if (state.hydrated && state.spaces.length && !force && !options?.projects) {
+    // Cache hit tylko gdy nie prosimy o ensure konkretnych projektów.
+    if (state.hydrated && state.spaces.length && !force && !ensureProjects?.length) {
       return state.spaces;
     }
 
-    if (hydratePromise && !force) {
+    if (hydratePromise && !force && !ensureProjects?.length) {
       return hydratePromise;
     }
 
-    set({ isLoading: !state.spaces.length, error: null });
+    set({ isLoading: !state.spaces.length && !state.hydrated, error: null });
 
-    hydratePromise = (async () => {
+    let task!: Promise<DashboardSpace[]>;
+    task = (async () => {
       try {
         let spaces: DashboardSpace[];
 
-        if (options?.projects?.length) {
-          spaces = await ensureAllDashboardSpaces({
-            projects: options.projects,
-            profileId: options.profileId,
-            displayName: options.displayName,
+        if (ensureProjects?.length) {
+          // Ensure wskazanych projektów i scal z cache (bez masowego ensure wszystkich na boot).
+          const ensured = await ensureAllDashboardSpaces({
+            projects: ensureProjects,
+            profileId: options?.profileId,
+            displayName: options?.displayName,
           });
+          const byId = new Map(get().spaces.map((space) => [space.id, space]));
+          for (const space of ensured) {
+            byId.set(space.id, space);
+          }
+          spaces = [...byId.values()];
         } else if (state.spaces.length && !force) {
           spaces = state.spaces;
         } else {
@@ -78,11 +87,17 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
         });
         throw error;
       } finally {
-        hydratePromise = null;
+        if (hydratePromise === task) {
+          hydratePromise = null;
+        }
       }
     })();
 
-    return hydratePromise;
+    if (!ensureProjects?.length) {
+      hydratePromise = task;
+    }
+
+    return task;
   },
 
   getSpaceByProject: (projectId, kind) => {

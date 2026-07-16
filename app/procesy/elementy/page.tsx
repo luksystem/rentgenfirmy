@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { BrandLoading } from "@/components/brand-loading";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,8 +16,10 @@ export default function ProcessElementsPage() {
   const projectTypes = useAppStore((state) => state.fieldOptions.projectTypes);
   const elements = useProcessStore((state) => state.elements);
   const isLoading = useProcessStore((state) => state.isLoading);
+  const hydrated = useProcessStore((state) => state.hydrated);
   const error = useProcessStore((state) => state.error);
   const hydrate = useProcessStore((state) => state.hydrate);
+  const showLoading = isLoading && !hydrated;
   const [nameFilter, setNameFilter] = useState("");
 
   useEffect(() => {
@@ -58,7 +61,7 @@ export default function ProcessElementsPage() {
         </Card>
       ) : null}
 
-      {!isLoading && elements.length > 0 ? (
+      {!showLoading && elements.length > 0 ? (
         <div className="mb-4 max-w-md">
           <Field label="Filtruj po nazwie">
             <Input
@@ -70,8 +73,8 @@ export default function ProcessElementsPage() {
         </div>
       ) : null}
 
-      {isLoading ? (
-        <p className="text-sm text-muted">Ładowanie elementów…</p>
+      {showLoading ? (
+        <BrandLoading className="min-h-[30vh]" label="Ładowanie elementów…" />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredElements.map((element) => (

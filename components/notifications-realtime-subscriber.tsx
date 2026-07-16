@@ -47,13 +47,20 @@ export function NotificationsRealtimeSubscriber() {
     };
   }, []);
 
-  const refresh = useCallback(() => {
+  const refreshLight = useCallback(() => {
     if (!profileId) {
       return;
     }
     void refreshFromRealtime(profileId);
     void refreshKanbanNewTaskCount();
     void refreshKanbanOverdueTaskCount();
+  }, [profileId, refreshFromRealtime, refreshKanbanNewTaskCount, refreshKanbanOverdueTaskCount]);
+
+  const refreshFull = useCallback(() => {
+    if (!profileId) {
+      return;
+    }
+    refreshLight();
     void refreshAgreementPendingCounts({ force: true });
 
     const leaveState = useLeaveStore.getState();
@@ -69,17 +76,21 @@ export function NotificationsRealtimeSubscriber() {
     void leaveState.refreshPendingForMeCount();
 
     scheduleMyWorkBackgroundRefresh();
-  }, [
-    profileId,
-    refreshAgreementPendingCounts,
-    refreshFromRealtime,
-    refreshKanbanNewTaskCount,
-    refreshKanbanOverdueTaskCount,
-    scheduleMyWorkBackgroundRefresh,
-  ]);
+  }, [profileId, refreshAgreementPendingCounts, refreshLight, scheduleMyWorkBackgroundRefresh]);
+
+  const refresh = useCallback(
+    (mode: "light" | "full" = "full") => {
+      if (mode === "light") {
+        refreshLight();
+        return;
+      }
+      refreshFull();
+    },
+    [refreshFull, refreshLight],
+  );
 
   useNotificationsRealtime(profileId, refresh);
-  useAgreementsHubRealtime(refresh);
+  useAgreementsHubRealtime(() => refresh("full"));
 
   useEffect(() => {
     if (!profileId || !isSupabaseConfigured()) {

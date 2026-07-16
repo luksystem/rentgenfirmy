@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { BrandLoading } from "@/components/brand-loading";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,8 +16,10 @@ export default function ProcesyPage() {
   const projectTypes = useAppStore((state) => state.fieldOptions.projectTypes);
   const templates = useProcessStore((state) => state.templates);
   const isLoading = useProcessStore((state) => state.isLoading);
+  const hydrated = useProcessStore((state) => state.hydrated);
   const error = useProcessStore((state) => state.error);
   const hydrate = useProcessStore((state) => state.hydrate);
+  const showLoading = isLoading && !hydrated;
   const ensureTemplateForProjectType = useProcessStore((state) => state.ensureTemplateForProjectType);
   const [creatingType, setCreatingType] = useState<string | null>(null);
 
@@ -61,8 +64,8 @@ export default function ProcesyPage() {
         </Card>
       ) : null}
 
-      {isLoading ? (
-        <p className="text-sm text-muted">Ładowanie szablonów procesów…</p>
+      {showLoading ? (
+        <BrandLoading className="min-h-[30vh]" label="Ładowanie szablonów procesów…" />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {projectTypes.map((projectType) => {

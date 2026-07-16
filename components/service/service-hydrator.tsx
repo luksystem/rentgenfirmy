@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { BrandLoading } from "@/components/brand-loading";
 import { Button } from "@/components/ui/button";
 import { useServiceStore } from "@/store/service-store";
 
@@ -15,11 +16,7 @@ export function ServiceHydrator({ children }: { children: React.ReactNode }) {
   }, [hydrate]);
 
   if (isLoading && !hydrated) {
-    return (
-      <div className="flex min-h-[30vh] items-center justify-center text-sm text-muted">
-        Ładowanie modułu ofert...
-      </div>
-    );
+    return <BrandLoading className="min-h-[30vh]" label="Ładowanie modułu ofert…" />;
   }
 
   if (error && !hydrated) {

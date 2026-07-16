@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Trash2 } from "lucide-react";
+import { BrandLoadingInline } from "@/components/brand-loading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -165,6 +166,10 @@ export function GoalDetailView({ goalId, onDeleted }: { goalId: string; onDelete
     upsertGoalInStore(next);
   }
 
+  const handleTaskCountsChange = useCallback((done: number, total: number) => {
+    setOpenTaskCount(Math.max(0, total - done));
+  }, []);
+
   const canCloseReview = useMemo(() => {
     if (!profile || !goal) return false;
     if (profile.id === goal.ownerId) return true;
@@ -172,12 +177,7 @@ export function GoalDetailView({ goalId, onDeleted }: { goalId: string; onDelete
   }, [profile, goal]);
 
   if (loading) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Wczytywanie celu...
-      </div>
-    );
+    return <BrandLoadingInline label="Wczytywanie celu…" />;
   }
 
   if (!goal) {
@@ -249,7 +249,7 @@ export function GoalDetailView({ goalId, onDeleted }: { goalId: string; onDelete
       {tab === "zadania" ? (
         <GoalInitiativesCard
           goalId={goal.id}
-          onCountsChange={(done, total) => setOpenTaskCount(Math.max(0, total - done))}
+          onCountsChange={handleTaskCountsChange}
         />
       ) : null}
 

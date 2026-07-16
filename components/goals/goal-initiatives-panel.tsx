@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { CheckSquare, Loader2, Square } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { CheckSquare, Square } from "lucide-react";
+import { BrandLoadingInline } from "@/components/brand-loading";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   fetchGoalInitiatives,
@@ -20,15 +22,21 @@ export function GoalInitiativesPanel({
 }) {
   const [items, setItems] = useState<GoalInitiative[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const setGoalInitiativeTaskCounts = useGoalStore((state) => state.setGoalInitiativeTaskCounts);
 
+  const onCountsChangeRef = useRef(onCountsChange);
+  onCountsChangeRef.current = onCountsChange;
+  const setCountsRef = useRef(setGoalInitiativeTaskCounts);
+  setCountsRef.current = setGoalInitiativeTaskCounts;
+
   const publishCounts = useCallback(
     (done: number, total: number) => {
-      setGoalInitiativeTaskCounts(goalId, done, total);
-      onCountsChange?.(done, total);
+      setCountsRef.current(goalId, done, total);
+      onCountsChangeRef.current?.(done, total);
     },
-    [goalId, onCountsChange, setGoalInitiativeTaskCounts],
+    [goalId],
   );
 
   const reload = useCallback(async () => {
@@ -42,9 +50,13 @@ export function GoalInitiativesPanel({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setError(null);
     void reload()
-      .catch(() => {
-        if (!cancelled) setItems([]);
+      .catch((err) => {
+        if (!cancelled) {
+          setItems([]);
+          setError(err instanceof Error ? err.message : "Nie udało się wczytać zadań.");
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -56,6 +68,7 @@ export function GoalInitiativesPanel({
 
   async function toggle(item: GoalInitiative) {
     setBusyId(item.id);
+    setError(null);
     try {
       const updated = await setGoalInitiativeCompleted(item.id, !item.completedAt);
       setItems((current) => {
@@ -64,17 +77,36 @@ export function GoalInitiativesPanel({
         publishCounts(done, next.length);
         return next;
       });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nie udało się zapisać zadania.");
     } finally {
       setBusyId(null);
     }
   }
 
   if (loading) {
+    return <BrandLoadingInline label="Ładowanie zadań…" />;
+  }
+
+  if (error && items.length === 0) {
     return (
-      <p className="flex items-center gap-2 text-sm text-muted">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Ładowanie zadań…
-      </p>
+      <div className="space-y-2">
+        <p className="text-sm text-rose-400">{error}</p>
+        <button
+          type="button"
+          className="text-sm font-medium text-accent underline-offset-2 hover:underline"
+          onClick={() => {
+            setLoading(true);
+            void reload()
+              .catch((err) => {
+                setError(err instanceof Error ? err.message : "Nie udało się wczytać zadań.");
+              })
+              .finally(() => setLoading(false));
+          }}
+        >
+          Spróbuj ponownie
+        </button>
+      </div>
     );
   }
 
@@ -86,6 +118,7 @@ export function GoalInitiativesPanel({
 
   return (
     <div className="space-y-2">
+      {error ? <p className="text-sm text-rose-400">{error}</p> : null}
       <p className="text-xs font-semibold uppercase tracking-wide text-muted">
         Zadania · {done}/{items.length} zrobione
       </p>
@@ -106,7 +139,13 @@ export function GoalInitiativesPanel({
                 )}
               >
                 {busyId === item.id ? (
-                  <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
+                  <Image
+                    src="/icons/rentgen-logo-mark-transparent-1024.png"
+                    alt=""
+                    width={16}
+                    height={16}
+                    className="mt-0.5 h-4 w-4 shrink-0 animate-pulse object-contain"
+                  />
                 ) : doneItem ? (
                   <CheckSquare className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
                 ) : (

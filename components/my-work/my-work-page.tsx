@@ -79,7 +79,7 @@ export function MyWorkPage() {
   const [teamView, setTeamView] = useState(false);
 
   useEffect(() => {
-    void ensureMyItems();
+    void ensureMyItems({ sync: true });
     void ensureDayContext();
     if (!canManage) {
       void ensureWeekPlan();

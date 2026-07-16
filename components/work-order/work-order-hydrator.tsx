@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { BrandLoading } from "@/components/brand-loading";
 import { Button } from "@/components/ui/button";
 import { useWorkOrderStore } from "@/store/work-order-store";
 
@@ -15,11 +16,7 @@ export function WorkOrderHydrator({ children }: { children: React.ReactNode }) {
   }, [hydrate]);
 
   if (isLoading && !hydrated) {
-    return (
-      <div className="flex min-h-[30vh] items-center justify-center text-sm text-muted">
-        Ładowanie modułu zleceń...
-      </div>
-    );
+    return <BrandLoading className="min-h-[30vh]" label="Ładowanie modułu zleceń…" />;
   }
 
   if (error && !hydrated) {
