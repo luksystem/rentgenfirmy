@@ -71,8 +71,12 @@ function parseDefaultKind(value: string | null): InterruptionKind {
 function InterruptionsPageContent() {
   const searchParams = useSearchParams();
   const defaultKind = parseDefaultKind(searchParams.get("kind"));
-  const { interruptions, projects, addInterruption, updateInterruption, deleteInterruption, isSaving } =
-    useAppStore();
+  const interruptions = useAppStore((state) => state.interruptions);
+  const projects = useAppStore((state) => state.projects);
+  const addInterruption = useAppStore((state) => state.addInterruption);
+  const updateInterruption = useAppStore((state) => state.updateInterruption);
+  const deleteInterruption = useAppStore((state) => state.deleteInterruption);
+  const isSaving = useAppStore((state) => state.isSaving);
   const projectNames = new Map(projects.map((project) => [project.id, project.name]));
   const projectOptions = projects.map((project) => ({ id: project.id, name: project.name }));
   const [editingInterruption, setEditingInterruption] = useState<Interruption | null>(null);

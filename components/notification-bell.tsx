@@ -20,14 +20,16 @@ import { NavBadges } from "@/components/nav-badges";
 import { cn, formatDate } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import { useAgreementHubStore } from "@/store/agreement-hub-store";
+import { useLeaveStore } from "@/store/leave-store";
+import { useNavBadgeStore } from "@/store/nav-badge-store";
 import { useNotificationStore } from "@/store/notification-store";
 import { useProcessStore } from "@/store/process-store";
 import { SALES_NOTIFICATION_KINDS } from "@/lib/notifications/types";
 import type { UserNotification } from "@/lib/notifications/types";
 
 /**
- * `primary` — ładuje badge’e API przy mount (tylko jedna instancja w shellu).
- * `secondary` — tylko UI; liczniki kanban/unread biorą ze store (już odświeżane przez realtime).
+ * `primary` — odświeża unread/agreements przy mount (badge’e HTTP idą przez nav-badge-store).
+ * `secondary` — tylko UI; liczniki ze store (już odświeżane przez realtime / poller).
  */
 export function NotificationBell({ role = "primary" }: { role?: "primary" | "secondary" }) {
   const profileId = useAuthStore((state) => state.profile?.id);
@@ -42,20 +44,21 @@ export function NotificationBell({ role = "primary" }: { role?: "primary" | "sec
   const setPanelOpen = useNotificationStore((state) => state.setPanelOpen);
   const kanbanNewTaskCount = useProcessStore((state) => state.kanbanNewTaskCount);
   const kanbanOverdueTaskCount = useProcessStore((state) => state.kanbanOverdueTaskCount);
-  const refreshKanbanNewTaskCount = useProcessStore((state) => state.refreshKanbanNewTaskCount);
-  const refreshKanbanOverdueTaskCount = useProcessStore((state) => state.refreshKanbanOverdueTaskCount);
   const agreementPendingCounts = useAgreementHubStore((state) => state.pendingCounts);
   const refreshAgreementPendingCounts = useAgreementHubStore((state) => state.refreshPendingCounts);
-  const [open, setOpen] = useState(false);
-  const [serviceNewCount, setServiceNewCount] = useState(0);
-  const [serviceOverdueCount, setServiceOverdueCount] = useState(0);
-  const [inspectionsPlanningCount, setInspectionsPlanningCount] = useState(0);
-  const [inspectionsBillingCount, setInspectionsBillingCount] = useState(0);
-  const [leavePendingCount, setLeavePendingCount] = useState(0);
-  const [functionalitySurveyPendingCount, setFunctionalitySurveyPendingCount] = useState(0);
-  const [functionalitySurveyLatestHref, setFunctionalitySurveyLatestHref] = useState<string | null>(
-    null,
+  const leavePendingCount = useLeaveStore((state) => state.pendingForMeCount);
+  const serviceNewCount = useNavBadgeStore((state) => state.serviceIntakeNewCount);
+  const serviceOverdueCount = useNavBadgeStore((state) => state.serviceIntakeOverdueCount);
+  const inspectionsPlanningCount = useNavBadgeStore((state) => state.inspectionsPlanningCount);
+  const inspectionsBillingCount = useNavBadgeStore((state) => state.inspectionsBillingCount);
+  const functionalitySurveyPendingCount = useNavBadgeStore(
+    (state) => state.functionalitySurveyPendingCount,
   );
+  const functionalitySurveyLatestHref = useNavBadgeStore(
+    (state) => state.functionalitySurveyLatestHref,
+  );
+  const refreshNavHttpBadges = useNavBadgeStore((state) => state.refreshHttpBadges);
+  const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   const kanbanAlertCount = kanbanNewTaskCount + kanbanOverdueTaskCount;
@@ -96,162 +99,21 @@ export function NotificationBell({ role = "primary" }: { role?: "primary" | "sec
     }
     if (open) {
       void refreshFromRealtime(profileId);
+      void loadNotifications(profileId);
     } else {
       void refreshUnreadCount(profileId);
     }
-    void refreshKanbanNewTaskCount();
-    void refreshKanbanOverdueTaskCount();
-    void refreshAgreementPendingCounts({ force: true });
-    void fetch("/api/service-intake/counts", { credentials: "include" })
-      .then(async (response) => {
-        if (!response.ok) {
-          return;
-        }
-        const payload = (await response.json()) as {
-          activeCount?: number;
-          newCount?: number;
-          overdueCount?: number;
-        };
-        setServiceNewCount(payload.newCount ?? 0);
-        setServiceOverdueCount(payload.overdueCount ?? 0);
-      })
-      .catch(() => {
-        setServiceNewCount(0);
-        setServiceOverdueCount(0);
-      });
-    void fetch("/api/inspections/counts", { credentials: "include" })
-      .then(async (response) => {
-        if (!response.ok) {
-          return;
-        }
-        const payload = (await response.json()) as {
-          planningDueCount?: number;
-          billingAlertCount?: number;
-          newCount?: number;
-        };
-        setInspectionsPlanningCount(payload.planningDueCount ?? 0);
-        setInspectionsBillingCount(payload.billingAlertCount ?? 0);
-      })
-      .catch(() => {
-        setInspectionsPlanningCount(0);
-        setInspectionsBillingCount(0);
-      });
-    void fetch("/api/leave-requests/counts", { credentials: "include" })
-      .then(async (response) => {
-        if (!response.ok) {
-          return;
-        }
-        const payload = (await response.json()) as { pendingForMeCount?: number };
-        setLeavePendingCount(payload.pendingForMeCount ?? 0);
-      })
-      .catch(() => setLeavePendingCount(0));
-    void fetch("/api/functionality-survey/counts", { credentials: "include" })
-      .then(async (response) => {
-        if (!response.ok) {
-          return;
-        }
-        const payload = (await response.json()) as {
-          pendingReviewCount?: number;
-          latest?: {
-            projectId: string;
-            clientId: string | null;
-          } | null;
-        };
-        setFunctionalitySurveyPendingCount(payload.pendingReviewCount ?? 0);
-        const latest = payload.latest;
-        if (latest?.clientId) {
-          const params = new URLSearchParams({
-            project: latest.projectId,
-            tab: "functionality-survey",
-          });
-          setFunctionalitySurveyLatestHref(
-            `/przestrzenie/klient/${latest.clientId}?${params.toString()}`,
-          );
-        } else {
-          setFunctionalitySurveyLatestHref("/przestrzenie");
-        }
-      })
-      .catch(() => {
-        setFunctionalitySurveyPendingCount(0);
-        setFunctionalitySurveyLatestHref(null);
-      });
-    if (open) {
-      void loadNotifications(profileId);
-    }
+    void refreshAgreementPendingCounts({ force: false });
+    void refreshNavHttpBadges();
   }, [
     loadNotifications,
     open,
     profileId,
     refreshAgreementPendingCounts,
     refreshFromRealtime,
-    refreshKanbanNewTaskCount,
-    refreshKanbanOverdueTaskCount,
+    refreshNavHttpBadges,
     refreshUnreadCount,
   ]);
-
-  useEffect(() => {
-    function onInspectionsCountChanged() {
-      void fetch("/api/inspections/counts", { credentials: "include" })
-        .then(async (response) => {
-          if (!response.ok) {
-            return;
-          }
-          const payload = (await response.json()) as {
-            planningDueCount?: number;
-            billingAlertCount?: number;
-          };
-          setInspectionsPlanningCount(payload.planningDueCount ?? 0);
-          setInspectionsBillingCount(payload.billingAlertCount ?? 0);
-        })
-        .catch(() => {
-          setInspectionsPlanningCount(0);
-          setInspectionsBillingCount(0);
-        });
-    }
-
-    function onFunctionalitySurveyCountChanged() {
-      void fetch("/api/functionality-survey/counts", { credentials: "include" })
-        .then(async (response) => {
-          if (!response.ok) {
-            return;
-          }
-          const payload = (await response.json()) as {
-            pendingReviewCount?: number;
-            latest?: {
-              projectId: string;
-              clientId: string | null;
-            } | null;
-          };
-          setFunctionalitySurveyPendingCount(payload.pendingReviewCount ?? 0);
-          const latest = payload.latest;
-          if (latest?.clientId) {
-            const params = new URLSearchParams({
-              project: latest.projectId,
-              tab: "functionality-survey",
-            });
-            setFunctionalitySurveyLatestHref(
-              `/przestrzenie/klient/${latest.clientId}?${params.toString()}`,
-            );
-          } else {
-            setFunctionalitySurveyLatestHref("/przestrzenie");
-          }
-        })
-        .catch(() => {
-          setFunctionalitySurveyPendingCount(0);
-          setFunctionalitySurveyLatestHref(null);
-        });
-    }
-
-    window.addEventListener("inspections-count-changed", onInspectionsCountChanged);
-    window.addEventListener("functionality-survey-count-changed", onFunctionalitySurveyCountChanged);
-    return () => {
-      window.removeEventListener("inspections-count-changed", onInspectionsCountChanged);
-      window.removeEventListener(
-        "functionality-survey-count-changed",
-        onFunctionalitySurveyCountChanged,
-      );
-    };
-  }, []);
 
   useEffect(() => {
     if (!profileId || role !== "primary") {

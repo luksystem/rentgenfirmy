@@ -55,6 +55,7 @@ import { NotificationsRealtimeSubscriber } from "@/components/notifications-real
 import { QuickAddMenuList } from "@/components/quick-add-menu";
 import { useAuthStore } from "@/store/auth-store";
 import { useLeaveStore } from "@/store/leave-store";
+import { useNavBadgeStore } from "@/store/nav-badge-store";
 import { useNavFavoritesStore } from "@/store/nav-favorites-store";
 import { useProcessStore } from "@/store/process-store";
 import { useRoleNavPermissionsStore } from "@/store/role-nav-permissions-store";
@@ -306,95 +307,22 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const signOut = useAuthStore((state) => state.signOut);
   const kanbanNewTaskCount = useProcessStore((state) => state.kanbanNewTaskCount);
   const kanbanOverdueTaskCount = useProcessStore((state) => state.kanbanOverdueTaskCount);
-  const refreshKanbanNewTaskCount = useProcessStore((state) => state.refreshKanbanNewTaskCount);
-  const refreshKanbanOverdueTaskCount = useProcessStore((state) => state.refreshKanbanOverdueTaskCount);
   const leavePendingForMeCount = useLeaveStore((state) => state.pendingForMeCount);
-  const refreshLeavePendingForMeCount = useLeaveStore((state) => state.refreshPendingForMeCount);
   const profileId = useAuthStore((state) => state.profile?.id);
   const navFavoriteHrefs = useNavFavoritesStore((state) => state.hrefs);
   const ensureNavFavorites = useNavFavoritesStore((state) => state.ensure);
   const toggleNavFavorite = useNavFavoritesStore((state) => state.toggle);
   const navPermissionsConfig = useRoleNavPermissionsStore((state) => state.config);
   const hydrateNavPermissions = useRoleNavPermissionsStore((state) => state.hydrate);
-  const [serviceIntakeNewCount, setServiceIntakeNewCount] = useState(0);
-  const [serviceIntakeOverdueCount, setServiceIntakeOverdueCount] = useState(0);
-  const [contactsNewCount, setContactsNewCount] = useState(0);
-  const [intakeOffersNewCount, setIntakeOffersNewCount] = useState(0);
-  const [inspectionsPlanningCount, setInspectionsPlanningCount] = useState(0);
-  const [inspectionsPlanningOverdueCount, setInspectionsPlanningOverdueCount] = useState(0);
-
-  const refreshServiceIntakeCounts = useCallback(() => {
-    void fetch("/api/service-intake/counts", { credentials: "include" })
-      .then(async (response) => {
-        if (!response.ok) {
-          return;
-        }
-        const payload = (await response.json()) as {
-          activeCount?: number;
-          overdueCount?: number;
-          newCount?: number;
-        };
-        setServiceIntakeNewCount(payload.newCount ?? 0);
-        setServiceIntakeOverdueCount(payload.overdueCount ?? 0);
-      })
-      .catch(() => {
-        setServiceIntakeNewCount(0);
-        setServiceIntakeOverdueCount(0);
-      });
-  }, []);
-
-  const refreshContactsCounts = useCallback(() => {
-    void fetch("/api/contacts/counts", { credentials: "include" })
-      .then(async (response) => {
-        if (!response.ok) {
-          return;
-        }
-        const payload = (await response.json()) as {
-          unhandledCount?: number;
-          newCount?: number;
-        };
-        setContactsNewCount(payload.newCount ?? payload.unhandledCount ?? 0);
-      })
-      .catch(() => {
-        setContactsNewCount(0);
-      });
-  }, []);
-
-  const refreshInspectionsCounts = useCallback(() => {
-    void fetch("/api/inspections/counts", { credentials: "include" })
-      .then(async (response) => {
-        if (!response.ok) {
-          return;
-        }
-        const payload = (await response.json()) as {
-          planningDueCount?: number;
-          planningOverdueCount?: number;
-        };
-        setInspectionsPlanningCount(payload.planningDueCount ?? 0);
-        setInspectionsPlanningOverdueCount(payload.planningOverdueCount ?? 0);
-      })
-      .catch(() => {
-        setInspectionsPlanningCount(0);
-        setInspectionsPlanningOverdueCount(0);
-      });
-  }, []);
-
-  const refreshIntakeOffersCounts = useCallback(() => {
-    void fetch("/api/services/intake-offers/counts", { credentials: "include" })
-      .then(async (response) => {
-        if (!response.ok) {
-          return;
-        }
-        const payload = (await response.json()) as {
-          unreviewedCount?: number;
-          newCount?: number;
-        };
-        setIntakeOffersNewCount(payload.newCount ?? payload.unreviewedCount ?? 0);
-      })
-      .catch(() => {
-        setIntakeOffersNewCount(0);
-      });
-  }, []);
+  const serviceIntakeNewCount = useNavBadgeStore((state) => state.serviceIntakeNewCount);
+  const serviceIntakeOverdueCount = useNavBadgeStore((state) => state.serviceIntakeOverdueCount);
+  const contactsNewCount = useNavBadgeStore((state) => state.contactsNewCount);
+  const intakeOffersNewCount = useNavBadgeStore((state) => state.intakeOffersNewCount);
+  const inspectionsPlanningCount = useNavBadgeStore((state) => state.inspectionsPlanningCount);
+  const inspectionsPlanningOverdueCount = useNavBadgeStore(
+    (state) => state.inspectionsPlanningOverdueCount,
+  );
+  const startNavBadgePolling = useNavBadgeStore((state) => state.startPolling);
 
   const handleKanbanOverdueCountChange = useCallback((count: number) => {
     useProcessStore.setState({ kanbanOverdueTaskCount: count });
@@ -405,50 +333,8 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void refreshKanbanOverdueTaskCount();
-    void refreshKanbanNewTaskCount();
-    void refreshLeavePendingForMeCount();
-    refreshServiceIntakeCounts();
-    refreshContactsCounts();
-    refreshIntakeOffersCounts();
-    refreshInspectionsCounts();
-    const interval = window.setInterval(() => {
-      void refreshLeavePendingForMeCount();
-      refreshServiceIntakeCounts();
-      refreshContactsCounts();
-      refreshIntakeOffersCounts();
-      refreshInspectionsCounts();
-    }, 30000);
-    const onFocus = () => {
-      void refreshLeavePendingForMeCount();
-      refreshServiceIntakeCounts();
-      refreshContactsCounts();
-      refreshIntakeOffersCounts();
-      refreshInspectionsCounts();
-    };
-    const onContactsCountChanged = () => refreshContactsCounts();
-    const onIntakeOffersCountChanged = () => refreshIntakeOffersCounts();
-    const onInspectionsCountChanged = () => refreshInspectionsCounts();
-    window.addEventListener("focus", onFocus);
-    window.addEventListener("contacts-count-changed", onContactsCountChanged);
-    window.addEventListener("services-intake-count-changed", onIntakeOffersCountChanged);
-    window.addEventListener("inspections-count-changed", onInspectionsCountChanged);
-    return () => {
-      window.clearInterval(interval);
-      window.removeEventListener("focus", onFocus);
-      window.removeEventListener("contacts-count-changed", onContactsCountChanged);
-      window.removeEventListener("services-intake-count-changed", onIntakeOffersCountChanged);
-      window.removeEventListener("inspections-count-changed", onInspectionsCountChanged);
-    };
-  }, [
-    refreshKanbanNewTaskCount,
-    refreshKanbanOverdueTaskCount,
-    refreshLeavePendingForMeCount,
-    refreshContactsCounts,
-    refreshIntakeOffersCounts,
-    refreshInspectionsCounts,
-    refreshServiceIntakeCounts,
-  ]);
+    startNavBadgePolling();
+  }, [startNavBadgePolling]);
 
   useKanbanOverdueTasksRealtime(handleKanbanOverdueCountChange);
   useKanbanNewTasksRealtime(handleKanbanNewCountChange);

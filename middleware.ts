@@ -5,12 +5,38 @@ import {
   isPublicAppRoute,
   shouldCheckNavModuleAccess,
 } from "@/lib/auth/routes";
-import { normalizeRoleNavPermissionsConfig, ROLE_NAV_PERMISSIONS_SETTINGS_ID } from "@/lib/navigation/role-nav-permissions";
+import {
+  normalizeRoleNavPermissionsConfig,
+  ROLE_NAV_PERMISSIONS_SETTINGS_ID,
+  type RoleNavPermissionsConfig,
+} from "@/lib/navigation/role-nav-permissions";
 import { updateSession } from "@/lib/supabase/middleware";
 import type { UserRole } from "@/lib/auth/types";
 
+const NAV_PERMISSIONS_CACHE_TTL_MS = 60_000;
+let navPermissionsCache: { expiresAt: number; config: RoleNavPermissionsConfig } | null = null;
+
+async function getCachedNavPermissions(
+  supabase: Awaited<ReturnType<typeof updateSession>>["supabase"],
+): Promise<RoleNavPermissionsConfig> {
+  const now = Date.now();
+  if (navPermissionsCache && navPermissionsCache.expiresAt > now) {
+    return navPermissionsCache.config;
+  }
+
+  const { data: settingsRow } = await supabase
+    .from("app_settings")
+    .select("data")
+    .eq("id", ROLE_NAV_PERMISSIONS_SETTINGS_ID)
+    .maybeSingle();
+
+  const config = normalizeRoleNavPermissionsConfig(settingsRow?.data);
+  navPermissionsCache = { expiresAt: now + NAV_PERMISSIONS_CACHE_TTL_MS, config };
+  return config;
+}
+
 export async function middleware(request: NextRequest) {
-  const { supabase, supabaseResponse } = await updateSession(request);
+  const { supabase, supabaseResponse, user } = await updateSession(request);
   const pathname = request.nextUrl.pathname;
 
   const isPublic =
@@ -24,10 +50,6 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/zgloszenie/") ||
     pathname.startsWith("/api/public/") ||
     pathname.startsWith("/api/sms/status-webhook");
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   if (!user) {
     if (isPublic || pathname.startsWith("/api/auth/")) {
@@ -45,6 +67,11 @@ export async function middleware(request: NextRequest) {
     homeUrl.pathname = "/";
     homeUrl.search = "";
     return NextResponse.redirect(homeUrl);
+  }
+
+  // API routes poza admin: auth w handlerze — unikamy dodatkowego round-tripu profiles.
+  if (pathname.startsWith("/api/") && !pathname.startsWith("/api/admin/")) {
+    return supabaseResponse;
   }
 
   const { data: profile } = await supabase
@@ -72,13 +99,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (shouldCheckNavModuleAccess(pathname)) {
-    const { data: settingsRow } = await supabase
-      .from("app_settings")
-      .select("data")
-      .eq("id", ROLE_NAV_PERMISSIONS_SETTINGS_ID)
-      .maybeSingle();
-
-    const navConfig = normalizeRoleNavPermissionsConfig(settingsRow?.data);
+    const navConfig = await getCachedNavPermissions(supabase);
     const role = profile.role as UserRole;
 
     if (!canAccessPathByNavPermissions(pathname, role, navConfig)) {

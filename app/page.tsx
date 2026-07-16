@@ -1,8 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BarPanel, PiePanel } from "@/components/charts";
 import { HomeOperationsCharts } from "@/components/home/home-operations-charts";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeader } from "@/components/page-header";
@@ -10,6 +10,16 @@ import { ClickableProjectCard } from "@/components/project-edit-provider";
 import { QuickWinsPanel } from "@/components/quick-wins-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BrandLoadingInline } from "@/components/brand-loading";
+
+const BarPanel = dynamic(
+  () => import("@/components/charts").then((module) => module.BarPanel),
+  { ssr: false, loading: () => <BrandLoadingInline label="Ładowanie wykresu…" /> },
+);
+const PiePanel = dynamic(
+  () => import("@/components/charts").then((module) => module.PiePanel),
+  { ssr: false, loading: () => <BrandLoadingInline label="Ładowanie wykresu…" /> },
+);
 import {
   generateWeeklyReport,
   interruptionsByType,
@@ -25,7 +35,9 @@ import { useAppStore } from "@/store/app-store";
 import { useProcessStore } from "@/store/process-store";
 
 export default function Home() {
-  const { projects, interruptions, fieldOptions } = useAppStore();
+  const projects = useAppStore((state) => state.projects);
+  const interruptions = useAppStore((state) => state.interruptions);
+  const fieldOptions = useAppStore((state) => state.fieldOptions);
   const templates = useProcessStore((state) => state.templates);
   const projectProcesses = useProcessStore((state) => state.projectProcesses);
   const projectClosingFlags = useMemo(
@@ -50,7 +62,7 @@ export default function Home() {
 
   useEffect(() => {
     void refreshKanbanOverdueTaskCount();
-    void refreshAgreementPendingCounts({ force: true });
+    void refreshAgreementPendingCounts({ force: false });
     void ensureAgreementSnapshot().then((snapshot) => {
       setPendingAgreementsTotal(snapshot.countsByStatus.pending_client);
     });

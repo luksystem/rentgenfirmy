@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { BrandLoading } from "@/components/brand-loading";
 import { Button } from "@/components/ui/button";
 import { ensureGoalActivityNotifications } from "@/lib/notifications/goal-activity";
 import { useAuthStore } from "@/store/auth-store";
@@ -11,7 +10,6 @@ import { useNotificationStore } from "@/store/notification-store";
 export function GoalHydrator({ children }: { children: React.ReactNode }) {
   const hydrate = useGoalStore((state) => state.hydrate);
   const hydrated = useGoalStore((state) => state.hydrated);
-  const isLoading = useGoalStore((state) => state.isLoading);
   const error = useGoalStore((state) => state.error);
 
   useEffect(() => {
@@ -32,24 +30,16 @@ export function GoalHydrator({ children }: { children: React.ReactNode }) {
       .catch(() => undefined);
   }, [hydrated]);
 
-  if (isLoading && !hydrated) {
-    return <BrandLoading className="min-h-[30vh]" label="Ładowanie modułu Tablic celów…" />;
-  }
-
   if (error && !hydrated) {
     return (
       <div className="flex min-h-[30vh] flex-col items-center justify-center gap-3 text-center">
         <p className="text-sm text-rose-400">{error}</p>
-        <Button type="button" variant="secondary" onClick={() => hydrate()}>
+        <Button type="button" variant="secondary" onClick={() => void hydrate()}>
           Spróbuj ponownie
         </Button>
       </div>
     );
   }
 
-  if (!hydrated) {
-    return null;
-  }
-
-  return children;
+  return <>{children}</>;
 }

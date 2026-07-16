@@ -23,7 +23,11 @@ type DialogMode = "create" | "edit" | null;
 
 export function ClientsTable({ clients }: { clients: Client[] }) {
   const router = useRouter();
-  const { addClient, updateClient, deleteClient, isSaving, projects } = useAppStore();
+  const addClient = useAppStore((state) => state.addClient);
+  const updateClient = useAppStore((state) => state.updateClient);
+  const deleteClient = useAppStore((state) => state.deleteClient);
+  const isSaving = useAppStore((state) => state.isSaving);
+  const projects = useAppStore((state) => state.projects);
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [planClient, setPlanClient] = useState<Client | null>(null);

@@ -1,18 +1,31 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2, RefreshCw, FileDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { BrandLoadingInline } from "@/components/brand-loading";
 import { VizBulkSetpointControl } from "@/components/viz/viz-bulk-setpoint-control";
 import { VizActiveAlarmsPanel } from "@/components/viz/viz-active-alarms-panel";
 import { VizNetworkSystemsMatrix } from "@/components/viz/viz-network-systems-matrix";
 import { VizServiceSlaPanel } from "@/components/viz/viz-service-sla-panel";
 import { VizChartRenderer } from "@/components/viz/viz-chart-renderer";
-import { VizDashboardMap } from "@/components/viz/viz-dashboard-map";
 import { VizEnergyTrendWidget } from "@/components/viz/viz-energy-trend-widget";
+
+const VizDashboardMap = dynamic(
+  () => import("@/components/viz/viz-dashboard-map").then((module) => module.VizDashboardMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-2xl border border-border/80 bg-surface p-6">
+        <BrandLoadingInline label="Ładowanie mapy…" />
+      </div>
+    ),
+  },
+);
 import { formatEnergyKwh } from "@/lib/viz/energy-kpi";
 import { STORE_QUICK_LINK_TABS, storeTabHref } from "@/lib/viz/store-tab-slugs";
 import { shouldShowOperatorPanels } from "@/lib/viz/store-tab-permissions";

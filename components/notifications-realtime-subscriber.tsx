@@ -90,7 +90,12 @@ export function NotificationsRealtimeSubscriber() {
   );
 
   useNotificationsRealtime(profileId, refresh);
-  useAgreementsHubRealtime(() => refresh("full"));
+  useAgreementsHubRealtime(() => {
+    // Zmiany ustaleń nie wymagają pełnego refresh leave/my-work — tylko liczniki hubu.
+    if (!profileId) return;
+    void refreshAgreementPendingCounts({ force: true });
+    void refreshFromRealtime(profileId);
+  });
 
   useEffect(() => {
     if (!profileId || !isSupabaseConfigured()) {

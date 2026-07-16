@@ -28,7 +28,9 @@ const presetLabels: Record<ReportPreset, string> = {
 };
 
 export default function ReportPage() {
-  const { projects, interruptions, fieldOptions } = useAppStore();
+  const projects = useAppStore((state) => state.projects);
+  const interruptions = useAppStore((state) => state.interruptions);
+  const fieldOptions = useAppStore((state) => state.fieldOptions);
   const templates = useProcessStore((state) => state.templates);
   const projectProcesses = useProcessStore((state) => state.projectProcesses);
   const defaultPeriod = createWeeklyPeriod();

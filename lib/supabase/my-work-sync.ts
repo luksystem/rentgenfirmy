@@ -1,6 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { UserProfile } from "@/lib/auth/types";
-import { kanbanTaskWorkItemAdapter } from "@/lib/my-work/source-adapters/kanban-task-adapter";
+import {
+  fetchOpenKanbanTaskMirrorsForUser,
+  kanbanTaskWorkItemAdapter,
+} from "@/lib/my-work/source-adapters/kanban-task-adapter";
 import { upsertWorkItemFromMirror, cancelOrphanedSyncedWorkItems } from "@/lib/my-work/source-adapters/sync-helpers";
 import {
   mapAgreementStatus,
@@ -13,7 +16,6 @@ import {
 } from "@/lib/my-work/source-adapters/status-mappers";
 import type { WorkItemMirrorFields } from "@/lib/my-work/source-adapters/types";
 import { canManagerWorkItems } from "@/lib/my-work/permissions";
-import { fetchOpenKanbanTasksForUser } from "@/lib/my-work/source-adapters/kanban-task-adapter";
 import {
   cancelMisassignedProcessItemWorkItemsForUser,
   syncProcessItemsToWorkItemsServer,
@@ -38,20 +40,21 @@ async function getCompletedPlanStatusId(admin: AdminClient) {
 }
 
 export async function syncKanbanTasksToWorkItems(admin: AdminClient, userId: string, managerId: string | null) {
-  const kanbanTasks = await fetchOpenKanbanTasksForUser(admin, userId);
+  const mirrors = await fetchOpenKanbanTaskMirrorsForUser(admin, userId);
 
-  for (const task of kanbanTasks) {
-    const mirror = await kanbanTaskWorkItemAdapter.fetchMirror(admin, task.id);
-    const status = kanbanTaskWorkItemAdapter.inferInitialStatus?.(mirror) ?? "in_progress";
-    await upsertWorkItemFromMirror(admin, {
-      sourceType: "kanban_task",
-      sourceId: task.id,
-      assignedUserId: userId,
-      managerId,
-      mirror,
-      status,
-    });
-  }
+  await Promise.all(
+    mirrors.map(({ sourceId, mirror }) => {
+      const status = kanbanTaskWorkItemAdapter.inferInitialStatus?.(mirror) ?? "in_progress";
+      return upsertWorkItemFromMirror(admin, {
+        sourceType: "kanban_task",
+        sourceId,
+        assignedUserId: userId,
+        managerId,
+        mirror,
+        status,
+      });
+    }),
+  );
 
   const { data: staleItems, error: staleError } = await admin
     .from("work_items")

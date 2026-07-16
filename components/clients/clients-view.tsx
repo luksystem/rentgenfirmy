@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { Activity, List, MapPin } from "lucide-react";
 import { ClientsTable } from "@/components/clients-table";
-import { ClientsHealthView } from "@/components/clients/clients-health-view";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
@@ -27,6 +26,19 @@ const ClientsMapView = dynamic(
     loading: () => (
       <div className="flex min-h-[420px] items-center justify-center rounded-2xl border border-border/80 bg-surface p-8 text-sm text-muted">
         Ładowanie mapy klientów…
+      </div>
+    ),
+  },
+);
+
+const ClientsHealthView = dynamic(
+  () =>
+    import("@/components/clients/clients-health-view").then((module) => module.ClientsHealthView),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-border/80 bg-surface p-8 text-sm text-muted">
+        Ładowanie widoku zdrowia…
       </div>
     ),
   },

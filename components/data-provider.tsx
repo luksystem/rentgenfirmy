@@ -22,7 +22,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const initialize = useAppStore((state) => state.initialize);
   const isLoading = useAppStore((state) => state.isLoading);
   const isInitialized = useAppStore((state) => state.isInitialized);
-  const projects = useAppStore((state) => state.projects);
   const error = useAppStore((state) => state.error);
   const skipData = isPublicAppRoute(pathname);
 
@@ -36,6 +35,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (!isInitialized || skipData) {
       return;
     }
+    // Nie subskrybuj projects w renderze — unikaj re-renderu całego drzewa app.
+    const projects = useAppStore.getState().projects;
     void ensureWarrantyExpiringNotifications(projects)
       .then(() => {
         const profileId = useAuthStore.getState().profile?.id;
@@ -44,7 +45,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
       })
       .catch(() => undefined);
-  }, [isInitialized, projects, skipData]);
+  }, [isInitialized, skipData]);
 
   if (skipData) {
     return <>{children}</>;

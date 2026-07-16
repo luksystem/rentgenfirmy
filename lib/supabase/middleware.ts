@@ -26,7 +26,10 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getUser();
+  // Jedno getUser() — middleware korzysta z wyniku zamiast drugiego round-tripu.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  return { supabase, supabaseResponse };
+  return { supabase, supabaseResponse, user };
 }

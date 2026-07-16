@@ -149,3 +149,35 @@ export async function fetchOpenKanbanTasksForUser(admin: SupabaseClient, userId:
   }
   return data ?? [];
 }
+
+/** Jedno zapytanie z pełnym kontekstem lustra — unika N+1 w sync My Work. */
+export async function fetchOpenKanbanTaskMirrorsForUser(admin: SupabaseClient, userId: string) {
+  const { data, error } = await admin
+    .from("process_kanban_tasks")
+    .select(
+      `
+      id, title, description, priority, due_date, closed_at, assignee_id, column_id,
+      process_kanban_columns (
+        title,
+        process_kanban_boards (
+          project_process_item_id,
+          project_process_items (
+            project_id,
+            projects ( id, client_id )
+          )
+        )
+      )
+    `,
+    )
+    .eq("assignee_id", userId)
+    .is("closed_at", null);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((data ?? []) as unknown as KanbanTaskContextRow[]).map((row) => ({
+    sourceId: row.id,
+    mirror: mirrorFromKanbanRow(row),
+  }));
+}

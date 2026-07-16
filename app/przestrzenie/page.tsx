@@ -55,7 +55,7 @@ export default function DashboardHubPage() {
             displayName: displayName || profile.email || "Pracownik",
           });
         }
-        await hydrate({ force: true });
+        await hydrate({ force: false });
       } catch {
         // Hub działa też na samej liście z cache — ensure jest best-effort.
       }

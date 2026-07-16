@@ -1,13 +1,18 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { Edit, Plus, Trash2 } from "lucide-react";
 import { MobileField, MobileListCard } from "@/components/mobile-list-card";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { ProjectProcessLink } from "@/components/process/project-process-link";
 import { useProjectEdit } from "@/components/project-edit-provider";
-import { ProjectForm } from "@/components/project-form";
 import { ProjectsStageKanban } from "@/components/projects-stage-kanban";
+
+const ProjectForm = dynamic(
+  () => import("@/components/project-form").then((module) => module.ProjectForm),
+  { ssr: false },
+);
 import { ProjectViewFiltersBar } from "@/components/projects-view-filters";
 import { PriorityBadge, ProjectStatusBadge } from "@/components/project-status-badge";
 import { Button } from "@/components/ui/button";
@@ -54,7 +59,16 @@ export function ProjectsTable() {
     projectsViewFilters,
     updateProjectsViewFilters,
     isInitialized,
-  } = useAppStore();
+  } = {
+    projects: useAppStore((state) => state.projects),
+    addProject: useAppStore((state) => state.addProject),
+    deleteProject: useAppStore((state) => state.deleteProject),
+    isSaving: useAppStore((state) => state.isSaving),
+    fieldOptions: useAppStore((state) => state.fieldOptions),
+    projectsViewFilters: useAppStore((state) => state.projectsViewFilters),
+    updateProjectsViewFilters: useAppStore((state) => state.updateProjectsViewFilters),
+    isInitialized: useAppStore((state) => state.isInitialized),
+  };
   const templates = useProcessStore((state) => state.templates);
   const projectProcesses = useProcessStore((state) => state.projectProcesses);
   const { openProjectEdit } = useProjectEdit();

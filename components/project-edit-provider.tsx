@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import {
   createContext,
   useCallback,
@@ -8,8 +9,12 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import { ProjectForm } from "@/components/project-form";
 import { ProjectIntegrationsTab } from "@/components/project/project-integrations-tab";
+
+const ProjectForm = dynamic(
+  () => import("@/components/project-form").then((module) => module.ProjectForm),
+  { ssr: false },
+);
 import {
   Dialog,
   DialogContent,

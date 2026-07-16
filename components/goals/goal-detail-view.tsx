@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { BrandLoadingInline } from "@/components/brand-loading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

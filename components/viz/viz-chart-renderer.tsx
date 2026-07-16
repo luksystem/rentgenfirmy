@@ -17,7 +17,7 @@ import {
 } from "recharts";
 import { Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { CHART_COLORS } from "@/components/charts";
+import { CHART_COLORS } from "@/components/chart-colors";
 import {
   buildChartAxisPlan,
   buildMultiSeriesRows,

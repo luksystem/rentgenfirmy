@@ -21,8 +21,12 @@ import { useAppStore } from "@/store/app-store";
 type DialogMode = "create" | "edit" | "history" | null;
 
 export function ContactsTable({ contacts }: { contacts: Contact[] }) {
-  const { addContact, updateContact, deleteContact, convertContactToClient, markContactHandled, isSaving } =
-    useAppStore();
+  const addContact = useAppStore((state) => state.addContact);
+  const updateContact = useAppStore((state) => state.updateContact);
+  const deleteContact = useAppStore((state) => state.deleteContact);
+  const convertContactToClient = useAppStore((state) => state.convertContactToClient);
+  const markContactHandled = useAppStore((state) => state.markContactHandled);
+  const isSaving = useAppStore((state) => state.isSaving);
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [activeContact, setActiveContact] = useState<Contact | null>(null);
 
