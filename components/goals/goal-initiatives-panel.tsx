@@ -9,6 +9,7 @@ import {
 } from "@/lib/supabase/goal-repository";
 import type { GoalInitiative } from "@/lib/goals/types";
 import { cn } from "@/lib/utils";
+import { useGoalStore } from "@/store/goal-store";
 
 export function GoalInitiativesPanel({
   goalId,
@@ -20,14 +21,23 @@ export function GoalInitiativesPanel({
   const [items, setItems] = useState<GoalInitiative[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const setGoalInitiativeTaskCounts = useGoalStore((state) => state.setGoalInitiativeTaskCounts);
+
+  const publishCounts = useCallback(
+    (done: number, total: number) => {
+      setGoalInitiativeTaskCounts(goalId, done, total);
+      onCountsChange?.(done, total);
+    },
+    [goalId, onCountsChange, setGoalInitiativeTaskCounts],
+  );
 
   const reload = useCallback(async () => {
     const list = await fetchGoalInitiatives(goalId);
     const tasks = list.filter((item) => item.kind === "task");
     setItems(tasks);
     const done = tasks.filter((item) => item.completedAt).length;
-    onCountsChange?.(done, tasks.length);
-  }, [goalId, onCountsChange]);
+    publishCounts(done, tasks.length);
+  }, [goalId, publishCounts]);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,7 +61,7 @@ export function GoalInitiativesPanel({
       setItems((current) => {
         const next = current.map((entry) => (entry.id === updated.id ? updated : entry));
         const done = next.filter((entry) => entry.completedAt).length;
-        onCountsChange?.(done, next.length);
+        publishCounts(done, next.length);
         return next;
       });
     } finally {

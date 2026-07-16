@@ -32,11 +32,16 @@ export function ProjectHealthPanel({
   projectName,
   stageTitle,
   processProgressPercent,
+  variant = "full",
+  onOpenGoals,
 }: {
   projectId: string;
   projectName: string;
   stageTitle?: string | null;
   processProgressPercent?: number | null;
+  /** `banner` — kompaktowy pasek na HOME; `full` — pełny panel na zakładce Cele. */
+  variant?: "full" | "banner";
+  onOpenGoals?: () => void;
 }) {
   const [bundle, setBundle] = useState<ProjectHealthBundle | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,6 +97,14 @@ export function ProjectHealthPanel({
   }
 
   if (loading && !bundle) {
+    if (variant === "banner") {
+      return (
+        <div className="flex items-center gap-2 rounded-2xl border border-border/80 bg-surface px-4 py-3 text-sm text-muted">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Analiza zdrowia projektu…
+        </div>
+      );
+    }
     return (
       <Card>
         <CardContent className="flex items-center gap-2 py-6 text-sm text-muted">
@@ -109,6 +122,58 @@ export function ProjectHealthPanel({
   const summary = bundle.latestSnapshot?.summaryMd ?? "";
   const s = bundle.signals;
 
+  if (variant === "banner") {
+    const preview =
+      summary.trim().split("\n").find((line) => line.trim().length > 0)?.replace(/^#+\s*/, "") ??
+      null;
+
+    return (
+      <div
+        className={cn(
+          "flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3",
+          BAND_TONE[bundle.band].split(" ").slice(0, 2).join(" "),
+        )}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <Activity className="h-4 w-4 shrink-0" />
+            <p className="text-sm font-semibold text-foreground">Zdrowie projektu</p>
+            <span className="text-lg font-semibold tabular-nums text-foreground">{bundle.score}</span>
+            <span className="text-xs text-muted">/100</span>
+            <Badge className={BAND_TONE[bundle.band]}>{PROJECT_HEALTH_BAND_LABELS[bundle.band]}</Badge>
+            <Badge tone="neutral">{PROJECT_HEALTH_SENTIMENT_LABELS[bundle.sentiment]}</Badge>
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            Cele {s.goalsActive}
+            {s.goalsAtRisk ? ` · zagrożone ${s.goalsAtRisk}` : ""}
+            {" · "}
+            zmiany {s.changesPending ? `${s.changesPending} czekają` : `${s.changesAccepted} ok`}
+            {" · "}
+            wdrożenie otwarte {s.kanbanTasksOpen}
+            {" · "}
+            notatki {s.meetingNotesPublished}
+            {preview ? ` · ${preview.slice(0, 120)}${preview.length > 120 ? "…" : ""}` : ""}
+          </p>
+          {error ? <p className="mt-1 text-xs text-rose-400">{error}</p> : null}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {onOpenGoals ? (
+            <Button type="button" size="sm" variant="outline" onClick={onOpenGoals}>
+              Szczegóły
+            </Button>
+          ) : null}
+          <Button type="button" size="sm" variant="outline" disabled={loading} onClick={() => void reload()}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          </Button>
+          <Button type="button" size="sm" disabled={generating} onClick={() => void handleGenerate()}>
+            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            AI
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4">
       <Card className={cn("border", BAND_TONE[bundle.band].split(" ").slice(0, 2).join(" "))}>
@@ -119,7 +184,7 @@ export function ProjectHealthPanel({
               Zdrowie projektu
             </CardTitle>
             <p className="mt-1 text-xs text-muted">
-              Cele, zadania, przełożenia i komentarze powiązane z projektem · etap:{" "}
+              Cele, notatki u klienta, zmiany, wdrożenie i komentarze · etap:{" "}
               {bundle.stageTitle ?? "—"}
               {bundle.processProgressPercent != null
                 ? ` · proces ~${bundle.processProgressPercent}%`
@@ -147,17 +212,43 @@ export function ProjectHealthPanel({
             <Badge tone="neutral">{PROJECT_HEALTH_SENTIMENT_LABELS[bundle.sentiment]}</Badge>
           </div>
 
-          <div className="grid gap-2 text-xs text-muted sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-2 text-xs text-muted sm:grid-cols-2 lg:grid-cols-3">
             <p>
               Cele aktywne: <span className="text-foreground">{s.goalsActive}</span>
               {s.goalsAtRisk > 0 ? ` · zagrożone ${s.goalsAtRisk}` : ""}
             </p>
             <p>
-              Zadania:{" "}
+              Zadania celów:{" "}
               <span className="text-foreground">
                 {s.tasksDone}/{s.tasksTotal}
               </span>{" "}
               zrobione
+            </p>
+            <p>
+              Notatki u klienta:{" "}
+              <span className="text-foreground">
+                {s.meetingNotesPublished}/{s.meetingNotesTotal}
+              </span>
+            </p>
+            <p>
+              Zmiany:{" "}
+              <span className="text-foreground">
+                {s.changesAccepted} ok · {s.changesPending} czekają
+                {s.changesRejected ? ` · ${s.changesRejected} odrz.` : ""}
+              </span>
+            </p>
+            <p>
+              Wdrożenie:{" "}
+              <span className="text-foreground">
+                {s.kanbanTasksOpen} otwarte / {s.kanbanTasksTotal}
+              </span>
+            </p>
+            <p>
+              Komentarze wdrożenia:{" "}
+              <span className="text-foreground">
+                {s.kanbanCommentsTotal}
+                {s.kanbanClientComments ? ` (klient ${s.kanbanClientComments})` : ""}
+              </span>
             </p>
             <p>
               Po terminie: <span className="text-foreground">{s.overdueCount}</span>
@@ -185,8 +276,8 @@ export function ProjectHealthPanel({
             </div>
           ) : (
             <p className="text-sm text-muted">
-              Kliknij „Podsumuj AI”, żeby zebrać wątek celów w werdykt zdrowia projektu (nastroje,
-              ryzyka, zgodność z etapem).
+              Kliknij „Podsumuj AI”, żeby zebrać cele, notatki, zmiany i wdrożenie w werdykt zdrowia
+              projektu.
             </p>
           )}
         </CardContent>
@@ -196,13 +287,13 @@ export function ProjectHealthPanel({
         <CardHeader>
           <CardTitle className="text-base">Wątek projektu</CardTitle>
           <p className="text-xs text-muted">
-            Komentarze, wnioski, zadania i przełożenia z celów przypiętych do tego projektu
+            Cele, notatki u klienta, zmiany projektowe, zadania i komentarze wdrożeniowe
           </p>
         </CardHeader>
         <CardContent>
           {bundle.thread.length === 0 ? (
             <p className="text-sm text-muted">
-              Brak wpisów. Dodaj cele do projektu i zapisuj komentarze / zadania podczas przeglądów.
+              Brak wpisów. Dodaj cele, notatki u klienta, zmiany lub zadania na tablicach wdrożenia.
             </p>
           ) : (
             <ul className="max-h-96 space-y-2 overflow-y-auto">

@@ -70,6 +70,7 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
   const [timeUpOpen, setTimeUpOpen] = useState(false);
   const [advancing, setAdvancing] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ outcome?: boolean; notes?: boolean }>({});
   const [settleOpen, setSettleOpen] = useState(false);
 
   const remainingRef = useRef(0);
@@ -120,6 +121,8 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
     elapsedRef.current = 0;
     setSummaryBuffer(meeting?.summaryBufferSeconds ?? 600);
     setTimeUpOpen(false);
+    setLocalError(null);
+    setFieldErrors({});
     window.scrollTo({ top: 0, behavior: "smooth" });
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
@@ -168,17 +171,27 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
 
   async function finishCurrentItemAndAdvance(options?: { skipOutcomeCheck?: boolean }) {
     if (!meeting || !activeItem || !activeGoal) return;
-    if (!outcome) {
-      setLocalError("Wybierz wynik przeglądu względem kryteriów sukcesu.");
-      return;
-    }
-    if (!notes.trim() && !options?.skipOutcomeCheck) {
-      setLocalError("Dodaj krótkie uzasadnienie oceny w notatkach.");
+
+    const missingOutcome = !outcome;
+    const missingNotes = !notes.trim() && !options?.skipOutcomeCheck;
+    if (missingOutcome || missingNotes) {
+      setFieldErrors({
+        outcome: missingOutcome,
+        notes: missingNotes,
+      });
+      setLocalError(
+        missingOutcome && missingNotes
+          ? "Uzupełnij wynik przeglądu i notatkę — pola podświetlone na czerwono."
+          : missingOutcome
+            ? "Wybierz wynik przeglądu względem kryteriów sukcesu."
+            : "Dodaj uzasadnienie oceny w notatkach.",
+      );
       return;
     }
 
     setAdvancing(true);
     setLocalError(null);
+    setFieldErrors({});
     setTimeUpOpen(false);
 
     try {
@@ -413,9 +426,17 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
         currentProfileId={profile?.id ?? null}
         teamProfiles={teamProfiles}
         notes={notes}
-        onNotesChange={persistNotes}
+        onNotesChange={(value) => {
+          persistNotes(value);
+          if (value.trim()) {
+            setFieldErrors((current) => ({ ...current, notes: false }));
+          }
+        }}
         outcome={outcome}
-        onOutcomeChange={setOutcome}
+        onOutcomeChange={(value) => {
+          setOutcome(value);
+          setFieldErrors((current) => ({ ...current, outcome: false }));
+        }}
         goalStatus={goalStatus}
         onGoalStatusChange={setGoalStatus}
         progressPercent={progressPercent}
@@ -423,6 +444,8 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
         ownerId={ownerId}
         onOwnerChange={setOwnerId}
         onRequestSettle={() => setSettleOpen(true)}
+        invalidOutcome={Boolean(fieldErrors.outcome)}
+        invalidNotes={Boolean(fieldErrors.notes)}
         onTaskCreated={() => {
           void refreshMeeting();
           if (meeting?.boardId) void ensureBoardGoals(meeting.boardId, { force: true });
@@ -442,7 +465,7 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
         </p>
         <Button
           type="button"
-          disabled={advancing || !outcome}
+          disabled={advancing}
           onClick={() => void finishCurrentItemAndAdvance()}
         >
           {advancing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -461,7 +484,7 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
-              disabled={advancing || !outcome}
+              disabled={advancing}
               onClick={() => void finishCurrentItemAndAdvance()}
             >
               Dalej
@@ -488,6 +511,7 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
         onOpenChange={setSettleOpen}
         currentProfileId={profile?.id ?? null}
         onSettled={(settledGoal) => {
+          setSettleOpen(false);
           setGoalStatus("settled");
           setProgressPercent(100);
           if (settledGoal) upsertGoalInStore(settledGoal);

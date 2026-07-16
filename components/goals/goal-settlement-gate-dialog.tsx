@@ -93,6 +93,7 @@ export function GoalSettlementGateDialog({
         settledBy: currentProfileId,
       });
       onSettled(result.goal);
+      onOpenChange(false);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Nie udało się rozliczyć celu.");
     } finally {

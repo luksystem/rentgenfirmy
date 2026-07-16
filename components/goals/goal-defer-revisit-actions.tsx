@@ -34,9 +34,19 @@ export function GoalDeferRevisitActions({
   const [busy, setBusy] = useState<"defer" | "revisit" | "clear" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [invalidDeferNote, setInvalidDeferNote] = useState(false);
+  const [invalidRevisitAt, setInvalidRevisitAt] = useState(false);
+  const [invalidRevisitNote, setInvalidRevisitNote] = useState(false);
+
   async function handleDefer() {
+    if (!deferNote.trim()) {
+      setInvalidDeferNote(true);
+      setError("Uzupełnij notatkę do przełożenia celu.");
+      return;
+    }
     setBusy("defer");
     setError(null);
+    setInvalidDeferNote(false);
     try {
       const result = await deferGoal({
         goalId: goal.id,
@@ -57,12 +67,24 @@ export function GoalDeferRevisitActions({
   }
 
   async function handleRevisit() {
-    if (!revisitAt) {
-      setError("Podaj datę powrotu do celu.");
+    const missingDate = !revisitAt;
+    const missingNote = !revisitNote.trim();
+    if (missingDate || missingNote) {
+      setInvalidRevisitAt(missingDate);
+      setInvalidRevisitNote(missingNote);
+      setError(
+        missingDate && missingNote
+          ? "Podaj datę powrotu i notatkę."
+          : missingDate
+            ? "Podaj datę powrotu do celu."
+            : "Uzupełnij notatkę do oznaczenia powrotu.",
+      );
       return;
     }
     setBusy("revisit");
     setError(null);
+    setInvalidRevisitAt(false);
+    setInvalidRevisitNote(false);
     try {
       const updated = await setGoalRevisit({
         goalId: goal.id,
@@ -113,12 +135,21 @@ export function GoalDeferRevisitActions({
           </p>
         ) : null}
         <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-          <Field label="Data powrotu" className="min-w-0">
+          <Field
+            label="Data powrotu *"
+            className="min-w-0"
+            invalid={invalidRevisitAt}
+            error={invalidRevisitAt ? "Podaj datę." : undefined}
+          >
             <Input
               type="date"
               className="min-w-0 max-w-full"
+              invalid={invalidRevisitAt}
               value={revisitAt}
-              onChange={(e) => setRevisitAt(e.target.value)}
+              onChange={(e) => {
+                setRevisitAt(e.target.value);
+                if (e.target.value) setInvalidRevisitAt(false);
+              }}
             />
           </Field>
           <div className="flex flex-wrap items-end gap-2">
@@ -146,11 +177,20 @@ export function GoalDeferRevisitActions({
             ) : null}
           </div>
         </div>
-        <Field label="Notatka (opcjonalnie)" className="min-w-0">
+        <Field
+          label="Notatka *"
+          className="min-w-0"
+          invalid={invalidRevisitNote}
+          error={invalidRevisitNote ? "Notatka jest obowiązkowa." : undefined}
+        >
           <Input
             className="min-w-0 max-w-full"
+            invalid={invalidRevisitNote}
             value={revisitNote}
-            onChange={(e) => setRevisitNote(e.target.value)}
+            onChange={(e) => {
+              setRevisitNote(e.target.value);
+              if (e.target.value.trim()) setInvalidRevisitNote(false);
+            }}
             placeholder="Dlaczego trzeba wrócić…"
           />
         </Field>
@@ -195,11 +235,20 @@ export function GoalDeferRevisitActions({
             />
           </Field>
         </div>
-        <Field label="Notatka (opcjonalnie)" className="min-w-0">
+        <Field
+          label="Notatka *"
+          className="min-w-0"
+          invalid={invalidDeferNote}
+          error={invalidDeferNote ? "Notatka jest obowiązkowa." : undefined}
+        >
           <Textarea
             className="min-w-0 max-w-full"
+            invalid={invalidDeferNote}
             value={deferNote}
-            onChange={(e) => setDeferNote(e.target.value)}
+            onChange={(e) => {
+              setDeferNote(e.target.value);
+              if (e.target.value.trim()) setInvalidDeferNote(false);
+            }}
             rows={2}
             placeholder="Kontekst przełożenia…"
           />

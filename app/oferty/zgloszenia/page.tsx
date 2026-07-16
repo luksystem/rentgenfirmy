@@ -9,7 +9,7 @@ export default function ServiceIntakeAdminPage() {
       <PageHeader
         eyebrow="Serwis"
         title="Zgłoszenia serwisowe"
-        description="Zgłoszenia z publicznego kreatora /zgloszenie — tablica Kanban, priorytety CAFE i wątki z klientem."
+        description="Tylko typ „Zgłoszenie serwisowe” — Kanban CAFE i wątki z klientem. Nowa funkcjonalność i prośba o ofertę trafiają do Szybkich ofert."
         action={
           <Button variant="secondary" asChild>
             <Link href="/zgloszenie" target="_blank" rel="noreferrer">
@@ -18,7 +18,7 @@ export default function ServiceIntakeAdminPage() {
           </Button>
         }
       />
-      <ServiceIntakeKanban />
+      <ServiceIntakeKanban requestTypeFilter="service" />
     </>
   );
 }

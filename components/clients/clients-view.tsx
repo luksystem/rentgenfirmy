@@ -2,8 +2,9 @@
 
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
-import { List, MapPin } from "lucide-react";
+import { Activity, List, MapPin } from "lucide-react";
 import { ClientsTable } from "@/components/clients-table";
+import { ClientsHealthView } from "@/components/clients/clients-health-view";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
@@ -31,13 +32,14 @@ const ClientsMapView = dynamic(
   },
 );
 
-type ClientsViewMode = "list" | "map";
+type ClientsViewMode = "list" | "map" | "health";
 
 export function ClientsView() {
   const allClients = useAppStore((state) => state.clients);
   const projects = useAppStore((state) => state.projects);
   const [view, setView] = useState<ClientsViewMode>("list");
   const [mapMounted, setMapMounted] = useState(false);
+  const [healthMounted, setHealthMounted] = useState(false);
   const [filters, setFilters] = useState<ClientListFilters>(EMPTY_CLIENT_LIST_FILTERS);
 
   const filteredClients = useMemo(() => {
@@ -54,6 +56,11 @@ export function ClientsView() {
   function openMapView() {
     setMapMounted(true);
     setView("map");
+  }
+
+  function openHealthView() {
+    setHealthMounted(true);
+    setView("health");
   }
 
   return (
@@ -78,6 +85,16 @@ export function ClientsView() {
         >
           <MapPin className="mr-2 h-4 w-4" />
           Mapa
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={view === "health" ? "default" : "outline"}
+          className={cn(view === "health" && "shadow-soft")}
+          onClick={openHealthView}
+        >
+          <Activity className="mr-2 h-4 w-4" />
+          Zdrowie
         </Button>
       </div>
 
@@ -163,6 +180,12 @@ export function ClientsView() {
       {mapMounted ? (
         <div className={view === "map" ? undefined : "hidden"}>
           <ClientsMapView clients={filteredClients} />
+        </div>
+      ) : null}
+
+      {healthMounted ? (
+        <div className={view === "health" ? undefined : "hidden"}>
+          <ClientsHealthView clients={filteredClients} projects={projects} />
         </div>
       ) : null}
     </>

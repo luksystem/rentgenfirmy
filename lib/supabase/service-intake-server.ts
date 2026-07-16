@@ -33,13 +33,14 @@ import {
   intakeAllowsPreliminaryAcceptance,
   intakeRequestTypeRequiresAiEstimate,
   intakeRequiresPreliminaryAcceptance,
+  isCommercialIntakeRequestType,
   resolveIntakeAiServiceType,
+  resolveIntakeEstimateScope,
   shouldApplyIntakePrioritySurcharge,
 } from "@/lib/service-intake/ai-estimate-flow";
 import { computeIntakeAiEstimate, applyEstimateScopeToLineItems } from "@/lib/service-intake/intake-ai-estimate";
 import { createServiceFromIntakePreliminaryAcceptance } from "@/lib/service-intake/create-service-from-intake";
 import { aggregateAiTaskHours, buildLineItemsFromAiEstimate } from "@/lib/service/apply-ai-estimate";
-import { resolveIntakeEstimateScope } from "@/lib/service-intake/ai-estimate-flow";
 import type {
   ServiceIntakeAiEstimateSnapshot,
   ServiceIntakeAttachment,
@@ -833,15 +834,26 @@ export async function submitServiceIntakeRequest(input: {
     }
   }
 
+  const isCommercialRequest = isCommercialIntakeRequestType(input.requestType);
   const preliminaryAccepted = Boolean(
     input.preliminaryAccepted && allowsPreliminaryAcceptanceForSnapshot && aiEstimateSnapshot,
   );
+  // Nowa funkcja / prośba o ofertę → Szybkie oferty (converted), nigdy otwarta karta na tablicy serwisowej.
+  const convertsToQuickOffer = preliminaryAccepted || (isCommercialRequest && Boolean(aiEstimateSnapshot));
+
+  if (isCommercialRequest && !aiEstimateSnapshot) {
+    throw new Error("Brak orientacyjnej wyceny. Wróć do kroku wyceny i spróbuj ponownie.");
+  }
+
+  if (isCommercialRequest && !input.preliminaryAccepted) {
+    throw new Error("Zaakceptuj orientacyjną wycenę — zgłoszenie trafi do oferty, nie na tablicę serwisową.");
+  }
 
   const { data, error } = await supabase
     .from("service_intake_requests")
     .insert({
       reference_number: referenceNumber,
-      status: preliminaryAccepted ? "converted" : "new",
+      status: convertsToQuickOffer ? "converted" : "new",
       client_id: verified.clientId,
       project_id: project.id,
       contact_email: verified.email,
@@ -859,14 +871,15 @@ export async function submitServiceIntakeRequest(input: {
       due_at: dueAt,
       ai_estimate: aiEstimateSnapshot,
       work_preference: workPreference,
-      preliminary_accepted_at: preliminaryAccepted ? now : null,
+      preliminary_accepted_at: convertsToQuickOffer ? now : null,
       metadata_json: {
         projectName: project.name,
         warrantyLabel: warranty.label,
         requestType: input.requestType,
         postWarrantyAction: input.postWarrantyAction,
         workPreference,
-        preliminaryAccepted,
+        preliminaryAccepted: convertsToQuickOffer,
+        routedToQuickOffer: isCommercialRequest,
         prioritySurchargeApplied: aiEstimateSnapshot?.prioritySurchargeApplied ?? false,
         prioritySurchargePercent: aiEstimateSnapshot?.prioritySurchargePercent ?? null,
       },
@@ -900,7 +913,7 @@ export async function submitServiceIntakeRequest(input: {
 
   await notifyServiceIntakeSubmitted(record);
 
-  if (preliminaryAccepted && aiEstimateSnapshot) {
+  if (convertsToQuickOffer && aiEstimateSnapshot) {
     const estimateScope = resolveIntakeEstimateScope(
       !isWarrantyActive && isServiceRequest ? input.postWarrantyAction : null,
     );

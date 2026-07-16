@@ -93,6 +93,8 @@ type GoalStore = {
     authorId: string | null,
   ) => Promise<void>;
   upsertGoalInStore: (goal: Goal) => void;
+  /** Aktualizuje licznik zadań na karcie kanbana (np. po odhaczeniu w szczegółach). */
+  setGoalInitiativeTaskCounts: (goalId: string, done: number, total: number) => void;
   getOwnerName: (profileId: string | null) => string;
 };
 
@@ -313,6 +315,55 @@ export const useGoalStore = create<GoalStore>((set, get) => ({
         : [goal, ...boardGoals];
 
     set({ goalsByBoard: { ...get().goalsByBoard, [goal.boardId]: nextGoals } });
+  },
+
+  setGoalInitiativeTaskCounts: (goalId, done, total) => {
+    const safeDone = Math.max(0, done);
+    const safeTotal = Math.max(0, total);
+    const metaByBoard = get().goalCardMetaByBoard;
+    let changed = false;
+    const nextMetaByBoard: Record<string, Record<string, GoalCardMeta>> = { ...metaByBoard };
+
+    for (const [boardId, metaByGoal] of Object.entries(metaByBoard)) {
+      const current = metaByGoal[goalId];
+      if (!current) continue;
+      if (current.initiativeTaskDone === safeDone && current.initiativeTaskTotal === safeTotal) {
+        continue;
+      }
+      changed = true;
+      nextMetaByBoard[boardId] = {
+        ...metaByGoal,
+        [goalId]: {
+          ...current,
+          initiativeTaskDone: safeDone,
+          initiativeTaskTotal: safeTotal,
+        },
+      };
+    }
+
+    // Cel może być w cache goals, ale jeszcze bez meta (np. świeżo otwarty szczegół).
+    if (!changed) {
+      for (const [boardId, goals] of Object.entries(get().goalsByBoard)) {
+        if (!goals.some((goal) => goal.id === goalId)) continue;
+        const boardMeta = nextMetaByBoard[boardId] ?? {};
+        nextMetaByBoard[boardId] = {
+          ...boardMeta,
+          [goalId]: {
+            linkedTaskCount: boardMeta[goalId]?.linkedTaskCount ?? 0,
+            openProblemCount: boardMeta[goalId]?.openProblemCount ?? 0,
+            nextReviewAt: boardMeta[goalId]?.nextReviewAt ?? null,
+            initiativeTaskDone: safeDone,
+            initiativeTaskTotal: safeTotal,
+          },
+        };
+        changed = true;
+        break;
+      }
+    }
+
+    if (changed) {
+      set({ goalCardMetaByBoard: nextMetaByBoard });
+    }
   },
 
   getOwnerName: (profileId) => {

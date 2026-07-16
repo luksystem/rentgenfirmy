@@ -338,6 +338,10 @@ export function ClientDashboardView({
       if (activeKanbanToken) {
         onKanbanTokenChange?.(null);
       }
+      // Cele i zdrowie projektu — tylko zespół (nie przestrzeń publiczna klienta).
+      if (readOnly && tab === "goals") {
+        return;
+      }
       if (readOnly && tab === "notes" && selectedProjectId) {
         const publishedIds = meetingNotes
           .filter((note) => note.status === "published")
@@ -365,8 +369,10 @@ export function ClientDashboardView({
 
   useEffect(() => {
     // Synchronizacja z URL (np. przycisk „wstecz” w przeglądarce po zmianie zakładki).
-    setActiveTab(initialTab ?? "home");
-  }, [initialTab]);
+    const next = initialTab ?? "home";
+    // Cele nie są dostępne w przestrzeni publicznej klienta.
+    setActiveTab(readOnly && next === "goals" ? "home" : next);
+  }, [initialTab, readOnly]);
 
   useEffect(() => {
     if (activeKanbanToken) {
@@ -844,7 +850,7 @@ export function ClientDashboardView({
   }
 
   function renderGoalsSection() {
-    if (!selectedProject) return null;
+    if (!selectedProject || readOnly) return null;
     const project = selectedProject;
     const activeStageId = process?.activeStageId ?? null;
     const anchored = process ? resolveAnchoredProcessTemplate(process, template) : null;
@@ -853,14 +859,12 @@ export function ClientDashboardView({
 
     return (
       <div className="grid min-w-0 max-w-full gap-4">
-        {!readOnly ? (
-          <ProjectHealthPanel
-            projectId={project.id}
-            projectName={project.name}
-            stageTitle={activeStageTitle}
-            processProgressPercent={processProgress?.percent ?? null}
-          />
-        ) : null}
+        <ProjectHealthPanel
+          projectId={project.id}
+          projectName={project.name}
+          stageTitle={activeStageTitle}
+          processProgressPercent={processProgress?.percent ?? null}
+        />
         <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
           <h2 className="mb-4 text-base font-semibold text-foreground">Cele</h2>
           <GoalCollectiveView projectId={project.id} clientId={client.id} />
@@ -1009,8 +1013,25 @@ export function ClientDashboardView({
   }
 
   function renderHomeSection() {
+    const activeStageId = process?.activeStageId ?? null;
+    const anchored = process ? resolveAnchoredProcessTemplate(process, template) : null;
+    const homeStageTitle =
+      anchored?.stages.find((stage) => stage.id === activeStageId)?.title ??
+      selectedProject?.stage ??
+      null;
+
     return (
       <div className="min-w-0 max-w-full grid gap-4">
+        {!readOnly && selectedProject ? (
+          <ProjectHealthPanel
+            variant="banner"
+            projectId={selectedProject.id}
+            projectName={selectedProject.name}
+            stageTitle={homeStageTitle}
+            processProgressPercent={processProgress?.percent ?? null}
+            onOpenGoals={() => handleSelectTab("goals")}
+          />
+        ) : null}
         <ClientDashboardHome
         client={client}
         project={selectedProject}
@@ -1453,7 +1474,7 @@ export function ClientDashboardView({
       case "process":
         return renderProcessSection();
       case "goals":
-        return renderGoalsSection();
+        return !readOnly ? renderGoalsSection() : null;
       case "agreements":
         return enableAgreements ? renderAgreementsPanel() : null;
       case "changes":

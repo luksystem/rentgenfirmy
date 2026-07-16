@@ -40,13 +40,22 @@ export function intakeAllowsPreliminaryAcceptance(input: {
   );
 }
 
-/** Przyjazd / serwis zdalny / gość — wymagana akceptacja wyceny na kroku wyceny. */
+/** Czy typ zgłoszenia trafia do Szybkich ofert (nie na tablicę serwisową). */
+export function isCommercialIntakeRequestType(requestType: ServiceIntakeRequestType) {
+  return requestType === "offer_request" || requestType === "new_feature";
+}
+
+/**
+ * Wymagana akceptacja wyceny na kroku wyceny:
+ * - gość / nowa funkcja / prośba o ofertę → zawsze (trafia do Szybkich ofert),
+ * - serwis: przyjazd lub serwis zdalny.
+ */
 export function intakeRequiresPreliminaryAcceptance(input: {
   requestType: ServiceIntakeRequestType;
   postWarrantyAction: "offer" | "on_site" | "remote" | null;
   isGuest?: boolean;
 }): boolean {
-  if (input.isGuest) {
+  if (input.isGuest || isCommercialIntakeRequestType(input.requestType)) {
     return true;
   }
 

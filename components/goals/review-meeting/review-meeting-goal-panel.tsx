@@ -61,6 +61,8 @@ export function ReviewMeetingGoalPanel({
   onRequestSettle,
   onTaskCreated,
   onGoalChanged,
+  invalidOutcome = false,
+  invalidNotes = false,
 }: {
   meetingId: string;
   item: GoalReviewMeetingItem;
@@ -81,6 +83,8 @@ export function ReviewMeetingGoalPanel({
   onRequestSettle: () => void;
   onTaskCreated: () => void;
   onGoalChanged: (goal: Goal) => void;
+  invalidOutcome?: boolean;
+  invalidNotes?: boolean;
 }) {
   const [methodology, setMethodology] = useState<GoalMethodology | null>(null);
   const [kpis, setKpis] = useState<GoalKpi[]>([]);
@@ -226,9 +230,14 @@ export function ReviewMeetingGoalPanel({
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Wynik przeglądu względem kryteriów">
+        <Field
+          label="Wynik przeglądu względem kryteriów *"
+          invalid={invalidOutcome}
+          error={invalidOutcome ? "Wybierz wynik przeglądu." : undefined}
+        >
           <Select
             value={outcome ?? ""}
+            invalid={invalidOutcome}
             onChange={(e) => onOutcomeChange(e.target.value as GoalReviewOutcome)}
           >
             <option value="" disabled>
@@ -280,17 +289,20 @@ export function ReviewMeetingGoalPanel({
       <Field
         label={
           isOwner
-            ? "Notatki ze spotkania (właściciel)"
-            : `Notatki ze spotkania (piszesz jako uczestnik · właściciel: ${ownerName})`
+            ? "Notatka ze spotkania *"
+            : `Notatka ze spotkania * (piszesz jako uczestnik · właściciel: ${ownerName})`
         }
+        invalid={invalidNotes}
+        error={invalidNotes ? "Notatka jest obowiązkowa." : undefined}
       >
         <MentionTextarea
           value={notes}
           onChange={onNotesChange}
           mentionOptions={mentionOptions}
           rows={6}
-          placeholder="Ustalenia, ryzyka, decyzje… użyj @ aby oznaczyć"
-          className={cn(isOwner && "border-accent/40")}
+          invalid={invalidNotes}
+          placeholder="Uzasadnienie oceny, ustalenia, ryzyka, decyzje… użyj @ aby oznaczyć"
+          className={cn(isOwner && !invalidNotes && "border-accent/40")}
         />
       </Field>
 

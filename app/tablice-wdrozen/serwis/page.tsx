@@ -7,7 +7,7 @@ export default function ServiceBoardPage() {
       <PageHeader
         eyebrow="Tablice wdrożeń"
         title="Tablica serwisowa"
-        description="Kanban zgłoszeń serwisowych z priorytetami CAFE, terminami reakcji i wątkami publicznymi."
+        description="Tylko zgłoszenia typu serwisowego (CAFE). Nowa funkcjonalność i prośba o ofertę są w module Szybkie oferty."
       />
       <ServiceIntakeKanban requestTypeFilter="service" />
     </>

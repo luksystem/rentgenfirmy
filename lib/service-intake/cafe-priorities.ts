@@ -64,17 +64,17 @@ export const SERVICE_INTAKE_REQUEST_TYPE_OPTIONS: Array<{
   {
     id: "service",
     label: "Zgłoszenie serwisowe",
-    description: "Usterka, awaria lub problem z działaniem systemu.",
+    description: "Usterka, awaria lub problem z działaniem systemu — trafia na tablicę serwisową.",
   },
   {
     id: "new_feature",
     label: "Nowa funkcjonalność",
-    description: "Propozycja rozbudowy lub zmiany w instalacji.",
+    description: "Propozycja rozbudowy lub zmiany — trafia do Szybkich ofert (nie na tablicę serwisową).",
   },
   {
     id: "offer_request",
     label: "Prośba o ofertę",
-    description: "Chcę otrzymać wycenę przed rozpoczęciem prac.",
+    description: "Wycena przed rozpoczęciem prac — trafia do Szybkich ofert (nie na tablicę serwisową).",
   },
 ];
 

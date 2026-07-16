@@ -41,10 +41,15 @@ export function Textarea({
 export function Select({
   className,
   children,
+  invalid,
   ...props
-}: React.SelectHTMLAttributes<HTMLSelectElement>) {
+}: React.SelectHTMLAttributes<HTMLSelectElement> & { invalid?: boolean }) {
   return (
-    <select className={cn("h-10", fieldClassName, className)} {...props}>
+    <select
+      className={cn("h-10", fieldClassName, invalid && inputInvalidClassName, className)}
+      aria-invalid={invalid || undefined}
+      {...props}
+    >
       {children}
     </select>
   );

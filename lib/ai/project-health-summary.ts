@@ -54,18 +54,19 @@ function buildPrompt(input: ProjectHealthSummaryInput) {
 
   return `Jesteś analitykiem zdrowia projektu w firmie wdrożeniowej.
 
-Na podstawie celów, zadań, przełożeń, komentarzy i etapu procesu oceń kondycję projektu po polsku.
+Na podstawie celów, notatek u klienta, zmian projektowych, zadań wdrożeniowych (kanban), komentarzy i etapu procesu oceń kondycję projektu po polsku.
 
 Zasady:
 - Opieraj się wyłącznie na dostarczonych danych — nie wymyślaj faktów.
 - Uwzględnij zgodność z aktualnym etapem procesu (czy cele/zadania „doganiają” etap, czy lagują).
-- Oceń nastrój wątku (pozytywny / mieszany / negatywny) na podstawie komentarzy i wniosków.
+- Oceń nastrój i jakość komunikacji (notatki u klienta, komentarze wdrożeniowe klienta vs zespołu, odpowiedzi na zmiany).
 - Struktura odpowiedzi (markdown):
   1. **Werdykt** — 1–2 zdania + sugerowana etykieta: Stabilny / Wymaga uwagi / Zagrożony
-  2. **Nastrój i komunikacja** — czy ton jest pozytywny, mieszany czy negatywny; przykłady
+  2. **Nastrój i komunikacja** — ton wątku; notatki u klienta; aktywność klienta na wdrożeniu
   3. **Cele vs etap** — co jest na torze, co odstaje od etapu „${input.stageTitle ?? "nieznany"}”
-  4. **Ryzyka i niedowiezienia**
-  5. **Co zrobić dalej** — 3–5 konkretnych działań
+  4. **Zmiany i wdrożenie** — akceptacje/oczekujące zmiany, otwarte zadania kanban
+  5. **Ryzyka i niedowiezienia**
+  6. **Co zrobić dalej** — 3–5 konkretnych działań
 
 Kontekst:
 - Projekt: ${input.projectName}
@@ -77,8 +78,11 @@ Sygnały:
 - Cele: ${s.goalsTotal} (aktywne ${s.goalsActive}, zagrożone ${s.goalsAtRisk}, wstrzymane ${s.goalsOnHold}, rozliczone ${s.goalsSettled})
 - Po terminie: ${s.overdueCount}, trzeba wrócić: ${s.revisitCount}
 - Przełożenia: ${s.deferralCount}, niedowiezione (nasz powód): ${s.undeliveredCount}
-- Zadania: ${s.tasksDone}/${s.tasksTotal} zrobione (otwarte ${s.openTasks})
-- Śr. postęp aktywnych: ${s.avgProgress}%
+- Zadania celów: ${s.tasksDone}/${s.tasksTotal} zrobione (otwarte ${s.openTasks})
+- Notatki u klienta: ${s.meetingNotesPublished}/${s.meetingNotesTotal} opublikowane
+- Zmiany projektu: ${s.changesAccepted} zaakceptowane, ${s.changesPending} czekają, ${s.changesRejected} odrzucone (razem ${s.changesTotal})
+- Wdrożenie (kanban): ${s.kanbanTasksClosed}/${s.kanbanTasksTotal} zamknięte, otwarte ${s.kanbanTasksOpen}; komentarze ${s.kanbanCommentsTotal} (klient ${s.kanbanClientComments})
+- Śr. postęp aktywnych celów: ${s.avgProgress}%
 
 Cele:
 ${goalsBlock}

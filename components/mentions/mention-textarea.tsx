@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { inputInvalidClassName } from "@/components/ui/input";
 import { filterMentionOptions } from "@/lib/notifications/mentions";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +16,7 @@ export function MentionTextarea({
   placeholder,
   rows,
   className,
+  invalid,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -23,6 +25,7 @@ export function MentionTextarea({
   placeholder?: string;
   rows?: number;
   className?: string;
+  invalid?: boolean;
 }) {
   const [query, setQuery] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -105,9 +108,10 @@ export function MentionTextarea({
     <div className="relative min-w-0 flex-1">
       <textarea
         ref={textareaRef}
-        className={cn(baseTextareaClassName, className)}
+        className={cn(baseTextareaClassName, invalid && inputInvalidClassName, className)}
         value={value}
         disabled={disabled}
+        aria-invalid={invalid || undefined}
         placeholder={placeholder ?? "Napisz… użyj @ aby oznaczyć osobę"}
         rows={rows}
         onChange={(event) => {

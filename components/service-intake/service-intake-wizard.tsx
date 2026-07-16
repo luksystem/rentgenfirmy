@@ -110,7 +110,7 @@ function validateGuestAddressFields(address: {
 const STEP_LABELS: Record<Exclude<WizardStep, "done" | "resolved">, string> = {
   email: "E-mail",
   verify: "Tożsamość",
-  project: "Obiekt",
+  project: "Projekt",
   requestType: "Rodzaj",
   details: "Zgłoszenie",
   suggestion: "Sugestia AI",
@@ -305,7 +305,8 @@ export function ServiceIntakeWizard() {
 
   const visibleSteps = useMemo(() => {
     const steps: Exclude<WizardStep, "done" | "resolved">[] = ["email", "verify"];
-    if (!isGuestMode) {
+    // Krok wyboru projektu tylko gdy klient ma więcej niż jeden projekt
+    if (!isGuestMode && (verification?.projects.length ?? 0) > 1) {
       steps.push("project");
     }
     steps.push("requestType", "details");
@@ -320,7 +321,13 @@ export function ServiceIntakeWizard() {
     }
     steps.push("summary");
     return steps;
-  }, [isServiceRequest, requiresActionStep, effectiveRequiresAiEstimate, isGuestMode]);
+  }, [
+    isServiceRequest,
+    requiresActionStep,
+    effectiveRequiresAiEstimate,
+    isGuestMode,
+    verification?.projects.length,
+  ]);
 
   const appliesPrioritySurcharge = shouldApplyIntakePrioritySurcharge({
     requestType,
@@ -370,7 +377,7 @@ export function ServiceIntakeWizard() {
   function validateProjectStep(): boolean {
     const errors: WizardFieldErrors = {};
     if (!selectedProjectId) {
-      errors.project = "Wybierz obiekt, którego dotyczy zgłoszenie.";
+      errors.project = "Wskaż projekt, którego dotyczy zgłoszenie.";
     }
     return applyFieldErrors(errors);
   }
@@ -644,9 +651,17 @@ export function ServiceIntakeWizard() {
       setGuestAddressCity("");
       setGuestAddressPostalCode("");
       setVerification(payload as ServiceIntakeVerifyResult);
-      setSelectedProjectId(payload.projects[0]?.id ?? null);
       setRequestType("service");
-      setStep("project");
+      const projects = (payload as ServiceIntakeVerifyResult).projects ?? [];
+      if (projects.length === 1) {
+        // Jeden projekt — wybór oczywisty, pomijamy krok
+        setSelectedProjectId(projects[0].id);
+        setStep("requestType");
+      } else {
+        // Wiele projektów — wymuś świadomy wybór (bez domyślnego zaznaczenia)
+        setSelectedProjectId(null);
+        setStep("project");
+      }
     } catch (verifyError) {
       setError(verifyError instanceof Error ? verifyError.message : "Błąd.");
     } finally {
@@ -964,7 +979,18 @@ export function ServiceIntakeWizard() {
                 <h2 className="text-lg font-semibold text-foreground">
                   Witaj, {verification.clientDisplayName}
                 </h2>
-                <p className="mt-1 text-sm text-muted">Wybierz obiekt, którego dotyczy zgłoszenie.</p>
+                <p className="mt-1 text-sm text-muted">
+                  {(() => {
+                    const count = verification.projects.length;
+                    const label =
+                      count === 1
+                        ? "1 projekt"
+                        : count >= 2 && count <= 4
+                          ? `${count} projekty`
+                          : `${count} projektów`;
+                    return `Masz ${label} — wskaż, którego dotyczy to zgłoszenie.`;
+                  })()}
+                </p>
               </div>
               <div
                 className={cn(
@@ -1007,7 +1033,7 @@ export function ServiceIntakeWizard() {
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Wstecz
                 </Button>
-                <Button type="button" onClick={handleProjectNext}>
+                <Button type="button" onClick={handleProjectNext} disabled={!selectedProjectId}>
                   Dalej
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -1591,7 +1617,7 @@ export function ServiceIntakeWizard() {
                 ) : selectedProject ? (
                   <>
                     <p>
-                      <span className="text-muted">Obiekt:</span> {selectedProject.name}
+                      <span className="text-muted">Projekt:</span> {selectedProject.name}
                     </p>
                     <p className="flex flex-wrap items-center gap-2">
                       <span className="text-muted">Gwarancja:</span>
