@@ -43,6 +43,7 @@ import { ProjectServiceIntakeHistoryPanel } from "@/components/dashboard/project
 import { ClientDashboardHome } from "@/components/dashboard/client-dashboard-home";
 import { ClientDashboardOverview } from "@/components/dashboard/client-dashboard-overview";
 import { ClientInfoCard } from "@/components/dashboard/client-info-card";
+import { ClientProjectsPanel } from "@/components/dashboard/client-projects-panel";
 import { ProjectContentPanel } from "@/components/dashboard/project-content-panel";
 import { ProjectTimeTrackingPanel } from "@/components/dashboard/project-time-tracking-panel";
 import { ProjectUsersPanel } from "@/components/dashboard/project-users-panel";
@@ -750,12 +751,27 @@ export function ClientDashboardView({
   });
 
   if (!selectedProject) {
+    if (readOnly) {
+      return (
+        <Card>
+          <CardContent className="py-8 text-sm text-muted">
+            Ten klient nie ma jeszcze przypisanych projektów.
+          </CardContent>
+        </Card>
+      );
+    }
+
     return (
-      <Card>
-        <CardContent className="py-8 text-sm text-muted">
-          Ten klient nie ma przypisanych projektów. Przypisz projekt w module Projektów.
-        </CardContent>
-      </Card>
+      <div className="grid gap-4">
+        <ClientInfoCard client={client} />
+        <ClientProjectsPanel
+          client={client}
+          projects={projects}
+          selectedProjectId={selectedProjectId || undefined}
+          onProjectChange={onProjectChange}
+          teamSpaceHref={(projectId) => `/przestrzenie/zespol/${projectId}`}
+        />
+      </div>
     );
   }
 

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { FolderPlus, Link2, Plus } from "lucide-react";
+import { ProjectSelectSearchable } from "@/components/goals/project-select-searchable";
 import { ProjectForm } from "@/components/project-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field } from "@/components/ui/input";
 import { projectToInput } from "@/lib/supabase/mappers";
 import { formatPartyName } from "@/lib/party/display-name";
 import type { Client } from "@/lib/service/types";
@@ -35,21 +35,24 @@ export function ClientProjectsPanel({
   teamSpaceHref?: (projectId: string) => string;
 }) {
   const allProjects = useAppStore((state) => state.projects);
+  const clients = useAppStore((state) => state.clients);
   const updateProject = useAppStore((state) => state.updateProject);
   const addProject = useAppStore((state) => state.addProject);
   const isSaving = useAppStore((state) => state.isSaving);
 
-  const [assignProjectId, setAssignProjectId] = useState("");
+  const [assignProjectId, setAssignProjectId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const unassignedProjects = useMemo(
-    () =>
-      allProjects
-        .filter((project) => !project.clientId)
-        .sort((left, right) => left.name.localeCompare(right.name, "pl")),
-    [allProjects],
+  const assignableProjects = useMemo(
+    () => allProjects.filter((project) => project.clientId !== client.id),
+    [allProjects, client.id],
+  );
+
+  const selectedAssignable = useMemo(
+    () => assignableProjects.find((project) => project.id === assignProjectId) ?? null,
+    [assignableProjects, assignProjectId],
   );
 
   async function handleAssignProject() {
@@ -62,6 +65,17 @@ export function ClientProjectsPanel({
       return;
     }
 
+    if (existing.clientId && existing.clientId !== client.id) {
+      const otherClient = clients.find((entry) => entry.id === existing.clientId);
+      const otherName = otherClient ? formatPartyName(otherClient) : "innego klienta";
+      const confirmed = window.confirm(
+        `Projekt „${existing.name}” jest przypisany do ${otherName}. Przypisać go do ${formatPartyName(client)}?`,
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
     setAssigning(true);
     setError(null);
     try {
@@ -69,7 +83,7 @@ export function ClientProjectsPanel({
         ...projectToInput(existing),
         clientId: client.id,
       });
-      setAssignProjectId("");
+      setAssignProjectId(null);
       onProjectChange?.(assignProjectId);
     } catch {
       setError("Nie udało się przypisać projektu.");
@@ -102,8 +116,8 @@ export function ClientProjectsPanel({
       <CardContent className="grid gap-4">
         {projects.length === 0 ? (
           <p className="text-sm text-muted">
-            Ten klient nie ma jeszcze przypisanych projektów. Utwórz nowy lub przypisz istniejący
-            bez klienta.
+            Ten klient nie ma jeszcze przypisanych projektów. Wyszukaj i przypisz istniejący albo
+            utwórz nowy.
           </p>
         ) : (
           <div className="grid gap-2">
@@ -140,37 +154,44 @@ export function ClientProjectsPanel({
           </div>
         )}
 
-        {unassignedProjects.length > 0 ? (
-          <div className="rounded-xl border border-dashed border-border/80 bg-surface-muted/10 p-3">
-            <p className="mb-2 text-sm font-medium text-foreground">Przypisz istniejący projekt</p>
-            <div className="flex flex-wrap items-end gap-2">
-              <Field label="Projekt bez klienta" className="min-w-[220px] flex-1">
-                <select
-                  value={assignProjectId}
-                  onChange={(event) => setAssignProjectId(event.target.value)}
-                  className="flex h-10 w-full rounded-xl border border-border bg-surface px-3 text-sm"
-                >
-                  <option value="">Wybierz projekt…</option>
-                  {unassignedProjects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name} · {project.type}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                disabled={!assignProjectId || assigning}
-                onClick={() => void handleAssignProject()}
-              >
-                <FolderPlus className="mr-1.5 h-3.5 w-3.5" />
-                Przypisz
-              </Button>
-            </div>
+        <div className="rounded-xl border border-dashed border-border/80 bg-surface-muted/10 p-3">
+          <p className="mb-2 text-sm font-medium text-foreground">Przypisz istniejący projekt</p>
+          <p className="mb-3 text-xs text-muted">
+            Lista posortowana alfabetycznie po nazwisku klienta. Wpisz nazwę, żeby wyszukać.
+          </p>
+          <div className="flex flex-wrap items-end gap-2">
+            <ProjectSelectSearchable
+              projects={assignableProjects}
+              clients={clients}
+              value={assignProjectId}
+              onChange={setAssignProjectId}
+              emptyLabel="Wyszukaj projekt…"
+              label="Projekt"
+              usePortal={false}
+              className="min-w-[220px] flex-1"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={!assignProjectId || assigning}
+              onClick={() => void handleAssignProject()}
+            >
+              <FolderPlus className="mr-1.5 h-3.5 w-3.5" />
+              Przypisz
+            </Button>
           </div>
-        ) : null}
+          {selectedAssignable?.clientId ? (
+            <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+              Ten projekt jest już przypisany do innego klienta — przypisanie przeniesie go tutaj.
+            </p>
+          ) : null}
+          {assignableProjects.length === 0 ? (
+            <p className="mt-2 text-xs text-muted">
+              Brak innych projektów do przypisania. Utwórz nowy projekt dla tego klienta.
+            </p>
+          ) : null}
+        </div>
 
         {error ? <p className="text-sm text-rose-400">{error}</p> : null}
       </CardContent>
@@ -185,6 +206,7 @@ export function ClientProjectsPanel({
           </DialogHeader>
           <ProjectForm
             defaultClientId={client.id}
+            variant="client-dashboard"
             isSaving={isSaving}
             onSubmit={(input) => void handleCreateProject(input)}
             onCancel={() => setCreateOpen(false)}

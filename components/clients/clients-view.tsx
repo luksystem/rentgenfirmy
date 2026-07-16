@@ -82,11 +82,19 @@ export function ClientsView() {
       </div>
 
       <div className="mb-4 rounded-2xl border border-border/80 bg-surface p-4">
+        <Input
+          type="search"
+          className="mb-3 md:hidden"
+          value={filters.nameQuery}
+          onChange={(event) => updateFilters({ nameQuery: event.target.value })}
+          placeholder="Szukaj po nazwie klienta…"
+          aria-label="Szukaj po nazwie klienta"
+        />
         <MobileFiltersPanel
           activeCount={activeFilterCount}
           onClear={() => setFilters(EMPTY_CLIENT_LIST_FILTERS)}
         >
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="hidden gap-2 md:grid sm:grid-cols-2 lg:grid-cols-3">
             <Input
               type="search"
               value={filters.nameQuery}
@@ -94,6 +102,28 @@ export function ClientsView() {
               placeholder="Szukaj po nazwie klienta…"
               aria-label="Szukaj po nazwie klienta"
             />
+            <Input
+              type="search"
+              value={filters.addressQuery}
+              onChange={(event) => updateFilters({ addressQuery: event.target.value })}
+              placeholder="Szukaj po adresie…"
+              aria-label="Szukaj po adresie"
+            />
+            <Select
+              value={filters.projectFilter}
+              onChange={(event) =>
+                updateFilters({ projectFilter: event.target.value as ClientProjectFilter })
+              }
+              aria-label="Filtr przypisania projektu"
+            >
+              {CLIENT_PROJECT_FILTER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div className="grid gap-2 md:hidden">
             <Input
               type="search"
               value={filters.addressQuery}

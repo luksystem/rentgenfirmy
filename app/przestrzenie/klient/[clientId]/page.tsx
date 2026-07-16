@@ -186,15 +186,6 @@ function ClientDashboardPageContent() {
         <p className="mb-4 text-sm text-muted">Ładowanie danych procesu…</p>
       ) : null}
 
-      {clientProjects.length === 0 ? (
-        <Card className="mb-4 border-amber-500/30 bg-amber-500/10">
-          <CardContent className="py-4 text-sm text-amber-100">
-            Ten klient nie ma jeszcze przypisanych projektów. Dodaj projekt w module projektów, aby
-            uruchomić pełny dashboard współpracy.
-          </CardContent>
-        </Card>
-      ) : null}
-
       <ClientDashboardView
         client={client}
         projects={clientProjects}
