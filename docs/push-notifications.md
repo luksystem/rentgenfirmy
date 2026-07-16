@@ -74,7 +74,11 @@ Powtórz kroki 4–6 na produkcyjnym HTTPS. Sprawdź w DevTools → Application 
 
 ## Ikony PWA
 
-Brakujące pliki (dodaj na podstawie logo firmy): `public/icons/push-icon-192.png`, `push-icon-512.png`, `push-badge-96.png`. Szczegóły: `public/icons/README.md`.
+Ikony aplikacji i powiadomień znajdują się w `public/icons/` (źródło: `rentgen-brand-assets`).
+
+- PWA: `pwa-192x192.png`, `pwa-512x512.png`, `pwa-maskable-512x512.png`
+- Push: `notification-icon-192x192.png` (icon), `push-badge-96x96.png` (badge)
+- Favicon / Apple: `favicon.ico`, `apple-touch-icon-180x180.png`
 
 ## Użycie `sendPushToUser()` w modułach
 

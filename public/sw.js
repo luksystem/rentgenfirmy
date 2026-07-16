@@ -1,7 +1,7 @@
 /* global self, clients */
 
-const DEFAULT_ICON = "/icons/push-icon-192.png";
-const DEFAULT_BADGE = "/icons/push-badge-96.png";
+const DEFAULT_ICON = "/icons/notification-icon-192x192.png";
+const DEFAULT_BADGE = "/icons/push-badge-96x96.png";
 const DEFAULT_URL = "/";
 
 function sanitizePath(url) {
@@ -29,7 +29,7 @@ function sanitizePath(url) {
 function parsePushData(event) {
   if (!event.data) {
     return {
-      title: "Rentgen firmy",
+      title: "Rentgen",
       body: "Masz nowe powiadomienie.",
       url: DEFAULT_URL,
       tag: "default",
@@ -41,7 +41,7 @@ function parsePushData(event) {
   try {
     const data = event.data.json();
     return {
-      title: typeof data.title === "string" && data.title.trim() ? data.title.trim() : "Rentgen firmy",
+      title: typeof data.title === "string" && data.title.trim() ? data.title.trim() : "Rentgen",
       body: typeof data.body === "string" && data.body.trim() ? data.body.trim() : "Masz nowe powiadomienie.",
       url: sanitizePath(data.url),
       tag: typeof data.tag === "string" && data.tag.trim() ? data.tag.trim() : "default",
@@ -52,7 +52,7 @@ function parsePushData(event) {
   } catch {
     const text = event.data.text();
     return {
-      title: "Rentgen firmy",
+      title: "Rentgen",
       body: text || "Masz nowe powiadomienie.",
       url: DEFAULT_URL,
       tag: "default",

@@ -32,8 +32,8 @@ function buildWebPushPayload(payload: PushPayload) {
     body: payload.body,
     url: safeUrl,
     tag: payload.tag ?? payload.notificationId ?? undefined,
-    icon: payload.icon ?? "/icons/push-icon-192.png",
-    badge: payload.badge ?? "/icons/push-badge-96.png",
+    icon: payload.icon ?? "/icons/notification-icon-192x192.png",
+    badge: payload.badge ?? "/icons/push-badge-96x96.png",
     notificationId: payload.notificationId,
   });
 }

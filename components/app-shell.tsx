@@ -47,6 +47,7 @@ import { useKanbanNewTasksRealtime, useKanbanOverdueTasksRealtime } from "@/hook
 import { COMMERCIAL_MODULES } from "@/lib/modules/commercial-modules";
 import { NAV_MODULE_GROUPS, type NavModuleKey } from "@/lib/navigation/nav-modules";
 import { canAccessNavModule } from "@/lib/navigation/role-nav-permissions";
+import { BrandMark } from "@/components/brand-mark";
 import { NavBadges } from "@/components/nav-badges";
 import { NotificationBell } from "@/components/notification-bell";
 import { UserAvatar } from "@/components/user-avatar";
@@ -580,11 +581,9 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
       <aside className="fixed inset-y-0 left-0 z-20 hidden h-screen w-72 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar/95 backdrop-blur-xl xl:flex">
         <div className="shrink-0 p-5 pb-4">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-soft">
-              <Activity className="h-5 w-5" />
-            </div>
+            <BrandMark size={44} />
             <div>
-              <p className="font-semibold text-sidebar-foreground">Rentgen firmy</p>
+              <p className="font-semibold text-sidebar-foreground">Rentgen</p>
               <p className="text-xs text-sidebar-muted">Smart Home / BMS</p>
             </div>
           </Link>
@@ -651,11 +650,8 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
 
         <header className="sticky top-0 z-20 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-xl xl:hidden">
           <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-soft"
-            >
-              <Activity className="h-4 w-4" />
+            <Link href="/" className="flex h-10 w-10 shrink-0 items-center justify-center">
+              <BrandMark size={40} />
             </Link>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">

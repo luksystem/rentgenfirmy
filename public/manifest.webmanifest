@@ -1,23 +1,30 @@
 {
-  "name": "Rentgen firmy",
+  "name": "Rentgen",
   "short_name": "Rentgen",
-  "description": "Przepływ projektów Smart Home / BMS / Automatyka Budynkowa",
+  "description": "Rentgen – zarządzanie projektami, pracą i systemami BMS",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#0a0a0a",
+  "background_color": "#081B33",
+  "theme_color": "#081B33",
   "icons": [
     {
-      "src": "/icons/push-icon-192.png",
+      "src": "/icons/pwa-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/icons/push-icon-512.png",
+      "src": "/icons/pwa-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
