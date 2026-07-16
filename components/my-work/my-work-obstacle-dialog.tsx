@@ -9,13 +9,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Field, Select, Textarea } from "@/components/ui/input";
+import { Field, Select } from "@/components/ui/input";
+import { MentionTextarea } from "@/components/mentions/mention-textarea";
 import {
   WORK_OBSTACLE_TYPE_LABELS,
   WORK_OBSTACLE_TYPES,
   type WorkObstacleType,
 } from "@/lib/my-work/plan-types";
 import type { WorkItemView } from "@/lib/my-work/types";
+import { useMentionOptionsFromProfiles } from "@/hooks/use-team-mention-options";
+import { useMyWorkStore } from "@/store/my-work-store";
 
 export function MyWorkObstacleDialog({
   item,
@@ -28,6 +31,8 @@ export function MyWorkObstacleDialog({
   onOpenChange: (open: boolean) => void;
   onSubmit: (obstacleType: WorkObstacleType, description: string) => Promise<void>;
 }) {
+  const teamProfiles = useMyWorkStore((state) => state.teamProfiles);
+  const { mentionOptions } = useMentionOptionsFromProfiles(teamProfiles);
   const [obstacleType, setObstacleType] = useState<WorkObstacleType>("other");
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -76,11 +81,12 @@ export function MyWorkObstacleDialog({
         </Field>
 
         <Field label="Opis">
-          <Textarea
+          <MentionTextarea
             value={description}
-            onChange={(event) => setDescription(event.target.value)}
+            onChange={setDescription}
+            mentionOptions={mentionOptions}
             rows={4}
-            placeholder="Co blokuje wykonanie i czego potrzebujesz od managera?"
+            placeholder="Co blokuje wykonanie? Użyj @ aby oznaczyć osobę."
           />
         </Field>
 

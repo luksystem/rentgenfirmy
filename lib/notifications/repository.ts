@@ -119,14 +119,21 @@ export async function markAllNotificationsRead(profileId: string) {
   }
 }
 
-export async function createKanbanMentionNotifications(input: {
-  commentId: string;
-  taskId: string;
-  taskTitle: string;
-  body: string;
+function normalizeAuthor(value: string) {
+  return value.trim().toLocaleLowerCase("pl");
+}
+
+export async function createUserMentionNotifications(input: {
+  sourceId: string;
   authorName: string;
+  body: string;
   candidates: MentionCandidate[];
-  linkUrl?: string;
+  /** np. „w Kanbanie”, „w komentarzu do celu” */
+  contextLabel: string;
+  /** Opcjonalny prefiks treści (np. tytuł zadania). */
+  subjectLabel?: string;
+  linkUrl: string;
+  excludeProfileIds?: string[];
 }) {
   const mentionTargets = resolveMentionTargets(input.body, input.candidates).filter(
     (target) => normalizeAuthor(target.name) !== normalizeAuthor(input.authorName),
@@ -153,6 +160,10 @@ export async function createKanbanMentionNotifications(input: {
     }
   }
 
+  for (const excluded of input.excludeProfileIds ?? []) {
+    profileIds.delete(excluded);
+  }
+
   if (!profileIds.size) {
     return;
   }
@@ -163,10 +174,10 @@ export async function createKanbanMentionNotifications(input: {
     id: crypto.randomUUID(),
     profile_id: profileId,
     kind: "kanban_mention" as UserNotificationKind,
-    title: `${input.authorName} oznaczył Cię w Kanbanie`,
-    body: `${input.taskTitle}: ${excerpt}`,
-    link_url: input.linkUrl ?? "/tablice-wdrozen",
-    source_id: input.commentId,
+    title: `${input.authorName} oznaczył Cię ${input.contextLabel}`,
+    body: input.subjectLabel ? `${input.subjectLabel}: ${excerpt}` : excerpt,
+    link_url: input.linkUrl,
+    source_id: input.sourceId,
     created_at: new Date().toISOString(),
   }));
 
@@ -177,6 +188,26 @@ export async function createKanbanMentionNotifications(input: {
     }
     throw new Error(error.message);
   }
+}
+
+export async function createKanbanMentionNotifications(input: {
+  commentId: string;
+  taskId: string;
+  taskTitle: string;
+  body: string;
+  authorName: string;
+  candidates: MentionCandidate[];
+  linkUrl?: string;
+}) {
+  await createUserMentionNotifications({
+    sourceId: input.commentId,
+    authorName: input.authorName,
+    body: input.body,
+    candidates: input.candidates,
+    contextLabel: "w Kanbanie",
+    subjectLabel: input.taskTitle,
+    linkUrl: input.linkUrl ?? "/tablice-wdrozen",
+  });
 }
 
 export async function createKanbanNewActivityNotifications(input: {
@@ -221,7 +252,3 @@ export async function createKanbanNewActivityNotifications(input: {
 }
 
 export { resolveKanbanPublicLinkForColumn, resolveKanbanPublicLinkForTask };
-
-function normalizeAuthor(value: string) {
-  return value.trim().toLocaleLowerCase("pl");
-}

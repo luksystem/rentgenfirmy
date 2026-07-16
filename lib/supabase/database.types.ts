@@ -1951,6 +1951,10 @@ export type GoalRow = {
   settlement_conclusions: string | null;
   settled_at: string | null;
   settled_by: string | null;
+  needs_revisit: boolean;
+  revisit_at: string | null;
+  deferral_count: number;
+  last_deferral_reason: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -2018,6 +2022,35 @@ export type GoalInitiativeRow = {
   status: string;
   converted_task_id: string | null;
   source: string;
+  completed_at: string | null;
+  created_at: string;
+};
+
+export type GoalDeferralRow = {
+  id: string;
+  goal_id: string;
+  meeting_id: string | null;
+  reason: string;
+  note: string;
+  previous_period_start: string;
+  previous_period_end: string;
+  new_period_start: string;
+  new_period_end: string;
+  marked_undelivered: boolean;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type ProjectHealthSnapshotRow = {
+  id: string;
+  project_id: string;
+  score: number;
+  band: string;
+  sentiment: string;
+  summary_md: string;
+  signals: unknown;
+  stage_title: string | null;
+  created_by: string | null;
   created_at: string;
 };
 
@@ -2851,6 +2884,28 @@ export type Database = {
         Row: GoalInitiativeRow;
         Insert: Partial<GoalInitiativeRow> & Pick<GoalInitiativeRow, "goal_id" | "kind" | "title">;
         Update: Partial<GoalInitiativeRow>;
+        Relationships: [];
+      };
+      goal_deferrals: {
+        Row: GoalDeferralRow;
+        Insert: Partial<GoalDeferralRow> &
+          Pick<
+            GoalDeferralRow,
+            | "goal_id"
+            | "reason"
+            | "previous_period_start"
+            | "previous_period_end"
+            | "new_period_start"
+            | "new_period_end"
+          >;
+        Update: Partial<GoalDeferralRow>;
+        Relationships: [];
+      };
+      project_health_snapshots: {
+        Row: ProjectHealthSnapshotRow;
+        Insert: Partial<ProjectHealthSnapshotRow> &
+          Pick<ProjectHealthSnapshotRow, "project_id" | "score" | "band">;
+        Update: Partial<ProjectHealthSnapshotRow>;
         Relationships: [];
       };
       goal_links: {

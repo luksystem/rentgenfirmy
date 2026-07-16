@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { GoalInitiativesPanel } from "@/components/goals/goal-initiatives-panel";
 import { getUserDisplayName } from "@/lib/auth/types";
 import {
   addGoalInitiative,
@@ -39,6 +40,11 @@ export function ReviewMeetingTaskForm({
   const [columnId, setColumnId] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [listKey, setListKey] = useState(0);
+
+  const refreshList = useCallback(() => {
+    setListKey((key) => key + 1);
+  }, []);
 
   useEffect(() => {
     if (alsoKanban) {
@@ -117,6 +123,7 @@ export function ReviewMeetingTaskForm({
       setDescription("");
       setAlsoKanban(false);
       setOpen(false);
+      refreshList();
       onCreated();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Nie udało się utworzyć zadania.");
@@ -125,64 +132,68 @@ export function ReviewMeetingTaskForm({
     }
   }
 
-  if (!open) {
-    return (
-      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
-        <Plus className="h-4 w-4" />
-        Dodaj zadanie do celu
-      </Button>
-    );
-  }
-
   return (
-    <div className="space-y-3 rounded-xl border border-border bg-surface-muted/20 p-3">
-      <Field label="Tytuł zadania">
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Co trzeba zrobić?" />
-      </Field>
-      <Field label="Opis (opcjonalnie)">
-        <Textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={2}
-          placeholder="Szczegóły, termin, kontekst…"
-        />
-      </Field>
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={alsoKanban}
-          onChange={(e) => setAlsoKanban(e.target.checked)}
-        />
-        Utwórz też zadanie Kanban (powiązane z celem)
-      </label>
-      {alsoKanban ? (
-        <Field label="Kolumna Kanban">
-          <Select value={columnId} onChange={(e) => setColumnId(e.target.value)}>
-            <option value="">Wybierz kolumnę…</option>
-            {columns.map((column) => (
-              <option key={column.id} value={column.id}>
-                {column.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
-      ) : null}
-      {error ? <p className="text-sm text-rose-400">{error}</p> : null}
-      <div className="flex gap-2">
-        <Button type="button" size="sm" disabled={saving} onClick={() => void handleSubmit()}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          Zapisz
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          disabled={saving}
-          onClick={() => setOpen(false)}
-        >
-          Anuluj
-        </Button>
+    <div className="space-y-3">
+      <div key={listKey} className="rounded-xl border border-border/70 bg-surface-muted/10 p-3">
+        <GoalInitiativesPanel goalId={goalId} />
       </div>
+
+      {!open ? (
+        <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+          <Plus className="h-4 w-4" />
+          Dodaj zadanie do celu
+        </Button>
+      ) : (
+        <div className="space-y-3 rounded-xl border border-border bg-surface-muted/20 p-3">
+          <Field label="Tytuł zadania">
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Co trzeba zrobić?" />
+          </Field>
+          <Field label="Opis (opcjonalnie)">
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              placeholder="Szczegóły, termin, kontekst…"
+            />
+          </Field>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={alsoKanban}
+              onChange={(e) => setAlsoKanban(e.target.checked)}
+            />
+            Utwórz też zadanie Kanban (powiązane z celem)
+          </label>
+          {alsoKanban ? (
+            <Field label="Kolumna Kanban">
+              <Select value={columnId} onChange={(e) => setColumnId(e.target.value)}>
+                <option value="">Wybierz kolumnę…</option>
+                {columns.map((column) => (
+                  <option key={column.id} value={column.id}>
+                    {column.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : null}
+          {error ? <p className="text-sm text-rose-400">{error}</p> : null}
+          <div className="flex gap-2">
+            <Button type="button" size="sm" disabled={saving} onClick={() => void handleSubmit()}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Zapisz
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={saving}
+              onClick={() => setOpen(false)}
+            >
+              Anuluj
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

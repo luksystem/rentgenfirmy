@@ -93,6 +93,15 @@ export const GOAL_REVIEW_OUTCOME_LABELS: Record<GoalReviewOutcome, string> = {
   off_track: "Poza planem",
 };
 
+/** Powód przełożenia celu na kolejny okres. */
+export const GOAL_DEFERRAL_REASONS = ["internal", "external"] as const;
+export type GoalDeferralReason = (typeof GOAL_DEFERRAL_REASONS)[number];
+
+export const GOAL_DEFERRAL_REASON_LABELS: Record<GoalDeferralReason, string> = {
+  internal: "Niedowieziony (z naszego powodu)",
+  external: "Przełożony (poza naszą kontrolą)",
+};
+
 export const GOAL_REVIEW_MEETING_STATUSES = [
   "draft",
   "in_progress",
@@ -279,6 +288,22 @@ export type GoalInitiative = {
   status: GoalInitiativeStatus;
   convertedTaskId: string | null;
   source: "ai" | "manual";
+  completedAt: string | null;
+  createdAt: string;
+};
+
+export type GoalDeferral = {
+  id: string;
+  goalId: string;
+  meetingId: string | null;
+  reason: GoalDeferralReason;
+  note: string;
+  previousPeriodStart: string;
+  previousPeriodEnd: string;
+  newPeriodStart: string;
+  newPeriodEnd: string;
+  markedUndelivered: boolean;
+  createdBy: string | null;
   createdAt: string;
 };
 
@@ -356,6 +381,11 @@ export type Goal = {
   settledAt: string | null;
   settledBy: string | null;
 
+  needsRevisit: boolean;
+  revisitAt: string | null;
+  deferralCount: number;
+  lastDeferralReason: GoalDeferralReason | null;
+
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -366,6 +396,8 @@ export type Goal = {
   linkedTaskCount?: number;
   openProblemCount?: number;
   nextReviewAt?: string | null;
+  initiativeTaskTotal?: number;
+  initiativeTaskDone?: number;
 };
 
 export type GoalInput = Omit<
@@ -378,6 +410,8 @@ export type GoalInput = Omit<
   | "linkedTaskCount"
   | "openProblemCount"
   | "nextReviewAt"
+  | "initiativeTaskTotal"
+  | "initiativeTaskDone"
 >;
 
 // ── AI-doradca (Faza 5, docs/cele/mvp/AI_I_METODOLOGIE.md) ─────────────────────

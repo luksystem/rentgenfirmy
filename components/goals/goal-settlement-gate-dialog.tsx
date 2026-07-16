@@ -32,7 +32,7 @@ export function GoalSettlementGateDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentProfileId: string | null;
-  onSettled: () => void;
+  onSettled: (goal?: import("@/lib/goals/types").Goal) => void;
 }) {
   const [methodology, setMethodology] = useState<GoalMethodology | null>(null);
   const [kpis, setKpis] = useState<GoalKpi[]>([]);
@@ -84,7 +84,7 @@ export function GoalSettlementGateDialog({
           return upsertGoalKpi({ ...kpi, currentValue: nextValue }).then(() => undefined);
         }),
       );
-      await settleGoal({
+      const result = await settleGoal({
         id: goal.id,
         settlementStatus,
         settlementWhatWorked: whatWorked,
@@ -92,7 +92,7 @@ export function GoalSettlementGateDialog({
         settlementConclusions: conclusions,
         settledBy: currentProfileId,
       });
-      onSettled();
+      onSettled(result.goal);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Nie udało się rozliczyć celu.");
     } finally {

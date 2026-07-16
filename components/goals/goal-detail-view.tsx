@@ -7,12 +7,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { MentionTextarea } from "@/components/mentions/mention-textarea";
 import { GoalAiReviewPanel } from "@/components/goals/goal-ai-review-panel";
+import { useMentionOptionsFromProfiles } from "@/hooks/use-team-mention-options";
+import { createUserMentionNotifications } from "@/lib/notifications/repository";
+import { GoalDeferRevisitActions } from "@/components/goals/goal-defer-revisit-actions";
+import { GoalInitiativesCard } from "@/components/goals/goal-initiatives-panel";
 import { GoalLinksPanel } from "@/components/goals/goal-links-panel";
+import { ProjectSelectSearchable } from "@/components/goals/project-select-searchable";
 import { UserIdentity } from "@/components/user-avatar";
 import { useDraftNumber } from "@/hooks/use-draft-number";
 import { getUserDisplayName, hasFullAppAccess, isAdministratorRole, type UserProfile } from "@/lib/auth/types";
 import {
+  GOAL_DEFERRAL_REASON_LABELS,
   GOAL_LEVEL_LABELS,
   GOAL_PERIOD_TYPE_LABELS,
   GOAL_PRIORITIES,
@@ -50,13 +57,23 @@ import {
 } from "@/lib/supabase/goal-repository";
 import { fetchGoalMethodologyByCode } from "@/lib/supabase/goal-methodology-repository";
 import { cn, formatDate, formatDateTime } from "@/lib/utils";
+import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useGoalStore } from "@/store/goal-store";
 
-type TabKey = "przeglad" | "kpi" | "historia" | "komentarze" | "przeglady" | "powiazania" | "rozliczenie";
+type TabKey =
+  | "przeglad"
+  | "zadania"
+  | "kpi"
+  | "historia"
+  | "komentarze"
+  | "przeglady"
+  | "powiazania"
+  | "rozliczenie";
 
 const TABS: Array<{ key: TabKey; label: string }> = [
   { key: "przeglad", label: "Przegląd" },
+  { key: "zadania", label: "Zadania" },
   { key: "kpi", label: "KPI" },
   { key: "historia", label: "Historia" },
   { key: "komentarze", label: "Komentarze" },
@@ -216,6 +233,8 @@ export function GoalDetailView({ goalId, onDeleted }: { goalId: string; onDelete
         />
       ) : null}
 
+      {tab === "zadania" ? <GoalInitiativesCard goalId={goal.id} /> : null}
+
       {tab === "kpi" ? (
         <KpiTab
           goalId={goal.id}
@@ -235,6 +254,8 @@ export function GoalDetailView({ goalId, onDeleted }: { goalId: string; onDelete
           authorId={profile?.id ?? null}
           authorName={profile ? getUserDisplayName(profile) : "Użytkownik"}
           teamProfiles={teamProfiles}
+          boardId={goal.boardId}
+          goalTitle={goal.title}
           onChanged={async () => setComments(await fetchGoalComments(goal.id))}
         />
       ) : null}
@@ -289,9 +310,12 @@ function OverviewTab({
   });
   const [periodStart, setPeriodStart] = useState(goal.periodStart.slice(0, 10));
   const [periodEnd, setPeriodEnd] = useState(goal.periodEnd.slice(0, 10));
+  const [projectId, setProjectId] = useState<string | null>(goal.projectId);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const projects = useAppStore((state) => state.projects);
+  const clients = useAppStore((state) => state.clients);
 
   async function handleApplyAiStatusSuggestion(outcome: GoalReviewOutcome) {
     const nextStatus: GoalStatus = outcome === "on_track" ? "in_progress" : "at_risk";
@@ -326,6 +350,7 @@ function OverviewTab({
         ownerId: ownerId || null,
         periodStart,
         periodEnd,
+        projectId,
       });
       let final = updated;
       if (status !== goal.status || progress !== goal.progressPercent) {
@@ -361,6 +386,19 @@ function OverviewTab({
                   {formatDate(goal.periodStart)} — {formatDate(goal.periodEnd)}
                 </span>
               </p>
+              {goal.needsRevisit ? (
+                <p className="text-violet-300 sm:col-span-2">
+                  Trzeba wrócić{goal.revisitAt ? ` · ${formatDate(goal.revisitAt)}` : ""}
+                </p>
+              ) : null}
+              {goal.deferralCount > 0 ? (
+                <p className="text-amber-300 sm:col-span-2">
+                  Przekładany {goal.deferralCount}×
+                  {goal.lastDeferralReason
+                    ? ` · ${GOAL_DEFERRAL_REASON_LABELS[goal.lastDeferralReason]}`
+                    : ""}
+                </p>
+              ) : null}
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-surface-muted">
               <div
@@ -369,6 +407,12 @@ function OverviewTab({
               />
             </div>
             <p className="text-sm font-semibold text-foreground">{goal.progressPercent}% realizacji</p>
+
+            <GoalDeferRevisitActions
+              goal={goal}
+              authorId={currentProfileId}
+              onChanged={onChanged}
+            />
 
             {goal.status !== "settled" && goal.status !== "cancelled" ? (
               <GoalAiReviewPanel
@@ -460,9 +504,39 @@ function OverviewTab({
                 />
               </Field>
             </div>
+            <ProjectSelectSearchable
+              projects={projects}
+              clients={clients}
+              value={projectId}
+              onChange={setProjectId}
+              usePortal={false}
+            />
             <Field label="Notatka do zmiany (opcjonalnie)">
               <Textarea value={note} onChange={(event) => setNote(event.target.value)} rows={2} />
             </Field>
+
+            <GoalDeferRevisitActions
+              goal={{
+                ...goal,
+                status,
+                periodStart,
+                periodEnd,
+                progressPercent: progress,
+                projectId,
+                ownerId: ownerId || null,
+              }}
+              authorId={currentProfileId}
+              onChanged={(updated) => {
+                onChanged(updated);
+                setStatus(updated.status);
+                setPeriodStart(updated.periodStart.slice(0, 10));
+                setPeriodEnd(updated.periodEnd.slice(0, 10));
+                setProgress(updated.progressPercent);
+                setProjectId(updated.projectId);
+                setOwnerId(updated.ownerId ?? "");
+              }}
+            />
+
             {error ? <p className="text-sm text-rose-400">{error}</p> : null}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
@@ -615,6 +689,8 @@ function CommentsTab({
   authorId,
   authorName,
   teamProfiles,
+  boardId,
+  goalTitle,
   onChanged,
 }: {
   goalId: string;
@@ -622,16 +698,29 @@ function CommentsTab({
   authorId: string | null;
   authorName: string;
   teamProfiles: UserProfile[];
+  boardId: string;
+  goalTitle: string;
   onChanged: () => Promise<void>;
 }) {
   const [body, setBody] = useState("");
   const [saving, setSaving] = useState(false);
+  const { candidates, mentionOptions } = useMentionOptionsFromProfiles(teamProfiles);
 
   async function handleSubmit() {
     if (!body.trim()) return;
     setSaving(true);
     try {
-      await addGoalComment({ goalId, authorId, authorName, body });
+      const comment = await addGoalComment({ goalId, authorId, authorName, body });
+      void createUserMentionNotifications({
+        sourceId: comment.id,
+        authorName,
+        body,
+        candidates,
+        contextLabel: "w komentarzu do celu",
+        subjectLabel: goalTitle,
+        linkUrl: `/tablice-celow/${boardId}/${goalId}`,
+        excludeProfileIds: authorId ? [authorId] : [],
+      }).catch(() => undefined);
       setBody("");
       await onChanged();
     } finally {
@@ -658,12 +747,13 @@ function CommentsTab({
           );
         })}
         <div className="flex gap-2 border-t border-border/60 pt-3">
-          <Textarea
+          <MentionTextarea
             value={body}
-            onChange={(event) => setBody(event.target.value)}
+            onChange={setBody}
+            mentionOptions={mentionOptions}
             rows={2}
-            placeholder="Napisz komentarz..."
-            className="flex-1"
+            placeholder="Napisz komentarz… użyj @ aby oznaczyć"
+            className="min-h-[4.5rem] flex-1"
           />
           <Button type="button" onClick={handleSubmit} disabled={saving} className="self-end">
             Dodaj

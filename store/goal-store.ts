@@ -20,6 +20,7 @@ import { defaultGoalModuleSettings, type GoalModuleSettings } from "@/lib/goals/
 import {
   createGoal as createGoalRow,
   deleteGoal as deleteGoalRow,
+  fetchGoalInitiativeTaskCounts,
   fetchGoalLinkCounts,
   fetchGoalsByBoard,
   fetchNextReviewByGoal,
@@ -33,6 +34,8 @@ type GoalCardMeta = {
   linkedTaskCount: number;
   openProblemCount: number;
   nextReviewAt: string | null;
+  initiativeTaskTotal: number;
+  initiativeTaskDone: number;
 };
 
 // Stabilne referencje dla fallbacków w selektorach Zustand (np. `state.goalsByBoard[id] ?? EMPTY_GOALS`).
@@ -164,9 +167,10 @@ export const useGoalStore = create<GoalStore>((set, get) => ({
     try {
       const goals = await fetchGoalsByBoard(boardId);
       const goalIds = goals.map((goal) => goal.id);
-      const [linkCounts, nextReviews] = await Promise.all([
+      const [linkCounts, nextReviews, initiativeCounts] = await Promise.all([
         fetchGoalLinkCounts(goalIds),
         fetchNextReviewByGoal(goalIds),
+        fetchGoalInitiativeTaskCounts(goalIds),
       ]);
 
       const meta: Record<string, GoalCardMeta> = {};
@@ -175,6 +179,8 @@ export const useGoalStore = create<GoalStore>((set, get) => ({
           linkedTaskCount: linkCounts[goal.id]?.linkedTaskCount ?? 0,
           openProblemCount: linkCounts[goal.id]?.openProblemCount ?? 0,
           nextReviewAt: nextReviews[goal.id] ?? null,
+          initiativeTaskTotal: initiativeCounts[goal.id]?.total ?? 0,
+          initiativeTaskDone: initiativeCounts[goal.id]?.done ?? 0,
         };
       }
 
@@ -248,7 +254,13 @@ export const useGoalStore = create<GoalStore>((set, get) => ({
         ...get().goalCardMetaByBoard,
         [input.boardId]: {
           ...(get().goalCardMetaByBoard[input.boardId] ?? {}),
-          [goal.id]: { linkedTaskCount: 0, openProblemCount: 0, nextReviewAt: null },
+          [goal.id]: {
+            linkedTaskCount: 0,
+            openProblemCount: 0,
+            nextReviewAt: null,
+            initiativeTaskTotal: 0,
+            initiativeTaskDone: 0,
+          },
         },
       },
       boardCounts: {

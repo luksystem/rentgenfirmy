@@ -10,7 +10,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Field, Textarea } from "@/components/ui/input";
+import { Field } from "@/components/ui/input";
+import { MentionTextarea } from "@/components/mentions/mention-textarea";
 import {
   isTerminalWorkItemStatus,
   WORK_ITEM_ACCEPTANCE_ACTION_LABELS,
@@ -22,6 +23,9 @@ import { workItemLogActionLabel } from "@/lib/my-work/display-labels";
 import { formatDate } from "@/lib/utils";
 import { canEditWorkItem } from "@/lib/my-work/permissions";
 import { UserIdentity } from "@/components/user-avatar";
+import { useMentionOptionsFromProfiles } from "@/hooks/use-team-mention-options";
+import { getUserDisplayName } from "@/lib/auth/types";
+import { createUserMentionNotifications } from "@/lib/notifications/repository";
 import { useAuthStore } from "@/store/auth-store";
 import { useCanManageWorkItems, useMyWorkStore } from "@/store/my-work-store";
 import { TaskChecklistPanel } from "@/components/task-checklist/task-checklist-panel";
@@ -58,6 +62,7 @@ export function MyWorkDetailPanel({
 }) {
   const profile = useAuthStore((state) => state.profile);
   const teamProfiles = useMyWorkStore((state) => state.teamProfiles);
+  const { candidates, mentionOptions } = useMentionOptionsFromProfiles(teamProfiles);
   const canManage = useCanManageWorkItems(profile?.role);
   const [commentBody, setCommentBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -90,7 +95,19 @@ export function MyWorkDetailPanel({
     if (!commentBody.trim()) return;
     setSubmitting(true);
     try {
-      await onComment(commentBody.trim());
+      const body = commentBody.trim();
+      await onComment(body);
+      const authorName = profile ? getUserDisplayName(profile) : "Użytkownik";
+      void createUserMentionNotifications({
+        sourceId: item.id,
+        authorName,
+        body,
+        candidates,
+        contextLabel: "w komentarzu do zadania",
+        subjectLabel: item.title,
+        linkUrl: "/moja-praca",
+        excludeProfileIds: profile?.id ? [profile.id] : [],
+      }).catch(() => undefined);
       setCommentBody("");
     } finally {
       setSubmitting(false);
@@ -189,7 +206,14 @@ export function MyWorkDetailPanel({
             </div>
             <div className="mt-3 grid gap-2">
               <Field label="Dodaj komentarz">
-                <Textarea value={commentBody} onChange={(event) => setCommentBody(event.target.value)} rows={2} />
+                <MentionTextarea
+                  value={commentBody}
+                  onChange={setCommentBody}
+                  mentionOptions={mentionOptions}
+                  rows={2}
+                  placeholder="Napisz komentarz… użyj @ aby oznaczyć"
+                  className="min-h-[4.5rem]"
+                />
               </Field>
               <Button size="sm" onClick={() => void handleComment()} disabled={submitting}>
                 Dodaj komentarz

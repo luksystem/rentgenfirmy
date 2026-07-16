@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Field, Input, Textarea } from "@/components/ui/input";
+import { MentionTextarea } from "@/components/mentions/mention-textarea";
 import { buildGoogleMapsDirectionsUrl } from "@/lib/dashboard/google-maps";
 import { isInspectionPlanningDue } from "@/lib/inspections/schedule";
 import {
@@ -25,6 +26,8 @@ import {
   type InspectionRecord,
   type InspectionStatus,
 } from "@/lib/inspections/types";
+import { createUserMentionNotifications } from "@/lib/notifications/repository";
+import { useMentionOptionsFromProfiles } from "@/hooks/use-team-mention-options";
 import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 import { useAuthStore } from "@/store/auth-store";
 import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
@@ -46,6 +49,7 @@ export function InspectionDetailModal({
   const profile = useAuthStore((state) => state.profile);
   const [detail, setDetail] = useState<InspectionRecord | null>(item);
   const [teamProfiles, setTeamProfiles] = useState<UserProfile[]>([]);
+  const { candidates, mentionOptions } = useMentionOptionsFromProfiles(teamProfiles);
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -161,6 +165,17 @@ export function InspectionDetailModal({
       if (!response.ok) {
         throw new Error(payload.error ?? "Nie udało się dodać komentarza.");
       }
+
+      const authorName = profile ? getUserDisplayName(profile) : "Zespół";
+      void createUserMentionNotifications({
+        sourceId: detail.id,
+        authorName,
+        body: comment,
+        candidates,
+        contextLabel: "w komentarzu do przeglądu",
+        linkUrl: "/przeglady",
+        excludeProfileIds: profile?.id ? [profile.id] : [],
+      }).catch(() => undefined);
 
       const reload = await fetch(`/api/inspections/${detail.id}`, { credentials: "include" });
       const reloadPayload = await reload.json();
@@ -528,11 +543,13 @@ export function InspectionDetailModal({
                 )}
               </div>
               <div className="mt-3 flex gap-2">
-                <Textarea
+                <MentionTextarea
                   rows={2}
                   value={comment}
-                  onChange={(event) => setComment(event.target.value)}
-                  placeholder="Dodaj komentarz…"
+                  onChange={setComment}
+                  mentionOptions={mentionOptions}
+                  placeholder="Dodaj komentarz… użyj @ aby oznaczyć"
+                  className="min-h-[4.5rem]"
                 />
                 <Button type="button" size="sm" disabled={busy || !comment.trim()} onClick={() => void handleCommentSubmit()}>
                   <Send className="h-4 w-4" />

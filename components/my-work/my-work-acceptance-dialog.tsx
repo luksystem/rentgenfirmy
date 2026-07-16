@@ -9,14 +9,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Field, Textarea } from "@/components/ui/input";
+import { Field } from "@/components/ui/input";
+import { MentionTextarea } from "@/components/mentions/mention-textarea";
 import {
   WORK_ITEM_ACCEPTANCE_ACTION_LABELS,
   WORK_ITEM_ACCEPTANCE_ACTIONS,
   type WorkItemAcceptanceAction,
   type WorkItemView,
 } from "@/lib/my-work/types";
+import { useMentionOptionsFromProfiles } from "@/hooks/use-team-mention-options";
 import { formatDate } from "@/lib/utils";
+import { useMyWorkStore } from "@/store/my-work-store";
 
 export function MyWorkAcceptanceDialog({
   item,
@@ -29,6 +32,8 @@ export function MyWorkAcceptanceDialog({
   onOpenChange: (open: boolean) => void;
   onSubmit: (action: WorkItemAcceptanceAction, comment: string, withoutReservations: boolean) => Promise<void>;
 }) {
+  const teamProfiles = useMyWorkStore((state) => state.teamProfiles);
+  const { mentionOptions } = useMentionOptionsFromProfiles(teamProfiles);
   const [action, setAction] = useState<WorkItemAcceptanceAction>("accept");
   const [comment, setComment] = useState("");
   const [withoutReservations, setWithoutReservations] = useState(true);
@@ -110,7 +115,13 @@ export function MyWorkAcceptanceDialog({
           </label>
         ) : (
           <Field label="Komentarz / uzasadnienie">
-            <Textarea value={comment} onChange={(event) => setComment(event.target.value)} rows={3} />
+            <MentionTextarea
+              value={comment}
+              onChange={setComment}
+              mentionOptions={mentionOptions}
+              rows={3}
+              placeholder="Uzasadnienie… użyj @ aby oznaczyć"
+            />
           </Field>
         )}
 

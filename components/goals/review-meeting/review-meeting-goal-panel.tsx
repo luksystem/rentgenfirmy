@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { Field, Input, Select } from "@/components/ui/input";
+import { MentionTextarea } from "@/components/mentions/mention-textarea";
+import { useMentionOptionsFromProfiles } from "@/hooks/use-team-mention-options";
 import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
 import {
   GOAL_REVIEW_OUTCOME_LABELS,
@@ -18,6 +20,7 @@ import {
 } from "@/lib/goals/types";
 import { fetchGoalKpis } from "@/lib/supabase/goal-repository";
 import { fetchGoalMethodologyByCode } from "@/lib/supabase/goal-methodology-repository";
+import { GoalDeferRevisitActions } from "@/components/goals/goal-defer-revisit-actions";
 import { ReviewMeetingTaskForm } from "@/components/goals/review-meeting/review-meeting-task-form";
 import { useDraftNumber } from "@/hooks/use-draft-number";
 import { cn } from "@/lib/utils";
@@ -57,6 +60,7 @@ export function ReviewMeetingGoalPanel({
   onOwnerChange,
   onRequestSettle,
   onTaskCreated,
+  onGoalChanged,
 }: {
   meetingId: string;
   item: GoalReviewMeetingItem;
@@ -76,9 +80,11 @@ export function ReviewMeetingGoalPanel({
   onOwnerChange: (ownerId: string | null) => void;
   onRequestSettle: () => void;
   onTaskCreated: () => void;
+  onGoalChanged: (goal: Goal) => void;
 }) {
   const [methodology, setMethodology] = useState<GoalMethodology | null>(null);
   const [kpis, setKpis] = useState<GoalKpi[]>([]);
+  const { mentionOptions } = useMentionOptionsFromProfiles(teamProfiles);
   const progressInput = useDraftNumber(progressPercent, onProgressChange, {
     min: 0,
     max: 100,
@@ -261,6 +267,16 @@ export function ReviewMeetingGoalPanel({
         Rozlicz cel (etap „Rozliczony”)
       </Button>
 
+      <GoalDeferRevisitActions
+        goal={goal}
+        authorId={currentProfileId}
+        meetingId={meetingId}
+        onChanged={(updated) => {
+          onGoalChanged(updated);
+          onGoalStatusChange(updated.status);
+        }}
+      />
+
       <Field
         label={
           isOwner
@@ -268,11 +284,12 @@ export function ReviewMeetingGoalPanel({
             : `Notatki ze spotkania (piszesz jako uczestnik · właściciel: ${ownerName})`
         }
       >
-        <Textarea
+        <MentionTextarea
           value={notes}
-          onChange={(e) => onNotesChange(e.target.value)}
+          onChange={onNotesChange}
+          mentionOptions={mentionOptions}
           rows={6}
-          placeholder="Ustalenia, ryzyka, decyzje, uzasadnienie oceny względem kryteriów sukcesu…"
+          placeholder="Ustalenia, ryzyka, decyzje… użyj @ aby oznaczyć"
           className={cn(isOwner && "border-accent/40")}
         />
       </Field>

@@ -10,11 +10,14 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/input";
+import { MentionTextarea } from "@/components/mentions/mention-textarea";
 import {
   WORK_ITEM_COMPLETE_OUTCOMES,
   type WorkItemCompleteOutcome,
   type WorkItemView,
 } from "@/lib/my-work/types";
+import { useMentionOptionsFromProfiles } from "@/hooks/use-team-mention-options";
+import { useMyWorkStore } from "@/store/my-work-store";
 
 const OUTCOME_LABELS: Record<WorkItemCompleteOutcome, string> = {
   done: "Wykonane",
@@ -39,6 +42,8 @@ export function MyWorkCompleteDialog({
     workDescription: string,
   ) => Promise<void>;
 }) {
+  const teamProfiles = useMyWorkStore((state) => state.teamProfiles);
+  const { mentionOptions } = useMentionOptionsFromProfiles(teamProfiles);
   const [outcome, setOutcome] = useState<WorkItemCompleteOutcome>("done");
   const [comment, setComment] = useState("");
   const [workDescription, setWorkDescription] = useState("");
@@ -89,7 +94,13 @@ export function MyWorkCompleteDialog({
         </Field>
 
         <Field label={outcome === "done" ? "Komentarz (opcjonalnie)" : "Komentarz (wymagany)"}>
-          <Textarea value={comment} onChange={(event) => setComment(event.target.value)} rows={3} />
+          <MentionTextarea
+            value={comment}
+            onChange={setComment}
+            mentionOptions={mentionOptions}
+            rows={3}
+            placeholder="Komentarz… użyj @ aby oznaczyć"
+          />
         </Field>
 
         <Field label="Opis wykonanych prac">

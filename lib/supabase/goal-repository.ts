@@ -4,6 +4,7 @@ import {
   goalToUpdateRow,
   rowToGoal,
   rowToGoalComment,
+  rowToGoalDeferral,
   rowToGoalInitiative,
   rowToGoalKpi,
   rowToGoalLink,
@@ -13,8 +14,11 @@ import {
 } from "@/lib/supabase/goal-mappers";
 import {
   computeNextPeriod,
+  GOAL_DEFERRAL_REASON_LABELS,
   type Goal,
   type GoalComment,
+  type GoalDeferral,
+  type GoalDeferralReason,
   type GoalInitiative,
   type GoalInitiativeKind,
   type GoalKpi,
@@ -496,6 +500,197 @@ export async function updateGoalInitiativeStatus(
   return rowToGoalInitiative(data);
 }
 
+export async function setGoalInitiativeCompleted(
+  id: string,
+  completed: boolean,
+): Promise<GoalInitiative> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("goal_initiatives")
+    .update({ completed_at: completed ? new Date().toISOString() : null })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToGoalInitiative(data);
+}
+
+/** Batch: ile zadań (kind=task) i ile odhaczonych — bez N+1. */
+export async function fetchGoalInitiativeTaskCounts(
+  goalIds: string[],
+): Promise<Record<string, { total: number; done: number }>> {
+  if (goalIds.length === 0) {
+    return {};
+  }
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("goal_initiatives")
+    .select("goal_id, completed_at")
+    .in("goal_id", goalIds)
+    .eq("kind", "task");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const out: Record<string, { total: number; done: number }> = {};
+  for (const row of data ?? []) {
+    const bucket = out[row.goal_id] ?? { total: 0, done: 0 };
+    bucket.total += 1;
+    if (row.completed_at) bucket.done += 1;
+    out[row.goal_id] = bucket;
+  }
+  return out;
+}
+
+export async function fetchGoalDeferrals(goalId: string): Promise<GoalDeferral[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("goal_deferrals")
+    .select("*")
+    .eq("goal_id", goalId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map(rowToGoalDeferral);
+}
+
+export async function fetchGoalDeferralsByMeeting(meetingId: string): Promise<GoalDeferral[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("goal_deferrals")
+    .select("*")
+    .eq("meeting_id", meetingId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map(rowToGoalDeferral);
+}
+
+/** Przełóż cel na kolejny okres (planowanie) z powodem niedowiezienia / zewnętrznym. */
+export async function deferGoal(input: {
+  goalId: string;
+  reason: GoalDeferralReason;
+  note?: string;
+  meetingId?: string | null;
+  authorId?: string | null;
+  periodStart?: string;
+  periodEnd?: string;
+}): Promise<{ goal: Goal; deferral: GoalDeferral }> {
+  const current = await fetchGoalById(input.goalId);
+  if (!current) {
+    throw new Error("Cel nie istnieje.");
+  }
+
+  const nextPeriod =
+    input.periodStart && input.periodEnd
+      ? { periodStart: input.periodStart, periodEnd: input.periodEnd }
+      : computeNextPeriod(current.periodType, current.periodEnd);
+
+  const markedUndelivered = input.reason === "internal";
+  const supabase = getSupabase();
+
+  const { data: deferralRow, error: deferralError } = await supabase
+    .from("goal_deferrals")
+    .insert({
+      goal_id: input.goalId,
+      meeting_id: input.meetingId ?? null,
+      reason: input.reason,
+      note: input.note?.trim() ?? "",
+      previous_period_start: current.periodStart,
+      previous_period_end: current.periodEnd,
+      new_period_start: nextPeriod.periodStart,
+      new_period_end: nextPeriod.periodEnd,
+      marked_undelivered: markedUndelivered,
+      created_by: input.authorId ?? null,
+    })
+    .select("*")
+    .single();
+
+  if (deferralError) {
+    throw new Error(deferralError.message);
+  }
+
+  const goal = await updateGoal(input.goalId, {
+    status: "planned",
+    periodStart: nextPeriod.periodStart,
+    periodEnd: nextPeriod.periodEnd,
+    deferralCount: current.deferralCount + 1,
+    lastDeferralReason: input.reason,
+    needsRevisit: false,
+    revisitAt: null,
+  });
+
+  const reasonLabel = GOAL_DEFERRAL_REASON_LABELS[input.reason];
+  await supabase.from("goal_updates").insert({
+    goal_id: input.goalId,
+    author_id: input.authorId ?? null,
+    previous_progress: current.progressPercent,
+    new_progress: goal.progressPercent,
+    previous_status: current.status,
+    new_status: goal.status,
+    note: [
+      `Przełożenie (#${goal.deferralCount}): ${reasonLabel}.`,
+      `Okres ${current.periodStart}–${current.periodEnd} → ${nextPeriod.periodStart}–${nextPeriod.periodEnd}.`,
+      input.note?.trim() || null,
+    ]
+      .filter(Boolean)
+      .join(" "),
+  });
+
+  return { goal, deferral: rowToGoalDeferral(deferralRow) };
+}
+
+export async function setGoalRevisit(input: {
+  goalId: string;
+  needsRevisit: boolean;
+  revisitAt?: string | null;
+  note?: string;
+  authorId?: string | null;
+}): Promise<Goal> {
+  const current = await fetchGoalById(input.goalId);
+  if (!current) {
+    throw new Error("Cel nie istnieje.");
+  }
+
+  const revisitAt = input.needsRevisit ? (input.revisitAt ?? null) : null;
+  const goal = await updateGoal(input.goalId, {
+    needsRevisit: input.needsRevisit,
+    revisitAt,
+  });
+
+  const supabase = getSupabase();
+  await supabase.from("goal_updates").insert({
+    goal_id: input.goalId,
+    author_id: input.authorId ?? null,
+    previous_progress: current.progressPercent,
+    new_progress: goal.progressPercent,
+    previous_status: current.status,
+    new_status: goal.status,
+    note: input.needsRevisit
+      ? [
+          "Oznaczenie: TRZEBA DO TEGO WRÓCIĆ.",
+          revisitAt ? `Data powrotu: ${revisitAt}.` : null,
+          input.note?.trim() || null,
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : "Usunięto oznaczenie „trzeba wrócić”.",
+  });
+
+  return goal;
+}
+
 // ── Powiązania (zadania Kanban, przyszłe problemy, dokumenty) ──────────────────
 
 export async function fetchGoalLinks(goalId: string): Promise<GoalLink[]> {
@@ -597,14 +792,22 @@ export async function settleGoal(input: {
     throw new Error("Cel nie istnieje.");
   }
 
-  const goal = await updateGoal(input.id, {
+  await updateGoalProgress(input.id, {
     status: "settled",
+    progressPercent: 100,
+    note: `Rozliczenie celu (${input.settlementStatus}). Postęp ustawiony na 100%.`,
+    authorId: input.settledBy,
+  });
+
+  const goal = await updateGoal(input.id, {
     settlementStatus: input.settlementStatus,
     settlementWhatWorked: input.settlementWhatWorked,
     settlementWhatFailed: input.settlementWhatFailed,
     settlementConclusions: input.settlementConclusions,
     settledAt: new Date().toISOString(),
     settledBy: input.settledBy,
+    needsRevisit: false,
+    revisitAt: null,
   });
 
   let nextRecurringGoal: Goal | null = null;

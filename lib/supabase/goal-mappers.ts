@@ -3,6 +3,7 @@ import type {
   GoalBoardKindRow,
   GoalBoardRow,
   GoalCommentRow,
+  GoalDeferralRow,
   GoalInitiativeRow,
   GoalKpiRow,
   GoalLinkRow,
@@ -22,6 +23,8 @@ import type {
   GoalBoard,
   GoalBoardKind,
   GoalComment,
+  GoalDeferral,
+  GoalDeferralReason,
   GoalInitiative,
   GoalKpi,
   GoalLevel,
@@ -141,6 +144,13 @@ export function rowToGoal(row: GoalRow): Goal {
     settlementConclusions: row.settlement_conclusions,
     settledAt: row.settled_at,
     settledBy: row.settled_by,
+    needsRevisit: Boolean(row.needs_revisit),
+    revisitAt: row.revisit_at,
+    deferralCount: Number(row.deferral_count ?? 0),
+    lastDeferralReason:
+      row.last_deferral_reason === "internal" || row.last_deferral_reason === "external"
+        ? (row.last_deferral_reason as GoalDeferralReason)
+        : null,
     createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -199,6 +209,10 @@ export function goalToUpdateRow(goal: Partial<Goal>): Partial<GoalRow> {
   if (goal.settlementConclusions !== undefined) row.settlement_conclusions = goal.settlementConclusions;
   if (goal.settledAt !== undefined) row.settled_at = goal.settledAt;
   if (goal.settledBy !== undefined) row.settled_by = goal.settledBy;
+  if (goal.needsRevisit !== undefined) row.needs_revisit = goal.needsRevisit;
+  if (goal.revisitAt !== undefined) row.revisit_at = goal.revisitAt;
+  if (goal.deferralCount !== undefined) row.deferral_count = goal.deferralCount;
+  if (goal.lastDeferralReason !== undefined) row.last_deferral_reason = goal.lastDeferralReason;
   row.updated_at = new Date().toISOString();
   return row;
 }
@@ -276,6 +290,24 @@ export function rowToGoalInitiative(row: GoalInitiativeRow): GoalInitiative {
     status: row.status as GoalInitiative["status"],
     convertedTaskId: row.converted_task_id,
     source: row.source === "ai" ? "ai" : "manual",
+    completedAt: row.completed_at ?? null,
+    createdAt: row.created_at,
+  };
+}
+
+export function rowToGoalDeferral(row: GoalDeferralRow): GoalDeferral {
+  return {
+    id: row.id,
+    goalId: row.goal_id,
+    meetingId: row.meeting_id,
+    reason: row.reason === "external" ? "external" : "internal",
+    note: row.note,
+    previousPeriodStart: row.previous_period_start,
+    previousPeriodEnd: row.previous_period_end,
+    newPeriodStart: row.new_period_start,
+    newPeriodEnd: row.new_period_end,
+    markedUndelivered: Boolean(row.marked_undelivered),
+    createdBy: row.created_by,
     createdAt: row.created_at,
   };
 }

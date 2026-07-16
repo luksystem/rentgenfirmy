@@ -423,7 +423,17 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
         ownerId={ownerId}
         onOwnerChange={setOwnerId}
         onRequestSettle={() => setSettleOpen(true)}
-        onTaskCreated={() => void refreshMeeting()}
+        onTaskCreated={() => {
+          void refreshMeeting();
+          if (meeting?.boardId) void ensureBoardGoals(meeting.boardId, { force: true });
+        }}
+        onGoalChanged={(updated) => {
+          upsertGoalInStore(updated);
+          setGoalStatus(updated.status === "settled" ? "settled" : updated.status);
+          setProgressPercent(updated.progressPercent);
+          setOwnerId(updated.ownerId);
+          if (meeting?.boardId) void ensureBoardGoals(meeting.boardId, { force: true });
+        }}
       />
 
       <div className="flex flex-wrap justify-between gap-2 border-t border-border pt-4">
@@ -477,8 +487,10 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
         open={settleOpen}
         onOpenChange={setSettleOpen}
         currentProfileId={profile?.id ?? null}
-        onSettled={() => {
+        onSettled={(settledGoal) => {
           setGoalStatus("settled");
+          setProgressPercent(100);
+          if (settledGoal) upsertGoalInStore(settledGoal);
           void ensureBoardGoals(meeting.boardId, { force: true });
         }}
       />

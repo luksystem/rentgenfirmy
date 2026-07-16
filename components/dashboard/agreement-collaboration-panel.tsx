@@ -6,6 +6,7 @@ import { AgreementApprovalResponsesList } from "@/components/dashboard/agreement
 import { AgreementAttachmentGallery } from "@/components/dashboard/agreement-attachment-gallery";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { MentionTextarea } from "@/components/mentions/mention-textarea";
 import {
   AGREEMENT_WORKFLOW_PHASE_LABELS,
   getAgreementWorkflowPhase,
@@ -21,6 +22,8 @@ import {
   respondToAgreementApproval,
   setAgreementDiscussionOpen,
 } from "@/lib/supabase/project-agreement-collaboration-repository";
+import { createUserMentionNotifications } from "@/lib/notifications/repository";
+import { useTeamMentionOptions } from "@/hooks/use-team-mention-options";
 import { formatDate } from "@/lib/utils";
 import { buildAgreementApprovalResponsesFromBundle } from "@/hooks/use-agreement-approval-responses";
 
@@ -72,6 +75,7 @@ export function AgreementCollaborationPanel({
   const [responderName, setResponderName] = useState(authorName);
   const [formError, setFormError] = useState<string | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const { candidates, mentionOptions } = useTeamMentionOptions(mode === "team" && !publicToken);
 
   const effectiveAuthorName = publicToken ? authorName.trim() : responderName.trim() || authorName.trim();
   const identityReady =
@@ -272,6 +276,16 @@ export function AgreementCollaborationPanel({
         authorRoleLabel: mode === "external" ? roleLabel : mode === "client" ? "Klient" : null,
         body: commentBody,
       });
+    }
+    if (mode === "team" && !publicToken && candidates.length) {
+      void createUserMentionNotifications({
+        sourceId: agreementId,
+        authorName: effectiveAuthorName,
+        body: commentBody,
+        candidates,
+        contextLabel: "w ustaleniu",
+        linkUrl: projectId ? `/przestrzenie/zespol/${projectId}?tab=agreements` : "/tablice-wdrozen/ustalenia",
+      }).catch(() => undefined);
     }
     setCommentBody("");
   }
@@ -575,12 +589,22 @@ export function AgreementCollaborationPanel({
             </>
           ) : null}
           <Field label="Dodaj komentarz">
-            <Textarea
-              value={commentBody}
-              onChange={(event) => setCommentBody(event.target.value)}
-              rows={3}
-              placeholder="Uwagi, pytania, propozycje zmian…"
-            />
+            {mode === "team" && !publicToken ? (
+              <MentionTextarea
+                value={commentBody}
+                onChange={setCommentBody}
+                mentionOptions={mentionOptions}
+                rows={3}
+                placeholder="Uwagi, pytania… użyj @ aby oznaczyć"
+              />
+            ) : (
+              <Textarea
+                value={commentBody}
+                onChange={(event) => setCommentBody(event.target.value)}
+                rows={3}
+                placeholder="Uwagi, pytania, propozycje zmian…"
+              />
+            )}
           </Field>
           {formError ? <p className="text-xs text-rose-300">{formError}</p> : null}
           <Button

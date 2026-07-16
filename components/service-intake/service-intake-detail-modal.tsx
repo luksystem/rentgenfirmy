@@ -6,9 +6,12 @@ import { Coffee, ExternalLink, Loader2, Navigation, UserRound, X } from "lucide-
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogTitle, StackedDialogContent } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { MentionTextarea } from "@/components/mentions/mention-textarea";
 import { buildGoogleMapsDirectionsUrl } from "@/lib/dashboard/google-maps";
 import { confirmServiceIntakeStatusChange } from "@/lib/service-intake/confirm-status-change";
 import type { UserProfile } from "@/lib/auth/types";
+import { createUserMentionNotifications } from "@/lib/notifications/repository";
+import { useMentionOptionsFromProfiles } from "@/hooks/use-team-mention-options";
 import { profileToOptionLabel } from "@/lib/supabase/profile-repository";
 import { CAFE_PRIORITY_OPTIONS } from "@/lib/service-intake/cafe-priorities";
 import {
@@ -133,6 +136,7 @@ export function ServiceIntakeDetailModal({
   const [statusDraft, setStatusDraft] = useState<ServiceIntakeStatus>("new");
   const [dueAtDraft, setDueAtDraft] = useState("");
   const [assigneeIdDraft, setAssigneeIdDraft] = useState("");
+  const { candidates, mentionOptions } = useMentionOptionsFromProfiles(teamProfiles);
 
   const loadThread = useCallback(async () => {
     if (!intakeId) {
@@ -304,6 +308,17 @@ export function ServiceIntakeDetailModal({
           ? { ...current, comments: [...current.comments, payload.comment as ServiceIntakeComment] }
           : current,
       );
+      void createUserMentionNotifications({
+        sourceId: intakeId,
+        authorName,
+        body: commentDraft,
+        candidates,
+        contextLabel: "w wątku zgłoszenia",
+        subjectLabel: thread?.intake
+          ? SERVICE_INTAKE_REQUEST_TYPE_LABELS[thread.intake.requestType]
+          : undefined,
+        linkUrl: "/oferty/zgloszenia",
+      }).catch(() => undefined);
       setCommentDraft("");
     } catch (commentError) {
       setError(commentError instanceof Error ? commentError.message : "Błąd.");
@@ -514,11 +529,12 @@ export function ServiceIntakeDetailModal({
               <CommentThread comments={thread?.comments ?? []} />
               {intake.status !== "closed" && intake.status !== "rejected" ? (
                 <div className="mt-3 grid gap-2">
-                  <Textarea
+                  <MentionTextarea
                     rows={3}
                     value={commentDraft}
-                    onChange={(event) => setCommentDraft(event.target.value)}
-                    placeholder="Odpowiedź zespołu…"
+                    onChange={setCommentDraft}
+                    mentionOptions={mentionOptions}
+                    placeholder="Odpowiedź zespołu… użyj @ aby oznaczyć"
                   />
                   <Button
                     type="button"

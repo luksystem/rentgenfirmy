@@ -53,6 +53,7 @@ import { PublicKanbanEmbedded } from "@/components/process/public-kanban-embedde
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClientProjectSummary } from "@/components/dashboard/client-project-summary";
+import { ProjectHealthPanel } from "@/components/dashboard/project-health-panel";
 import type { ClientOfferSummary } from "@/lib/dashboard/client-offer-summary";
 import type { ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
 import { isAgreementPendingAttention } from "@/lib/dashboard/agreement-types";
@@ -843,10 +844,27 @@ export function ClientDashboardView({
   }
 
   function renderGoalsSection() {
+    if (!selectedProject) return null;
+    const project = selectedProject;
+    const activeStageId = process?.activeStageId ?? null;
+    const anchored = process ? resolveAnchoredProcessTemplate(process, template) : null;
+    const activeStageTitle =
+      anchored?.stages.find((stage) => stage.id === activeStageId)?.title ?? project.stage;
+
     return (
-      <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
-        <h2 className="mb-4 text-base font-semibold text-foreground">Cele</h2>
-        <GoalCollectiveView projectId={selectedProject.id} clientId={client.id} />
+      <div className="grid min-w-0 max-w-full gap-4">
+        {!readOnly ? (
+          <ProjectHealthPanel
+            projectId={project.id}
+            projectName={project.name}
+            stageTitle={activeStageTitle}
+            processProgressPercent={processProgress?.percent ?? null}
+          />
+        ) : null}
+        <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
+          <h2 className="mb-4 text-base font-semibold text-foreground">Cele</h2>
+          <GoalCollectiveView projectId={project.id} clientId={client.id} />
+        </div>
       </div>
     );
   }

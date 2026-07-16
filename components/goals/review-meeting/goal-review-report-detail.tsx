@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import {
@@ -16,10 +16,13 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  GOAL_DEFERRAL_REASON_LABELS,
   GOAL_REVIEW_OUTCOME_LABELS,
+  type GoalDeferral,
   type GoalReviewOutcome,
 } from "@/lib/goals/types";
 import { formatTimerSeconds } from "@/lib/goals/review-meeting-timing";
+import { fetchGoalDeferralsByMeeting } from "@/lib/supabase/goal-repository";
 import { useGoalReviewMeetingStore } from "@/store/goal-review-meeting-store";
 import { useGoalStore, EMPTY_GOALS } from "@/store/goal-store";
 
@@ -60,6 +63,7 @@ export function GoalReviewReportDetail({ meetingId }: { meetingId: string }) {
   const goalsByBoard = useGoalStore((s) => s.goalsByBoard);
   const ensureBoardGoals = useGoalStore((s) => s.ensureBoardGoals);
   const hydrate = useGoalStore((s) => s.hydrate);
+  const [deferrals, setDeferrals] = useState<GoalDeferral[]>([]);
 
   useEffect(() => {
     void hydrate();
@@ -69,6 +73,20 @@ export function GoalReviewReportDetail({ meetingId }: { meetingId: string }) {
   useEffect(() => {
     if (meeting?.boardId) void ensureBoardGoals(meeting.boardId);
   }, [meeting?.boardId, ensureBoardGoals]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchGoalDeferralsByMeeting(meetingId)
+      .then((rows) => {
+        if (!cancelled) setDeferrals(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setDeferrals([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [meetingId]);
 
   const boardGoals = meeting ? goalsByBoard[meeting.boardId] ?? EMPTY_GOALS : EMPTY_GOALS;
   const goalName = (goalId: string) => boardGoals.find((g) => g.id === goalId)?.name ?? goalId;
@@ -310,6 +328,35 @@ export function GoalReviewReportDetail({ meetingId }: { meetingId: string }) {
                 <li key={action.id}>
                   {action.title}
                   <span className="text-muted"> — {goalName(action.goalId)}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {deferrals.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Przełożenia / niedowiezienia</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-sm">
+              {deferrals.map((entry) => (
+                <li
+                  key={entry.id}
+                  className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2"
+                >
+                  <p className="font-medium">{goalName(entry.goalId)}</p>
+                  <p className="text-xs text-amber-200">
+                    {GOAL_DEFERRAL_REASON_LABELS[entry.reason]}
+                    {entry.markedUndelivered ? " · niedowieziony" : ""}
+                  </p>
+                  <p className="text-xs text-muted">
+                    Okres {entry.previousPeriodStart}–{entry.previousPeriodEnd} →{" "}
+                    {entry.newPeriodStart}–{entry.newPeriodEnd}
+                  </p>
+                  {entry.note ? <p className="mt-1 text-muted">{entry.note}</p> : null}
                 </li>
               ))}
             </ul>

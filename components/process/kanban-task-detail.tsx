@@ -678,12 +678,21 @@ export function KanbanTaskDetailModal({
                     </div>
                     {isEditing ? (
                       <div className="mt-2 grid gap-2">
-                        <Textarea
-                          value={editingCommentBody}
-                          disabled={isBusy}
-                          onChange={(event) => setEditingCommentBody(event.target.value)}
-                          rows={3}
-                        />
+                        {mentionOptions.length > 0 ? (
+                          <KanbanMentionTextarea
+                            value={editingCommentBody}
+                            mentionOptions={mentionOptions}
+                            disabled={isBusy}
+                            onChange={setEditingCommentBody}
+                          />
+                        ) : (
+                          <Textarea
+                            value={editingCommentBody}
+                            disabled={isBusy}
+                            onChange={(event) => setEditingCommentBody(event.target.value)}
+                            rows={3}
+                          />
+                        )}
                         <div className="flex gap-2">
                           <Button
                             type="button"

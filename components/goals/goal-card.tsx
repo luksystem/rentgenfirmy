@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Calendar, ClipboardList, Repeat, ShieldAlert, User } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Calendar, CheckSquare, ClipboardList, History, Repeat, RotateCcw, ShieldAlert, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   GOAL_BOARD_COLUMNS,
+  GOAL_DEFERRAL_REASON_LABELS,
   GOAL_LEVEL_LABELS,
   GOAL_PERIOD_TYPE_LABELS,
   GOAL_PRIORITY_LABELS,
@@ -27,6 +28,8 @@ type GoalCardMeta = {
   linkedTaskCount: number;
   openProblemCount: number;
   nextReviewAt: string | null;
+  initiativeTaskTotal?: number;
+  initiativeTaskDone?: number;
 };
 
 const PRIORITY_TONE: Record<Goal["priority"], "neutral" | "waiting" | "critical"> = {
@@ -36,15 +39,22 @@ const PRIORITY_TONE: Record<Goal["priority"], "neutral" | "waiting" | "critical"
   critical: "critical",
 };
 
-/** Kolor daty docelowej wg zbliżania się terminu — zielony/neutralny -> żółty -> czerwony. */
-function dueDateToneClass(periodEnd: string, status: GoalStatus): string {
+/** Dni kalendarzowe do terminu (południe lokalne — mniej przesunięć strefy). */
+function calendarDaysUntil(periodEnd: string): number {
+  const end = new Date(`${periodEnd.slice(0, 10)}T12:00:00`);
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  return Math.round((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+/** Zielony wcześniej, żółty dzień przed, czerwony w dniu terminu (i po). */
+export function dueDateToneClass(periodEnd: string, status: GoalStatus): string {
   if (status === "settled" || status === "cancelled") {
     return "text-muted";
   }
-  const days = Math.ceil((new Date(periodEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-  if (days < 0) return "text-rose-400 font-bold";
-  if (days <= 3) return "text-rose-300 font-semibold";
-  if (days <= 7) return "text-amber-300 font-semibold";
+  const days = calendarDaysUntil(periodEnd);
+  if (days <= 0) return "text-rose-400 font-bold";
+  if (days === 1) return "text-amber-300 font-semibold";
   return "text-emerald-300/80";
 }
 
@@ -169,19 +179,42 @@ export function GoalCard({
   onDueDateChange?: (date: string) => void;
 }) {
   const reviewOverdue = meta?.nextReviewAt ? new Date(meta.nextReviewAt).getTime() < Date.now() : false;
+  const draggedRef = useRef(false);
+  const taskTotal = meta?.initiativeTaskTotal ?? 0;
+  const taskDone = meta?.initiativeTaskDone ?? 0;
+
+  function handleCardClick() {
+    if (draggedRef.current) {
+      draggedRef.current = false;
+      return;
+    }
+    onOpen();
+  }
+
+  const revisitTone = goal.needsRevisit
+    ? "border-violet-500/60 bg-violet-500/10 ring-1 ring-violet-400/30"
+    : "border-border/70 bg-surface-muted/20";
 
   if (compact) {
     return (
       <article
         draggable={draggable}
-        onDragStart={onDragStart}
+        onDragStart={(event) => {
+          draggedRef.current = true;
+          onDragStart?.(event);
+        }}
         onDragEnd={onDragEnd}
-        className="cursor-grab rounded-lg border border-border/70 bg-surface-muted/20 px-2.5 py-2 shadow-sm transition hover:border-accent/30 active:cursor-grabbing"
+        onClick={handleCardClick}
+        className={cn(
+          "cursor-pointer rounded-lg px-2.5 py-2 shadow-sm transition hover:border-accent/30 active:cursor-grabbing",
+          revisitTone,
+        )}
       >
         <div className="flex items-center gap-2">
-          <button type="button" className="min-w-0 flex-1 text-left" onClick={onOpen}>
-            <p className="truncate text-xs font-bold leading-tight text-foreground">{goal.name}</p>
-          </button>
+          <p className="min-w-0 flex-1 truncate text-xs font-bold leading-tight text-foreground">
+            {goal.name}
+          </p>
+          {goal.needsRevisit ? <RotateCcw className="h-3 w-3 shrink-0 text-violet-300" /> : null}
           {goal.isRecurring ? <Repeat className="h-3 w-3 shrink-0 text-sky-300" /> : null}
           {onDueDateChange ? (
             <DueDateInput goal={goal} onDueDateChange={onDueDateChange} className="shrink-0" />
@@ -201,11 +234,24 @@ export function GoalCard({
             </div>
           )}
           <span className="shrink-0 text-[10px] font-semibold text-muted">{goal.progressPercent}%</span>
+          {taskTotal > 0 ? (
+            <span className="flex shrink-0 items-center gap-0.5 text-[10px] text-muted">
+              <CheckSquare className="h-3 w-3" />
+              {taskDone}/{taskTotal}
+            </span>
+          ) : null}
           <span className="flex shrink-0 items-center gap-1 text-[10px] text-muted">
             <User className="h-3 w-3" />
             <span className="max-w-[96px] truncate">{ownerName}</span>
           </span>
         </div>
+        {goal.deferralCount > 0 ? (
+          <p className="mt-1 flex items-center gap-1 text-[10px] text-amber-300/90">
+            <History className="h-3 w-3" />
+            Przekładany {goal.deferralCount}×
+            {goal.lastDeferralReason ? ` · ${GOAL_DEFERRAL_REASON_LABELS[goal.lastDeferralReason]}` : ""}
+          </p>
+        ) : null}
       </article>
     );
   }
@@ -213,17 +259,27 @@ export function GoalCard({
   return (
     <article
       draggable={draggable}
-      onDragStart={onDragStart}
+      onDragStart={(event) => {
+        draggedRef.current = true;
+        onDragStart?.(event);
+      }}
       onDragEnd={onDragEnd}
-      className="cursor-grab rounded-xl border border-border/70 bg-surface-muted/20 p-3 shadow-sm transition hover:border-accent/30 active:cursor-grabbing"
+      onClick={handleCardClick}
+      className={cn(
+        "cursor-pointer rounded-xl p-3 shadow-sm transition hover:border-accent/30 active:cursor-grabbing",
+        revisitTone,
+      )}
     >
-      <button type="button" className="w-full text-left" onClick={onOpen}>
+      <div className="w-full text-left">
         <div className="flex items-center justify-between gap-2">
           <p className="truncate text-sm font-bold leading-tight text-foreground">{goal.name}</p>
-          {goal.isRecurring ? <Repeat className="h-3.5 w-3.5 shrink-0 text-sky-300" /> : null}
+          <span className="flex shrink-0 items-center gap-1">
+            {goal.needsRevisit ? <RotateCcw className="h-3.5 w-3.5 text-violet-300" /> : null}
+            {goal.isRecurring ? <Repeat className="h-3.5 w-3.5 text-sky-300" /> : null}
+          </span>
         </div>
         <p className="mt-1 line-clamp-2 text-xs text-muted/80">{goal.description}</p>
-      </button>
+      </div>
 
       {onProgressChange ? (
         <ProgressSlider progressPercent={goal.progressPercent} onProgressChange={onProgressChange} />
@@ -243,6 +299,12 @@ export function GoalCard({
         <Badge tone="blue">{GOAL_LEVEL_LABELS[goal.level]}</Badge>
         <Badge tone={PRIORITY_TONE[goal.priority]}>{GOAL_PRIORITY_LABELS[goal.priority]}</Badge>
         <Badge tone="neutral">{GOAL_PERIOD_TYPE_LABELS[goal.periodType]}</Badge>
+        {goal.needsRevisit ? <Badge tone="waiting">Wrócić{goal.revisitAt ? `: ${formatDate(goal.revisitAt)}` : ""}</Badge> : null}
+        {goal.deferralCount > 0 ? (
+          <Badge tone="critical">
+            Przekładany {goal.deferralCount}×
+          </Badge>
+        ) : null}
       </div>
 
       <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted">
@@ -252,10 +314,16 @@ export function GoalCard({
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted">
         <div className="flex flex-wrap items-center gap-2">
+          {taskTotal > 0 ? (
+            <span className="flex items-center gap-1">
+              <CheckSquare className="h-3 w-3" />
+              {taskDone}/{taskTotal} zadań
+            </span>
+          ) : null}
           {meta && meta.linkedTaskCount > 0 ? (
             <span className="flex items-center gap-1">
               <ClipboardList className="h-3 w-3" />
-              {meta.linkedTaskCount} zadań
+              {meta.linkedTaskCount} Kanban
             </span>
           ) : null}
           {meta && meta.openProblemCount > 0 ? (
@@ -274,9 +342,16 @@ export function GoalCard({
         {onDueDateChange ? (
           <DueDateInput goal={goal} onDueDateChange={onDueDateChange} />
         ) : (
-          <span>Termin: {formatDate(goal.periodEnd)}</span>
+          <span className={dueDateToneClass(goal.periodEnd, goal.status)}>
+            Termin: {formatDate(goal.periodEnd)}
+          </span>
         )}
       </div>
+      {goal.lastDeferralReason ? (
+        <p className="mt-1.5 text-[10px] text-amber-300/90">
+          Ostatnio: {GOAL_DEFERRAL_REASON_LABELS[goal.lastDeferralReason]}
+        </p>
+      ) : null}
     </article>
   );
 }

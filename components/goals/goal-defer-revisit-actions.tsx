@@ -1,0 +1,208 @@
+"use client";
+
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import {
+  GOAL_DEFERRAL_REASON_LABELS,
+  GOAL_DEFERRAL_REASONS,
+  computeNextPeriod,
+  type Goal,
+  type GoalDeferralReason,
+} from "@/lib/goals/types";
+import { deferGoal, setGoalRevisit } from "@/lib/supabase/goal-repository";
+
+export function GoalDeferRevisitActions({
+  goal,
+  authorId,
+  meetingId,
+  onChanged,
+}: {
+  goal: Goal;
+  authorId: string | null;
+  meetingId?: string | null;
+  onChanged: (goal: Goal) => void;
+}) {
+  const next = computeNextPeriod(goal.periodType, goal.periodEnd);
+  const [deferReason, setDeferReason] = useState<GoalDeferralReason>("internal");
+  const [deferNote, setDeferNote] = useState("");
+  const [periodStart, setPeriodStart] = useState(next.periodStart);
+  const [periodEnd, setPeriodEnd] = useState(next.periodEnd);
+  const [revisitAt, setRevisitAt] = useState(goal.revisitAt?.slice(0, 10) ?? "");
+  const [revisitNote, setRevisitNote] = useState("");
+  const [busy, setBusy] = useState<"defer" | "revisit" | "clear" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleDefer() {
+    setBusy("defer");
+    setError(null);
+    try {
+      const result = await deferGoal({
+        goalId: goal.id,
+        reason: deferReason,
+        note: deferNote,
+        meetingId,
+        authorId,
+        periodStart,
+        periodEnd,
+      });
+      onChanged(result.goal);
+      setDeferNote("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nie udało się przełożyć celu.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleRevisit() {
+    if (!revisitAt) {
+      setError("Podaj datę powrotu do celu.");
+      return;
+    }
+    setBusy("revisit");
+    setError(null);
+    try {
+      const updated = await setGoalRevisit({
+        goalId: goal.id,
+        needsRevisit: true,
+        revisitAt,
+        note: revisitNote,
+        authorId,
+      });
+      onChanged(updated);
+      setRevisitNote("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nie udało się oznaczyć powrotu.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleClearRevisit() {
+    setBusy("clear");
+    setError(null);
+    try {
+      const updated = await setGoalRevisit({
+        goalId: goal.id,
+        needsRevisit: false,
+        authorId,
+      });
+      onChanged(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nie udało się usunąć oznaczenia.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  if (goal.status === "settled" || goal.status === "cancelled") {
+    return null;
+  }
+
+  return (
+    <div className="space-y-4 rounded-xl border border-border/70 bg-surface-muted/10 p-3">
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-violet-300">
+          Trzeba do tego wrócić
+        </p>
+        {goal.needsRevisit ? (
+          <p className="text-sm text-violet-200">
+            Oznaczone{goal.revisitAt ? ` · data: ${goal.revisitAt}` : ""}
+          </p>
+        ) : null}
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+          <Field label="Data powrotu">
+            <Input
+              type="date"
+              value={revisitAt}
+              onChange={(e) => setRevisitAt(e.target.value)}
+            />
+          </Field>
+          <div className="flex items-end gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={busy != null}
+              onClick={() => void handleRevisit()}
+            >
+              {busy === "revisit" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Oznacz
+            </Button>
+            {goal.needsRevisit ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={busy != null}
+                onClick={() => void handleClearRevisit()}
+              >
+                {busy === "clear" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Usuń
+              </Button>
+            ) : null}
+          </div>
+        </div>
+        <Field label="Notatka (opcjonalnie)">
+          <Input
+            value={revisitNote}
+            onChange={(e) => setRevisitNote(e.target.value)}
+            placeholder="Dlaczego trzeba wrócić…"
+          />
+        </Field>
+      </div>
+
+      <div className="space-y-2 border-t border-border/60 pt-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">
+          Przełóż na kolejny okres
+        </p>
+        <p className="text-xs text-muted">
+          Cel wraca do „Planowanie”. Niedowieziony = z naszego powodu; przełożony = poza naszą
+          kontrolą. Zapis trafia do historii i raportów.
+        </p>
+        <Field label="Powód">
+          <Select
+            value={deferReason}
+            onChange={(e) => setDeferReason(e.target.value as GoalDeferralReason)}
+          >
+            {GOAL_DEFERRAL_REASONS.map((reason) => (
+              <option key={reason} value={reason}>
+                {GOAL_DEFERRAL_REASON_LABELS[reason]}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Field label="Nowy okres od">
+            <Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} />
+          </Field>
+          <Field label="Nowy okres do">
+            <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} />
+          </Field>
+        </div>
+        <Field label="Notatka (opcjonalnie)">
+          <Textarea
+            value={deferNote}
+            onChange={(e) => setDeferNote(e.target.value)}
+            rows={2}
+            placeholder="Kontekst przełożenia…"
+          />
+        </Field>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={busy != null}
+          onClick={() => void handleDefer()}
+        >
+          {busy === "defer" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          Przełóż cel
+        </Button>
+      </div>
+
+      {error ? <p className="text-sm text-rose-400">{error}</p> : null}
+    </div>
+  );
+}
