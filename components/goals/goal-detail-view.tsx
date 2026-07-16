@@ -46,6 +46,7 @@ import {
   deleteGoalKpi,
   fetchGoalById,
   fetchGoalComments,
+  fetchGoalInitiativeTaskCounts,
   fetchGoalKpis,
   fetchGoalReviews,
   fetchGoalUpdates,
@@ -101,6 +102,7 @@ export function GoalDetailView({ goalId, onDeleted }: { goalId: string; onDelete
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>("przeglad");
   const [deleting, setDeleting] = useState(false);
+  const [openTaskCount, setOpenTaskCount] = useState(0);
 
   const isAdmin = Boolean(profile && isAdministratorRole(profile.role));
 
@@ -129,18 +131,24 @@ export function GoalDetailView({ goalId, onDeleted }: { goalId: string; onDelete
     try {
       const record = await fetchGoalById(goalId);
       setGoal(record);
-      const [kpiList, updateList, commentList, reviewList, methodologyRecord] = await Promise.all([
-        fetchGoalKpis(goalId),
-        fetchGoalUpdates(goalId),
-        fetchGoalComments(goalId),
-        fetchGoalReviews(goalId),
-        record?.methodologyId ? fetchGoalMethodologyByCode(record.methodologyId) : Promise.resolve(null),
-      ]);
+      const [kpiList, updateList, commentList, reviewList, methodologyRecord, taskCounts] =
+        await Promise.all([
+          fetchGoalKpis(goalId),
+          fetchGoalUpdates(goalId),
+          fetchGoalComments(goalId),
+          fetchGoalReviews(goalId),
+          record?.methodologyId
+            ? fetchGoalMethodologyByCode(record.methodologyId)
+            : Promise.resolve(null),
+          fetchGoalInitiativeTaskCounts([goalId]),
+        ]);
       setKpis(kpiList);
       setUpdates(updateList);
       setComments(commentList);
       setReviews(reviewList);
       setMethodology(methodologyRecord);
+      const counts = taskCounts[goalId];
+      setOpenTaskCount(counts ? Math.max(0, counts.total - counts.done) : 0);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Nie udało się wczytać celu.");
     } finally {
@@ -177,11 +185,11 @@ export function GoalDetailView({ goalId, onDeleted }: { goalId: string; onDelete
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid min-w-0 max-w-full gap-4 overflow-x-clip">
       {error ? <p className="text-sm text-rose-400">{error}</p> : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Badge tone="blue">{GOAL_LEVEL_LABELS[goal.level]}</Badge>
           <Badge tone="neutral">{GOAL_STATUS_LABELS[goal.status]}</Badge>
           <Badge tone="neutral">{GOAL_PRIORITY_LABELS[goal.priority]}</Badge>
@@ -203,20 +211,25 @@ export function GoalDetailView({ goalId, onDeleted }: { goalId: string; onDelete
         ) : null}
       </div>
 
-      <div className="flex flex-wrap gap-1.5 border-b border-border/70 pb-2">
+      <div className="flex min-w-0 flex-wrap gap-1.5 border-b border-border/70 pb-2">
         {TABS.map((entry) => (
           <button
             key={entry.key}
             type="button"
             onClick={() => setTab(entry.key)}
             className={cn(
-              "rounded-lg px-3 py-1.5 text-sm font-medium transition",
+              "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition",
               tab === entry.key
                 ? "bg-accent text-accent-foreground"
                 : "text-muted hover:bg-surface-muted hover:text-foreground",
             )}
           >
             {entry.label}
+            {entry.key === "zadania" && openTaskCount > 0 ? (
+              <span className="rounded-full bg-rose-500/20 px-1.5 py-0.5 text-[10px] font-bold leading-none text-rose-300">
+                {openTaskCount}
+              </span>
+            ) : null}
           </button>
         ))}
       </div>
@@ -233,7 +246,12 @@ export function GoalDetailView({ goalId, onDeleted }: { goalId: string; onDelete
         />
       ) : null}
 
-      {tab === "zadania" ? <GoalInitiativesCard goalId={goal.id} /> : null}
+      {tab === "zadania" ? (
+        <GoalInitiativesCard
+          goalId={goal.id}
+          onCountsChange={(done, total) => setOpenTaskCount(Math.max(0, total - done))}
+        />
+      ) : null}
 
       {tab === "kpi" ? (
         <KpiTab
@@ -373,8 +391,8 @@ function OverviewTab({
   }
 
   return (
-    <Card>
-      <CardContent className="grid gap-4">
+    <Card className="min-w-0 max-w-full overflow-hidden">
+      <CardContent className="grid min-w-0 max-w-full gap-4 overflow-x-clip">
         {!editing ? (
           <>
             <p className="text-sm leading-6 text-foreground/90">{goal.description || "Brak opisu."}</p>
@@ -449,24 +467,47 @@ function OverviewTab({
             </div>
           </>
         ) : (
-          <>
-            <Field label="Nazwa celu">
-              <Input value={name} onChange={(event) => setName(event.target.value)} />
+          <div className="grid min-w-0 max-w-full gap-4 overflow-x-clip">
+            <Field label="Nazwa celu" className="min-w-0">
+              <Input
+                className="min-w-0 max-w-full"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
             </Field>
-            <Field label="Opis">
-              <Textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} />
+            <Field label="Opis" className="min-w-0">
+              <Textarea
+                className="min-w-0 max-w-full"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                rows={3}
+              />
             </Field>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Data początkowa">
-                <Input type="date" value={periodStart} onChange={(event) => setPeriodStart(event.target.value)} />
+            <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Data początkowa" className="min-w-0">
+                <Input
+                  type="date"
+                  className="min-w-0 max-w-full"
+                  value={periodStart}
+                  onChange={(event) => setPeriodStart(event.target.value)}
+                />
               </Field>
-              <Field label="Data docelowa">
-                <Input type="date" value={periodEnd} onChange={(event) => setPeriodEnd(event.target.value)} />
+              <Field label="Data docelowa" className="min-w-0">
+                <Input
+                  type="date"
+                  className="min-w-0 max-w-full"
+                  value={periodEnd}
+                  onChange={(event) => setPeriodEnd(event.target.value)}
+                />
               </Field>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Priorytet">
-                <Select value={priority} onChange={(event) => setPriority(event.target.value as Goal["priority"])}>
+            <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Priorytet" className="min-w-0">
+                <Select
+                  className="min-w-0 max-w-full"
+                  value={priority}
+                  onChange={(event) => setPriority(event.target.value as Goal["priority"])}
+                >
                   {GOAL_PRIORITIES.map((entry) => (
                     <option key={entry} value={entry}>
                       {GOAL_PRIORITY_LABELS[entry]}
@@ -474,8 +515,12 @@ function OverviewTab({
                   ))}
                 </Select>
               </Field>
-              <Field label="Właściciel">
-                <Select value={ownerId} onChange={(event) => setOwnerId(event.target.value)}>
+              <Field label="Właściciel" className="min-w-0">
+                <Select
+                  className="min-w-0 max-w-full"
+                  value={ownerId}
+                  onChange={(event) => setOwnerId(event.target.value)}
+                >
                   <option value="">— brak —</option>
                   {teamProfiles.map((member) => (
                     <option key={member.id} value={member.id}>
@@ -484,8 +529,12 @@ function OverviewTab({
                   ))}
                 </Select>
               </Field>
-              <Field label="Status">
-                <Select value={status} onChange={(event) => setStatus(event.target.value as GoalStatus)}>
+              <Field label="Status" className="min-w-0">
+                <Select
+                  className="min-w-0 max-w-full"
+                  value={status}
+                  onChange={(event) => setStatus(event.target.value as GoalStatus)}
+                >
                   {GOAL_STATUSES.map((entry) => (
                     <option key={entry} value={entry}>
                       {GOAL_STATUS_LABELS[entry]}
@@ -493,26 +542,35 @@ function OverviewTab({
                   ))}
                 </Select>
               </Field>
-              <Field label="Procent realizacji">
+              <Field label="Procent realizacji" className="min-w-0">
                 <Input
                   type="number"
                   min={0}
                   max={100}
+                  className="min-w-0 max-w-full"
                   value={progressInput.value}
                   onChange={(event) => progressInput.onChange(event.target.value)}
                   onBlur={progressInput.onBlur}
                 />
               </Field>
             </div>
-            <ProjectSelectSearchable
-              projects={projects}
-              clients={clients}
-              value={projectId}
-              onChange={setProjectId}
-              usePortal={false}
-            />
-            <Field label="Notatka do zmiany (opcjonalnie)">
-              <Textarea value={note} onChange={(event) => setNote(event.target.value)} rows={2} />
+            <div className="min-w-0 max-w-full">
+              <ProjectSelectSearchable
+                projects={projects}
+                clients={clients}
+                value={projectId}
+                onChange={setProjectId}
+                usePortal={false}
+                className="min-w-0 max-w-full"
+              />
+            </div>
+            <Field label="Notatka do zmiany (opcjonalnie)" className="min-w-0">
+              <Textarea
+                className="min-w-0 max-w-full"
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                rows={2}
+              />
             </Field>
 
             <GoalDeferRevisitActions
@@ -538,7 +596,7 @@ function OverviewTab({
             />
 
             {error ? <p className="text-sm text-rose-400">{error}</p> : null}
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
                 Anuluj
               </Button>
@@ -546,7 +604,7 @@ function OverviewTab({
                 {saving ? "Zapisywanie..." : "Zapisz"}
               </Button>
             </div>
-          </>
+          </div>
         )}
       </CardContent>
     </Card>

@@ -112,11 +112,17 @@ export function GoalInitiativesPanel({
   );
 }
 
-export function GoalInitiativesCard({ goalId }: { goalId: string }) {
+export function GoalInitiativesCard({
+  goalId,
+  onCountsChange,
+}: {
+  goalId: string;
+  onCountsChange?: (done: number, total: number) => void;
+}) {
   return (
     <Card>
       <CardContent className="pt-4">
-        <GoalInitiativesPanel goalId={goalId} />
+        <GoalInitiativesPanel goalId={goalId} onCountsChange={onCountsChange} />
       </CardContent>
     </Card>
   );

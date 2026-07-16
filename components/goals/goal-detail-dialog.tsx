@@ -16,9 +16,9 @@ export function GoalDetailDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-4xl">
+      <DialogContent className="max-h-[92vh] max-w-[calc(100vw-2rem)] overflow-x-clip overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>{goalName ?? "Szczegóły celu"}</DialogTitle>
+          <DialogTitle className="truncate pr-8">{goalName ?? "Szczegóły celu"}</DialogTitle>
         </DialogHeader>
         {goalId ? <GoalDetailView goalId={goalId} onDeleted={() => onOpenChange(false)} /> : null}
       </DialogContent>

@@ -102,8 +102,8 @@ export function GoalDeferRevisitActions({
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-border/70 bg-surface-muted/10 p-3">
-      <div className="space-y-2">
+    <div className="min-w-0 max-w-full space-y-4 overflow-x-clip rounded-xl border border-border/70 bg-surface-muted/10 p-3">
+      <div className="min-w-0 space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-violet-300">
           Trzeba do tego wrócić
         </p>
@@ -112,15 +112,16 @@ export function GoalDeferRevisitActions({
             Oznaczone{goal.revisitAt ? ` · data: ${goal.revisitAt}` : ""}
           </p>
         ) : null}
-        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-          <Field label="Data powrotu">
+        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <Field label="Data powrotu" className="min-w-0">
             <Input
               type="date"
+              className="min-w-0 max-w-full"
               value={revisitAt}
               onChange={(e) => setRevisitAt(e.target.value)}
             />
           </Field>
-          <div className="flex items-end gap-2">
+          <div className="flex flex-wrap items-end gap-2">
             <Button
               type="button"
               size="sm"
@@ -145,8 +146,9 @@ export function GoalDeferRevisitActions({
             ) : null}
           </div>
         </div>
-        <Field label="Notatka (opcjonalnie)">
+        <Field label="Notatka (opcjonalnie)" className="min-w-0">
           <Input
+            className="min-w-0 max-w-full"
             value={revisitNote}
             onChange={(e) => setRevisitNote(e.target.value)}
             placeholder="Dlaczego trzeba wrócić…"
@@ -154,7 +156,7 @@ export function GoalDeferRevisitActions({
         </Field>
       </div>
 
-      <div className="space-y-2 border-t border-border/60 pt-3">
+      <div className="min-w-0 space-y-2 border-t border-border/60 pt-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">
           Przełóż na kolejny okres
         </p>
@@ -162,8 +164,9 @@ export function GoalDeferRevisitActions({
           Cel wraca do „Planowanie”. Niedowieziony = z naszego powodu; przełożony = poza naszą
           kontrolą. Zapis trafia do historii i raportów.
         </p>
-        <Field label="Powód">
+        <Field label="Powód" className="min-w-0">
           <Select
+            className="min-w-0 max-w-full"
             value={deferReason}
             onChange={(e) => setDeferReason(e.target.value as GoalDeferralReason)}
           >
@@ -174,16 +177,27 @@ export function GoalDeferRevisitActions({
             ))}
           </Select>
         </Field>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Field label="Nowy okres od">
-            <Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} />
+        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+          <Field label="Nowy okres od" className="min-w-0">
+            <Input
+              type="date"
+              className="min-w-0 max-w-full"
+              value={periodStart}
+              onChange={(e) => setPeriodStart(e.target.value)}
+            />
           </Field>
-          <Field label="Nowy okres do">
-            <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} />
+          <Field label="Nowy okres do" className="min-w-0">
+            <Input
+              type="date"
+              className="min-w-0 max-w-full"
+              value={periodEnd}
+              onChange={(e) => setPeriodEnd(e.target.value)}
+            />
           </Field>
         </div>
-        <Field label="Notatka (opcjonalnie)">
+        <Field label="Notatka (opcjonalnie)" className="min-w-0">
           <Textarea
+            className="min-w-0 max-w-full"
             value={deferNote}
             onChange={(e) => setDeferNote(e.target.value)}
             rows={2}

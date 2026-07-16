@@ -182,6 +182,13 @@ export function GoalCard({
   const draggedRef = useRef(false);
   const taskTotal = meta?.initiativeTaskTotal ?? 0;
   const taskDone = meta?.initiativeTaskDone ?? 0;
+  const tasksComplete = taskTotal > 0 && taskDone >= taskTotal;
+  const goalSettled = goal.status === "settled" || goal.status === "cancelled";
+  const taskCountClass = goalSettled
+    ? "text-muted"
+    : tasksComplete
+      ? "text-emerald-300"
+      : "text-rose-300";
 
   function handleCardClick() {
     if (draggedRef.current) {
@@ -235,7 +242,7 @@ export function GoalCard({
           )}
           <span className="shrink-0 text-[10px] font-semibold text-muted">{goal.progressPercent}%</span>
           {taskTotal > 0 ? (
-            <span className="flex shrink-0 items-center gap-0.5 text-[10px] text-muted">
+            <span className={cn("flex shrink-0 items-center gap-0.5 text-[10px] font-semibold", taskCountClass)}>
               <CheckSquare className="h-3 w-3" />
               {taskDone}/{taskTotal}
             </span>
@@ -315,7 +322,7 @@ export function GoalCard({
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted">
         <div className="flex flex-wrap items-center gap-2">
           {taskTotal > 0 ? (
-            <span className="flex items-center gap-1">
+            <span className={cn("flex items-center gap-1 font-semibold", taskCountClass)}>
               <CheckSquare className="h-3 w-3" />
               {taskDone}/{taskTotal} zadań
             </span>
