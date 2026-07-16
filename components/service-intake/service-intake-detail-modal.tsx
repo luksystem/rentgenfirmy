@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Coffee, ExternalLink, Loader2, Navigation, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogTitle, StackedDialogContent } from "@/components/ui/dialog";
-import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { Field, Input, Select } from "@/components/ui/input";
 import { MentionTextarea } from "@/components/mentions/mention-textarea";
 import { buildGoogleMapsDirectionsUrl } from "@/lib/dashboard/google-maps";
 import { confirmServiceIntakeStatusChange } from "@/lib/service-intake/confirm-status-change";
