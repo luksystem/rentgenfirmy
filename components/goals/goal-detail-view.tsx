@@ -255,7 +255,7 @@ export function GoalDetailView({ goalId, onDeleted }: { goalId: string; onDelete
           authorName={profile ? getUserDisplayName(profile) : "Użytkownik"}
           teamProfiles={teamProfiles}
           boardId={goal.boardId}
-          goalTitle={goal.title}
+          goalTitle={goal.name}
           onChanged={async () => setComments(await fetchGoalComments(goal.id))}
         />
       ) : null}
