@@ -347,7 +347,7 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
       {/* Spacer pod fixed bar — wysokość zbliżona do paska + offset nagłówka app */}
       <div className="h-[7.5rem] shrink-0 sm:h-[6.75rem]" aria-hidden />
 
-      <div className="fixed inset-x-0 top-14 z-40 px-4 sm:px-5 xl:left-72 xl:top-16 xl:px-8">
+      <div className="fixed inset-x-0 top-[calc(3.5rem+env(safe-area-inset-top,0px))] z-40 px-4 sm:px-5 xl:left-72 xl:top-16 xl:px-8">
         <div
           className={`mx-auto max-w-3xl space-y-2 rounded-2xl border-2 px-4 py-3 shadow-lg backdrop-blur-md ${
             timerUrgent

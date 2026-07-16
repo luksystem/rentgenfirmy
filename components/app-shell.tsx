@@ -648,7 +648,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
           <NotificationBell />
         </header>
 
-        <header className="sticky top-0 z-20 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-xl xl:hidden">
+        <header className="sticky top-0 z-20 border-b border-border bg-background/80 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl xl:hidden">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex h-10 w-10 shrink-0 items-center justify-center">
               <BrandMark size={40} />
