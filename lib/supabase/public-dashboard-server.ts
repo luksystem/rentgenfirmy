@@ -54,6 +54,11 @@ import {
   servicesTableExists,
 } from "@/lib/supabase/service-repository-server";
 import { listServiceIntakeByProject } from "@/lib/supabase/service-intake-server";
+import {
+  fetchProjectSettlementsBundleServer,
+  settlementTablesExist,
+} from "@/lib/supabase/project-settlement-server";
+import type { ProjectSettlementsBundle } from "@/lib/settlements/types";
 import { getProcessProgress } from "@/lib/process/types";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import type { Client } from "@/lib/service/types";
@@ -520,6 +525,7 @@ export type PublicDashboardPayload = {
   kanbanPublicLinks: Record<string, string>;
   meetingNotes: ProjectMeetingNote[];
   documents: ProjectDocument[];
+  settlements: ProjectSettlementsBundle | null;
   features: {
     agreements: boolean;
     changeRequests: boolean;
@@ -531,6 +537,7 @@ export type PublicDashboardPayload = {
     offers: boolean;
     meetingNotes: boolean;
     documents: boolean;
+    settlements: boolean;
   };
 };
 
@@ -796,6 +803,7 @@ export async function fetchPublicDashboardPayload(
     offersEnabled,
     meetingNotesEnabled,
     documentsEnabled,
+    settlementsEnabled,
   ] = await Promise.all([
     tableExists("project_client_agreements"),
     tableExists("project_change_requests"),
@@ -807,6 +815,7 @@ export async function fetchPublicDashboardPayload(
     servicesTableExists(),
     tableExists("project_meeting_notes"),
     tableExists("project_documents"),
+    settlementTablesExist(),
   ]);
 
   const [
@@ -819,6 +828,7 @@ export async function fetchPublicDashboardPayload(
     credentials,
     meetingNotes,
     documents,
+    settlements,
   ] = initialProjectId
     ? await Promise.all([
         agreementsEnabled ? fetchAgreementsForProject(initialProjectId) : Promise.resolve([]),
@@ -836,8 +846,11 @@ export async function fetchPublicDashboardPayload(
           : Promise.resolve([]),
         meetingNotesEnabled ? fetchMeetingNotesForProject(initialProjectId) : Promise.resolve([]),
         documentsEnabled ? fetchDocumentsForProject(initialProjectId) : Promise.resolve([]),
+        settlementsEnabled
+          ? fetchProjectSettlementsBundleServer(initialProjectId)
+          : Promise.resolve(null),
       ])
-    : [[], [], [], [], null, [], [], [], []];
+    : [[], [], [], [], null, [], [], [], [], null];
 
   const pendingAgreementsCount = agreements.filter((entry) => isAgreementPendingAttention(entry)).length;
 
@@ -893,6 +906,7 @@ export async function fetchPublicDashboardPayload(
     kanbanPublicLinks,
     meetingNotes,
     documents,
+    settlements: settlements as ProjectSettlementsBundle | null,
     features: {
       agreements: agreementsEnabled,
       changeRequests: changeRequestsEnabled,
@@ -904,6 +918,7 @@ export async function fetchPublicDashboardPayload(
       offers: offersEnabled,
       meetingNotes: meetingNotesEnabled,
       documents: documentsEnabled,
+      settlements: settlementsEnabled,
     },
   };
 }

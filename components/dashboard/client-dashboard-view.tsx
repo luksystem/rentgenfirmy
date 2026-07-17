@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
   Briefcase,
   Cable,
@@ -22,6 +22,7 @@ import {
   StickyNote,
   Target,
   Users,
+  Wallet,
 } from "lucide-react";
 import { GoalCollectiveView } from "@/components/goals/goal-collective-view";
 import { ClientInspectionsPanel } from "@/components/dashboard/client-inspections-panel";
@@ -45,6 +46,8 @@ import { ClientDashboardOverview } from "@/components/dashboard/client-dashboard
 import { ClientInfoCard } from "@/components/dashboard/client-info-card";
 import { ClientProjectsPanel } from "@/components/dashboard/client-projects-panel";
 import { ProjectContentPanel } from "@/components/dashboard/project-content-panel";
+import { ProjectBillingBudgetPanel } from "@/components/dashboard/project-billing-budget-panel";
+import { ProjectSettlementsPanel } from "@/components/dashboard/project-settlements-panel";
 import { ProjectTimeTrackingPanel } from "@/components/dashboard/project-time-tracking-panel";
 import { ProjectUsersPanel } from "@/components/dashboard/project-users-panel";
 import { ProcessPipeline } from "@/components/process/process-pipeline";
@@ -96,6 +99,8 @@ import { useProjectTradeStore } from "@/store/project-trade-store";
 import { useFunctionalitySurveyStore, markProjectFunctionalitySurveyReviewed } from "@/store/project-functionality-survey-store";
 import { isFunctionalitySurveyPendingTeamReview } from "@/lib/client-functionality/survey-status";
 import { useAppStore } from "@/store/app-store";
+import { useProjectSettlementStore } from "@/store/project-settlement-store";
+import type { ProjectSettlementsBundle } from "@/lib/settlements/types";
 
 const EMPTY_SATISFACTION: ProjectSatisfactionBundle = {
   agreementFulfillments: [],
@@ -114,6 +119,7 @@ export type ClientDashboardTab =
   | "agreements"
   | "changes"
   | "offers"
+  | "settlements"
   | "inspections"
   | "specification"
   | "functionality-survey"
@@ -140,6 +146,7 @@ const PUBLIC_CLIENT_TAB_CONFIG: Array<{
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
   { id: "changes", label: "Zmiany projektu", icon: FileEdit },
   { id: "offers", label: "Oferty", icon: Receipt },
+  { id: "settlements", label: "Rozliczenia", icon: Wallet },
   { id: "inspections", label: "Przeglądy", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
   { id: "functionality-survey", label: "Ankieta funkcji", icon: ClipboardList },
@@ -162,6 +169,7 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
   { id: "changes", label: "Zmiany projektu", icon: FileEdit },
   { id: "offers", label: "Oferty", icon: Receipt },
+  { id: "settlements", label: "Rozliczenia", icon: Wallet },
   { id: "inspections", label: "Przeglądy", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
   { id: "functionality-survey", label: "Ankieta funkcji", icon: ClipboardList },
@@ -221,6 +229,7 @@ export function ClientDashboardView({
   enableAgreements = true,
   enableChangeRequests = true,
   enableOffers = true,
+  enableSettlements = true,
   enableSpecification = true,
   enableTrades = true,
   enableSatisfaction = true,
@@ -234,6 +243,7 @@ export function ClientDashboardView({
   seedOffersGrossTotal,
   seedAcceptedOffersCount,
   seedOffers,
+  seedSettlements,
   seedServiceIntakes,
   seedSpecificationItems,
   seedTrades,
@@ -267,6 +277,7 @@ export function ClientDashboardView({
   enableAgreements?: boolean;
   enableChangeRequests?: boolean;
   enableOffers?: boolean;
+  enableSettlements?: boolean;
   enableSpecification?: boolean;
   enableTrades?: boolean;
   enableSatisfaction?: boolean;
@@ -281,6 +292,7 @@ export function ClientDashboardView({
   seedOffersGrossTotal?: number;
   seedAcceptedOffersCount?: number;
   seedOffers?: ClientOfferSummary[];
+  seedSettlements?: ProjectSettlementsBundle;
   seedServiceIntakes?: ServiceIntakeRecord[];
   pendingOffersCount?: number;
   seedSpecificationItems?: ProjectSpecificationItem[];
@@ -552,6 +564,23 @@ export function ClientDashboardView({
     void ensureAgreements(selectedProjectId);
   }, [enableAgreements, ensureAgreements, selectedProjectId]);
 
+  const ensureSettlements = useProjectSettlementStore((state) => state.ensureSettlements);
+  const seedSettlementBundle = useProjectSettlementStore((state) => state.seedBundle);
+
+  useLayoutEffect(() => {
+    if (!enableSettlements || !selectedProjectId || !seedSettlements) {
+      return;
+    }
+    seedSettlementBundle(selectedProjectId, seedSettlements);
+  }, [enableSettlements, seedSettlementBundle, seedSettlements, selectedProjectId]);
+
+  useEffect(() => {
+    if (!enableSettlements || !selectedProjectId || seedSettlements) {
+      return;
+    }
+    void ensureSettlements(selectedProjectId).catch(() => undefined);
+  }, [enableSettlements, ensureSettlements, seedSettlements, selectedProjectId]);
+
   const refreshAgreementsFromServer = useCallback(() => {
     if (!enableAgreements || !selectedProjectId) {
       return;
@@ -733,6 +762,7 @@ export function ClientDashboardView({
     if (tab.id === "agreements" && !enableAgreements) return false;
     if (tab.id === "changes" && !enableChangeRequests) return false;
     if (tab.id === "offers" && !enableOffers) return false;
+    if (tab.id === "settlements" && !enableSettlements) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
     if (tab.id === "functionality-survey" && !enableSpecification) return false;
     if (tab.id === "trades" && !enableTrades) return false;
@@ -748,6 +778,7 @@ export function ClientDashboardView({
     if (tab.id === "agreements" && !enableAgreements) return false;
     if (tab.id === "changes" && !enableChangeRequests) return false;
     if (tab.id === "offers" && !enableOffers) return false;
+    if (tab.id === "settlements" && !enableSettlements) return false;
     if (tab.id === "specification" && !enableSpecification) return false;
     if (tab.id === "functionality-survey" && !enableSpecification) return false;
     if (tab.id === "trades" && !enableTrades) return false;
@@ -875,9 +906,37 @@ export function ClientDashboardView({
 
   function renderProjectSettingsSection() {
     return (
+      <div className="grid min-w-0 gap-4">
+        <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
+          <h2 className="mb-3 text-base font-semibold text-foreground">Ustawienia projektu</h2>
+          <ClientProjectSettingsPanel project={selectedProject} />
+        </div>
+        {enableSettlements && selectedProjectId ? (
+          <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
+            <h2 className="mb-3 text-base font-semibold text-foreground">Budżet projektu</h2>
+            <ProjectBillingBudgetPanel
+              projectId={selectedProjectId}
+              actorName={teamAuthorName}
+              readOnly={readOnly}
+            />
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  function renderSettlementsPanel() {
+    if (!selectedProjectId) {
+      return <p className="text-sm text-muted">Wybierz projekt, aby zobaczyć rozliczenia.</p>;
+    }
+    return (
       <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
-        <h2 className="mb-3 text-base font-semibold text-foreground">Ustawienia projektu</h2>
-        <ClientProjectSettingsPanel project={selectedProject} />
+        <h2 className="mb-3 text-base font-semibold text-foreground">Rozliczenia</h2>
+        <ProjectSettlementsPanel
+          projectId={selectedProjectId}
+          actorName={readOnly ? clientAuthorName : teamAuthorName}
+          readOnly={readOnly}
+        />
       </div>
     );
   }
@@ -1481,6 +1540,8 @@ export function ClientDashboardView({
         return enableChangeRequests ? renderChangeRequestsPanel() : null;
       case "offers":
         return enableOffers ? renderOffersPanel() : null;
+      case "settlements":
+        return enableSettlements ? renderSettlementsPanel() : null;
       case "inspections":
         return hasClientInspections ? renderInspectionsPanel() : null;
       case "specification":

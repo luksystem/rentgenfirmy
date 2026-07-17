@@ -3,7 +3,7 @@ export const PROJECT_INVOICE_KINDS = ["invoice", "cost"] as const;
 export type ProjectInvoiceKind = (typeof PROJECT_INVOICE_KINDS)[number];
 
 export const PROJECT_INVOICE_KIND_LABELS: Record<ProjectInvoiceKind, string> = {
-  invoice: "Faktura",
+  invoice: "Faktura kosztowa",
   cost: "Koszt",
 };
 

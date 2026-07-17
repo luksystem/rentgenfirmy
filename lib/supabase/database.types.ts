@@ -1107,6 +1107,138 @@ export type ProjectInvoiceRow = {
   updated_at: string;
 };
 
+export type ProjectBillingSettingsRow = {
+  project_id: string;
+  fixed_price_enabled: boolean;
+  hourly_enabled: boolean;
+  contract_amount_net: number | string | null;
+  contract_vat_rate: number | string | null;
+  contract_amount_gross: number | string | null;
+  currency: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectBillingSettingsInsert = {
+  project_id: string;
+  fixed_price_enabled?: boolean;
+  hourly_enabled?: boolean;
+  contract_amount_net?: number | null;
+  contract_vat_rate?: number | null;
+  contract_amount_gross?: number | null;
+  currency?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ProjectBillingSettingsUpdate = Partial<Omit<ProjectBillingSettingsInsert, "project_id">>;
+
+export type ProjectContractQuotaRow = {
+  id: string;
+  project_id: string;
+  label: string;
+  quantity: number | string;
+  unit: string;
+  position: number;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectContractQuotaInsert = {
+  id?: string;
+  project_id: string;
+  label: string;
+  quantity?: number;
+  unit?: string;
+  position?: number;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ProjectContractQuotaUpdate = Partial<ProjectContractQuotaInsert>;
+
+export type ProjectHourlyReportRow = {
+  id: string;
+  project_id: string;
+  work_date: string;
+  hours: number | string;
+  role_label: string;
+  amount_net: number | string | null;
+  vat_rate: number | string | null;
+  amount_gross: number | string | null;
+  notes: string;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectHourlyReportInsert = {
+  id?: string;
+  project_id: string;
+  work_date: string;
+  hours?: number;
+  role_label?: string;
+  amount_net?: number | null;
+  vat_rate?: number | null;
+  amount_gross?: number | null;
+  notes?: string;
+  created_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ProjectHourlyReportUpdate = Partial<ProjectHourlyReportInsert>;
+
+export type ProjectSettlementEntryRow = {
+  id: string;
+  project_id: string;
+  kind: string;
+  source: string;
+  source_id: string | null;
+  title: string;
+  amount_net: number | string;
+  vat_rate: number | string;
+  amount_gross: number | string;
+  currency: string;
+  entry_date: string | null;
+  due_date: string | null;
+  invoice_number: string;
+  external_ref: string;
+  notes: string;
+  is_auto: boolean;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectSettlementEntryInsert = {
+  id?: string;
+  project_id: string;
+  kind: string;
+  source?: string;
+  source_id?: string | null;
+  title: string;
+  amount_net?: number;
+  vat_rate?: number;
+  amount_gross?: number;
+  currency?: string;
+  entry_date?: string | null;
+  due_date?: string | null;
+  invoice_number?: string;
+  external_ref?: string;
+  notes?: string;
+  is_auto?: boolean;
+  created_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ProjectSettlementEntryUpdate = Partial<ProjectSettlementEntryInsert>;
+
 export type ProjectDocumentRow = {
   id: string;
   project_id: string | null;
@@ -2478,6 +2610,30 @@ export type Database = {
         Row: ProjectInvoiceRow;
         Insert: Partial<ProjectInvoiceRow> & Pick<ProjectInvoiceRow, "title">;
         Update: Partial<ProjectInvoiceRow>;
+        Relationships: [];
+      };
+      project_billing_settings: {
+        Row: ProjectBillingSettingsRow;
+        Insert: ProjectBillingSettingsInsert;
+        Update: ProjectBillingSettingsUpdate;
+        Relationships: [];
+      };
+      project_contract_quotas: {
+        Row: ProjectContractQuotaRow;
+        Insert: ProjectContractQuotaInsert;
+        Update: ProjectContractQuotaUpdate;
+        Relationships: [];
+      };
+      project_hourly_reports: {
+        Row: ProjectHourlyReportRow;
+        Insert: ProjectHourlyReportInsert;
+        Update: ProjectHourlyReportUpdate;
+        Relationships: [];
+      };
+      project_settlement_entries: {
+        Row: ProjectSettlementEntryRow;
+        Insert: ProjectSettlementEntryInsert;
+        Update: ProjectSettlementEntryUpdate;
         Relationships: [];
       };
       project_documents: {

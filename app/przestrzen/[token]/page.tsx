@@ -42,6 +42,7 @@ type PublicDashboardPayload = {
   kanbanPublicLinks: Record<string, string>;
   meetingNotes: import("@/lib/dashboard/meeting-note-types").ProjectMeetingNote[];
   documents: import("@/lib/documents/types").ProjectDocument[];
+  settlements: import("@/lib/settlements/types").ProjectSettlementsBundle | null;
   features: {
     agreements: boolean;
     changeRequests: boolean;
@@ -53,6 +54,7 @@ type PublicDashboardPayload = {
     offers: boolean;
     meetingNotes: boolean;
     documents: boolean;
+    settlements: boolean;
   };
   authRequired?: boolean;
   access?: DashboardPublicAccessInfo;
@@ -136,6 +138,7 @@ function PublicDashboardPageContent() {
   const [serviceIntakes, setServiceIntakes] = useState<PublicDashboardPayload["serviceIntakes"]>([]);
   const [meetingNotes, setMeetingNotes] = useState<PublicDashboardPayload["meetingNotes"]>([]);
   const [documents, setDocuments] = useState<PublicDashboardPayload["documents"]>([]);
+  const [settlements, setSettlements] = useState<PublicDashboardPayload["settlements"]>(null);
   const [pendingOffersCount, setPendingOffersCount] = useState(0);
   const [features, setFeatures] = useState({
     agreements: false,
@@ -148,6 +151,7 @@ function PublicDashboardPageContent() {
     offers: false,
     meetingNotes: false,
     documents: false,
+    settlements: false,
   });
   const [access, setAccess] = useState<DashboardPublicAccessInfo>(DEFAULT_ACCESS);
   const [contextTitle, setContextTitle] = useState<string | null>(null);
@@ -189,8 +193,21 @@ function PublicDashboardPageContent() {
     setServiceIntakes(payload.serviceIntakes ?? []);
     setMeetingNotes(payload.meetingNotes ?? []);
     setDocuments(payload.documents ?? []);
+    setSettlements(payload.settlements ?? null);
     setPendingOffersCount(payload.pendingOffersCount ?? 0);
-    setFeatures(payload.features);
+    setFeatures({
+      agreements: payload.features.agreements,
+      changeRequests: payload.features.changeRequests,
+      specification: payload.features.specification,
+      trades: payload.features.trades,
+      satisfaction: payload.features.satisfaction,
+      content: payload.features.content,
+      credentials: payload.features.credentials,
+      offers: payload.features.offers,
+      meetingNotes: payload.features.meetingNotes,
+      documents: payload.features.documents,
+      settlements: payload.features.settlements ?? false,
+    });
     setSelectedProjectId(payload.initialProjectId);
     setAuthenticated(true);
   }, []);
@@ -457,6 +474,7 @@ function PublicDashboardPageContent() {
           seedOffersGrossTotal={offersGrossTotal}
           seedAcceptedOffersCount={acceptedOffersCount}
           seedOffers={features.offers ? offers : undefined}
+          seedSettlements={features.settlements ? (settlements ?? undefined) : undefined}
           seedServiceIntakes={features.offers ? serviceIntakes : undefined}
           pendingOffersCount={pendingOffersCount}
           seedSpecificationItems={features.specification ? specificationItems : undefined}
@@ -474,6 +492,7 @@ function PublicDashboardPageContent() {
           enableAgreements={features.agreements}
           enableChangeRequests={features.changeRequests}
           enableOffers={features.offers}
+          enableSettlements={features.settlements}
           enableSpecification={features.specification}
           enableTrades={features.trades}
           enableMeetingNotes={features.meetingNotes}

@@ -10,6 +10,10 @@ export type ClientOfferAcceptedDocument = {
   reportHtml: string;
   title: string;
   grossTotal: number;
+  /** Netto w momencie akceptacji (nowe dokumenty; starsze mogą nie mieć). */
+  netTotal?: number;
+  /** Stawka VAT % w momencie akceptacji. */
+  vatRate?: number;
 };
 
 const ACCEPTED_BANNER_STYLES = `
@@ -50,11 +54,20 @@ export function buildAcceptedOfferDocument(
     .replace("</style>", `${ACCEPTED_BANNER_STYLES}</style>`)
     .replace("<body>", `<body>${banner}`);
 
+  const vatRate =
+    view.pricingModel === "fixed_price"
+      ? view.estimateDiscounts.vatRate
+      : view.status === "Rozliczony"
+        ? view.actualDiscounts.vatRate
+        : view.estimateDiscounts.vatRate;
+
   return {
     acceptedAt,
     reportHtml,
     title: service.title,
     grossTotal: combined.grossTotal,
+    netTotal: combined.netTotal,
+    vatRate,
   };
 }
 
@@ -81,5 +94,7 @@ export function normalizeClientOfferAcceptedDocument(
     reportHtml: row.reportHtml,
     title: row.title,
     grossTotal: row.grossTotal,
+    netTotal: typeof row.netTotal === "number" ? row.netTotal : undefined,
+    vatRate: typeof row.vatRate === "number" ? row.vatRate : undefined,
   };
 }

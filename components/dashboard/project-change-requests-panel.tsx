@@ -27,13 +27,14 @@ import {
 } from "@/lib/dashboard/change-request-types";
 import { DEFAULT_AGREEMENT_VAT_RATE, normalizeAgreementVatRate } from "@/lib/dashboard/agreement-cost";
 import { mergeChangeRequestsById } from "@/lib/dashboard/merge-change-requests";
-import { buildProjectCostSummary, sumAcceptedOffersGross } from "@/lib/dashboard/project-cost-summary";
+import { buildProjectFinancialSummary } from "@/lib/settlements/summary";
 import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
 import { cn, formatMoney } from "@/lib/utils";
 import { useProjectChangeRequestStore } from "@/store/project-change-request-store";
 import { useProcessStore } from "@/store/process-store";
 import { useServiceStore } from "@/store/service-store";
 import { useAppStore } from "@/store/app-store";
+import { useProjectSettlementStore } from "@/store/project-settlement-store";
 
 const EMPTY_CHANGE_REQUESTS: ProjectChangeRequest[] = [];
 
@@ -430,26 +431,44 @@ export function ProjectChangeRequestsPanel({
   }, [currentProject, ensureProjectProcess, mode, projectId]);
 
   const allServices = useServiceStore((state) => state.services);
-  const liveOffersSummary = useMemo(() => {
-    if (mode !== "team") {
-      return null;
-    }
-    return sumAcceptedOffersGross(allServices.filter((service) => service.projectId === projectId));
-  }, [allServices, mode, projectId]);
-
-  const offersGrossTotal = mode === "team" ? (liveOffersSummary?.total ?? 0) : (seedOffersGrossTotal ?? 0);
-  const acceptedOffersCount =
-    mode === "team" ? (liveOffersSummary?.count ?? 0) : (seedAcceptedOffersCount ?? 0);
+  const settlementEntries = useProjectSettlementStore(
+    (state) => state.byProject[projectId]?.entries,
+  );
+  const projectServices = useMemo(
+    () => allServices.filter((service) => service.projectId === projectId),
+    [allServices, projectId],
+  );
 
   const changeRequests = useMemo(
     () => mergeChangeRequestsById(storeChangeRequests, seedChangeRequests),
     [storeChangeRequests, seedChangeRequests],
   );
 
-  const costSummary = useMemo(
-    () => buildProjectCostSummary(offersGrossTotal, acceptedOffersCount, changeRequests),
-    [offersGrossTotal, acceptedOffersCount, changeRequests],
-  );
+  const costSummary = useMemo(() => {
+    const summary = buildProjectFinancialSummary(
+      mode === "team" ? projectServices : [],
+      changeRequests,
+      settlementEntries,
+    );
+    if (mode !== "team") {
+      return {
+        ...summary,
+        offersGrossTotal: seedOffersGrossTotal ?? summary.offersGrossTotal,
+        acceptedOffersCount: seedAcceptedOffersCount ?? summary.acceptedOffersCount,
+        totalGross: summary.hasSettlementLedger
+          ? summary.chargesGross
+          : (seedOffersGrossTotal ?? 0) + summary.changeRequestsGrossTotal,
+      };
+    }
+    return summary;
+  }, [
+    changeRequests,
+    mode,
+    projectServices,
+    seedAcceptedOffersCount,
+    seedOffersGrossTotal,
+    settlementEntries,
+  ]);
 
   const stageLabelById = useMemo(() => {
     const map = new Map<string, string>();
@@ -665,7 +684,9 @@ export function ProjectChangeRequestsPanel({
         <div className="flex items-start gap-2">
           <Wallet className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
           <div>
-            <p className="text-xs text-muted">Razem koszt projektu</p>
+            <p className="text-xs text-muted">
+              {costSummary.hasSettlementLedger ? "Do zapłaty (rozliczenia)" : "Razem koszt projektu"}
+            </p>
             <p className="text-base font-bold text-foreground">{formatMoney(costSummary.totalGross)}</p>
           </div>
         </div>
