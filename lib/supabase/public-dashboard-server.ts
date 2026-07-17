@@ -94,6 +94,8 @@ type ChangeRequestRow = {
   position: number;
   acceptance_deadline_stage_id: string | null;
   blocks_next_stage: boolean;
+  public_token?: string | null;
+  public_enabled?: boolean | null;
   created_at: string;
   updated_at: string;
 };
