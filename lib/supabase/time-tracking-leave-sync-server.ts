@@ -122,3 +122,61 @@ export async function syncApprovedLeaveToTimeTrackingServer(
 ): Promise<number> {
   return syncApprovedLeaveTimeEntriesServer(admin, leaveRequest, leaveTypeName);
 }
+
+export async function backfillApprovedLeaveTimeEntriesServer(
+  admin: AdminClient,
+  resolveLeaveTypeName: (leaveTypeItemId: string | null) => string,
+): Promise<{ processed: number; createdEntries: number; skipped: number }> {
+  const { data: approvedLeaves, error } = await admin
+    .from("leave_requests")
+    .select("id, profile_id, start_date, end_date, note, leave_type_item_id, status")
+    .eq("status", "approved");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  let processed = 0;
+  let createdEntries = 0;
+  let skipped = 0;
+
+  for (const row of approvedLeaves ?? []) {
+    processed += 1;
+    const leaveTypeName = resolveLeaveTypeName(row.leave_type_item_id as string | null);
+
+    if (!shouldSyncLeaveToTimeEntries(leaveTypeName)) {
+      skipped += 1;
+      continue;
+    }
+
+    const { count, error: countError } = await admin
+      .from("time_entries")
+      .select("id", { count: "exact", head: true })
+      .eq("leave_request_id", row.id as string);
+
+    if (countError) {
+      throw new Error(countError.message);
+    }
+
+    if ((count ?? 0) > 0) {
+      skipped += 1;
+      continue;
+    }
+
+    const created = await syncApprovedLeaveTimeEntriesServer(
+      admin,
+      {
+        id: row.id as string,
+        profileId: row.profile_id as string,
+        startDate: row.start_date as string,
+        endDate: row.end_date as string,
+        note: (row.note as string) ?? "",
+      },
+      leaveTypeName,
+    );
+
+    createdEntries += created;
+  }
+
+  return { processed, createdEntries, skipped };
+}
