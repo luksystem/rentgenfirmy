@@ -4,7 +4,7 @@ import { getUserDisplayName, USER_ROLES, type UserProfileInput } from "@/lib/aut
 import { requireAdministratorProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
 import { ensureEmployeeDashboardSpaceServer } from "@/lib/messages/resolve-message-variables";
-import { logActivityAdmin } from "@/lib/supabase/activity-log-repository";
+import { logActivityAdmin } from "@/lib/supabase/activity-log-server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   mapProfileInputToInsert,

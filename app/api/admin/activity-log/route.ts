@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdministratorProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
-import { fetchActivityLogPage } from "@/lib/supabase/activity-log-repository";
+import { fetchActivityLogPage } from "@/lib/supabase/activity-log-server";
 
 export async function GET(request: Request) {
   try {

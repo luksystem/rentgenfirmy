@@ -163,7 +163,7 @@ export function ActivityLogPanel() {
       </div>
 
       {error ? (
-        <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
+        <p className="rounded-lg border border-rose-500/30 bg-rose-500/5 px-3 py-2 text-sm text-rose-700">
           {error}
         </p>
       ) : null}

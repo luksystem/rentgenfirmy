@@ -4,7 +4,7 @@ import type { UserProfileInput } from "@/lib/auth/types";
 import { getUserDisplayName, USER_ROLES } from "@/lib/auth/types";
 import { requireAdministratorProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
-import { logActivityAdmin } from "@/lib/supabase/activity-log-repository";
+import { logActivityAdmin } from "@/lib/supabase/activity-log-server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { mapProfileInputToUpdate, mapProfileRow } from "@/lib/supabase/profile-mappers";
 
