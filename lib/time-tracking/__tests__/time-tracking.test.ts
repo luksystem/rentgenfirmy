@@ -18,6 +18,10 @@ import {
   countWorkingDaysInRange,
 } from "@/lib/time-tracking/work-schedule";
 import {
+  buildMatrixDateMeta,
+  resolveLeaveForUserOnDate,
+} from "@/lib/time-tracking/calendar-day-markers";
+import {
   canApproveTimesheetStatus,
   canSubmitTimesheetStatus,
   collectTimesheetSubmitIssues,
@@ -237,6 +241,42 @@ describe("period balance", () => {
     );
     expect(balance.expectedWorkMinutes).toBe(2400);
     expect(balance.balanceMinutes).toBe(0);
+  });
+});
+
+describe("calendar day markers", () => {
+  it("marks weekends and holidays as day off", () => {
+    const saturday = buildMatrixDateMeta("2026-07-18");
+    expect(saturday.isWeekend).toBe(true);
+    expect(saturday.isDayOff).toBe(true);
+
+    const holiday = buildMatrixDateMeta("2026-11-11");
+    expect(holiday.holidayName).toBeTruthy();
+    expect(holiday.isDayOff).toBe(true);
+  });
+
+  it("prefers approved leave over pending on the same day", () => {
+    const leaves = [
+      {
+        id: "l1",
+        profileId: "u1",
+        leaveTypeItemId: "t1",
+        startDate: "2026-07-14",
+        endDate: "2026-07-16",
+        status: "pending",
+      },
+      {
+        id: "l2",
+        profileId: "u1",
+        leaveTypeItemId: "t2",
+        startDate: "2026-07-15",
+        endDate: "2026-07-15",
+        status: "approved",
+      },
+    ] as import("@/lib/leave/types").LeaveRequest[];
+
+    const meta = resolveLeaveForUserOnDate("u1", "2026-07-15", leaves, () => "Urlop");
+    expect(meta?.status).toBe("approved");
   });
 });
 

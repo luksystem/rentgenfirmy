@@ -1,17 +1,30 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDurationMinutes } from "@/lib/time-tracking/format";
 import {
-  formatMatrixDayHeader,
+  buildLeaveCellIndex,
+  buildMatrixDateMeta,
+  formatMatrixHeaderDayLabel,
+  leaveOverlapsPeriod,
+  matrixDayHeaderClassName,
+  matrixDayOffCellClassName,
+  matrixEmployeeCellClassName,
+  matrixEmployeeCellTitle,
+  type MatrixDateMeta,
+  type MatrixLeaveCellMeta,
+} from "@/lib/time-tracking/calendar-day-markers";
+import {
   type TeamPeriodDetail,
   type TeamPeriodEmployeeRow,
   type TeamPeriodProjectRow,
 } from "@/lib/time-tracking/team-period-detail";
 import { TIMESHEET_STATUS_LABELS, type TimesheetPeriodType } from "@/lib/time-tracking/types";
+import { useDictionaryStore } from "@/store/dictionary-store";
+import { useLeaveStore } from "@/store/leave-store";
 import { cn } from "@/lib/utils";
 
 function formatMatrixMinutes(minutes: number): string {
@@ -22,6 +35,22 @@ function formatMatrixMinutes(minutes: number): string {
     return `${minutes / 60} h`;
   }
   return formatDurationMinutes(minutes);
+}
+
+function formatMatrixCellContent(
+  minutes: number,
+  leaveMeta: MatrixLeaveCellMeta | null | undefined,
+): string {
+  if (minutes > 0) {
+    return formatMatrixMinutes(minutes);
+  }
+  if (leaveMeta?.status === "approved") {
+    return "Urlop";
+  }
+  if (leaveMeta?.status === "pending") {
+    return "Oczek.";
+  }
+  return "—";
 }
 
 function statusTone(status: TeamPeriodEmployeeRow["status"]) {
@@ -37,19 +66,52 @@ function statusTone(status: TeamPeriodEmployeeRow["status"]) {
   }
 }
 
+function MatrixLegend() {
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted">
+      <span className="inline-flex items-center gap-1.5">
+        <span className="h-3 w-6 rounded bg-zinc-700/50" aria-hidden />
+        Weekend
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span className="h-3 w-6 rounded bg-violet-500/20" aria-hidden />
+        Święto
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span className="h-3 w-6 rounded bg-emerald-500/30 ring-1 ring-inset ring-emerald-500/60" aria-hidden />
+        Urlop zaakceptowany
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span
+          className="h-3 w-6 rounded bg-amber-500/25 ring-1 ring-inset ring-dashed ring-amber-500/60"
+          aria-hidden
+        />
+        Urlop oczekujący
+      </span>
+    </div>
+  );
+}
+
 function MatrixHeader({
-  dates,
+  datesMeta,
   periodType,
 }: {
-  dates: string[];
+  datesMeta: MatrixDateMeta[];
   periodType: TimesheetPeriodType;
 }) {
   return (
     <tr className="border-b border-border/70 text-left text-xs uppercase tracking-wide text-muted">
       <th className="sticky left-0 z-20 min-w-[180px] bg-surface px-2 py-2 font-medium">Pracownik</th>
-      {dates.map((date) => (
-        <th key={date} className="min-w-[52px] px-1 py-2 text-center font-medium">
-          {formatMatrixDayHeader(date, periodType)}
+      {datesMeta.map((meta) => (
+        <th
+          key={meta.date}
+          className={cn(
+            "min-w-[52px] whitespace-pre-line px-1 py-2 text-center text-[11px] font-medium leading-tight",
+            matrixDayHeaderClassName(meta),
+          )}
+          title={meta.holidayName ?? (meta.isWeekend ? "Weekend" : undefined)}
+        >
+          {formatMatrixHeaderDayLabel(meta.date, periodType)}
         </th>
       ))}
       <th className="min-w-[72px] px-2 py-2 text-right font-medium">Razem</th>
@@ -59,18 +121,20 @@ function MatrixHeader({
 
 function MatrixMinutesRow({
   label,
-  dates,
+  datesMeta,
   minutesByDate,
   totalMinutes,
   className,
   indent = false,
+  leaveByDate,
 }: {
   label: React.ReactNode;
-  dates: string[];
+  datesMeta: MatrixDateMeta[];
   minutesByDate: Record<string, number>;
   totalMinutes: number;
   className?: string;
   indent?: boolean;
+  leaveByDate?: Map<string, MatrixLeaveCellMeta>;
 }) {
   return (
     <tr className={className}>
@@ -82,9 +146,22 @@ function MatrixMinutesRow({
       >
         {label}
       </td>
-      {dates.map((date) => (
-        <td key={date} className="px-1 py-2 text-center text-xs text-foreground">
-          {formatMatrixMinutes(minutesByDate[date] ?? 0)}
+      {datesMeta.map((meta) => (
+        <td
+          key={meta.date}
+          className={cn(
+            "px-1 py-2 text-center text-xs text-foreground",
+            leaveByDate
+              ? matrixEmployeeCellClassName(meta, leaveByDate.get(meta.date))
+              : matrixDayOffCellClassName(meta),
+          )}
+          title={
+            leaveByDate
+              ? matrixEmployeeCellTitle(meta, leaveByDate.get(meta.date))
+              : meta.holidayName ?? (meta.isWeekend ? "Weekend" : undefined)
+          }
+        >
+          {formatMatrixCellContent(minutesByDate[meta.date] ?? 0, leaveByDate?.get(meta.date))}
         </td>
       ))}
       <td className="px-2 py-2 text-right text-sm font-medium text-foreground">
@@ -136,17 +213,19 @@ function ProjectEntriesDetail({ project }: { project: TeamPeriodProjectRow }) {
 
 function EmployeeProjectsSection({
   employee,
-  dates,
+  datesMeta,
+  leaveByDate,
 }: {
   employee: TeamPeriodEmployeeRow;
-  dates: string[];
+  datesMeta: MatrixDateMeta[];
+  leaveByDate: Map<string, MatrixLeaveCellMeta>;
 }) {
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
 
   if (employee.projects.length === 0) {
     return (
       <tr>
-        <td colSpan={dates.length + 2} className="bg-surface-muted/20 px-4 py-3 text-sm text-muted">
+        <td colSpan={datesMeta.length + 2} className="bg-surface-muted/20 px-4 py-3 text-sm text-muted">
           Brak wpisów przypisanych do projektów w tym okresie.
         </td>
       </tr>
@@ -181,15 +260,16 @@ function EmployeeProjectsSection({
                   <span className="truncate">{project.projectLabel}</span>
                 </button>
               }
-              dates={dates}
+              datesMeta={datesMeta}
               minutesByDate={project.minutesByDate}
               totalMinutes={project.totalMinutes}
+              leaveByDate={leaveByDate}
               indent
               className="border-b border-border/30 bg-surface-muted/20"
             />
             {expanded ? (
               <tr className="bg-surface-muted/20">
-                <td colSpan={dates.length + 2} className="p-0">
+                <td colSpan={datesMeta.length + 2} className="p-0">
                   <ProjectEntriesDetail project={project} />
                 </td>
               </tr>
@@ -213,17 +293,43 @@ export function TimeTeamPeriodMatrix({
   onSelectEmployee: (userId: string) => void;
 }) {
   const [expandedEmployees, setExpandedEmployees] = useState<Record<string, boolean>>({});
+  const ensurePlanningLeaveRequests = useLeaveStore((state) => state.ensurePlanningRequests);
+  const planningLeaveRequests = useLeaveStore((state) => state.planningRequests);
+  const leaveTypeLabel = useDictionaryStore((state) => state.itemLabel);
+
+  useEffect(() => {
+    void ensurePlanningLeaveRequests();
+  }, [ensurePlanningLeaveRequests]);
 
   const totalsByDate = detail?.totalsByDate ?? {};
   const dates = detail?.dates ?? [];
   const periodType = detail?.periodType ?? "week";
 
-  const visibleEmployees = useMemo(() => {
+  const datesMeta = useMemo(() => dates.map(buildMatrixDateMeta), [dates]);
+
+  const visibleEmployees = useMemo(() => detail?.employees ?? [], [detail]);
+
+  const periodLeaves = useMemo(() => {
     if (!detail) {
       return [];
     }
-    return detail.employees;
-  }, [detail]);
+    return planningLeaveRequests.filter(
+      (leave) =>
+        (leave.status === "approved" || leave.status === "pending") &&
+        leaveOverlapsPeriod(leave, detail.dateFrom, detail.dateTo),
+    );
+  }, [planningLeaveRequests, detail]);
+
+  const leaveByUser = useMemo(
+    () =>
+      buildLeaveCellIndex(
+        visibleEmployees.map((employee) => employee.userId),
+        dates,
+        periodLeaves,
+        leaveTypeLabel,
+      ),
+    [visibleEmployees, dates, periodLeaves, leaveTypeLabel],
+  );
 
   if (loading && !detail) {
     return (
@@ -247,15 +353,18 @@ export function TimeTeamPeriodMatrix({
           </p>
         </div>
 
+        <MatrixLegend />
+
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] border-collapse text-sm">
             <thead>
-              <MatrixHeader dates={dates} periodType={periodType} />
+              <MatrixHeader datesMeta={datesMeta} periodType={periodType} />
             </thead>
             <tbody>
               {visibleEmployees.map((employee) => {
                 const expanded = expandedEmployees[employee.userId] ?? false;
                 const selected = selectedUserId === employee.userId;
+                const leaveByDate = leaveByUser.get(employee.userId) ?? new Map();
 
                 return (
                   <Fragment key={employee.userId}>
@@ -292,9 +401,19 @@ export function TimeTeamPeriodMatrix({
                           </span>
                         </button>
                       </td>
-                      {dates.map((date) => (
-                        <td key={date} className="px-1 py-2 text-center text-xs text-foreground">
-                          {formatMatrixMinutes(employee.minutesByDate[date] ?? 0)}
+                      {datesMeta.map((meta) => (
+                        <td
+                          key={meta.date}
+                          className={cn(
+                            "px-1 py-2 text-center text-xs text-foreground",
+                            matrixEmployeeCellClassName(meta, leaveByDate.get(meta.date)),
+                          )}
+                          title={matrixEmployeeCellTitle(meta, leaveByDate.get(meta.date))}
+                        >
+                          {formatMatrixCellContent(
+                            employee.minutesByDate[meta.date] ?? 0,
+                            leaveByDate.get(meta.date),
+                          )}
                         </td>
                       ))}
                       <td className="px-2 py-2 text-right font-medium text-foreground">
@@ -302,7 +421,11 @@ export function TimeTeamPeriodMatrix({
                       </td>
                     </tr>
                     {expanded ? (
-                      <EmployeeProjectsSection employee={employee} dates={dates} />
+                      <EmployeeProjectsSection
+                        employee={employee}
+                        datesMeta={datesMeta}
+                        leaveByDate={leaveByDate}
+                      />
                     ) : null}
                   </Fragment>
                 );
@@ -311,7 +434,7 @@ export function TimeTeamPeriodMatrix({
               {visibleEmployees.length > 1 ? (
                 <MatrixMinutesRow
                   label={<span className="font-semibold text-foreground">Razem zespół</span>}
-                  dates={dates}
+                  datesMeta={datesMeta}
                   minutesByDate={totalsByDate}
                   totalMinutes={detail.totalMinutes}
                   className="border-t border-border/70 bg-surface-muted/50 font-medium"
