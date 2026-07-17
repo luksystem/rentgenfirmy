@@ -9,6 +9,13 @@ import type { Database } from "@/lib/supabase/database.types";
 
 type ChangeRequestRow = Database["public"]["Tables"]["project_change_requests"]["Row"];
 
+export type PublicChangeRequestBundle = {
+  changeRequest: ProjectChangeRequest;
+  projectName: string;
+  clientName: string | null;
+  linkActive: boolean;
+};
+
 function rowToChangeRequest(row: ChangeRequestRow): ProjectChangeRequest {
   return {
     id: row.id,
@@ -29,6 +36,8 @@ function rowToChangeRequest(row: ChangeRequestRow): ProjectChangeRequest {
     position: row.position,
     acceptanceDeadlineStageId: row.acceptance_deadline_stage_id,
     blocksNextStage: Boolean(row.blocks_next_stage),
+    publicToken: row.public_token ?? null,
+    publicEnabled: Boolean(row.public_enabled),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -85,6 +94,7 @@ export async function createProjectChangeRequest(
       created_by_name: author.name.trim() || "Zespół",
       created_by_side: author.side,
       position,
+      public_enabled: false,
       created_at: now,
       updated_at: now,
     })
@@ -137,6 +147,7 @@ export async function updateProjectChangeRequest(
   return rowToChangeRequest(data as ChangeRequestRow);
 }
 
+/** Wysyła zmianę do klienta i włącza publiczny link akceptacji. */
 export async function submitProjectChangeRequestForClient(changeRequestId: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase
@@ -144,10 +155,30 @@ export async function submitProjectChangeRequestForClient(changeRequestId: strin
     .update({
       status: "pending_client",
       submitted_at: new Date().toISOString(),
+      public_enabled: true,
       updated_at: new Date().toISOString(),
     })
     .eq("id", changeRequestId)
     .eq("status", "draft")
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToChangeRequest(data as ChangeRequestRow);
+}
+
+export async function setChangeRequestPublicEnabled(changeRequestId: string, enabled: boolean) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("project_change_requests")
+    .update({
+      public_enabled: enabled,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", changeRequestId)
     .select("*")
     .single();
 
@@ -171,6 +202,8 @@ export async function respondToProjectChangeRequest(
       client_responded_at: now,
       client_response_name: input.clientResponseName.trim() || "Klient",
       client_response_note: input.clientResponseNote?.trim() || null,
+      // Link wygasa po decyzji klienta
+      public_enabled: false,
       updated_at: now,
     })
     .eq("id", changeRequestId)
@@ -191,6 +224,7 @@ export async function cancelProjectChangeRequest(changeRequestId: string) {
     .from("project_change_requests")
     .update({
       status: "cancelled",
+      public_enabled: false,
       updated_at: new Date().toISOString(),
     })
     .eq("id", changeRequestId)

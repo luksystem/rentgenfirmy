@@ -9,6 +9,7 @@ import {
   CalendarClock,
   ClipboardCheck,
   ClipboardList,
+  FileEdit,
   PalmtreeIcon,
   Sparkles,
   Star,
@@ -169,6 +170,10 @@ export function NotificationBell({ role = "primary" }: { role?: "primary" | "sec
         ) : item.kind === "client_offer_accepted" || item.kind === "settlement_offer_accepted" ? (
           <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-emerald-500/35 bg-emerald-500/10 text-emerald-300">
             <BadgeCheck className="h-4 w-4" />
+          </span>
+        ) : item.kind === "change_request_client_responded" ? (
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-violet-500/35 bg-violet-500/10 text-violet-200">
+            <FileEdit className="h-4 w-4" />
           </span>
         ) : item.kind === "goal_review_due" ||
           item.kind === "goal_period_ending" ||

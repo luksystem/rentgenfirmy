@@ -229,6 +229,8 @@ function rowToChangeRequest(row: ChangeRequestRow): ProjectChangeRequest {
     position: row.position,
     acceptanceDeadlineStageId: row.acceptance_deadline_stage_id ?? null,
     blocksNextStage: Boolean(row.blocks_next_stage),
+    publicToken: row.public_token ?? null,
+    publicEnabled: Boolean(row.public_enabled),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

@@ -9,6 +9,7 @@ import {
   fetchPublicDashboardPayload,
 } from "@/lib/supabase/public-dashboard-server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { notifyTeamAboutChangeRequestDecision } from "@/lib/notifications/change-request";
 import { respondToProjectChangeRequest } from "@/lib/supabase/project-change-request-repository";
 
 async function assertPublicDashboardAccess(token: string) {
@@ -98,6 +99,15 @@ export async function POST(
       clientResponseName: authorName,
       clientResponseNote: body.clientResponseNote,
     });
+
+    await notifyTeamAboutChangeRequestDecision({
+      changeRequestId: changeRequest.id,
+      projectId: changeRequest.projectId,
+      title: changeRequest.title,
+      accepted: changeRequest.status === "accepted",
+      clientResponseName: changeRequest.clientResponseName ?? authorName,
+    }).catch(() => undefined);
+
     return NextResponse.json({ changeRequest });
   } catch (error) {
     return NextResponse.json(

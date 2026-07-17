@@ -29,9 +29,24 @@ export type ProjectChangeRequest = {
   acceptanceDeadlineStageId: string | null;
   /** Jeśli true i zmiana nie jest zaakceptowana, blokuje wybrany etap i wszystkie po nim. */
   blocksNextStage: boolean;
+  /** Token publicznego linku dla klienta (bez logowania). */
+  publicToken: string | null;
+  /** Czy publiczny link jest aktywny (wyłączany po decyzji klienta). */
+  publicEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 };
+
+export function getChangeRequestPublicPath(token: string) {
+  return `/zmiana/${encodeURIComponent(token)}`;
+}
+
+export function getChangeRequestPublicUrl(token: string) {
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}${getChangeRequestPublicPath(token)}`;
+  }
+  return getChangeRequestPublicPath(token);
+}
 
 export type ProjectChangeRequestInput = {
   title: string;

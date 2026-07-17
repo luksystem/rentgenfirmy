@@ -124,6 +124,10 @@ export const useProjectChangeRequestStore = create<ProjectChangeRequestStore>((s
     const updated = await respondToProjectChangeRequest(id, input);
     const list = (get().byProject[projectId] ?? []).map((entry) => (entry.id === id ? updated : entry));
     setProjectChangeRequests(projectId, list, set, get);
+    void fetch(`/api/change-requests/${encodeURIComponent(id)}/notify-decision`, {
+      method: "POST",
+      credentials: "include",
+    }).catch(() => undefined);
     return updated;
   },
 

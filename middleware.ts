@@ -47,6 +47,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/element/") ||
     pathname.startsWith("/api/przestrzen/") ||
     pathname.startsWith("/api/ustalenie/") ||
+    pathname.startsWith("/api/zmiana/") ||
     pathname.startsWith("/api/zgloszenie/") ||
     pathname.startsWith("/api/public/") ||
     pathname.startsWith("/api/sms/status-webhook");

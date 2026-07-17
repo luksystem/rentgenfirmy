@@ -6,7 +6,7 @@ import {
   type RoleNavPermissionsConfig,
 } from "@/lib/navigation/role-nav-permissions";
 
-const PUBLIC_PATH_PREFIXES = ["/logowanie", "/rejestracja", "/auth", "/oferta", "/kanban", "/odbior", "/element", "/przestrzen", "/ustalenie", "/zgloszenie", "/public", "/sri", "/ankieta"] as const;
+const PUBLIC_PATH_PREFIXES = ["/logowanie", "/rejestracja", "/auth", "/oferta", "/kanban", "/odbior", "/element", "/przestrzen", "/ustalenie", "/zmiana", "/zgloszenie", "/public", "/sri", "/ankieta"] as const;
 
 export function isPublicAppRoute(pathname: string) {
   return PUBLIC_PATH_PREFIXES.some(

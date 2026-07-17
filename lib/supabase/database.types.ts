@@ -292,6 +292,8 @@ export type ProjectChangeRequestRow = {
   position: number;
   acceptance_deadline_stage_id: string | null;
   blocks_next_stage: boolean;
+  public_token: string;
+  public_enabled: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -315,6 +317,8 @@ export type ProjectChangeRequestInsert = {
   position?: number;
   acceptance_deadline_stage_id?: string | null;
   blocks_next_stage?: boolean;
+  public_token?: string;
+  public_enabled?: boolean;
   created_at?: string;
   updated_at?: string;
 };

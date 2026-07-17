@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Lock, Pencil, Plus, Send, Trash2, Wallet, X } from "lucide-react";
+import { Check, Copy, Link2, Lock, Pencil, Plus, Send, Trash2, Wallet, X } from "lucide-react";
 import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-collapsible-shell";
 import { AgreementCostFields } from "@/components/dashboard/agreement-cost-fields";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 import {
   buildChangeRequestCollapsibleMeta,
   formatChangeRequestCost,
+  getChangeRequestPublicUrl,
   isChangeRequestBlockingActive,
   isChangeRequestPendingAttention,
   normalizeProjectChangeRequestInput,
@@ -206,41 +207,80 @@ function ChangeRequestCard({
         ) : null}
 
         {mode === "team" && changeRequest.status === "pending_client" ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            {onEdit ? (
+          <div className="grid gap-3">
+            {changeRequest.publicToken && changeRequest.publicEnabled ? (
+              <div className="rounded-xl border border-dashed border-border/80 bg-surface-muted/15 p-3">
+                <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-foreground">
+                  <Link2 className="h-3.5 w-3.5" />
+                  Publiczny link dla klienta
+                </p>
+                <p className="mb-2 text-[11px] text-muted">
+                  Wyślij klientowi, jeśli nie korzysta z aplikacji. Po akceptacji lub odrzuceniu link
+                  wygasa.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <code className="min-w-0 flex-1 truncate rounded-lg border border-border/60 bg-surface px-2 py-1.5 text-[11px] text-foreground">
+                    {getChangeRequestPublicUrl(changeRequest.publicToken)}
+                  </code>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => {
+                      const url = getChangeRequestPublicUrl(changeRequest.publicToken!);
+                      void navigator.clipboard.writeText(url).then(
+                        () => window.alert("Skopiowano link do schowka."),
+                        () => window.prompt("Skopiuj link:", url),
+                      );
+                    }}
+                  >
+                    <Copy className="mr-1.5 h-3.5 w-3.5" />
+                    Kopiuj
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted">
+                Publiczny link będzie dostępny po wysłaniu zmiany do klienta.
+              </p>
+            )}
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              {onEdit ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  disabled={busy}
+                  onClick={() => onEdit(changeRequest)}
+                >
+                  <Pencil className="mr-2 h-3.5 w-3.5" />
+                  Edytuj
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 className="w-full sm:w-auto"
                 disabled={busy}
-                onClick={() => onEdit(changeRequest)}
+                onClick={() => void run(() => onCancel(changeRequest.id))}
               >
-                <Pencil className="mr-2 h-3.5 w-3.5" />
-                Edytuj
+                Anuluj oczekujące
               </Button>
-            ) : null}
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              className="w-full sm:w-auto"
-              disabled={busy}
-              onClick={() => void run(() => onCancel(changeRequest.id))}
-            >
-              Anuluj oczekujące
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="destructive"
-              className="w-full sm:w-auto"
-              disabled={busy}
-              onClick={() => void run(() => onDelete(changeRequest.id))}
-            >
-              <Trash2 className="mr-2 h-3.5 w-3.5" />
-              Usuń
-            </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="destructive"
+                className="w-full sm:w-auto"
+                disabled={busy}
+                onClick={() => void run(() => onDelete(changeRequest.id))}
+              >
+                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                Usuń
+              </Button>
+            </div>
           </div>
         ) : null}
 
