@@ -548,7 +548,11 @@ export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
                   </Button>
                 </div>
               </div>
-              <VizChartRenderer dashboardId={dashboardId} chart={chart} />
+              <VizChartRenderer
+                dashboardId={dashboardId}
+                chart={chart}
+                enableViewerTimeRange={false}
+              />
             </div>
           ))
         )}

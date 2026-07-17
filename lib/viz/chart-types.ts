@@ -77,7 +77,7 @@ export const DEFAULT_VIZ_CHART_CONFIG: VizChartConfig = {
   mode: "compare",
   roleCodes: ["store_temperature"],
   projectIds: [],
-  periodHours: 24,
+  periodHours: 720,
   showLegend: true,
   showTooltip: true,
 };
@@ -101,7 +101,7 @@ export function normalizeChartConfig(value: unknown): VizChartConfig {
     projectIds: Array.isArray(raw.projectIds)
       ? raw.projectIds.filter((id): id is string => typeof id === "string")
       : [],
-    periodHours: typeof raw.periodHours === "number" ? raw.periodHours : 24,
+    periodHours: typeof raw.periodHours === "number" ? raw.periodHours : 720,
     dateRangeMode: raw.dateRangeMode === "absolute" ? "absolute" : "relative",
     startAt: typeof raw.startAt === "string" ? raw.startAt : null,
     endAt: typeof raw.endAt === "string" ? raw.endAt : null,

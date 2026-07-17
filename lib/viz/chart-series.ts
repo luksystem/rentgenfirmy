@@ -199,9 +199,26 @@ export function buildChartAxisPlan(input: {
 }
 
 function formatTimeLabel(value: string) {
+  return formatChartAxisTick(value);
+}
+
+export function formatChartAxisTick(value: string, spanMs?: number) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
+  }
+
+  const span = spanMs ?? 0;
+  if (span > 14 * 24 * 60 * 60 * 1000) {
+    return date.toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit" });
+  }
+  if (span > 48 * 60 * 60 * 1000) {
+    return date.toLocaleString("pl-PL", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
   return date.toLocaleString("pl-PL", {
     day: "2-digit",

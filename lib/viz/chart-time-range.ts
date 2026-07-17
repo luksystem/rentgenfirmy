@@ -5,6 +5,73 @@ export type VizChartTimeRange = {
   endAt: string;
 };
 
+/** Domyślny zakres podglądu wykresu na dashboardzie (30 dni, koniec = teraz). */
+export const VIZ_CHART_VIEWER_DEFAULT_PERIOD_HOURS = 720;
+
+export function createViewerDefaultTimeRange(now = Date.now()): VizChartTimeRange {
+  return {
+    startAt: new Date(now - VIZ_CHART_VIEWER_DEFAULT_PERIOD_HOURS * 60 * 60 * 1000).toISOString(),
+    endAt: new Date(now).toISOString(),
+  };
+}
+
+export function resolveViewerFetchTimeRange(
+  config: Pick<VizChartConfig, "dateRangeMode" | "periodHours" | "startAt" | "endAt">,
+  now = Date.now(),
+): VizChartTimeRange {
+  if (config.dateRangeMode === "absolute" && config.startAt && config.endAt) {
+    const configRange = resolveChartTimeRange(config, now);
+    const defaultRange = createViewerDefaultTimeRange(now);
+    return {
+      startAt: new Date(
+        Math.min(new Date(configRange.startAt).getTime(), new Date(defaultRange.startAt).getTime()),
+      ).toISOString(),
+      endAt: new Date(
+        Math.max(new Date(configRange.endAt).getTime(), new Date(defaultRange.endAt).getTime()),
+      ).toISOString(),
+    };
+  }
+
+  const hours = Math.max(
+    config.periodHours > 0 ? config.periodHours : 24,
+    VIZ_CHART_VIEWER_DEFAULT_PERIOD_HOURS,
+  );
+  return {
+    startAt: new Date(now - hours * 60 * 60 * 1000).toISOString(),
+    endAt: new Date(now).toISOString(),
+  };
+}
+
+export function formatChartTimeRangeLabel(startAt: string, endAt: string) {
+  const start = new Date(startAt);
+  const end = new Date(endAt);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return "";
+  }
+  const sameDay = start.toDateString() === end.toDateString();
+  const dateOpts: Intl.DateTimeFormatOptions = { day: "2-digit", month: "short", year: "numeric" };
+  const timeOpts: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" };
+  if (sameDay) {
+    return `${start.toLocaleDateString("pl-PL", dateOpts)}, ${start.toLocaleTimeString("pl-PL", timeOpts)} – ${end.toLocaleTimeString("pl-PL", timeOpts)}`;
+  }
+  return `${start.toLocaleString("pl-PL", { ...dateOpts, ...timeOpts })} – ${end.toLocaleString("pl-PL", { ...dateOpts, ...timeOpts })}`;
+}
+
+export function filterPointsInRange<T extends { measuredAt: string }>(
+  points: T[],
+  range: VizChartTimeRange,
+): T[] {
+  const startMs = new Date(range.startAt).getTime();
+  const endMs = new Date(range.endAt).getTime();
+  if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+    return points;
+  }
+  return points.filter((point) => {
+    const ms = new Date(point.measuredAt).getTime();
+    return !Number.isNaN(ms) && ms >= startMs && ms <= endMs;
+  });
+}
+
 export function resolveChartTimeRange(
   config: Pick<VizChartConfig, "dateRangeMode" | "periodHours" | "startAt" | "endAt">,
   now = Date.now(),

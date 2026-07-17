@@ -10,23 +10,32 @@ import {
   Legend,
   Line,
   LineChart,
+  ReferenceArea,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
-import { Loader2 } from "lucide-react";
+import { Loader2, RotateCcw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { CHART_COLORS } from "@/components/chart-colors";
 import {
   buildChartAxisPlan,
   buildMultiSeriesRows,
   filterHistoryPoints,
+  formatChartAxisTick,
   uniqueRoleCodes,
   uniqueSeriesKeys,
 } from "@/lib/viz/chart-series";
 import { normalizeChartConfig, type VizDashboardChart, type VizHistoryPoint } from "@/lib/viz/chart-types";
-import { resolveChartTimeRange } from "@/lib/viz/chart-time-range";
+import {
+  createViewerDefaultTimeRange,
+  filterPointsInRange,
+  formatChartTimeRangeLabel,
+  resolveChartTimeRange,
+  resolveViewerFetchTimeRange,
+  type VizChartTimeRange,
+} from "@/lib/viz/chart-time-range";
 import { LIVE_POLL_MS } from "@/store/viz-dashboard-cache-store";
 import { useVizStore } from "@/store/viz-store";
 
@@ -35,7 +44,16 @@ type VizChartRendererProps = {
   chart: VizDashboardChart;
   interactive?: boolean;
   canPersistToggles?: boolean;
+  /** Podgląd na dashboardzie: domyślnie miesiąc kończący się „teraz” + zoom przeciąganiem. */
+  enableViewerTimeRange?: boolean;
 };
+
+type ChartSelection = {
+  left: string;
+  right: string;
+};
+
+const MIN_ZOOM_SPAN_MS = 5 * 60 * 1000;
 
 function seriesColor(seriesKey: string, index: number, overrides?: Record<string, string>) {
   return overrides?.[seriesKey] ?? CHART_COLORS[index % CHART_COLORS.length];
@@ -57,6 +75,7 @@ export function VizChartRenderer({
   chart,
   interactive = true,
   canPersistToggles = false,
+  enableViewerTimeRange = true,
 }: VizChartRendererProps) {
   const variableRoles = useVizStore((s) => s.variableRoles);
   const [points, setPoints] = useState<VizHistoryPoint[]>([]);
@@ -64,7 +83,30 @@ export function VizChartRenderer({
   const [error, setError] = useState<string | null>(null);
 
   const config = useMemo(() => normalizeChartConfig(chart.config), [chart.config]);
-  const timeRange = useMemo(() => resolveChartTimeRange(config), [config]);
+  const configTimeRange = useMemo(() => resolveChartTimeRange(config), [config]);
+  const fetchTimeRange = useMemo(
+    () =>
+      enableViewerTimeRange && interactive
+        ? resolveViewerFetchTimeRange(config)
+        : configTimeRange,
+    [config, configTimeRange, enableViewerTimeRange, interactive],
+  );
+
+  const [viewerRange, setViewerRange] = useState<VizChartTimeRange>(() =>
+    enableViewerTimeRange && interactive ? createViewerDefaultTimeRange() : configTimeRange,
+  );
+  const [isZoomed, setIsZoomed] = useState(false);
+  const isZoomedRef = useRef(false);
+  const [selection, setSelection] = useState<ChartSelection | null>(null);
+  const isSelectingRef = useRef(false);
+
+  const displayTimeRange = enableViewerTimeRange && interactive ? viewerRange : configTimeRange;
+  const viewerSpanMs = useMemo(() => {
+    const startMs = new Date(displayTimeRange.startAt).getTime();
+    const endMs = new Date(displayTimeRange.endAt).getTime();
+    return Math.max(0, endMs - startMs);
+  }, [displayTimeRange.endAt, displayTimeRange.startAt]);
+
   const roleNameByCode = useMemo(
     () => new Map(variableRoles.map((role) => [role.code, role.name])),
     [variableRoles],
@@ -88,6 +130,22 @@ export function VizChartRenderer({
     setEnabledRoleCodes(initialEnabledSet(config.roleCodes, config.enabledRoleCodes));
   }, [chart.id, config.projectIds, config.roleCodes, config.enabledProjectIds, config.enabledRoleCodes]);
 
+  useEffect(() => {
+    isZoomedRef.current = isZoomed;
+  }, [isZoomed]);
+
+  useEffect(() => {
+    setIsZoomed(false);
+    isZoomedRef.current = false;
+    setSelection(null);
+    isSelectingRef.current = false;
+    if (enableViewerTimeRange && interactive) {
+      setViewerRange(createViewerDefaultTimeRange());
+    } else {
+      setViewerRange(configTimeRange);
+    }
+  }, [chart.id, configTimeRange, enableViewerTimeRange, interactive]);
+
   const loadHistory = useCallback(async () => {
     if (!config.projectIds.length || !config.roleCodes.length) {
       setPoints([]);
@@ -102,9 +160,9 @@ export function VizChartRenderer({
         roleCodes: config.roleCodes.join(","),
         projectIds: config.projectIds.join(","),
         periodHours: String(config.periodHours),
-        dateRangeMode: config.dateRangeMode ?? "relative",
-        startAt: timeRange.startAt,
-        endAt: timeRange.endAt,
+        dateRangeMode: "absolute",
+        startAt: fetchTimeRange.startAt,
+        endAt: fetchTimeRange.endAt,
       });
       const response = await fetch(`/api/viz/dashboards/${dashboardId}/charts?${params}`);
       if (!response.ok) {
@@ -112,12 +170,25 @@ export function VizChartRenderer({
       }
       const data = (await response.json()) as { points: VizHistoryPoint[] };
       setPoints(data.points);
+
+      if (enableViewerTimeRange && interactive && !isZoomedRef.current) {
+        setViewerRange(createViewerDefaultTimeRange());
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Błąd wykresu.");
     } finally {
       setIsLoading(false);
     }
-  }, [dashboardId, config.periodHours, config.projectIds, config.roleCodes, config.dateRangeMode, timeRange.endAt, timeRange.startAt]);
+  }, [
+    dashboardId,
+    config.periodHours,
+    config.projectIds,
+    config.roleCodes,
+    fetchTimeRange.endAt,
+    fetchTimeRange.startAt,
+    enableViewerTimeRange,
+    interactive,
+  ]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -172,14 +243,19 @@ export function VizChartRenderer({
     [points, enabledProjectIds, enabledRoleCodes],
   );
 
+  const displayPoints = useMemo(
+    () => filterPointsInRange(filteredPoints, displayTimeRange),
+    [filteredPoints, displayTimeRange],
+  );
+
   const seriesLabels = useMemo(
-    () => uniqueSeriesKeys(filteredPoints, roleNameByCode),
-    [filteredPoints, roleNameByCode],
+    () => uniqueSeriesKeys(displayPoints, roleNameByCode),
+    [displayPoints, roleNameByCode],
   );
 
   const rows = useMemo(
-    () => buildMultiSeriesRows(filteredPoints, roleNameByCode, timeRange),
-    [filteredPoints, roleNameByCode, timeRange],
+    () => buildMultiSeriesRows(displayPoints, roleNameByCode, displayTimeRange),
+    [displayPoints, roleNameByCode, displayTimeRange],
   );
 
   const axisPlan = useMemo(
@@ -234,8 +310,67 @@ export function VizChartRenderer({
     });
   }
 
+  function resetViewerRange() {
+    setIsZoomed(false);
+    isZoomedRef.current = false;
+    setSelection(null);
+    isSelectingRef.current = false;
+    setViewerRange(createViewerDefaultTimeRange());
+  }
+
+  function applyChartSelection() {
+    if (!selection) {
+      isSelectingRef.current = false;
+      return;
+    }
+
+    const leftMs = new Date(selection.left).getTime();
+    const rightMs = new Date(selection.right).getTime();
+    if (Number.isNaN(leftMs) || Number.isNaN(rightMs) || Math.abs(rightMs - leftMs) < MIN_ZOOM_SPAN_MS) {
+      setSelection(null);
+      isSelectingRef.current = false;
+      return;
+    }
+
+    setViewerRange({
+      startAt: new Date(Math.min(leftMs, rightMs)).toISOString(),
+      endAt: new Date(Math.max(leftMs, rightMs)).toISOString(),
+    });
+    setIsZoomed(true);
+    isZoomedRef.current = true;
+    setSelection(null);
+    isSelectingRef.current = false;
+  }
+
+  function handleChartMouseDown(state: { activeLabel?: string | number }) {
+    if (!interactive || !enableViewerTimeRange || !state?.activeLabel) {
+      return;
+    }
+    const label = String(state.activeLabel);
+    isSelectingRef.current = true;
+    setSelection({ left: label, right: label });
+  }
+
+  function handleChartMouseMove(state: { activeLabel?: string | number }) {
+    if (!isSelectingRef.current || !state?.activeLabel) {
+      return;
+    }
+    const label = String(state.activeLabel);
+    setSelection((current) => (current ? { ...current, right: label } : null));
+  }
+
   const missingProjects =
     config.projectIds.length - new Set(points.map((p) => p.projectId)).size;
+
+  const chartMouseHandlers =
+    interactive && enableViewerTimeRange
+      ? {
+          onMouseDown: handleChartMouseDown,
+          onMouseMove: handleChartMouseMove,
+          onMouseUp: applyChartSelection,
+          onMouseLeave: applyChartSelection,
+        }
+      : {};
 
   function renderSeries(chartType: VizDashboardChart["chartType"]) {
     return seriesLabels.map((label, index) => {
@@ -280,20 +415,16 @@ export function VizChartRenderer({
     });
   }
 
-  const chartBody =
-    chart.chartType === "bar" ? (
-      <BarChart data={rows}>{renderChartChrome("bar")}</BarChart>
-    ) : chart.chartType === "area" ? (
-      <AreaChart data={rows}>{renderChartChrome("area")}</AreaChart>
-    ) : (
-      <LineChart data={rows}>{renderChartChrome("line")}</LineChart>
-    );
-
   function renderChartChrome(chartType: VizDashboardChart["chartType"]) {
     return (
       <>
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-        <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={24} />
+        <XAxis
+          dataKey="time"
+          tick={{ fontSize: 11 }}
+          minTickGap={24}
+          tickFormatter={(value) => formatChartAxisTick(String(value), viewerSpanMs)}
+        />
         <YAxis
           {...(axisPlan.dualAxis ? { yAxisId: "left" } : {})}
           domain={[config.yAxisMin ?? "auto", config.yAxisMax ?? "auto"]}
@@ -317,26 +448,79 @@ export function VizChartRenderer({
             }
           />
         ) : null}
-        {config.showTooltip !== false ? <Tooltip /> : null}
+        {config.showTooltip !== false ? (
+          <Tooltip
+            labelFormatter={(value) => formatChartAxisTick(String(value), viewerSpanMs)}
+          />
+        ) : null}
         {config.showLegend !== false ? <Legend /> : null}
+        {selection ? (
+          <ReferenceArea
+            x1={selection.left}
+            x2={selection.right}
+            stroke="hsl(var(--accent))"
+            strokeOpacity={0.6}
+            fill="hsl(var(--accent))"
+            fillOpacity={0.12}
+          />
+        ) : null}
         {renderSeries(chartType)}
       </>
     );
   }
 
+  const chartBody =
+    chart.chartType === "bar" ? (
+      <BarChart data={rows} {...chartMouseHandlers}>
+        {renderChartChrome("bar")}
+      </BarChart>
+    ) : chart.chartType === "area" ? (
+      <AreaChart data={rows} {...chartMouseHandlers}>
+        {renderChartChrome("area")}
+      </AreaChart>
+    ) : (
+      <LineChart data={rows} {...chartMouseHandlers}>
+        {renderChartChrome("line")}
+      </LineChart>
+    );
+
+  const periodLabel =
+    enableViewerTimeRange && interactive
+      ? formatChartTimeRangeLabel(displayTimeRange.startAt, displayTimeRange.endAt)
+      : config.dateRangeMode === "absolute"
+        ? formatChartTimeRangeLabel(configTimeRange.startAt, configTimeRange.endAt)
+        : `${config.periodHours}h`;
+
   return (
     <Card className="p-4">
       <div className="mb-3">
-        <h3 className="font-semibold">{chart.name}</h3>
-        {chart.description ? <p className="text-sm text-muted">{chart.description}</p> : null}
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h3 className="font-semibold">{chart.name}</h3>
+            {chart.description ? <p className="text-sm text-muted">{chart.description}</p> : null}
+          </div>
+          {enableViewerTimeRange && interactive && isZoomed ? (
+            <button
+              type="button"
+              onClick={resetViewerRange}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs text-muted transition hover:border-accent hover:text-accent"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Pełny miesiąc
+            </button>
+          ) : null}
+        </div>
         <p className="mt-1 text-xs text-muted">
           Zmienne: {config.roleCodes.map((code) => roleNameByCode.get(code) ?? code).join(", ")} ·
-          Okres: {config.dateRangeMode === "absolute"
-            ? `${new Date(timeRange.startAt).toLocaleDateString("pl-PL")} – ${new Date(timeRange.endAt).toLocaleDateString("pl-PL")}`
-            : `${config.periodHours}h`}
+          Okres: {periodLabel}
           {axisPlan.dualAxis ? " · Dwie osie Y" : ""}
           {missingProjects > 0 ? ` · ${missingProjects} sklep(ów) bez danych` : ""}
         </p>
+        {enableViewerTimeRange && interactive ? (
+          <p className="mt-1 text-xs text-muted/80">
+            Przeciągnij na wykresie, aby powiększyć wybrany zakres czasu.
+          </p>
+        ) : null}
       </div>
 
       {interactive && (availableProjects.length > 1 || availableRoleCodes.length > 1) ? (
@@ -401,11 +585,13 @@ export function VizChartRenderer({
         <p className="py-8 text-sm text-rose-300">{error}</p>
       ) : !rows.length ? (
         <p className="py-8 text-sm text-muted">
-          Brak danych historycznych dla wybranej konfiguracji ({new Date(timeRange.startAt).toLocaleString("pl-PL")} – {new Date(timeRange.endAt).toLocaleString("pl-PL")}).
+          Brak danych historycznych dla wybranej konfiguracji ({formatChartTimeRangeLabel(displayTimeRange.startAt, displayTimeRange.endAt)}).
           Upewnij się, że mapowania zmiennych są skonfigurowane i sync telemetrii Loxone działa.
         </p>
       ) : (
-        <div className="h-72 w-full">
+        <div
+          className={`h-72 w-full ${enableViewerTimeRange && interactive ? "cursor-crosshair" : ""}`}
+        >
           <ResponsiveContainer width="100%" height="100%">
             {chartBody}
           </ResponsiveContainer>
