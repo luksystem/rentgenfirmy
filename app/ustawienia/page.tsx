@@ -193,13 +193,27 @@ export default function SettingsPage() {
       <Card className="mb-6 border border-border/80">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
           <div>
-            <p className="font-medium text-foreground">Powiadomienia</p>
+            <p className="font-medium text-foreground">Powiadomienia push</p>
             <p className="mt-1 text-sm text-muted">
-              Push na urządzeniu, test e-mail (Resend) i zarządzanie subskrypcją.
+              Włącz powiadomienia systemowe na tym urządzeniu, wyślij test i zarządzaj subskrypcją.
             </p>
           </div>
           <Button variant="secondary" asChild>
-            <Link href="/ustawienia/powiadomienia">Otwórz powiadomienia</Link>
+            <Link href="/ustawienia/powiadomienia">Otwórz powiadomienia push</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-6 border border-border/80">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+          <div>
+            <p className="font-medium text-foreground">Ustawienia e-mail</p>
+            <p className="mt-1 text-sm text-muted">
+              Kiedy wysyłać e-mail / push / SMS, szablony, branding i test wysyłki.
+            </p>
+          </div>
+          <Button variant="secondary" asChild>
+            <Link href="/ustawienia/email">Otwórz ustawienia e-mail</Link>
           </Button>
         </CardContent>
       </Card>

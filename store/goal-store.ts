@@ -1,7 +1,10 @@
 "use client";
 
 import { create } from "zustand";
+import { getActivityActor } from "@/lib/activity-log/actor";
+import { goalActivityHref } from "@/lib/activity-log/hrefs";
 import type { UserProfile } from "@/lib/auth/types";
+import { logActivity } from "@/lib/supabase/activity-log-repository";
 import { fetchTeamProfiles, profileToOptionLabel } from "@/lib/supabase/profile-repository";
 import {
   createGoalBoard,
@@ -274,10 +277,24 @@ export const useGoalStore = create<GoalStore>((set, get) => ({
         },
       },
     });
+
+    const actor = getActivityActor();
+    void logActivity({
+      actorUserId: actor.userId,
+      actorName: actor.name,
+      action: "created",
+      entityType: "goal",
+      entityId: goal.id,
+      entityLabel: goal.title,
+      summary: "Dodał cel",
+      href: goalActivityHref(goal.boardId, goal.id),
+    });
+
     return goal;
   },
 
   removeGoal: async (boardId, goalId) => {
+    const existing = (get().goalsByBoard[boardId] ?? []).find((goal) => goal.id === goalId);
     await deleteGoalRow(goalId);
     set({
       goalsByBoard: {
@@ -285,11 +302,36 @@ export const useGoalStore = create<GoalStore>((set, get) => ({
         [boardId]: (get().goalsByBoard[boardId] ?? []).filter((goal) => goal.id !== goalId),
       },
     });
+
+    const actor = getActivityActor();
+    void logActivity({
+      actorUserId: actor.userId,
+      actorName: actor.name,
+      action: "deleted",
+      entityType: "goal",
+      entityId: goalId,
+      entityLabel: existing?.title ?? goalId,
+      summary: "Usunął cel",
+      href: `/tablice-celow/${encodeURIComponent(boardId)}`,
+    });
   },
 
   moveGoalStatus: async (goal, status, authorId) => {
     const { goal: updated } = await updateGoalProgress(goal.id, { status, authorId });
     get().upsertGoalInStore(updated);
+
+    const actor = getActivityActor();
+    void logActivity({
+      actorUserId: actor.userId ?? authorId,
+      actorName: actor.name,
+      action: "updated",
+      entityType: "goal",
+      entityId: updated.id,
+      entityLabel: updated.title,
+      summary: "Zmienił status celu",
+      href: goalActivityHref(updated.boardId, updated.id),
+      metadata: { status },
+    });
   },
 
   updateGoalQuickFields: async (goal, patch, authorId) => {
@@ -299,10 +341,35 @@ export const useGoalStore = create<GoalStore>((set, get) => ({
         authorId,
       });
       get().upsertGoalInStore(updated);
+
+      const actor = getActivityActor();
+      void logActivity({
+        actorUserId: actor.userId ?? authorId,
+        actorName: actor.name,
+        action: "updated",
+        entityType: "goal",
+        entityId: updated.id,
+        entityLabel: updated.title,
+        summary: "Zaktualizował postęp celu",
+        href: goalActivityHref(updated.boardId, updated.id),
+        metadata: { progressPercent: patch.progressPercent },
+      });
     }
     if (patch.periodEnd !== undefined) {
       const updated = await updateGoal(goal.id, { periodEnd: patch.periodEnd });
       get().upsertGoalInStore(updated);
+
+      const actor = getActivityActor();
+      void logActivity({
+        actorUserId: actor.userId,
+        actorName: actor.name,
+        action: "updated",
+        entityType: "goal",
+        entityId: updated.id,
+        entityLabel: updated.title,
+        summary: "Zaktualizował cel",
+        href: goalActivityHref(updated.boardId, updated.id),
+      });
     }
   },
 

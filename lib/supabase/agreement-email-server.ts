@@ -3,7 +3,10 @@ import {
   agreementToEmailEntry,
   buildAgreementDeliveryEmail,
 } from "@/lib/email/agreement-templates";
+import { isEmailAudienceEnabled } from "@/lib/email/notification-routing";
 import { sendTransactionalEmail } from "@/lib/email/send";
+import { resolveCompanyProfileDocumentServer } from "@/lib/supabase/company-profile-server";
+import { fetchEmailSettingsServer } from "@/lib/supabase/email-settings-server";
 import type { AgreementApproverRole } from "@/lib/dashboard/agreement-collaboration-types";
 import { isTeamApproverRole } from "@/lib/dashboard/agreement-collaboration-types";
 import type { ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
@@ -358,12 +361,30 @@ export async function sendProjectAgreementEmails(input: {
       ? `[${formatProjectTradeRoleLabel(context.projectTrades.find((t) => t.id === input.tradeId) ?? { name: "Branża", company: "" })}] `
       : undefined;
 
+  const [settings, company] = await Promise.all([
+    fetchEmailSettingsServer(),
+    resolveCompanyProfileDocumentServer(),
+  ]);
+
+  const audience =
+    input.scope === "trade_pending" || input.scope === "single_trade" ? "trade" : "client";
+
+  if (!isEmailAudienceEnabled(settings.routing, "agreement_delivery", audience)) {
+    throw new Error(
+      audience === "trade"
+        ? "Wysyłka e-mail do branży jest wyłączona w Ustawieniach e-mail → Kiedy wysyłać."
+        : "Wysyłka e-mail do klienta jest wyłączona w Ustawieniach e-mail → Kiedy wysyłać.",
+    );
+  }
+
   const template = buildAgreementDeliveryEmail({
     recipientName: recipientName,
     projectName: context.projectName,
     intro,
     entries,
     subjectPrefix,
+    settings,
+    company,
   });
 
   const result = await sendTransactionalEmail({

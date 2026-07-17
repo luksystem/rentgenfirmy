@@ -8,6 +8,8 @@ import {
 } from "@/lib/service/fixed-price";
 import { DEFAULT_SERVICE_SETTINGS } from "@/lib/service/defaults";
 import { defaultClientOfferExpiry } from "@/lib/service/offer-validity";
+import { getActivityActor } from "@/lib/activity-log/actor";
+import { serviceActivityHref } from "@/lib/activity-log/hrefs";
 import {
   bootstrapServiceModule,
   deleteServiceRecord,
@@ -15,6 +17,7 @@ import {
   saveServiceSettings,
   upsertServiceRecord,
 } from "@/lib/supabase/service-repository";
+import { logActivity } from "@/lib/supabase/activity-log-repository";
 import {
   emptyLineItems,
   type ServiceGlobalSettings,
@@ -176,6 +179,7 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
     set({ isSaving: true, error: null });
 
     try {
+      const existed = get().services.some((item) => item.id === service.id);
       const saved = await upsertServiceRecord(service);
       const services = get().services;
       const index = services.findIndex((item) => item.id === service.id);
@@ -186,6 +190,19 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
 
       set({ services: next, isSaving: false });
       servicesRefreshGeneration += 1;
+
+      const actor = getActivityActor();
+      void logActivity({
+        actorUserId: actor.userId,
+        actorName: actor.name,
+        action: existed ? "updated" : "created",
+        entityType: "service",
+        entityId: saved.id,
+        entityLabel: saved.title || "Oferta",
+        summary: existed ? "Zaktualizował ofertę" : "Dodał ofertę",
+        href: serviceActivityHref(saved.id),
+      });
+
       return saved;
     } catch (error) {
       set({
@@ -200,11 +217,24 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
     set({ isSaving: true, error: null });
 
     try {
+      const existing = get().services.find((item) => item.id === id);
       await deleteServiceRecord(id);
       servicesRefreshGeneration += 1;
       set({
         services: get().services.filter((item) => item.id !== id),
         isSaving: false,
+      });
+
+      const actor = getActivityActor();
+      void logActivity({
+        actorUserId: actor.userId,
+        actorName: actor.name,
+        action: "deleted",
+        entityType: "service",
+        entityId: id,
+        entityLabel: existing?.title || id,
+        summary: "Usunął ofertę",
+        href: "/oferty",
       });
     } catch (error) {
       set({

@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { userActivityHref } from "@/lib/activity-log/hrefs";
 import type { UserProfileInput } from "@/lib/auth/types";
-import { USER_ROLES } from "@/lib/auth/types";
+import { getUserDisplayName, USER_ROLES } from "@/lib/auth/types";
 import { requireAdministratorProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
+import { logActivityAdmin } from "@/lib/supabase/activity-log-repository";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { mapProfileInputToUpdate, mapProfileRow } from "@/lib/supabase/profile-mappers";
 
@@ -57,7 +59,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireAdministratorProfile();
+    const actor = await requireAdministratorProfile();
     const { id } = await context.params;
     const body = parseUserInput(await request.json());
 
@@ -94,7 +96,19 @@ export async function PATCH(
       ban_duration: body.isActive ? "none" : "876000h",
     });
 
-    return NextResponse.json({ user: mapProfileRow(profile) });
+    const user = mapProfileRow(profile);
+    void logActivityAdmin({
+      actorUserId: actor.userId,
+      actorName: getUserDisplayName(actor.profile),
+      action: "updated",
+      entityType: "user",
+      entityId: user.id,
+      entityLabel: getUserDisplayName(user),
+      summary: "Zaktualizował użytkownika",
+      href: userActivityHref(),
+    });
+
+    return NextResponse.json({ user });
   } catch (error) {
     return jsonError(error);
   }
@@ -105,10 +119,10 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { userId: currentUserId } = await requireAdministratorProfile();
+    const actor = await requireAdministratorProfile();
     const { id } = await context.params;
 
-    if (id === currentUserId) {
+    if (id === actor.userId) {
       return NextResponse.json(
         { error: "Nie możesz usunąć własnego konta administratora." },
         { status: 400 },
@@ -116,11 +130,31 @@ export async function DELETE(
     }
 
     const admin = getSupabaseAdmin();
+    const { data: existingProfile } = await admin
+      .from("profiles")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    const label = existingProfile
+      ? getUserDisplayName(mapProfileRow(existingProfile))
+      : id;
+
     const { error } = await admin.auth.admin.deleteUser(id);
 
     if (error) {
       throw new Error(error.message);
     }
+
+    void logActivityAdmin({
+      actorUserId: actor.userId,
+      actorName: getUserDisplayName(actor.profile),
+      action: "deleted",
+      entityType: "user",
+      entityId: id,
+      entityLabel: label,
+      summary: "Usunął użytkownika",
+      href: userActivityHref(),
+    });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

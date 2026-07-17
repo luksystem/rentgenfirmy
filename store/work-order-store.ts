@@ -1,8 +1,11 @@
 "use client";
 
 import { create } from "zustand";
+import { getActivityActor } from "@/lib/activity-log/actor";
+import { workOrderActivityHref } from "@/lib/activity-log/hrefs";
 import { createEmptyWorkOrder } from "@/lib/work-order/defaults";
 import type { WorkOrderRecord } from "@/lib/work-order/types";
+import { logActivity } from "@/lib/supabase/activity-log-repository";
 import {
   deleteWorkOrderRecord,
   fetchWorkOrders,
@@ -65,6 +68,7 @@ export const useWorkOrderStore = create<WorkOrderStore>((set, get) => ({
     set({ isSaving: true, error: null });
 
     try {
+      const existed = get().orders.some((item) => item.id === order.id);
       const saved = await upsertWorkOrderRecord(order);
       const orders = get().orders;
       const index = orders.findIndex((item) => item.id === order.id);
@@ -74,6 +78,19 @@ export const useWorkOrderStore = create<WorkOrderStore>((set, get) => ({
           : [saved, ...orders];
 
       set({ orders: next, isSaving: false });
+
+      const actor = getActivityActor();
+      void logActivity({
+        actorUserId: actor.userId,
+        actorName: actor.name,
+        action: existed ? "updated" : "created",
+        entityType: "work_order",
+        entityId: saved.id,
+        entityLabel: saved.title || "Zlecenie",
+        summary: existed ? "Zaktualizował zlecenie" : "Dodał zlecenie",
+        href: workOrderActivityHref(),
+      });
+
       return saved;
     } catch (error) {
       set({
@@ -88,10 +105,23 @@ export const useWorkOrderStore = create<WorkOrderStore>((set, get) => ({
     set({ isSaving: true, error: null });
 
     try {
+      const existing = get().orders.find((item) => item.id === id);
       await deleteWorkOrderRecord(id);
       set({
         orders: get().orders.filter((item) => item.id !== id),
         isSaving: false,
+      });
+
+      const actor = getActivityActor();
+      void logActivity({
+        actorUserId: actor.userId,
+        actorName: actor.name,
+        action: "deleted",
+        entityType: "work_order",
+        entityId: id,
+        entityLabel: existing?.title || id,
+        summary: "Usunął zlecenie",
+        href: workOrderActivityHref(),
       });
     } catch (error) {
       set({

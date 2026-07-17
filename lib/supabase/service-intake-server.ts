@@ -10,7 +10,10 @@ import {
   getServiceIntakeThreadUrl,
 } from "@/lib/service-intake/email-templates";
 import { serviceIntakeDueAt, isServiceIntakeOverdue, isServiceIntakeInactive, isServiceIntakeActive, isServiceIntakeAwaitingPickup } from "@/lib/service-intake/sla";
+import { isEmailAudienceEnabled } from "@/lib/email/notification-routing";
 import { sendTransactionalEmail } from "@/lib/email/send";
+import { resolveCompanyProfileDocumentServer } from "@/lib/supabase/company-profile-server";
+import { fetchEmailSettingsServer } from "@/lib/supabase/email-settings-server";
 import {
   createIntakeGuestToken,
   createIntakeVerifiedToken,
@@ -343,47 +346,81 @@ function rowToComment(row: Record<string, unknown>): ServiceIntakeComment {
 
 async function notifyServiceIntakeSubmitted(record: ServiceIntakeRecord) {
   const threadUrl = getServiceIntakeThreadUrl(record.trackingToken);
-  const template = buildServiceIntakeSubmittedEmail({
-    referenceNumber: record.referenceNumber,
-    contactFullName: record.contactFullName,
-    threadUrl,
-  });
-
-  await Promise.allSettled([
-    sendTransactionalEmail({
-      to: record.contactEmail,
-      subject: template.subject,
-      html: template.html,
-    }),
-    sendTransactionalEmail({
-      to: getServiceInboxRecipients(),
-      subject: `[Nowe] ${template.subject}`,
-      html: `${template.html}<p>Klient: ${record.contactEmail}</p><p>Projekt: ${record.projectName ?? "—"}</p>`,
-    }),
+  const [settings, company] = await Promise.all([
+    fetchEmailSettingsServer(),
+    resolveCompanyProfileDocumentServer(),
   ]);
+  const template = buildServiceIntakeSubmittedEmail(
+    {
+      referenceNumber: record.referenceNumber,
+      contactFullName: record.contactFullName,
+      threadUrl,
+    },
+    { settings, company },
+  );
+
+  const sends: Array<Promise<unknown>> = [];
+  if (isEmailAudienceEnabled(settings.routing, "service_intake_submitted", "client")) {
+    sends.push(
+      sendTransactionalEmail({
+        to: record.contactEmail,
+        subject: template.subject,
+        html: template.html,
+      }),
+    );
+  }
+  if (isEmailAudienceEnabled(settings.routing, "service_intake_submitted", "inbox")) {
+    sends.push(
+      sendTransactionalEmail({
+        to: getServiceInboxRecipients(settings),
+        subject: `[Nowe] ${template.subject}`,
+        html: `${template.html}<p>Klient: ${record.contactEmail}</p><p>Projekt: ${record.projectName ?? "—"}</p>`,
+      }),
+    );
+  }
+  if (sends.length) {
+    await Promise.allSettled(sends);
+  }
 }
 
 async function notifyServiceIntakeStatusChange(record: ServiceIntakeRecord) {
   const threadUrl = getServiceIntakeThreadUrl(record.trackingToken);
-  const template = buildServiceIntakeStatusEmail({
-    referenceNumber: record.referenceNumber,
-    contactFullName: record.contactFullName,
-    statusLabel: SERVICE_INTAKE_STATUS_LABELS[record.status],
-    threadUrl,
-  });
-
-  await Promise.allSettled([
-    sendTransactionalEmail({
-      to: record.contactEmail,
-      subject: template.subject,
-      html: template.html,
-    }),
-    sendTransactionalEmail({
-      to: getServiceInboxRecipients(),
-      subject: `[Status] ${template.subject}`,
-      html: template.html,
-    }),
+  const [settings, company] = await Promise.all([
+    fetchEmailSettingsServer(),
+    resolveCompanyProfileDocumentServer(),
   ]);
+  const template = buildServiceIntakeStatusEmail(
+    {
+      referenceNumber: record.referenceNumber,
+      contactFullName: record.contactFullName,
+      statusLabel: SERVICE_INTAKE_STATUS_LABELS[record.status],
+      threadUrl,
+    },
+    { settings, company },
+  );
+
+  const sends: Array<Promise<unknown>> = [];
+  if (isEmailAudienceEnabled(settings.routing, "service_intake_status", "client")) {
+    sends.push(
+      sendTransactionalEmail({
+        to: record.contactEmail,
+        subject: template.subject,
+        html: template.html,
+      }),
+    );
+  }
+  if (isEmailAudienceEnabled(settings.routing, "service_intake_status", "inbox")) {
+    sends.push(
+      sendTransactionalEmail({
+        to: getServiceInboxRecipients(settings),
+        subject: `[Status] ${template.subject}`,
+        html: template.html,
+      }),
+    );
+  }
+  if (sends.length) {
+    await Promise.allSettled(sends);
+  }
 }
 
 function resolveIntakePartyName(input: {

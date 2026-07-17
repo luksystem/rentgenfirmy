@@ -416,7 +416,10 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
     if (isAdministrator) {
       groups.push({
         label: "Administracja",
-        items: [{ href: "/admin/uzytkownicy", label: "Użytkownicy", icon: Shield }],
+        items: [
+          { href: "/admin/uzytkownicy", label: "Użytkownicy", icon: Shield },
+          { href: "/admin/logi", label: "Logi", icon: Activity },
+        ],
       });
     }
 

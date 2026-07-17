@@ -7,7 +7,12 @@ type SendEmailInput = {
 
 export async function sendTransactionalEmail(input: SendEmailInput) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.EMAIL_FROM?.trim() ?? "LUKSYSTEM Serwis <serwis@luksystem.pl>";
+  const from =
+    process.env.EMAIL_FROM?.trim() ?? "Rentgen firmy <noreply@rentgen.luksystem.pl>";
+  const replyTo =
+    input.replyTo?.trim() ||
+    process.env.EMAIL_REPLY_TO?.trim() ||
+    "biuro@luksystem.pl";
 
   if (!apiKey) {
     console.warn("[email] RESEND_API_KEY missing — skipping send:", input.subject, input.to);
@@ -25,7 +30,7 @@ export async function sendTransactionalEmail(input: SendEmailInput) {
       to: Array.isArray(input.to) ? input.to : [input.to],
       subject: input.subject,
       html: input.html,
-      reply_to: input.replyTo,
+      reply_to: replyTo,
     }),
   });
 

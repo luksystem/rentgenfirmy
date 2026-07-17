@@ -3097,6 +3097,46 @@ export type Database = {
         Update: Partial<VizEnergyInvoiceRow>;
         Relationships: [];
       };
+      activity_log: {
+        Row: {
+          id: string;
+          created_at: string;
+          actor_user_id: string | null;
+          actor_name: string;
+          action: string;
+          entity_type: string;
+          entity_id: string | null;
+          entity_label: string;
+          summary: string;
+          href: string | null;
+          metadata: Record<string, unknown>;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          actor_user_id?: string | null;
+          actor_name: string;
+          action: string;
+          entity_type: string;
+          entity_id?: string | null;
+          entity_label?: string;
+          summary: string;
+          href?: string | null;
+          metadata?: Record<string, unknown>;
+        };
+        Update: Partial<{
+          actor_user_id: string | null;
+          actor_name: string;
+          action: string;
+          entity_type: string;
+          entity_id: string | null;
+          entity_label: string;
+          summary: string;
+          href: string | null;
+          metadata: Record<string, unknown>;
+        }>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

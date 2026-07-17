@@ -1,45 +1,90 @@
-const SERVICE_INBOX_EMAIL = "serwis@luksystem.pl";
+import type { CompanyProfileDocument } from "@/lib/company/company-profile-document";
+import {
+  defaultEmailSettings,
+  type EmailSettings,
+} from "@/lib/email/email-settings";
+import { buildEmailShell, escapeEmailHtml } from "@/lib/email/layout";
+import { renderEmailSubject, renderEmailTemplateString } from "@/lib/email/template-render";
 
 export function getServiceIntakeThreadUrl(trackingToken: string) {
   const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
   return `${base}/zgloszenie/watek/${trackingToken}`;
 }
 
-export function buildServiceIntakeSubmittedEmail(input: {
-  referenceNumber: string;
-  contactFullName: string;
-  threadUrl: string;
-}) {
+function threadLinkHtml(threadUrl: string) {
+  return `<p style="margin:0 0 16px;"><a href="${escapeEmailHtml(threadUrl)}" style="color:#2563eb;word-break:break-all;">${escapeEmailHtml(threadUrl)}</a></p>`;
+}
+
+export function buildServiceIntakeSubmittedEmail(
+  input: {
+    referenceNumber: string;
+    contactFullName: string;
+    threadUrl: string;
+  },
+  options?: {
+    settings?: EmailSettings;
+    company?: CompanyProfileDocument | null;
+  },
+) {
+  const settings = options?.settings ?? defaultEmailSettings();
+  const template = settings.templates.service_intake_submitted;
+  const textVars = {
+    recipient_name: input.contactFullName,
+    reference_number: input.referenceNumber,
+    thread_url: input.threadUrl,
+  };
+
   return {
-    subject: `Potwierdzenie zgłoszenia ${input.referenceNumber}`,
-    html: `
-      <p>Dzień dobry ${input.contactFullName},</p>
-      <p>otrzymaliśmy Twoje zgłoszenie serwisowe <strong>${input.referenceNumber}</strong>.</p>
-      <p>Możesz śledzić status i prowadzić dyskusję pod publicznym linkiem:</p>
-      <p><a href="${input.threadUrl}">${input.threadUrl}</a></p>
-      <p>Zespół serwisowy LUKSYSTEM</p>
-    `,
+    subject: renderEmailSubject(template.subject, textVars),
+    html: buildEmailShell({
+      content: renderEmailTemplateString(template.body, textVars, {
+        thread_link: threadLinkHtml(input.threadUrl),
+      }),
+      eyebrow: template.eyebrow,
+      disclaimer: template.disclaimer,
+      brand: settings.brand,
+      company: options?.company,
+    }),
   };
 }
 
-export function buildServiceIntakeStatusEmail(input: {
-  referenceNumber: string;
-  contactFullName: string;
-  statusLabel: string;
-  threadUrl: string;
-}) {
+export function buildServiceIntakeStatusEmail(
+  input: {
+    referenceNumber: string;
+    contactFullName: string;
+    statusLabel: string;
+    threadUrl: string;
+  },
+  options?: {
+    settings?: EmailSettings;
+    company?: CompanyProfileDocument | null;
+  },
+) {
+  const settings = options?.settings ?? defaultEmailSettings();
+  const template = settings.templates.service_intake_status;
+  const textVars = {
+    recipient_name: input.contactFullName,
+    reference_number: input.referenceNumber,
+    status_label: input.statusLabel,
+    thread_url: input.threadUrl,
+  };
+
   return {
-    subject: `Aktualizacja zgłoszenia ${input.referenceNumber}: ${input.statusLabel}`,
-    html: `
-      <p>Dzień dobry ${input.contactFullName},</p>
-      <p>status zgłoszenia <strong>${input.referenceNumber}</strong> zmienił się na: <strong>${input.statusLabel}</strong>.</p>
-      <p>Szczegóły i odpowiedzi zespołu:</p>
-      <p><a href="${input.threadUrl}">${input.threadUrl}</a></p>
-      <p>Zespół serwisowy LUKSYSTEM</p>
-    `,
+    subject: renderEmailSubject(template.subject, textVars),
+    html: buildEmailShell({
+      content: renderEmailTemplateString(template.body, textVars, {
+        thread_link: threadLinkHtml(input.threadUrl),
+      }),
+      eyebrow: template.eyebrow,
+      disclaimer: template.disclaimer,
+      brand: settings.brand,
+      company: options?.company,
+    }),
   };
 }
 
-export function getServiceInboxRecipients() {
-  return [SERVICE_INBOX_EMAIL];
+export function getServiceInboxRecipients(settings?: EmailSettings) {
+  const email =
+    settings?.serviceInboxEmail?.trim() || defaultEmailSettings().serviceInboxEmail;
+  return [email];
 }

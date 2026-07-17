@@ -59,8 +59,11 @@ export function resolveLeaveForUserOnDate(
     return null;
   }
 
+  const status: MatrixLeaveCellMeta["status"] =
+    item.status === "approved" ? "approved" : "pending";
+
   return {
-    status: item.status,
+    status,
     leaveTypeName: leaveTypeLabel(item.leaveTypeItemId),
     startDate: item.startDate,
     endDate: item.endDate,

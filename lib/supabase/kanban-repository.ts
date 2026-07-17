@@ -1,3 +1,4 @@
+import { kanbanActivityHref } from "@/lib/activity-log/hrefs";
 import { formatPartyName } from "@/lib/party/display-name";
 import type {
   KanbanAuthorSide,
@@ -15,8 +16,39 @@ import { isKanbanReactionEmoji } from "@/lib/process/kanban-reactions";
 import type { MentionCandidate } from "@/lib/notifications/types";
 import { createKanbanMentionNotifications, createKanbanNewActivityNotifications, resolveKanbanPublicLinkForColumn, resolveKanbanPublicLinkForTask } from "@/lib/notifications/repository";
 import { resolveMentionTargets } from "@/lib/notifications/mentions";
+import { logActivity } from "@/lib/supabase/activity-log-repository";
 import { getSupabase } from "@/lib/supabase/client";
 import { fetchAttachmentsForTaskIds } from "@/lib/supabase/kanban-attachments-repository";
+
+async function logTeamKanbanActivity(input: {
+  action: string;
+  summary: string;
+  taskId: string;
+  taskTitle: string;
+  authorName?: string;
+}) {
+  try {
+    const supabase = getSupabase();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return;
+    }
+    await logActivity({
+      actorUserId: user.id,
+      actorName: input.authorName?.trim() || "Zespół",
+      action: input.action,
+      entityType: "kanban_task",
+      entityId: input.taskId,
+      entityLabel: input.taskTitle,
+      summary: input.summary,
+      href: kanbanActivityHref(),
+    });
+  } catch {
+    // ignore — activity log must not break kanban mutations
+  }
+}
 
 type BoardRow = {
   id: string;
@@ -718,6 +750,14 @@ export async function createKanbanTask(input: {
       body: input.description?.trim() || title,
       linkUrl,
     }).catch(() => undefined);
+  } else {
+    void logTeamKanbanActivity({
+      action: "created",
+      summary: "Dodał zadanie Kanban",
+      taskId: task.id,
+      taskTitle: title,
+      authorName: input.authorName,
+    });
   }
 
   return task;
@@ -740,7 +780,14 @@ export async function moveKanbanTask(taskId: string, columnId: string, position:
     throw new Error(error.message);
   }
 
-  return rowToTask(data as TaskRow);
+  const task = rowToTask(data as TaskRow);
+  void logTeamKanbanActivity({
+    action: "moved",
+    summary: "Przeniósł zadanie Kanban",
+    taskId: task.id,
+    taskTitle: task.title,
+  });
+  return task;
 }
 
 export async function updateKanbanTask(
@@ -787,7 +834,14 @@ export async function updateKanbanTask(
     throw new Error(error.message);
   }
 
-  return rowToTask(data as TaskRow);
+  const task = rowToTask(data as TaskRow);
+  void logTeamKanbanActivity({
+    action: "updated",
+    summary: "Zaktualizował zadanie Kanban",
+    taskId: task.id,
+    taskTitle: task.title,
+  });
+  return task;
 }
 
 export async function closeKanbanTask(
@@ -821,16 +875,41 @@ export async function closeKanbanTask(
     });
   }
 
-  return rowToTask(data as TaskRow);
+  const task = rowToTask(data as TaskRow);
+
+  if (!actor || actor.authorSide === "team") {
+    void logTeamKanbanActivity({
+      action: closed ? "closed" : "reopened",
+      summary: closed ? "Zamknął zadanie Kanban" : "Ponownie otworzył zadanie Kanban",
+      taskId: task.id,
+      taskTitle: task.title,
+      authorName: actor?.authorName,
+    });
+  }
+
+  return task;
 }
 
 export async function deleteKanbanTask(taskId: string) {
   const supabase = getSupabase();
+  const { data: existing } = await supabase
+    .from("process_kanban_tasks")
+    .select("id, title")
+    .eq("id", taskId)
+    .maybeSingle();
+
   const { error } = await supabase.from("process_kanban_tasks").delete().eq("id", taskId);
 
   if (error) {
     throw new Error(error.message);
   }
+
+  void logTeamKanbanActivity({
+    action: "deleted",
+    summary: "Usunął zadanie Kanban",
+    taskId,
+    taskTitle: (existing as { title?: string } | null)?.title ?? taskId,
+  });
 }
 
 export async function addKanbanComment(input: {

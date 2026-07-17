@@ -1,3 +1,8 @@
+import { EMAIL_SETTINGS_ID, normalizeEmailSettings } from "@/lib/email/email-settings";
+import {
+  NOTIFICATION_ACTION_DEFINITIONS,
+  isChannelEnabled,
+} from "@/lib/email/notification-routing";
 import { resolveMessageTemplateVariables } from "@/lib/messages/resolve-message-variables";
 import {
   getEnabledRulesForTrigger,
@@ -64,12 +69,34 @@ export async function saveSmsRulesSettingsServer(
   return normalizeSmsRulesSettings(data.data);
 }
 
+async function fetchEmailRoutingForSmsGate() {
+  const supabase = getSupabaseServer();
+  const { data } = await supabase
+    .from("app_settings")
+    .select("data")
+    .eq("id", EMAIL_SETTINGS_ID)
+    .maybeSingle();
+  return normalizeEmailSettings(data?.data).routing;
+}
+
 export async function dispatchSmsRules(
   trigger: SmsRuleTrigger,
   context: SmsDispatchContext,
 ) {
   const settings = await fetchSmsRulesSettingsServer();
-  const rules = getEnabledRulesForTrigger(settings, trigger);
+  const routing = await fetchEmailRoutingForSmsGate().catch(() => null);
+  const rules = getEnabledRulesForTrigger(settings, trigger).filter((rule) => {
+    if (!routing) {
+      return true;
+    }
+    const definition = NOTIFICATION_ACTION_DEFINITIONS.find(
+      (entry) => entry.smsRuleId === rule.id,
+    );
+    if (!definition) {
+      return true;
+    }
+    return isChannelEnabled(routing, definition.id, "sms");
+  });
 
   if (rules.length === 0) {
     return { sent: 0, skipped: true as const, results: [] };

@@ -48,8 +48,11 @@ import {
   type ProjectActivitySettings,
 } from "@/lib/project-activity/settings";
 import type { Contact, ContactInput } from "@/lib/contacts/types";
+import { getActivityActor } from "@/lib/activity-log/actor";
+import { clientActivityHref, projectActivityHref } from "@/lib/activity-log/hrefs";
 import { formatPartyName } from "@/lib/party/display-name";
 import { sortClientsByLastName, sortContactsByLastName } from "@/lib/sort/party-and-project";
+import { logActivity } from "@/lib/supabase/activity-log-repository";
 import type { Client, ClientInput } from "@/lib/service/types";
 import type { Interruption, Project, ProjectInput } from "@/lib/types";
 
@@ -184,6 +187,18 @@ export const useAppStore = create<AppState>((set, get) => ({
         isSaving: false,
         error: null,
       }));
+
+      const actor = getActivityActor();
+      void logActivity({
+        actorUserId: actor.userId,
+        actorName: actor.name,
+        action: "created",
+        entityType: "project",
+        entityId: created.id,
+        entityLabel: created.name,
+        summary: "Dodał projekt",
+        href: projectActivityHref(created.id),
+      });
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : "Nie udało się dodać projektu",
@@ -232,6 +247,18 @@ export const useAppStore = create<AppState>((set, get) => ({
         error: null,
       }));
 
+      const actor = getActivityActor();
+      void logActivity({
+        actorUserId: actor.userId,
+        actorName: actor.name,
+        action: "updated",
+        entityType: "project",
+        entityId: updated.id,
+        entityLabel: updated.name,
+        summary: "Zaktualizował projekt",
+        href: projectActivityHref(updated.id),
+      });
+
       if (stageChanged) {
         await get().setProjectStage(id, project.stage);
       }
@@ -273,6 +300,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isSaving: true, error: null });
 
     try {
+      const existing = get().projects.find((project) => project.id === id);
       await deleteProjectRecord(id);
       set((state) => ({
         projects: state.projects.filter((project) => project.id !== id),
@@ -282,6 +310,18 @@ export const useAppStore = create<AppState>((set, get) => ({
         isSaving: false,
         error: null,
       }));
+
+      const actor = getActivityActor();
+      void logActivity({
+        actorUserId: actor.userId,
+        actorName: actor.name,
+        action: "deleted",
+        entityType: "project",
+        entityId: id,
+        entityLabel: existing?.name ?? id,
+        summary: "Usunął projekt",
+        href: "/projekty",
+      });
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : "Nie udało się usunąć projektu",
@@ -407,6 +447,18 @@ export const useAppStore = create<AppState>((set, get) => ({
         error: null,
       }));
 
+      const actor = getActivityActor();
+      void logActivity({
+        actorUserId: actor.userId,
+        actorName: actor.name,
+        action: "created",
+        entityType: "client",
+        entityId: created.id,
+        entityLabel: formatPartyName(created),
+        summary: "Dodał klienta",
+        href: clientActivityHref(),
+      });
+
       void fetch("/api/sms/dispatch", {
         method: "POST",
         credentials: "include",
@@ -447,6 +499,18 @@ export const useAppStore = create<AppState>((set, get) => ({
         isSaving: false,
         error: null,
       }));
+
+      const actor = getActivityActor();
+      void logActivity({
+        actorUserId: actor.userId,
+        actorName: actor.name,
+        action: "updated",
+        entityType: "client",
+        entityId: updated.id,
+        entityLabel: formatPartyName(updated),
+        summary: "Zaktualizował klienta",
+        href: clientActivityHref(),
+      });
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : "Nie udało się zaktualizować klienta",
@@ -460,6 +524,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isSaving: true, error: null });
 
     try {
+      const existing = get().clients.find((item) => item.id === id);
       await deleteClientRecord(id);
       set((state) => ({
         clients: state.clients.filter((item) => item.id !== id),
@@ -469,6 +534,18 @@ export const useAppStore = create<AppState>((set, get) => ({
         isSaving: false,
         error: null,
       }));
+
+      const actor = getActivityActor();
+      void logActivity({
+        actorUserId: actor.userId,
+        actorName: actor.name,
+        action: "deleted",
+        entityType: "client",
+        entityId: id,
+        entityLabel: existing ? formatPartyName(existing) : id,
+        summary: "Usunął klienta",
+        href: clientActivityHref(),
+      });
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : "Nie udało się usunąć klienta",

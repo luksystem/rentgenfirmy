@@ -1,11 +1,18 @@
+import type { CompanyProfileDocument } from "@/lib/company/company-profile-document";
 import {
   PROJECT_AGREEMENT_CATEGORY_LABELS,
   formatAgreementCost,
   type ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";
+import {
+  defaultEmailSettings,
+  type EmailSettings,
+} from "@/lib/email/email-settings";
+import { buildEmailShell, escapeEmailHtml } from "@/lib/email/layout";
+import { renderEmailSubject, renderEmailTemplateString } from "@/lib/email/template-render";
 
 export const AGREEMENT_BINDING_DISCLAIMER =
-  "Zaakceptowane ustalenia są wiążące na dalszych etapach realizacji projektu. Prosimy o dokładne zapoznanie się z treścią przed akceptacją.";
+  defaultEmailSettings().templates.agreement_delivery.disclaimer;
 
 export type AgreementEmailEntry = {
   title: string;
@@ -58,38 +65,30 @@ export function agreementToEmailEntry(
   };
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
 function emailButton(href: string, label: string, background: string, color = "#ffffff"): string {
-  return `<a href="${href}" style="display:inline-block;margin:6px 10px 6px 0;padding:12px 22px;background:${background};color:${color};text-decoration:none;border-radius:10px;font-weight:600;font-size:14px;line-height:1.2;">${escapeHtml(label)}</a>`;
+  return `<a href="${href}" style="display:inline-block;margin:6px 10px 6px 0;padding:12px 22px;background:${background};color:${color};text-decoration:none;border-radius:10px;font-weight:600;font-size:14px;line-height:1.2;">${escapeEmailHtml(label)}</a>`;
 }
 
-function renderAgreementBlock(entry: AgreementEmailEntry, index?: number): string {
+export function renderAgreementBlock(entry: AgreementEmailEntry, index?: number): string {
   const heading =
     index != null
-      ? `<h3 style="margin:0 0 8px;font-size:17px;color:#111827;">${index + 1}. ${escapeHtml(entry.title)}</h3>`
-      : `<h2 style="margin:0 0 8px;font-size:20px;color:#111827;">${escapeHtml(entry.title)}</h2>`;
+      ? `<h3 style="margin:0 0 8px;font-size:17px;color:#111827;">${index + 1}. ${escapeEmailHtml(entry.title)}</h3>`
+      : `<h2 style="margin:0 0 8px;font-size:20px;color:#111827;">${escapeEmailHtml(entry.title)}</h2>`;
 
   const body = entry.body
-    ? `<p style="margin:0 0 12px;color:#374151;white-space:pre-wrap;line-height:1.55;">${escapeHtml(entry.body)}</p>`
+    ? `<p style="margin:0 0 12px;color:#374151;white-space:pre-wrap;line-height:1.55;">${escapeEmailHtml(entry.body)}</p>`
     : "";
 
   const cost = entry.costLabel
-    ? `<p style="margin:0 0 6px;color:#111827;"><strong>Koszt:</strong> ${escapeHtml(entry.costLabel)}</p>`
+    ? `<p style="margin:0 0 6px;color:#111827;"><strong>Koszt:</strong> ${escapeEmailHtml(entry.costLabel)}</p>`
     : "";
 
   const costNote = entry.costNote
-    ? `<p style="margin:0 0 12px;color:#4b5563;"><strong>Notatka do kosztów:</strong> ${escapeHtml(entry.costNote)}</p>`
+    ? `<p style="margin:0 0 12px;color:#4b5563;"><strong>Notatka do kosztów:</strong> ${escapeEmailHtml(entry.costNote)}</p>`
     : "";
 
   const protocols = entry.protocols.length
-    ? `<p style="margin:0 0 12px;color:#4b5563;"><strong>Protokoły:</strong> ${escapeHtml(entry.protocols.join(", "))}</p>`
+    ? `<p style="margin:0 0 12px;color:#4b5563;"><strong>Protokoły:</strong> ${escapeEmailHtml(entry.protocols.join(", "))}</p>`
     : "";
 
   const buttons =
@@ -107,7 +106,7 @@ function renderAgreementBlock(entry: AgreementEmailEntry, index?: number): strin
 
   return `<div style="margin:0 0 24px;padding:20px;border:1px solid #e5e7eb;border-radius:14px;background:#fafafa;">
     ${heading}
-    <p style="margin:0 0 10px;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;">${escapeHtml(entry.categoryLabel)}</p>
+    <p style="margin:0 0 10px;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;">${escapeEmailHtml(entry.categoryLabel)}</p>
     ${body}
     ${cost}
     ${costNote}
@@ -116,67 +115,69 @@ function renderAgreementBlock(entry: AgreementEmailEntry, index?: number): strin
   </div>`;
 }
 
-function emailShell(content: string): string {
-  return `<!DOCTYPE html>
-<html lang="pl">
-  <body style="margin:0;padding:0;background:#f3f4f6;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f4f6;padding:24px 12px;">
-      <tr>
-        <td align="center">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.08);">
-            <tr>
-              <td style="padding:28px 28px 8px;background:linear-gradient(135deg,#0f172a,#1e293b);color:#ffffff;">
-                <p style="margin:0;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;opacity:0.75;">Ustalenia projektowe</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:24px 28px 28px;">
-                ${content}
-                <div style="margin-top:28px;padding:16px;border-left:4px solid #f59e0b;background:#fffbeb;border-radius:8px;">
-                  <p style="margin:0;font-size:13px;color:#92400e;line-height:1.55;">${escapeHtml(AGREEMENT_BINDING_DISCLAIMER)}</p>
-                </div>
-                <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;">Pozdrawiamy,<br />Zespół projektowy</p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
-}
-
 export function buildAgreementDeliveryEmail(input: {
   recipientName?: string;
   projectName?: string;
   intro: string;
   entries: AgreementEmailEntry[];
   subjectPrefix?: string;
+  settings?: EmailSettings;
+  company?: CompanyProfileDocument | null;
 }) {
+  const settings = input.settings ?? defaultEmailSettings();
+  const template = settings.templates.agreement_delivery;
+
   const greeting = input.recipientName?.trim()
-    ? `Dzień dobry ${escapeHtml(input.recipientName.trim())},`
-    : "Dzień dobry,";
+    ? `<p style="margin:0 0 12px;font-size:16px;color:#111827;">Dzień dobry ${escapeEmailHtml(input.recipientName.trim())},</p>`
+    : `<p style="margin:0 0 12px;font-size:16px;color:#111827;">Dzień dobry,</p>`;
 
   const projectLine = input.projectName?.trim()
-    ? `<p style="margin:0 0 16px;color:#4b5563;">Projekt: <strong style="color:#111827;">${escapeHtml(input.projectName.trim())}</strong></p>`
+    ? `<p style="margin:0 0 16px;color:#4b5563;">Projekt: <strong style="color:#111827;">${escapeEmailHtml(input.projectName.trim())}</strong></p>`
     : "";
 
-  const blocks = input.entries.map((entry, index) => renderAgreementBlock(entry, input.entries.length > 1 ? index : undefined)).join("");
+  const blocks = input.entries
+    .map((entry, index) =>
+      renderAgreementBlock(entry, input.entries.length > 1 ? index : undefined),
+    )
+    .join("");
 
-  const html = emailShell(`
-    <p style="margin:0 0 12px;font-size:16px;color:#111827;">${greeting}</p>
-    <p style="margin:0 0 16px;color:#374151;line-height:1.55;">${escapeHtml(input.intro)}</p>
-    ${projectLine}
-    ${blocks}
-  `);
+  const content = renderEmailTemplateString(
+    template.body,
+    {
+      intro: input.intro,
+      project_name: input.projectName?.trim() ?? "",
+      agreement_title: input.entries[0]?.title ?? "",
+      count: String(input.entries.length),
+    },
+    {
+      greeting,
+      project_line: projectLine,
+      agreements_block: blocks,
+    },
+  );
+
+  const html = buildEmailShell({
+    content,
+    eyebrow: template.eyebrow,
+    disclaimer: template.disclaimer,
+    brand: settings.brand,
+    company: input.company,
+  });
 
   const subjectBase =
     input.entries.length === 1
       ? `Ustalenie do akceptacji: ${input.entries[0].title}`
       : `${input.entries.length} ustaleń do akceptacji${input.projectName ? ` — ${input.projectName}` : ""}`;
 
+  const subject = renderEmailSubject(template.subject, {
+    subject_base: subjectBase,
+    agreement_title: input.entries[0]?.title ?? "",
+    count: String(input.entries.length),
+    project_name: input.projectName?.trim() ?? "",
+  });
+
   return {
-    subject: input.subjectPrefix ? `${input.subjectPrefix}${subjectBase}` : subjectBase,
+    subject: input.subjectPrefix ? `${input.subjectPrefix}${subject}` : subject,
     html,
   };
 }

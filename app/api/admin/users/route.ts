@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { userActivityHref } from "@/lib/activity-log/hrefs";
 import { getUserDisplayName, USER_ROLES, type UserProfileInput } from "@/lib/auth/types";
 import { requireAdministratorProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
 import { ensureEmployeeDashboardSpaceServer } from "@/lib/messages/resolve-message-variables";
+import { logActivityAdmin } from "@/lib/supabase/activity-log-repository";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   mapProfileInputToInsert,
@@ -86,7 +88,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    await requireAdministratorProfile();
+    const actor = await requireAdministratorProfile();
     const body = parseUserInput(await request.json());
 
     if (!body) {
@@ -166,6 +168,17 @@ export async function POST(request: Request) {
       firstName: user.firstName,
       lastName: user.lastName,
     }).catch(() => undefined);
+
+    void logActivityAdmin({
+      actorUserId: actor.userId,
+      actorName: getUserDisplayName(actor.profile),
+      action: "created",
+      entityType: "user",
+      entityId: user.id,
+      entityLabel: getUserDisplayName(user),
+      summary: "Dodał użytkownika",
+      href: userActivityHref(),
+    });
 
     return NextResponse.json({ user }, { status: 201 });
   } catch (error) {
