@@ -270,8 +270,13 @@ export function EmailSettingsView() {
                     } satisfies NotificationRoutingRule);
 
                   function patchRule(next: NotificationRoutingRule) {
-                    const others = settings.routing.filter((entry) => entry.id !== next.id);
-                    setSettings({ ...settings, routing: [...others, next] });
+                    setSettings((prev) => {
+                      if (!prev) {
+                        return prev;
+                      }
+                      const others = prev.routing.filter((entry) => entry.id !== next.id);
+                      return { ...prev, routing: [...others, next] };
+                    });
                     setSaved(false);
                   }
 

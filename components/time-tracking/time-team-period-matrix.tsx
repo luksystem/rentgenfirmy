@@ -302,9 +302,9 @@ export function TimeTeamPeriodMatrix({
   }, [ensurePlanningLeaveRequests]);
 
   const totalsByDate = detail?.totalsByDate ?? {};
-  const dates = detail?.dates ?? [];
   const periodType = detail?.periodType ?? "week";
 
+  const dates = useMemo(() => detail?.dates ?? [], [detail?.dates]);
   const datesMeta = useMemo(() => dates.map(buildMatrixDateMeta), [dates]);
 
   const visibleEmployees = useMemo(() => detail?.employees ?? [], [detail]);
