@@ -193,13 +193,13 @@ export default function SettingsPage() {
       <Card className="mb-6 border border-border/80">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
           <div>
-            <p className="font-medium text-foreground">Powiadomienia push</p>
+            <p className="font-medium text-foreground">Powiadomienia</p>
             <p className="mt-1 text-sm text-muted">
-              Włącz powiadomienia systemowe na tym urządzeniu, wyślij test i zarządzaj subskrypcją.
+              Push na urządzeniu, test e-mail (Resend) i zarządzanie subskrypcją.
             </p>
           </div>
           <Button variant="secondary" asChild>
-            <Link href="/ustawienia/powiadomienia">Otwórz powiadomienia push</Link>
+            <Link href="/ustawienia/powiadomienia">Otwórz powiadomienia</Link>
           </Button>
         </CardContent>
       </Card>

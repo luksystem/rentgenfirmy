@@ -1,6 +1,7 @@
 "use client";
 
-import { Bell, BellOff, BellRing, Smartphone } from "lucide-react";
+import { useState } from "react";
+import { Bell, BellOff, BellRing, Mail, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
@@ -19,14 +20,82 @@ export function PushNotificationsSettings() {
     unsubscribe,
     sendTestNotification,
   } = usePushNotifications();
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
+
+  async function sendTestEmail() {
+    setEmailLoading(true);
+    setEmailError(null);
+    setEmailSuccess(null);
+
+    try {
+      const response = await fetch("/api/email/test", { method: "POST" });
+      const payload = (await response.json()) as { error?: string; to?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się wysłać testowego e-maila.");
+      }
+
+      setEmailSuccess(
+        payload.to
+          ? `Wysłano testowy e-mail na ${payload.to}.`
+          : "Wysłano testowy e-mail.",
+      );
+    } catch (testError) {
+      setEmailError(
+        testError instanceof Error
+          ? testError.message
+          : "Nie udało się wysłać testowego e-maila.",
+      );
+    } finally {
+      setEmailLoading(false);
+    }
+  }
+
+  function renderEmailTest(withDivider: boolean) {
+    return (
+      <div className={`grid gap-2 ${withDivider ? "border-t border-border/60 pt-4" : ""}`}>
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 rounded-lg bg-surface-muted p-2">
+            <Mail className="h-5 w-5 text-accent" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-foreground">Test e-mail (Resend)</p>
+            <p className="mt-1 text-sm text-muted">
+              Wyśle wiadomość testową na adres z Twojego profilu. Wymaga{" "}
+              <code className="text-xs">RESEND_API_KEY</code> i{" "}
+              <code className="text-xs">EMAIL_FROM</code>.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            disabled={emailLoading}
+            onClick={() => void sendTestEmail()}
+          >
+            {emailLoading ? "Wysyłanie..." : "Wyślij testowy e-mail"}
+          </Button>
+        </div>
+        {emailSuccess ? <p className="text-sm text-emerald-300">{emailSuccess}</p> : null}
+        {emailError ? <p className="text-sm text-red-400">{emailError}</p> : null}
+      </div>
+    );
+  }
 
   if (!isSupported) {
     return (
-      <Card className="border border-border/80">
-        <CardContent className="py-5 text-sm text-muted">
-          Ta przeglądarka nie obsługuje powiadomień Web Push.
-        </CardContent>
-      </Card>
+      <div className="grid gap-4">
+        <Card className="border border-border/80">
+          <CardContent className="py-5 text-sm text-muted">
+            Ta przeglądarka nie obsługuje powiadomień Web Push.
+          </CardContent>
+        </Card>
+        <Card className="border border-border/80">
+          <CardContent className="grid gap-4 py-5">{renderEmailTest(false)}</CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -121,6 +190,8 @@ export function PushNotificationsSettings() {
         )}
 
         {error ? <p className="text-sm text-red-400">{error}</p> : null}
+
+        {renderEmailTest(true)}
       </CardContent>
     </Card>
   );

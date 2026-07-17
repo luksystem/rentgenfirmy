@@ -6,8 +6,8 @@ export default function PushNotificationsSettingsPage() {
     <>
       <PageHeader
         eyebrow="Ustawienia"
-        title="Powiadomienia push"
-        description="Zarządzaj powiadomieniami systemowymi na tym urządzeniu. Subskrypcja pozostaje aktywna po wylogowaniu — powiadomienia trafiają na Twoje konto, nie na sesję przeglądarki."
+        title="Powiadomienia"
+        description="Zarządzaj powiadomieniami push na tym urządzeniu oraz wyślij testowy e-mail (Resend)."
       />
       <PushNotificationsSettings />
     </>
