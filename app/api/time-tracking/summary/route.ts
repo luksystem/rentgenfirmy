@@ -1,0 +1,36 @@
+import { NextResponse } from "next/server";
+import { requireAuthenticatedProfile } from "@/lib/auth/api-auth";
+import { jsonError } from "@/lib/auth/http-error";
+import type { TimesheetPeriodType } from "@/lib/time-tracking/types";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { fetchTimesheetSummaryServer } from "@/lib/supabase/time-sheets-server";
+
+function parsePeriodType(value: string | null): TimesheetPeriodType {
+  return value === "month" ? "month" : "week";
+}
+
+export async function GET(request: Request) {
+  try {
+    const { profile } = await requireAuthenticatedProfile();
+    const admin = getSupabaseAdmin();
+    const url = new URL(request.url);
+
+    const dateFrom = url.searchParams.get("dateFrom");
+    const dateTo = url.searchParams.get("dateTo");
+    if (!dateFrom || !dateTo) {
+      return NextResponse.json({ error: "Podaj zakres dat zestawienia." }, { status: 400 });
+    }
+
+    const summary = await fetchTimesheetSummaryServer(admin, profile, {
+      userId: url.searchParams.get("userId") ?? undefined,
+      dateFrom,
+      dateTo,
+      periodType: parsePeriodType(url.searchParams.get("periodType")),
+      ensureTimesheet: url.searchParams.get("ensure") === "1",
+    });
+
+    return NextResponse.json({ summary });
+  } catch (error) {
+    return jsonError(error);
+  }
+}

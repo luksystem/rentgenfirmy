@@ -49,3 +49,31 @@ export function formatTimesheetPeriodLabel(range: Pick<TimesheetPeriodRange, "pe
 
   return `${formatter.format(from).replace(/\.$/, "")} – ${formatter.format(to).replace(/\.$/, "")}`;
 }
+
+export function shiftTimesheetPeriod(
+  range: TimesheetPeriodRange,
+  direction: -1 | 1,
+): TimesheetPeriodRange {
+  const anchor = new Date(`${range.dateFrom}T12:00:00`);
+
+  if (range.periodType === "month") {
+    anchor.setMonth(anchor.getMonth() + direction);
+    return resolveTimesheetPeriod("month", anchor);
+  }
+
+  anchor.setDate(anchor.getDate() + direction * 7);
+  return resolveTimesheetPeriod("week", anchor);
+}
+
+export function eachDateInRange(dateFrom: string, dateTo: string): string[] {
+  const dates: string[] = [];
+  const cursor = new Date(`${dateFrom}T12:00:00`);
+  const end = new Date(`${dateTo}T12:00:00`);
+
+  while (cursor <= end) {
+    dates.push(toDateInputValue(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return dates;
+}

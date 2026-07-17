@@ -7,6 +7,7 @@ import {
   canViewTeamTimesheets,
 } from "@/lib/time-tracking/permissions";
 import { collectTimesheetSubmitIssues } from "@/lib/time-tracking/timesheet-validation";
+import { buildTimesheetSummary, type TimesheetSummary } from "@/lib/time-tracking/timesheet-summary";
 import type {
   EnsureTimesheetInput,
   RejectTimesheetInput,
@@ -18,11 +19,13 @@ import type {
   TimesheetStatus,
   TimesheetView,
 } from "@/lib/time-tracking/types";
+import type { TeamTimesheetOverviewRow } from "@/lib/time-tracking/types";
 import {
   fetchActiveTimerServer,
   fetchTimeEntriesServer,
   fetchTimeTrackingMetaServer,
 } from "@/lib/supabase/time-tracking-server";
+import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
 
 type AdminClient = SupabaseClient;
 
@@ -437,4 +440,165 @@ export async function rejectTimesheetServer(
 
   const views = await attachTimesheetSummaries(admin, [mapTimesheetRow(data as TimeSheetRow)]);
   return views[0]!;
+}
+
+export type TimesheetSummaryQuery = {
+  userId?: string;
+  dateFrom: string;
+  dateTo: string;
+  periodType: TimesheetPeriodType;
+  ensureTimesheet?: boolean;
+};
+
+async function fetchTimesheetForPeriod(
+  admin: AdminClient,
+  userId: string,
+  input: Pick<TimesheetSummaryQuery, "dateFrom" | "dateTo" | "periodType">,
+): Promise<Timesheet | null> {
+  const { data, error } = await admin
+    .from("time_sheets")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("period_type", input.periodType)
+    .eq("date_from", input.dateFrom)
+    .eq("date_to", input.dateTo)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data ? mapTimesheetRow(data as TimeSheetRow) : null;
+}
+
+export async function fetchTimesheetSummaryServer(
+  admin: AdminClient,
+  actor: UserProfile,
+  query: TimesheetSummaryQuery,
+): Promise<TimesheetSummary> {
+  const targetUserId = query.userId ?? actor.id;
+  if (targetUserId !== actor.id && !canViewTeamTimesheets(actor.role)) {
+    throw new Error("Brak uprawnień do podglądu zestawienia innej osoby.");
+  }
+
+  const [meta, entries] = await Promise.all([
+    fetchTimeTrackingMetaServer(admin),
+    fetchTimeEntriesServer(admin, actor, {
+      userId: targetUserId,
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
+    }),
+  ]);
+
+  let timesheetView: TimesheetView | null = null;
+
+  if (query.ensureTimesheet && targetUserId === actor.id) {
+    timesheetView = await ensureTimesheetServer(admin, actor, {
+      userId: targetUserId,
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
+      periodType: query.periodType,
+    });
+  } else {
+    const existing = await fetchTimesheetForPeriod(admin, targetUserId, query);
+    if (existing) {
+      const views = await attachTimesheetSummaries(admin, [existing]);
+      timesheetView = views[0] ?? null;
+    }
+  }
+
+  return buildTimesheetSummary(
+    timesheetView,
+    entries,
+    query.dateFrom,
+    query.dateTo,
+    meta.entryTypes,
+  );
+}
+
+export async function fetchTeamTimesheetOverviewServer(
+  admin: AdminClient,
+  actor: UserProfile,
+  query: Pick<TimesheetSummaryQuery, "dateFrom" | "dateTo" | "periodType">,
+): Promise<TeamTimesheetOverviewRow[]> {
+  if (!canViewTeamTimesheets(actor.role)) {
+    throw new Error("Brak uprawnień do podglądu zestawienia zespołu.");
+  }
+
+  const [profiles, meta] = await Promise.all([
+    fetchTeamProfilesServer(),
+    fetchTimeTrackingMetaServer(admin),
+  ]);
+
+  const userIds = profiles.map((profile) => profile.id);
+  if (userIds.length === 0) {
+    return [];
+  }
+
+  const typeMeta = new Map(meta.entryTypes.map((item) => [item.id, item]));
+
+  const [entriesResult, sheetsResult] = await Promise.all([
+    admin
+      .from("time_entries")
+      .select("id, user_id, date, duration_minutes, status, entry_type_id")
+      .in("user_id", userIds)
+      .gte("date", query.dateFrom)
+      .lte("date", query.dateTo),
+    admin
+      .from("time_sheets")
+      .select("*")
+      .in("user_id", userIds)
+      .eq("period_type", query.periodType)
+      .eq("date_from", query.dateFrom)
+      .eq("date_to", query.dateTo),
+  ]);
+
+  if (entriesResult.error) {
+    throw new Error(entriesResult.error.message);
+  }
+  if (sheetsResult.error) {
+    throw new Error(sheetsResult.error.message);
+  }
+
+  const sheetsByUser = new Map(
+    (sheetsResult.data ?? []).map((row) => [row.user_id as string, mapTimesheetRow(row as TimeSheetRow)]),
+  );
+
+  return profiles
+    .map((profile) => {
+      const userEntries = (entriesResult.data ?? []).filter((row) => row.user_id === profile.id);
+      let totalMinutes = 0;
+      let workMinutes = 0;
+      let draftEntryCount = 0;
+      let submittedEntryCount = 0;
+      let approvedEntryCount = 0;
+
+      for (const row of userEntries) {
+        const minutes = row.duration_minutes as number;
+        totalMinutes += minutes;
+        const type = typeMeta.get(row.entry_type_id as string);
+        if (!type?.countsAsAbsence && (type?.countsAsWork ?? true)) {
+          workMinutes += minutes;
+        }
+        if (row.status === "draft") draftEntryCount += 1;
+        if (row.status === "submitted") submittedEntryCount += 1;
+        if (row.status === "approved") approvedEntryCount += 1;
+      }
+
+      const sheet = sheetsByUser.get(profile.id);
+
+      return {
+        userId: profile.id,
+        userDisplayName: getUserDisplayName(profile),
+        timesheetId: sheet?.id ?? null,
+        status: sheet?.status ?? "draft",
+        totalMinutes,
+        workMinutes,
+        entryCount: userEntries.length,
+        draftEntryCount,
+        submittedEntryCount,
+        approvedEntryCount,
+      } satisfies TeamTimesheetOverviewRow;
+    })
+    .sort((a, b) => a.userDisplayName.localeCompare(b.userDisplayName, "pl"));
 }

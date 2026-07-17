@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { formatDurationMinutes, parseDurationInput } from "@/lib/time-tracking/format";
 import { findOverlapMessage, rangesOverlap } from "@/lib/time-tracking/overlap";
 import { buildWeekTimeReport } from "@/lib/time-tracking/reports";
-import { resolveTimesheetPeriod } from "@/lib/time-tracking/timesheet-period";
+import { resolveTimesheetPeriod, shiftTimesheetPeriod } from "@/lib/time-tracking/timesheet-period";
+import { buildTimesheetSummary } from "@/lib/time-tracking/timesheet-summary";
 import {
   canApproveTimesheetStatus,
   canSubmitTimesheetStatus,
@@ -137,6 +138,61 @@ describe("timesheet period", () => {
     const range = resolveTimesheetPeriod("month", new Date("2026-07-15T12:00:00"));
     expect(range.dateFrom).toBe("2026-07-01");
     expect(range.dateTo).toBe("2026-07-31");
+  });
+
+  it("shifts week and month periods", () => {
+    const week = resolveTimesheetPeriod("week", new Date("2026-07-15T12:00:00"));
+    expect(shiftTimesheetPeriod(week, 1).dateFrom).toBe("2026-07-20");
+
+    const month = resolveTimesheetPeriod("month", new Date("2026-07-15T12:00:00"));
+    expect(shiftTimesheetPeriod(month, 1).dateFrom).toBe("2026-08-01");
+    expect(shiftTimesheetPeriod(month, -1).dateFrom).toBe("2026-06-01");
+  });
+});
+
+describe("timesheet summary", () => {
+  it("builds daily breakdown for each day in range", () => {
+    const entries = [
+      {
+        id: "1",
+        date: "2026-07-14",
+        durationMinutes: 480,
+        categoryId: "c1",
+        categoryName: "Projekt",
+        categoryColor: "#000",
+        entryTypeId: "t1",
+        entryTypeName: "Praca",
+        billable: true,
+      },
+      {
+        id: "2",
+        date: "2026-07-15",
+        durationMinutes: 60,
+        categoryId: "c1",
+        categoryName: "Projekt",
+        categoryColor: "#000",
+        entryTypeId: "t2",
+        entryTypeName: "Urlop",
+        billable: false,
+      },
+    ] as TimeEntryView[];
+
+    const summary = buildTimesheetSummary(
+      null,
+      entries,
+      "2026-07-13",
+      "2026-07-15",
+      [
+        { id: "t1", name: "Praca", countsAsWork: true, countsAsAbsence: false },
+        { id: "t2", name: "Urlop", countsAsWork: false, countsAsAbsence: true },
+      ],
+    );
+
+    expect(summary.dailyBreakdown).toHaveLength(3);
+    expect(summary.dailyBreakdown[0]?.totalMinutes).toBe(0);
+    expect(summary.dailyBreakdown[1]?.workMinutes).toBe(480);
+    expect(summary.dailyBreakdown[2]?.absenceMinutes).toBe(60);
+    expect(summary.report.totalMinutes).toBe(540);
   });
 });
 

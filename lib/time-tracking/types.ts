@@ -245,3 +245,16 @@ export function isEditableTimeEntryStatus(status: TimeEntryStatus) {
 export function isEditableTimesheetStatus(status: TimesheetStatus) {
   return status === "draft" || status === "rejected";
 }
+
+export type TeamTimesheetOverviewRow = {
+  userId: string;
+  userDisplayName: string;
+  timesheetId: string | null;
+  status: TimesheetStatus;
+  totalMinutes: number;
+  workMinutes: number;
+  entryCount: number;
+  draftEntryCount: number;
+  submittedEntryCount: number;
+  approvedEntryCount: number;
+};

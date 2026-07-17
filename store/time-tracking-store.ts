@@ -3,6 +3,8 @@
 import { create } from "zustand";
 import { hasFullAppAccess, type UserRole } from "@/lib/auth/types";
 import { endOfWeekSunday, startOfWeekMonday, toDateInputValue } from "@/lib/time-tracking/format";
+import { resolveTimesheetPeriod, type TimesheetPeriodRange } from "@/lib/time-tracking/timesheet-period";
+import type { TimesheetSummary } from "@/lib/time-tracking/timesheet-summary";
 import type {
   ActiveTimerView,
   CreateTimeEntryInput,
@@ -16,6 +18,7 @@ import type {
   TimeEntryView,
   TimesheetFilters,
   TimesheetView,
+  TeamTimesheetOverviewRow,
   TimeTrackingMeta,
   UpdateTimeEntryInput,
 } from "@/lib/time-tracking/types";
@@ -28,6 +31,8 @@ import {
   fetchActiveTimer,
   fetchTimeEntries,
   fetchTimeEntryLogs,
+  fetchTeamTimesheetOverview,
+  fetchTimesheetSummary,
   fetchTimesheets,
   fetchTimeTrackingMeta,
   pauseTimer,
@@ -48,6 +53,8 @@ const today = new Date();
 const defaultWeekStart = toDateInputValue(startOfWeekMonday(today));
 const defaultWeekEnd = toDateInputValue(endOfWeekSunday(startOfWeekMonday(today)));
 
+const defaultPeriod = resolveTimesheetPeriod("week");
+
 let metaPromise: Promise<TimeTrackingMeta> | null = null;
 let entriesPromise: Promise<TimeEntryView[]> | null = null;
 let entriesPromiseKey = "";
@@ -55,9 +62,21 @@ let timerPromise: Promise<ActiveTimerView | null> | null = null;
 let timesheetPromise: Promise<TimesheetView | null> | null = null;
 let timesheetPromiseKey = "";
 let pendingTimesheetsPromise: Promise<TimesheetView[]> | null = null;
+let summaryPromise: Promise<TimesheetSummary> | null = null;
+let summaryPromiseKey = "";
+let teamOverviewPromise: Promise<TeamTimesheetOverviewRow[]> | null = null;
+let teamOverviewPromiseKey = "";
 
 function buildEntriesKey(filters: TimeEntryFilters) {
   return JSON.stringify(filters);
+}
+
+function buildSummaryKey(period: TimesheetPeriodRange, userId?: string) {
+  return `${period.periodType}|${period.dateFrom}|${period.dateTo}|${userId ?? ""}`;
+}
+
+function buildTeamOverviewKey(period: TimesheetPeriodRange) {
+  return `${period.periodType}|${period.dateFrom}|${period.dateTo}`;
 }
 
 type TimeTrackingStore = {
@@ -82,11 +101,25 @@ type TimeTrackingStore = {
   pendingTimesheetsHydrated: boolean;
   pendingTimesheetsLoading: boolean;
 
+  timesheetPeriod: TimesheetPeriodRange;
+  timesheetUserId?: string;
+  summary: TimesheetSummary | null;
+  summaryHydrated: boolean;
+  summaryLoading: boolean;
+  teamOverview: TeamTimesheetOverviewRow[];
+  teamOverviewHydrated: boolean;
+  teamOverviewLoading: boolean;
+
   ensureMeta: (options?: EnsureTimeEntriesOptions) => Promise<TimeTrackingMeta>;
   ensureEntries: (options?: EnsureTimeEntriesOptions) => Promise<TimeEntryView[]>;
   ensureTimer: (options?: EnsureTimeEntriesOptions) => Promise<ActiveTimerView | null>;
   ensureCurrentTimesheet: (options?: EnsureTimeEntriesOptions) => Promise<TimesheetView | null>;
   ensurePendingTimesheets: (options?: EnsureTimeEntriesOptions) => Promise<TimesheetView[]>;
+  ensureTimesheetSummary: (options?: EnsureTimeEntriesOptions) => Promise<TimesheetSummary>;
+  ensureTeamOverview: (options?: EnsureTimeEntriesOptions) => Promise<TeamTimesheetOverviewRow[]>;
+  setTimesheetPeriod: (period: TimesheetPeriodRange) => void;
+  setTimesheetUserId: (userId?: string) => void;
+  submitSummaryTimesheet: (input?: SubmitTimesheetInput) => Promise<TimesheetView>;
   setFilters: (patch: Partial<TimeEntryFilters>) => void;
   createEntry: (input: CreateTimeEntryInput) => Promise<TimeEntryView>;
   updateEntry: (id: string, input: UpdateTimeEntryInput) => Promise<TimeEntryView>;
@@ -127,6 +160,15 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
   pendingTimesheets: [],
   pendingTimesheetsHydrated: false,
   pendingTimesheetsLoading: false,
+
+  timesheetPeriod: defaultPeriod,
+  timesheetUserId: undefined,
+  summary: null,
+  summaryHydrated: false,
+  summaryLoading: false,
+  teamOverview: [],
+  teamOverviewHydrated: false,
+  teamOverviewLoading: false,
 
   ensureMeta: async (options = {}) => {
     const { force = false, showLoading = !get().metaHydrated } = options;
@@ -295,6 +337,113 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
     return pendingTimesheetsPromise;
   },
 
+  ensureTimesheetSummary: async (options = {}) => {
+    const { force = false, showLoading = !get().summaryHydrated } = options;
+    const period = get().timesheetPeriod;
+    const userId = get().timesheetUserId;
+    const key = buildSummaryKey(period, userId);
+    const ensureSheet = !userId;
+
+    if (!force && get().summaryHydrated && summaryPromiseKey === key) {
+      return get().summary!;
+    }
+    if (!force && summaryPromise && summaryPromiseKey === key) {
+      return summaryPromise;
+    }
+
+    if (showLoading) {
+      set({ summaryLoading: true });
+    }
+
+    summaryPromiseKey = key;
+    summaryPromise = fetchTimesheetSummary(
+      {
+        dateFrom: period.dateFrom,
+        dateTo: period.dateTo,
+        periodType: period.periodType,
+        userId,
+      },
+      ensureSheet,
+    )
+      .then((summary) => {
+        set({ summary, summaryHydrated: true, summaryLoading: false });
+        summaryPromise = null;
+        return summary;
+      })
+      .catch((error) => {
+        set({ summaryLoading: false });
+        summaryPromise = null;
+        throw error;
+      });
+
+    return summaryPromise;
+  },
+
+  ensureTeamOverview: async (options = {}) => {
+    const { force = false, showLoading = !get().teamOverviewHydrated } = options;
+    const period = get().timesheetPeriod;
+    const key = buildTeamOverviewKey(period);
+
+    if (!force && get().teamOverviewHydrated && teamOverviewPromiseKey === key) {
+      return get().teamOverview;
+    }
+    if (!force && teamOverviewPromise && teamOverviewPromiseKey === key) {
+      return teamOverviewPromise;
+    }
+
+    if (showLoading) {
+      set({ teamOverviewLoading: true });
+    }
+
+    teamOverviewPromiseKey = key;
+    teamOverviewPromise = fetchTeamTimesheetOverview({
+      dateFrom: period.dateFrom,
+      dateTo: period.dateTo,
+      periodType: period.periodType,
+    })
+      .then((rows) => {
+        set({ teamOverview: rows, teamOverviewHydrated: true, teamOverviewLoading: false });
+        teamOverviewPromise = null;
+        return rows;
+      })
+      .catch((error) => {
+        set({ teamOverviewLoading: false });
+        teamOverviewPromise = null;
+        throw error;
+      });
+
+    return teamOverviewPromise;
+  },
+
+  setTimesheetPeriod: (period) => {
+    set({
+      timesheetPeriod: period,
+      summaryHydrated: false,
+      teamOverviewHydrated: false,
+    });
+  },
+
+  setTimesheetUserId: (userId) => {
+    set({
+      timesheetUserId: userId,
+      summaryHydrated: false,
+    });
+  },
+
+  submitSummaryTimesheet: async (input) => {
+    const summary = get().summary;
+    if (!summary?.timesheet) {
+      throw new Error("Brak arkusza czasu dla wybranego okresu.");
+    }
+    const timesheet = await submitTimesheet(summary.timesheet.id, input);
+    set({
+      summary: { ...summary, timesheet },
+      summaryHydrated: true,
+    });
+    await get().ensureTeamOverview({ force: true, showLoading: false });
+    return timesheet;
+  },
+
   setFilters: (patch) => {
     set((state) => ({
       filters: { ...state.filters, ...patch },
@@ -382,8 +531,13 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
       pendingTimesheets: state.pendingTimesheets.filter((item) => item.id !== id),
       currentTimesheet:
         state.currentTimesheet?.id === id ? timesheet : state.currentTimesheet,
+      summary:
+        state.summary?.timesheet?.id === id
+          ? { ...state.summary, timesheet }
+          : state.summary,
     }));
     await get().ensureEntries({ force: true, showLoading: false });
+    await get().ensureTeamOverview({ force: true, showLoading: false });
     return timesheet;
   },
 
@@ -393,8 +547,13 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
       pendingTimesheets: state.pendingTimesheets.filter((item) => item.id !== id),
       currentTimesheet:
         state.currentTimesheet?.id === id ? timesheet : state.currentTimesheet,
+      summary:
+        state.summary?.timesheet?.id === id
+          ? { ...state.summary, timesheet }
+          : state.summary,
     }));
     await get().ensureEntries({ force: true, showLoading: false });
+    await get().ensureTeamOverview({ force: true, showLoading: false });
     return timesheet;
   },
 
@@ -406,6 +565,10 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
     timesheetPromise = null;
     timesheetPromiseKey = "";
     pendingTimesheetsPromise = null;
+    summaryPromise = null;
+    summaryPromiseKey = "";
+    teamOverviewPromise = null;
+    teamOverviewPromiseKey = "";
     set({
       meta: null,
       metaHydrated: false,
@@ -417,6 +580,10 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
       timesheetHydrated: false,
       pendingTimesheets: [],
       pendingTimesheetsHydrated: false,
+      summary: null,
+      summaryHydrated: false,
+      teamOverview: [],
+      teamOverviewHydrated: false,
     });
   },
 }));

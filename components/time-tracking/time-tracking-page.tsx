@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -113,10 +114,15 @@ export function TimeTrackingPage() {
         title="Czas pracy"
         description="Rejestruj wykonany czas — jedno centralne miejsce ewidencji godzin pracy."
         action={
-          <Button onClick={openCreate}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            Dodaj czas
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/moja-praca/czas-pracy/arkusz">Arkusz czasu</Link>
+            </Button>
+            <Button onClick={openCreate}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Dodaj czas
+            </Button>
+          </div>
         }
       />
 

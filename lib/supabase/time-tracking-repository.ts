@@ -13,9 +13,11 @@ import type {
   TimeEntryView,
   TimesheetFilters,
   TimesheetView,
+  TeamTimesheetOverviewRow,
   TimeTrackingMeta,
   UpdateTimeEntryInput,
 } from "@/lib/time-tracking/types";
+import type { TimesheetSummary } from "@/lib/time-tracking/timesheet-summary";
 
 async function parseJsonResponse<T>(response: Response, fallbackError: string): Promise<T> {
   const payload = await response.json().catch(() => ({}));
@@ -46,6 +48,24 @@ function buildTimesheetQuery(filters: TimesheetFilters = {}, ensure = false): st
   if (ensure) params.set("ensure", "1");
   const query = params.toString();
   return query ? `?${query}` : "";
+}
+
+function buildSummaryQuery(
+  filters: {
+    dateFrom: string;
+    dateTo: string;
+    periodType: "week" | "month";
+    userId?: string;
+  },
+  ensure = false,
+): string {
+  const params = new URLSearchParams();
+  params.set("dateFrom", filters.dateFrom);
+  params.set("dateTo", filters.dateTo);
+  params.set("periodType", filters.periodType);
+  if (filters.userId) params.set("userId", filters.userId);
+  if (ensure) params.set("ensure", "1");
+  return `?${params.toString()}`;
 }
 
 export async function fetchTimeTrackingMeta(): Promise<TimeTrackingMeta> {
@@ -216,6 +236,45 @@ export async function ensureTimesheet(input: EnsureTimesheetInput): Promise<Time
     "Nie udało się przygotować arkusza czasu.",
   );
   return payload.timesheet;
+}
+
+export async function fetchTimesheetSummary(
+  filters: {
+    dateFrom: string;
+    dateTo: string;
+    periodType: "week" | "month";
+    userId?: string;
+  },
+  ensure = false,
+): Promise<TimesheetSummary> {
+  const response = await fetch(
+    `/api/time-tracking/summary${buildSummaryQuery(filters, ensure)}`,
+    { credentials: "include" },
+  );
+  const payload = await parseJsonResponse<{ summary: TimesheetSummary }>(
+    response,
+    "Nie udało się wczytać zestawienia czasu.",
+  );
+  return payload.summary;
+}
+
+export async function fetchTeamTimesheetOverview(filters: {
+  dateFrom: string;
+  dateTo: string;
+  periodType: "week" | "month";
+}): Promise<TeamTimesheetOverviewRow[]> {
+  const params = new URLSearchParams();
+  params.set("dateFrom", filters.dateFrom);
+  params.set("dateTo", filters.dateTo);
+  params.set("periodType", filters.periodType);
+  const response = await fetch(`/api/time-tracking/timesheets/team-overview?${params.toString()}`, {
+    credentials: "include",
+  });
+  const payload = await parseJsonResponse<{ rows: TeamTimesheetOverviewRow[] }>(
+    response,
+    "Nie udało się wczytać zestawienia zespołu.",
+  );
+  return payload.rows;
 }
 
 export async function submitTimesheet(
