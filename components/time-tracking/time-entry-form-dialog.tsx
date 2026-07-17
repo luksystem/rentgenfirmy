@@ -13,6 +13,7 @@ import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { ProjectSelectSearchable } from "@/components/goals/project-select-searchable";
 import { parseDurationInput } from "@/lib/time-tracking/format";
 import type { TimeEntryView } from "@/lib/time-tracking/types";
+import type { WorkMission } from "@/lib/supabase/work-missions-server";
 import { useAppStore } from "@/store/app-store";
 import { useTimeTrackingStore } from "@/store/time-tracking-store";
 
@@ -22,6 +23,7 @@ export type TimeEntryFormValues = {
   categoryId: string;
   entryTypeId: string;
   projectId: string;
+  missionId: string;
   description: string;
   billable: boolean;
   remoteWork: boolean;
@@ -35,6 +37,7 @@ function emptyForm(date: string, categoryId = "", entryTypeId = ""): TimeEntryFo
     categoryId,
     entryTypeId,
     projectId: "",
+    missionId: "",
     description: "",
     billable: false,
     remoteWork: false,
@@ -58,6 +61,7 @@ function entryToFormValues(entry: TimeEntryView): TimeEntryFormValues {
     categoryId: entry.categoryId,
     entryTypeId: entry.entryTypeId,
     projectId: entry.projectId ?? "",
+    missionId: entry.missionId ?? "",
     description: entry.description,
     billable: entry.billable,
     remoteWork: entry.remoteWork,
@@ -85,6 +89,7 @@ export function TimeEntryFormDialog({
   const clients = useAppStore((state) => state.clients);
 
   const [values, setValues] = useState<TimeEntryFormValues>(() => emptyForm(defaultDate));
+  const [missions, setMissions] = useState<WorkMission[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const defaultsAppliedRef = useRef(false);
 
@@ -143,6 +148,32 @@ export function TimeEntryFormDialog({
     }));
   }, [open, entry, defaultDate, categories, entryTypes]);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    let cancelled = false;
+    void fetch(`/api/time-tracking/missions?date=${encodeURIComponent(values.date)}`, {
+      credentials: "include",
+    })
+      .then(async (response) => {
+        const payload = (await response.json()) as { missions?: WorkMission[] };
+        if (!cancelled) {
+          setMissions(payload.missions ?? []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMissions([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, values.date]);
+
   function handleCategoryChange(categoryId: string) {
     const category = categories.find((item) => item.id === categoryId);
     setValues((current) => ({
@@ -173,6 +204,7 @@ export function TimeEntryFormDialog({
         description: values.description,
         billable: values.billable,
         projectId: values.projectId || null,
+        missionId: values.missionId || null,
         remoteWork: values.remoteWork,
         delegation: values.delegation,
       };
@@ -269,6 +301,24 @@ export function TimeEntryFormDialog({
               usePortal={false}
             />
           </div>
+
+          {missions.length > 0 ? (
+            <Field label="Misja / delegacja">
+              <Select
+                value={values.missionId}
+                onChange={(event) =>
+                  setValues((current) => ({ ...current, missionId: event.target.value }))
+                }
+              >
+                <option value="">— brak —</option>
+                {missions.map((mission) => (
+                  <option key={mission.id} value={mission.id}>
+                    {mission.title} ({mission.startDate} – {mission.endDate})
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : null}
 
           <Field label={selectedEntryType?.requiresDescription ? "Opis *" : "Opis"}>
             <Textarea

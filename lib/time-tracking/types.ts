@@ -97,6 +97,7 @@ export type CreateTimeEntryInput = {
   clientId?: string | null;
   workItemId?: string | null;
   serviceId?: string | null;
+  missionId?: string | null;
   remoteWork?: boolean;
   delegation?: boolean;
   userId?: string;
