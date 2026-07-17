@@ -18,6 +18,7 @@ import type {
   UpdateTimeEntryInput,
 } from "@/lib/time-tracking/types";
 import type { TimesheetSummary } from "@/lib/time-tracking/timesheet-summary";
+import type { TeamPeriodDetail } from "@/lib/time-tracking/team-period-detail";
 
 async function parseJsonResponse<T>(response: Response, fallbackError: string): Promise<T> {
   const payload = await response.json().catch(() => ({}));
@@ -275,6 +276,25 @@ export async function fetchTeamTimesheetOverview(filters: {
     "Nie udało się wczytać zestawienia zespołu.",
   );
   return payload.rows;
+}
+
+export async function fetchTeamPeriodDetail(filters: {
+  dateFrom: string;
+  dateTo: string;
+  periodType: "week" | "month";
+}): Promise<TeamPeriodDetail> {
+  const params = new URLSearchParams();
+  params.set("dateFrom", filters.dateFrom);
+  params.set("dateTo", filters.dateTo);
+  params.set("periodType", filters.periodType);
+  const response = await fetch(`/api/time-tracking/timesheets/team-detail?${params.toString()}`, {
+    credentials: "include",
+  });
+  const payload = await parseJsonResponse<{ detail: TeamPeriodDetail }>(
+    response,
+    "Nie udało się wczytać szczegółowego zestawienia zespołu.",
+  );
+  return payload.detail;
 }
 
 export async function submitTimesheet(

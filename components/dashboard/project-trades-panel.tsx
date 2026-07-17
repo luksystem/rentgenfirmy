@@ -406,8 +406,25 @@ export function ProjectTradesPanel({
               </div>
             </div>
             {trade.contactName || trade.email || trade.phone ? (
-              <p className="mt-2 break-words text-sm text-muted">
-                {[trade.contactName, trade.email, trade.phone].filter(Boolean).join(" · ")}
+              <p className="mt-2 flex flex-wrap items-baseline gap-x-1.5 gap-y-1 break-words text-sm text-muted">
+                {trade.contactName ? <span>{trade.contactName}</span> : null}
+                {trade.contactName && trade.email ? <span aria-hidden>·</span> : null}
+                {trade.email ? (
+                  <a href={`mailto:${trade.email}`} className="break-all text-accent hover:underline">
+                    {trade.email}
+                  </a>
+                ) : null}
+                {(trade.contactName || trade.email) && trade.phone ? (
+                  <span aria-hidden>·</span>
+                ) : null}
+                {trade.phone ? (
+                  <a
+                    href={`tel:${trade.phone.replace(/\s/g, "")}`}
+                    className="break-all text-accent hover:underline"
+                  >
+                    {trade.phone}
+                  </a>
+                ) : null}
               </p>
             ) : null}
             {trade.description ? (

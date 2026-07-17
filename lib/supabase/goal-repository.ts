@@ -125,8 +125,11 @@ export async function updateGoalProgress(
     throw new Error("Cel nie istnieje.");
   }
 
+  // Status „rozliczony” = cel domknięty — zawsze 100% realizacji.
+  const progressPercent = input.status === "settled" ? 100 : input.progressPercent;
+
   const nextGoal = await updateGoal(id, {
-    progressPercent: input.progressPercent,
+    progressPercent,
     status: input.status,
   });
 

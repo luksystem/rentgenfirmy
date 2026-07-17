@@ -42,6 +42,11 @@ import {
   updateContactRecord,
 } from "@/lib/supabase/contact-repository";
 import { fetchFieldOptions, saveFieldOptions } from "@/lib/supabase/settings-repository";
+import { fetchProjectActivitySettings } from "@/lib/supabase/project-activity-settings-repository";
+import {
+  defaultProjectActivitySettings,
+  type ProjectActivitySettings,
+} from "@/lib/project-activity/settings";
 import type { Contact, ContactInput } from "@/lib/contacts/types";
 import { formatPartyName } from "@/lib/party/display-name";
 import { sortClientsByLastName, sortContactsByLastName } from "@/lib/sort/party-and-project";
@@ -57,12 +62,14 @@ type AppState = {
   contacts: Contact[];
   interruptions: Interruption[];
   fieldOptions: FieldOptions;
+  projectActivitySettings: ProjectActivitySettings;
   projectsViewFilters: ProjectsViewFilters;
   isLoading: boolean;
   isInitialized: boolean;
   isSaving: boolean;
   error: string | null;
   initialize: () => Promise<void>;
+  setProjectActivitySettings: (settings: ProjectActivitySettings) => void;
   addProject: (project: ProjectInput) => Promise<void>;
   updateProject: (id: string, project: ProjectInput) => Promise<void>;
   setProjectStage: (projectId: string, stageTitle: string) => Promise<void>;
@@ -94,11 +101,16 @@ export const useAppStore = create<AppState>((set, get) => ({
   contacts: [],
   interruptions: [],
   fieldOptions: DEFAULT_FIELD_OPTIONS,
+  projectActivitySettings: defaultProjectActivitySettings(),
   projectsViewFilters: DEFAULT_PROJECTS_VIEW_FILTERS,
   isLoading: false,
   isInitialized: false,
   isSaving: false,
   error: null,
+
+  setProjectActivitySettings: (settings) => {
+    set({ projectActivitySettings: settings });
+  },
 
   initialize: async () => {
     if (get().isInitialized || get().isLoading) {
@@ -108,14 +120,22 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const [projects, clients, contacts, interruptions, fieldOptions, projectsViewFilters] =
-        await Promise.all([
+      const [
+        projects,
+        clients,
+        contacts,
+        interruptions,
+        fieldOptions,
+        projectsViewFilters,
+        projectActivitySettings,
+      ] = await Promise.all([
         fetchProjects(),
         fetchClients(),
         fetchContacts(),
         fetchInterruptions(),
         fetchFieldOptions(),
         fetchProjectsViewFilters(),
+        fetchProjectActivitySettings(),
       ]);
 
       set({
@@ -125,6 +145,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         interruptions,
         fieldOptions,
         projectsViewFilters,
+        projectActivitySettings,
         isInitialized: true,
         isLoading: false,
         error: null,

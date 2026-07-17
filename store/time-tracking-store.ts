@@ -5,6 +5,7 @@ import { hasFullAppAccess, type UserRole } from "@/lib/auth/types";
 import { endOfWeekSunday, startOfWeekMonday, toDateInputValue } from "@/lib/time-tracking/format";
 import { resolveTimesheetPeriod, type TimesheetPeriodRange } from "@/lib/time-tracking/timesheet-period";
 import type { TimesheetSummary } from "@/lib/time-tracking/timesheet-summary";
+import type { TeamPeriodDetail } from "@/lib/time-tracking/team-period-detail";
 import type {
   ActiveTimerView,
   CreateTimeEntryInput,
@@ -31,6 +32,7 @@ import {
   fetchActiveTimer,
   fetchTimeEntries,
   fetchTimeEntryLogs,
+  fetchTeamPeriodDetail,
   fetchTeamTimesheetOverview,
   fetchTimesheetSummary,
   fetchTimesheets,
@@ -66,6 +68,8 @@ let summaryPromise: Promise<TimesheetSummary> | null = null;
 let summaryPromiseKey = "";
 let teamOverviewPromise: Promise<TeamTimesheetOverviewRow[]> | null = null;
 let teamOverviewPromiseKey = "";
+let teamPeriodDetailPromise: Promise<TeamPeriodDetail> | null = null;
+let teamPeriodDetailPromiseKey = "";
 
 function buildEntriesKey(filters: TimeEntryFilters) {
   return JSON.stringify(filters);
@@ -88,6 +92,7 @@ type TimeTrackingStore = {
   entriesHydrated: boolean;
   entriesLoading: boolean;
   filters: TimeEntryFilters;
+  entriesPeriod: TimesheetPeriodRange;
 
   activeTimer: ActiveTimerView | null;
   timerHydrated: boolean;
@@ -109,6 +114,9 @@ type TimeTrackingStore = {
   teamOverview: TeamTimesheetOverviewRow[];
   teamOverviewHydrated: boolean;
   teamOverviewLoading: boolean;
+  teamPeriodDetail: TeamPeriodDetail | null;
+  teamPeriodDetailHydrated: boolean;
+  teamPeriodDetailLoading: boolean;
 
   ensureMeta: (options?: EnsureTimeEntriesOptions) => Promise<TimeTrackingMeta>;
   ensureEntries: (options?: EnsureTimeEntriesOptions) => Promise<TimeEntryView[]>;
@@ -117,8 +125,10 @@ type TimeTrackingStore = {
   ensurePendingTimesheets: (options?: EnsureTimeEntriesOptions) => Promise<TimesheetView[]>;
   ensureTimesheetSummary: (options?: EnsureTimeEntriesOptions) => Promise<TimesheetSummary>;
   ensureTeamOverview: (options?: EnsureTimeEntriesOptions) => Promise<TeamTimesheetOverviewRow[]>;
+  ensureTeamPeriodDetail: (options?: EnsureTimeEntriesOptions) => Promise<TeamPeriodDetail>;
   setTimesheetPeriod: (period: TimesheetPeriodRange) => void;
   setTimesheetUserId: (userId?: string) => void;
+  setEntriesPeriod: (period: TimesheetPeriodRange) => void;
   submitSummaryTimesheet: (input?: SubmitTimesheetInput) => Promise<TimesheetView>;
   setFilters: (patch: Partial<TimeEntryFilters>) => void;
   createEntry: (input: CreateTimeEntryInput) => Promise<TimeEntryView>;
@@ -148,6 +158,7 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
     dateFrom: defaultWeekStart,
     dateTo: defaultWeekEnd,
   },
+  entriesPeriod: defaultPeriod,
 
   activeTimer: null,
   timerHydrated: false,
@@ -169,6 +180,9 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
   teamOverview: [],
   teamOverviewHydrated: false,
   teamOverviewLoading: false,
+  teamPeriodDetail: null,
+  teamPeriodDetailHydrated: false,
+  teamPeriodDetailLoading: false,
 
   ensureMeta: async (options = {}) => {
     const { force = false, showLoading = !get().metaHydrated } = options;
@@ -281,7 +295,7 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
     const input: EnsureTimesheetInput = {
       dateFrom: filters.dateFrom,
       dateTo: filters.dateTo,
-      periodType: "week",
+      periodType: get().entriesPeriod.periodType,
     };
 
     timesheetPromise = ensureTimesheet(input)
@@ -317,7 +331,7 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
       dateFrom: filters.dateFrom,
       dateTo: filters.dateTo,
       status: "submitted",
-      periodType: "week",
+      periodType: get().entriesPeriod.periodType,
     })
       .then((timesheets) => {
         set({
@@ -415,11 +429,48 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
     return teamOverviewPromise;
   },
 
+  ensureTeamPeriodDetail: async (options = {}) => {
+    const { force = false, showLoading = !get().teamPeriodDetailHydrated } = options;
+    const period = get().timesheetPeriod;
+    const key = buildTeamOverviewKey(period);
+
+    if (!force && get().teamPeriodDetailHydrated && teamPeriodDetailPromiseKey === key) {
+      return get().teamPeriodDetail!;
+    }
+    if (!force && teamPeriodDetailPromise && teamPeriodDetailPromiseKey === key) {
+      return teamPeriodDetailPromise;
+    }
+
+    if (showLoading) {
+      set({ teamPeriodDetailLoading: true });
+    }
+
+    teamPeriodDetailPromiseKey = key;
+    teamPeriodDetailPromise = fetchTeamPeriodDetail({
+      dateFrom: period.dateFrom,
+      dateTo: period.dateTo,
+      periodType: period.periodType,
+    })
+      .then((detail) => {
+        set({ teamPeriodDetail: detail, teamPeriodDetailHydrated: true, teamPeriodDetailLoading: false });
+        teamPeriodDetailPromise = null;
+        return detail;
+      })
+      .catch((error) => {
+        set({ teamPeriodDetailLoading: false });
+        teamPeriodDetailPromise = null;
+        throw error;
+      });
+
+    return teamPeriodDetailPromise;
+  },
+
   setTimesheetPeriod: (period) => {
     set({
       timesheetPeriod: period,
       summaryHydrated: false,
       teamOverviewHydrated: false,
+      teamPeriodDetailHydrated: false,
     });
   },
 
@@ -427,6 +478,20 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
     set({
       timesheetUserId: userId,
       summaryHydrated: false,
+    });
+  },
+
+  setEntriesPeriod: (period) => {
+    set({
+      entriesPeriod: period,
+      filters: {
+        ...get().filters,
+        dateFrom: period.dateFrom,
+        dateTo: period.dateTo,
+      },
+      entriesHydrated: false,
+      timesheetHydrated: false,
+      pendingTimesheetsHydrated: false,
     });
   },
 
@@ -441,6 +506,7 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
       summaryHydrated: true,
     });
     await get().ensureTeamOverview({ force: true, showLoading: false });
+    await get().ensureTeamPeriodDetail({ force: true, showLoading: false });
     return timesheet;
   },
 
@@ -538,6 +604,7 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
     }));
     await get().ensureEntries({ force: true, showLoading: false });
     await get().ensureTeamOverview({ force: true, showLoading: false });
+    await get().ensureTeamPeriodDetail({ force: true, showLoading: false });
     return timesheet;
   },
 
@@ -554,6 +621,7 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
     }));
     await get().ensureEntries({ force: true, showLoading: false });
     await get().ensureTeamOverview({ force: true, showLoading: false });
+    await get().ensureTeamPeriodDetail({ force: true, showLoading: false });
     return timesheet;
   },
 
@@ -569,6 +637,8 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
     summaryPromiseKey = "";
     teamOverviewPromise = null;
     teamOverviewPromiseKey = "";
+    teamPeriodDetailPromise = null;
+    teamPeriodDetailPromiseKey = "";
     set({
       meta: null,
       metaHydrated: false,
@@ -584,6 +654,8 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
       summaryHydrated: false,
       teamOverview: [],
       teamOverviewHydrated: false,
+      teamPeriodDetail: null,
+      teamPeriodDetailHydrated: false,
     });
   },
 }));

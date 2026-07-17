@@ -8,6 +8,7 @@ import {
   type ProjectTimeSummary,
 } from "@/lib/time-tracking/project-time-summary";
 import { assertUserCanAccessProjectServer } from "@/lib/supabase/project-access-server";
+import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
 import {
   assertEditableStatus,
   canCreateTimeEntryForUser,
@@ -397,6 +398,40 @@ export async function fetchTimeEntriesServer(
   }
 
   const { data, error } = await query;
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return resolveEntryViews(admin, (data ?? []) as TimeEntryRow[]);
+}
+
+export async function fetchTeamTimeEntriesServer(
+  admin: AdminClient,
+  actor: UserProfile,
+  filters: Pick<TimeEntryFilters, "dateFrom" | "dateTo">,
+): Promise<TimeEntryView[]> {
+  if (!canViewTeamTimeEntries(actor.role)) {
+    throw new Error("Brak uprawnień do podglądu czasu zespołu.");
+  }
+  if (!filters.dateFrom || !filters.dateTo) {
+    throw new Error("Podaj zakres dat.");
+  }
+
+  const profiles = await fetchTeamProfilesServer();
+  const userIds = profiles.map((profile) => profile.id);
+  if (userIds.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await admin
+    .from("time_entries")
+    .select("*")
+    .in("user_id", userIds)
+    .gte("date", filters.dateFrom)
+    .lte("date", filters.dateTo)
+    .order("date", { ascending: true })
+    .order("created_at", { ascending: true });
+
   if (error) {
     throw new Error(error.message);
   }

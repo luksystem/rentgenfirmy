@@ -147,6 +147,28 @@ export async function fetchProjectDocuments(options?: {
   return attachSignedUrlsToProjectDocuments(documents);
 }
 
+async function resolveClientIdForProject(
+  projectId: string | null | undefined,
+  fallbackClientId: string | null | undefined,
+): Promise<string | null> {
+  if (!projectId) {
+    return fallbackClientId ?? null;
+  }
+
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("projects")
+    .select("client_id")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data?.client_id as string | null | undefined) ?? fallbackClientId ?? null;
+}
+
 export async function createProjectDocument(
   input: ProjectDocumentInput,
   createdByName: string,
@@ -158,6 +180,13 @@ export async function createProjectDocument(
   if (!normalized.title) {
     throw new Error("Podaj tytuł dokumentu.");
   }
+  if (!normalized.projectId) {
+    throw new Error(
+      "Dokument musi być przypisany do projektu (widok klienta i podpinanie w procesie).",
+    );
+  }
+
+  const clientId = await resolveClientIdForProject(normalized.projectId, normalized.clientId);
 
   const supabase = getSupabase();
   const now = new Date().toISOString();
@@ -182,7 +211,7 @@ export async function createProjectDocument(
     .insert({
       id: documentId,
       project_id: normalized.projectId,
-      client_id: normalized.clientId,
+      client_id: clientId,
       category: normalized.category,
       title: normalized.title,
       description: normalized.description ?? "",
@@ -206,6 +235,45 @@ export async function createProjectDocument(
   const [withUrl] = await attachSignedUrlsToProjectDocuments([
     rowToProjectDocument(data as DocumentRow),
   ]);
+  void import("@/lib/project-activity/touch-active").then(({ maybeActivateProjectFromActivity }) =>
+    maybeActivateProjectFromActivity(normalized.projectId),
+  );
+  return withUrl;
+}
+
+/** Przypisanie / poprawa powiązania dokumentu z projektem (i klientem). */
+export async function updateProjectDocumentLinks(
+  documentId: string,
+  input: { projectId: string; clientId?: string | null },
+) {
+  const projectId = input.projectId?.trim();
+  if (!projectId) {
+    throw new Error("Wybierz projekt.");
+  }
+
+  const clientId = await resolveClientIdForProject(projectId, input.clientId);
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("project_documents")
+    .update({
+      project_id: projectId,
+      client_id: clientId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", documentId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const [withUrl] = await attachSignedUrlsToProjectDocuments([
+    rowToProjectDocument(data as DocumentRow),
+  ]);
+  void import("@/lib/project-activity/touch-active").then(({ maybeActivateProjectFromActivity }) =>
+    maybeActivateProjectFromActivity(projectId),
+  );
   return withUrl;
 }
 

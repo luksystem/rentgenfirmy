@@ -80,53 +80,57 @@ export function GoalBoardHub() {
 
   return (
     <div className="grid gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
+      <div className="grid gap-3">
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
+          {isAdmin ? <CreateGoalBoardKindDialog /> : null}
+          <CreateGoalBoardDialog boardKinds={boardKinds} />
+        </div>
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] md:flex-wrap md:overflow-visible [&::-webkit-scrollbar]:hidden">
+          <Link
+            href="/tablice-celow/przeglad"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3.5 py-2 text-sm font-medium text-emerald-300 transition hover:border-emerald-400/60 hover:bg-emerald-500/25"
+          >
+            <ClipboardList className="h-4 w-4" />
+            Przegląd celów
+          </Link>
           <Link
             href="/tablice-celow/zbiorcza"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
           >
             <LayoutGrid className="h-4 w-4" />
             Widok zbiorczy
           </Link>
           <Link
             href="/tablice-celow/metodologie"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
           >
             <BookOpen className="h-4 w-4" />
             Biblioteka metodologii
           </Link>
           <Link
             href="/tablice-celow/podsumowanie"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
           >
             <BarChart3 className="h-4 w-4" />
             Podsumowanie
           </Link>
           <Link
             href="/tablice-celow/historia"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
           >
             <History className="h-4 w-4" />
             Historia i wnioski
           </Link>
           <Link
             href="/tablice-celow/asystent"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
           >
             <Sparkles className="h-4 w-4" />
             Asystent wyznaczania celów
           </Link>
           <Link
-            href="/tablice-celow/przeglad"
-            className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3.5 py-2 text-sm font-medium text-emerald-300 transition hover:border-emerald-400/60 hover:bg-emerald-500/25"
-          >
-            <ClipboardList className="h-4 w-4" />
-            Przegląd celów
-          </Link>
-          <Link
             href="/tablice-celow/raporty"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
           >
             <FileText className="h-4 w-4" />
             Raporty
@@ -134,16 +138,12 @@ export function GoalBoardHub() {
           {isAdmin ? (
             <Link
               href="/tablice-celow/ustawienia"
-              className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
+              className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
             >
               <Settings className="h-4 w-4" />
               Ustawienia
             </Link>
           ) : null}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {isAdmin ? <CreateGoalBoardKindDialog /> : null}
-          <CreateGoalBoardDialog boardKinds={boardKinds} />
         </div>
       </div>
 

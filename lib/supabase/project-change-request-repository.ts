@@ -105,7 +105,11 @@ export async function createProjectChangeRequest(
     throw new Error(error.message);
   }
 
-  return rowToChangeRequest(data as ChangeRequestRow);
+  const created = rowToChangeRequest(data as ChangeRequestRow);
+  void import("@/lib/project-activity/touch-active").then(({ maybeActivateProjectFromActivity }) =>
+    maybeActivateProjectFromActivity(created.projectId),
+  );
+  return created;
 }
 
 export async function updateProjectChangeRequestDraft(
@@ -167,7 +171,11 @@ export async function submitProjectChangeRequestForClient(changeRequestId: strin
     throw new Error(error.message);
   }
 
-  return rowToChangeRequest(data as ChangeRequestRow);
+  const submitted = rowToChangeRequest(data as ChangeRequestRow);
+  void import("@/lib/project-activity/touch-active").then(({ maybeActivateProjectFromActivity }) =>
+    maybeActivateProjectFromActivity(submitted.projectId),
+  );
+  return submitted;
 }
 
 export async function setChangeRequestPublicEnabled(changeRequestId: string, enabled: boolean) {
@@ -215,7 +223,11 @@ export async function respondToProjectChangeRequest(
     throw new Error(error.message);
   }
 
-  return rowToChangeRequest(data as ChangeRequestRow);
+  const responded = rowToChangeRequest(data as ChangeRequestRow);
+  void import("@/lib/project-activity/touch-active").then(({ maybeActivateProjectFromActivity }) =>
+    maybeActivateProjectFromActivity(responded.projectId),
+  );
+  return responded;
 }
 
 export async function cancelProjectChangeRequest(changeRequestId: string) {

@@ -36,7 +36,7 @@ function NewDocumentPageContent() {
       <PageHeader
         eyebrow="Dokumentacja"
         title={title}
-        description="Dołącz zdjęcie, skan lub PDF i przypisz do klienta lub projektu."
+        description="Dołącz zdjęcie, skan lub PDF i przypisz do projektu — wtedy będzie widoczny u klienta i w procesie."
       />
       <ProjectDocumentForm
         initialClientId={clientId}

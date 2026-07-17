@@ -4,11 +4,13 @@ import {
   normalizeGoalModuleSettings,
   type GoalModuleSettings,
 } from "@/lib/goals/module-settings";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getSupabase } from "@/lib/supabase/client";
 
-export async function fetchGoalModuleSettings(): Promise<GoalModuleSettings> {
-  const supabase = getSupabase();
-  const { data, error } = await supabase
+async function readGoalModuleSettingsFrom(
+  client: ReturnType<typeof getSupabase> | ReturnType<typeof getSupabaseAdmin>,
+): Promise<GoalModuleSettings> {
+  const { data, error } = await client
     .from("app_settings")
     .select("data")
     .eq("id", GOALS_MODULE_SETTINGS_ID)
@@ -23,6 +25,15 @@ export async function fetchGoalModuleSettings(): Promise<GoalModuleSettings> {
   }
 
   return normalizeGoalModuleSettings(data.data);
+}
+
+export async function fetchGoalModuleSettings(): Promise<GoalModuleSettings> {
+  return readGoalModuleSettingsFrom(getSupabase());
+}
+
+/** Wariant serwerowy (API / admin) — bez klienta przeglądarkowego. */
+export async function fetchGoalModuleSettingsAdmin(): Promise<GoalModuleSettings> {
+  return readGoalModuleSettingsFrom(getSupabaseAdmin());
 }
 
 export async function saveGoalModuleSettings(settings: GoalModuleSettings): Promise<GoalModuleSettings> {

@@ -113,7 +113,11 @@ export async function upsertServiceRecord(service: ServiceRecord): Promise<Servi
     throw new Error(error.message);
   }
 
-  return rowToService(data);
+  const saved = rowToService(data);
+  void import("@/lib/project-activity/touch-active").then(({ maybeActivateProjectFromActivity }) =>
+    maybeActivateProjectFromActivity(saved.projectId),
+  );
+  return saved;
 }
 
 export async function deleteServiceRecord(id: string): Promise<void> {

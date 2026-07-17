@@ -26,11 +26,7 @@ import {
   uniqueSeriesKeys,
 } from "@/lib/viz/chart-series";
 import { normalizeChartConfig, type VizDashboardChart, type VizHistoryPoint } from "@/lib/viz/chart-types";
-import {
-  fromDateTimeLocalValue,
-  resolveChartTimeRange,
-  toDateTimeLocalValue,
-} from "@/lib/viz/chart-time-range";
+import { resolveChartTimeRange } from "@/lib/viz/chart-time-range";
 import { LIVE_POLL_MS } from "@/store/viz-dashboard-cache-store";
 import { useVizStore } from "@/store/viz-store";
 
@@ -121,7 +117,7 @@ export function VizChartRenderer({
     } finally {
       setIsLoading(false);
     }
-  }, [dashboardId, config.periodHours, config.projectIds, config.roleCodes, config.dateRangeMode, config.startAt, config.endAt, timeRange.endAt, timeRange.startAt]);
+  }, [dashboardId, config.periodHours, config.projectIds, config.roleCodes, config.dateRangeMode, timeRange.endAt, timeRange.startAt]);
 
   useEffect(() => {
     setIsLoading(true);

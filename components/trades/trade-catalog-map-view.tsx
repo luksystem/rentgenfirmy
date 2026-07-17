@@ -142,14 +142,24 @@ export function TradeCatalogMapView({ items }: { items: TradeCatalogItem[] }) {
                   ) : null}
                   {entry.item.email ? (
                     <p className="flex items-center gap-1 text-xs">
-                      <Mail className="h-3 w-3" />
-                      {entry.item.email}
+                      <Mail className="h-3 w-3 shrink-0" />
+                      <a
+                        href={`mailto:${entry.item.email}`}
+                        className="break-all text-accent hover:underline"
+                      >
+                        {entry.item.email}
+                      </a>
                     </p>
                   ) : null}
                   {entry.item.phone ? (
                     <p className="flex items-center gap-1 text-xs">
-                      <Phone className="h-3 w-3" />
-                      {entry.item.phone}
+                      <Phone className="h-3 w-3 shrink-0" />
+                      <a
+                        href={`tel:${entry.item.phone.replace(/\s/g, "")}`}
+                        className="break-all text-accent hover:underline"
+                      >
+                        {entry.item.phone}
+                      </a>
                     </p>
                   ) : null}
                 </div>

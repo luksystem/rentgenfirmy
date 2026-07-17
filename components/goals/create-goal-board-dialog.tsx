@@ -47,7 +47,7 @@ export function CreateGoalBoardDialog({ boardKinds }: { boardKinds: GoalBoardKin
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button">
+        <Button type="button" className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           Nowa tablica
         </Button>

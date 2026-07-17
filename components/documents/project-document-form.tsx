@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ClientSelectWithCreate } from "@/components/client-select-with-create";
+import { ProjectSelectSearchable } from "@/components/goals/project-select-searchable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
@@ -33,7 +34,7 @@ type ProjectDocumentFormProps = {
   initialClientId?: string | null;
   initialProjectId?: string | null;
   initialCategory?: ProjectDocumentCategory;
-  /** Dokąd wrócić po zapisie/anulowaniu — np. do procesu lub zakładki „Dokumentacja”, z której otwarto formularz. */
+  /** Dokąd wrócić po zapisie/anulowaniu — np. do procesu lub zakładki „Dokumentacja”. */
   returnTo?: string | null;
 };
 
@@ -58,6 +59,18 @@ export function ProjectDocumentForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Gdy projekty doładują się później (quick-add), uzupełnij klienta z wybranego projektu.
+  useEffect(() => {
+    if (!form.projectId) {
+      return;
+    }
+    const project = projects.find((entry) => entry.id === form.projectId);
+    if (!project?.clientId || project.clientId === form.clientId) {
+      return;
+    }
+    setForm((current) => ({ ...current, clientId: project.clientId }));
+  }, [form.clientId, form.projectId, projects]);
+
   const filteredProjects = useMemo(() => {
     if (!form.clientId) {
       return projects;
@@ -65,10 +78,31 @@ export function ProjectDocumentForm({
     return projects.filter((project) => project.clientId === form.clientId);
   }, [form.clientId, projects]);
 
+  function resolveLinkedIds(input: ProjectDocumentInput) {
+    const projectId = input.projectId || null;
+    const project = projectId ? projects.find((entry) => entry.id === projectId) : null;
+    return {
+      projectId,
+      clientId: project?.clientId ?? input.clientId ?? null,
+    };
+  }
+
   async function save() {
-    const normalized = normalizeProjectDocumentInput(form);
+    const linked = resolveLinkedIds(form);
+    const normalized = normalizeProjectDocumentInput({
+      ...form,
+      projectId: linked.projectId,
+      clientId: linked.clientId,
+    });
+
     if (!normalized.title) {
       setError("Podaj tytuł dokumentu.");
+      return;
+    }
+    if (!normalized.projectId) {
+      setError(
+        "Wybierz projekt — bez projektu dokument nie pojawi się w module Klient ani w procesie.",
+      );
       return;
     }
     if (!file) {
@@ -145,30 +179,28 @@ export function ProjectDocumentForm({
               });
             }}
             onCreateClient={addClient}
-            emptyLabel="Bez klienta"
+            emptyLabel="Wszyscy klienci (filtr)"
           />
 
-          <Field label="Projekt">
-            <Select
-              value={form.projectId ?? ""}
-              onChange={(event) => {
-                const projectId = event.target.value || null;
-                const project = projects.find((entry) => entry.id === projectId);
-                setForm({
-                  ...form,
-                  projectId,
-                  clientId: project?.clientId ?? form.clientId,
-                });
-              }}
-            >
-              <option value="">Bez projektu</option>
-              {filteredProjects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
+          <ProjectSelectSearchable
+            projects={filteredProjects}
+            clients={clients}
+            value={form.projectId ?? null}
+            emptyLabel="Wybierz projekt…"
+            label="Projekt (wymagany)"
+            onChange={(projectId) => {
+              const project = projects.find((entry) => entry.id === projectId);
+              setForm({
+                ...form,
+                projectId,
+                clientId: project?.clientId ?? form.clientId,
+              });
+            }}
+          />
+          <p className="text-xs text-muted sm:col-span-2">
+            Dokument musi być przypisany do projektu, żeby był widoczny w dokumentacji klienta i do
+            podpięcia w procesie.
+          </p>
         </div>
 
         <Field label="Plik (PDF lub zdjęcie)">

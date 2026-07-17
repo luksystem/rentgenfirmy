@@ -57,7 +57,21 @@ export async function fetchInterruptions(): Promise<Interruption[]> {
 
 export async function createProject(input: ProjectInput): Promise<Project> {
   const supabase = getSupabase();
-  const payload = inputToProjectPayload(input, withAudit(input));
+  let nextInput = input;
+  try {
+    const { fetchProjectActivitySettings } = await import(
+      "@/lib/supabase/project-activity-settings-repository"
+    );
+    const activitySettings = await fetchProjectActivitySettings();
+    if (activitySettings.autoDetectActiveProjects) {
+      // Nowy projekt = start pracy; dalsze utrzymanie flagi robi auto-wykrywanie.
+      nextInput = { ...input, isActive: true };
+    }
+  } catch {
+    // brak ustawień nie blokuje tworzenia
+  }
+
+  const payload = inputToProjectPayload(nextInput, withAudit(nextInput));
   const { data, error } = await supabase
     .from("projects")
     .insert(projectToCreateInsert(payload))
@@ -77,7 +91,20 @@ export async function updateProjectRecord(
   existing: Project,
 ): Promise<Project> {
   const supabase = getSupabase();
-  const payload = inputToProjectPayload(input, withAudit(input, existing));
+  let nextInput = input;
+  try {
+    const { fetchProjectActivitySettings } = await import(
+      "@/lib/supabase/project-activity-settings-repository"
+    );
+    const activitySettings = await fetchProjectActivitySettings();
+    if (activitySettings.autoDetectActiveProjects) {
+      nextInput = { ...input, isActive: existing.isActive };
+    }
+  } catch {
+    // brak ustawień nie blokuje aktualizacji
+  }
+
+  const payload = inputToProjectPayload(nextInput, withAudit(nextInput, existing));
   const { data, error } = await supabase
     .from("projects")
     .update(projectToInsert(payload))

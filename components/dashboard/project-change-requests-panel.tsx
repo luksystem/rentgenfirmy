@@ -115,7 +115,7 @@ function ChangeRequestCard({
     if (!defaultExpanded || !cardRef.current) {
       return;
     }
-    cardRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    cardRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [defaultExpanded, changeRequest.id]);
 
   async function run(action: () => Promise<void>) {
@@ -128,41 +128,48 @@ function ChangeRequestCard({
   }
 
   return (
-    <div ref={cardRef}>
+    <div ref={cardRef} className="min-w-0 max-w-full">
       <AgreementCollapsibleShell
         title={meta.title}
         subtitle={meta.subtitle}
         statusLabel={meta.statusLabel}
         statusTone={meta.statusTone}
         defaultExpanded={defaultExpanded}
+        className="min-w-0"
         banner={
           isBlocking ? (
-            <div className="flex items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-1.5 text-xs font-medium text-rose-300">
-              <Lock className="h-3.5 w-3.5 shrink-0" />
-              {blockingStageLabel
-                ? `Blokuje etap „${blockingStageLabel}” do czasu akceptacji`
-                : "Blokuje kolejny etap procesu do czasu akceptacji"}
+            <div className="flex min-w-0 items-start gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-1.5 text-xs font-medium text-rose-300">
+              <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span className="min-w-0 break-words">
+                {blockingStageLabel
+                  ? `Blokuje etap „${blockingStageLabel}” do czasu akceptacji`
+                  : "Blokuje kolejny etap procesu do czasu akceptacji"}
+              </span>
             </div>
           ) : null
         }
       >
         {changeRequest.body ? (
-          <p className="break-words whitespace-pre-wrap text-sm text-muted">{changeRequest.body}</p>
+          <p className="max-h-40 overflow-y-auto break-words whitespace-pre-wrap text-sm text-muted sm:max-h-none sm:overflow-visible">
+            {changeRequest.body}
+          </p>
         ) : null}
 
-        {costLabel ? <p className="text-sm font-medium text-foreground">Koszt: {costLabel}</p> : null}
+        {costLabel ? (
+          <p className="break-words text-sm font-medium text-foreground">Koszt: {costLabel}</p>
+        ) : null}
         {changeRequest.costNote && costLabel !== changeRequest.costNote ? (
-          <p className="text-xs text-muted">{changeRequest.costNote}</p>
+          <p className="break-words text-xs text-muted">{changeRequest.costNote}</p>
         ) : null}
 
         {changeRequest.submittedAt ? (
-          <p className="text-xs text-muted">
+          <p className="break-words text-xs text-muted">
             Wysłano do klienta: {new Date(changeRequest.submittedAt).toLocaleString("pl-PL")}
           </p>
         ) : null}
 
         {changeRequest.clientResponseNote ? (
-          <p className="text-sm text-foreground">
+          <p className="break-words text-sm text-foreground">
             Odpowiedź klienta: <span className="text-muted">{changeRequest.clientResponseNote}</span>
           </p>
         ) : null}
@@ -209,23 +216,24 @@ function ChangeRequestCard({
         {mode === "team" && changeRequest.status === "pending_client" ? (
           <div className="grid gap-3">
             {changeRequest.publicToken && changeRequest.publicEnabled ? (
-              <div className="rounded-xl border border-dashed border-border/80 bg-surface-muted/15 p-3">
+              <div className="min-w-0 rounded-xl border border-dashed border-border/80 bg-surface-muted/15 p-3">
                 <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-foreground">
-                  <Link2 className="h-3.5 w-3.5" />
+                  <Link2 className="h-3.5 w-3.5 shrink-0" />
                   Publiczny link dla klienta
                 </p>
-                <p className="mb-2 text-[11px] text-muted">
+                <p className="mb-2 text-[11px] leading-relaxed text-muted">
                   Wyślij klientowi, jeśli nie korzysta z aplikacji. Po akceptacji lub odrzuceniu link
                   wygasa.
                 </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <code className="min-w-0 flex-1 truncate rounded-lg border border-border/60 bg-surface px-2 py-1.5 text-[11px] text-foreground">
+                <div className="grid min-w-0 gap-2">
+                  <code className="block max-w-full break-all rounded-lg border border-border/60 bg-surface px-2 py-1.5 text-[11px] leading-snug text-foreground">
                     {getChangeRequestPublicUrl(changeRequest.publicToken)}
                   </code>
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
+                    className="w-full sm:w-auto"
                     disabled={busy}
                     onClick={() => {
                       const url = getChangeRequestPublicUrl(changeRequest.publicToken!);
@@ -236,7 +244,7 @@ function ChangeRequestCard({
                     }}
                   >
                     <Copy className="mr-1.5 h-3.5 w-3.5" />
-                    Kopiuj
+                    Kopiuj link
                   </Button>
                 </div>
               </div>
@@ -301,19 +309,21 @@ function ChangeRequestCard({
         ) : null}
 
         {mode === "client" && changeRequest.status === "pending_client" ? (
-          <div className="grid gap-2">
-            <Field label="Uwagi (opcjonalnie)">
+          <div className="grid min-w-0 gap-2">
+            <Field label="Uwagi (opcjonalnie)" className="min-w-0">
               <Textarea
                 value={responseNote}
                 onChange={(event) => setResponseNote(event.target.value)}
                 rows={2}
                 placeholder="Komentarz do decyzji…"
+                className="max-w-full"
               />
             </Field>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid gap-2 sm:flex sm:flex-wrap">
               <Button
                 type="button"
                 size="sm"
+                className="w-full sm:w-auto"
                 disabled={busy}
                 onClick={() =>
                   void run(() =>
@@ -332,6 +342,7 @@ function ChangeRequestCard({
                 type="button"
                 size="sm"
                 variant="destructive"
+                className="w-full sm:w-auto"
                 disabled={busy}
                 onClick={() =>
                   void run(() =>
@@ -698,7 +709,7 @@ export function ProjectChangeRequestsPanel({
 
       {!isLoading && filtered.length === 0 ? <p className="text-sm text-muted">{emptyMessage}</p> : null}
 
-      <div className="grid gap-3">
+      <div className="grid min-w-0 max-w-full gap-3">
         {filtered.map((entry) => (
           <ChangeRequestCard
             key={entry.id}

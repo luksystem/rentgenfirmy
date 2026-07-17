@@ -12,8 +12,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { GoalSettlementGateDialog } from "@/components/goals/goal-settlement-gate-dialog";
+import { resolveReviewOutcomeLabel } from "@/lib/goals/module-settings";
 import {
-  GOAL_REVIEW_OUTCOME_LABELS,
   type Goal,
   type GoalReviewMeetingWithDetails,
   type GoalReviewOutcome,
@@ -48,6 +48,7 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
   const router = useRouter();
   const profile = useAuthStore((s) => s.profile);
   const teamProfiles = useGoalStore((s) => s.teamProfiles);
+  const reviewOutcomes = useGoalStore((s) => s.moduleSettings.reviewOutcomes);
   const goalsByBoard = useGoalStore((s) => s.goalsByBoard);
   const ensureBoardGoals = useGoalStore((s) => s.ensureBoardGoals);
   const upsertGoalInStore = useGoalStore((s) => s.upsertGoalInStore);
@@ -205,7 +206,7 @@ export function ReviewMeetingSession({ meetingId }: { meetingId: string }) {
           status: statusChanged ? goalStatus : undefined,
           progressPercent,
           authorId: profile?.id ?? null,
-          note: `Aktualizacja podczas przeglądu: ${GOAL_REVIEW_OUTCOME_LABELS[outcome]}`,
+          note: `Aktualizacja podczas przeglądu: ${resolveReviewOutcomeLabel(outcome, reviewOutcomes)}`,
         });
         upsertGoalInStore(updated);
       }

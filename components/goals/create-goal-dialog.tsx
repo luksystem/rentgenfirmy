@@ -66,7 +66,13 @@ function defaultPeriodEnd(periodType: GoalPeriodType) {
   return end.toISOString().slice(0, 10);
 }
 
-export function CreateGoalDialog({ boardId }: { boardId: string }) {
+export function CreateGoalDialog({
+  boardId,
+  triggerClassName,
+}: {
+  boardId: string;
+  triggerClassName?: string;
+}) {
   const profile = useAuthStore((state) => state.profile);
   const teamProfiles = useGoalStore((state) => state.teamProfiles);
   const methodologies = useGoalStore((state) => state.methodologies);
@@ -273,7 +279,7 @@ export function CreateGoalDialog({ boardId }: { boardId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button">
+        <Button type="button" size="sm" className={triggerClassName}>
           <Plus className="mr-2 h-4 w-4" />
           Nowy cel
         </Button>

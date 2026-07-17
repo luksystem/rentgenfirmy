@@ -5,6 +5,10 @@ import { buildWeekTimeReport } from "@/lib/time-tracking/reports";
 import { resolveTimesheetPeriod, shiftTimesheetPeriod } from "@/lib/time-tracking/timesheet-period";
 import { buildTimesheetSummary } from "@/lib/time-tracking/timesheet-summary";
 import {
+  buildProjectBreakdownForEntries,
+  buildTeamPeriodDetail,
+} from "@/lib/time-tracking/team-period-detail";
+import {
   canApproveTimesheetStatus,
   canSubmitTimesheetStatus,
   collectTimesheetSubmitIssues,
@@ -193,6 +197,111 @@ describe("timesheet summary", () => {
     expect(summary.dailyBreakdown[1]?.workMinutes).toBe(480);
     expect(summary.dailyBreakdown[2]?.absenceMinutes).toBe(60);
     expect(summary.report.totalMinutes).toBe(540);
+  });
+});
+
+describe("team period detail", () => {
+  it("builds project breakdown grouped by project with daily minutes", () => {
+    const entries = [
+      {
+        id: "1",
+        userId: "u1",
+        date: "2026-07-14",
+        durationMinutes: 240,
+        categoryId: "c1",
+        categoryName: "Projekt",
+        categoryColor: "#000",
+        entryTypeId: "t1",
+        entryTypeName: "Praca",
+        billable: true,
+        projectId: "p1",
+        projectName: "Alpha",
+        serviceId: null,
+        description: "Prace na budowie",
+      },
+      {
+        id: "2",
+        userId: "u1",
+        date: "2026-07-15",
+        durationMinutes: 120,
+        categoryId: "c1",
+        categoryName: "Projekt",
+        categoryColor: "#000",
+        entryTypeId: "t1",
+        entryTypeName: "Praca",
+        billable: false,
+        projectId: "p1",
+        projectName: "Alpha",
+        serviceId: null,
+        description: "",
+      },
+    ] as TimeEntryView[];
+
+    const projects = buildProjectBreakdownForEntries(entries, "2026-07-13", "2026-07-15", [
+      { id: "t1", countsAsWork: true, countsAsAbsence: false },
+    ]);
+
+    expect(projects).toHaveLength(1);
+    expect(projects[0]?.projectLabel).toBe("Alpha");
+    expect(projects[0]?.totalMinutes).toBe(360);
+    expect(projects[0]?.minutesByDate["2026-07-14"]).toBe(240);
+    expect(projects[0]?.entries).toHaveLength(2);
+  });
+
+  it("builds team matrix with daily totals per employee", () => {
+    const detail = buildTeamPeriodDetail({
+      dateFrom: "2026-07-14",
+      dateTo: "2026-07-15",
+      periodType: "week",
+      entryTypeMeta: [{ id: "t1", countsAsWork: true, countsAsAbsence: false }],
+      employees: [
+        {
+          userId: "u1",
+          userDisplayName: "Anna",
+          entries: [
+            {
+              id: "1",
+              userId: "u1",
+              date: "2026-07-14",
+              durationMinutes: 480,
+              categoryId: "c1",
+              categoryName: "Projekt",
+              categoryColor: "#000",
+              entryTypeId: "t1",
+              entryTypeName: "Praca",
+              billable: true,
+              projectId: "p1",
+              projectName: "Alpha",
+            },
+          ] as TimeEntryView[],
+        },
+        {
+          userId: "u2",
+          userDisplayName: "Bartek",
+          entries: [
+            {
+              id: "2",
+              userId: "u2",
+              date: "2026-07-15",
+              durationMinutes: 60,
+              categoryId: "c1",
+              categoryName: "Projekt",
+              categoryColor: "#000",
+              entryTypeId: "t1",
+              entryTypeName: "Praca",
+              billable: false,
+              projectId: null,
+              projectName: null,
+            },
+          ] as TimeEntryView[],
+        },
+      ],
+    });
+
+    expect(detail.dates).toEqual(["2026-07-14", "2026-07-15"]);
+    expect(detail.employees[0]?.minutesByDate["2026-07-14"]).toBe(480);
+    expect(detail.totalsByDate["2026-07-15"]).toBe(60);
+    expect(detail.totalMinutes).toBe(540);
   });
 });
 

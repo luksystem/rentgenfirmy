@@ -11,6 +11,8 @@
  * - Liczniki dashboardu: Aktywne / Nieaktywne
  * - Projekt może być np. Oczekujący + Nieaktywny — świadomie odłożony
  * - Przerwania w nieaktywnych projektach warto monitorować osobno
+ * - Opcjonalnie: auto-wykrywanie w Ustawienia → Projekty (aktywność z widoku klienta:
+ *   zmiany, ustalenia, oferty, czas pracy, dokumenty; okno ~30 dni + histereza ~45 dni)
  *
  * ETAP — flaga „Etap zamykający” na etapie szablonu procesu:
  * - Wskazuje fazę finalizacji (wdrożenie, odbiór itd.)
@@ -39,7 +41,7 @@
 export const PROJECT_RULES = {
   flowCategories: ["W trakcie", "Oczekujące", "Zamknięty"] as const,
   activeField:
-    "Checkbox Aktywny — czy zespół teraz pracuje nad projektem (niezależnie od statusu przepływu).",
+    "Checkbox Aktywny — czy zespół teraz pracuje nad projektem (niezależnie od statusu przepływu). Opcjonalnie auto-wykrywanie z aktywności w widoku klienta (~30 dni, histereza ~45 dni).",
   closingView:
     "Do zamknięcia = status W trakcie lub Oczekujące + aktywny etap procesu z flagą Etap zamykający (bez wymogu Aktywny).",
   waitingView: "Oczekujące = status przepływu z flagą Oczekujące.",

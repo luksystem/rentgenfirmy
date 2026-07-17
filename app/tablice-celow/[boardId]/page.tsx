@@ -21,10 +21,12 @@ export default function GoalBoardPage() {
         eyebrow={boardKind?.label ?? "Tablica celów"}
         title={board?.name ?? "Tablica celów"}
         description={board?.description || undefined}
+        headerClassName="mb-4 gap-3"
+        descriptionClassName="line-clamp-2 sm:line-clamp-none"
         action={
           <Link
             href="/tablice-celow"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-sm font-medium text-foreground transition hover:border-accent/40 sm:w-auto"
           >
             <ArrowLeft className="h-4 w-4" />
             Wszystkie tablice

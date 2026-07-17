@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ExternalLink,
   Eye,
@@ -27,6 +27,7 @@ import { isRichTextEmpty } from "@/lib/dashboard/meeting-notes-read";
 import type { ProjectMeetingNote, ProjectMeetingNoteInput } from "@/lib/dashboard/meeting-note-types";
 import type { ProjectDocument } from "@/lib/documents/types";
 import type { ProcessItemLink } from "@/lib/process/types";
+import { useListAutoRefresh } from "@/lib/hooks/use-list-auto-refresh";
 import { fetchProjectDocuments } from "@/lib/supabase/project-document-repository";
 import {
   fetchProjectMeetingNotes,
@@ -34,6 +35,7 @@ import {
   updateProjectMeetingNote,
 } from "@/lib/supabase/project-meeting-note-repository";
 import { cn, formatDateTime } from "@/lib/utils";
+import { useAppStore } from "@/store/app-store";
 import { useProcessStore } from "@/store/process-store";
 
 function emptyNoteInput(): ProjectMeetingNoteInput {
@@ -65,6 +67,9 @@ export function ProcessNoteLinksBoard({
   projectProcessItemId,
   actorName,
 }: ProcessNoteLinksBoardProps) {
+  const projectClientId = useAppStore(
+    (state) => state.projects.find((entry) => entry.id === projectId)?.clientId ?? null,
+  );
   const [returnUrl, setReturnUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -101,32 +106,21 @@ export function ProcessNoteLinksBoard({
     void ensureNoteLinks(projectId);
   }, [projectId, ensureNoteLinks]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      setLoadingLists(true);
-      try {
-        const [documentRows, noteRows] = await Promise.all([
-          fetchProjectDocuments({ projectId }),
-          fetchProjectMeetingNotes(projectId),
-        ]);
-        if (!cancelled) {
-          setDocuments(documentRows);
-          setNotes(noteRows);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingLists(false);
-        }
-      }
+  const refreshLists = useCallback(async () => {
+    setLoadingLists(true);
+    try {
+      const [documentRows, noteRows] = await Promise.all([
+        fetchProjectDocuments({ projectId }),
+        fetchProjectMeetingNotes(projectId),
+      ]);
+      setDocuments(documentRows);
+      setNotes(noteRows);
+    } finally {
+      setLoadingLists(false);
     }
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
   }, [projectId]);
+
+  useListAutoRefresh(refreshLists);
 
   const linkedDocumentIds = useMemo(
     () => new Set(links.filter((link) => link.documentId).map((link) => link.documentId as string)),
@@ -283,8 +277,8 @@ export function ProcessNoteLinksBoard({
   }
 
   const newDocumentHref = `/dokumenty/nowy?projectId=${encodeURIComponent(projectId)}${
-    returnUrl ? `&returnTo=${encodeURIComponent(returnUrl)}` : ""
-  }`;
+    projectClientId ? `&clientId=${encodeURIComponent(projectClientId)}` : ""
+  }${returnUrl ? `&returnTo=${encodeURIComponent(returnUrl)}` : ""}`;
 
   return (
     <div className="grid gap-4">

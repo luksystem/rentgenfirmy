@@ -211,6 +211,9 @@ export function ProjectForm({
 }) {
   const isClientDashboard = variant === "client-dashboard";
   const fieldOptions = useAppStore((state) => state.fieldOptions);
+  const autoDetectActiveProjects = useAppStore(
+    (state) => state.projectActivitySettings.autoDetectActiveProjects,
+  );
   const clients = useAppStore((state) => state.clients);
   const addClient = useAppStore((state) => state.addClient);
   const templates = useProcessStore((state) => state.templates);
@@ -276,6 +279,7 @@ export function ProjectForm({
   const systemHandoverAt = useWatch({ control, name: "systemHandoverAt" });
   const warrantyDurationMonths = useWatch({ control, name: "warrantyDurationMonths" });
   const createdAt = useWatch({ control, name: "createdAt" });
+  const isActiveValue = useWatch({ control, name: "isActive" });
   const durationPreview = formatProjectDuration({
     createdAt: createdAt ? `${createdAt.slice(0, 10)}T12:00:00.000Z` : "",
   });
@@ -450,21 +454,37 @@ export function ProjectForm({
         ) : null}
       </div>
 
-      <label className="panel-success flex cursor-pointer items-start gap-3 rounded-xl border p-4">
-        <input
-          type="checkbox"
-          className="mt-1 h-4 w-4 rounded border-border bg-surface-muted text-accent focus:ring-accent/30"
-          {...register("isActive")}
-        />
-        <span>
-          <span className="block text-sm font-semibold text-foreground">Aktywny</span>
-          <span className="mt-1 block text-sm text-muted">
-            Czy zespół teraz aktywnie pracuje nad projektem. Niezależne od statusu przepływu (W
-            trakcie / Oczekujące / Zamknięty). Projekt może być np. oczekujący i nieaktywny —
-            wtedy świadomie go nie prowadzimy, ale przerwania nadal warto rejestrować.
+      {autoDetectActiveProjects ? (
+        <div className="panel-success rounded-xl border p-4">
+          <p className="text-sm font-semibold text-foreground">
+            Aktywny — ustawiane automatycznie
+          </p>
+          <p className="mt-1 text-sm text-muted">
+            W ustawieniach włączono automatyczne wykrywanie. Projekt jest{" "}
+            <span className="font-medium text-foreground">
+              {isActiveValue ? "aktywny" : "nieaktywny"}
+            </span>{" "}
+            na podstawie aktywności w widoku klienta (zmiany, ustalenia, oferty, czas pracy,
+            dokumenty) w oknie ok. miesiąca — bez ręcznego przełączania.
+          </p>
+        </div>
+      ) : (
+        <label className="panel-success flex cursor-pointer items-start gap-3 rounded-xl border p-4">
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 rounded border-border bg-surface-muted text-accent focus:ring-accent/30"
+            {...register("isActive")}
+          />
+          <span>
+            <span className="block text-sm font-semibold text-foreground">Aktywny</span>
+            <span className="mt-1 block text-sm text-muted">
+              Czy zespół teraz aktywnie pracuje nad projektem. Niezależne od statusu przepływu (W
+              trakcie / Oczekujące / Zamknięty). Projekt może być np. oczekujący i nieaktywny —
+              wtedy świadomie go nie prowadzimy, ale przerwania nadal warto rejestrować.
+            </span>
           </span>
-        </span>
-      </label>
+        </label>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Status przepływu" error={errors.flowStatus?.message}>

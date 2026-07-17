@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ExternalLink, FileUp, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
   isImageDocument,
   type ProjectDocument,
 } from "@/lib/documents/types";
+import { useListAutoRefresh } from "@/lib/hooks/use-list-auto-refresh";
 import {
   attachSignedUrlsToProjectDocuments,
   deleteProjectDocument,
@@ -28,43 +29,41 @@ export function ProjectDocumentsPanel({
   mode: "team" | "client";
   seedDocuments?: ProjectDocument[];
 }) {
+  const liveFetch = mode === "team";
   const [documents, setDocuments] = useState<ProjectDocument[]>(seedDocuments ?? []);
-  const [loading, setLoading] = useState(seedDocuments === undefined);
+  const [loading, setLoading] = useState(liveFetch || seedDocuments === undefined);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      try {
-        const rows =
-          seedDocuments !== undefined
-            ? seedDocuments
-            : await fetchProjectDocuments({ projectId });
-        const withUrls = await attachSignedUrlsToProjectDocuments(rows);
-        if (!cancelled) {
-          setDocuments(withUrls);
-        }
-      } catch {
-        if (!cancelled) {
-          setDocuments([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
+  const refresh = useCallback(async () => {
+    if (!liveFetch) {
+      const rows = seedDocuments ?? [];
+      const withUrls = await attachSignedUrlsToProjectDocuments(rows);
+      setDocuments(withUrls);
+      setLoading(false);
+      return;
     }
 
-    void load();
+    setLoading(true);
+    try {
+      const rows = await fetchProjectDocuments({ projectId });
+      const withUrls = await attachSignedUrlsToProjectDocuments(rows);
+      setDocuments(withUrls);
+    } catch {
+      setDocuments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [liveFetch, projectId, seedDocuments]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [projectId, seedDocuments]);
+  useEffect(() => {
+    if (!liveFetch) {
+      void refresh();
+    }
+  }, [liveFetch, refresh]);
+
+  useListAutoRefresh(refresh, 30_000, liveFetch);
 
   async function removeDocument(documentId: string) {
     if (!window.confirm("Usunąć ten dokument?")) {

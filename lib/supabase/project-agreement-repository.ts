@@ -117,6 +117,10 @@ export async function createProjectAgreement(
     .eq("id", agreement.id)
     .single();
 
+  void import("@/lib/project-activity/touch-active").then(({ maybeActivateProjectFromActivity }) =>
+    maybeActivateProjectFromActivity(projectId),
+  );
+
   return rowToAgreement(refreshed as AgreementRow);
 }
 
@@ -194,6 +198,9 @@ export async function submitProjectAgreementForClient(
   publishedByName = "Zespół",
 ) {
   const bundle = await publishAgreementVersion(agreementId, publishedByName);
+  void import("@/lib/project-activity/touch-active").then(({ maybeActivateProjectFromActivity }) =>
+    maybeActivateProjectFromActivity(bundle.agreement.projectId),
+  );
   return bundle.agreement;
 }
 
@@ -223,6 +230,9 @@ export async function respondToProjectAgreement(
       respondedByName: input.clientResponseName,
       responseNote: input.clientResponseNote,
     });
+    void import("@/lib/project-activity/touch-active").then(({ maybeActivateProjectFromActivity }) =>
+      maybeActivateProjectFromActivity(bundle.agreement.projectId),
+    );
     return bundle.agreement;
   }
 
@@ -273,6 +283,10 @@ async function respondToProjectAgreementLegacy(
       throw new Error(projectError.message);
     }
   }
+
+  void import("@/lib/project-activity/touch-active").then(({ maybeActivateProjectFromActivity }) =>
+    maybeActivateProjectFromActivity(agreement.projectId),
+  );
 
   return agreement;
 }

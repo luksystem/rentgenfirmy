@@ -3,12 +3,9 @@
 import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  GOAL_REVIEW_OUTCOME_LABELS,
-  type GoalAiAdviceResponse,
-  type GoalLevel,
-  type GoalReviewOutcome,
-} from "@/lib/goals/types";
+import { resolveReviewOutcomeLabel } from "@/lib/goals/module-settings";
+import type { GoalAiAdviceResponse, GoalLevel, GoalReviewOutcome } from "@/lib/goals/types";
+import { useGoalStore } from "@/store/goal-store";
 
 /** Doradca AI w trakcie trwania celu (trigger='review', Faza 6) — sugestia korekty planu. */
 export function GoalAiReviewPanel({
@@ -24,6 +21,7 @@ export function GoalAiReviewPanel({
   boardKind: string;
   onApplyStatusSuggestion?: (outcome: GoalReviewOutcome) => void;
 }) {
+  const reviewOutcomes = useGoalStore((state) => state.moduleSettings.reviewOutcomes);
   const [open, setOpen] = useState(false);
   const [advice, setAdvice] = useState<GoalAiAdviceResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -102,7 +100,10 @@ export function GoalAiReviewPanel({
                   <p className="text-xs text-muted">
                     Sugerowany wynik przeglądu:{" "}
                     <span className="font-medium text-foreground">
-                      {GOAL_REVIEW_OUTCOME_LABELS[advice.ongoingAdjustment.statusSuggestion]}
+                      {resolveReviewOutcomeLabel(
+                        advice.ongoingAdjustment.statusSuggestion,
+                        reviewOutcomes,
+                      )}
                     </span>
                   </p>
                   {onApplyStatusSuggestion ? (

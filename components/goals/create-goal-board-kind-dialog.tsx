@@ -55,7 +55,7 @@ export function CreateGoalBoardKindDialog() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button type="button" variant="secondary">
+        <Button type="button" variant="secondary" className="w-full sm:w-auto">
           <FolderPlus className="mr-2 h-4 w-4" />
           Nowa kategoria
         </Button>

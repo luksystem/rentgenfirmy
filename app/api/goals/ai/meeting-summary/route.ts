@@ -3,18 +3,15 @@ import { requireAuthenticatedProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
 import { generateGoalReviewMeetingSummary } from "@/lib/ai/goal-review-meeting-summary";
 import { getUserDisplayName } from "@/lib/auth/types";
-import {
-  GOAL_REVIEW_OUTCOME_LABELS,
-  GOAL_STATUS_LABELS,
-  type GoalReviewOutcome,
-  type GoalStatus,
-} from "@/lib/goals/types";
+import { resolveReviewOutcomeLabel } from "@/lib/goals/module-settings";
+import { GOAL_STATUS_LABELS, type GoalStatus } from "@/lib/goals/types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   rowToGoalReviewMeeting,
   rowToGoalReviewMeetingAction,
   rowToGoalReviewMeetingItem,
 } from "@/lib/supabase/goal-mappers";
+import { fetchGoalModuleSettingsAdmin } from "@/lib/supabase/goal-settings-repository";
 
 function profileDisplayName(row: {
   id: string;
@@ -94,6 +91,7 @@ export async function POST(request: Request) {
       (profiles ?? []).map((row) => [row.id, profileDisplayName(row)] as const),
     );
     const goalById = new Map((goals ?? []).map((g) => [g.id, g] as const));
+    const moduleSettings = await fetchGoalModuleSettingsAdmin();
 
     const summary = await generateGoalReviewMeetingSummary({
       boardName,
@@ -101,10 +99,9 @@ export async function POST(request: Request) {
       participantNames: meeting.participantIds.map((id) => nameById.get(id) ?? id),
       items: items.map((item) => {
         const goal = goalById.get(item.goalId);
-        const outcomeLabel =
-          item.outcome && item.outcome in GOAL_REVIEW_OUTCOME_LABELS
-            ? GOAL_REVIEW_OUTCOME_LABELS[item.outcome as GoalReviewOutcome]
-            : item.outcome;
+        const outcomeLabel = item.outcome
+          ? resolveReviewOutcomeLabel(item.outcome, moduleSettings.reviewOutcomes)
+          : item.outcome;
         const status = goal?.status as GoalStatus | undefined;
         return {
           goalName: goal?.name ?? item.goalId,

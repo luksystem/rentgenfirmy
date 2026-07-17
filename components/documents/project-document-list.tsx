@@ -18,6 +18,7 @@ import { useListAutoRefresh } from "@/lib/hooks/use-list-auto-refresh";
 import {
   deleteProjectDocument,
   fetchProjectDocuments,
+  updateProjectDocumentLinks,
 } from "@/lib/supabase/project-document-repository";
 import { formatPartyName } from "@/lib/party/display-name";
 import { useAppStore } from "@/store/app-store";
@@ -47,6 +48,7 @@ export function ProjectDocumentList() {
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [linkingId, setLinkingId] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState(ALL);
   const [clientFilter, setClientFilter] = useState(ALL);
   const [projectFilter, setProjectFilter] = useState(ALL);
@@ -100,6 +102,21 @@ export function ProjectDocumentList() {
       setDocuments((current) => current.filter((entry) => entry.id !== documentId));
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function assignProject(documentId: string, projectId: string) {
+    if (!projectId) {
+      return;
+    }
+    setLinkingId(documentId);
+    try {
+      const updated = await updateProjectDocumentLinks(documentId, { projectId });
+      setDocuments((current) =>
+        current.map((entry) => (entry.id === documentId ? { ...entry, ...updated } : entry)),
+      );
+    } finally {
+      setLinkingId(null);
     }
   }
 
@@ -203,9 +220,23 @@ export function ProjectDocumentList() {
                     </td>
                     <td className="px-4 py-3 text-muted">
                       <div>{document.clientId ? clientNames.get(document.clientId) ?? "—" : "—"}</div>
-                      <div className="text-xs">
-                        {document.projectId ? projectNames.get(document.projectId) ?? "—" : "—"}
-                      </div>
+                      {document.projectId ? (
+                        <div className="text-xs">{projectNames.get(document.projectId) ?? "—"}</div>
+                      ) : (
+                        <Select
+                          className="mt-1 h-8 text-xs"
+                          value=""
+                          disabled={linkingId === document.id}
+                          onChange={(event) => void assignProject(document.id, event.target.value)}
+                        >
+                          <option value="">Przypisz projekt…</option>
+                          {projects.map((project) => (
+                            <option key={project.id} value={project.id}>
+                              {project.name}
+                            </option>
+                          ))}
+                        </Select>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {document.fileUrl ? (
@@ -259,6 +290,28 @@ export function ProjectDocumentList() {
                   </div>
                   {document.description ? (
                     <p className="text-sm text-muted">{document.description}</p>
+                  ) : null}
+                  <p className="text-xs text-muted">
+                    {document.clientId ? clientNames.get(document.clientId) ?? "—" : "—"}
+                    {" · "}
+                    {document.projectId
+                      ? projectNames.get(document.projectId) ?? "—"
+                      : "bez projektu"}
+                  </p>
+                  {!document.projectId ? (
+                    <Select
+                      className="h-9 text-sm"
+                      value=""
+                      disabled={linkingId === document.id}
+                      onChange={(event) => void assignProject(document.id, event.target.value)}
+                    >
+                      <option value="">Przypisz projekt…</option>
+                      {projects.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.name}
+                        </option>
+                      ))}
+                    </Select>
                   ) : null}
                   <div className="flex flex-wrap gap-2">
                     {document.fileUrl ? (

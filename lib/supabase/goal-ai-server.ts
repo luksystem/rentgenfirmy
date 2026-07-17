@@ -1,14 +1,14 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { rowToGoalMethodology } from "@/lib/supabase/goal-mappers";
 import type { GoalAiReviewContext } from "@/lib/ai/goal-ai-advisor";
+import { resolveReviewOutcomeLabel } from "@/lib/goals/module-settings";
 import {
   GOAL_STATUS_LABELS,
-  GOAL_REVIEW_OUTCOME_LABELS,
   type GoalAiSuggestedStructure,
   type GoalMethodology,
   type GoalStatus,
-  type GoalReviewOutcome,
 } from "@/lib/goals/types";
+import { fetchGoalModuleSettingsAdmin } from "@/lib/supabase/goal-settings-repository";
 
 export async function fetchActiveGoalMethodologiesAdmin(): Promise<GoalMethodology[]> {
   const supabase = getSupabaseAdmin();
@@ -101,11 +101,12 @@ export async function fetchGoalReviewContextAdmin(goalId: string): Promise<{
     (new Date(goal.period_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
   );
 
+  const moduleSettings = await fetchGoalModuleSettingsAdmin();
   const recentReviewsSummary = (reviews ?? [])
     .filter((review) => review.completed_at)
     .map((review) => {
       const outcomeLabel = review.outcome
-        ? GOAL_REVIEW_OUTCOME_LABELS[review.outcome as GoalReviewOutcome] ?? review.outcome
+        ? resolveReviewOutcomeLabel(review.outcome, moduleSettings.reviewOutcomes)
         : "brak wyniku";
       return `${review.scheduled_at.slice(0, 10)}: ${outcomeLabel}${review.note ? ` — ${review.note}` : ""}`;
     })

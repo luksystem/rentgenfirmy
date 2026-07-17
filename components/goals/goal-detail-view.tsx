@@ -15,6 +15,7 @@ import { createUserMentionNotifications } from "@/lib/notifications/repository";
 import { GoalDeferRevisitActions } from "@/components/goals/goal-defer-revisit-actions";
 import { GoalInitiativesCard } from "@/components/goals/goal-initiatives-panel";
 import { GoalLinksPanel } from "@/components/goals/goal-links-panel";
+import { GoalSettlementGateDialog } from "@/components/goals/goal-settlement-gate-dialog";
 import { ProjectSelectSearchable } from "@/components/goals/project-select-searchable";
 import { UserIdentity } from "@/components/user-avatar";
 import { useDraftNumber } from "@/hooks/use-draft-number";
@@ -25,12 +26,9 @@ import {
   GOAL_PERIOD_TYPE_LABELS,
   GOAL_PRIORITIES,
   GOAL_PRIORITY_LABELS,
-  GOAL_REVIEW_OUTCOME_LABELS,
-  GOAL_REVIEW_OUTCOMES,
   GOAL_SETTLEMENT_STATUS_LABELS,
   GOAL_SETTLEMENT_STATUSES,
   GOAL_STATUS_LABELS,
-  GOAL_STATUSES,
   type Goal,
   type GoalComment,
   type GoalKpi,
@@ -58,6 +56,7 @@ import {
   upsertGoalKpi,
 } from "@/lib/supabase/goal-repository";
 import { fetchGoalMethodologyByCode } from "@/lib/supabase/goal-methodology-repository";
+import { resolveReviewOutcomeLabel } from "@/lib/goals/module-settings";
 import { cn, formatDate, formatDateTime } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
@@ -331,21 +330,55 @@ function OverviewTab({
   const [projectId, setProjectId] = useState<string | null>(goal.projectId);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [statusSaving, setStatusSaving] = useState(false);
+  const [settlementOpen, setSettlementOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const projects = useAppStore((state) => state.projects);
   const clients = useAppStore((state) => state.clients);
+  const reviewOutcomes = useGoalStore((state) => state.moduleSettings.reviewOutcomes);
+
+  useEffect(() => {
+    setStatus(goal.status);
+    setProgress(goal.progressPercent);
+  }, [goal.id, goal.status, goal.progressPercent]);
+
+  async function applyStatusChange(nextStatus: GoalStatus) {
+    if (nextStatus === goal.status) {
+      return;
+    }
+    if (nextStatus === "settled") {
+      setSettlementOpen(true);
+      return;
+    }
+    setStatusSaving(true);
+    setError(null);
+    try {
+      const result = await updateGoalProgress(goal.id, {
+        status: nextStatus,
+        authorId: currentProfileId,
+      });
+      setStatus(result.goal.status);
+      setProgress(result.goal.progressPercent);
+      onChanged(result.goal);
+    } catch (statusError) {
+      setError(statusError instanceof Error ? statusError.message : "Nie udało się zmienić statusu.");
+      setStatus(goal.status);
+    } finally {
+      setStatusSaving(false);
+    }
+  }
 
   async function handleApplyAiStatusSuggestion(outcome: GoalReviewOutcome) {
     const nextStatus: GoalStatus = outcome === "on_track" ? "in_progress" : "at_risk";
     try {
       const result = await updateGoalProgress(goal.id, {
         status: nextStatus,
-        note: `AI (przegląd): sugerowany wynik — ${GOAL_REVIEW_OUTCOME_LABELS[outcome]}.`,
+        note: `AI (przegląd): sugerowany wynik — ${resolveReviewOutcomeLabel(outcome, reviewOutcomes)}.`,
         authorId: currentProfileId,
       });
       onChanged(result.goal);
     } catch {
-      // brak akcji — użytkownik może wprowadzić zmianę statusu ręcznie w edycji
+      // brak akcji — użytkownik może wprowadzić zmianę statusu ręcznie
     }
   }
 
@@ -374,7 +407,7 @@ function OverviewTab({
       if (status !== goal.status || progress !== goal.progressPercent) {
         const result = await updateGoalProgress(goal.id, {
           status,
-          progressPercent: progress,
+          progressPercent: status === "settled" ? 100 : progress,
           note: note.trim() || undefined,
           authorId: currentProfileId,
         });
@@ -418,6 +451,36 @@ function OverviewTab({
                 </p>
               ) : null}
             </div>
+
+            <Field label="Status">
+              <Select
+                value={goal.status === "settled" ? "settled" : status}
+                disabled={statusSaving}
+                onChange={(event) => {
+                  const next = event.target.value as GoalStatus | "settle_gate";
+                  if (next === "settle_gate" || next === "settled") {
+                    void applyStatusChange("settled");
+                    return;
+                  }
+                  setStatus(next);
+                  void applyStatusChange(next);
+                }}
+              >
+                {(["planned", "in_progress", "at_risk", "on_hold", "cancelled"] as GoalStatus[]).map(
+                  (entry) => (
+                    <option key={entry} value={entry}>
+                      {GOAL_STATUS_LABELS[entry]}
+                    </option>
+                  ),
+                )}
+                {goal.status === "settled" ? (
+                  <option value="settled">{GOAL_STATUS_LABELS.settled}</option>
+                ) : (
+                  <option value="settle_gate">{GOAL_STATUS_LABELS.settled}…</option>
+                )}
+              </Select>
+            </Field>
+
             <div className="h-2 w-full overflow-hidden rounded-full bg-surface-muted">
               <div
                 className="h-full rounded-full bg-accent"
@@ -460,11 +523,28 @@ function OverviewTab({
               </div>
             ) : null}
 
+            {error ? <p className="text-sm text-rose-400">{error}</p> : null}
+
             <div>
               <Button type="button" variant="secondary" onClick={() => setEditing(true)}>
                 Edytuj
               </Button>
             </div>
+
+            <GoalSettlementGateDialog
+              goal={goal}
+              open={settlementOpen}
+              onOpenChange={setSettlementOpen}
+              currentProfileId={currentProfileId}
+              onSettled={(settledGoal) => {
+                setSettlementOpen(false);
+                if (settledGoal) {
+                  setStatus(settledGoal.status);
+                  setProgress(settledGoal.progressPercent);
+                  onChanged(settledGoal);
+                }
+              }}
+            />
           </>
         ) : (
           <div className="grid min-w-0 max-w-full gap-4 overflow-x-clip">
@@ -532,14 +612,28 @@ function OverviewTab({
               <Field label="Status" className="min-w-0">
                 <Select
                   className="min-w-0 max-w-full"
-                  value={status}
-                  onChange={(event) => setStatus(event.target.value as GoalStatus)}
+                  value={status === "settled" ? "settled" : status}
+                  onChange={(event) => {
+                    const next = event.target.value as GoalStatus | "settle_gate";
+                    if (next === "settle_gate" || next === "settled") {
+                      setSettlementOpen(true);
+                      return;
+                    }
+                    setStatus(next);
+                  }}
                 >
-                  {GOAL_STATUSES.map((entry) => (
-                    <option key={entry} value={entry}>
-                      {GOAL_STATUS_LABELS[entry]}
-                    </option>
-                  ))}
+                  {(["planned", "in_progress", "at_risk", "on_hold", "cancelled"] as GoalStatus[]).map(
+                    (entry) => (
+                      <option key={entry} value={entry}>
+                        {GOAL_STATUS_LABELS[entry]}
+                      </option>
+                    ),
+                  )}
+                  {status === "settled" || goal.status === "settled" ? (
+                    <option value="settled">{GOAL_STATUS_LABELS.settled}</option>
+                  ) : (
+                    <option value="settle_gate">{GOAL_STATUS_LABELS.settled}…</option>
+                  )}
                 </Select>
               </Field>
               <Field label="Procent realizacji" className="min-w-0">
@@ -604,6 +698,22 @@ function OverviewTab({
                 {saving ? "Zapisywanie..." : "Zapisz"}
               </Button>
             </div>
+
+            <GoalSettlementGateDialog
+              goal={goal}
+              open={settlementOpen}
+              onOpenChange={setSettlementOpen}
+              currentProfileId={currentProfileId}
+              onSettled={(settledGoal) => {
+                setSettlementOpen(false);
+                setEditing(false);
+                if (settledGoal) {
+                  setStatus(settledGoal.status);
+                  setProgress(settledGoal.progressPercent);
+                  onChanged(settledGoal);
+                }
+              }}
+            />
           </div>
         )}
       </CardContent>
@@ -835,6 +945,7 @@ function ReviewsTab({
   currentProfileId: string | null;
   onChanged: () => Promise<void>;
 }) {
+  const reviewOutcomes = useGoalStore((state) => state.moduleSettings.reviewOutcomes);
   const [scheduledAt, setScheduledAt] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -869,23 +980,23 @@ function ReviewsTab({
               {review.completedAt ? (
                 <p className="text-xs text-muted">
                   Zamknięty {formatDateTime(review.completedAt)} —{" "}
-                  {review.outcome ? GOAL_REVIEW_OUTCOME_LABELS[review.outcome] : "—"}
+                  {resolveReviewOutcomeLabel(review.outcome, reviewOutcomes)}
                 </p>
               ) : (
                 <p className="text-xs text-amber-300">Otwarty — wymaga akcji</p>
               )}
             </div>
             {!review.completedAt && canClose ? (
-              <div className="flex gap-1.5">
-                {GOAL_REVIEW_OUTCOMES.map((outcome) => (
+              <div className="flex flex-wrap gap-1.5">
+                {reviewOutcomes.map((entry) => (
                   <Button
-                    key={outcome}
+                    key={entry.id}
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => void handleClose(review, outcome)}
+                    onClick={() => void handleClose(review, entry.id)}
                   >
-                    {GOAL_REVIEW_OUTCOME_LABELS[outcome]}
+                    {entry.label}
                   </Button>
                 ))}
               </div>

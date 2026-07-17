@@ -124,5 +124,10 @@ export async function respondToChangeRequestByPublicToken(
     throw new Error(error.message);
   }
 
-  return rowToChangeRequest(data as ChangeRequestRow);
+  const responded = rowToChangeRequest(data as ChangeRequestRow);
+  void import("@/lib/supabase/project-activity-recompute-server").then(
+    ({ maybeActivateProjectFromActivityServer }) =>
+      maybeActivateProjectFromActivityServer(responded.projectId),
+  );
+  return responded;
 }

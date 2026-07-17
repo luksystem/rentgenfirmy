@@ -15,23 +15,14 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  GOAL_DEFERRAL_REASON_LABELS,
-  GOAL_REVIEW_OUTCOME_LABELS,
-  type GoalDeferral,
-  type GoalReviewOutcome,
-} from "@/lib/goals/types";
+import { resolveReviewOutcomeLabel } from "@/lib/goals/module-settings";
+import { GOAL_DEFERRAL_REASON_LABELS, type GoalDeferral } from "@/lib/goals/types";
 import { formatTimerSeconds } from "@/lib/goals/review-meeting-timing";
 import { fetchGoalDeferralsByMeeting } from "@/lib/supabase/goal-repository";
 import { useGoalReviewMeetingStore } from "@/store/goal-review-meeting-store";
 import { useGoalStore, EMPTY_GOALS } from "@/store/goal-store";
 
-const OUTCOME_COLORS: Record<string, string> = {
-  on_track: "#34d399",
-  at_risk: "#fbbf24",
-  off_track: "#f87171",
-  none: "#71717a",
-};
+const OUTCOME_COLORS = ["#34d399", "#fbbf24", "#f87171", "#60a5fa", "#c084fc", "#fb7185", "#71717a"];
 
 function resolveActualSeconds(meeting: {
   actualDurationSeconds: number | null;
@@ -63,6 +54,7 @@ export function GoalReviewReportDetail({ meetingId }: { meetingId: string }) {
   const goalsByBoard = useGoalStore((s) => s.goalsByBoard);
   const ensureBoardGoals = useGoalStore((s) => s.ensureBoardGoals);
   const hydrate = useGoalStore((s) => s.hydrate);
+  const reviewOutcomes = useGoalStore((s) => s.moduleSettings.reviewOutcomes);
   const [deferrals, setDeferrals] = useState<GoalDeferral[]>([]);
 
   useEffect(() => {
@@ -96,27 +88,24 @@ export function GoalReviewReportDetail({ meetingId }: { meetingId: string }) {
 
   const outcomeChart = useMemo(() => {
     if (!meeting) return [];
-    const counts: Record<string, number> = {
-      on_track: 0,
-      at_risk: 0,
-      off_track: 0,
-      none: 0,
-    };
+    const counts: Record<string, number> = { none: 0 };
     for (const item of meeting.items) {
-      if (item.outcome && item.outcome in counts) counts[item.outcome]! += 1;
-      else counts.none! += 1;
+      if (item.outcome) {
+        counts[item.outcome] = (counts[item.outcome] ?? 0) + 1;
+      } else {
+        counts.none! += 1;
+      }
     }
     return Object.entries(counts)
       .filter(([, value]) => value > 0)
-      .map(([key, value]) => ({
+      .map(([key, value], index) => ({
         key,
         name:
-          key === "none"
-            ? "Bez oceny"
-            : GOAL_REVIEW_OUTCOME_LABELS[key as GoalReviewOutcome] ?? key,
+          key === "none" ? "Bez oceny" : resolveReviewOutcomeLabel(key, reviewOutcomes),
         value,
+        color: OUTCOME_COLORS[index % OUTCOME_COLORS.length]!,
       }));
-  }, [meeting]);
+  }, [meeting, reviewOutcomes]);
 
   const durationChart = useMemo(() => {
     if (!meeting) return [];
@@ -128,9 +117,10 @@ export function GoalReviewReportDetail({ meetingId }: { meetingId: string }) {
 
   const onPlanRate = useMemo(() => {
     if (!meeting || meeting.items.length === 0) return 0;
-    const onTrack = meeting.items.filter((item) => item.outcome === "on_track").length;
+    const positiveId = reviewOutcomes[0]?.id ?? "on_track";
+    const onTrack = meeting.items.filter((item) => item.outcome === positiveId).length;
     return Math.round((onTrack / meeting.items.length) * 100);
-  }, [meeting]);
+  }, [meeting, reviewOutcomes]);
 
   if (loading && !meeting) {
     return (
@@ -245,7 +235,7 @@ export function GoalReviewReportDetail({ meetingId }: { meetingId: string }) {
                     paddingAngle={3}
                   >
                     {outcomeChart.map((entry) => (
-                      <Cell key={entry.key} fill={OUTCOME_COLORS[entry.key] ?? "#71717a"} />
+                      <Cell key={entry.key} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -264,7 +254,7 @@ export function GoalReviewReportDetail({ meetingId }: { meetingId: string }) {
                 <li key={entry.key} className="flex items-center gap-1.5">
                   <span
                     className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ background: OUTCOME_COLORS[entry.key] ?? "#71717a" }}
+                    style={{ background: entry.color }}
                   />
                   {entry.name}: {entry.value}
                 </li>
@@ -305,7 +295,7 @@ export function GoalReviewReportDetail({ meetingId }: { meetingId: string }) {
                 </div>
                 {item.outcome ? (
                   <p className="text-xs text-muted">
-                    {GOAL_REVIEW_OUTCOME_LABELS[item.outcome as GoalReviewOutcome]}
+                    {resolveReviewOutcomeLabel(item.outcome, reviewOutcomes)}
                   </p>
                 ) : null}
                 {item.notes ? (

@@ -8,6 +8,7 @@ import {
 } from "@/lib/time-tracking/permissions";
 import { collectTimesheetSubmitIssues } from "@/lib/time-tracking/timesheet-validation";
 import { buildTimesheetSummary, type TimesheetSummary } from "@/lib/time-tracking/timesheet-summary";
+import { buildTeamPeriodDetail, type TeamPeriodDetail } from "@/lib/time-tracking/team-period-detail";
 import type {
   EnsureTimesheetInput,
   RejectTimesheetInput,
@@ -22,6 +23,7 @@ import type {
 import type { TeamTimesheetOverviewRow } from "@/lib/time-tracking/types";
 import {
   fetchActiveTimerServer,
+  fetchTeamTimeEntriesServer,
   fetchTimeEntriesServer,
   fetchTimeTrackingMetaServer,
 } from "@/lib/supabase/time-tracking-server";
@@ -601,4 +603,65 @@ export async function fetchTeamTimesheetOverviewServer(
       } satisfies TeamTimesheetOverviewRow;
     })
     .sort((a, b) => a.userDisplayName.localeCompare(b.userDisplayName, "pl"));
+}
+
+export async function fetchTeamPeriodDetailServer(
+  admin: AdminClient,
+  actor: UserProfile,
+  query: Pick<TimesheetSummaryQuery, "dateFrom" | "dateTo" | "periodType">,
+): Promise<TeamPeriodDetail> {
+  if (!canViewTeamTimesheets(actor.role)) {
+    throw new Error("Brak uprawnień do podglądu zestawienia zespołu.");
+  }
+
+  const [profiles, meta, entries, sheetsResult] = await Promise.all([
+    fetchTeamProfilesServer(),
+    fetchTimeTrackingMetaServer(admin),
+    fetchTeamTimeEntriesServer(admin, actor, {
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
+    }),
+    admin
+      .from("time_sheets")
+      .select("*")
+      .eq("period_type", query.periodType)
+      .eq("date_from", query.dateFrom)
+      .eq("date_to", query.dateTo),
+  ]);
+
+  if (sheetsResult.error) {
+    throw new Error(sheetsResult.error.message);
+  }
+
+  const sheetsByUser = new Map(
+    (sheetsResult.data ?? []).map((row) => [row.user_id as string, mapTimesheetRow(row as TimeSheetRow)]),
+  );
+
+  const entriesByUser = new Map<string, typeof entries>();
+  for (const entry of entries) {
+    const bucket = entriesByUser.get(entry.userId) ?? [];
+    bucket.push(entry);
+    entriesByUser.set(entry.userId, bucket);
+  }
+
+  return buildTeamPeriodDetail({
+    dateFrom: query.dateFrom,
+    dateTo: query.dateTo,
+    periodType: query.periodType,
+    entryTypeMeta: meta.entryTypes.map((item) => ({
+      id: item.id,
+      countsAsWork: item.countsAsWork,
+      countsAsAbsence: item.countsAsAbsence,
+    })),
+    employees: profiles.map((profile) => {
+      const sheet = sheetsByUser.get(profile.id);
+      return {
+        userId: profile.id,
+        userDisplayName: getUserDisplayName(profile),
+        entries: entriesByUser.get(profile.id) ?? [],
+        timesheetId: sheet?.id ?? null,
+        status: sheet?.status ?? "draft",
+      };
+    }),
+  });
 }

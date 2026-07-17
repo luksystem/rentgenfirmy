@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GOAL_REVIEW_OUTCOME_LABELS, type GoalReviewOutcome } from "@/lib/goals/types";
+import { resolveReviewOutcomeLabel } from "@/lib/goals/module-settings";
 import { formatTimerSeconds } from "@/lib/goals/review-meeting-timing";
 import { useGoalReviewMeetingStore } from "@/store/goal-review-meeting-store";
 import { useGoalStore, EMPTY_GOALS } from "@/store/goal-store";
@@ -34,6 +34,7 @@ export function ReviewMeetingSummary({ meetingId }: { meetingId: string }) {
   const loading = useGoalReviewMeetingStore((s) => s.activeMeetingLoading);
   const goalsByBoard = useGoalStore((s) => s.goalsByBoard);
   const ensureBoardGoals = useGoalStore((s) => s.ensureBoardGoals);
+  const reviewOutcomes = useGoalStore((s) => s.moduleSettings.reviewOutcomes);
 
   const [summary, setSummary] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -113,7 +114,7 @@ export function ReviewMeetingSummary({ meetingId }: { meetingId: string }) {
               {item.outcome ? (
                 <span className="text-muted">
                   {" "}
-                  · {GOAL_REVIEW_OUTCOME_LABELS[item.outcome as GoalReviewOutcome]}
+                  · {resolveReviewOutcomeLabel(item.outcome, reviewOutcomes)}
                 </span>
               ) : null}
               {item.notes ? (

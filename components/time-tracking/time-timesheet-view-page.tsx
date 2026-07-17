@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Select } from "@/components/ui/input";
 import { TimeDailyBreakdownTable } from "@/components/time-tracking/time-daily-breakdown-table";
+import { TimeEmployeeProjectBreakdown } from "@/components/time-tracking/time-employee-project-breakdown";
 import { TimePeriodReport } from "@/components/time-tracking/time-period-report";
-import { TimeTeamOverviewTable } from "@/components/time-tracking/time-team-overview-table";
+import { TimeTeamPeriodMatrix } from "@/components/time-tracking/time-team-period-matrix";
 import { TimeTimesheetApprovalPanel } from "@/components/time-tracking/time-timesheet-approval-panel";
 import { TimeTimesheetPanel } from "@/components/time-tracking/time-timesheet-panel";
 import { formatDurationMinutes } from "@/lib/time-tracking/format";
@@ -34,11 +35,11 @@ export function TimeTimesheetViewPage() {
   const summary = useTimeTrackingStore((state) => state.summary);
   const summaryHydrated = useTimeTrackingStore((state) => state.summaryHydrated);
   const summaryLoading = useTimeTrackingStore((state) => state.summaryLoading);
-  const teamOverview = useTimeTrackingStore((state) => state.teamOverview);
-  const teamOverviewLoading = useTimeTrackingStore((state) => state.teamOverviewLoading);
+  const teamPeriodDetail = useTimeTrackingStore((state) => state.teamPeriodDetail);
+  const teamPeriodDetailLoading = useTimeTrackingStore((state) => state.teamPeriodDetailLoading);
   const ensureMeta = useTimeTrackingStore((state) => state.ensureMeta);
   const ensureTimesheetSummary = useTimeTrackingStore((state) => state.ensureTimesheetSummary);
-  const ensureTeamOverview = useTimeTrackingStore((state) => state.ensureTeamOverview);
+  const ensureTeamPeriodDetail = useTimeTrackingStore((state) => state.ensureTeamPeriodDetail);
   const setTimesheetPeriod = useTimeTrackingStore((state) => state.setTimesheetPeriod);
   const setTimesheetUserId = useTimeTrackingStore((state) => state.setTimesheetUserId);
   const submitSummaryTimesheet = useTimeTrackingStore((state) => state.submitSummaryTimesheet);
@@ -61,17 +62,17 @@ export function TimeTimesheetViewPage() {
     void ensureMeta();
     void ensureTimesheetSummary();
     if (canManageTeam) {
-      void ensureTeamOverview();
+      void ensureTeamPeriodDetail();
       void fetchTeamProfiles()
         .then(setTeamProfiles)
         .catch(() => setTeamProfiles([]));
     }
-  }, [ensureMeta, ensureTimesheetSummary, ensureTeamOverview, canManageTeam]);
+  }, [ensureMeta, ensureTimesheetSummary, ensureTeamPeriodDetail, canManageTeam]);
 
   useEffect(() => {
     void ensureTimesheetSummary({ force: true, showLoading: false });
     if (canManageTeam) {
-      void ensureTeamOverview({ force: true, showLoading: false });
+      void ensureTeamPeriodDetail({ force: true, showLoading: false });
     }
   }, [
     timesheetPeriod.dateFrom,
@@ -79,7 +80,7 @@ export function TimeTimesheetViewPage() {
     timesheetPeriod.periodType,
     timesheetUserId,
     ensureTimesheetSummary,
-    ensureTeamOverview,
+    ensureTeamPeriodDetail,
     canManageTeam,
   ]);
 
@@ -93,6 +94,8 @@ export function TimeTimesheetViewPage() {
 
   const totalMinutes = summary?.report.totalMinutes ?? 0;
   const entryCount = summary?.report.entryCount ?? 0;
+  const reportTitle =
+    timesheetPeriod.periodType === "month" ? "Raport miesiąca" : "Raport tygodnia";
 
   return (
     <>
@@ -216,16 +219,29 @@ export function TimeTimesheetViewPage() {
           ) : null}
 
           <TimeDailyBreakdownTable rows={summary?.dailyBreakdown ?? []} />
-          <TimePeriodReport report={summary?.report ?? null} />
+          <TimeEmployeeProjectBreakdown
+            entries={summary?.entries ?? []}
+            dateFrom={timesheetPeriod.dateFrom}
+            dateTo={timesheetPeriod.dateTo}
+          />
+          <TimePeriodReport
+            report={summary?.report ?? null}
+            title={reportTitle}
+            description={
+              timesheetPeriod.periodType === "month"
+                ? "Miesięczne podsumowanie wg kategorii i typów wpisów."
+                : "Tygodniowe podsumowanie wg kategorii i typów wpisów."
+            }
+          />
         </div>
       )}
 
       {canManageTeam ? (
-        <TimeTeamOverviewTable
-          rows={teamOverview}
+        <TimeTeamPeriodMatrix
+          detail={teamPeriodDetail}
+          loading={teamPeriodDetailLoading}
           selectedUserId={timesheetUserId ?? profile?.id}
-          loading={teamOverviewLoading}
-          onSelect={(userId) => {
+          onSelectEmployee={(userId) => {
             if (userId === profile?.id) {
               setTimesheetUserId(undefined);
             } else {

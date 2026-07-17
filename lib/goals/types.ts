@@ -84,10 +84,12 @@ export const GOAL_INITIATIVE_KIND_LABELS: Record<GoalInitiativeKind, string> = {
 export const GOAL_INITIATIVE_STATUSES = ["proposed", "accepted", "rejected", "converted"] as const;
 export type GoalInitiativeStatus = (typeof GOAL_INITIATIVE_STATUSES)[number];
 
+/** Domyślne kody wyników przeglądu (nadpisywane w ustawieniach modułu). */
 export const GOAL_REVIEW_OUTCOMES = ["on_track", "at_risk", "off_track"] as const;
-export type GoalReviewOutcome = (typeof GOAL_REVIEW_OUTCOMES)[number];
+/** Id wyniku przeglądu — lista etykiet jest konfigurowalna w ustawieniach tablic celów. */
+export type GoalReviewOutcome = string;
 
-export const GOAL_REVIEW_OUTCOME_LABELS: Record<GoalReviewOutcome, string> = {
+export const GOAL_REVIEW_OUTCOME_LABELS: Record<(typeof GOAL_REVIEW_OUTCOMES)[number], string> = {
   on_track: "Zgodnie z planem",
   at_risk: "Zagrożony",
   off_track: "Poza planem",

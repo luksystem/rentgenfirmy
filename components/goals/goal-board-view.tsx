@@ -11,6 +11,7 @@ import {
 import { KanbanMobileColumnNav } from "@/components/process/kanban-mobile-column-nav";
 import { useKanbanMobileColumns } from "@/hooks/use-kanban-mobile-columns";
 import {
+  KANBAN_BOARD_HEADER_CLASS,
   KANBAN_BOARD_ROOT_CLASS,
   KANBAN_DRAG_HINT,
   KANBAN_MOBILE_COLUMN_BODY_CLASS,
@@ -86,6 +87,7 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
   const ensureBoardGoals = useGoalStore((state) => state.ensureBoardGoals);
   const moveGoalStatus = useGoalStore((state) => state.moveGoalStatus);
   const updateGoalQuickFields = useGoalStore((state) => state.updateGoalQuickFields);
+  const upsertGoalInStore = useGoalStore((state) => state.upsertGoalInStore);
   const getOwnerName = useGoalStore((state) => state.getOwnerName);
 
   const [dragGoalId, setDragGoalId] = useState<string | null>(null);
@@ -164,9 +166,8 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
     if (!goal || goal.status === status) {
       return;
     }
-    if (status === "settled" && goal.methodologyId) {
-      // Cel ma metodologię — zanim przejdzie do „Rozliczony”, wymagamy przeglądu
-      // kluczowych wyników i kryteriów sukcesu (patrz GoalSettlementGateDialog).
+    if (status === "settled") {
+      // Zawsze przez dialog rozliczenia — ustawia też postęp na 100% (settleGoal).
       setSettlementGateGoal(goal);
       setDragGoalId(null);
       setDragOverColumn(null);
@@ -204,20 +205,36 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
 
   return (
     <div className={cn(KANBAN_BOARD_ROOT_CLASS, "md:min-h-[calc(100vh-14rem)]")}>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm text-muted">
-          <Target className="h-4 w-4" />
-          {filteredGoals.length === goals.length
-            ? `${goals.length} ${goals.length === 1 ? "cel" : "celów"} na tablicy`
-            : `${filteredGoals.length} z ${goals.length} ${goals.length === 1 ? "cela" : "celów"}`}
+      <div className={KANBAN_BOARD_HEADER_CLASS}>
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-2 text-sm text-muted">
+            <Target className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 truncate">
+              {filteredGoals.length === goals.length
+                ? `${goals.length} ${goals.length === 1 ? "cel" : "celów"} na tablicy`
+                : `${filteredGoals.length} z ${goals.length} ${goals.length === 1 ? "cela" : "celów"}`}
+            </span>
+          </div>
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
+            <Button
+              type="button"
+              size="sm"
+              asChild
+              className="w-full border-emerald-500/40 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 hover:text-emerald-200 sm:w-auto"
+            >
+              <Link href={`/tablice-celow/przeglad?boardId=${boardId}`}>Przegląd celów</Link>
+            </Button>
+            <CreateGoalDialog boardId={boardId} triggerClassName="w-full sm:w-auto" />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center overflow-hidden rounded-lg border border-border/70">
+
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center overflow-hidden rounded-lg border border-border/70 sm:flex-none">
             <button
               type="button"
               onClick={() => handleDensityChange("normal")}
               className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition",
+                "flex flex-1 items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition sm:flex-none",
                 density === "normal" ? "bg-accent text-accent-foreground" : "text-muted hover:bg-surface-muted",
               )}
             >
@@ -228,7 +245,7 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
               type="button"
               onClick={() => handleDensityChange("slim")}
               className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition",
+                "flex flex-1 items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition sm:flex-none",
                 density === "slim" ? "bg-accent text-accent-foreground" : "text-muted hover:bg-surface-muted",
               )}
             >
@@ -240,15 +257,17 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
             type="button"
             variant="outline"
             size="sm"
+            className="min-w-0 flex-1 sm:flex-none"
             onClick={() => setShowCancelled((current) => !current)}
           >
-            {showCancelled ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-            {showCancelled ? "Skryj anulowane" : "Pokaż anulowane"}
+            {showCancelled ? <EyeOff className="mr-2 h-4 w-4 shrink-0" /> : <Eye className="mr-2 h-4 w-4 shrink-0" />}
+            <span className="truncate">{showCancelled ? "Skryj anulowane" : "Pokaż anulowane"}</span>
           </Button>
           <Button
             type="button"
             variant="outline"
             size="sm"
+            className="min-w-0 sm:flex-none"
             disabled={isLoading}
             onClick={() => void ensureBoardGoals(boardId, { force: true })}
           >
@@ -259,15 +278,6 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
             )}
             Odśwież
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            asChild
-            className="border-emerald-500/40 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 hover:text-emerald-200"
-          >
-            <Link href={`/tablice-celow/przeglad?boardId=${boardId}`}>Przegląd celów</Link>
-          </Button>
-          <CreateGoalDialog boardId={boardId} />
         </div>
       </div>
 
@@ -435,8 +445,11 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
           if (!next) setSettlementGateGoal(null);
         }}
         currentProfileId={profile?.id ?? null}
-        onSettled={() => {
+        onSettled={(settledGoal) => {
           setSettlementGateGoal(null);
+          if (settledGoal) {
+            upsertGoalInStore(settledGoal);
+          }
           void ensureBoardGoals(boardId, { force: true });
         }}
       />

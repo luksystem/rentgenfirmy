@@ -44,8 +44,8 @@ export function AgreementCollapsibleShell({
   return (
     <article
       className={cn(
-        "min-w-0 max-w-full overflow-hidden rounded-xl border border-border/70 bg-surface-muted/15",
-        compact ? "px-3 py-2.5" : "p-4",
+        "min-w-0 max-w-full overflow-x-hidden rounded-xl border border-border/70 bg-surface-muted/15",
+        compact ? "px-3 py-2.5" : "p-3 sm:p-4",
         className,
       )}
     >
@@ -92,14 +92,23 @@ export function AgreementCollapsibleShell({
         </div>
       </button>
 
-      {banner ? <div className={cn(hasDetails ? "mt-2 pl-6" : "mt-2")}>{banner}</div> : null}
+      {banner ? (
+        <div className={cn("min-w-0", hasDetails ? "mt-2 pl-6" : "mt-2")}>{banner}</div>
+      ) : null}
 
       {preview && !expanded ? (
-        <div className={cn(hasDetails ? "mt-2 pl-6" : "mt-2")}>{preview}</div>
+        <div className={cn("min-w-0", hasDetails ? "mt-2 pl-6" : "mt-2")}>{preview}</div>
       ) : null}
 
       {hasDetails && expanded ? (
-        <div className={cn("grid gap-3 border-t border-border/60 pt-3", compact ? "mt-2" : "mt-3")}>
+        <div
+          className={cn(
+            "grid min-w-0 max-w-full gap-3 overflow-x-hidden border-t border-border/60 pt-3",
+            compact ? "mt-2" : "mt-3",
+            // Na wąskim ekranie bez dodatkowego wcięcia — więcej miejsca na treść i przyciski
+            hasDetails && "sm:pl-6",
+          )}
+        >
           {children}
         </div>
       ) : null}

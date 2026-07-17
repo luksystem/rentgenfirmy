@@ -8,8 +8,6 @@ import { MentionTextarea } from "@/components/mentions/mention-textarea";
 import { useMentionOptionsFromProfiles } from "@/hooks/use-team-mention-options";
 import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
 import {
-  GOAL_REVIEW_OUTCOME_LABELS,
-  GOAL_REVIEW_OUTCOMES,
   GOAL_STATUS_LABELS,
   type Goal,
   type GoalKpi,
@@ -24,6 +22,7 @@ import { GoalDeferRevisitActions } from "@/components/goals/goal-defer-revisit-a
 import { ReviewMeetingTaskForm } from "@/components/goals/review-meeting/review-meeting-task-form";
 import { useDraftNumber } from "@/hooks/use-draft-number";
 import { cn } from "@/lib/utils";
+import { useGoalStore } from "@/store/goal-store";
 
 const SUCCESS_FIELD_HINTS = [
   "success",
@@ -86,6 +85,7 @@ export function ReviewMeetingGoalPanel({
   invalidOutcome?: boolean;
   invalidNotes?: boolean;
 }) {
+  const reviewOutcomes = useGoalStore((state) => state.moduleSettings.reviewOutcomes);
   const [methodology, setMethodology] = useState<GoalMethodology | null>(null);
   const [kpis, setKpis] = useState<GoalKpi[]>([]);
   const { mentionOptions } = useMentionOptionsFromProfiles(teamProfiles);
@@ -243,9 +243,9 @@ export function ReviewMeetingGoalPanel({
             <option value="" disabled>
               Wybierz…
             </option>
-            {GOAL_REVIEW_OUTCOMES.map((value) => (
-              <option key={value} value={value}>
-                {GOAL_REVIEW_OUTCOME_LABELS[value]}
+            {reviewOutcomes.map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {entry.label}
               </option>
             ))}
           </Select>
