@@ -7,6 +7,11 @@ import {
   type ProjectTimeEntryRow,
   type ProjectTimeSummary,
 } from "@/lib/time-tracking/project-time-summary";
+import {
+  buildProjectHourBudget,
+  countBillableWorkMinutes,
+  type ProjectHourBudgetSummary,
+} from "@/lib/time-tracking/project-hour-budget";
 import { assertUserCanAccessProjectServer } from "@/lib/supabase/project-access-server";
 import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
 import {
@@ -502,6 +507,31 @@ async function loadCostRateSnapshot(
   return data?.cost_rate ?? null;
 }
 
+async function loadClientRateSnapshot(
+  admin: AdminClient,
+  projectId: string | null | undefined,
+): Promise<number | null> {
+  if (!projectId) {
+    return null;
+  }
+
+  const { data, error } = await admin
+    .from("project_billing_settings")
+    .select("hourly_rate_net, hourly_enabled")
+    .eq("project_id", projectId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data?.hourly_enabled || data.hourly_rate_net == null) {
+    return null;
+  }
+
+  return Number(data.hourly_rate_net);
+}
+
 export async function createTimeEntryServer(
   admin: AdminClient,
   actor: UserProfile,
@@ -538,6 +568,7 @@ export async function createTimeEntryServer(
 
   const clientId = await resolveClientIdFromProject(admin, input.projectId, input.clientId);
   const costRateSnapshot = await loadCostRateSnapshot(admin, targetUserId);
+  const clientRateSnapshot = await loadClientRateSnapshot(admin, input.projectId);
   const billable =
     input.billable ?? (entryType.allowsBillable ? category.defaultBillable : false);
 
@@ -556,11 +587,13 @@ export async function createTimeEntryServer(
     client_id: clientId,
     work_item_id: input.workItemId ?? null,
     service_id: input.serviceId ?? null,
+    mission_id: input.missionId ?? null,
     process_stage_id: options?.processStageId ?? null,
     resource_plan_item_id: options?.resourcePlanItemId ?? null,
     remote_work: input.remoteWork ?? false,
     delegation: input.delegation ?? false,
     cost_rate_snapshot: costRateSnapshot,
+    client_rate_snapshot: clientRateSnapshot,
     status: "draft",
     created_from: options?.createdFrom ?? "manual",
   };
@@ -1068,7 +1101,11 @@ export async function fetchProjectTimeTrackingServer(
   admin: AdminClient,
   actor: UserProfile,
   projectId: string,
-): Promise<{ entries: ProjectTimeEntryRow[]; summary: ProjectTimeSummary }> {
+): Promise<{
+  entries: ProjectTimeEntryRow[];
+  summary: ProjectTimeSummary;
+  hourBudget: ProjectHourBudgetSummary | null;
+}> {
   await assertUserCanAccessProjectServer(admin, actor, projectId);
 
   const { data, error } = await admin
@@ -1083,10 +1120,19 @@ export async function fetchProjectTimeTrackingServer(
   }
 
   const rows = (data ?? []) as TimeEntryRow[];
-  const [baseViews, stageMeta] = await Promise.all([
+  const [baseViews, stageMeta, quotasResult] = await Promise.all([
     resolveEntryViews(admin, rows),
     fetchProjectStageTitleMap(admin, projectId),
+    admin
+      .from("project_contract_quotas")
+      .select("id, label, quantity, unit, position, notes, project_id, created_at, updated_at")
+      .eq("project_id", projectId)
+      .order("position", { ascending: true }),
   ]);
+
+  if (quotasResult.error) {
+    throw new Error(quotasResult.error.message);
+  }
 
   const userIds = [...new Set(rows.map((row) => row.user_id))];
   const { data: profileRows, error: profileError } = userIds.length
@@ -1114,8 +1160,25 @@ export async function fetchProjectTimeTrackingServer(
     processStageTitle: resolveProcessStageTitle(entry.processStageId, stageMeta.titleById),
   }));
 
+  const usedMinutes = countBillableWorkMinutes(entries);
+  const hourBudget = buildProjectHourBudget(
+    (quotasResult.data ?? []).map((row) => ({
+      id: row.id as string,
+      projectId: row.project_id as string,
+      label: row.label as string,
+      quantity: Number(row.quantity),
+      unit: row.unit as "hours" | "visits" | "other",
+      position: row.position as number,
+      notes: row.notes as string,
+      createdAt: row.created_at as string,
+      updatedAt: row.updated_at as string,
+    })),
+    usedMinutes,
+  );
+
   return {
     entries,
     summary: buildProjectTimeSummary(entries, stageMeta.orderedStages),
+    hourBudget,
   };
 }

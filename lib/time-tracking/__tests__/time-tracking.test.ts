@@ -25,6 +25,7 @@ import {
   buildPlanTimeSuggestionDrafts,
   distributeMinutesAcrossWorkingDays,
 } from "@/lib/time-tracking/plan-suggestions";
+import { buildProjectHourBudget } from "@/lib/time-tracking/project-hour-budget";
 import type { ResourcePlanItem } from "@/lib/resource-plan/types";
 import {
   canApproveTimesheetStatus,
@@ -336,6 +337,31 @@ describe("plan time suggestions", () => {
     expect(drafts.some((draft) => draft.date === "2026-07-14")).toBe(false);
     expect(drafts.length).toBeGreaterThan(0);
     expect(drafts.every((draft) => draft.categoryCode === "project")).toBe(true);
+  });
+});
+
+describe("project hour budget", () => {
+  it("computes utilization against hour quotas", () => {
+    const budget = buildProjectHourBudget(
+      [
+        {
+          id: "q1",
+          projectId: "p1",
+          label: "Programista",
+          quantity: 40,
+          unit: "hours",
+          position: 0,
+          notes: "",
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+      30 * 60,
+    );
+
+    expect(budget?.totalBudgetMinutes).toBe(2400);
+    expect(budget?.utilizationPercent).toBe(75);
+    expect(budget?.overBudget).toBe(false);
   });
 });
 

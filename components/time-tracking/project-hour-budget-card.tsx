@@ -1,0 +1,55 @@
+"use client";
+
+import { Card, CardContent } from "@/components/ui/card";
+import { formatDurationMinutes } from "@/lib/time-tracking/format";
+import type { ProjectHourBudgetSummary } from "@/lib/time-tracking/project-hour-budget";
+import { cn } from "@/lib/utils";
+
+export function ProjectHourBudgetCard({ budget }: { budget: ProjectHourBudgetSummary }) {
+  return (
+    <Card className={cn(budget.overBudget && "border-rose-500/40 bg-rose-500/5")}>
+      <CardContent className="grid gap-4 py-4">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">Budżet godzin kontraktu</p>
+          <p className="mt-1 text-2xl font-semibold text-foreground">
+            {formatDurationMinutes(budget.totalUsedMinutes)}{" "}
+            <span className="text-base font-normal text-muted">
+              / {formatDurationMinutes(budget.totalBudgetMinutes)}
+            </span>
+          </p>
+          <p className={cn("mt-1 text-sm", budget.overBudget ? "text-rose-300" : "text-muted")}>
+            {budget.overBudget
+              ? `Przekroczenie o ${formatDurationMinutes(budget.totalUsedMinutes - budget.totalBudgetMinutes)}`
+              : `Pozostało ${formatDurationMinutes(budget.totalRemainingMinutes)} (${100 - budget.utilizationPercent}%)`}
+          </p>
+        </div>
+
+        <div className="h-2 overflow-hidden rounded-full bg-surface-muted">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all",
+              budget.overBudget ? "bg-rose-500" : "bg-accent",
+            )}
+            style={{ width: `${Math.min(budget.utilizationPercent, 100)}%` }}
+          />
+        </div>
+
+        {budget.lines.length > 1 ? (
+          <div className="grid gap-2">
+            {budget.lines.map((line) => (
+              <div
+                key={line.quotaId}
+                className="flex items-center justify-between gap-3 text-sm"
+              >
+                <span className="truncate text-muted">{line.label}</span>
+                <span className="shrink-0 font-medium text-foreground">
+                  {formatDurationMinutes(line.usedMinutes)} / {formatDurationMinutes(line.budgetMinutes)}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}

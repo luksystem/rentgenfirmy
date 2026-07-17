@@ -8,6 +8,8 @@ import type {
   ProjectTimeEntryRow,
   ProjectTimeSummary,
 } from "@/lib/time-tracking/project-time-summary";
+import type { ProjectHourBudgetSummary } from "@/lib/time-tracking/project-hour-budget";
+import { ProjectHourBudgetCard } from "@/components/time-tracking/project-hour-budget-card";
 import { TIME_ENTRY_STATUS_LABELS } from "@/lib/time-tracking/types";
 import { formatDate } from "@/lib/utils";
 
@@ -27,6 +29,7 @@ function statusTone(status: ProjectTimeEntryRow["status"]) {
 export function ProjectTimeTrackingPanel({ projectId }: { projectId: string }) {
   const [entries, setEntries] = useState<ProjectTimeEntryRow[]>([]);
   const [summary, setSummary] = useState<ProjectTimeSummary | null>(null);
+  const [hourBudget, setHourBudget] = useState<ProjectHourBudgetSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,6 +45,7 @@ export function ProjectTimeTrackingPanel({ projectId }: { projectId: string }) {
         const payload = (await response.json()) as {
           entries?: ProjectTimeEntryRow[];
           summary?: ProjectTimeSummary;
+          hourBudget?: ProjectHourBudgetSummary | null;
           error?: string;
         };
         if (!response.ok) {
@@ -50,6 +54,7 @@ export function ProjectTimeTrackingPanel({ projectId }: { projectId: string }) {
         if (!cancelled) {
           setEntries(payload.entries ?? []);
           setSummary(payload.summary ?? null);
+          setHourBudget(payload.hourBudget ?? null);
         }
       })
       .catch((err: unknown) => {
@@ -57,6 +62,7 @@ export function ProjectTimeTrackingPanel({ projectId }: { projectId: string }) {
           setError(err instanceof Error ? err.message : "Nie udało się wczytać czasu pracy.");
           setEntries([]);
           setSummary(null);
+          setHourBudget(null);
         }
       })
       .finally(() => {
@@ -81,6 +87,7 @@ export function ProjectTimeTrackingPanel({ projectId }: { projectId: string }) {
   return (
     <div className="grid gap-4">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {hourBudget ? <ProjectHourBudgetCard budget={hourBudget} /> : null}
         <Card>
           <CardContent className="py-4">
             <p className="text-xs font-medium uppercase tracking-wide text-muted">Łącznie w projekcie</p>
