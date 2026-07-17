@@ -8,7 +8,6 @@ import {
 } from "@/lib/time-tracking/permissions";
 import { collectTimesheetSubmitIssues } from "@/lib/time-tracking/timesheet-validation";
 import { buildTimesheetSummary, type TimesheetSummary } from "@/lib/time-tracking/timesheet-summary";
-import { buildWorkPeriodBalance, type WorkPeriodBalance } from "@/lib/time-tracking/period-balance";
 import { buildTeamPeriodDetail, type TeamPeriodDetail } from "@/lib/time-tracking/team-period-detail";
 import type {
   EnsureTimesheetInput,
