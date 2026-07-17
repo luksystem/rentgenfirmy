@@ -10,6 +10,7 @@ import { Field, Select } from "@/components/ui/input";
 import { TimeDailyBreakdownTable } from "@/components/time-tracking/time-daily-breakdown-table";
 import { TimeEmployeeProjectBreakdown } from "@/components/time-tracking/time-employee-project-breakdown";
 import { TimePeriodReport } from "@/components/time-tracking/time-period-report";
+import { TimePeriodBalanceCard } from "@/components/time-tracking/time-period-balance-card";
 import { TimeTeamPeriodMatrix } from "@/components/time-tracking/time-team-period-matrix";
 import { TimeTimesheetApprovalPanel } from "@/components/time-tracking/time-timesheet-approval-panel";
 import { TimeTimesheetPanel } from "@/components/time-tracking/time-timesheet-panel";
@@ -219,6 +220,7 @@ export function TimeTimesheetViewPage() {
           ) : null}
 
           <TimeDailyBreakdownTable rows={summary?.dailyBreakdown ?? []} />
+          <TimePeriodBalanceCard balance={summary?.balance ?? null} periodType={timesheetPeriod.periodType} />
           <TimeEmployeeProjectBreakdown
             entries={summary?.entries ?? []}
             dateFrom={timesheetPeriod.dateFrom}

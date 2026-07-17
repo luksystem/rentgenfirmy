@@ -8,6 +8,15 @@ import {
   buildProjectBreakdownForEntries,
   buildTeamPeriodDetail,
 } from "@/lib/time-tracking/team-period-detail";
+import { buildWorkPeriodBalance } from "@/lib/time-tracking/period-balance";
+import {
+  resolveLeaveEntryTypeCode,
+  shouldSyncLeaveToTimeEntries,
+} from "@/lib/time-tracking/leave-type-mapping";
+import {
+  buildExpectedWorkMinutes,
+  countWorkingDaysInRange,
+} from "@/lib/time-tracking/work-schedule";
 import {
   canApproveTimesheetStatus,
   canSubmitTimesheetStatus,
@@ -197,6 +206,47 @@ describe("timesheet summary", () => {
     expect(summary.dailyBreakdown[1]?.workMinutes).toBe(480);
     expect(summary.dailyBreakdown[2]?.absenceMinutes).toBe(60);
     expect(summary.report.totalMinutes).toBe(540);
+    expect(summary.balance.actualWorkMinutes).toBe(480);
+  });
+});
+
+describe("work schedule", () => {
+  it("counts working days excluding weekends", () => {
+    expect(countWorkingDaysInRange("2026-07-13", "2026-07-19")).toBe(5);
+  });
+
+  it("builds expected minutes from daily norm", () => {
+    const result = buildExpectedWorkMinutes("2026-07-13", "2026-07-19", 8);
+    expect(result.workingDays).toBe(5);
+    expect(result.expectedWorkMinutes).toBe(5 * 480);
+  });
+});
+
+describe("period balance", () => {
+  it("computes balance against expected work", () => {
+    const balance = buildWorkPeriodBalance(
+      {
+        workMinutes: 2400,
+        absenceMinutes: 480,
+        totalMinutes: 2880,
+        byType: [],
+      },
+      "2026-07-13",
+      "2026-07-19",
+      8,
+    );
+    expect(balance.expectedWorkMinutes).toBe(2400);
+    expect(balance.balanceMinutes).toBe(0);
+  });
+});
+
+describe("leave type mapping", () => {
+  it("maps sick leave to sick entry type", () => {
+    expect(resolveLeaveEntryTypeCode("Zwolnienie lekarskie")).toBe("sick");
+  });
+
+  it("skips business trips", () => {
+    expect(shouldSyncLeaveToTimeEntries("Delegacja / wyjazd służbowy")).toBe(false);
   });
 });
 

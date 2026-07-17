@@ -60,6 +60,7 @@ type TimeEntryRow = {
   work_item_id: string | null;
   service_id: string | null;
   mission_id: string | null;
+  leave_request_id: string | null;
   remote_work: boolean;
   delegation: boolean;
   overtime_flag: boolean;
@@ -243,6 +244,7 @@ export function mapTimeEntryRow(row: TimeEntryRow): TimeEntry {
     workItemId: row.work_item_id,
     serviceId: row.service_id,
     missionId: row.mission_id,
+    leaveRequestId: row.leave_request_id,
     remoteWork: row.remote_work,
     delegation: row.delegation,
     overtimeFlag: row.overtime_flag,

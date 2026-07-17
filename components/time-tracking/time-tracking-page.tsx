@@ -14,6 +14,7 @@ import { TimeTimerPanel } from "@/components/time-tracking/time-timer-panel";
 import { TimeTimesheetApprovalPanel } from "@/components/time-tracking/time-timesheet-approval-panel";
 import { TimeTimesheetPanel } from "@/components/time-tracking/time-timesheet-panel";
 import { TimeWeekReport } from "@/components/time-tracking/time-week-report";
+import { TimeEntriesPeriodBalance } from "@/components/time-tracking/time-entries-period-balance";
 import {
   formatTimesheetPeriodLabel,
   resolveTimesheetPeriod,
@@ -150,6 +151,7 @@ export function TimeTrackingPage() {
           />
         ) : null}
         <TimeWeekReport entries={entries} />
+        <TimeEntriesPeriodBalance entries={entries} periodType={entriesPeriod.periodType} />
       </div>
 
       <div className="mb-6 grid gap-4 lg:grid-cols-[1fr_auto]">

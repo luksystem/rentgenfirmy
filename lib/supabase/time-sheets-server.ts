@@ -8,6 +8,7 @@ import {
 } from "@/lib/time-tracking/permissions";
 import { collectTimesheetSubmitIssues } from "@/lib/time-tracking/timesheet-validation";
 import { buildTimesheetSummary, type TimesheetSummary } from "@/lib/time-tracking/timesheet-summary";
+import { buildWorkPeriodBalance, type WorkPeriodBalance } from "@/lib/time-tracking/period-balance";
 import { buildTeamPeriodDetail, type TeamPeriodDetail } from "@/lib/time-tracking/team-period-detail";
 import type {
   EnsureTimesheetInput,
@@ -28,6 +29,7 @@ import {
   fetchTimeTrackingMetaServer,
 } from "@/lib/supabase/time-tracking-server";
 import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
+import { mapProfileRow } from "@/lib/supabase/profile-mappers";
 
 type AdminClient = SupabaseClient;
 
@@ -483,13 +485,14 @@ export async function fetchTimesheetSummaryServer(
     throw new Error("Brak uprawnień do podglądu zestawienia innej osoby.");
   }
 
-  const [meta, entries] = await Promise.all([
+  const [meta, entries, profileResult] = await Promise.all([
     fetchTimeTrackingMetaServer(admin),
     fetchTimeEntriesServer(admin, actor, {
       userId: targetUserId,
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
     }),
+    admin.from("profiles").select("*").eq("id", targetUserId).maybeSingle(),
   ]);
 
   let timesheetView: TimesheetView | null = null;
@@ -515,6 +518,11 @@ export async function fetchTimesheetSummaryServer(
     query.dateFrom,
     query.dateTo,
     meta.entryTypes,
+    profileResult.data
+      ? mapProfileRow(profileResult.data).dailyHoursLimit
+      : actor.id === targetUserId
+        ? actor.dailyHoursLimit
+        : null,
   );
 }
 

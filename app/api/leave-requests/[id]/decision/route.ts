@@ -6,6 +6,7 @@ import { countLeaveDays, countLeaveWorkingDays } from "@/lib/leave/types";
 import { generateLeaveCardPdf } from "@/lib/leave/leave-card-pdf";
 import { dispatchLeaveRequestDecidedSms } from "@/lib/leave/leave-sms";
 import { syncApprovedLeaveAbsence } from "@/lib/leave/leave-absence-sync";
+import { syncApprovedLeaveToTimeTrackingServer } from "@/lib/supabase/time-tracking-leave-sync-server";
 import { createAllDayCalendarEvent } from "@/lib/google/calendar";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -202,6 +203,18 @@ export async function POST(
     await syncApprovedLeaveAbsence(
       admin,
       { id, profileId: item.profileId, startDate: item.startDate, endDate: item.endDate },
+      leaveTypeName,
+    ).catch(() => undefined);
+
+    await syncApprovedLeaveToTimeTrackingServer(
+      admin,
+      {
+        id,
+        profileId: item.profileId,
+        startDate: item.startDate,
+        endDate: item.endDate,
+        note: item.note,
+      },
       leaveTypeName,
     ).catch(() => undefined);
 

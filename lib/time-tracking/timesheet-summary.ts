@@ -1,4 +1,5 @@
 import { buildWeekTimeReport, type WeekTimeReport } from "@/lib/time-tracking/reports";
+import { buildWorkPeriodBalance, type WorkPeriodBalance } from "@/lib/time-tracking/period-balance";
 import { eachDateInRange } from "@/lib/time-tracking/timesheet-period";
 import type { TimeEntryView, TimesheetView } from "@/lib/time-tracking/types";
 
@@ -18,6 +19,7 @@ export type TimesheetSummary = {
   entries: TimeEntryView[];
   report: PeriodTimeReport;
   dailyBreakdown: DailyTimeSummary[];
+  balance: WorkPeriodBalance;
 };
 
 export function buildDailyTimeBreakdown(
@@ -86,11 +88,13 @@ export function buildTimesheetSummary(
     countsAsWork: boolean;
     countsAsAbsence: boolean;
   }>,
+  dailyHoursLimit?: number | null,
 ): TimesheetSummary {
+  const report = buildWeekTimeReport(entries, entryTypeMeta);
   return {
     timesheet,
     entries,
-    report: buildWeekTimeReport(entries, entryTypeMeta),
+    report,
     dailyBreakdown: buildDailyTimeBreakdown(
       entries,
       dateFrom,
@@ -101,5 +105,6 @@ export function buildTimesheetSummary(
         countsAsAbsence: item.countsAsAbsence,
       })),
     ),
+    balance: buildWorkPeriodBalance(report, dateFrom, dateTo, dailyHoursLimit),
   };
 }

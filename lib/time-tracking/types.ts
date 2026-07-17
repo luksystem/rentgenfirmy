@@ -48,6 +48,7 @@ export type TimeEntry = {
   workItemId: string | null;
   serviceId: string | null;
   missionId: string | null;
+  leaveRequestId: string | null;
   remoteWork: boolean;
   delegation: boolean;
   overtimeFlag: boolean;
