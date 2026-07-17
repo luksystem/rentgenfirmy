@@ -1,6 +1,6 @@
 # Stan wdrożenia — Moja praca
 
-Ostatnia aktualizacja: Etapy 1–5 (zadania + plany + agregacja + AI + pulpit).
+Ostatnia aktualizacja: moduł Czas pracy (etapy 1–6).
 
 ## Etap 1 — Zadania (MVP) ✅
 
@@ -49,8 +49,6 @@ Ostatnia aktualizacja: Etapy 1–5 (zadania + plany + agregacja + AI + pulpit).
 | Flagi `ai_generated`, `ai_suggestion_reason`, `ai_draft` | ✅ |
 | Filtr „Sugestie AI” w liście zadań | ✅ |
 
-**Uwaga:** Bez `OPENAI_API_KEY` działa fallback heurystyczny (reguły operacyjne).
-
 ## Etap 5 — Pulpit managera ✅
 
 | Element | Status |
@@ -62,17 +60,37 @@ Ostatnia aktualizacja: Etapy 1–5 (zadania + plany + agregacja + AI + pulpit).
 | Nawigacja „Pulpit” w menu Moja praca | ✅ |
 | KPI: zaległe, weryfikacja, przeszkody, obciążenie zespołu | ✅ |
 
+## Czas pracy — `/moja-praca/czas-pracy` ✅
+
+| Element | Status |
+|---------|--------|
+| Migracja `125` — wpisy, kategorie, typy, timer | ✅ |
+| Ewidencja + timer + walidacja nakładania | ✅ |
+| Arkusz tygodniowy / miesięczny + akceptacja | ✅ |
+| Macierz zespołu dzień-po-dniu + rozbicie projektów | ✅ |
+| Saldo godzin (norma vs praca) | ✅ |
+| Sync urlopów → wpisy (`154`) | ✅ |
+| Oznaczenia weekendów / świąt / urlopów w macierzy | ✅ |
+| Propozycje z planu zasobów (`159`) | ✅ |
+| Budżet godzin vs kontrakt (`project_contract_quotas`) | ✅ |
+| Misje / delegacje (`160`, `work_missions`) | ✅ |
+| Snapshot stawek koszt / klient (`161`, profil + billing) | ✅ |
+| Backfill urlopów: `POST /api/time-tracking/leave-backfill` | ✅ |
+
+**Adresy:**
+- Ewidencja: `/moja-praca/czas-pracy`
+- Arkusz: `/moja-praca/czas-pracy/arkusz`
+
 ## Poza zakresem (roadmapa)
 
 | Element | Status |
 |---------|--------|
-| `/moja-praca/czas-pracy` — Etap 2–3 (wpisy + timer) | 🟡 w toku |
-| Arkusz tygodniowy + akceptacja | 🔲 Etap 4–5 |
-| Integracja z planowaniem / urlopami | 🔲 Etap 6 |
+| UI zarządzania misjami (CRUD) | 🔲 |
+| AI / anomalie w czasie pracy | 🔲 |
 | Realtime na pulpicie managera | 🔲 opcjonalnie |
 
 ## Checklist po deploy
 
-- [ ] Migracje `120`–`124` na produkcji
+- [ ] Migracje `120`–`124`, `125`, `154`, `159`–`161` na produkcji
 - [ ] `OPENAI_API_KEY` w env (opcjonalnie, dla pełnego AI)
 - [ ] Test manualny wg [TEST_RECZNY.md](./TEST_RECZNY.md)
