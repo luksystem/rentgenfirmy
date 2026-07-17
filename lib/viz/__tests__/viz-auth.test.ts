@@ -6,7 +6,8 @@ describe("resolveInternalVizAccessRole", () => {
   it("maps internal staff roles to dashboard access roles", () => {
     expect(resolveInternalVizAccessRole("administrator")).toBe("admin");
     expect(resolveInternalVizAccessRole("manager")).toBe("admin");
-    expect(resolveInternalVizAccessRole("pracownik")).toBe("operator");
+    expect(resolveInternalVizAccessRole("instalator")).toBe("operator");
+    expect(resolveInternalVizAccessRole("office")).toBe("operator");
     expect(resolveInternalVizAccessRole("podwykonawca")).toBe("service");
     expect(resolveInternalVizAccessRole("klient")).toBeNull();
   });

@@ -23,7 +23,7 @@ function parseUserInput(body: unknown): CreateUserBody | null {
   }
 
   const data = body as Record<string, unknown>;
-  const role = typeof data.role === "string" ? data.role : "pracownik";
+  const role = typeof data.role === "string" ? data.role : "instalator";
 
   if (!USER_ROLES.includes(role as (typeof USER_ROLES)[number])) {
     return null;

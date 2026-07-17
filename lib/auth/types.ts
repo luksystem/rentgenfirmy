@@ -1,7 +1,8 @@
 export const USER_ROLES = [
   "administrator",
   "manager",
-  "pracownik",
+  "instalator",
+  "office",
   "podwykonawca",
   "klient",
   "gosc",
@@ -13,7 +14,8 @@ export type UserRole = (typeof USER_ROLES)[number];
 export const STAFF_ROLES = [
   "administrator",
   "manager",
-  "pracownik",
+  "instalator",
+  "office",
   "podwykonawca",
 ] as const satisfies readonly UserRole[];
 
@@ -63,7 +65,8 @@ export type UserProfileInput = {
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
   administrator: "Administrator",
   manager: "Manager",
-  pracownik: "Pracownik",
+  instalator: "Instalator",
+  office: "Office",
   podwykonawca: "Podwykonawca",
   klient: "Klient",
   gosc: "Gość",
@@ -83,5 +86,5 @@ export function hasFullAppAccess(role: UserRole) {
 }
 
 export function isIntegrationOperator(role: UserRole) {
-  return role === "administrator" || role === "manager" || role === "pracownik";
+  return role === "administrator" || role === "manager" || role === "instalator";
 }

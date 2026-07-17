@@ -32,7 +32,7 @@ export function resolveInternalVizAccessRole(profileRole: UserRole): VizAccessRo
   if (profileRole === "manager") {
     return "admin";
   }
-  if (profileRole === "pracownik") {
+  if (profileRole === "instalator" || profileRole === "office") {
     return "operator";
   }
   if (profileRole === "podwykonawca") {

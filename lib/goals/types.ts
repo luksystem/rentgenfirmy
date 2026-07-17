@@ -28,12 +28,12 @@ export const GOAL_STATUSES = [
 ] as const;
 export type GoalStatus = (typeof GOAL_STATUSES)[number];
 
+/** Kolumny aktywne na tablicy; „settled” i „cancelled” dokładane przyciskami Pokaż… */
 export const GOAL_BOARD_COLUMNS: GoalStatus[] = [
   "planned",
   "in_progress",
   "at_risk",
   "on_hold",
-  "settled",
 ];
 
 export const GOAL_STATUS_LABELS: Record<GoalStatus, string> = {

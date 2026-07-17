@@ -25,11 +25,29 @@ const PODWYKONAWCA_NAV_ACCESS: NavModuleKey[] = [
   "change-password",
 ];
 
+/** Kadry i Płace — ludzie, czas, urlopy, faktury, raporty. */
+const OFFICE_NAV_ACCESS: NavModuleKey[] = [
+  "start",
+  "my-work-tasks",
+  "my-work-dashboard",
+  "my-work-time",
+  "my-work-availability",
+  "employees",
+  "resource-plan",
+  "invoices",
+  "documents",
+  "reports",
+  "settings",
+  "account-settings",
+  "change-password",
+];
+
 /** Domyślny dostęp do modułów menu per rola. */
 export const DEFAULT_ROLE_NAV_ACCESS: Record<UserRole, NavModuleKey[]> = {
   administrator: FULL_NAV_ACCESS,
   manager: FULL_NAV_ACCESS,
-  pracownik: FULL_NAV_ACCESS,
+  instalator: FULL_NAV_ACCESS,
+  office: OFFICE_NAV_ACCESS,
   podwykonawca: PODWYKONAWCA_NAV_ACCESS,
   klient: ["visualizations", "account-settings", "change-password"],
   gosc: [],
@@ -52,7 +70,7 @@ function viewOnlyForModules(modules: NavModuleKey[]): Partial<Record<NavModuleKe
   return actions;
 }
 
-function pracownikActions(modules: NavModuleKey[]): Partial<Record<NavModuleKey, PermissionActionKey[]>> {
+function instalatorActions(modules: NavModuleKey[]): Partial<Record<NavModuleKey, PermissionActionKey[]>> {
   const actions: Partial<Record<NavModuleKey, PermissionActionKey[]>> = {};
   const noDeleteModules: NavModuleKey[] = [
     "invoices",
@@ -69,6 +87,29 @@ function pracownikActions(modules: NavModuleKey[]): Partial<Record<NavModuleKey,
       actions[moduleKey] = supported.filter((a) => a !== "delete");
     } else {
       actions[moduleKey] = [...supported];
+    }
+  }
+  return actions;
+}
+
+function officeActions(modules: NavModuleKey[]): Partial<Record<NavModuleKey, PermissionActionKey[]>> {
+  const actions: Partial<Record<NavModuleKey, PermissionActionKey[]>> = {};
+  const fullEditModules: NavModuleKey[] = [
+    "my-work-tasks",
+    "my-work-time",
+    "my-work-availability",
+    "employees",
+    "invoices",
+    "documents",
+    "settings",
+  ];
+
+  for (const moduleKey of modules) {
+    const supported = getSupportedActionsForModule(moduleKey);
+    if (fullEditModules.includes(moduleKey)) {
+      actions[moduleKey] = supported.filter((a) => a !== "delete" || moduleKey === "documents");
+    } else {
+      actions[moduleKey] = supported.includes("view") ? ["view"] : [supported[0]];
     }
   }
   return actions;
@@ -109,9 +150,13 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, RolePermissionDefaults> 
     modules: DEFAULT_ROLE_NAV_ACCESS.manager,
     actions: allActionsForModules(DEFAULT_ROLE_NAV_ACCESS.manager),
   },
-  pracownik: {
-    modules: DEFAULT_ROLE_NAV_ACCESS.pracownik,
-    actions: pracownikActions(DEFAULT_ROLE_NAV_ACCESS.pracownik),
+  instalator: {
+    modules: DEFAULT_ROLE_NAV_ACCESS.instalator,
+    actions: instalatorActions(DEFAULT_ROLE_NAV_ACCESS.instalator),
+  },
+  office: {
+    modules: DEFAULT_ROLE_NAV_ACCESS.office,
+    actions: officeActions(DEFAULT_ROLE_NAV_ACCESS.office),
   },
   podwykonawca: {
     modules: DEFAULT_ROLE_NAV_ACCESS.podwykonawca,

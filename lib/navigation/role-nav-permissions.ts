@@ -77,12 +77,31 @@ function migrateV1ToV2(input: LegacyV1Config): RoleNavPermissionsConfig {
   return { version: 2, roles };
 }
 
+function remapLegacyRoleKeys(
+  roles: Partial<Record<string, unknown>> | undefined,
+): Partial<Record<UserRole, unknown>> {
+  if (!roles || typeof roles !== "object") {
+    return {};
+  }
+  const next: Partial<Record<string, unknown>> = { ...roles };
+  // Historyczna rola „pracownik” → „instalator”
+  if (next.pracownik != null && next.instalator == null) {
+    next.instalator = next.pracownik;
+  }
+  delete next.pracownik;
+  return next as Partial<Record<UserRole, unknown>>;
+}
+
 export function normalizeRoleNavPermissionsConfig(raw: unknown): RoleNavPermissionsConfig {
   if (!raw || typeof raw !== "object") {
     return { ...EMPTY_ROLE_NAV_PERMISSIONS_CONFIG };
   }
 
-  const input = raw as LegacyV1Config & Partial<RoleNavPermissionsConfig>;
+  const inputRaw = raw as LegacyV1Config & Partial<RoleNavPermissionsConfig>;
+  const input = {
+    ...inputRaw,
+    roles: remapLegacyRoleKeys(inputRaw.roles as Partial<Record<string, unknown>> | undefined),
+  } as LegacyV1Config & Partial<RoleNavPermissionsConfig>;
 
   if (input.version === 1 || (input.roles && !("version" in input))) {
     const firstValue = Object.values(input.roles ?? {})[0];

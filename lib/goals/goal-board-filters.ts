@@ -26,8 +26,10 @@ export function countActiveGoalBoardFilters(filters: GoalBoardFilters) {
 export function filterGoalsForBoard(
   goals: Goal[],
   filters: GoalBoardFilters,
-  options: { showCancelled: boolean },
+  options: { showCancelled: boolean; showSettled?: boolean },
 ) {
+  const showSettled = options.showSettled ?? false;
+
   return goals.filter((goal) => {
     if (goal.status === "cancelled") {
       if (filters.status === "cancelled") {
@@ -35,6 +37,16 @@ export function filterGoalsForBoard(
       } else if (filters.status !== "all") {
         return false;
       } else if (!options.showCancelled) {
+        return false;
+      }
+    }
+
+    if (goal.status === "settled") {
+      if (filters.status === "settled") {
+        // pokazuj rozliczone przy filtrze statusu
+      } else if (filters.status !== "all") {
+        return false;
+      } else if (!showSettled) {
         return false;
       }
     }
@@ -98,7 +110,7 @@ export function filterGoalsForCollective(
   filters: GoalCollectiveFilters,
   context?: { projectId?: string | null; clientId?: string | null },
 ) {
-  return filterGoalsForBoard(goals, filters, { showCancelled: true }).filter((goal) => {
+  return filterGoalsForBoard(goals, filters, { showCancelled: true, showSettled: true }).filter((goal) => {
     if (filters.boardId !== "all" && goal.boardId !== filters.boardId) {
       return false;
     }

@@ -295,7 +295,7 @@ export default function SettingsPage() {
               <p className="font-medium text-foreground">Uprawnienia ról</p>
               <p className="mt-1 text-sm text-muted">
                 Macierz dostępu do menu i akcji (podgląd, tworzenie, edycja…) dla wszystkich ról:
-                administrator, manager, pracownik, podwykonawca, klient, gość.
+                administrator, manager, instalator, office, podwykonawca, klient, gość.
               </p>
             </div>
             <Button variant="secondary" asChild>

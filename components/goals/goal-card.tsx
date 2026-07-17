@@ -80,7 +80,7 @@ function StatusSelect({
         className,
       )}
     >
-      {[...GOAL_BOARD_COLUMNS, "cancelled" as const].map((status) => (
+      {[...GOAL_BOARD_COLUMNS, "settled" as const, "cancelled" as const].map((status) => (
         <option key={status} value={status}>
           {GOAL_STATUS_LABELS[status]}
         </option>

@@ -94,6 +94,7 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
   const [dragOverColumn, setDragOverColumn] = useState<GoalStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCancelled, setShowCancelled] = useState(false);
+  const [showSettled, setShowSettled] = useState(false);
   const [filters, setFilters] = useState<GoalBoardFilters>(EMPTY_GOAL_BOARD_FILTERS);
   const [density, setDensity] = useState<"normal" | "slim">("normal");
   const [openGoal, setOpenGoal] = useState<Goal | null>(null);
@@ -129,24 +130,31 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
     [goals, getOwnerName],
   );
   const filteredGoals = useMemo(
-    () => filterGoalsForBoard(goals, filters, { showCancelled }),
-    [goals, filters, showCancelled],
+    () => filterGoalsForBoard(goals, filters, { showCancelled, showSettled }),
+    [goals, filters, showCancelled, showSettled],
   );
+  const showSettledColumn = showSettled || filters.status === "settled";
   const showCancelledColumn = showCancelled || filters.status === "cancelled";
 
   const columns = useMemo(() => {
     const base = GOAL_BOARD_COLUMNS.map((status) => ({ id: status, title: GOAL_STATUS_LABELS[status] }));
+    if (showSettledColumn) {
+      base.push({ id: "settled" as GoalStatus, title: GOAL_STATUS_LABELS.settled });
+    }
     if (showCancelledColumn) {
       base.push({ id: "cancelled" as GoalStatus, title: GOAL_STATUS_LABELS.cancelled });
     }
     return base;
-  }, [showCancelledColumn]);
+  }, [showSettledColumn, showCancelledColumn]);
   const { activeColumnId, scrollerRef, scrollToColumn, setColumnRef } = useKanbanMobileColumns(columns);
 
   const grouped = useMemo(() => {
     const map = new Map<GoalStatus, Goal[]>();
     for (const status of GOAL_BOARD_COLUMNS) {
       map.set(status, []);
+    }
+    if (showSettledColumn) {
+      map.set("settled", []);
     }
     if (showCancelledColumn) {
       map.set("cancelled", []);
@@ -157,7 +165,7 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
       map.set(goal.status, bucket);
     }
     return map;
-  }, [filteredGoals, showCancelledColumn]);
+  }, [filteredGoals, showSettledColumn, showCancelledColumn]);
 
   const maxColumnCount = Math.max(1, ...columns.map((column) => grouped.get(column.id)?.length ?? 0));
 
@@ -258,10 +266,20 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
             variant="outline"
             size="sm"
             className="min-w-0 flex-1 sm:flex-none"
+            onClick={() => setShowSettled((current) => !current)}
+          >
+            {showSettled ? <EyeOff className="mr-2 h-4 w-4 shrink-0" /> : <Eye className="mr-2 h-4 w-4 shrink-0" />}
+            <span className="truncate">{showSettled ? "Ukryj rozliczone" : "Pokaż rozliczone"}</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="min-w-0 flex-1 sm:flex-none"
             onClick={() => setShowCancelled((current) => !current)}
           >
             {showCancelled ? <EyeOff className="mr-2 h-4 w-4 shrink-0" /> : <Eye className="mr-2 h-4 w-4 shrink-0" />}
-            <span className="truncate">{showCancelled ? "Skryj anulowane" : "Pokaż anulowane"}</span>
+            <span className="truncate">{showCancelled ? "Ukryj anulowane" : "Pokaż anulowane"}</span>
           </Button>
           <Button
             type="button"

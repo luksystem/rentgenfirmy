@@ -31,7 +31,7 @@ export function VizDashboardList() {
   const canCreateDashboard =
     profile?.role === "administrator" ||
     profile?.role === "manager" ||
-    profile?.role === "pracownik" ||
+    profile?.role === "instalator" ||
     profile?.role === "podwykonawca";
 
   const loading = isLoading && !hydrated;

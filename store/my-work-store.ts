@@ -604,5 +604,5 @@ export const useMyWorkStore = create<MyWorkStore>((set, get) => ({
 }));
 
 export function useCanManageWorkItems(role: UserRole | undefined) {
-  return hasFullAppAccess(role ?? "pracownik");
+  return hasFullAppAccess(role ?? "instalator");
 }

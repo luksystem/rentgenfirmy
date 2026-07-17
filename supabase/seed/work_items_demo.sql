@@ -12,8 +12,8 @@ declare
   v_manual_blocked_id uuid := gen_random_uuid();
 begin
   select id into v_manager_id from public.profiles where role in ('administrator', 'manager') and is_active limit 1;
-  select id into v_worker_a_id from public.profiles where role = 'pracownik' and is_active order by created_at limit 1;
-  select id into v_worker_b_id from public.profiles where role = 'pracownik' and is_active order by created_at offset 1 limit 1;
+  select id into v_worker_a_id from public.profiles where role = 'instalator' and is_active order by created_at limit 1;
+  select id into v_worker_b_id from public.profiles where role = 'instalator' and is_active order by created_at offset 1 limit 1;
 
   if v_manager_id is null or v_worker_a_id is null then
     raise notice 'Pominięto seed work_items — brak profili manager/pracownik.';

@@ -26,7 +26,8 @@ type PermissionsTab = "menu" | "actions";
 const ROLE_SHORT_LABELS: Record<UserRole, string> = {
   administrator: "Admin",
   manager: "Manager",
-  pracownik: "Prac.",
+  instalator: "Inst.",
+  office: "Office",
   podwykonawca: "Podw.",
   klient: "Klient",
   gosc: "Gość",
@@ -196,7 +197,9 @@ export function RoleNavPermissionsView() {
         <CardContent className="grid gap-2 py-4 text-sm text-muted">
           <p className="hidden sm:block">
             Macierz obejmuje wszystkie role:{" "}
-            {CONFIGURABLE_ROLES.map((role) => USER_ROLE_LABELS[role]).join(", ")}.
+            {CONFIGURABLE_ROLES.map((role) => USER_ROLE_LABELS[role]).join(", ")}
+            {" "}
+            (Office = Kadry i Płace).
           </p>
           <p>
             Użytkownik z rolą <strong className="text-foreground">Administrator</strong> w profilu

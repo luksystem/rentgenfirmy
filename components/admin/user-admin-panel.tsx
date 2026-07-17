@@ -30,7 +30,7 @@ const emptyForm = (): UserFormState => ({
   lastName: "",
   phone: "",
   email: "",
-  role: "pracownik",
+  role: "instalator",
   isActive: true,
   dailyHoursLimit: null,
   weeklyHoursLimit: null,
