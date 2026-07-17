@@ -15,6 +15,7 @@ import { TimeTimesheetApprovalPanel } from "@/components/time-tracking/time-time
 import { TimeTimesheetPanel } from "@/components/time-tracking/time-timesheet-panel";
 import { TimeWeekReport } from "@/components/time-tracking/time-week-report";
 import { TimeEntriesPeriodBalance } from "@/components/time-tracking/time-entries-period-balance";
+import { TimePlanSuggestionsPanel } from "@/components/time-tracking/time-plan-suggestions-panel";
 import {
   formatTimesheetPeriodLabel,
   resolveTimesheetPeriod,
@@ -131,6 +132,7 @@ export function TimeTrackingPage() {
 
       <div className="mb-6 grid gap-4">
         <TimeTimerPanel />
+        <TimePlanSuggestionsPanel />
         <TimeTimesheetPanel
           timesheet={currentTimesheet}
           loading={timesheetLoading}

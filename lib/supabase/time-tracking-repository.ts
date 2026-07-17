@@ -1,9 +1,11 @@
 "use client";
 
 import type {
+  AcceptPlanSuggestionsInput,
   ActiveTimerView,
   CreateTimeEntryInput,
   EnsureTimesheetInput,
+  PlanTimeSuggestion,
   RejectTimesheetInput,
   StartTimerInput,
   StopTimerInput,
@@ -338,4 +340,38 @@ export async function rejectTimesheet(id: string, input: RejectTimesheetInput): 
     "Nie udało się odrzucić arkusza.",
   );
   return payload.timesheet;
+}
+
+export async function fetchPlanTimeSuggestions(params: {
+  dateFrom: string;
+  dateTo: string;
+}): Promise<PlanTimeSuggestion[]> {
+  const search = new URLSearchParams({
+    dateFrom: params.dateFrom,
+    dateTo: params.dateTo,
+  });
+  const response = await fetch(`/api/time-tracking/plan-suggestions?${search.toString()}`, {
+    credentials: "include",
+  });
+  const payload = await parseJsonResponse<{ suggestions: PlanTimeSuggestion[] }>(
+    response,
+    "Nie udało się wczytać propozycji z planu zasobów.",
+  );
+  return payload.suggestions;
+}
+
+export async function acceptPlanTimeSuggestions(
+  input: AcceptPlanSuggestionsInput,
+): Promise<TimeEntryView[]> {
+  const response = await fetch("/api/time-tracking/plan-suggestions/accept", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const payload = await parseJsonResponse<{ entries: TimeEntryView[] }>(
+    response,
+    "Nie udało się zaakceptować propozycji z planu.",
+  );
+  return payload.entries;
 }

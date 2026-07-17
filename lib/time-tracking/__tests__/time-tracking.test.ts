@@ -22,6 +22,11 @@ import {
   resolveLeaveForUserOnDate,
 } from "@/lib/time-tracking/calendar-day-markers";
 import {
+  buildPlanTimeSuggestionDrafts,
+  distributeMinutesAcrossWorkingDays,
+} from "@/lib/time-tracking/plan-suggestions";
+import type { ResourcePlanItem } from "@/lib/resource-plan/types";
+import {
   canApproveTimesheetStatus,
   canSubmitTimesheetStatus,
   collectTimesheetSubmitIssues,
@@ -277,6 +282,60 @@ describe("calendar day markers", () => {
 
     const meta = resolveLeaveForUserOnDate("u1", "2026-07-15", leaves, () => "Urlop");
     expect(meta?.status).toBe("approved");
+  });
+});
+
+describe("plan time suggestions", () => {
+  it("distributes minutes evenly across working days", () => {
+    const map = distributeMinutesAcrossWorkingDays(480, "2026-07-13", "2026-07-17");
+    expect(map.size).toBe(5);
+    expect([...map.values()].reduce((sum, value) => sum + value, 0)).toBe(480);
+  });
+
+  it("builds drafts for assignee and skips covered days", () => {
+    const item = {
+      id: "plan-1",
+      projectId: "p1",
+      clientId: null,
+      processStageId: null,
+      taskId: null,
+      serviceIntakeRequestId: null,
+      workTypeItemId: null,
+      title: "Montaż rozdzielni",
+      startAt: "2026-07-14T08:00:00.000Z",
+      endAt: "2026-07-16T16:00:00.000Z",
+      plannedHours: 24,
+      actualHours: null,
+      assigneeId: "u1",
+      teamItemId: null,
+      statusItemId: null,
+      riskItemId: null,
+      riskNote: "",
+      laborBudget: null,
+      materialBudget: null,
+      travelBudget: null,
+      notes: "",
+      acceptedRisk: false,
+      createdBy: null,
+      linkedGroupId: null,
+      shiftWithLinkedGroup: false,
+      participants: [],
+      requiredCompetencies: [],
+      createdAt: "",
+      updatedAt: "",
+    } satisfies ResourcePlanItem;
+
+    const drafts = buildPlanTimeSuggestionDrafts({
+      items: [item],
+      userId: "u1",
+      dateFrom: "2026-07-14",
+      dateTo: "2026-07-16",
+      existingEntries: [{ resourcePlanItemId: "plan-1", date: "2026-07-14" }],
+    });
+
+    expect(drafts.some((draft) => draft.date === "2026-07-14")).toBe(false);
+    expect(drafts.length).toBeGreaterThan(0);
+    expect(drafts.every((draft) => draft.categoryCode === "project")).toBe(true);
   });
 });
 

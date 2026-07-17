@@ -7,9 +7,11 @@ import { resolveTimesheetPeriod, type TimesheetPeriodRange } from "@/lib/time-tr
 import type { TimesheetSummary } from "@/lib/time-tracking/timesheet-summary";
 import type { TeamPeriodDetail } from "@/lib/time-tracking/team-period-detail";
 import type {
+  AcceptPlanSuggestionsInput,
   ActiveTimerView,
   CreateTimeEntryInput,
   EnsureTimesheetInput,
+  PlanTimeSuggestion,
   RejectTimesheetInput,
   StartTimerInput,
   StopTimerInput,
@@ -24,12 +26,14 @@ import type {
   UpdateTimeEntryInput,
 } from "@/lib/time-tracking/types";
 import {
+  acceptPlanTimeSuggestions,
   approveTimesheet,
   cancelTimer,
   createTimeEntry,
   deleteTimeEntry,
   ensureTimesheet,
   fetchActiveTimer,
+  fetchPlanTimeSuggestions,
   fetchTimeEntries,
   fetchTimeEntryLogs,
   fetchTeamPeriodDetail,
@@ -70,6 +74,12 @@ let teamOverviewPromise: Promise<TeamTimesheetOverviewRow[]> | null = null;
 let teamOverviewPromiseKey = "";
 let teamPeriodDetailPromise: Promise<TeamPeriodDetail> | null = null;
 let teamPeriodDetailPromiseKey = "";
+let planSuggestionsPromise: Promise<PlanTimeSuggestion[]> | null = null;
+let planSuggestionsPromiseKey = "";
+
+function buildPlanSuggestionsKey(dateFrom: string, dateTo: string) {
+  return `${dateFrom}|${dateTo}`;
+}
 
 function buildEntriesKey(filters: TimeEntryFilters) {
   return JSON.stringify(filters);
@@ -118,6 +128,10 @@ type TimeTrackingStore = {
   teamPeriodDetailHydrated: boolean;
   teamPeriodDetailLoading: boolean;
 
+  planSuggestions: PlanTimeSuggestion[];
+  planSuggestionsHydrated: boolean;
+  planSuggestionsLoading: boolean;
+
   ensureMeta: (options?: EnsureTimeEntriesOptions) => Promise<TimeTrackingMeta>;
   ensureEntries: (options?: EnsureTimeEntriesOptions) => Promise<TimeEntryView[]>;
   ensureTimer: (options?: EnsureTimeEntriesOptions) => Promise<ActiveTimerView | null>;
@@ -126,6 +140,8 @@ type TimeTrackingStore = {
   ensureTimesheetSummary: (options?: EnsureTimeEntriesOptions) => Promise<TimesheetSummary>;
   ensureTeamOverview: (options?: EnsureTimeEntriesOptions) => Promise<TeamTimesheetOverviewRow[]>;
   ensureTeamPeriodDetail: (options?: EnsureTimeEntriesOptions) => Promise<TeamPeriodDetail>;
+  ensurePlanSuggestions: (options?: EnsureTimeEntriesOptions) => Promise<PlanTimeSuggestion[]>;
+  acceptPlanSuggestions: (input: AcceptPlanSuggestionsInput) => Promise<TimeEntryView[]>;
   setTimesheetPeriod: (period: TimesheetPeriodRange) => void;
   setTimesheetUserId: (userId?: string) => void;
   setEntriesPeriod: (period: TimesheetPeriodRange) => void;
@@ -183,6 +199,10 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
   teamPeriodDetail: null,
   teamPeriodDetailHydrated: false,
   teamPeriodDetailLoading: false,
+
+  planSuggestions: [],
+  planSuggestionsHydrated: false,
+  planSuggestionsLoading: false,
 
   ensureMeta: async (options = {}) => {
     const { force = false, showLoading = !get().metaHydrated } = options;
@@ -465,6 +485,55 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
     return teamPeriodDetailPromise;
   },
 
+  ensurePlanSuggestions: async (options = {}) => {
+    const { force = false, showLoading = !get().planSuggestionsHydrated } = options;
+    const period = get().entriesPeriod;
+    const key = buildPlanSuggestionsKey(period.dateFrom, period.dateTo);
+
+    if (!force && get().planSuggestionsHydrated && planSuggestionsPromiseKey === key) {
+      return get().planSuggestions;
+    }
+    if (!force && planSuggestionsPromise && planSuggestionsPromiseKey === key) {
+      return planSuggestionsPromise;
+    }
+
+    if (showLoading) {
+      set({ planSuggestionsLoading: true });
+    }
+
+    planSuggestionsPromiseKey = key;
+    planSuggestionsPromise = fetchPlanTimeSuggestions({
+      dateFrom: period.dateFrom,
+      dateTo: period.dateTo,
+    })
+      .then((suggestions) => {
+        set({ planSuggestions: suggestions, planSuggestionsHydrated: true, planSuggestionsLoading: false });
+        planSuggestionsPromise = null;
+        return suggestions;
+      })
+      .catch((error) => {
+        set({ planSuggestionsLoading: false });
+        planSuggestionsPromise = null;
+        throw error;
+      });
+
+    return planSuggestionsPromise;
+  },
+
+  acceptPlanSuggestions: async (input) => {
+    const entries = await acceptPlanTimeSuggestions(input);
+    set((state) => {
+      const merged = [...entries, ...state.entries.filter((item) => !entries.some((entry) => entry.id === item.id))];
+      return {
+        entries: merged,
+        entriesHydrated: true,
+        planSuggestionsHydrated: false,
+      };
+    });
+    await get().ensurePlanSuggestions({ force: true, showLoading: false });
+    return entries;
+  },
+
   setTimesheetPeriod: (period) => {
     set({
       timesheetPeriod: period,
@@ -492,6 +561,7 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
       entriesHydrated: false,
       timesheetHydrated: false,
       pendingTimesheetsHydrated: false,
+      planSuggestionsHydrated: false,
     });
   },
 
@@ -639,6 +709,8 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
     teamOverviewPromiseKey = "";
     teamPeriodDetailPromise = null;
     teamPeriodDetailPromiseKey = "";
+    planSuggestionsPromise = null;
+    planSuggestionsPromiseKey = "";
     set({
       meta: null,
       metaHydrated: false,
@@ -656,6 +728,8 @@ export const useTimeTrackingStore = create<TimeTrackingStore>((set, get) => ({
       teamOverviewHydrated: false,
       teamPeriodDetail: null,
       teamPeriodDetailHydrated: false,
+      planSuggestions: [],
+      planSuggestionsHydrated: false,
     });
   },
 }));

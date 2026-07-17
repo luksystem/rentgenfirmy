@@ -61,6 +61,7 @@ type TimeEntryRow = {
   service_id: string | null;
   mission_id: string | null;
   leave_request_id: string | null;
+  resource_plan_item_id: string | null;
   remote_work: boolean;
   delegation: boolean;
   overtime_flag: boolean;
@@ -245,6 +246,7 @@ export function mapTimeEntryRow(row: TimeEntryRow): TimeEntry {
     serviceId: row.service_id,
     missionId: row.mission_id,
     leaveRequestId: row.leave_request_id,
+    resourcePlanItemId: row.resource_plan_item_id,
     remoteWork: row.remote_work,
     delegation: row.delegation,
     overtimeFlag: row.overtime_flag,
@@ -504,7 +506,11 @@ export async function createTimeEntryServer(
   admin: AdminClient,
   actor: UserProfile,
   input: CreateTimeEntryInput,
-  options?: { createdFrom?: TimeEntryCreatedFrom },
+  options?: {
+    createdFrom?: TimeEntryCreatedFrom;
+    resourcePlanItemId?: string | null;
+    processStageId?: string | null;
+  },
 ): Promise<TimeEntryView> {
   const targetUserId = input.userId ?? actor.id;
   if (!canCreateTimeEntryForUser(actor, targetUserId)) {
@@ -550,6 +556,8 @@ export async function createTimeEntryServer(
     client_id: clientId,
     work_item_id: input.workItemId ?? null,
     service_id: input.serviceId ?? null,
+    process_stage_id: options?.processStageId ?? null,
+    resource_plan_item_id: options?.resourcePlanItemId ?? null,
     remote_work: input.remoteWork ?? false,
     delegation: input.delegation ?? false,
     cost_rate_snapshot: costRateSnapshot,

@@ -49,6 +49,7 @@ export type TimeEntry = {
   serviceId: string | null;
   missionId: string | null;
   leaveRequestId: string | null;
+  resourcePlanItemId: string | null;
   remoteWork: boolean;
   delegation: boolean;
   overtimeFlag: boolean;
@@ -104,6 +105,27 @@ export type CreateTimeEntryInput = {
 export type UpdateTimeEntryInput = Partial<
   Omit<CreateTimeEntryInput, "userId" | "date"> & { date?: string }
 >;
+
+export type PlanTimeSuggestion = {
+  key: string;
+  resourcePlanItemId: string;
+  date: string;
+  durationMinutes: number;
+  title: string;
+  projectId: string | null;
+  projectName: string | null;
+  clientId: string | null;
+  processStageId: string | null;
+  categoryId: string;
+  entryTypeId: string;
+};
+
+export type AcceptPlanSuggestionsInput = {
+  suggestions: Array<{
+    resourcePlanItemId: string;
+    date: string;
+  }>;
+};
 
 export type ActiveTimer = {
   id: string;
