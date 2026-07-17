@@ -11,6 +11,9 @@ export const VIZ_CHART_PERIODS = [
   { hours: 720, label: "30 dni" },
 ] as const;
 
+export const VIZ_CHART_DATE_RANGE_MODES = ["relative", "absolute"] as const;
+export type VizChartDateRangeMode = (typeof VIZ_CHART_DATE_RANGE_MODES)[number];
+
 export type VizChartConfig = {
   mode: VizChartMode;
   /** @deprecated Użyj roleCodes */
@@ -18,6 +21,10 @@ export type VizChartConfig = {
   roleCodes: string[];
   projectIds: string[];
   periodHours: number;
+  /** relative = ostatnie N godzin; absolute = startAt/endAt */
+  dateRangeMode?: VizChartDateRangeMode;
+  startAt?: string | null;
+  endAt?: string | null;
   showLegend?: boolean;
   showTooltip?: boolean;
   yAxisMin?: number | null;
@@ -95,6 +102,9 @@ export function normalizeChartConfig(value: unknown): VizChartConfig {
       ? raw.projectIds.filter((id): id is string => typeof id === "string")
       : [],
     periodHours: typeof raw.periodHours === "number" ? raw.periodHours : 24,
+    dateRangeMode: raw.dateRangeMode === "absolute" ? "absolute" : "relative",
+    startAt: typeof raw.startAt === "string" ? raw.startAt : null,
+    endAt: typeof raw.endAt === "string" ? raw.endAt : null,
     showLegend: raw.showLegend !== false,
     showTooltip: raw.showTooltip !== false,
     yAxisMin: typeof raw.yAxisMin === "number" ? raw.yAxisMin : null,

@@ -6,12 +6,14 @@ import { PageHeader } from "@/components/page-header";
 import { VizDashboardConfigForm } from "@/components/viz/viz-dashboard-config-form";
 import { VizAlarmRulesConfig } from "@/components/viz/viz-alarm-rules-config";
 import { VizDashboardAccessConfig } from "@/components/viz/viz-dashboard-access-config";
+import { VizDashboardSystemsConfig } from "@/components/viz/viz-dashboard-systems-config";
 import { VizDashboardLayout } from "@/components/viz/viz-dashboard-layout";
 import { VizScrollTabBar } from "@/components/viz/viz-scroll-tab-bar";
 import type { VizDashboard } from "@/lib/viz/types";
 
 const CONFIG_SECTIONS = [
   { id: "ustawienia", label: "Ustawienia i projekty" },
+  { id: "systemy", label: "Macierz systemów" },
   { id: "alarmy", label: "Reguły alarmów" },
   { id: "dostep", label: "Dostęp użytkowników" },
 ] as const;
@@ -19,7 +21,7 @@ const CONFIG_SECTIONS = [
 type ConfigSection = (typeof CONFIG_SECTIONS)[number]["id"];
 
 function configSectionFromSlug(slug: string | null | undefined): ConfigSection {
-  if (slug === "alarmy" || slug === "dostep") {
+  if (slug === "alarmy" || slug === "dostep" || slug === "systemy") {
     return slug;
   }
   return "ustawienia";
@@ -89,6 +91,10 @@ function VizDashboardConfigContent({ dashboardId }: { dashboardId: string }) {
         ) : (
           <p className="text-sm text-muted">Ładowanie ustawień dashboardu…</p>
         )
+      ) : null}
+
+      {activeSection === "systemy" ? (
+        <VizDashboardSystemsConfig dashboardId={dashboardId} />
       ) : null}
 
       {activeSection === "alarmy" ? (

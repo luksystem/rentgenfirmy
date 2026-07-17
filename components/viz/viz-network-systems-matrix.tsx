@@ -15,10 +15,10 @@ import {
 } from "@/lib/viz/systems-matrix";
 import {
   VIZ_SYSTEM_INTEGRATION_STATUS_LABELS,
+  type VizIntegratedSystem,
   type VizProjectSystemStatus,
 } from "@/lib/viz/types";
 import type { VizStoreLiveSnapshot } from "@/lib/viz/viz-telemetry-server";
-import { useVizStore } from "@/store/viz-store";
 
 type VizNetworkSystemsMatrixProps = {
   dashboardId: string;
@@ -31,14 +31,13 @@ export function VizNetworkSystemsMatrix({
   dashboardId,
   snapshots,
 }: VizNetworkSystemsMatrixProps) {
-  const systems = useVizStore((s) => s.systems);
-  const ensureViz = useVizStore((s) => s.hydrate);
+  const [systems, setSystems] = useState<VizIntegratedSystem[]>([]);
   const [statuses, setStatuses] = useState<VizProjectSystemStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<MatrixFilter>("all");
 
-  const loadStatuses = useCallback(async () => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -46,7 +45,11 @@ export function VizNetworkSystemsMatrix({
       if (!response.ok) {
         throw new Error("Nie udało się pobrać macierzy systemów.");
       }
-      const data = (await response.json()) as { statuses: VizProjectSystemStatus[] };
+      const data = (await response.json()) as {
+        systems: VizIntegratedSystem[];
+        statuses: VizProjectSystemStatus[];
+      };
+      setSystems(data.systems ?? []);
       setStatuses(data.statuses ?? []);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Błąd ładowania.");
@@ -56,12 +59,8 @@ export function VizNetworkSystemsMatrix({
   }, [dashboardId]);
 
   useEffect(() => {
-    void ensureViz();
-  }, [ensureViz]);
-
-  useEffect(() => {
-    void loadStatuses();
-  }, [loadStatuses]);
+    void loadData();
+  }, [loadData]);
 
   const activeSystems = useMemo(
     () => systems.filter((system) => system.isActive).sort((a, b) => a.sortOrder - b.sortOrder),
@@ -104,14 +103,20 @@ export function VizNetworkSystemsMatrix({
     );
   }
 
-  if (error && !statuses.length) {
+  if (error && !systems.length) {
     return <Card className="p-6 text-sm text-rose-300">{error}</Card>;
   }
 
   if (!activeSystems.length) {
     return (
       <Card className="p-5 text-sm text-muted">
-        Brak zdefiniowanych systemów technicznych w szablonie dashboardu.
+        Brak kategorii systemów dla tego dashboardu.{" "}
+        <Link
+          href={`/wizualizacje/${dashboardId}/konfiguracja?sekcja=systemy`}
+          className="text-accent hover:underline"
+        >
+          Skonfiguruj macierz systemów
+        </Link>
       </Card>
     );
   }
@@ -122,7 +127,7 @@ export function VizNetworkSystemsMatrix({
         <div>
           <h2 className="text-base font-semibold">Macierz systemów sieci</h2>
           <p className="mt-1 text-sm text-muted">
-            Status integracji HVAC, PV, energii i innych systemów we wszystkich sklepach dashboardu.
+            Status integracji systemów we wszystkich sklepach dashboardu.
           </p>
           <p className="mt-2 text-sm">
             Zintegrowane pozycje:{" "}
@@ -137,6 +142,12 @@ export function VizNetworkSystemsMatrix({
               </>
             ) : null}
           </p>
+          <Link
+            href={`/wizualizacje/${dashboardId}/konfiguracja?sekcja=systemy`}
+            className="mt-2 inline-block text-xs text-accent hover:underline"
+          >
+            Edytuj kategorie macierzy
+          </Link>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button

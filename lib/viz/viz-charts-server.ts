@@ -8,6 +8,7 @@ import type {
   VizHistoryPoint,
 } from "@/lib/viz/chart-types";
 import { normalizeChartConfig } from "@/lib/viz/chart-types";
+import { resolveChartTimeRange } from "@/lib/viz/chart-time-range";
 import { listVizDashboardProjects, listVizVariableMappings } from "@/lib/supabase/viz-server";
 
 type ChartRow = {
@@ -123,7 +124,10 @@ export async function queryVizChartHistory(
   options: {
     roleCodes: string[];
     projectIds: string[];
-    periodHours: number;
+    periodHours?: number;
+    startAt?: string;
+    endAt?: string;
+    dateRangeMode?: "relative" | "absolute";
   },
 ): Promise<VizHistoryPoint[]> {
   const roleCodes = [...new Set(options.roleCodes.filter(Boolean))];
@@ -131,7 +135,12 @@ export async function queryVizChartHistory(
     return [];
   }
 
-  const since = new Date(Date.now() - options.periodHours * 60 * 60 * 1000).toISOString();
+  const range = resolveChartTimeRange({
+    dateRangeMode: options.dateRangeMode,
+    periodHours: options.periodHours ?? 24,
+    startAt: options.startAt ?? null,
+    endAt: options.endAt ?? null,
+  });
 
   const [projects, mappings] = await Promise.all([
     listVizDashboardProjects(dashboardId),
@@ -154,24 +163,37 @@ export async function queryVizChartHistory(
   }
 
   const mappingIds = relevantMappings.map((m) => m.id);
+  const variableIds = [
+    ...new Set(
+      relevantMappings
+        .map((m) => m.integrationVariableId)
+        .filter(Boolean) as string[],
+    ),
+  ];
+  const mappingById = new Map(relevantMappings.map((m) => [m.id, m]));
+  const mappingByVariableId = new Map(
+    relevantMappings
+      .filter((m) => m.integrationVariableId)
+      .map((m) => [m.integrationVariableId as string, m]),
+  );
+
   const supabase = getSupabaseAdmin();
 
-  const { data, error } = await supabase
+  const { data: historyRows, error } = await supabase
     .from("viz_variable_readings_history")
     .select("mapping_id, project_id, role_code, numeric_value, text_value, data_quality, measured_at")
     .eq("dashboard_id", dashboardId)
     .in("mapping_id", mappingIds)
-    .gte("measured_at", since)
+    .gte("measured_at", range.startAt)
+    .lte("measured_at", range.endAt)
     .order("measured_at", { ascending: true })
-    .limit(5000);
+    .limit(8000);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  const mappingById = new Map(relevantMappings.map((m) => [m.id, m]));
-
-  return (data ?? []).map((row) => {
+  const points: VizHistoryPoint[] = (historyRows ?? []).map((row) => {
     const mapping = mappingById.get(row.mapping_id as string);
     const numeric =
       row.numeric_value != null
@@ -188,4 +210,74 @@ export async function queryVizChartHistory(
       roleCode: row.role_code as string,
     };
   });
+
+  if (points.length >= 20) {
+    return points;
+  }
+
+  const { data: telemetryRows, error: telemetryError } = await supabase
+    .from("project_telemetry")
+    .select(
+      "project_id, integration_variable_id, numeric_value, text_value, temperature, measured_at",
+    )
+    .in("integration_variable_id", variableIds)
+    .in("project_id", options.projectIds)
+    .gte("measured_at", range.startAt)
+    .lte("measured_at", range.endAt)
+    .order("measured_at", { ascending: true })
+    .limit(8000);
+
+  if (telemetryError) {
+    return points;
+  }
+
+  const telemetryPoints: VizHistoryPoint[] = [];
+  for (const row of telemetryRows ?? []) {
+    const variableId = row.integration_variable_id as string | null;
+    if (!variableId) {
+      continue;
+    }
+    const mapping = mappingByVariableId.get(variableId);
+    if (!mapping) {
+      continue;
+    }
+
+    const rawNumeric =
+      row.numeric_value != null
+        ? Number(row.numeric_value)
+        : row.temperature != null
+          ? Number(row.temperature)
+          : null;
+    const numeric =
+      rawNumeric != null
+        ? rawNumeric * (mapping.multiplier ?? 1) + (mapping.offsetValue ?? 0)
+        : null;
+
+    telemetryPoints.push({
+      measuredAt: row.measured_at as string,
+      numericValue: numeric,
+      textValue: (row.text_value as string | null) ?? null,
+      dataQuality: "valid",
+      projectId: row.project_id as string,
+      projectLabel: projectLabelById.get(row.project_id as string) ?? (row.project_id as string),
+      roleCode: mapping.roleCode,
+    });
+  }
+
+  const seen = new Set(
+    points.map(
+      (point) =>
+        `${point.projectId}:${point.roleCode}:${point.measuredAt}:${point.numericValue ?? "null"}`,
+    ),
+  );
+
+  for (const point of telemetryPoints) {
+    const key = `${point.projectId}:${point.roleCode}:${point.measuredAt}:${point.numericValue ?? "null"}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      points.push(point);
+    }
+  }
+
+  return points.sort((a, b) => a.measuredAt.localeCompare(b.measuredAt));
 }

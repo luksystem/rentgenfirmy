@@ -15,6 +15,13 @@ import {
   deleteVizVariableMapping,
 } from "@/lib/supabase/viz-server";
 import {
+  createVizDashboardSystem,
+  deleteVizDashboardSystem,
+  ensureVizDashboardSystemsCatalog,
+  resetVizDashboardSystemsFromTemplate,
+  updateVizDashboardSystem,
+} from "@/lib/viz/viz-dashboard-systems-server";
+import {
   VIZ_ACCESS_ROLES,
   VIZ_SERVICE_CONTRACT_STATUSES,
   VIZ_SYSTEM_INTEGRATION_STATUSES,
@@ -47,8 +54,15 @@ export async function GET(request: Request, context: RouteContext) {
         return NextResponse.json({ mappings });
       }
       case "systems": {
-        const statuses = await listVizProjectSystemStatuses(dashboardId, projectId);
-        return NextResponse.json({ statuses });
+        const [systems, statuses] = await Promise.all([
+          ensureVizDashboardSystemsCatalog(dashboardId),
+          listVizProjectSystemStatuses(dashboardId, projectId),
+        ]);
+        return NextResponse.json({ systems, statuses });
+      }
+      case "systemsCatalog": {
+        const systems = await ensureVizDashboardSystemsCatalog(dashboardId);
+        return NextResponse.json({ systems });
       }
       case "access": {
         const access = await listVizDashboardAccess(dashboardId);
@@ -73,11 +87,19 @@ export async function PUT(request: Request, context: RouteContext) {
     await requireAuthenticatedProfile();
     const { dashboardId } = await context.params;
     const body = (await request.json()) as {
-      section: "projects" | "mapping" | "system" | "access";
+      section: "projects" | "mapping" | "system" | "access" | "systemCatalog" | "resetSystemsCatalog";
       projects?: VizDashboardProjectInput[];
       mapping?: VizVariableMappingInput;
       system?: VizProjectSystemStatusInput;
       access?: VizDashboardAccessInput;
+      systemCatalog?: {
+        id?: string;
+        code?: string;
+        name?: string;
+        description?: string | null;
+        sortOrder?: number;
+        isActive?: boolean;
+      };
     };
 
     switch (body.section) {
@@ -123,6 +145,33 @@ export async function PUT(request: Request, context: RouteContext) {
         const access = await upsertVizDashboardAccess(dashboardId, body.access);
         return NextResponse.json({ access });
       }
+      case "systemCatalog": {
+        if (!body.systemCatalog?.name?.trim()) {
+          return NextResponse.json({ error: "Nazwa systemu jest wymagana." }, { status: 400 });
+        }
+        if (body.systemCatalog.id) {
+          const system = await updateVizDashboardSystem(body.systemCatalog.id, {
+            code: body.systemCatalog.code,
+            name: body.systemCatalog.name,
+            description: body.systemCatalog.description,
+            sortOrder: body.systemCatalog.sortOrder,
+            isActive: body.systemCatalog.isActive,
+          });
+          return NextResponse.json({ system });
+        }
+        const system = await createVizDashboardSystem(dashboardId, {
+          code: body.systemCatalog.code ?? body.systemCatalog.name,
+          name: body.systemCatalog.name,
+          description: body.systemCatalog.description,
+          sortOrder: body.systemCatalog.sortOrder,
+          isActive: body.systemCatalog.isActive,
+        });
+        return NextResponse.json({ system }, { status: 201 });
+      }
+      case "resetSystemsCatalog": {
+        const systems = await resetVizDashboardSystemsFromTemplate(dashboardId);
+        return NextResponse.json({ systems });
+      }
       default:
         return NextResponse.json({ error: "Nieznana sekcja." }, { status: 400 });
     }
@@ -152,6 +201,8 @@ export async function DELETE(request: Request) {
       await deleteVizVariableMapping(id);
     } else if (section === "access") {
       await deleteVizDashboardAccess(id);
+    } else if (section === "systemCatalog") {
+      await deleteVizDashboardSystem(id);
     } else {
       return NextResponse.json({ error: "Nieznana sekcja." }, { status: 400 });
     }

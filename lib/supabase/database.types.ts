@@ -629,6 +629,7 @@ export type VizIntegratedSystemRow = {
   description: string | null;
   sort_order: number;
   is_active: boolean;
+  dashboard_id: string | null;
   created_at: string;
 };
 

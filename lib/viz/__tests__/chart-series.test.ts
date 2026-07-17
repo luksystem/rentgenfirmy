@@ -63,7 +63,7 @@ describe("chart-series", () => {
     const rows = buildMultiSeriesRows(
       [
         {
-          measuredAt: "2026-01-01T10:02:00.000Z",
+          measuredAt: "2026-01-01T10:01:00.000Z",
           numericValue: 22,
           textValue: null,
           dataQuality: "valid",
@@ -72,7 +72,7 @@ describe("chart-series", () => {
           roleCode: "store_temperature",
         },
         {
-          measuredAt: "2026-01-01T10:13:00.000Z",
+          measuredAt: "2026-01-01T10:03:00.000Z",
           numericValue: 24,
           textValue: null,
           dataQuality: "valid",
@@ -82,12 +82,12 @@ describe("chart-series", () => {
         },
       ],
       undefined,
-      24,
+      { startAt: "2026-01-01T10:00:00.000Z", endAt: "2026-01-01T11:00:00.000Z" },
     );
 
     expect(rows).toHaveLength(1);
-    expect(bucketMeasuredAt("2026-01-01T10:02:00.000Z", bucketMs)).toBe(
-      bucketMeasuredAt("2026-01-01T10:13:00.000Z", bucketMs),
+    expect(bucketMeasuredAt("2026-01-01T10:01:00.000Z", bucketMs)).toBe(
+      bucketMeasuredAt("2026-01-01T10:03:00.000Z", bucketMs),
     );
     expect(rows[0]?.["DOM · store_temperature"]).toBe(22);
     expect(rows[0]?.["Kingi · store_temperature"]).toBe(24);

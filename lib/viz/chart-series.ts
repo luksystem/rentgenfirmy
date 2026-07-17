@@ -1,4 +1,5 @@
 import type { VizChartConfig, VizHistoryPoint } from "@/lib/viz/chart-types";
+import { resolveChartBucketMsForRange } from "@/lib/viz/chart-time-range";
 
 export function normalizeRoleCodes(config: Pick<VizChartConfig, "roleCode" | "roleCodes">): string[] {
   if (config.roleCodes?.length) {
@@ -28,9 +29,11 @@ export function filterHistoryPoints(
 export function buildMultiSeriesRows(
   points: VizHistoryPoint[],
   roleNameByCode?: Map<string, string>,
-  periodHours = 24,
+  timeRange?: { startAt: string; endAt: string },
 ) {
-  const bucketMs = resolveChartBucketMs(periodHours);
+  const bucketMs = timeRange
+    ? resolveChartBucketMsForRange(timeRange.startAt, timeRange.endAt)
+    : resolveChartBucketMs(24);
   const byTime = new Map<string, Record<string, string | number | null>>();
 
   const sortedPoints = [...points].sort((a, b) => a.measuredAt.localeCompare(b.measuredAt));

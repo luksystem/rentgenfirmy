@@ -18,6 +18,10 @@ import {
 import type { VizDashboardProject } from "@/lib/viz/types";
 import { useVizStore } from "@/store/viz-store";
 import { useVizDashboardCacheStore } from "@/store/viz-dashboard-cache-store";
+import {
+  fromDateTimeLocalValue,
+  toDateTimeLocalValue,
+} from "@/lib/viz/chart-time-range";
 import { VizChartRenderer } from "@/components/viz/viz-chart-renderer";
 
 type VizChartsConfigProps = {
@@ -321,24 +325,80 @@ export function VizChartsConfig({ dashboardId }: VizChartsConfigProps) {
             </select>
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium">Okres</label>
+            <label className="mb-1.5 block text-sm font-medium">Zakres czasu</label>
             <select
               className={selectClassName}
-              value={form.config.periodHours}
+              value={form.config.dateRangeMode ?? "relative"}
               onChange={(e) =>
                 setForm((current) => ({
                   ...current,
-                  config: { ...current.config, periodHours: Number(e.target.value) },
+                  config: {
+                    ...current.config,
+                    dateRangeMode: e.target.value as VizChartConfig["dateRangeMode"],
+                  },
                 }))
               }
             >
-              {VIZ_CHART_PERIODS.map((period) => (
-                <option key={period.hours} value={period.hours}>
-                  {period.label}
-                </option>
-              ))}
+              <option value="relative">Ostatnie N godzin</option>
+              <option value="absolute">Zakres dat (od–do)</option>
             </select>
           </div>
+          {form.config.dateRangeMode === "absolute" ? (
+            <>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">Od</label>
+                <Input
+                  type="datetime-local"
+                  value={toDateTimeLocalValue(form.config.startAt)}
+                  onChange={(e) =>
+                    setForm((current) => ({
+                      ...current,
+                      config: {
+                        ...current.config,
+                        startAt: fromDateTimeLocalValue(e.target.value),
+                      },
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">Do</label>
+                <Input
+                  type="datetime-local"
+                  value={toDateTimeLocalValue(form.config.endAt)}
+                  onChange={(e) =>
+                    setForm((current) => ({
+                      ...current,
+                      config: {
+                        ...current.config,
+                        endAt: fromDateTimeLocalValue(e.target.value),
+                      },
+                    }))
+                  }
+                />
+              </div>
+            </>
+          ) : (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">Okres</label>
+              <select
+                className={selectClassName}
+                value={form.config.periodHours}
+                onChange={(e) =>
+                  setForm((current) => ({
+                    ...current,
+                    config: { ...current.config, periodHours: Number(e.target.value) },
+                  }))
+                }
+              >
+                {VIZ_CHART_PERIODS.map((period) => (
+                  <option key={period.hours} value={period.hours}>
+                    {period.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="mb-1.5 block text-sm font-medium">Oś Y min (opcjonalnie)</label>
             <Input

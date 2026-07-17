@@ -11,7 +11,6 @@ import {
   type VizProjectSystemStatus,
   type VizSystemIntegrationStatus,
 } from "@/lib/viz/types";
-import { useVizStore } from "@/store/viz-store";
 
 const selectClassName =
   "h-9 w-full rounded-lg border border-border bg-surface-muted px-2 text-sm";
@@ -27,8 +26,7 @@ export function VizStoreSystemsPanel({
   projectId,
   canEdit,
 }: VizStoreSystemsPanelProps) {
-  const systems = useVizStore((s) => s.systems);
-  const ensureViz = useVizStore((s) => s.hydrate);
+  const [systems, setSystems] = useState<VizIntegratedSystem[]>([]);
   const [statuses, setStatuses] = useState<VizProjectSystemStatus[]>([]);
   const [draft, setDraft] = useState<Record<string, VizSystemIntegrationStatus>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -46,10 +44,14 @@ export function VizStoreSystemsPanel({
       if (!response.ok) {
         throw new Error("Nie udało się pobrać statusów systemów.");
       }
-      const data = (await response.json()) as { statuses: VizProjectSystemStatus[] };
-      setStatuses(data.statuses);
+      const data = (await response.json()) as {
+        systems: VizIntegratedSystem[];
+        statuses: VizProjectSystemStatus[];
+      };
+      setSystems(data.systems ?? []);
+      setStatuses(data.statuses ?? []);
       const nextDraft: Record<string, VizSystemIntegrationStatus> = {};
-      for (const system of systems) {
+      for (const system of data.systems ?? []) {
         const existing = data.statuses.find((item) => item.systemId === system.id);
         nextDraft[system.id] = existing?.status ?? "none";
       }
@@ -59,17 +61,11 @@ export function VizStoreSystemsPanel({
     } finally {
       setIsLoading(false);
     }
-  }, [dashboardId, projectId, systems]);
+  }, [dashboardId, projectId]);
 
   useEffect(() => {
-    void ensureViz();
-  }, [ensureViz]);
-
-  useEffect(() => {
-    if (systems.length) {
-      void loadStatuses();
-    }
-  }, [loadStatuses, systems.length]);
+    void loadStatuses();
+  }, [loadStatuses]);
 
   const integratedCount = useMemo(
     () =>

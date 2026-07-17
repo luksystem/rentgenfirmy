@@ -26,6 +26,11 @@ import {
   uniqueSeriesKeys,
 } from "@/lib/viz/chart-series";
 import { normalizeChartConfig, type VizDashboardChart, type VizHistoryPoint } from "@/lib/viz/chart-types";
+import {
+  fromDateTimeLocalValue,
+  resolveChartTimeRange,
+  toDateTimeLocalValue,
+} from "@/lib/viz/chart-time-range";
 import { LIVE_POLL_MS } from "@/store/viz-dashboard-cache-store";
 import { useVizStore } from "@/store/viz-store";
 
@@ -63,6 +68,7 @@ export function VizChartRenderer({
   const [error, setError] = useState<string | null>(null);
 
   const config = useMemo(() => normalizeChartConfig(chart.config), [chart.config]);
+  const timeRange = useMemo(() => resolveChartTimeRange(config), [config]);
   const roleNameByCode = useMemo(
     () => new Map(variableRoles.map((role) => [role.code, role.name])),
     [variableRoles],
@@ -100,6 +106,9 @@ export function VizChartRenderer({
         roleCodes: config.roleCodes.join(","),
         projectIds: config.projectIds.join(","),
         periodHours: String(config.periodHours),
+        dateRangeMode: config.dateRangeMode ?? "relative",
+        startAt: timeRange.startAt,
+        endAt: timeRange.endAt,
       });
       const response = await fetch(`/api/viz/dashboards/${dashboardId}/charts?${params}`);
       if (!response.ok) {
@@ -112,7 +121,7 @@ export function VizChartRenderer({
     } finally {
       setIsLoading(false);
     }
-  }, [dashboardId, config.periodHours, config.projectIds, config.roleCodes]);
+  }, [dashboardId, config.periodHours, config.projectIds, config.roleCodes, config.dateRangeMode, config.startAt, config.endAt, timeRange.endAt, timeRange.startAt]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -173,8 +182,8 @@ export function VizChartRenderer({
   );
 
   const rows = useMemo(
-    () => buildMultiSeriesRows(filteredPoints, roleNameByCode, config.periodHours),
-    [filteredPoints, roleNameByCode, config.periodHours],
+    () => buildMultiSeriesRows(filteredPoints, roleNameByCode, timeRange),
+    [filteredPoints, roleNameByCode, timeRange],
   );
 
   const axisPlan = useMemo(
@@ -326,7 +335,9 @@ export function VizChartRenderer({
         {chart.description ? <p className="text-sm text-muted">{chart.description}</p> : null}
         <p className="mt-1 text-xs text-muted">
           Zmienne: {config.roleCodes.map((code) => roleNameByCode.get(code) ?? code).join(", ")} ·
-          Okres: {config.periodHours}h
+          Okres: {config.dateRangeMode === "absolute"
+            ? `${new Date(timeRange.startAt).toLocaleDateString("pl-PL")} – ${new Date(timeRange.endAt).toLocaleDateString("pl-PL")}`
+            : `${config.periodHours}h`}
           {axisPlan.dualAxis ? " · Dwie osie Y" : ""}
           {missingProjects > 0 ? ` · ${missingProjects} sklep(ów) bez danych` : ""}
         </p>
@@ -394,8 +405,8 @@ export function VizChartRenderer({
         <p className="py-8 text-sm text-rose-300">{error}</p>
       ) : !rows.length ? (
         <p className="py-8 text-sm text-muted">
-          Brak danych historycznych dla wybranej konfiguracji. Upewnij się, że mapowania są
-          skonfigurowane i sync telemetrii działa.
+          Brak danych historycznych dla wybranej konfiguracji ({new Date(timeRange.startAt).toLocaleString("pl-PL")} – {new Date(timeRange.endAt).toLocaleString("pl-PL")}).
+          Upewnij się, że mapowania zmiennych są skonfigurowane i sync telemetrii Loxone działa.
         </p>
       ) : (
         <div className="h-72 w-full">

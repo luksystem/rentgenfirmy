@@ -23,6 +23,10 @@ export async function GET(request: Request, context: RouteContext) {
       const roleCodes = roleCodesParam?.split(",").map((code) => code.trim()).filter(Boolean) ?? [];
       const projectIds = url.searchParams.get("projectIds")?.split(",").filter(Boolean) ?? [];
       const periodHours = Number(url.searchParams.get("periodHours") ?? "24");
+      const dateRangeMode =
+        url.searchParams.get("dateRangeMode") === "absolute" ? "absolute" : "relative";
+      const startAt = url.searchParams.get("startAt");
+      const endAt = url.searchParams.get("endAt");
 
       if (!roleCodes.length || !projectIds.length) {
         return NextResponse.json({ error: "Wymagane roleCodes i projectIds." }, { status: 400 });
@@ -32,6 +36,9 @@ export async function GET(request: Request, context: RouteContext) {
         roleCodes,
         projectIds,
         periodHours: Number.isFinite(periodHours) ? periodHours : 24,
+        dateRangeMode,
+        startAt: startAt ?? undefined,
+        endAt: endAt ?? undefined,
       });
 
       return NextResponse.json({ points });
