@@ -134,7 +134,7 @@ export function ClientDashboardOverview({
 
       {pendingAgreements.length > 0 ? (
         <div className="rounded-2xl border border-border/80 bg-surface p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
+          <h3 className="page-section-title mb-3 flex items-center gap-2 text-base font-semibold">
             <ClipboardCheck className="h-4 w-4 text-accent" />
             Oczekujące ustalenia
           </h3>
@@ -157,7 +157,7 @@ export function ClientDashboardOverview({
 
       {pendingWarranty.length > 0 ? (
         <div className="rounded-2xl border border-border/80 bg-surface p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
+          <h3 className="page-section-title mb-3 flex items-center gap-2 text-base font-semibold">
             <Shield className="h-4 w-4 text-accent" />
             Propozycje przedłużenia gwarancji
           </h3>
@@ -228,7 +228,7 @@ export function ClientDashboardOverview({
 
       {!readOnly ? (
         <div className="rounded-2xl border border-border/80 bg-surface p-4">
-          <h3 className="mb-3 text-base font-semibold text-foreground">Ostatnie ustalenia</h3>
+          <h3 className="page-section-title mb-3 text-base font-semibold">Ostatnie ustalenia</h3>
           {agreements.filter((entry) => entry.category !== "warranty").length === 0 ? (
             <p className="text-sm text-muted">Brak ustaleń w tym projekcie.</p>
           ) : (

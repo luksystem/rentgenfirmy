@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { UserProfile } from "@/lib/auth/types";
+import { hasFullAppAccess } from "@/lib/auth/types";
 
 type AdminClient = SupabaseClient;
 
@@ -43,11 +44,17 @@ export async function fetchWorkMissionsForUserServer(
   admin: AdminClient,
   actor: UserProfile,
   date?: string,
+  targetUserId?: string,
 ): Promise<WorkMission[]> {
+  const userId = targetUserId ?? actor.id;
+  if (userId !== actor.id && !hasFullAppAccess(actor.role)) {
+    throw new Error("Brak uprawnień do podglądu misji innego użytkownika.");
+  }
+
   let query = admin
     .from("work_missions")
     .select("*")
-    .eq("user_id", actor.id)
+    .eq("user_id", userId)
     .eq("status", "active")
     .order("start_date", { ascending: false });
 

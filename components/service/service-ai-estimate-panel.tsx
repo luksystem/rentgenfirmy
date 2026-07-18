@@ -231,7 +231,7 @@ export function ServiceAiEstimatePanel({
     <div className="grid gap-4 rounded-2xl border border-accent/25 bg-accent/5 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h3 className="text-base font-semibold text-foreground">Szacowanie AI</h3>
+          <h3 className="page-section-title text-base font-semibold">Szacowanie AI</h3>
           <p className="mt-1 text-sm text-muted">
             Opisz zgłoszenie — AI zaproponuje orientacyjne godziny i dojazd. Kwoty liczy aplikacja
             ze stawek. Propozycja wymaga zatwierdzenia.

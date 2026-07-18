@@ -179,7 +179,7 @@ export function ClientsHealthView({
     <div className="grid gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+          <h2 className="page-section-title flex items-center gap-2 text-base font-semibold">
             <Activity className="h-4 w-4" />
             Zdrowie projektów
           </h2>

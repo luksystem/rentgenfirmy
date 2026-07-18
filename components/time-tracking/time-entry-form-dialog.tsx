@@ -11,10 +11,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { ProjectSelectSearchable } from "@/components/goals/project-select-searchable";
+import { TeamProfileSelect } from "@/components/process/team-profile-select";
 import { parseDurationInput } from "@/lib/time-tracking/format";
+import type { UserProfile } from "@/lib/auth/types";
 import type { TimeEntryView } from "@/lib/time-tracking/types";
 import type { WorkMission } from "@/lib/supabase/work-missions-server";
+import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
+import { createTimeEntry } from "@/lib/supabase/time-tracking-repository";
 import { useAppStore } from "@/store/app-store";
+import { useAuthStore } from "@/store/auth-store";
 import { useTimeTrackingStore } from "@/store/time-tracking-store";
 
 export type TimeEntryFormValues = {
@@ -28,9 +33,10 @@ export type TimeEntryFormValues = {
   billable: boolean;
   remoteWork: boolean;
   delegation: boolean;
+  userId: string;
 };
 
-function emptyForm(date: string, categoryId = "", entryTypeId = ""): TimeEntryFormValues {
+function emptyForm(date: string, categoryId = "", entryTypeId = "", userId = ""): TimeEntryFormValues {
   return {
     date,
     durationInput: "1h",
@@ -42,6 +48,7 @@ function emptyForm(date: string, categoryId = "", entryTypeId = ""): TimeEntryFo
     billable: false,
     remoteWork: false,
     delegation: false,
+    userId,
   };
 }
 
@@ -66,6 +73,7 @@ function entryToFormValues(entry: TimeEntryView): TimeEntryFormValues {
     billable: entry.billable,
     remoteWork: entry.remoteWork,
     delegation: entry.delegation,
+    userId: entry.userId,
   };
 }
 
@@ -74,21 +82,37 @@ export function TimeEntryFormDialog({
   onOpenChange,
   entry,
   defaultDate,
+  defaultProjectId,
+  lockProject = false,
+  allowUserSelection = false,
+  defaultUserId,
+  entryUserLabel,
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   entry?: TimeEntryView | null;
   defaultDate: string;
+  defaultProjectId?: string;
+  lockProject?: boolean;
+  allowUserSelection?: boolean;
+  defaultUserId?: string;
+  entryUserLabel?: string;
+  onSaved?: (entry: TimeEntryView) => void;
 }) {
   const meta = useTimeTrackingStore((state) => state.meta);
   const ensureMeta = useTimeTrackingStore((state) => state.ensureMeta);
   const createEntry = useTimeTrackingStore((state) => state.createEntry);
   const updateEntry = useTimeTrackingStore((state) => state.updateEntry);
 
+  const profile = useAuthStore((state) => state.profile);
   const projects = useAppStore((state) => state.projects);
   const clients = useAppStore((state) => state.clients);
 
-  const [values, setValues] = useState<TimeEntryFormValues>(() => emptyForm(defaultDate));
+  const [values, setValues] = useState<TimeEntryFormValues>(() =>
+    emptyForm(defaultDate, "", "", defaultUserId ?? profile?.id ?? ""),
+  );
+  const [teamProfiles, setTeamProfiles] = useState<UserProfile[]>([]);
   const [missions, setMissions] = useState<WorkMission[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const defaultsAppliedRef = useRef(false);
@@ -112,9 +136,32 @@ export function TimeEntryFormDialog({
   }, [open, ensureMeta]);
 
   useEffect(() => {
+    if (!open || !allowUserSelection) {
+      return;
+    }
+
+    let cancelled = false;
+    void fetchTeamProfiles()
+      .then((profiles) => {
+        if (!cancelled) {
+          setTeamProfiles(profiles);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTeamProfiles([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, allowUserSelection]);
+
+  useEffect(() => {
     if (!open) {
       defaultsAppliedRef.current = false;
-      setValues(emptyForm(defaultDate));
+      setValues(emptyForm(defaultDate, "", "", defaultUserId ?? profile?.id ?? ""));
       return;
     }
 
@@ -133,28 +180,39 @@ export function TimeEntryFormDialog({
     }
 
     const defaultCategory = categories[0];
+    const projectCategory = categories.find((item) => item.requiresProject) ?? defaultCategory;
     const defaultType = entryTypes.find((item) => item.name === "Praca") ?? entryTypes[0];
+    const categoryForProject = defaultProjectId ? projectCategory : defaultCategory;
 
     defaultsAppliedRef.current = true;
     setValues((current) => ({
       ...current,
       date: current.date || defaultDate,
-      categoryId: current.categoryId || defaultCategory?.id || "",
+      categoryId: current.categoryId || categoryForProject?.id || "",
       entryTypeId: current.entryTypeId || defaultType?.id || "",
+      projectId: defaultProjectId || current.projectId || "",
+      userId: defaultUserId ?? profile?.id ?? current.userId ?? "",
       billable:
-        current.categoryId && current.categoryId !== (defaultCategory?.id ?? "")
+        current.categoryId && current.categoryId !== (categoryForProject?.id ?? "")
           ? current.billable
-          : (defaultCategory?.defaultBillable ?? current.billable),
+          : (categoryForProject?.defaultBillable ?? current.billable),
     }));
-  }, [open, entry, defaultDate, categories, entryTypes]);
+  }, [open, entry, defaultDate, defaultProjectId, defaultUserId, profile?.id, categories, entryTypes]);
 
   useEffect(() => {
     if (!open) {
       return;
     }
 
+    const missionUserId =
+      entry?.userId ?? (values.userId || profile?.id || "");
+    const missionParams = new URLSearchParams({ date: values.date });
+    if (missionUserId && missionUserId !== profile?.id) {
+      missionParams.set("userId", missionUserId);
+    }
+
     let cancelled = false;
-    void fetch(`/api/time-tracking/missions?date=${encodeURIComponent(values.date)}`, {
+    void fetch(`/api/time-tracking/missions?${missionParams.toString()}`, {
       credentials: "include",
     })
       .then(async (response) => {
@@ -172,7 +230,7 @@ export function TimeEntryFormDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, values.date]);
+  }, [open, values.date, values.userId, entry?.userId, profile?.id]);
 
   function handleCategoryChange(categoryId: string) {
     const category = categories.find((item) => item.id === categoryId);
@@ -209,11 +267,21 @@ export function TimeEntryFormDialog({
         delegation: values.delegation,
       };
 
+      let savedEntry: TimeEntryView;
       if (entry) {
-        await updateEntry(entry.id, payload);
+        savedEntry = await updateEntry(entry.id, payload);
       } else {
-        await createEntry(payload);
+        const targetUserId = values.userId || profile?.id;
+        const createPayload = {
+          ...payload,
+          userId: targetUserId && targetUserId !== profile?.id ? targetUserId : undefined,
+        };
+        savedEntry =
+          createPayload.userId != null
+            ? await createTimeEntry(createPayload)
+            : await createEntry(createPayload);
       }
+      onSaved?.(savedEntry);
       onOpenChange(false);
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "Nie udało się zapisać wpisu.");
@@ -237,6 +305,23 @@ export function TimeEntryFormDialog({
         </DialogHeader>
 
         <div className="grid gap-4">
+          {allowUserSelection && !entry ? (
+            <Field label="Pracownik">
+              <TeamProfileSelect
+                value={values.userId}
+                onChange={(userId) => setValues((current) => ({ ...current, userId }))}
+                teamProfiles={teamProfiles}
+                placeholder="— wybierz pracownika —"
+              />
+            </Field>
+          ) : null}
+
+          {allowUserSelection && entry ? (
+            <Field label="Pracownik">
+              <Input value={entryUserLabel ?? entry.userId} disabled />
+            </Field>
+          ) : null}
+
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Data">
               <Input
@@ -298,6 +383,7 @@ export function TimeEntryFormDialog({
                 setValues((current) => ({ ...current, projectId: projectId ?? "" }))
               }
               label={requiresProject ? "Projekt *" : "Projekt"}
+              disabled={lockProject}
               usePortal={false}
             />
           </div>

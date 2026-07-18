@@ -939,7 +939,7 @@ export function ClientDashboardView({
           processProgressPercent={processProgress?.percent ?? null}
         />
         <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
-          <h2 className="mb-4 text-base font-semibold text-foreground">Cele</h2>
+          <h2 className="page-section-title mb-4 text-base font-semibold">Cele</h2>
           <GoalCollectiveView projectId={project.id} clientId={client.id} />
         </div>
       </div>
@@ -999,7 +999,7 @@ export function ClientDashboardView({
       <div className="grid min-w-0 gap-4">
         {anchoredTemplate && process ? (
           <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
-            <h2 className="mb-4 text-base font-semibold text-foreground">Proces wdrożenia</h2>
+            <h2 className="page-section-title mb-4 text-base font-semibold">Proces wdrożenia</h2>
             {readOnly ? (
               <ProcessPipeline
                 template={anchoredTemplate}
@@ -1055,7 +1055,7 @@ export function ClientDashboardView({
     return (
       <div className="grid min-w-0 gap-4">
         <div className="min-w-0 overflow-x-auto rounded-2xl border border-border/80 bg-surface p-4">
-          <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
+          <h2 className="page-section-title mb-3 flex items-center gap-2 text-base font-semibold">
             <Link2 className="h-4 w-4 text-accent" />
             Linki zewnętrzne
           </h2>
@@ -1068,7 +1068,7 @@ export function ClientDashboardView({
           />
         </div>
         <div className="min-w-0 overflow-x-auto rounded-2xl border border-border/80 bg-surface p-4">
-          <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
+          <h2 className="page-section-title mb-3 flex items-center gap-2 text-base font-semibold">
             <FolderOpen className="h-4 w-4 text-accent" />
             Pliki i zdjęcia
           </h2>
@@ -1081,7 +1081,7 @@ export function ClientDashboardView({
           />
         </div>
         <div className="min-w-0 overflow-x-auto rounded-2xl border border-border/80 bg-surface p-4">
-          <h2 className="mb-3 text-base font-semibold text-foreground">Instrukcje</h2>
+          <h2 className="page-section-title mb-3 text-base font-semibold">Instrukcje</h2>
           <ProjectContentPanel
             projectId={selectedProject.id}
             section="instructions"
@@ -1221,7 +1221,7 @@ export function ClientDashboardView({
           />
         </div>
         <div className="rounded-2xl border border-border/80 bg-surface p-4">
-          <h2 className="mb-3 text-base font-semibold text-foreground">Historia zgłoszeń serwisowych</h2>
+          <h2 className="page-section-title mb-3 text-base font-semibold">Historia zgłoszeń serwisowych</h2>
           <ProjectServiceIntakeHistoryPanel
             projectId={selectedProject.id}
             readOnly={readOnly}
@@ -1243,7 +1243,7 @@ export function ClientDashboardView({
   function renderAgreementsPanel() {
     return (
       <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
-        <h2 className="mb-3 text-base font-semibold text-foreground">Ustalenia i akceptacje</h2>
+        <h2 className="page-section-title mb-3 text-base font-semibold">Ustalenia i akceptacje</h2>
         <ProjectAgreementsPanel
           projectId={selectedProject.id}
           mode={readOnly ? "client" : "team"}
@@ -1263,7 +1263,7 @@ export function ClientDashboardView({
   function renderChangeRequestsPanel() {
     return (
       <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
-        <h2 className="mb-3 text-base font-semibold text-foreground">Karta zmian Projektu</h2>
+        <h2 className="page-section-title mb-3 text-base font-semibold">Karta zmian Projektu</h2>
         <p className="mb-4 text-sm text-muted">
           Zmiany zakresu lub kosztu projektu wymagające akceptacji klienta. Zaakceptowane zmiany
           sumują się do całkowitego kosztu projektu (baza z ofert + zmiany).
@@ -1284,7 +1284,7 @@ export function ClientDashboardView({
   function renderSpecificationPanel() {
     return (
       <div className="rounded-2xl border border-border/80 bg-surface p-4">
-        <h2 className="mb-3 text-base font-semibold text-foreground">Konfigurator specyfikacji</h2>
+        <h2 className="page-section-title mb-3 text-base font-semibold">Konfigurator specyfikacji</h2>
         <ProjectSpecificationPanel
           projectId={selectedProject.id}
           readOnly={readOnly}
@@ -1312,7 +1312,7 @@ export function ClientDashboardView({
   function renderTradesPanel() {
     return (
       <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
-        <h2 className="mb-3 text-base font-semibold text-foreground">Branże w tym projekcie</h2>
+        <h2 className="page-section-title mb-3 text-base font-semibold">Branże w tym projekcie</h2>
         <p className="mb-4 text-sm text-muted">
           Wykonawcy przypisani do projektu — wykorzystasz ich przy rolach akceptacji w ustaleniach.
           Firmy dodane tutaj automatycznie trafiają do katalogu branż.
@@ -1325,7 +1325,7 @@ export function ClientDashboardView({
   function renderDocumentationPanel() {
     return (
       <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
-        <h2 className="mb-3 text-base font-semibold text-foreground">Dokumentacja projektu</h2>
+        <h2 className="page-section-title mb-3 text-base font-semibold">Dokumentacja projektu</h2>
         <ProjectDocumentsPanel
           projectId={selectedProject.id}
           clientId={client.id}
@@ -1339,7 +1339,7 @@ export function ClientDashboardView({
   function renderMeetingNotesPanel() {
     return (
       <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
-        <h2 className="mb-3 text-base font-semibold text-foreground">Notatki ze spotkań</h2>
+        <h2 className="page-section-title mb-3 text-base font-semibold">Notatki ze spotkań</h2>
         <ProjectMeetingNotesPanel
           projectId={selectedProject.id}
           mode={readOnly ? "client" : "team"}
@@ -1368,7 +1368,7 @@ export function ClientDashboardView({
 
     return (
       <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
-        <h2 className="mb-3 text-base font-semibold text-foreground">Ocena spełnienia i zadowolenia</h2>
+        <h2 className="page-section-title mb-3 text-base font-semibold">Ocena spełnienia i zadowolenia</h2>
         <p className="mb-4 text-sm text-muted">
           Przy przekazaniu instalacji zweryfikuj ustalenia i specyfikację oraz oceń projekt.
         </p>
@@ -1388,7 +1388,7 @@ export function ClientDashboardView({
   function renderTimeTrackingPanel() {
     return (
       <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
-        <h2 className="mb-3 text-base font-semibold text-foreground">Czas pracy</h2>
+        <h2 className="page-section-title mb-3 text-base font-semibold">Czas pracy</h2>
         <p className="mb-4 text-sm text-muted">
           Wszystkie wpisy czasu pracy zarejestrowane w tym projekcie — z podsumowaniem według etapów
           procesu i łącznym czasem.
@@ -1401,7 +1401,7 @@ export function ClientDashboardView({
   function renderProjectUsersPanel() {
     return (
       <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
-        <h2 className="mb-3 text-base font-semibold text-foreground">Użytkownicy projektu</h2>
+        <h2 className="page-section-title mb-3 text-base font-semibold">Użytkownicy projektu</h2>
         <ProjectUsersPanel projectId={selectedProject.id} />
       </div>
     );

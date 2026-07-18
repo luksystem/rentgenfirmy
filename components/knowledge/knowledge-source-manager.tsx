@@ -185,7 +185,7 @@ export function KnowledgeSourceManager() {
       <Card>
         <CardContent className="grid gap-4 py-6">
           <div>
-            <h2 className="text-base font-semibold text-foreground">Dodaj nowe źródło</h2>
+            <h2 className="page-section-title text-base font-semibold">Dodaj nowe źródło</h2>
             <p className="mt-1 text-sm text-muted">
               Wpisz tekst wprost, wgraj zdjęcie (AI je opisze), plik CSV (np. baza usterek albo
               cennik), PDF, plik tekstowy, eksport czatu WhatsApp (.txt), podaj link do
@@ -305,7 +305,7 @@ export function KnowledgeSourceManager() {
       <Card>
         <CardContent className="grid gap-3 py-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-foreground">Źródła w bazie wiedzy</h2>
+            <h2 className="page-section-title text-base font-semibold">Źródła w bazie wiedzy</h2>
             <span className="text-xs text-muted">{sources.length} pozycji</span>
           </div>
 

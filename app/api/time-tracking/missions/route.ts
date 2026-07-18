@@ -7,9 +7,11 @@ import { fetchWorkMissionsForUserServer } from "@/lib/supabase/work-missions-ser
 export async function GET(request: Request) {
   try {
     const { profile } = await requireAuthenticatedProfile();
-    const date = new URL(request.url).searchParams.get("date") ?? undefined;
+    const url = new URL(request.url);
+    const date = url.searchParams.get("date") ?? undefined;
+    const userId = url.searchParams.get("userId") ?? undefined;
     const admin = getSupabaseAdmin();
-    const missions = await fetchWorkMissionsForUserServer(admin, profile, date);
+    const missions = await fetchWorkMissionsForUserServer(admin, profile, date, userId ?? undefined);
     return NextResponse.json({ missions });
   } catch (error) {
     return jsonError(error);

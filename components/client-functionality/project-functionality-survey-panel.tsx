@@ -251,7 +251,7 @@ export function ProjectFunctionalitySurveyPanel({
         </Card>
       ) : null}
       <div>
-        <h2 className="text-base font-semibold text-foreground">Ankieta funkcjonalności klienta</h2>
+        <h2 className="page-section-title text-base font-semibold">Ankieta funkcjonalności klienta</h2>
         <p className="mt-1 text-sm text-muted">
           Klient opisuje jak ma działać dom — na podstawie pozycji specyfikacji projektu. Po wypełnieniu
           otrzymujesz listę funkcji do uruchomienia.

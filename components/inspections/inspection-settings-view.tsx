@@ -26,7 +26,7 @@ function SettingsSection({
   return (
     <section className="grid gap-4 border-t border-border/60 pt-6 first:border-t-0 first:pt-0">
       <div>
-        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+        <h2 className="page-section-title text-base font-semibold">{title}</h2>
         {description ? <p className="mt-1 text-sm text-muted">{description}</p> : null}
       </div>
       {children}

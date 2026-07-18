@@ -109,7 +109,7 @@ export function KnowledgeSettingsPanel() {
       <Card>
         <CardContent className="grid gap-4 py-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-foreground">Ustawienia bazy wiedzy</h2>
+            <h2 className="page-section-title text-base font-semibold">Ustawienia bazy wiedzy</h2>
             {isSaving ? (
               <span className="flex items-center gap-1.5 text-xs text-muted">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -146,7 +146,7 @@ export function KnowledgeSettingsPanel() {
         <Card>
           <CardContent className="grid gap-4 py-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+              <h2 className="page-section-title flex items-center gap-2 text-base font-semibold">
                 <Sparkles className="h-4 w-4 text-accent" />
                 Prompt AI do sugestii i wyszukiwania
               </h2>

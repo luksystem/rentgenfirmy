@@ -6,11 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDurationMinutes } from "@/lib/time-tracking/format";
 import {
-  isEditableTimeEntryStatus,
+  canDeleteTimeEntryInUi,
+  canEditTimeEntryInUi,
+} from "@/lib/time-tracking/entry-actions";
+import {
   TIME_ENTRY_STATUS_LABELS,
   type TimeEntryView,
 } from "@/lib/time-tracking/types";
 import { formatDate } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth-store";
 
 function statusTone(status: TimeEntryView["status"]) {
   switch (status) {
@@ -36,6 +40,9 @@ export function TimeEntryList({
   onDelete: (entry: TimeEntryView) => void;
   onHistory: (entry: TimeEntryView) => void;
 }) {
+  const profile = useAuthStore((state) => state.profile);
+  const actor = profile ? { id: profile.id, role: profile.role } : null;
+
   const grouped = entries.reduce<Record<string, TimeEntryView[]>>((acc, entry) => {
     const key = entry.date;
     acc[key] = acc[key] ?? [];
@@ -70,7 +77,8 @@ export function TimeEntryList({
 
             <div className="grid gap-2">
               {dayEntries.map((entry) => {
-                const editable = isEditableTimeEntryStatus(entry.status);
+                const editable = canEditTimeEntryInUi(actor, entry);
+                const deletable = canDeleteTimeEntryInUi(actor, entry);
 
                 return (
                   <Card key={entry.id}>
@@ -102,7 +110,7 @@ export function TimeEntryList({
                         ) : null}
                       </div>
 
-                      {editable ? (
+                      {(editable || deletable) ? (
                         <div className="flex shrink-0 items-center gap-2">
                           <Button
                             type="button"
@@ -113,24 +121,28 @@ export function TimeEntryList({
                             <History className="mr-1.5 h-3.5 w-3.5" />
                             Historia
                           </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onEdit(entry)}
-                          >
-                            <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                            Edytuj
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onDelete(entry)}
-                          >
-                            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                            Usuń
-                          </Button>
+                          {editable ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onEdit(entry)}
+                            >
+                              <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                              Edytuj
+                            </Button>
+                          ) : null}
+                          {deletable ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onDelete(entry)}
+                            >
+                              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                              Usuń
+                            </Button>
+                          ) : null}
                         </div>
                       ) : (
                         <div className="flex shrink-0 items-center gap-2">

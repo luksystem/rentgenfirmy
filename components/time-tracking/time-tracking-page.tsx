@@ -242,6 +242,7 @@ export function TimeTrackingPage() {
         onOpenChange={setFormOpen}
         entry={editingEntry}
         defaultDate={today}
+        allowUserSelection={canManageTeam}
       />
     </>
   );

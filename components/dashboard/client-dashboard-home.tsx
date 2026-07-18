@@ -702,7 +702,7 @@ export function ClientDashboardHome({
 
       {pendingWarranty.length > 0 ? (
         <div className="rounded-2xl border border-border/80 bg-surface p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
+          <h3 className="page-section-title mb-3 flex items-center gap-2 text-base font-semibold">
             <Shield className="h-4 w-4 text-accent" />
             Propozycje przedłużenia gwarancji
           </h3>
@@ -763,7 +763,7 @@ export function ClientDashboardHome({
         />
       ) : projects.length > 1 && onProjectChange ? (
         <div className="rounded-2xl border border-border/80 bg-surface p-4">
-          <h2 className="mb-3 text-base font-semibold text-foreground">Projekty</h2>
+          <h2 className="page-section-title mb-3 text-base font-semibold">Projekty</h2>
           <div className="grid gap-2">
             {projects.map((entry) => (
               <button
@@ -788,7 +788,7 @@ export function ClientDashboardHome({
       ) : null}
 
       <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
-        <h2 className="mb-3 text-base font-semibold text-foreground">Dane projektu</h2>
+        <h2 className="page-section-title mb-3 text-base font-semibold">Dane projektu</h2>
         <ClientProjectSummary project={project} compact excludeWarrantyFields />
       </div>
 

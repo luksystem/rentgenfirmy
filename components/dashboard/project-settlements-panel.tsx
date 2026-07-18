@@ -1,11 +1,31 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Copy, Link2, Mail, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import {
+  Check,
+  Copy,
+  ExternalLink,
+  Link2,
+  Mail,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Share2,
+  Trash2,
+} from "lucide-react";
 import { AgreementCostFields } from "@/components/dashboard/agreement-cost-fields";
 import { ProjectHourBudgetCard } from "@/components/time-tracking/project-hour-budget-card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { buildSettlementReportEmail } from "@/lib/email/settlement-templates";
 import {
   addDaysIso,
   buildSettlementSummary,
@@ -71,10 +91,39 @@ export function ProjectSettlementsPanel({
   const [emailSending, setEmailSending] = useState(false);
   const [emailMessage, setEmailMessage] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
+  const [origin, setOrigin] = useState("");
 
-  const publicSettlementsUrl = publicDashboardToken
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/przestrzen/${publicDashboardToken}?projectId=${encodeURIComponent(projectId)}&tab=settlements`
-    : null;
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+
+  const publicSettlementsUrl =
+    publicDashboardToken && origin
+      ? `${origin}/przestrzen/${publicDashboardToken}?projectId=${encodeURIComponent(projectId)}&tab=settlements`
+      : null;
+
+  const emailPreview = useMemo(
+    () =>
+      buildSettlementReportEmail({
+        clientName: clientName ?? "Klient",
+        projectName: project?.name ?? "Projekt",
+        entries,
+        publicUrl: publicSettlementsUrl,
+      }),
+    [clientName, entries, project?.name, publicSettlementsUrl],
+  );
+
+  const paidScheduleIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const entry of entries) {
+      if (entry.kind === "payment" && entry.sourceId) {
+        ids.add(entry.sourceId);
+      }
+    }
+    return ids;
+  }, [entries]);
 
   useEffect(() => {
     void ensureSettlements(projectId, {
@@ -157,7 +206,42 @@ export function ProjectSettlementsPanel({
     }
   }
 
-  async function handleSendEmail() {
+  async function handleMarkSchedulePaid(schedule: ProjectSettlementEntry) {
+    if (readOnly || schedule.kind !== "schedule") return;
+    if (paidScheduleIds.has(schedule.id)) return;
+    setBusyId(schedule.id);
+    setError(null);
+    try {
+      const created = await addEntry(
+        projectId,
+        {
+          kind: "payment",
+          source: "none",
+          sourceId: schedule.id,
+          processStageId: schedule.processStageId,
+          title: `Spłata: ${schedule.title}`,
+          amountNet: schedule.amountNet,
+          vatRate: schedule.vatRate,
+          amountGross: schedule.amountGross,
+          entryDate: new Date().toISOString().slice(0, 10),
+          dueDate: schedule.dueDate,
+          notes: schedule.notes
+            ? `${schedule.notes}\nZ harmonogramu spłat.`
+            : "Z harmonogramu spłat.",
+        },
+        actorName,
+      );
+      await ensureSettlements(projectId, { force: true, sync: true, showLoading: false });
+      setCreatingKind(null);
+      setEditing(created);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nie udało się oznaczyć jako spłacone.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleConfirmSendEmail() {
     if (readOnly) return;
     setEmailSending(true);
     setEmailMessage(null);
@@ -180,6 +264,7 @@ export function ProjectSettlementsPanel({
           ? payload.message ?? "Wysyłka pominięta (brak konfiguracji e-mail lub wyłączone w ustawieniach)."
           : "Raport rozliczenia wysłany do klienta.",
       );
+      setEmailPreviewOpen(false);
     } catch (err) {
       setEmailMessage(err instanceof Error ? err.message : "Błąd wysyłki e-mail.");
     } finally {
@@ -191,7 +276,27 @@ export function ProjectSettlementsPanel({
     if (!publicSettlementsUrl) return;
     await navigator.clipboard.writeText(publicSettlementsUrl);
     setLinkCopied(true);
+    setShareMessage(null);
     window.setTimeout(() => setLinkCopied(false), 2000);
+  }
+
+  async function sharePublicLink() {
+    if (!publicSettlementsUrl) return;
+    setShareMessage(null);
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: `Rozliczenia — ${project?.name ?? "projekt"}`,
+          text: "Link do rozliczeń projektu",
+          url: publicSettlementsUrl,
+        });
+        return;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+      }
+    }
+    await copyPublicLink();
+    setShareMessage("Link skopiowany — wklej go klientowi.");
   }
 
   if (loading && !bundle) {
@@ -212,20 +317,26 @@ export function ProjectSettlementsPanel({
         : "warning";
 
   return (
-    <div className="grid min-w-0 gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="grid min-w-0 gap-5 sm:gap-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <p className="text-xs text-muted">
           Podsumowania w netto. Harmonogram uwzględnia kwoty z VAT (brutto w pozycjach).
         </p>
         {!readOnly ? (
-          <Button type="button" variant="secondary" size="sm" onClick={() => void handleRefresh()}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="w-full sm:w-auto"
+            onClick={() => void handleRefresh()}
+          >
             <RefreshCw className="mr-1 h-3.5 w-3.5" />
             Odśwież źródła
           </Button>
         ) : null}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           label="Do zapłaty (netto)"
           value={summary.chargesNet}
@@ -293,31 +404,79 @@ export function ProjectSettlementsPanel({
       ) : null}
 
       {!readOnly || publicSettlementsUrl ? (
-        <section className="grid gap-3 rounded-xl border border-border/70 bg-surface-muted/20 p-4">
+        <section className="grid gap-3 rounded-xl border border-border/70 bg-surface-muted/20 p-3 sm:p-4">
           <h3 className="page-section-subtitle text-sm">Wyślij rozliczenie / link publiczny</h3>
           <p className="text-xs text-muted">
             Raport dla klienta: planowane wpływy, spłaty, saldo i harmonogram.
             {clientName ? ` Odbiorca: ${clientName}.` : ""}
           </p>
-          <div className="flex flex-wrap gap-2">
-            {!readOnly ? (
+
+          {publicSettlementsUrl ? (
+            <div className="grid gap-2">
+              <Field label="Link publiczny do rozliczeń">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    readOnly
+                    value={publicSettlementsUrl}
+                    className="min-w-0 font-mono text-xs"
+                    onFocus={(event) => event.currentTarget.select()}
+                  />
+                  <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="w-full sm:w-auto"
+                      onClick={() => void copyPublicLink()}
+                    >
+                      <Copy className="mr-1 h-3.5 w-3.5" />
+                      {linkCopied ? "Skopiowano" : "Kopiuj"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="w-full sm:w-auto"
+                      onClick={() => void sharePublicLink()}
+                    >
+                      <Share2 className="mr-1 h-3.5 w-3.5" />
+                      Udostępnij
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full sm:w-auto"
+                      onClick={() => window.open(publicSettlementsUrl, "_blank", "noopener,noreferrer")}
+                    >
+                      <ExternalLink className="mr-1 h-3.5 w-3.5" />
+                      Podgląd
+                    </Button>
+                  </div>
+                </div>
+              </Field>
+              {shareMessage ? <p className="text-xs text-muted">{shareMessage}</p> : null}
+            </div>
+          ) : (
+            <p className="text-xs text-amber-300">
+              Brak tokenu przestrzeni publicznej — wygeneruj link dashboardu klienta, aby udostępnić
+              rozliczenia.
+            </p>
+          )}
+
+          {!readOnly ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <Button
                 type="button"
-                onClick={() => void handleSendEmail()}
-                disabled={emailSending || !clientEmail}
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  setEmailMessage(null);
+                  setEmailPreviewOpen(true);
+                }}
+                disabled={!clientEmail}
               >
                 <Mail className="mr-1 h-4 w-4" />
-                {emailSending ? "Wysyłanie…" : "Wyślij e-mail"}
+                Wyślij e-mail…
               </Button>
-            ) : null}
-            {publicSettlementsUrl ? (
-              <Button type="button" variant="secondary" onClick={() => void copyPublicLink()}>
-                <Link2 className="mr-1 h-4 w-4" />
-                {linkCopied ? "Skopiowano" : "Kopiuj link publiczny"}
-                <Copy className="ml-1 h-3.5 w-3.5 opacity-60" />
-              </Button>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
           {emailMessage ? <p className="text-sm text-muted">{emailMessage}</p> : null}
           {!clientEmail && !readOnly ? (
             <p className="text-xs text-amber-300">Uzupełnij e-mail klienta, aby wysłać raport.</p>
@@ -325,19 +484,69 @@ export function ProjectSettlementsPanel({
         </section>
       ) : null}
 
+      <Dialog open={emailPreviewOpen} onOpenChange={setEmailPreviewOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Podgląd raportu przed wysyłką</DialogTitle>
+            <DialogDescription>
+              Sprawdź treść wiadomości. Po potwierdzeniu raport trafi na{" "}
+              <span className="font-medium text-foreground">{clientEmail ?? "—"}</span>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <Field label="Temat">
+              <Input readOnly value={emailPreview.subject} />
+            </Field>
+            <div className="overflow-hidden rounded-xl border border-border/70 bg-white">
+              <div
+                className="max-h-[50vh] overflow-auto p-4 text-sm text-neutral-900"
+                dangerouslySetInnerHTML={{ __html: emailPreview.html }}
+              />
+            </div>
+            {publicSettlementsUrl ? (
+              <p className="break-all text-xs text-muted">
+                <Link2 className="mr-1 inline h-3.5 w-3.5 align-text-bottom" />
+                W wiadomości będzie też link: {publicSettlementsUrl}
+              </p>
+            ) : null}
+          </div>
+          <DialogFooter className="mt-4 flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full sm:w-auto"
+              disabled={emailSending}
+              onClick={() => setEmailPreviewOpen(false)}
+            >
+              Anuluj
+            </Button>
+            <Button
+              type="button"
+              className="w-full sm:w-auto"
+              disabled={emailSending || !clientEmail}
+              onClick={() => void handleConfirmSendEmail()}
+            >
+              <Mail className="mr-1 h-4 w-4" />
+              {emailSending ? "Wysyłanie…" : "Potwierdź i wyślij"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {error ? <p className="text-sm text-rose-400">{error}</p> : null}
 
       {KIND_SECTIONS.map((kind) => {
         const sectionEntries = entries.filter((entry) => entry.kind === kind);
         return (
           <section key={kind} className="grid gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <h3 className="page-section-subtitle text-sm">{SETTLEMENT_KIND_LABELS[kind]}</h3>
               {!readOnly ? (
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
+                  className="w-full sm:w-auto"
                   onClick={() => {
                     setEditing(null);
                     setCreatingKind(kind);
@@ -379,9 +588,9 @@ export function ProjectSettlementsPanel({
                   ) : (
                     <li
                       key={entry.id}
-                      className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border/70 px-3 py-2.5"
+                      className="flex flex-col gap-3 rounded-xl border border-border/70 px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between"
                     >
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="font-medium text-foreground">{entry.title}</p>
                         <p className="text-xs text-muted">
                           {SETTLEMENT_SOURCE_LABELS[entry.source]}
@@ -392,17 +601,40 @@ export function ProjectSettlementsPanel({
                           {entry.invoiceNumber ? ` · nr ${entry.invoiceNumber}` : ""}
                           {entry.entryDate ? ` · przewidywana ${formatDate(entry.entryDate)}` : ""}
                           {entry.dueDate ? ` · płatność ${formatDate(entry.dueDate)}` : ""}
+                          {kind === "schedule" && paidScheduleIds.has(entry.id)
+                            ? " · oznaczona jako spłacona"
+                            : ""}
                         </p>
                       </div>
-                      <div className="flex items-start gap-2">
-                        <div className="text-right text-sm tabular-nums">
+                      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-start">
+                        <div className="text-left text-sm tabular-nums sm:text-right">
                           <p className="text-foreground">netto {formatMoney(entry.amountNet)}</p>
                           <p className="text-xs text-muted">
                             VAT {entry.vatRate}% · brutto {formatMoney(entry.amountGross)}
                           </p>
                         </div>
                         {!readOnly ? (
-                          <div className="flex gap-0.5">
+                          <div className="flex flex-wrap gap-1">
+                            {kind === "schedule" ? (
+                              paidScheduleIds.has(entry.id) ? (
+                                <span className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-300">
+                                  <Check className="h-3.5 w-3.5" />
+                                  Spłacone
+                                </span>
+                              ) : (
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  className="flex-1 sm:flex-none"
+                                  disabled={busyId === entry.id}
+                                  onClick={() => void handleMarkSchedulePaid(entry)}
+                                >
+                                  <Check className="mr-1 h-3.5 w-3.5" />
+                                  Spłacone
+                                </Button>
+                              )
+                            ) : null}
                             <Button
                               type="button"
                               variant="ghost"
@@ -427,6 +659,11 @@ export function ProjectSettlementsPanel({
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
+                        ) : kind === "schedule" && paidScheduleIds.has(entry.id) ? (
+                          <span className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-300">
+                            <Check className="h-3.5 w-3.5" />
+                            Spłacone
+                          </span>
                         ) : null}
                       </div>
                     </li>
@@ -474,12 +711,12 @@ function SummaryCard({
           : "text-foreground";
 
   return (
-    <div className={cn("rounded-2xl border px-4 py-3", toneClass)}>
+    <div className={cn("rounded-2xl border px-3 py-3 sm:px-4", toneClass)}>
       <p className="text-xs font-medium text-muted">{label}</p>
-      <p className={cn("mt-1 text-lg font-semibold tabular-nums", valueClass)}>
+      <p className={cn("mt-1 text-base font-semibold tabular-nums sm:text-lg", valueClass)}>
         {formatMoney(value)}
       </p>
-      <p className="mt-1 text-[11px] text-muted">{hint}</p>
+      <p className="mt-1 text-[11px] leading-snug text-muted">{hint}</p>
     </div>
   );
 }
@@ -622,9 +859,10 @@ function EntryForm({
       <Field label="Notatka">
         <Textarea value={notes} rows={2} onChange={(event) => setNotes(event.target.value)} />
       </Field>
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <Button
           type="button"
+          className="w-full sm:w-auto"
           disabled={busy || !title.trim() || net == null}
           onClick={() =>
             onSave({
@@ -646,7 +884,13 @@ function EntryForm({
         >
           {busy ? "Zapisywanie…" : "Zapisz"}
         </Button>
-        <Button type="button" variant="ghost" disabled={busy} onClick={onCancel}>
+        <Button
+          type="button"
+          variant="ghost"
+          className="w-full sm:w-auto"
+          disabled={busy}
+          onClick={onCancel}
+        >
           Anuluj
         </Button>
       </div>
