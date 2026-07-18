@@ -211,7 +211,7 @@ export function ProjectBillingBudgetPanel({
           </ul>
         )}
         {!readOnly ? (
-          <div className="grid gap-2 sm:grid-cols-[1fr_6rem_8rem_auto]">
+          <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-[1fr_6rem_8rem_auto]">
             <Input
               placeholder="Nazwa (np. godziny programisty)"
               value={quotaLabel}
@@ -234,7 +234,12 @@ export function ProjectBillingBudgetPanel({
                 </option>
               ))}
             </Select>
-            <Button type="button" variant="secondary" onClick={() => void handleAddQuota()}>
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full sm:w-auto"
+              onClick={() => void handleAddQuota()}
+            >
               <Plus className="mr-1 h-4 w-4" />
               Dodaj
             </Button>
@@ -267,8 +272,8 @@ function QuotaRow({
   }, [quota]);
 
   return (
-    <li className="flex flex-wrap items-end gap-2 rounded-xl border border-border/60 px-3 py-2">
-      <Field label="Nazwa" className="min-w-[10rem] flex-1">
+    <li className="flex min-w-0 flex-wrap items-end gap-2 rounded-xl border border-border/60 px-3 py-2">
+      <Field label="Nazwa" className="min-w-0 w-full flex-1 sm:min-w-[10rem]">
         <Input
           value={label}
           disabled={readOnly}

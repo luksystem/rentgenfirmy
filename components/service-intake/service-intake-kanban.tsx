@@ -37,6 +37,7 @@ import { resolveKanbanColumnId, TOUCH_DRAG_THRESHOLD_PX } from "@/lib/process/ka
 import {
   countActiveServiceIntakes,
   countOverdueActiveServiceIntakes,
+  isServiceIntakeActive,
   isServiceIntakeInactive,
   isServiceIntakeOverdue,
   SERVICE_INTAKE_KANBAN_COLUMNS,
@@ -481,6 +482,29 @@ export function ServiceIntakeKanban({
     [grouped],
   );
 
+  const attentionItems = useMemo(
+    () =>
+      items
+        .filter((item) => {
+          if (!isServiceIntakeActive(item.status)) {
+            return false;
+          }
+          const overdue = isServiceIntakeOverdue(item);
+          const critical = item.priority === "c";
+          return overdue || critical;
+        })
+        .sort((left, right) => {
+          const rankDiff =
+            serviceIntakePriorityRank(left.priority) - serviceIntakePriorityRank(right.priority);
+          if (rankDiff !== 0) {
+            return rankDiff;
+          }
+          return new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
+        })
+        .slice(0, 12),
+    [items],
+  );
+
   function beginDrag(itemId: string) {
     dragItemIdRef.current = itemId;
     setDragItemId(itemId);
@@ -598,6 +622,69 @@ export function ServiceIntakeKanban({
           Odśwież
         </Button>
       </div>
+
+      {attentionItems.length > 0 ? (
+        <section className="shrink-0 rounded-2xl border border-rose-500/35 bg-rose-500/10 p-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-rose-100">
+              Do obsługi teraz ({attentionItems.length})
+            </p>
+            <p className="text-[11px] text-rose-100/80">Przeterminowane lub krytyczne</p>
+          </div>
+          <ul className="grid gap-2">
+            {attentionItems.map((item) => {
+              const directionsUrl = item.clientAddress
+                ? buildGoogleMapsDirectionsUrl(item.clientAddress)
+                : null;
+              const overdue = isServiceIntakeOverdue(item);
+              return (
+                <li
+                  key={`attention-${item.id}`}
+                  className="flex min-w-0 flex-col gap-2 rounded-xl border border-rose-500/25 bg-background/40 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 text-left"
+                    onClick={() => setSelectedId(item.id)}
+                  >
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {item.clientName?.trim() || item.contactFullName || "Klient"}
+                      {item.projectName ? ` · ${item.projectName}` : ""}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-muted">
+                      {SERVICE_INTAKE_STATUS_LABELS[item.status]}
+                      {item.priority
+                        ? ` · ${SERVICE_INTAKE_PRIORITY_LABELS[item.priority]}`
+                        : ""}
+                      {overdue ? " · przeterminowane" : ""}
+                      {item.clientAddress ? ` · ${item.clientAddress}` : ""}
+                    </p>
+                  </button>
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    {directionsUrl ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="border-accent/40 text-accent hover:bg-accent/10"
+                        asChild
+                      >
+                        <a href={directionsUrl} target="_blank" rel="noopener noreferrer">
+                          <Navigation className="mr-1 h-3.5 w-3.5" />
+                          Prowadź do
+                        </a>
+                      </Button>
+                    ) : null}
+                    <Button type="button" size="sm" variant="secondary" onClick={() => setSelectedId(item.id)}>
+                      Otwórz
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
 
       <KanbanMobileColumnNav
         columns={columns}

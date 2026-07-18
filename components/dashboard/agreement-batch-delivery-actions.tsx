@@ -122,8 +122,8 @@ export function AgreementBatchDeliveryActions({
   }
 
   return (
-    <div className="grid gap-3 rounded-xl border border-accent/25 bg-accent/5 p-3">
-      <div>
+    <div className="grid min-w-0 w-full gap-3 rounded-xl border border-accent/25 bg-accent/5 p-3">
+      <div className="min-w-0">
         <p className="text-sm font-medium text-foreground">Zbiorcza wysyłka ustaleń</p>
         <p className="mt-1 text-xs text-muted">
           Wyślij w jednym mailu HTML wszystkie oczekujące ustalenia ({pendingAgreements.length}) — z
@@ -131,25 +131,32 @@ export function AgreementBatchDeliveryActions({
         </p>
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+      <div className="flex min-w-0 w-full flex-col gap-2 sm:flex-row sm:flex-wrap">
         {clientEmail?.trim() ? (
           <Button
             type="button"
             size="sm"
+            className="h-auto w-full min-w-0 whitespace-normal text-left sm:w-auto"
             disabled={busyKey !== null}
             onClick={() => void runSend("client-all", { scope: "client_all_pending" })}
           >
             {busyKey === "client-all" ? (
-              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="mr-2 h-3.5 w-3.5 shrink-0 animate-spin" />
             ) : (
-              <Send className="mr-2 h-3.5 w-3.5" />
+              <Send className="mr-2 h-3.5 w-3.5 shrink-0" />
             )}
             Wszystkie oczekujące → klient ({pendingAgreements.length})
           </Button>
         ) : null}
 
         {clientBatchMailto ? (
-          <Button type="button" size="sm" variant="outline" asChild>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-auto w-full min-w-0 whitespace-normal text-left sm:w-auto"
+            asChild
+          >
             <a href={clientBatchMailto}>Kopia zbiorcza w kliencie poczty</a>
           </Button>
         ) : null}
@@ -161,6 +168,7 @@ export function AgreementBatchDeliveryActions({
               type="button"
               size="sm"
               variant="secondary"
+              className="h-auto w-full min-w-0 whitespace-normal text-left sm:w-auto"
               disabled={busyKey !== null}
               onClick={() =>
                 void runSend(`trade-all-${batch.tradeId}`, {
@@ -170,9 +178,9 @@ export function AgreementBatchDeliveryActions({
               }
             >
               {busyKey === `trade-all-${batch.tradeId}` ? (
-                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="mr-2 h-3.5 w-3.5 shrink-0 animate-spin" />
               ) : (
-                <Send className="mr-2 h-3.5 w-3.5" />
+                <Send className="mr-2 h-3.5 w-3.5 shrink-0" />
               )}
               Wszystkie → {batch.tradeName} ({batch.count})
             </Button>

@@ -241,14 +241,15 @@ export function ProjectTimeTrackingPanel({ projectId }: { projectId: string }) {
                       ) : null}
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
+                        className="min-w-0"
                         onClick={() => setHistoryEntry(entry)}
                       >
-                        <History className="mr-1.5 h-3.5 w-3.5" />
+                        <History className="mr-1.5 h-3.5 w-3.5 shrink-0" />
                         Historia
                       </Button>
                       {editable ? (
@@ -256,9 +257,10 @@ export function ProjectTimeTrackingPanel({ projectId }: { projectId: string }) {
                           type="button"
                           variant="outline"
                           size="sm"
+                          className="min-w-0"
                           onClick={() => openEdit(entry)}
                         >
-                          <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                          <Pencil className="mr-1.5 h-3.5 w-3.5 shrink-0" />
                           Edytuj
                         </Button>
                       ) : null}
@@ -267,9 +269,10 @@ export function ProjectTimeTrackingPanel({ projectId }: { projectId: string }) {
                           type="button"
                           variant="outline"
                           size="sm"
+                          className="min-w-0"
                           onClick={() => void handleDelete(entry)}
                         >
-                          <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                          <Trash2 className="mr-1.5 h-3.5 w-3.5 shrink-0" />
                           Usuń
                         </Button>
                       ) : null}

@@ -173,6 +173,25 @@ export function ProjectSettlementsPanel({
     }
   }
 
+  function settlementErrorMessage(err: unknown, fallback: string) {
+    if (!(err instanceof Error)) {
+      return fallback;
+    }
+    const message = err.message.trim();
+    if (!message || /load failed|failed to fetch|networkerror/i.test(message)) {
+      return `${fallback} Sprawdź połączenie i odśwież listę.`;
+    }
+    return message;
+  }
+
+  async function refreshSettlementsSoft() {
+    try {
+      await ensureSettlements(projectId, { force: true, sync: false, showLoading: false });
+    } catch {
+      // Cache lokalny już zaktualizowany przez mutację — nie blokuj UI.
+    }
+  }
+
   async function handleSave(input: ProjectSettlementEntryInput, entryId?: string) {
     setError(null);
     setBusyId(entryId ?? "new");
@@ -184,9 +203,9 @@ export function ProjectSettlementsPanel({
       }
       setEditing(null);
       setCreatingKind(null);
-      await ensureSettlements(projectId, { force: true, sync: true, showLoading: false });
+      await refreshSettlementsSoft();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Nie udało się zapisać pozycji.");
+      setError(settlementErrorMessage(err, "Nie udało się zapisać pozycji."));
     } finally {
       setBusyId(null);
     }
@@ -199,9 +218,12 @@ export function ProjectSettlementsPanel({
     setError(null);
     try {
       await removeEntry(projectId, entryId);
-      await ensureSettlements(projectId, { force: true, sync: true, showLoading: false });
+      if (editing?.id === entryId) {
+        setEditing(null);
+      }
+      await refreshSettlementsSoft();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Nie udało się usunąć pozycji.");
+      setError(settlementErrorMessage(err, "Nie udało się usunąć pozycji."));
     } finally {
       setBusyId(null);
     }
@@ -213,7 +235,7 @@ export function ProjectSettlementsPanel({
     setBusyId(schedule.id);
     setError(null);
     try {
-      const created = await addEntry(
+      await addEntry(
         projectId,
         {
           kind: "payment",
@@ -232,11 +254,11 @@ export function ProjectSettlementsPanel({
         },
         actorName,
       );
-      await ensureSettlements(projectId, { force: true, sync: true, showLoading: false });
       setCreatingKind(null);
-      setEditing(created);
+      setEditing(null);
+      await refreshSettlementsSoft();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Nie udało się oznaczyć jako spłacone.");
+      setError(settlementErrorMessage(err, "Nie udało się oznaczyć jako spłacone."));
     } finally {
       setBusyId(null);
     }
@@ -419,7 +441,7 @@ export function ProjectSettlementsPanel({
                   <Input
                     readOnly
                     value={publicSettlementsUrl}
-                    className="min-w-0 font-mono text-xs"
+                    className="min-w-0 break-all font-mono text-xs"
                     onFocus={(event) => event.currentTarget.select()}
                   />
                   <div className="flex shrink-0 flex-col gap-2 sm:flex-row">

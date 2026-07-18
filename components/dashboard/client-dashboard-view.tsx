@@ -972,7 +972,7 @@ export function ClientDashboardView({
       return <p className="text-sm text-muted">Wybierz projekt, aby zobaczyć rozliczenia.</p>;
     }
     return (
-      <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
         <h2 className="page-section-title mb-3 text-base font-semibold">Rozliczenia</h2>
         <ProjectSettlementsPanel
           projectId={selectedProjectId}

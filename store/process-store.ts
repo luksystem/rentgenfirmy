@@ -78,7 +78,10 @@ import {
   updateProjectProcessCompletion,
   updateProjectProcessMilestoneDate,
 } from "@/lib/supabase/process-repository";
+import { getActivityActor } from "@/lib/activity-log/actor";
+import { projectActivityHref } from "@/lib/activity-log/hrefs";
 import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
+import { logActivity } from "@/lib/supabase/activity-log-repository";
 import { updateProjectStage } from "@/lib/supabase/repository";
 import { useAppStore } from "@/store/app-store";
 
@@ -614,23 +617,40 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
   },
 
   setActiveStage: async (projectId, stageId) => {
+    const project = useAppStore.getState().projects.find((entry) => entry.id === projectId);
+    const previousStage = project?.stage ?? null;
     const updated = await updateProjectProcessActiveStage(projectId, stageId);
     set((state) => ({
       projectProcesses: { ...state.projectProcesses, [projectId]: updated },
     }));
 
+    let stageTitle: string | null = null;
     if (stageId) {
       const template = resolveAnchoredProcessTemplate(
         updated,
-        get().getTemplateByProjectType(
-          useAppStore.getState().projects.find((project) => project.id === projectId)?.type ?? "",
-        ),
+        get().getTemplateByProjectType(project?.type ?? ""),
       );
-      const stageTitle = template?.stages.find((stage) => stage.id === stageId)?.title;
+      stageTitle = template?.stages.find((stage) => stage.id === stageId)?.title ?? null;
       if (stageTitle) {
         const syncedProject = await updateProjectStage(projectId, stageTitle);
         useAppStore.getState().patchProjectFields(projectId, { stage: syncedProject.stage });
       }
+    }
+
+    if (stageTitle && stageTitle !== previousStage) {
+      const actor = getActivityActor();
+      void logActivity({
+        actorUserId: actor.userId,
+        actorName: actor.name,
+        action: "updated",
+        entityType: "project",
+        entityId: projectId,
+        entityLabel: project?.name ?? projectId,
+        summary: previousStage
+          ? `Zmienił etap: ${previousStage} → ${stageTitle}`
+          : `Ustawił etap: ${stageTitle}`,
+        href: projectActivityHref(projectId),
+      });
     }
   },
 

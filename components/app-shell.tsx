@@ -53,13 +53,16 @@ import { AccountHeaderButton } from "@/components/account/account-header-button"
 import { NotificationBell } from "@/components/notification-bell";
 import { UserAvatar } from "@/components/user-avatar";
 import { NotificationsRealtimeSubscriber } from "@/components/notifications-realtime-subscriber";
+import { NavigateToClientDialog } from "@/components/quick-add/navigate-to-client-dialog";
 import { QuickAddMenuList } from "@/components/quick-add-menu";
 import { useAuthStore } from "@/store/auth-store";
 import { useLeaveStore } from "@/store/leave-store";
+import { useMyWorkStore } from "@/store/my-work-store";
 import { useNavBadgeStore } from "@/store/nav-badge-store";
 import { useNavFavoritesStore } from "@/store/nav-favorites-store";
 import { useProcessStore } from "@/store/process-store";
 import { useRoleNavPermissionsStore } from "@/store/role-nav-permissions-store";
+import type { UserRole } from "@/lib/auth/types";
 
 type NavItem = {
   key?: NavModuleKey;
@@ -126,8 +129,39 @@ const navGroupsBase: NavGroup[] = NAV_MODULE_GROUPS.map((group) => ({
   })),
 }));
 
-function buildMobileNavSlots(allNav: NavItem[]) {
+function buildMobileNavSlots(allNav: NavItem[], role?: UserRole | null) {
   const byHref = new Map(allNav.map((item) => [item.href, item]));
+
+  if (role === "instalator") {
+    const myWork =
+      byHref.get("/moja-praca/zadania") ??
+      ({
+        key: "my-work-tasks" as NavModuleKey,
+        href: "/moja-praca/zadania",
+        label: "Moja praca",
+        icon: ListTodo,
+      } satisfies NavItem);
+    const services =
+      byHref.get("/oferty/zgloszenia") ??
+      ({
+        key: "service-requests" as NavModuleKey,
+        href: "/oferty/zgloszenia",
+        label: "Serwisy",
+        icon: Inbox,
+      } satisfies NavItem);
+    const clients = byHref.get("/klienci");
+    const left = [
+      { ...myWork, label: "Moja praca" },
+      { ...services, label: "Serwisy" },
+    ];
+    const right = clients ? [clients] : [];
+    const primaryHrefs = new Set([
+      ...left.map((item) => item.href),
+      ...right.map((item) => item.href),
+    ]);
+    return { left, right, primaryHrefs };
+  }
+
   const left = [byHref.get("/"), byHref.get("/projekty")].filter(
     (item): item is NavItem => item != null,
   );
@@ -301,9 +335,12 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [navigateToClientOpen, setNavigateToClientOpen] = useState(false);
   const isAdministrator = useAuthStore((state) => state.isAdministrator);
   const profile = useAuthStore((state) => state.profile);
   const profileRole = useAuthStore((state) => state.profile?.role);
+  const dayContext = useMyWorkStore((state) => state.dayContext);
+  const ensureDayContext = useMyWorkStore((state) => state.ensureDayContext);
   const displayName = useAuthStore((state) => state.displayName);
   const signOut = useAuthStore((state) => state.signOut);
   const kanbanNewTaskCount = useProcessStore((state) => state.kanbanNewTaskCount);
@@ -336,6 +373,12 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     startNavBadgePolling();
   }, [startNavBadgePolling]);
+
+  useEffect(() => {
+    if (profileRole === "instalator") {
+      void ensureDayContext({ showLoading: false }).catch(() => undefined);
+    }
+  }, [ensureDayContext, profileRole]);
 
   useKanbanOverdueTasksRealtime(handleKanbanOverdueCountChange);
   useKanbanNewTasksRealtime(handleKanbanNewCountChange);
@@ -430,9 +473,33 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const allNav = useMemo(() => baseNavGroups.flatMap((group) => group.items), [baseNavGroups]);
 
   const { left: mobileNavLeft, right: mobileNavRight, primaryHrefs: mobilePrimaryHrefs } = useMemo(
-    () => buildMobileNavSlots(allNav),
-    [allNav],
+    () => buildMobileNavSlots(allNav, profileRole),
+    [allNav, profileRole],
   );
+
+  const myWorkDayBadgeCount = useMemo(() => {
+    if (profileRole !== "instalator") {
+      return 0;
+    }
+    const session = dayContext?.session;
+    if (!session?.startConfirmed) {
+      return 1;
+    }
+    if (!session.endedAt) {
+      return 1;
+    }
+    return 0;
+  }, [dayContext?.session, profileRole]);
+
+  function mobileTabBadgeCount(href: string) {
+    if (href.startsWith("/moja-praca")) {
+      return myWorkDayBadgeCount;
+    }
+    if (href === "/oferty/zgloszenia") {
+      return serviceIntakeNewCount + serviceIntakeOverdueCount;
+    }
+    return 0;
+  }
 
   const favoriteHrefSet = useMemo(() => new Set(navFavoriteHrefs), [navFavoriteHrefs]);
 
@@ -568,8 +635,10 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
           <div className="mx-auto grid max-w-lg grid-cols-5 rounded-2xl border border-border bg-surface-elevated/95 px-1 py-1 shadow-card backdrop-blur-xl">
             {mobileNavLeft.map((item) => {
               const Icon = item.icon;
-              const active = isNavItemActive(pathname, item);
-              const badgeCount = 0;
+              const active = item.href.startsWith("/moja-praca")
+                ? pathname.startsWith("/moja-praca")
+                : isNavItemActive(pathname, item);
+              const badgeCount = mobileTabBadgeCount(item.href);
 
               return (
                 <Link
@@ -702,10 +771,22 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <QuickAddMenuList compact onNavigate={() => setAddMenuOpen(false)} />
+              <QuickAddMenuList
+                compact
+                onNavigate={() => setAddMenuOpen(false)}
+                onNavigateToClient={() => {
+                  setAddMenuOpen(false);
+                  setNavigateToClientOpen(true);
+                }}
+              />
             </div>
           </div>
         ) : null}
+
+        <NavigateToClientDialog
+          open={navigateToClientOpen}
+          onOpenChange={setNavigateToClientOpen}
+        />
 
         <button
           type="button"

@@ -242,8 +242,9 @@ export function NotificationBell({ role = "primary" }: { role?: "primary" | "sec
       {open ? (
         <div
           className={cn(
-            "absolute right-0 z-50 mt-2 w-[min(26rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-border bg-surface-elevated shadow-card",
-            "top-full",
+            "z-50 overflow-hidden rounded-2xl border border-border bg-surface-elevated shadow-card",
+            "fixed inset-x-3 top-[max(3.5rem,env(safe-area-inset-top))] w-auto max-w-none",
+            "sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[min(26rem,calc(100vw-1.5rem))]",
           )}
         >
           <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">

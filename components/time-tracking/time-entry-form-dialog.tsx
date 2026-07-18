@@ -309,79 +309,81 @@ export function TimeEntryFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg overflow-visible">
-        <DialogHeader>
-          <DialogTitle>{entry ? "Edytuj wpis czasu" : "Dodaj czas pracy"}</DialogTitle>
-          <DialogDescription>
-            Zarejestruj wykonany czas z kategorią, typem i opcjonalnym kontekstem projektu.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="flex max-h-[calc(100dvh-2rem)] max-w-lg flex-col overflow-hidden p-0 sm:max-h-[90vh]">
+        <div className="shrink-0 border-b border-border/70 px-5 pb-3 pt-5 sm:px-6 sm:pt-6">
+          <DialogHeader>
+            <DialogTitle>{entry ? "Edytuj wpis czasu" : "Dodaj czas pracy"}</DialogTitle>
+            <DialogDescription>
+              Zarejestruj wykonany czas z kategorią, typem i opcjonalnym kontekstem projektu.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <div className="grid gap-4">
-          {allowUserSelection ? (
-            <Field label="Pracownik">
-              <TeamProfileSelect
-                value={values.userId}
-                onChange={(userId) => setValues((current) => ({ ...current, userId }))}
-                teamProfiles={teamProfiles}
-                placeholder="— wybierz pracownika —"
-              />
-            </Field>
-          ) : null}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
+          <div className="grid gap-4">
+            {allowUserSelection ? (
+              <Field label="Pracownik">
+                <TeamProfileSelect
+                  value={values.userId}
+                  onChange={(userId) => setValues((current) => ({ ...current, userId }))}
+                  teamProfiles={teamProfiles}
+                  placeholder="— wybierz pracownika —"
+                />
+              </Field>
+            ) : null}
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Data">
-              <Input
-                type="date"
-                value={values.date}
-                onChange={(event) =>
-                  setValues((current) => ({ ...current, date: event.target.value }))
-                }
-              />
-            </Field>
-            <Field label="Czas (np. 2h, 90m, 1.5)">
-              <Input
-                value={values.durationInput}
-                onChange={(event) =>
-                  setValues((current) => ({ ...current, durationInput: event.target.value }))
-                }
-                placeholder="2h 30m"
-              />
-            </Field>
-          </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Data">
+                <Input
+                  type="date"
+                  value={values.date}
+                  onChange={(event) =>
+                    setValues((current) => ({ ...current, date: event.target.value }))
+                  }
+                />
+              </Field>
+              <Field label="Czas (np. 2h, 90m, 1.5)">
+                <Input
+                  value={values.durationInput}
+                  onChange={(event) =>
+                    setValues((current) => ({ ...current, durationInput: event.target.value }))
+                  }
+                  placeholder="2h 30m"
+                />
+              </Field>
+            </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Kategoria">
-              <Select
-                value={values.categoryId}
-                onChange={(event) => handleCategoryChange(event.target.value)}
-              >
-                <option value="">— wybierz —</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Typ wpisu">
-              <Select
-                value={values.entryTypeId}
-                onChange={(event) =>
-                  setValues((current) => ({ ...current, entryTypeId: event.target.value }))
-                }
-              >
-                <option value="">— wybierz —</option>
-                {entryTypes.map((entryType) => (
-                  <option key={entryType.id} value={entryType.id}>
-                    {entryType.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Kategoria">
+                <Select
+                  value={values.categoryId}
+                  onChange={(event) => handleCategoryChange(event.target.value)}
+                >
+                  <option value="">— wybierz —</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Typ wpisu">
+                <Select
+                  value={values.entryTypeId}
+                  onChange={(event) =>
+                    setValues((current) => ({ ...current, entryTypeId: event.target.value }))
+                  }
+                >
+                  <option value="">— wybierz —</option>
+                  {entryTypes.map((entryType) => (
+                    <option key={entryType.id} value={entryType.id}>
+                      {entryType.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
 
-          <div className="relative z-20 overflow-visible">
             <ProjectSelectSearchable
               projects={projects}
               clients={clients}
@@ -391,75 +393,75 @@ export function TimeEntryFormDialog({
               }
               label={requiresProject ? "Projekt *" : "Projekt"}
               disabled={lockProject}
-              usePortal={false}
+              usePortal
             />
-          </div>
 
-          {missions.length > 0 ? (
-            <Field label="Misja / delegacja">
-              <Select
-                value={values.missionId}
+            {missions.length > 0 ? (
+              <Field label="Misja / delegacja">
+                <Select
+                  value={values.missionId}
+                  onChange={(event) =>
+                    setValues((current) => ({ ...current, missionId: event.target.value }))
+                  }
+                >
+                  <option value="">— brak —</option>
+                  {missions.map((mission) => (
+                    <option key={mission.id} value={mission.id}>
+                      {mission.title} ({mission.startDate} – {mission.endDate})
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            ) : null}
+
+            <Field label={selectedEntryType?.requiresDescription ? "Opis *" : "Opis"}>
+              <Textarea
+                value={values.description}
                 onChange={(event) =>
-                  setValues((current) => ({ ...current, missionId: event.target.value }))
+                  setValues((current) => ({ ...current, description: event.target.value }))
                 }
-              >
-                <option value="">— brak —</option>
-                {missions.map((mission) => (
-                  <option key={mission.id} value={mission.id}>
-                    {mission.title} ({mission.startDate} – {mission.endDate})
-                  </option>
-                ))}
-              </Select>
+                placeholder="Co zostało wykonane?"
+              />
             </Field>
-          ) : null}
 
-          <Field label={selectedEntryType?.requiresDescription ? "Opis *" : "Opis"}>
-            <Textarea
-              value={values.description}
-              onChange={(event) =>
-                setValues((current) => ({ ...current, description: event.target.value }))
-              }
-              placeholder="Co zostało wykonane?"
-            />
-          </Field>
-
-          <div className="flex flex-wrap gap-4 text-sm">
-            {showBillable ? (
+            <div className="flex flex-wrap gap-4 text-sm">
+              {showBillable ? (
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={values.billable}
+                    onChange={(event) =>
+                      setValues((current) => ({ ...current, billable: event.target.checked }))
+                    }
+                  />
+                  Do rozliczenia
+                </label>
+              ) : null}
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  checked={values.billable}
+                  checked={values.remoteWork}
                   onChange={(event) =>
-                    setValues((current) => ({ ...current, billable: event.target.checked }))
+                    setValues((current) => ({ ...current, remoteWork: event.target.checked }))
                   }
                 />
-                Do rozliczenia
+                Praca zdalna
               </label>
-            ) : null}
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={values.remoteWork}
-                onChange={(event) =>
-                  setValues((current) => ({ ...current, remoteWork: event.target.checked }))
-                }
-              />
-              Praca zdalna
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={values.delegation}
-                onChange={(event) =>
-                  setValues((current) => ({ ...current, delegation: event.target.checked }))
-                }
-              />
-              Delegacja / wyjazd
-            </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={values.delegation}
+                  onChange={(event) =>
+                    setValues((current) => ({ ...current, delegation: event.target.checked }))
+                  }
+                />
+                Delegacja / wyjazd
+              </label>
+            </div>
           </div>
         </div>
 
-        <div className="flex justify-end gap-2">
+        <div className="sticky bottom-0 flex shrink-0 justify-end gap-2 border-t border-border/70 bg-surface-elevated px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6">
           <Button variant="secondary" onClick={() => onOpenChange(false)}>
             Anuluj
           </Button>
