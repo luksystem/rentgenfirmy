@@ -646,6 +646,17 @@ export async function updateTimeEntryServer(
   }
   assertEditableStatus(entry.status, actor.role);
 
+  let targetUserId = entry.userId;
+  if (input.userId !== undefined && input.userId !== entry.userId) {
+    if (!hasFullAppAccess(actor.role)) {
+      throw new Error("Brak uprawnień do zmiany przypisanej osoby.");
+    }
+    if (!canCreateTimeEntryForUser(actor, input.userId)) {
+      throw new Error("Brak uprawnień do przypisania wpisu tej osobie.");
+    }
+    targetUserId = input.userId;
+  }
+
   const categoryId = input.categoryId ?? entry.categoryId;
   const entryTypeId = input.entryTypeId ?? entry.entryTypeId;
   const { category, entryType } = await loadCategoryAndType(admin, categoryId, entryTypeId);
@@ -675,7 +686,7 @@ export async function updateTimeEntryServer(
 
   await assertNoTimeOverlap(
     admin,
-    entry.userId,
+    targetUserId,
     merged.date,
     merged.startTime ?? null,
     merged.endTime ?? null,
@@ -684,6 +695,10 @@ export async function updateTimeEntryServer(
 
   const clientId = await resolveClientIdFromProject(admin, merged.projectId, merged.clientId);
   const billable = entryType.allowsBillable ? merged.billable : false;
+  const costRateSnapshot =
+    targetUserId !== entry.userId
+      ? await loadCostRateSnapshot(admin, targetUserId)
+      : undefined;
 
   const updatePayload = {
     date: merged.date,
@@ -702,6 +717,12 @@ export async function updateTimeEntryServer(
     remote_work: merged.remoteWork ?? false,
     delegation: merged.delegation ?? false,
     updated_at: new Date().toISOString(),
+    ...(targetUserId !== entry.userId
+      ? {
+          user_id: targetUserId,
+          cost_rate_snapshot: costRateSnapshot,
+        }
+      : {}),
   };
 
   const { data, error } = await admin

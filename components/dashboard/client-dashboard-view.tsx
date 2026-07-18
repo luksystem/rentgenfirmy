@@ -146,7 +146,6 @@ const PUBLIC_CLIENT_TAB_CONFIG: Array<{
   icon: React.ComponentType<{ className?: string }>;
 }> = [
   { id: "home", label: "HOME", icon: Home },
-  { id: "project", label: "Projekt", icon: Briefcase },
   { id: "settlements", label: "Rozliczenia", icon: Wallet },
   { id: "process", label: "Proces", icon: GitBranch },
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
@@ -361,8 +360,8 @@ export function ClientDashboardView({
       if (activeKanbanToken) {
         onKanbanTokenChange?.(null);
       }
-      // Cele i zdrowie projektu — tylko zespół (nie przestrzeń publiczna klienta).
-      if (readOnly && tab === "goals") {
+      // Cele, ustawienia projektu — tylko zespół (nie przestrzeń publiczna klienta).
+      if (readOnly && (tab === "goals" || tab === "project")) {
         return;
       }
       if (readOnly && tab === "notes" && selectedProjectId) {
@@ -393,8 +392,8 @@ export function ClientDashboardView({
   useEffect(() => {
     // Synchronizacja z URL (np. przycisk „wstecz” w przeglądarce po zmianie zakładki).
     const next = initialTab ?? "home";
-    // Cele nie są dostępne w przestrzeni publicznej klienta.
-    setActiveTab(readOnly && next === "goals" ? "home" : next);
+    // Cele i zakładka Projekt nie są dostępne w przestrzeni publicznej klienta.
+    setActiveTab(readOnly && (next === "goals" || next === "project") ? "home" : next);
   }, [initialTab, readOnly]);
 
   useEffect(() => {
@@ -799,7 +798,6 @@ export function ClientDashboardView({
   }, [process, processProgress, template]);
 
   const publicClientTabs = PUBLIC_CLIENT_TAB_CONFIG.filter((tab) => {
-    if (tab.id === "project" && !enableSettlements) return false;
     if (tab.id === "inspections" && !hasClientInspections) return false;
     if (tab.id === "agreements" && !enableAgreements) return false;
     if (tab.id === "changes" && !enableChangeRequests) return false;
@@ -1576,7 +1574,7 @@ export function ClientDashboardView({
       case "home":
         return renderHomeSection();
       case "project":
-        return renderProjectSettingsSection();
+        return !readOnly ? renderProjectSettingsSection() : null;
       case "integrations":
         return canViewIntegrations ? renderIntegrationsSection() : null;
       case "overview":
@@ -1660,12 +1658,18 @@ export function ClientDashboardView({
         <>
           <div className="hidden w-full min-w-0 xl:block">
             {renderTabBar(teamMainTabs, "desktop")}
-            <div className="mt-4 grid w-full gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
-              <aside className="min-w-0 max-w-full self-start overflow-x-hidden">
-                {renderDataSection()}
-              </aside>
-              <section className="min-w-0 overflow-x-hidden">{renderMainArea()}</section>
-            </div>
+            {activeTab === "home" && !activeKanbanToken ? (
+              <div className="mt-4 min-w-0 max-w-full overflow-x-hidden">
+                {renderMainArea()}
+              </div>
+            ) : (
+              <div className="mt-4 grid w-full gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+                <aside className="min-w-0 max-w-full self-start overflow-x-hidden">
+                  {renderDataSection()}
+                </aside>
+                <section className="min-w-0 overflow-x-hidden">{renderMainArea()}</section>
+              </div>
+            )}
           </div>
           <div className="min-w-0 max-w-full overflow-x-hidden xl:hidden">
             {renderTabBar(teamMainTabs, "mobile-top")}

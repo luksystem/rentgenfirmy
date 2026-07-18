@@ -104,7 +104,7 @@ export type CreateTimeEntryInput = {
 };
 
 export type UpdateTimeEntryInput = Partial<
-  Omit<CreateTimeEntryInput, "userId" | "date"> & { date?: string }
+  Omit<CreateTimeEntryInput, "date"> & { date?: string }
 >;
 
 export type PlanTimeSuggestion = {

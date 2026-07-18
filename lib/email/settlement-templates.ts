@@ -1,5 +1,7 @@
 import { escapeEmailHtml } from "@/lib/email/layout";
 import { buildSettlementSummary, type ProjectSettlementEntry } from "@/lib/settlements/types";
+import { formatDurationMinutes } from "@/lib/time-tracking/format";
+import type { ProjectHourBudgetSummary } from "@/lib/time-tracking/project-hour-budget";
 
 function money(value: number) {
   return new Intl.NumberFormat("pl-PL", {
@@ -9,11 +11,56 @@ function money(value: number) {
   }).format(value);
 }
 
+function buildHourBudgetHtml(budget: ProjectHourBudgetSummary) {
+  const remainingLabel = budget.overBudget
+    ? `Przekroczenie o ${formatDurationMinutes(budget.totalUsedMinutes - budget.totalBudgetMinutes)}`
+    : `Pozostało ${formatDurationMinutes(budget.totalRemainingMinutes)} (${Math.max(0, 100 - budget.utilizationPercent)}%)`;
+  const remainingColor = budget.overBudget ? "#be123c" : "#6b7280";
+
+  const lines =
+    budget.lines.length > 1
+      ? `<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;">
+          <tbody>
+            ${budget.lines
+              .map(
+                (line) => `<tr>
+                  <td style="padding:6px 0;color:#6b7280;border-bottom:1px solid #e5e7eb;">${escapeEmailHtml(line.label)}</td>
+                  <td style="padding:6px 0;text-align:right;font-weight:600;border-bottom:1px solid #e5e7eb;">
+                    ${escapeEmailHtml(formatDurationMinutes(line.usedMinutes))} / ${escapeEmailHtml(formatDurationMinutes(line.budgetMinutes))}
+                  </td>
+                </tr>`,
+              )
+              .join("")}
+          </tbody>
+        </table>`
+      : "";
+
+  return `<h2 style="font-size:15px;margin:24px 0 8px;">Zużycie godzin (czas pracy)</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+      <tr>
+        <td style="padding:6px 0;color:#6b7280;">Zużyte / deklarowane w kontrakcie</td>
+        <td style="text-align:right;font-weight:700;">
+          ${escapeEmailHtml(formatDurationMinutes(budget.totalUsedMinutes))} / ${escapeEmailHtml(formatDurationMinutes(budget.totalBudgetMinutes))}
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;color:#6b7280;">Wykorzystanie</td>
+        <td style="text-align:right;font-weight:600;">${budget.utilizationPercent}%</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;color:#6b7280;">Bilans godzin</td>
+        <td style="text-align:right;font-weight:600;color:${remainingColor};">${escapeEmailHtml(remainingLabel)}</td>
+      </tr>
+    </table>
+    ${lines}`;
+}
+
 export function buildSettlementReportEmail(input: {
   clientName: string;
   projectName: string;
   entries: ProjectSettlementEntry[];
   publicUrl?: string | null;
+  hourBudget?: ProjectHourBudgetSummary | null;
 }) {
   const summary = buildSettlementSummary(input.entries);
   const charges = input.entries.filter((e) => e.kind === "charge");
@@ -38,6 +85,7 @@ export function buildSettlementReportEmail(input: {
     : "";
 
   const balanceColor = summary.balanceNet > 0.5 ? "#be123c" : summary.balanceNet < -0.5 ? "#047857" : "#374151";
+  const hourBudgetHtml = input.hourBudget ? buildHourBudgetHtml(input.hourBudget) : "";
 
   const html = `<div style="font-family:system-ui,sans-serif;color:#111827;line-height:1.5;max-width:640px;margin:0 auto;">
     <h1 style="font-size:20px;margin:0 0 8px;">Rozliczenie projektu</h1>
@@ -48,6 +96,7 @@ export function buildSettlementReportEmail(input: {
       <tr><td style="padding:6px 0;color:#6b7280;">Pozostało</td><td style="text-align:right;font-weight:700;color:${balanceColor};">${escapeEmailHtml(money(summary.balanceNet))}</td></tr>
       <tr><td style="padding:6px 0;color:#6b7280;">Harmonogram (netto)</td><td style="text-align:right;font-weight:600;">${escapeEmailHtml(money(summary.scheduleNet))}</td></tr>
     </table>
+    ${hourBudgetHtml}
     ${link}
     <h2 style="font-size:15px;margin:24px 0 8px;">Należności</h2>
     <table style="width:100%;border-collapse:collapse;font-size:13px;">

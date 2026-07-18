@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { Camera, Loader2, Trash2 } from "lucide-react";
+import { ChangePasswordForm } from "@/components/account/change-password-form";
+import { PushNotificationsSettings } from "@/components/push/push-notifications-settings";
 import { UserAvatar } from "@/components/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -142,7 +143,9 @@ export function AccountSettingsForm() {
     <div className="mx-auto grid max-w-2xl gap-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Zdjęcie i tożsamość</CardTitle>
+          <CardTitle className="page-section-title text-base font-semibold">
+            Zdjęcie i tożsamość
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-4">
           <UserAvatar profile={profile} size="lg" />
@@ -185,7 +188,7 @@ export function AccountSettingsForm() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Dane konta</CardTitle>
+          <CardTitle className="page-section-title text-base font-semibold">Dane konta</CardTitle>
         </CardHeader>
         <CardContent>
           <form className="grid gap-4" onSubmit={(e) => void handleSave(e)}>
@@ -229,17 +232,30 @@ export function AccountSettingsForm() {
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 Zapisz
               </Button>
-              <Button type="button" variant="outline" asChild>
-                <Link href="/konto/haslo">Zmiana hasła</Link>
-              </Button>
             </div>
           </form>
         </CardContent>
       </Card>
 
+      <section className="grid gap-3">
+        <h2 className="page-section-title text-base font-semibold">Powiadomienia push</h2>
+        <PushNotificationsSettings />
+      </section>
+
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Kompetencje i doświadczenie</CardTitle>
+          <CardTitle className="page-section-title text-base font-semibold">Zmiana hasła</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ChangePasswordForm />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="page-section-title text-base font-semibold">
+            Kompetencje i doświadczenie
+          </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 text-sm">
           <div>

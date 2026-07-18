@@ -14,10 +14,10 @@ import { ProjectSelectSearchable } from "@/components/goals/project-select-searc
 import { TeamProfileSelect } from "@/components/process/team-profile-select";
 import { parseDurationInput } from "@/lib/time-tracking/format";
 import type { UserProfile } from "@/lib/auth/types";
-import type { TimeEntryView } from "@/lib/time-tracking/types";
+import type { TimeEntryView, UpdateTimeEntryInput } from "@/lib/time-tracking/types";
 import type { WorkMission } from "@/lib/supabase/work-missions-server";
 import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
-import { createTimeEntry } from "@/lib/supabase/time-tracking-repository";
+import { createTimeEntry, updateTimeEntry } from "@/lib/supabase/time-tracking-repository";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useTimeTrackingStore } from "@/store/time-tracking-store";
@@ -86,7 +86,6 @@ export function TimeEntryFormDialog({
   lockProject = false,
   allowUserSelection = false,
   defaultUserId,
-  entryUserLabel,
   onSaved,
 }: {
   open: boolean;
@@ -97,7 +96,6 @@ export function TimeEntryFormDialog({
   lockProject?: boolean;
   allowUserSelection?: boolean;
   defaultUserId?: string;
-  entryUserLabel?: string;
   onSaved?: (entry: TimeEntryView) => void;
 }) {
   const meta = useTimeTrackingStore((state) => state.meta);
@@ -204,8 +202,7 @@ export function TimeEntryFormDialog({
       return;
     }
 
-    const missionUserId =
-      entry?.userId ?? (values.userId || profile?.id || "");
+    const missionUserId = values.userId || profile?.id || "";
     const missionParams = new URLSearchParams({ date: values.date });
     if (missionUserId && missionUserId !== profile?.id) {
       missionParams.set("userId", missionUserId);
@@ -230,7 +227,7 @@ export function TimeEntryFormDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, values.date, values.userId, entry?.userId, profile?.id]);
+  }, [open, values.date, values.userId, profile?.id]);
 
   function handleCategoryChange(categoryId: string) {
     const category = categories.find((item) => item.id === categoryId);
@@ -251,6 +248,10 @@ export function TimeEntryFormDialog({
       window.alert("Wybierz kategorię i typ wpisu.");
       return;
     }
+    if (allowUserSelection && !values.userId) {
+      window.alert("Wybierz pracownika.");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -269,7 +270,19 @@ export function TimeEntryFormDialog({
 
       let savedEntry: TimeEntryView;
       if (entry) {
-        savedEntry = await updateEntry(entry.id, payload);
+        const updatePayload: UpdateTimeEntryInput = { ...payload };
+        const targetUserId = values.userId || profile?.id;
+        const userChanged = Boolean(targetUserId && targetUserId !== entry.userId);
+        if (allowUserSelection && userChanged && targetUserId) {
+          updatePayload.userId = targetUserId;
+        }
+
+        if (userChanged) {
+          savedEntry = await updateTimeEntry(entry.id, updatePayload);
+          void useTimeTrackingStore.getState().ensureEntries({ force: true, showLoading: false });
+        } else {
+          savedEntry = await updateEntry(entry.id, updatePayload);
+        }
       } else {
         const targetUserId = values.userId || profile?.id;
         const createPayload = {
@@ -305,7 +318,7 @@ export function TimeEntryFormDialog({
         </DialogHeader>
 
         <div className="grid gap-4">
-          {allowUserSelection && !entry ? (
+          {allowUserSelection ? (
             <Field label="Pracownik">
               <TeamProfileSelect
                 value={values.userId}
@@ -313,12 +326,6 @@ export function TimeEntryFormDialog({
                 teamProfiles={teamProfiles}
                 placeholder="— wybierz pracownika —"
               />
-            </Field>
-          ) : null}
-
-          {allowUserSelection && entry ? (
-            <Field label="Pracownik">
-              <Input value={entryUserLabel ?? entry.userId} disabled />
             </Field>
           ) : null}
 

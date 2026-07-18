@@ -303,7 +303,6 @@ export function ProjectTimeTrackingPanel({ projectId }: { projectId: string }) {
         defaultProjectId={projectId}
         lockProject
         allowUserSelection={canManageTeam}
-        entryUserLabel={editingEntry?.userDisplayName}
         onSaved={() => {
           void loadEntries();
         }}

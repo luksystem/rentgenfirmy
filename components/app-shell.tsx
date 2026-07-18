@@ -49,6 +49,7 @@ import { NAV_MODULE_GROUPS, type NavModuleKey } from "@/lib/navigation/nav-modul
 import { canAccessNavModule } from "@/lib/navigation/role-nav-permissions";
 import { BrandMark } from "@/components/brand-mark";
 import { NavBadges } from "@/components/nav-badges";
+import { AccountHeaderButton } from "@/components/account/account-header-button";
 import { NotificationBell } from "@/components/notification-bell";
 import { UserAvatar } from "@/components/user-avatar";
 import { NotificationsRealtimeSubscriber } from "@/components/notifications-realtime-subscriber";
@@ -482,7 +483,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
           <div className="grid gap-6">
             {navGroups.map((group) => (
               <div key={group.label}>
-                <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-sidebar-muted">
+                <p className="nav-section-label mb-2 px-3 text-[11px] uppercase">
                   {group.label}
                 </p>
                 <div className="grid gap-0.5">
@@ -534,7 +535,10 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
             </p>
             <p className="truncate text-xs text-muted">Smart Home / BMS</p>
           </div>
-          <NotificationBell role="primary" />
+          <div className="flex shrink-0 items-center gap-2">
+            <NotificationBell role="primary" />
+            <AccountHeaderButton />
+          </div>
         </header>
 
         <header className="sticky top-0 z-20 border-b border-border bg-background/80 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl xl:hidden">
@@ -548,7 +552,10 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
               </p>
               <p className="truncate text-xs text-muted">Smart Home / BMS</p>
             </div>
-            <NotificationBell role="secondary" />
+            <div className="flex shrink-0 items-center gap-2">
+              <NotificationBell role="secondary" />
+              <AccountHeaderButton />
+            </div>
           </div>
         </header>
 
@@ -735,7 +742,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
               <div className="grid max-h-[min(70vh,520px)] gap-5 overflow-y-auto overscroll-contain">
                 {mobileSheetGroups.map((group) => (
                   <div key={group.label}>
-                    <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                    <p className="nav-section-label mb-2 px-1 text-[11px] uppercase">
                       {group.label}
                     </p>
                     <div className="grid gap-2">

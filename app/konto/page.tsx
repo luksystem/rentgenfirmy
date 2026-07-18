@@ -7,7 +7,7 @@ export default function AccountSettingsPage() {
       <PageHeader
         eyebrow="Konto"
         title="Ustawienia konta"
-        description="Twoje imię, zdjęcie, kontakt i notatka — widoczne przy aktywnościach w aplikacji."
+        description="Profil, powiadomienia push, hasło oraz dane widoczne przy aktywnościach w aplikacji."
       />
       <AccountSettingsForm />
     </>

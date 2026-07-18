@@ -481,8 +481,46 @@ export function ClientDashboardHome({
           ? "success"
           : "neutral";
 
+  const processWarrantyBlock = (
+    <div className="grid gap-3">
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">
+        Proces wdrożenia i gwarancja
+      </p>
+      <div className="grid gap-4">
+        <WarrantyHomeCard
+          project={project}
+          agreements={agreements}
+          mode={readOnly ? "client" : "team"}
+          authorName={authorName}
+          seedAgreements={seedAgreements}
+          onWarrantySettingsSave={onWarrantySettingsSave}
+          onWarrantyExtensionAccepted={onWarrantyExtensionAccepted}
+        />
+
+        {progress ? (
+          <ProcessProgressCard
+            progress={progress}
+            project={project}
+            onOpenProcess={onOpenTab ? () => onOpenTab("process") : undefined}
+          />
+        ) : (
+          <div className="rounded-2xl border border-border/80 bg-surface p-4">
+            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+              <GitBranch className="h-3.5 w-3.5 text-accent" />
+              Proces wdrożenia
+            </p>
+            <p className="mt-2 text-sm text-muted">Proces nie został jeszcze uruchomiony.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="grid min-w-0 max-w-full gap-4 overflow-x-hidden">
+      {/* Team: jak na mobile — najpierw proces/gwarancja */}
+      {!readOnly ? processWarrantyBlock : null}
+
       {settlementBalanceNet != null ? (
         <button
           type="button"
@@ -536,51 +574,18 @@ export function ClientDashboardHome({
             project={project}
             agreements={agreements}
           />
+          {/* Public: jak na mobile — proces po skrótach */}
+          {processWarrantyBlock}
         </>
       ) : null}
 
-      <div className={cn("grid gap-3", readOnly ? "xl:order-last" : "order-first xl:order-last")}>
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent xl:hidden">
-          Proces wdrożenia i gwarancja
-        </p>
-        <div className="grid gap-4">
-          <WarrantyHomeCard
-            project={project}
-            agreements={agreements}
-            mode={readOnly ? "client" : "team"}
-            authorName={authorName}
-            seedAgreements={seedAgreements}
-            onWarrantySettingsSave={onWarrantySettingsSave}
-            onWarrantyExtensionAccepted={onWarrantyExtensionAccepted}
-          />
-
-          {progress ? (
-            <ProcessProgressCard
-              progress={progress}
-              project={project}
-              onOpenProcess={onOpenTab ? () => onOpenTab("process") : undefined}
-            />
-          ) : (
-            <div className="rounded-2xl border border-border/80 bg-surface p-4">
-              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-                <GitBranch className="h-3.5 w-3.5 text-accent" />
-                Proces wdrożenia
-              </p>
-              <p className="mt-2 text-sm text-muted">Proces nie został jeszcze uruchomiony.</p>
-            </div>
-          )}
-        </div>
-      </div>
-
       {showTeamSatisfactionSummary && satisfactionBundle ? (
-        <div className="xl:hidden">
-          <ProjectSatisfactionSummaryCard
-            bundle={satisfactionBundle}
-            variant="inline"
-            subtleStars
-            className="rounded-2xl border border-border/80 bg-surface-muted/20 px-3 py-2.5"
-          />
-        </div>
+        <ProjectSatisfactionSummaryCard
+          bundle={satisfactionBundle}
+          variant="inline"
+          subtleStars
+          className="rounded-2xl border border-border/80 bg-surface-muted/20 px-3 py-2.5"
+        />
       ) : null}
 
       {recentMeetingNotes.length > 0 ? (

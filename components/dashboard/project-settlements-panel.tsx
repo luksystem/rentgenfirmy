@@ -111,8 +111,9 @@ export function ProjectSettlementsPanel({
         projectName: project?.name ?? "Projekt",
         entries,
         publicUrl: publicSettlementsUrl,
+        hourBudget: settings?.hourlyEnabled ? hourBudget : null,
       }),
-    [clientName, entries, project?.name, publicSettlementsUrl],
+    [clientName, entries, hourBudget, project?.name, publicSettlementsUrl, settings?.hourlyEnabled],
   );
 
   const paidScheduleIds = useMemo(() => {
@@ -403,7 +404,7 @@ export function ProjectSettlementsPanel({
         </section>
       ) : null}
 
-      {!readOnly || publicSettlementsUrl ? (
+      {!readOnly ? (
         <section className="grid gap-3 rounded-xl border border-border/70 bg-surface-muted/20 p-3 sm:p-4">
           <h3 className="page-section-subtitle text-sm">Wyślij rozliczenie / link publiczny</h3>
           <p className="text-xs text-muted">
@@ -461,24 +462,22 @@ export function ProjectSettlementsPanel({
             </p>
           )}
 
-          {!readOnly ? (
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <Button
-                type="button"
-                className="w-full sm:w-auto"
-                onClick={() => {
-                  setEmailMessage(null);
-                  setEmailPreviewOpen(true);
-                }}
-                disabled={!clientEmail}
-              >
-                <Mail className="mr-1 h-4 w-4" />
-                Wyślij e-mail…
-              </Button>
-            </div>
-          ) : null}
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Button
+              type="button"
+              className="w-full sm:w-auto"
+              onClick={() => {
+                setEmailMessage(null);
+                setEmailPreviewOpen(true);
+              }}
+              disabled={!clientEmail}
+            >
+              <Mail className="mr-1 h-4 w-4" />
+              Wyślij e-mail…
+            </Button>
+          </div>
           {emailMessage ? <p className="text-sm text-muted">{emailMessage}</p> : null}
-          {!clientEmail && !readOnly ? (
+          {!clientEmail ? (
             <p className="text-xs text-amber-300">Uzupełnij e-mail klienta, aby wysłać raport.</p>
           ) : null}
         </section>

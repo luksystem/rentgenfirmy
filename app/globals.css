@@ -125,6 +125,13 @@ select option {
   font-weight: 600;
 }
 
+/* Nagłówki grup w menu bocznym / arkuszu mobilnym */
+.nav-section-label {
+  color: #93c5fd;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
 .smart-home-marker-wrap {
   background: transparent;
   border: 0;
