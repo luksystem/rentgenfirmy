@@ -6,6 +6,7 @@ import {
   calculateFixedPriceBreakdown,
   fixedPriceBreakdownToServiceCost,
 } from "@/lib/service/fixed-price";
+import { clearClientOfferWaitingIfNeeded } from "@/lib/service/client-offer";
 import { DEFAULT_SERVICE_SETTINGS } from "@/lib/service/defaults";
 import { defaultClientOfferExpiry } from "@/lib/service/offer-validity";
 import { getActivityActor } from "@/lib/activity-log/actor";
@@ -179,8 +180,9 @@ export const useServiceStore = create<ServiceStore>((set, get) => ({
     set({ isSaving: true, error: null });
 
     try {
+      const normalized = clearClientOfferWaitingIfNeeded(service);
       const existed = get().services.some((item) => item.id === service.id);
-      const saved = await upsertServiceRecord(service);
+      const saved = await upsertServiceRecord(normalized);
       const services = get().services;
       const index = services.findIndex((item) => item.id === service.id);
       const next =

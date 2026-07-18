@@ -203,7 +203,7 @@ export function ClientOfferPanel({
 
   const canGenerate = canGenerateClientOffer(service);
   const canSend = canSendClientOffer(service);
-  const offerActive = isClientOfferActive(service.clientOffer);
+  const offerActive = isClientOfferActive(service.clientOffer, service.status);
   const regenerationHint = getOfferRegenerationHint(service);
   const generateBlockReason = getClientOfferGenerateBlockReason(service);
 

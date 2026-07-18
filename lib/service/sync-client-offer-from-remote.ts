@@ -1,6 +1,9 @@
 import type { ServiceRecord } from "@/lib/service/types";
 
 export function isWaitingForClientResponse(service: ServiceRecord) {
+  if (service.status !== "Oczekuje na klienta") {
+    return false;
+  }
   const status = service.clientOffer.status;
   return status === "pending" || status === "negotiation";
 }

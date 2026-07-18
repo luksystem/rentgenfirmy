@@ -25,26 +25,33 @@ export type ClientOfferSummary = {
 };
 
 export function getClientOfferSummaryTone(summary: ClientOfferSummary): ServiceOfferListTone | null {
+  if (summary.serviceStatus === "Wycena") {
+    return "quote";
+  }
+  if (summary.serviceStatus === "Anulowany") {
+    return "rejected";
+  }
   if (summary.offerStatus === "accepted") {
     return "accepted";
   }
   if (summary.offerStatus === "rejected") {
     return "rejected";
   }
-  if (summary.offerStatus === "negotiation") {
+  if (summary.serviceStatus === "Oczekuje na klienta" && summary.offerStatus === "negotiation") {
     return "negotiation";
   }
-  if (summary.offerStatus === "pending") {
+  if (summary.serviceStatus === "Oczekuje na klienta" && summary.offerStatus === "pending") {
     return "pending";
-  }
-  if (summary.serviceStatus === "Wycena") {
-    return "quote";
   }
   return null;
 }
 
 export function isClientOfferPendingAttention(summary: ClientOfferSummary) {
-  return summary.canRespond && summary.offerStatus === "pending";
+  return (
+    summary.serviceStatus === "Oczekuje na klienta" &&
+    summary.canRespond &&
+    summary.offerStatus === "pending"
+  );
 }
 
 export function buildClientOfferSummary(

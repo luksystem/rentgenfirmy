@@ -80,7 +80,7 @@ async function fetchPendingOffers(): Promise<PendingOfferRow[]> {
   const { data, error } = await supabase
     .from("services")
     .select(
-      "id, title, client_full_name, client_email, client_phone, client_offer_token, client_offer_expires_at, client_offer_status, settlement_offer_token, settlement_offer_expires_at, settlement_offer_status",
+      "id, status, title, client_full_name, client_email, client_phone, client_offer_token, client_offer_expires_at, client_offer_status, settlement_offer_token, settlement_offer_expires_at, settlement_offer_status",
     )
     .or("client_offer_status.eq.pending,settlement_offer_status.eq.pending");
 
@@ -90,7 +90,11 @@ async function fetchPendingOffers(): Promise<PendingOfferRow[]> {
 
   const rows: PendingOfferRow[] = [];
   for (const record of data ?? []) {
+    const workflowStatus = String(record.status ?? "");
+
+    // Przypomnienie o ofercie tylko gdy status workflow = Oczekuje na klienta.
     if (
+      workflowStatus === "Oczekuje na klienta" &&
       record.client_offer_status === "pending" &&
       record.client_offer_token &&
       record.client_offer_expires_at
@@ -107,7 +111,10 @@ async function fetchPendingOffers(): Promise<PendingOfferRow[]> {
       });
     }
 
+    // Rozliczenie: nie wysyłaj przy Wycena / Anulowany.
     if (
+      workflowStatus !== "Wycena" &&
+      workflowStatus !== "Anulowany" &&
       record.settlement_offer_status === "pending" &&
       record.settlement_offer_token &&
       record.settlement_offer_expires_at

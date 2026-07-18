@@ -53,7 +53,7 @@ export function ProjectBillingBudgetPanel({
   const [quotaUnit, setQuotaUnit] = useState<ContractQuotaUnit>("hours");
 
   useEffect(() => {
-    void ensureSettlements(projectId, { sync: !readOnly, force: !readOnly }).catch(() => undefined);
+    void ensureSettlements(projectId, { sync: !readOnly, force: false }).catch(() => undefined);
   }, [ensureSettlements, projectId, readOnly]);
 
   useEffect(() => {
@@ -109,10 +109,10 @@ export function ProjectBillingBudgetPanel({
   }
 
   return (
-    <div className="grid min-w-0 gap-6">
-      <section className="grid gap-3">
+    <div className="grid min-w-0 max-w-full gap-6 overflow-x-hidden">
+      <section className="grid min-w-0 gap-3">
         <h3 className="page-section-subtitle text-sm">Model rozliczenia</h3>
-        <div className="flex flex-wrap gap-4 text-sm">
+        <div className="flex min-w-0 flex-wrap gap-4 text-sm">
           <label className="inline-flex items-center gap-2">
             <input
               type="checkbox"

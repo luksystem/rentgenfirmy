@@ -107,6 +107,14 @@ export function appendSettlementOfferHistory(
 }
 
 export function getServiceOfferListTone(service: ServiceRecord): ServiceOfferListTone | null {
+  // Workflow ma pierwszeństwo przy wycofaniu oferty — nie pokazuj „Oczekuje na klienta”.
+  if (service.status === "Wycena") {
+    return "quote";
+  }
+  if (service.status === "Anulowany") {
+    return "rejected";
+  }
+
   const offerStatus = service.clientOffer.status;
 
   if (offerStatus === "accepted") {
@@ -117,16 +125,12 @@ export function getServiceOfferListTone(service: ServiceRecord): ServiceOfferLis
     return "rejected";
   }
 
-  if (offerStatus === "negotiation") {
+  if (service.status === "Oczekuje na klienta" && offerStatus === "negotiation") {
     return "negotiation";
   }
 
-  if (offerStatus === "pending") {
+  if (service.status === "Oczekuje na klienta" && offerStatus === "pending") {
     return "pending";
-  }
-
-  if (service.status === "Wycena") {
-    return "quote";
   }
 
   return null;

@@ -48,15 +48,55 @@ export function getClientOfferGenerateBlockReason(service: ServiceRecord) {
 }
 
 export function canSendClientOffer(service: ServiceRecord) {
-  return Boolean(service.clientOffer.token && service.clientOffer.status === "pending");
+  return Boolean(
+    service.status === "Oczekuje na klienta" &&
+      service.clientOffer.token &&
+      service.clientOffer.status === "pending",
+  );
 }
 
-export function isClientOfferActive(offer: ClientOfferState) {
+export function isClientOfferActive(
+  offer: ClientOfferState,
+  serviceStatus?: ServiceStatus,
+) {
+  if (serviceStatus && serviceStatus !== "Oczekuje na klienta") {
+    return false;
+  }
   if (!offer.token || !offer.expiresAt || offer.status !== "pending") {
     return false;
   }
 
   return !isOfferExpired(offer.expiresAt);
+}
+
+/** Statusy, przy których oferta nie powinna już „czekać na klienta”. */
+export function statusClearsClientOfferWaiting(status: ServiceStatus) {
+  return status === "Wycena" || status === "Anulowany";
+}
+
+/**
+ * Przy ręcznej zmianie statusu na Wycena / Anulowany usuwa flagę pending/negotiation,
+ * żeby UI i przypomnienia nie traktowały oferty jako oczekującej na klienta.
+ */
+export function clearClientOfferWaitingIfNeeded(service: ServiceRecord): ServiceRecord {
+  if (!statusClearsClientOfferWaiting(service.status)) {
+    return service;
+  }
+
+  const offerStatus = service.clientOffer.status;
+  if (offerStatus !== "pending" && offerStatus !== "negotiation") {
+    return service;
+  }
+
+  return {
+    ...service,
+    clientOffer: {
+      ...service.clientOffer,
+      status: null,
+      message: null,
+      respondedAt: null,
+    },
+  };
 }
 
 export function canClientAskAboutOffer(service: Pick<ServiceRecord, "clientOffer">) {

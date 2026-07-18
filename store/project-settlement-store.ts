@@ -35,6 +35,8 @@ import {
 } from "@/lib/supabase/project-settlement-repository";
 
 const loadPromises = new Map<string, Promise<ProjectSettlementsBundle>>();
+/** Ignoruj odpowiedzi starszych requestów (race po Spłacone / Odśwież). */
+const loadTokens = new Map<string, number>();
 
 type ProjectSettlementStore = {
   byProject: Record<string, ProjectSettlementsBundle>;
@@ -132,19 +134,29 @@ export const useProjectSettlementStore = create<ProjectSettlementStore>((set, ge
       });
     }
 
+    const token = (loadTokens.get(projectId) ?? 0) + 1;
+    loadTokens.set(projectId, token);
+
     const promise = fetchProjectSettlementsBundle(projectId, { sync })
       .then((bundle) => {
+        if (loadTokens.get(projectId) !== token) {
+          return get().byProject[projectId] ?? bundle;
+        }
         setBundle(projectId, bundle, set, get);
         return bundle;
       })
       .catch((error) => {
-        set({
-          loadingProjects: { ...get().loadingProjects, [projectId]: false },
-        });
+        if (loadTokens.get(projectId) === token) {
+          set({
+            loadingProjects: { ...get().loadingProjects, [projectId]: false },
+          });
+        }
         throw error;
       })
       .finally(() => {
-        loadPromises.delete(projectId);
+        if (loadPromises.get(projectId) === promise) {
+          loadPromises.delete(projectId);
+        }
       });
 
     loadPromises.set(projectId, promise);
@@ -247,6 +259,8 @@ export const useProjectSettlementStore = create<ProjectSettlementStore>((set, ge
 
   addEntry: async (projectId, input, createdByName) => {
     const created = await createProjectSettlementEntry(projectId, input, createdByName);
+    // Unieważnij trwający fetch — inaczej stara odpowiedź nadpisze świeżą spłatę.
+    loadTokens.set(projectId, (loadTokens.get(projectId) ?? 0) + 1);
     const current = get().byProject[projectId];
     patchBundle(
       projectId,
@@ -259,6 +273,7 @@ export const useProjectSettlementStore = create<ProjectSettlementStore>((set, ge
 
   updateEntry: async (projectId, entryId, input) => {
     const updated = await updateProjectSettlementEntry(entryId, input);
+    loadTokens.set(projectId, (loadTokens.get(projectId) ?? 0) + 1);
     const current = get().byProject[projectId];
     patchBundle(
       projectId,
@@ -272,6 +287,7 @@ export const useProjectSettlementStore = create<ProjectSettlementStore>((set, ge
 
   removeEntry: async (projectId, entryId) => {
     await deleteProjectSettlementEntry(entryId);
+    loadTokens.set(projectId, (loadTokens.get(projectId) ?? 0) + 1);
     const current = get().byProject[projectId];
     patchBundle(
       projectId,

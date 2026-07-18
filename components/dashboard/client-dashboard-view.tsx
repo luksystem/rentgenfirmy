@@ -972,19 +972,21 @@ export function ClientDashboardView({
       return <p className="text-sm text-muted">Wybierz projekt, aby zobaczyć rozliczenia.</p>;
     }
     return (
-      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-3 sm:p-4">
         <h2 className="page-section-title mb-3 text-base font-semibold">Rozliczenia</h2>
-        <ProjectSettlementsPanel
-          projectId={selectedProjectId}
-          actorName={readOnly ? clientAuthorName : teamAuthorName}
-          readOnly={readOnly}
-          publicDashboardToken={
-            publicDashboardToken ??
-            (clientSpace?.publicEnabled ? clientSpace.publicToken : undefined)
-          }
-          clientEmail={client.email || null}
-          clientName={formatPartyName(client)}
-        />
+        <div className="min-w-0 max-w-full overflow-x-hidden">
+          <ProjectSettlementsPanel
+            projectId={selectedProjectId}
+            actorName={readOnly ? clientAuthorName : teamAuthorName}
+            readOnly={readOnly}
+            publicDashboardToken={
+              publicDashboardToken ??
+              (clientSpace?.publicEnabled ? clientSpace.publicToken : undefined)
+            }
+            clientEmail={client.email || null}
+            clientName={formatPartyName(client)}
+          />
+        </div>
       </div>
     );
   }
@@ -1385,13 +1387,15 @@ export function ClientDashboardView({
 
   function renderTimeTrackingPanel() {
     return (
-      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-3 sm:p-4">
         <h2 className="page-section-title mb-3 text-base font-semibold">Czas pracy</h2>
-        <p className="mb-4 text-sm text-muted">
+        <p className="mb-4 break-words text-sm text-muted">
           Wszystkie wpisy czasu pracy zarejestrowane w tym projekcie — z podsumowaniem według etapów
           procesu i łącznym czasem.
         </p>
-        <ProjectTimeTrackingPanel projectId={selectedProject.id} />
+        <div className="min-w-0 max-w-full overflow-x-hidden">
+          <ProjectTimeTrackingPanel projectId={selectedProject.id} />
+        </div>
       </div>
     );
   }

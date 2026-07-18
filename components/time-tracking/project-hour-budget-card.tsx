@@ -7,17 +7,22 @@ import { cn } from "@/lib/utils";
 
 export function ProjectHourBudgetCard({ budget }: { budget: ProjectHourBudgetSummary }) {
   return (
-    <Card className={cn(budget.overBudget && "border-rose-500/40 bg-rose-500/5")}>
-      <CardContent className="grid gap-4 py-4">
-        <div>
+    <Card
+      className={cn(
+        "min-w-0 max-w-full overflow-hidden",
+        budget.overBudget && "border-rose-500/40 bg-rose-500/5",
+      )}
+    >
+      <CardContent className="grid min-w-0 gap-4 py-4">
+        <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-wide text-muted">Budżet godzin kontraktu</p>
-          <p className="mt-1 text-2xl font-semibold text-foreground">
+          <p className="mt-1 break-words text-2xl font-semibold text-foreground">
             {formatDurationMinutes(budget.totalUsedMinutes)}{" "}
             <span className="text-base font-normal text-muted">
               / {formatDurationMinutes(budget.totalBudgetMinutes)}
             </span>
           </p>
-          <p className={cn("mt-1 text-sm", budget.overBudget ? "text-rose-300" : "text-muted")}>
+          <p className={cn("mt-1 break-words text-sm", budget.overBudget ? "text-rose-300" : "text-muted")}>
             {budget.overBudget
               ? `Przekroczenie o ${formatDurationMinutes(budget.totalUsedMinutes - budget.totalBudgetMinutes)}`
               : `Pozostało ${formatDurationMinutes(budget.totalRemainingMinutes)} (${100 - budget.utilizationPercent}%)`}
@@ -35,13 +40,13 @@ export function ProjectHourBudgetCard({ budget }: { budget: ProjectHourBudgetSum
         </div>
 
         {budget.lines.length > 1 ? (
-          <div className="grid gap-2">
+          <div className="grid min-w-0 gap-2">
             {budget.lines.map((line) => (
               <div
                 key={line.quotaId}
-                className="flex items-center justify-between gap-3 text-sm"
+                className="flex min-w-0 flex-col gap-0.5 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3"
               >
-                <span className="truncate text-muted">{line.label}</span>
+                <span className="min-w-0 break-words text-muted">{line.label}</span>
                 <span className="shrink-0 font-medium text-foreground">
                   {formatDurationMinutes(line.usedMinutes)} / {formatDurationMinutes(line.budgetMinutes)}
                 </span>

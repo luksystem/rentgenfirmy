@@ -439,6 +439,7 @@ export { getPublicOfferView, getPublicSettlementView } from "@/lib/service/clien
 
 export function isPublicOfferAvailable(service: ServiceRecord) {
   return (
+    service.status === "Oczekuje na klienta" &&
     Boolean(service.clientOffer.token) &&
     service.clientOffer.status === "pending" &&
     !isOfferExpiredService(service)
@@ -447,6 +448,7 @@ export function isPublicOfferAvailable(service: ServiceRecord) {
 
 export function isPublicOfferQuestionAvailable(service: ServiceRecord) {
   return (
+    service.status === "Oczekuje na klienta" &&
     Boolean(service.clientOffer.token) &&
     service.clientOffer.status === "pending" &&
     isOfferExpiredService(service)

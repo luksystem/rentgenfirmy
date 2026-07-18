@@ -120,21 +120,21 @@ export function ProjectTimeTrackingPanel({ projectId }: { projectId: string }) {
 
   return (
     <>
-      <div className="grid gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm font-semibold text-foreground">Czas pracy w projekcie</p>
-          <Button type="button" size="sm" onClick={openCreate}>
+      <div className="grid min-w-0 max-w-full gap-4 overflow-x-hidden">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <p className="min-w-0 text-sm font-semibold text-foreground">Czas pracy w projekcie</p>
+          <Button type="button" size="sm" className="w-full sm:w-auto" onClick={openCreate}>
             <Plus className="mr-1.5 h-4 w-4" />
             Dodaj czas
           </Button>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {hourBudget ? <ProjectHourBudgetCard budget={hourBudget} /> : null}
-          <Card>
+          <Card className="min-w-0 max-w-full overflow-hidden">
             <CardContent className="py-4">
               <p className="text-xs font-medium uppercase tracking-wide text-muted">Łącznie w projekcie</p>
-              <p className="mt-1 text-2xl font-semibold text-foreground">
+              <p className="mt-1 break-words text-2xl font-semibold text-foreground">
                 {formatDurationMinutes(summary?.totalMinutes ?? 0)}
               </p>
               <p className="mt-1 text-xs text-muted">
@@ -145,12 +145,12 @@ export function ProjectTimeTrackingPanel({ projectId }: { projectId: string }) {
           </Card>
 
           {(summary?.byStage ?? []).slice(0, 2).map((stage) => (
-            <Card key={stage.stageId ?? stage.stageTitle}>
+            <Card key={stage.stageId ?? stage.stageTitle} className="min-w-0 max-w-full overflow-hidden">
               <CardContent className="py-4">
-                <p className="line-clamp-2 text-xs font-medium uppercase tracking-wide text-muted">
+                <p className="line-clamp-2 break-words text-xs font-medium uppercase tracking-wide text-muted">
                   {stage.stageTitle}
                 </p>
-                <p className="mt-1 text-2xl font-semibold text-foreground">
+                <p className="mt-1 break-words text-2xl font-semibold text-foreground">
                   {formatDurationMinutes(stage.totalMinutes)}
                 </p>
                 <p className="mt-1 text-xs text-muted">{stage.entryCount} wpisów</p>
@@ -160,38 +160,31 @@ export function ProjectTimeTrackingPanel({ projectId }: { projectId: string }) {
         </div>
 
         {summary && summary.byStage.length > 0 ? (
-          <Card>
-            <CardContent className="grid gap-3 py-4">
+          <Card className="min-w-0 max-w-full overflow-hidden">
+            <CardContent className="grid min-w-0 gap-3 py-4">
               <p className="text-sm font-semibold text-foreground">Podsumowanie według etapów procesu</p>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border/70 text-left text-xs uppercase tracking-wide text-muted">
-                      <th className="px-2 py-2 font-medium">Etap</th>
-                      <th className="px-2 py-2 font-medium">Wpisy</th>
-                      <th className="px-2 py-2 font-medium">Czas</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summary.byStage.map((stage) => (
-                      <tr key={stage.stageId ?? stage.stageTitle} className="border-b border-border/40">
-                        <td className="px-2 py-2 text-foreground">{stage.stageTitle}</td>
-                        <td className="px-2 py-2 text-muted">{stage.entryCount}</td>
-                        <td className="px-2 py-2 font-medium text-foreground">
-                          {formatDurationMinutes(stage.totalMinutes)}
-                        </td>
-                      </tr>
-                    ))}
-                    <tr>
-                      <td className="px-2 py-2 font-semibold text-foreground">Razem</td>
-                      <td className="px-2 py-2 font-semibold text-muted">{summary.entryCount}</td>
-                      <td className="px-2 py-2 font-semibold text-foreground">
-                        {formatDurationMinutes(summary.totalMinutes)}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              <ul className="grid min-w-0 gap-2">
+                {summary.byStage.map((stage) => (
+                  <li
+                    key={stage.stageId ?? stage.stageTitle}
+                    className="flex min-w-0 flex-col gap-0.5 rounded-lg border border-border/50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+                  >
+                    <span className="min-w-0 break-words text-sm text-foreground">{stage.stageTitle}</span>
+                    <span className="shrink-0 text-sm text-muted">
+                      {stage.entryCount} wpis. ·{" "}
+                      <span className="font-medium text-foreground">
+                        {formatDurationMinutes(stage.totalMinutes)}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+                <li className="flex min-w-0 flex-col gap-0.5 rounded-lg border border-border/70 bg-surface-muted/20 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                  <span className="text-sm font-semibold text-foreground">Razem</span>
+                  <span className="shrink-0 text-sm font-semibold text-foreground">
+                    {summary.entryCount} wpis. · {formatDurationMinutes(summary.totalMinutes)}
+                  </span>
+                </li>
+              </ul>
             </CardContent>
           </Card>
         ) : null}
@@ -214,16 +207,16 @@ export function ProjectTimeTrackingPanel({ projectId }: { projectId: string }) {
               const deletable = canDeleteTimeEntryInUi(actor, entry);
 
               return (
-                <Card key={entry.id}>
-                  <CardContent className="flex flex-col gap-2 py-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
+                <Card key={entry.id} className="min-w-0 max-w-full overflow-hidden">
+                  <CardContent className="flex min-w-0 flex-col gap-2 py-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 max-w-full flex-1">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
                         <span
                           className="inline-flex h-2.5 w-2.5 shrink-0 rounded-full"
                           style={{ backgroundColor: entry.categoryColor }}
                           aria-hidden
                         />
-                        <p className="font-medium text-foreground">
+                        <p className="min-w-0 break-words font-medium text-foreground">
                           {entry.categoryName} · {entry.entryTypeName}
                         </p>
                         <Badge tone={statusTone(entry.status)}>
@@ -231,13 +224,13 @@ export function ProjectTimeTrackingPanel({ projectId }: { projectId: string }) {
                         </Badge>
                         {entry.billable ? <Badge tone="blue">Do rozliczenia</Badge> : null}
                       </div>
-                      <p className="mt-1 text-sm text-muted">
+                      <p className="mt-1 break-words text-sm text-muted">
                         {formatDate(entry.date)} · {formatDurationMinutes(entry.durationMinutes)} ·{" "}
                         {entry.userDisplayName}
                         {entry.processStageTitle ? ` · ${entry.processStageTitle}` : ""}
                       </p>
                       {entry.description ? (
-                        <p className="mt-2 text-sm text-foreground/90">{entry.description}</p>
+                        <p className="mt-2 break-words text-sm text-foreground/90">{entry.description}</p>
                       ) : null}
                     </div>
 

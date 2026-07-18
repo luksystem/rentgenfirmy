@@ -128,11 +128,13 @@ export function ProjectSettlementsPanel({
 
   useEffect(() => {
     void ensureSettlements(projectId, {
-      force: !readOnly,
+      force: false,
       sync: !readOnly,
-      showLoading: !bundle,
+      showLoading: true,
     }).catch(() => undefined);
-  }, [bundle, ensureSettlements, projectId, readOnly]);
+    // Tylko przy zmianie projektu — nie przy każdej mutacji cache (wyścig z Spłacone).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- celowo bez bundle
+  }, [ensureSettlements, projectId, readOnly]);
 
   useEffect(() => {
     if (!project) return;
@@ -231,6 +233,7 @@ export function ProjectSettlementsPanel({
 
   async function handleMarkSchedulePaid(schedule: ProjectSettlementEntry) {
     if (readOnly || schedule.kind !== "schedule") return;
+    if (busyId) return;
     if (paidScheduleIds.has(schedule.id)) return;
     setBusyId(schedule.id);
     setError(null);
@@ -256,7 +259,7 @@ export function ProjectSettlementsPanel({
       );
       setCreatingKind(null);
       setEditing(null);
-      await refreshSettlementsSoft();
+      // Cache już ma spłatę — nie rób force-refresh (stary request potrafił nadpisać listę).
     } catch (err) {
       setError(settlementErrorMessage(err, "Nie udało się oznaczyć jako spłacone."));
     } finally {
@@ -340,9 +343,9 @@ export function ProjectSettlementsPanel({
         : "warning";
 
   return (
-    <div className="grid min-w-0 gap-5 sm:gap-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <p className="text-xs text-muted">
+    <div className="grid min-w-0 max-w-full gap-5 overflow-x-hidden sm:gap-6">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <p className="min-w-0 break-words text-xs text-muted">
           Podsumowania w netto. Harmonogram uwzględnia kwoty z VAT (brutto w pozycjach).
         </p>
         {!readOnly ? (
@@ -359,7 +362,7 @@ export function ProjectSettlementsPanel({
         ) : null}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           label="Do zapłaty (netto)"
           value={summary.chargesNet}
@@ -385,7 +388,7 @@ export function ProjectSettlementsPanel({
         />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         <SummaryCard
           label="Planowane wpływy vs spłaty"
           value={summary.balanceNet}
@@ -441,10 +444,10 @@ export function ProjectSettlementsPanel({
                   <Input
                     readOnly
                     value={publicSettlementsUrl}
-                    className="min-w-0 break-all font-mono text-xs"
+                    className="w-full min-w-0 max-w-full break-all font-mono text-xs"
                     onFocus={(event) => event.currentTarget.select()}
                   />
-                  <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                  <div className="flex min-w-0 w-full flex-col gap-2 sm:w-auto sm:flex-row">
                     <Button
                       type="button"
                       variant="secondary"
@@ -609,11 +612,11 @@ export function ProjectSettlementsPanel({
                   ) : (
                     <li
                       key={entry.id}
-                      className="flex flex-col gap-3 rounded-xl border border-border/70 px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between"
+                      className="flex min-w-0 max-w-full flex-col gap-3 overflow-hidden rounded-xl border border-border/70 px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between"
                     >
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-foreground">{entry.title}</p>
-                        <p className="text-xs text-muted">
+                      <div className="min-w-0 max-w-full flex-1">
+                        <p className="break-words font-medium text-foreground">{entry.title}</p>
+                        <p className="break-words text-xs text-muted">
                           {SETTLEMENT_SOURCE_LABELS[entry.source]}
                           {entry.isAuto ? " · auto" : ""}
                           {entry.processStageId
@@ -648,11 +651,11 @@ export function ProjectSettlementsPanel({
                                   variant="secondary"
                                   size="sm"
                                   className="flex-1 sm:flex-none"
-                                  disabled={busyId === entry.id}
+                                  disabled={Boolean(busyId)}
                                   onClick={() => void handleMarkSchedulePaid(entry)}
                                 >
                                   <Check className="mr-1 h-3.5 w-3.5" />
-                                  Spłacone
+                                  {busyId === entry.id ? "Zapisywanie…" : "Spłacone"}
                                 </Button>
                               )
                             ) : null}
@@ -732,12 +735,12 @@ function SummaryCard({
           : "text-foreground";
 
   return (
-    <div className={cn("rounded-2xl border px-3 py-3 sm:px-4", toneClass)}>
-      <p className="text-xs font-medium text-muted">{label}</p>
-      <p className={cn("mt-1 text-base font-semibold tabular-nums sm:text-lg", valueClass)}>
+    <div className={cn("min-w-0 max-w-full overflow-hidden rounded-2xl border px-3 py-3 sm:px-4", toneClass)}>
+      <p className="break-words text-xs font-medium text-muted">{label}</p>
+      <p className={cn("mt-1 break-words text-base font-semibold tabular-nums sm:text-lg", valueClass)}>
         {formatMoney(value)}
       </p>
-      <p className="mt-1 text-[11px] leading-snug text-muted">{hint}</p>
+      <p className="mt-1 break-words text-[11px] leading-snug text-muted">{hint}</p>
     </div>
   );
 }
@@ -801,9 +804,13 @@ function EntryForm({
   }
 
   return (
-    <div className="grid gap-3 rounded-xl border border-border/80 bg-surface-muted/40 p-3">
+    <div className="grid min-w-0 max-w-full gap-3 overflow-x-hidden rounded-xl border border-border/80 bg-surface-muted/40 p-3">
       <Field label="Tytuł">
-        <Input value={title} onChange={(event) => setTitle(event.target.value)} />
+        <Input
+          value={title}
+          className="min-w-0 max-w-full"
+          onChange={(event) => setTitle(event.target.value)}
+        />
       </Field>
       <AgreementCostFields
         net={net}

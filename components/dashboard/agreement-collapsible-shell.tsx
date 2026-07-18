@@ -69,9 +69,11 @@ export function AgreementCollapsibleShell({
           <span className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
         )}
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <p className="min-w-0 flex-1 break-words font-medium text-foreground">{title}</p>
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+            <p className="min-w-0 w-full break-words font-medium text-foreground sm:w-auto sm:flex-1 sm:basis-0">
+              {title}
+            </p>
+            <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5 sm:max-w-[min(100%,18rem)] sm:justify-end sm:shrink-0">
               {headerBadges}
               <span
                 className={cn(

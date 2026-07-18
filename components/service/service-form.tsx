@@ -26,6 +26,7 @@ import { FixedPriceSummaryPanel } from "@/components/service/fixed-price-summary
 import { ServiceMaterialItemsForm } from "@/components/service/service-material-items-form";
 import { SettlementOfferPanel } from "@/components/service/settlement-offer-panel";
 import { useServiceDetailAutoRefresh } from "@/lib/hooks/use-service-detail-auto-refresh";
+import { clearClientOfferWaitingIfNeeded } from "@/lib/service/client-offer";
 import { buildCombinedBilling } from "@/lib/service/optional-items";
 import { useUnsavedChangesGuard } from "@/lib/hooks/use-unsaved-changes-guard";
 import {
@@ -85,11 +86,14 @@ function stepForMainTab(tab: MainTab, currentStep: number) {
 }
 
 function clientTabBadge(service: ServiceRecord) {
+  if (service.status === "Wycena" || service.status === "Anulowany") {
+    return service.clientOffer.token ? "Link" : null;
+  }
   const status = service.clientOffer.status;
-  if (status === "pending") {
+  if (service.status === "Oczekuje na klienta" && status === "pending") {
     return "Oczekuje";
   }
-  if (status === "negotiation") {
+  if (service.status === "Oczekuje na klienta" && status === "negotiation") {
     return "Negocjacja";
   }
   if (status === "accepted") {
@@ -686,12 +690,15 @@ export function ServiceForm({
               <Field label="Status oferty">
                 <Select
                   value={service.status}
-                  onChange={(e) =>
-                    setService({
-                      ...service,
-                      status: e.target.value as ServiceRecord["status"],
-                    })
-                  }
+                  onChange={(e) => {
+                    const nextStatus = e.target.value as ServiceRecord["status"];
+                    setService(
+                      clearClientOfferWaitingIfNeeded({
+                        ...service,
+                        status: nextStatus,
+                      }),
+                    );
+                  }}
                 >
                   {SERVICE_STATUSES.map((status) => (
                     <option key={status}>{status}</option>
