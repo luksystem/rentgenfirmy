@@ -5,6 +5,7 @@ export const USER_NOTIFICATION_KINDS = [
   "agreement_client_created",
   "client_stage_rating",
   "service_intake_preliminary_offer",
+  "service_intake_assigned",
   "inspection_billing_due",
   "goal_review_due",
   "goal_period_ending",

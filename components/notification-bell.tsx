@@ -163,7 +163,8 @@ export function NotificationBell({ role = "primary" }: { role?: "primary" | "sec
           <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-amber-500/35 bg-amber-500/10 text-amber-200">
             <Star className="h-4 w-4" />
           </span>
-        ) : item.kind === "service_intake_preliminary_offer" ? (
+        ) : item.kind === "service_intake_preliminary_offer" ||
+          item.kind === "service_intake_assigned" ? (
           <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-sky-500/35 bg-sky-500/10 text-sky-200">
             <Sparkles className="h-4 w-4" />
           </span>

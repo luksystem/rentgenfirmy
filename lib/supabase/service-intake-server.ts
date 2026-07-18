@@ -1171,22 +1171,23 @@ export async function updateServiceIntake(
   const now = new Date().toISOString();
   const update: Partial<ServiceIntakeRequestRow> = { updated_at: now };
 
-  let previousStatus: ServiceIntakeStatus | null = null;
+  const { data: existing, error: existingError } = await supabase
+    .from("service_intake_requests")
+    .select("status, priority, assignee_id, reference_number, contact_full_name, client_id, project_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+  if (!existing) {
+    throw new Error("Nie znaleziono zgłoszenia.");
+  }
+
+  const previousStatus = existing.status as ServiceIntakeStatus;
+  const previousAssigneeId = existing.assignee_id ? String(existing.assignee_id) : null;
+
   if (patch.status !== undefined) {
-    const { data: existing, error: existingError } = await supabase
-      .from("service_intake_requests")
-      .select("status, priority")
-      .eq("id", id)
-      .maybeSingle();
-
-    if (existingError) {
-      throw new Error(existingError.message);
-    }
-    if (!existing) {
-      throw new Error("Nie znaleziono zgłoszenia.");
-    }
-
-    previousStatus = existing.status as ServiceIntakeStatus;
     const reopening =
       isServiceIntakeInactive(previousStatus) && !isServiceIntakeInactive(patch.status);
 
@@ -1222,11 +1223,42 @@ export async function updateServiceIntake(
     throw new Error(error.message);
   }
 
-  const record = rowToIntakeRecord(data);
+  const [record] = await hydrateServiceIntakeRows([data as Record<string, unknown>]);
+  const hydrated = record ?? rowToIntakeRecord(data);
+
   if (patch.status !== undefined) {
-    await notifyServiceIntakeStatusChange(record);
+    await notifyServiceIntakeStatusChange(hydrated);
   }
-  return record;
+
+  const nextStatus = (patch.status ?? previousStatus) as ServiceIntakeStatus;
+  const nextAssigneeId =
+    patch.assigneeId !== undefined
+      ? update.assignee_id
+        ? String(update.assignee_id)
+        : null
+      : previousAssigneeId;
+
+  if (
+    nextStatus === "new" &&
+    nextAssigneeId &&
+    nextAssigneeId !== previousAssigneeId
+  ) {
+    const { createServiceIntakeAssignedNotificationServer } = await import(
+      "@/lib/notifications/service-intake-assign"
+    );
+    await createServiceIntakeAssignedNotificationServer({
+      intakeId: hydrated.id,
+      recipientProfileId: nextAssigneeId,
+      referenceNumber: hydrated.referenceNumber,
+      clientLabel:
+        hydrated.clientName?.trim() ||
+        hydrated.contactFullName?.trim() ||
+        String(existing.contact_full_name ?? "Klient"),
+      projectLabel: hydrated.projectName,
+    }).catch(() => undefined);
+  }
+
+  return hydrated;
 }
 
 export async function updateServiceIntakeStatus(id: string, status: ServiceIntakeStatus) {

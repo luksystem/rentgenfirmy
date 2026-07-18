@@ -26,6 +26,7 @@ import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 import { useAuthStore } from "@/store/auth-store";
 import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
 import { CAFE_PRIORITY_OPTIONS, isHighCafePriority } from "@/lib/service-intake/cafe-priorities";
+import { canManageServiceIntakeBoard } from "@/lib/service-intake/status-permissions";
 import {
   KANBAN_BOARD_ROOT_CLASS,
   KANBAN_DRAG_HINT,
@@ -96,6 +97,7 @@ function ServiceIntakeCard({
   busy,
   isDragging,
   draggable = true,
+  canReopen = false,
   onOpen,
   onStatusChange,
   onDragStart,
@@ -107,6 +109,7 @@ function ServiceIntakeCard({
   busy: boolean;
   isDragging?: boolean;
   draggable?: boolean;
+  canReopen?: boolean;
   onOpen: () => void;
   onStatusChange: (status: ServiceIntakeStatus) => void;
   onDragStart: () => void;
@@ -306,6 +309,7 @@ function ServiceIntakeCard({
             type="button"
             size="sm"
             disabled={busy}
+            className="h-9 min-w-[7.5rem] px-3 text-sm font-bold uppercase tracking-wide"
             onPointerDown={stopDragPropagation}
             onClick={() => onStatusChange("in_review")}
           >
@@ -316,15 +320,27 @@ function ServiceIntakeCard({
           <Button
             type="button"
             size="sm"
-            variant="secondary"
             disabled={busy}
+            className="h-9 min-w-[7.5rem] px-3 text-sm font-bold uppercase tracking-wide"
             onPointerDown={stopDragPropagation}
             onClick={() => onStatusChange("converted")}
           >
             Rozlicz
           </Button>
         ) : null}
-        {inactive ? (
+        {item.status === "converted" ? (
+          <Button
+            type="button"
+            size="sm"
+            disabled={busy}
+            className="h-9 min-w-[7.5rem] px-3 text-sm font-bold uppercase tracking-wide"
+            onPointerDown={stopDragPropagation}
+            onClick={() => onStatusChange("closed")}
+          >
+            Zamknij
+          </Button>
+        ) : null}
+        {inactive && canReopen ? (
           <Button
             type="button"
             size="sm"
@@ -370,6 +386,7 @@ export function ServiceIntakeKanban({
   const [items, setItems] = useState<ServiceIntakeRecord[]>([]);
   const [teamProfiles, setTeamProfiles] = useState<UserProfile[]>([]);
   const profile = useAuthStore((state) => state.profile);
+  const canManageBoard = canManageServiceIntakeBoard(profile?.role);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -518,6 +535,10 @@ export function ServiceIntakeKanban({
   }
 
   async function handleDrop(columnId: string, itemIdOverride?: string) {
+    if (!canManageBoard) {
+      clearDragState();
+      return;
+    }
     const itemId = itemIdOverride ?? dragItemIdRef.current ?? dragItemId;
     if (!itemId) {
       return;
@@ -780,6 +801,8 @@ export function ServiceIntakeKanban({
                       item={item}
                       busy={busyId === item.id}
                       isDragging={dragItemId === item.id}
+                      draggable={canManageBoard}
+                      canReopen={canManageBoard}
                       onOpen={() => setSelectedId(item.id)}
                       onStatusChange={(nextStatus) => void changeStatus(item.id, nextStatus)}
                       onDragStart={() => beginDrag(item.id)}

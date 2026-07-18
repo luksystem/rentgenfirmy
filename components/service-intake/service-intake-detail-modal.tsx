@@ -9,11 +9,15 @@ import { Field, Input, Select } from "@/components/ui/input";
 import { MentionTextarea } from "@/components/mentions/mention-textarea";
 import { buildGoogleMapsDirectionsUrl } from "@/lib/dashboard/google-maps";
 import { confirmServiceIntakeStatusChange } from "@/lib/service-intake/confirm-status-change";
-import type { UserProfile } from "@/lib/auth/types";
+import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
 import { createUserMentionNotifications } from "@/lib/notifications/repository";
 import { useMentionOptionsFromProfiles } from "@/hooks/use-team-mention-options";
 import { profileToOptionLabel } from "@/lib/supabase/profile-repository";
 import { CAFE_PRIORITY_OPTIONS } from "@/lib/service-intake/cafe-priorities";
+import {
+  canManageServiceIntakeBoard,
+  serviceIntakePrimaryAction,
+} from "@/lib/service-intake/status-permissions";
 import {
   SERVICE_INTAKE_KANBAN_COLUMNS,
   SERVICE_INTAKE_STATUS_BADGE_CLASS,
@@ -21,6 +25,7 @@ import {
   isServiceIntakeOverdue,
   resolveServiceIntakeDueAt,
 } from "@/lib/service-intake/sla";
+import { useAuthStore } from "@/store/auth-store";
 import {
   SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS,
   SERVICE_INTAKE_PRIORITY_LABELS,
@@ -136,6 +141,8 @@ export function ServiceIntakeDetailModal({
   const [statusDraft, setStatusDraft] = useState<ServiceIntakeStatus>("new");
   const [dueAtDraft, setDueAtDraft] = useState("");
   const [assigneeIdDraft, setAssigneeIdDraft] = useState("");
+  const profile = useAuthStore((state) => state.profile);
+  const canManageBoard = canManageServiceIntakeBoard(profile?.role);
   const { candidates, mentionOptions } = useMentionOptionsFromProfiles(teamProfiles);
 
   const loadThread = useCallback(async () => {
@@ -260,11 +267,15 @@ export function ServiceIntakeDetailModal({
     setBusy(true);
     setError(null);
     try {
+      const patch: { status: ServiceIntakeStatus; assigneeId?: string } = { status: nextStatus };
+      if (nextStatus === "in_review" && !intake.assigneeId && profile?.id) {
+        patch.assigneeId = profile.id;
+      }
       const response = await fetch(`/api/service-intake/${encodeURIComponent(intakeId)}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus }),
+        body: JSON.stringify(patch),
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -275,9 +286,15 @@ export function ServiceIntakeDetailModal({
         ...(payload.item as ServiceIntakeRecord),
         clientName: intake.clientName,
         projectName: intake.projectName,
+        clientAddress: intake.clientAddress,
       };
+      if (patch.assigneeId && profile?.id === patch.assigneeId) {
+        updated.assigneeId = profile.id;
+        updated.assigneeName = getUserDisplayName(profile);
+      }
       setThread((current) => (current ? { ...current, intake: updated } : current));
       setStatusDraft(updated.status);
+      setAssigneeIdDraft(updated.assigneeId ?? "");
       onUpdated?.(updated);
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Błąd.");
@@ -449,75 +466,133 @@ export function ServiceIntakeDetailModal({
               </p>
             </div>
 
-            <Field label="Termin wykonania do">
-              <div className="flex flex-wrap items-end gap-2">
-                <Input
-                  type="date"
-                  value={dueAtDraft}
-                  onChange={(event) => setDueAtDraft(event.target.value)}
-                  className="min-w-0 flex-1 sm:min-w-[220px]"
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={busy || !dueAtChanged}
-                  onClick={() => void saveDueAt()}
-                >
-                  Zapisz termin
-                </Button>
-              </div>
-              <p className="mt-1 text-xs text-muted">
-                Domyślnie ustawiany przy zgłoszeniu według priorytetu CAFE (C: 1 dzień, A: 7 dni, F: 30 dni, E: brak).
+            {(() => {
+              const primary = serviceIntakePrimaryAction(intake.status);
+              if (!primary) {
+                return null;
+              }
+              return (
+                <div className="rounded-2xl border-2 border-accent/50 bg-accent/10 p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+                    Następny krok
+                  </p>
+                  <p className="mt-1 text-sm text-foreground/90">{primary.hint}</p>
+                  <Button
+                    type="button"
+                    size="lg"
+                    disabled={busy}
+                    className="mt-3 h-12 w-full text-base font-bold uppercase tracking-wide sm:w-auto sm:min-w-[220px]"
+                    onClick={() => void changeStatus(primary.nextStatus)}
+                  >
+                    {primary.label}
+                  </Button>
+                </div>
+              );
+            })()}
+
+            {canManageBoard ? (
+              <Field label="Termin wykonania do">
+                <div className="flex flex-wrap items-end gap-2">
+                  <Input
+                    type="date"
+                    value={dueAtDraft}
+                    onChange={(event) => setDueAtDraft(event.target.value)}
+                    className="min-w-0 flex-1 sm:min-w-[220px]"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={busy || !dueAtChanged}
+                    onClick={() => void saveDueAt()}
+                  >
+                    Zapisz termin
+                  </Button>
+                </div>
+                <p className="mt-1 text-xs text-muted">
+                  Domyślnie ustawiany przy zgłoszeniu według priorytetu CAFE (C: 1 dzień, A: 7 dni, F: 30
+                  dni, E: brak).
+                </p>
+              </Field>
+            ) : dueAt ? (
+              <p className="text-sm text-muted">
+                Termin wykonania do:{" "}
+                <span className="font-medium text-foreground">{formatDate(dueAt.slice(0, 10))}</span>
               </p>
-            </Field>
+            ) : null}
 
-            <Field label="Osoba do obsługi">
-              <div className="flex flex-wrap items-end gap-2">
-                <Select
-                  value={assigneeIdDraft}
-                  onChange={(event) => setAssigneeIdDraft(event.target.value)}
-                  className="min-w-0 flex-1 sm:min-w-[220px]"
-                >
-                  <option value="">— brak przypisania —</option>
-                  {teamProfiles.map((profile) => (
-                    <option key={profile.id} value={profile.id}>
-                      {profileToOptionLabel(profile)}
-                    </option>
-                  ))}
-                </Select>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={busy || !assigneeChanged}
-                  onClick={() => void saveAssignee()}
-                >
-                  Zapisz osobę
-                </Button>
-              </div>
-            </Field>
+            {canManageBoard ? (
+              <Field label="Osoba do obsługi">
+                <div className="flex flex-wrap items-end gap-2">
+                  <Select
+                    value={assigneeIdDraft}
+                    onChange={(event) => setAssigneeIdDraft(event.target.value)}
+                    className="min-w-0 flex-1 sm:min-w-[220px]"
+                  >
+                    <option value="">— brak przypisania —</option>
+                    {teamProfiles.map((teamProfile) => (
+                      <option key={teamProfile.id} value={teamProfile.id}>
+                        {profileToOptionLabel(teamProfile)}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={busy || !assigneeChanged}
+                    onClick={() => void saveAssignee()}
+                  >
+                    Zapisz osobę
+                  </Button>
+                </div>
+                <p className="mt-1 text-xs text-muted">
+                  Po przypisaniu przy statusie „Nowe” pracownik dostaje push i powiadomienie w dzwonku —
+                  musi kliknąć Przyjmij.
+                </p>
+              </Field>
+            ) : intake.assigneeName ? (
+              <p className="flex items-center gap-1.5 text-sm text-muted">
+                <UserRound className="h-3.5 w-3.5" />
+                Obsługuje:{" "}
+                <span className="font-medium text-foreground">{intake.assigneeName}</span>
+              </p>
+            ) : null}
 
-            <Field label="Etap na tablicy">
-              <div className="flex flex-wrap items-end gap-2">
-                <Select
-                  value={statusDraft}
-                  onChange={(event) => setStatusDraft(event.target.value as ServiceIntakeStatus)}
-                  className="min-w-0 flex-1 sm:min-w-[220px]"
+            {canManageBoard ? (
+              <Field label="Etap na tablicy (tylko manager)">
+                <div className="flex flex-wrap items-end gap-2">
+                  <Select
+                    value={statusDraft}
+                    onChange={(event) => setStatusDraft(event.target.value as ServiceIntakeStatus)}
+                    className="min-w-0 flex-1 sm:min-w-[220px]"
+                  >
+                    {SERVICE_INTAKE_KANBAN_COLUMNS.map((status) => (
+                      <option key={status} value={status}>
+                        {SERVICE_INTAKE_STATUS_LABELS[status]}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button
+                    type="button"
+                    disabled={busy || statusDraft === intake.status}
+                    onClick={() => void changeStatus(statusDraft)}
+                  >
+                    Przenieś
+                  </Button>
+                </div>
+              </Field>
+            ) : (
+              <p className="text-sm text-muted">
+                Etap:{" "}
+                <span
+                  className={cn(
+                    "rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-wide",
+                    SERVICE_INTAKE_STATUS_BADGE_CLASS[SERVICE_INTAKE_STATUS_TONE[intake.status]],
+                  )}
                 >
-                  {SERVICE_INTAKE_KANBAN_COLUMNS.map((status) => (
-                    <option key={status} value={status}>
-                      {SERVICE_INTAKE_STATUS_LABELS[status]}
-                    </option>
-                  ))}
-                </Select>
-                <Button
-                  type="button"
-                  disabled={busy || statusDraft === intake.status}
-                  onClick={() => void changeStatus(statusDraft)}
-                >
-                  Przenieś
-                </Button>
-              </div>
-            </Field>
+                  {SERVICE_INTAKE_STATUS_LABELS[intake.status]}
+                </span>
+              </p>
+            )}
 
             <div>
               <p className="mb-2 text-sm font-medium text-foreground">Załączniki</p>
@@ -554,32 +629,31 @@ export function ServiceIntakeDetailModal({
                   <ExternalLink className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild variant="outline">
-                {intake.serviceId ? (
-                  <Link href={`/oferty/${intake.serviceId}`}>Otwórz rozliczenie</Link>
-                ) : (
-                  <Link
-                    href={`/oferty/nowy?clientId=${intake.clientId ?? ""}&projectId=${intake.projectId ?? ""}`}
-                  >
-                    Utwórz ofertę
-                  </Link>
-                )}
-              </Button>
-              {intake.status !== "closed" && intake.status !== "rejected" ? (
-                <>
-                  <Button type="button" variant="outline" disabled={busy} onClick={() => void changeStatus("closed")}>
-                    Zamknij
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    disabled={busy}
-                    onClick={() => void changeStatus("rejected")}
-                  >
-                    Odrzuć
-                  </Button>
-                </>
-              ) : (
+              {canManageBoard ? (
+                <Button asChild variant="outline">
+                  {intake.serviceId ? (
+                    <Link href={`/oferty/${intake.serviceId}`}>Otwórz rozliczenie</Link>
+                  ) : (
+                    <Link
+                      href={`/oferty/nowy?clientId=${intake.clientId ?? ""}&projectId=${intake.projectId ?? ""}`}
+                    >
+                      Utwórz ofertę
+                    </Link>
+                  )}
+                </Button>
+              ) : null}
+              {canManageBoard && intake.status !== "closed" && intake.status !== "rejected" ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={busy}
+                  onClick={() => void changeStatus("rejected")}
+                >
+                  Odrzuć
+                </Button>
+              ) : null}
+              {canManageBoard &&
+              (intake.status === "closed" || intake.status === "rejected") ? (
                 <Button
                   type="button"
                   disabled={busy}
@@ -587,7 +661,7 @@ export function ServiceIntakeDetailModal({
                 >
                   Otwórz ponownie
                 </Button>
-              )}
+              ) : null}
             </div>
           </div>
         ) : null}

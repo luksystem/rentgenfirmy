@@ -3,6 +3,7 @@ import { isServiceIntakeInactive } from "@/lib/service-intake/sla";
 
 const CONFIRM_MESSAGES: Partial<Record<ServiceIntakeStatus, string>> = {
   in_review: "Czy na pewno przyjąć to zgłoszenie do obsługi?",
+  converted: "Przenieść zgłoszenie do rozliczania?",
   closed: "Czy na pewno zamknąć to zgłoszenie?",
   rejected: "Czy na pewno odrzucić to zgłoszenie?",
 };
