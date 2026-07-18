@@ -25,7 +25,7 @@ import { confirmServiceIntakeStatusChange } from "@/lib/service-intake/confirm-s
 import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 import { useAuthStore } from "@/store/auth-store";
 import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
-import { CAFE_PRIORITY_OPTIONS } from "@/lib/service-intake/cafe-priorities";
+import { CAFE_PRIORITY_OPTIONS, isHighCafePriority } from "@/lib/service-intake/cafe-priorities";
 import {
   KANBAN_BOARD_ROOT_CLASS,
   KANBAN_DRAG_HINT,
@@ -489,9 +489,10 @@ export function ServiceIntakeKanban({
           if (!isServiceIntakeActive(item.status)) {
             return false;
           }
-          const overdue = isServiceIntakeOverdue(item);
-          const critical = item.priority === "c";
-          return overdue || critical;
+          return (
+            isServiceIntakeOverdue(item) ||
+            (item.priority != null && isHighCafePriority(item.priority))
+          );
         })
         .sort((left, right) => {
           const rankDiff =
@@ -629,7 +630,7 @@ export function ServiceIntakeKanban({
             <p className="text-sm font-semibold text-rose-100">
               Do obsługi teraz ({attentionItems.length})
             </p>
-            <p className="text-[11px] text-rose-100/80">Przeterminowane lub krytyczne</p>
+            <p className="text-[11px] text-rose-100/80">Przeterminowane, ASAP lub krytyczne</p>
           </div>
           <ul className="grid gap-2">
             {attentionItems.map((item) => {

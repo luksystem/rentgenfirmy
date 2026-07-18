@@ -4,16 +4,23 @@ export function buildClientAddressLine(client: Pick<
   Client,
   "addressStreet" | "addressCity" | "addressPostalCode" | "location"
 >) {
-  const parts = [
-    client.addressStreet?.trim(),
-    [client.addressPostalCode?.trim(), client.addressCity?.trim()].filter(Boolean).join(" "),
-  ].filter(Boolean);
+  const street = client.addressStreet?.trim() || "";
+  const cityLine = [client.addressPostalCode?.trim(), client.addressCity?.trim()]
+    .filter(Boolean)
+    .join(" ");
+  const location = client.location?.trim() || "";
+  const parts = [street, cityLine].filter(Boolean);
 
   if (parts.length) {
-    return parts.join(", ");
+    const line = parts.join(", ");
+    // Bez ulicy dołącz lokalizację (np. nazwa obiektu), żeby Maps nie celował tylko w miasto.
+    if (!street && location && !line.toLowerCase().includes(location.toLowerCase())) {
+      return `${location}, ${line}`;
+    }
+    return line;
   }
 
-  return client.location?.trim() || "";
+  return location;
 }
 
 export function buildGoogleMapsSearchUrl(address: string) {

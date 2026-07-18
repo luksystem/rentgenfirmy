@@ -322,6 +322,90 @@ function rowToIntakeRecord(
   };
 }
 
+type ClientAddressRow = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  address_street: string | null;
+  address_city: string | null;
+  address_postal_code: string | null;
+  location: string | null;
+};
+
+function clientRowAddressLine(row: Pick<
+  ClientAddressRow,
+  "address_street" | "address_city" | "address_postal_code" | "location"
+>) {
+  return buildClientAddressLine({
+    addressStreet: row.address_street ?? "",
+    addressCity: row.address_city ?? "",
+    addressPostalCode: row.address_postal_code ?? "",
+    location: row.location ?? "",
+  });
+}
+
+function clientRowDisplayName(row: Pick<ClientAddressRow, "first_name" | "last_name">) {
+  return formatPartyName({
+    firstName: row.first_name ?? "",
+    lastName: row.last_name ?? "",
+  });
+}
+
+/** Uzupełnia nazwę/adres klienta — także przez project.client_id, gdy intake.client_id jest puste. */
+async function hydrateServiceIntakeRows(
+  rows: Array<Record<string, unknown>>,
+): Promise<ServiceIntakeRecord[]> {
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const supabase = getSupabaseAdmin();
+  const directClientIds = [
+    ...new Set(rows.map((row) => row.client_id).filter(Boolean).map(String)),
+  ];
+  const projectIds = [
+    ...new Set(rows.map((row) => row.project_id).filter(Boolean).map(String)),
+  ];
+
+  const { data: projects } = projectIds.length
+    ? await supabase.from("projects").select("id, name, client_id").in("id", projectIds)
+    : { data: [] as Array<{ id: string; name: string; client_id: string | null }> };
+
+  const projectMap = new Map(
+    (projects ?? []).map((row) => [
+      row.id,
+      { name: row.name, clientId: row.client_id ? String(row.client_id) : null },
+    ]),
+  );
+
+  const projectClientIds = [...projectMap.values()]
+    .map((project) => project.clientId)
+    .filter((id): id is string => Boolean(id));
+  const allClientIds = [...new Set([...directClientIds, ...projectClientIds])];
+
+  const { data: clients } = allClientIds.length
+    ? await supabase
+        .from("clients")
+        .select("id, first_name, last_name, address_street, address_city, address_postal_code, location")
+        .in("id", allClientIds)
+    : { data: [] as ClientAddressRow[] };
+
+  const clientMap = new Map((clients ?? []).map((row) => [row.id, row as ClientAddressRow]));
+
+  return rows.map((row) => {
+    const directClient = row.client_id ? clientMap.get(String(row.client_id)) : undefined;
+    const project = row.project_id ? projectMap.get(String(row.project_id)) : undefined;
+    const projectClient = project?.clientId ? clientMap.get(project.clientId) : undefined;
+    const resolvedClient = directClient ?? projectClient;
+
+    return rowToIntakeRecord(row, {
+      clientName: resolvedClient ? clientRowDisplayName(resolvedClient) : null,
+      projectName: project?.name ?? null,
+      clientAddress: resolvedClient ? clientRowAddressLine(resolvedClient) || null : undefined,
+    });
+  });
+}
+
 function rowToAttachment(row: Record<string, unknown>): ServiceIntakeAttachment {
   return {
     id: String(row.id),
@@ -1037,58 +1121,7 @@ export async function listServiceIntakeRequests(options?: {
     throw new Error(error.message);
   }
 
-  const rows = data ?? [];
-  const clientIds = [...new Set(rows.map((row) => row.client_id).filter(Boolean))] as string[];
-  const projectIds = [...new Set(rows.map((row) => row.project_id).filter(Boolean))] as string[];
-
-  const [{ data: clients }, { data: projects }] = await Promise.all([
-    clientIds.length
-      ? supabase
-          .from("clients")
-          .select("id, first_name, last_name, address_street, address_city, address_postal_code, location")
-          .in("id", clientIds)
-      : Promise.resolve({
-          data: [] as Array<{
-            id: string;
-            first_name: string;
-            last_name: string;
-            address_street: string | null;
-            address_city: string | null;
-            address_postal_code: string | null;
-            location: string | null;
-          }>,
-        }),
-    projectIds.length
-      ? supabase.from("projects").select("id, name").in("id", projectIds)
-      : Promise.resolve({ data: [] as Array<{ id: string; name: string }> }),
-  ]);
-
-  const clientMap = new Map(
-    (clients ?? []).map((row) => [
-      row.id,
-      formatPartyName({ firstName: row.first_name ?? "", lastName: row.last_name }),
-    ]),
-  );
-  const clientAddressMap = new Map(
-    (clients ?? []).map((row) => [
-      row.id,
-      buildClientAddressLine({
-        addressStreet: row.address_street ?? "",
-        addressCity: row.address_city ?? "",
-        addressPostalCode: row.address_postal_code ?? "",
-        location: row.location ?? "",
-      }),
-    ]),
-  );
-  const projectMap = new Map((projects ?? []).map((row) => [row.id, row.name]));
-
-  return rows.map((row) =>
-    rowToIntakeRecord(row, {
-      clientName: row.client_id ? clientMap.get(row.client_id) ?? null : null,
-      projectName: row.project_id ? projectMap.get(row.project_id) ?? null : null,
-      clientAddress: row.client_id ? clientAddressMap.get(row.client_id) || null : undefined,
-    }),
-  );
+  return hydrateServiceIntakeRows((data ?? []) as Array<Record<string, unknown>>);
 }
 
 async function resolveAssigneeUpdate(assigneeId: string | null) {
@@ -1295,51 +1328,24 @@ export async function getServiceIntakeThreadById(id: string): Promise<ServiceInt
     return null;
   }
 
-  const intake = rowToIntakeRecord(data);
-  const [{ data: attachments }, { data: comments }, clientResult, projectResult] = await Promise.all([
+  const [{ data: attachments }, { data: comments }, hydrated] = await Promise.all([
     supabase
       .from("service_intake_attachments")
       .select("*")
-      .eq("intake_id", intake.id)
+      .eq("intake_id", String(data.id))
       .order("created_at", { ascending: true }),
     supabase
       .from("service_intake_comments")
       .select("*")
-      .eq("intake_id", intake.id)
+      .eq("intake_id", String(data.id))
       .order("created_at", { ascending: true }),
-    intake.clientId
-      ? supabase
-          .from("clients")
-          .select("first_name, last_name, address_street, address_city, address_postal_code, location")
-          .eq("id", intake.clientId)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    intake.projectId
-      ? supabase.from("projects").select("name").eq("id", intake.projectId).maybeSingle()
-      : Promise.resolve({ data: null }),
+    hydrateServiceIntakeRows([data as Record<string, unknown>]),
   ]);
 
-  const clientAddress = clientResult.data
-    ? buildClientAddressLine({
-        addressStreet: clientResult.data.address_street ?? "",
-        addressCity: clientResult.data.address_city ?? "",
-        addressPostalCode: clientResult.data.address_postal_code ?? "",
-        location: clientResult.data.location ?? "",
-      })
-    : null;
+  const intake = hydrated[0] ?? rowToIntakeRecord(data);
 
   return {
-    intake: {
-      ...intake,
-      clientName: clientResult.data
-        ? formatPartyName({
-            firstName: clientResult.data.first_name ?? "",
-            lastName: clientResult.data.last_name ?? "",
-          })
-        : intake.clientName ?? null,
-      projectName: projectResult.data?.name ?? intake.projectName ?? null,
-      clientAddress: clientAddress || (intake.clientAddress ?? null),
-    },
+    intake,
     attachments: (attachments ?? []).map((row) => rowToAttachment(row)),
     comments: (comments ?? []).map((row) => rowToComment(row)),
   };
@@ -1357,7 +1363,7 @@ export async function listServiceIntakeByProject(projectId: string) {
     throw new Error(error.message);
   }
 
-  return (data ?? []).map((row) => rowToIntakeRecord(row));
+  return hydrateServiceIntakeRows((data ?? []) as Array<Record<string, unknown>>);
 }
 
 export async function addServiceIntakeTeamComment(input: {
