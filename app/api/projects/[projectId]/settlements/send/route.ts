@@ -73,7 +73,7 @@ export async function POST(request: Request, context: RouteContext) {
       : "Klient";
 
     let hourBudget = null;
-    if (bundle.settings.hourlyEnabled) {
+    if (bundle.settings?.hourlyEnabled) {
       const { data: timeRows, error: timeError } = await admin
         .from("time_entries")
         .select("duration_minutes, status")

@@ -267,6 +267,12 @@ export function EmailSettingsView() {
                       email: { ...action.defaults.email },
                       push: action.defaults.push,
                       sms: action.defaults.sms,
+                      ...(action.supportsSchedule && action.defaults.schedule
+                        ? {
+                            daysBefore: action.defaults.schedule.daysBefore,
+                            notifyAtHour: action.defaults.schedule.notifyAtHour,
+                          }
+                        : {}),
                     } satisfies NotificationRoutingRule);
 
                   function patchRule(next: NotificationRoutingRule) {
@@ -366,6 +372,41 @@ export function EmailSettingsView() {
                           </div>
                         </div>
                       </div>
+
+                      {action.supportsSchedule ? (
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          <Field label="Ile dni przed wygaśnięciem">
+                            <Input
+                              type="number"
+                              min={1}
+                              max={60}
+                              value={rule.daysBefore ?? action.defaults.schedule?.daysBefore ?? 3}
+                              onChange={(event) =>
+                                patchRule({
+                                  ...rule,
+                                  daysBefore: Number(event.target.value) || 1,
+                                })
+                              }
+                            />
+                          </Field>
+                          <Field label="Godzina powiadomienia (Europe/Warsaw)">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={23}
+                              value={
+                                rule.notifyAtHour ?? action.defaults.schedule?.notifyAtHour ?? 9
+                              }
+                              onChange={(event) =>
+                                patchRule({
+                                  ...rule,
+                                  notifyAtHour: Number(event.target.value) || 0,
+                                })
+                              }
+                            />
+                          </Field>
+                        </div>
+                      ) : null}
                     </article>
                   );
                 })}

@@ -171,6 +171,10 @@ export function NotificationBell({ role = "primary" }: { role?: "primary" | "sec
           <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-emerald-500/35 bg-emerald-500/10 text-emerald-300">
             <BadgeCheck className="h-4 w-4" />
           </span>
+        ) : item.kind === "client_offer_expiring" ? (
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-amber-500/35 bg-amber-500/10 text-amber-200">
+            <CalendarClock className="h-4 w-4" />
+          </span>
         ) : item.kind === "change_request_client_responded" ? (
           <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-violet-500/35 bg-violet-500/10 text-violet-200">
             <FileEdit className="h-4 w-4" />

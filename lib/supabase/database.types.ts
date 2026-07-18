@@ -3257,6 +3257,35 @@ export type Database = {
         Update: Partial<VizEnergyInvoiceRow>;
         Relationships: [];
       };
+      offer_expiry_reminder_log: {
+        Row: {
+          id: string;
+          service_id: string;
+          offer_kind: string;
+          expires_at: string;
+          days_before: number;
+          channels: string[];
+          sent_at: string;
+        };
+        Insert: {
+          id?: string;
+          service_id: string;
+          offer_kind: string;
+          expires_at: string;
+          days_before: number;
+          channels?: string[];
+          sent_at?: string;
+        };
+        Update: Partial<{
+          service_id: string;
+          offer_kind: string;
+          expires_at: string;
+          days_before: number;
+          channels: string[];
+          sent_at: string;
+        }>;
+        Relationships: [];
+      };
       activity_log: {
         Row: {
           id: string;

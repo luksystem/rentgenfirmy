@@ -25,6 +25,13 @@ export const NOTIFICATION_ROUTING_CATEGORY_LABELS: Record<NotificationRoutingCat
   zmiany: "Wnioski o zmianę",
 };
 
+export type NotificationScheduleDefaults = {
+  /** Ile dni przed zdarzeniem (np. wygaśnięciem oferty) */
+  daysBefore: number;
+  /** Godzina wysyłki 0–23 (Europe/Warsaw) */
+  notifyAtHour: number;
+};
+
 export type NotificationActionDefinition = {
   id: string;
   label: string;
@@ -36,6 +43,8 @@ export type NotificationActionDefinition = {
   supportsPush: boolean;
   /** Czy SMS ma sens (telefon klienta lub użytkownika) */
   supportsSms: boolean;
+  /** Harmonogram: dni przed + godzina (Europe/Warsaw) */
+  supportsSchedule?: boolean;
   /** Powiązanie z regułą SMS (sync enabled) */
   smsRuleId?: string;
   /** Powiązanie z szablonem e-mail */
@@ -48,6 +57,7 @@ export type NotificationActionDefinition = {
     email: Partial<Record<NotificationAudience, boolean>>;
     push: boolean;
     sms: boolean;
+    schedule?: NotificationScheduleDefaults;
   };
 };
 
@@ -106,6 +116,23 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     supportsPush: false,
     supportsSms: true,
     defaults: { email: { client: true }, push: false, sms: false },
+  },
+  {
+    id: "client_offer_expiring",
+    label: "Oferta wygasa — przypomnienie dla klienta",
+    description:
+      "Przypomnienie przed utratą ważności oferty: trzeba będzie renegocjować warunki. E-mail i SMS do klienta z linkiem do akceptacji; push — krótkie powiadomienie w aplikacji (zespół) z tym samym linkiem.",
+    category: "oferty",
+    emailAudiences: ["client"],
+    supportsPush: true,
+    supportsSms: true,
+    supportsSchedule: true,
+    defaults: {
+      email: { client: true },
+      push: true,
+      sms: false,
+      schedule: { daysBefore: 3, notifyAtHour: 9 },
+    },
   },
   {
     id: "client_offer_accepted",
@@ -227,7 +254,35 @@ export type NotificationRoutingRule = {
   email: Partial<Record<NotificationAudience, boolean>>;
   push: boolean;
   sms: boolean;
+  /** Ile dni przed zdarzeniem (gdy supportsSchedule) */
+  daysBefore?: number;
+  /** Godzina 0–23 Europe/Warsaw (gdy supportsSchedule) */
+  notifyAtHour?: number;
 };
+
+const DEFAULT_SCHEDULE: NotificationScheduleDefaults = {
+  daysBefore: 3,
+  notifyAtHour: 9,
+};
+
+function clampInt(value: unknown, min: number, max: number, fallback: number) {
+  const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, Math.round(n)));
+}
+
+export function getRuleSchedule(
+  rule: NotificationRoutingRule | null | undefined,
+  definition?: NotificationActionDefinition,
+): NotificationScheduleDefaults {
+  const defaults = definition?.defaults.schedule ?? DEFAULT_SCHEDULE;
+  return {
+    daysBefore: clampInt(rule?.daysBefore, 1, 60, defaults.daysBefore),
+    notifyAtHour: clampInt(rule?.notifyAtHour, 0, 23, defaults.notifyAtHour),
+  };
+}
 
 export const NOTIFICATION_AUDIENCE_LABELS: Record<NotificationAudience, string> = {
   client: "Klient",
@@ -243,12 +298,20 @@ export function getNotificationActionDefinition(
 }
 
 export function defaultNotificationRouting(): NotificationRoutingRule[] {
-  return NOTIFICATION_ACTION_DEFINITIONS.map((definition) => ({
-    id: definition.id,
-    email: { ...definition.defaults.email },
-    push: definition.defaults.push,
-    sms: definition.defaults.sms,
-  }));
+  return NOTIFICATION_ACTION_DEFINITIONS.map((definition) => {
+    const schedule = definition.supportsSchedule
+      ? getRuleSchedule(null, definition)
+      : null;
+    return {
+      id: definition.id,
+      email: { ...definition.defaults.email },
+      push: definition.defaults.push,
+      sms: definition.defaults.sms,
+      ...(schedule
+        ? { daysBefore: schedule.daysBefore, notifyAtHour: schedule.notifyAtHour }
+        : {}),
+    };
+  });
 }
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -282,6 +345,26 @@ export function normalizeNotificationRouting(value: unknown): NotificationRoutin
           : Boolean(fallback.email[audience]);
     }
 
+    const schedule = definition.supportsSchedule
+      ? getRuleSchedule(
+          {
+            id,
+            email,
+            push: false,
+            sms: false,
+            daysBefore:
+              typeof data.daysBefore === "number" || typeof data.daysBefore === "string"
+                ? Number(data.daysBefore)
+                : fallback.daysBefore,
+            notifyAtHour:
+              typeof data.notifyAtHour === "number" || typeof data.notifyAtHour === "string"
+                ? Number(data.notifyAtHour)
+                : fallback.notifyAtHour,
+          },
+          definition,
+        )
+      : null;
+
     normalized.push({
       id,
       email,
@@ -295,6 +378,9 @@ export function normalizeNotificationRouting(value: unknown): NotificationRoutin
           ? data.sms
           : fallback.sms
         : false,
+      ...(schedule
+        ? { daysBefore: schedule.daysBefore, notifyAtHour: schedule.notifyAtHour }
+        : {}),
     });
   }
 
