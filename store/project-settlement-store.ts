@@ -126,9 +126,9 @@ export const useProjectSettlementStore = create<ProjectSettlementStore>((set, ge
       return inFlight;
     }
 
-    if (showLoading || !cached) {
+    if (showLoading && !cached) {
       set({
-        loadingProjects: { ...get().loadingProjects, [projectId]: !cached },
+        loadingProjects: { ...get().loadingProjects, [projectId]: true },
       });
     }
 
@@ -166,6 +166,7 @@ export const useProjectSettlementStore = create<ProjectSettlementStore>((set, ge
       contractAmountNet: money?.amountNet ?? input.contractAmountNet ?? null,
       contractVatRate: money?.vatRate ?? input.contractVatRate ?? null,
       contractAmountGross: money?.amountGross ?? input.contractAmountGross ?? null,
+      hourlyRateNet: input.hourlyRateNet ?? null,
     });
     patchBundle(projectId, { settings: saved }, get, set);
     await syncProjectSettlementCharges(projectId);

@@ -24,6 +24,7 @@ export const SETTLEMENT_SOURCES = [
   "offer",
   "change_request",
   "hourly",
+  "agreement",
   "manual",
   "none",
 ] as const;
@@ -34,6 +35,7 @@ export const SETTLEMENT_SOURCE_LABELS: Record<SettlementSource, string> = {
   offer: "Oferta",
   change_request: "Zmiana projektu",
   hourly: "Godziny",
+  agreement: "Ustalenie",
   manual: "Ręcznie",
   none: "—",
 };
@@ -54,6 +56,7 @@ export type ProjectBillingSettings = {
   contractAmountNet: number | null;
   contractVatRate: AgreementVatRate | null;
   contractAmountGross: number | null;
+  hourlyRateNet: number | null;
   currency: string;
   notes: string;
   createdAt: string;
@@ -66,6 +69,7 @@ export type ProjectBillingSettingsInput = {
   contractAmountNet?: number | null;
   contractVatRate?: number | null;
   contractAmountGross?: number | null;
+  hourlyRateNet?: number | null;
   currency?: string;
   notes?: string;
 };
@@ -121,6 +125,7 @@ export type ProjectSettlementEntry = {
   kind: SettlementKind;
   source: SettlementSource;
   sourceId: string | null;
+  processStageId: string | null;
   title: string;
   amountNet: number;
   vatRate: number;
@@ -141,6 +146,7 @@ export type ProjectSettlementEntryInput = {
   kind: SettlementKind;
   source?: SettlementSource;
   sourceId?: string | null;
+  processStageId?: string | null;
   title: string;
   amountNet: number;
   vatRate: number;
@@ -170,7 +176,11 @@ export type ProjectSettlementSummary = {
   paidGross: number;
   scheduleNet: number;
   scheduleGross: number;
+  /** Saldo netto: należności − spłaty */
+  balanceNet: number;
   balanceGross: number;
+  /** Harmonogram vs należności (netto) */
+  scheduleCoverageNet: number;
   chargesCount: number;
   invoicesCount: number;
   paymentsCount: number;
@@ -223,7 +233,14 @@ export function normalizeSettlementEntryInput(
     notes: input.notes?.trim() ?? "",
     source: input.source ?? (input.kind === "charge" ? "manual" : "none"),
     sourceId: input.sourceId ?? null,
+    processStageId: input.processStageId ?? null,
   };
+}
+
+export function addDaysIso(dateIso: string, days: number): string {
+  const date = new Date(`${dateIso}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 export function buildSettlementSummary(entries: ProjectSettlementEntry[]): ProjectSettlementSummary {
@@ -262,6 +279,9 @@ export function buildSettlementSummary(entries: ProjectSettlementEntry[]): Proje
 
   const round = (value: number) => Math.round(value * 100) / 100;
 
+  const balanceNet = round(chargesNet - paidNet);
+  const scheduleCoverageNet = round(scheduleNet - chargesNet);
+
   return {
     chargesNet: round(chargesNet),
     chargesGross: round(chargesGross),
@@ -271,7 +291,9 @@ export function buildSettlementSummary(entries: ProjectSettlementEntry[]): Proje
     paidGross: round(paidGross),
     scheduleNet: round(scheduleNet),
     scheduleGross: round(scheduleGross),
+    balanceNet,
     balanceGross: round(chargesGross - paidGross),
+    scheduleCoverageNet,
     chargesCount,
     invoicesCount,
     paymentsCount,
@@ -288,6 +310,7 @@ export function emptyBillingSettings(projectId: string): ProjectBillingSettings 
     contractAmountNet: null,
     contractVatRate: DEFAULT_AGREEMENT_VAT_RATE,
     contractAmountGross: null,
+    hourlyRateNet: null,
     currency: "PLN",
     notes: "",
     createdAt: now,

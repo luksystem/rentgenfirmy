@@ -100,7 +100,11 @@ import { useFunctionalitySurveyStore, markProjectFunctionalitySurveyReviewed } f
 import { isFunctionalitySurveyPendingTeamReview } from "@/lib/client-functionality/survey-status";
 import { useAppStore } from "@/store/app-store";
 import { useProjectSettlementStore } from "@/store/project-settlement-store";
-import type { ProjectSettlementsBundle } from "@/lib/settlements/types";
+import {
+  buildSettlementSummary,
+  type ProjectSettlementsBundle,
+} from "@/lib/settlements/types";
+import { formatPartyName } from "@/lib/party/display-name";
 
 const EMPTY_SATISFACTION: ProjectSatisfactionBundle = {
   agreementFulfillments: [],
@@ -142,11 +146,12 @@ const PUBLIC_CLIENT_TAB_CONFIG: Array<{
   icon: React.ComponentType<{ className?: string }>;
 }> = [
   { id: "home", label: "HOME", icon: Home },
+  { id: "project", label: "Projekt", icon: Briefcase },
+  { id: "settlements", label: "Rozliczenia", icon: Wallet },
   { id: "process", label: "Proces", icon: GitBranch },
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
   { id: "changes", label: "Zmiany projektu", icon: FileEdit },
   { id: "offers", label: "Oferty", icon: Receipt },
-  { id: "settlements", label: "Rozliczenia", icon: Wallet },
   { id: "inspections", label: "Przeglądy", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
   { id: "functionality-survey", label: "Ankieta funkcji", icon: ClipboardList },
@@ -169,7 +174,6 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
   { id: "changes", label: "Zmiany projektu", icon: FileEdit },
   { id: "offers", label: "Oferty", icon: Receipt },
-  { id: "settlements", label: "Rozliczenia", icon: Wallet },
   { id: "inspections", label: "Przeglądy", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
   { id: "functionality-survey", label: "Ankieta funkcji", icon: ClipboardList },
@@ -185,6 +189,12 @@ const TEAM_PROJECT_TAB = {
   id: "project" as const,
   label: "Projekt",
   icon: Briefcase,
+};
+
+const TEAM_SETTLEMENTS_TAB = {
+  id: "settlements" as const,
+  label: "Rozliczenia",
+  icon: Wallet,
 };
 
 const TEAM_INTEGRATIONS_TAB = {
@@ -208,6 +218,7 @@ const TEAM_PROJECT_USERS_TAB = {
 const teamTabsWithProject = [
   TEAM_MAIN_TAB_CONFIG[0],
   TEAM_PROJECT_TAB,
+  TEAM_SETTLEMENTS_TAB,
   TEAM_TIME_TRACKING_TAB,
   TEAM_PROJECT_USERS_TAB,
   TEAM_INTEGRATIONS_TAB,
@@ -578,7 +589,12 @@ export function ClientDashboardView({
     if (!enableSettlements || !selectedProjectId || seedSettlements) {
       return;
     }
-    void ensureSettlements(selectedProjectId).catch(() => undefined);
+    // Zawsze odśwież + sync przy wejściu w projekt (usunięte ustalenia/oferty/CR).
+    void ensureSettlements(selectedProjectId, {
+      force: true,
+      sync: true,
+      showLoading: false,
+    }).catch(() => undefined);
   }, [enableSettlements, ensureSettlements, seedSettlements, selectedProjectId]);
 
   const refreshAgreementsFromServer = useCallback(() => {
@@ -714,7 +730,22 @@ export function ClientDashboardView({
     }
     agreementsSyncKeyRef.current = syncKey;
     onAgreementsUpdated(storeAgreements);
-  }, [onAgreementsUpdated, storeAgreements]);
+    // Po zmianie ustaleń odśwież ledger rozliczeń (usunięcie / akceptacja z kwotą).
+    if (enableSettlements && selectedProjectId && !readOnly) {
+      void ensureSettlements(selectedProjectId, {
+        force: true,
+        sync: true,
+        showLoading: false,
+      }).catch(() => undefined);
+    }
+  }, [
+    enableSettlements,
+    ensureSettlements,
+    onAgreementsUpdated,
+    readOnly,
+    selectedProjectId,
+    storeAgreements,
+  ]);
 
   const pendingAcceptanceCount = useMemo(() => {
     return agreementSource.filter(
@@ -722,6 +753,16 @@ export function ClientDashboardView({
         entry.projectId === selectedProjectId && isAgreementPendingAttention(entry),
     ).length;
   }, [agreementSource, selectedProjectId]);
+
+  const settlementEntries = useProjectSettlementStore(
+    (state) => state.byProject[selectedProjectId]?.entries,
+  );
+  const settlementBalanceNet = useMemo(() => {
+    if (!enableSettlements || !settlementEntries) {
+      return null;
+    }
+    return buildSettlementSummary(settlementEntries).balanceNet;
+  }, [enableSettlements, settlementEntries]);
 
   const pendingWarrantyCount = useMemo(() => {
     return agreementSource.filter(
@@ -758,6 +799,7 @@ export function ClientDashboardView({
   }, [process, processProgress, template]);
 
   const publicClientTabs = PUBLIC_CLIENT_TAB_CONFIG.filter((tab) => {
+    if (tab.id === "project" && !enableSettlements) return false;
     if (tab.id === "inspections" && !hasClientInspections) return false;
     if (tab.id === "agreements" && !enableAgreements) return false;
     if (tab.id === "changes" && !enableChangeRequests) return false;
@@ -907,13 +949,15 @@ export function ClientDashboardView({
   function renderProjectSettingsSection() {
     return (
       <div className="grid min-w-0 gap-4">
-        <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
-          <h2 className="mb-3 text-base font-semibold text-foreground">Ustawienia projektu</h2>
-          <ClientProjectSettingsPanel project={selectedProject} />
-        </div>
+        {!readOnly ? (
+          <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
+            <h2 className="page-section-title mb-3 text-base font-semibold">Ustawienia projektu</h2>
+            <ClientProjectSettingsPanel project={selectedProject} />
+          </div>
+        ) : null}
         {enableSettlements && selectedProjectId ? (
           <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
-            <h2 className="mb-3 text-base font-semibold text-foreground">Budżet projektu</h2>
+            <h2 className="page-section-title mb-3 text-base font-semibold">Budżet projektu</h2>
             <ProjectBillingBudgetPanel
               projectId={selectedProjectId}
               actorName={teamAuthorName}
@@ -931,11 +975,17 @@ export function ClientDashboardView({
     }
     return (
       <div className="min-w-0 max-w-full rounded-2xl border border-border/80 bg-surface p-4">
-        <h2 className="mb-3 text-base font-semibold text-foreground">Rozliczenia</h2>
+        <h2 className="page-section-title mb-3 text-base font-semibold">Rozliczenia</h2>
         <ProjectSettlementsPanel
           projectId={selectedProjectId}
           actorName={readOnly ? clientAuthorName : teamAuthorName}
           readOnly={readOnly}
+          publicDashboardToken={
+            publicDashboardToken ??
+            (clientSpace?.publicEnabled ? clientSpace.publicToken : undefined)
+          }
+          clientEmail={client.email || null}
+          clientName={formatPartyName(client)}
         />
       </div>
     );
@@ -1104,6 +1154,7 @@ export function ClientDashboardView({
         pendingWarrantyCount={pendingWarrantyCount}
         changeRequests={enableChangeRequests ? changeRequestSource : []}
         pendingChangeRequestsCount={enableChangeRequests ? pendingChangeRequestsCount : 0}
+        settlementBalanceNet={settlementBalanceNet}
         onOpenTab={(tab) => handleSelectTab(tab)}
         clientSpace={clientSpace}
         showPublicLinkPanel={showPublicLink && !readOnly}

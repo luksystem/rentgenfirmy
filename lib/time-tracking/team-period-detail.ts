@@ -33,6 +33,8 @@ export type TeamPeriodEmployeeRow = {
   status: TimesheetStatus;
   totalMinutes: number;
   workMinutes: number;
+  absenceMinutes: number;
+  billableMinutes: number;
   entryCount: number;
   minutesByDate: Record<string, number>;
   dailyBreakdown: DailyTimeSummary[];
@@ -175,9 +177,13 @@ export function buildEmployeePeriodDetail(input: {
   );
 
   let workMinutes = 0;
+  let absenceMinutes = 0;
+  let billableMinutes = 0;
   let totalMinutes = 0;
   for (const day of dailyBreakdown) {
     workMinutes += day.workMinutes;
+    absenceMinutes += day.absenceMinutes;
+    billableMinutes += day.billableMinutes;
     totalMinutes += day.totalMinutes;
   }
 
@@ -188,6 +194,8 @@ export function buildEmployeePeriodDetail(input: {
     status: input.status ?? "draft",
     totalMinutes,
     workMinutes,
+    absenceMinutes,
+    billableMinutes,
     entryCount: input.entries.length,
     minutesByDate,
     dailyBreakdown,

@@ -1114,6 +1114,7 @@ export type ProjectBillingSettingsRow = {
   contract_amount_net: number | string | null;
   contract_vat_rate: number | string | null;
   contract_amount_gross: number | string | null;
+  hourly_rate_net?: number | string | null;
   currency: string;
   notes: string;
   created_at: string;
@@ -1127,6 +1128,7 @@ export type ProjectBillingSettingsInsert = {
   contract_amount_net?: number | null;
   contract_vat_rate?: number | null;
   contract_amount_gross?: number | null;
+  hourly_rate_net?: number | null;
   currency?: string;
   notes?: string;
   created_at?: string;
@@ -1199,6 +1201,7 @@ export type ProjectSettlementEntryRow = {
   kind: string;
   source: string;
   source_id: string | null;
+  process_stage_id?: string | null;
   title: string;
   amount_net: number | string;
   vat_rate: number | string;
@@ -1221,6 +1224,7 @@ export type ProjectSettlementEntryInsert = {
   kind: string;
   source?: string;
   source_id?: string | null;
+  process_stage_id?: string | null;
   title: string;
   amount_net?: number;
   vat_rate?: number;

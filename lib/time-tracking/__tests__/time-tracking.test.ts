@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDurationMinutes, parseDurationInput } from "@/lib/time-tracking/format";
+import { formatDurationHm, formatDurationMinutes, parseDurationInput } from "@/lib/time-tracking/format";
 import { findOverlapMessage, rangesOverlap } from "@/lib/time-tracking/overlap";
 import { buildWeekTimeReport } from "@/lib/time-tracking/reports";
 import { resolveTimesheetPeriod, shiftTimesheetPeriod } from "@/lib/time-tracking/timesheet-period";
@@ -64,6 +64,12 @@ describe("time-tracking format", () => {
     expect(formatDurationMinutes(90)).toBe("1 h 30 min");
     expect(formatDurationMinutes(120)).toBe("2 h");
     expect(formatDurationMinutes(45)).toBe("45 min");
+  });
+
+  it("formats minutes as h:mm for timesheets", () => {
+    expect(formatDurationHm(90)).toBe("1:30");
+    expect(formatDurationHm(480)).toBe("8:00");
+    expect(formatDurationHm(0)).toBe("0:00");
   });
 
   it("parses duration input variants", () => {

@@ -12,6 +12,7 @@ import {
   Receipt,
   Shield,
   Star,
+  Wallet,
   Wrench,
 } from "lucide-react";
 import type { ProjectSatisfactionBundle } from "@/lib/dashboard/satisfaction-types";
@@ -53,7 +54,7 @@ import {
 import type { Client, ClientInput } from "@/lib/service/types";
 import type { DashboardSpace } from "@/lib/dashboard/types";
 import type { Project } from "@/lib/types";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, formatMoney } from "@/lib/utils";
 
 const SERVICE_REQUEST_URL = "https://www.serwis.luksystem.pl";
 
@@ -389,6 +390,7 @@ export function ClientDashboardHome({
   pendingWarrantyCount,
   changeRequests = [],
   pendingChangeRequestsCount = 0,
+  settlementBalanceNet = null,
   onOpenTab,
   clientSpace = null,
   showPublicLinkPanel = false,
@@ -418,8 +420,17 @@ export function ClientDashboardHome({
   pendingWarrantyCount: number;
   changeRequests?: ProjectChangeRequest[];
   pendingChangeRequestsCount?: number;
+  settlementBalanceNet?: number | null;
   onOpenTab?: (
-    tab: "agreements" | "changes" | "offers" | "process" | "home" | "satisfaction" | "notes",
+    tab:
+      | "agreements"
+      | "changes"
+      | "offers"
+      | "process"
+      | "home"
+      | "satisfaction"
+      | "notes"
+      | "settlements",
   ) => void;
   clientSpace?: DashboardSpace | null;
   /** Panel włączania linku publicznego dashboardu — tylko widok zespołu. */
@@ -461,8 +472,52 @@ export function ClientDashboardHome({
     pendingChangeRequests.some((entry) => isChangeRequestBlockingActive(entry));
   const recentMeetingNotes = meetingNotes.filter((note) => isRecentPublishedMeetingNote(note));
 
+  const settlementTone =
+    settlementBalanceNet == null
+      ? "neutral"
+      : settlementBalanceNet > 0.5
+        ? "danger"
+        : settlementBalanceNet < -0.5
+          ? "success"
+          : "neutral";
+
   return (
     <div className="grid min-w-0 max-w-full gap-4 overflow-x-hidden">
+      {settlementBalanceNet != null ? (
+        <button
+          type="button"
+          onClick={() => onOpenTab?.("settlements")}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition hover:brightness-110",
+            settlementTone === "danger" && "border-rose-500/40 bg-rose-500/10",
+            settlementTone === "success" && "border-emerald-500/40 bg-emerald-500/10",
+            settlementTone === "neutral" && "border-border/70 bg-surface-muted/30",
+          )}
+        >
+          <Wallet
+            className={cn(
+              "h-5 w-5 shrink-0",
+              settlementTone === "danger" && "text-rose-300",
+              settlementTone === "success" && "text-emerald-300",
+              settlementTone === "neutral" && "text-accent",
+            )}
+          />
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-muted">Pozostało do rozliczenia (netto)</p>
+            <p
+              className={cn(
+                "text-lg font-semibold tabular-nums",
+                settlementTone === "danger" && "text-rose-300",
+                settlementTone === "success" && "text-emerald-300",
+                settlementTone === "neutral" && "text-foreground",
+              )}
+            >
+              {formatMoney(settlementBalanceNet)}
+            </p>
+          </div>
+        </button>
+      ) : null}
+
       {readOnly ? (
         <>
           <PublicHomeQuickActions

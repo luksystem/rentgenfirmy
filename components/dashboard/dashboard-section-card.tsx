@@ -20,7 +20,7 @@ export function DashboardSectionCard({
     >
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="text-base font-semibold text-foreground">{section.title}</h2>
+          <h2 className="page-section-title text-base font-semibold">{section.title}</h2>
           <p className="mt-1 text-sm text-muted">{section.description}</p>
         </div>
         {isPlanned ? (

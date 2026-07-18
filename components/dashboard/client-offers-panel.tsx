@@ -189,7 +189,7 @@ export function ClientOffersPanel({
     <div className="grid min-w-0 gap-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-base font-semibold text-foreground">Oferty i rozliczenia</h2>
+          <h2 className="page-section-title text-base font-semibold">Oferty i rozliczenia</h2>
           <p className="text-sm text-muted">
             Rozliczenia serwisu oraz kalkulacje dla tego klienta.
           </p>

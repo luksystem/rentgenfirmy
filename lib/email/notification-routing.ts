@@ -209,6 +209,17 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     supportsSms: false,
     defaults: { email: { user: false, client: false }, push: true, sms: false },
   },
+  {
+    id: "settlement_report",
+    label: "Raport rozliczenia projektu dla klienta",
+    description:
+      "Ręczna wysyłka podsumowania rozliczeń (należności, spłaty, harmonogram, saldo) z linkiem do dashboardu.",
+    category: "projekty",
+    emailAudiences: ["client"],
+    supportsPush: false,
+    supportsSms: false,
+    defaults: { email: { client: true }, push: false, sms: false },
+  },
 ];
 
 export type NotificationRoutingRule = {

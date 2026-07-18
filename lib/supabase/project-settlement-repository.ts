@@ -1,4 +1,5 @@
 import { DEFAULT_AGREEMENT_VAT_RATE, normalizeAgreementVatRate } from "@/lib/dashboard/agreement-cost";
+import type { ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
 import type { ProjectChangeRequest } from "@/lib/dashboard/change-request-types";
 import { getServiceCombinedBilling } from "@/lib/service/report-document";
 import type { ServiceRecord } from "@/lib/service/types";
@@ -9,16 +10,16 @@ import {
   isSettlementSource,
   normalizeSettlementEntryInput,
   type ProjectBillingSettings,
-  type ProjectHourlyReport,
   type ProjectSettlementEntry,
   type ProjectSettlementEntryInput,
   type ProjectSettlementsBundle,
 } from "@/lib/settlements/types";
+import { countBillableWorkMinutes } from "@/lib/time-tracking/project-hour-budget";
 import {
   fetchProjectBillingSettings,
   fetchProjectContractQuotas,
-  fetchProjectHourlyReports,
 } from "@/lib/supabase/project-billing-repository";
+import { fetchProjectAgreements } from "@/lib/supabase/project-agreement-repository";
 import { fetchProjectChangeRequests } from "@/lib/supabase/project-change-request-repository";
 import { getSupabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
@@ -38,6 +39,7 @@ export function rowToSettlementEntry(row: EntryRow): ProjectSettlementEntry {
     kind: isSettlementKind(row.kind) ? row.kind : "charge",
     source: isSettlementSource(row.source) ? row.source : "manual",
     sourceId: row.source_id,
+    processStageId: row.process_stage_id ?? null,
     title: row.title,
     amountNet: num(row.amount_net),
     vatRate: num(row.vat_rate),
@@ -93,7 +95,7 @@ async function fetchServicesForProject(projectId: string): Promise<ServiceRecord
 }
 
 type AutoChargeSeed = {
-  source: "contract" | "offer" | "change_request" | "hourly";
+  source: "contract" | "offer" | "change_request" | "hourly" | "agreement";
   sourceId: string | null;
   title: string;
   amountNet: number;
@@ -102,6 +104,84 @@ type AutoChargeSeed = {
   entryDate: string | null;
   notes?: string;
 };
+
+function agreementChargeSeed(agreement: ProjectClientAgreement): AutoChargeSeed | null {
+  if (agreement.status !== "accepted") {
+    return null;
+  }
+  const net = agreement.proposedCostNet;
+  const gross = agreement.proposedCostGross;
+  if ((net == null || net <= 0) && (gross == null || gross <= 0)) {
+    return null;
+  }
+  const vatRate = normalizeAgreementVatRate(agreement.proposedCostVatRate);
+  const amountNet = net ?? Math.round(((gross ?? 0) / (1 + vatRate / 100)) * 100) / 100;
+  const amountGross = gross ?? Math.round(amountNet * (1 + vatRate / 100) * 100) / 100;
+  if (amountNet <= 0) {
+    return null;
+  }
+  return {
+    source: "agreement",
+    sourceId: agreement.id,
+    title: `Ustalenie: ${agreement.title}`,
+    amountNet,
+    vatRate,
+    amountGross,
+    entryDate: agreement.clientRespondedAt?.slice(0, 10) ?? agreement.updatedAt.slice(0, 10),
+    notes: agreement.costNote ?? undefined,
+  };
+}
+
+async function fetchProjectBillableMinutes(projectId: string): Promise<number> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("time_entries")
+    .select("duration_minutes, status")
+    .eq("project_id", projectId);
+
+  if (error) {
+    if (error.message.toLowerCase().includes("does not exist")) {
+      return 0;
+    }
+    throw new Error(error.message);
+  }
+
+  return countBillableWorkMinutes(
+    (data ?? []).map((row) => ({
+      durationMinutes: Number((row as { duration_minutes?: number }).duration_minutes) || 0,
+      status: String((row as { status?: string }).status ?? ""),
+    })),
+  );
+}
+
+function hourlyUsageChargeSeed(
+  settings: ProjectBillingSettings,
+  usedMinutes: number,
+): AutoChargeSeed | null {
+  if (!settings.hourlyEnabled || settings.hourlyRateNet == null || settings.hourlyRateNet <= 0) {
+    return null;
+  }
+  if (usedMinutes <= 0) {
+    return null;
+  }
+  const hours = Math.round((usedMinutes / 60) * 100) / 100;
+  const money = buildMoneyPayload(
+    Math.round(hours * settings.hourlyRateNet * 100) / 100,
+    settings.contractVatRate ?? DEFAULT_AGREEMENT_VAT_RATE,
+  );
+  if (!money) {
+    return null;
+  }
+  return {
+    source: "hourly",
+    sourceId: null,
+    title: `Zużycie godzin (${hours} h × ${settings.hourlyRateNet} PLN)`,
+    amountNet: money.amountNet,
+    vatRate: money.vatRate,
+    amountGross: money.amountGross,
+    entryDate: new Date().toISOString().slice(0, 10),
+  };
+}
 
 function offerChargeSeed(service: ServiceRecord): AutoChargeSeed | null {
   if (service.clientOffer.status !== "accepted" || !service.clientOfferAcceptedDocument) {
@@ -186,29 +266,6 @@ function contractChargeSeed(settings: ProjectBillingSettings): AutoChargeSeed | 
   };
 }
 
-function hourlyChargeSeed(report: ProjectHourlyReport): AutoChargeSeed | null {
-  if (report.amountNet == null || report.amountNet <= 0) {
-    return null;
-  }
-  const money = buildMoneyPayload(report.amountNet, report.vatRate);
-  if (!money) {
-    return null;
-  }
-  const role = report.roleLabel.trim();
-  return {
-    source: "hourly",
-    sourceId: report.id,
-    title: role
-      ? `Godziny: ${role} (${report.hours} h)`
-      : `Godziny: ${report.hours} h · ${report.workDate}`,
-    amountNet: money.amountNet,
-    vatRate: money.vatRate,
-    amountGross: report.amountGross ?? money.amountGross,
-    entryDate: report.workDate,
-    notes: report.notes || undefined,
-  };
-}
-
 async function upsertAutoCharge(
   projectId: string,
   seed: AutoChargeSeed,
@@ -221,7 +278,7 @@ async function upsertAutoCharge(
       (entry.sourceId ?? null) === (seed.sourceId ?? null),
   );
 
-  // Ręcznie edytowana pozycja — nie nadpisuj
+  // Ręcznie edytowana pozycja — nie nadpisuj kwot, ale źródło nadal „żyje”
   if (match && !match.isAuto) {
     return;
   }
@@ -266,20 +323,14 @@ async function upsertAutoCharge(
   }
 }
 
-async function removeStaleAutoCharges(
+async function removeStaleLinkedCharges(
   existing: ProjectSettlementEntry[],
   keepKeys: Set<string>,
 ): Promise<void> {
+  // Usuwamy powiązane należności gdy zniknie źródło (także po ręcznej edycji kwoty).
+  const linkedSources = new Set(["contract", "offer", "change_request", "hourly", "agreement"]);
   const toRemove = existing.filter((entry) => {
-    if (entry.kind !== "charge" || !entry.isAuto) {
-      return false;
-    }
-    if (
-      entry.source !== "contract" &&
-      entry.source !== "offer" &&
-      entry.source !== "change_request" &&
-      entry.source !== "hourly"
-    ) {
+    if (entry.kind !== "charge" || !linkedSources.has(entry.source)) {
       return false;
     }
     const key = `${entry.source}:${entry.sourceId ?? ""}`;
@@ -304,19 +355,25 @@ async function removeStaleAutoCharges(
 }
 
 export async function syncProjectSettlementCharges(projectId: string): Promise<void> {
-  const [settings, changeRequests, services, hourlyReports, existing] = await Promise.all([
-    fetchProjectBillingSettings(projectId),
-    fetchProjectChangeRequests(projectId).catch(() => [] as ProjectChangeRequest[]),
-    fetchServicesForProject(projectId).catch(() => [] as ServiceRecord[]),
-    fetchProjectHourlyReports(projectId).catch(() => [] as ProjectHourlyReport[]),
-    fetchProjectSettlementEntries(projectId),
-  ]);
+  const [settings, changeRequests, services, agreements, usedMinutes, existing] =
+    await Promise.all([
+      fetchProjectBillingSettings(projectId),
+      fetchProjectChangeRequests(projectId).catch(() => [] as ProjectChangeRequest[]),
+      fetchServicesForProject(projectId).catch(() => [] as ServiceRecord[]),
+      fetchProjectAgreements(projectId).catch(() => [] as ProjectClientAgreement[]),
+      fetchProjectBillableMinutes(projectId).catch(() => 0),
+      fetchProjectSettlementEntries(projectId),
+    ]);
 
   const seeds: AutoChargeSeed[] = [];
   if (settings) {
     const contract = contractChargeSeed(settings);
     if (contract) {
       seeds.push(contract);
+    }
+    const hourly = hourlyUsageChargeSeed(settings, usedMinutes);
+    if (hourly) {
+      seeds.push(hourly);
     }
   }
 
@@ -334,12 +391,10 @@ export async function syncProjectSettlementCharges(projectId: string): Promise<v
     }
   }
 
-  if (settings?.hourlyEnabled) {
-    for (const report of hourlyReports) {
-      const seed = hourlyChargeSeed(report);
-      if (seed) {
-        seeds.push(seed);
-      }
+  for (const agreement of agreements) {
+    const seed = agreementChargeSeed(agreement);
+    if (seed) {
+      seeds.push(seed);
     }
   }
 
@@ -349,7 +404,7 @@ export async function syncProjectSettlementCharges(projectId: string): Promise<v
     await upsertAutoCharge(projectId, seed, existing);
   }
 
-  await removeStaleAutoCharges(existing, keepKeys);
+  await removeStaleLinkedCharges(existing, keepKeys);
 }
 
 export async function fetchProjectSettlementsBundle(
@@ -364,17 +419,16 @@ export async function fetchProjectSettlementsBundle(
     }
   }
 
-  const [settings, quotas, hourlyReports, entries] = await Promise.all([
+  const [settings, quotas, entries] = await Promise.all([
     fetchProjectBillingSettings(projectId),
     fetchProjectContractQuotas(projectId),
-    fetchProjectHourlyReports(projectId),
     fetchProjectSettlementEntries(projectId),
   ]);
 
   return {
     settings: settings ?? emptyBillingSettings(projectId),
     quotas,
-    hourlyReports,
+    hourlyReports: [],
     entries,
   };
 }
@@ -396,6 +450,7 @@ export async function createProjectSettlementEntry(
       kind: normalized.kind,
       source: normalized.source ?? "manual",
       source_id: normalized.sourceId ?? null,
+      process_stage_id: normalized.processStageId ?? null,
       title: normalized.title,
       amount_net: normalized.amountNet,
       vat_rate: normalized.vatRate,
@@ -434,6 +489,7 @@ export async function updateProjectSettlementEntry(
       kind: normalized.kind,
       source: normalized.source ?? "manual",
       source_id: normalized.sourceId ?? null,
+      process_stage_id: normalized.processStageId ?? null,
       title: normalized.title,
       amount_net: normalized.amountNet,
       vat_rate: normalized.vatRate,

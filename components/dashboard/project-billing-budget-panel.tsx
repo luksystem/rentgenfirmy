@@ -13,18 +13,15 @@ import {
   normalizeAgreementVatRate,
   type ContractQuotaUnit,
   type ProjectContractQuota,
-  type ProjectHourlyReport,
 } from "@/lib/settlements/types";
-import { formatDate, formatMoney } from "@/lib/utils";
 import { useProjectSettlementStore } from "@/store/project-settlement-store";
 
 export function ProjectBillingBudgetPanel({
   projectId,
-  actorName,
   readOnly = false,
 }: {
   projectId: string;
-  actorName: string;
+  actorName?: string;
   readOnly?: boolean;
 }) {
   const bundle = useProjectSettlementStore((state) => state.byProject[projectId]);
@@ -34,19 +31,18 @@ export function ProjectBillingBudgetPanel({
   const addQuota = useProjectSettlementStore((state) => state.addQuota);
   const updateQuota = useProjectSettlementStore((state) => state.updateQuota);
   const removeQuota = useProjectSettlementStore((state) => state.removeQuota);
-  const addHourlyReport = useProjectSettlementStore((state) => state.addHourlyReport);
-  const updateHourlyReport = useProjectSettlementStore((state) => state.updateHourlyReport);
-  const removeHourlyReport = useProjectSettlementStore((state) => state.removeHourlyReport);
 
   const settings = bundle?.settings ?? emptyBillingSettings(projectId);
   const quotas = bundle?.quotas ?? [];
-  const hourlyReports = bundle?.hourlyReports ?? [];
 
   const [fixedPriceEnabled, setFixedPriceEnabled] = useState(settings.fixedPriceEnabled);
   const [hourlyEnabled, setHourlyEnabled] = useState(settings.hourlyEnabled);
   const [contractNet, setContractNet] = useState<number | null>(settings.contractAmountNet);
   const [contractVat, setContractVat] = useState(
     normalizeAgreementVatRate(settings.contractVatRate ?? DEFAULT_AGREEMENT_VAT_RATE),
+  );
+  const [hourlyRateNet, setHourlyRateNet] = useState<string>(
+    settings.hourlyRateNet != null ? String(settings.hourlyRateNet) : "",
   );
   const [notes, setNotes] = useState(settings.notes);
   const [saving, setSaving] = useState(false);
@@ -56,15 +52,8 @@ export function ProjectBillingBudgetPanel({
   const [quotaQty, setQuotaQty] = useState("0");
   const [quotaUnit, setQuotaUnit] = useState<ContractQuotaUnit>("hours");
 
-  const [hourDate, setHourDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [hourHours, setHourHours] = useState("1");
-  const [hourRole, setHourRole] = useState("");
-  const [hourNet, setHourNet] = useState("");
-  const [hourVat, setHourVat] = useState(String(DEFAULT_AGREEMENT_VAT_RATE));
-  const [hourNotes, setHourNotes] = useState("");
-
   useEffect(() => {
-    void ensureSettlements(projectId, { sync: !readOnly }).catch(() => undefined);
+    void ensureSettlements(projectId, { sync: !readOnly, force: !readOnly }).catch(() => undefined);
   }, [ensureSettlements, projectId, readOnly]);
 
   useEffect(() => {
@@ -77,6 +66,9 @@ export function ProjectBillingBudgetPanel({
     setContractVat(
       normalizeAgreementVatRate(bundle.settings.contractVatRate ?? DEFAULT_AGREEMENT_VAT_RATE),
     );
+    setHourlyRateNet(
+      bundle.settings.hourlyRateNet != null ? String(bundle.settings.hourlyRateNet) : "",
+    );
     setNotes(bundle.settings.notes);
   }, [bundle?.settings]);
 
@@ -85,11 +77,13 @@ export function ProjectBillingBudgetPanel({
     setSaving(true);
     setError(null);
     try {
+      const rateRaw = hourlyRateNet.trim() ? Number(hourlyRateNet) : null;
       await saveBillingSettings(projectId, {
         fixedPriceEnabled,
         hourlyEnabled,
         contractAmountNet: contractNet,
         contractVatRate: contractVat,
+        hourlyRateNet: rateRaw != null && Number.isFinite(rateRaw) ? rateRaw : null,
         notes,
       });
     } catch (err) {
@@ -110,29 +104,6 @@ export function ProjectBillingBudgetPanel({
     setQuotaQty("0");
   }
 
-  async function handleAddHourly() {
-    if (readOnly) return;
-    const hours = Number(hourHours);
-    if (!Number.isFinite(hours) || hours < 0) return;
-    const netRaw = hourNet.trim() ? Number(hourNet) : null;
-    await addHourlyReport(
-      projectId,
-      {
-        workDate: hourDate,
-        hours,
-        roleLabel: hourRole,
-        amountNet: netRaw,
-        vatRate: Number(hourVat) || DEFAULT_AGREEMENT_VAT_RATE,
-        notes: hourNotes,
-      },
-      actorName,
-    );
-    setHourHours("1");
-    setHourRole("");
-    setHourNet("");
-    setHourNotes("");
-  }
-
   if (loading && !bundle) {
     return <p className="text-sm text-muted">Ładowanie budżetu…</p>;
   }
@@ -140,7 +111,7 @@ export function ProjectBillingBudgetPanel({
   return (
     <div className="grid min-w-0 gap-6">
       <section className="grid gap-3">
-        <h3 className="text-sm font-semibold text-foreground">Model rozliczenia</h3>
+        <h3 className="page-section-subtitle text-sm">Model rozliczenia</h3>
         <div className="flex flex-wrap gap-4 text-sm">
           <label className="inline-flex items-center gap-2">
             <input
@@ -158,16 +129,16 @@ export function ProjectBillingBudgetPanel({
               disabled={readOnly}
               onChange={(event) => setHourlyEnabled(event.target.checked)}
             />
-            Godzinowo (zużycie czasu / materiału)
+            Godzinowo (czas pracy z zakładki Czas pracy)
           </label>
         </div>
         {fixedPriceEnabled || hourlyEnabled ? (
           <p className="text-xs text-muted">
             {fixedPriceEnabled && hourlyEnabled
-              ? "Oba tryby: kwota umowy jest bazą, do której dokładane są pozycje godzinowe i inne należności."
+              ? "Oba tryby: kwota umowy jest bazą, a zużycie godzin z czasu pracy dokładane jest według stawki."
               : fixedPriceEnabled
                 ? "Rozliczenie według kwoty umowy głównej."
-                : "Rozliczenie według raportowanych godzin (docelowo z czasu pracy zadań)."}
+                : "Zużycie godzin pobierane jest z wpisów czasu pracy projektu i porównywane z polami kontraktu."}
           </p>
         ) : null}
 
@@ -185,6 +156,20 @@ export function ProjectBillingBudgetPanel({
           </div>
         ) : null}
 
+        {hourlyEnabled ? (
+          <Field label="Stawka godzinowa netto (PLN/h)">
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={hourlyRateNet}
+              disabled={readOnly}
+              placeholder="np. 180"
+              onChange={(event) => setHourlyRateNet(event.target.value)}
+            />
+          </Field>
+        ) : null}
+
         <Field label="Notatki do budżetu">
           <Textarea
             value={notes}
@@ -199,15 +184,16 @@ export function ProjectBillingBudgetPanel({
             <Button type="button" onClick={() => void handleSaveSettings()} disabled={saving}>
               {saving ? "Zapisywanie…" : "Zapisz budżet"}
             </Button>
-            {error ? <p className="text-sm text-rose-500">{error}</p> : null}
+            {error ? <p className="text-sm text-rose-400">{error}</p> : null}
           </div>
         ) : null}
       </section>
 
       <section className="grid gap-3">
-        <h3 className="text-sm font-semibold text-foreground">Pola w ramach kontraktu</h3>
+        <h3 className="page-section-subtitle text-sm">Pola w ramach kontraktu</h3>
         <p className="text-xs text-muted">
-          Np. godziny programisty, godziny instalatora, przyjazdy nadzoru na budowę.
+          Np. godziny programisty, godziny instalatora, przyjazdy nadzoru — porównywane w rozliczeniu z
+          czasem pracy.
         </p>
         {quotas.length === 0 ? (
           <p className="text-sm text-muted">Brak zdefiniowanych pól.</p>
@@ -255,82 +241,6 @@ export function ProjectBillingBudgetPanel({
           </div>
         ) : null}
       </section>
-
-      {hourlyEnabled ? (
-        <section className="grid gap-3">
-          <h3 className="text-sm font-semibold text-foreground">Raportowanie godzin</h3>
-          <p className="text-xs text-muted">
-            Na razie ręczne wpisy. Docelowo pozycje będą brane z czasu pracy zadań.
-          </p>
-          {hourlyReports.length === 0 ? (
-            <p className="text-sm text-muted">Brak raportów godzin.</p>
-          ) : (
-            <ul className="grid gap-2">
-              {hourlyReports.map((report) => (
-                <HourlyRow
-                  key={report.id}
-                  report={report}
-                  readOnly={readOnly}
-                  onSave={(input) => void updateHourlyReport(projectId, report.id, input)}
-                  onDelete={() => void removeHourlyReport(projectId, report.id)}
-                />
-              ))}
-            </ul>
-          )}
-          {!readOnly ? (
-            <div className="grid gap-2 rounded-xl border border-border/70 p-3 sm:grid-cols-2">
-              <Field label="Data">
-                <Input
-                  type="date"
-                  value={hourDate}
-                  onChange={(event) => setHourDate(event.target.value)}
-                />
-              </Field>
-              <Field label="Godziny">
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.25"
-                  value={hourHours}
-                  onChange={(event) => setHourHours(event.target.value)}
-                />
-              </Field>
-              <Field label="Rola / opis">
-                <Input
-                  value={hourRole}
-                  placeholder="np. programista"
-                  onChange={(event) => setHourRole(event.target.value)}
-                />
-              </Field>
-              <Field label="Kwota netto (opcjonalnie)">
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={hourNet}
-                  onChange={(event) => setHourNet(event.target.value)}
-                />
-              </Field>
-              <Field label="VAT %">
-                <Select value={hourVat} onChange={(event) => setHourVat(event.target.value)}>
-                  <option value="0">0%</option>
-                  <option value="8">8%</option>
-                  <option value="23">23%</option>
-                </Select>
-              </Field>
-              <Field label="Notatka">
-                <Input value={hourNotes} onChange={(event) => setHourNotes(event.target.value)} />
-              </Field>
-              <div className="sm:col-span-2">
-                <Button type="button" onClick={() => void handleAddHourly()}>
-                  <Plus className="mr-1 h-4 w-4" />
-                  Dodaj raport godzin
-                </Button>
-              </div>
-            </div>
-          ) : null}
-        </section>
-      ) : null}
     </div>
   );
 }
@@ -408,67 +318,6 @@ function QuotaRow({
         <Button type="button" variant="ghost" size="sm" onClick={onDelete} aria-label="Usuń">
           <Trash2 className="h-4 w-4" />
         </Button>
-      ) : null}
-    </li>
-  );
-}
-
-function HourlyRow({
-  report,
-  readOnly,
-  onSave,
-  onDelete,
-}: {
-  report: ProjectHourlyReport;
-  readOnly: boolean;
-  onSave: (input: {
-    workDate: string;
-    hours: number;
-    roleLabel?: string;
-    amountNet?: number | null;
-    vatRate?: number | null;
-    notes?: string;
-  }) => void;
-  onDelete: () => void;
-}) {
-  return (
-    <li className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/60 px-3 py-2 text-sm">
-      <div>
-        <p className="font-medium text-foreground">
-          {formatDate(report.workDate)} · {report.hours} h
-          {report.roleLabel ? ` · ${report.roleLabel}` : ""}
-        </p>
-        <p className="text-xs text-muted">
-          {report.amountNet != null
-            ? `netto ${formatMoney(report.amountNet)} · VAT ${report.vatRate ?? 0}% · brutto ${formatMoney(report.amountGross ?? 0)}`
-            : "Bez wyceny kwotowej"}
-          {report.notes ? ` — ${report.notes}` : ""}
-        </p>
-      </div>
-      {!readOnly ? (
-        <div className="flex gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              onSave({
-                workDate: report.workDate,
-                hours: report.hours,
-                roleLabel: report.roleLabel,
-                amountNet: report.amountNet,
-                vatRate: report.vatRate,
-                notes: report.notes,
-              })
-            }
-            className="hidden"
-          >
-            Zapisz
-          </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={onDelete} aria-label="Usuń">
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
       ) : null}
     </li>
   );

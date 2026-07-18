@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Select } from "@/components/ui/input";
-import { TimeDailyBreakdownTable } from "@/components/time-tracking/time-daily-breakdown-table";
+import { TimePeriodEmployeeSummaryTable } from "@/components/time-tracking/time-period-employee-summary-table";
 import { TimeEmployeeProjectBreakdown } from "@/components/time-tracking/time-employee-project-breakdown";
 import { TimePeriodReport } from "@/components/time-tracking/time-period-report";
 import { TimePeriodBalanceCard } from "@/components/time-tracking/time-period-balance-card";
@@ -219,7 +219,6 @@ export function TimeTimesheetViewPage() {
             />
           ) : null}
 
-          <TimeDailyBreakdownTable rows={summary?.dailyBreakdown ?? []} />
           <TimePeriodBalanceCard balance={summary?.balance ?? null} periodType={timesheetPeriod.periodType} />
           <TimeEmployeeProjectBreakdown
             entries={summary?.entries ?? []}
@@ -239,17 +238,50 @@ export function TimeTimesheetViewPage() {
       )}
 
       {canManageTeam ? (
-        <TimeTeamPeriodMatrix
-          detail={teamPeriodDetail}
-          loading={teamPeriodDetailLoading}
-          selectedUserId={timesheetUserId ?? profile?.id}
-          onSelectEmployee={(userId) => {
-            if (userId === profile?.id) {
-              setTimesheetUserId(undefined);
-            } else {
-              setTimesheetUserId(userId);
-            }
-          }}
+        <div className="grid gap-4">
+          <TimeTeamPeriodMatrix
+            detail={teamPeriodDetail}
+            loading={teamPeriodDetailLoading}
+            selectedUserId={timesheetUserId ?? profile?.id}
+            onSelectEmployee={(userId) => {
+              if (userId === profile?.id) {
+                setTimesheetUserId(undefined);
+              } else {
+                setTimesheetUserId(userId);
+              }
+            }}
+          />
+          <TimePeriodEmployeeSummaryTable
+            rows={teamPeriodDetail?.employees ?? []}
+            periodLabel={periodLabel}
+            selectedUserId={timesheetUserId ?? profile?.id}
+            onSelectEmployee={(userId) => {
+              if (userId === profile?.id) {
+                setTimesheetUserId(undefined);
+              } else {
+                setTimesheetUserId(userId);
+              }
+            }}
+          />
+        </div>
+      ) : summary ? (
+        <TimePeriodEmployeeSummaryTable
+          rows={[
+            {
+              userId: profile?.id ?? "",
+              userDisplayName: profile?.firstName
+                ? `${profile.firstName} ${profile.lastName}`.trim()
+                : "Ja",
+              status: summary.timesheet?.status,
+              workMinutes: summary.report.workMinutes,
+              absenceMinutes: summary.report.absenceMinutes,
+              billableMinutes: summary.report.billableMinutes,
+              totalMinutes: summary.report.totalMinutes,
+              entryCount: summary.report.entryCount,
+            },
+          ]}
+          periodLabel={periodLabel}
+          showStatus={Boolean(summary.timesheet)}
         />
       ) : null}
     </>

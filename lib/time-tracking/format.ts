@@ -13,6 +13,16 @@ export function formatDurationMinutes(totalMinutes: number): string {
   return `${hours} h ${minutes} min`;
 }
 
+/** Format arkusza: godziny w układzie h:mm (np. 8:00, 1:30). */
+export function formatDurationHm(totalMinutes: number): string {
+  if (totalMinutes <= 0) {
+    return "0:00";
+  }
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}:${String(minutes).padStart(2, "0")}`;
+}
+
 export function parseDurationInput(value: string): number | null {
   const trimmed = value.trim().toLowerCase();
   if (!trimmed) {

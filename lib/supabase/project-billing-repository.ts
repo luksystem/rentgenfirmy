@@ -31,6 +31,7 @@ export function rowToBillingSettings(row: SettingsRow): ProjectBillingSettings {
     contractVatRate:
       row.contract_vat_rate != null ? normalizeAgreementVatRate(Number(row.contract_vat_rate)) : null,
     contractAmountGross: num(row.contract_amount_gross),
+    hourlyRateNet: num(row.hourly_rate_net),
     currency: row.currency || "PLN",
     notes: row.notes ?? "",
     createdAt: row.created_at,
@@ -106,6 +107,7 @@ export async function upsertProjectBillingSettings(
         contract_amount_net: input.contractAmountNet ?? null,
         contract_vat_rate: vatRate,
         contract_amount_gross: input.contractAmountGross ?? null,
+        hourly_rate_net: input.hourlyRateNet ?? null,
         currency: input.currency?.trim() || "PLN",
         notes: input.notes?.trim() ?? "",
         updated_at: now,

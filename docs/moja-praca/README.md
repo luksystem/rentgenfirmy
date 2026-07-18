@@ -10,6 +10,7 @@ Moduł **Moja praca** to osobisty pulpit operacyjny pracownika i managera w Rent
 | [INSTRUKCJA_MANAGER.md](./INSTRUKCJA_MANAGER.md) | Tworzenie zadań, pulpit, weryfikacja, plany — dla managera |
 | [ARCHITEKTURA.md](./ARCHITEKTURA.md) | Model danych, warstwy, adaptery, uprawnienia |
 | [STAN_WDROZENIA.md](./STAN_WDROZENIA.md) | Co jest wdrożone (Etapy 1–5) |
+| [CZAS_PRACY.md](./CZAS_PRACY.md) | Dokumentacja modułu Czas pracy — funkcje, API, przepływy |
 | [TEST_RECZNY.md](./TEST_RECZNY.md) | Scenariusze testów manualnych |
 
 ## Trasy aplikacji
@@ -19,7 +20,8 @@ Moduł **Moja praca** to osobisty pulpit operacyjny pracownika i managera w Rent
 | `/moja-praca/zadania` | Lista / Kanban zadań, plan dnia/tygodnia | Wszyscy |
 | `/moja-praca/pulpit` | Dashboard managera (KPI, kolejki) | Manager / admin |
 | `/moja-praca/dostepnosc` | Urlopy i dostępność | Wszyscy |
-| `/moja-praca/czas-pracy` | *(planowane)* | — |
+| `/moja-praca/czas-pracy` | Ewidencja czasu, timer, propozycje z planu | Wszyscy |
+| `/moja-praca/czas-pracy/arkusz` | Arkusz okresowy, macierz zespołu | Wszyscy / manager |
 
 ## Etapy wdrożenia
 

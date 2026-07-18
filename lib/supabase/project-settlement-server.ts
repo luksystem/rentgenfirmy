@@ -94,6 +94,9 @@ export async function fetchProjectSettlementsBundleServer(
             ? normalizeAgreementVatRate(Number(settingsRow.contract_vat_rate))
             : null,
         contractAmountGross: num(settingsRow.contract_amount_gross),
+        hourlyRateNet: num(
+          (settingsRow as { hourly_rate_net?: number | string | null }).hourly_rate_net,
+        ),
         currency: settingsRow.currency || "PLN",
         notes: settingsRow.notes ?? "",
         createdAt: settingsRow.created_at,
@@ -157,6 +160,7 @@ export async function fetchProjectSettlementsBundleServer(
     kind: string;
     source: string;
     source_id: string | null;
+    process_stage_id?: string | null;
     title: string;
     amount_net: number | string;
     vat_rate: number | string;
@@ -177,6 +181,7 @@ export async function fetchProjectSettlementsBundleServer(
     kind: isSettlementKind(row.kind) ? row.kind : "charge",
     source: isSettlementSource(row.source) ? row.source : "manual",
     sourceId: row.source_id,
+    processStageId: row.process_stage_id ?? null,
     title: row.title,
     amountNet: Number(row.amount_net) || 0,
     vatRate: Number(row.vat_rate) || 0,
