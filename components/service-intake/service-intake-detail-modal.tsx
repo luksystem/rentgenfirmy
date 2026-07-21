@@ -15,6 +15,7 @@ import { useMentionOptionsFromProfiles } from "@/hooks/use-team-mention-options"
 import { profileToOptionLabel } from "@/lib/supabase/profile-repository";
 import { CAFE_PRIORITY_OPTIONS } from "@/lib/service-intake/cafe-priorities";
 import {
+  canDeleteServiceIntake,
   canManageServiceIntakeBoard,
   serviceIntakePrimaryAction,
 } from "@/lib/service-intake/status-permissions";
@@ -125,6 +126,7 @@ export function ServiceIntakeDetailModal({
   open,
   onOpenChange,
   onUpdated,
+  onDeleted,
 }: {
   intakeId: string | null;
   authorName: string;
@@ -132,6 +134,7 @@ export function ServiceIntakeDetailModal({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdated?: (item: ServiceIntakeRecord) => void;
+  onDeleted?: (id: string) => void;
 }) {
   const [thread, setThread] = useState<ServiceIntakeThread | null>(null);
   const [loading, setLoading] = useState(false);
@@ -143,6 +146,7 @@ export function ServiceIntakeDetailModal({
   const [assigneeIdDraft, setAssigneeIdDraft] = useState("");
   const profile = useAuthStore((state) => state.profile);
   const canManageBoard = canManageServiceIntakeBoard(profile?.role);
+  const canDelete = canDeleteServiceIntake(profile?.role);
   const { candidates, mentionOptions } = useMentionOptionsFromProfiles(teamProfiles);
 
   const loadThread = useCallback(async () => {
@@ -298,6 +302,37 @@ export function ServiceIntakeDetailModal({
       onUpdated?.(updated);
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Błąd.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteIntake() {
+    if (!intakeId || !intake || !canDelete) {
+      return;
+    }
+    if (
+      !window.confirm(
+        `Trwale usunąć zgłoszenie ${intake.referenceNumber}? Tej operacji nie można cofnąć.`,
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/service-intake/${encodeURIComponent(intakeId)}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się usunąć zgłoszenia.");
+      }
+      onDeleted?.(intakeId);
+      onOpenChange(false);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Błąd.");
     } finally {
       setBusy(false);
     }
@@ -660,6 +695,16 @@ export function ServiceIntakeDetailModal({
                   onClick={() => void changeStatus("in_review")}
                 >
                   Otwórz ponownie
+                </Button>
+              ) : null}
+              {canDelete ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={busy}
+                  onClick={() => void deleteIntake()}
+                >
+                  Usuń zgłoszenie
                 </Button>
               ) : null}
             </div>

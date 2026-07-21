@@ -1265,6 +1265,28 @@ export async function updateServiceIntakeStatus(id: string, status: ServiceIntak
   return updateServiceIntake(id, { status });
 }
 
+export async function deleteServiceIntake(id: string) {
+  const supabase = getSupabaseAdmin();
+
+  const { data: existing, error: existingError } = await supabase
+    .from("service_intake_requests")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+  if (!existing) {
+    throw new Error("Nie znaleziono zgłoszenia.");
+  }
+
+  const { error } = await supabase.from("service_intake_requests").delete().eq("id", id);
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export async function getServiceIntakeThreadByToken(token: string): Promise<ServiceIntakeThread | null> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase

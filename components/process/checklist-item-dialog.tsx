@@ -79,7 +79,7 @@ export function ChecklistItemDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <TopAnchoredDialogContent className="p-0">
-        <div className="flex max-h-[inherit] flex-col">
+        <div className="flex min-h-0 flex-1 flex-col">
           <DialogHeader className="shrink-0 border-b border-border/60 px-5 pb-4 pt-5 pr-12">
             <div className="flex flex-wrap items-start gap-2">
               <span className={cn("mt-1 h-2.5 w-2.5 shrink-0 rounded-full", currentStyles.dot)} />

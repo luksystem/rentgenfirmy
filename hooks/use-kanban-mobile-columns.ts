@@ -26,11 +26,15 @@ export function useKanbanMobileColumns(columns: Array<{ id: string }>) {
 
   const scrollToColumn = useCallback((columnId: string) => {
     setActiveColumnId(columnId);
-    columnRefs.current[columnId]?.scrollIntoView({
-      behavior: "smooth",
-      inline: "center",
-      block: "nearest",
-    });
+    const scroller = scrollerRef.current;
+    const column = columnRefs.current[columnId];
+    if (!scroller || !column) {
+      return;
+    }
+    // Tylko poziomy scroll kontenera — scrollIntoView na mobile pociąga też stronę i dolne menu.
+    const targetLeft =
+      column.offsetLeft - Math.max(0, (scroller.clientWidth - column.clientWidth) / 2);
+    scroller.scrollTo({ left: Math.max(0, targetLeft), behavior: "smooth" });
   }, []);
 
   useEffect(() => {

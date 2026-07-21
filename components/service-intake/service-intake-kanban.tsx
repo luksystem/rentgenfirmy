@@ -620,6 +620,11 @@ export function ServiceIntakeKanban({
     );
   }
 
+  function handleItemDeleted(id: string) {
+    setItems((current) => current.filter((entry) => entry.id !== id));
+    setSelectedId(null);
+  }
+
   if (loading) {
     return (
       <p className="flex items-center gap-2 text-sm text-muted">
@@ -832,6 +837,7 @@ export function ServiceIntakeKanban({
           }
         }}
         onUpdated={handleItemUpdated}
+        onDeleted={handleItemDeleted}
       />
     </div>
   );

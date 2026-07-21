@@ -168,10 +168,16 @@ export function ProcessItemPanel({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent fullscreen={isFullscreen}>
-        <DialogHeader className={isFullscreen ? "min-w-0 shrink-0 pb-2" : undefined}>
-          <DialogTitle className="flex items-center gap-2">
+        <DialogHeader
+          className={cn(
+            isFullscreen &&
+              "sticky top-0 z-20 -mx-4 mb-0 shrink-0 border-b border-border/60 bg-surface-elevated px-4 pb-3 pt-1 sm:-mx-5 sm:px-5",
+            isFullscreen ? "min-w-0" : undefined,
+          )}
+        >
+          <DialogTitle className="flex items-center gap-2 pr-2">
             <Icon className="h-5 w-5 shrink-0 text-accent" />
-            {item.title}
+            <span className="min-w-0 truncate">{item.title}</span>
           </DialogTitle>
           {!isInternalAcceptance ? (
             <DialogDescription>{PROCESS_ITEM_KIND_LABELS[item.kind]}</DialogDescription>
@@ -186,6 +192,7 @@ export function ProcessItemPanel({
               : "grid gap-4",
             isFullscreen && item.kind !== "kanban" && "min-h-0 flex-1 overflow-y-auto overscroll-y-contain",
             showMobileNavPadding && "pb-24",
+            isFullscreen && "pt-3",
           )}
         >
           {showResponsible && isChecklistInteractive ? (

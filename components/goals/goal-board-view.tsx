@@ -47,6 +47,35 @@ import { useGoalStore, EMPTY_GOALS, EMPTY_GOAL_CARD_META } from "@/store/goal-st
 import { GoalAiBulkImportPanel } from "@/components/goals/goal-ai-bulk-import-panel";
 
 const DENSITY_STORAGE_KEY = "goals-card-density";
+const DENSITY_STORAGE_KEY_MOBILE = "goals-card-density-mobile";
+
+function isGoalsBoardMobileViewport() {
+  return typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
+}
+
+function densityStorageKey(isMobile: boolean) {
+  return isMobile ? DENSITY_STORAGE_KEY_MOBILE : DENSITY_STORAGE_KEY;
+}
+
+function readStoredGoalCardDensity(): "normal" | "slim" {
+  const isMobile = isGoalsBoardMobileViewport();
+  const key = densityStorageKey(isMobile);
+  try {
+    const stored = window.localStorage.getItem(key);
+    if (stored === "slim" || stored === "normal") {
+      return stored;
+    }
+    if (!isMobile) {
+      const legacy = window.localStorage.getItem(DENSITY_STORAGE_KEY);
+      if (legacy === "slim" || legacy === "normal") {
+        return legacy;
+      }
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return isMobile ? "slim" : "normal";
+}
 
 function goalBoardFiltersStorageKey(boardId: string) {
   return `goal-board-filters:${boardId}`;
@@ -96,7 +125,7 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
   const [showCancelled, setShowCancelled] = useState(false);
   const [showSettled, setShowSettled] = useState(false);
   const [filters, setFilters] = useState<GoalBoardFilters>(EMPTY_GOAL_BOARD_FILTERS);
-  const [density, setDensity] = useState<"normal" | "slim">("normal");
+  const [density, setDensity] = useState<"normal" | "slim">("slim");
   const [openGoal, setOpenGoal] = useState<Goal | null>(null);
   const [settlementGateGoal, setSettlementGateGoal] = useState<Goal | null>(null);
 
@@ -105,10 +134,7 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
   }, [boardId, ensureBoardGoals]);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(DENSITY_STORAGE_KEY);
-    if (stored === "slim" || stored === "normal") {
-      setDensity(stored);
-    }
+    setDensity(readStoredGoalCardDensity());
   }, []);
 
   useEffect(() => {
@@ -121,7 +147,7 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
 
   function handleDensityChange(next: "normal" | "slim") {
     setDensity(next);
-    window.localStorage.setItem(DENSITY_STORAGE_KEY, next);
+    window.localStorage.setItem(densityStorageKey(isGoalsBoardMobileViewport()), next);
   }
 
   const activeFilterCount = countActiveGoalBoardFilters(filters);
@@ -236,13 +262,17 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
           </div>
         </div>
 
-        <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
-          <div className="flex min-w-0 flex-1 items-center overflow-hidden rounded-lg border border-border/70 sm:flex-none">
+        <div className="grid w-full min-w-0 gap-2">
+          <div
+            className="flex w-full items-center overflow-hidden rounded-lg border border-border/70"
+            role="group"
+            aria-label="Gęstość kart celów"
+          >
             <button
               type="button"
               onClick={() => handleDensityChange("normal")}
               className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition sm:flex-none",
+                "flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition",
                 density === "normal" ? "bg-accent text-accent-foreground" : "text-muted hover:bg-surface-muted",
               )}
             >
@@ -253,7 +283,7 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
               type="button"
               onClick={() => handleDensityChange("slim")}
               className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition sm:flex-none",
+                "flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition",
                 density === "slim" ? "bg-accent text-accent-foreground" : "text-muted hover:bg-surface-muted",
               )}
             >
@@ -261,41 +291,43 @@ export function GoalBoardView({ boardId }: { boardId: string }) {
               Slim
             </button>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="min-w-0 flex-1 sm:flex-none"
-            onClick={() => setShowSettled((current) => !current)}
-          >
-            {showSettled ? <EyeOff className="mr-2 h-4 w-4 shrink-0" /> : <Eye className="mr-2 h-4 w-4 shrink-0" />}
-            <span className="truncate">{showSettled ? "Ukryj rozliczone" : "Pokaż rozliczone"}</span>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="min-w-0 flex-1 sm:flex-none"
-            onClick={() => setShowCancelled((current) => !current)}
-          >
-            {showCancelled ? <EyeOff className="mr-2 h-4 w-4 shrink-0" /> : <Eye className="mr-2 h-4 w-4 shrink-0" />}
-            <span className="truncate">{showCancelled ? "Ukryj anulowane" : "Pokaż anulowane"}</span>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="min-w-0 sm:flex-none"
-            disabled={isLoading}
-            onClick={() => void ensureBoardGoals(boardId, { force: true })}
-          >
-            {isLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            Odśwież
-          </Button>
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="min-w-0 flex-1 sm:flex-none"
+              onClick={() => setShowSettled((current) => !current)}
+            >
+              {showSettled ? <EyeOff className="mr-2 h-4 w-4 shrink-0" /> : <Eye className="mr-2 h-4 w-4 shrink-0" />}
+              <span className="truncate">{showSettled ? "Ukryj rozliczone" : "Pokaż rozliczone"}</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="min-w-0 flex-1 sm:flex-none"
+              onClick={() => setShowCancelled((current) => !current)}
+            >
+              {showCancelled ? <EyeOff className="mr-2 h-4 w-4 shrink-0" /> : <Eye className="mr-2 h-4 w-4 shrink-0" />}
+              <span className="truncate">{showCancelled ? "Ukryj anulowane" : "Pokaż anulowane"}</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="min-w-0 flex-1 sm:flex-none"
+              disabled={isLoading}
+              onClick={() => void ensureBoardGoals(boardId, { force: true })}
+            >
+              {isLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Odśwież
+            </Button>
+          </div>
         </div>
       </div>
 

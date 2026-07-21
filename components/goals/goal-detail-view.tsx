@@ -328,6 +328,7 @@ function OverviewTab({
   const [periodStart, setPeriodStart] = useState(goal.periodStart.slice(0, 10));
   const [periodEnd, setPeriodEnd] = useState(goal.periodEnd.slice(0, 10));
   const [projectId, setProjectId] = useState<string | null>(goal.projectId);
+  const [isRecurring, setIsRecurring] = useState(goal.isRecurring);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [statusSaving, setStatusSaving] = useState(false);
@@ -340,7 +341,24 @@ function OverviewTab({
   useEffect(() => {
     setStatus(goal.status);
     setProgress(goal.progressPercent);
-  }, [goal.id, goal.status, goal.progressPercent]);
+    setIsRecurring(goal.isRecurring);
+  }, [goal.id, goal.status, goal.progressPercent, goal.isRecurring]);
+
+  function beginEditing() {
+    setName(goal.name);
+    setDescription(goal.description);
+    setPriority(goal.priority);
+    setOwnerId(goal.ownerId ?? "");
+    setStatus(goal.status);
+    setProgress(goal.progressPercent);
+    setPeriodStart(goal.periodStart.slice(0, 10));
+    setPeriodEnd(goal.periodEnd.slice(0, 10));
+    setProjectId(goal.projectId);
+    setIsRecurring(goal.isRecurring);
+    setNote("");
+    setError(null);
+    setEditing(true);
+  }
 
   async function applyStatusChange(nextStatus: GoalStatus) {
     if (nextStatus === goal.status) {
@@ -402,6 +420,7 @@ function OverviewTab({
         periodStart,
         periodEnd,
         projectId,
+        isRecurring,
       });
       let final = updated;
       if (status !== goal.status || progress !== goal.progressPercent) {
@@ -526,7 +545,7 @@ function OverviewTab({
             {error ? <p className="text-sm text-rose-400">{error}</p> : null}
 
             <div>
-              <Button type="button" variant="secondary" onClick={() => setEditing(true)}>
+              <Button type="button" variant="secondary" onClick={beginEditing}>
                 Edytuj
               </Button>
             </div>
@@ -658,6 +677,22 @@ function OverviewTab({
                 className="min-w-0 max-w-full"
               />
             </div>
+            <label className="flex items-start gap-2 text-sm text-foreground/90">
+              <input
+                type="checkbox"
+                checked={isRecurring}
+                onChange={(event) => setIsRecurring(event.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-border"
+              />
+              <span>
+                Cel cykliczny — po rozliczeniu automatycznie utwórz następny okres
+                {!isRecurring && goal.isRecurring ? (
+                  <span className="mt-0.5 block text-xs text-amber-300/90">
+                    Wyłączenie cykliczności zatrzyma tworzenie kolejnych okresów po rozliczeniu.
+                  </span>
+                ) : null}
+              </span>
+            </label>
             <Field label="Notatka do zmiany (opcjonalnie)" className="min-w-0">
               <Textarea
                 className="min-w-0 max-w-full"

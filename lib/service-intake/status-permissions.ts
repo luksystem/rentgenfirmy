@@ -1,5 +1,9 @@
 import { HttpError } from "@/lib/auth/http-error";
-import { hasFullAppAccess, type UserRole } from "@/lib/auth/types";
+import {
+  hasFullAppAccess,
+  isAdministratorRole,
+  type UserRole,
+} from "@/lib/auth/types";
 import type { ServiceIntakeStatus } from "@/lib/service-intake/types";
 
 /** Dozwolone przejścia etapu dla instalatora / ról bez pełnego dostępu (dedykowane CTA). */
@@ -13,6 +17,11 @@ const WORKER_STATUS_TRANSITIONS: Partial<
 
 export function canManageServiceIntakeBoard(role: UserRole | null | undefined) {
   return role ? hasFullAppAccess(role) : false;
+}
+
+/** Trwałe usuwanie zgłoszenia — tylko administrator, na każdym etapie. */
+export function canDeleteServiceIntake(role: UserRole | null | undefined) {
+  return role ? isAdministratorRole(role) : false;
 }
 
 export function isServiceIntakeWorkerTransitionAllowed(

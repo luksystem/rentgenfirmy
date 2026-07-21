@@ -626,12 +626,12 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="mx-auto w-full min-w-0 max-w-[1500px] overflow-x-clip px-4 py-4 pb-28 sm:px-5 sm:py-6 sm:pb-28 xl:px-8 xl:pb-6">
+        <main className="mx-auto w-full min-w-0 max-w-[1500px] overflow-x-clip overscroll-x-none px-4 py-4 pb-28 sm:px-5 sm:py-6 sm:pb-28 xl:px-8 xl:pb-6 xl:overscroll-x-auto">
           {children}
         </main>
 
         <>
-        <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 xl:hidden">
+        <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 isolate transform-gpu xl:hidden">
           <div className="mx-auto grid max-w-lg grid-cols-5 rounded-2xl border border-border bg-surface-elevated/95 px-1 py-1 shadow-card backdrop-blur-xl">
             {mobileNavLeft.map((item) => {
               const Icon = item.icon;

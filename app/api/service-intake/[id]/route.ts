@@ -8,10 +8,12 @@ import {
 } from "@/lib/service-intake/types";
 import {
   assertServiceIntakeStatusChangeAllowed,
+  canDeleteServiceIntake,
   canManageServiceIntakeBoard,
 } from "@/lib/service-intake/status-permissions";
 import {
   addServiceIntakeTeamComment,
+  deleteServiceIntake,
   getServiceIntakeThreadById,
   updateServiceIntake,
 } from "@/lib/supabase/service-intake-server";
@@ -129,6 +131,23 @@ export async function POST(
       body: body.message ?? "",
     });
     return NextResponse.json({ comment });
+  } catch (error) {
+    return jsonError(error);
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { profile } = await requireAuthenticatedProfile();
+    if (!canDeleteServiceIntake(profile.role)) {
+      throw new HttpError(403, "Tylko administrator może usunąć zgłoszenie.");
+    }
+    const { id } = await context.params;
+    await deleteServiceIntake(id);
+    return NextResponse.json({ ok: true });
   } catch (error) {
     return jsonError(error);
   }
