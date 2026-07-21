@@ -110,6 +110,13 @@ export function ProjectSettlementsPanel({
     [changeRequests, entries, offerSummaries, projectId, projectServices, settings],
   );
 
+  const pendingOriginLines = useMemo(
+    () => [...originBreakdown.changeRequests.pending, ...originBreakdown.offers.pending],
+    [originBreakdown],
+  );
+  const pendingOriginNetTotal =
+    originBreakdown.changeRequests.pendingNetTotal + originBreakdown.offers.pendingNetTotal;
+
   const [editing, setEditing] = useState<ProjectSettlementEntry | null>(null);
   const [creatingKind, setCreatingKind] = useState<SettlementKind | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -131,6 +138,16 @@ export function ProjectSettlementsPanel({
       ? `${origin}/przestrzen/${publicDashboardToken}?projectId=${encodeURIComponent(projectId)}&tab=settlements`
       : null;
 
+  const pendingEmailItems = useMemo(
+    () =>
+      pendingOriginLines.map((line) => ({
+        title: line.title,
+        amountNet: line.amountNet,
+        publicUrl: line.publicPath && origin ? `${origin}${line.publicPath}` : null,
+      })),
+    [pendingOriginLines, origin],
+  );
+
   const emailPreview = useMemo(
     () =>
       buildSettlementReportEmail({
@@ -139,8 +156,17 @@ export function ProjectSettlementsPanel({
         entries,
         publicUrl: publicSettlementsUrl,
         hourBudget: settings?.hourlyEnabled ? hourBudget : null,
+        pendingItems: pendingEmailItems,
       }),
-    [clientName, entries, hourBudget, project?.name, publicSettlementsUrl, settings?.hourlyEnabled],
+    [
+      clientName,
+      entries,
+      hourBudget,
+      pendingEmailItems,
+      project?.name,
+      publicSettlementsUrl,
+      settings?.hourlyEnabled,
+    ],
   );
 
   const paidScheduleIds = useMemo(() => {
@@ -425,6 +451,42 @@ export function ProjectSettlementsPanel({
           emphasize
         />
       </div>
+
+      {pendingOriginLines.length > 0 ? (
+        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+          <p className="text-xs font-medium text-amber-100/90">Niezaakceptowane do rozliczenia (netto)</p>
+          <p className="mt-1 text-lg font-semibold tabular-nums text-amber-200">
+            {formatMoney(pendingOriginNetTotal)}
+          </p>
+          <p className="mt-1 text-[11px] leading-snug text-amber-100/80">
+            Suma zmian projektowych i szybkich ofert oczekujących na decyzję klienta — jeszcze nie w
+            saldzie powyżej.
+          </p>
+          <ul className="mt-2 grid gap-1">
+            {pendingOriginLines.map((line) => (
+              <li
+                key={line.id}
+                className="flex flex-wrap items-center justify-between gap-2 text-xs text-amber-100/90"
+              >
+                <span className="truncate">{line.title}</span>
+                <span className="flex items-center gap-2 tabular-nums">
+                  {line.amountNet != null ? `${formatMoney(line.amountNet)} netto` : "bez kwoty"}
+                  {line.publicPath ? (
+                    <a
+                      href={line.publicPath}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-amber-200 underline"
+                    >
+                      Akceptacja
+                    </a>
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <SettlementOriginBreakdownCard breakdown={originBreakdown} />
 

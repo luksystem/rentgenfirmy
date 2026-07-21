@@ -3,11 +3,12 @@ import {
   type ClientOfferSummary,
 } from "@/lib/dashboard/client-offer-summary";
 import {
+  getChangeRequestPublicPath,
   isChangeRequestPendingAttention,
   PROJECT_CHANGE_REQUEST_STATUS_LABELS,
   type ProjectChangeRequest,
 } from "@/lib/dashboard/change-request-types";
-import { CLIENT_OFFER_STATUS_LABELS } from "@/lib/service/client-offer";
+import { CLIENT_OFFER_STATUS_LABELS, getClientOfferPublicPath } from "@/lib/service/client-offer";
 import type { ServiceRecord } from "@/lib/service/types";
 import type { ProjectBillingSettings, ProjectSettlementEntry } from "@/lib/settlements/types";
 
@@ -22,6 +23,8 @@ export type SettlementOriginLine = {
   amountGross: number | null;
   /** Już jako należność w ledgerze rozliczeń. */
   inLedger: boolean;
+  /** Ścieżka publicznej strony akceptacji (bez originu) — null gdy brak aktywnego linku. */
+  publicPath: string | null;
 };
 
 export type SettlementOriginGroup = {
@@ -107,6 +110,7 @@ export function buildSettlementOriginBreakdown(input: {
           amountNet: contractAmountNet,
           amountGross: contractAmountGross,
           inLedger: Boolean(contractCharge),
+          publicPath: null,
         }
       : null;
 
@@ -131,6 +135,10 @@ export function buildSettlementOriginBreakdown(input: {
       amountNet: change.proposedCostNet,
       amountGross: change.proposedCostGross,
       inLedger: ledgerHasSource(entries, "change_request", change.id),
+      publicPath:
+        change.publicEnabled && change.publicToken
+          ? getChangeRequestPublicPath(change.publicToken)
+          : null,
     };
 
     if (change.status === "accepted") {
@@ -167,6 +175,8 @@ export function buildSettlementOriginBreakdown(input: {
       amountNet: offer.amountNet,
       amountGross: offer.amountGross,
       inLedger: ledgerHasSource(entries, "offer", offer.id),
+      publicPath:
+        offer.canRespond && offer.offerToken ? getClientOfferPublicPath(offer.offerToken) : null,
     };
 
     if (isAccepted) {
@@ -193,6 +203,7 @@ export function buildSettlementOriginBreakdown(input: {
       amountNet: entry.amountNet,
       amountGross: entry.amountGross,
       inLedger: true,
+      publicPath: null,
     });
   }
 
@@ -212,6 +223,7 @@ export function buildSettlementOriginBreakdown(input: {
       amountNet: entry.amountNet,
       amountGross: entry.amountGross,
       inLedger: true,
+      publicPath: null,
     });
   }
 

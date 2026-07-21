@@ -62,3 +62,6 @@ __pycache__/
 # Core Orchestrator — staging i cache buildu (artefakty w generated/<version>/ sa commitowane)
 /generated/.staging/
 /generated/.cache/
+
+.vercel
+.env*

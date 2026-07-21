@@ -92,14 +92,62 @@ function buildHourBudgetHtml(budget: ProjectHourBudgetSummary) {
     ${lines}`;
 }
 
+export type SettlementPendingEmailItem = {
+  title: string;
+  amountNet: number | null;
+  publicUrl: string | null;
+};
+
+function buildPendingItemsHtml(items: SettlementPendingEmailItem[]) {
+  if (items.length === 0) {
+    return "";
+  }
+  const pendingTotal = items.reduce((sum, item) => sum + (item.amountNet ?? 0), 0);
+  const rows = items
+    .map((item) => {
+      const link = item.publicUrl
+        ? `<a href="${escapeEmailHtml(item.publicUrl)}" style="color:#92400e;font-weight:600;text-decoration:underline;">Zobacz i zaakceptuj →</a>`
+        : "";
+      return `<tr>
+        <td style="padding:8px;border-bottom:1px solid #fde68a;">${escapeEmailHtml(item.title)}</td>
+        <td style="padding:8px;border-bottom:1px solid #fde68a;text-align:right;">${
+          item.amountNet != null ? escapeEmailHtml(money(item.amountNet)) : "—"
+        }</td>
+        <td style="padding:8px;border-bottom:1px solid #fde68a;text-align:right;">${link}</td>
+      </tr>`;
+    })
+    .join("");
+
+  return `<div style="margin:20px 0;padding:14px 16px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;">
+    <h2 style="font-size:15px;margin:0 0 4px;color:#92400e;">Niezaakceptowane do rozliczenia</h2>
+    <p style="margin:0 0 10px;color:#92400e;font-size:13px;">
+      Suma oczekujących na Twoją decyzję: <strong>${escapeEmailHtml(money(pendingTotal))}</strong> netto —
+      nie jest jeszcze wliczona do salda "Pozostało".
+    </p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:8px;color:#92400e;">Pozycja</th>
+          <th style="text-align:right;padding:8px;color:#92400e;">Netto</th>
+          <th style="text-align:right;padding:8px;color:#92400e;">Akcja</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
 export function buildSettlementReportEmail(input: {
   clientName: string;
   projectName: string;
   entries: ProjectSettlementEntry[];
   publicUrl?: string | null;
   hourBudget?: ProjectHourBudgetSummary | null;
+  pendingItems?: SettlementPendingEmailItem[];
 }) {
   const summary = buildSettlementSummary(input.entries);
+  const pendingItems = input.pendingItems ?? [];
+  const pendingNetTotal = pendingItems.reduce((sum, item) => sum + (item.amountNet ?? 0), 0);
   const charges = input.entries.filter((e) => e.kind === "charge");
   const payments = input.entries.filter((e) => e.kind === "payment");
   const schedule = input.entries.filter((e) => e.kind === "schedule");
@@ -123,6 +171,11 @@ export function buildSettlementReportEmail(input: {
 
   const balanceColor = summary.balanceNet > 0.5 ? "#be123c" : summary.balanceNet < -0.5 ? "#047857" : "#374151";
   const hourBudgetHtml = input.hourBudget ? buildHourBudgetHtml(input.hourBudget) : "";
+  const pendingItemsHtml = buildPendingItemsHtml(pendingItems);
+  const pendingRowHtml =
+    pendingItems.length > 0
+      ? `<tr><td style="padding:6px 0;color:#92400e;">Niezaakceptowane (netto)</td><td style="text-align:right;font-weight:700;color:#92400e;">${escapeEmailHtml(money(pendingNetTotal))}</td></tr>`
+      : "";
 
   const html = `<div style="font-family:system-ui,sans-serif;color:#111827;line-height:1.5;max-width:640px;margin:0 auto;">
     <h1 style="font-size:20px;margin:0 0 8px;">Rozliczenie projektu</h1>
@@ -131,9 +184,11 @@ export function buildSettlementReportEmail(input: {
       <tr><td style="padding:6px 0;color:#6b7280;">Do zapłaty (netto)</td><td style="text-align:right;font-weight:600;">${escapeEmailHtml(money(summary.chargesNet))}</td></tr>
       <tr><td style="padding:6px 0;color:#6b7280;">Zapłacono (netto)</td><td style="text-align:right;font-weight:600;">${escapeEmailHtml(money(summary.paidNet))}</td></tr>
       <tr><td style="padding:6px 0;color:#6b7280;">Pozostało</td><td style="text-align:right;font-weight:700;color:${balanceColor};">${escapeEmailHtml(money(summary.balanceNet))}</td></tr>
+      ${pendingRowHtml}
       <tr><td style="padding:6px 0;color:#6b7280;">Harmonogram (netto)</td><td style="text-align:right;font-weight:600;">${escapeEmailHtml(money(summary.scheduleNet))}</td></tr>
     </table>
     ${hourBudgetHtml}
+    ${pendingItemsHtml}
     ${link}
     <h2 style="font-size:15px;margin:24px 0 8px;">Należności</h2>
     <table style="width:100%;border-collapse:collapse;font-size:13px;">

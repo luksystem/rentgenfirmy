@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 import type {
   SettlementOriginBreakdown,
   SettlementOriginGroup,
@@ -35,6 +37,17 @@ function OriginLineRow({ line }: { line: SettlementOriginLine }) {
           {line.tone === "accepted" ? "Zaakceptowane" : line.tone === "pending" ? "Oczekuje" : "Baza"}
         </span>
         <p className="text-sm font-semibold tabular-nums text-foreground">{formatOriginAmount(line)}</p>
+        {line.publicPath ? (
+          <Link
+            href={line.publicPath}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+          >
+            Otwórz do akceptacji
+            <ExternalLink className="h-3 w-3" />
+          </Link>
+        ) : null}
       </div>
     </li>
   );

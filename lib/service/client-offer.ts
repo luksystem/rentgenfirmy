@@ -109,9 +109,13 @@ export function canClientAskAboutOffer(service: Pick<ServiceRecord, "clientOffer
   );
 }
 
+export function getClientOfferPublicPath(token: string) {
+  return `/oferta/${encodeURIComponent(token)}`;
+}
+
 export function getClientOfferUrl(token: string, origin?: string) {
   const base = origin ?? (typeof window !== "undefined" ? window.location.origin : "");
-  return `${base}/oferta/${token}`;
+  return `${base}${getClientOfferPublicPath(token)}`;
 }
 
 export function statusAfterClientOfferAction(action: ClientOfferAction): ServiceStatus {

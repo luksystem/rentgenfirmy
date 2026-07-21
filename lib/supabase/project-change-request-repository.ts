@@ -7,7 +7,7 @@ import { normalizeProjectChangeRequestInput } from "@/lib/dashboard/change-reque
 import { getSupabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
 
-type ChangeRequestRow = Database["public"]["Tables"]["project_change_requests"]["Row"];
+export type ChangeRequestRow = Database["public"]["Tables"]["project_change_requests"]["Row"];
 
 export type PublicChangeRequestBundle = {
   changeRequest: ProjectChangeRequest;
@@ -16,7 +16,7 @@ export type PublicChangeRequestBundle = {
   linkActive: boolean;
 };
 
-function rowToChangeRequest(row: ChangeRequestRow): ProjectChangeRequest {
+export function rowToChangeRequest(row: ChangeRequestRow): ProjectChangeRequest {
   return {
     id: row.id,
     projectId: row.project_id,

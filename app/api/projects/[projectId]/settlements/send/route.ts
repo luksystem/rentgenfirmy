@@ -1,13 +1,22 @@
 import { NextResponse } from "next/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
+import { buildClientOfferSummaries } from "@/lib/dashboard/client-offer-summary";
 import { buildSettlementReportEmail } from "@/lib/email/settlement-templates";
 import { isEmailAudienceEnabled } from "@/lib/email/notification-routing";
 import { sendTransactionalEmail } from "@/lib/email/send";
+import { absoluteAppUrl } from "@/lib/messages/app-url";
 import { formatPartyName } from "@/lib/party/display-name";
+import { buildSettlementOriginBreakdown } from "@/lib/settlements/origin-breakdown";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { fetchEmailSettingsServer } from "@/lib/supabase/email-settings-server";
+import {
+  rowToChangeRequest,
+  type ChangeRequestRow,
+} from "@/lib/supabase/project-change-request-repository";
 import { fetchProjectSettlementsBundleServer } from "@/lib/supabase/project-settlement-server";
+import { rowToService } from "@/lib/supabase/service-mappers";
+import type { ServiceRow } from "@/lib/supabase/database.types";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 
@@ -67,13 +76,44 @@ export async function POST(request: Request, context: RouteContext) {
           lastName: client.last_name ?? "",
         })
       : "Klient";
+    const projectName = String((project as { name?: string }).name ?? "Projekt");
+
+    const [changeRequestResult, serviceResult] = await Promise.all([
+      admin.from("project_change_requests").select("*").eq("project_id", projectId),
+      admin.from("services").select("*").eq("project_id", projectId),
+    ]);
+    const changeRequestRows = changeRequestResult.error ? [] : changeRequestResult.data ?? [];
+    const serviceRows = serviceResult.error ? [] : serviceResult.data ?? [];
+    const changeRequests = changeRequestRows.map((row) => rowToChangeRequest(row as ChangeRequestRow));
+    const projectNames = new Map([[projectId, projectName]]);
+    const offerSummaries = buildClientOfferSummaries(
+      serviceRows.map((row) => rowToService(row as ServiceRow)),
+      projectNames,
+      { projectId },
+    );
+
+    const originBreakdown = buildSettlementOriginBreakdown({
+      projectId,
+      settings: bundle.settings,
+      entries: bundle.entries,
+      changeRequests,
+      offerSummaries,
+    });
+    const pendingItems = [...originBreakdown.changeRequests.pending, ...originBreakdown.offers.pending].map(
+      (line) => ({
+        title: line.title,
+        amountNet: line.amountNet,
+        publicUrl: line.publicPath ? absoluteAppUrl(line.publicPath) : null,
+      }),
+    );
 
     const email = buildSettlementReportEmail({
       clientName,
-      projectName: String((project as { name?: string }).name ?? "Projekt"),
+      projectName,
       entries: bundle.entries,
       publicUrl: body.publicUrl,
       hourBudget: bundle.settings?.hourlyEnabled ? bundle.hourBudget ?? null : null,
+      pendingItems,
     });
 
     const result = await sendTransactionalEmail({
