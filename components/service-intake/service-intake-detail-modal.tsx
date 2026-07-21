@@ -42,6 +42,7 @@ import {
   type ServiceIntakeThread,
 } from "@/lib/service-intake/types";
 import { serviceIntakeAttachmentLabel } from "@/lib/service-intake/attachment-display";
+import { buildServiceIntakeOfferHref } from "@/lib/service-intake/offer-link";
 import { cn, formatDate, formatDateTime, formatMoney } from "@/lib/utils";
 import { ServiceIntakeSettlementDialog } from "@/components/service-intake/service-intake-settlement-dialog";
 import { ServiceIntakeStuckDialog } from "@/components/service-intake/service-intake-stuck-dialog";
@@ -877,7 +878,9 @@ export function ServiceIntakeDetailModal({
                     <Link href={`/oferty/${intake.serviceId}`}>Otwórz rozliczenie</Link>
                   ) : (
                     <Link
-                      href={`/oferty/nowy?clientId=${intake.clientId ?? ""}&projectId=${intake.projectId ?? ""}`}
+                      href={buildServiceIntakeOfferHref(intake, {
+                        extraCosts: Boolean(intake.extraCosts),
+                      })}
                     >
                       Utwórz ofertę
                     </Link>

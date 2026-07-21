@@ -15,6 +15,7 @@ function NewOfferPageContent() {
   const clientId = searchParams.get("clientId");
   const contactId = searchParams.get("contactId");
   const projectId = searchParams.get("projectId");
+  const title = searchParams.get("title");
   const clients = useAppStore((state) => state.clients);
   const contacts = useAppStore((state) => state.contacts);
   const createEmptyService = useServiceStore((state) => state.createEmptyService);
@@ -22,11 +23,12 @@ function NewOfferPageContent() {
   const initialService = useMemo(() => {
     const base = createEmptyService();
     const resolvedProjectId = projectId && projectId.length > 0 ? projectId : null;
+    const resolvedTitle = title?.trim() ? title.trim() : base.title;
 
     if (contactId) {
       const contact = contacts.find((entry) => entry.id === contactId);
       if (!contact) {
-        return base;
+        return { ...base, title: resolvedTitle };
       }
 
       return {
@@ -35,16 +37,17 @@ function NewOfferPageContent() {
         contactId,
         projectId: resolvedProjectId,
         client: contactToServiceClient(contact),
+        title: resolvedTitle,
       };
     }
 
     if (!clientId) {
-      return base;
+      return { ...base, title: resolvedTitle };
     }
 
     const client = clients.find((entry) => entry.id === clientId);
     if (!client) {
-      return base;
+      return { ...base, title: resolvedTitle };
     }
 
     return {
@@ -53,8 +56,9 @@ function NewOfferPageContent() {
       contactId: null,
       projectId: resolvedProjectId,
       client: clientToServiceClient(client),
+      title: resolvedTitle,
     };
-  }, [clientId, contactId, clients, contacts, createEmptyService, projectId]);
+  }, [clientId, contactId, clients, contacts, createEmptyService, projectId, title]);
 
   const [service] = useState(initialService);
 

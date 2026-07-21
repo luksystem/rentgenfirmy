@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, Select, Textarea } from "@/components/ui/input";
+import { buildServiceIntakeOfferHref } from "@/lib/service-intake/offer-link";
 import {
   SERVICE_INTAKE_RESOLUTION_OUTCOME_LABELS,
   SERVICE_INTAKE_RESOLUTION_OUTCOMES,
@@ -114,13 +117,27 @@ export function ServiceIntakeSettlementDialog({
           </Field>
 
           {extraCosts ? (
-            <Field label="Notatka o kosztach (opcjonalnie)">
-              <Textarea
-                value={extraCostsNote}
-                onChange={(event) => setExtraCostsNote(event.target.value)}
-                rows={2}
-              />
-            </Field>
+            <>
+              <Field label="Notatka o kosztach (opcjonalnie)">
+                <Textarea
+                  value={extraCostsNote}
+                  onChange={(event) => setExtraCostsNote(event.target.value)}
+                  rows={2}
+                />
+              </Field>
+              {intake.serviceId ? (
+                <Button asChild variant="outline" className="justify-self-start">
+                  <Link href={`/oferty/${intake.serviceId}`}>Otwórz rozliczenie</Link>
+                </Button>
+              ) : (
+                <Button asChild variant="outline" className="justify-self-start">
+                  <Link href={buildServiceIntakeOfferHref(intake, { extraCosts: true })}>
+                    Utwórz ofertę — koszty dodatkowe
+                    <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              )}
+            </>
           ) : null}
 
           {error ? <p className="text-sm text-rose-300">{error}</p> : null}
