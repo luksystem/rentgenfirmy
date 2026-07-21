@@ -2462,14 +2462,44 @@ export type Database = {
             "integration_id" | "password_ciphertext" | "password_iv" | "password_tag"
           >;
         Update: Partial<ProjectIntegrationSecretRow>;
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "project_integration_secrets_integration_id_fkey";
+            columns: ["integration_id"];
+            isOneToOne: false;
+            referencedRelation: "project_integrations";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       project_telemetry: {
         Row: ProjectTelemetryRow;
         Insert: Partial<ProjectTelemetryRow> &
           Pick<ProjectTelemetryRow, "project_id" | "integration_id" | "online_status">;
         Update: Partial<ProjectTelemetryRow>;
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "project_telemetry_integration_id_fkey";
+            columns: ["integration_id"];
+            isOneToOne: false;
+            referencedRelation: "project_integrations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "project_telemetry_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "project_telemetry_integration_variable_id_fkey";
+            columns: ["integration_variable_id"];
+            isOneToOne: false;
+            referencedRelation: "project_integration_variables";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       project_integration_audit_log: {
         Row: ProjectIntegrationAuditLogRow;
@@ -3066,7 +3096,22 @@ export type Database = {
         Row: GoalReviewRow;
         Insert: Partial<GoalReviewRow> & Pick<GoalReviewRow, "goal_id" | "scheduled_at">;
         Update: Partial<GoalReviewRow>;
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "goal_reviews_goal_id_fkey";
+            columns: ["goal_id"];
+            isOneToOne: false;
+            referencedRelation: "goals";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "goal_reviews_closed_by_fkey";
+            columns: ["closed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       goal_initiatives: {
         Row: GoalInitiativeRow;
