@@ -236,22 +236,45 @@ async function fetchClientProjects(clientId: string) {
   return (data ?? []).map(rowToProject);
 }
 
-async function nextReferenceNumber() {
+async function nextReferenceNumberFallback() {
   const supabase = getSupabaseAdmin();
   const year = new Date().getFullYear();
   const prefix = `ZS-${year}-`;
 
-  const { count, error } = await supabase
+  // Używaj MAX numeru, nie COUNT — przy lukach (np. usunięte ZS-…-0003) count+1
+  // koliduje z istniejącym max (np. ZS-2026-0011).
+  const { data, error } = await supabase
     .from("service_intake_requests")
-    .select("id", { count: "exact", head: true })
+    .select("reference_number")
     .like("reference_number", `${prefix}%`);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  const sequence = String((count ?? 0) + 1).padStart(4, "0");
-  return `${prefix}${sequence}`;
+  let maxSeq = 0;
+  for (const row of data ?? []) {
+    const value = String(row.reference_number ?? "");
+    if (!value.startsWith(prefix)) {
+      continue;
+    }
+    const suffix = value.slice(prefix.length);
+    if (!/^\d+$/.test(suffix)) {
+      continue;
+    }
+    maxSeq = Math.max(maxSeq, Number(suffix));
+  }
+
+  return `${prefix}${String(maxSeq + 1).padStart(4, "0")}`;
+}
+
+async function nextReferenceNumber() {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.rpc("next_service_intake_reference_number");
+  if (!error && typeof data === "string" && data.trim()) {
+    return data.trim();
+  }
+  return nextReferenceNumberFallback();
 }
 
 function normalizeWorkPreference(value: unknown): ServiceIntakeWorkPreference | null {
