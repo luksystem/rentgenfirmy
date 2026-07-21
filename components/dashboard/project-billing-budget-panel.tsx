@@ -145,6 +145,9 @@ export function ProjectBillingBudgetPanel({
         {fixedPriceEnabled ? (
           <div className="rounded-xl border border-border/70 p-3">
             <p className="mb-2 text-xs font-medium text-muted">Kwota umowy głównej</p>
+            <p className="mb-2 text-xs text-muted">
+              Ta sama kwota co pozycja „Umowa główna” w rozliczeniach — zapis aktualizuje obie.
+            </p>
             <AgreementCostFields
               net={contractNet}
               vatRate={contractVat}

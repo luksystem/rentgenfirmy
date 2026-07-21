@@ -4,7 +4,7 @@ import {
 } from "@/lib/service/client-offer";
 import type { ServiceOfferListTone } from "@/lib/service/client-offer-history";
 import { isPublicOfferAvailable } from "@/lib/supabase/client-offer-repository";
-import { isServiceSettled } from "@/lib/service/report-document";
+import { getServiceCombinedBilling, isServiceSettled } from "@/lib/service/report-document";
 import type { ServiceRecord, ServiceStatus } from "@/lib/service/types";
 
 export type ClientOfferSummary = {
@@ -22,6 +22,11 @@ export type ClientOfferSummary = {
   expiresAt: string | null;
   canRespond: boolean;
   isSettlement: boolean;
+  /** Kwota netto (zaakceptowana lub bieżąca wycena). */
+  amountNet: number | null;
+  /** Kwota brutto (zaakceptowana lub bieżąca wycena). */
+  amountGross: number | null;
+  vatRate: number | null;
 };
 
 export function getClientOfferSummaryTone(summary: ClientOfferSummary): ServiceOfferListTone | null {
@@ -54,11 +59,37 @@ export function isClientOfferPendingAttention(summary: ClientOfferSummary) {
   );
 }
 
+function resolveOfferAmounts(service: ServiceRecord): {
+  amountNet: number | null;
+  amountGross: number | null;
+  vatRate: number | null;
+} {
+  const accepted = service.clientOfferAcceptedDocument;
+  if (accepted) {
+    return {
+      amountNet: accepted.netTotal ?? null,
+      amountGross: accepted.grossTotal ?? null,
+      vatRate: accepted.vatRate ?? null,
+    };
+  }
+  try {
+    const billing = getServiceCombinedBilling(service);
+    return {
+      amountNet: billing.netTotal,
+      amountGross: billing.grossTotal,
+      vatRate: null,
+    };
+  } catch {
+    return { amountNet: null, amountGross: null, vatRate: null };
+  }
+}
+
 export function buildClientOfferSummary(
   service: ServiceRecord,
   projectNames: Map<string, string>,
 ): ClientOfferSummary {
   const offerStatus = service.clientOffer.status;
+  const amounts = resolveOfferAmounts(service);
   return {
     id: service.id,
     title: service.title.trim() || "Oferta serwisowa",
@@ -74,6 +105,9 @@ export function buildClientOfferSummary(
     expiresAt: service.clientOffer.expiresAt,
     canRespond: isPublicOfferAvailable(service),
     isSettlement: isServiceSettled(service) || service.status === "Do rozliczenia",
+    amountNet: amounts.amountNet,
+    amountGross: amounts.amountGross,
+    vatRate: amounts.vatRate,
   };
 }
 

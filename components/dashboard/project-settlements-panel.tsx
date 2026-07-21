@@ -14,6 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { AgreementCostFields } from "@/components/dashboard/agreement-cost-fields";
+import { SettlementOriginBreakdownCard } from "@/components/dashboard/settlement-origin-breakdown";
 import { ProjectHourBudgetCard } from "@/components/time-tracking/project-hour-budget-card";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +26,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import type { ClientOfferSummary } from "@/lib/dashboard/client-offer-summary";
+import type { ProjectChangeRequest } from "@/lib/dashboard/change-request-types";
 import { buildSettlementReportEmail } from "@/lib/email/settlement-templates";
+import { buildSettlementOriginBreakdown } from "@/lib/settlements/origin-breakdown";
 import {
   addDaysIso,
   buildSettlementSummary,
@@ -42,6 +46,7 @@ import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template"
 import { cn, formatDate, formatMoney } from "@/lib/utils";
 import { useProcessStore } from "@/store/process-store";
 import { useProjectSettlementStore } from "@/store/project-settlement-store";
+import { useServiceStore } from "@/store/service-store";
 import { useAppStore } from "@/store/app-store";
 
 const KIND_SECTIONS: SettlementKind[] = ["charge", "sales_invoice", "payment", "schedule"];
@@ -53,6 +58,8 @@ export function ProjectSettlementsPanel({
   publicDashboardToken,
   clientEmail,
   clientName,
+  changeRequests = [],
+  offerSummaries,
 }: {
   projectId: string;
   actorName: string;
@@ -60,6 +67,9 @@ export function ProjectSettlementsPanel({
   publicDashboardToken?: string;
   clientEmail?: string | null;
   clientName?: string;
+  changeRequests?: ProjectChangeRequest[];
+  /** Publiczny link / seed — gdy brak, w trybie zespołu bierzemy oferty ze store. */
+  offerSummaries?: ClientOfferSummary[];
 }) {
   const bundle = useProjectSettlementStore((state) => state.byProject[projectId]);
   const loading = useProjectSettlementStore((state) => state.loadingProjects[projectId]);
@@ -70,6 +80,7 @@ export function ProjectSettlementsPanel({
 
   const projects = useAppStore((state) => state.projects);
   const project = projects.find((entry) => entry.id === projectId);
+  const allServices = useServiceStore((state) => state.services);
   const process = useProcessStore((state) => state.projectProcesses[projectId] ?? null);
   const template = useProcessStore((state) =>
     project ? state.getTemplateByProjectType(project.type) ?? null : null,
@@ -82,6 +93,22 @@ export function ProjectSettlementsPanel({
   const entries = bundle?.entries ?? [];
   const settings = bundle?.settings;
   const summary = useMemo(() => buildSettlementSummary(entries), [entries]);
+  const projectServices = useMemo(
+    () => allServices.filter((service) => service.projectId === projectId),
+    [allServices, projectId],
+  );
+  const originBreakdown = useMemo(
+    () =>
+      buildSettlementOriginBreakdown({
+        projectId,
+        settings,
+        entries,
+        changeRequests,
+        services: offerSummaries ? undefined : projectServices,
+        offerSummaries,
+      }),
+    [changeRequests, entries, offerSummaries, projectId, projectServices, settings],
+  );
 
   const [editing, setEditing] = useState<ProjectSettlementEntry | null>(null);
   const [creatingKind, setCreatingKind] = useState<SettlementKind | null>(null);
@@ -400,6 +427,8 @@ export function ProjectSettlementsPanel({
           emphasize
         />
       </div>
+
+      <SettlementOriginBreakdownCard breakdown={originBreakdown} />
 
       <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         <SummaryCard
@@ -824,8 +853,14 @@ function EntryForm({
           value={title}
           className="min-w-0 max-w-full"
           onChange={(event) => setTitle(event.target.value)}
+          disabled={initial?.source === "contract"}
         />
       </Field>
+      {initial?.source === "contract" ? (
+        <p className="text-xs text-muted">
+          Kwota umowy głównej — zapis aktualizuje też Budżet projektu.
+        </p>
+      ) : null}
       <AgreementCostFields
         net={net}
         vatRate={vatRate}

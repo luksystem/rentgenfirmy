@@ -985,6 +985,8 @@ export function ClientDashboardView({
             }
             clientEmail={client.email || null}
             clientName={formatPartyName(client)}
+            changeRequests={enableChangeRequests ? changeRequestSource : []}
+            offerSummaries={readOnly ? seedOffers : undefined}
           />
         </div>
       </div>

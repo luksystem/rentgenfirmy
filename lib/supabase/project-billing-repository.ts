@@ -124,6 +124,28 @@ export async function upsertProjectBillingSettings(
   return rowToBillingSettings(data as SettingsRow);
 }
 
+/** Aktualizuje tylko kwotę umowy głównej — zachowuje pozostałe ustawienia budżetu. */
+export async function updateProjectBillingContractAmount(
+  projectId: string,
+  input: {
+    contractAmountNet: number;
+    contractVatRate: number;
+    contractAmountGross: number;
+  },
+): Promise<ProjectBillingSettings> {
+  const existing = (await fetchProjectBillingSettings(projectId)) ?? emptyBillingSettings(projectId);
+  return upsertProjectBillingSettings(projectId, {
+    fixedPriceEnabled: true,
+    hourlyEnabled: existing.hourlyEnabled,
+    contractAmountNet: input.contractAmountNet,
+    contractVatRate: input.contractVatRate,
+    contractAmountGross: input.contractAmountGross,
+    hourlyRateNet: existing.hourlyRateNet,
+    currency: existing.currency,
+    notes: existing.notes,
+  });
+}
+
 export async function fetchProjectContractQuotas(projectId: string): Promise<ProjectContractQuota[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase

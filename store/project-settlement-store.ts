@@ -272,13 +272,14 @@ export const useProjectSettlementStore = create<ProjectSettlementStore>((set, ge
   },
 
   updateEntry: async (projectId, entryId, input) => {
-    const updated = await updateProjectSettlementEntry(entryId, input);
+    const { entry: updated, settings } = await updateProjectSettlementEntry(entryId, input);
     loadTokens.set(projectId, (loadTokens.get(projectId) ?? 0) + 1);
     const current = get().byProject[projectId];
     patchBundle(
       projectId,
       {
         entries: (current?.entries ?? []).map((entry) => (entry.id === entryId ? updated : entry)),
+        ...(settings ? { settings } : {}),
       },
       get,
       set,

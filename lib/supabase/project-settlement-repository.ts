@@ -18,6 +18,7 @@ import { countBillableWorkMinutes } from "@/lib/time-tracking/project-hour-budge
 import {
   fetchProjectBillingSettings,
   fetchProjectContractQuotas,
+  updateProjectBillingContractAmount,
 } from "@/lib/supabase/project-billing-repository";
 import { fetchProjectAgreements } from "@/lib/supabase/project-agreement-repository";
 import { fetchProjectChangeRequests } from "@/lib/supabase/project-change-request-repository";
@@ -278,8 +279,9 @@ async function upsertAutoCharge(
       (entry.sourceId ?? null) === (seed.sourceId ?? null),
   );
 
-  // Ręcznie edytowana pozycja — nie nadpisuj kwot, ale źródło nadal „żyje”
-  if (match && !match.isAuto) {
+  // Ręcznie edytowana pozycja — nie nadpisuj kwot, ale źródło nadal „żyje”.
+  // Wyjątek: Umowa główna zawsze spójna z budżetem projektu.
+  if (match && !match.isAuto && seed.source !== "contract") {
     return;
   }
 
@@ -480,29 +482,46 @@ export async function createProjectSettlementEntry(
 export async function updateProjectSettlementEntry(
   entryId: string,
   input: ProjectSettlementEntryInput,
-): Promise<ProjectSettlementEntry> {
-  const normalized = normalizeSettlementEntryInput(input);
+): Promise<{ entry: ProjectSettlementEntry; settings?: ProjectBillingSettings }> {
   const supabase = getSupabase();
+
+  const { data: existingRow, error: existingError } = await supabase
+    .from("project_settlement_entries")
+    .select("*")
+    .eq("id", entryId)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+  if (!existingRow) {
+    throw new Error("Nie znaleziono pozycji rozliczenia.");
+  }
+
+  const existing = rowToSettlementEntry(existingRow as EntryRow);
+  const normalized = normalizeSettlementEntryInput(input);
+  const isContractCharge = existing.kind === "charge" && existing.source === "contract";
+  const money = buildMoneyPayload(normalized.amountNet, normalized.vatRate);
 
   const { data, error } = await supabase
     .from("project_settlement_entries")
     .update({
       kind: normalized.kind,
-      source: normalized.source ?? "manual",
-      source_id: normalized.sourceId ?? null,
+      source: isContractCharge ? "contract" : (normalized.source ?? "manual"),
+      source_id: isContractCharge ? null : (normalized.sourceId ?? null),
       process_stage_id: normalized.processStageId ?? null,
-      title: normalized.title,
-      amount_net: normalized.amountNet,
-      vat_rate: normalized.vatRate,
-      amount_gross: normalized.amountGross ?? normalized.amountNet,
+      title: isContractCharge ? "Umowa główna" : normalized.title,
+      amount_net: money?.amountNet ?? normalized.amountNet,
+      vat_rate: money?.vatRate ?? normalized.vatRate,
+      amount_gross: money?.amountGross ?? normalized.amountGross ?? normalized.amountNet,
       currency: normalized.currency ?? "PLN",
       entry_date: normalized.entryDate ?? null,
       due_date: normalized.dueDate ?? null,
       invoice_number: normalized.invoiceNumber ?? "",
       external_ref: normalized.externalRef ?? "",
       notes: normalized.notes ?? "",
-      // Edycja przez użytkownika — nie nadpisuj przy sync
-      is_auto: false,
+      // Umowa główna zostaje auto — sync z budżetem; inne pozycje zamrażamy po edycji.
+      is_auto: isContractCharge,
       updated_at: new Date().toISOString(),
     })
     .eq("id", entryId)
@@ -513,7 +532,18 @@ export async function updateProjectSettlementEntry(
     throw new Error(error.message);
   }
 
-  return rowToSettlementEntry(data as EntryRow);
+  const entry = rowToSettlementEntry(data as EntryRow);
+
+  if (isContractCharge && money) {
+    const settings = await updateProjectBillingContractAmount(existing.projectId, {
+      contractAmountNet: money.amountNet,
+      contractVatRate: money.vatRate,
+      contractAmountGross: money.amountGross,
+    });
+    return { entry, settings };
+  }
+
+  return { entry };
 }
 
 export async function deleteProjectSettlementEntry(entryId: string): Promise<void> {
