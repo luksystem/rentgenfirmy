@@ -27,6 +27,7 @@ import {
   resolveServiceIntakeDueAt,
 } from "@/lib/service-intake/sla";
 import { useAuthStore } from "@/store/auth-store";
+import { useResourcePlanStore } from "@/store/resource-plan-store";
 import {
   SERVICE_INTAKE_POST_WARRANTY_ACTION_LABELS,
   SERVICE_INTAKE_PRIORITY_LABELS,
@@ -233,6 +234,7 @@ export function ServiceIntakeDetailModal({
       setThread((current) => (current ? { ...current, intake: updated } : current));
       setAssigneeIdDraft(updated.assigneeId ?? "");
       onUpdated?.(updated);
+      useResourcePlanStore.getState().invalidate();
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Błąd.");
     } finally {
@@ -266,6 +268,7 @@ export function ServiceIntakeDetailModal({
       setThread((current) => (current ? { ...current, intake: updated } : current));
       setInvolvedDraft(updated.involvedProfileIds ?? []);
       onUpdated?.(updated);
+      useResourcePlanStore.getState().invalidate();
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Błąd.");
     } finally {
@@ -299,6 +302,7 @@ export function ServiceIntakeDetailModal({
       setThread((current) => (current ? { ...current, intake: updated } : current));
       setDueAtDraft(dueAtToDateInputValue(resolveServiceIntakeDueAt(updated)));
       onUpdated?.(updated);
+      useResourcePlanStore.getState().invalidate();
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Błąd.");
     } finally {
@@ -371,6 +375,7 @@ export function ServiceIntakeDetailModal({
       setAssigneeIdDraft(updated.assigneeId ?? "");
       setInvolvedDraft(updated.involvedProfileIds ?? []);
       onUpdated?.(updated);
+      useResourcePlanStore.getState().invalidate();
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Błąd.");
       setStatusDraft(intake.status);
@@ -406,6 +411,7 @@ export function ServiceIntakeDetailModal({
       setThread((current) => (current ? { ...current, intake: updated } : current));
       setStatusDraft(updated.status);
       onUpdated?.(updated);
+      useResourcePlanStore.getState().invalidate();
       setSettlementOpen(false);
     } catch (updateError) {
       throw updateError instanceof Error ? updateError : new Error("Błąd.");
@@ -441,6 +447,7 @@ export function ServiceIntakeDetailModal({
       setThread((current) => (current ? { ...current, intake: updated } : current));
       setStatusDraft(updated.status);
       onUpdated?.(updated);
+      useResourcePlanStore.getState().invalidate();
       setStuckOpen(false);
     } catch (updateError) {
       throw updateError instanceof Error ? updateError : new Error("Błąd.");

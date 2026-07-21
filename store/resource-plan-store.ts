@@ -58,6 +58,12 @@ type ResourcePlanStore = {
   /** Włącza/wyłącza "zależność pociętych" na całej grupie naraz. */
   setLinkedGroupShiftEnabled: (groupId: string, enabled: boolean) => Promise<void>;
   allItems: () => ResourcePlanItem[];
+  /**
+   * Czyści cache zakresów (nie same elementy), aby kolejne `ensureRange` wymusiło
+   * świeży fetch. Wołaj po zmianach wykonanych poza tym store (np. sync z modułu
+   * zgłoszeń serwisowych), które mogły zmienić daty/uczestników elementów planu.
+   */
+  invalidate: () => void;
 };
 
 export const useResourcePlanStore = create<ResourcePlanStore>((set, get) => ({
@@ -179,4 +185,9 @@ export const useResourcePlanStore = create<ResourcePlanStore>((set, get) => ({
   },
 
   allItems: () => memoizedAllItems(get().items),
+
+  invalidate: () => {
+    loadPromises.clear();
+    set({ loadedRanges: [] });
+  },
 }));

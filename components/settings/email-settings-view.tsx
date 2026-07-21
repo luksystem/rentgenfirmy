@@ -71,8 +71,14 @@ function buildPreview(settings: EmailSettings, company: CompanyProfile | null, k
     {
       referenceNumber: "ZS-2026-001",
       contactFullName: "Anna Nowak",
-      statusLabel: "W realizacji",
+      statusLabel: "Rozliczanie",
       threadUrl: "https://example.com/zgloszenie/watek/demo",
+      settlement: {
+        resolutionOutcome: "full",
+        resolutionCause: "Wymieniono uszkodzony moduł zasilania, usterka usunięta.",
+        extraCosts: true,
+        extraCostsNote: "Dojazd poza standardowym zakresem umowy — 120 PLN netto.",
+      },
     },
     { settings, company: companyDoc },
   );

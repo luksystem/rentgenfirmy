@@ -522,6 +522,12 @@ async function notifyServiceIntakeStatusChange(record: ServiceIntakeRecord) {
       contactFullName: record.contactFullName,
       statusLabel: SERVICE_INTAKE_STATUS_LABELS[record.status],
       threadUrl,
+      settlement: {
+        resolutionOutcome: record.resolutionOutcome,
+        resolutionCause: record.resolutionCause,
+        extraCosts: record.extraCosts,
+        extraCostsNote: record.extraCostsNote,
+      },
     },
     { settings, company },
   );

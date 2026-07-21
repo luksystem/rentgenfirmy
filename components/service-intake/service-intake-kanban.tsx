@@ -41,6 +41,7 @@ import {
 } from "@/lib/service-intake/confirm-status-change";
 import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 import { useAuthStore } from "@/store/auth-store";
+import { useResourcePlanStore } from "@/store/resource-plan-store";
 import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
 import { CAFE_PRIORITY_OPTIONS, isHighCafePriority } from "@/lib/service-intake/cafe-priorities";
 import { canManageServiceIntakeBoard } from "@/lib/service-intake/status-permissions";
@@ -876,6 +877,7 @@ export function ServiceIntakeKanban({
             : entry,
         ),
       );
+      useResourcePlanStore.getState().invalidate();
     } catch (updateError) {
       setItems(snapshot);
       setError(updateError instanceof Error ? updateError.message : "Błąd.");
@@ -908,6 +910,7 @@ export function ServiceIntakeKanban({
         clientName: target.clientName,
         projectName: target.projectName,
       });
+      useResourcePlanStore.getState().invalidate();
       setSettlementTarget(null);
     } catch (updateError) {
       setItems(snapshot);
@@ -941,6 +944,7 @@ export function ServiceIntakeKanban({
         clientName: target.clientName,
         projectName: target.projectName,
       });
+      useResourcePlanStore.getState().invalidate();
       setStuckTarget(null);
     } catch (updateError) {
       setItems(snapshot);
