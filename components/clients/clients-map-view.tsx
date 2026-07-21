@@ -18,8 +18,9 @@ import type { ProjectTelemetrySnapshot } from "@/lib/integrations/types";
 import { formatPartyName } from "@/lib/party/display-name";
 import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
-import { clientHasGeocodableAddress, formatClientAddress, buildClientGeocodeFingerprint } from "@/lib/clients/client-location";
+import { clientHasGeocodableAddress, formatClientAddress, buildClientGeocodeFingerprint, clientNeedsMapGeocode } from "@/lib/clients/client-location";
 import { geocodeClientsSequential } from "@/lib/clients/geocode-client";
+import { partyAddressFingerprint } from "@/lib/party/gps";
 import { getSmartHomeMarkerIcon } from "@/lib/clients/smart-home-marker-icon";
 import {
   buildGoogleMapsDirectionsUrl,
@@ -251,7 +252,7 @@ export function ClientsMapView({ clients }: { clients: Client[] }) {
       }
 
       const initialPlaced: PlacedClient[] = [];
-      const missingGps: Client[] = [];
+      const pendingGeocode: Client[] = [];
 
       for (const client of geocodableClients) {
         if (
@@ -266,19 +267,19 @@ export function ClientsMapView({ clients }: { clients: Client[] }) {
             lng: client.lng,
             label: client.location || `${client.lat}, ${client.lng}`,
           });
-        } else {
-          missingGps.push(client);
+        } else if (clientNeedsMapGeocode(client)) {
+          pendingGeocode.push(client);
         }
       }
 
       setPlacedClients(initialPlaced);
       setProgress({
-        done: geocodableClients.length - missingGps.length,
+        done: geocodableClients.length - pendingGeocode.length,
         total: geocodableClients.length,
       });
       setError(null);
 
-      if (missingGps.length === 0) {
+      if (pendingGeocode.length === 0) {
         setLoading(false);
         return;
       }
@@ -289,7 +290,7 @@ export function ClientsMapView({ clients }: { clients: Client[] }) {
       const { patchClientGps } = await import("@/lib/supabase/client-repository");
 
       await geocodeClientsSequential(
-        missingGps,
+        pendingGeocode,
         (client, done, _total, coords) => {
           if (cancelled) {
             return;
@@ -310,22 +311,32 @@ export function ClientsMapView({ clients }: { clients: Client[] }) {
             total: geocodableClients.length,
           });
         },
-        async (client, coords) => {
-          // Backfill GPS do bazy — kolejne otwarcie mapy bez geokodowania
-          try {
-            const updated = await patchClientGps(client.id, {
-              lat: coords.lat,
-              lng: coords.lng,
-              gpsManual: false,
-            });
-            useAppStore.setState((state) => ({
-              clients: state.clients.map((item) => (item.id === client.id ? updated : item)),
-            }));
-          } catch {
-            // mapa działa mimo braku zapisu
-          }
+        undefined,
+        {
+          signal: abort.signal,
+          onLookupFinished: async (client, coords) => {
+            // Zapisz GPS i/lub fingerprint — bez fingerprintu mapa odpytywałaby w kółko.
+            try {
+              const fingerprint = partyAddressFingerprint(client);
+              const updated = await patchClientGps(
+                client.id,
+                coords
+                  ? {
+                      lat: coords.lat,
+                      lng: coords.lng,
+                      gpsManual: false,
+                      gpsAddressFingerprint: fingerprint,
+                    }
+                  : { gpsAddressFingerprint: fingerprint },
+              );
+              useAppStore.setState((state) => ({
+                clients: state.clients.map((item) => (item.id === client.id ? updated : item)),
+              }));
+            } catch {
+              // mapa działa mimo braku zapisu
+            }
+          },
         },
-        { signal: abort.signal },
       );
 
       if (!cancelled) {

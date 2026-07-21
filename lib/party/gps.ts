@@ -9,6 +9,8 @@ export type PartyLocationFields = {
   lat?: number | null;
   lng?: number | null;
   gpsManual?: boolean;
+  /** Fingerprint adresu z ostatniej próby geokodowania (mapa nie ponawia przy zgodności). */
+  gpsAddressFingerprint?: string | null;
 };
 
 export type PartyGpsCoordinates = {
@@ -59,6 +61,16 @@ export function partyHasStoredGps(party: Pick<PartyLocationFields, "lat" | "lng"
   );
 }
 
+/** Brak GPS i adres nie był jeszcze sprawdzany (lub zmienił się od ostatniej próby). */
+export function partyNeedsMapGeocode(party: PartyLocationFields) {
+  if (!partyHasGeocodableAddress(party) || partyHasStoredGps(party)) {
+    return false;
+  }
+  const current = partyAddressFingerprint(party);
+  const previous = party.gpsAddressFingerprint?.trim() ?? "";
+  return !previous || previous !== current;
+}
+
 export function partyAddressFingerprint(party: PartyLocationFields) {
   return [party.location, party.addressStreet, party.addressCity, party.addressPostalCode]
     .map((value) => value.trim().toLowerCase())
@@ -94,14 +106,21 @@ export async function resolvePartyGpsOnSave(
   next: PartyLocationFields,
   previous: PartyLocationFields | null | undefined,
   geocode: (party: PartyLocationFields) => Promise<PartyGpsCoordinates | null>,
-): Promise<{ lat: number | null; lng: number | null; gpsManual: boolean }> {
+): Promise<{
+  lat: number | null;
+  lng: number | null;
+  gpsManual: boolean;
+  gpsAddressFingerprint: string | null;
+}> {
+  const nextFingerprint = partyAddressFingerprint(next);
+
   if (next.gpsManual === true) {
     const lat = parseOptionalCoordinate(next.lat);
     const lng = parseOptionalCoordinate(next.lng);
     if (lat != null && lng != null) {
-      return { lat, lng, gpsManual: true };
+      return { lat, lng, gpsManual: true, gpsAddressFingerprint: nextFingerprint };
     }
-    return { lat: null, lng: null, gpsManual: false };
+    return { lat: null, lng: null, gpsManual: false, gpsAddressFingerprint: nextFingerprint };
   }
 
   const addressChanged = partyAddressChanged(previous, next);
@@ -112,24 +131,31 @@ export async function resolvePartyGpsOnSave(
       lat: previous.lat ?? null,
       lng: previous.lng ?? null,
       gpsManual: Boolean(previous.gpsManual),
+      gpsAddressFingerprint: previous.gpsAddressFingerprint ?? nextFingerprint,
     };
   }
 
   if (!partyHasGeocodableAddress(next)) {
-    return { lat: null, lng: null, gpsManual: false };
+    return { lat: null, lng: null, gpsManual: false, gpsAddressFingerprint: nextFingerprint };
   }
 
   const result = await geocode(next);
   if (!result) {
     if (addressChanged) {
-      return { lat: null, lng: null, gpsManual: false };
+      return { lat: null, lng: null, gpsManual: false, gpsAddressFingerprint: nextFingerprint };
     }
     return {
       lat: previous?.lat ?? null,
       lng: previous?.lng ?? null,
       gpsManual: Boolean(previous?.gpsManual),
+      gpsAddressFingerprint: nextFingerprint,
     };
   }
 
-  return { lat: result.lat, lng: result.lng, gpsManual: false };
+  return {
+    lat: result.lat,
+    lng: result.lng,
+    gpsManual: false,
+    gpsAddressFingerprint: nextFingerprint,
+  };
 }

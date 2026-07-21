@@ -19,7 +19,13 @@ async function resolveContactGpsAdmin(
     }
     return null;
   });
-  return { ...input, lat: gps.lat, lng: gps.lng, gpsManual: gps.gpsManual };
+  return {
+    ...input,
+    lat: gps.lat,
+    lng: gps.lng,
+    gpsManual: gps.gpsManual,
+    gpsAddressFingerprint: gps.gpsAddressFingerprint,
+  };
 }
 
 function normalizeContactEmail(email: string) {

@@ -85,7 +85,7 @@ async function resolveGpsForApi(input: ClientInput, previous: ClientInput | null
     }
     return null;
   });
-  return { ...input, lat: gps.lat, lng: gps.lng, gpsManual: gps.gpsManual };
+  return { ...input, lat: gps.lat, lng: gps.lng, gpsManual: gps.gpsManual, gpsAddressFingerprint: gps.gpsAddressFingerprint };
 }
 
 function isAuthorized(request: Request) {

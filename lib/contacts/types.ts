@@ -35,6 +35,7 @@ export type Contact = {
   lat: number | null;
   lng: number | null;
   gpsManual: boolean;
+  gpsAddressFingerprint: string | null;
   email: string;
   phone: string;
   notes?: string;
@@ -61,10 +62,12 @@ export type ContactInput = Omit<
   | "lat"
   | "lng"
   | "gpsManual"
+  | "gpsAddressFingerprint"
 > & {
   lat?: number | null;
   lng?: number | null;
   gpsManual?: boolean;
+  gpsAddressFingerprint?: string | null;
 };
 
 export function contactToServiceClient(
@@ -94,6 +97,7 @@ export function contactToClientInput(contact: Contact): ClientInput {
     lat: contact.lat,
     lng: contact.lng,
     gpsManual: contact.gpsManual,
+    gpsAddressFingerprint: contact.gpsAddressFingerprint,
     email: contact.email,
     phone: contact.phone,
     notes: notesParts.join("\n\n"),

@@ -156,6 +156,8 @@ export type Client = {
   lat: number | null;
   lng: number | null;
   gpsManual: boolean;
+  /** Fingerprint adresu po ostatniej próbie geokodowania — mapa pomija przy zgodności. */
+  gpsAddressFingerprint: string | null;
   email: string;
   phone: string;
   notes?: string;
@@ -164,10 +166,14 @@ export type Client = {
   updatedAt: string;
 };
 
-export type ClientInput = Omit<Client, "id" | "createdAt" | "updatedAt" | "lat" | "lng" | "gpsManual"> & {
+export type ClientInput = Omit<
+  Client,
+  "id" | "createdAt" | "updatedAt" | "lat" | "lng" | "gpsManual" | "gpsAddressFingerprint"
+> & {
   lat?: number | null;
   lng?: number | null;
   gpsManual?: boolean;
+  gpsAddressFingerprint?: string | null;
 };
 
 export function clientToServiceClient(

@@ -124,6 +124,7 @@ export type ClientRow = {
   lat: number | null;
   lng: number | null;
   gps_manual: boolean;
+  gps_address_fingerprint: string | null;
   email: string;
   phone: string;
   notes: string | null;
@@ -143,6 +144,7 @@ export type ContactRow = {
   lat: number | null;
   lng: number | null;
   gps_manual: boolean;
+  gps_address_fingerprint: string | null;
   email: string;
   phone: string;
   notes: string | null;
@@ -174,6 +176,7 @@ export type ClientInsert = {
   lat?: number | null;
   lng?: number | null;
   gps_manual?: boolean;
+  gps_address_fingerprint?: string | null;
   email?: string;
   phone?: string;
   notes?: string | null;

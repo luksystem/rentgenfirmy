@@ -33,6 +33,7 @@ async function withResolvedGps(
     lat: gps.lat,
     lng: gps.lng,
     gpsManual: gps.gpsManual,
+    gpsAddressFingerprint: gps.gpsAddressFingerprint,
   };
 }
 

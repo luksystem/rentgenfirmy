@@ -81,6 +81,7 @@ export function buildGuestServiceClient(input: {
     lat: null,
     lng: null,
     gpsManual: false,
+    gpsAddressFingerprint: null,
     email: input.email,
     phone: input.phone,
     notes: "",

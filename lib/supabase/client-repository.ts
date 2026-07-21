@@ -32,6 +32,7 @@ async function withResolvedGps(
     lat: gps.lat,
     lng: gps.lng,
     gpsManual: gps.gpsManual,
+    gpsAddressFingerprint: gps.gpsAddressFingerprint,
   };
 }
 
@@ -83,20 +84,30 @@ export async function updateClientRecord(id: string, input: ClientInput): Promis
   return rowToClient(data);
 }
 
-/** Szybki zapis współrzędnych (np. backfill z mapy) — bez zmiany adresu. */
+/** Szybki zapis współrzędnych / fingerprintu (backfill z mapy) — bez zmiany adresu. */
 export async function patchClientGps(
   id: string,
-  coords: { lat: number; lng: number; gpsManual?: boolean },
+  coords: {
+    lat?: number | null;
+    lng?: number | null;
+    gpsManual?: boolean;
+    gpsAddressFingerprint?: string | null;
+  },
 ): Promise<Client> {
   const supabase = getSupabase();
+  const payload: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  if ("lat" in coords) payload.lat = coords.lat ?? null;
+  if ("lng" in coords) payload.lng = coords.lng ?? null;
+  if ("gpsManual" in coords) payload.gps_manual = Boolean(coords.gpsManual);
+  if ("gpsAddressFingerprint" in coords) {
+    payload.gps_address_fingerprint = coords.gpsAddressFingerprint ?? null;
+  }
+
   const { data, error } = await supabase
     .from("clients")
-    .update({
-      lat: coords.lat,
-      lng: coords.lng,
-      gps_manual: Boolean(coords.gpsManual),
-      updated_at: new Date().toISOString(),
-    })
+    .update(payload)
     .eq("id", id)
     .select("*")
     .single();

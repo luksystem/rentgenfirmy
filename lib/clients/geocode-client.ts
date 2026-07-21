@@ -77,6 +77,11 @@ export async function geocodeClient(client: Client): Promise<ClientMapCoordinate
 
 export type GeocodeClientsSequentialOptions = {
   signal?: AbortSignal;
+  /** Wywołane po próbie sieciowej (sukces lub brak wyniku) — nie dla GPS z DB. */
+  onLookupFinished?: (
+    client: Client,
+    coords: ClientMapCoordinates | null,
+  ) => void | Promise<void>;
 };
 
 /**
@@ -145,6 +150,8 @@ export async function geocodeClientsSequential(
     if (signal?.aborted) {
       break;
     }
+
+    await options?.onLookupFinished?.(client, coords);
 
     if (coords) {
       results.set(client.id, coords);

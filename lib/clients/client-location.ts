@@ -4,6 +4,7 @@ import {
   formatPartyAddress,
   partyHasGeocodableAddress,
   partyHasStoredGps,
+  partyNeedsMapGeocode,
 } from "@/lib/party/gps";
 
 export function formatClientAddress(client: Client) {
@@ -22,8 +23,13 @@ export function clientHasGeocodableAddress(client: Client) {
   return partyHasGeocodableAddress(client) || partyHasStoredGps(client);
 }
 
+export function clientNeedsMapGeocode(client: Client) {
+  return partyNeedsMapGeocode(client);
+}
+
 /**
- * Fingerprint adresów (bez lat/lng) — zapis GPS przy backfillu mapy nie restartuje pętli.
+ * Fingerprint adresów (bez lat/lng i bez wyniku lookupu) —
+ * zapis GPS/fingerprint przy backfillu nie restartuje pętli w połowie.
  */
 export function buildClientGeocodeFingerprint(clients: Client[]) {
   return clients
