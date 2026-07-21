@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Clock, MinusCircle, XCircle, ArrowLeft } from "lucide-react";
+import { Check, Clock, MinusCircle, XCircle } from "lucide-react";
 import { ChecklistLineDocumentationPanel, type ChecklistDocumentationUploadContext } from "@/components/process/checklist-line-documentation-panel";
 import { TeamProfileSelect } from "@/components/process/team-profile-select";
 import { Button } from "@/components/ui/button";
@@ -80,19 +80,7 @@ export function ChecklistItemDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <TopAnchoredDialogContent className="p-0">
         <div className="flex min-h-0 flex-1 flex-col">
-          <DialogHeader className="shrink-0 border-b border-border/60 px-5 pb-4 pt-5 pr-12">
-            <div className="mb-3">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="h-10 min-h-10 w-full justify-start px-3 sm:h-8 sm:w-auto"
-                onClick={() => onOpenChange(false)}
-              >
-                <ArrowLeft className="mr-1.5 h-4 w-4" />
-                Wróć
-              </Button>
-            </div>
+          <DialogHeader className="shrink-0 border-b border-border/60 px-5 pb-4 pt-4">
             <div className="flex flex-wrap items-start gap-2">
               <span className={cn("mt-1 h-2.5 w-2.5 shrink-0 rounded-full", currentStyles.dot)} />
               <div className="min-w-0 flex-1">

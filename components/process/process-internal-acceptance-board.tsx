@@ -38,6 +38,7 @@ export function ProcessInternalAcceptanceBoard({
   teamProfiles = [],
   publicToken,
   onStateChange,
+  raisedMobileNavForBack = false,
 }: {
   projectId: string;
   templateItemId: string;
@@ -49,6 +50,7 @@ export function ProcessInternalAcceptanceBoard({
   teamProfiles?: UserProfile[];
   publicToken?: string;
   onStateChange?: (state: InternalAcceptanceState) => void;
+  raisedMobileNavForBack?: boolean;
 }) {
   const [state, setState] = useState<InternalAcceptanceState | null>(() =>
     normalizeInternalAcceptanceState(initialState ?? null),
@@ -279,7 +281,13 @@ export function ProcessInternalAcceptanceBoard({
   const activeItem = state.items.find((item) => item.itemKey === activeKey) ?? null;
 
   return (
-    <div className={cn("grid gap-4 pb-2", showMobileNav && "pb-24 md:pb-2")}>
+    <div
+      className={cn(
+        "grid gap-4 pb-2",
+        showMobileNav && (raisedMobileNavForBack ? "pb-40 md:pb-2" : "pb-24 md:pb-2"),
+        !showMobileNav && raisedMobileNavForBack && "pb-20 md:pb-2",
+      )}
+    >
       <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/25 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -444,6 +452,7 @@ export function ProcessInternalAcceptanceBoard({
       <BoardCategoryMobileNav
         categories={navCategories}
         activeCategoryId={navCategoryId}
+        raisedForBackButton={raisedMobileNavForBack}
         onSelect={(categoryId) => {
           setNavCategoryId(categoryId);
           scrollToBoardSection(boardSectionDomId("acceptance-category", categoryId));

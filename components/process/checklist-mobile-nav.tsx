@@ -30,10 +30,12 @@ export function ChecklistMobileNav({
   sections,
   activeSectionId,
   onSelect,
+  raisedForBackButton = false,
 }: {
   sections: ChecklistSection[];
   activeSectionId: string | null;
   onSelect: (sectionId: string) => void;
+  raisedForBackButton?: boolean;
 }) {
   const categories = sections.map(sectionToNavCategory);
   return (
@@ -41,6 +43,7 @@ export function ChecklistMobileNav({
       categories={categories}
       activeCategoryId={activeSectionId}
       onSelect={onSelect}
+      raisedForBackButton={raisedForBackButton}
     />
   );
 }

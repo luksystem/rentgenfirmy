@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
@@ -25,7 +26,7 @@ export function DialogContent({
         className={cn(
           "fixed z-50 border border-border bg-surface-elevated shadow-card",
           fullscreen
-            ? "inset-0 flex max-h-[100dvh] w-full flex-col overflow-hidden rounded-none p-4 pt-[max(1rem,env(safe-area-inset-top))] sm:p-5"
+            ? "inset-0 flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden rounded-none p-4 pt-[max(1rem,env(safe-area-inset-top))] sm:p-5"
             : cn(
                 "flex flex-col overflow-hidden",
                 "inset-x-4 top-[max(1rem,env(safe-area-inset-top))] max-h-[calc(100dvh-2rem-env(safe-area-inset-bottom))] w-auto -translate-x-0 -translate-y-0 rounded-2xl p-5 sm:inset-x-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90vh] sm:w-[min(720px,calc(100vw-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:p-6",
@@ -62,18 +63,31 @@ export function TopAnchoredDialogContent({
       <DialogPrimitive.Overlay className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm" />
       <DialogPrimitive.Content
         className={cn(
-          "fixed z-[100] flex max-h-[min(90dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem))] w-full min-h-0 flex-col overflow-hidden border border-border bg-surface-elevated shadow-soft",
-          "inset-x-0 top-[max(0.5rem,env(safe-area-inset-top))] rounded-b-2xl",
-          "sm:inset-x-auto sm:left-1/2 sm:top-[max(1rem,env(safe-area-inset-top))] sm:max-w-2xl sm:-translate-x-1/2 sm:rounded-2xl",
+          "fixed z-[100] flex h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-0.75rem))] max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-0.75rem))] w-full min-h-0 flex-col overflow-hidden border border-border bg-surface-elevated shadow-soft",
+          "inset-x-0 top-[max(0.5rem,env(safe-area-inset-top))]",
+          "rounded-b-2xl sm:inset-x-auto sm:left-1/2 sm:max-w-2xl sm:-translate-x-1/2 sm:rounded-2xl",
           className,
         )}
         {...props}
       >
-        <DialogPrimitive.Close className={cn(dialogCloseClassName, "z-[110]")}>
-          <X className="h-4 w-4" />
-          <span className="sr-only">Zamknij</span>
-        </DialogPrimitive.Close>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+        <div className="flex shrink-0 items-center gap-2 border-b border-border/60 bg-surface-elevated px-4 py-3 pr-14">
+          <DialogPrimitive.Close asChild>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-10 min-h-10 w-full justify-start px-3 sm:h-8 sm:w-auto"
+            >
+              <ArrowLeft className="mr-1.5 h-4 w-4" />
+              Wróć
+            </Button>
+          </DialogPrimitive.Close>
+          <DialogPrimitive.Close className={cn(dialogCloseClassName, "z-[110]")}>
+            <X className="h-4 w-4" />
+            <span className="sr-only">Zamknij</span>
+          </DialogPrimitive.Close>
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">{children}</div>
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
   );

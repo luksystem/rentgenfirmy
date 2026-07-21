@@ -76,6 +76,7 @@ export function ProcessChecklistBoard({
   defaultAssigneeId = null,
   defaultAssigneeName = null,
   onSave,
+  raisedMobileNavForBack = false,
 }: {
   initialPayload: ChecklistItemPayload;
   readOnly?: boolean;
@@ -88,6 +89,7 @@ export function ProcessChecklistBoard({
   defaultAssigneeId?: string | null;
   defaultAssigneeName?: string | null;
   onSave?: (payload: ChecklistItemPayload) => Promise<void>;
+  raisedMobileNavForBack?: boolean;
 }) {
   const [payload, setPayload] = useState(() => normalizeChecklistPayload(initialPayload));
   const [activeLineId, setActiveLineId] = useState<string | null>(null);
@@ -177,8 +179,13 @@ export function ProcessChecklistBoard({
   const showMobileNav = sections.length > 1;
 
   return (
-    <div className={cn("grid gap-4", showMobileNav && "pb-24 md:pb-0")}>
-      <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/25 p-3">
+    <div
+      className={cn(
+        "grid gap-4",
+        showMobileNav && (raisedMobileNavForBack ? "pb-40 md:pb-0" : "pb-24 md:pb-0"),
+        !showMobileNav && raisedMobileNavForBack && "pb-20 md:pb-0",
+      )}
+    >      <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/25 p-3">
         <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
           <CheckCircle2 className="h-4 w-4 text-accent" />
           {progress.completed}/{progress.total} punktów ·{" "}
@@ -316,6 +323,7 @@ export function ProcessChecklistBoard({
       <ChecklistMobileNav
         sections={sections}
         activeSectionId={navSectionId}
+        raisedForBackButton={raisedMobileNavForBack}
         onSelect={(sectionId) => {
           setNavSectionId(sectionId);
           scrollToBoardSection(boardSectionDomId("checklist-section", sectionId));

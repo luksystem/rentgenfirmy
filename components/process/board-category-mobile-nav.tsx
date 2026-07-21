@@ -13,17 +13,27 @@ export function BoardCategoryMobileNav({
   categories,
   activeCategoryId,
   onSelect,
+  /** Gdy panel ma dolny przycisk „Wróć” — unosi pasek kategorii. */
+  raisedForBackButton = false,
 }: {
   categories: BoardNavCategory[];
   activeCategoryId: string | null;
   onSelect: (categoryId: string) => void;
+  raisedForBackButton?: boolean;
 }) {
   if (categories.length <= 1) {
     return null;
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-[110] border-t border-border/80 bg-surface-elevated/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-md md:hidden">
+    <nav
+      className={cn(
+        "fixed inset-x-0 z-[110] border-t border-border/80 bg-surface-elevated/95 px-2 pt-2 backdrop-blur-md md:hidden",
+        raisedForBackButton
+          ? "bottom-[calc(3.5rem+env(safe-area-inset-bottom))] pb-2"
+          : "bottom-0 pb-[max(0.5rem,env(safe-area-inset-bottom))]",
+      )}
+    >
       <div className="flex gap-2 overflow-x-auto">
         {categories.map((category) => {
           const toneClass =

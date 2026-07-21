@@ -180,7 +180,7 @@ export function ProcessItemPanel({
         <DialogHeader
           className={cn(
             isFullscreen &&
-              "sticky top-0 z-20 -mx-4 mb-0 shrink-0 border-b border-border/60 bg-surface-elevated px-4 pb-3 pt-1 sm:-mx-5 sm:px-5",
+              "mb-0 shrink-0 border-b border-border/60 bg-surface-elevated pb-3 pt-1 -mx-4 px-4 sm:-mx-5 sm:px-5",
             isFullscreen ? "min-w-0" : undefined,
           )}
         >
@@ -214,7 +214,7 @@ export function ProcessItemPanel({
               ? "flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain"
               : "grid gap-4",
             isFullscreen && item.kind !== "kanban" && "min-h-0 flex-1 overflow-y-auto overscroll-y-contain",
-            showMobileNavPadding && "pb-24",
+            showMobileNavPadding && "pb-36 md:pb-0",
             isFullscreen && "pt-3",
           )}
         >
@@ -240,6 +240,7 @@ export function ProcessItemPanel({
               actorId={currentUserId}
               actorName={actorName}
               teamProfiles={teamProfiles}
+              raisedMobileNavForBack
             />
           ) : null}
 
@@ -255,6 +256,7 @@ export function ProcessItemPanel({
                 defaultAssigneeId={resolvedInstance?.assigneeId}
                 defaultAssigneeName={resolvedInstance?.assigneeName}
                 onSave={onSaveChecklist}
+                raisedMobileNavForBack
               />
 
               {showResponsible ? (
@@ -496,6 +498,20 @@ export function ProcessItemPanel({
             </p>
           ) : null}
         </div>
+
+        {isFullscreen ? (
+          <div className="fixed inset-x-0 bottom-0 z-[120] border-t border-border/80 bg-surface-elevated/95 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-md md:hidden">
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-11 w-full justify-center text-sm font-semibold"
+              onClick={() => onOpenChange(false)}
+            >
+              <ArrowLeft className="mr-1.5 h-4 w-4" />
+              Wróć do procesu
+            </Button>
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );
