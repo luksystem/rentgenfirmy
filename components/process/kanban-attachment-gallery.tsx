@@ -55,35 +55,65 @@ export function KanbanAttachmentGallery({
   }
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+    const files = event.target.files ? Array.from(event.target.files) : [];
     event.target.value = "";
-    if (!file || !onUpload) {
+    if (!files.length || !onUpload) {
       return;
     }
 
-    const validation = validateKanbanAttachmentFile({ type: file.type, size: file.size });
-    if (!validation.ok) {
-      setLocalError(validation.error);
+    if (files.length === 1) {
+      const file = files[0];
+      const validation = validateKanbanAttachmentFile({ type: file.type, size: file.size });
+      if (!validation.ok) {
+        setLocalError(validation.error);
+        return;
+      }
+
+      if (validation.mediaKind === "video" && hasVideo) {
+        setLocalError("Na tej karcie jest już film — możesz dodać tylko jeden.");
+        return;
+      }
+
+      setLocalError(null);
+
+      if (validation.mediaKind === "image") {
+        clearPendingImage();
+        setPendingImage(file);
+        setPendingPreviewUrl(URL.createObjectURL(file));
+        setSetAsCardCover(false);
+        return;
+      }
+
+      try {
+        await onUpload(file);
+      } catch (uploadErr) {
+        setLocalError(uploadErr instanceof Error ? uploadErr.message : "Nie udało się przesłać pliku.");
+      }
       return;
     }
 
-    if (validation.mediaKind === "video" && hasVideo) {
-      setLocalError("Na tej karcie jest już film — możesz dodać tylko jeden.");
-      return;
+    // Wiele plików naraz: pomijamy krok wyboru okładki (można ustawić ją później na kafelku).
+    let videoAlreadyIncluded = hasVideo;
+    for (const file of files) {
+      const validation = validateKanbanAttachmentFile({ type: file.type, size: file.size });
+      if (!validation.ok) {
+        setLocalError(validation.error);
+        return;
+      }
+      if (validation.mediaKind === "video" && videoAlreadyIncluded) {
+        setLocalError("Na karcie może być tylko jeden film — odznacz nadmiarowe pliki wideo.");
+        return;
+      }
+      if (validation.mediaKind === "video") {
+        videoAlreadyIncluded = true;
+      }
     }
 
     setLocalError(null);
-
-    if (validation.mediaKind === "image") {
-      clearPendingImage();
-      setPendingImage(file);
-      setPendingPreviewUrl(URL.createObjectURL(file));
-      setSetAsCardCover(false);
-      return;
-    }
-
     try {
-      await onUpload(file);
+      for (const file of files) {
+        await onUpload(file);
+      }
     } catch (uploadErr) {
       setLocalError(uploadErr instanceof Error ? uploadErr.message : "Nie udało się przesłać pliku.");
     }
@@ -155,6 +185,7 @@ export function KanbanAttachmentGallery({
           <input
             ref={inputRef}
             type="file"
+            multiple
             accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,video/mp4,video/webm,video/quicktime"
             className="hidden"
             onChange={(event) => void handleFileChange(event)}
@@ -171,7 +202,7 @@ export function KanbanAttachmentGallery({
             ) : (
               <ImagePlus className="mr-1.5 h-4 w-4" />
             )}
-            {uploading ? "Przesyłanie…" : "Dodaj zdjęcie lub film"}
+            {uploading ? "Przesyłanie…" : "Dodaj zdjęcia lub film"}
           </Button>
 
           {pendingImage && pendingPreviewUrl ? (

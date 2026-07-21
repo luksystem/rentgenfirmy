@@ -43,21 +43,25 @@ export function AgreementAttachmentGallery({
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+    const files = event.target.files ? Array.from(event.target.files) : [];
     event.target.value = "";
-    if (!file || !onUpload) {
+    if (!files.length || !onUpload) {
       return;
     }
 
-    const validation = validateAgreementAttachmentFile({ type: file.type, size: file.size });
-    if (!validation.ok) {
-      setLocalError(validation.error);
-      return;
+    for (const file of files) {
+      const validation = validateAgreementAttachmentFile({ type: file.type, size: file.size });
+      if (!validation.ok) {
+        setLocalError(validation.error);
+        return;
+      }
     }
 
     setLocalError(null);
     try {
-      await onUpload(file);
+      for (const file of files) {
+        await onUpload(file);
+      }
     } catch (uploadErr) {
       setLocalError(uploadErr instanceof Error ? uploadErr.message : "Nie udało się przesłać pliku.");
     }
@@ -155,6 +159,7 @@ export function AgreementAttachmentGallery({
           <input
             ref={inputRef}
             type="file"
+            multiple
             className="hidden"
             accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
             onChange={(event) => void handleFileChange(event)}
@@ -172,7 +177,7 @@ export function AgreementAttachmentGallery({
             ) : (
               <Paperclip className="mr-2 h-3.5 w-3.5" />
             )}
-            Dodaj zdjęcie lub plik
+            Dodaj zdjęcia lub pliki
           </Button>
           <p className="text-xs text-muted">
             Zdjęcia do {Math.round(AGREEMENT_IMAGE_MAX_BYTES / (1024 * 1024))} MB, pliki (PDF, Word,

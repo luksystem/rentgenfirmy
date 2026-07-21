@@ -706,27 +706,33 @@ export function ServiceIntakeWizard() {
     }
   }
 
+  async function uploadOneAttachment(verificationToken: string, file: File) {
+    const formData = new FormData();
+    formData.append("verificationToken", verificationToken);
+    formData.append("file", file);
+    const response = await fetch("/api/zgloszenie/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error ?? "Nie udało się przesłać pliku.");
+    }
+    setUploadedAttachments((current) => [...current, payload.attachment]);
+  }
+
   async function handleAttachmentUpload(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file || !verification?.verificationToken) {
+    const files = event.target.files ? Array.from(event.target.files) : [];
+    if (!files.length || !verification?.verificationToken) {
       return;
     }
 
     setUploadingAttachment(true);
     setError(null);
     try {
-      const formData = new FormData();
-      formData.append("verificationToken", verification.verificationToken);
-      formData.append("file", file);
-      const response = await fetch("/api/zgloszenie/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Nie udało się przesłać pliku.");
+      for (const file of files) {
+        await uploadOneAttachment(verification.verificationToken, file);
       }
-      setUploadedAttachments((current) => [...current, payload.attachment]);
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Błąd uploadu.");
     } finally {
@@ -1253,6 +1259,7 @@ export function ServiceIntakeWizard() {
                 <div className="grid gap-2">
                   <Input
                     type="file"
+                    multiple
                     accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
                     disabled={uploadingAttachment || !verification}
                     onChange={(event) => void handleAttachmentUpload(event)}

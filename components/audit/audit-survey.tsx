@@ -152,10 +152,13 @@ function SurveyQuestion({
             <Paperclip className="h-3.5 w-3.5" /> Dodaj dowód
             <input
               type="file"
+              multiple
               className="hidden"
               onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) onEvidence(f);
+                const files = e.target.files ? Array.from(e.target.files) : [];
+                for (const f of files) {
+                  onEvidence(f);
+                }
                 e.target.value = "";
               }}
             />

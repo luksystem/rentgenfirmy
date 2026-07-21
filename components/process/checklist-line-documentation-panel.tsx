@@ -142,9 +142,11 @@ export function ChecklistLineDocumentationPanel({
       }
 
       const payload = (await response.json()) as { attachment: ChecklistLineAttachment };
-      const nextAttachments = [...attachments, payload.attachment];
-      setAttachments(nextAttachments);
-      onAttachmentsChange(nextAttachments);
+      setAttachments((current) => {
+        const nextAttachments = [...current, payload.attachment];
+        onAttachmentsChange(nextAttachments);
+        return nextAttachments;
+      });
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Błąd przesyłania.");
     } finally {
@@ -250,13 +252,18 @@ export function ChecklistLineDocumentationPanel({
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             className="hidden"
             accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
             disabled={saving || uploading}
             onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) {
-                void uploadFile(file);
+              const files = event.target.files ? Array.from(event.target.files) : [];
+              if (files.length) {
+                void (async () => {
+                  for (const file of files) {
+                    await uploadFile(file);
+                  }
+                })();
               }
             }}
           />
