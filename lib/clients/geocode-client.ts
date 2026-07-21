@@ -14,9 +14,17 @@ function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function geocodeQuery(query: string): Promise<ClientMapCoordinates | null> {
+async function geocodeQuery(
+  query: string,
+  signal?: AbortSignal,
+): Promise<ClientMapCoordinates | null> {
+  if (signal?.aborted) {
+    return null;
+  }
+
   const response = await fetch(`/api/clients/geocode?q=${encodeURIComponent(query)}`, {
     credentials: "include",
+    signal,
   });
 
   if (!response.ok) {
@@ -67,6 +75,10 @@ export async function geocodeClient(client: Client): Promise<ClientMapCoordinate
   return null;
 }
 
+export type GeocodeClientsSequentialOptions = {
+  signal?: AbortSignal;
+};
+
 /**
  * Preferuje zapisane GPS z DB. Geokoduje tylko brakujące i wywołuje onResolved
  * (np. żeby zapisać wynik z powrotem do klienta).
@@ -80,12 +92,18 @@ export async function geocodeClientsSequential(
     coords: ClientMapCoordinates | null,
   ) => void,
   onResolved?: (client: Client, coords: ClientMapCoordinates) => void | Promise<void>,
+  options?: GeocodeClientsSequentialOptions,
 ) {
+  const signal = options?.signal;
   const results = new Map<string, ClientMapCoordinates>();
   let done = 0;
   let lastNetworkAt = 0;
 
   for (const client of clients) {
+    if (signal?.aborted) {
+      break;
+    }
+
     const stored = coordsFromStoredClient(client);
     if (stored) {
       results.set(client.id, stored);
@@ -98,16 +116,34 @@ export async function geocodeClientsSequential(
     let coords: ClientMapCoordinates | null = null;
 
     for (const query of queries) {
+      if (signal?.aborted) {
+        break;
+      }
+
       const elapsed = Date.now() - lastNetworkAt;
       if (lastNetworkAt > 0 && elapsed < REQUEST_GAP_MS) {
         await wait(REQUEST_GAP_MS - elapsed);
       }
+      if (signal?.aborted) {
+        break;
+      }
 
       lastNetworkAt = Date.now();
-      coords = await geocodeQuery(query);
+      try {
+        coords = await geocodeQuery(query, signal);
+      } catch (error) {
+        if (signal?.aborted || (error instanceof DOMException && error.name === "AbortError")) {
+          break;
+        }
+        throw error;
+      }
       if (coords) {
         break;
       }
+    }
+
+    if (signal?.aborted) {
+      break;
     }
 
     if (coords) {

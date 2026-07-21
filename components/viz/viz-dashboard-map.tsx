@@ -55,6 +55,7 @@ export function VizDashboardMap({ dashboardId, snapshots }: VizDashboardMapProps
   const clientsById = useMemo(() => new Map(clients.map((c) => [c.id, c])), [clients]);
 
   useEffect(() => {
+    const abort = new AbortController();
     let cancelled = false;
 
     async function geocodeStores() {
@@ -84,7 +85,16 @@ export function VizDashboardMap({ dashboardId, snapshots }: VizDashboardMapProps
         toGeocode.push({ snapshot, client });
       }
 
-      const geocoded = await geocodeClientsSequential(toGeocode.map((entry) => entry.client));
+      const geocoded = await geocodeClientsSequential(
+        toGeocode.map((entry) => entry.client),
+        undefined,
+        undefined,
+        { signal: abort.signal },
+      );
+      if (cancelled || abort.signal.aborted) {
+        return;
+      }
+
       const placedStores: PlacedStore[] = [...withOverride];
 
       for (const entry of toGeocode) {
@@ -99,15 +109,14 @@ export function VizDashboardMap({ dashboardId, snapshots }: VizDashboardMapProps
         });
       }
 
-      if (!cancelled) {
-        setPlaced(placedStores);
-        setIsGeocoding(false);
-      }
+      setPlaced(placedStores);
+      setIsGeocoding(false);
     }
 
     void geocodeStores();
     return () => {
       cancelled = true;
+      abort.abort();
     };
   }, [snapshots, clientsById]);
 

@@ -239,6 +239,7 @@ export function ClientsMapView({ clients }: { clients: Client[] }) {
   );
 
   useEffect(() => {
+    const abort = new AbortController();
     let cancelled = false;
 
     void (async () => {
@@ -249,17 +250,47 @@ export function ClientsMapView({ clients }: { clients: Client[] }) {
         return;
       }
 
-      setLoading(true);
-      setError(null);
-      setPlacedClients([]);
-      setProgress({ done: 0, total: geocodableClients.length });
+      const initialPlaced: PlacedClient[] = [];
+      const missingGps: Client[] = [];
 
-      const placed: PlacedClient[] = [];
+      for (const client of geocodableClients) {
+        if (
+          typeof client.lat === "number" &&
+          Number.isFinite(client.lat) &&
+          typeof client.lng === "number" &&
+          Number.isFinite(client.lng)
+        ) {
+          initialPlaced.push({
+            client,
+            lat: client.lat,
+            lng: client.lng,
+            label: client.location || `${client.lat}, ${client.lng}`,
+          });
+        } else {
+          missingGps.push(client);
+        }
+      }
+
+      setPlacedClients(initialPlaced);
+      setProgress({
+        done: geocodableClients.length - missingGps.length,
+        total: geocodableClients.length,
+      });
+      setError(null);
+
+      if (missingGps.length === 0) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+
+      const placed = [...initialPlaced];
       const { patchClientGps } = await import("@/lib/supabase/client-repository");
 
       await geocodeClientsSequential(
-        geocodableClients,
-        (client, done, total, coords) => {
+        missingGps,
+        (client, done, _total, coords) => {
           if (cancelled) {
             return;
           }
@@ -274,7 +305,10 @@ export function ClientsMapView({ clients }: { clients: Client[] }) {
             setPlacedClients([...placed]);
           }
 
-          setProgress({ done, total });
+          setProgress({
+            done: initialPlaced.length + done,
+            total: geocodableClients.length,
+          });
         },
         async (client, coords) => {
           // Backfill GPS do bazy — kolejne otwarcie mapy bez geokodowania
@@ -291,6 +325,7 @@ export function ClientsMapView({ clients }: { clients: Client[] }) {
             // mapa działa mimo braku zapisu
           }
         },
+        { signal: abort.signal },
       );
 
       if (!cancelled) {
@@ -303,8 +338,11 @@ export function ClientsMapView({ clients }: { clients: Client[] }) {
 
     return () => {
       cancelled = true;
+      abort.abort();
     };
-  }, [geocodeFingerprint, geocodableClients]);
+    // Tylko fingerprint adresów — zapis GPS w store nie restartuje pętli.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- geocodableClients z renderu fingerprintu
+  }, [geocodeFingerprint]);
 
   const projectIds = useMemo(() => projects.map((project) => project.id), [projects]);
 

@@ -22,14 +22,12 @@ export function clientHasGeocodableAddress(client: Client) {
   return partyHasGeocodableAddress(client) || partyHasStoredGps(client);
 }
 
+/**
+ * Fingerprint adresów (bez lat/lng) — zapis GPS przy backfillu mapy nie restartuje pętli.
+ */
 export function buildClientGeocodeFingerprint(clients: Client[]) {
   return clients
-    .map((client) => {
-      if (partyHasStoredGps(client)) {
-        return `${client.id}:gps:${client.lat},${client.lng}`;
-      }
-      return `${client.id}:${buildClientGeocodeQueries(client).join("|")}`;
-    })
+    .map((client) => `${client.id}:${buildClientGeocodeQueries(client).join("|")}`)
     .sort()
     .join("\n");
 }
