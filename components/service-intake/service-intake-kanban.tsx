@@ -1,12 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import Link from "next/link";
 import {
   Calendar,
   Coffee,
   ExternalLink,
+  Eye,
+  EyeOff,
   GripVertical,
+  LayoutGrid,
+  List,
   Loader2,
   MessageSquare,
   Navigation,
@@ -99,12 +111,138 @@ function stopDragPropagation(event: ReactPointerEvent) {
   event.stopPropagation();
 }
 
+const DENSITY_STORAGE_KEY = "service-intake-card-density";
+const DENSITY_STORAGE_KEY_MOBILE = "service-intake-card-density-mobile";
+
+function isServiceIntakeBoardMobileViewport() {
+  return typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
+}
+
+function densityStorageKey(isMobile: boolean) {
+  return isMobile ? DENSITY_STORAGE_KEY_MOBILE : DENSITY_STORAGE_KEY;
+}
+
+function readStoredServiceIntakeCardDensity(): "normal" | "slim" {
+  const isMobile = isServiceIntakeBoardMobileViewport();
+  try {
+    const stored = window.localStorage.getItem(densityStorageKey(isMobile));
+    if (stored === "slim" || stored === "normal") {
+      return stored;
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return isMobile ? "slim" : "normal";
+}
+
+/** Karta otwiera szczegóły na klik w cały obszar — akcje wewnątrz muszą zatrzymać propagację. */
+function stopClickPropagation<E extends { stopPropagation: () => void }>(event: E) {
+  event.stopPropagation();
+}
+
+/** Przyciski akcji statusu — współdzielone przez karty normal i slim (slim = subtelniejszy styl). */
+function ServiceIntakeStatusActions({
+  item,
+  busy,
+  inactive,
+  canReopen,
+  subtle,
+  onStatusChange,
+}: {
+  item: ServiceIntakeRecord;
+  busy: boolean;
+  inactive: boolean;
+  canReopen: boolean;
+  subtle: boolean;
+  onStatusChange: (status: ServiceIntakeStatus) => void;
+}) {
+  const emphasizedClass = "h-9 min-w-[7.5rem] px-3 text-sm font-bold uppercase tracking-wide";
+  const subtleClass = "h-7 px-2 text-xs font-medium";
+  const buttonClass = subtle ? subtleClass : emphasizedClass;
+
+  function handleClick(event: ReactMouseEvent, status: ServiceIntakeStatus) {
+    stopClickPropagation(event);
+    onStatusChange(status);
+  }
+
+  return (
+    <>
+      {item.status === "new" || item.status === "stuck" ? (
+        <Button
+          type="button"
+          size="sm"
+          variant={subtle ? "outline" : "default"}
+          disabled={busy}
+          className={buttonClass}
+          onPointerDown={stopDragPropagation}
+          onClick={(event) => handleClick(event, "in_review")}
+        >
+          {item.status === "stuck" ? "Wznów" : "Przyjmij"}
+        </Button>
+      ) : null}
+      {item.status === "in_review" ? (
+        <>
+          <Button
+            type="button"
+            size="sm"
+            variant={subtle ? "outline" : "default"}
+            disabled={busy}
+            className={buttonClass}
+            onPointerDown={stopDragPropagation}
+            onClick={(event) => handleClick(event, "converted")}
+          >
+            Rozlicz
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            className={buttonClass}
+            onPointerDown={stopDragPropagation}
+            onClick={(event) => handleClick(event, "stuck")}
+          >
+            Utknięte
+          </Button>
+        </>
+      ) : null}
+      {item.status === "converted" ? (
+        <Button
+          type="button"
+          size="sm"
+          variant={subtle ? "outline" : "default"}
+          disabled={busy}
+          className={buttonClass}
+          onPointerDown={stopDragPropagation}
+          onClick={(event) => handleClick(event, "closed")}
+        >
+          Zamknij
+        </Button>
+      ) : null}
+      {inactive && canReopen ? (
+        <Button
+          type="button"
+          size="sm"
+          variant={subtle ? "outline" : "secondary"}
+          disabled={busy}
+          className={subtle ? subtleClass : undefined}
+          onPointerDown={stopDragPropagation}
+          onClick={(event) => handleClick(event, "in_review")}
+        >
+          Otwórz ponownie
+        </Button>
+      ) : null}
+    </>
+  );
+}
+
 function ServiceIntakeCard({
   item,
   busy,
   isDragging,
   draggable = true,
   canReopen = false,
+  compact = false,
   onOpen,
   onStatusChange,
   onDragStart,
@@ -117,6 +255,7 @@ function ServiceIntakeCard({
   isDragging?: boolean;
   draggable?: boolean;
   canReopen?: boolean;
+  compact?: boolean;
   onOpen: () => void;
   onStatusChange: (status: ServiceIntakeStatus) => void;
   onDragStart: () => void;
@@ -199,6 +338,101 @@ function ServiceIntakeCard({
     onOpen();
   }
 
+  if (compact) {
+    return (
+      <article
+        draggable={canDrag}
+        onDragStart={
+          canDrag
+            ? (event) => {
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("text/plain", item.id);
+                onDragStart();
+              }
+            : undefined
+        }
+        onDragEnd={canDrag ? onDragEnd : undefined}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={finishPointerDrag}
+        onPointerCancel={finishPointerDrag}
+        onClick={handleOpenClick}
+        className={cn(
+          "grid cursor-pointer gap-1.5 rounded-lg border px-2.5 py-2 shadow-sm transition",
+          canDrag && "touch-manipulation cursor-grab active:cursor-grabbing",
+          inactive
+            ? "border-dashed border-border/50 bg-surface-muted/10 opacity-50 grayscale"
+            : "hover:border-accent/30",
+          !inactive && cafe ? cafe.toneClass : !inactive ? "border-border/70 bg-surface-muted/20" : undefined,
+          !inactive && overdue ? "ring-1 ring-rose-500/40" : undefined,
+          isDragging && "scale-[0.98] opacity-35 ring-2 ring-accent/30",
+        )}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-1.5">
+            {cafe ? (
+              <span
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase",
+                  cafe.letterClass,
+                )}
+              >
+                <Coffee className="h-3 w-3" />
+                {cafe.letter}
+              </span>
+            ) : null}
+            <span className="truncate text-xs font-bold text-foreground">{item.referenceNumber}</span>
+          </div>
+          {overdue ? (
+            <span className="shrink-0 rounded-full border border-rose-500/40 bg-rose-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-rose-200">
+              Po terminie
+            </span>
+          ) : null}
+        </div>
+
+        <p className="flex items-center gap-1 truncate text-[11px] text-muted">
+          <User className="h-3 w-3 shrink-0" />
+          {item.clientName ?? item.contactFullName}
+        </p>
+
+        <div className="flex items-center justify-between gap-2 text-[10px] text-muted">
+          <span className="flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            {formatDate(item.createdAt.slice(0, 10))}
+          </span>
+          {item.attemptCount > 1 ? (
+            <span className="text-amber-200/90">Podejście {item.attemptCount}</span>
+          ) : null}
+        </div>
+
+        <div className="flex flex-wrap gap-1 pt-0.5">
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs font-medium"
+            onPointerDown={stopDragPropagation}
+            onClick={(event) => {
+              stopClickPropagation(event);
+              handleOpenClick();
+            }}
+          >
+            <MessageSquare className="mr-1 h-3 w-3" />
+            Szczegóły
+          </Button>
+          <ServiceIntakeStatusActions
+            item={item}
+            busy={busy}
+            inactive={inactive}
+            canReopen={canReopen}
+            subtle
+            onStatusChange={onStatusChange}
+          />
+        </div>
+      </article>
+    );
+  }
+
   return (
     <article
       draggable={canDrag}
@@ -216,8 +450,9 @@ function ServiceIntakeCard({
       onPointerMove={handlePointerMove}
       onPointerUp={finishPointerDrag}
       onPointerCancel={finishPointerDrag}
+      onClick={handleOpenClick}
       className={cn(
-        "grid gap-2 rounded-xl border p-3 shadow-sm transition",
+        "grid cursor-pointer gap-2 rounded-xl border p-3 shadow-sm transition",
         canDrag && "touch-manipulation cursor-grab active:cursor-grabbing",
         inactive
           ? "border-dashed border-border/50 bg-surface-muted/10 opacity-50 grayscale"
@@ -249,10 +484,8 @@ function ServiceIntakeCard({
       ) : null}
 
       <div className="min-w-0">
-        <button type="button" className="w-full text-left" onPointerDown={stopDragPropagation} onClick={handleOpenClick}>
-          <p className="font-semibold text-foreground">{item.referenceNumber}</p>
-          <p className="mt-0.5 line-clamp-3 text-sm text-foreground/90">{item.description}</p>
-        </button>
+        <p className="font-semibold text-foreground">{item.referenceNumber}</p>
+        <p className="mt-0.5 line-clamp-3 text-sm text-foreground/90">{item.description}</p>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
@@ -310,70 +543,27 @@ function ServiceIntakeCard({
       </div>
 
       <div className="flex flex-wrap gap-1.5 pt-1">
-        <Button type="button" size="sm" variant="outline" onPointerDown={stopDragPropagation} onClick={handleOpenClick}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onPointerDown={stopDragPropagation}
+          onClick={(event) => {
+            stopClickPropagation(event);
+            handleOpenClick();
+          }}
+        >
           <MessageSquare className="mr-1 h-3.5 w-3.5" />
           Szczegóły
         </Button>
-        {item.status === "new" || item.status === "stuck" ? (
-          <Button
-            type="button"
-            size="sm"
-            disabled={busy}
-            className="h-9 min-w-[7.5rem] px-3 text-sm font-bold uppercase tracking-wide"
-            onPointerDown={stopDragPropagation}
-            onClick={() => onStatusChange("in_review")}
-          >
-            {item.status === "stuck" ? "Wznów" : "Przyjmij"}
-          </Button>
-        ) : null}
-        {item.status === "in_review" ? (
-          <>
-            <Button
-              type="button"
-              size="sm"
-              disabled={busy}
-              className="h-9 min-w-[7.5rem] px-3 text-sm font-bold uppercase tracking-wide"
-              onPointerDown={stopDragPropagation}
-              onClick={() => onStatusChange("converted")}
-            >
-              Rozlicz
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={busy}
-              className="h-9 min-w-[7.5rem] px-3 text-sm font-bold uppercase tracking-wide"
-              onPointerDown={stopDragPropagation}
-              onClick={() => onStatusChange("stuck")}
-            >
-              Utknięte
-            </Button>
-          </>
-        ) : null}
-        {item.status === "converted" ? (
-          <Button
-            type="button"
-            size="sm"
-            disabled={busy}
-            className="h-9 min-w-[7.5rem] px-3 text-sm font-bold uppercase tracking-wide"
-            onPointerDown={stopDragPropagation}
-            onClick={() => onStatusChange("closed")}
-          >
-            Zamknij
-          </Button>
-        ) : null}
-        {inactive && canReopen ? (
-          <Button
-            type="button"
-            size="sm"
-            disabled={busy}
-            onPointerDown={stopDragPropagation}
-            onClick={() => onStatusChange("in_review")}
-          >
-            Otwórz ponownie
-          </Button>
-        ) : null}
+        <ServiceIntakeStatusActions
+          item={item}
+          busy={busy}
+          inactive={inactive}
+          canReopen={canReopen}
+          subtle={false}
+          onStatusChange={onStatusChange}
+        />
         {directionsUrl ? (
           <Button
             type="button"
@@ -383,14 +573,24 @@ function ServiceIntakeCard({
             asChild
             onPointerDown={stopDragPropagation}
           >
-            <a href={directionsUrl} target="_blank" rel="noopener noreferrer">
+            <a
+              href={directionsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={stopClickPropagation}
+            >
               <Navigation className="mr-1 h-3.5 w-3.5" />
               Prowadź do
             </a>
           </Button>
         ) : null}
         <Button size="sm" variant="ghost" asChild onPointerDown={stopDragPropagation}>
-          <Link href={`/zgloszenie/watek/${item.trackingToken}`} target="_blank" rel="noreferrer">
+          <Link
+            href={`/zgloszenie/watek/${item.trackingToken}`}
+            target="_blank"
+            rel="noreferrer"
+            onClick={stopClickPropagation}
+          >
             <ExternalLink className="h-3.5 w-3.5" />
           </Link>
         </Button>
@@ -419,18 +619,37 @@ export function ServiceIntakeKanban({
   const [stuckTarget, setStuckTarget] = useState<ServiceIntakeRecord | null>(null);
   const [dragItemId, setDragItemId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
+  const [showClosed, setShowClosed] = useState(false);
+  const [showRejected, setShowRejected] = useState(false);
+  const [density, setDensity] = useState<"normal" | "slim">("slim");
   const dragItemIdRef = useRef<string | null>(null);
 
   const dragItem = dragItemId ? (items.find((entry) => entry.id === dragItemId) ?? null) : null;
 
-  const columns = useMemo(
-    () =>
-      SERVICE_INTAKE_KANBAN_COLUMNS.map((status) => ({
-        id: status,
-        title: SERVICE_INTAKE_STATUS_LABELS[status],
-      })),
-    [],
-  );
+  useEffect(() => {
+    setDensity(readStoredServiceIntakeCardDensity());
+  }, []);
+
+  function handleDensityChange(next: "normal" | "slim") {
+    setDensity(next);
+    try {
+      window.localStorage.setItem(densityStorageKey(isServiceIntakeBoardMobileViewport()), next);
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  const columns = useMemo(() => {
+    const visibleStatuses = SERVICE_INTAKE_KANBAN_COLUMNS.filter((status) => {
+      if (status === "closed") return showClosed;
+      if (status === "rejected") return showRejected;
+      return true;
+    });
+    return visibleStatuses.map((status) => ({
+      id: status,
+      title: SERVICE_INTAKE_STATUS_LABELS[status],
+    }));
+  }, [showClosed, showRejected]);
 
   const { activeColumnId, scrollerRef, scrollToColumn, setColumnRef } = useKanbanMobileColumns(columns);
 
@@ -520,8 +739,8 @@ export function ServiceIntakeKanban({
   }, [items]);
 
   const maxColumnCount = useMemo(
-    () => Math.max(1, ...SERVICE_INTAKE_KANBAN_COLUMNS.map((status) => grouped.get(status)?.length ?? 0)),
-    [grouped],
+    () => Math.max(1, ...columns.map((column) => grouped.get(column.id)?.length ?? 0)),
+    [grouped, columns],
   );
 
   const attentionItems = useMemo(
@@ -771,6 +990,59 @@ export function ServiceIntakeKanban({
         </Button>
       </div>
 
+      <div className="grid w-full min-w-0 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
+        <div
+          className="flex w-full items-center overflow-hidden rounded-lg border border-border/70 sm:w-auto"
+          role="group"
+          aria-label="Gęstość kart zgłoszeń"
+        >
+          <button
+            type="button"
+            onClick={() => handleDensityChange("normal")}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition sm:flex-none",
+              density === "normal" ? "bg-accent text-accent-foreground" : "text-muted hover:bg-surface-muted",
+            )}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            Standard
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDensityChange("slim")}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition sm:flex-none",
+              density === "slim" ? "bg-accent text-accent-foreground" : "text-muted hover:bg-surface-muted",
+            )}
+          >
+            <List className="h-3.5 w-3.5" />
+            Slim
+          </button>
+        </div>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="min-w-0 flex-1 sm:flex-none"
+            onClick={() => setShowClosed((current) => !current)}
+          >
+            {showClosed ? <EyeOff className="mr-2 h-4 w-4 shrink-0" /> : <Eye className="mr-2 h-4 w-4 shrink-0" />}
+            <span className="truncate">{showClosed ? "Ukryj zamknięte" : "Pokaż zamknięte"}</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="min-w-0 flex-1 sm:flex-none"
+            onClick={() => setShowRejected((current) => !current)}
+          >
+            {showRejected ? <EyeOff className="mr-2 h-4 w-4 shrink-0" /> : <Eye className="mr-2 h-4 w-4 shrink-0" />}
+            <span className="truncate">{showRejected ? "Ukryj odrzucone" : "Pokaż odrzucone"}</span>
+          </Button>
+        </div>
+      </div>
+
       {attentionItems.length > 0 ? (
         <section className="shrink-0 rounded-2xl border border-rose-500/35 bg-rose-500/10 p-3">
           <div className="mb-2 flex items-center justify-between gap-2">
@@ -855,20 +1127,21 @@ export function ServiceIntakeKanban({
       <p className="hidden shrink-0 text-sm text-muted md:block">{KANBAN_DRAG_HINT}</p>
 
       <div ref={scrollerRef} className={KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS}>
-        {SERVICE_INTAKE_KANBAN_COLUMNS.map((status) => {
+        {columns.map(({ id: status }) => {
           const columnItems = grouped.get(status) ?? [];
           const activeCount = countActiveServiceIntakes(columnItems);
           const inactiveCount = columnItems.length - activeCount;
           const overdueCount = countOverdueActiveServiceIntakes(columnItems);
           const isArchiveColumn = status === "closed" || status === "rejected";
           const isDropTarget = Boolean(dragItemId && dragOverColumnId === status);
+          const cardRowHeight = density === "slim" ? 96 : 168;
           return (
             <section
               key={status}
               ref={(node) => setColumnRef(status, node as HTMLDivElement | null)}
               data-column-id={status}
               className={cn(KANBAN_MOBILE_COLUMN_SHELL_CLASS, getKanbanColumnDropTargetClasses(isDropTarget))}
-              style={{ minHeight: `${Math.max(220, maxColumnCount * 168)}px` }}
+              style={{ minHeight: `${Math.max(220, maxColumnCount * cardRowHeight)}px` }}
               onDragEnter={(event) => {
                 if (!dragItemId) {
                   return;
@@ -929,6 +1202,7 @@ export function ServiceIntakeKanban({
                       isDragging={dragItemId === item.id}
                       draggable={canManageBoard}
                       canReopen={canManageBoard}
+                      compact={density === "slim"}
                       onOpen={() => setSelectedId(item.id)}
                       onStatusChange={(nextStatus) => void changeStatus(item.id, nextStatus)}
                       onDragStart={() => beginDrag(item.id)}
