@@ -47,6 +47,7 @@ export function InspectionDetailModal({
   onDeleted?: (id: string) => void;
 }) {
   const profile = useAuthStore((state) => state.profile);
+  const itemId = item?.id ?? null;
   const [detail, setDetail] = useState<InspectionRecord | null>(item);
   const [teamProfiles, setTeamProfiles] = useState<UserProfile[]>([]);
   const { candidates, mentionOptions } = useMentionOptionsFromProfiles(teamProfiles);
@@ -61,7 +62,7 @@ export function InspectionDetailModal({
   const [recommendations, setRecommendations] = useState("");
 
   useEffect(() => {
-    if (!open || !item) {
+    if (!open || !itemId) {
       setBusy(false);
       setLoading(false);
       setError(null);
@@ -77,7 +78,7 @@ export function InspectionDetailModal({
 
     setLoading(true);
     setError(null);
-    void fetch(`/api/inspections/${item.id}`, { credentials: "include" })
+    void fetch(`/api/inspections/${itemId}`, { credentials: "include" })
       .then(async (response) => {
         const payload = await response.json();
         if (!response.ok) {
@@ -96,7 +97,7 @@ export function InspectionDetailModal({
         setError(loadError instanceof Error ? loadError.message : "Błąd.");
       })
       .finally(() => setLoading(false));
-  }, [open, item?.id]);
+  }, [open, itemId]);
 
   useEffect(() => {
     void fetchTeamProfiles()

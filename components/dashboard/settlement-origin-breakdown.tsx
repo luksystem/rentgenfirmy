@@ -8,17 +8,10 @@ import type {
 import { cn, formatMoney } from "@/lib/utils";
 
 function formatOriginAmount(line: SettlementOriginLine) {
-  if (line.amountGross != null && Number.isFinite(line.amountGross)) {
-    const net =
-      line.amountNet != null && Number.isFinite(line.amountNet)
-        ? ` · netto ${formatMoney(line.amountNet)}`
-        : "";
-    return `${formatMoney(line.amountGross)} brutto${net}`;
-  }
   if (line.amountNet != null && Number.isFinite(line.amountNet)) {
     return `${formatMoney(line.amountNet)} netto`;
   }
-  return "bez kwoty";
+  return "bez kwoty netto";
 }
 
 function toneClass(tone: SettlementOriginLine["tone"]) {
@@ -82,8 +75,7 @@ function OriginGroupBlock({
               Zaakceptowane
             </p>
             <p className="text-xs text-muted">
-              łącznie {formatMoney(group.acceptedGrossTotal)} brutto
-              {group.acceptedNetTotal > 0 ? ` · ${formatMoney(group.acceptedNetTotal)} netto` : ""}
+              łącznie {formatMoney(group.acceptedNetTotal)} netto
             </p>
           </div>
           <ul className="grid gap-2">
@@ -101,8 +93,7 @@ function OriginGroupBlock({
               Oczekują na akceptację
             </p>
             <p className="text-xs text-muted">
-              łącznie {formatMoney(group.pendingGrossTotal)} brutto
-              {group.pendingNetTotal > 0 ? ` · ${formatMoney(group.pendingNetTotal)} netto` : ""}
+              łącznie {formatMoney(group.pendingNetTotal)} netto
             </p>
           </div>
           <ul className="grid gap-2">
@@ -128,11 +119,11 @@ export function SettlementOriginBreakdownCard({
   return (
     <section className="grid min-w-0 gap-3 rounded-xl border border-border/70 bg-surface-muted/15 p-3 sm:p-4">
       <div>
-        <h3 className="page-section-subtitle text-sm">Skąd się biorą kwoty</h3>
+        <h3 className="page-section-subtitle text-sm">Skąd się biorą kwoty (netto)</h3>
         <p className="mt-1 text-xs text-muted">
-          Umowa główna, zaakceptowane i oczekujące zmiany w projekcie oraz szybkie oferty. Pozycje
-          „w należnościach” wchodzą do salda; oczekujące na akceptację są widoczne, ale jeszcze nie
-          w bilansie.
+          Wszystkie kwoty poniżej są netto. Umowa główna, zaakceptowane i oczekujące zmiany oraz
+          szybkie oferty. Pozycje „w należnościach” wchodzą do salda; oczekujące na akceptację są
+          widoczne, ale jeszcze nie w bilansie.
         </p>
       </div>
 
@@ -144,14 +135,14 @@ export function SettlementOriginBreakdownCard({
 
       <OriginGroupBlock
         title="Zmiany w projekcie"
-        hint="Dodatkowe koszty po akceptacji klienta trafiają do należności."
+        hint="Kwoty netto — po akceptacji klienta trafiają do należności."
         group={breakdown.changeRequests}
         emptyLabel="Brak zmian z kwotą w tym projekcie."
       />
 
       <OriginGroupBlock
         title="Szybkie oferty"
-        hint="Zaakceptowane oferty serwisowe doliczane do rozliczenia projektu."
+        hint="Kwoty netto zaakceptowanych i oczekujących ofert serwisowych."
         group={breakdown.offers}
         emptyLabel="Brak ofert powiązanych z tym projektem."
       />

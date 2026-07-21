@@ -90,7 +90,7 @@ export function ProjectSettlementsPanel({
   const anchored = process && template ? resolveAnchoredProcessTemplate(process, template) : template;
   const stages = anchored?.stages ?? [];
 
-  const entries = bundle?.entries ?? [];
+  const entries = useMemo(() => bundle?.entries ?? [], [bundle?.entries]);
   const settings = bundle?.settings;
   const summary = useMemo(() => buildSettlementSummary(entries), [entries]);
   const projectServices = useMemo(
@@ -159,8 +159,6 @@ export function ProjectSettlementsPanel({
       sync: !readOnly,
       showLoading: true,
     }).catch(() => undefined);
-    // Tylko przy zmianie projektu — nie przy każdej mutacji cache (wyścig z Spłacone).
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- celowo bez bundle
   }, [ensureSettlements, projectId, readOnly]);
 
   useEffect(() => {
@@ -386,7 +384,7 @@ export function ProjectSettlementsPanel({
     <div className="grid min-w-0 max-w-full gap-5 overflow-x-hidden sm:gap-6">
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <p className="min-w-0 break-words text-xs text-muted">
-          Podsumowania w netto. Harmonogram uwzględnia kwoty z VAT (brutto w pozycjach).
+          Wszystkie kwoty w podsumowaniu są netto. Brutto jest podane tylko przy kwocie „Do zapłaty”.
         </p>
         {!readOnly ? (
           <Button
@@ -416,13 +414,13 @@ export function ProjectSettlementsPanel({
         <SummaryCard
           label="Zapłacono (netto)"
           value={summary.paidNet}
-          hint={`${summary.paymentsCount} spłat · brutto ${formatMoney(summary.paidGross)}`}
+          hint={`${summary.paymentsCount} spłat`}
           tone="success"
         />
         <SummaryCard
-          label="Pozostało do rozliczenia"
+          label="Pozostało do rozliczenia (netto)"
           value={summary.balanceNet}
-          hint="Należności − spłaty (netto)"
+          hint="Należności − spłaty"
           tone={balanceTone}
           emphasize
         />
@@ -675,10 +673,8 @@ export function ProjectSettlementsPanel({
                       </div>
                       <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-start">
                         <div className="text-left text-sm tabular-nums sm:text-right">
-                          <p className="text-foreground">netto {formatMoney(entry.amountNet)}</p>
-                          <p className="text-xs text-muted">
-                            VAT {entry.vatRate}% · brutto {formatMoney(entry.amountGross)}
-                          </p>
+                          <p className="text-foreground">{formatMoney(entry.amountNet)} netto</p>
+                          <p className="text-xs text-muted">VAT {entry.vatRate}%</p>
                         </div>
                         {!readOnly ? (
                           <div className="flex flex-wrap gap-1">

@@ -40,31 +40,16 @@ export type SettlementOriginBreakdown = {
   hasAnyExtra: boolean;
 };
 
-function sumGross(lines: SettlementOriginLine[]) {
-  return lines.reduce((sum, line) => sum + (line.amountGross ?? 0), 0);
-}
-
 function sumNet(lines: SettlementOriginLine[]) {
   return lines.reduce((sum, line) => sum + (line.amountNet ?? 0), 0);
-}
-
-function emptyGroup(): SettlementOriginGroup {
-  return {
-    accepted: [],
-    pending: [],
-    acceptedGrossTotal: 0,
-    pendingGrossTotal: 0,
-    acceptedNetTotal: 0,
-    pendingNetTotal: 0,
-  };
 }
 
 function finalizeGroup(accepted: SettlementOriginLine[], pending: SettlementOriginLine[]): SettlementOriginGroup {
   return {
     accepted,
     pending,
-    acceptedGrossTotal: sumGross(accepted),
-    pendingGrossTotal: sumGross(pending),
+    acceptedGrossTotal: 0,
+    pendingGrossTotal: 0,
     acceptedNetTotal: sumNet(accepted),
     pendingNetTotal: sumNet(pending),
   };

@@ -453,11 +453,15 @@ export function ProjectChangeRequestsPanel({
     if (mode !== "team") {
       return {
         ...summary,
+        offersNetTotal: seedOffersGrossTotal ?? summary.offersNetTotal,
         offersGrossTotal: seedOffersGrossTotal ?? summary.offersGrossTotal,
         acceptedOffersCount: seedAcceptedOffersCount ?? summary.acceptedOffersCount,
+        totalNet: summary.hasSettlementLedger
+          ? summary.chargesNet
+          : (seedOffersGrossTotal ?? 0) + summary.changeRequestsNetTotal,
         totalGross: summary.hasSettlementLedger
-          ? summary.chargesGross
-          : (seedOffersGrossTotal ?? 0) + summary.changeRequestsGrossTotal,
+          ? summary.chargesNet
+          : (seedOffersGrossTotal ?? 0) + summary.changeRequestsNetTotal,
       };
     }
     return summary;
@@ -660,34 +664,54 @@ export function ProjectChangeRequestsPanel({
 
   return (
     <div className="grid min-w-0 max-w-full gap-3 overflow-x-hidden">
-      <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/10 p-4 sm:grid-cols-3">
+      <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/10 p-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="flex items-start gap-2">
           <Wallet className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
           <div>
-            <p className="text-xs text-muted">Koszt bazowy (zaakceptowane oferty)</p>
+            <p className="text-xs text-muted">Koszt bazowy ofert (netto)</p>
             <p className="text-sm font-semibold text-foreground">
-              {formatMoney(costSummary.offersGrossTotal)}
+              {formatMoney(costSummary.offersNetTotal)}
             </p>
             <p className="text-[11px] text-muted">{costSummary.acceptedOffersCount} ofert</p>
           </div>
         </div>
         <div className="flex items-start gap-2">
-          <Wallet className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+          <Wallet className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
           <div>
-            <p className="text-xs text-muted">Koszty zmian (zaakceptowane)</p>
+            <p className="text-xs text-muted">Zmiany zaakceptowane (netto)</p>
             <p className="text-sm font-semibold text-foreground">
-              {formatMoney(costSummary.changeRequestsGrossTotal)}
+              {formatMoney(costSummary.changeRequestsNetTotal)}
             </p>
             <p className="text-[11px] text-muted">{costSummary.acceptedChangeRequestsCount} zmian</p>
           </div>
         </div>
         <div className="flex items-start gap-2">
-          <Wallet className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+          <Wallet className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+          <div>
+            <p className="text-xs text-muted">Czeka na akceptację (netto)</p>
+            <p className="text-sm font-semibold text-foreground">
+              {formatMoney(costSummary.pendingChangeRequestsNetTotal)}
+            </p>
+            <p className="text-[11px] text-muted">
+              {costSummary.pendingChangeRequestsCount}{" "}
+              {costSummary.pendingChangeRequestsCount === 1 ? "zmiana" : "zmian"}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-start gap-2">
+          <Wallet className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
           <div>
             <p className="text-xs text-muted">
-              {costSummary.hasSettlementLedger ? "Do zapłaty (rozliczenia)" : "Razem koszt projektu"}
+              {costSummary.hasSettlementLedger
+                ? "Do zapłaty — rozliczenia (netto)"
+                : "Razem koszt projektu (netto)"}
             </p>
-            <p className="text-base font-bold text-foreground">{formatMoney(costSummary.totalGross)}</p>
+            <p className="text-base font-bold text-foreground">{formatMoney(costSummary.totalNet)}</p>
+            {costSummary.pendingChangeRequestsNetTotal > 0 ? (
+              <p className="text-[11px] text-amber-200/90">
+                + {formatMoney(costSummary.pendingChangeRequestsNetTotal)} netto poza saldem
+              </p>
+            ) : null}
           </div>
         </div>
       </div>

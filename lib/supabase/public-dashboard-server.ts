@@ -21,7 +21,7 @@ import type {
   ProjectChangeRequest,
   ProjectChangeRequestStatus,
 } from "@/lib/dashboard/change-request-types";
-import { sumAcceptedOffersGross } from "@/lib/dashboard/project-cost-summary";
+import { sumAcceptedOffersNet } from "@/lib/dashboard/project-cost-summary";
 import type {
   DashboardContentSection,
   DashboardContentType,
@@ -861,7 +861,7 @@ export async function fetchPublicDashboardPayload(
     publicOnly: true,
   });
   const pendingOffersCount = countPendingClientOffers(offers);
-  const acceptedOffersSummary = sumAcceptedOffersGross(
+  const acceptedOffersSummary = sumAcceptedOffersNet(
     initialProjectId
       ? clientServices.filter((service) => service.projectId === initialProjectId)
       : [],

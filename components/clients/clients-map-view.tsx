@@ -321,7 +321,7 @@ export function ClientsMapView({ clients }: { clients: Client[] }) {
     return () => {
       cancelled = true;
     };
-  }, [projectIds.join(",")]);
+  }, [projectIds]);
 
   const mapPoints = useMemo(
     () => placedClients.map((entry) => [entry.lat, entry.lng] as [number, number]),

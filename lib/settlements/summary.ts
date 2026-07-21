@@ -1,7 +1,7 @@
 import type { ProjectChangeRequest } from "@/lib/dashboard/change-request-types";
 import {
   buildProjectCostSummary,
-  sumAcceptedOffersGross,
+  sumAcceptedOffersNet,
   type ProjectCostSummary,
 } from "@/lib/dashboard/project-cost-summary";
 import type { ServiceRecord } from "@/lib/service/types";
@@ -22,7 +22,7 @@ export function buildProjectFinancialSummary(
   changeRequests: ProjectChangeRequest[],
   settlementEntries: ProjectSettlementEntry[] | null | undefined,
 ): ProjectFinancialSummary {
-  const offers = sumAcceptedOffersGross(projectServices);
+  const offers = sumAcceptedOffersNet(projectServices);
   const cost = buildProjectCostSummary(offers.total, offers.count, changeRequests);
   const settlement = buildSettlementSummary(settlementEntries ?? []);
   const hasSettlementLedger = (settlementEntries?.length ?? 0) > 0;
@@ -31,7 +31,8 @@ export function buildProjectFinancialSummary(
     ...cost,
     ...settlement,
     hasSettlementLedger,
-    // Gdy ledger ma należności — one są źródłem prawdy dla „do zapłaty”
-    totalGross: hasSettlementLedger ? settlement.chargesGross : cost.totalGross,
+    // Gdy ledger ma należności — one są źródłem prawdy dla „do zapłaty” (netto)
+    totalNet: hasSettlementLedger ? settlement.chargesNet : cost.totalNet,
+    totalGross: hasSettlementLedger ? settlement.chargesNet : cost.totalNet,
   };
 }
