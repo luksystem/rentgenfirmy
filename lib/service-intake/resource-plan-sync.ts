@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveServiceIntakeDueAt } from "@/lib/service-intake/sla";
 import type { ServiceIntakeRecord } from "@/lib/service-intake/types";
 
 let serviceWorkTypeItemId: string | null | undefined;
@@ -43,7 +44,11 @@ export async function syncServiceIntakeResourcePlanItem(
   }
 
   const workTypeItemId = await getServiceWorkTypeItemId(supabase).catch(() => null);
-  const day = new Date();
+  const now = new Date();
+  const dueAtIso = resolveServiceIntakeDueAt(intake);
+  const dueDate = dueAtIso ? new Date(dueAtIso) : null;
+  // Dzień wpisu = termin wykonania (jeśli jeszcze nie minął), inaczej dziś (zgłoszenie przeterminowane).
+  const day = dueDate && !Number.isNaN(dueDate.getTime()) && dueDate.getTime() > now.getTime() ? dueDate : now;
   const y = day.getFullYear();
   const m = String(day.getMonth() + 1).padStart(2, "0");
   const d = String(day.getDate()).padStart(2, "0");

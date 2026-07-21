@@ -1358,7 +1358,7 @@ export async function updateServiceIntake(
   const shouldSyncPlan =
     nextStatus === "in_review" ||
     nextStatus === "stuck" ||
-    (patch.involvedProfileIds !== undefined &&
+    ((patch.involvedProfileIds !== undefined || patch.dueAt !== undefined) &&
       (previousStatus === "in_review" || previousStatus === "stuck"));
 
   if (shouldSyncPlan) {
