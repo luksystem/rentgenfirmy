@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Pencil, Plus, Settings, Trash2 } from "lucide-react";
+import { emptyTradeInput, TradeFormFields } from "@/components/dashboard/trade-form-fields";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,244 +12,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, Input, Textarea } from "@/components/ui/input";
 import type { ProjectTrade, ProjectTradeInput } from "@/lib/dashboard/trade-types";
 import type { TradeCatalogItem } from "@/lib/field-options";
 import { findTradeCatalogItem } from "@/lib/field-options";
 import { tradeCatalogItemToProjectTradeInput } from "@/lib/trades/catalog-location";
-import {
-  companiesForTrade,
-  companyItemToCatalogShape,
-  formatCatalogCompanyLabel,
-  tradeCatalogEntryKey,
-  uniqueTradeNames,
-} from "@/lib/trades/catalog-utils";
 import type { TradeCompanyItem } from "@/lib/trades/company-types";
-import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 import { useProjectTradeStore } from "@/store/project-trade-store";
 
 const EMPTY_TRADES: ProjectTrade[] = [];
-
-function emptyTradeInput(): ProjectTradeInput {
-  return {
-    name: "",
-    company: "",
-    contactName: "",
-    email: "",
-    phone: "",
-    description: "",
-  };
-}
-
-function applyCatalogItem(form: ProjectTradeInput, item: TradeCatalogItem): ProjectTradeInput {
-  const fromCatalog = tradeCatalogItemToProjectTradeInput(item);
-  return {
-    ...form,
-    ...fromCatalog,
-    company: form.company?.trim() ? form.company : fromCatalog.company,
-    contactName: form.contactName?.trim() ? form.contactName : fromCatalog.contactName,
-    email: form.email?.trim() ? form.email : fromCatalog.email,
-    phone: form.phone?.trim() ? form.phone : fromCatalog.phone,
-    description: form.description?.trim() ? form.description : fromCatalog.description,
-  };
-}
-
-function TradeFormFields({
-  form,
-  onChange,
-  categories = [],
-  companyPool = [],
-}: {
-  form: ProjectTradeInput;
-  onChange: (next: ProjectTradeInput) => void;
-  categories?: TradeCatalogItem[];
-  companyPool?: TradeCompanyItem[];
-}) {
-  const tradeNames = useMemo(() => uniqueTradeNames(categories), [categories]);
-  const companiesForSelectedTrade = useMemo(
-    () => (form.name.trim() ? companiesForTrade(form.name, companyPool) : []),
-    [companyPool, form.name],
-  );
-  const companyQuery = (form.company ?? "").trim().toLowerCase();
-  const companySuggestions = useMemo(() => {
-    if (!form.name.trim()) {
-      return companyPool.map(companyItemToCatalogShape);
-    }
-    if (!companyQuery) {
-      return companiesForSelectedTrade;
-    }
-    return companiesForSelectedTrade.filter((item) =>
-      formatCatalogCompanyLabel(item).toLowerCase().includes(companyQuery),
-    );
-  }, [companiesForSelectedTrade, companyPool, companyQuery, form.name]);
-
-  return (
-    <div className="grid gap-3">
-      {tradeNames.length > 0 ? (
-        <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/10 p-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">Branża z katalogu</p>
-          <div className="flex flex-wrap gap-1.5">
-            {tradeNames.map((tradeName) => (
-              <button
-                key={tradeName}
-                type="button"
-                className={cn(
-                  "rounded-full border px-2.5 py-1 text-xs font-medium transition",
-                  form.name === tradeName
-                    ? "border-accent/50 bg-accent/10 text-foreground"
-                    : "border-border/70 text-muted hover:border-accent/30 hover:text-foreground",
-                )}
-                onClick={() => {
-                  const category = categories.find(
-                    (entry) => entry.name.trim().toLowerCase() === tradeName.trim().toLowerCase(),
-                  );
-                  onChange({
-                    ...form,
-                    name: tradeName,
-                    company: "",
-                    description: category?.description?.trim() || form.description,
-                  });
-                }}
-              >
-                {tradeName}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {companiesForSelectedTrade.length > 0 ? (
-        <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/10 p-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">
-            Firmy w branży „{form.name}”
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {companiesForSelectedTrade.map((item) => (
-              <button
-                key={tradeCatalogEntryKey(item)}
-                type="button"
-                className={cn(
-                  "rounded-full border px-2.5 py-1 text-xs font-medium transition",
-                  form.company === item.company && form.name === item.name
-                    ? "border-accent/50 bg-accent/10 text-foreground"
-                    : "border-border/70 text-muted hover:border-accent/30 hover:text-foreground",
-                )}
-                onClick={() => onChange(applyCatalogItem(form, item))}
-              >
-                {formatCatalogCompanyLabel(item)}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-muted">
-            Wybierz firmę z bazy branży lub wpisz nową — trafi do wspólnej bazy i będzie podpowiadana
-            w kolejnych projektach.
-          </p>
-        </div>
-      ) : null}
-
-      <Field label="Branża *">
-        <Input
-          value={form.name}
-          placeholder="np. Klimatyzacja, Elektryka, Smart Home"
-          list="trade-catalog-suggestions"
-          onChange={(event) => {
-            const nextName = event.target.value;
-            const category = categories.find(
-              (entry) => entry.name.trim().toLowerCase() === nextName.trim().toLowerCase(),
-            );
-            onChange({
-              ...form,
-              name: nextName,
-              company: form.name.trim().toLowerCase() === nextName.trim().toLowerCase() ? form.company : "",
-              description: category?.description?.trim() || form.description,
-            });
-          }}
-        />
-        {tradeNames.length > 0 ? (
-          <datalist id="trade-catalog-suggestions">
-            {tradeNames.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
-        ) : null}
-      </Field>
-
-      <Field label="Firma wykonawcy">
-        <Input
-          value={form.company ?? ""}
-          placeholder="Wybierz z bazy branży lub wpisz nową firmę dla tego klienta"
-          list="trade-company-suggestions"
-          onChange={(event) => {
-            const nextCompany = event.target.value;
-            const match = companiesForSelectedTrade.find(
-              (item) => (item.company ?? "").toLowerCase() === nextCompany.trim().toLowerCase(),
-            );
-            if (match) {
-              onChange(applyCatalogItem({ ...form, company: nextCompany }, match));
-              return;
-            }
-            onChange({ ...form, company: nextCompany });
-          }}
-        />
-        {companySuggestions.length > 0 ? (
-          <datalist id="trade-company-suggestions">
-            {companySuggestions.map((item) => (
-              <option key={tradeCatalogEntryKey(item)} value={item.company ?? ""} />
-            ))}
-          </datalist>
-        ) : null}
-      </Field>
-
-      {companyQuery && companySuggestions.length > 0 && companySuggestions.length <= 8 ? (
-        <div className="flex flex-wrap gap-1.5">
-          {companySuggestions.map((item) => (
-            <button
-              key={`company-suggestion-${tradeCatalogEntryKey(item)}`}
-              type="button"
-              className="rounded-lg border border-border/70 px-2 py-1 text-left text-xs text-muted hover:border-accent/30 hover:text-foreground"
-              onClick={() => onChange(applyCatalogItem(form, item))}
-            >
-              <span className="font-medium text-foreground">{formatCatalogCompanyLabel(item)}</span>
-              <span className="text-muted"> · {item.name}</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
-      <Field label="Osoba kontaktowa">
-        <Input
-          value={form.contactName ?? ""}
-          placeholder="Imię i nazwisko"
-          onChange={(event) => onChange({ ...form, contactName: event.target.value })}
-        />
-      </Field>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="E-mail">
-          <Input
-            type="email"
-            value={form.email ?? ""}
-            onChange={(event) => onChange({ ...form, email: event.target.value })}
-          />
-        </Field>
-        <Field label="Telefon">
-          <Input
-            type="tel"
-            value={form.phone ?? ""}
-            onChange={(event) => onChange({ ...form, phone: event.target.value })}
-          />
-        </Field>
-      </div>
-      <Field label="Zakres prac / opis">
-        <Textarea
-          value={form.description ?? ""}
-          rows={3}
-          placeholder="Krótki opis tego, co ta branża wykona w projekcie…"
-          onChange={(event) => onChange({ ...form, description: event.target.value })}
-        />
-      </Field>
-    </div>
-  );
-}
 
 export function ProjectTradesPanel({
   projectId,
@@ -265,21 +37,35 @@ export function ProjectTradesPanel({
   const updateTrade = useProjectTradeStore((state) => state.updateTrade);
   const removeTrade = useProjectTradeStore((state) => state.removeTrade);
   const fieldOptions = useAppStore((state) => state.fieldOptions);
+  const refreshFieldOptions = useAppStore((state) => state.refreshFieldOptions);
   const categories = useMemo(() => fieldOptions.tradeCatalogItems, [fieldOptions.tradeCatalogItems]);
   const [companyPool, setCompanyPool] = useState<TradeCompanyItem[]>(fieldOptions.tradeCompanies ?? []);
   const trades = storeTrades;
   const isLoading = loading && trades.length === 0;
 
+  async function refreshCatalogSources() {
+    try {
+      const options = await refreshFieldOptions();
+      setCompanyPool(options.tradeCompanies ?? []);
+    } catch {
+      // zostaw lokalny katalog
+    }
+    try {
+      const response = await fetch("/api/trades/companies", { credentials: "include" });
+      const payload = await response.json();
+      if (response.ok) {
+        setCompanyPool(payload.companies ?? []);
+      }
+    } catch {
+      // pool firm jest opcjonalny
+    }
+  }
+
   useEffect(() => {
-    void fetch("/api/trades/companies", { credentials: "include" })
-      .then(async (response) => {
-        const payload = await response.json();
-        if (response.ok) {
-          setCompanyPool(payload.companies ?? []);
-        }
-      })
-      .catch(() => setCompanyPool(fieldOptions.tradeCompanies ?? []));
-  }, [fieldOptions.tradeCompanies]);
+    void refreshCatalogSources();
+    // tylko przy montowaniu panelu — pełne odświeżenie także przy otwarciu dialogu
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -293,6 +79,12 @@ export function ProjectTradesPanel({
     }
     void ensureTrades(projectId, { force: seedTrades !== undefined });
   }, [ensureTrades, projectId, seedProjectTrades, seedTrades]);
+
+  useEffect(() => {
+    if (!dialogOpen) return;
+    void refreshCatalogSources();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dialogOpen]);
 
   function openCreate(prefill?: TradeCatalogItem) {
     setEditingId(null);
@@ -330,7 +122,7 @@ export function ProjectTradesPanel({
       }
       setDialogOpen(false);
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Nie udało się zapisać branży.");
+      setError(saveError instanceof Error ? saveError.message : "Nie udało się zapisać wykonawcy.");
     } finally {
       setSaving(false);
     }
@@ -340,7 +132,7 @@ export function ProjectTradesPanel({
     <div className="grid min-w-0 max-w-full gap-4 overflow-x-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted">
-          W projekcie dodajesz firmę wykonawczą w danej branży. Trafia ona do wspólnej bazy pod tą branżą.
+          Wykonawcy przypisani do projektu. Firma trafia też do wspólnego katalogu branż.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" variant="outline" asChild>
@@ -351,7 +143,7 @@ export function ProjectTradesPanel({
           </Button>
           <Button type="button" size="sm" className="shrink-0" onClick={() => openCreate()}>
             <Plus className="mr-2 h-4 w-4" />
-            Dodaj branżę
+            Dodaj wykonawcę
           </Button>
         </div>
       </div>
@@ -359,13 +151,13 @@ export function ProjectTradesPanel({
       {error && !dialogOpen ? <p className="text-sm text-rose-400">{error}</p> : null}
 
       {isLoading && !trades.length ? (
-        <p className="text-sm text-muted">Ładowanie branż…</p>
+        <p className="text-sm text-muted">Ładowanie wykonawców…</p>
       ) : null}
 
       {!isLoading && trades.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border/70 bg-surface-muted/10 p-4 text-sm text-muted">
-          Brak branż. Dodaj wykonawców z katalogu (np. klimatyzacja, elektryka) lub ręcznie — będą dostępne
-          przy rolach akceptacji w ustaleniach.
+          Brak wykonawców. Dodaj firmę z katalogu (np. klimatyzacja, elektryka) lub ręcznie — będą
+          dostępne przy rolach akceptacji w ustaleniach.
         </p>
       ) : null}
 
@@ -453,7 +245,7 @@ export function ProjectTradesPanel({
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? "Edytuj branżę" : "Nowa branża"}</DialogTitle>
+            <DialogTitle>{editingId ? "Edytuj wykonawcę" : "Nowy Wykonawca"}</DialogTitle>
             <DialogDescription>
               Wybierz branżę z katalogu lub wpisz ręcznie — dane wykonawcy będą dostępne przy rolach
               akceptacji w ustaleniach.
@@ -468,7 +260,7 @@ export function ProjectTradesPanel({
           {error ? <p className="text-sm text-rose-400">{error}</p> : null}
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button type="button" disabled={saving} onClick={() => void handleSave()}>
-              {saving ? "Zapisywanie…" : editingId ? "Zapisz zmiany" : "Dodaj branżę"}
+              {saving ? "Zapisywanie…" : editingId ? "Zapisz zmiany" : "Dodaj wykonawcę"}
             </Button>
             <Button type="button" variant="secondary" onClick={() => setDialogOpen(false)}>
               Anuluj

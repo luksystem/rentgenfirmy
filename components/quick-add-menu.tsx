@@ -7,6 +7,7 @@ import {
   CalendarOff,
   Clock3,
   FileUp,
+  HardHat,
   Navigation,
   Package,
   PhoneCall,
@@ -14,7 +15,7 @@ import {
 
 export type QuickAddMenuItem = {
   href?: string;
-  action?: "navigate-to";
+  action?: "navigate-to" | "add-contractor";
   label: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -74,6 +75,12 @@ export function useQuickAddMenuItems(): QuickAddMenuItem[] {
         icon: CalendarOff,
       },
       {
+        action: "add-contractor",
+        label: "+ Wykonawca",
+        description: "Dodaj wykonawcę do projektu klienta i katalogu branż",
+        icon: HardHat,
+      },
+      {
         action: "navigate-to",
         label: "Prowadź do",
         description: "Wybierz klienta i otwórz trasę w Google Maps",
@@ -117,6 +124,12 @@ export const QUICK_ADD_MENU_ITEMS: QuickAddMenuItem[] = [
     icon: CalendarOff,
   },
   {
+    action: "add-contractor",
+    label: "+ Wykonawca",
+    description: "Dodaj wykonawcę do projektu klienta i katalogu branż",
+    icon: HardHat,
+  },
+  {
     action: "navigate-to",
     label: "Prowadź do",
     description: "Wybierz klienta i otwórz trasę w Google Maps",
@@ -133,7 +146,7 @@ function MenuItemCard({
   item: QuickAddMenuItem;
   compact?: boolean;
   onNavigate?: () => void;
-  onAction?: (action: "navigate-to") => void;
+  onAction?: (action: "navigate-to" | "add-contractor") => void;
 }) {
   const Icon = item.icon;
   const className =
@@ -185,10 +198,12 @@ function MenuItemCard({
 function QuickAddMenuListInner({
   onNavigate,
   onNavigateToClient,
+  onAddContractor,
   compact = false,
 }: {
   onNavigate?: () => void;
   onNavigateToClient?: () => void;
+  onAddContractor?: () => void;
   compact?: boolean;
 }) {
   const items = useQuickAddMenuItems();
@@ -205,6 +220,9 @@ function QuickAddMenuListInner({
             if (action === "navigate-to") {
               onNavigateToClient?.();
             }
+            if (action === "add-contractor") {
+              onAddContractor?.();
+            }
           }}
         />
       ))}
@@ -215,10 +233,12 @@ function QuickAddMenuListInner({
 export function QuickAddMenuList({
   onNavigate,
   onNavigateToClient,
+  onAddContractor,
   compact = false,
 }: {
   onNavigate?: () => void;
   onNavigateToClient?: () => void;
+  onAddContractor?: () => void;
   compact?: boolean;
 }) {
   return (
@@ -230,6 +250,7 @@ export function QuickAddMenuList({
       <QuickAddMenuListInner
         onNavigate={onNavigate}
         onNavigateToClient={onNavigateToClient}
+        onAddContractor={onAddContractor}
         compact={compact}
       />
     </Suspense>

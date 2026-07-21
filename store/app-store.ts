@@ -86,6 +86,8 @@ type AppState = {
   updateInterruption: (id: string, interruption: Omit<Interruption, "id">) => Promise<void>;
   deleteInterruption: (id: string) => Promise<void>;
   updateFieldOptions: (options: FieldOptions) => Promise<void>;
+  /** Odśwież katalog branż / firm z serwera (np. przy otwarciu formularza wykonawcy). */
+  refreshFieldOptions: () => Promise<FieldOptions>;
   updateProjectsViewFilters: (filters: ProjectsViewFilters) => void;
   addClient: (input: ClientInput) => Promise<Client>;
   updateClient: (id: string, input: ClientInput) => Promise<void>;
@@ -405,6 +407,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
       throw error;
     }
+  },
+
+  refreshFieldOptions: async () => {
+    const fieldOptions = await fetchFieldOptions();
+    set({ fieldOptions });
+    return fieldOptions;
   },
 
   updateProjectsViewFilters: (filters) => {

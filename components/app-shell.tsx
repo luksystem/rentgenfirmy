@@ -54,6 +54,7 @@ import { NotificationBell } from "@/components/notification-bell";
 import { UserAvatar } from "@/components/user-avatar";
 import { NotificationsRealtimeSubscriber } from "@/components/notifications-realtime-subscriber";
 import { NavigateToClientDialog } from "@/components/quick-add/navigate-to-client-dialog";
+import { AddContractorDialog } from "@/components/quick-add/add-contractor-dialog";
 import { QuickAddMenuList } from "@/components/quick-add-menu";
 import { useAuthStore } from "@/store/auth-store";
 import { useLeaveStore } from "@/store/leave-store";
@@ -336,6 +337,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [navigateToClientOpen, setNavigateToClientOpen] = useState(false);
+  const [addContractorOpen, setAddContractorOpen] = useState(false);
   const isAdministrator = useAuthStore((state) => state.isAdministrator);
   const profile = useAuthStore((state) => state.profile);
   const profileRole = useAuthStore((state) => state.profile?.role);
@@ -778,6 +780,10 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
                   setAddMenuOpen(false);
                   setNavigateToClientOpen(true);
                 }}
+                onAddContractor={() => {
+                  setAddMenuOpen(false);
+                  setAddContractorOpen(true);
+                }}
               />
             </div>
           </div>
@@ -787,6 +793,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
           open={navigateToClientOpen}
           onOpenChange={setNavigateToClientOpen}
         />
+        <AddContractorDialog open={addContractorOpen} onOpenChange={setAddContractorOpen} />
 
         <button
           type="button"

@@ -154,7 +154,7 @@ const PUBLIC_CLIENT_TAB_CONFIG: Array<{
   { id: "inspections", label: "Przeglądy", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
   { id: "functionality-survey", label: "Ankieta funkcji", icon: ClipboardList },
-  { id: "trades", label: "Branże", icon: HardHat },
+  { id: "trades", label: "Wykonawcy", icon: HardHat },
   { id: "notes", label: "Notatki", icon: StickyNote },
   { id: "documentation", label: "Dokumentacja", icon: FolderOpen },
   { id: "satisfaction", label: "Ocena", icon: Star },
@@ -176,7 +176,7 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "inspections", label: "Przeglądy", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
   { id: "functionality-survey", label: "Ankieta funkcji", icon: ClipboardList },
-  { id: "trades", label: "Branże", icon: HardHat },
+  { id: "trades", label: "Wykonawcy", icon: HardHat },
   { id: "notes", label: "Notatki", icon: StickyNote },
   { id: "documentation", label: "Dokumentacja", icon: FolderOpen },
   { id: "satisfaction", label: "Ocena", icon: Star },
@@ -1314,7 +1314,7 @@ export function ClientDashboardView({
   function renderTradesPanel() {
     return (
       <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
-        <h2 className="page-section-title mb-3 text-base font-semibold">Branże w tym projekcie</h2>
+        <h2 className="page-section-title mb-3 text-base font-semibold">Wykonawcy w tym projekcie</h2>
         <p className="mb-4 text-sm text-muted">
           Wykonawcy przypisani do projektu — wykorzystasz ich przy rolach akceptacji w ustaleniach.
           Firmy dodane tutaj automatycznie trafiają do katalogu branż.
