@@ -8,7 +8,7 @@ import { Dialog, DialogTitle, StackedDialogContent } from "@/components/ui/dialo
 import { Field, Input, Select } from "@/components/ui/input";
 import { MentionTextarea } from "@/components/mentions/mention-textarea";
 import { buildGoogleMapsDirectionsUrl } from "@/lib/dashboard/google-maps";
-import { confirmServiceIntakeStatusChange } from "@/lib/service-intake/confirm-status-change";
+import { confirmServiceIntakeStatusChange, confirmServiceIntakeTakeover } from "@/lib/service-intake/confirm-status-change";
 import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
 import { createUserMentionNotifications } from "@/lib/notifications/repository";
 import { useMentionOptionsFromProfiles } from "@/hooks/use-team-mention-options";
@@ -36,11 +36,15 @@ import {
   type ServiceIntakeAttachment,
   type ServiceIntakeComment,
   type ServiceIntakeRecord,
+  type ServiceIntakeSettlementFeedback,
   type ServiceIntakeStatus,
+  type ServiceIntakeStuckFeedback,
   type ServiceIntakeThread,
 } from "@/lib/service-intake/types";
 import { serviceIntakeAttachmentLabel } from "@/lib/service-intake/attachment-display";
 import { cn, formatDate, formatDateTime, formatMoney } from "@/lib/utils";
+import { ServiceIntakeSettlementDialog } from "@/components/service-intake/service-intake-settlement-dialog";
+import { ServiceIntakeStuckDialog } from "@/components/service-intake/service-intake-stuck-dialog";
 
 function dueAtToDateInputValue(dueAt: string | null) {
   if (!dueAt) {
@@ -144,6 +148,9 @@ export function ServiceIntakeDetailModal({
   const [statusDraft, setStatusDraft] = useState<ServiceIntakeStatus>("new");
   const [dueAtDraft, setDueAtDraft] = useState("");
   const [assigneeIdDraft, setAssigneeIdDraft] = useState("");
+  const [involvedDraft, setInvolvedDraft] = useState<string[]>([]);
+  const [settlementOpen, setSettlementOpen] = useState(false);
+  const [stuckOpen, setStuckOpen] = useState(false);
   const profile = useAuthStore((state) => state.profile);
   const canManageBoard = canManageServiceIntakeBoard(profile?.role);
   const canDelete = canDeleteServiceIntake(profile?.role);
@@ -168,6 +175,7 @@ export function ServiceIntakeDetailModal({
       setStatusDraft(loaded.intake.status);
       setDueAtDraft(dueAtToDateInputValue(resolveServiceIntakeDueAt(loaded.intake)));
       setAssigneeIdDraft(loaded.intake.assigneeId ?? "");
+      setInvolvedDraft(loaded.intake.involvedProfileIds ?? []);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Błąd.");
     } finally {
@@ -192,6 +200,10 @@ export function ServiceIntakeDetailModal({
   const dueAtChanged = intake ? dueAtDraft !== dueAtToDateInputValue(dueAt) : false;
   const assigneeChanged = intake
     ? assigneeIdDraft !== (intake.assigneeId ?? "")
+    : false;
+  const involvedChanged = intake
+    ? [...involvedDraft].sort().join("|") !==
+      [...(intake.involvedProfileIds ?? [])].sort().join("|")
     : false;
 
   async function saveAssignee() {
@@ -219,6 +231,39 @@ export function ServiceIntakeDetailModal({
       };
       setThread((current) => (current ? { ...current, intake: updated } : current));
       setAssigneeIdDraft(updated.assigneeId ?? "");
+      onUpdated?.(updated);
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Błąd.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveInvolved() {
+    if (!intakeId || !intake) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/service-intake/${encodeURIComponent(intakeId)}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ involvedProfileIds: involvedDraft }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się zapisać zaangażowanych.");
+      }
+      const updated = {
+        ...intake,
+        ...(payload.item as ServiceIntakeRecord),
+        clientName: intake.clientName,
+        projectName: intake.projectName,
+      };
+      setThread((current) => (current ? { ...current, intake: updated } : current));
+      setInvolvedDraft(updated.involvedProfileIds ?? []);
       onUpdated?.(updated);
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Błąd.");
@@ -264,17 +309,41 @@ export function ServiceIntakeDetailModal({
     if (!intakeId || !intake) {
       return;
     }
+
+    if (nextStatus === "converted") {
+      setSettlementOpen(true);
+      return;
+    }
+    if (nextStatus === "stuck") {
+      setStuckOpen(true);
+      return;
+    }
+
     if (!confirmServiceIntakeStatusChange(nextStatus, intake.status)) {
       setStatusDraft(intake.status);
       return;
     }
+
+    const patch: { status: ServiceIntakeStatus; assigneeId?: string } = { status: nextStatus };
+    if (nextStatus === "in_review" && profile?.id) {
+      if (
+        !confirmServiceIntakeTakeover({
+          currentUserId: profile.id,
+          assigneeId: intake.assigneeId,
+          assigneeName: intake.assigneeName,
+        })
+      ) {
+        setStatusDraft(intake.status);
+        return;
+      }
+      if (!intake.assigneeId || intake.assigneeId !== profile.id) {
+        patch.assigneeId = profile.id;
+      }
+    }
+
     setBusy(true);
     setError(null);
     try {
-      const patch: { status: ServiceIntakeStatus; assigneeId?: string } = { status: nextStatus };
-      if (nextStatus === "in_review" && !intake.assigneeId && profile?.id) {
-        patch.assigneeId = profile.id;
-      }
       const response = await fetch(`/api/service-intake/${encodeURIComponent(intakeId)}`, {
         method: "PATCH",
         credentials: "include",
@@ -299,9 +368,81 @@ export function ServiceIntakeDetailModal({
       setThread((current) => (current ? { ...current, intake: updated } : current));
       setStatusDraft(updated.status);
       setAssigneeIdDraft(updated.assigneeId ?? "");
+      setInvolvedDraft(updated.involvedProfileIds ?? []);
       onUpdated?.(updated);
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Błąd.");
+      setStatusDraft(intake.status);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function applySettlement(feedback: ServiceIntakeSettlementFeedback) {
+    if (!intakeId || !intake) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/service-intake/${encodeURIComponent(intakeId)}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "converted", settlement: feedback }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się rozliczyć zgłoszenia.");
+      }
+      const updated = {
+        ...intake,
+        ...(payload.item as ServiceIntakeRecord),
+        clientName: intake.clientName,
+        projectName: intake.projectName,
+        clientAddress: intake.clientAddress,
+      };
+      setThread((current) => (current ? { ...current, intake: updated } : current));
+      setStatusDraft(updated.status);
+      onUpdated?.(updated);
+      setSettlementOpen(false);
+    } catch (updateError) {
+      throw updateError instanceof Error ? updateError : new Error("Błąd.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function applyStuck(feedback: ServiceIntakeStuckFeedback) {
+    if (!intakeId || !intake) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/service-intake/${encodeURIComponent(intakeId)}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "stuck", stuck: feedback }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się oznaczyć jako utknięte.");
+      }
+      const updated = {
+        ...intake,
+        ...(payload.item as ServiceIntakeRecord),
+        clientName: intake.clientName,
+        projectName: intake.projectName,
+        clientAddress: intake.clientAddress,
+      };
+      setThread((current) => (current ? { ...current, intake: updated } : current));
+      setStatusDraft(updated.status);
+      onUpdated?.(updated);
+      setStuckOpen(false);
+    } catch (updateError) {
+      throw updateError instanceof Error ? updateError : new Error("Błąd.");
     } finally {
       setBusy(false);
     }
@@ -512,15 +653,32 @@ export function ServiceIntakeDetailModal({
                     Następny krok
                   </p>
                   <p className="mt-1 text-sm text-foreground/90">{primary.hint}</p>
-                  <Button
-                    type="button"
-                    size="lg"
-                    disabled={busy}
-                    className="mt-3 h-12 w-full text-base font-bold uppercase tracking-wide sm:w-auto sm:min-w-[220px]"
-                    onClick={() => void changeStatus(primary.nextStatus)}
-                  >
-                    {primary.label}
-                  </Button>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="lg"
+                      disabled={busy}
+                      className="h-12 w-full text-base font-bold uppercase tracking-wide sm:w-auto sm:min-w-[220px]"
+                      onClick={() => void changeStatus(primary.nextStatus)}
+                    >
+                      {primary.label}
+                    </Button>
+                    {intake.status === "in_review" ? (
+                      <Button
+                        type="button"
+                        size="lg"
+                        variant="outline"
+                        disabled={busy}
+                        className="h-12 w-full text-base font-bold uppercase tracking-wide sm:w-auto sm:min-w-[180px]"
+                        onClick={() => void changeStatus("stuck")}
+                      >
+                        Utknięte
+                      </Button>
+                    ) : null}
+                  </div>
+                  {intake.attemptCount > 1 ? (
+                    <p className="mt-2 text-xs text-amber-200">Podejście {intake.attemptCount}</p>
+                  ) : null}
                 </div>
               );
             })()}
@@ -591,6 +749,55 @@ export function ServiceIntakeDetailModal({
                 <span className="font-medium text-foreground">{intake.assigneeName}</span>
               </p>
             ) : null}
+
+            <Field label="Zaangażowani (opcjonalnie)">
+              <div className="grid max-h-40 gap-1.5 overflow-y-auto rounded-xl border border-border/70 bg-surface-muted/10 p-2">
+                {teamProfiles.length === 0 ? (
+                  <p className="text-xs text-muted">Brak listy zespołu.</p>
+                ) : (
+                  teamProfiles.map((teamProfile) => {
+                    const checked = involvedDraft.includes(teamProfile.id);
+                    const isAssignee = (assigneeIdDraft || intake.assigneeId) === teamProfile.id;
+                    return (
+                      <label
+                        key={teamProfile.id}
+                        className="flex cursor-pointer items-center gap-2 text-sm text-foreground"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={busy || isAssignee}
+                          onChange={(event) => {
+                            setInvolvedDraft((current) =>
+                              event.target.checked
+                                ? [...current, teamProfile.id]
+                                : current.filter((id) => id !== teamProfile.id),
+                            );
+                          }}
+                        />
+                        <span>
+                          {profileToOptionLabel(teamProfile)}
+                          {isAssignee ? " (odpowiedzialny)" : ""}
+                        </span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+              <div className="mt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={busy || !involvedChanged}
+                  onClick={() => void saveInvolved()}
+                >
+                  Zapisz zaangażowanych
+                </Button>
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                Traffią do planu zasobów razem z odpowiedzialnym po Przyjmij / Wznów.
+              </p>
+            </Field>
 
             {canManageBoard ? (
               <Field label="Etap na tablicy (tylko manager)">
@@ -711,6 +918,19 @@ export function ServiceIntakeDetailModal({
           </div>
         ) : null}
       </StackedDialogContent>
+
+      <ServiceIntakeSettlementDialog
+        intake={intake}
+        open={settlementOpen}
+        onOpenChange={setSettlementOpen}
+        onSubmit={applySettlement}
+      />
+      <ServiceIntakeStuckDialog
+        intake={intake}
+        open={stuckOpen}
+        onOpenChange={setStuckOpen}
+        onSubmit={applyStuck}
+      />
     </Dialog>
   );
 }

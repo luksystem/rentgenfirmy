@@ -5,6 +5,7 @@ import type { ServiceType } from "@/lib/service/types";
 export const SERVICE_INTAKE_STATUSES = [
   "new",
   "in_review",
+  "stuck",
   "converted",
   "closed",
   "rejected",
@@ -38,9 +39,31 @@ export const SERVICE_INTAKE_WORK_PREFERENCE_LABELS: Record<ServiceIntakeWorkPref
 export const SERVICE_INTAKE_STATUS_LABELS: Record<ServiceIntakeStatus, string> = {
   new: "Nowe",
   in_review: "W trakcie",
+  stuck: "Utknięte",
   converted: "Rozliczanie",
   closed: "Zamknięte",
   rejected: "Odrzucone",
+};
+
+export const SERVICE_INTAKE_RESOLUTION_OUTCOMES = ["full", "partial", "none"] as const;
+export type ServiceIntakeResolutionOutcome = (typeof SERVICE_INTAKE_RESOLUTION_OUTCOMES)[number];
+
+export const SERVICE_INTAKE_RESOLUTION_OUTCOME_LABELS: Record<ServiceIntakeResolutionOutcome, string> = {
+  full: "Tak — całkowicie",
+  partial: "Częściowo",
+  none: "Nie",
+};
+
+export type ServiceIntakeSettlementFeedback = {
+  resolutionOutcome: ServiceIntakeResolutionOutcome;
+  resolutionCause: string;
+  extraCosts: boolean;
+  extraCostsNote: string;
+};
+
+export type ServiceIntakeStuckFeedback = {
+  stuckReason: string;
+  stuckNotes: string;
 };
 
 export const SERVICE_INTAKE_PRIORITY_LABELS: Record<ServiceIntakePriority, string> = {
@@ -128,6 +151,15 @@ export type ServiceIntakeRecord = {
   dueAt: string | null;
   assigneeId: string | null;
   assigneeName: string | null;
+  involvedProfileIds: string[];
+  attemptCount: number;
+  resolutionOutcome: ServiceIntakeResolutionOutcome | null;
+  resolutionCause: string | null;
+  extraCosts: boolean | null;
+  extraCostsNote: string | null;
+  stuckReason: string | null;
+  stuckNotes: string | null;
+  feedbackAt: string | null;
   aiEstimate: ServiceIntakeAiEstimateSnapshot | null;
   workPreference: ServiceIntakeWorkPreference | null;
   preliminaryAcceptedAt: string | null;

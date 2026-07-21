@@ -3,8 +3,12 @@ import { requireAuthenticatedProfile } from "@/lib/auth/api-auth";
 import { HttpError, jsonError } from "@/lib/auth/http-error";
 import { getUserDisplayName } from "@/lib/auth/types";
 import {
+  SERVICE_INTAKE_RESOLUTION_OUTCOMES,
   SERVICE_INTAKE_STATUSES,
+  type ServiceIntakeResolutionOutcome,
+  type ServiceIntakeSettlementFeedback,
   type ServiceIntakeStatus,
+  type ServiceIntakeStuckFeedback,
 } from "@/lib/service-intake/types";
 import {
   assertServiceIntakeStatusChangeAllowed,
@@ -17,6 +21,37 @@ import {
   getServiceIntakeThreadById,
   updateServiceIntake,
 } from "@/lib/supabase/service-intake-server";
+
+function parseSettlement(value: unknown): ServiceIntakeSettlementFeedback | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+  const raw = value as Record<string, unknown>;
+  const resolutionOutcome = raw.resolutionOutcome;
+  if (
+    typeof resolutionOutcome !== "string" ||
+    !SERVICE_INTAKE_RESOLUTION_OUTCOMES.includes(resolutionOutcome as ServiceIntakeResolutionOutcome)
+  ) {
+    throw new HttpError(400, "Nieprawidłowy wynik rozwiązania.");
+  }
+  return {
+    resolutionOutcome: resolutionOutcome as ServiceIntakeResolutionOutcome,
+    resolutionCause: typeof raw.resolutionCause === "string" ? raw.resolutionCause : "",
+    extraCosts: Boolean(raw.extraCosts),
+    extraCostsNote: typeof raw.extraCostsNote === "string" ? raw.extraCostsNote : "",
+  };
+}
+
+function parseStuck(value: unknown): ServiceIntakeStuckFeedback | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+  const raw = value as Record<string, unknown>;
+  return {
+    stuckReason: typeof raw.stuckReason === "string" ? raw.stuckReason : "",
+    stuckNotes: typeof raw.stuckNotes === "string" ? raw.stuckNotes : "",
+  };
+}
 
 export async function GET(
   _request: Request,
@@ -46,6 +81,9 @@ export async function PATCH(
       status?: ServiceIntakeStatus;
       dueAt?: string | null;
       assigneeId?: string | null;
+      involvedProfileIds?: string[];
+      settlement?: unknown;
+      stuck?: unknown;
     };
 
     const canManage = canManageServiceIntakeBoard(profile.role);
@@ -54,6 +92,9 @@ export async function PATCH(
       status?: ServiceIntakeStatus;
       dueAt?: string | null;
       assigneeId?: string | null;
+      involvedProfileIds?: string[];
+      settlement?: ServiceIntakeSettlementFeedback;
+      stuck?: ServiceIntakeStuckFeedback;
     } = {};
 
     if (body.status !== undefined) {
@@ -80,7 +121,7 @@ export async function PATCH(
 
     if (body.assigneeId !== undefined) {
       if (!canManage) {
-        // Instalator może tylko auto-przypisać siebie przy Przyjmij.
+        // Instalator może tylko auto-przypisać siebie przy Przyjmij / Wznów.
         const selfAssignOnAccept =
           body.status === "in_review" && body.assigneeId === profile.id;
         if (!selfAssignOnAccept) {
@@ -90,10 +131,28 @@ export async function PATCH(
       patch.assigneeId = body.assigneeId === "" ? null : body.assigneeId;
     }
 
+    if (body.involvedProfileIds !== undefined) {
+      if (!Array.isArray(body.involvedProfileIds)) {
+        return NextResponse.json({ error: "Nieprawidłowa lista zaangażowanych." }, { status: 400 });
+      }
+      patch.involvedProfileIds = body.involvedProfileIds.map(String);
+    }
+
+    if (body.settlement !== undefined) {
+      patch.settlement = parseSettlement(body.settlement);
+    }
+
+    if (body.stuck !== undefined) {
+      patch.stuck = parseStuck(body.stuck);
+    }
+
     if (
       patch.status === undefined &&
       patch.dueAt === undefined &&
-      patch.assigneeId === undefined
+      patch.assigneeId === undefined &&
+      patch.involvedProfileIds === undefined &&
+      patch.settlement === undefined &&
+      patch.stuck === undefined
     ) {
       return NextResponse.json({ error: "Brak pól do aktualizacji." }, { status: 400 });
     }

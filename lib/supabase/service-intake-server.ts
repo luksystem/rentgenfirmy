@@ -53,11 +53,15 @@ import type {
   ServiceIntakeProjectOption,
   ServiceIntakeRecord,
   ServiceIntakeRequestType,
+  ServiceIntakeSettlementFeedback,
   ServiceIntakeStatus,
+  ServiceIntakeStuckFeedback,
   ServiceIntakeThread,
   ServiceIntakeVerifyResult,
   ServiceIntakeWorkPreference,
 } from "@/lib/service-intake/types";
+import { SERVICE_INTAKE_RESOLUTION_OUTCOMES } from "@/lib/service-intake/types";
+import { syncServiceIntakeResourcePlanItem } from "@/lib/service-intake/resource-plan-sync";
 import {
   isGuestIntakeRequestType,
   SERVICE_INTAKE_WORK_PREFERENCES,
@@ -311,6 +315,22 @@ function rowToIntakeRecord(
     dueAt: row.due_at ? String(row.due_at) : null,
     assigneeId: row.assignee_id ? String(row.assignee_id) : null,
     assigneeName: row.assignee_name ? String(row.assignee_name) : null,
+    involvedProfileIds: Array.isArray(row.involved_profile_ids)
+      ? (row.involved_profile_ids as unknown[]).map(String).filter(Boolean)
+      : [],
+    attemptCount: typeof row.attempt_count === "number" ? row.attempt_count : Number(row.attempt_count) || 1,
+    resolutionOutcome:
+      row.resolution_outcome === "full" ||
+      row.resolution_outcome === "partial" ||
+      row.resolution_outcome === "none"
+        ? row.resolution_outcome
+        : null,
+    resolutionCause: row.resolution_cause ? String(row.resolution_cause) : null,
+    extraCosts: typeof row.extra_costs === "boolean" ? row.extra_costs : null,
+    extraCostsNote: row.extra_costs_note ? String(row.extra_costs_note) : null,
+    stuckReason: row.stuck_reason ? String(row.stuck_reason) : null,
+    stuckNotes: row.stuck_notes ? String(row.stuck_notes) : null,
+    feedbackAt: row.feedback_at ? String(row.feedback_at) : null,
     aiEstimate: normalizeIntakeAiEstimate(row.ai_estimate),
     workPreference: normalizeWorkPreference(row.work_preference),
     preliminaryAcceptedAt: row.preliminary_accepted_at
@@ -1157,12 +1177,18 @@ export async function updateServiceIntake(
     status?: ServiceIntakeStatus;
     dueAt?: string | null;
     assigneeId?: string | null;
+    involvedProfileIds?: string[];
+    settlement?: ServiceIntakeSettlementFeedback;
+    stuck?: ServiceIntakeStuckFeedback;
   },
 ) {
   if (
     patch.status === undefined &&
     patch.dueAt === undefined &&
-    patch.assigneeId === undefined
+    patch.assigneeId === undefined &&
+    patch.involvedProfileIds === undefined &&
+    patch.settlement === undefined &&
+    patch.stuck === undefined
   ) {
     throw new Error("Brak pól do aktualizacji.");
   }
@@ -1173,7 +1199,9 @@ export async function updateServiceIntake(
 
   const { data: existing, error: existingError } = await supabase
     .from("service_intake_requests")
-    .select("status, priority, assignee_id, reference_number, contact_full_name, client_id, project_id")
+    .select(
+      "status, priority, assignee_id, attempt_count, reference_number, contact_full_name, client_id, project_id",
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -1186,6 +1214,27 @@ export async function updateServiceIntake(
 
   const previousStatus = existing.status as ServiceIntakeStatus;
   const previousAssigneeId = existing.assignee_id ? String(existing.assignee_id) : null;
+  const previousAttemptCount =
+    typeof existing.attempt_count === "number"
+      ? existing.attempt_count
+      : Number(existing.attempt_count) || 1;
+
+  if (patch.status === "converted" && previousStatus !== "converted") {
+    const settlement = patch.settlement;
+    if (
+      !settlement ||
+      !SERVICE_INTAKE_RESOLUTION_OUTCOMES.includes(settlement.resolutionOutcome) ||
+      !settlement.resolutionCause.trim()
+    ) {
+      throw new Error("Aby rozliczyć zgłoszenie, wypełnij feedback (rozwiązanie i przyczyna).");
+    }
+  }
+
+  if (patch.status === "stuck" && previousStatus !== "stuck") {
+    if (!patch.stuck?.stuckReason.trim()) {
+      throw new Error("Aby oznaczyć jako utknięte, podaj powód.");
+    }
+  }
 
   if (patch.status !== undefined) {
     const reopening =
@@ -1200,6 +1249,10 @@ export async function updateServiceIntake(
         existing.priority ? (existing.priority as ServiceIntakePriority) : null,
       );
     }
+
+    if (patch.status === "stuck" && previousStatus !== "stuck") {
+      update.attempt_count = previousAttemptCount + 1;
+    }
   }
 
   if (patch.dueAt !== undefined) {
@@ -1210,6 +1263,27 @@ export async function updateServiceIntake(
     const assignee = await resolveAssigneeUpdate(patch.assigneeId);
     update.assignee_id = assignee.assignee_id;
     update.assignee_name = assignee.assignee_name;
+  }
+
+  if (patch.involvedProfileIds !== undefined) {
+    const unique = Array.from(
+      new Set(patch.involvedProfileIds.map((value) => value.trim()).filter(Boolean)),
+    );
+    update.involved_profile_ids = unique;
+  }
+
+  if (patch.settlement) {
+    update.resolution_outcome = patch.settlement.resolutionOutcome;
+    update.resolution_cause = patch.settlement.resolutionCause.trim();
+    update.extra_costs = Boolean(patch.settlement.extraCosts);
+    update.extra_costs_note = patch.settlement.extraCostsNote.trim() || null;
+    update.feedback_at = now;
+  }
+
+  if (patch.stuck) {
+    update.stuck_reason = patch.stuck.stuckReason.trim();
+    update.stuck_notes = patch.stuck.stuckNotes.trim() || null;
+    update.feedback_at = now;
   }
 
   const { data, error } = await supabase
@@ -1226,7 +1300,7 @@ export async function updateServiceIntake(
   const [record] = await hydrateServiceIntakeRows([data as Record<string, unknown>]);
   const hydrated = record ?? rowToIntakeRecord(data);
 
-  if (patch.status !== undefined) {
+  if (patch.status !== undefined && patch.status !== previousStatus) {
     await notifyServiceIntakeStatusChange(hydrated);
   }
 
@@ -1255,6 +1329,18 @@ export async function updateServiceIntake(
         hydrated.contactFullName?.trim() ||
         String(existing.contact_full_name ?? "Klient"),
       projectLabel: hydrated.projectName,
+    }).catch(() => undefined);
+  }
+
+  const shouldSyncPlan =
+    nextStatus === "in_review" ||
+    nextStatus === "stuck" ||
+    (patch.involvedProfileIds !== undefined &&
+      (previousStatus === "in_review" || previousStatus === "stuck"));
+
+  if (shouldSyncPlan) {
+    await syncServiceIntakeResourcePlanItem(supabase, hydrated, {
+      clearWhenUnassigned: true,
     }).catch(() => undefined);
   }
 

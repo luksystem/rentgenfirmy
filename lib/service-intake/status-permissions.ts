@@ -11,7 +11,8 @@ const WORKER_STATUS_TRANSITIONS: Partial<
   Record<ServiceIntakeStatus, readonly ServiceIntakeStatus[]>
 > = {
   new: ["in_review"],
-  in_review: ["converted"],
+  stuck: ["in_review"],
+  in_review: ["converted", "stuck"],
   converted: ["closed"],
 };
 
@@ -42,7 +43,7 @@ export function assertServiceIntakeStatusChangeAllowed(input: {
   if (!isServiceIntakeWorkerTransitionAllowed(input.from, input.to)) {
     throw new HttpError(
       403,
-      "Brak uprawnień do tej zmiany etapu. Użyj przycisku Przyjmij / Rozlicz / Zamknij.",
+      "Brak uprawnień do tej zmiany etapu. Użyj przycisku Przyjmij / Rozlicz / Utknięte / Zamknij.",
     );
   }
 }
@@ -57,11 +58,18 @@ export function serviceIntakePrimaryAction(
       hint: "Przejmij obsługę — dopiero potem zgłoszenie jest w realizacji",
     };
   }
+  if (status === "stuck") {
+    return {
+      nextStatus: "in_review",
+      label: "Wznów",
+      hint: "Wróć do realizacji (to samo podejście lub przejęcie przez inną osobę)",
+    };
+  }
   if (status === "in_review") {
     return {
       nextStatus: "converted",
       label: "Rozlicz",
-      hint: "Przenieś do rozliczania po wykonaniu prac",
+      hint: "Wypełnij krótki feedback i przenieś do rozliczania",
     };
   }
   if (status === "converted") {

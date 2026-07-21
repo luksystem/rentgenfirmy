@@ -18,10 +18,15 @@ import {
 import { KanbanDropPlaceholder, getKanbanColumnDropTargetClasses } from "@/components/process/kanban-drop-placeholder";
 import { KanbanMobileColumnNav } from "@/components/process/kanban-mobile-column-nav";
 import { ServiceIntakeDetailModal } from "@/components/service-intake/service-intake-detail-modal";
+import { ServiceIntakeSettlementDialog } from "@/components/service-intake/service-intake-settlement-dialog";
+import { ServiceIntakeStuckDialog } from "@/components/service-intake/service-intake-stuck-dialog";
 import { Button } from "@/components/ui/button";
 import { useKanbanMobileColumns } from "@/hooks/use-kanban-mobile-columns";
 import { buildGoogleMapsDirectionsUrl } from "@/lib/dashboard/google-maps";
-import { confirmServiceIntakeStatusChange } from "@/lib/service-intake/confirm-status-change";
+import {
+  confirmServiceIntakeStatusChange,
+  confirmServiceIntakeTakeover,
+} from "@/lib/service-intake/confirm-status-change";
 import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 import { useAuthStore } from "@/store/auth-store";
 import { getUserDisplayName, type UserProfile } from "@/lib/auth/types";
@@ -55,7 +60,9 @@ import {
   SERVICE_INTAKE_STATUS_LABELS,
   type ServiceIntakeRecord,
   type ServiceIntakeRequestType,
+  type ServiceIntakeSettlementFeedback,
   type ServiceIntakeStatus,
+  type ServiceIntakeStuckFeedback,
 } from "@/lib/service-intake/types";
 import { cn, formatDate, formatDateTime } from "@/lib/utils";
 
@@ -287,6 +294,9 @@ function ServiceIntakeCard({
         ) : item.status !== "closed" && item.status !== "rejected" ? (
           <p className="text-amber-200/80">Brak osoby do obsługi</p>
         ) : null}
+        {item.attemptCount > 1 ? (
+          <p className="text-amber-200/90">Podejście {item.attemptCount}</p>
+        ) : null}
         {item.contactPhone ? (
           <p className="flex items-center gap-1">
             <Phone className="h-3 w-3" />
@@ -304,7 +314,7 @@ function ServiceIntakeCard({
           <MessageSquare className="mr-1 h-3.5 w-3.5" />
           Szczegóły
         </Button>
-        {item.status === "new" ? (
+        {item.status === "new" || item.status === "stuck" ? (
           <Button
             type="button"
             size="sm"
@@ -313,20 +323,33 @@ function ServiceIntakeCard({
             onPointerDown={stopDragPropagation}
             onClick={() => onStatusChange("in_review")}
           >
-            Przyjmij
+            {item.status === "stuck" ? "Wznów" : "Przyjmij"}
           </Button>
         ) : null}
         {item.status === "in_review" ? (
-          <Button
-            type="button"
-            size="sm"
-            disabled={busy}
-            className="h-9 min-w-[7.5rem] px-3 text-sm font-bold uppercase tracking-wide"
-            onPointerDown={stopDragPropagation}
-            onClick={() => onStatusChange("converted")}
-          >
-            Rozlicz
-          </Button>
+          <>
+            <Button
+              type="button"
+              size="sm"
+              disabled={busy}
+              className="h-9 min-w-[7.5rem] px-3 text-sm font-bold uppercase tracking-wide"
+              onPointerDown={stopDragPropagation}
+              onClick={() => onStatusChange("converted")}
+            >
+              Rozlicz
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              className="h-9 min-w-[7.5rem] px-3 text-sm font-bold uppercase tracking-wide"
+              onPointerDown={stopDragPropagation}
+              onClick={() => onStatusChange("stuck")}
+            >
+              Utknięte
+            </Button>
+          </>
         ) : null}
         {item.status === "converted" ? (
           <Button
@@ -392,6 +415,8 @@ export function ServiceIntakeKanban({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [settlementTarget, setSettlementTarget] = useState<ServiceIntakeRecord | null>(null);
+  const [stuckTarget, setStuckTarget] = useState<ServiceIntakeRecord | null>(null);
   const [dragItemId, setDragItemId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
   const dragItemIdRef = useRef<string | null>(null);
@@ -554,15 +579,45 @@ export function ServiceIntakeKanban({
 
   async function changeStatus(id: string, status: ServiceIntakeStatus) {
     const currentItem = items.find((entry) => entry.id === id);
-    if (!confirmServiceIntakeStatusChange(status, currentItem?.status)) {
+    if (!currentItem) {
       return;
     }
+
+    if (status === "converted") {
+      setSettlementTarget(currentItem);
+      return;
+    }
+    if (status === "stuck") {
+      setStuckTarget(currentItem);
+      return;
+    }
+
+    if (!confirmServiceIntakeStatusChange(status, currentItem.status)) {
+      return;
+    }
+
+    const patch: {
+      status: ServiceIntakeStatus;
+      assigneeId?: string;
+    } = { status };
+
+    if (status === "in_review" && profile?.id) {
+      if (
+        !confirmServiceIntakeTakeover({
+          currentUserId: profile.id,
+          assigneeId: currentItem.assigneeId,
+          assigneeName: currentItem.assigneeName,
+        })
+      ) {
+        return;
+      }
+      if (!currentItem.assigneeId || currentItem.assigneeId !== profile.id) {
+        patch.assigneeId = profile.id;
+      }
+    }
+
     setBusyId(id);
     const snapshot = items;
-    const patch: { status: ServiceIntakeStatus; assigneeId?: string } = { status };
-    if (status === "in_review" && !currentItem?.assigneeId && profile?.id) {
-      patch.assigneeId = profile.id;
-    }
     setItems((current) =>
       current.map((entry) =>
         entry.id === id
@@ -605,6 +660,72 @@ export function ServiceIntakeKanban({
     } catch (updateError) {
       setItems(snapshot);
       setError(updateError instanceof Error ? updateError.message : "Błąd.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function applySettlement(feedback: ServiceIntakeSettlementFeedback) {
+    const target = settlementTarget;
+    if (!target) {
+      return;
+    }
+    setBusyId(target.id);
+    const snapshot = items;
+    try {
+      const response = await fetch(`/api/service-intake/${encodeURIComponent(target.id)}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "converted", settlement: feedback }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się rozliczyć zgłoszenia.");
+      }
+      handleItemUpdated({
+        ...target,
+        ...(payload.item as ServiceIntakeRecord),
+        clientName: target.clientName,
+        projectName: target.projectName,
+      });
+      setSettlementTarget(null);
+    } catch (updateError) {
+      setItems(snapshot);
+      throw updateError instanceof Error ? updateError : new Error("Błąd.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function applyStuck(feedback: ServiceIntakeStuckFeedback) {
+    const target = stuckTarget;
+    if (!target) {
+      return;
+    }
+    setBusyId(target.id);
+    const snapshot = items;
+    try {
+      const response = await fetch(`/api/service-intake/${encodeURIComponent(target.id)}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "stuck", stuck: feedback }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Nie udało się oznaczyć jako utknięte.");
+      }
+      handleItemUpdated({
+        ...target,
+        ...(payload.item as ServiceIntakeRecord),
+        clientName: target.clientName,
+        projectName: target.projectName,
+      });
+      setStuckTarget(null);
+    } catch (updateError) {
+      setItems(snapshot);
+      throw updateError instanceof Error ? updateError : new Error("Błąd.");
     } finally {
       setBusyId(null);
     }
@@ -838,6 +959,28 @@ export function ServiceIntakeKanban({
         }}
         onUpdated={handleItemUpdated}
         onDeleted={handleItemDeleted}
+      />
+
+      <ServiceIntakeSettlementDialog
+        intake={settlementTarget}
+        open={settlementTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSettlementTarget(null);
+          }
+        }}
+        onSubmit={applySettlement}
+      />
+
+      <ServiceIntakeStuckDialog
+        intake={stuckTarget}
+        open={stuckTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setStuckTarget(null);
+          }
+        }}
+        onSubmit={applyStuck}
       />
     </div>
   );

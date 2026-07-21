@@ -926,6 +926,15 @@ export type ServiceIntakeRequestRow = {
   due_at: string | null;
   assignee_id: string | null;
   assignee_name: string | null;
+  involved_profile_ids: string[];
+  attempt_count: number;
+  resolution_outcome: string | null;
+  resolution_cause: string | null;
+  extra_costs: boolean | null;
+  extra_costs_note: string | null;
+  stuck_reason: string | null;
+  stuck_notes: string | null;
+  feedback_at: string | null;
   ai_estimate?: unknown;
   work_preference?: string | null;
   preliminary_accepted_at?: string | null;

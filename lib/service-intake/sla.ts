@@ -122,6 +122,7 @@ export const SERVICE_INTAKE_STATUS_TONE: Record<
 > = {
   new: "info",
   in_review: "warning",
+  stuck: "danger",
   converted: "success",
   closed: "neutral",
   rejected: "danger",
@@ -145,6 +146,7 @@ export const SERVICE_INTAKE_PRIORITY_BADGE_CLASS: Record<ServiceIntakePriority, 
 export const SERVICE_INTAKE_KANBAN_COLUMNS: ServiceIntakeStatus[] = [
   "new",
   "in_review",
+  "stuck",
   "converted",
   "closed",
   "rejected",
