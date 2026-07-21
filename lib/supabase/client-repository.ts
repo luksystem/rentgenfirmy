@@ -6,6 +6,7 @@ import {
 } from "@/lib/supabase/client-mappers";
 import { geocodePartyAddress } from "@/lib/party/geocode-party";
 import { resolvePartyGpsOnSave } from "@/lib/party/gps";
+import type { ClientUpdate } from "@/lib/supabase/database.types";
 import type { Client, ClientInput } from "@/lib/service/types";
 
 export async function fetchClients(): Promise<Client[]> {
@@ -95,7 +96,7 @@ export async function patchClientGps(
   },
 ): Promise<Client> {
   const supabase = getSupabase();
-  const payload: Record<string, unknown> = {
+  const payload: ClientUpdate = {
     updated_at: new Date().toISOString(),
   };
   if ("lat" in coords) payload.lat = coords.lat ?? null;
