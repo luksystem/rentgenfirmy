@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, Textarea } from "@/components/ui/input";
+import { buildServiceIntakeOfferHref } from "@/lib/service-intake/offer-link";
 import type { ServiceIntakeRecord, ServiceIntakeStuckFeedback } from "@/lib/service-intake/types";
 
 export function ServiceIntakeStuckDialog({
@@ -83,6 +86,19 @@ export function ServiceIntakeStuckDialog({
               rows={3}
             />
           </Field>
+
+          {intake.serviceId ? (
+            <Button asChild variant="outline" className="justify-self-start">
+              <Link href={`/oferty/${intake.serviceId}`}>Otwórz rozliczenie</Link>
+            </Button>
+          ) : (
+            <Button asChild variant="outline" className="justify-self-start">
+              <Link href={buildServiceIntakeOfferHref(intake)}>
+                Utwórz ofertę
+                <ExternalLink className="ml-1 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          )}
 
           {error ? <p className="text-sm text-rose-300">{error}</p> : null}
 
