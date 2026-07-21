@@ -1,7 +1,16 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { CheckCircle2, FileCheck2, Lock, LayoutGrid, Receipt, ShieldCheck, StickyNote } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  FileCheck2,
+  Lock,
+  LayoutGrid,
+  Receipt,
+  ShieldCheck,
+  StickyNote,
+} from "lucide-react";
 import { ProcessChecklistBoard } from "@/components/process/process-checklist-board";
 import { ProcessInternalAcceptanceBoard } from "@/components/process/process-internal-acceptance-board";
 import { ProcessKanbanBoard } from "@/components/process/process-kanban-board";
@@ -175,6 +184,20 @@ export function ProcessItemPanel({
             isFullscreen ? "min-w-0" : undefined,
           )}
         >
+          {isFullscreen ? (
+            <div className="mb-2 flex flex-wrap items-center gap-2 pr-10 sm:pr-8">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="h-10 min-h-10 w-full justify-start px-3 text-sm font-medium sm:h-8 sm:w-auto sm:justify-center"
+                onClick={() => onOpenChange(false)}
+              >
+                <ArrowLeft className="mr-1.5 h-4 w-4 shrink-0" />
+                Wróć do procesu
+              </Button>
+            </div>
+          ) : null}
           <DialogTitle className="flex items-center gap-2 pr-2">
             <Icon className="h-5 w-5 shrink-0 text-accent" />
             <span className="min-w-0 truncate">{item.title}</span>

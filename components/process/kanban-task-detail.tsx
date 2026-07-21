@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { History, Pencil, Trash2, X } from "lucide-react";
+import { ArrowLeft, History, Pencil, Trash2 } from "lucide-react";
 import { KanbanPriorityPicker } from "@/components/process/kanban-task-card";
 import {
   KanbanTaskAssigneeFields,
@@ -388,22 +388,24 @@ export function KanbanTaskDetailModal({
     >
       <StackedDialogContent aria-describedby={undefined}>
         <div className="mx-auto mb-1 h-1 w-10 rounded-full bg-border/80 sm:hidden" aria-hidden />
-        <div className="flex items-start justify-between gap-3">
-          <div>
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="h-10 min-h-10 w-full justify-start px-3 sm:h-8 sm:w-auto order-first sm:order-last"
+            disabled={isClosingModal || isSaving}
+            onClick={() => void handleClose()}
+          >
+            <ArrowLeft className="mr-1.5 h-4 w-4" />
+            Wróć
+          </Button>
+          <div className="min-w-0">
             <DialogTitle className="text-lg font-semibold text-foreground">Szczegóły zgłoszenia</DialogTitle>
             {isClosed ? (
               <p className="mt-1 text-xs font-medium uppercase tracking-wide text-muted">Zamknięte</p>
             ) : null}
           </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            disabled={isClosingModal || isSaving}
-            onClick={() => void handleClose()}
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </div>
 
         <Field label="Tytuł">

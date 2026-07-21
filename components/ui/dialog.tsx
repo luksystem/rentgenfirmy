@@ -83,8 +83,12 @@ export function TopAnchoredDialogContent({
 export function StackedDialogContent({
   className,
   children,
+  showCloseButton = false,
   ...props
-}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>) {
+}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+  /** Domyślnie wyłączone — wiele stacked dialogów ma własny przycisk zanim zapisze zmiany. */
+  showCloseButton?: boolean;
+}) {
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm" />
@@ -97,7 +101,18 @@ export function StackedDialogContent({
         )}
         {...props}
       >
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5">
+        {showCloseButton ? (
+          <DialogPrimitive.Close className={cn(dialogCloseClassName, "z-[110]")}>
+            <X className="h-4 w-4" />
+            <span className="sr-only">Zamknij</span>
+          </DialogPrimitive.Close>
+        ) : null}
+        <div
+          className={cn(
+            "min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5",
+            showCloseButton && "pt-12 sm:pt-5",
+          )}
+        >
           {children}
         </div>
       </DialogPrimitive.Content>

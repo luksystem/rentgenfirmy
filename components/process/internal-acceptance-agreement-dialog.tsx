@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+import { ArrowLeft } from "lucide-react";
 import { AgreementApprovalResponses } from "@/components/dashboard/agreement-approval-responses";
 import { AgreementCollaborationPanel } from "@/components/dashboard/agreement-collaboration-panel";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogDescription,
@@ -27,10 +29,12 @@ function InternalAcceptanceAgreementDialogBody({
   agreement,
   projectId,
   authorName,
+  onClose,
 }: {
   agreement: ProjectClientAgreement;
   projectId: string;
   authorName: string;
+  onClose: () => void;
 }) {
   const ensureAgreements = useProjectAgreementStore((state) => state.ensureAgreements);
   const approvalHint = useAgreementApprovalHint(agreement);
@@ -39,6 +43,18 @@ function InternalAcceptanceAgreementDialogBody({
   return (
     <>
       <DialogHeader>
+        <div className="mb-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="h-10 min-h-10 w-full justify-start px-3 sm:h-8 sm:w-auto"
+            onClick={onClose}
+          >
+            <ArrowLeft className="mr-1.5 h-4 w-4" />
+            Wróć
+          </Button>
+        </div>
         <DialogTitle>{agreement.title}</DialogTitle>
         <DialogDescription asChild>
           <div className="grid gap-1 text-sm text-muted">
@@ -105,7 +121,10 @@ export function InternalAcceptanceAgreementDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <StackedDialogContent className="max-h-[min(92vh,900px)] max-w-2xl overflow-y-auto">
+      <StackedDialogContent
+        className="max-h-[min(92vh,900px)] max-w-2xl overflow-y-auto"
+        showCloseButton
+      >
         {loading && !agreement ? (
           <p className="py-6 text-sm text-muted">Ładowanie ustalenia…</p>
         ) : !agreement ? (
@@ -115,6 +134,7 @@ export function InternalAcceptanceAgreementDialog({
             agreement={agreement}
             projectId={projectId}
             authorName={authorName}
+            onClose={() => onOpenChange(false)}
           />
         )}
       </StackedDialogContent>
