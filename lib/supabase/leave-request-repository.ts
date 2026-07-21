@@ -4,6 +4,7 @@ import type {
   LeaveRequest,
   LeaveRequestDecisionInput,
   LeaveRequestInput,
+  LeaveRequestUpdateInput,
 } from "@/lib/leave/types";
 
 async function parseJsonResponse<T>(response: Response, fallbackError: string): Promise<T> {
@@ -61,6 +62,23 @@ export async function createLeaveRequest(input: LeaveRequestInput): Promise<Leav
   const payload = await parseJsonResponse<{ item: LeaveRequest }>(
     response,
     "Nie udało się złożyć wniosku o urlop.",
+  );
+  return payload.item;
+}
+
+export async function updateLeaveRequest(
+  id: string,
+  input: LeaveRequestUpdateInput,
+): Promise<LeaveRequest> {
+  const response = await fetch(`/api/leave-requests/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const payload = await parseJsonResponse<{ item: LeaveRequest }>(
+    response,
+    "Nie udało się zaktualizować wniosku o urlop.",
   );
   return payload.item;
 }

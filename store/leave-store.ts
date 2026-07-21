@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import type { UserProfile } from "@/lib/auth/types";
 import { fetchTeamProfiles, profileToOptionLabel } from "@/lib/supabase/profile-repository";
-import type { LeaveRequest, LeaveRequestDecisionInput, LeaveRequestInput } from "@/lib/leave/types";
+import type { LeaveRequest, LeaveRequestDecisionInput, LeaveRequestInput, LeaveRequestUpdateInput } from "@/lib/leave/types";
 import {
   clearLeaveRequestSignature as clearLeaveRequestSignatureRepo,
   createLeaveRequest as createLeaveRequestRepo,
@@ -14,7 +14,9 @@ import {
   fetchPendingLeaveRequestCount,
   fetchPlanningLeaveRequests,
   revertLeaveRequest as revertLeaveRequestRepo,
+  updateLeaveRequest as updateLeaveRequestRepo,
 } from "@/lib/supabase/leave-request-repository";
+import { useAuthStore } from "@/store/auth-store";
 
 // Stabilna referencja — patrz uzasadnienie w `store/goal-store.ts` (React #185 przy `[]` w selektorze).
 export const EMPTY_LEAVE_REQUESTS: LeaveRequest[] = [];
@@ -48,6 +50,7 @@ type LeaveStore = {
   ensurePlanningRequests: (options?: { force?: boolean }) => Promise<LeaveRequest[]>;
   refreshPendingForMeCount: () => Promise<number>;
   createRequest: (input: LeaveRequestInput) => Promise<LeaveRequest>;
+  updateRequest: (id: string, input: LeaveRequestUpdateInput) => Promise<LeaveRequest>;
   cancelRequest: (id: string) => Promise<void>;
   decideRequest: (id: string, input: LeaveRequestDecisionInput) => Promise<LeaveRequest>;
   revertRequest: (id: string) => Promise<LeaveRequest>;
@@ -221,8 +224,15 @@ export const useLeaveStore = create<LeaveStore>((set, get) => ({
 
   createRequest: async (input) => {
     const created = await createLeaveRequestRepo(input);
-    set({ myRequests: [created, ...get().myRequests] });
+    get().upsertInStore(created);
+    void get().refreshPendingForMeCount();
     return created;
+  },
+
+  updateRequest: async (id, input) => {
+    const updated = await updateLeaveRequestRepo(id, input);
+    get().upsertInStore(updated);
+    return updated;
   },
 
   cancelRequest: async (id) => {
@@ -263,14 +273,21 @@ export const useLeaveStore = create<LeaveStore>((set, get) => ({
   },
 
   upsertInStore: (item) => {
-    const replace = (list: LeaveRequest[]) => {
+    const currentUserId = useAuthStore.getState().profile?.id ?? null;
+    const replace = (list: LeaveRequest[], allowInsert: boolean) => {
       const index = list.findIndex((entry) => entry.id === item.id);
-      return index >= 0 ? list.map((entry) => (entry.id === item.id ? item : entry)) : [item, ...list];
+      if (index >= 0) {
+        return list.map((entry) => (entry.id === item.id ? item : entry));
+      }
+      return allowInsert ? [item, ...list] : list;
     };
     set({
-      myRequests: replace(get().myRequests),
-      allRequests: replace(get().allRequests),
-      planningRequests: replace(get().planningRequests),
+      myRequests: replace(get().myRequests, item.profileId === currentUserId),
+      allRequests: replace(get().allRequests, true),
+      planningRequests: replace(
+        get().planningRequests,
+        item.status === "pending" || item.status === "approved",
+      ),
     });
   },
 }));

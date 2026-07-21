@@ -70,6 +70,42 @@ export async function createAllDayCalendarEvent(params: {
   }
 }
 
+/** Aktualizuje całodniowy wpis (lub tworzy nowy, gdy brak eventId). */
+export async function upsertAllDayCalendarEvent(params: {
+  eventId?: string | null;
+  summary: string;
+  startDate: string;
+  endDate: string;
+  description?: string;
+}): Promise<string | null> {
+  if (!isGoogleCalendarConfigured()) {
+    return params.eventId ?? null;
+  }
+
+  if (params.eventId) {
+    try {
+      const calendar = getCalendarClient();
+      const calendarId = process.env.GOOGLE_CALENDAR_ID!;
+      await calendar.events.patch({
+        calendarId,
+        eventId: params.eventId,
+        requestBody: {
+          summary: params.summary,
+          description: params.description,
+          start: { date: params.startDate },
+          end: { date: nextDayIso(params.endDate) },
+        },
+      });
+      return params.eventId;
+    } catch (error) {
+      console.error("[google-calendar] Nie udało się zaktualizować wpisu urlopu:", error);
+      await deleteCalendarEvent(params.eventId);
+    }
+  }
+
+  return createAllDayCalendarEvent(params);
+}
+
 /** Usuwa wpis z kalendarza (np. po cofnięciu zaakceptowanego urlopu). Błędy są tylko logowane. */
 export async function deleteCalendarEvent(eventId: string): Promise<void> {
   if (!isGoogleCalendarConfigured()) {
@@ -84,3 +120,4 @@ export async function deleteCalendarEvent(eventId: string): Promise<void> {
     console.error("[google-calendar] Nie udało się usunąć wpisu urlopu:", error);
   }
 }
+

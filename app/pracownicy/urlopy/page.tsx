@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Download, Eraser, RotateCcw } from "lucide-react";
+import { Download, Eraser, Pencil, RotateCcw } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/input";
+import { CreateLeaveRequestDialog } from "@/components/leave/create-leave-request-dialog";
+import { EditLeaveRequestDialog } from "@/components/leave/edit-leave-request-dialog";
 import { LeaveStatusBadge } from "@/components/leave/leave-status-badge";
 import { LeaveDecisionDialog } from "@/components/leave/leave-decision-dialog";
 import { formatDate } from "@/lib/utils";
@@ -38,6 +40,7 @@ export default function EmployeeLeavesPage() {
   const [employeeFilter, setEmployeeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<LeaveRequestStatus | "">("");
   const [decision, setDecision] = useState<{ item: LeaveRequest; mode: "approve" | "reject" } | null>(null);
+  const [editing, setEditing] = useState<LeaveRequest | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -85,7 +88,11 @@ export default function EmployeeLeavesPage() {
   }
 
   async function handleClearSignature(id: string) {
-    if (!window.confirm("Wyczyścić podpis? Wniosek wróci do statusu „oczekuje” i będzie mógł zostać ponownie rozpatrzony.")) {
+    if (
+      !window.confirm(
+        "Wyczyścić podpis? Wniosek wróci do statusu „oczekuje” i będzie mógł zostać ponownie rozpatrzony.",
+      )
+    ) {
       return;
     }
     setBusyId(id);
@@ -104,6 +111,7 @@ export default function EmployeeLeavesPage() {
         eyebrow="Pracownicy"
         title="Urlopy"
         description="Wszystkie wnioski urlopowe — akceptacje, odrzucenia i karty urlopowe. Filtruj po pracowniku i statusie."
+        action={isAdmin ? <CreateLeaveRequestDialog allowOnBehalf /> : undefined}
       />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-2 sm:max-w-md">
@@ -154,7 +162,9 @@ export default function EmployeeLeavesPage() {
                     <p className="mt-1 text-sm text-muted">
                       {leaveTypeName} · {formatDate(item.startDate)} — {formatDate(item.endDate)} ·{" "}
                       {countLeaveWorkingDays(item.startDate, item.endDate)}{" "}
-                      {countLeaveWorkingDays(item.startDate, item.endDate) === 1 ? "dzień roboczy" : "dni roboczych"}{" "}
+                      {countLeaveWorkingDays(item.startDate, item.endDate) === 1
+                        ? "dzień roboczy"
+                        : "dni roboczych"}{" "}
                       ({countLeaveDays(item.startDate, item.endDate)} kalendarzowych)
                     </p>
                     {item.note ? <p className="mt-1 text-xs text-muted">„{item.note}”</p> : null}
@@ -163,7 +173,8 @@ export default function EmployeeLeavesPage() {
                     ) : null}
                     {item.status === "approved" && item.signature ? (
                       <p className="mt-1 text-xs text-muted">
-                        Zaakceptował: {item.signature.signerName} · {formatDate(item.decidedAt ?? undefined)}
+                        Zaakceptował: {item.signature.signerName} ·{" "}
+                        {formatDate(item.decidedAt ?? undefined)}
                       </p>
                     ) : null}
                   </div>
@@ -199,6 +210,19 @@ export default function EmployeeLeavesPage() {
                       >
                         <Download className="mr-1.5 h-3.5 w-3.5" />
                         Karta
+                      </Button>
+                    ) : null}
+
+                    {isAdmin ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => setEditing(item)}
+                      >
+                        <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                        Edytuj
                       </Button>
                     ) : null}
 
@@ -244,6 +268,19 @@ export default function EmployeeLeavesPage() {
           onOpenChange={(open) => {
             if (!open) {
               setDecision(null);
+            }
+          }}
+        />
+      ) : null}
+
+      {editing ? (
+        <EditLeaveRequestDialog
+          item={editing}
+          employeeName={getEmployeeName(editing.profileId)}
+          open={Boolean(editing)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditing(null);
             }
           }}
         />

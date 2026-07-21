@@ -100,12 +100,43 @@ export async function POST(request: Request) {
     }
 
     const admin = getSupabaseAdmin();
-    const supervisorId = profile.supervisorId;
+
+    const requestedProfileId =
+      typeof body.profileId === "string" && body.profileId.trim() ? body.profileId.trim() : null;
+    const isAdmin = isAdministratorRole(profile.role);
+
+    if (requestedProfileId && requestedProfileId !== userId && !isAdmin) {
+      return NextResponse.json(
+        { error: "Tylko administrator może złożyć wniosek w imieniu innego pracownika." },
+        { status: 403 },
+      );
+    }
+
+    let targetProfile = profile;
+    let targetProfileId = userId;
+
+    if (requestedProfileId && requestedProfileId !== userId) {
+      const { data: targetRow, error: targetError } = await admin
+        .from("profiles")
+        .select("*")
+        .eq("id", requestedProfileId)
+        .maybeSingle();
+      if (targetError) {
+        throw new Error(targetError.message);
+      }
+      if (!targetRow) {
+        return NextResponse.json({ error: "Nie znaleziono wybranego pracownika." }, { status: 404 });
+      }
+      targetProfile = mapProfileRow(targetRow);
+      targetProfileId = targetProfile.id;
+    }
+
+    const supervisorId = targetProfile.supervisorId;
 
     const { data: inserted, error: insertError } = await admin
       .from("leave_requests")
       .insert({
-        profile_id: userId,
+        profile_id: targetProfileId,
         leave_type_item_id: leaveTypeItemId,
         start_date: startDate,
         end_date: endDate,
@@ -130,10 +161,12 @@ export async function POST(request: Request) {
         : Promise.resolve({ data: null }),
     ]);
 
-    const employeeName = getUserDisplayName(profile);
+    const employeeName = getUserDisplayName(targetProfile);
     const leaveTypeName = leaveTypeRow?.name ?? "Dostępność";
-    const adminIds = (adminRows ?? []).map((row) => row.id).filter((id) => id !== userId);
-    const recipientIds = supervisorId ? [supervisorId, ...adminIds] : adminIds;
+    const adminIds = (adminRows ?? []).map((row) => row.id).filter((id) => id !== targetProfileId);
+    const recipientIds = supervisorId
+      ? [supervisorId, ...adminIds.filter((id) => id !== supervisorId)]
+      : adminIds;
 
     await createLeaveRequestCreatedNotificationsServer({
       leaveRequestId: leaveRequest.id,

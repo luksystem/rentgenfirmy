@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import {
   Dialog,
@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { TeamProfileSelect } from "@/components/process/team-profile-select";
+import { isAdministratorRole } from "@/lib/auth/types";
 import { useAuthStore } from "@/store/auth-store";
 import { useDictionaryStore } from "@/store/dictionary-store";
 import { useLeaveStore } from "@/store/leave-store";
@@ -19,12 +21,23 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function CreateLeaveRequestDialog() {
+type CreateLeaveRequestDialogProps = {
+  /** Na stronie Urlopy admina — pokaż wybór pracownika. */
+  allowOnBehalf?: boolean;
+};
+
+export function CreateLeaveRequestDialog({ allowOnBehalf = false }: CreateLeaveRequestDialogProps) {
   const profile = useAuthStore((state) => state.profile);
   const leaveTypes = useDictionaryStore((state) => state.byKey("leave_type"));
   const createRequest = useLeaveStore((state) => state.createRequest);
+  const teamProfiles = useLeaveStore((state) => state.teamProfiles);
+  const ensureAllRequests = useLeaveStore((state) => state.ensureAllRequests);
+
+  const isAdmin = profile ? isAdministratorRole(profile.role) : false;
+  const showEmployeePicker = allowOnBehalf && isAdmin;
 
   const [open, setOpen] = useState(false);
+  const [profileId, setProfileId] = useState("");
   const [leaveTypeItemId, setLeaveTypeItemId] = useState("");
   const [startDate, setStartDate] = useState(todayIso());
   const [endDate, setEndDate] = useState(todayIso());
@@ -32,9 +45,16 @@ export function CreateLeaveRequestDialog() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const missingSupervisor = !profile?.supervisorId && profile?.role !== "administrator";
+  const missingSupervisor = !showEmployeePicker && !profile?.supervisorId && profile?.role !== "administrator";
+
+  useEffect(() => {
+    if (open && showEmployeePicker && teamProfiles.length === 0) {
+      void ensureAllRequests();
+    }
+  }, [open, showEmployeePicker, teamProfiles.length, ensureAllRequests]);
 
   function resetForm() {
+    setProfileId("");
     setLeaveTypeItemId("");
     setStartDate(todayIso());
     setEndDate(todayIso());
@@ -44,6 +64,10 @@ export function CreateLeaveRequestDialog() {
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (showEmployeePicker && !profileId) {
+      setError("Wybierz pracownika.");
+      return;
+    }
     if (!leaveTypeItemId) {
       setError("Wybierz typ dostępności.");
       return;
@@ -56,7 +80,13 @@ export function CreateLeaveRequestDialog() {
     setSaving(true);
     setError(null);
     try {
-      await createRequest({ leaveTypeItemId, startDate, endDate, note: note.trim() });
+      await createRequest({
+        leaveTypeItemId,
+        startDate,
+        endDate,
+        note: note.trim(),
+        ...(showEmployeePicker && profileId ? { profileId } : {}),
+      });
       setOpen(false);
       resetForm();
     } catch (submitError) {
@@ -79,12 +109,14 @@ export function CreateLeaveRequestDialog() {
       <DialogTrigger asChild>
         <Button type="button">
           <Plus className="mr-2 h-4 w-4" />
-          Nowy wniosek
+          {showEmployeePicker ? "Wniosek w imieniu" : "Nowy wniosek"}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Nowy wniosek o dostępność</DialogTitle>
+          <DialogTitle>
+            {showEmployeePicker ? "Wniosek o dostępność w imieniu pracownika" : "Nowy wniosek o dostępność"}
+          </DialogTitle>
         </DialogHeader>
 
         {missingSupervisor ? (
@@ -95,6 +127,17 @@ export function CreateLeaveRequestDialog() {
         ) : null}
 
         <form className="grid gap-4" onSubmit={handleSubmit}>
+          {showEmployeePicker ? (
+            <Field label="Pracownik">
+              <TeamProfileSelect
+                value={profileId}
+                onChange={(nextId) => setProfileId(nextId)}
+                teamProfiles={teamProfiles}
+                placeholder="— wybierz pracownika —"
+              />
+            </Field>
+          ) : null}
+
           <Field label="Typ dostępności">
             <Select value={leaveTypeItemId} onChange={(event) => setLeaveTypeItemId(event.target.value)}>
               <option value="">— wybierz —</option>

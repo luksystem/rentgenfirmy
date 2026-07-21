@@ -43,6 +43,15 @@ export type LeaveRequestInput = {
   startDate: string;
   endDate: string;
   note: string;
+  /** Tylko administrator — składanie wniosku w imieniu pracownika. */
+  profileId?: string;
+};
+
+export type LeaveRequestUpdateInput = {
+  leaveTypeItemId: string;
+  startDate: string;
+  endDate: string;
+  note: string;
 };
 
 export type LeaveRequestDecisionInput =
