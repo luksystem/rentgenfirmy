@@ -396,9 +396,9 @@ function ServiceIntakeCard({
         </p>
 
         <div className="flex items-center justify-between gap-2 text-[10px] text-muted">
-          <span className="flex items-center gap-1">
+          <span className={cn("flex items-center gap-1", overdue && "font-semibold text-rose-300")}>
             <Calendar className="h-3 w-3" />
-            {formatDate(item.createdAt.slice(0, 10))}
+            {dueAt ? formatDate(dueAt.slice(0, 10)) : formatDate(item.createdAt.slice(0, 10))}
           </span>
           {item.attemptCount > 1 ? (
             <span className="text-amber-200/90">Podejście {item.attemptCount}</span>
