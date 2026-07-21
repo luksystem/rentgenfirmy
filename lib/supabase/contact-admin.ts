@@ -1,8 +1,26 @@
 import { appendContactHistory, createContactHistoryEntry } from "@/lib/contacts/history";
 import { isContactConverted, type Contact, type ContactInput } from "@/lib/contacts/types";
 import { splitPartyFullName } from "@/lib/party/display-name";
+import { buildPartyGeocodeQueries, resolvePartyGpsOnSave } from "@/lib/party/gps";
+import { geocodeAddressServer } from "@/lib/service/geocode-server";
 import { contactInputToInsert, rowToContact } from "@/lib/supabase/contact-mappers";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+
+async function resolveContactGpsAdmin(
+  input: ContactInput,
+  previous: Contact | null,
+): Promise<ContactInput> {
+  const gps = await resolvePartyGpsOnSave(input, previous, async (party) => {
+    for (const query of buildPartyGeocodeQueries(party)) {
+      const result = await geocodeAddressServer(query);
+      if (result) {
+        return result;
+      }
+    }
+    return null;
+  });
+  return { ...input, lat: gps.lat, lng: gps.lng, gpsManual: gps.gpsManual };
+}
 
 function normalizeContactEmail(email: string) {
   return email.trim().toLowerCase();
@@ -75,7 +93,10 @@ async function linkExistingContactFromIntakeAdmin(
 ): Promise<Contact> {
   const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
-  const merged = mergeIntakeIntoExistingContact(existing, input);
+  const merged = await resolveContactGpsAdmin(
+    mergeIntakeIntoExistingContact(existing, input),
+    existing,
+  );
   const historyMessage = input.intakeReference
     ? `Powiązano zgłoszenie ${input.intakeReference} z istniejącym kontaktem (ten sam e-mail).`
     : "Powiązano zgłoszenie z istniejącym kontaktem (ten sam e-mail).";
@@ -147,24 +168,31 @@ export async function createContactFromIntakeAdmin(
     createContactHistoryEntry("created", historyMessage),
   ];
 
+  const resolved = await resolveContactGpsAdmin(
+    {
+      firstName: input.firstName,
+      lastName: input.lastName,
+      location: input.location,
+      addressStreet: input.addressStreet,
+      addressCity: input.addressCity,
+      addressPostalCode: input.addressPostalCode,
+      email: input.email,
+      phone: input.phone,
+      notes: input.notes,
+      externalId: input.externalId ?? null,
+    },
+    null,
+  );
+
   const { data, error } = await supabase
     .from("contacts")
     .insert(
-      contactInputToInsert(
-        {
-          firstName: input.firstName,
-          lastName: input.lastName,
-          location: input.location,
-          addressStreet: input.addressStreet,
-          addressCity: input.addressCity,
-          addressPostalCode: input.addressPostalCode,
-          email: input.email,
-          phone: input.phone,
-          notes: input.notes,
-          externalId: input.externalId ?? null,
-        },
-        { createdAt: now, updatedAt: now, history, handledAt: null },
-      ),
+      contactInputToInsert(resolved, {
+        createdAt: now,
+        updatedAt: now,
+        history,
+        handledAt: null,
+      }),
     )
     .select("*")
     .single();

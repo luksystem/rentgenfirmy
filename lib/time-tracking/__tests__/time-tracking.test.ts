@@ -347,7 +347,54 @@ describe("plan time suggestions", () => {
 });
 
 describe("project hour budget", () => {
-  it("computes utilization against hour quotas", () => {
+  it("computes utilization by linked time category", () => {
+    const budget = buildProjectHourBudget(
+      [
+        {
+          id: "q1",
+          projectId: "p1",
+          label: "Programista",
+          quantity: 40,
+          unit: "hours",
+          position: 0,
+          notes: "prace deweloperskie",
+          timeCategoryId: "cat-dev",
+          createdAt: "",
+          updatedAt: "",
+        },
+        {
+          id: "q2",
+          projectId: "p1",
+          label: "Instalator",
+          quantity: 10,
+          unit: "hours",
+          position: 1,
+          notes: "",
+          timeCategoryId: "cat-install",
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+      [
+        { durationMinutes: 30 * 60, status: "approved", categoryId: "cat-dev" },
+        { durationMinutes: 2 * 60, status: "approved", categoryId: "cat-install" },
+        { durationMinutes: 60, status: "approved", categoryId: "cat-other" },
+      ],
+      { categoryNames: { "cat-dev": "Rozwój", "cat-install": "Instalacja" } },
+    );
+
+    expect(budget?.totalBudgetMinutes).toBe(3000);
+    expect(budget?.totalUsedMinutes).toBe(32 * 60);
+    expect(budget?.utilizationPercent).toBe(64);
+    expect(budget?.overBudget).toBe(false);
+    expect(budget?.usageOnly).toBe(false);
+    expect(budget?.lines[0]?.usedMinutes).toBe(30 * 60);
+    expect(budget?.lines[0]?.categoryName).toBe("Rozwój");
+    expect(budget?.lines[1]?.usedMinutes).toBe(2 * 60);
+    expect(budget?.unmatchedUsedMinutes).toBe(60);
+  });
+
+  it("does not pro-rate when only a total minutes number is passed", () => {
     const budget = buildProjectHourBudget(
       [
         {
@@ -358,6 +405,7 @@ describe("project hour budget", () => {
           unit: "hours",
           position: 0,
           notes: "",
+          timeCategoryId: "cat-dev",
           createdAt: "",
           updatedAt: "",
         },
@@ -365,10 +413,9 @@ describe("project hour budget", () => {
       30 * 60,
     );
 
-    expect(budget?.totalBudgetMinutes).toBe(2400);
-    expect(budget?.utilizationPercent).toBe(75);
-    expect(budget?.overBudget).toBe(false);
-    expect(budget?.usageOnly).toBe(false);
+    expect(budget?.lines[0]?.usedMinutes).toBe(0);
+    expect(budget?.unmatchedUsedMinutes).toBe(30 * 60);
+    expect(budget?.totalUsedMinutes).toBe(30 * 60);
   });
 
   it("returns usage-only summary when hourly without quotas", () => {

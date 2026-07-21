@@ -45,6 +45,9 @@ export function ProjectHourBudgetCard({ budget }: { budget: ProjectHourBudgetSum
                   ? `Przekroczenie o ${formatDurationMinutes(budget.totalUsedMinutes - budget.totalBudgetMinutes)}`
                   : `Pozostało ${formatDurationMinutes(budget.totalRemainingMinutes)} (${100 - budget.utilizationPercent}%)`}
               </p>
+              <p className="mt-1 text-xs text-muted">
+                Zużycie według kategorii czasu przypisanych do pól kontraktu.
+              </p>
             </>
           )}
         </div>
@@ -61,19 +64,39 @@ export function ProjectHourBudgetCard({ budget }: { budget: ProjectHourBudgetSum
           </div>
         ) : null}
 
-        {!budget.usageOnly && budget.lines.length > 1 ? (
+        {!budget.usageOnly && budget.lines.length > 0 ? (
           <div className="grid min-w-0 gap-2">
             {budget.lines.map((line) => (
               <div
                 key={line.quotaId}
-                className="flex min-w-0 flex-col gap-0.5 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+                className="flex min-w-0 flex-col gap-0.5 text-sm sm:flex-row sm:items-start sm:justify-between sm:gap-3"
               >
-                <span className="min-w-0 break-words text-muted">{line.label}</span>
+                <div className="min-w-0">
+                  <span className="break-words text-muted">{line.label}</span>
+                  {line.categoryName ? (
+                    <p className="text-xs text-muted/80">Kategoria: {line.categoryName}</p>
+                  ) : (
+                    <p className="text-xs text-amber-600/90 dark:text-amber-300/80">
+                      Brak kategorii — przypisz w budżecie projektu
+                    </p>
+                  )}
+                  {line.notes ? (
+                    <p className="text-xs text-muted/80">{line.notes}</p>
+                  ) : null}
+                </div>
                 <span className="shrink-0 font-medium text-foreground">
                   {formatDurationMinutes(line.usedMinutes)} / {formatDurationMinutes(line.budgetMinutes)}
                 </span>
               </div>
             ))}
+            {budget.unmatchedUsedMinutes > 0 ? (
+              <div className="flex min-w-0 items-center justify-between gap-3 border-t border-border/50 pt-2 text-sm">
+                <span className="text-muted">Pozostałe (inne kategorie / bez kategorii)</span>
+                <span className="shrink-0 font-medium text-foreground">
+                  {formatDurationMinutes(budget.unmatchedUsedMinutes)}
+                </span>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </CardContent>

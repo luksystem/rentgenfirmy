@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, Input, Select } from "@/components/ui/input";
 import type { ProjectTradeInput } from "@/lib/dashboard/trade-types";
+import type { TradeCatalogItem } from "@/lib/field-options";
 import { formatPartyName } from "@/lib/party/display-name";
 import type { TradeCompanyItem } from "@/lib/trades/company-types";
 import { useAppStore } from "@/store/app-store";
@@ -39,13 +40,14 @@ export function AddContractorDialog({
   const [projectQuery, setProjectQuery] = useState("");
   const [projectId, setProjectId] = useState<string | null>(null);
   const [form, setForm] = useState<ProjectTradeInput>(emptyTradeInput());
+  const [categories, setCategories] = useState<TradeCatalogItem[]>(
+    fieldOptions.tradeCatalogItems,
+  );
   const [companyPool, setCompanyPool] = useState<TradeCompanyItem[]>(
     fieldOptions.tradeCompanies ?? [],
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const categories = fieldOptions.tradeCatalogItems;
 
   useEffect(() => {
     if (!open) return;
@@ -55,17 +57,26 @@ export function AddContractorDialog({
       try {
         const options = await refreshFieldOptions();
         if (!cancelled) {
+          setCategories(options.tradeCatalogItems);
           setCompanyPool(options.tradeCompanies ?? []);
         }
       } catch {
         if (!cancelled) {
-          setCompanyPool(fieldOptions.tradeCompanies ?? []);
+          const latest = useAppStore.getState().fieldOptions;
+          setCategories(latest.tradeCatalogItems);
+          setCompanyPool(latest.tradeCompanies ?? []);
         }
       }
       try {
         const response = await fetch("/api/trades/companies", { credentials: "include" });
-        const payload = await response.json();
+        const payload = (await response.json()) as {
+          companies?: TradeCompanyItem[];
+          categories?: TradeCatalogItem[];
+        };
         if (!cancelled && response.ok) {
+          if (payload.categories) {
+            setCategories(payload.categories);
+          }
           setCompanyPool(payload.companies ?? []);
         }
       } catch {
@@ -169,6 +180,7 @@ export function AddContractorDialog({
     setError(null);
     try {
       await addTrade(projectId, form);
+      // Katalog w store już ma nową branżę (sync przy addTrade) — kolejne otwarcie dialogu ją zobaczy.
       handleOpenChange(false);
       router.push(
         `/przestrzenie/klient/${encodeURIComponent(clientId)}?project=${encodeURIComponent(projectId)}&tab=trades`,

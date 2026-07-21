@@ -6,6 +6,12 @@ import type {
   ContactInput,
 } from "@/lib/contacts/types";
 
+function numOrNull(value: number | string | null | undefined): number | null {
+  if (value == null || value === "") return null;
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 export function rowToContact(row: ContactRow): Contact {
   return {
     id: row.id,
@@ -15,6 +21,9 @@ export function rowToContact(row: ContactRow): Contact {
     addressStreet: row.address_street ?? "",
     addressCity: row.address_city ?? "",
     addressPostalCode: row.address_postal_code ?? "",
+    lat: numOrNull(row.lat),
+    lng: numOrNull(row.lng),
+    gpsManual: Boolean(row.gps_manual),
     email: row.email,
     phone: row.phone,
     notes: row.notes ?? undefined,
@@ -47,6 +56,9 @@ export function contactInputToInsert(
     address_street: input.addressStreet.trim(),
     address_city: input.addressCity.trim(),
     address_postal_code: input.addressPostalCode.trim(),
+    lat: input.lat ?? null,
+    lng: input.lng ?? null,
+    gps_manual: Boolean(input.gpsManual),
     email: input.email.trim(),
     phone: input.phone.trim(),
     notes: input.notes?.trim() || null,
@@ -67,6 +79,9 @@ export function contactToInsert(contact: Contact): ContactInsert {
     address_street: contact.addressStreet,
     address_city: contact.addressCity,
     address_postal_code: contact.addressPostalCode,
+    lat: contact.lat,
+    lng: contact.lng,
+    gps_manual: contact.gpsManual,
     email: contact.email,
     phone: contact.phone,
     notes: contact.notes ?? null,

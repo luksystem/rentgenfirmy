@@ -255,24 +255,43 @@ export function ClientsMapView({ clients }: { clients: Client[] }) {
       setProgress({ done: 0, total: geocodableClients.length });
 
       const placed: PlacedClient[] = [];
+      const { patchClientGps } = await import("@/lib/supabase/client-repository");
 
-      await geocodeClientsSequential(geocodableClients, (client, done, total, coords) => {
-        if (cancelled) {
-          return;
-        }
+      await geocodeClientsSequential(
+        geocodableClients,
+        (client, done, total, coords) => {
+          if (cancelled) {
+            return;
+          }
 
-        if (coords) {
-          placed.push({
-            client,
-            lat: coords.lat,
-            lng: coords.lng,
-            label: coords.label,
-          });
-          setPlacedClients([...placed]);
-        }
+          if (coords) {
+            placed.push({
+              client,
+              lat: coords.lat,
+              lng: coords.lng,
+              label: coords.label,
+            });
+            setPlacedClients([...placed]);
+          }
 
-        setProgress({ done, total });
-      });
+          setProgress({ done, total });
+        },
+        async (client, coords) => {
+          // Backfill GPS do bazy — kolejne otwarcie mapy bez geokodowania
+          try {
+            const updated = await patchClientGps(client.id, {
+              lat: coords.lat,
+              lng: coords.lng,
+              gpsManual: false,
+            });
+            useAppStore.setState((state) => ({
+              clients: state.clients.map((item) => (item.id === client.id ? updated : item)),
+            }));
+          } catch {
+            // mapa działa mimo braku zapisu
+          }
+        },
+      );
 
       if (!cancelled) {
         setLoading(false);
@@ -345,9 +364,11 @@ export function ClientsMapView({ clients }: { clients: Client[] }) {
         {loading ? (
           <p className="flex items-center gap-2 text-xs text-muted">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            Lokalizowanie adresów {progress.done}/{progress.total}
+            Uzupełnianie brakujących GPS {progress.done}/{progress.total}
           </p>
-        ) : null}
+        ) : (
+          <p className="text-xs text-muted">Pozycje z zapisanych współrzędnych GPS</p>
+        )}
       </div>
 
       <div className="relative h-[min(70vh,640px)] min-h-[420px] w-full">

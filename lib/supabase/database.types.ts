@@ -121,6 +121,9 @@ export type ClientRow = {
   address_street: string;
   address_city: string;
   address_postal_code: string;
+  lat: number | null;
+  lng: number | null;
+  gps_manual: boolean;
   email: string;
   phone: string;
   notes: string | null;
@@ -137,6 +140,9 @@ export type ContactRow = {
   address_street: string;
   address_city: string;
   address_postal_code: string;
+  lat: number | null;
+  lng: number | null;
+  gps_manual: boolean;
   email: string;
   phone: string;
   notes: string | null;
@@ -165,6 +171,9 @@ export type ClientInsert = {
   address_street?: string;
   address_city?: string;
   address_postal_code?: string;
+  lat?: number | null;
+  lng?: number | null;
+  gps_manual?: boolean;
   email?: string;
   phone?: string;
   notes?: string | null;
@@ -1145,6 +1154,7 @@ export type ProjectContractQuotaRow = {
   unit: string;
   position: number;
   notes: string;
+  time_category_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -1157,6 +1167,7 @@ export type ProjectContractQuotaInsert = {
   unit?: string;
   position?: number;
   notes?: string;
+  time_category_id?: string | null;
   created_at?: string;
   updated_at?: string;
 };

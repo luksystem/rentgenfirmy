@@ -1,6 +1,12 @@
 import type { ClientRow, ClientInsert } from "@/lib/supabase/database.types";
 import type { Client, ClientInput } from "@/lib/service/types";
 
+function numOrNull(value: number | string | null | undefined): number | null {
+  if (value == null || value === "") return null;
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 export function rowToClient(row: ClientRow): Client {
   return {
     id: row.id,
@@ -10,6 +16,9 @@ export function rowToClient(row: ClientRow): Client {
     addressStreet: row.address_street ?? "",
     addressCity: row.address_city ?? "",
     addressPostalCode: row.address_postal_code ?? "",
+    lat: numOrNull(row.lat),
+    lng: numOrNull(row.lng),
+    gpsManual: Boolean(row.gps_manual),
     email: row.email,
     phone: row.phone,
     notes: row.notes ?? undefined,
@@ -32,6 +41,9 @@ export function clientInputToInsert(
     address_street: input.addressStreet.trim(),
     address_city: input.addressCity.trim(),
     address_postal_code: input.addressPostalCode.trim(),
+    lat: input.lat ?? null,
+    lng: input.lng ?? null,
+    gps_manual: Boolean(input.gpsManual),
     email: input.email.trim(),
     phone: input.phone.trim(),
     notes: input.notes?.trim() || null,
@@ -50,6 +62,9 @@ export function clientToInsert(client: Client): ClientInsert {
     address_street: client.addressStreet,
     address_city: client.addressCity,
     address_postal_code: client.addressPostalCode,
+    lat: client.lat,
+    lng: client.lng,
+    gps_manual: client.gpsManual,
     email: client.email,
     phone: client.phone,
     notes: client.notes ?? null,

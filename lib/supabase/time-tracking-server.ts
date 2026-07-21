@@ -9,7 +9,6 @@ import {
 } from "@/lib/time-tracking/project-time-summary";
 import {
   buildProjectHourBudget,
-  countBillableWorkMinutes,
   type ProjectHourBudgetSummary,
 } from "@/lib/time-tracking/project-hour-budget";
 import { assertUserCanAccessProjectServer } from "@/lib/supabase/project-access-server";
@@ -1146,7 +1145,9 @@ export async function fetchProjectTimeTrackingServer(
     fetchProjectStageTitleMap(admin, projectId),
     admin
       .from("project_contract_quotas")
-      .select("id, label, quantity, unit, position, notes, project_id, created_at, updated_at")
+      .select(
+        "id, label, quantity, unit, position, notes, time_category_id, project_id, created_at, updated_at",
+      )
       .eq("project_id", projectId)
       .order("position", { ascending: true }),
   ]);
@@ -1181,21 +1182,53 @@ export async function fetchProjectTimeTrackingServer(
     processStageTitle: resolveProcessStageTitle(entry.processStageId, stageMeta.titleById),
   }));
 
-  const usedMinutes = countBillableWorkMinutes(entries);
+  const quotas = (quotasResult.data ?? []).map((row) => ({
+    id: row.id as string,
+    projectId: row.project_id as string,
+    label: row.label as string,
+    quantity: Number(row.quantity),
+    unit: row.unit as "hours" | "visits" | "other",
+    position: row.position as number,
+    notes: (row.notes as string) ?? "",
+    timeCategoryId: (row.time_category_id as string | null) ?? null,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  }));
+
+  const categoryNames: Record<string, string> = {};
+  for (const entry of entries) {
+    if (entry.categoryId && entry.categoryName) {
+      categoryNames[entry.categoryId] = entry.categoryName;
+    }
+  }
+  const missingCategoryIds = [
+    ...new Set(
+      quotas
+        .map((quota) => quota.timeCategoryId)
+        .filter((id): id is string => {
+          if (!id) return false;
+          return !categoryNames[id];
+        }),
+    ),
+  ];
+  if (missingCategoryIds.length > 0) {
+    const { data: categoryRows } = await admin
+      .from("time_categories")
+      .select("id, name")
+      .in("id", missingCategoryIds);
+    for (const row of categoryRows ?? []) {
+      categoryNames[row.id as string] = String(row.name ?? "");
+    }
+  }
+
   const hourBudget = buildProjectHourBudget(
-    (quotasResult.data ?? []).map((row) => ({
-      id: row.id as string,
-      projectId: row.project_id as string,
-      label: row.label as string,
-      quantity: Number(row.quantity),
-      unit: row.unit as "hours" | "visits" | "other",
-      position: row.position as number,
-      notes: row.notes as string,
-      createdAt: row.created_at as string,
-      updatedAt: row.updated_at as string,
+    quotas,
+    entries.map((entry) => ({
+      durationMinutes: entry.durationMinutes,
+      status: entry.status,
+      categoryId: entry.categoryId,
     })),
-    usedMinutes,
-    { allowUsageOnly: true },
+    { allowUsageOnly: true, categoryNames },
   );
 
   return {

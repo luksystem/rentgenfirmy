@@ -83,6 +83,8 @@ export type ProjectContractQuota = {
   unit: ContractQuotaUnit;
   position: number;
   notes: string;
+  /** Kategoria czasu pracy — zużycie w rozliczeniu liczone z wpisów tej kategorii */
+  timeCategoryId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -92,6 +94,7 @@ export type ProjectContractQuotaInput = {
   quantity: number;
   unit: ContractQuotaUnit;
   notes?: string;
+  timeCategoryId?: string | null;
   position?: number;
 };
 

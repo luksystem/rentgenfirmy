@@ -35,19 +35,39 @@ function buildHourBudgetHtml(budget: ProjectHourBudgetSummary) {
   const remainingColor = budget.overBudget ? "#be123c" : "#6b7280";
 
   const lines =
-    budget.lines.length > 1
+    budget.lines.length > 0
       ? `<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;">
           <tbody>
             ${budget.lines
               .map(
                 (line) => `<tr>
-                  <td style="padding:6px 0;color:#6b7280;border-bottom:1px solid #e5e7eb;">${escapeEmailHtml(line.label)}</td>
-                  <td style="padding:6px 0;text-align:right;font-weight:600;border-bottom:1px solid #e5e7eb;">
+                  <td style="padding:6px 0;color:#6b7280;border-bottom:1px solid #e5e7eb;">
+                    ${escapeEmailHtml(line.label)}${
+                      line.categoryName
+                        ? `<div style="font-size:11px;color:#9ca3af;">${escapeEmailHtml(line.categoryName)}</div>`
+                        : ""
+                    }${
+                      line.notes
+                        ? `<div style="font-size:11px;color:#9ca3af;">${escapeEmailHtml(line.notes)}</div>`
+                        : ""
+                    }
+                  </td>
+                  <td style="padding:6px 0;text-align:right;font-weight:600;border-bottom:1px solid #e5e7eb;vertical-align:top;">
                     ${escapeEmailHtml(formatDurationMinutes(line.usedMinutes))} / ${escapeEmailHtml(formatDurationMinutes(line.budgetMinutes))}
                   </td>
                 </tr>`,
               )
               .join("")}
+            ${
+              budget.unmatchedUsedMinutes > 0
+                ? `<tr>
+                  <td style="padding:6px 0;color:#6b7280;">Pozostałe (inne kategorie)</td>
+                  <td style="padding:6px 0;text-align:right;font-weight:600;">
+                    ${escapeEmailHtml(formatDurationMinutes(budget.unmatchedUsedMinutes))}
+                  </td>
+                </tr>`
+                : ""
+            }
           </tbody>
         </table>`
       : "";

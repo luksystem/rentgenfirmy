@@ -16,6 +16,12 @@ export type TimeCategory = {
   sortOrder: number;
   defaultBillable: boolean;
   requiresProject: boolean;
+  /** Kod systemowy (np. project) — obecny w odpowiedziach admin API */
+  code?: string;
+};
+
+export type AdminTimeCategory = TimeCategory & {
+  code: string;
 };
 
 export type TimeEntryType = {

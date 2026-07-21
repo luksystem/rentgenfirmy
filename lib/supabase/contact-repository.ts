@@ -1,5 +1,7 @@
 import { appendContactHistory, createContactHistoryEntry } from "@/lib/contacts/history";
 import type { Contact, ContactInput } from "@/lib/contacts/types";
+import { geocodePartyAddress } from "@/lib/party/geocode-party";
+import { resolvePartyGpsOnSave } from "@/lib/party/gps";
 import {
   contactInputToInsert,
   contactToInsert,
@@ -21,16 +23,37 @@ export async function fetchContacts(): Promise<Contact[]> {
   return (data ?? []).map(rowToContact);
 }
 
+async function withResolvedGps(
+  input: ContactInput,
+  previous: Contact | null,
+): Promise<ContactInput> {
+  const gps = await resolvePartyGpsOnSave(input, previous, geocodePartyAddress);
+  return {
+    ...input,
+    lat: gps.lat,
+    lng: gps.lng,
+    gpsManual: gps.gpsManual,
+  };
+}
+
 export async function createContactRecord(input: ContactInput): Promise<Contact> {
   const supabase = getSupabase();
   const now = new Date().toISOString();
   const history = [
     createContactHistoryEntry("created", "Kontakt dodany do bazy Kontaktów."),
   ];
+  const resolved = await withResolvedGps(input, null);
 
   const { data, error } = await supabase
     .from("contacts")
-    .insert(contactInputToInsert(input, { createdAt: now, updatedAt: now, history, handledAt: now }))
+    .insert(
+      contactInputToInsert(resolved, {
+        createdAt: now,
+        updatedAt: now,
+        history,
+        handledAt: now,
+      }),
+    )
     .select("*")
     .single();
 
@@ -58,6 +81,7 @@ export async function updateContactRecord(id: string, input: ContactInput): Prom
   }
 
   const contact = rowToContact(existing);
+  const resolved = await withResolvedGps(input, contact);
   const now = new Date().toISOString();
   const history = appendContactHistory(
     contact.history,
@@ -67,9 +91,33 @@ export async function updateContactRecord(id: string, input: ContactInput): Prom
   const { data, error } = await supabase
     .from("contacts")
     .update({
-      ...contactInputToInsert(input, { updatedAt: now }),
+      ...contactInputToInsert(resolved, { updatedAt: now }),
       history,
       updated_at: now,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToContact(data);
+}
+
+export async function patchContactGps(
+  id: string,
+  coords: { lat: number; lng: number; gpsManual?: boolean },
+): Promise<Contact> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("contacts")
+    .update({
+      lat: coords.lat,
+      lng: coords.lng,
+      gps_manual: Boolean(coords.gpsManual),
+      updated_at: new Date().toISOString(),
     })
     .eq("id", id)
     .select("*")

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { splitPartyFullName } from "@/lib/party/display-name";
+import { buildPartyGeocodeQueries, resolvePartyGpsOnSave } from "@/lib/party/gps";
+import { geocodeAddressServer } from "@/lib/service/geocode-server";
 import { clientInputToInsert, rowToClient } from "@/lib/supabase/client-mappers";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import type { ClientInput } from "@/lib/service/types";
@@ -73,6 +75,19 @@ function parseClientBody(body: unknown): ClientInput | null {
   };
 }
 
+async function resolveGpsForApi(input: ClientInput, previous: ClientInput | null) {
+  const gps = await resolvePartyGpsOnSave(input, previous, async (party) => {
+    for (const query of buildPartyGeocodeQueries(party)) {
+      const result = await geocodeAddressServer(query);
+      if (result) {
+        return result;
+      }
+    }
+    return null;
+  });
+  return { ...input, lat: gps.lat, lng: gps.lng, gpsManual: gps.gpsManual };
+}
+
 function isAuthorized(request: Request) {
   const secret = process.env.CLIENTS_API_SECRET;
   if (!secret) {
@@ -116,10 +131,12 @@ export async function POST(request: Request) {
         .maybeSingle();
 
       if (existing) {
+        const previous = rowToClient(existing);
+        const resolved = await resolveGpsForApi(input, previous);
         const { data, error } = await supabase
           .from("clients")
           .update({
-            ...clientInputToInsert(input, { updatedAt: new Date().toISOString() }),
+            ...clientInputToInsert(resolved, { updatedAt: new Date().toISOString() }),
             updated_at: new Date().toISOString(),
           })
           .eq("id", existing.id)
@@ -134,9 +151,10 @@ export async function POST(request: Request) {
       }
     }
 
+    const resolved = await resolveGpsForApi(input, null);
     const { data, error } = await supabase
       .from("clients")
-      .insert(clientInputToInsert(input))
+      .insert(clientInputToInsert(resolved))
       .select("*")
       .single();
 

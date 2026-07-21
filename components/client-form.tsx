@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/input";
+import { parseOptionalCoordinate } from "@/lib/party/gps";
 import type { Client, ClientInput } from "@/lib/service/types";
+import { useAuthStore } from "@/store/auth-store";
 
 export function ClientForm({
   client,
@@ -15,6 +18,9 @@ export function ClientForm({
   onSubmit: (input: ClientInput) => void | Promise<void>;
   onCancel?: () => void;
 }) {
+  const isAdministrator = useAuthStore((state) => state.isAdministrator);
+  const [gpsTouched, setGpsTouched] = useState(false);
+
   const defaults: ClientInput = {
     firstName: client?.firstName ?? "",
     lastName: client?.lastName ?? "",
@@ -22,6 +28,9 @@ export function ClientForm({
     addressStreet: client?.addressStreet ?? "",
     addressCity: client?.addressCity ?? "",
     addressPostalCode: client?.addressPostalCode ?? "",
+    lat: client?.lat ?? null,
+    lng: client?.lng ?? null,
+    gpsManual: client?.gpsManual ?? false,
     email: client?.email ?? "",
     phone: client?.phone ?? "",
     notes: client?.notes ?? "",
@@ -31,6 +40,8 @@ export function ClientForm({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const lat = parseOptionalCoordinate(form.get("lat"));
+    const lng = parseOptionalCoordinate(form.get("lng"));
 
     await onSubmit({
       firstName: String(form.get("firstName") ?? ""),
@@ -43,6 +54,9 @@ export function ClientForm({
       phone: String(form.get("phone") ?? ""),
       notes: String(form.get("notes") ?? ""),
       externalId: String(form.get("externalId") ?? "") || null,
+      lat,
+      lng,
+      gpsManual: isAdministrator && gpsTouched,
     });
   }
 
@@ -70,6 +84,47 @@ export function ClientForm({
           <Input name="addressCity" defaultValue={defaults.addressCity} />
         </Field>
       </div>
+      {isAdministrator ? (
+        <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/10 p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">Pozycja GPS</p>
+          <p className="text-xs text-muted">
+            Wyliczana automatycznie przy zapisie adresu. Możesz ustawić ręcznie — wtedy system nie
+            nadpisze jej, dopóki nie zmienisz adresu.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Szerokość (lat)">
+              <Input
+                name="lat"
+                inputMode="decimal"
+                placeholder="np. 52.2297"
+                defaultValue={defaults.lat != null ? String(defaults.lat) : ""}
+                onChange={() => setGpsTouched(true)}
+              />
+            </Field>
+            <Field label="Długość (lng)">
+              <Input
+                name="lng"
+                inputMode="decimal"
+                placeholder="np. 21.0122"
+                defaultValue={defaults.lng != null ? String(defaults.lng) : ""}
+                onChange={() => setGpsTouched(true)}
+              />
+            </Field>
+          </div>
+          {defaults.gpsManual ? (
+            <p className="text-xs text-amber-700 dark:text-amber-300">Aktualnie: pozycja ręczna</p>
+          ) : defaults.lat != null ? (
+            <p className="text-xs text-muted">Aktualnie: z geokodera</p>
+          ) : (
+            <p className="text-xs text-muted">Brak zapisanej pozycji — uzupełni się przy zapisie adresu.</p>
+          )}
+        </div>
+      ) : defaults.lat != null ? (
+        <p className="text-xs text-muted">
+          GPS: {defaults.lat.toFixed(5)}, {defaults.lng?.toFixed(5)}
+          {defaults.gpsManual ? " (ręczna)" : ""}
+        </p>
+      ) : null}
       <Field label="E-mail">
         <Input name="email" type="email" defaultValue={defaults.email} />
       </Field>

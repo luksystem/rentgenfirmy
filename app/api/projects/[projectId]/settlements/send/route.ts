@@ -8,10 +8,6 @@ import { formatPartyName } from "@/lib/party/display-name";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { fetchEmailSettingsServer } from "@/lib/supabase/email-settings-server";
 import { fetchProjectSettlementsBundleServer } from "@/lib/supabase/project-settlement-server";
-import {
-  buildProjectHourBudget,
-  countBillableWorkMinutes,
-} from "@/lib/time-tracking/project-hour-budget";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
 
@@ -72,32 +68,12 @@ export async function POST(request: Request, context: RouteContext) {
         })
       : "Klient";
 
-    let hourBudget = null;
-    if (bundle.settings?.hourlyEnabled) {
-      const { data: timeRows, error: timeError } = await admin
-        .from("time_entries")
-        .select("duration_minutes, status")
-        .eq("project_id", projectId);
-      if (timeError && !timeError.message.toLowerCase().includes("does not exist")) {
-        throw new Error(timeError.message);
-      }
-      const usedMinutes = countBillableWorkMinutes(
-        (timeRows ?? []).map((row) => ({
-          durationMinutes: Number((row as { duration_minutes?: number }).duration_minutes) || 0,
-          status: String((row as { status?: string }).status ?? ""),
-        })),
-      );
-      hourBudget = buildProjectHourBudget(bundle.quotas, usedMinutes, {
-        allowUsageOnly: true,
-      });
-    }
-
     const email = buildSettlementReportEmail({
       clientName,
       projectName: String((project as { name?: string }).name ?? "Projekt"),
       entries: bundle.entries,
       publicUrl: body.publicUrl,
-      hourBudget,
+      hourBudget: bundle.settings?.hourlyEnabled ? bundle.hourBudget ?? null : null,
     });
 
     const result = await sendTransactionalEmail({

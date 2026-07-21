@@ -48,6 +48,7 @@ export function rowToContractQuota(row: QuotaRow): ProjectContractQuota {
     unit: isContractQuotaUnit(row.unit) ? row.unit : "other",
     position: row.position,
     notes: row.notes ?? "",
+    timeCategoryId: row.time_category_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -188,6 +189,7 @@ export async function createProjectContractQuota(
       unit: input.unit,
       position,
       notes: input.notes?.trim() ?? "",
+      time_category_id: input.unit === "hours" ? (input.timeCategoryId ?? null) : null,
       created_at: now,
       updated_at: now,
     })
@@ -213,6 +215,7 @@ export async function updateProjectContractQuota(
       quantity: input.quantity,
       unit: input.unit,
       notes: input.notes?.trim() ?? "",
+      time_category_id: input.unit === "hours" ? (input.timeCategoryId ?? null) : null,
       ...(input.position != null ? { position: input.position } : {}),
       updated_at: new Date().toISOString(),
     })

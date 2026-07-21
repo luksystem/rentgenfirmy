@@ -277,6 +277,20 @@ export default function SettingsPage() {
       <Card className="mb-6 border border-border/80">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
           <div>
+            <p className="font-medium text-foreground">Czas pracy — kategorie</p>
+            <p className="mt-1 text-sm text-muted">
+              Kategorie wybierane przy zapisie czasu i powiązywane z deklaracją godzin w budżecie projektu.
+            </p>
+          </div>
+          <Button variant="secondary" asChild>
+            <Link href="/ustawienia/czas-pracy">Otwórz kategorie czasu</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-6 border border-border/80">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+          <div>
             <p className="font-medium text-foreground">Plan Zasobów — słowniki</p>
             <p className="mt-1 text-sm text-muted">
               Role operacyjne, kompetencje, zespoły, obszary, typy pracy, statusy, ryzyka, nieobecności i budżety.

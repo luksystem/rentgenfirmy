@@ -13,7 +13,6 @@ import {
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   buildProjectHourBudget,
-  countBillableWorkMinutes,
 } from "@/lib/time-tracking/project-hour-budget";
 
 function num(value: number | string | null | undefined): number | null {
@@ -117,6 +116,7 @@ export async function fetchProjectSettlementsBundleServer(
     unit: string;
     position: number;
     notes: string;
+    time_category_id?: string | null;
     created_at: string;
     updated_at: string;
   }>).map((row) => ({
@@ -127,6 +127,7 @@ export async function fetchProjectSettlementsBundleServer(
     unit: isContractQuotaUnit(row.unit) ? row.unit : "other",
     position: row.position,
     notes: row.notes ?? "",
+    timeCategoryId: row.time_category_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }));
@@ -207,18 +208,42 @@ export async function fetchProjectSettlementsBundleServer(
   if (settings.hourlyEnabled) {
     const { data: timeRows, error: timeError } = await supabase
       .from("time_entries")
-      .select("duration_minutes, status")
+      .select("duration_minutes, status, category_id")
       .eq("project_id", projectId);
     if (timeError && !isMissingTableError(timeError.message)) {
       throw new Error(timeError.message);
     }
-    const usedMinutes = countBillableWorkMinutes(
-      (timeRows ?? []).map((row) => ({
-        durationMinutes: Number((row as { duration_minutes?: number }).duration_minutes) || 0,
-        status: String((row as { status?: string }).status ?? ""),
-      })),
-    );
-    hourBudget = buildProjectHourBudget(quotas, usedMinutes, { allowUsageOnly: true });
+
+    const categoryIds = [
+      ...new Set(
+        [
+          ...quotas.map((quota) => quota.timeCategoryId).filter(Boolean),
+          ...(timeRows ?? []).map(
+            (row) => (row as { category_id?: string | null }).category_id,
+          ),
+        ].filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const categoryNames: Record<string, string> = {};
+    if (categoryIds.length > 0) {
+      const { data: categoryRows } = await supabase
+        .from("time_categories")
+        .select("id, name")
+        .in("id", categoryIds);
+      for (const row of categoryRows ?? []) {
+        categoryNames[(row as { id: string }).id] = String((row as { name: string }).name ?? "");
+      }
+    }
+
+    const budgetEntries = (timeRows ?? []).map((row) => ({
+      durationMinutes: Number((row as { duration_minutes?: number }).duration_minutes) || 0,
+      status: String((row as { status?: string }).status ?? ""),
+      categoryId: (row as { category_id?: string | null }).category_id ?? null,
+    }));
+    hourBudget = buildProjectHourBudget(quotas, budgetEntries, {
+      allowUsageOnly: true,
+      categoryNames,
+    });
   }
 
   return { settings, quotas, hourlyReports, entries, hourBudget };

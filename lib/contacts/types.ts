@@ -31,6 +31,10 @@ export type Contact = {
   addressStreet: string;
   addressCity: string;
   addressPostalCode: string;
+  /** Pozycja GPS — wyliczana z adresu lub ustawiona ręcznie */
+  lat: number | null;
+  lng: number | null;
+  gpsManual: boolean;
   email: string;
   phone: string;
   notes?: string;
@@ -54,7 +58,14 @@ export type ContactInput = Omit<
   | "history"
   | "createdAt"
   | "updatedAt"
->;
+  | "lat"
+  | "lng"
+  | "gpsManual"
+> & {
+  lat?: number | null;
+  lng?: number | null;
+  gpsManual?: boolean;
+};
 
 export function contactToServiceClient(
   contact: Pick<Contact, "firstName" | "lastName" | "location" | "email" | "phone">,
@@ -80,6 +91,9 @@ export function contactToClientInput(contact: Contact): ClientInput {
     addressStreet: contact.addressStreet,
     addressCity: contact.addressCity,
     addressPostalCode: contact.addressPostalCode,
+    lat: contact.lat,
+    lng: contact.lng,
+    gpsManual: contact.gpsManual,
     email: contact.email,
     phone: contact.phone,
     notes: notesParts.join("\n\n"),

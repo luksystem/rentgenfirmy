@@ -152,6 +152,10 @@ export type Client = {
   addressStreet: string;
   addressCity: string;
   addressPostalCode: string;
+  /** Pozycja GPS (mapa) — wyliczana z adresu lub ustawiona ręcznie */
+  lat: number | null;
+  lng: number | null;
+  gpsManual: boolean;
   email: string;
   phone: string;
   notes?: string;
@@ -160,7 +164,11 @@ export type Client = {
   updatedAt: string;
 };
 
-export type ClientInput = Omit<Client, "id" | "createdAt" | "updatedAt">;
+export type ClientInput = Omit<Client, "id" | "createdAt" | "updatedAt" | "lat" | "lng" | "gpsManual"> & {
+  lat?: number | null;
+  lng?: number | null;
+  gpsManual?: boolean;
+};
 
 export function clientToServiceClient(
   client: Pick<Client, "firstName" | "lastName" | "location" | "email" | "phone">,

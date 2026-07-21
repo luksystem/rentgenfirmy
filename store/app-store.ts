@@ -41,7 +41,11 @@ import {
   fetchContacts,
   updateContactRecord,
 } from "@/lib/supabase/contact-repository";
-import { fetchFieldOptions, saveFieldOptions } from "@/lib/supabase/settings-repository";
+import {
+  fetchFieldOptions,
+  patchFieldOptions as patchFieldOptionsOnServer,
+  saveFieldOptions,
+} from "@/lib/supabase/settings-repository";
 import { fetchProjectActivitySettings } from "@/lib/supabase/project-activity-settings-repository";
 import {
   defaultProjectActivitySettings,
@@ -86,6 +90,8 @@ type AppState = {
   updateInterruption: (id: string, interruption: Omit<Interruption, "id">) => Promise<void>;
   deleteInterruption: (id: string) => Promise<void>;
   updateFieldOptions: (options: FieldOptions) => Promise<void>;
+  /** Atomowy patch na świeżych danych z serwera (bez nadpisywania katalogu starą kopią). */
+  patchFieldOptions: (mutator: (current: FieldOptions) => FieldOptions) => Promise<FieldOptions>;
   /** Odśwież katalog branż / firm z serwera (np. przy otwarciu formularza wykonawcy). */
   refreshFieldOptions: () => Promise<FieldOptions>;
   updateProjectsViewFilters: (filters: ProjectsViewFilters) => void;
@@ -400,6 +406,25 @@ export const useAppStore = create<AppState>((set, get) => ({
         isSaving: false,
         error: null,
       });
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Nie udało się zapisać ustawień",
+        isSaving: false,
+      });
+      throw error;
+    }
+  },
+
+  patchFieldOptions: async (mutator) => {
+    set({ isSaving: true, error: null });
+    try {
+      const fieldOptions = await patchFieldOptionsOnServer(mutator);
+      set({
+        fieldOptions,
+        isSaving: false,
+        error: null,
+      });
+      return fieldOptions;
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : "Nie udało się zapisać ustawień",

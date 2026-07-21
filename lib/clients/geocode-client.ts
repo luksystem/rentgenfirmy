@@ -1,5 +1,6 @@
 import type { Client } from "@/lib/service/types";
 import { buildClientGeocodeQueries } from "@/lib/clients/client-location";
+import { partyHasStoredGps } from "@/lib/party/gps";
 
 export type ClientMapCoordinates = {
   lat: number;
@@ -7,57 +8,7 @@ export type ClientMapCoordinates = {
   label: string;
 };
 
-const memoryCache = new Map<string, ClientMapCoordinates>();
-const STORAGE_KEY = "rentgen-client-geocode-v2";
 const REQUEST_GAP_MS = 1200;
-
-function readStorageCache(): Record<string, ClientMapCoordinates> {
-  if (typeof window === "undefined") {
-    return {};
-  }
-  try {
-    const raw = window.sessionStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, ClientMapCoordinates>) : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeStorageCache(entry: Record<string, ClientMapCoordinates>) {
-  if (typeof window === "undefined") {
-    return;
-  }
-  try {
-    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(entry));
-  } catch {
-    // ignore quota errors
-  }
-}
-
-function cacheKey(client: Client) {
-  return `${client.id}:${buildClientGeocodeQueries(client).join("|")}`;
-}
-
-function getCached(client: Client) {
-  const key = cacheKey(client);
-  if (memoryCache.has(key)) {
-    return memoryCache.get(key) ?? null;
-  }
-  const stored = readStorageCache()[key];
-  if (stored) {
-    memoryCache.set(key, stored);
-    return stored;
-  }
-  return null;
-}
-
-function setCached(client: Client, value: ClientMapCoordinates) {
-  const key = cacheKey(client);
-  memoryCache.set(key, value);
-  const stored = readStorageCache();
-  stored[key] = value;
-  writeStorageCache(stored);
-}
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -74,20 +25,30 @@ async function geocodeQuery(query: string): Promise<ClientMapCoordinates | null>
 
   const payload = (await response.json()) as {
     result?: ClientMapCoordinates | null;
-    error?: string;
   };
 
   return payload.result ?? null;
 }
 
+export function coordsFromStoredClient(client: Client): ClientMapCoordinates | null {
+  if (!partyHasStoredGps(client)) {
+    return null;
+  }
+  return {
+    lat: client.lat as number,
+    lng: client.lng as number,
+    label: client.location || `${client.lat}, ${client.lng}`,
+  };
+}
+
 export function isClientGeocodeCached(client: Client) {
-  return getCached(client) !== null;
+  return partyHasStoredGps(client);
 }
 
 export async function geocodeClient(client: Client): Promise<ClientMapCoordinates | null> {
-  const cached = getCached(client);
-  if (cached) {
-    return cached;
+  const stored = coordsFromStoredClient(client);
+  if (stored) {
+    return stored;
   }
 
   const queries = buildClientGeocodeQueries(client);
@@ -98,7 +59,6 @@ export async function geocodeClient(client: Client): Promise<ClientMapCoordinate
   for (const query of queries) {
     const result = await geocodeQuery(query);
     if (result) {
-      setCached(client, result);
       return result;
     }
     await wait(REQUEST_GAP_MS);
@@ -107,6 +67,10 @@ export async function geocodeClient(client: Client): Promise<ClientMapCoordinate
   return null;
 }
 
+/**
+ * Preferuje zapisane GPS z DB. Geokoduje tylko brakujące i wywołuje onResolved
+ * (np. żeby zapisać wynik z powrotem do klienta).
+ */
 export async function geocodeClientsSequential(
   clients: Client[],
   onProgress?: (
@@ -115,17 +79,18 @@ export async function geocodeClientsSequential(
     total: number,
     coords: ClientMapCoordinates | null,
   ) => void,
+  onResolved?: (client: Client, coords: ClientMapCoordinates) => void | Promise<void>,
 ) {
   const results = new Map<string, ClientMapCoordinates>();
   let done = 0;
   let lastNetworkAt = 0;
 
   for (const client of clients) {
-    const cached = getCached(client);
-    if (cached) {
-      results.set(client.id, cached);
+    const stored = coordsFromStoredClient(client);
+    if (stored) {
+      results.set(client.id, stored);
       done += 1;
-      onProgress?.(client, done, clients.length, cached);
+      onProgress?.(client, done, clients.length, stored);
       continue;
     }
 
@@ -141,13 +106,13 @@ export async function geocodeClientsSequential(
       lastNetworkAt = Date.now();
       coords = await geocodeQuery(query);
       if (coords) {
-        setCached(client, coords);
         break;
       }
     }
 
     if (coords) {
       results.set(client.id, coords);
+      await onResolved?.(client, coords);
     }
 
     done += 1;

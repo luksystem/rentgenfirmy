@@ -21,6 +21,7 @@ function emptyCategory(): TradeCatalogItem {
 export function TradeCatalogSettings() {
   const fieldOptions = useAppStore((state) => state.fieldOptions);
   const updateFieldOptions = useAppStore((state) => state.updateFieldOptions);
+  const refreshFieldOptions = useAppStore((state) => state.refreshFieldOptions);
   const isSaving = useAppStore((state) => state.isSaving);
   const [categories, setCategories] = useState<TradeCatalogItem[]>(fieldOptions.tradeCatalogItems);
   const [companyPool, setCompanyPool] = useState<TradeCompanyWithProjects[]>([]);
@@ -30,9 +31,15 @@ export function TradeCatalogSettings() {
   const loadCompanies = useCallback(async () => {
     try {
       const response = await fetch("/api/trades/companies", { credentials: "include" });
-      const payload = await response.json();
+      const payload = (await response.json()) as {
+        companies?: TradeCompanyWithProjects[];
+        categories?: TradeCatalogItem[];
+      };
       if (response.ok) {
         setCompanyPool(payload.companies ?? []);
+        if (payload.categories) {
+          setCategories(payload.categories);
+        }
       }
     } catch {
       setCompanyPool([]);
@@ -40,12 +47,21 @@ export function TradeCatalogSettings() {
   }, []);
 
   useEffect(() => {
-    setCategories(fieldOptions.tradeCatalogItems);
-  }, [fieldOptions.tradeCatalogItems]);
+    void (async () => {
+      try {
+        const options = await refreshFieldOptions();
+        setCategories(options.tradeCatalogItems);
+      } catch {
+        setCategories(fieldOptions.tradeCatalogItems);
+      }
+      await loadCompanies();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadCompanies, refreshFieldOptions]);
 
   useEffect(() => {
-    void loadCompanies();
-  }, [loadCompanies]);
+    setCategories(fieldOptions.tradeCatalogItems);
+  }, [fieldOptions.tradeCatalogItems]);
 
   const directory = useMemo(
     () => groupTradeDirectory(categories, companyPool),
@@ -117,14 +133,21 @@ export function TradeCatalogSettings() {
     }
 
     setError(null);
-    const nextOptions: FieldOptions = {
-      ...fieldOptions,
-      tradeCatalogItems: normalizedCategories,
-      tradeCompanies: fieldOptions.tradeCompanies ?? [],
-    };
-    await updateFieldOptions(nextOptions);
-    setSaved(true);
-    void loadCompanies();
+    try {
+      // Świeże firmy z serwera — nie nadpisuj katalogu firm starą kopią ze store.
+      const fresh = await refreshFieldOptions();
+      const nextOptions: FieldOptions = {
+        ...fresh,
+        tradeCatalogItems: normalizedCategories,
+        tradeCompanies: fresh.tradeCompanies ?? [],
+      };
+      await updateFieldOptions(nextOptions);
+      setCategories(normalizedCategories);
+      setSaved(true);
+      void loadCompanies();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Nie udało się zapisać katalogu.");
+    }
   }
 
   return (
@@ -253,6 +276,10 @@ export function TradeCatalogSettings() {
           {isSaving ? "Zapisywanie…" : "Zapisz katalog branż"}
         </Button>
       </div>
+      <p className="text-xs text-muted">
+        Po dodaniu branży kliknij „Zapisz katalog branż” — dopiero wtedy pojawi się w formularzu
+        wykonawcy.
+      </p>
     </div>
   );
 }

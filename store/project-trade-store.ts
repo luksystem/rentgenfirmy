@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import type { ProjectTrade, ProjectTradeInput } from "@/lib/dashboard/trade-types";
-import { mergeCompanyIntoPool, tradeCompanyKey } from "@/lib/trades/company-pool";
+import { mergeCompanyIntoPool } from "@/lib/trades/company-pool";
 import {
   addProjectTrade,
   deleteProjectTrade,
@@ -14,24 +14,34 @@ import { useAppStore } from "@/store/app-store";
 const loadPromises = new Map<string, Promise<ProjectTrade[]>>();
 
 async function syncTradeCompanyToPool(input: ProjectTradeInput) {
-  const { fieldOptions, updateFieldOptions } = useAppStore.getState();
-  const merged = mergeCompanyIntoPool(fieldOptions.tradeCompanies ?? [], input);
-  const changed =
-    merged.length !== (fieldOptions.tradeCompanies ?? []).length ||
-    merged.some((item, index) => {
-      const existing = fieldOptions.tradeCompanies?.[index];
-      if (!existing) {
-        return true;
-      }
-      return (
-        tradeCompanyKey(item) === tradeCompanyKey(existing) &&
-        JSON.stringify(item) !== JSON.stringify(existing)
-      );
-    });
-
-  if (changed) {
-    await updateFieldOptions({ ...fieldOptions, tradeCompanies: merged });
+  const { patchFieldOptions } = useAppStore.getState();
+  const tradeName = input.name.trim();
+  if (!tradeName) {
+    return;
   }
+
+  await patchFieldOptions((current) => {
+    const hasCategory = current.tradeCatalogItems.some(
+      (item) => item.name.trim().toLowerCase() === tradeName.toLowerCase(),
+    );
+    const tradeCatalogItems = hasCategory
+      ? current.tradeCatalogItems
+      : [
+          ...current.tradeCatalogItems,
+          {
+            name: tradeName,
+            communicationProtocols: [],
+            description: input.description?.trim() || "",
+          },
+        ];
+
+    const merged = mergeCompanyIntoPool(current.tradeCompanies ?? [], input);
+    return {
+      ...current,
+      tradeCatalogItems,
+      tradeCompanies: merged,
+    };
+  });
 }
 
 type ProjectTradeStore = {

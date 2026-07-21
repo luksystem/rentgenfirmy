@@ -1,33 +1,17 @@
 import type { Client } from "@/lib/service/types";
-import { buildClientAddressLine } from "@/lib/dashboard/google-maps";
+import {
+  buildPartyGeocodeQueries,
+  formatPartyAddress,
+  partyHasGeocodableAddress,
+  partyHasStoredGps,
+} from "@/lib/party/gps";
 
 export function formatClientAddress(client: Client) {
-  const structured = buildClientAddressLine(client);
-  if (structured) {
-    return structured;
-  }
-  return client.location?.trim() || "";
+  return formatPartyAddress(client);
 }
 
 export function buildClientGeocodeQueries(client: Client) {
-  const queries = new Set<string>();
-  const primary = buildClientAddressLine(client);
-
-  if (primary) {
-    queries.add(`${primary}, Polska`);
-  }
-
-  const location = client.location?.trim();
-  if (location) {
-    queries.add(`${location}, Polska`);
-  }
-
-  const cityLine = [client.addressPostalCode, client.addressCity].filter(Boolean).join(" ").trim();
-  if (cityLine) {
-    queries.add(`${cityLine}, Polska`);
-  }
-
-  return [...queries];
+  return buildPartyGeocodeQueries(client);
 }
 
 export function buildClientGeocodeQuery(client: Client) {
@@ -35,12 +19,17 @@ export function buildClientGeocodeQuery(client: Client) {
 }
 
 export function clientHasGeocodableAddress(client: Client) {
-  return buildClientGeocodeQueries(client).length > 0;
+  return partyHasGeocodableAddress(client) || partyHasStoredGps(client);
 }
 
 export function buildClientGeocodeFingerprint(clients: Client[]) {
   return clients
-    .map((client) => `${client.id}:${buildClientGeocodeQueries(client).join("|")}`)
+    .map((client) => {
+      if (partyHasStoredGps(client)) {
+        return `${client.id}:gps:${client.lat},${client.lng}`;
+      }
+      return `${client.id}:${buildClientGeocodeQueries(client).join("|")}`;
+    })
     .sort()
     .join("\n");
 }

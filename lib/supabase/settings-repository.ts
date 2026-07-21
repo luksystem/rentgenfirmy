@@ -44,3 +44,14 @@ export async function saveFieldOptions(options: FieldOptions): Promise<FieldOpti
 
   return normalizeFieldOptions(data.data as Partial<FieldOptions>);
 }
+
+/**
+ * Read-modify-write: zawsze bazuje na świeżych danych z serwera,
+ * żeby lokalnie stale fieldOptions nie nadpisywały katalogu branż.
+ */
+export async function patchFieldOptions(
+  mutator: (current: FieldOptions) => FieldOptions,
+): Promise<FieldOptions> {
+  const current = await fetchFieldOptions();
+  return saveFieldOptions(mutator(current));
+}

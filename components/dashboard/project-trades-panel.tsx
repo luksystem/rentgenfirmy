@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Pencil, Plus, Settings, Trash2 } from "lucide-react";
 import { emptyTradeInput, TradeFormFields } from "@/components/dashboard/trade-form-fields";
@@ -38,7 +38,7 @@ export function ProjectTradesPanel({
   const removeTrade = useProjectTradeStore((state) => state.removeTrade);
   const fieldOptions = useAppStore((state) => state.fieldOptions);
   const refreshFieldOptions = useAppStore((state) => state.refreshFieldOptions);
-  const categories = useMemo(() => fieldOptions.tradeCatalogItems, [fieldOptions.tradeCatalogItems]);
+  const [categories, setCategories] = useState<TradeCatalogItem[]>(fieldOptions.tradeCatalogItems);
   const [companyPool, setCompanyPool] = useState<TradeCompanyItem[]>(fieldOptions.tradeCompanies ?? []);
   const trades = storeTrades;
   const isLoading = loading && trades.length === 0;
@@ -46,14 +46,21 @@ export function ProjectTradesPanel({
   async function refreshCatalogSources() {
     try {
       const options = await refreshFieldOptions();
+      setCategories(options.tradeCatalogItems);
       setCompanyPool(options.tradeCompanies ?? []);
     } catch {
       // zostaw lokalny katalog
     }
     try {
       const response = await fetch("/api/trades/companies", { credentials: "include" });
-      const payload = await response.json();
+      const payload = (await response.json()) as {
+        companies?: TradeCompanyItem[];
+        categories?: TradeCatalogItem[];
+      };
       if (response.ok) {
+        if (payload.categories) {
+          setCategories(payload.categories);
+        }
         setCompanyPool(payload.companies ?? []);
       }
     } catch {
@@ -120,6 +127,8 @@ export function ProjectTradesPanel({
       } else {
         await addTrade(projectId, form);
       }
+      // Nowa branża / firma mogły wejść do katalogu — odśwież chipy przy kolejnym otwarciu.
+      void refreshCatalogSources();
       setDialogOpen(false);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Nie udało się zapisać wykonawcy.");

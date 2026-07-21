@@ -50,7 +50,22 @@ export function TradeFormFields({
   categories?: TradeCatalogItem[];
   companyPool?: TradeCompanyItem[];
 }) {
-  const tradeNames = useMemo(() => uniqueTradeNames(categories), [categories]);
+  const tradeNames = useMemo(() => {
+    const names = uniqueTradeNames(categories);
+    const current = form.name.trim();
+    if (
+      current &&
+      !names.some((name) => name.toLowerCase() === current.toLowerCase())
+    ) {
+      return [...names, current].sort((a, b) => a.localeCompare(b, "pl"));
+    }
+    return names;
+  }, [categories, form.name]);
+  const isNewTradeCategory =
+    Boolean(form.name.trim()) &&
+    !categories.some(
+      (entry) => entry.name.trim().toLowerCase() === form.name.trim().toLowerCase(),
+    );
   const companiesForSelectedTrade = useMemo(
     () => (form.name.trim() ? companiesForTrade(form.name, companyPool) : []),
     [companyPool, form.name],
@@ -80,7 +95,7 @@ export function TradeFormFields({
                 type="button"
                 className={cn(
                   "rounded-full border px-2.5 py-1 text-xs font-medium transition",
-                  form.name === tradeName
+                  form.name.trim().toLowerCase() === tradeName.trim().toLowerCase()
                     ? "border-accent/50 bg-accent/10 text-foreground"
                     : "border-border/70 text-muted hover:border-accent/30 hover:text-foreground",
                 )}
@@ -100,6 +115,12 @@ export function TradeFormFields({
               </button>
             ))}
           </div>
+          {isNewTradeCategory ? (
+            <p className="text-xs text-muted">
+              „{form.name.trim()}” to nowa branża — po zapisaniu wykonawcy trafi do katalogu i będzie
+              podpowiadana przy kolejnych dodaniach.
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -135,7 +156,7 @@ export function TradeFormFields({
       <Field label="Branża *">
         <Input
           value={form.name}
-          placeholder="np. Klimatyzacja, Elektryka, Smart Home"
+          placeholder="np. Klimatyzacja, Elektryka albo nowa nazwa (np. Ogród)"
           list="trade-catalog-suggestions"
           onChange={(event) => {
             const nextName = event.target.value;
@@ -157,6 +178,11 @@ export function TradeFormFields({
               <option key={name} value={name} />
             ))}
           </datalist>
+        ) : null}
+        {isNewTradeCategory ? (
+          <p className="mt-1 text-xs text-muted">
+            Nowa branża zostanie dodana do katalogu przy zapisaniu wykonawcy.
+          </p>
         ) : null}
       </Field>
 
