@@ -1195,6 +1195,7 @@ export async function fetchProjectTimeTrackingServer(
       updatedAt: row.updated_at as string,
     })),
     usedMinutes,
+    { allowUsageOnly: true },
   );
 
   return {

@@ -368,6 +368,14 @@ describe("project hour budget", () => {
     expect(budget?.totalBudgetMinutes).toBe(2400);
     expect(budget?.utilizationPercent).toBe(75);
     expect(budget?.overBudget).toBe(false);
+    expect(budget?.usageOnly).toBe(false);
+  });
+
+  it("returns usage-only summary when hourly without quotas", () => {
+    const budget = buildProjectHourBudget([], 90, { allowUsageOnly: true });
+    expect(budget?.usageOnly).toBe(true);
+    expect(budget?.totalUsedMinutes).toBe(90);
+    expect(budget?.totalBudgetMinutes).toBe(0);
   });
 });
 

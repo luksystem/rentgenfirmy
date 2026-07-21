@@ -430,6 +430,7 @@ export async function fetchProjectSettlementsBundle(
     quotas,
     hourlyReports: [],
     entries,
+    hourBudget: null,
   };
 }
 

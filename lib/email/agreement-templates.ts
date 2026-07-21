@@ -10,6 +10,7 @@ import {
 } from "@/lib/email/email-settings";
 import { buildEmailShell, escapeEmailHtml } from "@/lib/email/layout";
 import { renderEmailSubject, renderEmailTemplateString } from "@/lib/email/template-render";
+import { absoluteAppUrl } from "@/lib/messages/app-url";
 
 export const AGREEMENT_BINDING_DISCLAIMER =
   defaultEmailSettings().templates.agreement_delivery.disclaimer;
@@ -26,11 +27,10 @@ export type AgreementEmailEntry = {
 };
 
 export function resolveAgreementPublicUrl(token: string): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
   if (!token) {
     return "";
   }
-  return `${base}/ustalenie/${token}`;
+  return absoluteAppUrl(`/ustalenie/${token}`);
 }
 
 export function agreementAcceptUrl(token: string): string {

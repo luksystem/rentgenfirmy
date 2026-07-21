@@ -5,6 +5,7 @@ import {
   normalizeAgreementVatRate,
   type AgreementVatRate,
 } from "@/lib/dashboard/agreement-cost";
+import type { ProjectHourBudgetSummary } from "@/lib/time-tracking/project-hour-budget";
 
 export { AGREEMENT_VAT_RATES, computeGrossFromNet, DEFAULT_AGREEMENT_VAT_RATE, normalizeAgreementVatRate };
 export type { AgreementVatRate };
@@ -165,6 +166,8 @@ export type ProjectSettlementsBundle = {
   quotas: ProjectContractQuota[];
   hourlyReports: ProjectHourlyReport[];
   entries: ProjectSettlementEntry[];
+  /** Zużycie godzin z time_entries — gdy model godzinowy włączony */
+  hourBudget?: ProjectHourBudgetSummary | null;
 };
 
 export type ProjectSettlementSummary = {

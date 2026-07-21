@@ -87,7 +87,9 @@ export async function POST(request: Request, context: RouteContext) {
           status: String((row as { status?: string }).status ?? ""),
         })),
       );
-      hourBudget = buildProjectHourBudget(bundle.quotas, usedMinutes);
+      hourBudget = buildProjectHourBudget(bundle.quotas, usedMinutes, {
+        allowUsageOnly: true,
+      });
     }
 
     const email = buildSettlementReportEmail({

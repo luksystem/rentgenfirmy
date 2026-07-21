@@ -15,6 +15,8 @@ export type ProjectHourBudgetSummary = {
   totalRemainingMinutes: number;
   utilizationPercent: number;
   overBudget: boolean;
+  /** true gdy nie ma budżetu kontraktowego — pokazujemy tylko przepracowane godziny */
+  usageOnly: boolean;
   lines: ProjectHourBudgetLine[];
 };
 
@@ -28,10 +30,32 @@ function quotaToMinutes(quota: Pick<ProjectContractQuota, "quantity" | "unit">):
 export function buildProjectHourBudget(
   quotas: ProjectContractQuota[],
   usedMinutes: number,
+  options?: { allowUsageOnly?: boolean },
 ): ProjectHourBudgetSummary | null {
   const hourQuotas = quotas.filter((quota) => quota.unit === "hours" && quota.quantity > 0);
   if (hourQuotas.length === 0) {
-    return null;
+    if (!options?.allowUsageOnly) {
+      return null;
+    }
+    const safeUsed = Math.max(0, Math.round(usedMinutes));
+    return {
+      totalBudgetMinutes: 0,
+      totalUsedMinutes: safeUsed,
+      totalRemainingMinutes: 0,
+      utilizationPercent: 0,
+      overBudget: false,
+      usageOnly: true,
+      lines: [
+        {
+          quotaId: "usage",
+          label: "Czas pracy",
+          budgetMinutes: 0,
+          usedMinutes: safeUsed,
+          remainingMinutes: 0,
+          utilizationPercent: 0,
+        },
+      ],
+    };
   }
 
   const totalBudgetMinutes = hourQuotas.reduce((sum, quota) => sum + quotaToMinutes(quota), 0);
@@ -64,6 +88,7 @@ export function buildProjectHourBudget(
     totalRemainingMinutes,
     utilizationPercent,
     overBudget: usedMinutes > totalBudgetMinutes,
+    usageOnly: false,
     lines,
   };
 }

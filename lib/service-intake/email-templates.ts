@@ -5,10 +5,10 @@ import {
 } from "@/lib/email/email-settings";
 import { buildEmailShell, escapeEmailHtml } from "@/lib/email/layout";
 import { renderEmailSubject, renderEmailTemplateString } from "@/lib/email/template-render";
+import { absoluteAppUrl } from "@/lib/messages/app-url";
 
 export function getServiceIntakeThreadUrl(trackingToken: string) {
-  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
-  return `${base}/zgloszenie/watek/${trackingToken}`;
+  return absoluteAppUrl(`/zgloszenie/watek/${trackingToken}`);
 }
 
 function threadLinkHtml(threadUrl: string) {

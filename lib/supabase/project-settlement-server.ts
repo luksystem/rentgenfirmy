@@ -11,6 +11,10 @@ import {
   type ProjectSettlementsBundle,
 } from "@/lib/settlements/types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import {
+  buildProjectHourBudget,
+  countBillableWorkMinutes,
+} from "@/lib/time-tracking/project-hour-budget";
 
 function num(value: number | string | null | undefined): number | null {
   if (value == null) return null;
@@ -63,6 +67,7 @@ export async function fetchProjectSettlementsBundleServer(
         quotas: [],
         hourlyReports: [],
         entries: [],
+        hourBudget: null,
       };
     }
     if (result.error) {
@@ -198,5 +203,23 @@ export async function fetchProjectSettlementsBundleServer(
     updatedAt: row.updated_at,
   }));
 
-  return { settings, quotas, hourlyReports, entries };
+  let hourBudget = null;
+  if (settings.hourlyEnabled) {
+    const { data: timeRows, error: timeError } = await supabase
+      .from("time_entries")
+      .select("duration_minutes, status")
+      .eq("project_id", projectId);
+    if (timeError && !isMissingTableError(timeError.message)) {
+      throw new Error(timeError.message);
+    }
+    const usedMinutes = countBillableWorkMinutes(
+      (timeRows ?? []).map((row) => ({
+        durationMinutes: Number((row as { duration_minutes?: number }).duration_minutes) || 0,
+        status: String((row as { status?: string }).status ?? ""),
+      })),
+    );
+    hourBudget = buildProjectHourBudget(quotas, usedMinutes, { allowUsageOnly: true });
+  }
+
+  return { settings, quotas, hourlyReports, entries, hourBudget };
 }

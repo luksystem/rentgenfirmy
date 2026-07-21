@@ -1,3 +1,4 @@
+import { getAppBaseUrl } from "@/lib/messages/app-url";
 import type { SmsProviderName } from "@/lib/sms/types";
 
 function readProviderName(): SmsProviderName {
@@ -9,7 +10,7 @@ function readProviderName(): SmsProviderName {
 }
 
 export function getSmsConfig() {
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const appUrl = getAppBaseUrl();
 
   return {
     provider: readProviderName(),

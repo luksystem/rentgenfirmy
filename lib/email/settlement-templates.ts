@@ -12,6 +12,23 @@ function money(value: number) {
 }
 
 function buildHourBudgetHtml(budget: ProjectHourBudgetSummary) {
+  if (budget.usageOnly) {
+    return `<h2 style="font-size:15px;margin:24px 0 8px;">Zużycie godzin (czas pracy)</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+      <tr>
+        <td style="padding:6px 0;color:#6b7280;">Przepracowano</td>
+        <td style="text-align:right;font-weight:700;">
+          ${escapeEmailHtml(formatDurationMinutes(budget.totalUsedMinutes))}
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="padding:6px 0;color:#6b7280;font-size:12px;">
+          Zarejestrowany czas pracy w projekcie (rozliczenie godzinowe)
+        </td>
+      </tr>
+    </table>`;
+  }
+
   const remainingLabel = budget.overBudget
     ? `Przekroczenie o ${formatDurationMinutes(budget.totalUsedMinutes - budget.totalBudgetMinutes)}`
     : `Pozostało ${formatDurationMinutes(budget.totalRemainingMinutes)} (${Math.max(0, 100 - budget.utilizationPercent)}%)`;

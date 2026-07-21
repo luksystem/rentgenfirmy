@@ -142,10 +142,23 @@ export function ProjectSettlementsPanel({
   }, [ensureProjectProcess, project, projectId]);
 
   useEffect(() => {
-    if (!settings?.hourlyEnabled || readOnly) {
+    if (!settings?.hourlyEnabled) {
       setHourBudget(null);
       return;
     }
+
+    if (bundle?.hourBudget) {
+      setHourBudget(bundle.hourBudget);
+    }
+
+    // Publiczny podgląd nie ma auth do /time-entries — bierzemy hourBudget z seeda.
+    if (readOnly) {
+      if (!bundle?.hourBudget) {
+        setHourBudget(null);
+      }
+      return;
+    }
+
     let cancelled = false;
     void fetch(`/api/projects/${encodeURIComponent(projectId)}/time-entries`, {
       credentials: "include",
@@ -155,16 +168,16 @@ export function ProjectSettlementsPanel({
           hourBudget?: ProjectHourBudgetSummary | null;
         };
         if (!cancelled && response.ok) {
-          setHourBudget(payload.hourBudget ?? null);
+          setHourBudget(payload.hourBudget ?? bundle?.hourBudget ?? null);
         }
       })
       .catch(() => {
-        if (!cancelled) setHourBudget(null);
+        if (!cancelled) setHourBudget(bundle?.hourBudget ?? null);
       });
     return () => {
       cancelled = true;
     };
-  }, [projectId, readOnly, settings?.hourlyEnabled, entries.length]);
+  }, [bundle?.hourBudget, projectId, readOnly, settings?.hourlyEnabled, entries.length]);
 
   async function handleRefresh() {
     setError(null);
@@ -422,8 +435,8 @@ export function ProjectSettlementsPanel({
             <ProjectHourBudgetCard budget={hourBudget} />
           ) : (
             <p className="text-sm text-muted">
-              Brak pól godzin w kontrakcie albo brak wpisów czasu — zdefiniuj budżet godzin w projekcie
-              (pola kontraktu) i rejestruj czas w zakładce Czas pracy.
+              Brak zarejestrowanego czasu pracy. Po wpisach w module czasu pracy zużycie godzin pojawi się
+              tutaj automatycznie.
             </p>
           )}
         </section>
@@ -433,7 +446,8 @@ export function ProjectSettlementsPanel({
         <section className="grid gap-3 rounded-xl border border-border/70 bg-surface-muted/20 p-3 sm:p-4">
           <h3 className="page-section-subtitle text-sm">Wyślij rozliczenie / link publiczny</h3>
           <p className="text-xs text-muted">
-            Raport dla klienta: planowane wpływy, spłaty, saldo i harmonogram.
+            Raport dla klienta: należności, spłaty, saldo, harmonogram
+            {settings?.hourlyEnabled ? " oraz zużycie godzin" : ""}.
             {clientName ? ` Odbiorca: ${clientName}.` : ""}
           </p>
 
