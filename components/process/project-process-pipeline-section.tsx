@@ -138,8 +138,9 @@ export function ProjectProcessPipelineSection({
           <div className="min-w-0 text-sm">
             <p className="font-medium text-foreground">Zakotwiczony proces projektu</p>
             <p className="mt-0.5 text-muted">
-              Zmiany w szablonie nie aktualizują tego projektu automatycznie. Uzupełnione listy i
-              postęp zostają po ręcznym wczytaniu.
+              Struktura etapów jest zakotwiczona — nowe lub zmienione etapy szablonu wymagają
+              ręcznego wczytania. Treść pytań checklist aktualizuje się automatycznie przy
+              odświeżeniu, a zaznaczenia klienta zostają zachowane.
             </p>
           </div>
           <Button type="button" variant="outline" size="sm" onClick={() => setSyncDialogOpen(true)}>

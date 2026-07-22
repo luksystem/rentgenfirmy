@@ -11,7 +11,7 @@ import {
 import type { ProcessItemCompletion, ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import { flattenProcessItems } from "@/lib/process/types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { backfillEmptyChecklistInstances } from "@/lib/supabase/process-item-repository";
+import { syncChecklistInstancesFromTemplate } from "@/lib/supabase/process-item-repository";
 import { projectProcessToUpdate, rowToProjectProcess } from "@/lib/supabase/process-mappers";
 import { fetchProcessTemplateByProjectTypeWithClient } from "@/lib/supabase/process-repository";
 
@@ -66,7 +66,7 @@ async function ensureProjectProcessItemsAdmin(
   const missing = templateItems.filter((item) => !existingIds.has(item.id));
 
   if (!missing.length) {
-    await backfillEmptyChecklistInstances(admin, projectId, template);
+    await syncChecklistInstancesFromTemplate(admin, projectId, template);
     return 0;
   }
 
@@ -92,7 +92,7 @@ async function ensureProjectProcessItemsAdmin(
     throw new Error(error.message);
   }
 
-  await backfillEmptyChecklistInstances(admin, projectId, template);
+  await syncChecklistInstancesFromTemplate(admin, projectId, template);
   return missing.length;
 }
 

@@ -84,7 +84,6 @@ function ChangeRequestCard({
   mode,
   authorName,
   onSubmit,
-  onCancel,
   onRespond,
   onDelete,
   onEdit,
@@ -95,7 +94,6 @@ function ChangeRequestCard({
   mode: "team" | "client";
   authorName: string;
   onSubmit: (id: string) => Promise<void>;
-  onCancel: (id: string) => Promise<void>;
   onRespond: (
     id: string,
     input: { accepted: boolean; clientResponseName: string; clientResponseNote?: string },
@@ -274,9 +272,17 @@ function ChangeRequestCard({
                 variant="secondary"
                 className="w-full sm:w-auto"
                 disabled={busy}
-                onClick={() => void run(() => onCancel(changeRequest.id))}
+                onClick={() =>
+                  void run(() =>
+                    onRespond(changeRequest.id, {
+                      accepted: true,
+                      clientResponseName: authorName,
+                    }),
+                  )
+                }
               >
-                Anuluj oczekujące
+                <Check className="mr-2 h-3.5 w-3.5" />
+                Oznacz jako zaakceptowane
               </Button>
               <Button
                 type="button"
@@ -394,7 +400,6 @@ export function ProjectChangeRequestsPanel({
   const createChangeRequest = useProjectChangeRequestStore((state) => state.createChangeRequest);
   const submitForClient = useProjectChangeRequestStore((state) => state.submitForClient);
   const respond = useProjectChangeRequestStore((state) => state.respond);
-  const cancel = useProjectChangeRequestStore((state) => state.cancel);
   const removeDraft = useProjectChangeRequestStore((state) => state.removeDraft);
   const removeChangeRequest = useProjectChangeRequestStore((state) => state.removeChangeRequest);
   const updateChangeRequest = useProjectChangeRequestStore((state) => state.updateChangeRequest);
@@ -585,11 +590,6 @@ export function ProjectChangeRequestsPanel({
     await refreshLocal();
   }
 
-  async function handleCancel(id: string) {
-    await cancel(projectId, id);
-    await refreshLocal();
-  }
-
   async function handleRespond(
     id: string,
     input: { accepted: boolean; clientResponseName: string; clientResponseNote?: string },
@@ -762,7 +762,6 @@ export function ProjectChangeRequestsPanel({
             mode={mode}
             authorName={authorName}
             onSubmit={(id) => handleSubmit(id)}
-            onCancel={(id) => handleCancel(id)}
             onRespond={(id, input) => handleRespond(id, input)}
             onDelete={(id) => handleDelete(id)}
             onEdit={mode === "team" ? (item) => openEditDialog(item) : undefined}

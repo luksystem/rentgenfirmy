@@ -138,6 +138,75 @@ export function projectChecklistPayloadFromTemplate(defaultPayload: unknown): Ch
   return cloneTemplatePayloadForProject(normalized);
 }
 
+/**
+ * Aktualizuje treść pytań/list checklisty instancji projektu do aktualnej wersji z szablonu,
+ * dopasowując punkty po `id` (stabilne, dopóki punkt nie zostanie usunięty i dodany od nowa w
+ * edytorze). Zachowuje stan wypełnienia (checked/status/notatki/załączniki) istniejących punktów,
+ * dokłada nowe punkty z szablonu jako niewypełnione, i nie kasuje punktów/list usuniętych z
+ * szablonu, które klient już wypełnił — te trafiają na koniec odpowiedniej listy/payloadu.
+ */
+export function mergeChecklistPayloadWithTemplate(
+  existingPayload: unknown,
+  templateDefaultPayload: unknown,
+): ChecklistItemPayload {
+  const template = normalizeChecklistPayload(templateDefaultPayload);
+  if (!hasChecklistLines(template)) {
+    return normalizeChecklistPayload(existingPayload);
+  }
+
+  const existing = normalizeChecklistPayload(existingPayload);
+  const existingLineById = new Map<string, ChecklistLine>();
+  const existingLinesBySection = new Map<string, ChecklistLine[]>();
+  getChecklistSections(existing).forEach((section) => {
+    existingLinesBySection.set(section.id, section.lines);
+    section.lines.forEach((line) => existingLineById.set(line.id, line));
+  });
+
+  const mergedSections: ChecklistSection[] = getChecklistSections(template).map((templateSection) => {
+    const templateLineIds = new Set(templateSection.lines.map((line) => line.id));
+
+    const mergedLines = templateSection.lines.map((templateLine) => {
+      const existingLine = existingLineById.get(templateLine.id);
+      if (!existingLine) {
+        return {
+          id: templateLine.id,
+          text: templateLine.text,
+          checked: false,
+          status: "NOT_STARTED" as const,
+          requireDocumentation: templateLine.requireDocumentation,
+          documentationHint: templateLine.documentationHint,
+        };
+      }
+      return {
+        ...existingLine,
+        text: templateLine.text,
+        requireDocumentation: templateLine.requireDocumentation,
+        documentationHint: templateLine.documentationHint,
+      };
+    });
+
+    const orphanedLines = (existingLinesBySection.get(templateSection.id) ?? []).filter(
+      (line) => !templateLineIds.has(line.id),
+    );
+
+    return {
+      id: templateSection.id,
+      name: templateSection.name,
+      position: templateSection.position,
+      lines: [...mergedLines, ...orphanedLines],
+    };
+  });
+
+  const orphanedSections = getChecklistSections(existing).filter(
+    (section) => !mergedSections.some((merged) => merged.id === section.id),
+  );
+
+  return {
+    sections: withChecklistSectionPositions([...mergedSections, ...orphanedSections]),
+    note: existing.note,
+  };
+}
+
 export function resolveElementDefaultPayload(
   kind: ProcessItemKind,
   raw: unknown,
