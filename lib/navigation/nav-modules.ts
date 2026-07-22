@@ -7,6 +7,7 @@ export type NavModuleKey =
   | "my-work-time"
   | "my-work-availability"
   | "my-work-reviews"
+  | "my-work-xp"
   | "contacts"
   | "service-offers"
   | "sales-calculations"
@@ -100,6 +101,12 @@ export const NAV_MODULE_GROUPS: NavModuleGroupDefinition[] = [
         label: "Oceny miesięczne",
         href: "/moja-praca/oceny",
         routePrefixes: ["/moja-praca/oceny"],
+      },
+      {
+        key: "my-work-xp",
+        label: "Punkty XP",
+        href: "/moja-praca/xp",
+        routePrefixes: ["/moja-praca/xp"],
       },
     ],
   },

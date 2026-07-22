@@ -7,6 +7,7 @@ import type { TimesheetSummary } from "@/lib/time-tracking/timesheet-summary";
 import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
 import { mapProfileRow } from "@/lib/supabase/profile-mappers";
 import { generateMonthlyReviewReconciliation } from "@/lib/ai/monthly-review-ai";
+import { awardXpServer } from "@/lib/supabase/xp-server";
 import type {
   MonthlyManagerAssessment,
   MonthlyReview,
@@ -278,6 +279,18 @@ export async function submitSelfAssessmentServer(
 
   await ensureMonthlyReviewAiReportServer(admin, review.id);
 
+  await awardXpServer(admin, {
+    employeeId: input.employeeId,
+    criterionKey: "self_assessment_submitted",
+    sourceId: review.id,
+  });
+  await awardXpServer(admin, {
+    employeeId: input.employeeId,
+    criterionKey: "self_assessment_rating",
+    ratingForScaling: input.rating,
+    sourceId: review.id,
+  });
+
   return { ...review, selfSubmittedAt: submittedAt };
 }
 
@@ -314,6 +327,13 @@ export async function submitManagerAssessmentServer(
   }
 
   await ensureMonthlyReviewAiReportServer(admin, review.id);
+
+  await awardXpServer(admin, {
+    employeeId: input.employeeId,
+    criterionKey: "manager_assessment_rating",
+    ratingForScaling: input.rating,
+    sourceId: review.id,
+  });
 
   return { ...review, managerSubmittedAt: submittedAt, managerId: input.managerId };
 }

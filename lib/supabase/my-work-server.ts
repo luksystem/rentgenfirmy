@@ -27,6 +27,7 @@ import { assertWorkItemStatusTransition } from "@/lib/my-work/state-machine";
 import { resolveSourceLinkForItem } from "@/lib/my-work/link-resolver";
 import { mapProfileRow } from "@/lib/supabase/profile-mappers";
 import { assertAssigneeHasProjectAccessServer } from "@/lib/supabase/project-access-server";
+import { awardXpServer } from "@/lib/supabase/xp-server";
 import type { WorkItemPatch } from "@/lib/my-work/source-adapters/types";
 
 type AdminClient = SupabaseClient;
@@ -805,6 +806,14 @@ export async function recordWorkItemAcceptanceServer(
     metadata: { comment: input.comment ?? "" },
   });
 
+  if (input.acceptedWithoutReservations ?? input.action === "accept") {
+    await awardXpServer(admin, {
+      employeeId: actor.id,
+      criterionKey: "task_accepted_without_reservations",
+      sourceId: id,
+    });
+  }
+
   return fetchWorkItemDetail(admin, id, actor.id, actor);
 }
 
@@ -908,6 +917,16 @@ export async function verifyWorkItemServer(admin: AdminClient, id: string, actor
   await syncWorkItemPatchToSource(admin, detail.item, { status: "verified", completedAt: now });
 
   await appendWorkItemLog(admin, { workItemId: id, userId: actor.id, action: "verified" });
+
+  const dueDate = detail.item.plannedEnd ?? detail.item.dueDate;
+  if (dueDate && new Date(now) <= new Date(`${dueDate}T23:59:59`)) {
+    await awardXpServer(admin, {
+      employeeId: detail.item.assignedUserId,
+      criterionKey: "task_completed_on_time",
+      sourceId: id,
+    });
+  }
+
   return fetchWorkItemDetail(admin, id, actor.id, actor);
 }
 

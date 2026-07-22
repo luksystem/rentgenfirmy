@@ -35,6 +35,7 @@ import {
   Star,
   Target,
   Timer,
+  Trophy,
   UserCircle,
   Users,
   Users2,
@@ -49,6 +50,7 @@ import { NAV_MODULE_GROUPS, type NavModuleKey } from "@/lib/navigation/nav-modul
 import { canAccessNavModule } from "@/lib/navigation/role-nav-permissions";
 import { BrandMark } from "@/components/brand-mark";
 import { NavBadges } from "@/components/nav-badges";
+import { XpBadge } from "@/components/xp/xp-badge";
 import { AccountHeaderButton } from "@/components/account/account-header-button";
 import { NotificationBell } from "@/components/notification-bell";
 import { UserAvatar } from "@/components/user-avatar";
@@ -87,6 +89,7 @@ const NAV_MODULE_ICONS: Record<NavModuleKey, React.ComponentType<{ className?: s
   "my-work-time": Timer,
   "my-work-availability": PalmtreeIcon,
   "my-work-reviews": Star,
+  "my-work-xp": Trophy,
   contacts: Contact,
   "service-offers": COMMERCIAL_MODULES.serviceSettlement.icon,
   "sales-calculations": COMMERCIAL_MODULES.salesCalculations.icon,
@@ -473,6 +476,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
           { href: "/admin/uzytkownicy", label: "Użytkownicy", icon: Shield },
           { href: "/admin/logi", label: "Logi", icon: Activity },
           { href: "/admin/oceny-miesieczne", label: "Oceny miesięczne", icon: Star },
+          { href: "/admin/punkty-xp", label: "Punkty XP", icon: Trophy },
         ],
       });
     }
@@ -592,6 +596,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
                 {displayName || "Użytkownik"}
               </span>
             </Link>
+            <XpBadge />
             <button
               type="button"
               onClick={() => void signOut().then(() => window.location.assign("/logowanie"))}

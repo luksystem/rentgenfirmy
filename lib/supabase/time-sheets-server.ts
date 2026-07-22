@@ -29,6 +29,7 @@ import {
 } from "@/lib/supabase/time-tracking-server";
 import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
 import { mapProfileRow } from "@/lib/supabase/profile-mappers";
+import { awardXpServer } from "@/lib/supabase/xp-server";
 
 type AdminClient = SupabaseClient;
 
@@ -362,8 +363,37 @@ export async function submitTimesheetServer(
 
   await updateEntriesInPeriod(admin, sheet, ["draft", "rejected"], "submitted", actor.id, "submitted");
 
+  await awardXpServer(admin, { employeeId: sheet.userId, criterionKey: "timesheet_submitted", sourceId: sheetId });
+
   const views = await attachTimesheetSummaries(admin, [mapTimesheetRow(data as TimeSheetRow)]);
   return views[0]!;
+}
+
+/** Czy jakikolwiek wpis z tego okresu był kiedykolwiek odrzucony — do bonusu "bez poprawek". */
+async function hasTimesheetBeenRejectedServer(admin: AdminClient, sheet: Timesheet): Promise<boolean> {
+  const { data: entries, error: entriesError } = await admin
+    .from("time_entries")
+    .select("id")
+    .eq("user_id", sheet.userId)
+    .gte("date", sheet.dateFrom)
+    .lte("date", sheet.dateTo);
+  if (entriesError || !entries?.length) {
+    return false;
+  }
+
+  const { count, error: logsError } = await admin
+    .from("time_entry_logs")
+    .select("id", { count: "exact", head: true })
+    .in(
+      "time_entry_id",
+      entries.map((entry) => entry.id as string),
+    )
+    .eq("action", "rejected");
+  if (logsError) {
+    return false;
+  }
+
+  return (count ?? 0) > 0;
 }
 
 export async function approveTimesheetServer(
@@ -397,6 +427,16 @@ export async function approveTimesheetServer(
   }
 
   await updateEntriesInPeriod(admin, sheet, ["submitted"], "approved", actor.id, "approved");
+
+  await awardXpServer(admin, { employeeId: sheet.userId, criterionKey: "timesheet_approved", sourceId: sheetId });
+  const wasEverRejected = await hasTimesheetBeenRejectedServer(admin, sheet);
+  if (!wasEverRejected) {
+    await awardXpServer(admin, {
+      employeeId: sheet.userId,
+      criterionKey: "timesheet_approved_without_rework",
+      sourceId: sheetId,
+    });
+  }
 
   const views = await attachTimesheetSummaries(admin, [mapTimesheetRow(data as TimeSheetRow)]);
   return views[0]!;
