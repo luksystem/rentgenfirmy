@@ -86,6 +86,7 @@ const NAV_MODULE_ICONS: Record<NavModuleKey, React.ComponentType<{ className?: s
   "my-work-dashboard": LayoutDashboard,
   "my-work-time": Timer,
   "my-work-availability": PalmtreeIcon,
+  "my-work-reviews": Star,
   contacts: Contact,
   "service-offers": COMMERCIAL_MODULES.serviceSettlement.icon,
   "sales-calculations": COMMERCIAL_MODULES.salesCalculations.icon,
@@ -465,6 +466,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
         items: [
           { href: "/admin/uzytkownicy", label: "Użytkownicy", icon: Shield },
           { href: "/admin/logi", label: "Logi", icon: Activity },
+          { href: "/admin/oceny-miesieczne", label: "Oceny miesięczne", icon: Star },
         ],
       });
     }

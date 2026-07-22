@@ -19,6 +19,7 @@ export function mapProfileRow(row: ProfileRow): UserProfile {
     allProjectsAccess: row.all_projects_access !== false,
     avatarUrl: row.avatar_url ?? null,
     aboutMe: row.about_me ?? "",
+    monthlyReviewEnabled: row.monthly_review_enabled !== false,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -43,6 +44,7 @@ export function mapProfileInputToInsert(
     is_available_for_planning: input.isAvailableForPlanning ?? true,
     supervisor_id: input.supervisorId ?? null,
     all_projects_access: input.role === "podwykonawca" ? false : undefined,
+    monthly_review_enabled: input.monthlyReviewEnabled ?? input.role !== "administrator",
   };
 }
 
@@ -60,6 +62,7 @@ export function mapProfileInputToUpdate(input: UserProfileInput): ProfileUpdate 
     cost_rate: input.costRate ?? null,
     is_available_for_planning: input.isAvailableForPlanning ?? true,
     supervisor_id: input.supervisorId ?? null,
+    monthly_review_enabled: input.monthlyReviewEnabled ?? input.role !== "administrator",
     updated_at: new Date().toISOString(),
   };
 }

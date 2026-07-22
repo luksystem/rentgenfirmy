@@ -1463,6 +1463,7 @@ export type ProfileRow = {
   all_projects_access: boolean;
   avatar_url: string | null;
   about_me: string;
+  monthly_review_enabled: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -1484,6 +1485,7 @@ export type ProfileInsert = {
   all_projects_access?: boolean;
   avatar_url?: string | null;
   about_me?: string;
+  monthly_review_enabled?: boolean;
   created_at?: string;
   updated_at?: string;
 };

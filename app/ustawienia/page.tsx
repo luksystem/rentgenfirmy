@@ -277,6 +277,20 @@ export default function SettingsPage() {
       <Card className="mb-6 border border-border/80">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
           <div>
+            <p className="font-medium text-foreground">Oceny miesięczne</p>
+            <p className="mt-1 text-sm text-muted">
+              Widoczność oceny przełożonego dla pracownika po złożeniu obu ocen za dany miesiąc.
+            </p>
+          </div>
+          <Button variant="secondary" asChild>
+            <Link href="/ustawienia/oceny-miesieczne">Otwórz ustawienia ocen</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-6 border border-border/80">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+          <div>
             <p className="font-medium text-foreground">Czas pracy — kategorie</p>
             <p className="mt-1 text-sm text-muted">
               Kategorie wybierane przy zapisie czasu i powiązywane z deklaracją godzin w budżecie projektu.

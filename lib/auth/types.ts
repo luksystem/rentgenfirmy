@@ -37,6 +37,8 @@ export type UserProfile = {
   isAvailableForPlanning: boolean;
   /** Przełożony — odbiorca wniosków urlopowych. Wymagany dla wszystkich ról poza administratorem. */
   supervisorId: string | null;
+  /** Czy pracownik uczestniczy w comiesięcznym cyklu samooceny / oceny przełożonego. */
+  monthlyReviewEnabled: boolean;
   /** Gdy true (domyślnie): dostęp do wszystkich projektów. Administrator zawsze ma pełny dostęp. */
   allProjectsAccess: boolean;
   /** Publiczny URL awatara (opcjonalnie). */
@@ -60,6 +62,7 @@ export type UserProfileInput = {
   costRate?: number | null;
   isAvailableForPlanning?: boolean;
   supervisorId?: string | null;
+  monthlyReviewEnabled?: boolean;
 };
 
 export const USER_ROLE_LABELS: Record<UserRole, string> = {

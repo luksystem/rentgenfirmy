@@ -37,6 +37,8 @@ function parseUserInput(body: unknown): UserProfileInput | null {
     costRate: typeof data.costRate === "number" ? data.costRate : null,
     isAvailableForPlanning: data.isAvailableForPlanning !== false,
     supervisorId: typeof data.supervisorId === "string" && data.supervisorId.trim() ? data.supervisorId : null,
+    monthlyReviewEnabled:
+      typeof data.monthlyReviewEnabled === "boolean" ? data.monthlyReviewEnabled : role !== "administrator",
   };
 }
 

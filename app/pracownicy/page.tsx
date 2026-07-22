@@ -1,11 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { PalmtreeIcon } from "lucide-react";
+import { PalmtreeIcon, Star } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { hasFullAppAccess } from "@/lib/auth/types";
+import { useAuthStore } from "@/store/auth-store";
 
 export default function EmployeesHubPage() {
+  const profile = useAuthStore((state) => state.profile);
+  const canRateEmployees = Boolean(profile) && hasFullAppAccess(profile!.role);
+
   return (
     <>
       <PageHeader
@@ -28,6 +33,22 @@ export default function EmployeesHubPage() {
             </CardContent>
           </Card>
         </Link>
+
+        {canRateEmployees ? (
+          <Link href="/pracownicy/oceny-miesieczne">
+            <Card className="h-full transition hover:border-accent/40 hover:bg-surface-muted/20">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-start justify-between gap-3 text-base">
+                  <span>Oceny miesięczne</span>
+                  <Star className="h-4 w-4 shrink-0 text-accent" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted">
+                Oceń pracowników za bieżący miesiąc — niezależnie od ich samooceny.
+              </CardContent>
+            </Card>
+          </Link>
+        ) : null}
       </section>
     </>
   );

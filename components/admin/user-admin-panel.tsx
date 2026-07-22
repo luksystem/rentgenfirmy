@@ -38,6 +38,7 @@ const emptyForm = (): UserFormState => ({
   costRate: null,
   isAvailableForPlanning: true,
   supervisorId: null,
+  monthlyReviewEnabled: true,
   password: "",
   sendInvite: false,
 });
@@ -56,6 +57,7 @@ function profileToForm(user: UserProfile): UserFormState {
     costRate: user.costRate,
     isAvailableForPlanning: user.isAvailableForPlanning,
     supervisorId: user.supervisorId,
+    monthlyReviewEnabled: user.monthlyReviewEnabled,
     password: "",
     sendInvite: false,
   };
@@ -562,6 +564,17 @@ export function UserAdminPanel() {
                   className="h-4 w-4 rounded border-border"
                 />
                 Dostępny do planowania w module Plan Zasobów
+              </label>
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground/90">
+                <input
+                  type="checkbox"
+                  checked={form.monthlyReviewEnabled ?? true}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, monthlyReviewEnabled: event.target.checked }))
+                  }
+                  className="h-4 w-4 rounded border-border"
+                />
+                Uczestniczy w ocenach miesięcznych
               </label>
             </div>
 

@@ -46,6 +46,8 @@ function parseUserInput(body: unknown): CreateUserBody | null {
     costRate: typeof data.costRate === "number" ? data.costRate : null,
     isAvailableForPlanning: data.isAvailableForPlanning !== false,
     supervisorId: typeof data.supervisorId === "string" && data.supervisorId.trim() ? data.supervisorId : null,
+    monthlyReviewEnabled:
+      typeof data.monthlyReviewEnabled === "boolean" ? data.monthlyReviewEnabled : role !== "administrator",
     password: typeof data.password === "string" ? data.password : undefined,
     sendInvite: data.sendInvite === true,
   };

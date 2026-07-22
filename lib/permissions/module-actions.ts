@@ -33,6 +33,7 @@ export const NAV_MODULE_SUPPORTED_ACTIONS: Record<NavModuleKey, PermissionAction
   "my-work-dashboard": VIEW_ONLY,
   "my-work-time": CRUD_EXPORT,
   "my-work-availability": CRUD,
+  "my-work-reviews": VIEW_EDIT,
   contacts: CRUD_EXPORT,
   "service-offers": CRUD_EXPORT,
   "sales-calculations": CRUD,
