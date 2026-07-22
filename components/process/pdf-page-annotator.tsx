@@ -103,6 +103,8 @@ export function PdfPageAnnotator({
   const pdfDocRef = useRef<PDFDocumentProxy | null>(null);
   const loadingTaskRef = useRef<PDFDocumentLoadingTask | null>(null);
   const drawingRef = useRef(false);
+  const activePointerIdRef = useRef<number | null>(null);
+  const penDetectedRef = useRef(false);
   const strokedRef = useRef(false);
   const hasContentRef = useRef(false);
   const dirtyRef = useRef(false);
@@ -461,11 +463,22 @@ export function PdfPageAnnotator({
       placeSignatureStamp(event.clientX, event.clientY, tool === "stamp-company" ? "company" : "client");
       return;
     }
+    if (event.pointerType === "pen") {
+      // Rysik wykryty — od teraz ignorujemy dotyk palcem (odłożona dłoń) na tej stronie.
+      penDetectedRef.current = true;
+    } else if (event.pointerType === "touch" && penDetectedRef.current) {
+      return;
+    }
+    if (drawingRef.current) {
+      // Kreska już trwa z innego wskaźnika — nie pozwól kolejnemu dotknięciu jej przejąć.
+      return;
+    }
     const ctx = drawCanvasRef.current?.getContext("2d");
     if (!ctx) {
       return;
     }
     event.currentTarget.setPointerCapture(event.pointerId);
+    activePointerIdRef.current = event.pointerId;
     drawingRef.current = true;
     ctx.globalCompositeOperation = tool === "eraser" ? "destination-out" : "source-over";
     ctx.strokeStyle = penColor;
@@ -476,7 +489,7 @@ export function PdfPageAnnotator({
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLCanvasElement>) {
-    if (!drawingRef.current) {
+    if (!drawingRef.current || event.pointerId !== activePointerIdRef.current) {
       return;
     }
     const ctx = drawCanvasRef.current?.getContext("2d");
@@ -493,11 +506,12 @@ export function PdfPageAnnotator({
     }
   }
 
-  function finishStroke() {
-    if (!drawingRef.current) {
+  function finishStroke(event: React.PointerEvent<HTMLCanvasElement>) {
+    if (!drawingRef.current || event.pointerId !== activePointerIdRef.current) {
       return;
     }
     drawingRef.current = false;
+    activePointerIdRef.current = null;
     if (strokedRef.current) {
       strokedRef.current = false;
       dirtyRef.current = true;
@@ -930,7 +944,8 @@ export function PdfPageAnnotator({
       {!readOnly ? (
         <p className="text-center text-[11px] text-muted">
           Pisz/rysuj rysikiem lub palcem, użyj gumki do poprawek, wstaw pole tekstowe (kliknij, aby edytować) albo
-          złożony podpis w wybranym miejscu — przeciągnij, aby przesunąć. Zapisuje się automatycznie.
+          złożony podpis w wybranym miejscu — przeciągnij, aby przesunąć. Zapisuje się automatycznie. Po pierwszym
+          dotknięciu rysikiem dotyk dłonią jest ignorowany — można swobodnie oprzeć rękę na ekranie.
         </p>
       ) : null}
     </div>
