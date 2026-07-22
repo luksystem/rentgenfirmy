@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, FileText, Loader2, Paperclip, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AGREEMENT_ATTACHMENT_SIGNED_URL_TTL_SEC } from "@/lib/dashboard/agreement-attachments";
 import { attachSignedUrlsToChecklistAttachments } from "@/lib/supabase/checklist-attachments-repository";
 import type { ChecklistLine, ChecklistLineAttachment } from "@/lib/process/types";
 import { cn } from "@/lib/utils";
+
+/** Odśwież podpisane URL-e zanim wygasną (TTL/2), żeby nie trafić na wygasły token w trakcie sesji. */
+const SIGNED_URL_REFRESH_INTERVAL_MS = (AGREEMENT_ATTACHMENT_SIGNED_URL_TTL_SEC * 1000) / 2;
 
 export type DocumentationRequirement = {
   requireDocumentation?: boolean;
@@ -67,10 +71,14 @@ export function ChecklistLineDocumentationPanel({
   const [attachments, setAttachments] = useState(resolvedRequirement.attachments ?? []);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const attachmentsRef = useRef(attachments);
+  attachmentsRef.current = attachments;
+  const retriedOnErrorRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const source = resolvedRequirement.attachments ?? [];
     setAttachments(source);
+    retriedOnErrorRef.current.clear();
     if (!source.length) {
       return;
     }
@@ -86,6 +94,52 @@ export function ChecklistLineDocumentationPanel({
       cancelled = true;
     };
   }, [resolvedRequirement.attachments, resolvedTargetId]);
+
+  // Podpisane URL-e do plików wygasają po AGREEMENT_ATTACHMENT_SIGNED_URL_TTL_SEC — jeśli okno
+  // zostanie otwarte dłużej, trzeba je odświeżyć w tle, inaczej miniaturki/linki przestają działać
+  // (Supabase odrzuca wygasły token: "exp" claim timestamp check failed).
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!attachmentsRef.current.length) {
+        return;
+      }
+      void attachSignedUrlsToChecklistAttachments(attachmentsRef.current).then(setAttachments);
+    }, SIGNED_URL_REFRESH_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const refreshAttachmentUrl = useCallback(async (attachmentId: string) => {
+    const target = attachmentsRef.current.find((entry) => entry.id === attachmentId);
+    if (!target) {
+      return null;
+    }
+    const [refreshed] = await attachSignedUrlsToChecklistAttachments([target]);
+    if (!refreshed?.url) {
+      return null;
+    }
+    setAttachments((current) =>
+      current.map((entry) => (entry.id === attachmentId ? { ...entry, url: refreshed.url } : entry)),
+    );
+    return refreshed.url;
+  }, []);
+
+  function handleImageError(attachmentId: string) {
+    if (retriedOnErrorRef.current.has(attachmentId)) {
+      return;
+    }
+    retriedOnErrorRef.current.add(attachmentId);
+    void refreshAttachmentUrl(attachmentId);
+  }
+
+  async function handleOpenAttachment(event: React.MouseEvent, attachment: ChecklistLineAttachment) {
+    event.preventDefault();
+    const freshUrl = await refreshAttachmentUrl(attachment.id);
+    const target = freshUrl ?? attachment.url;
+    if (target) {
+      window.open(target, "_blank", "noopener,noreferrer");
+    }
+  }
 
   if (!resolvedRequirement.requireDocumentation && !attachments.length) {
     return null;
@@ -201,12 +255,19 @@ export function ChecklistLineDocumentationPanel({
               className="flex items-center gap-3 rounded-lg border border-border/60 bg-surface/50 p-2"
             >
               {attachment.mediaKind === "image" && attachment.url ? (
-                <a href={attachment.url} target="_blank" rel="noreferrer" className="shrink-0">
+                <a
+                  href={attachment.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="shrink-0"
+                  onClick={(event) => void handleOpenAttachment(event, attachment)}
+                >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={attachment.url}
                     alt={attachment.fileName}
                     className="h-14 w-14 rounded-md object-cover"
+                    onError={() => handleImageError(attachment.id)}
                   />
                 </a>
               ) : (
@@ -221,6 +282,7 @@ export function ChecklistLineDocumentationPanel({
                     target="_blank"
                     rel="noreferrer"
                     className="truncate text-sm font-medium text-accent hover:underline"
+                    onClick={(event) => void handleOpenAttachment(event, attachment)}
                   >
                     {attachment.fileName}
                   </a>
