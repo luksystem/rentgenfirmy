@@ -363,6 +363,9 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const inspectionsPlanningOverdueCount = useNavBadgeStore(
     (state) => state.inspectionsPlanningOverdueCount,
   );
+  const monthlyReviewPendingForMeCount = useNavBadgeStore(
+    (state) => state.monthlyReviewPendingForMeCount,
+  );
   const startNavBadgePolling = useNavBadgeStore((state) => state.startPolling);
 
   const handleKanbanOverdueCountChange = useCallback((count: number) => {
@@ -442,7 +445,10 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
       };
     }
     if (href === "/pracownicy") {
-      return { overdueBadgeCount: leavePendingForMeCount };
+      return {
+        overdueBadgeCount: leavePendingForMeCount,
+        newBadgeCount: monthlyReviewPendingForMeCount,
+      };
     }
     return {};
   }

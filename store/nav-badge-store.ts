@@ -14,6 +14,7 @@ type NavBadgeState = {
   inspectionsBillingCount: number;
   functionalitySurveyPendingCount: number;
   functionalitySurveyLatestHref: string | null;
+  monthlyReviewPendingForMeCount: number;
   pollStarted: boolean;
   refreshHttpBadges: () => Promise<void>;
   refreshAll: () => Promise<void>;
@@ -40,10 +41,11 @@ export const useNavBadgeStore = create<NavBadgeState>((set, get) => ({
   inspectionsBillingCount: 0,
   functionalitySurveyPendingCount: 0,
   functionalitySurveyLatestHref: null,
+  monthlyReviewPendingForMeCount: 0,
   pollStarted: false,
 
   refreshHttpBadges: async () => {
-    const [serviceIntake, contacts, intakeOffers, inspections, functionalitySurvey] =
+    const [serviceIntake, contacts, intakeOffers, inspections, functionalitySurvey, monthlyReview] =
       await Promise.all([
         fetchJson<{ newCount?: number; overdueCount?: number }>("/api/service-intake/counts"),
         fetchJson<{ newCount?: number; unhandledCount?: number }>("/api/contacts/counts"),
@@ -59,6 +61,7 @@ export const useNavBadgeStore = create<NavBadgeState>((set, get) => ({
           pendingReviewCount?: number;
           latest?: { projectId: string; clientId: string | null } | null;
         }>("/api/functionality-survey/counts"),
+        fetchJson<{ pendingForMeCount?: number }>("/api/monthly-reviews/counts"),
       ]);
 
     let functionalitySurveyLatestHref: string | null = null;
@@ -83,6 +86,7 @@ export const useNavBadgeStore = create<NavBadgeState>((set, get) => ({
       inspectionsBillingCount: inspections?.billingAlertCount ?? 0,
       functionalitySurveyPendingCount: functionalitySurvey?.pendingReviewCount ?? 0,
       functionalitySurveyLatestHref,
+      monthlyReviewPendingForMeCount: monthlyReview?.pendingForMeCount ?? 0,
     });
   },
 

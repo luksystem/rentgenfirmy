@@ -50,6 +50,8 @@ export function SelfAssessmentForm({
           <p className="mt-1 text-sm text-muted">
             Sprawdź swoje godziny powyżej, oceń swoje zaangażowanie w tym miesiącu i opisz, jak go
             oceniasz. Twój przełożony ocenia Cię niezależnie — nie widzi tego, co tu napiszesz.
+            Wysyłając samoocenę, jednocześnie potwierdzasz i wysyłasz swoje godziny do akceptacji
+            (jeśli jeszcze tego nie zrobiłeś/-aś).
           </p>
         </div>
 

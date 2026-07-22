@@ -6,6 +6,8 @@ import {
 } from "@/lib/notifications/kanban-activity";
 import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { hasFullAppAccess } from "@/lib/auth/types";
+import { formatPeriodMonthLabel } from "@/lib/monthly-reviews/format";
 
 export async function createKanbanMentionNotificationsServer(input: {
   commentId: string;
@@ -181,5 +183,41 @@ export async function createLeaveRequestDecidedNotificationServer(input: {
 
   if (error && !error.message.toLowerCase().includes("does not exist")) {
     throw new Error(error.message);
+  }
+}
+
+/** Powiadomienie dla manager/admin, że pracownik złożył samoocenę miesięczną — można go ocenić. */
+export async function createMonthlyReviewSelfSubmittedNotificationServer(input: {
+  employeeId: string;
+  employeeName: string;
+  periodMonth: string;
+}) {
+  const teamProfiles = await fetchTeamProfilesServer();
+  const recipients = teamProfiles
+    .filter((profile) => hasFullAppAccess(profile.role) && profile.id !== input.employeeId)
+    .map((profile) => profile.id);
+
+  if (!recipients.length) {
+    return;
+  }
+
+  const supabase = getSupabaseAdmin();
+  const title = `${input.employeeName} — samoocena miesięczna`;
+  const body = `Złożył/-a samoocenę za ${formatPeriodMonthLabel(input.periodMonth)}. Możesz ją teraz ocenić.`;
+  const now = new Date().toISOString();
+  const rows = recipients.map((profileId) => ({
+    id: crypto.randomUUID(),
+    profile_id: profileId,
+    kind: "monthly_review_self_submitted" as UserNotificationKind,
+    title,
+    body,
+    link_url: "/pracownicy/oceny-miesieczne",
+    source_id: input.employeeId,
+    created_at: now,
+  }));
+
+  const { error: insertError } = await supabase.from("user_notifications").insert(rows);
+  if (insertError && !insertError.message.toLowerCase().includes("does not exist")) {
+    throw new Error(insertError.message);
   }
 }

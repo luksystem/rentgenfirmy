@@ -13,6 +13,7 @@ export const USER_NOTIFICATION_KINDS = [
   "goal_recurring_created",
   "leave_request_created",
   "leave_request_decided",
+  "monthly_review_self_submitted",
   "client_offer_accepted",
   "settlement_offer_accepted",
   "client_offer_expiring",
