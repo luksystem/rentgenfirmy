@@ -65,7 +65,6 @@ import { countNewKanbanTasksForTeam, countOverdueKanbanTasks } from "@/lib/supab
 import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 import {
   addProjectProcessSnapshotItem,
-  ensureDefaultProcessTemplates,
   ensureAnchoredTemplateSnapshot,
   ensureProcessTemplateForProjectType,
   fetchProcessTemplates,
@@ -249,6 +248,8 @@ type ProcessStore = {
 };
 
 let hydratePromise: Promise<void> | null = null;
+let kanbanNewTaskCountPromise: Promise<void> | null = null;
+let kanbanOverdueTaskCountPromise: Promise<void> | null = null;
 
 export const useProcessStore = create<ProcessStore>((set, get) => ({
   templates: [],
@@ -282,8 +283,7 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
 
     hydratePromise = (async () => {
       try {
-        await ensureDefaultProcessTemplates(projectTypes);
-        const [templates, processes, elements, kanbanNewTaskCount, kanbanOverdueTaskCount] =
+        const [fetchedTemplates, processes, elements, kanbanNewTaskCount, kanbanOverdueTaskCount] =
           await Promise.all([
             fetchProcessTemplates(),
             fetchProjectProcesses(),
@@ -291,6 +291,18 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
             countNewKanbanTasksForTeam().catch(() => 0),
             countOverdueKanbanTasks().catch(() => 0),
           ]);
+
+        const missingProjectTypes = projectTypes.filter(
+          (projectType) => !fetchedTemplates.some((template) => template.projectType === projectType),
+        );
+        let templates = fetchedTemplates;
+        if (missingProjectTypes.length) {
+          for (const projectType of missingProjectTypes) {
+            await ensureProcessTemplateForProjectType(projectType);
+          }
+          templates = await fetchProcessTemplates();
+        }
+
         set({
           templates,
           elements,
@@ -920,21 +932,37 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
   },
 
   refreshKanbanNewTaskCount: async () => {
-    try {
-      const kanbanNewTaskCount = await countNewKanbanTasksForTeam();
-      set({ kanbanNewTaskCount });
-    } catch {
-      set({ kanbanNewTaskCount: 0 });
+    if (kanbanNewTaskCountPromise) {
+      return kanbanNewTaskCountPromise;
     }
+    kanbanNewTaskCountPromise = (async () => {
+      try {
+        const kanbanNewTaskCount = await countNewKanbanTasksForTeam();
+        set({ kanbanNewTaskCount });
+      } catch {
+        set({ kanbanNewTaskCount: 0 });
+      } finally {
+        kanbanNewTaskCountPromise = null;
+      }
+    })();
+    return kanbanNewTaskCountPromise;
   },
 
   refreshKanbanOverdueTaskCount: async () => {
-    try {
-      const kanbanOverdueTaskCount = await countOverdueKanbanTasks();
-      set({ kanbanOverdueTaskCount });
-    } catch {
-      set({ kanbanOverdueTaskCount: 0 });
+    if (kanbanOverdueTaskCountPromise) {
+      return kanbanOverdueTaskCountPromise;
     }
+    kanbanOverdueTaskCountPromise = (async () => {
+      try {
+        const kanbanOverdueTaskCount = await countOverdueKanbanTasks();
+        set({ kanbanOverdueTaskCount });
+      } catch {
+        set({ kanbanOverdueTaskCount: 0 });
+      } finally {
+        kanbanOverdueTaskCountPromise = null;
+      }
+    })();
+    return kanbanOverdueTaskCountPromise;
   },
 
   replaceProjectProcessItem: (projectId, item) => {

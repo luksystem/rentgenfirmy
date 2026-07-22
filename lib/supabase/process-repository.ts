@@ -330,22 +330,6 @@ export async function ensureProcessTemplateForProjectType(projectType: string) {
   return fetchProcessTemplateByProjectType(projectType);
 }
 
-export async function ensureDefaultProcessTemplates(projectTypes: string[]) {
-  const existing = await fetchTemplatesGraphWithClient();
-  const existingTypes = new Set(existing.map((template) => template.projectType));
-
-  for (const projectType of projectTypes) {
-    if (existingTypes.has(projectType)) {
-      continue;
-    }
-
-    await ensureProcessTemplateForProjectType(projectType);
-    existingTypes.add(projectType);
-  }
-
-  return fetchTemplatesGraphWithClient();
-}
-
 export async function fetchProjectProcess(projectId: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase

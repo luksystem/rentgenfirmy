@@ -506,6 +506,16 @@ export function ProcessTemplateEditor({
           </CardContent>
         </Card>
       ))}
+
+      <Card>
+        <CardContent className="flex flex-wrap items-center gap-2 py-5">
+          <Button type="button" disabled={isSaving} onClick={() => void handleSave()}>
+            {isSaving ? "Zapisywanie…" : "Zapisz szablon"}
+          </Button>
+          {message ? <p className="text-sm text-emerald-400">{message}</p> : null}
+          {error ? <p className="text-sm text-rose-400">{error}</p> : null}
+        </CardContent>
+      </Card>
     </div>
   );
 }
