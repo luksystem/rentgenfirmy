@@ -6,40 +6,14 @@ import {
   validateAgreementAttachmentFile,
   type AgreementAttachmentMediaKind,
 } from "@/lib/dashboard/agreement-attachments";
-import { getSupabaseAdmin, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 import { getSupabase } from "@/lib/supabase/client";
 import { touchAgreementActivity } from "@/lib/supabase/project-agreement-collaboration-repository";
 
 export const AGREEMENT_ATTACHMENTS_BUCKET = "agreement-attachments";
 
-const AGREEMENT_ATTACHMENTS_FILE_SIZE_LIMIT = 15 * 1024 * 1024;
+export const AGREEMENT_ATTACHMENTS_FILE_SIZE_LIMIT = 15 * 1024 * 1024;
 
-let agreementAttachmentsBucketReady = false;
-
-export async function ensureAgreementAttachmentsBucket() {
-  if (agreementAttachmentsBucketReady || !isSupabaseAdminConfigured()) {
-    return;
-  }
-
-  const supabase = getSupabaseAdmin();
-  const { data: existing } = await supabase.storage.getBucket(AGREEMENT_ATTACHMENTS_BUCKET);
-
-  if (existing) {
-    agreementAttachmentsBucketReady = true;
-    return;
-  }
-
-  const { error: createError } = await supabase.storage.createBucket(AGREEMENT_ATTACHMENTS_BUCKET, {
-    public: false,
-    fileSizeLimit: AGREEMENT_ATTACHMENTS_FILE_SIZE_LIMIT,
-  });
-
-  if (createError && !/already exists/i.test(createError.message)) {
-    throw new Error(createError.message);
-  }
-
-  agreementAttachmentsBucketReady = true;
-}
+type SupabaseClientLike = ReturnType<typeof getSupabase>;
 
 type AttachmentRow = {
   id: string;
@@ -82,33 +56,12 @@ function rowToAttachment(row: AttachmentRow): AgreementAttachment {
 
 export async function attachSignedUrlsToAgreementAttachments(
   attachments: AgreementAttachment[],
+  supabase: SupabaseClientLike = getSupabase(),
 ): Promise<AgreementAttachment[]> {
   if (!attachments.length) {
     return attachments;
   }
 
-  const supabase = getSupabase();
-  return Promise.all(
-    attachments.map(async (attachment) => {
-      const { data, error } = await supabase.storage
-        .from(AGREEMENT_ATTACHMENTS_BUCKET)
-        .createSignedUrl(attachment.storagePath, AGREEMENT_ATTACHMENT_SIGNED_URL_TTL_SEC);
-
-      if (error || !data?.signedUrl) {
-        return attachment;
-      }
-
-      return { ...attachment, url: data.signedUrl };
-    }),
-  );
-}
-
-export async function attachSignedUrlsAdmin(attachments: AgreementAttachment[]) {
-  if (!attachments.length) {
-    return attachments;
-  }
-
-  const supabase = getSupabaseAdmin();
   return Promise.all(
     attachments.map(async (attachment) => {
       const { data, error } = await supabase.storage
@@ -140,12 +93,12 @@ export async function fetchAgreementAttachments(agreementId: string) {
   return attachSignedUrlsToAgreementAttachments(attachments);
 }
 
-async function uploadAgreementAttachmentInternal(input: {
+export async function uploadAgreementAttachmentWithClient(input: {
   agreementId: string;
   file: File;
   authorName: string;
   authorSource: AgreementCommentAuthorSource;
-  useAdmin: boolean;
+  supabase: SupabaseClientLike;
 }) {
   const validation = validateAgreementAttachmentFile({
     type: input.file.type,
@@ -156,11 +109,7 @@ async function uploadAgreementAttachmentInternal(input: {
     throw new Error(validation.error);
   }
 
-  if (input.useAdmin) {
-    await ensureAgreementAttachmentsBucket();
-  }
-
-  const supabase = input.useAdmin ? getSupabaseAdmin() : getSupabase();
+  const supabase = input.supabase;
 
   const { data: lastAttachment } = await supabase
     .from("project_agreement_attachments")
@@ -211,9 +160,7 @@ async function uploadAgreementAttachmentInternal(input: {
   await touchAgreementActivity(input.agreementId, supabase);
 
   const attachment = rowToAttachment(data as AttachmentRow);
-  const [withUrl] = input.useAdmin
-    ? await attachSignedUrlsAdmin([attachment])
-    : await attachSignedUrlsToAgreementAttachments([attachment]);
+  const [withUrl] = await attachSignedUrlsToAgreementAttachments([attachment], supabase);
   return withUrl;
 }
 
@@ -223,47 +170,7 @@ export async function uploadAgreementAttachment(input: {
   authorName: string;
   authorSource: AgreementCommentAuthorSource;
 }) {
-  return uploadAgreementAttachmentInternal({ ...input, useAdmin: false });
-}
-
-export async function uploadAgreementAttachmentAdmin(input: {
-  agreementId: string;
-  file: File;
-  authorName: string;
-  authorSource: AgreementCommentAuthorSource;
-}) {
-  return uploadAgreementAttachmentInternal({ ...input, useAdmin: true });
-}
-
-export async function deleteAgreementAttachmentAdmin(attachmentId: string) {
-  await ensureAgreementAttachmentsBucket();
-
-  const supabase = getSupabaseAdmin();
-
-  const { data: row, error: fetchError } = await supabase
-    .from("project_agreement_attachments")
-    .select("storage_path, agreement_id")
-    .eq("id", attachmentId)
-    .maybeSingle();
-
-  if (fetchError) {
-    throw new Error(fetchError.message);
-  }
-  if (!row?.storage_path || !row.agreement_id) {
-    throw new Error("Nie znaleziono załącznika.");
-  }
-
-  const { error: deleteRowError } = await supabase
-    .from("project_agreement_attachments")
-    .delete()
-    .eq("id", attachmentId);
-
-  if (deleteRowError) {
-    throw new Error(deleteRowError.message);
-  }
-
-  await touchAgreementActivity(row.agreement_id, supabase);
-  await supabase.storage.from(AGREEMENT_ATTACHMENTS_BUCKET).remove([row.storage_path]);
+  return uploadAgreementAttachmentWithClient({ ...input, supabase: getSupabase() });
 }
 
 export async function deleteAgreementAttachment(attachmentId: string) {

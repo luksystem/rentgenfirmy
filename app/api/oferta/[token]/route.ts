@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
 import {
-  fetchServiceByPublicOfferToken,
   getPublicOfferView,
   getPublicSettlementView,
   isPublicOfferAvailable,
   isPublicOfferQuestionAvailable,
   isPublicSettlementOfferAvailable,
   isPublicSettlementOfferQuestionAvailable,
+} from "@/lib/supabase/client-offer-repository";
+import {
+  fetchServiceByPublicOfferToken,
   respondToClientOffer,
   respondToSettlementOffer,
-} from "@/lib/supabase/client-offer-repository";
+} from "@/lib/supabase/client-offer-server";
 import { isOfferExpired } from "@/lib/service/offer-validity";
 import {
   CLIENT_OFFER_ACTION_LABELS,

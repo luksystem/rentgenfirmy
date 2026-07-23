@@ -421,6 +421,134 @@ export type KnowledgeChunkInsert = {
 
 export type KnowledgeChunkUpdate = Partial<KnowledgeChunkInsert>;
 
+export type SmartHomeKbCategoryRow = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SmartHomeKbCategoryInsert = {
+  id?: string;
+  slug: string;
+  name: string;
+  description?: string;
+  sort_order?: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type SmartHomeKbCategoryUpdate = Partial<SmartHomeKbCategoryInsert>;
+
+export type SmartHomeKbTagRow = {
+  id: string;
+  slug: string;
+  name: string;
+  created_at: string;
+};
+
+export type SmartHomeKbTagInsert = {
+  id?: string;
+  slug: string;
+  name: string;
+  created_at?: string;
+};
+
+export type SmartHomeKbTagUpdate = Partial<SmartHomeKbTagInsert>;
+
+export type SmartHomeKbArticleRow = {
+  id: string;
+  category_id: string | null;
+  slug: string;
+  title: string;
+  summary: string;
+  body_html: string;
+  youtube_url: string | null;
+  cover_image_storage_path: string | null;
+  status: string;
+  sort_order: number;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SmartHomeKbArticleInsert = {
+  id?: string;
+  category_id?: string | null;
+  slug: string;
+  title: string;
+  summary?: string;
+  body_html?: string;
+  youtube_url?: string | null;
+  cover_image_storage_path?: string | null;
+  status?: string;
+  sort_order?: number;
+  created_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type SmartHomeKbArticleUpdate = Partial<SmartHomeKbArticleInsert>;
+
+export type SmartHomeKbArticleTagRow = {
+  article_id: string;
+  tag_id: string;
+};
+
+export type SmartHomeKbArticleTagInsert = SmartHomeKbArticleTagRow;
+export type SmartHomeKbArticleTagUpdate = Partial<SmartHomeKbArticleTagRow>;
+
+export type SmartHomeKbArticleMediaRow = {
+  id: string;
+  article_id: string;
+  storage_path: string;
+  file_name: string;
+  mime_type: string | null;
+  size_bytes: number | string | null;
+  sort_order: number;
+  created_at: string;
+};
+
+export type SmartHomeKbArticleMediaInsert = {
+  id?: string;
+  article_id: string;
+  storage_path: string;
+  file_name: string;
+  mime_type?: string | null;
+  size_bytes?: number | null;
+  sort_order?: number;
+  created_at?: string;
+};
+
+export type SmartHomeKbArticleMediaUpdate = Partial<SmartHomeKbArticleMediaInsert>;
+
+export type SmartHomeKbFaqItemRow = {
+  id: string;
+  category_id: string | null;
+  question: string;
+  answer_html: string;
+  sort_order: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SmartHomeKbFaqItemInsert = {
+  id?: string;
+  category_id?: string | null;
+  question: string;
+  answer_html?: string;
+  sort_order?: number;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type SmartHomeKbFaqItemUpdate = Partial<SmartHomeKbFaqItemInsert>;
+
 export type ProcessProtocolTemplateRow = {
   id: string;
   name: string;
@@ -2448,6 +2576,42 @@ export type Database = {
         Row: KnowledgeChunkRow;
         Insert: KnowledgeChunkInsert;
         Update: KnowledgeChunkUpdate;
+        Relationships: [];
+      };
+      smart_home_kb_categories: {
+        Row: SmartHomeKbCategoryRow;
+        Insert: SmartHomeKbCategoryInsert;
+        Update: SmartHomeKbCategoryUpdate;
+        Relationships: [];
+      };
+      smart_home_kb_tags: {
+        Row: SmartHomeKbTagRow;
+        Insert: SmartHomeKbTagInsert;
+        Update: SmartHomeKbTagUpdate;
+        Relationships: [];
+      };
+      smart_home_kb_articles: {
+        Row: SmartHomeKbArticleRow;
+        Insert: SmartHomeKbArticleInsert;
+        Update: SmartHomeKbArticleUpdate;
+        Relationships: [];
+      };
+      smart_home_kb_article_tags: {
+        Row: SmartHomeKbArticleTagRow;
+        Insert: SmartHomeKbArticleTagInsert;
+        Update: SmartHomeKbArticleTagUpdate;
+        Relationships: [];
+      };
+      smart_home_kb_article_media: {
+        Row: SmartHomeKbArticleMediaRow;
+        Insert: SmartHomeKbArticleMediaInsert;
+        Update: SmartHomeKbArticleMediaUpdate;
+        Relationships: [];
+      };
+      smart_home_kb_faq_items: {
+        Row: SmartHomeKbFaqItemRow;
+        Insert: SmartHomeKbFaqItemInsert;
+        Update: SmartHomeKbFaqItemUpdate;
         Relationships: [];
       };
       process_protocol_templates: {

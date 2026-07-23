@@ -16,6 +16,7 @@ import {
 } from "@/lib/supabase/public-dashboard-server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { respondToProjectAgreement } from "@/lib/supabase/project-agreement-repository";
+import { notifyTeamAboutAgreementResponse } from "@/lib/notifications/agreement-response";
 
 async function assertPublicDashboardAccess(token: string) {
   const meta = await fetchDashboardPublicMeta(token);
@@ -163,11 +164,20 @@ export async function POST(
         return NextResponse.json({ error: "Podaj imię lub firmę." }, { status: 400 });
       }
 
-      const agreement = await respondToProjectAgreement(resolvedId, {
+      const responseInput = {
         accepted: Boolean(body.accepted),
         clientResponseName: authorName,
         clientResponseNote: body.clientResponseNote ?? body.responseNote,
-      });
+      };
+      const agreement = await respondToProjectAgreement(resolvedId, responseInput);
+      void notifyTeamAboutAgreementResponse({
+        agreementId: agreement.id,
+        projectId: agreement.projectId,
+        title: agreement.title,
+        accepted: responseInput.accepted,
+        clientResponseName: responseInput.clientResponseName,
+        clientResponseNote: responseInput.clientResponseNote,
+      }).catch(() => undefined);
       return NextResponse.json({ agreement });
     }
 

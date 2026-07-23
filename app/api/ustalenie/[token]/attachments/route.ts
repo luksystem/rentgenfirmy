@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchAgreementCollaborationByToken } from "@/lib/supabase/project-agreement-collaboration-repository";
-import { uploadAgreementAttachmentAdmin } from "@/lib/supabase/project-agreement-attachments-repository";
+import { uploadAgreementAttachmentAdmin } from "@/lib/supabase/project-agreement-attachments-server";
 
 export async function POST(
   request: Request,

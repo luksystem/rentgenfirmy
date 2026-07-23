@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { ExternalLink, Plus, Trash2 } from "lucide-react";
+import { ExternalLink, Trash2 } from "lucide-react";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -159,20 +158,11 @@ export function ProjectDocumentList() {
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm text-muted">
-          {loading ? "Ładowanie…" : `${filteredDocuments.length} dokumentów`}
-        </div>
-        <Button asChild>
-          <Link href="/dokumenty/nowy">
-            <Plus className="h-4 w-4" />
-            Dodaj dokument
-          </Link>
-        </Button>
+      <div className="text-sm text-muted">
+        {loading ? "Ładowanie…" : `${filteredDocuments.length} dokumentów`}
       </div>
 
       <MobileFiltersPanel title="Filtry">{filters}</MobileFiltersPanel>
-      <div className="hidden sm:block">{filters}</div>
 
       {loading ? (
         <Card>

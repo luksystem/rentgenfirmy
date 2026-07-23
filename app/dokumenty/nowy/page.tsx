@@ -1,49 +1,24 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
-import { ProjectDocumentForm } from "@/components/documents/project-document-form";
-import {
-  PROJECT_DOCUMENT_CATEGORY_LABELS,
-  PROJECT_DOCUMENT_CATEGORIES,
-  type ProjectDocumentCategory,
-} from "@/lib/documents/types";
-
-function isCategory(value: string | null): value is ProjectDocumentCategory {
-  return PROJECT_DOCUMENT_CATEGORIES.includes(value as ProjectDocumentCategory);
-}
+import { QuickAddHub } from "@/components/documents/quick-add-hub";
 
 function NewDocumentPageContent() {
   const searchParams = useSearchParams();
   const clientId = searchParams.get("clientId");
   const projectId = searchParams.get("projectId");
-  const categoryParam = searchParams.get("category");
   const returnTo = searchParams.get("returnTo");
-
-  const initialCategory = useMemo(
-    () => (isCategory(categoryParam) ? categoryParam : undefined),
-    [categoryParam],
-  );
-
-  const title =
-    initialCategory != null
-      ? `Nowy dokument: ${PROJECT_DOCUMENT_CATEGORY_LABELS[initialCategory]}`
-      : "Nowy dokument";
 
   return (
     <>
       <PageHeader
         eyebrow="Dokumentacja"
-        title={title}
-        description="Dołącz zdjęcie, skan lub PDF i przypisz do projektu — wtedy będzie widoczny u klienta i w procesie."
+        title="Podręczne dodawanie"
+        description="Zdjęcie, dokumentacja, notatka, protokół, hasło, ustalenie lub zmiana — powiązane z klientem i projektem, bez wchodzenia w jego dashboard."
       />
-      <ProjectDocumentForm
-        initialClientId={clientId}
-        initialProjectId={projectId}
-        initialCategory={initialCategory}
-        returnTo={returnTo}
-      />
+      <QuickAddHub initialClientId={clientId} initialProjectId={projectId} returnTo={returnTo} />
     </>
   );
 }

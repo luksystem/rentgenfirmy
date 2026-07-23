@@ -21,6 +21,7 @@ export type NavModuleKey =
   | "documents"
   | "trades-catalog"
   | "visualizations"
+  | "smart-home-knowledge"
   | "inspections"
   | "service-requests"
   | "knowledge-base"
@@ -65,6 +66,18 @@ export const NAV_MODULE_GROUPS: NavModuleGroupDefinition[] = [
         label: "Start",
         href: "/",
         routePrefixes: ["/"],
+      },
+    ],
+  },
+  {
+    key: "wiedza",
+    label: "Wiedza",
+    modules: [
+      {
+        key: "smart-home-knowledge",
+        label: "Wiedza Smart Home",
+        href: "/wiedza-smart-home",
+        routePrefixes: ["/wiedza-smart-home"],
       },
     ],
   },

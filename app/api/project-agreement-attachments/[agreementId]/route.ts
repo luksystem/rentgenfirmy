@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/api-auth";
 import { HttpError, jsonError } from "@/lib/auth/http-error";
 import type { AgreementCommentAuthorSource } from "@/lib/dashboard/agreement-collaboration-types";
-import { uploadAgreementAttachmentAdmin } from "@/lib/supabase/project-agreement-attachments-repository";
+import { uploadAgreementAttachmentAdmin } from "@/lib/supabase/project-agreement-attachments-server";
 
 function parseAuthorSource(value: FormDataEntryValue | null): AgreementCommentAuthorSource {
   if (value === "team" || value === "client" || value === "external") {

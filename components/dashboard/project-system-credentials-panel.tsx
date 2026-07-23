@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 
 const EMPTY_CREDENTIALS: SystemCredentialMeta[] = [];
 
-function emptyInput(): SystemCredentialInput {
+export function emptyCredentialInput(): SystemCredentialInput {
   return {
     label: "",
     systemUrl: "",
@@ -31,7 +31,9 @@ function emptyInput(): SystemCredentialInput {
   };
 }
 
-function CredentialFormFields({
+const emptyInput = emptyCredentialInput;
+
+export function CredentialFormFields({
   form,
   onChange,
   includePassword,

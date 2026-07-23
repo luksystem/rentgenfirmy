@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuthenticatedProfile } from "@/lib/auth/api-auth";
 import { HttpError, jsonError } from "@/lib/auth/http-error";
-import { deleteAgreementAttachmentAdmin } from "@/lib/supabase/project-agreement-attachments-repository";
+import { deleteAgreementAttachmentAdmin } from "@/lib/supabase/project-agreement-attachments-server";
 
 export async function DELETE(
   _request: Request,

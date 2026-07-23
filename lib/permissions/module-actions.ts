@@ -48,6 +48,7 @@ export const NAV_MODULE_SUPPORTED_ACTIONS: Record<NavModuleKey, PermissionAction
   documents: CRUD,
   "trades-catalog": CRUD,
   visualizations: CRUD,
+  "smart-home-knowledge": CRUD,
   inspections: CRUD,
   "service-requests": CRUD,
   "knowledge-base": CRUD,

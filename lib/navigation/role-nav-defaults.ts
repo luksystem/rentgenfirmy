@@ -23,6 +23,7 @@ const PODWYKONAWCA_NAV_ACCESS: NavModuleKey[] = [
   "projects",
   "work-orders",
   "documents",
+  "smart-home-knowledge",
   "account-settings",
   "change-password",
 ];
@@ -40,6 +41,7 @@ const OFFICE_NAV_ACCESS: NavModuleKey[] = [
   "resource-plan",
   "invoices",
   "documents",
+  "smart-home-knowledge",
   "reports",
   "settings",
   "account-settings",
@@ -53,7 +55,7 @@ export const DEFAULT_ROLE_NAV_ACCESS: Record<UserRole, NavModuleKey[]> = {
   instalator: FULL_NAV_ACCESS,
   office: OFFICE_NAV_ACCESS,
   podwykonawca: PODWYKONAWCA_NAV_ACCESS,
-  klient: ["visualizations", "account-settings", "change-password"],
+  klient: ["visualizations", "smart-home-knowledge", "account-settings", "change-password"],
   gosc: [],
 };
 

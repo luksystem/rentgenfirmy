@@ -1,13 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { ClientSelectWithCreate } from "@/components/client-select-with-create";
-import { ProjectSelectSearchable } from "@/components/goals/project-select-searchable";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   PROJECT_DOCUMENT_CATEGORIES,
   PROJECT_DOCUMENT_CATEGORY_LABELS,
@@ -16,93 +11,39 @@ import {
   type ProjectDocumentInput,
 } from "@/lib/documents/types";
 import { createProjectDocument } from "@/lib/supabase/project-document-repository";
-import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
 
-function emptyInput(): ProjectDocumentInput {
-  return {
-    category: "photo",
-    title: "",
-    description: "",
-    projectId: null,
-    clientId: null,
-    source: "manual",
-  };
-}
-
 type ProjectDocumentFormProps = {
-  initialClientId?: string | null;
-  initialProjectId?: string | null;
+  clientId: string | null;
+  projectId: string;
   initialCategory?: ProjectDocumentCategory;
-  /** Dokąd wrócić po zapisie/anulowaniu — np. do procesu lub zakładki „Dokumentacja”. */
-  returnTo?: string | null;
+  onCreated: () => void;
 };
 
 export function ProjectDocumentForm({
-  initialClientId,
-  initialProjectId,
+  clientId,
+  projectId,
   initialCategory,
-  returnTo,
+  onCreated,
 }: ProjectDocumentFormProps) {
-  const router = useRouter();
-  const projects = useAppStore((state) => state.projects);
-  const clients = useAppStore((state) => state.clients);
-  const addClient = useAppStore((state) => state.addClient);
   const displayName = useAuthStore((state) => state.displayName);
-  const [form, setForm] = useState<ProjectDocumentInput>(() => ({
-    ...emptyInput(),
-    clientId: initialClientId ?? null,
-    projectId: initialProjectId ?? null,
+  const [form, setForm] = useState<ProjectDocumentInput>({
     category: initialCategory ?? "photo",
-  }));
+    title: "",
+    description: "",
+    projectId,
+    clientId,
+    source: "manual",
+  });
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Gdy projekty doładują się później (quick-add), uzupełnij klienta z wybranego projektu.
-  useEffect(() => {
-    if (!form.projectId) {
-      return;
-    }
-    const project = projects.find((entry) => entry.id === form.projectId);
-    if (!project?.clientId || project.clientId === form.clientId) {
-      return;
-    }
-    setForm((current) => ({ ...current, clientId: project.clientId }));
-  }, [form.clientId, form.projectId, projects]);
-
-  const filteredProjects = useMemo(() => {
-    if (!form.clientId) {
-      return projects;
-    }
-    return projects.filter((project) => project.clientId === form.clientId);
-  }, [form.clientId, projects]);
-
-  function resolveLinkedIds(input: ProjectDocumentInput) {
-    const projectId = input.projectId || null;
-    const project = projectId ? projects.find((entry) => entry.id === projectId) : null;
-    return {
-      projectId,
-      clientId: project?.clientId ?? input.clientId ?? null,
-    };
-  }
-
   async function save() {
-    const linked = resolveLinkedIds(form);
-    const normalized = normalizeProjectDocumentInput({
-      ...form,
-      projectId: linked.projectId,
-      clientId: linked.clientId,
-    });
+    const normalized = normalizeProjectDocumentInput({ ...form, projectId, clientId });
 
     if (!normalized.title) {
       setError("Podaj tytuł dokumentu.");
-      return;
-    }
-    if (!normalized.projectId) {
-      setError(
-        "Wybierz projekt — bez projektu dokument nie pojawi się w module Klient ani w procesie.",
-      );
       return;
     }
     if (!file) {
@@ -115,8 +56,7 @@ export function ProjectDocumentForm({
 
     try {
       await createProjectDocument(normalized, displayName || "Zespół", file);
-      router.push(returnTo || "/dokumenty");
-      router.refresh();
+      onCreated();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Nie udało się zapisać dokumentu.");
     } finally {
@@ -125,108 +65,59 @@ export function ProjectDocumentForm({
   }
 
   return (
-    <Card>
-      <CardContent className="grid gap-4 pt-6">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Kategoria">
-            <Select
-              value={form.category}
-              onChange={(event) =>
-                setForm({ ...form, category: event.target.value as ProjectDocumentCategory })
-              }
-            >
-              {PROJECT_DOCUMENT_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {PROJECT_DOCUMENT_CATEGORY_LABELS[category]}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <Field label="Tytuł">
-            <Input
-              value={form.title}
-              onChange={(event) => setForm({ ...form, title: event.target.value })}
-              placeholder="Np. Plan piętra, Zdjęcie rozdzielni…"
-            />
-          </Field>
-        </div>
-
-        <Field label="Opis">
-          <Textarea
-            rows={3}
-            value={form.description ?? ""}
-            onChange={(event) => setForm({ ...form, description: event.target.value })}
-            placeholder="Krótki opis lub kontekst dokumentu"
-          />
+    <div className="grid gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Kategoria">
+          <Select
+            value={form.category}
+            onChange={(event) =>
+              setForm({ ...form, category: event.target.value as ProjectDocumentCategory })
+            }
+          >
+            {PROJECT_DOCUMENT_CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {PROJECT_DOCUMENT_CATEGORY_LABELS[category]}
+              </option>
+            ))}
+          </Select>
         </Field>
 
-        <div className="grid gap-4 rounded-xl border border-border/80 bg-surface-muted/30 p-4 sm:grid-cols-2">
-          <ClientSelectWithCreate
-            clients={clients}
-            value={form.clientId ?? null}
-            onChange={(clientId) => {
-              const nextProjects = clientId
-                ? projects.filter((project) => project.clientId === clientId)
-                : projects;
-              setForm({
-                ...form,
-                clientId,
-                projectId:
-                  form.projectId && nextProjects.some((project) => project.id === form.projectId)
-                    ? form.projectId
-                    : null,
-              });
-            }}
-            onCreateClient={addClient}
-            emptyLabel="Wszyscy klienci (filtr)"
-          />
-
-          <ProjectSelectSearchable
-            projects={filteredProjects}
-            clients={clients}
-            value={form.projectId ?? null}
-            emptyLabel="Wybierz projekt…"
-            label="Projekt (wymagany)"
-            onChange={(projectId) => {
-              const project = projects.find((entry) => entry.id === projectId);
-              setForm({
-                ...form,
-                projectId,
-                clientId: project?.clientId ?? form.clientId,
-              });
-            }}
-          />
-          <p className="text-xs text-muted sm:col-span-2">
-            Dokument musi być przypisany do projektu, żeby był widoczny w dokumentacji klienta i do
-            podpięcia w procesie.
-          </p>
-        </div>
-
-        <Field label="Plik (PDF lub zdjęcie)">
+        <Field label="Tytuł">
           <Input
-            type="file"
-            accept="application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,.pdf"
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            value={form.title}
+            onChange={(event) => setForm({ ...form, title: event.target.value })}
+            placeholder="Np. Plan piętra, Zdjęcie rozdzielni…"
           />
-          {file ? (
-            <p className="text-xs font-normal text-muted">
-              Wybrano: {file.name} ({Math.round(file.size / 1024)} KB)
-            </p>
-          ) : null}
         </Field>
+      </div>
 
-        {error ? <p className="text-sm text-rose-400">{error}</p> : null}
+      <Field label="Opis">
+        <Textarea
+          rows={3}
+          value={form.description ?? ""}
+          onChange={(event) => setForm({ ...form, description: event.target.value })}
+          placeholder="Krótki opis lub kontekst dokumentu"
+        />
+      </Field>
 
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" disabled={saving} onClick={() => void save()}>
-            {saving ? "Zapisywanie…" : "Zapisz dokument"}
-          </Button>
-          <Button type="button" variant="secondary" asChild>
-            <Link href={returnTo || "/dokumenty"}>Anuluj</Link>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      <Field label="Plik (PDF lub zdjęcie)">
+        <Input
+          type="file"
+          accept="application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,.pdf"
+          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+        />
+        {file ? (
+          <p className="text-xs font-normal text-muted">
+            Wybrano: {file.name} ({Math.round(file.size / 1024)} KB)
+          </p>
+        ) : null}
+      </Field>
+
+      {error ? <p className="text-sm text-rose-400">{error}</p> : null}
+
+      <Button type="button" disabled={saving} onClick={() => void save()}>
+        {saving ? "Zapisywanie…" : "Zapisz dokument"}
+      </Button>
+    </div>
   );
 }
