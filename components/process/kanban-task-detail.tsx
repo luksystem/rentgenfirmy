@@ -314,16 +314,20 @@ export function KanbanTaskDetailModal({
   }
 
   const lastColumn = columns && columns.length > 0 ? columns[columns.length - 1] : null;
-  const canOfferMoveOnClose = Boolean(lastColumn && onMoveToColumn && lastColumn.id !== stageId);
+  const secondLastColumn = columns && columns.length > 1 ? columns[columns.length - 2] : null;
+  const closeMoveTargets = [lastColumn, secondLastColumn].filter(
+    (column): column is { id: string; title: string } => column !== null && column.id !== stageId,
+  );
+  const canOfferMoveOnClose = Boolean(onMoveToColumn && closeMoveTargets.length > 0);
 
-  async function handleCloseTask(moveToLastColumn = false) {
+  async function handleCloseTask(targetColumnId?: string) {
     setIsClosing(true);
     setError(null);
     try {
       await flushPendingChanges();
-      if (moveToLastColumn && lastColumn && onMoveToColumn) {
-        await onMoveToColumn(lastColumn.id);
-        setStageId(lastColumn.id);
+      if (targetColumnId && onMoveToColumn) {
+        await onMoveToColumn(targetColumnId);
+        setStageId(targetColumnId);
       }
       await onCloseTask(true);
       setCloseConfirmOpen(false);
@@ -339,7 +343,7 @@ export function KanbanTaskDetailModal({
       setCloseConfirmOpen(true);
       return;
     }
-    void handleCloseTask(false);
+    void handleCloseTask();
   }
 
   async function handleReopenTask() {
@@ -788,33 +792,41 @@ export function KanbanTaskDetailModal({
       <Dialog open={closeConfirmOpen} onOpenChange={setCloseConfirmOpen}>
         <StackedDialogContent showCloseButton aria-describedby={undefined}>
           <DialogTitle className="text-lg font-semibold text-foreground">Zamknąć zgłoszenie?</DialogTitle>
-          {lastColumn ? (
+          {closeMoveTargets.length ? (
             <p className="mt-2 text-sm text-muted">
-              Czy przenieść je też do kolumny „{lastColumn.title}”?
+              Czy przenieść je też do innej kolumny?
             </p>
           ) : null}
           {error ? <p className="mt-2 text-sm text-rose-400">{error}</p> : null}
-          <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <div className="mt-4 grid gap-2">
+            {closeMoveTargets.map((target) => (
+              <Button
+                key={target.id}
+                type="button"
+                className="w-full justify-center whitespace-normal text-center"
+                disabled={isClosing}
+                onClick={() => void handleCloseTask(target.id)}
+              >
+                {isClosing ? "Zamykanie…" : `Przenieś do „${target.title}” i zamknij`}
+              </Button>
+            ))}
             <Button
               type="button"
-              size="sm"
+              variant="secondary"
+              className="w-full justify-center whitespace-normal text-center"
+              disabled={isClosing}
+              onClick={() => void handleCloseTask()}
+            >
+              Zamknij bez przenoszenia
+            </Button>
+            <Button
+              type="button"
               variant="outline"
+              className="w-full justify-center"
               disabled={isClosing}
               onClick={() => setCloseConfirmOpen(false)}
             >
               Anuluj
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              disabled={isClosing}
-              onClick={() => void handleCloseTask(false)}
-            >
-              Zamknij bez przenoszenia
-            </Button>
-            <Button type="button" size="sm" disabled={isClosing} onClick={() => void handleCloseTask(true)}>
-              {isClosing ? "Zamykanie…" : `Zamknij i przenieś do „${lastColumn?.title ?? ""}"`}
             </Button>
           </div>
         </StackedDialogContent>
