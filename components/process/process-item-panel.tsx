@@ -222,7 +222,7 @@ export function ProcessItemPanel({
           data-process-scroll-root
           className={cn(
             item.kind === "kanban"
-              ? "flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain"
+              ? "flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain [scrollbar-gutter:stable] [scrollbar-width:thin]"
               : "grid gap-4",
             isFullscreen && item.kind !== "kanban" && "min-h-0 flex-1 overflow-y-auto overscroll-y-contain",
             showMobileNavPadding && "pb-36 md:pb-0",
@@ -412,7 +412,7 @@ export function ProcessItemPanel({
           ) : null}
 
           {item.kind === "kanban" && interactive && resolvedInstance ? (
-            <div className="flex min-h-0 min-w-0 w-full max-w-full flex-col overflow-x-hidden max-md:overflow-visible md:flex-1">
+            <div className="flex min-w-0 w-full max-w-full flex-col">
               <ProcessKanbanBoard
                 projectProcessItemId={resolvedInstance.id}
                 templatePayload={

@@ -55,7 +55,7 @@ export const KANBAN_MOBILE_MOVE_HINT =
   "Przeciągnij zgłoszenie między kolumnami lub otwórz je i wybierz etap, aby przenieść na kolejny krok.";
 
 export const KANBAN_BOARD_ROOT_CLASS =
-  "flex min-w-0 w-full max-w-full flex-col gap-3 max-md:overflow-x-hidden md:min-h-0 md:flex-1";
+  "flex min-w-0 w-full max-w-full flex-col gap-3 max-md:overflow-x-hidden";
 
 export const KANBAN_BOARD_HEADER_CLASS =
   "flex w-full min-w-0 max-w-full shrink-0 flex-col gap-3 overflow-x-hidden";
