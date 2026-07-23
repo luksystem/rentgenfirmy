@@ -23,6 +23,7 @@ import {
 import { sortClientsByActivity } from "@/lib/sort/activity-sort";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
+import { useAuthStore } from "@/store/auth-store";
 import { useClientRecentViewsStore } from "@/store/client-recent-views-store";
 
 const ClientsMapView = dynamic(
@@ -58,14 +59,22 @@ export function ClientsView() {
   const recentViews = useClientRecentViewsStore((state) => state.views);
   const hydrateRecentViews = useClientRecentViewsStore((state) => state.hydrate);
   const togglePin = useClientRecentViewsStore((state) => state.togglePin);
+  const authInitialized = useAuthStore((state) => state.isInitialized);
+  const currentUserId = useAuthStore((state) => state.profile?.id ?? state.user?.id ?? null);
   const [view, setView] = useState<ClientsViewMode>("list");
   const [mapMounted, setMapMounted] = useState(false);
   const [healthMounted, setHealthMounted] = useState(false);
   const [filters, setFilters] = useState<ClientListFilters>(EMPTY_CLIENT_LIST_FILTERS);
 
   useEffect(() => {
+    // Store czyta usera synchronicznie z auth-store — po twardym przeładowaniu
+    // strony auth-store.initialize() jeszcze trwa, więc trzeba poczekać, inaczej
+    // hydrate() po cichu nic nie pobiera i nigdy nie ponawia próby.
+    if (!authInitialized || !currentUserId) {
+      return;
+    }
     void hydrateRecentViews();
-  }, [hydrateRecentViews]);
+  }, [authInitialized, currentUserId, hydrateRecentViews]);
 
   const favoriteClientIds = useMemo(() => getFavoriteClientIdSet(recentViews), [recentViews]);
   const recentClientIds = useMemo(() => getRecentlyOpenedClientIds(recentViews), [recentViews]);

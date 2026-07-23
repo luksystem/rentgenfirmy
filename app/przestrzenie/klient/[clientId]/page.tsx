@@ -46,6 +46,8 @@ function ClientDashboardPageContent() {
   const templates = useProcessStore((state) => state.templates);
   const processHydrated = useProcessStore((state) => state.hydrated);
   const displayName = useAuthStore((state) => state.displayName);
+  const authInitialized = useAuthStore((state) => state.isInitialized);
+  const currentUserId = useAuthStore((state) => state.profile?.id ?? state.user?.id ?? null);
   const updateProjectWarrantySettings = useAppStore((state) => state.updateProjectWarrantySettings);
   const patchProjectFields = useAppStore((state) => state.patchProjectFields);
   const recordClientView = useClientRecentViewsStore((state) => state.recordView);
@@ -53,11 +55,13 @@ function ClientDashboardPageContent() {
   const client = clients.find((entry) => entry.id === clientId) ?? null;
 
   useEffect(() => {
-    if (!client) {
+    // Auth-store hydratuje się asynchronicznie po twardym wejściu na URL —
+    // bez tej bramki zapis odwiedzin po cichu ginie, gdy user jeszcze nie jest gotowy.
+    if (!client || !authInitialized || !currentUserId) {
       return;
     }
     void recordClientView(client.id);
-  }, [client?.id, recordClientView]);
+  }, [client?.id, authInitialized, currentUserId, recordClientView]);
   const clientProjects = useMemo(
     () =>
       projects
