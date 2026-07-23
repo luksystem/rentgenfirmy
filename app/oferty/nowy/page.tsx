@@ -16,6 +16,7 @@ function NewOfferPageContent() {
   const contactId = searchParams.get("contactId");
   const projectId = searchParams.get("projectId");
   const title = searchParams.get("title");
+  const note = searchParams.get("note");
   const clients = useAppStore((state) => state.clients);
   const contacts = useAppStore((state) => state.contacts);
   const createEmptyService = useServiceStore((state) => state.createEmptyService);
@@ -69,7 +70,7 @@ function NewOfferPageContent() {
         title="Nowa oferta"
         description="Uzupełnij dane klienta lub kontaktu, stawki, przewidywane koszty i po wykonaniu koszty rzeczywiste."
       />
-      <ServiceForm initialService={service} />
+      <ServiceForm initialService={service} initialAiNote={note?.trim() || undefined} />
     </>
   );
 }

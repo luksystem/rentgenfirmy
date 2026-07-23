@@ -849,6 +849,47 @@ export function ServiceIntakeDetailModal({
               <AttachmentList attachments={thread?.attachments ?? []} />
             </div>
 
+            {intake.extraCosts ? (
+              <div
+                className={cn(
+                  "grid gap-2 rounded-xl border p-3",
+                  intake.serviceId
+                    ? "border-emerald-500/35 bg-emerald-500/10"
+                    : "border-amber-500/40 bg-amber-500/10",
+                )}
+              >
+                <p
+                  className={cn(
+                    "text-xs font-semibold uppercase tracking-wide",
+                    intake.serviceId ? "text-emerald-200" : "text-amber-200",
+                  )}
+                >
+                  {intake.serviceId
+                    ? "💰 Koszty dodatkowe — oferta utworzona"
+                    : "⚠ Koszty dodatkowe zgłoszone — brak oferty!"}
+                </p>
+                {intake.extraCostsNote ? (
+                  <p className="whitespace-pre-wrap break-words text-sm text-foreground/90">
+                    {intake.extraCostsNote}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted">Zgłoszono koszty dodatkowe bez notatki.</p>
+                )}
+                {canManageBoard && !intake.serviceId ? (
+                  <Button asChild size="sm" className="justify-self-start">
+                    <Link
+                      href={buildServiceIntakeOfferHref(intake, {
+                        extraCosts: true,
+                        extraCostsNote: intake.extraCostsNote,
+                      })}
+                    >
+                      Utwórz ofertę — koszty dodatkowe
+                    </Link>
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+
             <div>
               <p className="mb-2 text-sm font-medium text-foreground">Wątek</p>
               <CommentThread comments={thread?.comments ?? []} />
@@ -887,6 +928,7 @@ export function ServiceIntakeDetailModal({
                     <Link
                       href={buildServiceIntakeOfferHref(intake, {
                         extraCosts: Boolean(intake.extraCosts),
+                        extraCostsNote: intake.extraCostsNote,
                       })}
                     >
                       Utwórz ofertę

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ServiceCostBreakdownPanel } from "@/components/service/service-cost-breakdown";
 import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/input";
@@ -93,6 +93,7 @@ function rebuildPreview(input: {
 
 export function ServiceAiEstimatePanel({
   description: initialDescription,
+  autoRunOnMount = false,
   serviceType,
   clientId,
   projectId,
@@ -104,6 +105,8 @@ export function ServiceAiEstimatePanel({
   onApply,
 }: {
   description?: string;
+  /** Uruchom szacowanie automatycznie po zamontowaniu (np. notatka o kosztach dodatkowych ze zgłoszenia). */
+  autoRunOnMount?: boolean;
   serviceType: ServiceType;
   clientId: string | null;
   projectId?: string | null;
@@ -133,6 +136,19 @@ export function ServiceAiEstimatePanel({
   const [projectContextUsed, setProjectContextUsed] = useState(false);
   const [warrantyContextUsed, setWarrantyContextUsed] = useState(false);
   const [editing, setEditing] = useState(!existingRecord?.appliedAt);
+  const autoRunTriggeredRef = useRef(false);
+
+  useEffect(() => {
+    if (!autoRunOnMount || autoRunTriggeredRef.current) {
+      return;
+    }
+    if (existingRecord || !initialDescription?.trim()) {
+      return;
+    }
+    autoRunTriggeredRef.current = true;
+    void runEstimate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- uruchom raz po zamontowaniu z notatką z linku zgłoszenia
+  }, []);
 
   const preview = useMemo(() => {
     if (!proposal || !travelContext) {

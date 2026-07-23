@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import {
   Calendar,
+  CircleDollarSign,
   Coffee,
   ExternalLink,
   Eye,
@@ -104,6 +105,28 @@ function ServiceIntakeWarrantyBadge({ item }: { item: ServiceIntakeRecord }) {
     >
       <Shield className="h-3 w-3 shrink-0" />
       {isWarranty ? "Gwarancyjne" : "Pogwarancyjne"}
+    </span>
+  );
+}
+
+function ServiceIntakeExtraCostsBadge({ item }: { item: ServiceIntakeRecord }) {
+  if (!item.extraCosts) {
+    return null;
+  }
+
+  const hasOffer = Boolean(item.serviceId);
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+        hasOffer
+          ? "border-emerald-500/45 bg-emerald-500/15 text-emerald-300"
+          : "border-amber-500/60 bg-amber-500/20 text-amber-100",
+      )}
+    >
+      <CircleDollarSign className="h-3 w-3 shrink-0" />
+      {hasOffer ? "Koszty dod. — oferta gotowa" : "Koszty dodatkowe!"}
     </span>
   );
 }
@@ -396,6 +419,12 @@ function ServiceIntakeCard({
           {item.clientName ?? item.contactFullName}
         </p>
 
+        {item.extraCosts ? (
+          <div className="flex flex-wrap gap-1">
+            <ServiceIntakeExtraCostsBadge item={item} />
+          </div>
+        ) : null}
+
         <div className="flex items-center justify-between gap-2 text-[10px] text-muted">
           <span className={cn("flex items-center gap-1", overdue && "font-semibold text-rose-300")}>
             <Calendar className="h-3 w-3" />
@@ -491,6 +520,7 @@ function ServiceIntakeCard({
 
       <div className="flex flex-wrap gap-1.5">
         <ServiceIntakeWarrantyBadge item={item} />
+        <ServiceIntakeExtraCostsBadge item={item} />
         <span
           className={cn(
             "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",

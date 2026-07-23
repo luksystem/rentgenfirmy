@@ -215,8 +215,11 @@ function ViewSwitchButton({
 
 export function ServiceForm({
   initialService,
+  initialAiNote,
 }: {
   initialService: ServiceRecord;
+  /** Notatka o kosztach dodatkowych ze zgłoszenia serwisowego — wstępnie wypełnia opis w szacowaniu AI. */
+  initialAiNote?: string;
 }) {
   const router = useRouter();
   const projects = useAppStore((s) => s.projects);
@@ -863,6 +866,8 @@ export function ServiceForm({
                 ) : (
                   <>
                 <ServiceAiEstimatePanel
+                  description={initialAiNote}
+                  autoRunOnMount={Boolean(initialAiNote)}
                   serviceType={service.serviceType}
                   clientId={service.clientId}
                   projectId={withoutProject ? null : service.projectId}

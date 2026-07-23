@@ -117,27 +117,43 @@ export function ServiceIntakeSettlementDialog({
           </Field>
 
           {extraCosts ? (
-            <>
-              <Field label="Notatka o kosztach (opcjonalnie)">
+            <div className="grid gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-200">
+                ⚠ Koszty dodatkowe — nie zapomnij przygotować lub rozliczyć oferty
+              </p>
+              <Field label="Notatka o kosztach">
                 <Textarea
                   value={extraCostsNote}
                   onChange={(event) => setExtraCostsNote(event.target.value)}
                   rows={2}
+                  placeholder="Co dokładnie i dlaczego — trafi do opisu w szacowaniu AI nowej oferty"
                 />
               </Field>
               {intake.serviceId ? (
-                <Button asChild variant="outline" className="justify-self-start">
+                <Button asChild className="justify-self-start">
                   <Link href={`/oferty/${intake.serviceId}`}>Otwórz rozliczenie</Link>
                 </Button>
               ) : (
-                <Button asChild variant="outline" className="justify-self-start">
-                  <Link href={buildServiceIntakeOfferHref(intake, { extraCosts: true })}>
-                    Utwórz ofertę — koszty dodatkowe
-                    <ExternalLink className="ml-1 h-3.5 w-3.5" />
-                  </Link>
-                </Button>
+                <div className="grid gap-1.5 justify-items-start">
+                  <Button asChild className="justify-self-start">
+                    <Link
+                      href={buildServiceIntakeOfferHref(intake, {
+                        extraCosts: true,
+                        extraCostsNote,
+                      })}
+                    >
+                      Utwórz ofertę — koszty dodatkowe
+                      <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
+                  {extraCostsNote.trim() ? (
+                    <p className="text-[11px] text-amber-100/80">
+                      Notatka trafi do szacowania AI — oferta wstępnie wyceni się automatycznie.
+                    </p>
+                  ) : null}
+                </div>
               )}
-            </>
+            </div>
           ) : null}
 
           {error ? <p className="text-sm text-rose-300">{error}</p> : null}
