@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -26,6 +26,7 @@ export function ServiceIntakeSettlementDialog({
   onOpenChange: (open: boolean) => void;
   onSubmit: (feedback: ServiceIntakeSettlementFeedback) => Promise<void>;
 }) {
+  const router = useRouter();
   const [resolutionOutcome, setResolutionOutcome] =
     useState<ServiceIntakeResolutionOutcome>("full");
   const [resolutionCause, setResolutionCause] = useState("");
@@ -45,10 +46,11 @@ export function ServiceIntakeSettlementDialog({
     setError(null);
   }, [open, intake]);
 
-  async function handleSubmit() {
+  /** Zapisuje feedback rozliczenia (przenosi zgłoszenie do "Rozliczanie"). Zwraca sukces. */
+  async function submitFeedback(): Promise<boolean> {
     if (!resolutionCause.trim()) {
       setError("Podaj przyczynę / co było problemem.");
-      return;
+      return false;
     }
     setSaving(true);
     setError(null);
@@ -59,11 +61,25 @@ export function ServiceIntakeSettlementDialog({
         extraCosts,
         extraCostsNote: extraCostsNote.trim(),
       });
-      onOpenChange(false);
+      return true;
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Nie udało się rozliczyć.");
+      return false;
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleSubmit() {
+    if (await submitFeedback()) {
+      onOpenChange(false);
+    }
+  }
+
+  /** Najpierw zapisuje rozliczenie, dopiero potem przenosi do oferty — inaczej zgłoszenie zostawało w "W trakcie". */
+  async function handleSubmitAndNavigate(href: string) {
+    if (await submitFeedback()) {
+      router.push(href);
     }
   }
 
@@ -130,21 +146,31 @@ export function ServiceIntakeSettlementDialog({
                 />
               </Field>
               {intake.serviceId ? (
-                <Button asChild className="justify-self-start">
-                  <Link href={`/oferty/${intake.serviceId}`}>Otwórz rozliczenie</Link>
+                <Button
+                  type="button"
+                  className="justify-self-start"
+                  disabled={saving}
+                  onClick={() => void handleSubmitAndNavigate(`/oferty/${intake.serviceId}`)}
+                >
+                  {saving ? "Zapisywanie…" : "Rozlicz i otwórz ofertę"}
                 </Button>
               ) : (
                 <div className="grid gap-1.5 justify-items-start">
-                  <Button asChild className="justify-self-start">
-                    <Link
-                      href={buildServiceIntakeOfferHref(intake, {
-                        extraCosts: true,
-                        extraCostsNote,
-                      })}
-                    >
-                      Utwórz ofertę — koszty dodatkowe
-                      <ExternalLink className="ml-1 h-3.5 w-3.5" />
-                    </Link>
+                  <Button
+                    type="button"
+                    className="justify-self-start"
+                    disabled={saving}
+                    onClick={() =>
+                      void handleSubmitAndNavigate(
+                        buildServiceIntakeOfferHref(intake, {
+                          extraCosts: true,
+                          extraCostsNote,
+                        }),
+                      )
+                    }
+                  >
+                    {saving ? "Zapisywanie…" : "Rozlicz i utwórz ofertę — koszty dodatkowe"}
+                    <ExternalLink className="ml-1 h-3.5 w-3.5" />
                   </Button>
                   {extraCostsNote.trim() ? (
                     <p className="text-[11px] text-amber-100/80">

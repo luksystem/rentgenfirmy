@@ -1,4 +1,4 @@
-import type { ServiceIntakeStatus } from "@/lib/service-intake/types";
+import type { ServiceIntakeRecord, ServiceIntakeStatus } from "@/lib/service-intake/types";
 import { isServiceIntakeInactive } from "@/lib/service-intake/sla";
 
 const CONFIRM_MESSAGES: Partial<Record<ServiceIntakeStatus, string>> = {
@@ -6,6 +6,9 @@ const CONFIRM_MESSAGES: Partial<Record<ServiceIntakeStatus, string>> = {
   closed: "Czy na pewno zamknąć to zgłoszenie?",
   rejected: "Czy na pewno odrzucić to zgłoszenie?",
 };
+
+const NO_OFFER_CLOSE_MESSAGE =
+  "Dla tego zgłoszenia nie utworzono jeszcze oferty — kliknij Anuluj, żeby ją przygotować lub rozliczyć. Zamknąć mimo to?";
 
 const REOPEN_MESSAGE =
   "Problem wrócił — otworzyć ponownie to zgłoszenie (ten sam numer i wątek)?";
@@ -16,6 +19,7 @@ const TAKEOVER_MESSAGE = (assigneeName: string | null | undefined) =>
 export function confirmServiceIntakeStatusChange(
   status: ServiceIntakeStatus,
   fromStatus?: ServiceIntakeStatus,
+  intake?: Pick<ServiceIntakeRecord, "serviceId">,
 ): boolean {
   if (fromStatus && isServiceIntakeInactive(fromStatus) && !isServiceIntakeInactive(status)) {
     return window.confirm(REOPEN_MESSAGE);
@@ -23,6 +27,9 @@ export function confirmServiceIntakeStatusChange(
   // Rozlicz / Utknięte — osobne formularze (bramki).
   if (status === "converted" || status === "stuck") {
     return true;
+  }
+  if (status === "closed" && !intake?.serviceId) {
+    return window.confirm(NO_OFFER_CLOSE_MESSAGE);
   }
   const message = CONFIRM_MESSAGES[status];
   if (!message) {

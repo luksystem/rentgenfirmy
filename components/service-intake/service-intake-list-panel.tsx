@@ -54,7 +54,8 @@ export function ServiceIntakeListPanel() {
   }, [loadItems]);
 
   async function updateStatus(id: string, status: ServiceIntakeStatus) {
-    if (!confirmServiceIntakeStatusChange(status)) {
+    const currentItem = items.find((entry) => entry.id === id);
+    if (!confirmServiceIntakeStatusChange(status, currentItem?.status, currentItem)) {
       return;
     }
     setUpdatingId(id);

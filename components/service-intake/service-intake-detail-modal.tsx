@@ -324,7 +324,7 @@ export function ServiceIntakeDetailModal({
       return;
     }
 
-    if (!confirmServiceIntakeStatusChange(nextStatus, intake.status)) {
+    if (!confirmServiceIntakeStatusChange(nextStatus, intake.status, intake)) {
       setStatusDraft(intake.status);
       return;
     }

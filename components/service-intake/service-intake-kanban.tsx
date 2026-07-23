@@ -842,7 +842,7 @@ export function ServiceIntakeKanban({
       return;
     }
 
-    if (!confirmServiceIntakeStatusChange(status, currentItem.status)) {
+    if (!confirmServiceIntakeStatusChange(status, currentItem.status, currentItem)) {
       return;
     }
 
