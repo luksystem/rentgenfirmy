@@ -67,6 +67,13 @@ type ProcessItemPanelProps = {
   onToggleComplete?: (completed: boolean) => void;
   actorName?: string;
   canCustomizeChecklist?: boolean;
+  /** Checklista leży na etapie oznaczonym jako „etap zamykający projekt”. */
+  isClosingStage?: boolean;
+  /** Utwórz taski AI na tablicy wdrożeniowej z notatki tej checklisty (tylko widok zespołu). */
+  onCreateTasksFromNote?: (note: string) => void;
+  /** Notatka przekazana z checklisty do wstępnego wypełnienia panelu AI na tej tablicy kanban. */
+  initialKanbanNote?: string | null;
+  onConsumeKanbanNote?: () => void;
 };
 
 export function ProcessItemPanel({
@@ -86,6 +93,10 @@ export function ProcessItemPanel({
   onToggleComplete,
   actorName,
   canCustomizeChecklist = false,
+  isClosingStage = false,
+  onCreateTasksFromNote,
+  initialKanbanNote,
+  onConsumeKanbanNote,
 }: ProcessItemPanelProps) {
   const [structureDraft, setStructureDraft] = useState<ChecklistItemPayload | null>(null);
   const [structureOpen, setStructureOpen] = useState(false);
@@ -257,6 +268,7 @@ export function ProcessItemPanel({
                 defaultAssigneeName={resolvedInstance?.assigneeName}
                 onSave={onSaveChecklist}
                 raisedMobileNavForBack
+                onCreateTasksFromNote={isClosingStage ? onCreateTasksFromNote : undefined}
               />
 
               {showResponsible ? (
@@ -410,6 +422,8 @@ export function ProcessItemPanel({
                 authorName={actorName ?? "Zespół"}
                 showPublicLink
                 embedded
+                initialClientText={initialKanbanNote ?? undefined}
+                onConsumeInitialClientText={onConsumeKanbanNote}
               />
             </div>
           ) : null}

@@ -88,6 +88,7 @@ export function cloneTemplatePayloadForProject(templatePayload: ChecklistItemPay
         status: "NOT_STARTED" as const,
         requireDocumentation: line.requireDocumentation,
         documentationHint: line.documentationHint,
+        isCustom: false,
       })),
     })),
   };
@@ -277,6 +278,7 @@ function normalizeChecklistLine(entry: unknown): ChecklistLine | null {
       requireDocumentation: Boolean(raw.requireDocumentation),
       documentationHint:
         typeof raw.documentationHint === "string" ? raw.documentationHint : undefined,
+      isCustom: Boolean(raw.isCustom),
     };
   }
   const checked = Boolean(raw.checked);
@@ -311,6 +313,7 @@ function normalizeChecklistLine(entry: unknown): ChecklistLine | null {
           .map((attachment) => normalizeChecklistLineAttachment(attachment))
           .filter((attachment): attachment is ChecklistLineAttachment => attachment !== null)
       : undefined,
+    isCustom: Boolean(raw.isCustom),
   };
 }
 

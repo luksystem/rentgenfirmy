@@ -88,9 +88,16 @@ export function KanbanTaskCardView({
       return;
     }
 
-    const distance = Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY);
+    const deltaX = event.clientX - dragState.startX;
+    const deltaY = event.clientY - dragState.startY;
+    const distance = Math.hypot(deltaX, deltaY);
     if (!dragState.started) {
       if (distance < TOUCH_DRAG_THRESHOLD_PX) {
+        return;
+      }
+      if (Math.abs(deltaY) > Math.abs(deltaX)) {
+        // Pionowy gest = przewijanie listy, nie przeciąganie karty.
+        pointerDragRef.current = null;
         return;
       }
       dragState.started = true;

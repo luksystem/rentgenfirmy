@@ -133,6 +133,7 @@ export function KanbanTaskDetailModal({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isClosingModal, setIsClosingModal] = useState(false);
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
   const isFlushingRef = useRef(false);
   const authProfile = useAuthStore((state) => state.profile);
 
@@ -312,17 +313,33 @@ export function KanbanTaskDetailModal({
     }
   }
 
-  async function handleCloseTask() {
+  const lastColumn = columns && columns.length > 0 ? columns[columns.length - 1] : null;
+  const canOfferMoveOnClose = Boolean(lastColumn && onMoveToColumn && lastColumn.id !== stageId);
+
+  async function handleCloseTask(moveToLastColumn = false) {
     setIsClosing(true);
     setError(null);
     try {
       await flushPendingChanges();
+      if (moveToLastColumn && lastColumn && onMoveToColumn) {
+        await onMoveToColumn(lastColumn.id);
+        setStageId(lastColumn.id);
+      }
       await onCloseTask(true);
+      setCloseConfirmOpen(false);
     } catch (closeError) {
       setError(closeError instanceof Error ? closeError.message : "Nie udało się zamknąć zgłoszenia.");
     } finally {
       setIsClosing(false);
     }
+  }
+
+  function requestCloseTask() {
+    if (canOfferMoveOnClose) {
+      setCloseConfirmOpen(true);
+      return;
+    }
+    void handleCloseTask(false);
   }
 
   async function handleReopenTask() {
@@ -519,7 +536,7 @@ export function KanbanTaskDetailModal({
               size="sm"
               variant="secondary"
               disabled={isSaving || isClosing || isReopening}
-              onClick={() => void handleCloseTask()}
+              onClick={requestCloseTask}
             >
               {isClosing ? "Zamykanie…" : "Zamknij zgłoszenie"}
             </Button>
@@ -767,6 +784,41 @@ export function KanbanTaskDetailModal({
           </Button>
         </div>
       </StackedDialogContent>
+
+      <Dialog open={closeConfirmOpen} onOpenChange={setCloseConfirmOpen}>
+        <StackedDialogContent showCloseButton aria-describedby={undefined}>
+          <DialogTitle className="text-lg font-semibold text-foreground">Zamknąć zgłoszenie?</DialogTitle>
+          {lastColumn ? (
+            <p className="mt-2 text-sm text-muted">
+              Czy przenieść je też do kolumny „{lastColumn.title}"?
+            </p>
+          ) : null}
+          {error ? <p className="mt-2 text-sm text-rose-400">{error}</p> : null}
+          <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={isClosing}
+              onClick={() => setCloseConfirmOpen(false)}
+            >
+              Anuluj
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={isClosing}
+              onClick={() => void handleCloseTask(false)}
+            >
+              Zamknij bez przenoszenia
+            </Button>
+            <Button type="button" size="sm" disabled={isClosing} onClick={() => void handleCloseTask(true)}>
+              {isClosing ? "Zamykanie…" : `Zamknij i przenieś do „${lastColumn?.title ?? ""}"`}
+            </Button>
+          </div>
+        </StackedDialogContent>
+      </Dialog>
     </Dialog>
   );
 }

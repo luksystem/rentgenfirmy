@@ -61,13 +61,13 @@ export const KANBAN_BOARD_HEADER_CLASS =
   "flex w-full min-w-0 max-w-full shrink-0 flex-col gap-3 overflow-x-hidden";
 
 export const KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS =
-  "flex w-full min-w-0 max-w-full touch-pan-x snap-x snap-mandatory gap-3 overflow-x-auto overflow-y-visible overscroll-x-contain pb-2 [-ms-overflow-style:none] [scrollbar-width:none] max-md:flex-none md:min-h-0 md:flex-1 md:snap-none md:flex-row md:overflow-hidden md:overscroll-x-auto md:pb-0 [&::-webkit-scrollbar]:hidden";
+  "flex w-full min-w-0 max-w-full snap-x snap-mandatory gap-3 overflow-x-auto overflow-y-visible overscroll-x-contain pb-2 [-ms-overflow-style:none] [scrollbar-width:none] max-md:flex-none md:min-h-0 md:flex-1 md:snap-none md:flex-row md:overflow-hidden md:overscroll-x-auto md:pb-0 [&::-webkit-scrollbar]:hidden";
 
 export const KANBAN_MOBILE_COLUMN_SHELL_CLASS =
-  "flex w-[min(100%,22rem)] shrink-0 snap-center flex-col overflow-hidden rounded-2xl border border-border/80 bg-surface-muted/40 shadow-sm max-md:self-start md:min-h-0 md:w-auto md:min-w-0 md:flex-1 md:snap-align-none";
+  "flex w-[min(100%,22rem)] shrink-0 snap-center flex-col overflow-hidden rounded-2xl border border-border/80 bg-surface-muted/40 shadow-sm md:min-h-0 md:w-auto md:min-w-0 md:flex-1 md:snap-align-none";
 
 export const KANBAN_MOBILE_COLUMN_BODY_CLASS =
-  "flex flex-col gap-2.5 p-3 max-md:overflow-visible md:min-h-0 md:flex-1 md:overflow-y-auto";
+  "flex min-h-[min(52vh,28rem)] flex-col gap-2.5 overflow-y-auto p-3 md:min-h-0 md:flex-1";
 
 export function sortKanbanColumnTasks(tasks: KanbanTask[], sortMode: KanbanColumnSortMode = "position") {
   return sortKanbanColumnTasksWithMode(tasks, sortMode);

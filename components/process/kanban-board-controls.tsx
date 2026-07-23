@@ -1,11 +1,14 @@
 "use client";
 
+import { Eye, EyeOff } from "lucide-react";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
+import { Button } from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
   countActiveKanbanBoardFilters,
   DEFAULT_KANBAN_BOARD_FILTERS,
+  persistKanbanHideClosed,
   type KanbanBoardFilters,
   type KanbanColumnSortMode,
 } from "@/lib/process/kanban-task-meta";
@@ -36,14 +39,26 @@ export function KanbanBoardControls({
   const assigneeChoices =
     assigneeFilterOptions ??
     (assigneeOptions ?? []).map((option) => ({ value: option, label: option }));
+  const hideClosed = Boolean(filters.hideClosed);
+
+  function toggleHideClosed() {
+    const next = !hideClosed;
+    persistKanbanHideClosed(next);
+    onFiltersChange({ ...filters, hideClosed: next });
+  }
 
   return (
-    <MobileFiltersPanel
-      activeCount={activeCount}
-      onClear={() => onFiltersChange(DEFAULT_KANBAN_BOARD_FILTERS)}
-      className="shrink-0 min-w-0 w-full max-w-full"
-      panelClassName="rounded-xl border border-border/70 bg-surface/40 p-3"
-    >
+    <div className="flex shrink-0 min-w-0 w-full max-w-full flex-wrap items-center gap-2">
+      <Button type="button" variant="outline" size="sm" onClick={toggleHideClosed}>
+        {hideClosed ? <Eye className="mr-2 h-4 w-4 shrink-0" /> : <EyeOff className="mr-2 h-4 w-4 shrink-0" />}
+        {hideClosed ? "Pokaż zamknięte" : "Ukryj zamknięte"}
+      </Button>
+      <MobileFiltersPanel
+        activeCount={activeCount}
+        onClear={() => onFiltersChange({ ...DEFAULT_KANBAN_BOARD_FILTERS, hideClosed: filters.hideClosed })}
+        className="min-w-0 flex-1"
+        panelClassName="rounded-xl border border-border/70 bg-surface/40 p-3"
+      >
       <div
         className={cn(
           "grid gap-2",
@@ -118,7 +133,8 @@ export function KanbanBoardControls({
           </Select>
         </Field>
       </div>
-    </MobileFiltersPanel>
+      </MobileFiltersPanel>
+    </div>
   );
 }
 

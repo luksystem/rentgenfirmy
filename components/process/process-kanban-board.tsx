@@ -28,6 +28,7 @@ import {
   buildKanbanTaskActivityMap,
   collectKanbanAssigneeOptions,
   computeKanbanBoardStats,
+  getDefaultKanbanHideClosed,
   matchesKanbanBoardFilters,
   type KanbanBoardFilters,
   type KanbanColumnSortMode,
@@ -70,6 +71,8 @@ export function ProcessKanbanBoard({
   authorName,
   showPublicLink = false,
   embedded = false,
+  initialClientText,
+  onConsumeInitialClientText,
 }: {
   projectProcessItemId: string;
   templatePayload: KanbanTemplatePayload | unknown;
@@ -77,6 +80,8 @@ export function ProcessKanbanBoard({
   authorName: string;
   showPublicLink?: boolean;
   embedded?: boolean;
+  initialClientText?: string;
+  onConsumeInitialClientText?: () => void;
 }) {
   const cachedBoard = useKanbanCacheStore((state) => state.boardsByItemId[projectProcessItemId]);
   const ensureBoard = useKanbanCacheStore((state) => state.ensureBoard);
@@ -101,7 +106,11 @@ export function ProcessKanbanBoard({
   const [accessMessage, setAccessMessage] = useState<string | null>(null);
   const [accessError, setAccessError] = useState<string | null>(null);
   const [publicLinkOpen, setPublicLinkOpen] = useState(!embedded);
-  const [filters, setFilters] = useState<KanbanBoardFilters>({ priority: "all", assignee: "all" });
+  const [filters, setFilters] = useState<KanbanBoardFilters>(() => ({
+    priority: "all",
+    assignee: "all",
+    hideClosed: getDefaultKanbanHideClosed(),
+  }));
   const [sortMode, setSortMode] = useState<KanbanColumnSortMode>("position");
   const dragTaskIdRef = useRef<string | null>(null);
   const fieldOptions = useAppStore((state) => state.fieldOptions);
@@ -506,6 +515,8 @@ export function ProcessKanbanBoard({
           authorSide={authorSide}
           authorName={authorName}
           onCreated={() => refresh({ force: true, showLoading: false })}
+          initialClientText={initialClientText}
+          onConsumeInitialClientText={onConsumeInitialClientText}
         />
       ) : null}
 

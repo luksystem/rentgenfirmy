@@ -33,12 +33,17 @@ export function KanbanAiImportPanel({
   authorSide,
   authorName,
   onCreated,
+  initialClientText,
+  onConsumeInitialClientText,
 }: {
   firstColumnId: string;
   firstColumnTitle: string;
   authorSide: KanbanAuthorSide;
   authorName: string;
   onCreated: () => Promise<void>;
+  /** Notatka z checklisty etapu zamykającego — wstępnie wypełnia i otwiera panel raz. */
+  initialClientText?: string;
+  onConsumeInitialClientText?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [clientText, setClientText] = useState("");
@@ -48,6 +53,16 @@ export function KanbanAiImportPanel({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const draftsPreviewRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!initialClientText) {
+      return;
+    }
+    setClientText(initialClientText);
+    setOpen(true);
+    onConsumeInitialClientText?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialClientText]);
 
   const selectedCount = useMemo(
     () => drafts.filter((task) => task.selected && task.title.trim()).length,

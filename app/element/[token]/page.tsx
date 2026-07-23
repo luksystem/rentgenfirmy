@@ -67,6 +67,7 @@ export default function PublicProcessElementPage({
       <header className="mb-4 shrink-0">
         <p className="text-xs uppercase tracking-wide text-muted">Checklista — podgląd publiczny</p>
         <h1 className="text-2xl font-semibold text-foreground">{item.title}</h1>
+        <p className="mt-1 text-sm text-muted">Klient: {item.clientName ?? "Klient nieprzypisany"}</p>
       </header>
       {item.kind === "checklist" && item.checklist ? (
         <ProcessChecklistBoard

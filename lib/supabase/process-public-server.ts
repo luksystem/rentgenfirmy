@@ -1,4 +1,5 @@
 import type { InternalAcceptanceState } from "@/lib/internal-acceptance/types";
+import { formatPartyName } from "@/lib/party/display-name";
 import type { ChecklistItemPayload, ProcessItemKind } from "@/lib/process/types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { rowToProjectProcessItem } from "@/lib/supabase/process-item-mappers";
@@ -15,6 +16,7 @@ export type PublicProcessItemPayload = {
   projectProcessItemId: string;
   assigneeId: string | null;
   assigneeName: string | null;
+  clientName: string | null;
 };
 
 export async function fetchPublicProcessItemByToken(
@@ -46,6 +48,29 @@ export async function fetchPublicProcessItemByToken(
 
   const title = (templateItem?.title as string | undefined) ?? "Element procesu";
 
+  const { data: project } = await supabase
+    .from("projects")
+    .select("client_id")
+    .eq("id", instance.projectId)
+    .maybeSingle();
+
+  let clientName: string | null = null;
+  const clientId = project?.client_id as string | undefined;
+  if (clientId) {
+    const { data: client } = await supabase
+      .from("clients")
+      .select("first_name, last_name")
+      .eq("id", clientId)
+      .maybeSingle();
+
+    clientName = client
+      ? formatPartyName({
+          firstName: client.first_name?.trim() ?? "",
+          lastName: client.last_name?.trim() ?? "",
+        }) || null
+      : null;
+  }
+
   return {
     title,
     kind: instance.kind,
@@ -57,5 +82,6 @@ export async function fetchPublicProcessItemByToken(
     projectProcessItemId: instance.id,
     assigneeId: instance.assigneeId,
     assigneeName: instance.assigneeName,
+    clientName,
   };
 }

@@ -46,8 +46,8 @@ export const MILESTONE_DATE_STATUS_CLASSES: Record<
   { badge: string; dot: string }
 > = {
   none: {
-    badge: "border-border/70 bg-surface/60 text-muted hover:border-accent/30",
-    dot: "bg-muted",
+    badge: "border-dashed border-accent/50 bg-accent/5 text-accent hover:border-accent hover:bg-accent/10",
+    dot: "bg-accent/70",
   },
   ok: {
     badge: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:border-emerald-400/50",

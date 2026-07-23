@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Paperclip } from "lucide-react";
+import { CheckCircle2, Paperclip, Plus, Trash2 } from "lucide-react";
 import type { ChecklistDocumentationUploadContext } from "@/components/process/checklist-line-documentation-panel";
 import { ChecklistItemDialog } from "@/components/process/checklist-item-dialog";
 import { ChecklistMobileNav } from "@/components/process/checklist-mobile-nav";
-import { Field, Textarea } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Field, Input, Textarea } from "@/components/ui/input";
 import type { UserProfile } from "@/lib/auth/types";
 import { boardSectionDomId, scrollToBoardSection } from "@/lib/board-scroll";
 import { INTERNAL_ACCEPTANCE_STATUS_STYLES } from "@/lib/internal-acceptance/status-styles";
@@ -77,6 +78,7 @@ export function ProcessChecklistBoard({
   defaultAssigneeName = null,
   onSave,
   raisedMobileNavForBack = false,
+  onCreateTasksFromNote,
 }: {
   initialPayload: ChecklistItemPayload;
   readOnly?: boolean;
@@ -90,6 +92,8 @@ export function ProcessChecklistBoard({
   defaultAssigneeName?: string | null;
   onSave?: (payload: ChecklistItemPayload) => Promise<void>;
   raisedMobileNavForBack?: boolean;
+  /** Checklista jest na etapie zamykającym projekt — pokaż "Utwórz taski z notatek" (widok zespołu). */
+  onCreateTasksFromNote?: (note: string) => void;
 }) {
   const [payload, setPayload] = useState(() => normalizeChecklistPayload(initialPayload));
   const [activeLineId, setActiveLineId] = useState<string | null>(null);
@@ -97,6 +101,7 @@ export function ProcessChecklistBoard({
   const [savingLineId, setSavingLineId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [navSectionId, setNavSectionId] = useState<string | null>(null);
+  const [customLineDrafts, setCustomLineDrafts] = useState<Record<string, string>>({});
 
   const actor = useMemo(
     () => ({ id: actorId, name: actorName.trim() || "Zespół" }),
@@ -176,6 +181,40 @@ export function ProcessChecklistBoard({
     setPayload((current) => applyLinePatch(current, sectionId, lineId, patch, actor.name));
   }
 
+  async function handleAddCustomLine(sectionId: string) {
+    const text = (customLineDrafts[sectionId] ?? "").trim();
+    if (!text) {
+      return;
+    }
+    const newLine: ChecklistLine = {
+      id: crypto.randomUUID(),
+      text,
+      checked: false,
+      status: "NOT_STARTED",
+      isCustom: true,
+    };
+    const nextPayload: ChecklistItemPayload = {
+      ...payload,
+      sections: getChecklistSections(payload).map((section) =>
+        section.id === sectionId ? { ...section, lines: [...section.lines, newLine] } : section,
+      ),
+    };
+    setCustomLineDrafts((current) => ({ ...current, [sectionId]: "" }));
+    await persist(nextPayload);
+  }
+
+  async function handleRemoveCustomLine(sectionId: string, lineId: string) {
+    const nextPayload: ChecklistItemPayload = {
+      ...payload,
+      sections: getChecklistSections(payload).map((section) =>
+        section.id === sectionId
+          ? { ...section, lines: section.lines.filter((line) => line.id !== lineId) }
+          : section,
+      ),
+    };
+    await persist(nextPayload);
+  }
+
   const showMobileNav = sections.length > 1;
 
   return (
@@ -215,54 +254,95 @@ export function ProcessChecklistBoard({
                 const styles = INTERNAL_ACCEPTANCE_STATUS_STYLES[status];
                 const assignee = getChecklistLineAssignee(line, defaultAssignee);
                 return (
-                  <button
+                  <div
                     key={line.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveLineId(line.id);
-                      setActiveSectionId(section.id);
-                    }}
                     className={cn(
-                      "rounded-lg border border-l-4 px-3 py-2.5 text-left text-sm transition",
+                      "flex items-stretch gap-1 rounded-lg border border-l-4 transition",
                       styles.row,
                       activeLineId === line.id && styles.rowActive,
                     )}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex min-w-0 items-start gap-2">
-                        <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", styles.dot)} />
-                        <span className="font-medium text-foreground">
-                          {line.text}
-                          {line.requireDocumentation ? (
-                            <Paperclip
-                              className="ml-1.5 inline h-3.5 w-3.5 align-text-bottom text-amber-300/90"
-                              aria-label="Wymaga dokumentacji"
-                            />
-                          ) : null}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveLineId(line.id);
+                        setActiveSectionId(section.id);
+                      }}
+                      className="min-w-0 flex-1 px-3 py-2.5 text-left text-sm"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 items-start gap-2">
+                          <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", styles.dot)} />
+                          <span className="font-medium text-foreground">
+                            {line.text}
+                            {line.requireDocumentation ? (
+                              <Paperclip
+                                className="ml-1.5 inline h-3.5 w-3.5 align-text-bottom text-amber-300/90"
+                                aria-label="Wymaga dokumentacji"
+                              />
+                            ) : null}
+                          </span>
+                        </div>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase",
+                            styles.badge,
+                          )}
+                        >
+                          {INTERNAL_ACCEPTANCE_STATUS_LABELS[status]}
                         </span>
                       </div>
-                      <span
-                        className={cn(
-                          "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase",
-                          styles.badge,
-                        )}
+                      {assignee.assigneeName || line.checkedAt ? (
+                        <p className="mt-1 pl-4 text-[11px] text-muted/80">
+                          {assignee.assigneeName
+                            ? `Odp.: ${assignee.assigneeName}${assignee.inherited ? " (checklista)" : ""}`
+                            : null}
+                          {assignee.assigneeName && line.checkedAt ? " · " : null}
+                          {line.checkedAt ? formatDateTime(line.checkedAt) : null}
+                        </p>
+                      ) : null}
+                    </button>
+                    {line.isCustom && !readOnly ? (
+                      <button
+                        type="button"
+                        aria-label="Usuń punkt"
+                        onClick={() => void handleRemoveCustomLine(section.id, line.id)}
+                        className="shrink-0 self-stretch px-2 text-muted transition hover:text-rose-400"
                       >
-                        {INTERNAL_ACCEPTANCE_STATUS_LABELS[status]}
-                      </span>
-                    </div>
-                    {assignee.assigneeName || line.checkedAt ? (
-                      <p className="mt-1 pl-4 text-[11px] text-muted/80">
-                        {assignee.assigneeName
-                          ? `Odp.: ${assignee.assigneeName}${assignee.inherited ? " (checklista)" : ""}`
-                          : null}
-                        {assignee.assigneeName && line.checkedAt ? " · " : null}
-                        {line.checkedAt ? formatDateTime(line.checkedAt) : null}
-                      </p>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     ) : null}
-                  </button>
+                  </div>
                 );
               })}
             </div>
+
+            {!readOnly ? (
+              <div className="mt-2 flex items-center gap-2">
+                <Input
+                  value={customLineDrafts[section.id] ?? ""}
+                  placeholder="Dodaj punkt…"
+                  onChange={(event) =>
+                    setCustomLineDrafts((current) => ({ ...current, [section.id]: event.target.value }))
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void handleAddCustomLine(section.id);
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={!(customLineDrafts[section.id] ?? "").trim()}
+                  onClick={() => void handleAddCustomLine(section.id)}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : null}
           </section>
         ))}
       </div>
@@ -275,6 +355,18 @@ export function ProcessChecklistBoard({
             onChange={(event) => setPayload({ ...payload, note: event.target.value })}
             onBlur={() => void persist({ ...payload })}
           />
+          {onCreateTasksFromNote ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="mt-2"
+              disabled={!(payload.note ?? "").trim()}
+              onClick={() => onCreateTasksFromNote(payload.note ?? "")}
+            >
+              Utwórz taski z notatek
+            </Button>
+          ) : null}
         </Field>
       ) : payload.note ? (
         <div>

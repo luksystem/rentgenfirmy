@@ -2,6 +2,7 @@ import {
   deriveProcessItemStatus,
   emptyChecklistPayload,
   hasChecklistLines,
+  isEmptyChecklistPayload,
   mergeChecklistPayloadWithTemplate,
   normalizeChecklistPayload,
   projectChecklistPayloadFromTemplate,
@@ -323,4 +324,140 @@ export async function signProjectProcessItem(
 
 export function mapProjectProcessItemsByTemplateId(items: Awaited<ReturnType<typeof fetchProjectProcessItems>>) {
   return Object.fromEntries(items.map((item) => [item.templateItemId, item]));
+}
+
+/**
+ * Elementy projektu, których `templateItemId` nie występuje już w bieżącym szablonie —
+ * powstają, gdy element zostanie usunięty z jednego miejsca i dodany od nowa gdzie indziej
+ * w edytorze szablonu (nowy `id`), przez co stary wiersz (z danymi klienta/tablicy kanban)
+ * traci powiązanie z etapem i staje się niewidoczny w pipeline.
+ */
+export async function fetchOrphanedProjectProcessItems(
+  supabase: SupabaseClient,
+  projectId: string,
+  template: ProcessTemplate,
+) {
+  const templateItemIds = new Set(flattenProcessItems(template).map((item) => item.id));
+  const { data, error } = await supabase
+    .from("project_process_items")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map(rowToProjectProcessItem).filter((item) => !templateItemIds.has(item.templateItemId));
+}
+
+async function isProjectProcessItemRowEmpty(
+  supabase: SupabaseClient,
+  row: { id: string; kind: string; payload: unknown; status: string; signedAt?: string | null },
+) {
+  if (row.kind === "checklist") {
+    return isEmptyChecklistPayload(row.payload);
+  }
+  if (row.kind === "kanban") {
+    const { data: board } = await supabase
+      .from("process_kanban_boards")
+      .select("id")
+      .eq("project_process_item_id", row.id)
+      .maybeSingle();
+    if (!board) {
+      return true;
+    }
+    const { data: columns } = await supabase
+      .from("process_kanban_columns")
+      .select("id")
+      .eq("board_id", board.id);
+    const columnIds = (columns ?? []).map((column) => column.id as string);
+    if (!columnIds.length) {
+      return true;
+    }
+    const { count } = await supabase
+      .from("process_kanban_tasks")
+      .select("id", { count: "exact", head: true })
+      .in("column_id", columnIds);
+    return !count;
+  }
+  return row.status !== "completed" && !row.signedAt;
+}
+
+/**
+ * Przepina istniejący wiersz (z zachowanymi danymi — checklistą/tablicą kanban) na nowe miejsce
+ * w szablonie, bez ruszania samych danych: `process_kanban_boards` jest powiązana z
+ * `project_process_items.id` (stały identyfikator wiersza), a nie z `template_item_id`, więc
+ * wystarczy zmienić samo dopasowanie do szablonu. Docelowy wiersz (pusty placeholder utworzony
+ * automatycznie przy synchronizacji z szablonem) zostaje usunięty, żeby zwolnić unikalność
+ * `(project_id, template_item_id)`.
+ */
+export async function reassignProjectProcessItemToTemplateItem(
+  supabase: SupabaseClient,
+  projectId: string,
+  orphanItemId: string,
+  targetTemplateItemId: string,
+) {
+  const { data: orphanRow, error: orphanError } = await supabase
+    .from("project_process_items")
+    .select("*")
+    .eq("id", orphanItemId)
+    .eq("project_id", projectId)
+    .maybeSingle();
+
+  if (orphanError) {
+    throw new Error(orphanError.message);
+  }
+  if (!orphanRow) {
+    throw new Error("Nie znaleziono elementu do naprawy.");
+  }
+
+  const { data: targetRow, error: targetError } = await supabase
+    .from("project_process_items")
+    .select("*")
+    .eq("project_id", projectId)
+    .eq("template_item_id", targetTemplateItemId)
+    .maybeSingle();
+
+  if (targetError) {
+    throw new Error(targetError.message);
+  }
+
+  if (targetRow) {
+    if (targetRow.kind !== orphanRow.kind) {
+      throw new Error("Element docelowy jest innego typu — wybierz element tego samego rodzaju.");
+    }
+    const targetIsEmpty = await isProjectProcessItemRowEmpty(supabase, {
+      id: targetRow.id,
+      kind: targetRow.kind,
+      payload: targetRow.payload,
+      status: targetRow.status,
+      signedAt: targetRow.signed_at,
+    });
+    if (!targetIsEmpty) {
+      throw new Error("Element docelowy nie jest pusty — wybierz inny lub najpierw go wyczyść.");
+    }
+
+    const { error: deleteError } = await supabase
+      .from("project_process_items")
+      .delete()
+      .eq("id", targetRow.id);
+
+    if (deleteError) {
+      throw new Error(deleteError.message);
+    }
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from("project_process_items")
+    .update({ template_item_id: targetTemplateItemId, updated_at: new Date().toISOString() })
+    .eq("id", orphanRow.id)
+    .select("*")
+    .single();
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  return rowToProjectProcessItem(updated);
 }

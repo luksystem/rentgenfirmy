@@ -22,6 +22,7 @@ import { MilestoneDateBadge } from "@/components/process/milestone-date-badge";
 import { ProcessItemPanel } from "@/components/process/process-item-panel";
 import { formatAssigneeLabel } from "@/components/process/process-item-responsible-section";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { UserProfile } from "@/lib/auth/types";
@@ -43,6 +44,9 @@ import {
   findUnblockedIncompleteStagesBeforeActive,
 } from "@/lib/process/stage-gate";
 import {
+  findClosingStageKanbanItems,
+  flattenProcessItems,
+  isTemplateItemOnClosingStage,
   PROCESS_ITEM_KIND_LABELS,
   type ChecklistItemPayload,
   type ProcessItem,
@@ -279,6 +283,36 @@ export function ProcessPipeline({
       await ensureProjectProcessItems(projectId, template);
     }
     setActiveItem(item);
+  }
+
+  const closingStageKanbanItems = useMemo(() => findClosingStageKanbanItems(template), [template]);
+  const activeItemIsClosingStage = activeItem
+    ? isTemplateItemOnClosingStage(template, activeItem.id)
+    : false;
+  const [pendingKanbanNote, setPendingKanbanNote] = useState<string | null>(null);
+  const [noteBoardPickerOpen, setNoteBoardPickerOpen] = useState(false);
+  const [pendingNoteText, setPendingNoteText] = useState("");
+
+  function openKanbanItemWithNote(templateItemId: string, note: string) {
+    const target = flattenProcessItems(template).find((entry) => entry.id === templateItemId);
+    if (!target) {
+      return;
+    }
+    setPendingKanbanNote(note);
+    void handleOpenItem(target);
+  }
+
+  function handleCreateTasksFromNote(note: string) {
+    const text = note.trim();
+    if (!text || !closingStageKanbanItems.length) {
+      return;
+    }
+    if (closingStageKanbanItems.length === 1) {
+      openKanbanItemWithNote(closingStageKanbanItems[0].templateItemId, text);
+      return;
+    }
+    setPendingNoteText(text);
+    setNoteBoardPickerOpen(true);
   }
 
   return (
@@ -737,7 +771,41 @@ export function ProcessPipeline({
           }
           onToggleItem?.(activeItem.id, completed);
         }}
+        isClosingStage={activeItemIsClosingStage}
+        onCreateTasksFromNote={
+          interactive && closingStageKanbanItems.length ? handleCreateTasksFromNote : undefined
+        }
+        initialKanbanNote={activeItem?.kind === "kanban" ? pendingKanbanNote : null}
+        onConsumeKanbanNote={() => setPendingKanbanNote(null)}
       />
+
+      <Dialog open={noteBoardPickerOpen} onOpenChange={setNoteBoardPickerOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Wybierz tablicę wdrożeniową</DialogTitle>
+            <DialogDescription>
+              W projekcie jest więcej niż jedna tablica kanban na etapie zamykającym — wybierz, do
+              której przenieść notatkę.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            {closingStageKanbanItems.map((candidate) => (
+              <Button
+                key={candidate.templateItemId}
+                type="button"
+                variant="outline"
+                className="justify-start text-left"
+                onClick={() => {
+                  openKanbanItemWithNote(candidate.templateItemId, pendingNoteText);
+                  setNoteBoardPickerOpen(false);
+                }}
+              >
+                {candidate.stageTitle} → {candidate.milestoneTitle} → {candidate.title}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

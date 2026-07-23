@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
+import { ProcessItemRepairDialog } from "@/components/process/process-item-repair-dialog";
 import { ProcessPipeline } from "@/components/process/process-pipeline";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,6 +66,7 @@ export function ProjectProcessPipelineSection({
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [repairDialogOpen, setRepairDialogOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
 
@@ -143,10 +145,15 @@ export function ProjectProcessPipelineSection({
               odświeżeniu, a zaznaczenia klienta zostają zachowane.
             </p>
           </div>
-          <Button type="button" variant="outline" size="sm" onClick={() => setSyncDialogOpen(true)}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Wczytaj z szablonu
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setSyncDialogOpen(true)}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Wczytaj z szablonu
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setRepairDialogOpen(true)}>
+              Napraw dopasowanie elementu
+            </Button>
+          </div>
         </div>
       ) : null}
 
@@ -208,6 +215,14 @@ export function ProjectProcessPipelineSection({
           </div>
         </DialogContent>
       </Dialog>
+
+      {canSyncFromTemplate ? (
+        <ProcessItemRepairDialog
+          projectId={projectId}
+          open={repairDialogOpen}
+          onOpenChange={setRepairDialogOpen}
+        />
+      ) : null}
     </>
   );
 }

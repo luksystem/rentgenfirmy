@@ -19,13 +19,46 @@ export type KanbanBoardFilters = {
   assignee: string | "all" | "unassigned";
   /** Id projektu lub `name:…` gdy brak id — tylko tablica zbiorcza. */
   projectId?: string | "all";
+  /** Ukryj zamknięte zgłoszenia — domyślnie włączone na mobile, zapamiętywane w localStorage. */
+  hideClosed?: boolean;
 };
 
 export const DEFAULT_KANBAN_BOARD_FILTERS: KanbanBoardFilters = {
   priority: "all",
   assignee: "all",
   projectId: "all",
+  hideClosed: false,
 };
+
+const KANBAN_HIDE_CLOSED_STORAGE_KEY = "kanban-hide-closed";
+
+function isCoarsePointerViewport() {
+  return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+}
+
+/** Domyślny stan „ukryj zamknięte” — jawny wybór użytkownika z localStorage, w innym razie włączony na dotyku. */
+export function getDefaultKanbanHideClosed() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  try {
+    const stored = window.localStorage.getItem(KANBAN_HIDE_CLOSED_STORAGE_KEY);
+    if (stored === "true" || stored === "false") {
+      return stored === "true";
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return isCoarsePointerViewport();
+}
+
+export function persistKanbanHideClosed(value: boolean) {
+  try {
+    window.localStorage.setItem(KANBAN_HIDE_CLOSED_STORAGE_KEY, String(value));
+  } catch {
+    // ignore storage errors
+  }
+}
 
 export function countActiveKanbanBoardFilters(filters: KanbanBoardFilters) {
   let count = 0;
@@ -105,6 +138,10 @@ export function matchesKanbanBoardFilters(
   filters: KanbanBoardFilters,
   context?: { teamProfiles?: UserProfile[]; roleOptions?: DictionaryItem[] },
 ) {
+  if (filters.hideClosed && task.closedAt) {
+    return false;
+  }
+
   if (filters.priority !== "all" && task.priority !== filters.priority) {
     return false;
   }

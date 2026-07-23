@@ -123,6 +123,21 @@ type ProcessStore = {
     process: ProjectProcess,
     itemsByTemplateId: Record<string, ProjectProcessItem>,
   ) => void;
+  fetchOrphanedProcessItems: (projectId: string) => Promise<{
+    orphans: ProjectProcessItem[];
+    templateItems: {
+      id: string;
+      kind: ProcessItemKind;
+      title: string;
+      stageTitle: string;
+      milestoneTitle: string;
+    }[];
+  }>;
+  reassignOrphanedProcessItem: (
+    projectId: string,
+    orphanItemId: string,
+    targetTemplateItemId: string,
+  ) => Promise<void>;
   loadTeamProfiles: () => Promise<void>;
   ensureTemplateForProjectType: (projectType: string) => Promise<ProcessTemplate>;
   saveTemplate: (template: ProcessTemplate) => Promise<void>;
@@ -417,6 +432,53 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
       projectProcessItems: {
         ...state.projectProcessItems,
         [projectId]: itemsByTemplateId,
+      },
+    }));
+  },
+
+  fetchOrphanedProcessItems: async (projectId) => {
+    const response = await fetch(`/api/projects/${projectId}/process/reassign-item`, {
+      credentials: "include",
+    });
+    const payload = (await response.json()) as {
+      orphans?: ProjectProcessItem[];
+      templateItems?: {
+        id: string;
+        kind: ProcessItemKind;
+        title: string;
+        stageTitle: string;
+        milestoneTitle: string;
+      }[];
+      error?: string;
+    };
+
+    if (!response.ok || !payload.orphans || !payload.templateItems) {
+      throw new Error(payload.error ?? "Nie udało się wczytać osieroconych elementów.");
+    }
+
+    return { orphans: payload.orphans, templateItems: payload.templateItems };
+  },
+
+  reassignOrphanedProcessItem: async (projectId, orphanItemId, targetTemplateItemId) => {
+    const response = await fetch(`/api/projects/${projectId}/process/reassign-item`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orphanItemId, targetTemplateItemId }),
+    });
+    const payload = (await response.json()) as {
+      itemsByTemplateId?: Record<string, ProjectProcessItem>;
+      error?: string;
+    };
+
+    if (!response.ok || !payload.itemsByTemplateId) {
+      throw new Error(payload.error ?? "Nie udało się przełączyć elementu.");
+    }
+
+    set((state) => ({
+      projectProcessItems: {
+        ...state.projectProcessItems,
+        [projectId]: payload.itemsByTemplateId!,
       },
     }));
   },

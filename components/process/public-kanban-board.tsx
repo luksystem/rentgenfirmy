@@ -14,6 +14,7 @@ import { KANBAN_DRAG_HINT, KANBAN_MOBILE_MOVE_HINT, countOpenKanbanTasks, sortKa
 import {
   buildKanbanTaskActivityMap,
   collectKanbanAssigneeOptions,
+  getDefaultKanbanHideClosed,
   matchesKanbanBoardFilters,
   type KanbanBoardFilters,
   type KanbanColumnSortMode,
@@ -60,7 +61,11 @@ export function PublicKanbanBoard({
   const [isCoarsePointer, setIsCoarsePointer] = useState(true);
   const [activeColumnId, setActiveColumnId] = useState(board.columns[0]?.id ?? "");
   const dragTaskIdRef = useRef<string | null>(null);
-  const [filters, setFilters] = useState<KanbanBoardFilters>({ priority: "all", assignee: "all" });
+  const [filters, setFilters] = useState<KanbanBoardFilters>(() => ({
+    priority: "all",
+    assignee: "all",
+    hideClosed: getDefaultKanbanHideClosed(),
+  }));
   const [sortMode, setSortMode] = useState<KanbanColumnSortMode>("position");
   const scrollerRef = useRef<HTMLDivElement>(null);
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
