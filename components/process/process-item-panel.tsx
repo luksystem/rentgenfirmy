@@ -412,7 +412,7 @@ export function ProcessItemPanel({
           ) : null}
 
           {item.kind === "kanban" && interactive && resolvedInstance ? (
-            <div className="flex min-h-0 min-w-0 w-full max-w-full flex-col overflow-x-hidden max-md:overflow-visible md:flex-1 md:overflow-hidden">
+            <div className="flex min-h-0 min-w-0 w-full max-w-full flex-col overflow-x-hidden max-md:overflow-visible md:flex-1">
               <ProcessKanbanBoard
                 projectProcessItemId={resolvedInstance.id}
                 templatePayload={

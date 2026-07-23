@@ -115,7 +115,7 @@ export default function KanbanHubBoardPage() {
       ) : null}
 
       {!loading && !error && boardEntry && processHydrated && templateItem ? (
-        <div className="flex min-w-0 flex-col rounded-2xl border border-border bg-surface p-4 md:min-h-0 md:flex-1 md:overflow-hidden">
+        <div className="flex min-w-0 flex-col rounded-2xl border border-border bg-surface p-4 md:flex-1">
           <ProcessKanbanBoard
             projectProcessItemId={boardEntry.projectProcessItemId}
             templatePayload={templatePayload}
