@@ -13,6 +13,8 @@ import { serviceIntakeDueAt, isServiceIntakeOverdue, isServiceIntakeInactive, is
 import { isChannelEnabled, isEmailAudienceEnabled } from "@/lib/email/notification-routing";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { sendPushToUser } from "@/lib/push/send-push";
+import { sendSms } from "@/lib/sms/sendSms";
+import { renderPlainTemplateString } from "@/lib/notifications/dispatch";
 import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
 import { resolveCompanyProfileDocumentServer } from "@/lib/supabase/company-profile-server";
 import { fetchEmailSettingsServer } from "@/lib/supabase/email-settings-server";
@@ -511,6 +513,13 @@ async function notifyServiceIntakeSubmitted(record: ServiceIntakeRecord) {
     await Promise.allSettled(sends);
   }
 
+  await notifyServiceIntakeClientSms({
+    actionId: "service_intake_submitted",
+    record,
+    settings,
+    threadUrl,
+  });
+
   await notifyServiceIntakeTeamPush({
     actionId: "service_intake_submitted",
     record,
@@ -518,6 +527,36 @@ async function notifyServiceIntakeSubmitted(record: ServiceIntakeRecord) {
     pushTitle: "Nowe zgłoszenie serwisowe",
     pushBody: `${record.referenceNumber} — ${record.contactFullName}.`,
   });
+}
+
+async function notifyServiceIntakeClientSms(input: {
+  actionId: "service_intake_submitted" | "service_intake_status";
+  record: ServiceIntakeRecord;
+  settings: Awaited<ReturnType<typeof fetchEmailSettingsServer>>;
+  threadUrl: string;
+  statusLabel?: string;
+}) {
+  const phone = input.record.contactPhone?.trim();
+  if (!phone || !isChannelEnabled(input.settings.routing, input.actionId, "sms")) {
+    return;
+  }
+  const template = input.settings.templates[input.actionId];
+  if (template.smsManagedElsewhere || !template.sms) {
+    return;
+  }
+  try {
+    const message = renderPlainTemplateString(template.sms, {
+      recipient_name: input.record.contactFullName,
+      reference_number: input.record.referenceNumber,
+      status_label: input.statusLabel ?? "",
+      thread_url: input.threadUrl,
+    });
+    if (message) {
+      await sendSms({ phone, message, metadata: { type: input.actionId } });
+    }
+  } catch (error) {
+    console.warn(`[${input.actionId}] sms failed:`, error);
+  }
 }
 
 async function notifyServiceIntakeTeamPush(input: {
@@ -627,6 +666,14 @@ async function notifyServiceIntakeStatusChange(record: ServiceIntakeRecord) {
   if (sends.length) {
     await Promise.allSettled(sends);
   }
+
+  await notifyServiceIntakeClientSms({
+    actionId: "service_intake_status",
+    record,
+    settings,
+    threadUrl,
+    statusLabel: SERVICE_INTAKE_STATUS_LABELS[record.status],
+  });
 
   await notifyServiceIntakeTeamPush({
     actionId: "service_intake_status",

@@ -9,6 +9,8 @@ import { fetchEmailSettingsServer } from "@/lib/supabase/email-settings-server";
 import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { formatDate } from "@/lib/utils";
+import { sendSms } from "@/lib/sms/sendSms";
+import { renderPlainTemplateString } from "@/lib/notifications/dispatch";
 
 const ACTION_ID = "warranty_expiring" as const;
 
@@ -29,8 +31,9 @@ export async function runWarrantyExpiringNotificationsServer() {
   const pushEnabled = isChannelEnabled(settings.routing, ACTION_ID, "push");
   const emailUserEnabled = isEmailAudienceEnabled(settings.routing, ACTION_ID, "user");
   const emailClientEnabled = isEmailAudienceEnabled(settings.routing, ACTION_ID, "client");
+  const smsEnabled = isChannelEnabled(settings.routing, ACTION_ID, "sms");
 
-  if (!pushEnabled && !emailUserEnabled && !emailClientEnabled) {
+  if (!pushEnabled && !emailUserEnabled && !emailClientEnabled && !smsEnabled) {
     return { scanned: 0, expiring: 0, notified: 0 };
   }
 
@@ -153,14 +156,15 @@ export async function runWarrantyExpiringNotificationsServer() {
       }
     }
 
-    if (emailClientEnabled && project.client_id) {
+    if ((emailClientEnabled || smsEnabled) && project.client_id) {
       const { data: clientRow } = await supabase
         .from("clients")
-        .select("email")
+        .select("email, phone")
         .eq("id", project.client_id)
         .maybeSingle();
+
       const clientEmail = (clientRow?.email as string | undefined)?.trim();
-      if (clientEmail) {
+      if (emailClientEnabled && clientEmail) {
         try {
           await sendTransactionalEmail({
             to: clientEmail,
@@ -175,6 +179,18 @@ export async function runWarrantyExpiringNotificationsServer() {
           });
         } catch (emailError) {
           console.warn("[warranty-expiring] email (client) failed:", emailError);
+        }
+      }
+
+      const clientPhone = (clientRow?.phone as string | undefined)?.trim();
+      if (smsEnabled && clientPhone && template.sms) {
+        try {
+          const message = renderPlainTemplateString(template.sms, variables);
+          if (message) {
+            await sendSms({ phone: clientPhone, message, metadata: { type: ACTION_ID } });
+          }
+        } catch (smsError) {
+          console.warn("[warranty-expiring] sms failed:", smsError);
         }
       }
     }
