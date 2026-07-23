@@ -25,7 +25,6 @@ const RENDER_WIDTH = 760;
 const MIN_ZOOM_WIDTH = 420;
 const MAX_ZOOM_WIDTH = 1500;
 const ZOOM_STEP = 140;
-const PEN_WIDTH = 3;
 const ERASER_WIDTH = 22;
 const DEFAULT_FONT_SIZE_RATIO = 0.022;
 const DEFAULT_SIGNATURE_WIDTH_RATIO = 0.22;
@@ -39,6 +38,13 @@ const PEN_COLORS = [
   { value: "#2563eb", label: "Niebieski" },
   { value: "#16a34a", label: "Zielony" },
   { value: "#ea580c", label: "Pomarańczowy" },
+];
+
+const PEN_WIDTHS = [
+  { value: 1.5, label: "Cienki" },
+  { value: 3, label: "Średni" },
+  { value: 5, label: "Gruby" },
+  { value: 8, label: "Bardzo gruby" },
 ];
 
 type TextEditorState = {
@@ -115,6 +121,8 @@ export function PdfPageAnnotator({
   const overlayDirtyRef = useRef(false);
   const itemsRef = useRef<ProtocolOverlayItem[]>(overlayItems);
   const dragStateRef = useRef<DragState | null>(null);
+  const skipNextRenderRef = useRef(false);
+  const lastRenderNavSignatureRef = useRef("");
 
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -128,6 +136,7 @@ export function PdfPageAnnotator({
   const [canvasCssSize, setCanvasCssSize] = useState({ width: RENDER_WIDTH, height: Math.round(RENDER_WIDTH * 1.414) });
   const [tool, setTool] = useState<Tool>("pen");
   const [penColor, setPenColor] = useState(PEN_COLORS[0].value);
+  const [penWidth, setPenWidth] = useState(PEN_WIDTHS[1].value);
   const [textEditor, setTextEditor] = useState<TextEditorState | null>(null);
   const [items, setItems] = useState<ProtocolOverlayItem[]>(overlayItems);
 
@@ -156,6 +165,10 @@ export function PdfPageAnnotator({
     const dataUrl = hasContentRef.current ? canvas.toDataURL("image/png") : null;
     setSaving(true);
     try {
+      // Zapis odświeży `annotationUrlsByPage` u rodzica (nowy podpisany URL tego samego pliku) —
+      // płótno już pokazuje dokładnie to, co właśnie zapisaliśmy, więc pomijamy zbędne
+      // przerysowanie strony, żeby uniknąć widocznego "odświeżenia"/przesunięcia po puszczeniu rysika.
+      skipNextRenderRef.current = true;
       await onSaveAnnotation(currentPageRef.current, dataUrl);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Nie udało się zapisać adnotacji.");
@@ -314,6 +327,18 @@ export function PdfPageAnnotator({
 
   useEffect(() => {
     if (numPages > 0) {
+      // `renderCurrentPage` też zmienia tożsamość, gdy zmieni się `annotationUrlsByPage` (np. echo
+      // naszego własnego zapisu z nowym podpisanym URL-em tego samego pliku) — w takim wypadku
+      // płótno ma już poprawną zawartość, więc pomijamy przerysowanie, chyba że realnie zmieniła
+      // się strona lub przybliżenie.
+      const navSignature = `${currentPage}:${zoomWidth}`;
+      const isRealNavigation = lastRenderNavSignatureRef.current !== navSignature;
+      lastRenderNavSignatureRef.current = navSignature;
+      if (!isRealNavigation && skipNextRenderRef.current) {
+        skipNextRenderRef.current = false;
+        return;
+      }
+      skipNextRenderRef.current = false;
       void renderCurrentPage();
     }
   }, [numPages, currentPage, renderCurrentPage]);
@@ -482,7 +507,7 @@ export function PdfPageAnnotator({
     drawingRef.current = true;
     ctx.globalCompositeOperation = tool === "eraser" ? "destination-out" : "source-over";
     ctx.strokeStyle = penColor;
-    ctx.lineWidth = (tool === "eraser" ? ERASER_WIDTH : PEN_WIDTH) * ratioRef.current;
+    ctx.lineWidth = (tool === "eraser" ? ERASER_WIDTH : penWidth) * ratioRef.current;
     const { x, y } = getPoint(event);
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -766,6 +791,33 @@ export function PdfPageAnnotator({
                   )}
                   style={{ backgroundColor: colorOption.value }}
                 />
+              ))}
+            </div>
+          ) : null}
+          {tool === "pen" ? (
+            <div className="flex items-center gap-1">
+              {PEN_WIDTHS.map((widthOption) => (
+                <button
+                  key={widthOption.value}
+                  type="button"
+                  title={widthOption.label}
+                  onClick={() => setPenWidth(widthOption.value)}
+                  className={cn(
+                    "flex h-7 w-7 items-center justify-center rounded-md border transition",
+                    penWidth === widthOption.value
+                      ? "border-foreground bg-surface-muted/40"
+                      : "border-border/50",
+                  )}
+                >
+                  <span
+                    className="rounded-full"
+                    style={{
+                      width: Math.round(widthOption.value * 2),
+                      height: Math.round(widthOption.value * 2),
+                      backgroundColor: penColor,
+                    }}
+                  />
+                </button>
               ))}
             </div>
           ) : null}
