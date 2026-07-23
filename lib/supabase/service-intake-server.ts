@@ -10,8 +10,10 @@ import {
   getServiceIntakeThreadUrl,
 } from "@/lib/service-intake/email-templates";
 import { serviceIntakeDueAt, isServiceIntakeOverdue, isServiceIntakeInactive, isServiceIntakeActive, isServiceIntakeAwaitingPickup } from "@/lib/service-intake/sla";
-import { isEmailAudienceEnabled } from "@/lib/email/notification-routing";
+import { isChannelEnabled, isEmailAudienceEnabled } from "@/lib/email/notification-routing";
 import { sendTransactionalEmail } from "@/lib/email/send";
+import { sendPushToUser } from "@/lib/push/send-push";
+import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
 import { resolveCompanyProfileDocumentServer } from "@/lib/supabase/company-profile-server";
 import { fetchEmailSettingsServer } from "@/lib/supabase/email-settings-server";
 import {
@@ -508,6 +510,77 @@ async function notifyServiceIntakeSubmitted(record: ServiceIntakeRecord) {
   if (sends.length) {
     await Promise.allSettled(sends);
   }
+
+  await notifyServiceIntakeTeamPush({
+    actionId: "service_intake_submitted",
+    record,
+    settings,
+    pushTitle: "Nowe zgłoszenie serwisowe",
+    pushBody: `${record.referenceNumber} — ${record.contactFullName}.`,
+  });
+}
+
+async function notifyServiceIntakeTeamPush(input: {
+  actionId: "service_intake_submitted" | "service_intake_status";
+  record: ServiceIntakeRecord;
+  settings: Awaited<ReturnType<typeof fetchEmailSettingsServer>>;
+  pushTitle: string;
+  pushBody: string;
+  sourceIdSuffix?: string;
+}) {
+  if (!isChannelEnabled(input.settings.routing, input.actionId, "push")) {
+    return;
+  }
+
+  const teamProfiles = await fetchTeamProfilesServer().catch(() => []);
+  if (!teamProfiles.length) {
+    return;
+  }
+
+  const sourceId = `${input.actionId}:${input.record.id}${input.sourceIdSuffix ? `:${input.sourceIdSuffix}` : ""}`;
+  const supabase = getSupabaseAdmin();
+  const { data: existing } = await supabase
+    .from("user_notifications")
+    .select("id")
+    .eq("source_id", sourceId)
+    .limit(1);
+
+  if ((existing ?? []).length > 0) {
+    return;
+  }
+
+  const linkUrl = "/oferty/zgloszenia";
+  const now = new Date().toISOString();
+  const rows = teamProfiles.map((profile) => ({
+    id: crypto.randomUUID(),
+    profile_id: profile.id,
+    kind: input.actionId,
+    title: input.pushTitle,
+    body: input.pushBody,
+    link_url: linkUrl,
+    source_id: sourceId,
+    created_at: now,
+  }));
+
+  const { error } = await supabase.from("user_notifications").insert(rows);
+  if (error && !error.message.toLowerCase().includes("user_notifications_kind_check")) {
+    console.warn(`[${input.actionId}] user_notifications insert:`, error.message);
+  }
+
+  await Promise.all(
+    teamProfiles.map(async (profile) => {
+      try {
+        await sendPushToUser(profile.id, {
+          title: input.pushTitle,
+          body: input.pushBody,
+          url: linkUrl,
+          tag: sourceId,
+        });
+      } catch {
+        // Brak VAPID / subskrypcji — pomijamy.
+      }
+    }),
+  );
 }
 
 async function notifyServiceIntakeStatusChange(record: ServiceIntakeRecord) {
@@ -554,6 +627,15 @@ async function notifyServiceIntakeStatusChange(record: ServiceIntakeRecord) {
   if (sends.length) {
     await Promise.allSettled(sends);
   }
+
+  await notifyServiceIntakeTeamPush({
+    actionId: "service_intake_status",
+    record,
+    settings,
+    pushTitle: "Zmiana statusu zgłoszenia",
+    pushBody: `${record.referenceNumber}: ${SERVICE_INTAKE_STATUS_LABELS[record.status]}.`,
+    sourceIdSuffix: record.status,
+  });
 }
 
 function resolveIntakePartyName(input: {

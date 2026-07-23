@@ -28,6 +28,9 @@ export const USER_NOTIFICATION_KINDS = [
   "change_request_client_responded",
   "offer_approval_requested",
   "offer_approval_reviewed",
+  "agreement_client_responded",
+  "service_intake_submitted",
+  "service_intake_status",
 ] as const;
 
 export const SALES_NOTIFICATION_KINDS = [

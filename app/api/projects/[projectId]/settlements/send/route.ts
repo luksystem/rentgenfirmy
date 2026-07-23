@@ -3,10 +3,12 @@ import { requireAuthenticatedProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
 import { buildClientOfferSummaries } from "@/lib/dashboard/client-offer-summary";
 import { buildSettlementReportEmail } from "@/lib/email/settlement-templates";
-import { isEmailAudienceEnabled } from "@/lib/email/notification-routing";
+import { isChannelEnabled, isEmailAudienceEnabled } from "@/lib/email/notification-routing";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { absoluteAppUrl } from "@/lib/messages/app-url";
+import { renderPlainTemplateString } from "@/lib/notifications/dispatch";
 import { formatPartyName } from "@/lib/party/display-name";
+import { sendSms } from "@/lib/sms/sendSms";
 import { buildSettlementOriginBreakdown } from "@/lib/settlements/origin-breakdown";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { fetchEmailSettingsServer } from "@/lib/supabase/email-settings-server";
@@ -30,11 +32,13 @@ export async function POST(request: Request, context: RouteContext) {
     };
 
     const settings = await fetchEmailSettingsServer();
-    if (!isEmailAudienceEnabled(settings.routing, "settlement_report", "client")) {
+    const emailEnabled = isEmailAudienceEnabled(settings.routing, "settlement_report", "client");
+    const smsEnabled = isChannelEnabled(settings.routing, "settlement_report", "sms");
+    if (!emailEnabled && !smsEnabled) {
       return NextResponse.json({
         skipped: true,
         message:
-          "Wysyłka raportu rozliczenia jest wyłączona w ustawieniach powiadomień e-mail (projekty → Raport rozliczenia).",
+          "Wysyłka raportu rozliczenia jest wyłączona w ustawieniach powiadomień (projekty → Raport rozliczenia).",
       });
     }
 
@@ -53,19 +57,19 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const clientId = (project as { client_id?: string | null }).client_id;
-    type ClientEmailRow = { first_name?: string; last_name?: string; email?: string };
+    type ClientEmailRow = { first_name?: string; last_name?: string; email?: string; phone?: string };
     let client: ClientEmailRow | null = null;
     if (clientId) {
       const { data } = await admin
         .from("clients")
-        .select("id, first_name, last_name, email")
+        .select("id, first_name, last_name, email, phone")
         .eq("id", clientId)
         .maybeSingle();
       client = (data as ClientEmailRow | null) ?? null;
     }
 
     const to = (body.to ?? client?.email ?? "").trim();
-    if (!to) {
+    if (emailEnabled && !to) {
       return NextResponse.json({ error: "Brak adresu e-mail klienta." }, { status: 400 });
     }
 
@@ -116,13 +120,35 @@ export async function POST(request: Request, context: RouteContext) {
       pendingItems,
     });
 
-    const result = await sendTransactionalEmail({
-      to,
-      subject: email.subject,
-      html: email.html,
-    });
+    let emailSkipped = false;
+    if (emailEnabled && to) {
+      const result = await sendTransactionalEmail({
+        to,
+        subject: email.subject,
+        html: email.html,
+      });
+      emailSkipped = Boolean(result.skipped);
+    }
 
-    if (result.skipped) {
+    if (smsEnabled && client?.phone?.trim() && body.publicUrl) {
+      try {
+        const message = renderPlainTemplateString(settings.templates.settlement_report.sms, {
+          project_name: projectName,
+          public_url: body.publicUrl,
+        });
+        if (message) {
+          await sendSms({
+            phone: client.phone.trim(),
+            message,
+            metadata: { type: "settlement_report", projectId },
+          });
+        }
+      } catch (smsError) {
+        console.warn("[settlement-report] sms failed:", smsError);
+      }
+    }
+
+    if (emailSkipped) {
       return NextResponse.json({
         skipped: true,
         message: "Brak konfiguracji RESEND_API_KEY — e-mail nie został wysłany.",

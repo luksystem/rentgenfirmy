@@ -32,6 +32,8 @@ export type NotificationScheduleDefaults = {
   notifyAtHour: number;
 };
 
+import type { EmailTemplateKind } from "@/lib/email/email-settings";
+
 export type NotificationActionDefinition = {
   id: string;
   label: string;
@@ -47,11 +49,8 @@ export type NotificationActionDefinition = {
   supportsSchedule?: boolean;
   /** Powiązanie z regułą SMS (sync enabled) */
   smsRuleId?: string;
-  /** Powiązanie z szablonem e-mail */
-  emailTemplateKind?:
-    | "agreement_delivery"
-    | "service_intake_submitted"
-    | "service_intake_status";
+  /** Powiązanie z szablonem e-mail/push/SMS w email_settings.templates */
+  emailTemplateKind: EmailTemplateKind;
   /** Domyślne wartości */
   defaults: {
     email: Partial<Record<NotificationAudience, boolean>>;
@@ -71,7 +70,7 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     category: "projekty",
     emailAudiences: ["client", "trade"],
     supportsPush: false,
-    supportsSms: false,
+    supportsSms: true,
     emailTemplateKind: "agreement_delivery",
     defaults: { email: { client: true, trade: true }, push: false, sms: false },
   },
@@ -83,6 +82,7 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     emailAudiences: ["user"],
     supportsPush: true,
     supportsSms: false,
+    emailTemplateKind: "agreement_client_responded",
     defaults: { email: { user: false }, push: true, sms: false },
   },
   {
@@ -115,6 +115,7 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     emailAudiences: ["client"],
     supportsPush: false,
     supportsSms: true,
+    emailTemplateKind: "client_offer_sent",
     defaults: { email: { client: true }, push: false, sms: false },
   },
   {
@@ -127,6 +128,7 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     supportsPush: true,
     supportsSms: true,
     supportsSchedule: true,
+    emailTemplateKind: "client_offer_expiring",
     defaults: {
       email: { client: true },
       push: true,
@@ -143,6 +145,7 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     emailAudiences: ["user"],
     supportsPush: true,
     supportsSms: false,
+    emailTemplateKind: "offer_approval_requested",
     defaults: { email: { user: true }, push: true, sms: false },
   },
   {
@@ -153,6 +156,7 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     emailAudiences: ["user"],
     supportsPush: true,
     supportsSms: false,
+    emailTemplateKind: "client_offer_accepted",
     defaults: { email: { user: false }, push: true, sms: false },
   },
   {
@@ -163,6 +167,7 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     emailAudiences: ["user"],
     supportsPush: true,
     supportsSms: false,
+    emailTemplateKind: "change_request_client_responded",
     defaults: { email: { user: true }, push: true, sms: false },
   },
   {
@@ -174,6 +179,7 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     supportsPush: false,
     supportsSms: true,
     smsRuleId: "client_created_welcome",
+    emailTemplateKind: "client_created",
     defaults: { email: { client: false }, push: false, sms: false },
   },
   {
@@ -185,6 +191,7 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     supportsPush: false,
     supportsSms: true,
     smsRuleId: "user_created_welcome",
+    emailTemplateKind: "user_created",
     defaults: { email: { user: false }, push: false, sms: false },
   },
   {
@@ -195,6 +202,7 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     emailAudiences: ["user"],
     supportsPush: true,
     supportsSms: true,
+    emailTemplateKind: "leave_request_created",
     defaults: { email: { user: false }, push: true, sms: false },
   },
   {
@@ -205,6 +213,7 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     emailAudiences: ["user"],
     supportsPush: true,
     supportsSms: true,
+    emailTemplateKind: "leave_request_decided",
     defaults: { email: { user: false }, push: true, sms: false },
   },
   {
@@ -215,6 +224,7 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     emailAudiences: ["user"],
     supportsPush: true,
     supportsSms: false,
+    emailTemplateKind: "work_item_assigned",
     defaults: { email: { user: false }, push: true, sms: false },
   },
   {
@@ -225,6 +235,7 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     emailAudiences: ["user"],
     supportsPush: true,
     supportsSms: false,
+    emailTemplateKind: "work_item_acceptance_needed",
     defaults: { email: { user: false }, push: true, sms: false },
   },
   {
@@ -235,6 +246,7 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     emailAudiences: ["user"],
     supportsPush: true,
     supportsSms: false,
+    emailTemplateKind: "goal_review_due",
     defaults: { email: { user: false }, push: true, sms: false },
   },
   {
@@ -245,6 +257,7 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     emailAudiences: ["user", "client"],
     supportsPush: true,
     supportsSms: false,
+    emailTemplateKind: "warranty_expiring",
     defaults: { email: { user: false, client: false }, push: true, sms: false },
   },
   {
@@ -255,7 +268,8 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     category: "projekty",
     emailAudiences: ["client"],
     supportsPush: false,
-    supportsSms: false,
+    supportsSms: true,
+    emailTemplateKind: "settlement_report",
     defaults: { email: { client: true }, push: false, sms: false },
   },
 ];

@@ -1,9 +1,16 @@
 import type { UserNotificationKind } from "@/lib/notifications/types";
+import { sendNotificationChannels } from "@/lib/notifications/dispatch";
 import { workItemLinkUrl } from "@/lib/my-work/types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 function workItemNotificationLink(workItemId: string) {
   return workItemLinkUrl(workItemId);
+}
+
+async function fetchProfileEmail(profileId: string): Promise<string | null> {
+  const supabase = getSupabaseAdmin();
+  const { data } = await supabase.from("profiles").select("email").eq("id", profileId).maybeSingle();
+  return (data?.email as string | undefined)?.trim() || null;
 }
 
 async function insertWorkItemNotification(input: {
@@ -41,6 +48,16 @@ export async function createWorkItemAssignedNotificationServer(input: {
     title: "Nowe zadanie przypisane",
     body: input.title,
     workItemId: input.workItemId,
+  });
+
+  const email = await fetchProfileEmail(input.recipientProfileId);
+  await sendNotificationChannels({
+    actionId: "work_item_assigned",
+    variables: { title: input.title },
+    emailRecipients: email ? [{ audience: "user", to: email }] : [],
+    pushUserIds: [input.recipientProfileId],
+    linkUrl: workItemNotificationLink(input.workItemId),
+    pushTag: `work_item_assigned:${input.workItemId}`,
   });
 }
 
@@ -87,6 +104,16 @@ export async function createWorkItemVerificationNeededNotificationServer(input: 
     title: `${input.employeeName} — zadanie do weryfikacji`,
     body: input.title,
     workItemId: input.workItemId,
+  });
+
+  const email = await fetchProfileEmail(input.recipientProfileId);
+  await sendNotificationChannels({
+    actionId: "work_item_acceptance_needed",
+    variables: { employee_name: input.employeeName, title: input.title },
+    emailRecipients: email ? [{ audience: "user", to: email }] : [],
+    pushUserIds: [input.recipientProfileId],
+    linkUrl: workItemNotificationLink(input.workItemId),
+    pushTag: `work_item_acceptance_needed:${input.workItemId}`,
   });
 }
 

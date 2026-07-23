@@ -9,7 +9,6 @@ import { Field, Input, Textarea } from "@/components/ui/input";
 import { MessageTemplateVariablesReference } from "@/components/settings/message-template-variables-reference";
 import type { SmsMessageRecord } from "@/lib/sms/types";
 import type { SmsRule, SmsRulesSettings } from "@/lib/sms/sms-rules";
-import type { LeaveNotificationsSettings } from "@/lib/leave/leave-settings";
 import { cn, formatDateTime } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -64,10 +63,6 @@ export function SmsSettingsView() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [leaveSettings, setLeaveSettings] = useState<LeaveNotificationsSettings | null>(null);
-  const [leaveSaving, setLeaveSaving] = useState(false);
-  const [leaveSaved, setLeaveSaved] = useState(false);
-
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("Test SMS z aplikacji Rentgen");
   const [result, setResult] = useState<string | null>(null);
@@ -109,49 +104,12 @@ export function SmsSettingsView() {
     }
   }, []);
 
-  const loadLeaveSettings = useCallback(async () => {
-    try {
-      const response = await fetch("/api/settings/leave-notifications", { credentials: "include" });
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Nie udało się wczytać ustawień SMS o urlopach.");
-      }
-      setLeaveSettings(payload.settings as LeaveNotificationsSettings);
-    } catch {
-      setLeaveSettings({ smsEnabled: false });
-    }
-  }, []);
-
   useEffect(() => {
     if (isAdministrator && !authLoading) {
       void loadSettings();
       void loadHistory();
-      void loadLeaveSettings();
     }
-  }, [authLoading, isAdministrator, loadHistory, loadLeaveSettings, loadSettings]);
-
-  async function handleToggleLeaveSms(checked: boolean) {
-    setLeaveSaving(true);
-    setLeaveSaved(false);
-    try {
-      const response = await fetch("/api/settings/leave-notifications", {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ settings: { smsEnabled: checked } }),
-      });
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Nie udało się zapisać ustawienia.");
-      }
-      setLeaveSettings(payload.settings as LeaveNotificationsSettings);
-      setLeaveSaved(true);
-    } catch (toggleError) {
-      setError(toggleError instanceof Error ? toggleError.message : "Błąd zapisu ustawienia SMS o urlopach.");
-    } finally {
-      setLeaveSaving(false);
-    }
-  }
+  }, [authLoading, isAdministrator, loadHistory, loadSettings]);
 
   function updateRule(index: number, next: SmsRule) {
     setSettings((current) =>
@@ -294,25 +252,13 @@ export function SmsSettingsView() {
           </div>
         </details>
 
-        <article className="grid gap-3 rounded-xl border border-border/80 bg-surface-muted/15 p-4">
-          <label className="flex items-start gap-3">
-            <input
-              type="checkbox"
-              checked={leaveSettings?.smsEnabled ?? false}
-              disabled={!leaveSettings || leaveSaving}
-              onChange={(event) => void handleToggleLeaveSms(event.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-border"
-            />
-            <span className="min-w-0 flex-1">
-              <span className="font-medium text-foreground">Wysyłki SMS — Moja praca / Dostępność (urlopy)</span>
-              <span className="mt-1 block text-sm text-muted">
-                Gdy włączone: przełożony (i administrator) otrzymuje SMS o nowej prośbie o urlop, a pracownik
-                otrzymuje SMS o akceptacji lub odrzuceniu jego wniosku.
-              </span>
-            </span>
-          </label>
-          {leaveSaved ? <p className="text-xs text-emerald-300">Zapisano.</p> : null}
-        </article>
+        <p className="text-sm text-muted">
+          SMS o wnioskach urlopowych (nowy wniosek / decyzja) włączasz teraz w{" "}
+          <a href="/ustawienia/email" className="text-accent underline">
+            Ustawieniach e-mail → tabela „Kiedy wysyłać”
+          </a>{" "}
+          — tam też edytujesz treść.
+        </p>
 
         <div className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5 text-accent" />

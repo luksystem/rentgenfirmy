@@ -4,10 +4,22 @@ import {
   NOTIFICATION_BODY_MAX_LENGTH,
   buildKanbanNewActivityRows,
 } from "@/lib/notifications/kanban-activity";
+import { sendNotificationChannels } from "@/lib/notifications/dispatch";
 import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { hasFullAppAccess } from "@/lib/auth/types";
 import { formatPeriodMonthLabel } from "@/lib/monthly-reviews/format";
+
+async function fetchProfileEmails(profileIds: string[]): Promise<string[]> {
+  if (!profileIds.length) {
+    return [];
+  }
+  const supabase = getSupabaseAdmin();
+  const { data } = await supabase.from("profiles").select("email").in("id", profileIds);
+  return (data ?? [])
+    .map((row) => (row.email as string | undefined)?.trim())
+    .filter((email): email is string => Boolean(email));
+}
 
 export async function createKanbanMentionNotificationsServer(input: {
   commentId: string;
@@ -148,6 +160,21 @@ export async function createLeaveRequestCreatedNotificationsServer(input: {
   if (error && !error.message.toLowerCase().includes("does not exist")) {
     throw new Error(error.message);
   }
+
+  const emails = await fetchProfileEmails(recipients);
+  await sendNotificationChannels({
+    actionId: "leave_request_created",
+    variables: {
+      employee_name: input.employeeName,
+      leave_type_name: input.leaveTypeName,
+      start_date: input.startDate,
+      end_date: input.endDate,
+    },
+    emailRecipients: emails.map((email) => ({ audience: "user", to: email })),
+    pushUserIds: recipients,
+    linkUrl: input.linkUrl ?? "/pracownicy/urlopy",
+    pushTag: `leave_request_created:${input.leaveRequestId}`,
+  });
 }
 
 /** Powiadomienie dla pracownika o decyzji (akceptacja/odrzucenie) w sprawie jego wniosku. */
@@ -184,6 +211,25 @@ export async function createLeaveRequestDecidedNotificationServer(input: {
   if (error && !error.message.toLowerCase().includes("does not exist")) {
     throw new Error(error.message);
   }
+
+  const decisionLabel = input.approved ? "Zaakceptowano" : "Odrzucono";
+  const [email] = await fetchProfileEmails([input.employeeProfileId]);
+  await sendNotificationChannels({
+    actionId: "leave_request_decided",
+    variables: {
+      decision_label: decisionLabel,
+      decision_label_lower: input.approved ? "zaakceptowany" : "odrzucony",
+      leave_type_name: input.leaveTypeName,
+      start_date: input.startDate,
+      end_date: input.endDate,
+      decision_note_line:
+        !input.approved && input.decisionNote?.trim() ? `\n\nPowód: ${input.decisionNote.trim()}` : "",
+    },
+    emailRecipients: email ? [{ audience: "user", to: email }] : [],
+    pushUserIds: [input.employeeProfileId],
+    linkUrl: input.linkUrl ?? "/moja-praca/dostepnosc",
+    pushTag: `leave_request_decided:${input.leaveRequestId}`,
+  });
 }
 
 /** Powiadomienie dla manager/admin, że pracownik złożył samoocenę miesięczną — można go ocenić. */

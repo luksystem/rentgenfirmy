@@ -1,7 +1,10 @@
 import { HttpError } from "@/lib/auth/http-error";
 import type { UserProfile } from "@/lib/auth/types";
+import { isChannelEnabled, isEmailAudienceEnabled } from "@/lib/email/notification-routing";
 import { buildOfferSendEmail } from "@/lib/email/service-offer-templates";
 import { sendTransactionalEmail } from "@/lib/email/send";
+import { renderPlainTemplateString } from "@/lib/notifications/dispatch";
+import { sendSms } from "@/lib/sms/sendSms";
 import { absoluteAppUrl } from "@/lib/messages/app-url";
 import {
   appendClientOfferHistory,
@@ -186,12 +189,34 @@ export async function sendOfferEmailServer(input: {
   assertCanSend(service, input.kind, input.actingProfile);
 
   const withToken = await ensureOfferToken(service, input.kind);
-  if (!withToken.client.email.trim()) {
-    throw new HttpError(400, "Brak adresu e-mail klienta.");
+  const settings = await fetchEmailSettingsServer();
+  const emailEnabled = isEmailAudienceEnabled(settings.routing, "client_offer_sent", "client");
+  const smsEnabled = isChannelEnabled(settings.routing, "client_offer_sent", "sms");
+
+  let result: { skipped?: boolean } = {};
+  if (emailEnabled) {
+    if (!withToken.client.email.trim()) {
+      throw new HttpError(400, "Brak adresu e-mail klienta.");
+    }
+    const email = await buildEmailForService(withToken, input.kind);
+    result = await sendTransactionalEmail({ to: email.to, subject: email.subject, html: email.html });
   }
 
-  const email = await buildEmailForService(withToken, input.kind);
-  const result = await sendTransactionalEmail({ to: email.to, subject: email.subject, html: email.html });
+  if (smsEnabled && withToken.client.phone.trim()) {
+    try {
+      const template = settings.templates.client_offer_sent;
+      const message = renderPlainTemplateString(template.sms, {
+        kind_label: input.kind === "settlement" ? "rozliczenie" : "wycenę",
+        offer_title: withToken.title,
+        offer_url: offerPublicUrl(withToken, input.kind),
+      });
+      if (message) {
+        await sendSms({ phone: withToken.client.phone.trim(), message, metadata: { type: "client_offer_sent" } });
+      }
+    } catch (smsError) {
+      console.warn("[client-offer-sent] sms failed:", smsError);
+    }
+  }
 
   const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();

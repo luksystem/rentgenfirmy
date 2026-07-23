@@ -1,7 +1,9 @@
+import { isChannelEnabled } from "@/lib/email/notification-routing";
+import { renderPlainTemplateString } from "@/lib/notifications/dispatch";
 import { sendSms } from "@/lib/sms/sendSms";
-import { fetchLeaveNotificationsSettingsServer } from "@/lib/supabase/leave-settings-server";
+import { fetchEmailSettingsServer } from "@/lib/supabase/email-settings-server";
 
-/** SMS do przełożonego o nowej prośbie o urlop — wysyłany tylko gdy checkbox w ustawieniach SMS jest włączony. */
+/** SMS do przełożonego o nowej prośbie o urlop — sterowany głównym przełącznikiem w /ustawienia/email. */
 export async function dispatchLeaveRequestCreatedSms(input: {
   supervisorPhone: string | null;
   employeeName: string;
@@ -9,12 +11,24 @@ export async function dispatchLeaveRequestCreatedSms(input: {
   startDate: string;
   endDate: string;
 }) {
-  const settings = await fetchLeaveNotificationsSettingsServer();
-  if (!settings.smsEnabled || !input.supervisorPhone?.trim()) {
+  if (!input.supervisorPhone?.trim()) {
     return;
   }
 
-  const message = `${input.employeeName} prosi o urlop (${input.leaveTypeName}): ${input.startDate} - ${input.endDate}. Zaloguj się do Rentgena, aby zaakceptować lub odrzucić.`;
+  const settings = await fetchEmailSettingsServer();
+  if (!isChannelEnabled(settings.routing, "leave_request_created", "sms")) {
+    return;
+  }
+
+  const message = renderPlainTemplateString(settings.templates.leave_request_created.sms, {
+    employee_name: input.employeeName,
+    leave_type_name: input.leaveTypeName,
+    start_date: input.startDate,
+    end_date: input.endDate,
+  });
+  if (!message) {
+    return;
+  }
 
   await sendSms({
     phone: input.supervisorPhone,
@@ -23,7 +37,7 @@ export async function dispatchLeaveRequestCreatedSms(input: {
   }).catch(() => undefined);
 }
 
-/** SMS do pracownika o decyzji w sprawie jego wniosku urlopowego. */
+/** SMS do pracownika o decyzji w sprawie jego wniosku urlopowego — sterowany głównym przełącznikiem. */
 export async function dispatchLeaveRequestDecidedSms(input: {
   employeePhone: string | null;
   approved: boolean;
@@ -31,14 +45,24 @@ export async function dispatchLeaveRequestDecidedSms(input: {
   startDate: string;
   endDate: string;
 }) {
-  const settings = await fetchLeaveNotificationsSettingsServer();
-  if (!settings.smsEnabled || !input.employeePhone?.trim()) {
+  if (!input.employeePhone?.trim()) {
     return;
   }
 
-  const message = input.approved
-    ? `Twój urlop (${input.leaveTypeName}, ${input.startDate} - ${input.endDate}) zostal zaakceptowany.`
-    : `Twój wniosek o urlop (${input.leaveTypeName}, ${input.startDate} - ${input.endDate}) zostal odrzucony.`;
+  const settings = await fetchEmailSettingsServer();
+  if (!isChannelEnabled(settings.routing, "leave_request_decided", "sms")) {
+    return;
+  }
+
+  const message = renderPlainTemplateString(settings.templates.leave_request_decided.sms, {
+    decision_label: input.approved ? "Zaakceptowano" : "Odrzucono",
+    leave_type_name: input.leaveTypeName,
+    start_date: input.startDate,
+    end_date: input.endDate,
+  });
+  if (!message) {
+    return;
+  }
 
   await sendSms({
     phone: input.employeePhone,

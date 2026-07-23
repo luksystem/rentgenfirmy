@@ -1,12 +1,8 @@
-// Ustawienia modułu "Moja praca" → Dostępność, trzymane w `app_settings` (jak reguły SMS) —
-// jeden checkbox włączający SMS o urlopach + metadane wzoru karty urlopowej PDF.
+// Metadane wzoru karty urlopowej PDF, trzymane w `app_settings`.
+// Ustawienie SMS o urlopach (kiedyś osobny checkbox tutaj) zostało scalone z głównym
+// przełącznikiem w /ustawienia/email — patrz lib/leave/leave-sms.ts.
 
-export const LEAVE_NOTIFICATIONS_SETTINGS_ID = "leave_notifications_settings";
 export const LEAVE_CARD_TEMPLATE_SETTINGS_ID = "leave_card_template_settings";
-
-export type LeaveNotificationsSettings = {
-  smsEnabled: boolean;
-};
 
 export type LeaveCardTemplateSettings = {
   path: string | null;
@@ -17,15 +13,6 @@ function asObject(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
-}
-
-export function defaultLeaveNotificationsSettings(): LeaveNotificationsSettings {
-  return { smsEnabled: false };
-}
-
-export function normalizeLeaveNotificationsSettings(value: unknown): LeaveNotificationsSettings {
-  const data = asObject(value);
-  return { smsEnabled: data.smsEnabled === true };
 }
 
 export function defaultLeaveCardTemplateSettings(): LeaveCardTemplateSettings {

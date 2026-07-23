@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
 import type { UserNotificationKind } from "@/lib/notifications/types";
+import { sendNotificationChannels } from "@/lib/notifications/dispatch";
 
 export async function createClientOfferAcceptedNotifications(input: {
   serviceId: string;
@@ -53,4 +54,24 @@ export async function createClientOfferAcceptedNotifications(input: {
   if (error && !error.message.toLowerCase().includes("user_notifications_kind_check")) {
     throw new Error(error.message);
   }
+
+  if (input.kind === "settlement") {
+    // Poza katalogiem powiadomień z ustawień (tylko client_offer_accepted jest w tabeli routingu).
+    return;
+  }
+
+  await sendNotificationChannels({
+    actionId: "client_offer_accepted",
+    variables: {
+      kind_label: "ofertę",
+      client_label: clientLabel,
+      reference_label: referenceLabel,
+    },
+    emailRecipients: profiles
+      .filter((profile) => profile.email.trim())
+      .map((profile) => ({ audience: "user" as const, to: profile.email.trim() })),
+    pushUserIds: profiles.map((profile) => profile.id),
+    linkUrl: `/oferty/${input.serviceId}`,
+    pushTag: sourceId,
+  });
 }

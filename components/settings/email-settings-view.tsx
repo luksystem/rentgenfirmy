@@ -11,17 +11,20 @@ import { normalizeCompanyProfile, type CompanyProfile } from "@/lib/company/comp
 import { buildAgreementDeliveryEmail } from "@/lib/email/agreement-templates";
 import {
   defaultEmailSettings,
-  EMAIL_TEMPLATE_KINDS,
   EMAIL_TEMPLATE_VARIABLES,
   type EmailSettings,
   type EmailTemplateKind,
+  type TemplateVariableChannel,
 } from "@/lib/email/email-settings";
+import { buildEmailShell } from "@/lib/email/layout";
 import {
+  getNotificationActionDefinition,
   groupNotificationActionsByCategory,
   NOTIFICATION_AUDIENCE_LABELS,
   type NotificationAudience,
   type NotificationRoutingRule,
 } from "@/lib/email/notification-routing";
+import { renderEmailSubject, renderEmailTemplateString } from "@/lib/email/template-render";
 import {
   buildServiceIntakeStatusEmail,
   buildServiceIntakeSubmittedEmail,
@@ -31,32 +34,73 @@ import { useAuthStore } from "@/store/auth-store";
 
 const ROUTING_GROUPS = groupNotificationActionsByCategory();
 
-function buildPreview(settings: EmailSettings, company: CompanyProfile | null, kind: EmailTemplateKind) {
-  const companyDoc = company ? resolveCompanyProfileDocument(company) : null;
+type PreviewChannel = "email" | "sms" | "push";
 
-  if (kind === "agreement_delivery") {
-    return buildAgreementDeliveryEmail({
-      recipientName: "Jan Kowalski",
-      projectName: "Przykładowy projekt",
-      intro: "Przesyłamy ustalenie projektowe oczekujące na Państwa akceptację.",
-      entries: [
-        {
-          title: "Zakres prac — etap 1",
-          body: "Przykładowa treść ustalenia widoczna w podglądzie.",
-          categoryLabel: "Zakres",
-          costLabel: "1 200 zł",
-          costNote: null,
-          protocols: ["E-mail"],
-          acceptUrl: "https://example.com/accept",
-          discussUrl: "https://example.com/discuss",
-        },
-      ],
-      settings,
-      company: companyDoc,
-    });
+function renderPlain(template: string, variables: Record<string, string>) {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => variables[key] ?? "").trim();
+}
+
+function buildSampleVariables(kind: EmailTemplateKind): Record<string, string> {
+  const sample: Record<string, string> = {};
+  for (const variable of EMAIL_TEMPLATE_VARIABLES[kind]) {
+    sample[variable.key] = variable.label;
+  }
+  return sample;
+}
+
+function buildPreview(
+  settings: EmailSettings,
+  company: CompanyProfile | null,
+  kind: EmailTemplateKind,
+  channel: PreviewChannel,
+) {
+  const companyDoc = company ? resolveCompanyProfileDocument(company) : null;
+  const template = settings.templates[kind];
+
+  if (channel === "email" && kind === "agreement_delivery") {
+    return {
+      subject: buildAgreementDeliveryEmail({
+        recipientName: "Jan Kowalski",
+        projectName: "Przykładowy projekt",
+        intro: "Przesyłamy ustalenie projektowe oczekujące na Państwa akceptację.",
+        entries: [
+          {
+            title: "Zakres prac — etap 1",
+            body: "Przykładowa treść ustalenia widoczna w podglądzie.",
+            categoryLabel: "Zakres",
+            costLabel: "1 200 zł",
+            costNote: null,
+            protocols: ["E-mail"],
+            acceptUrl: "https://example.com/accept",
+            discussUrl: "https://example.com/discuss",
+          },
+        ],
+        settings,
+        company: companyDoc,
+      }).subject,
+      html: buildAgreementDeliveryEmail({
+        recipientName: "Jan Kowalski",
+        projectName: "Przykładowy projekt",
+        intro: "Przesyłamy ustalenie projektowe oczekujące na Państwa akceptację.",
+        entries: [
+          {
+            title: "Zakres prac — etap 1",
+            body: "Przykładowa treść ustalenia widoczna w podglądzie.",
+            categoryLabel: "Zakres",
+            costLabel: "1 200 zł",
+            costNote: null,
+            protocols: ["E-mail"],
+            acceptUrl: "https://example.com/accept",
+            discussUrl: "https://example.com/discuss",
+          },
+        ],
+        settings,
+        company: companyDoc,
+      }).html,
+    };
   }
 
-  if (kind === "service_intake_submitted") {
+  if (channel === "email" && kind === "service_intake_submitted") {
     return buildServiceIntakeSubmittedEmail(
       {
         referenceNumber: "ZS-2026-001",
@@ -67,21 +111,50 @@ function buildPreview(settings: EmailSettings, company: CompanyProfile | null, k
     );
   }
 
-  return buildServiceIntakeStatusEmail(
-    {
-      referenceNumber: "ZS-2026-001",
-      contactFullName: "Anna Nowak",
-      statusLabel: "Rozliczanie",
-      threadUrl: "https://example.com/zgloszenie/watek/demo",
-      settlement: {
-        resolutionOutcome: "full",
-        resolutionCause: "Wymieniono uszkodzony moduł zasilania, usterka usunięta.",
-        extraCosts: true,
-        extraCostsNote: "Dojazd poza standardowym zakresem umowy — 120 PLN netto.",
+  if (channel === "email" && kind === "service_intake_status") {
+    return buildServiceIntakeStatusEmail(
+      {
+        referenceNumber: "ZS-2026-001",
+        contactFullName: "Anna Nowak",
+        statusLabel: "Rozliczanie",
+        threadUrl: "https://example.com/zgloszenie/watek/demo",
+        settlement: {
+          resolutionOutcome: "full",
+          resolutionCause: "Wymieniono uszkodzony moduł zasilania, usterka usunięta.",
+          extraCosts: true,
+          extraCostsNote: "Dojazd poza standardowym zakresem umowy — 120 PLN netto.",
+        },
       },
-    },
-    { settings, company: companyDoc },
-  );
+      { settings, company: companyDoc },
+    );
+  }
+
+  const sample = buildSampleVariables(kind);
+
+  if (channel === "email") {
+    return {
+      subject: renderEmailSubject(template.subject, sample),
+      html: buildEmailShell({
+        content: renderEmailTemplateString(template.body, sample),
+        eyebrow: template.eyebrow,
+        disclaimer: template.disclaimer,
+        brand: settings.brand,
+        company: companyDoc,
+      }),
+    };
+  }
+
+  if (channel === "sms") {
+    return { subject: "", html: null, plain: renderPlain(template.sms, sample) };
+  }
+
+  return {
+    subject: "",
+    html: null,
+    plain: [renderPlain(template.pushTitle, sample), renderPlain(template.pushBody, sample)]
+      .filter(Boolean)
+      .join("\n"),
+  };
 }
 
 export function EmailSettingsView() {
@@ -91,6 +164,7 @@ export function EmailSettingsView() {
   const [settings, setSettings] = useState<EmailSettings | null>(null);
   const [company, setCompany] = useState<CompanyProfile | null>(null);
   const [activeKind, setActiveKind] = useState<EmailTemplateKind>("agreement_delivery");
+  const [activeChannel, setActiveChannel] = useState<PreviewChannel>("email");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -133,8 +207,8 @@ export function EmailSettingsView() {
 
   const preview = useMemo(() => {
     if (!settings) return null;
-    return buildPreview(settings, company, activeKind);
-  }, [settings, company, activeKind]);
+    return buildPreview(settings, company, activeKind, activeChannel);
+  }, [settings, company, activeKind, activeChannel]);
 
   async function handleSave() {
     if (!settings) return;
@@ -226,7 +300,12 @@ export function EmailSettingsView() {
   }
 
   const activeTemplate = settings.templates[activeKind];
-  const variables = EMAIL_TEMPLATE_VARIABLES[activeKind];
+  const activeAction = getNotificationActionDefinition(activeKind);
+  const variables = EMAIL_TEMPLATE_VARIABLES[activeKind].filter(
+    (variable) =>
+      variable.channels.includes("all" as TemplateVariableChannel) ||
+      variable.channels.includes(activeChannel),
+  );
 
   return (
     <>
@@ -551,89 +630,209 @@ export function EmailSettingsView() {
           <div>
             <p className="font-medium text-foreground">Szablony treści</p>
             <p className="mt-1 text-sm text-muted">
-              Edytujesz subject i treść. Bloki dynamiczne (przyciski ustaleń, linki) wstawiasz
-              placeholderami.
+              Treść e-mail, SMS i push dla każdego zdarzenia — edytowalna tutaj, z placeholderami.
+              Bloki dynamiczne (przyciski ustaleń, linki) wstawiasz placeholderami.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {EMAIL_TEMPLATE_KINDS.map((kind) => (
-              <Button
-                key={kind}
-                type="button"
-                size="sm"
-                variant={activeKind === kind ? "secondary" : "outline"}
-                onClick={() => setActiveKind(kind)}
-              >
-                {settings.templates[kind].label}
-              </Button>
-            ))}
+          <div className="grid gap-2">
+            {ROUTING_GROUPS.map((group) => {
+              const isOpenGroup = group.actions.some((action) => action.id === activeKind);
+              return (
+                <details
+                  key={group.category}
+                  open={isOpenGroup}
+                  className="rounded-xl border border-border/70 bg-surface-muted/10"
+                >
+                  <summary className="cursor-pointer list-none px-4 py-2.5 marker:content-none [&::-webkit-details-marker]:hidden">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+                      {group.label}
+                    </span>
+                  </summary>
+                  <div className="flex flex-wrap gap-2 border-t border-border/60 px-4 py-3">
+                    {group.actions.map((action) => (
+                      <Button
+                        key={action.id}
+                        type="button"
+                        size="sm"
+                        variant={activeKind === action.id ? "secondary" : "outline"}
+                        onClick={() => setActiveKind(action.id as EmailTemplateKind)}
+                      >
+                        {action.label}
+                      </Button>
+                    ))}
+                  </div>
+                </details>
+              );
+            })}
           </div>
 
           <p className="text-sm text-muted">{activeTemplate.description}</p>
 
-          <Field label="Etykieta w nagłówku">
-            <Input
-              value={activeTemplate.eyebrow}
-              onChange={(event) => {
-                setSettings({
-                  ...settings,
-                  templates: {
-                    ...settings.templates,
-                    [activeKind]: { ...activeTemplate, eyebrow: event.target.value },
-                  },
-                });
-                setSaved(false);
-              }}
-            />
-          </Field>
-          <Field label="Temat (subject)">
-            <Input
-              value={activeTemplate.subject}
-              onChange={(event) => {
-                setSettings({
-                  ...settings,
-                  templates: {
-                    ...settings.templates,
-                    [activeKind]: { ...activeTemplate, subject: event.target.value },
-                  },
-                });
-                setSaved(false);
-              }}
-            />
-          </Field>
-          <Field label="Treść">
-            <Textarea
-              rows={8}
-              value={activeTemplate.body}
-              onChange={(event) => {
-                setSettings({
-                  ...settings,
-                  templates: {
-                    ...settings.templates,
-                    [activeKind]: { ...activeTemplate, body: event.target.value },
-                  },
-                });
-                setSaved(false);
-              }}
-            />
-          </Field>
-          <Field label="Disclaimer (pusty = ukryty)">
-            <Textarea
-              rows={3}
-              value={activeTemplate.disclaimer}
-              onChange={(event) => {
-                setSettings({
-                  ...settings,
-                  templates: {
-                    ...settings.templates,
-                    [activeKind]: { ...activeTemplate, disclaimer: event.target.value },
-                  },
-                });
-                setSaved(false);
-              }}
-            />
-          </Field>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={activeChannel === "email" ? "secondary" : "outline"}
+              onClick={() => setActiveChannel("email")}
+            >
+              E-mail
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={activeChannel === "sms" ? "secondary" : "outline"}
+              onClick={() => setActiveChannel("sms")}
+            >
+              SMS
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={activeChannel === "push" ? "secondary" : "outline"}
+              onClick={() => setActiveChannel("push")}
+            >
+              Push
+            </Button>
+          </div>
+
+          {activeChannel === "email" ? (
+            <>
+              <Field label="Etykieta w nagłówku">
+                <Input
+                  value={activeTemplate.eyebrow}
+                  onChange={(event) => {
+                    setSettings({
+                      ...settings,
+                      templates: {
+                        ...settings.templates,
+                        [activeKind]: { ...activeTemplate, eyebrow: event.target.value },
+                      },
+                    });
+                    setSaved(false);
+                  }}
+                />
+              </Field>
+              <Field label="Temat (subject)">
+                <Input
+                  value={activeTemplate.subject}
+                  onChange={(event) => {
+                    setSettings({
+                      ...settings,
+                      templates: {
+                        ...settings.templates,
+                        [activeKind]: { ...activeTemplate, subject: event.target.value },
+                      },
+                    });
+                    setSaved(false);
+                  }}
+                />
+              </Field>
+              <Field label="Treść">
+                <Textarea
+                  rows={8}
+                  value={activeTemplate.body}
+                  onChange={(event) => {
+                    setSettings({
+                      ...settings,
+                      templates: {
+                        ...settings.templates,
+                        [activeKind]: { ...activeTemplate, body: event.target.value },
+                      },
+                    });
+                    setSaved(false);
+                  }}
+                />
+              </Field>
+              <Field label="Disclaimer (pusty = ukryty)">
+                <Textarea
+                  rows={3}
+                  value={activeTemplate.disclaimer}
+                  onChange={(event) => {
+                    setSettings({
+                      ...settings,
+                      templates: {
+                        ...settings.templates,
+                        [activeKind]: { ...activeTemplate, disclaimer: event.target.value },
+                      },
+                    });
+                    setSaved(false);
+                  }}
+                />
+              </Field>
+            </>
+          ) : null}
+
+          {activeChannel === "sms" ? (
+            activeTemplate.smsManagedElsewhere ? (
+              <p className="text-sm text-muted">
+                Treść SMS dla tego zdarzenia edytujesz w{" "}
+                <a href="/ustawienia/sms" className="text-accent underline-offset-2 hover:underline">
+                  Wysyłki SMS
+                </a>
+                .
+              </p>
+            ) : !activeAction?.supportsSms ? (
+              <p className="text-sm text-muted">SMS niedostępny dla tego zdarzenia.</p>
+            ) : (
+              <Field label="Treść SMS">
+                <Textarea
+                  rows={4}
+                  value={activeTemplate.sms}
+                  onChange={(event) => {
+                    setSettings({
+                      ...settings,
+                      templates: {
+                        ...settings.templates,
+                        [activeKind]: { ...activeTemplate, sms: event.target.value },
+                      },
+                    });
+                    setSaved(false);
+                  }}
+                />
+              </Field>
+            )
+          ) : null}
+
+          {activeChannel === "push" ? (
+            !activeAction?.supportsPush ? (
+              <p className="text-sm text-muted">Push niedostępny dla tego zdarzenia.</p>
+            ) : (
+              <>
+                <Field label="Tytuł push">
+                  <Input
+                    value={activeTemplate.pushTitle}
+                    onChange={(event) => {
+                      setSettings({
+                        ...settings,
+                        templates: {
+                          ...settings.templates,
+                          [activeKind]: { ...activeTemplate, pushTitle: event.target.value },
+                        },
+                      });
+                      setSaved(false);
+                    }}
+                  />
+                </Field>
+                <Field label="Treść push">
+                  <Textarea
+                    rows={3}
+                    value={activeTemplate.pushBody}
+                    onChange={(event) => {
+                      setSettings({
+                        ...settings,
+                        templates: {
+                          ...settings.templates,
+                          [activeKind]: { ...activeTemplate, pushBody: event.target.value },
+                        },
+                      });
+                      setSaved(false);
+                    }}
+                  />
+                </Field>
+              </>
+            )
+          ) : null}
 
           <div className="rounded-lg border border-border/60 bg-surface-muted/20 p-3">
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
@@ -650,6 +849,9 @@ export function EmailSettingsView() {
                   {variable.html ? " (HTML)" : ""}
                 </code>
               ))}
+              {variables.length === 0 ? (
+                <span className="text-xs text-muted">Brak placeholderów dla tego kanału.</span>
+              ) : null}
             </div>
           </div>
 
@@ -672,17 +874,21 @@ export function EmailSettingsView() {
           <CardContent className="grid gap-3 py-5">
             <div>
               <p className="font-medium text-foreground">Podgląd</p>
-              <p className="mt-1 text-sm text-muted">
-                Subject: <span className="text-foreground">{preview.subject}</span>
-              </p>
+              {preview.subject ? (
+                <p className="mt-1 text-sm text-muted">
+                  Subject: <span className="text-foreground">{preview.subject}</span>
+                </p>
+              ) : null}
             </div>
-            <div className="overflow-hidden rounded-xl border border-border/60 bg-white">
-              <iframe
-                title="Podgląd e-mail"
-                className="h-[520px] w-full bg-white"
-                srcDoc={preview.html}
-              />
-            </div>
+            {preview.html ? (
+              <div className="overflow-hidden rounded-xl border border-border/60 bg-white">
+                <iframe title="Podgląd e-mail" className="h-[520px] w-full bg-white" srcDoc={preview.html} />
+              </div>
+            ) : (
+              <pre className="whitespace-pre-wrap rounded-xl border border-border/60 bg-surface-muted/20 p-4 text-sm text-foreground">
+                {preview.plain || "—"}
+              </pre>
+            )}
           </CardContent>
         </Card>
       ) : null}

@@ -3,14 +3,16 @@ import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-serve
 import type { UserNotificationKind } from "@/lib/notifications/types";
 import { sendNotificationChannels } from "@/lib/notifications/dispatch";
 
-const ACTION_ID = "change_request_client_responded" as const;
+const ACTION_ID = "agreement_client_responded" as const;
 
-export async function notifyTeamAboutChangeRequestDecision(input: {
-  changeRequestId: string;
+/** Powiadomienie zespołu po akceptacji/odrzuceniu ustalenia przez klienta. */
+export async function notifyTeamAboutAgreementResponse(input: {
+  agreementId: string;
   projectId: string;
   title: string;
   accepted: boolean;
   clientResponseName: string;
+  clientResponseNote?: string | null;
 }) {
   const teamProfiles = await fetchTeamProfilesServer().catch(() => []);
   if (!teamProfiles.length) {
@@ -18,7 +20,7 @@ export async function notifyTeamAboutChangeRequestDecision(input: {
   }
 
   const supabase = getSupabaseAdmin();
-  const sourceId = `change_request_client_responded:${input.changeRequestId}`;
+  const sourceId = `agreement_client_responded:${input.agreementId}`;
 
   const { data: existing } = await supabase
     .from("user_notifications")
@@ -39,19 +41,20 @@ export async function notifyTeamAboutChangeRequestDecision(input: {
   const clientId = (projectRow?.client_id as string | null) ?? null;
   const projectName = (projectRow?.name as string | undefined) ?? "Projekt";
   const linkUrl = clientId
-    ? `/przestrzenie/klient/${clientId}?project=${encodeURIComponent(input.projectId)}&tab=changes`
+    ? `/przestrzenie/klient/${clientId}?project=${encodeURIComponent(input.projectId)}&tab=agreements`
     : "/projekty";
 
-  const kind: UserNotificationKind = "change_request_client_responded";
-  const decision = input.accepted ? "zaakceptował" : "odrzucił";
+  const kind: UserNotificationKind = "agreement_client_responded";
+  const decisionLabel = input.accepted ? "Zaakceptowano" : "Odrzucono";
+  const decisionVerb = input.accepted ? "zaakceptował(a)" : "odrzucił(a)";
   const now = new Date().toISOString();
 
   const rows = teamProfiles.map((profile) => ({
     id: crypto.randomUUID(),
     profile_id: profile.id,
     kind,
-    title: `Klient ${decision} zmianę projektu`,
-    body: `${input.clientResponseName} — „${input.title}” w projekcie „${projectName}".`,
+    title: `${decisionLabel}: ${input.title}`,
+    body: `${input.clientResponseName} ${decisionVerb} ustalenie „${input.title}” w projekcie „${projectName}".`,
     link_url: linkUrl,
     source_id: sourceId,
     created_at: now,
@@ -65,10 +68,12 @@ export async function notifyTeamAboutChangeRequestDecision(input: {
   await sendNotificationChannels({
     actionId: ACTION_ID,
     variables: {
-      decision_verb: decision,
+      decision_label: decisionLabel,
+      decision_verb: decisionVerb,
       responder_name: input.clientResponseName,
-      title: input.title,
+      agreement_title: input.title,
       project_name: projectName,
+      response_note: input.clientResponseNote?.trim() ?? "",
     },
     emailRecipients: teamProfiles
       .filter((profile) => profile.email.trim())

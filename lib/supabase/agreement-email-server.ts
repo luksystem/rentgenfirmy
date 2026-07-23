@@ -3,8 +3,11 @@ import {
   agreementToEmailEntry,
   buildAgreementDeliveryEmail,
 } from "@/lib/email/agreement-templates";
-import { isEmailAudienceEnabled } from "@/lib/email/notification-routing";
+import { isChannelEnabled, isEmailAudienceEnabled } from "@/lib/email/notification-routing";
 import { sendTransactionalEmail } from "@/lib/email/send";
+import { renderPlainTemplateString } from "@/lib/notifications/dispatch";
+import { sendSms } from "@/lib/sms/sendSms";
+import { absoluteAppUrl } from "@/lib/messages/app-url";
 import { resolveCompanyProfileDocumentServer } from "@/lib/supabase/company-profile-server";
 import { fetchEmailSettingsServer } from "@/lib/supabase/email-settings-server";
 import type { AgreementApproverRole } from "@/lib/dashboard/agreement-collaboration-types";
@@ -137,12 +140,13 @@ async function fetchProjectContext(projectId: string) {
   }
 
   let clientEmail = "";
+  let clientPhone = "";
   let clientName = "Klient";
 
   if (project.client_id) {
     const { data: client, error: clientError } = await supabase
       .from("clients")
-      .select("first_name, last_name, email")
+      .select("first_name, last_name, email, phone")
       .eq("id", project.client_id)
       .maybeSingle();
 
@@ -151,6 +155,7 @@ async function fetchProjectContext(projectId: string) {
     }
 
     clientEmail = String(client?.email ?? "").trim();
+    clientPhone = String(client?.phone ?? "").trim();
     clientName =
       formatPartyName({
         firstName: String(client?.first_name ?? "").trim(),
@@ -199,6 +204,7 @@ async function fetchProjectContext(projectId: string) {
   return {
     projectName: String(project.name ?? "Projekt"),
     clientEmail,
+    clientPhone,
     clientName,
     projectTrades,
   };
@@ -397,6 +403,33 @@ export async function sendProjectAgreementEmails(input: {
     throw new Error(
       "Wysyłka e-mail nie jest skonfigurowana (brak RESEND_API_KEY). Użyj opcji „Otwórz w kliencie poczty”.",
     );
+  }
+
+  // SMS tylko do klienta (nie do branży) i tylko gdy chodzi o pojedyncze ustalenie — przy
+  // wysyłce wielu ustaleń naraz nie ma jednego, sensownego linku do podania w SMS.
+  if (
+    audience === "client" &&
+    entries.length === 1 &&
+    context.clientPhone.trim() &&
+    isChannelEnabled(settings.routing, "agreement_delivery", "sms")
+  ) {
+    try {
+      const agreement = agreements[0];
+      const message = renderPlainTemplateString(settings.templates.agreement_delivery.sms, {
+        agreement_title: agreement.title,
+        project_name: context.projectName,
+        offer_url: agreement.publicToken ? `${absoluteAppUrl(`/ustalenie/${agreement.publicToken}`)}` : "",
+      });
+      if (message) {
+        await sendSms({
+          phone: context.clientPhone.trim(),
+          message,
+          metadata: { type: "agreement_delivery", agreementId: agreement.id },
+        });
+      }
+    } catch (smsError) {
+      console.warn("[agreement-delivery] sms failed:", smsError);
+    }
   }
 
   return {

@@ -233,10 +233,31 @@ export async function respondToProjectAgreement(
     void import("@/lib/project-activity/touch-active").then(({ maybeActivateProjectFromActivity }) =>
       maybeActivateProjectFromActivity(bundle.agreement.projectId),
     );
+    void notifyAgreementResponse(bundle.agreement, input);
     return bundle.agreement;
   }
 
-  return respondToProjectAgreementLegacy(agreementId, input);
+  const agreement = await respondToProjectAgreementLegacy(agreementId, input);
+  void notifyAgreementResponse(agreement, input);
+  return agreement;
+}
+
+function notifyAgreementResponse(
+  agreement: { id: string; projectId: string; title: string },
+  input: { accepted: boolean; clientResponseName: string; clientResponseNote?: string },
+) {
+  return import("@/lib/notifications/agreement-response")
+    .then(({ notifyTeamAboutAgreementResponse }) =>
+      notifyTeamAboutAgreementResponse({
+        agreementId: agreement.id,
+        projectId: agreement.projectId,
+        title: agreement.title,
+        accepted: input.accepted,
+        clientResponseName: input.clientResponseName,
+        clientResponseNote: input.clientResponseNote,
+      }),
+    )
+    .catch(() => undefined);
 }
 
 async function respondToProjectAgreementLegacy(
