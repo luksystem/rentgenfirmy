@@ -3,6 +3,7 @@ import {
   statusAfterClientOfferAction,
   type ClientOfferAction,
 } from "@/lib/service/client-offer";
+import { serviceStatusAfterSettlementAction } from "@/lib/service/settlement-offer";
 import { isOfferExpired, resolveClientOfferExpiresAt } from "@/lib/service/offer-validity";
 import { appendClientOfferHistory } from "@/lib/service/client-offer-history";
 import { appendSettlementOfferHistory } from "@/lib/service/client-offer-history";
@@ -377,6 +378,7 @@ export async function respondToSettlementOffer(
 
   const serviceForSave: ServiceRecord = {
     ...service,
+    status: serviceStatusAfterSettlementAction(action),
     updatedAt: now,
     settlementOfferHistory: appendSettlementOfferHistory(service.settlementOfferHistory, {
       type: historyTypeForAction(action),

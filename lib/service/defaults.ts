@@ -56,6 +56,8 @@ function makeService(
     | "settlementOffer"
     | "settlementOfferHistory"
     | "settlementOfferAcceptedDocument"
+    | "estimateApproval"
+    | "settlementApproval"
     | "aiEstimate"
     | "optionalItems"
     | "intakeReference"
@@ -71,6 +73,8 @@ function makeService(
     settlementOffer?: ServiceRecord["settlementOffer"];
     settlementOfferHistory?: ServiceRecord["settlementOfferHistory"];
     settlementOfferAcceptedDocument?: ServiceRecord["settlementOfferAcceptedDocument"];
+    estimateApproval?: ServiceRecord["estimateApproval"];
+    settlementApproval?: ServiceRecord["settlementApproval"];
     aiEstimate?: ServiceRecord["aiEstimate"];
     optionalItems?: ServiceRecord["optionalItems"];
     intakeReference?: ServiceRecord["intakeReference"];
@@ -87,6 +91,13 @@ function makeService(
     respondedAt: null,
     lastClientMessage: null,
   };
+  const emptyApproval: ServiceRecord["estimateApproval"] = {
+    status: null,
+    requestedBy: null,
+    assignedAdminId: null,
+    note: "",
+    history: [],
+  };
 
   return {
     ...partial,
@@ -99,6 +110,8 @@ function makeService(
     settlementOffer: partial.settlementOffer ?? { ...emptyOffer },
     settlementOfferHistory: partial.settlementOfferHistory ?? [],
     settlementOfferAcceptedDocument: partial.settlementOfferAcceptedDocument ?? null,
+    estimateApproval: partial.estimateApproval ?? { ...emptyApproval },
+    settlementApproval: partial.settlementApproval ?? { ...emptyApproval },
     aiEstimate: partial.aiEstimate ?? null,
     intakeReference: partial.intakeReference ?? null,
     reviewedAt: partial.reviewedAt ?? null,
@@ -128,6 +141,8 @@ export function createSampleServices(): ServiceRecord[] {
       | "settlementOffer"
       | "settlementOfferHistory"
       | "settlementOfferAcceptedDocument"
+      | "estimateApproval"
+      | "settlementApproval"
     >
   > = [
     {

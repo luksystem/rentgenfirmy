@@ -9,11 +9,19 @@ function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+export function computeMaterialItemNetAmount(
+  item: Pick<ServiceMaterialItem, "netUnitPrice" | "quantity">,
+) {
+  return roundMoney(Math.max(0, item.netUnitPrice) * Math.max(0, item.quantity));
+}
+
 export function createMaterialItem(vatRate: VatRate = 23): ServiceMaterialItem {
   return {
     id: crypto.randomUUID(),
     title: "",
     description: "",
+    netUnitPrice: 0,
+    quantity: 1,
     netAmount: 0,
     vatRate,
     billable: true,
@@ -34,12 +42,28 @@ export function normalizeMaterialItems(value: unknown): ServiceMaterialItem[] {
       const row = entry as Record<string, unknown>;
       const vat = Number(row.vatRate);
       const id = typeof row.id === "string" && row.id.trim() ? row.id : crypto.randomUUID();
+      const legacyNetAmount = Math.max(
+        0,
+        Number.isFinite(Number(row.netAmount)) ? Number(row.netAmount) : 0,
+      );
+      // Stare rekordy nie mają quantity/netUnitPrice — traktujemy netAmount jako cenę
+      // jednostkową przy ilości 1, żeby istniejące dane nie zmieniły wartości.
+      const quantity = Math.max(
+        0,
+        Number.isFinite(Number(row.quantity)) ? Number(row.quantity) : 1,
+      );
+      const netUnitPrice = Math.max(
+        0,
+        Number.isFinite(Number(row.netUnitPrice)) ? Number(row.netUnitPrice) : legacyNetAmount,
+      );
 
       return {
         id,
         title: typeof row.title === "string" ? row.title : "",
         description: typeof row.description === "string" ? row.description : "",
-        netAmount: Math.max(0, Number.isFinite(Number(row.netAmount)) ? Number(row.netAmount) : 0),
+        netUnitPrice,
+        quantity,
+        netAmount: computeMaterialItemNetAmount({ netUnitPrice, quantity }),
         vatRate: (VAT_RATES as readonly number[]).includes(vat) ? (vat as VatRate) : 23,
         billable: row.billable !== false,
       } satisfies ServiceMaterialItem;
@@ -79,6 +103,8 @@ export function ensureMaterialItemsFromLegacyCost(items: ServiceLineItems): Serv
           id: crypto.randomUUID(),
           title: "Materiały",
           description: items.materialsNote,
+          netUnitPrice: items.materialsCost,
+          quantity: 1,
           netAmount: items.materialsCost,
           vatRate: 23,
           billable: items.billable.materials,

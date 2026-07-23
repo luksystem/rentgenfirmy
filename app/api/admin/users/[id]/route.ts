@@ -39,6 +39,7 @@ function parseUserInput(body: unknown): UserProfileInput | null {
     supervisorId: typeof data.supervisorId === "string" && data.supervisorId.trim() ? data.supervisorId : null,
     monthlyReviewEnabled:
       typeof data.monthlyReviewEnabled === "boolean" ? data.monthlyReviewEnabled : role !== "administrator",
+    offerApprovalBypass: data.offerApprovalBypass === true,
   };
 }
 

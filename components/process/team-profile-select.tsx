@@ -1,10 +1,14 @@
 "use client";
 
 import { Select } from "@/components/ui/input";
-import { STAFF_ROLES, USER_ROLE_LABELS, getUserDisplayName, type UserProfile } from "@/lib/auth/types";
+import {
+  STAFF_ROLES,
+  USER_ROLE_LABELS,
+  getUserDisplayName,
+  type UserProfile,
+  type UserRole,
+} from "@/lib/auth/types";
 import { profileToOptionLabel } from "@/lib/supabase/profile-repository";
-
-const TEAM_ROLES = STAFF_ROLES;
 
 export function teamProfileOptionLabel(profile: UserProfile) {
   return `${profileToOptionLabel(profile)} · ${USER_ROLE_LABELS[profile.role]}`;
@@ -16,14 +20,17 @@ export function TeamProfileSelect({
   teamProfiles,
   disabled,
   placeholder = "— wybierz osobę —",
+  roles = STAFF_ROLES,
 }: {
   value: string;
   onChange: (profileId: string, profile: UserProfile | null) => void;
   teamProfiles: UserProfile[];
   disabled?: boolean;
   placeholder?: string;
+  /** Ogranicza wybór do wskazanych ról (domyślnie wszystkie role wewnętrzne). */
+  roles?: readonly UserRole[];
 }) {
-  const grouped = TEAM_ROLES.map((role) => ({
+  const grouped = roles.map((role) => ({
     role,
     profiles: teamProfiles.filter((profile) => profile.role === role),
   })).filter((group) => group.profiles.length > 0);

@@ -26,6 +26,8 @@ export const USER_NOTIFICATION_KINDS = [
   "work_item_verification_needed",
   "work_item_takeover_requested",
   "change_request_client_responded",
+  "offer_approval_requested",
+  "offer_approval_reviewed",
 ] as const;
 
 export const SALES_NOTIFICATION_KINDS = [

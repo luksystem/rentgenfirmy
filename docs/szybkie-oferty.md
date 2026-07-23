@@ -84,7 +84,10 @@ Ręczna konwersja: przycisk „Stwórz klienta” na liście kontaktów (bez ofe
 | Zaplanowany | Klient zaakceptował wycenę |
 | W trakcie | Realizacja |
 | Do rozliczenia | Po pracach, przed finalnym rozliczeniem |
-| Rozliczony | Koszty rzeczywiste (`actual`) zatwierdzone w systemie |
+| Rozliczony | Koszty rzeczywiste (`actual`) zatwierdzone w systemie — jeszcze niewysłane do klienta |
+| Rozliczanie | Rozliczenie wysłane do klienta, czeka na jego decyzję |
+| Fakturowanie | Klient zaakceptował rozliczenie — do zafakturowania |
+| Zakończona | Ustawiane ręcznie po wpłacie |
 | Anulowany | Odrzucona przez klienta |
 
 ### Link publiczny dla klienta

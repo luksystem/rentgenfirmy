@@ -48,6 +48,7 @@ function parseUserInput(body: unknown): CreateUserBody | null {
     supervisorId: typeof data.supervisorId === "string" && data.supervisorId.trim() ? data.supervisorId : null,
     monthlyReviewEnabled:
       typeof data.monthlyReviewEnabled === "boolean" ? data.monthlyReviewEnabled : role !== "administrator",
+    offerApprovalBypass: data.offerApprovalBypass === true,
     password: typeof data.password === "string" ? data.password : undefined,
     sendInvite: data.sendInvite === true,
   };

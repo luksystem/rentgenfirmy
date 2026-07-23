@@ -39,6 +39,8 @@ export type UserProfile = {
   supervisorId: string | null;
   /** Czy pracownik uczestniczy w comiesięcznym cyklu samooceny / oceny przełożonego. */
   monthlyReviewEnabled: boolean;
+  /** Gdy true: może wysyłać wyceny/rozliczenia do klienta bez akceptacji administratora. */
+  offerApprovalBypass: boolean;
   /** Gdy true (domyślnie): dostęp do wszystkich projektów. Administrator zawsze ma pełny dostęp. */
   allProjectsAccess: boolean;
   /** Publiczny URL awatara (opcjonalnie). */
@@ -63,6 +65,7 @@ export type UserProfileInput = {
   isAvailableForPlanning?: boolean;
   supervisorId?: string | null;
   monthlyReviewEnabled?: boolean;
+  offerApprovalBypass?: boolean;
 };
 
 export const USER_ROLE_LABELS: Record<UserRole, string> = {

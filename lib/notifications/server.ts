@@ -221,3 +221,71 @@ export async function createMonthlyReviewSelfSubmittedNotificationServer(input: 
     throw new Error(insertError.message);
   }
 }
+
+const OFFER_KIND_LABELS = { estimate: "wycenę", settlement: "rozliczenie" } as const;
+
+/** Powiadomienie dla wskazanego administratora — pracownik prosi o akceptację przed wysyłką do klienta. */
+export async function createOfferApprovalRequestedNotificationServer(input: {
+  serviceId: string;
+  kind: "estimate" | "settlement";
+  requestedByName: string;
+  serviceTitle: string;
+  assignedAdminId: string;
+}) {
+  const supabase = getSupabaseAdmin();
+  const title = `${input.requestedByName} prosi o akceptację`;
+  const body = `${OFFER_KIND_LABELS[input.kind]} „${input.serviceTitle}” czeka na Twoją akceptację przed wysyłką do klienta.`;
+
+  const { error } = await supabase.from("user_notifications").insert({
+    id: crypto.randomUUID(),
+    profile_id: input.assignedAdminId,
+    kind: "offer_approval_requested" as UserNotificationKind,
+    title,
+    body,
+    link_url: `/oferty/${input.serviceId}`,
+    source_id: input.serviceId,
+    created_at: new Date().toISOString(),
+  });
+
+  if (error && !error.message.toLowerCase().includes("does not exist")) {
+    throw new Error(error.message);
+  }
+}
+
+/** Powiadomienie dla wnioskodawcy — administrator zaakceptował, zadał pytanie albo wysłał do klienta. */
+export async function createOfferApprovalReviewedNotificationServer(input: {
+  serviceId: string;
+  kind: "estimate" | "settlement";
+  requestedById: string;
+  serviceTitle: string;
+  outcome: "approved" | "question" | "sent";
+  note?: string;
+}) {
+  const supabase = getSupabaseAdmin();
+  const kindLabel = OFFER_KIND_LABELS[input.kind];
+  const title =
+    input.outcome === "approved"
+      ? `Zaakceptowano — możesz wysłać ${kindLabel}`
+      : input.outcome === "question"
+        ? `Pytanie do Twojej ${kindLabel === "wycenę" ? "wyceny" : "rozliczenia"}`
+        : `Wysłano ${kindLabel} do klienta`;
+  const bodyParts = [`„${input.serviceTitle}”.`];
+  if (input.outcome === "question" && input.note?.trim()) {
+    bodyParts.push(input.note.trim());
+  }
+
+  const { error } = await supabase.from("user_notifications").insert({
+    id: crypto.randomUUID(),
+    profile_id: input.requestedById,
+    kind: "offer_approval_reviewed" as UserNotificationKind,
+    title,
+    body: bodyParts.join(" "),
+    link_url: `/oferty/${input.serviceId}`,
+    source_id: input.serviceId,
+    created_at: new Date().toISOString(),
+  });
+
+  if (error && !error.message.toLowerCase().includes("does not exist")) {
+    throw new Error(error.message);
+  }
+}

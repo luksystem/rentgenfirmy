@@ -4,15 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import {
+  computeMaterialItemNetAmount,
   createMaterialItem,
 } from "@/lib/service/material-items";
 import { VAT_RATES, type ServiceMaterialItem, type VatRate } from "@/lib/service/types";
 import { cn, formatMoney } from "@/lib/utils";
 
 function materialItemAmounts(item: ServiceMaterialItem) {
-  const vatAmount = Math.round((item.netAmount * item.vatRate) / 100 * 100) / 100;
-  const grossAmount = Math.round((item.netAmount + vatAmount) * 100) / 100;
-  return { vatAmount, grossAmount };
+  const netAmount = computeMaterialItemNetAmount(item);
+  const vatAmount = Math.round((netAmount * item.vatRate) / 100 * 100) / 100;
+  const grossAmount = Math.round((netAmount + vatAmount) * 100) / 100;
+  return { netAmount, vatAmount, grossAmount };
+}
+
+function withRecomputedAmount(item: ServiceMaterialItem): ServiceMaterialItem {
+  return { ...item, netAmount: computeMaterialItemNetAmount(item) };
 }
 
 function MaterialItemCard({
@@ -28,7 +34,7 @@ function MaterialItemCard({
   onRemove: () => void;
   disabled?: boolean;
 }) {
-  const { vatAmount, grossAmount } = materialItemAmounts(item);
+  const { netAmount, vatAmount, grossAmount } = materialItemAmounts(item);
 
   return (
     <div className="grid gap-3 rounded-xl border border-border/80 bg-surface-muted/20 p-4">
@@ -56,12 +62,19 @@ function MaterialItemCard({
           rows={2}
         />
       </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Kwota netto (PLN)">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Field label="Cena jednostkowa netto (PLN)">
           <NumericInput
-            value={item.netAmount}
+            value={item.netUnitPrice}
             disabled={disabled}
-            onChange={(value) => onChange({ ...item, netAmount: value })}
+            onChange={(value) => onChange(withRecomputedAmount({ ...item, netUnitPrice: value }))}
+          />
+        </Field>
+        <Field label="Ilość">
+          <NumericInput
+            value={item.quantity}
+            disabled={disabled}
+            onChange={(value) => onChange(withRecomputedAmount({ ...item, quantity: value }))}
           />
         </Field>
         <Field label="Stawka VAT">
@@ -95,6 +108,8 @@ function MaterialItemCard({
       </label>
 
       <div className="rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-sm text-muted">
+        Netto: <span className="font-medium text-foreground">{formatMoney(netAmount)}</span>
+        <span className="mx-2 text-border">·</span>
         VAT: <span className="font-medium text-foreground">{formatMoney(vatAmount)}</span>
         <span className="mx-2 text-border">·</span>
         Brutto: <span className="font-semibold text-foreground">{formatMoney(grossAmount)}</span>

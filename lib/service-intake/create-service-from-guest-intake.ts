@@ -100,6 +100,8 @@ export async function createServiceFromGuestIntake(input: {
     },
     settlementOfferHistory: [],
     settlementOfferAcceptedDocument: null,
+    estimateApproval: { status: null, requestedBy: null, assignedAdminId: null, note: "", history: [] },
+    settlementApproval: { status: null, requestedBy: null, assignedAdminId: null, note: "", history: [] },
     aiEstimate: {
       ...input.aiEstimateRecord,
       appliedAt: now,

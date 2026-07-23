@@ -30,7 +30,22 @@ import {
 } from "@/lib/supabase/work-order-repository";
 import { useServiceStore } from "@/store/service-store";
 import { useWorkOrderStore } from "@/store/work-order-store";
+import { useAuthStore } from "@/store/auth-store";
 import { formatDate, formatMoney } from "@/lib/utils";
+import { canGenerateOrSendOffer } from "@/lib/service/offer-approval";
+import { OfferApprovalPanel } from "@/components/service/offer-approval-panel";
+import { OfferEmailPreviewDialog } from "@/components/service/offer-email-preview-dialog";
+
+type EmailPreview = { subject: string; html: string; to: string };
+
+async function postJson<T>(url: string): Promise<T> {
+  const response = await fetch(url, { method: "POST" });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error ?? "Nie udało się wykonać operacji.");
+  }
+  return data as T;
+}
 
 export function ClientOfferPanel({
   service,
@@ -44,6 +59,11 @@ export function ClientOfferPanel({
   const [linkedOrderId, setLinkedOrderId] = useState<string | null>(null);
   const [isCheckingOrder, setIsCheckingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const currentProfile = useAuthStore((state) => state.profile);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [preview, setPreview] = useState<EmailPreview | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
   const [canShare, setCanShare] = useState(false);
   const router = useRouter();
@@ -201,13 +221,65 @@ export function ClientOfferPanel({
     }
   }
 
-  const canGenerate = canGenerateClientOffer(service);
-  const canSend = canSendClientOffer(service);
+  async function handleOpenPreview() {
+    setPreviewError(null);
+    setPreview(null);
+    setPreviewOpen(true);
+    try {
+      const data = await postJson<EmailPreview & { service: ServiceRecord }>(
+        `/api/services/${service.id}/client-offer/preview-email`,
+      );
+      replaceService(data.service);
+      onServiceUpdated(data.service);
+      setPreview({ subject: data.subject, html: data.html, to: data.to });
+    } catch (loadError) {
+      setPreviewError(
+        loadError instanceof Error ? loadError.message : "Nie udało się przygotować podglądu.",
+      );
+    }
+  }
+
+  async function handleConfirmSend() {
+    setSending(true);
+    setPreviewError(null);
+    try {
+      const data = await postJson<{ service: ServiceRecord; emailSkipped: boolean }>(
+        `/api/services/${service.id}/client-offer/send`,
+      );
+      replaceService(data.service);
+      onServiceUpdated(data.service);
+      setPreviewOpen(false);
+      if (data.emailSkipped) {
+        setError("Brak konfiguracji RESEND_API_KEY — e-mail nie został wysłany.");
+      }
+    } catch (sendError) {
+      setPreviewError(sendError instanceof Error ? sendError.message : "Nie udało się wysłać maila.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const approvalOk = currentProfile ? canGenerateOrSendOffer(service.estimateApproval, currentProfile) : false;
+  const canGenerate = canGenerateClientOffer(service) && approvalOk;
+  const canSend = canSendClientOffer(service) && approvalOk;
   const offerActive = isClientOfferActive(service.clientOffer, service.status);
   const regenerationHint = getOfferRegenerationHint(service);
   const generateBlockReason = getClientOfferGenerateBlockReason(service);
 
   return (
+    <>
+    {currentProfile ? (
+      <OfferApprovalPanel
+        serviceId={service.id}
+        kind="estimate"
+        approval={service.estimateApproval}
+        currentProfile={currentProfile}
+        onServiceUpdated={(updated) => {
+          replaceService(updated);
+          onServiceUpdated(updated);
+        }}
+      />
+    ) : null}
     <Card className="border-accent/20 bg-accent-soft/20">
       <CardContent className="grid gap-3 py-5">
         <div>
@@ -280,8 +352,14 @@ export function ClientOfferPanel({
         {error ? <p className="text-sm text-rose-400">{error}</p> : null}
 
         <div className="flex flex-wrap gap-2">
+          {canSend && service.client.email.trim() ? (
+            <Button type="button" onClick={() => void handleOpenPreview()}>
+              Wyślij do klienta
+            </Button>
+          ) : null}
           <Button
             type="button"
+            variant={canSend ? "secondary" : "default"}
             disabled={!canGenerate || isGenerating}
             onClick={() => void handleGenerate()}
           >
@@ -326,11 +404,21 @@ export function ClientOfferPanel({
 
         {canSend ? (
           <p className="text-xs text-muted">
-            Wysyłka na razie ręczna: e-mail z programu pocztowego, udostępnianie na telefonie albo
-            wklejenie linku do SMS / WhatsApp. Automatyczna wysyłka z serwera może być dodana później.
+            „Wyślij do klienta” wysyła maila z serwera (z podglądem przed wysyłką). Pozostałe
+            przyciski to ręczna wysyłka: e-mail z programu pocztowego, udostępnianie na telefonie
+            albo wklejenie linku do SMS / WhatsApp.
           </p>
         ) : null}
       </CardContent>
     </Card>
+    <OfferEmailPreviewDialog
+      open={previewOpen}
+      onOpenChange={setPreviewOpen}
+      preview={preview}
+      sending={sending}
+      error={previewError}
+      onConfirmSend={() => void handleConfirmSend()}
+    />
+    </>
   );
 }

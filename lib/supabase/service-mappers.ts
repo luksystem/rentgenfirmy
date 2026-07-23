@@ -7,6 +7,12 @@ import { normalizeClientOfferHistory, normalizeSettlementOfferHistory } from "@/
 import { normalizeClientOfferAcceptedDocument } from "@/lib/service/client-offer-snapshot";
 import { normalizeFixedPriceTables } from "@/lib/service/fixed-price";
 import { normalizeOptionalItems } from "@/lib/service/optional-items";
+import {
+  normalizeOfferApprovalHistory,
+  OFFER_APPROVAL_STATUSES,
+  type OfferApprovalState,
+  type OfferApprovalStatus,
+} from "@/lib/service/offer-approval";
 import { normalizeLineItemsFromJson } from "@/lib/service/normalize-line-items";
 import {
   normalizeServiceAiEstimateRecord,
@@ -153,6 +159,35 @@ function normalizeSettlementOffer(row: ServiceRow): ServiceRecord["settlementOff
   };
 }
 
+function normalizeOfferApprovalStatus(value: unknown): OfferApprovalStatus | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  return OFFER_APPROVAL_STATUSES.includes(value as OfferApprovalStatus)
+    ? (value as OfferApprovalStatus)
+    : null;
+}
+
+function normalizeEstimateApproval(row: ServiceRow): OfferApprovalState {
+  return {
+    status: normalizeOfferApprovalStatus(row.estimate_approval_status),
+    requestedBy: row.estimate_approval_requested_by ?? null,
+    assignedAdminId: row.estimate_approval_assigned_admin_id ?? null,
+    note: row.estimate_approval_note ?? "",
+    history: normalizeOfferApprovalHistory(row.estimate_approval_history),
+  };
+}
+
+function normalizeSettlementApproval(row: ServiceRow): OfferApprovalState {
+  return {
+    status: normalizeOfferApprovalStatus(row.settlement_approval_status),
+    requestedBy: row.settlement_approval_requested_by ?? null,
+    assignedAdminId: row.settlement_approval_assigned_admin_id ?? null,
+    note: row.settlement_approval_note ?? "",
+    history: normalizeOfferApprovalHistory(row.settlement_approval_history),
+  };
+}
+
 function normalizeClientOffer(row: ServiceRow): ServiceRecord["clientOffer"] {
   return {
     token: row.client_offer_token ?? null,
@@ -203,6 +238,8 @@ export function rowToService(row: ServiceRow): ServiceRecord {
     settlementOfferAcceptedDocument: normalizeClientOfferAcceptedDocument(
       row.settlement_offer_accepted_document,
     ),
+    estimateApproval: normalizeEstimateApproval(row),
+    settlementApproval: normalizeSettlementApproval(row),
     intakeReference: row.intake_reference ?? null,
     reviewedAt: row.reviewed_at ?? null,
   };
@@ -249,6 +286,16 @@ export function serviceToInsert(service: ServiceRecord): ServiceInsert {
     settlement_offer_last_client_message: service.settlementOffer.lastClientMessage,
     settlement_offer_history: service.settlementOfferHistory,
     settlement_offer_accepted_document: service.settlementOfferAcceptedDocument,
+    estimate_approval_status: service.estimateApproval.status,
+    estimate_approval_requested_by: service.estimateApproval.requestedBy,
+    estimate_approval_assigned_admin_id: service.estimateApproval.assignedAdminId,
+    estimate_approval_note: service.estimateApproval.note,
+    estimate_approval_history: service.estimateApproval.history,
+    settlement_approval_status: service.settlementApproval.status,
+    settlement_approval_requested_by: service.settlementApproval.requestedBy,
+    settlement_approval_assigned_admin_id: service.settlementApproval.assignedAdminId,
+    settlement_approval_note: service.settlementApproval.note,
+    settlement_approval_history: service.settlementApproval.history,
     ai_estimate: service.aiEstimate ? serializeServiceAiEstimateRecord(service.aiEstimate) : null,
     intake_reference: service.intakeReference,
     reviewed_at: service.reviewedAt,

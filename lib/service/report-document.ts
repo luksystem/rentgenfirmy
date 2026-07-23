@@ -11,11 +11,26 @@ import type {
   ServiceDiscounts,
   ServiceLineItems,
   ServiceRecord,
+  ServiceStatus,
 } from "@/lib/service/types";
 import { formatMoney } from "@/lib/utils";
 
+/**
+ * Statusy od "Rozliczony" wzwyż — koszty rzeczywiste (`actual`) są już zatwierdzone i mają
+ * pierwszeństwo nad wyceną w raporcie/rozliczeniu. Rozliczenie zostaje w tym zbiorze przez cały
+ * cykl życia po rozliczeniu (wysłane, zaakceptowane, zafakturowane, zakończone), a odrzucenie /
+ * negocjacja przez klienta cofa status z powrotem do "Rozliczony" — więc nigdy nie wypada z tego
+ * zbioru, dopóki ktoś ręcznie nie cofnie na Wycena/Anulowany.
+ */
+const SETTLED_SERVICE_STATUSES = new Set<ServiceStatus>([
+  "Rozliczony",
+  "Rozliczanie",
+  "Fakturowanie",
+  "Zakończona",
+]);
+
 export function isServiceSettled(service: ServiceRecord): boolean {
-  return service.status === "Rozliczony";
+  return SETTLED_SERVICE_STATUSES.has(service.status);
 }
 
 export function shouldShowEstimateComparison(service: ServiceRecord) {

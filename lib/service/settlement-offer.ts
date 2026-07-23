@@ -1,7 +1,7 @@
-import type { ClientOfferStatus } from "@/lib/service/client-offer";
+import type { ClientOfferAction, ClientOfferStatus } from "@/lib/service/client-offer";
 import { isOfferExpired } from "@/lib/service/offer-validity";
 import { isServiceSettled } from "@/lib/service/report-document";
-import type { ServiceRecord } from "@/lib/service/types";
+import type { ServiceRecord, ServiceStatus } from "@/lib/service/types";
 
 export function canGenerateSettlementOffer(service: ServiceRecord) {
   return (
@@ -60,4 +60,12 @@ export function settlementStatusAfterClientAction(
   action: "accept" | "reject" | "negotiate",
 ): ClientOfferStatus {
   return action === "accept" ? "accepted" : action === "reject" ? "rejected" : "negotiation";
+}
+
+/**
+ * Status usługi po odpowiedzi klienta na rozliczenie: akceptacja przechodzi do fakturowania,
+ * odrzucenie/negocjacja wraca do "Rozliczony", żeby dało się poprawić i wysłać ponownie.
+ */
+export function serviceStatusAfterSettlementAction(action: ClientOfferAction): ServiceStatus {
+  return action === "accept" ? "Fakturowanie" : "Rozliczony";
 }

@@ -39,6 +39,7 @@ const emptyForm = (): UserFormState => ({
   isAvailableForPlanning: true,
   supervisorId: null,
   monthlyReviewEnabled: true,
+  offerApprovalBypass: false,
   password: "",
   sendInvite: false,
 });
@@ -58,6 +59,7 @@ function profileToForm(user: UserProfile): UserFormState {
     isAvailableForPlanning: user.isAvailableForPlanning,
     supervisorId: user.supervisorId,
     monthlyReviewEnabled: user.monthlyReviewEnabled,
+    offerApprovalBypass: user.offerApprovalBypass,
     password: "",
     sendInvite: false,
   };
@@ -575,6 +577,17 @@ export function UserAdminPanel() {
                   className="h-4 w-4 rounded border-border"
                 />
                 Uczestniczy w ocenach miesięcznych
+              </label>
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground/90">
+                <input
+                  type="checkbox"
+                  checked={form.offerApprovalBypass ?? false}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, offerApprovalBypass: event.target.checked }))
+                  }
+                  className="h-4 w-4 rounded border-border"
+                />
+                Może wysyłać wyceny/rozliczenia do klienta bez akceptacji administratora
               </label>
             </div>
 

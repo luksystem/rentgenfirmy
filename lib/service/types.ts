@@ -3,6 +3,7 @@ import type { ServiceAiEstimateRecord } from "@/lib/service/ai-estimate-types";
 import type { ClientOfferStatus } from "@/lib/service/client-offer";
 import type { ClientOfferAcceptedDocument } from "@/lib/service/client-offer-snapshot";
 import type { ClientOfferHistoryEntry } from "@/lib/service/client-offer-history";
+import type { OfferApprovalState } from "@/lib/service/offer-approval";
 
 export const SERVICE_TYPES = [
   "Gwarancyjny",
@@ -20,6 +21,9 @@ export const SERVICE_STATUSES = [
   "W trakcie",
   "Do rozliczenia",
   "Rozliczony",
+  "Rozliczanie",
+  "Fakturowanie",
+  "Zakończona",
   "Anulowany",
 ] as const;
 
@@ -61,6 +65,9 @@ export type ServiceMaterialItem = {
   id: string;
   title: string;
   description: string;
+  /** Cena jednostkowa netto — wartość pozycji (netAmount) to netUnitPrice * quantity. */
+  netUnitPrice: number;
+  quantity: number;
   netAmount: number;
   vatRate: VatRate;
   billable: boolean;
@@ -241,6 +248,8 @@ export type ServiceRecord = {
   };
   settlementOfferHistory: ClientOfferHistoryEntry[];
   settlementOfferAcceptedDocument: ClientOfferAcceptedDocument | null;
+  estimateApproval: OfferApprovalState;
+  settlementApproval: OfferApprovalState;
   aiEstimate: ServiceAiEstimateRecord | null;
   /** Numer zgłoszenia z formularza /zgloszenie — null dla ofert dodanych ręcznie. */
   intakeReference: string | null;

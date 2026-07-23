@@ -20,7 +20,22 @@ import { CLIENT_OFFER_STATUS_LABELS } from "@/lib/service/client-offer";
 import type { ServiceRecord } from "@/lib/service/types";
 import { generateSettlementOfferForService } from "@/lib/supabase/client-offer-repository";
 import { useServiceStore } from "@/store/service-store";
+import { useAuthStore } from "@/store/auth-store";
 import { formatDate, formatMoney } from "@/lib/utils";
+import { canGenerateOrSendOffer } from "@/lib/service/offer-approval";
+import { OfferApprovalPanel } from "@/components/service/offer-approval-panel";
+import { OfferEmailPreviewDialog } from "@/components/service/offer-email-preview-dialog";
+
+type EmailPreview = { subject: string; html: string; to: string };
+
+async function postJson<T>(url: string): Promise<T> {
+  const response = await fetch(url, { method: "POST" });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error ?? "Nie udało się wykonać operacji.");
+  }
+  return data as T;
+}
 
 export function SettlementOfferPanel({
   service,
@@ -34,6 +49,11 @@ export function SettlementOfferPanel({
   const [copied, setCopied] = useState(false);
   const [canShare, setCanShare] = useState(false);
   const replaceService = useServiceStore((state) => state.replaceService);
+  const currentProfile = useAuthStore((state) => state.profile);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [preview, setPreview] = useState<EmailPreview | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
   const offerUrl = useMemo(
     () => (service.settlementOffer.token ? getSettlementOfferUrl(service.settlementOffer.token) : null),
@@ -45,10 +65,51 @@ export function SettlementOfferPanel({
     [offerUrl, service],
   );
 
-  const canGenerate = canGenerateSettlementOffer(service);
-  const canSend = canSendSettlementOffer(service);
+  const approvalOk = currentProfile
+    ? canGenerateOrSendOffer(service.settlementApproval, currentProfile)
+    : false;
+  const canGenerate = canGenerateSettlementOffer(service) && approvalOk;
+  const canSend = canSendSettlementOffer(service) && approvalOk;
   const offerActive = isSettlementOfferActive(service);
   const generateBlockReason = getSettlementOfferGenerateBlockReason(service);
+
+  async function handleOpenPreview() {
+    setPreviewError(null);
+    setPreview(null);
+    setPreviewOpen(true);
+    try {
+      const data = await postJson<EmailPreview & { service: ServiceRecord }>(
+        `/api/services/${service.id}/settlement-offer/preview-email`,
+      );
+      replaceService(data.service);
+      onServiceUpdated(data.service);
+      setPreview({ subject: data.subject, html: data.html, to: data.to });
+    } catch (loadError) {
+      setPreviewError(
+        loadError instanceof Error ? loadError.message : "Nie udało się przygotować podglądu.",
+      );
+    }
+  }
+
+  async function handleConfirmSend() {
+    setSending(true);
+    setPreviewError(null);
+    try {
+      const data = await postJson<{ service: ServiceRecord; emailSkipped: boolean }>(
+        `/api/services/${service.id}/settlement-offer/send`,
+      );
+      replaceService(data.service);
+      onServiceUpdated(data.service);
+      setPreviewOpen(false);
+      if (data.emailSkipped) {
+        setError("Brak konfiguracji RESEND_API_KEY — e-mail nie został wysłany.");
+      }
+    } catch (sendError) {
+      setPreviewError(sendError instanceof Error ? sendError.message : "Nie udało się wysłać maila.");
+    } finally {
+      setSending(false);
+    }
+  }
 
   useEffect(() => {
     setCanShare(canShareClientOffer());
@@ -121,6 +182,19 @@ export function SettlementOfferPanel({
   }
 
   return (
+    <>
+    {currentProfile ? (
+      <OfferApprovalPanel
+        serviceId={service.id}
+        kind="settlement"
+        approval={service.settlementApproval}
+        currentProfile={currentProfile}
+        onServiceUpdated={(updated) => {
+          replaceService(updated);
+          onServiceUpdated(updated);
+        }}
+      />
+    ) : null}
     <Card className="border-sky-500/20 bg-sky-500/5">
       <CardContent className="grid gap-3 py-5">
         <div>
@@ -186,8 +260,14 @@ export function SettlementOfferPanel({
         {error ? <p className="text-sm text-rose-400">{error}</p> : null}
 
         <div className="flex flex-wrap gap-2">
+          {canSend && service.client.email.trim() ? (
+            <Button type="button" onClick={() => void handleOpenPreview()}>
+              Wyślij do klienta
+            </Button>
+          ) : null}
           <Button
             type="button"
+            variant={canSend ? "secondary" : "default"}
             disabled={!canGenerate || isGenerating}
             onClick={() => void handleGenerate()}
           >
@@ -217,10 +297,20 @@ export function SettlementOfferPanel({
         {canSend ? (
           <p className="text-xs text-muted">
             Link pokazuje koszty rzeczywiste po serwisie — klient może zaakceptować, odrzucić lub
-            poprosić o konsultację.
+            poprosić o konsultację. „Wyślij do klienta” wysyła maila z serwera (z podglądem przed
+            wysyłką) i zmienia status oferty na „Rozliczanie”.
           </p>
         ) : null}
       </CardContent>
     </Card>
+    <OfferEmailPreviewDialog
+      open={previewOpen}
+      onOpenChange={setPreviewOpen}
+      preview={preview}
+      sending={sending}
+      error={previewError}
+      onConfirmSend={() => void handleConfirmSend()}
+    />
+    </>
   );
 }
