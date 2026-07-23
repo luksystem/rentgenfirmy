@@ -104,6 +104,7 @@ export function PdfPageAnnotator({
   className,
 }: PdfPageAnnotatorProps) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const bgCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const pdfDocRef = useRef<PDFDocumentProxy | null>(null);
@@ -128,11 +129,10 @@ export function PdfPageAnnotator({
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingDoc, setLoadingDoc] = useState(true);
   const [renderingPage, setRenderingPage] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [savingOverlay, setSavingOverlay] = useState(false);
   const [isEmpty, setIsEmpty] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [zoomWidth, setZoomWidth] = useState(RENDER_WIDTH);
+  const [maxZoomWidth, setMaxZoomWidth] = useState(MAX_ZOOM_WIDTH);
   const [canvasCssSize, setCanvasCssSize] = useState({ width: RENDER_WIDTH, height: Math.round(RENDER_WIDTH * 1.414) });
   const [tool, setTool] = useState<Tool>("pen");
   const [penColor, setPenColor] = useState(PEN_COLORS[0].value);
@@ -163,17 +163,16 @@ export function PdfPageAnnotator({
     }
     dirtyRef.current = false;
     const dataUrl = hasContentRef.current ? canvas.toDataURL("image/png") : null;
-    setSaving(true);
     try {
       // Zapis odświeży `annotationUrlsByPage` u rodzica (nowy podpisany URL tego samego pliku) —
       // płótno już pokazuje dokładnie to, co właśnie zapisaliśmy, więc pomijamy zbędne
       // przerysowanie strony, żeby uniknąć widocznego "odświeżenia"/przesunięcia po puszczeniu rysika.
+      // Zapis dzieje się w tle — celowo bez widocznego wskaźnika "Zapisywanie…", żeby nie
+      // powodować przeskoku układu paska narzędzi.
       skipNextRenderRef.current = true;
       await onSaveAnnotation(currentPageRef.current, dataUrl);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Nie udało się zapisać adnotacji.");
-    } finally {
-      setSaving(false);
     }
   }, [onSaveAnnotation, readOnly]);
 
@@ -182,13 +181,10 @@ export function PdfPageAnnotator({
       return;
     }
     overlayDirtyRef.current = false;
-    setSavingOverlay(true);
     try {
       await onSaveOverlayItems(itemsRef.current);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Nie udało się zapisać elementów strony.");
-    } finally {
-      setSavingOverlay(false);
     }
   }, [onSaveOverlayItems, readOnly]);
 
@@ -260,6 +256,32 @@ export function PdfPageAnnotator({
       pdfDocRef.current = null;
     };
   }, [pdfUrl]);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    // Ogranicza maksymalne przybliżenie do faktycznie widocznej szerokości — w przeciwnym razie
+    // dokument mógłby się poszerzyć poza ekran, a płótno (touch-action: none) blokuje przewijanie
+    // dotykiem, więc nie dałoby się już wrócić do reszty strony.
+    const updateMax = (width: number) => {
+      setMaxZoomWidth(Math.max(MIN_ZOOM_WIDTH, Math.min(MAX_ZOOM_WIDTH, Math.floor(width))));
+    };
+    updateMax(container.clientWidth);
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      if (width) {
+        updateMax(width);
+      }
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    setZoomWidth((current) => Math.min(current, maxZoomWidth));
+  }, [maxZoomWidth]);
 
   const renderCurrentPage = useCallback(async () => {
     const pdf = pdfDocRef.current;
@@ -341,6 +363,7 @@ export function PdfPageAnnotator({
       skipNextRenderRef.current = false;
       void renderCurrentPage();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numPages, currentPage, renderCurrentPage]);
 
   async function goToPage(next: number) {
@@ -666,8 +689,8 @@ export function PdfPageAnnotator({
             type="button"
             size="sm"
             variant="outline"
-            disabled={zoomWidth >= MAX_ZOOM_WIDTH || renderingPage}
-            onClick={() => setZoomWidth((current) => Math.min(MAX_ZOOM_WIDTH, current + ZOOM_STEP))}
+            disabled={zoomWidth >= maxZoomWidth || renderingPage}
+            onClick={() => setZoomWidth((current) => Math.min(maxZoomWidth, current + ZOOM_STEP))}
             title="Powiększ"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -685,12 +708,6 @@ export function PdfPageAnnotator({
           ) : null}
         </div>
         <div className="flex items-center gap-2">
-          {saving || savingOverlay ? (
-            <span className="flex items-center gap-1 text-xs text-muted">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              Zapisywanie…
-            </span>
-          ) : null}
           {!readOnly ? (
             <Button type="button" size="sm" variant="outline" disabled={isEmpty} onClick={handleClearPage}>
               <Trash2 className="mr-1.5 h-3.5 w-3.5" />
@@ -826,7 +843,7 @@ export function PdfPageAnnotator({
 
       {error ? <p className="text-xs text-rose-400">{error}</p> : null}
 
-      <div className="overflow-x-auto">
+      <div ref={scrollContainerRef} className="overflow-x-auto">
         <div
           ref={wrapperRef}
           className="relative mx-auto overflow-hidden rounded-xl border-2 border-dashed border-border/70 bg-white"
