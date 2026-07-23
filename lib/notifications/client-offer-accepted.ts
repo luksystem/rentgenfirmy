@@ -1,7 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
 import type { UserNotificationKind } from "@/lib/notifications/types";
-import { sendNotificationChannels } from "@/lib/notifications/dispatch";
 
 export async function createClientOfferAcceptedNotifications(input: {
   serviceId: string;
@@ -60,6 +59,10 @@ export async function createClientOfferAcceptedNotifications(input: {
     return;
   }
 
+  // Dynamiczny import — dispatch.ts ciągnie web-push (moduły Node, np. `tls`), a ten plik jest
+  // też importowany z lib/supabase/client-offer-repository.ts, uzywanego w komponentach klienckich.
+  // Statyczny import wysypałby build przeglądarki ("Module not found: Can't resolve 'tls'").
+  const { sendNotificationChannels } = await import("@/lib/notifications/dispatch");
   await sendNotificationChannels({
     actionId: "client_offer_accepted",
     variables: {

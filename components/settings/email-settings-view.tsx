@@ -53,7 +53,7 @@ function buildPreview(
   company: CompanyProfile | null,
   kind: EmailTemplateKind,
   channel: PreviewChannel,
-) {
+): { subject: string; html: string | null; plain?: string } {
   const companyDoc = company ? resolveCompanyProfileDocument(company) : null;
   const template = settings.templates[kind];
 
