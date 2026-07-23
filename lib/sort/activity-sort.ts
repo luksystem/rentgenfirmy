@@ -4,7 +4,9 @@ import {
   isProjectWaiting,
   type FieldOptions,
 } from "@/lib/field-options";
+import { getClientLastViewedAt } from "@/lib/clients/client-recent-views";
 import type { Client } from "@/lib/service/types";
+import type { ClientRecentView } from "@/lib/supabase/client-recent-views-repository";
 import type { Project } from "@/lib/types";
 
 const collator = new Intl.Collator("pl", { sensitivity: "base" });
@@ -63,13 +65,18 @@ export function sortProjectsByActivity(projects: Project[], fieldOptions: FieldO
   });
 }
 
-export function getClientLastActivityAt(client: Client, projects: Project[]) {
+export function getClientLastActivityAt(
+  client: Client,
+  projects: Project[],
+  recentViews: ClientRecentView[] = [],
+) {
   const clientTimestamp = parseTimestamp(client.updatedAt);
   const projectTimestamps = projects
     .filter((project) => project.clientId === client.id)
     .map((project) => parseTimestamp(project.lastChangedAt));
+  const viewedTimestamp = getClientLastViewedAt(recentViews, client.id);
 
-  return Math.max(clientTimestamp, ...projectTimestamps, 0);
+  return Math.max(clientTimestamp, ...projectTimestamps, viewedTimestamp, 0);
 }
 
 export function getClientActivityTier(
@@ -88,9 +95,15 @@ export function getClientActivityTier(
   );
 }
 
-export function sortClientsByActivity(clients: Client[], projects: Project[]) {
+export function sortClientsByActivity(
+  clients: Client[],
+  projects: Project[],
+  recentViews: ClientRecentView[] = [],
+) {
   return [...clients].sort((left, right) => {
-    const timeDiff = getClientLastActivityAt(right, projects) - getClientLastActivityAt(left, projects);
+    const timeDiff =
+      getClientLastActivityAt(right, projects, recentViews) -
+      getClientLastActivityAt(left, projects, recentViews);
     if (timeDiff !== 0) {
       return timeDiff;
     }

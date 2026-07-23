@@ -11,6 +11,7 @@ import { formatPartyName } from "@/lib/party/display-name";
 import { isClientDashboardTab } from "@/lib/dashboard/client-dashboard-tabs";
 import { useAuthStore } from "@/store/auth-store";
 import { useAppStore } from "@/store/app-store";
+import { useClientRecentViewsStore } from "@/store/client-recent-views-store";
 import { useDashboardStore } from "@/store/dashboard-store";
 import { useProcessStore } from "@/store/process-store";
 
@@ -47,8 +48,16 @@ function ClientDashboardPageContent() {
   const displayName = useAuthStore((state) => state.displayName);
   const updateProjectWarrantySettings = useAppStore((state) => state.updateProjectWarrantySettings);
   const patchProjectFields = useAppStore((state) => state.patchProjectFields);
+  const recordClientView = useClientRecentViewsStore((state) => state.recordView);
 
   const client = clients.find((entry) => entry.id === clientId) ?? null;
+
+  useEffect(() => {
+    if (!client) {
+      return;
+    }
+    void recordClientView(client.id);
+  }, [client?.id, recordClientView]);
   const clientProjects = useMemo(
     () =>
       projects

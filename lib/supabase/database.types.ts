@@ -1600,6 +1600,26 @@ export type UserNavFavoriteInsert = {
   created_at?: string;
 };
 
+export type ClientRecentViewRow = {
+  user_id: string;
+  client_id: string;
+  view_count: number;
+  last_viewed_at: string | null;
+  pinned_at: string | null;
+  created_at: string;
+};
+
+export type ClientRecentViewInsert = {
+  user_id: string;
+  client_id: string;
+  view_count?: number;
+  last_viewed_at?: string | null;
+  pinned_at?: string | null;
+  created_at?: string;
+};
+
+export type ClientRecentViewUpdate = Partial<ClientRecentViewInsert>;
+
 export type UserOperationalRoleRow = {
   id: string;
   user_id: string;
@@ -2367,6 +2387,20 @@ export type Database = {
         Insert: ClientInsert;
         Update: ClientUpdate;
         Relationships: [];
+      };
+      client_recent_views: {
+        Row: ClientRecentViewRow;
+        Insert: ClientRecentViewInsert;
+        Update: ClientRecentViewUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "client_recent_views_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       contacts: {
         Row: ContactRow;
@@ -3424,6 +3458,10 @@ export type Database = {
       next_service_intake_reference_number: {
         Args: Record<string, never>;
         Returns: string;
+      };
+      record_client_view: {
+        Args: { p_client_id: string };
+        Returns: ClientRecentViewRow;
       };
     };
     Enums: Record<string, never>;

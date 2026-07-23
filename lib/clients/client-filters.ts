@@ -17,12 +17,14 @@ export type ClientListFilters = {
   nameQuery: string;
   addressQuery: string;
   projectFilter: ClientProjectFilter;
+  favoritesOnly: boolean;
 };
 
 export const EMPTY_CLIENT_LIST_FILTERS: ClientListFilters = {
   nameQuery: "",
   addressQuery: "",
   projectFilter: "all",
+  favoritesOnly: false,
 };
 
 export function buildClientIdsWithProject(projects: Project[]) {
@@ -40,6 +42,7 @@ export function countActiveClientListFilters(filters: ClientListFilters) {
   if (filters.nameQuery.trim()) count += 1;
   if (filters.addressQuery.trim()) count += 1;
   if (filters.projectFilter !== "all") count += 1;
+  if (filters.favoritesOnly) count += 1;
   return count;
 }
 
@@ -47,12 +50,16 @@ export function filterClients(
   clients: Client[],
   filters: ClientListFilters,
   projects: Project[] = [],
+  favoriteClientIds: Set<string> = new Set(),
 ) {
   const nameQuery = filters.nameQuery.trim().toLowerCase();
   const addressQuery = filters.addressQuery.trim().toLowerCase();
   const clientIdsWithProject = buildClientIdsWithProject(projects);
 
   return clients.filter((client) => {
+    if (filters.favoritesOnly && !favoriteClientIds.has(client.id)) {
+      return false;
+    }
     if (filters.projectFilter === "with_project" && !clientIdsWithProject.has(client.id)) {
       return false;
     }

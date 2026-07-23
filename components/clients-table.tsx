@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Edit, CalendarClock, LayoutDashboard, Plus, Trash2 } from "lucide-react";
+import { Edit, CalendarClock, LayoutDashboard, Plus, Star, Trash2 } from "lucide-react";
 import { ClientForm } from "@/components/client-form";
 import { InspectionPlanWizard } from "@/components/inspections/inspection-plan-wizard";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,15 @@ import { useAppStore } from "@/store/app-store";
 
 type DialogMode = "create" | "edit" | null;
 
-export function ClientsTable({ clients }: { clients: Client[] }) {
+export function ClientsTable({
+  clients,
+  favoriteClientIds,
+  onTogglePin,
+}: {
+  clients: Client[];
+  favoriteClientIds: Set<string>;
+  onTogglePin: (clientId: string) => void;
+}) {
   const router = useRouter();
   const addClient = useAppStore((state) => state.addClient);
   const updateClient = useAppStore((state) => state.updateClient);
@@ -124,6 +132,25 @@ export function ClientsTable({ clients }: { clients: Client[] }) {
                   >
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onTogglePin(client.id);
+                          }}
+                          title={
+                            favoriteClientIds.has(client.id)
+                              ? "Usuń z ulubionych"
+                              : "Dodaj do ulubionych"
+                          }
+                          className="text-muted transition hover:text-amber-400"
+                        >
+                          <Star
+                            className="h-4 w-4"
+                            fill={favoriteClientIds.has(client.id) ? "currentColor" : "none"}
+                            strokeWidth={2}
+                          />
+                        </button>
                         <span>{client.firstName || "—"}</span>
                         {!hasProjects ? (
                           <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 dark:text-amber-300">

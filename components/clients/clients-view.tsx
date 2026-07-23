@@ -1,9 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
-import { Activity, List, MapPin } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Activity, List, MapPin, Star } from "lucide-react";
 import { ClientsTable } from "@/components/clients-table";
+import { RecentClientsStrip } from "@/components/clients/recent-clients-strip";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
@@ -15,9 +16,14 @@ import {
   type ClientListFilters,
   type ClientProjectFilter,
 } from "@/lib/clients/client-filters";
+import {
+  getFavoriteClientIdSet,
+  getRecentlyOpenedClientIds,
+} from "@/lib/clients/client-recent-views";
 import { sortClientsByActivity } from "@/lib/sort/activity-sort";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
+import { useClientRecentViewsStore } from "@/store/client-recent-views-store";
 
 const ClientsMapView = dynamic(
   () => import("@/components/clients/clients-map-view").then((module) => module.ClientsMapView),
@@ -49,15 +55,25 @@ type ClientsViewMode = "list" | "map" | "health";
 export function ClientsView() {
   const allClients = useAppStore((state) => state.clients);
   const projects = useAppStore((state) => state.projects);
+  const recentViews = useClientRecentViewsStore((state) => state.views);
+  const hydrateRecentViews = useClientRecentViewsStore((state) => state.hydrate);
+  const togglePin = useClientRecentViewsStore((state) => state.togglePin);
   const [view, setView] = useState<ClientsViewMode>("list");
   const [mapMounted, setMapMounted] = useState(false);
   const [healthMounted, setHealthMounted] = useState(false);
   const [filters, setFilters] = useState<ClientListFilters>(EMPTY_CLIENT_LIST_FILTERS);
 
+  useEffect(() => {
+    void hydrateRecentViews();
+  }, [hydrateRecentViews]);
+
+  const favoriteClientIds = useMemo(() => getFavoriteClientIdSet(recentViews), [recentViews]);
+  const recentClientIds = useMemo(() => getRecentlyOpenedClientIds(recentViews), [recentViews]);
+
   const filteredClients = useMemo(() => {
-    const filtered = filterClients(allClients, filters, projects);
-    return sortClientsByActivity(filtered, projects);
-  }, [allClients, filters, projects]);
+    const filtered = filterClients(allClients, filters, projects, favoriteClientIds);
+    return sortClientsByActivity(filtered, projects, recentViews);
+  }, [allClients, filters, projects, favoriteClientIds, recentViews]);
 
   const activeFilterCount = countActiveClientListFilters(filters);
 
@@ -110,6 +126,8 @@ export function ClientsView() {
         </Button>
       </div>
 
+      <RecentClientsStrip clients={allClients} recentClientIds={recentClientIds} />
+
       <div className="mb-4 rounded-2xl border border-border/80 bg-surface p-4">
         <Input
           type="search"
@@ -151,6 +169,16 @@ export function ClientsView() {
                 </option>
               ))}
             </Select>
+            <Button
+              type="button"
+              size="sm"
+              variant={filters.favoritesOnly ? "default" : "outline"}
+              onClick={() => updateFilters({ favoritesOnly: !filters.favoritesOnly })}
+              className="justify-self-start"
+            >
+              <Star className="mr-2 h-4 w-4" fill={filters.favoritesOnly ? "currentColor" : "none"} />
+              Ulubieni
+            </Button>
           </div>
           <div className="grid gap-2 md:hidden">
             <Input
@@ -173,6 +201,16 @@ export function ClientsView() {
                 </option>
               ))}
             </Select>
+            <Button
+              type="button"
+              size="sm"
+              variant={filters.favoritesOnly ? "default" : "outline"}
+              onClick={() => updateFilters({ favoritesOnly: !filters.favoritesOnly })}
+              className="justify-self-start"
+            >
+              <Star className="mr-2 h-4 w-4" fill={filters.favoritesOnly ? "currentColor" : "none"} />
+              Ulubieni
+            </Button>
           </div>
         </MobileFiltersPanel>
         <p className="mt-2 text-sm text-muted">
@@ -181,12 +219,16 @@ export function ClientsView() {
           {" · "}
           {allClients.length} w bazie
           {" · "}
-          sortowanie: ostatnia zmiana klienta lub projektu
+          sortowanie: ostatnie otwarcie, zmiana klienta lub projektu
         </p>
       </div>
 
       <div className={view === "list" ? undefined : "hidden"}>
-        <ClientsTable clients={filteredClients} />
+        <ClientsTable
+          clients={filteredClients}
+          favoriteClientIds={favoriteClientIds}
+          onTogglePin={togglePin}
+        />
       </div>
 
       {mapMounted ? (
