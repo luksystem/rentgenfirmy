@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
-import { AlertTriangle, ChevronLeft, ChevronRight, Plus, Scissors, X } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Plus, Scissors, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
@@ -93,6 +93,7 @@ type GanttRowEntry =
 const ROW_LABEL_WIDTH_PX = 140;
 
 const ZOOM_OPTIONS: { key: GanttZoom; label: string }[] = [
+  { key: "week", label: "Tydzień" },
   { key: "month", label: "Miesiąc" },
   { key: "quarter", label: "Kwartał" },
   { key: "year", label: "Rok" },
@@ -130,7 +131,10 @@ export function ResourcePlanGantt() {
     [monthStart, periodEnd],
   );
   const days = useMemo(() => Array.from({ length: totalDays }, (_, index) => addDays(monthStart, index)), [monthStart, totalDays]);
-  const monthGroups = useMemo(() => (zoom === "month" ? [] : groupGanttDaysByMonth(days)), [zoom, days]);
+  const monthGroups = useMemo(
+    () => (zoom === "month" || zoom === "week" ? [] : groupGanttDaysByMonth(days)),
+    [zoom, days],
+  );
 
   const from = monthStart.toISOString();
   const to = useMemo(() => new Date(periodEnd.getTime() - 1).toISOString(), [periodEnd]);
@@ -581,7 +585,7 @@ export function ResourcePlanGantt() {
               >
                 {groupBy === "user" ? "Osoba" : groupBy === "team" ? "Zespół" : "Projekt"}
               </div>
-              {zoom === "month" ? (
+              {zoom === "month" || zoom === "week" ? (
                 <div className="flex">
                   {days.map((day) => {
                     const isToday = day.toDateString() === todayKey;
@@ -598,7 +602,14 @@ export function ResourcePlanGantt() {
                           isToday && "bg-accent/10 font-semibold text-accent",
                         )}
                       >
-                        {day.getDate()}
+                        {zoom === "week" ? (
+                          <>
+                            <div className="capitalize">{new Intl.DateTimeFormat("pl-PL", { weekday: "short" }).format(day)}</div>
+                            <div>{day.getDate()}</div>
+                          </>
+                        ) : (
+                          day.getDate()
+                        )}
                       </div>
                     );
                   })}
@@ -967,6 +978,7 @@ function GanttBlock({
         // (normalny stan bloku, żeby długa etykieta się nie rozlewała) byłby wyrenderowany, ale
         // wizualnie przycięty i niewidoczny. W trybie podziału potrzebny `overflow-visible`.
         splitArmed ? "overflow-visible ring-2 ring-dashed ring-accent" : "overflow-hidden",
+        item.inspectionId && !item.inspectionDateConfirmed && "border-dashed",
       )}
       style={{
         left,
@@ -1043,6 +1055,13 @@ function GanttBlock({
         </select>
         {hasWarning ? (
           <AlertTriangle className={cn("h-3 w-3 shrink-0", hasDanger ? "text-rose-400" : "text-amber-400")} />
+        ) : null}
+        {item.inspectionId ? (
+          <span title={item.inspectionDateConfirmed ? "Przegląd — data ustalona" : "Przegląd — data wstępna"}>
+            <ShieldCheck
+              className={cn("h-3 w-3 shrink-0", item.inspectionDateConfirmed ? "text-emerald-400" : "text-sky-400")}
+            />
+          </span>
         ) : null}
         <button
           type="button"

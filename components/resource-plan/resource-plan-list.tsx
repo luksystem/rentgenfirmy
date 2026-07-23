@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Pencil, Plus } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Pencil, Plus, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
@@ -299,6 +299,20 @@ export function ResourcePlanList() {
                   ) : null}
                   {team ? (
                     <span className="rounded-full bg-surface-muted px-2 py-1 text-xs text-muted">{team.name}</span>
+                  ) : null}
+                  {item.inspectionId ? (
+                    <span
+                      className={cn(
+                        "flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium",
+                        item.inspectionDateConfirmed
+                          ? "bg-emerald-500/15 text-emerald-300"
+                          : "bg-sky-500/15 text-sky-300",
+                      )}
+                      title={item.inspectionDateConfirmed ? "Przegląd — data ustalona" : "Przegląd — data wstępna"}
+                    >
+                      <ShieldCheck className="h-3 w-3" />
+                      {item.inspectionDateConfirmed ? "Przegląd · termin" : "Przegląd · wstępnie"}
+                    </span>
                   ) : null}
                   {warnings.length > 0 ? (
                     <span

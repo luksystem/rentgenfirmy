@@ -1763,6 +1763,10 @@ export type ResourcePlanItemRow = {
   process_stage_id: string | null;
   task_id: string | null;
   service_intake_request_id: string | null;
+  /** Powiązany przegląd (public.inspections) — patrz lib/inspections/resource-plan-sync.ts. */
+  inspection_id: string | null;
+  /** null = element nie pochodzi z przeglądu; false = data wstępna; true = data ustalona. */
+  inspection_date_confirmed: boolean | null;
   work_type_item_id: string | null;
   title: string;
   start_at: string;
@@ -1795,6 +1799,8 @@ export type ResourcePlanItemInsert = {
   process_stage_id?: string | null;
   task_id?: string | null;
   service_intake_request_id?: string | null;
+  inspection_id?: string | null;
+  inspection_date_confirmed?: boolean | null;
   work_type_item_id?: string | null;
   title?: string;
   start_at: string;

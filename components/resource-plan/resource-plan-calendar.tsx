@@ -232,8 +232,20 @@ export function ResourcePlanCalendar() {
                         title={[item.title || project?.name, assignee ? `${assignee.firstName} ${assignee.lastName}` : null]
                           .filter(Boolean)
                           .join(" · ")}
-                        className="flex items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-left text-[11px] font-medium"
-                        style={{ backgroundColor: `${status?.color ?? "#64748b"}22`, color: status?.color ?? "#94a3b8" }}
+                        className={cn(
+                          "flex items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-left text-[11px] font-medium",
+                          item.inspectionId && "border",
+                        )}
+                        style={{
+                          backgroundColor: `${status?.color ?? "#64748b"}22`,
+                          color: status?.color ?? "#94a3b8",
+                          borderStyle: item.inspectionId ? (item.inspectionDateConfirmed ? "solid" : "dashed") : undefined,
+                          borderColor: item.inspectionId
+                            ? item.inspectionDateConfirmed
+                              ? "#10b981"
+                              : "#38bdf8"
+                            : undefined,
+                        }}
                       >
                         <StatusIcon className="h-2.5 w-2.5 shrink-0" />
                         <span className="truncate">{item.title || project?.name || "Element planu"}</span>

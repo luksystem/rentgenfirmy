@@ -17,6 +17,7 @@ import type {
   InspectionStatus,
 } from "@/lib/inspections/types";
 import { INSPECTION_REACTION_EMOJIS, INSPECTION_STATUSES } from "@/lib/inspections/types";
+import { syncInspectionResourcePlanItem } from "@/lib/inspections/resource-plan-sync";
 import { mapProfileRow } from "@/lib/supabase/profile-mappers";
 import {
   rowToInspection,
@@ -338,6 +339,7 @@ export async function updateInspection(
   if (!updated) {
     throw new Error("Nie znaleziono przeglądu po aktualizacji.");
   }
+  await syncInspectionResourcePlanItem(supabase, updated).catch(() => undefined);
   return updated;
 }
 
@@ -462,6 +464,21 @@ export async function planInspectionsForClient(input: InspectionPlanInput) {
   const horizonMonths = input.horizonMonths ?? 12;
   const created: InspectionRecord[] = [];
 
+  const [{ data: client }, { data: project }] = await Promise.all([
+    supabase
+      .from("clients")
+      .select("first_name, last_name")
+      .eq("id", input.clientId)
+      .maybeSingle(),
+    input.projectId
+      ? supabase.from("projects").select("name").eq("id", input.projectId).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  const inspectionMeta = {
+    clientName: client ? formatPartyName({ firstName: client.first_name ?? "", lastName: client.last_name ?? "" }) : null,
+    projectName: project?.name ?? null,
+  };
+
   for (const system of input.systems) {
     const label = systemMap.get(system.systemCode) ?? system.systemCode.toUpperCase();
 
@@ -533,7 +550,9 @@ export async function planInspectionsForClient(input: InspectionPlanInput) {
         throw new Error(insertError.message);
       }
 
-      created.push(rowToInspection(inserted));
+      const record = rowToInspection(inserted, inspectionMeta);
+      created.push(record);
+      await syncInspectionResourcePlanItem(supabase, record).catch(() => undefined);
     }
   }
 

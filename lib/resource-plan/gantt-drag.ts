@@ -10,10 +10,11 @@ export const GANTT_MIN_DURATION_MS = 30 * 60_000;
 
 export type GanttDragMode = "move" | "resize-start" | "resize-end";
 
-export type GanttZoom = "month" | "quarter" | "year";
+export type GanttZoom = "week" | "month" | "quarter" | "year";
 
 /** Szerokość kolumny dnia w pikselach zależnie od poziomu przybliżenia. */
 export const GANTT_ZOOM_DAY_WIDTH_PX: Record<GanttZoom, number> = {
+  week: 90,
   month: GANTT_DAY_WIDTH_PX,
   quarter: 14,
   year: 5,
@@ -26,6 +27,7 @@ export const GANTT_ZOOM_DAY_WIDTH_PX: Record<GanttZoom, number> = {
  * miesięcznym.
  */
 export const GANTT_ZOOM_SNAP_DAYS: Record<GanttZoom, number> = {
+  week: 1,
   month: 1,
   quarter: 7,
   year: 30,
@@ -34,6 +36,17 @@ export const GANTT_ZOOM_SNAP_DAYS: Record<GanttZoom, number> = {
 /** Zakres dat (początek/koniec, wyłącznie) dla danego poziomu zoomu i przesunięcia okresu. */
 export function getGanttPeriodRange(zoom: GanttZoom, periodOffset: number): { start: Date; end: Date } {
   const now = new Date();
+  if (zoom === "week") {
+    const dayOfWeek = (now.getDay() + 6) % 7; // poniedziałek = 0
+    const currentWeekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
+    const start = new Date(
+      currentWeekStart.getFullYear(),
+      currentWeekStart.getMonth(),
+      currentWeekStart.getDate() + periodOffset * 7,
+    );
+    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7);
+    return { start, end };
+  }
   if (zoom === "month") {
     const start = new Date(now.getFullYear(), now.getMonth() + periodOffset, 1);
     const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
@@ -52,6 +65,15 @@ export function getGanttPeriodRange(zoom: GanttZoom, periodOffset: number): { st
 
 /** Etykieta bieżącego okresu do wyświetlenia w nawigacji nad Ganttem. */
 export function formatGanttPeriodLabel(zoom: GanttZoom, start: Date): string {
+  if (zoom === "week") {
+    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+    const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
+    const endLabel = new Intl.DateTimeFormat("pl-PL", { day: "numeric", month: "long", year: "numeric" }).format(end);
+    const startLabel = new Intl.DateTimeFormat("pl-PL", sameMonth ? { day: "numeric" } : { day: "numeric", month: "long" }).format(
+      start,
+    );
+    return `${startLabel} – ${endLabel}`;
+  }
   if (zoom === "month") {
     return new Intl.DateTimeFormat("pl-PL", { month: "long", year: "numeric" }).format(start);
   }

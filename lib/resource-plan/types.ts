@@ -26,6 +26,10 @@ export type ResourcePlanItem = {
   processStageId: string | null;
   taskId: string | null;
   serviceIntakeRequestId: string | null;
+  /** Powiązany przegląd (lib/inspections) — patrz lib/inspections/resource-plan-sync.ts. */
+  inspectionId: string | null;
+  /** null = element nie pochodzi z przeglądu; false = data wstępna; true = data ustalona. */
+  inspectionDateConfirmed: boolean | null;
   workTypeItemId: string | null;
   title: string;
   startAt: string;
@@ -63,6 +67,8 @@ export type ResourcePlanItemInput = {
   processStageId: string | null;
   taskId: string | null;
   serviceIntakeRequestId: string | null;
+  inspectionId: string | null;
+  inspectionDateConfirmed: boolean | null;
   workTypeItemId: string | null;
   title: string;
   startAt: string;
@@ -101,6 +107,8 @@ export function resourcePlanItemToInput(item: ResourcePlanItem): ResourcePlanIte
     processStageId: item.processStageId,
     taskId: item.taskId,
     serviceIntakeRequestId: item.serviceIntakeRequestId,
+    inspectionId: item.inspectionId,
+    inspectionDateConfirmed: item.inspectionDateConfirmed,
     workTypeItemId: item.workTypeItemId,
     title: item.title,
     startAt: item.startAt,
