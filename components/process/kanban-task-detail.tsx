@@ -790,7 +790,7 @@ export function KanbanTaskDetailModal({
           <DialogTitle className="text-lg font-semibold text-foreground">Zamknąć zgłoszenie?</DialogTitle>
           {lastColumn ? (
             <p className="mt-2 text-sm text-muted">
-              Czy przenieść je też do kolumny „{lastColumn.title}"?
+              Czy przenieść je też do kolumny „{lastColumn.title}”?
             </p>
           ) : null}
           {error ? <p className="mt-2 text-sm text-rose-400">{error}</p> : null}
