@@ -307,6 +307,41 @@ export function buildSettlementSummary(entries: ProjectSettlementEntry[]): Proje
   };
 }
 
+export type SettlementChargeSourceBreakdown = {
+  contractNet: number;
+  extraNet: number;
+  otherNet: number;
+};
+
+/** Rozbicie kwoty "Do zapłaty" wg pochodzenia — umowa główna vs zmiany/oferty vs inne (bez alokacji wpłat). */
+export function buildSettlementChargeSourceBreakdown(
+  entries: ProjectSettlementEntry[],
+): SettlementChargeSourceBreakdown {
+  let contractNet = 0;
+  let extraNet = 0;
+  let otherNet = 0;
+
+  for (const entry of entries) {
+    if (entry.kind !== "charge") {
+      continue;
+    }
+    if (entry.source === "contract") {
+      contractNet += entry.amountNet;
+    } else if (entry.source === "change_request" || entry.source === "offer") {
+      extraNet += entry.amountNet;
+    } else {
+      otherNet += entry.amountNet;
+    }
+  }
+
+  const round = (value: number) => Math.round(value * 100) / 100;
+  return {
+    contractNet: round(contractNet),
+    extraNet: round(extraNet),
+    otherNet: round(otherNet),
+  };
+}
+
 export function emptyBillingSettings(projectId: string): ProjectBillingSettings {
   const now = new Date().toISOString();
   return {

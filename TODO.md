@@ -75,6 +75,18 @@ Na razie **administrator** i **manager** mają pełny dostęp do aplikacji. Role
 - [x] Dodawanie checklist, protokołów odbioru, rozliczeń
 - [ ] Przypisanie domyślnej osoby odpowiedzialnej per element szablonu
 
+### [ ] Dojazd liczony po trasie (routing), nie w linii prostej
+
+Obecnie odległość do klienta (`lib/service/travel-context.ts` → `resolveOneWayDistanceKm`) liczy się jako linia prosta (haversine) między współrzędnymi z geokodowania adresu firmy i klienta (`lib/service/geocode-server.ts`, Nominatim/OpenStreetMap — bez klucza API). To zaniża realny dystans drogowy o ok. 10–20%.
+
+**Do zrobienia:**
+
+- [ ] Dodać wywołanie serwisu routingu zamiast/obok haversine — kandydaci: **OSRM** (darmowy, bez klucza, publiczny serwer demo — najprostszy upgrade w tym samym duchu co obecne rozwiązanie) albo **Google Distance Matrix API** (dokładniejszy dla polskich dróg, ale płatny klucz)
+- [ ] Zdecydować, czy zostawić haversine jako fallback, gdy routing nie odpowie
+- [ ] Sprawdzić limity/koszt wybranego API przy realnym wolumenie zapytań (AI-wycena wywołuje to przy każdym szacowaniu)
+
+**Pliki startowe:** `lib/service/geocode-server.ts`, `lib/service/travel-context.ts`
+
 ### [ ] Proces projektu — pełna realizacja (dane per projekt)
 
 Obecnie: szablon globalny + w `project_processes.completions` tylko proste odhaczenie (data, kto). Brak treści checklist/protokołów, podpisów i raportu końcowego.

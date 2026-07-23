@@ -91,6 +91,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { useProjectAgreementsRealtime } from "@/hooks/use-project-agreements-realtime";
 import { useProjectChangeRequestsRealtime } from "@/hooks/use-project-change-requests-realtime";
 import { useProjectDashboardRealtime } from "@/hooks/use-project-dashboard-realtime";
+import { useProjectSettlementsRealtime } from "@/hooks/use-project-settlements-realtime";
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
 import { useProjectChangeRequestStore } from "@/store/project-change-request-store";
 import { useProjectSatisfactionStore } from "@/store/project-satisfaction-store";
@@ -596,6 +597,21 @@ export function ClientDashboardView({
     }).catch(() => undefined);
   }, [enableSettlements, ensureSettlements, seedSettlements, selectedProjectId]);
 
+  const refreshSettlementsFromServer = useCallback(() => {
+    if (!enableSettlements || !selectedProjectId) {
+      return;
+    }
+    void ensureSettlements(selectedProjectId, {
+      force: true,
+      sync: true,
+      showLoading: false,
+    }).catch(() => undefined);
+  }, [enableSettlements, ensureSettlements, selectedProjectId]);
+
+  useProjectSettlementsRealtime(selectedProjectId, refreshSettlementsFromServer, {
+    enabled: enableSettlements,
+  });
+
   const refreshAgreementsFromServer = useCallback(() => {
     if (!enableAgreements || !selectedProjectId) {
       return;
@@ -631,7 +647,21 @@ export function ClientDashboardView({
       return;
     }
     ensureChangeRequests(selectedProjectId, { force: true }).catch(() => undefined);
-  }, [enableChangeRequests, ensureChangeRequests, selectedProjectId]);
+    // Zmiana projektu wpływa na kwoty w rozliczeniach (auto-należność po akceptacji).
+    if (enableSettlements) {
+      void ensureSettlements(selectedProjectId, {
+        force: true,
+        sync: true,
+        showLoading: false,
+      }).catch(() => undefined);
+    }
+  }, [
+    enableChangeRequests,
+    enableSettlements,
+    ensureChangeRequests,
+    ensureSettlements,
+    selectedProjectId,
+  ]);
 
   useProjectChangeRequestsRealtime(selectedProjectId, refreshChangeRequestsFromServer, {
     enabled: enableChangeRequests,

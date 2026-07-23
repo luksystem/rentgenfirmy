@@ -112,7 +112,7 @@ export default function ServiceIntakeThreadPage({
 
       <Card>
         <CardContent className="grid gap-2 py-4 text-sm">
-          <p className="whitespace-pre-wrap text-foreground">{thread.intake.description}</p>
+          <p className="whitespace-pre-wrap break-words text-foreground">{thread.intake.description}</p>
           <p className="text-muted">Zgłoszono: {formatDateTime(thread.intake.createdAt)}</p>
         </CardContent>
       </Card>
@@ -146,7 +146,7 @@ export default function ServiceIntakeThreadPage({
               {comment.authorName} · {comment.authorSide === "team" ? "Zespół" : "Klient"} ·{" "}
               {formatDateTime(comment.createdAt)}
             </p>
-            <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{comment.body}</p>
+            <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground">{comment.body}</p>
           </div>
         ))}
       </div>

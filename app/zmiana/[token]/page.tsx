@@ -145,7 +145,7 @@ export default function PublicChangeRequestPage() {
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-muted">Opis zmiany</p>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
+              <p className="mt-2 whitespace-pre-wrap break-words text-sm text-foreground">
                 {changeRequest.body || "—"}
               </p>
             </div>

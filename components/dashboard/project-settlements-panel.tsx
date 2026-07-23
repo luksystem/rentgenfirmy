@@ -32,6 +32,7 @@ import { buildSettlementReportEmail } from "@/lib/email/settlement-templates";
 import { buildSettlementOriginBreakdown } from "@/lib/settlements/origin-breakdown";
 import {
   addDaysIso,
+  buildSettlementChargeSourceBreakdown,
   buildSettlementSummary,
   DEFAULT_AGREEMENT_VAT_RATE,
   normalizeAgreementVatRate,
@@ -93,6 +94,10 @@ export function ProjectSettlementsPanel({
   const entries = useMemo(() => bundle?.entries ?? [], [bundle?.entries]);
   const settings = bundle?.settings;
   const summary = useMemo(() => buildSettlementSummary(entries), [entries]);
+  const chargeSourceBreakdown = useMemo(
+    () => buildSettlementChargeSourceBreakdown(entries),
+    [entries],
+  );
   const projectServices = useMemo(
     () => allServices.filter((service) => service.projectId === projectId),
     [allServices, projectId],
@@ -431,6 +436,11 @@ export function ProjectSettlementsPanel({
           label="Do zapłaty (netto)"
           value={summary.chargesNet}
           hint={`${summary.chargesCount} należności · brutto ${formatMoney(summary.chargesGross)}`}
+          breakdown={
+            chargeSourceBreakdown.contractNet > 0 || chargeSourceBreakdown.extraNet > 0
+              ? `W tym: z umowy głównej ${formatMoney(chargeSourceBreakdown.contractNet)} · z prac dodatkowych (zmian + ofert) ${formatMoney(chargeSourceBreakdown.extraNet)}`
+              : undefined
+          }
         />
         <SummaryCard
           label="Zafakturowano (netto)"
@@ -807,12 +817,14 @@ function SummaryCard({
   label,
   value,
   hint,
+  breakdown,
   tone = "neutral",
   emphasize = false,
 }: {
   label: string;
   value: number;
   hint: string;
+  breakdown?: string;
   tone?: "neutral" | "success" | "danger" | "warning";
   emphasize?: boolean;
 }) {
@@ -842,6 +854,9 @@ function SummaryCard({
         {formatMoney(value)}
       </p>
       <p className="mt-1 break-words text-[11px] leading-snug text-muted">{hint}</p>
+      {breakdown ? (
+        <p className="mt-1 break-words text-[11px] leading-snug text-muted/80">{breakdown}</p>
+      ) : null}
     </div>
   );
 }

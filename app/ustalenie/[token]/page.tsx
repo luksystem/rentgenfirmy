@@ -122,7 +122,7 @@ export default function PublicAgreementPage() {
               }
             >
               {agreement.body ? (
-                <p className="whitespace-pre-wrap text-sm text-foreground">{agreement.body}</p>
+                <p className="whitespace-pre-wrap break-words text-sm text-foreground">{agreement.body}</p>
               ) : (
                 <p className="text-sm text-muted">Brak opisu w tej wersji.</p>
               )}
