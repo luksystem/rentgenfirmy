@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Paperclip, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronUp, Paperclip, Plus, StickyNote, Trash2 } from "lucide-react";
 import type { ChecklistDocumentationUploadContext } from "@/components/process/checklist-line-documentation-panel";
 import { ChecklistItemDialog } from "@/components/process/checklist-item-dialog";
 import { ChecklistMobileNav } from "@/components/process/checklist-mobile-nav";
@@ -102,6 +102,7 @@ export function ProcessChecklistBoard({
   const [error, setError] = useState<string | null>(null);
   const [navSectionId, setNavSectionId] = useState<string | null>(null);
   const [customLineDrafts, setCustomLineDrafts] = useState<Record<string, string>>({});
+  const [mobileNoteOpen, setMobileNoteOpen] = useState(false);
 
   const actor = useMemo(
     () => ({ id: actorId, name: actorName.trim() || "Zespół" }),
@@ -216,21 +217,33 @@ export function ProcessChecklistBoard({
   }
 
   const showMobileNav = sections.length > 1;
+  const showMobileNoteBar = !readOnly;
+  /** Wysokość pasków zakotwiczonych pod treścią na mobile — kafelki list i przycisk „Wróć”. */
+  const NAV_TILES_REM = 4.5;
+  const BACK_BUTTON_REM = 3.5;
+  const noteBarBottomRem =
+    (showMobileNav ? NAV_TILES_REM : 0) + (raisedMobileNavForBack ? BACK_BUTTON_REM : 0);
 
   return (
     <div
       className={cn(
         "grid gap-4",
-        showMobileNav && (raisedMobileNavForBack ? "pb-40 md:pb-0" : "pb-24 md:pb-0"),
-        !showMobileNav && raisedMobileNavForBack && "pb-20 md:pb-0",
+        !showMobileNoteBar &&
+          showMobileNav &&
+          (raisedMobileNavForBack ? "pb-40 md:pb-0" : "pb-24 md:pb-0"),
+        !showMobileNoteBar && !showMobileNav && raisedMobileNavForBack && "pb-20 md:pb-0",
+        showMobileNoteBar && showMobileNav && raisedMobileNavForBack && "pb-44 md:pb-0",
+        showMobileNoteBar && showMobileNav && !raisedMobileNavForBack && "pb-[7.5rem] md:pb-0",
+        showMobileNoteBar && !showMobileNav && raisedMobileNavForBack && "pb-[6.5rem] md:pb-0",
+        showMobileNoteBar && !showMobileNav && !raisedMobileNavForBack && "pb-12 md:pb-0",
       )}
-    >      <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/25 p-3">
-        <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <CheckCircle2 className="h-4 w-4 text-accent" />
-          {progress.completed}/{progress.total} punktów ·{" "}
+    >      <div className="z-20 flex items-center gap-2 rounded-lg border border-border/60 bg-surface/95 px-2.5 py-1.5 backdrop-blur-md max-md:sticky max-md:top-0">
+        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-accent" />
+        <span className="shrink-0 text-xs font-medium tabular-nums text-foreground">
+          {progress.completed}/{progress.total} ·{" "}
           {progress.total ? Math.round((progress.completed / progress.total) * 100) : 0}%
-        </p>
-        <div className="h-1.5 overflow-hidden rounded-full bg-surface-muted">
+        </span>
+        <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-muted">
           <div
             className="h-full rounded-full bg-accent transition-all"
             style={{
@@ -348,26 +361,28 @@ export function ProcessChecklistBoard({
       </div>
 
       {!readOnly ? (
-        <Field label="Notatka do checklisty">
-          <Textarea
-            value={payload.note ?? ""}
-            disabled={Boolean(savingLineId)}
-            onChange={(event) => setPayload({ ...payload, note: event.target.value })}
-            onBlur={() => void persist({ ...payload })}
-          />
-          {onCreateTasksFromNote ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              className="mt-2"
-              disabled={!(payload.note ?? "").trim()}
-              onClick={() => onCreateTasksFromNote(payload.note ?? "")}
-            >
-              Utwórz taski z notatek
-            </Button>
-          ) : null}
-        </Field>
+        <div className="hidden md:grid">
+          <Field label="Notatka do checklisty">
+            <Textarea
+              value={payload.note ?? ""}
+              disabled={Boolean(savingLineId)}
+              onChange={(event) => setPayload({ ...payload, note: event.target.value })}
+              onBlur={() => void persist({ ...payload })}
+            />
+            {onCreateTasksFromNote ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="mt-2"
+                disabled={!(payload.note ?? "").trim()}
+                onClick={() => onCreateTasksFromNote(payload.note ?? "")}
+              >
+                Utwórz taski z notatek
+              </Button>
+            ) : null}
+          </Field>
+        </div>
       ) : payload.note ? (
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted">Notatka</p>
@@ -421,6 +436,61 @@ export function ProcessChecklistBoard({
           scrollToBoardSection(boardSectionDomId("checklist-section", sectionId));
         }}
       />
+
+      {showMobileNoteBar ? (
+        <div
+          className="fixed inset-x-0 z-[105] md:hidden"
+          style={{ bottom: `calc(${noteBarBottomRem}rem + env(safe-area-inset-bottom))` }}
+        >
+          {mobileNoteOpen ? (
+            <div className="border-t border-border/80 bg-surface-elevated/95 px-3 pb-2 pt-2 backdrop-blur-md">
+              <button
+                type="button"
+                className="mb-2 flex w-full items-center justify-between text-sm font-medium text-foreground"
+                onClick={() => setMobileNoteOpen(false)}
+              >
+                <span className="flex items-center gap-1.5">
+                  <StickyNote className="h-4 w-4 text-accent" />
+                  Notatka do checklisty
+                </span>
+                <ChevronDown className="h-4 w-4 text-muted" />
+              </button>
+              <Textarea
+                value={payload.note ?? ""}
+                disabled={Boolean(savingLineId)}
+                onChange={(event) => setPayload({ ...payload, note: event.target.value })}
+                onBlur={() => void persist({ ...payload })}
+                rows={4}
+                className="max-h-[30vh]"
+              />
+              {onCreateTasksFromNote ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="mt-2 w-full"
+                  disabled={!(payload.note ?? "").trim()}
+                  onClick={() => onCreateTasksFromNote(payload.note ?? "")}
+                >
+                  Utwórz taski z notatek
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setMobileNoteOpen(true)}
+              className="flex w-full items-center gap-2 border-t border-border/80 bg-surface-elevated/95 px-3 py-2.5 text-left text-sm backdrop-blur-md"
+            >
+              <StickyNote className="h-4 w-4 shrink-0 text-accent" />
+              <span className="min-w-0 flex-1 truncate text-muted">
+                {payload.note?.trim() ? payload.note : "Notatka do checklisty"}
+              </span>
+              <ChevronUp className="h-4 w-4 shrink-0 text-muted" />
+            </button>
+          )}
+        </div>
+      ) : null}
 
       {error ? <p className="text-sm text-rose-400">{error}</p> : null}
     </div>

@@ -196,12 +196,12 @@ export function ProcessItemPanel({
           )}
         >
           {isFullscreen ? (
-            <div className="mb-2 flex flex-wrap items-center gap-2 pr-10 sm:pr-8">
+            <div className="mb-2 hidden flex-wrap items-center gap-2 pr-10 sm:pr-8 md:flex">
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
-                className="h-10 min-h-10 w-full justify-start px-3 text-sm font-medium sm:h-8 sm:w-auto sm:justify-center"
+                className="h-8 w-auto justify-center px-3 text-sm font-medium"
                 onClick={() => onOpenChange(false)}
               >
                 <ArrowLeft className="mr-1.5 h-4 w-4 shrink-0" />
