@@ -14,7 +14,6 @@ import {
   canSendSettlementOffer,
   getSettlementOfferGenerateBlockReason,
   getSettlementOfferUrl,
-  isSettlementOfferActive,
 } from "@/lib/service/settlement-offer";
 import { CLIENT_OFFER_STATUS_LABELS } from "@/lib/service/client-offer";
 import type { ServiceRecord } from "@/lib/service/types";
@@ -70,7 +69,6 @@ export function SettlementOfferPanel({
     : false;
   const canGenerate = canGenerateSettlementOffer(service) && approvalOk;
   const canSend = canSendSettlementOffer(service) && approvalOk;
-  const offerActive = isSettlementOfferActive(service);
   const generateBlockReason = getSettlementOfferGenerateBlockReason(service);
 
   async function handleOpenPreview() {
@@ -229,8 +227,9 @@ export function SettlementOfferPanel({
             ) : null}
             {service.settlementOffer.expiresAt ? (
               <p className="mt-1 text-xs text-muted">
-                Ważność linku: {formatDate(service.settlementOffer.expiresAt)}
-                {offerActive ? "" : " · wygasł — wygeneruj nowy link"}
+                Termin automatycznej akceptacji: {formatDate(service.settlementOffer.expiresAt)} —
+                link nie wygasa; jeśli klient nie odpowie do tego dnia, rozliczenie zostanie samo
+                oznaczone jako zaakceptowane.
               </p>
             ) : null}
           </div>

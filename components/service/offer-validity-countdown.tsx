@@ -8,8 +8,16 @@ import {
 } from "@/lib/service/offer-validity";
 import { cn, formatDate } from "@/lib/utils";
 
-export function OfferValidityCountdown({ expiresAt }: { expiresAt: string }) {
+export function OfferValidityCountdown({
+  expiresAt,
+  kind = "estimate",
+}: {
+  expiresAt: string;
+  /** Dla rozliczenia link nie wygasa — po terminie następuje automatyczna akceptacja. */
+  kind?: "estimate" | "settlement";
+}) {
   const [remainingMs, setRemainingMs] = useState(() => getOfferRemainingMs(expiresAt));
+  const isSettlement = kind === "settlement";
 
   useEffect(() => {
     setRemainingMs(getOfferRemainingMs(expiresAt));
@@ -43,11 +51,13 @@ export function OfferValidityCountdown({ expiresAt }: { expiresAt: string }) {
       />
       <div className="min-w-0">
         <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
-          Ważność oferty
+          {isSettlement ? "Termin automatycznej akceptacji" : "Ważność oferty"}
         </p>
         {expired ? (
           <p className="mt-1 text-sm text-zinc-400">
-            Oferta wygasła · była ważna do {formatDate(expiresAt)}
+            {isSettlement
+              ? `Termin minął (${formatDate(expiresAt)}) — rozliczenie zostanie automatycznie uznane za zaakceptowane, jeśli jeszcze nie zareagowałeś/-aś.`
+              : `Oferta wygasła · była ważna do ${formatDate(expiresAt)}`}
           </p>
         ) : (
           <>
@@ -59,7 +69,11 @@ export function OfferValidityCountdown({ expiresAt }: { expiresAt: string }) {
             >
               {formatOfferCountdown(remainingMs)}
             </p>
-            <p className="mt-0.5 text-xs text-zinc-500">Ważna do {formatDate(expiresAt)}</p>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              {isSettlement
+                ? `Zdecyduj do ${formatDate(expiresAt)} — brak reakcji oznacza automatyczną akceptację`
+                : `Ważna do ${formatDate(expiresAt)}`}
+            </p>
           </>
         )}
       </div>

@@ -7,6 +7,7 @@ export const CLIENT_OFFER_HISTORY_TYPES = [
   "client_accepted",
   "client_rejected",
   "client_negotiation",
+  "auto_accepted",
 ] as const;
 
 export type ClientOfferHistoryEntryType = (typeof CLIENT_OFFER_HISTORY_TYPES)[number];
@@ -25,6 +26,7 @@ export const CLIENT_OFFER_HISTORY_LABELS: Record<ClientOfferHistoryEntryType, st
   client_accepted: "Klient zaakceptował ofertę",
   client_rejected: "Klient odrzucił ofertę",
   client_negotiation: "Klient prosi o negocjację",
+  auto_accepted: "Automatycznie zaakceptowano po terminie",
 };
 
 export type ServiceOfferListTone =
@@ -95,6 +97,7 @@ export const SETTLEMENT_OFFER_HISTORY_LABELS: Record<ClientOfferHistoryEntryType
   client_accepted: "Klient zaakceptował rozliczenie",
   client_rejected: "Klient odrzucił rozliczenie",
   client_negotiation: "Klient prosi o konsultację rozliczenia",
+  auto_accepted: "Automatycznie zaakceptowano po terminie — brak reakcji klienta",
 };
 
 export const normalizeSettlementOfferHistory = normalizeClientOfferHistory;

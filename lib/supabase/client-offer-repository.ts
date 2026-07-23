@@ -245,10 +245,6 @@ export async function respondToClientOffer(
   return saved;
 }
 
-function isSettlementOfferExpiredService(service: ServiceRecord) {
-  return isOfferExpired(service.settlementOffer.expiresAt);
-}
-
 export async function fetchServiceBySettlementOfferToken(
   token: string,
 ): Promise<ServiceRecord | null> {
@@ -360,9 +356,8 @@ export async function respondToSettlementOffer(
     throw new Error("Nie znaleziono rozliczenia.");
   }
 
-  if (action !== "negotiate" && isSettlementOfferExpiredService(service)) {
-    throw new Error("Rozliczenie straciło ważność — akceptacja i odrzucenie nie są już możliwe.");
-  }
+  // Rozliczenie nie wygasa — klient może odpowiedzieć zawsze, dopóki nie ma jeszcze decyzji
+  // (po terminie automatycznej akceptacji i tak zostanie oznaczone jako zaakceptowane przez cron).
 
   if (service.settlementOffer.status && service.settlementOffer.status !== "pending") {
     throw new Error("Rozliczenie ma już zapisaną decyzję klienta.");
@@ -457,18 +452,12 @@ export function isPublicOfferQuestionAvailable(service: ServiceRecord) {
   );
 }
 
+/** Rozliczenie nie wygasa — dostępne dopóki klient nie podjął jeszcze decyzji. */
 export function isPublicSettlementOfferAvailable(service: ServiceRecord) {
-  return (
-    Boolean(service.settlementOffer.token) &&
-    service.settlementOffer.status === "pending" &&
-    !isSettlementOfferExpiredService(service)
-  );
+  return Boolean(service.settlementOffer.token) && service.settlementOffer.status === "pending";
 }
 
-export function isPublicSettlementOfferQuestionAvailable(service: ServiceRecord) {
-  return (
-    Boolean(service.settlementOffer.token) &&
-    service.settlementOffer.status === "pending" &&
-    isSettlementOfferExpiredService(service)
-  );
+/** Rozliczenie nigdy nie „traci ważności” z perspektywy klienta — nie ma trybu pytania zamiast decyzji. */
+export function isPublicSettlementOfferQuestionAvailable() {
+  return false;
 }

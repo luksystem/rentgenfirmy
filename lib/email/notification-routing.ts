@@ -135,6 +135,17 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     },
   },
   {
+    id: "offer_approval_requested",
+    label: "Oferta/rozliczenie czeka na akceptację",
+    description:
+      "Pracownik prosi wskazanego administratora o akceptację przed wysyłką oferty lub rozliczenia do klienta.",
+    category: "oferty",
+    emailAudiences: ["user"],
+    supportsPush: true,
+    supportsSms: false,
+    defaults: { email: { user: true }, push: true, sms: false },
+  },
+  {
     id: "client_offer_accepted",
     label: "Klient zaakceptował ofertę",
     description: "Powiadomienie zespołu sprzedaży / opiekuna po akceptacji oferty.",

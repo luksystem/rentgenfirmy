@@ -10,6 +10,7 @@ import {
   requestOfferApprovalServer,
 } from "@/lib/supabase/service-repository-server";
 import { createOfferApprovalRequestedNotificationServer } from "@/lib/notifications/server";
+import { notifyOfferApprovalRequestedChannels } from "@/lib/notifications/offer-approval-email";
 
 function parseKind(value: string): OfferKind {
   if (value === "estimate" || value === "settlement") {
@@ -62,12 +63,23 @@ export async function POST(
       assignedAdminId,
     });
 
+    const requestedByName = getUserDisplayName(profile);
+
     await createOfferApprovalRequestedNotificationServer({
       serviceId: id,
       kind,
-      requestedByName: getUserDisplayName(profile),
+      requestedByName,
       serviceTitle: service.title,
       assignedAdminId,
+    }).catch(() => undefined);
+
+    await notifyOfferApprovalRequestedChannels({
+      serviceId: id,
+      kind,
+      requestedByName,
+      serviceTitle: service.title,
+      assignedAdminId,
+      assignedAdminEmail: mapProfileRow(adminRow).email,
     }).catch(() => undefined);
 
     return NextResponse.json({ service: updated });

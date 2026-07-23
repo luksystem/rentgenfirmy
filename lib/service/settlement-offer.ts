@@ -1,5 +1,4 @@
 import type { ClientOfferAction, ClientOfferStatus } from "@/lib/service/client-offer";
-import { isOfferExpired } from "@/lib/service/offer-validity";
 import { isServiceSettled } from "@/lib/service/report-document";
 import type { ServiceRecord, ServiceStatus } from "@/lib/service/types";
 
@@ -31,24 +30,13 @@ export function canSendSettlementOffer(service: ServiceRecord) {
   return Boolean(service.settlementOffer.token && service.settlementOffer.status === "pending");
 }
 
+/**
+ * Rozliczenie nie wygasa — link działa zawsze, dopóki klient nie odpowie. `expiresAt` to termin
+ * automatycznej akceptacji (patrz `lib/notifications/settlement-auto-accept.ts`), nie ważność linku.
+ */
 export function isSettlementOfferActive(service: Pick<ServiceRecord, "settlementOffer">) {
   const { settlementOffer } = service;
-
-  if (!settlementOffer.token || !settlementOffer.expiresAt || settlementOffer.status !== "pending") {
-    return false;
-  }
-
-  return !isOfferExpired(settlementOffer.expiresAt);
-}
-
-export function canClientAskAboutSettlementOffer(service: Pick<ServiceRecord, "settlementOffer">) {
-  const { settlementOffer } = service;
-
-  return (
-    Boolean(settlementOffer.token) &&
-    settlementOffer.status === "pending" &&
-    isOfferExpired(settlementOffer.expiresAt)
-  );
+  return Boolean(settlementOffer.token) && settlementOffer.status === "pending";
 }
 
 export function getSettlementOfferUrl(token: string, origin?: string) {

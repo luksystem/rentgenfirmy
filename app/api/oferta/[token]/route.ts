@@ -54,7 +54,7 @@ export async function GET(
         : isPublicOfferAvailable(service);
     const canAskQuestion =
       kind === "settlement"
-        ? isPublicSettlementOfferQuestionAvailable(service)
+        ? isPublicSettlementOfferQuestionAvailable()
         : isPublicOfferQuestionAvailable(service);
     const expired = isOfferExpired(offer.expiresAt);
     const publicService =

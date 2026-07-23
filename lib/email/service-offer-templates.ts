@@ -14,7 +14,10 @@ export function buildOfferSendEmail(input: {
   clientName: string;
   offerTitle: string;
   offerUrl: string;
-  /** Sformatowana etykieta daty ważności (np. przez formatDate) — lub null, gdy brak terminu. */
+  /**
+   * Sformatowana etykieta daty (np. przez formatDate) — lub null, gdy brak terminu. Dla wyceny to
+   * termin ważności linku; dla rozliczenia to termin automatycznej akceptacji (link nie wygasa).
+   */
   expiresAtLabel: string | null;
   grossTotal: number | null;
   kind: "estimate" | "settlement";
@@ -49,7 +52,11 @@ export function buildOfferSendEmail(input: {
     </p>
     ${amountHtml}
     <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#111827;">
-      Możesz zaakceptować, odrzucić albo poprosić o konsultację pod poniższym linkiem:
+      Możesz zaakceptować, odrzucić albo poprosić o konsultację pod poniższym linkiem${
+        input.kind === "settlement" && input.expiresAtLabel
+          ? ` — link jest dostępny bez ograniczeń czasowych, ale prosimy o decyzję do ${escapeEmailHtml(input.expiresAtLabel)}`
+          : ""
+      }:
     </p>
     <p style="margin:0 0 8px;">
       <a href="${escapeEmailHtml(input.offerUrl)}"
@@ -68,7 +75,9 @@ export function buildOfferSendEmail(input: {
       content,
       eyebrow: input.kind === "settlement" ? "Rozliczenie" : "Oferta",
       disclaimer: input.expiresAtLabel
-        ? `Link jest ważny do ${input.expiresAtLabel} — po tym terminie warunki trzeba będzie ustalić na nowo.`
+        ? input.kind === "settlement"
+          ? `Jeśli nie odpowiesz do ${input.expiresAtLabel}, rozliczenie zostanie uznane za zaakceptowane, a wyliczona kwota zostanie zafakturowana.`
+          : `Link jest ważny do ${input.expiresAtLabel} — po tym terminie warunki trzeba będzie ustalić na nowo.`
         : undefined,
       brand: input.brand,
       company: input.company,

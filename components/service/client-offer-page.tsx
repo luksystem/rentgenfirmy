@@ -279,10 +279,12 @@ export function ClientOfferPage({ token }: { token: string }) {
                 {service.client.location ? ` · ${service.client.location}` : ""}
               </p>
               {offer.expiresAt && offer.canRespond ? (
-                <OfferValidityCountdown expiresAt={offer.expiresAt} />
+                <OfferValidityCountdown expiresAt={offer.expiresAt} kind={offerKind} />
               ) : offer.expiresAt ? (
                 <p className="mt-2 text-xs text-zinc-500">
-                  Oferta ważna była do: {formatDate(offer.expiresAt)}
+                  {isSettlementView
+                    ? `Termin automatycznej akceptacji był: ${formatDate(offer.expiresAt)}`
+                    : `Oferta ważna była do: ${formatDate(offer.expiresAt)}`}
                 </p>
               ) : null}
             </div>
