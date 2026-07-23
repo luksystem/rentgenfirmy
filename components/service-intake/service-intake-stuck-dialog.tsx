@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogDescription, DialogHeader, DialogTitle, StackedDialogContent } from "@/components/ui/dialog";
 import { Field, Textarea } from "@/components/ui/input";
 import { buildServiceIntakeOfferHref } from "@/lib/service-intake/offer-link";
 import type { ServiceIntakeRecord, ServiceIntakeStuckFeedback } from "@/lib/service-intake/types";
@@ -60,7 +60,7 @@ export function ServiceIntakeStuckDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !saving && onOpenChange(next)}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <StackedDialogContent showCloseButton className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Utknięte: {intake.referenceNumber}</DialogTitle>
           <DialogDescription>
@@ -111,7 +111,7 @@ export function ServiceIntakeStuckDialog({
             </Button>
           </div>
         </div>
-      </DialogContent>
+      </StackedDialogContent>
     </Dialog>
   );
 }
