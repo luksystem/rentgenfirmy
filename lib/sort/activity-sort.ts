@@ -19,7 +19,17 @@ function parseTimestamp(value: string | null | undefined) {
     return 0;
   }
   const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : 0;
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+  // Część rekordów ma updated_at/lastChangedAt z datą w przyszłości (błędne dane
+  // źródłowe) — traktujemy to jako brak sygnału (0), a nie "właśnie teraz":
+  // clampowanie do Date.now() sprawiało, że taki klient wygrywał przy KAŻDYM
+  // renderze na zawsze, blokując realnie ostatnio otwieranych klientów.
+  if (parsed > Date.now()) {
+    return 0;
+  }
+  return parsed;
 }
 
 function isRecentActivity(timestamp: number) {
