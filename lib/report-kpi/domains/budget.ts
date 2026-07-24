@@ -113,8 +113,8 @@ async function loadForecastRowsServer(admin: AdminClient) {
     admin.from("project_revenue_forecasts").select("expected_date, amount_net, confidence"),
     admin
       .from("project_settlement_entries")
-      .select("id, kind, entry_date, amount_gross, source_id")
-      .in("kind", ["payment", "schedule"])
+      .select("id, kind, entry_date, amount_gross")
+      .eq("kind", "schedule")
       .gte("entry_date", fromDate)
       .lte("entry_date", toDate),
   ]);
@@ -128,26 +128,15 @@ async function loadForecastRowsServer(admin: AdminClient) {
     kind: string;
     entry_date: string | null;
     amount_gross: number;
-    source_id: string | null;
   }>;
 
-  // Opłacona rata harmonogramu dostaje osobny wiersz kind='payment' (source_id -> wiersz
-  // 'schedule'), ale oryginalny wiersz harmonogramu zostaje w tabeli. Bez wykluczenia liczyłby
-  // się podwójnie: raz jako realna wpłata, raz jako wciąż "spodziewany" harmonogram.
-  const paidScheduleIds = new Set(
-    settlementRows.filter((row) => row.kind === "payment" && row.source_id).map((row) => row.source_id as string),
-  );
-
-  const actualPayments: MonthlyForecastInputs["actualPayments"] = [];
+  // To jest budżet/plan — pokazujemy cały harmonogram spłat niezależnie od tego, czy dana rata
+  // została już realnie opłacona. Rozliczenie realne-vs-budżet to osobny widok po integracji
+  // z iFirma/KSeF, więc kind='payment' celowo nie jest tu pobierane.
   const scheduledEntries: MonthlyForecastInputs["scheduledEntries"] = [];
   for (const entry of settlementRows) {
     if (!entry.entry_date) continue;
-    const amount = { month: entry.entry_date, amountGross: entry.amount_gross };
-    if (entry.kind === "payment") {
-      actualPayments.push(amount);
-    } else if (entry.kind === "schedule" && !paidScheduleIds.has(entry.id)) {
-      scheduledEntries.push(amount);
-    }
+    scheduledEntries.push({ month: entry.entry_date, amountGross: entry.amount_gross });
   }
 
   const pipelineForecasts: MonthlyForecastInputs["pipelineForecasts"] = (
@@ -162,7 +151,6 @@ async function loadForecastRowsServer(admin: AdminClient) {
     months,
     currentMonth,
     openingBalance: settings.openingBalance,
-    actualPayments,
     scheduledEntries,
     pipelineForecasts,
     confidenceWeights: settings.confidenceWeights,

@@ -19,7 +19,6 @@ export type BudgetForecastDataset = {
   scenarioActions: BudgetScenarioAction[];
   months: string[];
   currentMonth: string;
-  actualPayments: MonthlyAmount[];
   scheduledEntries: MonthlyAmount[];
   pipelineForecasts: Array<PipelineForecastAmount & { projectId: string; projectName: string }>;
 };
@@ -36,29 +35,16 @@ export async function loadBudgetForecastDataset(horizonMonthsOverride?: number):
     fetchActiveBudgetCostItems(),
     fetchAllBudgetScenarioActions(),
     fetchAllProjectRevenueForecastsWithProjectNames(),
-    fetchCompanySettlementEntriesByKindInRange(["payment", "schedule"], fromDate, toDate),
+    fetchCompanySettlementEntriesByKindInRange(["schedule"], fromDate, toDate),
   ]);
 
-  // Gdy rata harmonogramu zostaje opłacona, aplikacja dopisuje osobny wiersz kind='payment'
-  // (source_id wskazujący na wiersz 'schedule'), ale NIE usuwa/nie oznacza oryginalnego wiersza
-  // harmonogramu. Bez tego wykluczenia opłacona rata liczyłaby się podwójnie: raz jako realna
-  // wpłata, raz jako wciąż "spodziewana" z harmonogramu.
-  const paidScheduleIds = new Set(
-    settlementEntries
-      .filter((entry) => entry.kind === "payment" && entry.sourceId)
-      .map((entry) => entry.sourceId as string),
-  );
-
-  const actualPayments: MonthlyAmount[] = [];
+  // To jest budżet/plan — pokazujemy cały harmonogram spłat niezależnie od tego, czy dana rata
+  // została już realnie opłacona. Rozliczenie realne-vs-budżet to osobny widok po integracji
+  // z iFirma/KSeF, więc kind='payment' celowo nie jest tu pobierane.
   const scheduledEntries: MonthlyAmount[] = [];
   for (const entry of settlementEntries) {
     if (!entry.entryDate) continue;
-    const amount = { month: monthKey(entry.entryDate), amountGross: entry.amountGross };
-    if (entry.kind === "payment") {
-      actualPayments.push(amount);
-    } else if (entry.kind === "schedule" && !paidScheduleIds.has(entry.id)) {
-      scheduledEntries.push(amount);
-    }
+    scheduledEntries.push({ month: monthKey(entry.entryDate), amountGross: entry.amountGross });
   }
 
   const pipelineForecasts = pipelineEntries
@@ -77,7 +63,6 @@ export async function loadBudgetForecastDataset(horizonMonthsOverride?: number):
     scenarioActions,
     months,
     currentMonth,
-    actualPayments,
     scheduledEntries,
     pipelineForecasts,
   };

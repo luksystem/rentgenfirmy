@@ -22,9 +22,9 @@ export type MonthlyForecastInputs = {
   months: string[];
   currentMonth: string;
   openingBalance: number;
-  /** Zagregowane rzeczywiste wpłaty (kind='payment') per miesiąc. */
-  actualPayments: MonthlyAmount[];
-  /** Zagregowany harmonogram spłat (kind='schedule') per miesiąc — traktowany jako pewny. */
+  /** Zagregowany harmonogram spłat (kind='schedule') per miesiąc — pełny plan, bez odejmowania
+   * już opłaconych rat (to jest budżet/plan, nie rozliczenie realne-vs-budżet — to osobny widok
+   * po integracji z iFirma/KSeF). */
   scheduledEntries: MonthlyAmount[];
   /** Pipeline przychodów powiązany z projektami, ważony suwakami pewności. */
   pipelineForecasts: PipelineForecastAmount[];
@@ -40,7 +40,6 @@ export type MonthlyForecastRow = {
   isPast: boolean;
   isCurrent: boolean;
   isFuture: boolean;
-  actualRevenue: number;
   scheduledRevenue: number;
   pipelineRevenueRaw: number;
   pipelineRevenueWeighted: number;
@@ -183,7 +182,6 @@ export function aggregateScenarioActionsToMonths(
 }
 
 export function buildMonthlyForecast(inputs: MonthlyForecastInputs): MonthlyForecastRow[] {
-  const actualByMonth = groupAmountByMonth(inputs.actualPayments);
   const scheduledByMonth = groupAmountByMonth(inputs.scheduledEntries);
   const { raw: pipelineRawByMonth, weighted: pipelineWeightedByMonth } = groupPipelineWeightedByMonth(
     inputs.pipelineForecasts,
@@ -203,22 +201,18 @@ export function buildMonthlyForecast(inputs: MonthlyForecastInputs): MonthlyFore
     const isCurrent = compareMonthKeys(month, inputs.currentMonth) === 0;
     const isFuture = compareMonthKeys(month, inputs.currentMonth) > 0;
 
-    const actualRevenue = actualByMonth[month] ?? 0;
     const scheduledRevenue = scheduledByMonth[month] ?? 0;
     const pipelineRevenueRaw = pipelineRawByMonth[month] ?? 0;
     const pipelineRevenueWeighted = pipelineWeightedByMonth[month] ?? 0;
     const scenarioRevenueDelta = revenueDeltaByMonth[month] ?? 0;
     const scenarioCostDelta = costDeltaByMonth[month] ?? 0;
 
-    const baseRevenueForMonth = isPast
-      ? actualRevenue
-      : isCurrent
-        ? actualRevenue + scheduledRevenue + pipelineRevenueWeighted
-        : scheduledRevenue + pipelineRevenueWeighted;
-
+    // To jest budżet/plan (harmonogramy + pipeline), nie rozliczenie realne-vs-budżet —
+    // to osobny widok po integracji z iFirma/KSeF, więc realne wpłaty (kind='payment')
+    // celowo nie wchodzą do tej sumy niezależnie od isPast/isCurrent/isFuture.
     // Akcje symulacyjne po stronie przychodów wchodzą też do bazy liczącej koszt zmienny
     // (tak jak w arkuszu: "planowane działania zwiększające sprzedaż" liczą się do % kosztu).
-    const totalRevenueForMonth = baseRevenueForMonth + scenarioRevenueDelta;
+    const totalRevenueForMonth = scheduledRevenue + pipelineRevenueWeighted + scenarioRevenueDelta;
 
     const fixedCosts = (fixedCostsByMonth[month] ?? 0) + scenarioCostDelta;
     const variableCosts = inputs.variableCostPercent * totalRevenueForMonth;
@@ -231,7 +225,6 @@ export function buildMonthlyForecast(inputs: MonthlyForecastInputs): MonthlyFore
       isPast,
       isCurrent,
       isFuture,
-      actualRevenue,
       scheduledRevenue,
       pipelineRevenueRaw,
       pipelineRevenueWeighted,

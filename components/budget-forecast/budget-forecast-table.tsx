@@ -25,7 +25,6 @@ export function BudgetForecastTable({ rows }: { rows: MonthlyForecastRow[] }) {
           <thead>
             <tr className="border-b border-border/70 bg-surface-muted/20 text-left text-xs uppercase tracking-wide text-muted">
               <th className="px-4 py-3 font-medium">Miesiąc</th>
-              <th className="px-4 py-3 text-right font-medium">Przychód rzeczywisty</th>
               <th className="px-4 py-3 text-right font-medium">Przychód prognozowany (ważony)</th>
               <th className="px-4 py-3 text-right font-medium">Koszty stałe</th>
               <th className="px-4 py-3 text-right font-medium">Koszt zmienny</th>
@@ -39,9 +38,6 @@ export function BudgetForecastTable({ rows }: { rows: MonthlyForecastRow[] }) {
                 <td className="whitespace-nowrap px-4 py-3 font-medium text-foreground capitalize">
                   {formatMonthLabel(row.month)}
                   {row.isCurrent ? <span className="ml-2 text-xs font-normal text-accent">bieżący</span> : null}
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-muted">
-                  {formatMoney(row.actualRevenue)}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-muted">
                   {formatMoney(row.scheduledRevenue + row.pipelineRevenueWeighted + row.scenarioRevenueDelta)}

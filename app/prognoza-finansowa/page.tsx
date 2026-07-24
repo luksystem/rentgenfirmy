@@ -19,7 +19,7 @@ const TAB_LABELS: Record<BudgetForecastTab, string> = {
 
 const TAB_DESCRIPTIONS: Record<BudgetForecastTab, string> = {
   prognoza:
-    "Prognoza płynności firmy na najbliższe miesiące — rzeczywiste wpłaty i harmonogramy połączone ze spodziewanymi wpływami z projektów, ważone pewnością. Suwaki po prawej przeliczają wynik na żywo.",
+    "Prognoza płynności firmy na najbliższe miesiące — plan wg harmonogramów spłat i spodziewanych wpływów z projektów, ważony pewnością. To budżet/plan, nie rozliczenie rzeczywistych wpłat. Suwaki po prawej przeliczają wynik na żywo.",
   koszty: "Koszty stałe, cykliczne i jednorazowe firmy — wejście do prognozy płynności.",
   pipeline: "Wszystkie spodziewane wpływy powiązane z projektami, w jednym miejscu.",
 };

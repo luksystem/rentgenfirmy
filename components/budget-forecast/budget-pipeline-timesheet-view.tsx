@@ -102,12 +102,12 @@ function buildGroupSegments(periods: PeriodColumn[]) {
   return segments;
 }
 
-/** Zwięzły zapis kwoty dla ciasnych komórek siatki (np. "418 tys." zamiast "417 941,91 zł"). */
+/** Zwięzły zapis kwoty dla ciasnych komórek siatki (np. "418k" zamiast "417 941,91 zł"). */
 function formatCompactAmount(value: number): string {
   if (Math.abs(value) < 1) return "0";
   const sign = value < 0 ? "-" : "";
   const rounded = Math.round(Math.abs(value) / 1000);
-  return `${sign}${rounded.toLocaleString("pl-PL")} tys.`;
+  return `${sign}${rounded.toLocaleString("pl-PL")}k`;
 }
 
 function TrendArrow({ current, previous }: { current: number; previous: number }) {

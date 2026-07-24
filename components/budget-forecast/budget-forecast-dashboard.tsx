@@ -68,7 +68,6 @@ export function BudgetForecastDashboard() {
       months: dataset.months,
       currentMonth: dataset.currentMonth,
       openingBalance,
-      actualPayments: dataset.actualPayments,
       scheduledEntries: dataset.scheduledEntries,
       pipelineForecasts: dataset.pipelineForecasts,
       confidenceWeights,
