@@ -44,7 +44,7 @@ export function BudgetForecastTable({ rows }: { rows: MonthlyForecastRow[] }) {
                   {formatMoney(row.actualRevenue)}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-muted">
-                  {formatMoney(row.scheduledRevenue + row.pipelineRevenueWeighted)}
+                  {formatMoney(row.scheduledRevenue + row.pipelineRevenueWeighted + row.scenarioRevenueDelta)}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-muted">
                   {formatMoney(row.fixedCosts)}

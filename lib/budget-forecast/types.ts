@@ -106,6 +106,49 @@ export type BudgetCostItemInput = {
   notes?: string;
 };
 
+export const BUDGET_SCENARIO_EFFECT_TYPES = ["cost", "revenue"] as const;
+export type BudgetScenarioEffectType = (typeof BUDGET_SCENARIO_EFFECT_TYPES)[number];
+
+export const BUDGET_SCENARIO_EFFECT_TYPE_LABELS: Record<BudgetScenarioEffectType, string> = {
+  cost: "Koszty",
+  revenue: "Przychody",
+};
+
+export function isBudgetScenarioEffectType(value: string): value is BudgetScenarioEffectType {
+  return (BUDGET_SCENARIO_EFFECT_TYPES as readonly string[]).includes(value);
+}
+
+export type BudgetScenarioAction = {
+  id: string;
+  name: string;
+  notes: string;
+  effectType: BudgetScenarioEffectType;
+  /** Dodatnia = wzrost, ujemna = spadek (np. zwolnienie pracownika = cost, wartość ujemna). */
+  amount: number;
+  cadence: BudgetCostCadence;
+  intervalMonths: number | null;
+  month: string | null;
+  startMonth: string;
+  endMonth: string | null;
+  isEnabled: boolean;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BudgetScenarioActionInput = {
+  name: string;
+  notes?: string;
+  effectType: BudgetScenarioEffectType;
+  amount: number;
+  cadence: BudgetCostCadence;
+  intervalMonths?: number | null;
+  month?: string | null;
+  startMonth?: string;
+  endMonth?: string | null;
+  isEnabled?: boolean;
+};
+
 export type BudgetForecastSettings = {
   openingBalance: number;
   openingBalanceAsOf: string; // "YYYY-MM-DD"

@@ -3,7 +3,9 @@ import {
   compareMonthKeys,
   monthKey,
   type BudgetConfidenceLevel,
+  type BudgetCostCadence,
   type BudgetCostItem,
+  type BudgetScenarioAction,
 } from "@/lib/budget-forecast/types";
 
 export type MonthlyAmount = { month: string; amountGross: number };
@@ -28,6 +30,8 @@ export type MonthlyForecastInputs = {
   confidenceWeights: Record<BudgetConfidenceLevel, number>;
   costItems: BudgetCostItem[];
   variableCostPercent: number;
+  /** Przełączalne akcje "co jeśli" (zwolnienie, nowa umowa, redukcja kosztów...) — tylko włączone są uwzględniane. */
+  scenarioActions: BudgetScenarioAction[];
 };
 
 export type MonthlyForecastRow = {
@@ -39,11 +43,25 @@ export type MonthlyForecastRow = {
   scheduledRevenue: number;
   pipelineRevenueRaw: number;
   pipelineRevenueWeighted: number;
+  /** Suma włączonych akcji symulacyjnych po stronie przychodów tego miesiąca. */
+  scenarioRevenueDelta: number;
+  /** Suma włączonych akcji symulacyjnych po stronie kosztów tego miesiąca (może obniżać koszty). */
+  scenarioCostDelta: number;
   totalRevenueForMonth: number;
   fixedCosts: number;
   variableCosts: number;
+  /** Wynik miesiąca (nie narastająco) — odpowiednik "Stan miesiąca" z arkusza. */
   netResult: number;
+  /** Saldo narastające — odpowiednik "Przewidywany progress" z arkusza. */
   cumulativeBalance: number;
+};
+
+type CadenceSchedule = {
+  cadence: BudgetCostCadence;
+  intervalMonths: number | null;
+  month: string | null;
+  startMonth: string;
+  endMonth: string | null;
 };
 
 export function groupAmountByMonth(entries: MonthlyAmount[]): Record<string, number> {
@@ -77,42 +95,51 @@ function groupPipelineWeightedByMonth(
   return { raw, weighted };
 }
 
-/** Czy dany miesiąc okna jest objęty pozycją kosztową, wg jej cadence. */
-export function expandCostItemToMonths(item: BudgetCostItem, months: string[]): Record<string, number> {
+/** Rozwija dowolną pozycję z harmonogramem cykliczności (koszt stały lub akcja symulacyjna) na miesiące okna. */
+export function expandAmountToMonths(
+  schedule: CadenceSchedule,
+  amount: number,
+  months: string[],
+): Record<string, number> {
   const result: Record<string, number> = {};
 
-  if (item.cadence === "one_off") {
-    if (item.month && months.includes(monthKey(item.month))) {
-      result[monthKey(item.month)] = item.amount;
+  if (schedule.cadence === "one_off") {
+    if (schedule.month && months.includes(monthKey(schedule.month))) {
+      result[monthKey(schedule.month)] = amount;
     }
     return result;
   }
 
-  const start = monthKey(item.startMonth);
-  const end = item.endMonth ? monthKey(item.endMonth) : null;
+  const start = monthKey(schedule.startMonth);
+  const end = schedule.endMonth ? monthKey(schedule.endMonth) : null;
 
-  if (item.cadence === "monthly") {
+  if (schedule.cadence === "monthly") {
     for (const month of months) {
       if (compareMonthKeys(month, start) >= 0 && (!end || compareMonthKeys(month, end) <= 0)) {
-        result[month] = item.amount;
+        result[month] = amount;
       }
     }
     return result;
   }
 
   // every_n_months
-  const interval = item.intervalMonths && item.intervalMonths > 0 ? item.intervalMonths : 1;
+  const interval = schedule.intervalMonths && schedule.intervalMonths > 0 ? schedule.intervalMonths : 1;
   let cursor = start;
   // Zabezpieczenie przed nieskończoną pętlą przy złych danych.
   for (let i = 0; i < 1000; i++) {
     if (end && compareMonthKeys(cursor, end) > 0) break;
     if (months.length > 0 && compareMonthKeys(cursor, months[months.length - 1]) > 0) break;
     if (months.includes(cursor)) {
-      result[cursor] = item.amount;
+      result[cursor] = amount;
     }
     cursor = addMonthsToKey(cursor, interval);
   }
   return result;
+}
+
+/** Czy dany miesiąc okna jest objęty pozycją kosztową, wg jej cadence. */
+export function expandCostItemToMonths(item: BudgetCostItem, months: string[]): Record<string, number> {
+  return expandAmountToMonths(item, item.amount, months);
 }
 
 export function aggregateCostItemsToMonths(items: BudgetCostItem[], months: string[]): Record<string, number> {
@@ -130,6 +157,30 @@ export function aggregateCostItemsToMonths(items: BudgetCostItem[], months: stri
   return totals;
 }
 
+/** Sumuje włączone akcje symulacyjne na miesiące, osobno dla kosztów i przychodów. */
+export function aggregateScenarioActionsToMonths(
+  actions: BudgetScenarioAction[],
+  months: string[],
+): { costDeltaByMonth: Record<string, number>; revenueDeltaByMonth: Record<string, number> } {
+  const costDeltaByMonth: Record<string, number> = {};
+  const revenueDeltaByMonth: Record<string, number> = {};
+  for (const month of months) {
+    costDeltaByMonth[month] = 0;
+    revenueDeltaByMonth[month] = 0;
+  }
+
+  for (const action of actions) {
+    if (!action.isEnabled) continue;
+    const perMonth = expandAmountToMonths(action, action.amount, months);
+    const target = action.effectType === "cost" ? costDeltaByMonth : revenueDeltaByMonth;
+    for (const [month, amount] of Object.entries(perMonth)) {
+      target[month] = (target[month] ?? 0) + amount;
+    }
+  }
+
+  return { costDeltaByMonth, revenueDeltaByMonth };
+}
+
 export function buildMonthlyForecast(inputs: MonthlyForecastInputs): MonthlyForecastRow[] {
   const actualByMonth = groupAmountByMonth(inputs.actualPayments);
   const scheduledByMonth = groupAmountByMonth(inputs.scheduledEntries);
@@ -138,6 +189,10 @@ export function buildMonthlyForecast(inputs: MonthlyForecastInputs): MonthlyFore
     inputs.confidenceWeights,
   );
   const fixedCostsByMonth = aggregateCostItemsToMonths(inputs.costItems, inputs.months);
+  const { costDeltaByMonth, revenueDeltaByMonth } = aggregateScenarioActionsToMonths(
+    inputs.scenarioActions,
+    inputs.months,
+  );
 
   let cumulativeBalance = inputs.openingBalance;
   const rows: MonthlyForecastRow[] = [];
@@ -151,14 +206,20 @@ export function buildMonthlyForecast(inputs: MonthlyForecastInputs): MonthlyFore
     const scheduledRevenue = scheduledByMonth[month] ?? 0;
     const pipelineRevenueRaw = pipelineRawByMonth[month] ?? 0;
     const pipelineRevenueWeighted = pipelineWeightedByMonth[month] ?? 0;
+    const scenarioRevenueDelta = revenueDeltaByMonth[month] ?? 0;
+    const scenarioCostDelta = costDeltaByMonth[month] ?? 0;
 
-    const totalRevenueForMonth = isPast
+    const baseRevenueForMonth = isPast
       ? actualRevenue
       : isCurrent
         ? actualRevenue + scheduledRevenue + pipelineRevenueWeighted
         : scheduledRevenue + pipelineRevenueWeighted;
 
-    const fixedCosts = fixedCostsByMonth[month] ?? 0;
+    // Akcje symulacyjne po stronie przychodów wchodzą też do bazy liczącej koszt zmienny
+    // (tak jak w arkuszu: "planowane działania zwiększające sprzedaż" liczą się do % kosztu).
+    const totalRevenueForMonth = baseRevenueForMonth + scenarioRevenueDelta;
+
+    const fixedCosts = (fixedCostsByMonth[month] ?? 0) + scenarioCostDelta;
     const variableCosts = inputs.variableCostPercent * totalRevenueForMonth;
     const netResult = totalRevenueForMonth - fixedCosts - variableCosts;
 
@@ -173,6 +234,8 @@ export function buildMonthlyForecast(inputs: MonthlyForecastInputs): MonthlyFore
       scheduledRevenue,
       pipelineRevenueRaw,
       pipelineRevenueWeighted,
+      scenarioRevenueDelta,
+      scenarioCostDelta,
       totalRevenueForMonth,
       fixedCosts,
       variableCosts,

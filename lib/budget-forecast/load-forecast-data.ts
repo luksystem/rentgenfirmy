@@ -1,6 +1,7 @@
 import { fetchActiveBudgetCostItems } from "@/lib/supabase/budget-cost-item-repository";
 import { fetchBudgetForecastSettings } from "@/lib/supabase/budget-forecast-settings-repository";
 import { fetchAllProjectRevenueForecastsWithProjectNames } from "@/lib/supabase/project-revenue-forecast-repository";
+import { fetchAllBudgetScenarioActions } from "@/lib/supabase/budget-scenario-action-repository";
 import { fetchCompanySettlementEntriesByKindInRange } from "@/lib/supabase/project-settlement-repository";
 import {
   buildMonthsWindow,
@@ -8,12 +9,14 @@ import {
   monthKey,
   type BudgetCostItem,
   type BudgetForecastSettings,
+  type BudgetScenarioAction,
 } from "@/lib/budget-forecast/types";
 import type { MonthlyAmount, PipelineForecastAmount } from "@/lib/budget-forecast/engine";
 
 export type BudgetForecastDataset = {
   settings: BudgetForecastSettings;
   costItems: BudgetCostItem[];
+  scenarioActions: BudgetScenarioAction[];
   months: string[];
   currentMonth: string;
   actualPayments: MonthlyAmount[];
@@ -29,8 +32,9 @@ export async function loadBudgetForecastDataset(horizonMonthsOverride?: number):
   const fromDate = months[0];
   const toDate = months[months.length - 1];
 
-  const [costItems, pipelineEntries, settlementEntries] = await Promise.all([
+  const [costItems, scenarioActions, pipelineEntries, settlementEntries] = await Promise.all([
     fetchActiveBudgetCostItems(),
+    fetchAllBudgetScenarioActions(),
     fetchAllProjectRevenueForecastsWithProjectNames(),
     fetchCompanySettlementEntriesByKindInRange(["payment", "schedule"], fromDate, toDate),
   ]);
@@ -60,6 +64,7 @@ export async function loadBudgetForecastDataset(horizonMonthsOverride?: number):
   return {
     settings,
     costItems,
+    scenarioActions,
     months,
     currentMonth,
     actualPayments,

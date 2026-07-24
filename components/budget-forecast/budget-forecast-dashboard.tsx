@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { BudgetForecastSlidersPanel } from "@/components/budget-forecast/budget-forecast-sliders-panel";
 import { BudgetForecastTable } from "@/components/budget-forecast/budget-forecast-table";
 import { BudgetForecastChart } from "@/components/budget-forecast/budget-forecast-chart";
+import { BudgetScenarioActionsPanel } from "@/components/budget-forecast/budget-scenario-actions-panel";
 import { buildMonthlyForecast } from "@/lib/budget-forecast/engine";
 import { loadBudgetForecastDataset, type BudgetForecastDataset } from "@/lib/budget-forecast/load-forecast-data";
 import { saveBudgetForecastSettings } from "@/lib/supabase/budget-forecast-settings-repository";
@@ -70,6 +71,7 @@ export function BudgetForecastDashboard() {
       confidenceWeights,
       costItems: dataset.costItems,
       variableCostPercent,
+      scenarioActions: dataset.scenarioActions,
     });
   }, [dataset, openingBalance, variableCostPercent, confidenceWeights]);
 
@@ -120,6 +122,11 @@ export function BudgetForecastDashboard() {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="grid gap-6">
+        <BudgetScenarioActionsPanel
+          actions={dataset?.scenarioActions ?? []}
+          onActionsChange={(next) => setDataset(dataset ? { ...dataset, scenarioActions: next } : dataset)}
+          canManage={canManageSettings}
+        />
         <BudgetForecastChart rows={rows} />
         <BudgetForecastTable rows={rows} />
         {error ? <p className="text-sm text-rose-400">{error}</p> : null}

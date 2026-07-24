@@ -1552,6 +1552,42 @@ export type ProjectRevenueForecastInsert = {
 
 export type ProjectRevenueForecastUpdate = Partial<ProjectRevenueForecastInsert>;
 
+export type BudgetScenarioActionRow = {
+  id: string;
+  name: string;
+  notes: string;
+  effect_type: string;
+  amount: number | string;
+  cadence: string;
+  interval_months: number | null;
+  month: string | null;
+  start_month: string;
+  end_month: string | null;
+  is_enabled: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BudgetScenarioActionInsert = {
+  id?: string;
+  name: string;
+  notes?: string;
+  effect_type: string;
+  amount?: number;
+  cadence: string;
+  interval_months?: number | null;
+  month?: string | null;
+  start_month?: string;
+  end_month?: string | null;
+  is_enabled?: boolean;
+  created_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type BudgetScenarioActionUpdate = Partial<BudgetScenarioActionInsert>;
+
 export type ProjectDocumentRow = {
   id: string;
   project_id: string | null;
@@ -3108,6 +3144,12 @@ export type Database = {
         Row: ProjectRevenueForecastRow;
         Insert: ProjectRevenueForecastInsert;
         Update: ProjectRevenueForecastUpdate;
+        Relationships: [];
+      };
+      budget_scenario_actions: {
+        Row: BudgetScenarioActionRow;
+        Insert: BudgetScenarioActionInsert;
+        Update: BudgetScenarioActionUpdate;
         Relationships: [];
       };
       project_documents: {
