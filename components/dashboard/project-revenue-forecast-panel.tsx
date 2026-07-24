@@ -24,8 +24,9 @@ import {
   createProjectRevenueForecast,
   deleteProjectRevenueForecast,
   fetchProjectRevenueForecasts,
+  updateProjectRevenueForecast,
 } from "@/lib/supabase/project-revenue-forecast-repository";
-import { formatMoney } from "@/lib/utils";
+import { formatDate, formatMoney } from "@/lib/utils";
 
 const CONFIDENCE_BADGE_TONE: Record<BudgetConfidenceLevel, "active" | "blue" | "waiting" | "neutral" | "closed"> = {
   ok: "active",
@@ -34,6 +35,31 @@ const CONFIDENCE_BADGE_TONE: Record<BudgetConfidenceLevel, "active" | "blue" | "
   low: "neutral",
   frozen: "closed",
 };
+
+type DraftState = {
+  date: string;
+  amount: string;
+  confidence: BudgetConfidenceLevel;
+  notes: string;
+};
+
+function emptyDraft(): DraftState {
+  return {
+    date: `${currentMonthKey().slice(0, 7)}-01`,
+    amount: "",
+    confidence: "medium",
+    notes: "",
+  };
+}
+
+function draftFromEntry(entry: ProjectRevenueForecast): DraftState {
+  return {
+    date: entry.expectedDate.slice(0, 10),
+    amount: String(entry.amountGross),
+    confidence: entry.confidence,
+    notes: entry.notes,
+  };
+}
 
 export function ProjectRevenueForecastPanel({
   projectId,
@@ -48,10 +74,8 @@ export function ProjectRevenueForecastPanel({
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [draftMonth, setDraftMonth] = useState(currentMonthKey().slice(0, 7));
-  const [draftAmount, setDraftAmount] = useState("");
-  const [draftConfidence, setDraftConfidence] = useState<BudgetConfidenceLevel>("medium");
-  const [draftNotes, setDraftNotes] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<DraftState>(emptyDraft());
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -67,29 +91,47 @@ export function ProjectRevenueForecastPanel({
       .finally(() => setLoading(false));
   }
 
-  function openDialog() {
-    setDraftMonth(currentMonthKey().slice(0, 7));
-    setDraftAmount("");
-    setDraftConfidence("medium");
-    setDraftNotes("");
+  function openCreateDialog() {
+    setEditingId(null);
+    setDraft(emptyDraft());
     setDialogOpen(true);
   }
 
-  async function handleCreate() {
+  function openEditDialog(entry: ProjectRevenueForecast) {
+    setEditingId(entry.id);
+    setDraft(draftFromEntry(entry));
+    setDialogOpen(true);
+  }
+
+  async function handleSaveDraft() {
     setSaving(true);
     setError(null);
     try {
-      const created = await createProjectRevenueForecast({
-        projectId,
-        expectedMonth: `${draftMonth}-01`,
-        amountGross: Number(draftAmount) || 0,
-        confidence: draftConfidence,
-        notes: draftNotes.trim(),
-      });
-      setEntries((prev) => [...prev, created].sort((a, b) => a.expectedMonth.localeCompare(b.expectedMonth)));
+      if (editingId) {
+        const updated = await updateProjectRevenueForecast(editingId, {
+          expectedDate: draft.date,
+          amountGross: Number(draft.amount) || 0,
+          confidence: draft.confidence,
+          notes: draft.notes.trim(),
+        });
+        setEntries((prev) =>
+          prev
+            .map((entry) => (entry.id === editingId ? updated : entry))
+            .sort((a, b) => a.expectedDate.localeCompare(b.expectedDate)),
+        );
+      } else {
+        const created = await createProjectRevenueForecast({
+          projectId,
+          expectedDate: draft.date,
+          amountGross: Number(draft.amount) || 0,
+          confidence: draft.confidence,
+          notes: draft.notes.trim(),
+        });
+        setEntries((prev) => [...prev, created].sort((a, b) => a.expectedDate.localeCompare(b.expectedDate)));
+      }
       setDialogOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Nie udało się dodać pozycji.");
+      setError(err instanceof Error ? err.message : "Nie udało się zapisać pozycji.");
     } finally {
       setSaving(false);
     }
@@ -114,13 +156,13 @@ export function ProjectRevenueForecastPanel({
   return (
     <div className="grid gap-4">
       <p className="text-sm text-muted">
-        Spodziewane wpływy z tego projektu, jeszcze niezafakturowane — kwota, miesiąc i poziom pewności.
+        Spodziewane wpływy z tego projektu, jeszcze niezafakturowane — kwota, data i poziom pewności.
         Wchodzą do firmowej prognozy płynności ważone pewnością.
       </p>
 
       {!readOnly ? (
         <div className="flex justify-end">
-          <Button type="button" size="sm" onClick={openDialog}>
+          <Button type="button" size="sm" onClick={openCreateDialog}>
             <Plus className="h-4 w-4" />
             Dodaj spodziewany wpływ
           </Button>
@@ -146,7 +188,7 @@ export function ProjectRevenueForecastPanel({
               <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
                 <div>
                   <p className="font-medium text-foreground">
-                    {formatMoney(entry.amountGross)} · {entry.expectedMonth.slice(0, 7)}
+                    {formatMoney(entry.amountGross)} · {formatDate(entry.expectedDate)}
                   </p>
                   {entry.notes ? <p className="text-sm text-muted">{entry.notes}</p> : null}
                 </div>
@@ -155,15 +197,20 @@ export function ProjectRevenueForecastPanel({
                     {BUDGET_CONFIDENCE_LABELS[entry.confidence]}
                   </Badge>
                   {!readOnly ? (
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      disabled={busyId === entry.id}
-                      onClick={() => void handleDelete(entry.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <>
+                      <Button type="button" variant="secondary" size="sm" onClick={() => openEditDialog(entry)}>
+                        Edytuj
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        disabled={busyId === entry.id}
+                        onClick={() => void handleDelete(entry.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
                   ) : null}
                 </div>
               </CardContent>
@@ -175,28 +222,28 @@ export function ProjectRevenueForecastPanel({
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nowy spodziewany wpływ</DialogTitle>
+            <DialogTitle>{editingId ? "Edytuj spodziewany wpływ" : "Nowy spodziewany wpływ"}</DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Miesiąc">
-                <Input type="month" value={draftMonth} onChange={(e) => setDraftMonth(e.target.value)} />
+              <Field label="Data">
+                <Input type="date" value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} />
               </Field>
               <Field label="Kwota (zł)">
                 <Input
                   type="number"
                   step="0.01"
-                  value={draftAmount}
-                  onChange={(e) => setDraftAmount(e.target.value)}
+                  value={draft.amount}
+                  onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
                 />
               </Field>
             </div>
 
             <Field label="Pewność">
               <Select
-                value={draftConfidence}
-                onChange={(e) => setDraftConfidence(e.target.value as BudgetConfidenceLevel)}
+                value={draft.confidence}
+                onChange={(e) => setDraft({ ...draft, confidence: e.target.value as BudgetConfidenceLevel })}
               >
                 {BUDGET_CONFIDENCE_LEVELS.map((level) => (
                   <option key={level} value={level}>
@@ -207,7 +254,7 @@ export function ProjectRevenueForecastPanel({
             </Field>
 
             <Field label="Notatki (opcjonalnie)">
-              <Input value={draftNotes} onChange={(e) => setDraftNotes(e.target.value)} />
+              <Input value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
             </Field>
           </div>
 
@@ -215,7 +262,7 @@ export function ProjectRevenueForecastPanel({
             <Button type="button" variant="secondary" onClick={() => setDialogOpen(false)}>
               Anuluj
             </Button>
-            <Button type="button" onClick={() => void handleCreate()} disabled={saving}>
+            <Button type="button" onClick={() => void handleSaveDraft()} disabled={saving}>
               {saving ? "Zapisywanie..." : "Zapisz"}
             </Button>
           </DialogFooter>

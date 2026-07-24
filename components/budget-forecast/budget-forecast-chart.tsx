@@ -50,7 +50,7 @@ function ChartTooltip({
 
 export function BudgetForecastChart({ rows }: { rows: MonthlyForecastRow[] }) {
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardHeader>
         <CardTitle>Stan miesiąca i saldo narastające</CardTitle>
       </CardHeader>

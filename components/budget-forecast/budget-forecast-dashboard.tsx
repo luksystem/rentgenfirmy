@@ -120,8 +120,8 @@ export function BudgetForecastDashboard() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-      <div className="grid gap-6">
+    <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid min-w-0 gap-6">
         <BudgetScenarioActionsPanel
           actions={dataset?.scenarioActions ?? []}
           onActionsChange={(next) => setDataset(dataset ? { ...dataset, scenarioActions: next } : dataset)}

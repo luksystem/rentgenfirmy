@@ -81,7 +81,7 @@ export function rowToProjectRevenueForecast(row: ProjectRevenueForecastRow): Pro
   return {
     id: row.id,
     projectId: row.project_id,
-    expectedMonth: row.expected_month,
+    expectedDate: row.expected_date,
     amountGross: num(row.amount_gross),
     confidence: isBudgetConfidenceLevel(row.confidence) ? row.confidence : "medium",
     notes: row.notes ?? "",
@@ -96,7 +96,7 @@ export function projectRevenueForecastToInsertRow(
 ): ProjectRevenueForecastInsert {
   return {
     project_id: input.projectId,
-    expected_month: input.expectedMonth,
+    expected_date: input.expectedDate,
     amount_gross: input.amountGross,
     confidence: input.confidence,
     notes: input.notes ?? "",
@@ -107,7 +107,7 @@ export function projectRevenueForecastToUpdateRow(
   patch: Partial<ProjectRevenueForecast>,
 ): ProjectRevenueForecastUpdate {
   const row: ProjectRevenueForecastUpdate = {};
-  if (patch.expectedMonth !== undefined) row.expected_month = patch.expectedMonth;
+  if (patch.expectedDate !== undefined) row.expected_date = patch.expectedDate;
   if (patch.amountGross !== undefined) row.amount_gross = patch.amountGross;
   if (patch.confidence !== undefined) row.confidence = patch.confidence;
   if (patch.notes !== undefined) row.notes = patch.notes;

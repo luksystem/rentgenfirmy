@@ -180,7 +180,7 @@ export function BudgetScenarioActionsPanel({
   }
 
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
         <CardTitle>Akcje symulacyjne</CardTitle>
         {canManage ? (

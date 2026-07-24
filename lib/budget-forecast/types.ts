@@ -54,7 +54,8 @@ export function isBudgetCostCadence(value: string): value is BudgetCostCadence {
 export type ProjectRevenueForecast = {
   id: string;
   projectId: string;
-  expectedMonth: string; // "YYYY-MM-01"
+  /** Konkretna data ("YYYY-MM-DD"), nie tylko miesiąc — pozwala na widok tygodniowy. */
+  expectedDate: string;
   amountGross: number;
   confidence: BudgetConfidenceLevel;
   notes: string;
@@ -65,7 +66,7 @@ export type ProjectRevenueForecast = {
 
 export type ProjectRevenueForecastInput = {
   projectId: string;
-  expectedMonth: string;
+  expectedDate: string;
   amountGross: number;
   confidence: BudgetConfidenceLevel;
   notes?: string;

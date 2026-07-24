@@ -1529,7 +1529,7 @@ export type BudgetCostItemUpdate = Partial<BudgetCostItemInsert>;
 export type ProjectRevenueForecastRow = {
   id: string;
   project_id: string;
-  expected_month: string;
+  expected_date: string;
   amount_gross: number | string;
   confidence: string;
   notes: string;
@@ -1541,7 +1541,7 @@ export type ProjectRevenueForecastRow = {
 export type ProjectRevenueForecastInsert = {
   id?: string;
   project_id: string;
-  expected_month: string;
+  expected_date: string;
   amount_gross?: number;
   confidence: string;
   notes?: string;

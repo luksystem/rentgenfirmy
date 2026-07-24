@@ -17,7 +17,7 @@ export async function fetchProjectRevenueForecasts(projectId: string): Promise<P
     .from("project_revenue_forecasts")
     .select("*")
     .eq("project_id", projectId)
-    .order("expected_month", { ascending: true });
+    .order("expected_date", { ascending: true });
 
   if (error) {
     throw new Error(error.message);
@@ -33,7 +33,7 @@ export async function fetchAllProjectRevenueForecastsWithProjectNames(): Promise
   const { data, error } = await supabase
     .from("project_revenue_forecasts")
     .select("*, projects(name, client_id)")
-    .order("expected_month", { ascending: true });
+    .order("expected_date", { ascending: true });
 
   if (error) {
     throw new Error(error.message);
@@ -51,15 +51,15 @@ export async function fetchAllProjectRevenueForecastsWithProjectNames(): Promise
 }
 
 export async function fetchProjectRevenueForecastsInRange(
-  fromMonth: string,
-  toMonth: string,
+  fromDate: string,
+  toDate: string,
 ): Promise<ProjectRevenueForecast[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("project_revenue_forecasts")
     .select("*")
-    .gte("expected_month", fromMonth)
-    .lte("expected_month", toMonth);
+    .gte("expected_date", fromDate)
+    .lte("expected_date", toDate);
 
   if (error) {
     throw new Error(error.message);

@@ -31,7 +31,7 @@ export function BudgetForecastSlidersPanel({
   dirty: boolean;
 }) {
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardHeader>
         <CardTitle>Założenia prognozy</CardTitle>
       </CardHeader>

@@ -19,7 +19,7 @@ export function BudgetForecastTable({ rows }: { rows: MonthlyForecastRow[] }) {
   }
 
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardContent className="overflow-x-auto p-0">
         <table className="min-w-full text-sm">
           <thead>

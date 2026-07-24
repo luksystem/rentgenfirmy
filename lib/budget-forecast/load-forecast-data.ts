@@ -52,9 +52,9 @@ export async function loadBudgetForecastDataset(horizonMonthsOverride?: number):
   }
 
   const pipelineForecasts = pipelineEntries
-    .filter((entry) => months.includes(monthKey(entry.expectedMonth)))
+    .filter((entry) => months.includes(monthKey(entry.expectedDate)))
     .map((entry) => ({
-      month: entry.expectedMonth,
+      month: entry.expectedDate,
       amountGross: entry.amountGross,
       confidence: entry.confidence,
       projectId: entry.projectId,
