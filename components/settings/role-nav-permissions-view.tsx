@@ -17,6 +17,7 @@ import {
   getSupportedActionsForModule,
   PERMISSION_ACTION_LABELS,
 } from "@/lib/permissions/module-actions";
+import { ALWAYS_ALLOWED_NAV_MODULES } from "@/lib/navigation/role-nav-permissions";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import { useRoleNavPermissionsStore } from "@/store/role-nav-permissions-store";
@@ -360,20 +361,27 @@ export function RoleNavPermissionsView() {
                           <p className="font-medium text-foreground">{module.label}</p>
                           <p className="text-xs text-muted">{module.href}</p>
                         </td>
-                        {CONFIGURABLE_ROLES.map((role) => (
-                          <td key={`${module.key}-${role}`} className="px-2 py-2.5 text-center">
-                            <label className="inline-flex cursor-pointer items-center justify-center">
-                              <input
-                                type="checkbox"
-                                className="h-4 w-4 rounded border-border accent-blue-500"
-                                checked={navMatrix[role][module.key]}
-                                onChange={(event) =>
-                                  setModuleAccess(role, module.key, event.target.checked)
-                                }
-                              />
-                            </label>
-                          </td>
-                        ))}
+                        {CONFIGURABLE_ROLES.map((role) => {
+                          const alwaysAllowed = ALWAYS_ALLOWED_NAV_MODULES.includes(module.key);
+                          return (
+                            <td key={`${module.key}-${role}`} className="px-2 py-2.5 text-center">
+                              <label
+                                className="inline-flex cursor-pointer items-center justify-center"
+                                title={alwaysAllowed ? "Zawsze dostępne dla każdej roli" : undefined}
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 rounded border-border accent-blue-500 disabled:opacity-60"
+                                  checked={alwaysAllowed || navMatrix[role][module.key]}
+                                  disabled={alwaysAllowed}
+                                  onChange={(event) =>
+                                    setModuleAccess(role, module.key, event.target.checked)
+                                  }
+                                />
+                              </label>
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                   </Fragment>

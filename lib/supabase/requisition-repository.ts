@@ -19,6 +19,8 @@ type RequisitionRow = {
   reviewed_by_name: string | null;
   reviewed_at: string | null;
   review_note: string;
+  order_owner_id: string | null;
+  order_due_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -52,6 +54,8 @@ export function rowToRequisition(row: RequisitionRow): Requisition {
     reviewedByName: row.reviewed_by_name,
     reviewedAt: row.reviewed_at,
     reviewNote: row.review_note,
+    orderOwnerId: row.order_owner_id,
+    orderDueAt: row.order_due_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -133,6 +137,31 @@ export async function updateRequisitionStatus(
       reviewed_by_name: reviewerName.trim() || "Zespół",
       reviewed_at: now,
       review_note: reviewNote?.trim() ?? "",
+      updated_at: now,
+    })
+    .eq("id", requisitionId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToRequisition(data as RequisitionRow);
+}
+
+export async function updateRequisitionOrderPlan(
+  requisitionId: string,
+  input: { orderOwnerId: string | null; orderDueAt: string | null },
+) {
+  const supabase = getSupabase();
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("requisitions")
+    .update({
+      order_owner_id: input.orderOwnerId,
+      order_due_at: input.orderDueAt,
       updated_at: now,
     })
     .eq("id", requisitionId)

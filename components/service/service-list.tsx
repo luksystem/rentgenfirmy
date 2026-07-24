@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildServiceCosts, useServiceStore } from "@/store/service-store";
 import { useAppStore } from "@/store/app-store";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Field, Select } from "@/components/ui/input";
+import { Field, Input, Select } from "@/components/ui/input";
 import {
   getServiceOfferListTone,
   serviceOfferListBadge,
@@ -17,20 +17,29 @@ import {
 import { useListAutoRefresh } from "@/lib/hooks/use-list-auto-refresh";
 import { isUnreviewedIntakeOffer } from "@/lib/service/intake-offer";
 import { SERVICE_STATUSES } from "@/lib/service/types";
+import {
+  fetchRecentOfferSearches,
+  recordOfferSearch,
+} from "@/lib/supabase/offer-search-history-repository";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
 
 const ALL_CLIENTS = "";
 const ALL_STATUSES = "";
+const SEARCH_SAVE_DEBOUNCE_MS = 1200;
 
 export function ServiceList() {
   const services = useServiceStore((s) => s.services);
   const deleteService = useServiceStore((s) => s.deleteService);
   const duplicateServiceForClient = useServiceStore((s) => s.duplicateServiceForClient);
+  const upsertService = useServiceStore((s) => s.upsertService);
   const refresh = useServiceStore((s) => s.refresh);
   const isSaving = useServiceStore((s) => s.isSaving);
   const projects = useAppStore((s) => s.projects);
   const [clientFilter, setClientFilter] = useState(ALL_CLIENTS);
   const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [showRecentSearches, setShowRecentSearches] = useState(false);
+  const searchSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refreshList = useCallback(async () => {
     await refresh();
@@ -38,20 +47,43 @@ export function ServiceList() {
 
   useListAutoRefresh(refreshList, 30_000, !isSaving);
 
+  useEffect(() => {
+    void fetchRecentOfferSearches().then(setRecentSearches);
+  }, []);
+
+  function handleClientFilterChange(value: string) {
+    setClientFilter(value);
+    if (searchSaveTimer.current) {
+      clearTimeout(searchSaveTimer.current);
+    }
+    if (!value.trim()) {
+      return;
+    }
+    searchSaveTimer.current = setTimeout(() => {
+      void recordOfferSearch(value).then(() => {
+        void fetchRecentOfferSearches().then(setRecentSearches);
+      });
+    }, SEARCH_SAVE_DEBOUNCE_MS);
+  }
+
+  function handleSelectRecentSearch(query: string) {
+    setClientFilter(query);
+    setShowRecentSearches(false);
+  }
+
   const projectNames = useMemo(
     () => new Map(projects.map((project) => [project.id, project.name])),
     [projects],
   );
 
-  const clientOptions = useMemo(() => {
-    const names = new Set(services.map((service) => service.client.fullName.trim()).filter(Boolean));
-    return [...names].sort((left, right) => left.localeCompare(right, "pl"));
-  }, [services]);
-
   const rows = useMemo(() => {
+    const normalizedClientFilter = clientFilter.trim().toLowerCase();
     return services
       .filter((service) => {
-        if (clientFilter && service.client.fullName !== clientFilter) {
+        if (
+          normalizedClientFilter &&
+          !service.client.fullName.toLowerCase().includes(normalizedClientFilter)
+        ) {
           return false;
         }
         if (statusFilter && service.status !== statusFilter) {
@@ -117,6 +149,22 @@ export function ServiceList() {
     }
   }
 
+  async function handleMarkPaid(service: (typeof rows)[number]["service"]) {
+    if (!window.confirm("Oznaczyć rozliczenie jako opłacone i zakończone?")) {
+      return;
+    }
+
+    try {
+      await upsertService({
+        ...service,
+        status: "Zakończona",
+        updatedAt: new Date().toISOString(),
+      });
+    } catch {
+      window.alert("Nie udało się zmienić statusu.");
+    }
+  }
+
   if (services.length === 0) {
     return (
       <Card className="p-8 text-center text-sm text-muted">
@@ -133,15 +181,35 @@ export function ServiceList() {
           onClear={clearFilters}
         >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
-            <Field label="Klient">
-              <Select value={clientFilter} onChange={(event) => setClientFilter(event.target.value)}>
-                <option value={ALL_CLIENTS}>Wszyscy klienci</option>
-                {clientOptions.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </Select>
+            <Field label="Klient" className="relative">
+              <Input
+                value={clientFilter}
+                onChange={(event) => handleClientFilterChange(event.target.value)}
+                onFocus={() => setShowRecentSearches(true)}
+                onBlur={() => window.setTimeout(() => setShowRecentSearches(false), 150)}
+                placeholder="Szukaj po imieniu i nazwisku…"
+              />
+              {showRecentSearches && recentSearches.length > 0 ? (
+                <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-xl border border-border/80 bg-surface-elevated shadow-soft">
+                  <p className="px-3 pt-2 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                    Ostatnie wyszukiwania
+                  </p>
+                  <ul className="max-h-48 overflow-y-auto py-1">
+                    {recentSearches.map((query) => (
+                      <li key={query}>
+                        <button
+                          type="button"
+                          className="block w-full px-3 py-1.5 text-left text-sm text-foreground hover:bg-surface-muted/60"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => handleSelectRecentSearch(query)}
+                        >
+                          {query}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </Field>
             <Field label="Status">
               <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
@@ -264,6 +332,16 @@ export function ServiceList() {
                 <Button variant="secondary" size="sm" asChild className="flex-1 sm:flex-none">
                   <Link href={`/oferty/${service.id}`}>Edytuj</Link>
                 </Button>
+                {service.status === "Fakturowanie" ? (
+                  <Button
+                    size="sm"
+                    className="flex-1 sm:flex-none"
+                    disabled={isSaving}
+                    onClick={() => void handleMarkPaid(service)}
+                  >
+                    Oznacz jako opłacone
+                  </Button>
+                ) : null}
                 <Button
                   variant="secondary"
                   size="sm"
@@ -345,6 +423,15 @@ export function ServiceList() {
                         <Button variant="secondary" size="sm" asChild>
                           <Link href={`/oferty/${service.id}`}>Edytuj</Link>
                         </Button>
+                        {service.status === "Fakturowanie" ? (
+                          <Button
+                            size="sm"
+                            disabled={isSaving}
+                            onClick={() => void handleMarkPaid(service)}
+                          >
+                            Oznacz jako opłacone
+                          </Button>
+                        ) : null}
                         <Button
                           variant="secondary"
                           size="sm"

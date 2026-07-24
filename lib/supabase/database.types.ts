@@ -1434,6 +1434,8 @@ export type RequisitionRow = {
   reviewed_by_name: string | null;
   reviewed_at: string | null;
   review_note: string;
+  order_owner_id: string | null;
+  order_due_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -2933,6 +2935,26 @@ export type Database = {
         Update: Partial<RequisitionRow>;
         Relationships: [];
       };
+      requisition_overdue_alert_log: {
+        Row: {
+          id: string;
+          requisition_id: string;
+          alert_date: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          requisition_id: string;
+          alert_date: string;
+          created_at?: string;
+        };
+        Update: Partial<{
+          requisition_id: string;
+          alert_date: string;
+          created_at: string;
+        }>;
+        Relationships: [];
+      };
       sms_messages: {
         Row: {
           id: string;
@@ -3619,6 +3641,24 @@ export type Database = {
           summary: string;
           href: string | null;
           metadata: Record<string, unknown>;
+        }>;
+        Relationships: [];
+      };
+      offer_list_recent_searches: {
+        Row: {
+          id: string;
+          profile_id: string;
+          query: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          query: string;
+          created_at?: string;
+        };
+        Update: Partial<{
+          query: string;
         }>;
         Relationships: [];
       };

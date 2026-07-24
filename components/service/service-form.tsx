@@ -391,6 +391,10 @@ export function ServiceForm({
   }
 
   async function save() {
+    await persistOffer();
+  }
+
+  async function saveAndExit() {
     await persistOffer("/oferty");
   }
 
@@ -1144,6 +1148,9 @@ export function ServiceForm({
             ) : null}
             <Button type="button" variant="secondary" disabled={isSaving} className="w-full sm:w-auto" onClick={() => save()}>
               {isSaving ? "Zapisywanie…" : settled ? "Zapisz rozliczenie" : "Zapisz"}
+            </Button>
+            <Button type="button" variant="secondary" disabled={isSaving} className="w-full sm:w-auto" onClick={() => saveAndExit()}>
+              {isSaving ? "Zapisywanie…" : "Zapisz i wyjdź"}
             </Button>
             {!settled && !isFixedPrice && (mainTab === "settlement" || mainTab === "preview") ? (
               <Button type="button" disabled={isSaving} className="col-span-2 w-full sm:col-span-1 sm:w-auto" onClick={() => void settle()}>

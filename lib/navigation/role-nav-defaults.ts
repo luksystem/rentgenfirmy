@@ -24,6 +24,7 @@ const PODWYKONAWCA_NAV_ACCESS: NavModuleKey[] = [
   "work-orders",
   "documents",
   "smart-home-knowledge",
+  "requisitions",
   "account-settings",
   "change-password",
 ];
@@ -42,6 +43,7 @@ const OFFICE_NAV_ACCESS: NavModuleKey[] = [
   "invoices",
   "documents",
   "smart-home-knowledge",
+  "requisitions",
   "reports",
   "settings",
   "account-settings",

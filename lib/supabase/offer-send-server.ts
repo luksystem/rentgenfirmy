@@ -147,6 +147,9 @@ async function buildEmailForService(service: ServiceRecord, kind: OfferKind) {
   }
 
   const expiresAt = kind === "estimate" ? service.clientOffer.expiresAt : service.settlementOffer.expiresAt;
+  const materialItems = (kind === "settlement" ? service.actual : service.estimate).materialItems
+    .filter((item) => item.billable && (item.title.trim() || item.netAmount > 0))
+    .map((item) => ({ title: item.title.trim(), quantity: item.quantity, netAmount: item.netAmount }));
 
   const email = buildOfferSendEmail({
     clientName: service.client.fullName,
@@ -154,6 +157,7 @@ async function buildEmailForService(service: ServiceRecord, kind: OfferKind) {
     offerUrl: offerPublicUrl(service, kind),
     expiresAtLabel: expiresAt ? formatDate(expiresAt) : null,
     grossTotal,
+    materialItems,
     kind,
     brand: settings.brand,
     company,

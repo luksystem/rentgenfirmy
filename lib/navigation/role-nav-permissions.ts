@@ -26,6 +26,9 @@ export const EMPTY_ROLE_NAV_PERMISSIONS_CONFIG: RoleNavPermissionsConfig = {
   roles: {},
 };
 
+/** Moduły, których dostępu nie da się ograniczyć per rola — muszą działać dla każdego zalogowanego. */
+export const ALWAYS_ALLOWED_NAV_MODULES: NavModuleKey[] = ["account-settings", "change-password"];
+
 type LegacyV1Config = {
   version?: 1;
   roles?: Partial<Record<UserRole, NavModuleKey[]>>;
@@ -203,7 +206,7 @@ export function canAccessNavModule(
   moduleKey: NavModuleKey,
   config: RoleNavPermissionsConfig = EMPTY_ROLE_NAV_PERMISSIONS_CONFIG,
 ): boolean {
-  if (isAdministratorRole(role)) {
+  if (isAdministratorRole(role) || ALWAYS_ALLOWED_NAV_MODULES.includes(moduleKey)) {
     return true;
   }
   return resolveAllowedNavKeys(role, config).includes(moduleKey);

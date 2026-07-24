@@ -31,6 +31,7 @@ export const USER_NOTIFICATION_KINDS = [
   "agreement_client_responded",
   "service_intake_submitted",
   "service_intake_status",
+  "requisition_order_overdue",
 ] as const;
 
 export const SALES_NOTIFICATION_KINDS = [

@@ -40,7 +40,12 @@ import {
 import { hasMaterialItems } from "@/lib/service/material-items";
 import { FixedPriceOfferReport } from "@/components/service/fixed-price-offer-report";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
-import type { ServiceCostBreakdown, ServiceDiscounts, ServiceRecord } from "@/lib/service/types";
+import type {
+  ServiceCostBreakdown,
+  ServiceDiscounts,
+  ServiceMaterialItem,
+  ServiceRecord,
+} from "@/lib/service/types";
 import { useAppStore } from "@/store/app-store";
 
 function ReportField({ label, value }: { label: string; value: string }) {
@@ -100,6 +105,7 @@ function CostTable({
   specialDiscountPln,
   emptyMessage,
   grossTotalLabel,
+  materialItems,
 }: {
   breakdown: ServiceCostBreakdown;
   vatRate: number;
@@ -107,12 +113,20 @@ function CostTable({
   specialDiscountPln: number;
   emptyMessage: string;
   grossTotalLabel: string;
+  /** Pozycje materiałowe do rozbicia wiersza "Materiały" na osobne pozycje. */
+  materialItems?: ServiceMaterialItem[];
 }) {
+  const visibleMaterialItems = (materialItems ?? []).filter(
+    (item) => item.billable && (item.title.trim() || item.netAmount > 0),
+  );
+
   const rows = [
     { label: "Auto (kilometry)", value: breakdown.categories.car },
     { label: "Godziny w aucie", value: breakdown.categories.carHours },
     { label: "Praca", value: breakdown.categories.labor },
-    { label: "Materiały", value: breakdown.categories.materials },
+    ...(visibleMaterialItems.length === 0
+      ? [{ label: "Materiały", value: breakdown.categories.materials }]
+      : []),
     { label: "Noclegi", value: breakdown.categories.accommodations },
   ].filter((row) => row.value > 0);
 
@@ -134,13 +148,32 @@ function CostTable({
               </td>
             </tr>
           ))
-        ) : (
+        ) : visibleMaterialItems.length === 0 ? (
           <tr className="border-b border-zinc-100">
             <td colSpan={2} className="py-3 text-zinc-500">
               {emptyMessage}
             </td>
           </tr>
-        )}
+        ) : null}
+        {visibleMaterialItems.map((item) => (
+          <tr key={item.id} className="border-b border-zinc-100">
+            <td className="py-2.5 pr-4 pl-4 text-zinc-600">
+              {item.title.trim() || "Materiał"}
+              {item.quantity !== 1 ? ` × ${item.quantity}` : ""}
+            </td>
+            <td className="py-2.5 text-right tabular-nums text-zinc-900">
+              {formatMoney(item.netAmount)}
+            </td>
+          </tr>
+        ))}
+        {visibleMaterialItems.length > 0 ? (
+          <tr className="border-b border-zinc-100">
+            <td className="py-2.5 pr-4 text-zinc-700">Materiały razem</td>
+            <td className="py-2.5 text-right tabular-nums text-zinc-900">
+              {formatMoney(breakdown.categories.materials)}
+            </td>
+          </tr>
+        ) : null}
         <tr className="border-b border-zinc-100">
           <td className="py-2.5 pr-4 text-zinc-600">Suma netto przed rabatem</td>
           <td className="py-2.5 text-right tabular-nums font-medium text-zinc-900">
@@ -671,6 +704,7 @@ export function ServiceReport({
             specialDiscountPln={billingDiscounts.specialDiscountPln}
             emptyMessage={meta.emptyCostRowsMessage}
             grossTotalLabel={meta.grossTotalLabel}
+            materialItems={settled ? service.actual.materialItems : service.estimate.materialItems}
           />
         ) : (
           <CompactCostSummary

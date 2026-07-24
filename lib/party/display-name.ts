@@ -6,15 +6,15 @@ export function partyFirstName(input: { firstName: string }) {
   return input.firstName.trim();
 }
 
-/** Migawka ServiceClient — operacyjnie tylko nazwisko. */
-export function partyToServiceClientName(input: { firstName: string; lastName: string }) {
-  return partyLastName(input);
-}
-
 export function formatPartyName(input: { firstName: string; lastName: string }) {
   const first = partyFirstName(input);
   const last = partyLastName(input);
   return [first, last].filter(Boolean).join(" ") || "—";
+}
+
+/** Migawka ServiceClient — imię i nazwisko. */
+export function partyToServiceClientName(input: { firstName: string; lastName: string }) {
+  return formatPartyName(input);
 }
 
 /** Parsuje jedno pole „imię i nazwisko” (np. formularz zgłoszenia) na firstName + lastName. */

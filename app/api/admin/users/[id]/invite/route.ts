@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireAdministratorProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
+import { getAppBaseUrl } from "@/lib/messages/app-url";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(
-  request: Request,
+  _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -22,9 +23,8 @@ export async function POST(
       return NextResponse.json({ error: "Nie znaleziono użytkownika." }, { status: 404 });
     }
 
-    const origin = new URL(request.url).origin;
     const { error } = await admin.auth.resetPasswordForEmail(profile.email, {
-      redirectTo: `${origin}/auth/callback?next=/konto/haslo`,
+      redirectTo: `${getAppBaseUrl()}/auth/callback?next=/konto/haslo`,
     });
 
     if (error) {

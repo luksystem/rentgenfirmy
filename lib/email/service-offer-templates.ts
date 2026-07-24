@@ -10,6 +10,38 @@ function money(value: number) {
   }).format(value);
 }
 
+export type OfferSendEmailMaterialItem = {
+  title: string;
+  quantity: number;
+  netAmount: number;
+};
+
+function buildMaterialItemsHtml(items: OfferSendEmailMaterialItem[]) {
+  if (items.length === 0) {
+    return "";
+  }
+
+  const rows = items
+    .map(
+      (item) => `<tr>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;color:#374151;">
+          ${escapeEmailHtml(item.title || "Materiał")}${item.quantity !== 1 ? ` × ${item.quantity}` : ""}
+        </td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;text-align:right;color:#111827;">
+          ${escapeEmailHtml(money(item.netAmount))}
+        </td>
+      </tr>`,
+    )
+    .join("");
+
+  return `<div style="margin:0 0 16px;">
+    <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#374151;">Pozycje materiałowe</p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
 export function buildOfferSendEmail(input: {
   clientName: string;
   offerTitle: string;
@@ -20,6 +52,7 @@ export function buildOfferSendEmail(input: {
    */
   expiresAtLabel: string | null;
   grossTotal: number | null;
+  materialItems?: OfferSendEmailMaterialItem[];
   kind: "estimate" | "settlement";
   brand: EmailBrandSettings;
   company?: CompanyProfileDocument | null;
@@ -41,6 +74,8 @@ export function buildOfferSendEmail(input: {
         </p>`
       : "";
 
+  const materialItemsHtml = buildMaterialItemsHtml(input.materialItems ?? []);
+
   const content = `
     <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#111827;">
       Dzień dobry ${escapeEmailHtml(name)},
@@ -51,6 +86,7 @@ export function buildOfferSendEmail(input: {
       do przejrzenia i decyzji.
     </p>
     ${amountHtml}
+    ${materialItemsHtml}
     <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#111827;">
       Możesz zaakceptować, odrzucić albo poprosić o konsultację pod poniższym linkiem${
         input.kind === "settlement" && input.expiresAtLabel

@@ -4,6 +4,7 @@ import { getUserDisplayName, USER_ROLES, type UserProfileInput } from "@/lib/aut
 import { requireAdministratorProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
 import { ensureEmployeeDashboardSpaceServer } from "@/lib/messages/resolve-message-variables";
+import { getAppBaseUrl } from "@/lib/messages/app-url";
 import { logActivityAdmin } from "@/lib/supabase/activity-log-server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -121,10 +122,9 @@ export async function POST(request: Request) {
     let userId: string;
 
     if (body.sendInvite) {
-      const origin = new URL(request.url).origin;
       const { data, error } = await admin.auth.admin.inviteUserByEmail(body.email.trim(), {
         data: metadata,
-        redirectTo: `${origin}/auth/callback?next=/konto/haslo`,
+        redirectTo: `${getAppBaseUrl()}/auth/callback?next=/konto/haslo`,
       });
 
       if (error || !data.user) {

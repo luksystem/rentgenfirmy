@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
+import { fetchProfilesWithProjectAccessServer } from "@/lib/supabase/project-access-server";
 import type { UserNotificationKind } from "@/lib/notifications/types";
 import { sendNotificationChannels } from "@/lib/notifications/dispatch";
 
@@ -12,12 +12,15 @@ export async function notifyTeamAboutChangeRequestDecision(input: {
   accepted: boolean;
   clientResponseName: string;
 }) {
-  const teamProfiles = await fetchTeamProfilesServer().catch(() => []);
+  const supabase = getSupabaseAdmin();
+  // Tylko osoby z dostępem do tego projektu (nie cała firma) — patrz profile_project_access.
+  const teamProfiles = await fetchProfilesWithProjectAccessServer(supabase, input.projectId).catch(
+    () => [],
+  );
   if (!teamProfiles.length) {
     return;
   }
 
-  const supabase = getSupabaseAdmin();
   const sourceId = `change_request_client_responded:${input.changeRequestId}`;
 
   const { data: existing } = await supabase

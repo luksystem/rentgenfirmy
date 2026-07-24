@@ -31,6 +31,7 @@ export type NavModuleKey =
   | "implementation-boards"
   | "goal-boards"
   | "interruptions"
+  | "requisitions"
   | "employees"
   | "reports"
   | "view-to-close"
@@ -278,6 +279,12 @@ export const NAV_MODULE_GROUPS: NavModuleGroupDefinition[] = [
         label: "Przerwania",
         href: "/przerwania",
         routePrefixes: ["/przerwania"],
+      },
+      {
+        key: "requisitions",
+        label: "Zapotrzebowania",
+        href: "/zapotrzebowania",
+        routePrefixes: ["/zapotrzebowania"],
       },
       {
         key: "employees",

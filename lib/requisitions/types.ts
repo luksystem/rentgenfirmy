@@ -49,6 +49,10 @@ export type Requisition = {
   reviewedByName: string | null;
   reviewedAt: string | null;
   reviewNote: string;
+  /** Osoba odpowiedzialna za złożenie zamówienia (ustawiane po akceptacji). */
+  orderOwnerId: string | null;
+  /** Termin, do którego zapotrzebowanie powinno zostać zamówione (YYYY-MM-DD). */
+  orderDueAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -82,6 +86,18 @@ export function canMarkOrdered(status: RequisitionStatus) {
 
 export function canMarkFulfilled(status: RequisitionStatus) {
   return status === "ordered";
+}
+
+/** Zapotrzebowanie zaakceptowane, czeka na zamówienie i minął ustalony termin. */
+export function isRequisitionOrderOverdue(
+  requisition: Pick<Requisition, "status" | "orderDueAt">,
+  today: Date = new Date(),
+): boolean {
+  if (requisition.status !== "approved" || !requisition.orderDueAt) {
+    return false;
+  }
+  const todayYmd = today.toISOString().slice(0, 10);
+  return requisition.orderDueAt < todayYmd;
 }
 
 export function requisitionStatusTone(status: RequisitionStatus) {

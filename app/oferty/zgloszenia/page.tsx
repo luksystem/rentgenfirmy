@@ -11,9 +11,9 @@ export default function ServiceIntakeAdminPage() {
         title="Zgłoszenia serwisowe"
         description="Tylko typ „Zgłoszenie serwisowe” — Kanban CAFE i wątki z klientem. Nowa funkcjonalność i prośba o ofertę trafiają do Szybkich ofert."
         action={
-          <Button variant="secondary" asChild>
+          <Button variant="default" asChild>
             <Link href="/zgloszenie" target="_blank" rel="noreferrer">
-              Podgląd strony publicznej
+              Nowe zgłoszenie klienta
             </Link>
           </Button>
         }

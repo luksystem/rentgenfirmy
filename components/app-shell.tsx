@@ -30,7 +30,9 @@ import {
   PauseCircle,
   PhoneCall,
   Plus,
+  Package,
   Receipt,
+  Search,
   Settings,
   Shield,
   Star,
@@ -49,6 +51,7 @@ import { useKanbanNewTasksRealtime, useKanbanOverdueTasksRealtime } from "@/hook
 import { COMMERCIAL_MODULES } from "@/lib/modules/commercial-modules";
 import { NAV_MODULE_GROUPS, type NavModuleKey } from "@/lib/navigation/nav-modules";
 import { canAccessNavModule } from "@/lib/navigation/role-nav-permissions";
+import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/brand-mark";
 import { NavBadges } from "@/components/nav-badges";
 import { XpBadge } from "@/components/xp/xp-badge";
@@ -57,6 +60,7 @@ import { NotificationBell } from "@/components/notification-bell";
 import { UserAvatar } from "@/components/user-avatar";
 import { NotificationsRealtimeSubscriber } from "@/components/notifications-realtime-subscriber";
 import { NavigateToClientDialog } from "@/components/quick-add/navigate-to-client-dialog";
+import { OpenClientPanelDialog } from "@/components/quick-add/open-client-panel-dialog";
 import { AddContractorDialog } from "@/components/quick-add/add-contractor-dialog";
 import { QuickAddMenuList } from "@/components/quick-add-menu";
 import { useAuthStore } from "@/store/auth-store";
@@ -114,6 +118,7 @@ const NAV_MODULE_ICONS: Record<NavModuleKey, React.ComponentType<{ className?: s
   "implementation-boards": LayoutGrid,
   "goal-boards": Target,
   interruptions: PhoneCall,
+  requisitions: Package,
   employees: Users2,
   reports: BarChart3,
   "view-to-close": CheckCircle2,
@@ -344,6 +349,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [navigateToClientOpen, setNavigateToClientOpen] = useState(false);
   const [addContractorOpen, setAddContractorOpen] = useState(false);
+  const [clientSearchOpen, setClientSearchOpen] = useState(false);
   const isAdministrator = useAuthStore((state) => state.isAdministrator);
   const profile = useAuthStore((state) => state.profile);
   const profileRole = useAuthStore((state) => state.profile?.role);
@@ -620,6 +626,16 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
             <p className="truncate text-xs text-muted">Smart Home / BMS</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="shrink-0"
+              onClick={() => setClientSearchOpen(true)}
+              aria-label="Szukaj klienta"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
             <NotificationBell role="primary" />
             <AccountHeaderButton />
           </div>
@@ -637,6 +653,16 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
               <p className="truncate text-xs text-muted">Smart Home / BMS</p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="shrink-0"
+                onClick={() => setClientSearchOpen(true)}
+                aria-label="Szukaj klienta"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
               <NotificationBell role="secondary" />
               <AccountHeaderButton />
             </div>
@@ -809,6 +835,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
           onOpenChange={setNavigateToClientOpen}
         />
         <AddContractorDialog open={addContractorOpen} onOpenChange={setAddContractorOpen} />
+        <OpenClientPanelDialog open={clientSearchOpen} onOpenChange={setClientSearchOpen} />
 
         <button
           type="button"

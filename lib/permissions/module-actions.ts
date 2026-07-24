@@ -58,6 +58,7 @@ export const NAV_MODULE_SUPPORTED_ACTIONS: Record<NavModuleKey, PermissionAction
   "implementation-boards": CRUD,
   "goal-boards": CRUD,
   interruptions: CRUD,
+  requisitions: CRUD,
   employees: VIEW_EDIT,
   reports: VIEW_EXPORT,
   "view-to-close": VIEW_ONLY,
