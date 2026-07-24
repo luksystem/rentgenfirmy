@@ -6,16 +6,27 @@ import { useAuthStore } from "@/store/auth-store";
 import { useChatStore } from "@/store/chat-store";
 import { Button } from "@/components/ui/button";
 import { ChatInviteMemberDialog } from "@/components/chat/chat-invite-member-dialog";
-import { fetchChatRoomAttachments, removeChatRoomMember } from "@/lib/supabase/chat-room-repository";
-import type { ChatAttachment, ChatRoom } from "@/lib/chat/types";
+import { ChatClientMemberManager } from "@/components/chat/chat-client-member-manager";
+import {
+  fetchChatRoomAttachments,
+  removeChatRoomMember,
+  type ChatRoomMemberWithProfile,
+} from "@/lib/supabase/chat-room-repository";
+import type { ChatAttachment, ChatMessageWithExtras, ChatPin, ChatRoom } from "@/lib/chat/types";
 
 type Tab = "members" | "files" | "pins";
 
+// Referencje modułowe — patrz komentarz w chat-message-list.tsx (Zustand + `?? []` inline
+// tworzy nową tablicę co render i wywala pętlę getSnapshot).
+const EMPTY_MEMBERS: ChatRoomMemberWithProfile[] = [];
+const EMPTY_PINS: ChatPin[] = [];
+const EMPTY_MESSAGES: ChatMessageWithExtras[] = [];
+
 export function ChatRightPanel({ room, currentProfileId }: { room: ChatRoom; currentProfileId: string }) {
   const profile = useAuthStore((state) => state.profile);
-  const members = useChatStore((state) => state.membersByRoom[room.id] ?? []);
-  const pins = useChatStore((state) => state.pinsByRoom[room.id] ?? []);
-  const messages = useChatStore((state) => state.messagesByRoom[room.id] ?? []);
+  const members = useChatStore((state) => state.membersByRoom[room.id] ?? EMPTY_MEMBERS);
+  const pins = useChatStore((state) => state.pinsByRoom[room.id] ?? EMPTY_PINS);
+  const messages = useChatStore((state) => state.messagesByRoom[room.id] ?? EMPTY_MESSAGES);
   const loadRoomDetail = useChatStore((state) => state.loadRoomDetail);
   const toggleMute = useChatStore((state) => state.toggleMute);
 
@@ -62,6 +73,11 @@ export function ChatRightPanel({ room, currentProfileId }: { room: ChatRoom; cur
               <Button type="button" variant="secondary" size="sm" className="mb-2" onClick={() => setInviteOpen(true)}>
                 <UserPlus className="mr-1.5 h-3.5 w-3.5" /> Dodaj uczestnika
               </Button>
+            ) : null}
+            {room.kind === "client" && profile?.role === "administrator" && room.clientId ? (
+              <div className="mb-3">
+                <ChatClientMemberManager clientId={room.clientId} onLinked={() => void loadRoomDetail(room.id)} />
+              </div>
             ) : null}
             {members.map((member) => (
               <div key={member.id} className="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm hover:bg-surface-muted">

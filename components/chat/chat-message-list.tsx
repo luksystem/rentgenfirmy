@@ -9,7 +9,8 @@ import { useChatRoomRealtime } from "@/hooks/use-chat-room-realtime";
 import { useChatTypingPresence } from "@/hooks/use-chat-typing-presence";
 import { ChatMessageBubble } from "@/components/chat/chat-message-bubble";
 import { ChatComposer } from "@/components/chat/chat-composer";
-import type { ChatMessageWithExtras, ChatRoom } from "@/lib/chat/types";
+import type { ChatMessageWithExtras, ChatPin, ChatRoom } from "@/lib/chat/types";
+import type { ChatRoomMemberWithProfile } from "@/lib/supabase/chat-room-repository";
 import { Button } from "@/components/ui/button";
 
 type ChatMessageListProps = {
@@ -20,11 +21,18 @@ type ChatMessageListProps = {
   onMessageSent: () => void;
 };
 
+// Referencje modułowe — selektor Zustand musi zwracać tę samą referencję gdy brak danych dla
+// pokoju, inaczej `[] ?? []`-styl tworzy nową tablicę przy każdym renderze i wywala pętlę
+// (getSnapshot should be cached).
+const EMPTY_MESSAGES: ChatMessageWithExtras[] = [];
+const EMPTY_MEMBERS: ChatRoomMemberWithProfile[] = [];
+const EMPTY_PINS: ChatPin[] = [];
+
 export function ChatMessageList({ room, currentProfileId, onBack, onToggleRightPanel, onMessageSent }: ChatMessageListProps) {
   const profile = useAuthStore((state) => state.profile);
-  const messages = useChatStore((state) => state.messagesByRoom[room.id] ?? []);
-  const members = useChatStore((state) => state.membersByRoom[room.id] ?? []);
-  const pins = useChatStore((state) => state.pinsByRoom[room.id] ?? []);
+  const messages = useChatStore((state) => state.messagesByRoom[room.id] ?? EMPTY_MESSAGES);
+  const members = useChatStore((state) => state.membersByRoom[room.id] ?? EMPTY_MEMBERS);
+  const pins = useChatStore((state) => state.pinsByRoom[room.id] ?? EMPTY_PINS);
   const hasMore = useChatStore((state) => state.hasMoreByRoom[room.id] ?? false);
   const loadRoomDetail = useChatStore((state) => state.loadRoomDetail);
   const loadOlderMessages = useChatStore((state) => state.loadOlderMessages);
