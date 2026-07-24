@@ -69,6 +69,57 @@ function validateSupervisor(body: CreateUserBody, ownId?: string) {
   return null;
 }
 
+/** Supabase Admin API paginuje po 50 — pobierz wszystkie strony, żeby last_sign_in_at objęło cały zespół. */
+async function fetchAllAuthUsersLastSignIn(
+  admin: ReturnType<typeof getSupabaseAdmin>,
+): Promise<Map<string, string | null>> {
+  const lastSignInById = new Map<string, string | null>();
+  let page = 1;
+
+  for (;;) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) {
+      throw new Error(error.message);
+    }
+    for (const authUser of data.users) {
+      lastSignInById.set(authUser.id, authUser.last_sign_in_at ?? null);
+    }
+    if (data.users.length < 200) {
+      break;
+    }
+    page += 1;
+  }
+
+  return lastSignInById;
+}
+
+const ACTIVITY_WINDOW_DAYS = 30;
+
+/** Liczba wpisów activity_log per użytkownik w ostatnich 30 dniach — orientacyjna częstotliwość aktywności. */
+async function fetchActivityCounts(
+  admin: ReturnType<typeof getSupabaseAdmin>,
+): Promise<Map<string, number>> {
+  const since = new Date(Date.now() - ACTIVITY_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await admin
+    .from("activity_log")
+    .select("actor_user_id")
+    .not("actor_user_id", "is", null)
+    .gte("created_at", since);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const counts = new Map<string, number>();
+  for (const row of data ?? []) {
+    if (!row.actor_user_id) {
+      continue;
+    }
+    counts.set(row.actor_user_id, (counts.get(row.actor_user_id) ?? 0) + 1);
+  }
+  return counts;
+}
+
 export async function GET() {
   try {
     await requireAdministratorProfile();
@@ -82,8 +133,17 @@ export async function GET() {
       throw new Error(error.message);
     }
 
+    const [lastSignInById, activityCounts] = await Promise.all([
+      fetchAllAuthUsersLastSignIn(admin).catch(() => new Map<string, string | null>()),
+      fetchActivityCounts(admin).catch(() => new Map<string, number>()),
+    ]);
+
     return NextResponse.json({
-      users: (data ?? []).map(mapProfileRow),
+      users: (data ?? []).map((row) => ({
+        ...mapProfileRow(row),
+        lastSignInAt: lastSignInById.get(row.id) ?? null,
+        activityCount30d: activityCounts.get(row.id) ?? 0,
+      })),
     });
   } catch (error) {
     return jsonError(error);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Camera, Loader2, Trash2 } from "lucide-react";
+import { Camera, Loader2, LogOut, Trash2 } from "lucide-react";
 import { ChangePasswordForm } from "@/components/account/change-password-form";
 import { PushNotificationsSettings } from "@/components/push/push-notifications-settings";
 import { UserAvatar } from "@/components/user-avatar";
@@ -16,6 +16,7 @@ import { useDictionaryStore } from "@/store/dictionary-store";
 export function AccountSettingsForm() {
   const profile = useAuthStore((s) => s.profile);
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
+  const signOut = useAuthStore((s) => s.signOut);
   const ensureDictionaries = useDictionaryStore((s) => s.ensure);
   const itemLabel = useDictionaryStore((s) => s.itemLabel);
 
@@ -288,6 +289,15 @@ export function AccountSettingsForm() {
           </div>
         </CardContent>
       </Card>
+
+      <button
+        type="button"
+        onClick={() => void signOut().then(() => window.location.assign("/logowanie"))}
+        className="flex items-center justify-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/5 px-3 py-2.5 text-sm font-medium text-rose-400 transition hover:bg-rose-500/10 xl:hidden"
+      >
+        <LogOut className="h-4 w-4" />
+        Wyloguj
+      </button>
     </div>
   );
 }

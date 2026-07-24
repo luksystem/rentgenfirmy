@@ -901,6 +901,19 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
                   </div>
                 ))}
               </div>
+              <div className="mt-5 border-t border-border pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    void signOut().then(() => window.location.assign("/logowanie"));
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-400 transition hover:bg-rose-500/10"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Wyloguj
+                </button>
+              </div>
             </div>
           </div>
         ) : null}

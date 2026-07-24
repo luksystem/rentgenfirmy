@@ -18,12 +18,22 @@ import {
 import { ADMIN_SETUP_ERROR_CODE, ADMIN_SETUP_STEPS } from "@/lib/auth/admin-setup";
 import { UserResourceProfileEditor } from "@/components/admin/user-resource-profile-editor";
 import { UserProjectAccessEditor } from "@/components/admin/user-project-access-editor";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 
 type UserFormState = UserProfileInput & {
   password: string;
   sendInvite: boolean;
 };
+
+/** Wzbogacone dane z GET /api/admin/users — logowanie i aktywność liczone po stronie serwera. */
+type UserProfileWithStats = UserProfile & {
+  lastSignInAt: string | null;
+  activityCount30d: number;
+};
+
+function formatLastSignIn(value: string | null) {
+  return value ? formatDateTime(value) : "Nigdy";
+}
 
 const emptyForm = (): UserFormState => ({
   firstName: "",
@@ -66,7 +76,7 @@ function profileToForm(user: UserProfile): UserFormState {
 }
 
 export function UserAdminPanel() {
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState<UserProfileWithStats[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState<UserFormState>(emptyForm());
   const [passwordDraft, setPasswordDraft] = useState("");
@@ -91,7 +101,7 @@ export function UserAdminPanel() {
     try {
       const response = await fetch("/api/admin/users");
       const payload = (await response.json()) as {
-        users?: UserProfile[];
+        users?: UserProfileWithStats[];
         error?: string;
         code?: string;
       };
@@ -344,6 +354,16 @@ export function UserAdminPanel() {
                     >
                       <MobileField label="Telefon" value={user.phone || "—"} />
                       <MobileField label="Rola" value={USER_ROLE_LABELS[user.role]} stack />
+                      <MobileField
+                        label="Ostatnie logowanie"
+                        value={formatLastSignIn(user.lastSignInAt)}
+                        stack
+                      />
+                      <MobileField
+                        label="Aktywność (30 dni)"
+                        value={String(user.activityCount30d)}
+                        stack
+                      />
                     </MobileListCard>
                   ))}
                   {!users.length ? (
@@ -360,6 +380,10 @@ export function UserAdminPanel() {
                         <th className="px-2 py-2 font-medium">Telefon</th>
                         <th className="px-2 py-2 font-medium">Rola</th>
                         <th className="px-2 py-2 font-medium">Aktywny</th>
+                        <th className="px-2 py-2 font-medium">Ostatnie logowanie</th>
+                        <th className="px-2 py-2 font-medium" title="Liczba akcji w dzienniku aktywności w ostatnich 30 dniach">
+                          Aktywność (30 dni)
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -378,6 +402,10 @@ export function UserAdminPanel() {
                           <td className="px-2 py-3">{user.phone || "—"}</td>
                           <td className="px-2 py-3">{USER_ROLE_LABELS[user.role]}</td>
                           <td className="px-2 py-3">{user.isActive ? "Tak" : "Nie"}</td>
+                          <td className="px-2 py-3 whitespace-nowrap">
+                            {formatLastSignIn(user.lastSignInAt)}
+                          </td>
+                          <td className="px-2 py-3 tabular-nums">{user.activityCount30d}</td>
                         </tr>
                       ))}
                     </tbody>
