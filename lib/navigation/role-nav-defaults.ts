@@ -47,16 +47,22 @@ const OFFICE_NAV_ACCESS: NavModuleKey[] = [
   "smart-home-knowledge",
   "requisitions",
   "reports",
+  "budget-forecast",
   "settings",
   "account-settings",
   "change-password",
 ];
 
 /** Domyślny dostęp do modułów menu per rola. */
+/** Dane kosztowe/płacowe modułu Prognoza finansowa nie trafiają do instalatora mimo pełnego dostępu. */
+const INSTALATOR_NAV_ACCESS: NavModuleKey[] = FULL_NAV_ACCESS.filter(
+  (key) => key !== "budget-forecast",
+);
+
 export const DEFAULT_ROLE_NAV_ACCESS: Record<UserRole, NavModuleKey[]> = {
   administrator: FULL_NAV_ACCESS,
   manager: FULL_NAV_ACCESS,
-  instalator: FULL_NAV_ACCESS,
+  instalator: INSTALATOR_NAV_ACCESS,
   office: OFFICE_NAV_ACCESS,
   podwykonawca: PODWYKONAWCA_NAV_ACCESS,
   klient: ["chat", "visualizations", "smart-home-knowledge", "account-settings", "change-password"],
@@ -117,7 +123,11 @@ function officeActions(modules: NavModuleKey[]): Partial<Record<NavModuleKey, Pe
 
   for (const moduleKey of modules) {
     const supported = getSupportedActionsForModule(moduleKey);
-    if (fullEditModules.includes(moduleKey)) {
+    if (moduleKey === "budget-forecast") {
+      // Office widzi i edytuje koszty/pipeline, ale saldo otwarcia i wagi (manage_settings)
+      // oraz usuwanie zostają zastrzeżone dla administrator/manager.
+      actions[moduleKey] = supported.filter((a) => a === "view" || a === "create" || a === "edit");
+    } else if (fullEditModules.includes(moduleKey)) {
       actions[moduleKey] = supported.filter((a) => a !== "delete" || moduleKey === "documents");
     } else {
       actions[moduleKey] = supported.includes("view") ? ["view"] : [supported[0]];

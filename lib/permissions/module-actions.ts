@@ -62,6 +62,7 @@ export const NAV_MODULE_SUPPORTED_ACTIONS: Record<NavModuleKey, PermissionAction
   requisitions: CRUD,
   employees: VIEW_EDIT,
   reports: VIEW_EXPORT,
+  "budget-forecast": [...CRUD, "manage_settings"],
   "view-to-close": VIEW_ONLY,
   "view-no-contact": VIEW_ONLY,
   "view-waiting": VIEW_ONLY,

@@ -23,6 +23,7 @@ import {
   Star,
   StickyNote,
   Target,
+  TrendingUp,
   Users,
   Wallet,
 } from "lucide-react";
@@ -53,6 +54,7 @@ import { ProjectBillingBudgetPanel } from "@/components/dashboard/project-billin
 import { ProjectSettlementsPanel } from "@/components/dashboard/project-settlements-panel";
 import { ProjectTimeTrackingPanel } from "@/components/dashboard/project-time-tracking-panel";
 import { ProjectUsersPanel } from "@/components/dashboard/project-users-panel";
+import { ProjectRevenueForecastPanel } from "@/components/dashboard/project-revenue-forecast-panel";
 import { ProcessPipeline } from "@/components/process/process-pipeline";
 import { ProjectProcessPipelineSection } from "@/components/process/project-process-pipeline-section";
 import { PublicKanbanEmbedded } from "@/components/process/public-kanban-embedded";
@@ -90,7 +92,7 @@ import type { ServiceIntakeRecord } from "@/lib/service-intake/types";
 import type { Client, ClientInput } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { isIntegrationOperator } from "@/lib/auth/types";
+import { hasFullAppAccess, isIntegrationOperator } from "@/lib/auth/types";
 import { useAuthStore } from "@/store/auth-store";
 import { useProjectAgreementsRealtime } from "@/hooks/use-project-agreements-realtime";
 import { useProjectChangeRequestsRealtime } from "@/hooks/use-project-change-requests-realtime";
@@ -141,6 +143,7 @@ export type ClientDashboardTab =
   | "links"
   | "time-tracking"
   | "project-users"
+  | "revenue-forecast"
   | "training";
 
 const EMPTY_AGREEMENTS: ProjectClientAgreement[] = [];
@@ -223,10 +226,17 @@ const TEAM_PROJECT_USERS_TAB = {
   icon: Users,
 };
 
+const TEAM_REVENUE_FORECAST_TAB = {
+  id: "revenue-forecast" as const,
+  label: "Prognoza wpływów",
+  icon: TrendingUp,
+};
+
 const teamTabsWithProject = [
   TEAM_MAIN_TAB_CONFIG[0],
   TEAM_PROJECT_TAB,
   TEAM_SETTLEMENTS_TAB,
+  TEAM_REVENUE_FORECAST_TAB,
   TEAM_TIME_TRACKING_TAB,
   TEAM_PROJECT_USERS_TAB,
   TEAM_INTEGRATIONS_TAB,
@@ -443,6 +453,9 @@ export function ClientDashboardView({
   );
   const canViewIntegrations =
     !readOnly && (isAdministrator || (profile ? isIntegrationOperator(profile.role) : false));
+  const canViewRevenueForecast =
+    !readOnly &&
+    (isAdministrator || (profile ? hasFullAppAccess(profile.role) || profile.role === "office" : false));
 
   useEffect(() => {
     if (seedKanbanPublicLinks !== undefined) {
@@ -853,6 +866,7 @@ export function ClientDashboardView({
   const teamMainTabs = teamTabsWithProject.filter((tab) => {
     if (tab.id === "inspections" && !hasClientInspections) return false;
     if (tab.id === "integrations" && !canViewIntegrations) return false;
+    if (tab.id === "revenue-forecast" && !canViewRevenueForecast) return false;
     if (tab.id === "agreements" && !enableAgreements) return false;
     if (tab.id === "changes" && !enableChangeRequests) return false;
     if (tab.id === "offers" && !enableOffers) return false;
@@ -1449,6 +1463,15 @@ export function ClientDashboardView({
     );
   }
 
+  function renderRevenueForecastPanel() {
+    return (
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
+        <h2 className="page-section-title mb-3 text-base font-semibold">Prognoza wpływów</h2>
+        <ProjectRevenueForecastPanel projectId={selectedProject.id} readOnly={readOnly} />
+      </div>
+    );
+  }
+
   function renderCredentialsPanel() {
     if (!enableCredentials) {
       return (
@@ -1661,6 +1684,8 @@ export function ClientDashboardView({
         return !readOnly ? renderTimeTrackingPanel() : null;
       case "project-users":
         return !readOnly ? renderProjectUsersPanel() : null;
+      case "revenue-forecast":
+        return canViewRevenueForecast ? renderRevenueForecastPanel() : null;
       case "training":
         return !readOnly ? <ClientTrainingPathPanel clientId={client.id} /> : null;
       default:

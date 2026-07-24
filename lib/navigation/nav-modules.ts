@@ -35,6 +35,7 @@ export type NavModuleKey =
   | "requisitions"
   | "employees"
   | "reports"
+  | "budget-forecast"
   | "view-to-close"
   | "view-no-contact"
   | "view-waiting"
@@ -316,6 +317,12 @@ export const NAV_MODULE_GROUPS: NavModuleGroupDefinition[] = [
         label: "Raport",
         href: "/raport",
         routePrefixes: ["/raport"],
+      },
+      {
+        key: "budget-forecast",
+        label: "Prognoza finansowa",
+        href: "/prognoza-finansowa",
+        routePrefixes: ["/prognoza-finansowa"],
       },
     ],
   },

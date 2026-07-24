@@ -25,7 +25,7 @@ function colorForIndex(index: number) {
   return CHART_COLORS[index % CHART_COLORS.length];
 }
 
-function ClientOnlyChart({ children }: { children: React.ReactNode }) {
+export function ClientOnlyChart({ children }: { children: React.ReactNode }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const [ready, setReady] = useState(false);

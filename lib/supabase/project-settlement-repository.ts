@@ -76,6 +76,27 @@ export async function fetchProjectSettlementEntries(
   return (data ?? []).map((row) => rowToSettlementEntry(row as EntryRow));
 }
 
+/** Wpisy rozliczeń całej firmy (nie per-projekt) w danym oknie dat — do prognozy płynności. */
+export async function fetchCompanySettlementEntriesByKindInRange(
+  kinds: Array<"payment" | "schedule">,
+  fromDate: string,
+  toDate: string,
+): Promise<ProjectSettlementEntry[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("project_settlement_entries")
+    .select("*")
+    .in("kind", kinds)
+    .gte("entry_date", fromDate)
+    .lte("entry_date", toDate);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row) => rowToSettlementEntry(row as EntryRow));
+}
+
 async function fetchServicesForProject(projectId: string): Promise<ServiceRecord[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase

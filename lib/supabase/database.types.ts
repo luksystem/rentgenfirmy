@@ -1490,6 +1490,68 @@ export type ProjectSettlementEntryInsert = {
 
 export type ProjectSettlementEntryUpdate = Partial<ProjectSettlementEntryInsert>;
 
+export type BudgetCostItemRow = {
+  id: string;
+  name: string;
+  category: string;
+  amount: number | string;
+  cadence: string;
+  interval_months: number | null;
+  month: string | null;
+  start_month: string;
+  end_month: string | null;
+  is_active: boolean;
+  notes: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BudgetCostItemInsert = {
+  id?: string;
+  name: string;
+  category?: string;
+  amount?: number;
+  cadence: string;
+  interval_months?: number | null;
+  month?: string | null;
+  start_month?: string;
+  end_month?: string | null;
+  is_active?: boolean;
+  notes?: string;
+  created_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type BudgetCostItemUpdate = Partial<BudgetCostItemInsert>;
+
+export type ProjectRevenueForecastRow = {
+  id: string;
+  project_id: string;
+  expected_month: string;
+  amount_gross: number | string;
+  confidence: string;
+  notes: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectRevenueForecastInsert = {
+  id?: string;
+  project_id: string;
+  expected_month: string;
+  amount_gross?: number;
+  confidence: string;
+  notes?: string;
+  created_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ProjectRevenueForecastUpdate = Partial<ProjectRevenueForecastInsert>;
+
 export type ProjectDocumentRow = {
   id: string;
   project_id: string | null;
@@ -3034,6 +3096,18 @@ export type Database = {
         Row: ProjectSettlementEntryRow;
         Insert: ProjectSettlementEntryInsert;
         Update: ProjectSettlementEntryUpdate;
+        Relationships: [];
+      };
+      budget_cost_items: {
+        Row: BudgetCostItemRow;
+        Insert: BudgetCostItemInsert;
+        Update: BudgetCostItemUpdate;
+        Relationships: [];
+      };
+      project_revenue_forecasts: {
+        Row: ProjectRevenueForecastRow;
+        Insert: ProjectRevenueForecastInsert;
+        Update: ProjectRevenueForecastUpdate;
         Relationships: [];
       };
       project_documents: {
