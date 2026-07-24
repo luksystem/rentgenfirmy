@@ -36,6 +36,7 @@ export type NavModuleKey =
   | "employees"
   | "reports"
   | "budget-forecast"
+  | "standards"
   | "view-to-close"
   | "view-no-contact"
   | "view-waiting"
@@ -250,6 +251,12 @@ export const NAV_MODULE_GROUPS: NavModuleGroupDefinition[] = [
         label: "Baza wiedzy",
         href: "/baza-wiedzy",
         routePrefixes: ["/baza-wiedzy"],
+      },
+      {
+        key: "standards",
+        label: "Standardy i procedury",
+        href: "/standardy",
+        routePrefixes: ["/standardy"],
       },
       {
         key: "service-rates",

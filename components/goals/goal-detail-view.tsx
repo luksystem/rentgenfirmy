@@ -20,6 +20,9 @@ import { ProjectSelectSearchable } from "@/components/goals/project-select-searc
 import { UserIdentity } from "@/components/user-avatar";
 import { useDraftNumber } from "@/hooks/use-draft-number";
 import { getUserDisplayName, hasFullAppAccess, isAdministratorRole, type UserProfile } from "@/lib/auth/types";
+import { CreateStandardFromGoalButton } from "@/components/standards/create-standard-from-goal-button";
+import { derivePdcaStage, PDCA_STAGE_LABELS } from "@/lib/goals/pdca-stage";
+import { PDCA_IMPROVEMENT_BOARD_KIND } from "@/lib/goals/types";
 import {
   GOAL_DEFERRAL_REASON_LABELS,
   GOAL_LEVEL_LABELS,
@@ -175,6 +178,16 @@ export function GoalDetailView({ goalId, onDeleted }: { goalId: string; onDelete
     return hasFullAppAccess(profile.role);
   }, [profile, goal]);
 
+  const isImprovementGoal = useMemo(
+    () => boards.find((board) => board.id === goal?.boardId)?.kind === PDCA_IMPROVEMENT_BOARD_KIND,
+    [boards, goal?.boardId],
+  );
+  const pdcaStage = useMemo(() => {
+    if (!goal) return null;
+    const hasOpenReview = reviews.some((review) => !review.completedAt);
+    return derivePdcaStage(goal, hasOpenReview);
+  }, [goal, reviews]);
+
   if (loading) {
     return <BrandLoadingInline label="Wczytywanie celu…" />;
   }
@@ -194,7 +207,14 @@ export function GoalDetailView({ goalId, onDeleted }: { goalId: string; onDelete
           <Badge tone="neutral">{GOAL_PRIORITY_LABELS[goal.priority]}</Badge>
           <Badge tone="neutral">{GOAL_PERIOD_TYPE_LABELS[goal.periodType]}</Badge>
           {goal.isRecurring ? <Badge tone="blue">Cykliczny</Badge> : null}
+          {isImprovementGoal && pdcaStage ? (
+            <Badge tone="waiting">PDCA: {PDCA_STAGE_LABELS[pdcaStage]}</Badge>
+          ) : null}
         </div>
+        <div className="flex shrink-0 items-center gap-2">
+        {isImprovementGoal && goal.settlementStatus === "achieved" ? (
+          <CreateStandardFromGoalButton goalId={goal.id} />
+        ) : null}
         {isAdmin ? (
           <Button
             type="button"
@@ -208,6 +228,7 @@ export function GoalDetailView({ goalId, onDeleted }: { goalId: string; onDelete
             {deleting ? "Usuwanie..." : "Usuń cel"}
           </Button>
         ) : null}
+        </div>
       </div>
 
       <div className="flex min-w-0 flex-wrap gap-1.5 border-b border-border/70 pb-2">

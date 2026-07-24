@@ -488,3 +488,40 @@ export function computeNextPeriod(
     periodEnd: end.toISOString().slice(0, 10),
   };
 }
+
+// ── Zgłoszenia problemów (PDCA — etap Plan przed akceptacją) ─────────────────
+
+export const GOAL_PROBLEM_STATUSES = ["pending", "accepted", "rejected"] as const;
+export type GoalProblemStatus = (typeof GOAL_PROBLEM_STATUSES)[number];
+
+export const GOAL_PROBLEM_STATUS_LABELS: Record<GoalProblemStatus, string> = {
+  pending: "Oczekuje na decyzję",
+  accepted: "Zaakceptowany",
+  rejected: "Odrzucony",
+};
+
+export type GoalProblem = {
+  id: string;
+  boardId: string;
+  reportedBy: string | null;
+  reportedByName?: string | null;
+  title: string;
+  description: string;
+  status: GoalProblemStatus;
+  rejectionReason: string;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  resultingGoalId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GoalProblemInput = {
+  title: string;
+  description?: string;
+};
+
+/** Kod metodologii PDCA użyty przy tworzeniu Celu z zaakceptowanego problemu. */
+export const PDCA_IMPROVEMENT_METHODOLOGY_CODE = "pdca_improvement";
+/** Kod rodzaju tablicy dla usprawnień PDCA. */
+export const PDCA_IMPROVEMENT_BOARD_KIND = "improvement";

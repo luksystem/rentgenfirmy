@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { BarChart3, BookOpen, ClipboardList, FileText, History, LayoutGrid, Settings, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, BarChart3, BookOpen, ClipboardList, FileText, History, LayoutGrid, Settings, Sparkles, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -134,6 +134,13 @@ export function GoalBoardHub() {
           >
             <FileText className="h-4 w-4" />
             Raporty
+          </Link>
+          <Link
+            href="/tablice-celow/problemy"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/15 px-3.5 py-2 text-sm font-medium text-amber-300 transition hover:border-amber-400/60 hover:bg-amber-500/25"
+          >
+            <AlertTriangle className="h-4 w-4" />
+            Problemy (PDCA)
           </Link>
           {isAdmin ? (
             <Link

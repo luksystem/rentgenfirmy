@@ -1530,7 +1530,7 @@ export type ProjectRevenueForecastRow = {
   id: string;
   project_id: string;
   expected_date: string;
-  amount_gross: number | string;
+  amount_net: number | string;
   confidence: string;
   notes: string;
   created_by: string | null;
@@ -1542,7 +1542,7 @@ export type ProjectRevenueForecastInsert = {
   id?: string;
   project_id: string;
   expected_date: string;
-  amount_gross?: number;
+  amount_net?: number;
   confidence: string;
   notes?: string;
   created_by?: string | null;
@@ -3457,6 +3457,94 @@ export type Database = {
           requisition_id: string;
           alert_date: string;
           created_at: string;
+        }>;
+        Relationships: [];
+      };
+      goal_problems: {
+        Row: {
+          id: string;
+          board_id: string;
+          reported_by: string | null;
+          title: string;
+          description: string;
+          status: string;
+          rejection_reason: string;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          resulting_goal_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          board_id: string;
+          reported_by?: string | null;
+          title: string;
+          description?: string;
+          status?: string;
+          rejection_reason?: string;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          resulting_goal_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<{
+          board_id: string;
+          reported_by: string | null;
+          title: string;
+          description: string;
+          status: string;
+          rejection_reason: string;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          resulting_goal_id: string | null;
+          created_at: string;
+          updated_at: string;
+        }>;
+        Relationships: [];
+      };
+      company_standards: {
+        Row: {
+          id: string;
+          slug: string;
+          title: string;
+          summary: string;
+          context_html: string;
+          steps: Record<string, unknown>[];
+          tips_html: string;
+          status: string;
+          source_goal_id: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          title: string;
+          summary?: string;
+          context_html?: string;
+          steps?: Record<string, unknown>[];
+          tips_html?: string;
+          status?: string;
+          source_goal_id?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<{
+          slug: string;
+          title: string;
+          summary: string;
+          context_html: string;
+          steps: Record<string, unknown>[];
+          tips_html: string;
+          status: string;
+          source_goal_id: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
         }>;
         Relationships: [];
       };

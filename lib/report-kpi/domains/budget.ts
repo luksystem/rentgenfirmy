@@ -110,7 +110,7 @@ async function loadForecastRowsServer(admin: AdminClient) {
   const [costItemsRes, scenarioActionsRes, pipelineRes, settlementRes] = await Promise.all([
     admin.from("budget_cost_items").select("*").eq("is_active", true),
     admin.from("budget_scenario_actions").select("*").eq("is_enabled", true),
-    admin.from("project_revenue_forecasts").select("expected_date, amount_gross, confidence"),
+    admin.from("project_revenue_forecasts").select("expected_date, amount_net, confidence"),
     admin
       .from("project_settlement_entries")
       .select("kind, entry_date, amount_gross")
@@ -140,10 +140,10 @@ async function loadForecastRowsServer(admin: AdminClient) {
   }
 
   const pipelineForecasts: MonthlyForecastInputs["pipelineForecasts"] = (
-    (pipelineRes.data ?? []) as Array<{ expected_date: string; amount_gross: number; confidence: string }>
+    (pipelineRes.data ?? []) as Array<{ expected_date: string; amount_net: number; confidence: string }>
   ).map((row) => ({
     month: row.expected_date,
-    amountGross: row.amount_gross,
+    amountNet: row.amount_net,
     confidence: row.confidence as MonthlyForecastInputs["pipelineForecasts"][number]["confidence"],
   }));
 
