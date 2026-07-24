@@ -12,6 +12,7 @@ import { KbTaxonomyManagerDialog } from "@/components/smart-home-kb/kb-taxonomy-
 import { KbAiSettingsDialog } from "@/components/smart-home-kb/kb-ai-settings-dialog";
 import { KbAiSearchBox } from "@/components/smart-home-kb/kb-ai-search-box";
 import { KbClientPathView } from "@/components/smart-home-kb/kb-client-path-view";
+import { KbPathTemplatesView } from "@/components/smart-home-kb/kb-path-templates-view";
 import { isStaffRole } from "@/lib/permissions/can-module-action";
 import type { SmartHomeKbArticle } from "@/lib/smart-home-kb/types";
 import { useSmartHomeKbStore } from "@/store/smart-home-kb-store";
@@ -19,7 +20,7 @@ import { useSmartHomeKbPathsStore } from "@/store/smart-home-kb-paths-store";
 import { useAuthStore } from "@/store/auth-store";
 import { cn } from "@/lib/utils";
 
-type ViewMode = "articles" | "faq";
+type ViewMode = "articles" | "faq" | "templates";
 
 export function KbMainView() {
   const role = useAuthStore((state) => state.profile?.role);
@@ -184,22 +185,40 @@ export function KbMainView() {
         >
           FAQ
         </button>
+        {canManage ? (
+          <button
+            type="button"
+            onClick={() => setView("templates")}
+            className={cn(
+              "rounded-xl border px-4 py-2 text-sm font-medium transition",
+              view === "templates"
+                ? "border-accent/50 bg-accent/15 text-accent"
+                : "border-border bg-surface-muted/30 text-muted hover:text-foreground",
+            )}
+          >
+            Szablony ścieżek
+          </button>
+        ) : null}
       </div>
 
-      <div className="mb-5">
-        <KbFilters
-          query={query}
-          onQueryChange={setQuery}
-          categories={categories}
-          activeCategoryId={categoryId}
-          onCategoryChange={setCategoryId}
-          tags={tags}
-          activeTagIds={tagIds}
-          onTagToggle={toggleTag}
-        />
-      </div>
+      {view !== "templates" ? (
+        <div className="mb-5">
+          <KbFilters
+            query={query}
+            onQueryChange={setQuery}
+            categories={categories}
+            activeCategoryId={categoryId}
+            onCategoryChange={setCategoryId}
+            tags={tags}
+            activeTagIds={tagIds}
+            onTagToggle={toggleTag}
+          />
+        </div>
+      ) : null}
 
-      {isLoading && !hydrated ? (
+      {view === "templates" ? (
+        <KbPathTemplatesView articles={articles} />
+      ) : isLoading && !hydrated ? (
         <div className="flex justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted" />
         </div>

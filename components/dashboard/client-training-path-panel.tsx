@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { ChevronDown, Link2, Loader2, Plus, Settings2, Trash2, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
 import { KbArticleOrderPicker } from "@/components/smart-home-kb/kb-article-order-picker";
-import { KbPathTemplateManagerDialog } from "@/components/smart-home-kb/kb-path-template-manager-dialog";
 import { useSmartHomeKbStore } from "@/store/smart-home-kb-store";
 import { useSmartHomeKbPathsStore } from "@/store/smart-home-kb-paths-store";
 import type { SmartHomeKbClientPath } from "@/lib/smart-home-kb/types";
@@ -34,7 +34,6 @@ export function ClientTrainingPathPanel({ clientId }: { clientId: string }) {
   const removeClientPath = useSmartHomeKbPathsStore((state) => state.removeClientPath);
   const setClientPathArticles = useSmartHomeKbPathsStore((state) => state.setClientPathArticles);
 
-  const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [newPathName, setNewPathName] = useState("");
   const [creatingFromTemplate, setCreatingFromTemplate] = useState(false);
@@ -181,9 +180,11 @@ export function ClientTrainingPathPanel({ clientId }: { clientId: string }) {
 
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">Ścieżki szkoleniowe</h3>
-        <Button type="button" variant="outline" size="sm" onClick={() => setTemplateManagerOpen(true)}>
-          <Settings2 className="h-3.5 w-3.5" />
-          Zarządzaj szablonami
+        <Button asChild type="button" variant="outline" size="sm">
+          <Link href="/wiedza-smart-home">
+            <Settings2 className="h-3.5 w-3.5" />
+            Zarządzaj szablonami
+          </Link>
         </Button>
       </div>
 
@@ -270,8 +271,6 @@ export function ClientTrainingPathPanel({ clientId }: { clientId: string }) {
       </div>
 
       {error ? <p className="text-sm text-rose-400">{error}</p> : null}
-
-      <KbPathTemplateManagerDialog open={templateManagerOpen} onOpenChange={setTemplateManagerOpen} articles={articles} />
     </div>
   );
 }
