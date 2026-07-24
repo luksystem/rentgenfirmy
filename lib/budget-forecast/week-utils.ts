@@ -94,3 +94,73 @@ export function formatWeekStartLabel(weekStart: string): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   return `${day}.${month}`;
 }
+
+export const MONTH_SHORT_LABELS_PL = [
+  "Sty",
+  "Lut",
+  "Mar",
+  "Kwi",
+  "Maj",
+  "Cze",
+  "Lip",
+  "Sie",
+  "Wrz",
+  "Paź",
+  "Lis",
+  "Gru",
+];
+
+export const QUARTER_LABELS_PL = ["I kwartał", "II kwartał", "III kwartał", "IV kwartał"];
+
+export type TimesheetGranularity = "week" | "month";
+
+/** Ujednolicona kolumna okresu — tydzień albo miesiąc, do wspólnego renderowania siatki. */
+export type PeriodColumn = {
+  /** Poniedziałek tygodnia albo pierwszy dzień miesiąca — klucz okresu. */
+  periodStart: string;
+  periodEnd: string;
+  index: number;
+  /** Krótka etykieta kolumny (data początku tygodnia albo skrót miesiąca). */
+  label: string;
+  /** Etykieta grupy w nagłówku — miesiąc (dla tygodni) albo kwartał (dla miesięcy). */
+  groupLabel: string;
+  isFirstOfGroup: boolean;
+};
+
+export function buildYearWeekColumns(year: number): PeriodColumn[] {
+  return buildYearWeeks(year).map((week) => ({
+    periodStart: week.weekStart,
+    periodEnd: week.weekEnd,
+    index: week.weekIndex,
+    label: formatWeekStartLabel(week.weekStart),
+    groupLabel: week.monthLabel,
+    isFirstOfGroup: week.isFirstWeekOfMonth,
+  }));
+}
+
+export function buildYearMonthColumns(year: number): PeriodColumn[] {
+  return Array.from({ length: 12 }, (_, month) => {
+    const periodStart = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+    const periodEnd = toDateOnly(new Date(year, month + 1, 0));
+    return {
+      periodStart,
+      periodEnd,
+      index: month,
+      label: MONTH_SHORT_LABELS_PL[month],
+      groupLabel: QUARTER_LABELS_PL[Math.floor(month / 3)],
+      isFirstOfGroup: month % 3 === 0,
+    };
+  });
+}
+
+export function buildYearPeriodColumns(year: number, granularity: TimesheetGranularity): PeriodColumn[] {
+  return granularity === "week" ? buildYearWeekColumns(year) : buildYearMonthColumns(year);
+}
+
+/** Poniedziałek tygodnia (granularity="week") albo pierwszy dzień miesiąca (granularity="month") danej daty. */
+export function snapDateToGranularity(value: string, granularity: TimesheetGranularity): string {
+  if (granularity === "week") {
+    return mondayOf(value);
+  }
+  return `${value.slice(0, 7)}-01`;
+}

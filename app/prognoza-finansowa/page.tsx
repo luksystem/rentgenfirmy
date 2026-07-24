@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { BudgetForecastDashboard } from "@/components/budget-forecast/budget-forecast-dashboard";
 import { BudgetCostItemsManager } from "@/components/budget-forecast/budget-cost-items-manager";
 import { BudgetPipelineOverview } from "@/components/budget-forecast/budget-pipeline-overview";
-import { BudgetPipelineWeeklyView } from "@/components/budget-forecast/budget-pipeline-weekly-view";
+import { BudgetPipelineTimesheetView } from "@/components/budget-forecast/budget-pipeline-timesheet-view";
 
 type BudgetForecastTab = "prognoza" | "koszty" | "pipeline";
-type PipelineView = "lista" | "tydzien";
+type PipelineView = "lista" | "timesheet";
 
 const TAB_LABELS: Record<BudgetForecastTab, string> = {
   prognoza: "Prognoza",
@@ -26,7 +26,7 @@ const TAB_DESCRIPTIONS: Record<BudgetForecastTab, string> = {
 
 const PIPELINE_VIEW_LABELS: Record<PipelineView, string> = {
   lista: "Lista",
-  tydzien: "Tydzień",
+  timesheet: "Timesheet",
 };
 
 export default function BudgetForecastPage() {
@@ -76,7 +76,7 @@ export default function BudgetForecastPage() {
       {tab === "prognoza" ? <BudgetForecastDashboard /> : null}
       {tab === "koszty" ? <BudgetCostItemsManager /> : null}
       {tab === "pipeline" && pipelineView === "lista" ? <BudgetPipelineOverview /> : null}
-      {tab === "pipeline" && pipelineView === "tydzien" ? <BudgetPipelineWeeklyView /> : null}
+      {tab === "pipeline" && pipelineView === "timesheet" ? <BudgetPipelineTimesheetView /> : null}
     </>
   );
 }

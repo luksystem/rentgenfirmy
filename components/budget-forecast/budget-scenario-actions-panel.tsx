@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import {
 import {
   createBudgetScenarioAction,
   deleteBudgetScenarioAction,
+  fetchAllBudgetScenarioActions,
   updateBudgetScenarioAction,
 } from "@/lib/supabase/budget-scenario-action-repository";
 import { cn, formatMoney } from "@/lib/utils";
@@ -88,20 +89,42 @@ function describeSchedule(action: BudgetScenarioAction) {
 }
 
 export function BudgetScenarioActionsPanel({
-  actions,
+  actions: actionsProp,
   onActionsChange,
   canManage,
 }: {
-  actions: BudgetScenarioAction[];
-  onActionsChange: (next: BudgetScenarioAction[]) => void;
+  /** Gdy pominięte — panel sam pobiera i zarządza swoją listą (tryb samodzielny, np. w Timesheet). */
+  actions?: BudgetScenarioAction[];
+  onActionsChange?: (next: BudgetScenarioAction[]) => void;
   canManage: boolean;
 }) {
+  const isControlled = actionsProp !== undefined;
+  const [ownActions, setOwnActions] = useState<BudgetScenarioAction[]>([]);
+  const [ownLoading, setOwnLoading] = useState(!isControlled);
+  const actions = isControlled ? actionsProp : ownActions;
+
+  function updateActions(next: BudgetScenarioAction[]) {
+    if (onActionsChange) onActionsChange(next);
+    if (!isControlled) setOwnActions(next);
+  }
+
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftState>(emptyDraft());
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (isControlled) return;
+    setOwnLoading(true);
+    void fetchAllBudgetScenarioActions()
+      .then(setOwnActions)
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Nie udało się wczytać akcji."))
+      .finally(() => setOwnLoading(false));
+    // Tryb samodzielny pobiera tylko raz przy montowaniu.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function openCreateDialog() {
     setEditingId(null);
@@ -119,13 +142,13 @@ export function BudgetScenarioActionsPanel({
     setBusyId(action.id);
     setError(null);
     // Optymistyczna aktualizacja — natychmiastowe przeliczenie prognozy bez czekania na zapis.
-    onActionsChange(
+    updateActions(
       actions.map((item) => (item.id === action.id ? { ...item, isEnabled: !item.isEnabled } : item)),
     );
     try {
       await updateBudgetScenarioAction(action.id, { isEnabled: !action.isEnabled });
     } catch (err) {
-      onActionsChange(actions);
+      updateActions(actions);
       setError(err instanceof Error ? err.message : "Nie udało się przełączyć akcji.");
     } finally {
       setBusyId(null);
@@ -153,10 +176,10 @@ export function BudgetScenarioActionsPanel({
 
       if (editingId) {
         const updated = await updateBudgetScenarioAction(editingId, input);
-        onActionsChange(actions.map((item) => (item.id === editingId ? updated : item)));
+        updateActions(actions.map((item) => (item.id === editingId ? updated : item)));
       } else {
         const created = await createBudgetScenarioAction(input);
-        onActionsChange([created, ...actions]);
+        updateActions([created, ...actions]);
       }
       setDialogOpen(false);
     } catch (err) {
@@ -171,12 +194,16 @@ export function BudgetScenarioActionsPanel({
     setError(null);
     try {
       await deleteBudgetScenarioAction(action.id);
-      onActionsChange(actions.filter((item) => item.id !== action.id));
+      updateActions(actions.filter((item) => item.id !== action.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Nie udało się usunąć akcji.");
     } finally {
       setBusyId(null);
     }
+  }
+
+  if (!isControlled && ownLoading) {
+    return <p className="text-sm text-muted">Ładowanie akcji symulacyjnych...</p>;
   }
 
   return (
