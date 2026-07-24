@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/app-shell";
 import { AuthProvider } from "@/components/auth/auth-provider";
+import { HashSessionHandler } from "@/components/auth/hash-session-handler";
 import { DataProvider } from "@/components/data-provider";
 import { IosAddToHomeScreenPrompt } from "@/components/pwa/ios-add-to-home-screen-prompt";
 import "./globals.css";
@@ -63,6 +64,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
+          <HashSessionHandler />
           <AppShell>
             <DataProvider>{children}</DataProvider>
           </AppShell>

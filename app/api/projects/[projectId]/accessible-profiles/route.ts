@@ -4,7 +4,7 @@ import { jsonError } from "@/lib/auth/http-error";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   assertUserCanAccessProjectServer,
-  fetchProfilesWithProjectAccessServer,
+  fetchProjectAssignedProfilesServer,
 } from "@/lib/supabase/project-access-server";
 
 type RouteContext = { params: Promise<{ projectId: string }> };
@@ -15,7 +15,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const { projectId } = await context.params;
     const admin = getSupabaseAdmin();
     await assertUserCanAccessProjectServer(admin, profile, projectId);
-    const profiles = await fetchProfilesWithProjectAccessServer(admin, projectId);
+    const profiles = await fetchProjectAssignedProfilesServer(admin, projectId);
     return NextResponse.json({ profiles });
   } catch (error) {
     return jsonError(error);

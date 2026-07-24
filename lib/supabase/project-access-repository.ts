@@ -1,6 +1,14 @@
 import type { UserProfile } from "@/lib/auth/types";
 import type { ProfileProjectAccessState } from "@/lib/project-access/types";
 
+export type ProjectRoleFlags = {
+  technicalLead: boolean;
+  operationalLead: boolean;
+  developer: boolean;
+};
+
+export type ProjectAssignedProfile = UserProfile & ProjectRoleFlags;
+
 async function parseJsonResponse<T>(response: Response, fallbackError: string): Promise<T> {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -35,13 +43,37 @@ export async function saveUserProjectAccess(
   return payload.access;
 }
 
-export async function fetchProjectAccessibleProfiles(projectId: string): Promise<UserProfile[]> {
+export async function fetchProjectAccessibleProfiles(
+  projectId: string,
+): Promise<ProjectAssignedProfile[]> {
   const response = await fetch(`/api/projects/${projectId}/accessible-profiles`, {
     credentials: "include",
   });
-  const payload = await parseJsonResponse<{ profiles: UserProfile[] }>(
+  const payload = await parseJsonResponse<{ profiles: ProjectAssignedProfile[] }>(
     response,
     "Nie udało się wczytać użytkowników projektu.",
+  );
+  return payload.profiles;
+}
+
+export async function setProjectRoleFlag(
+  projectId: string,
+  profileId: string,
+  field: keyof ProjectRoleFlags,
+  value: boolean,
+): Promise<ProjectAssignedProfile[]> {
+  const response = await fetch(
+    `/api/projects/${projectId}/accessible-profiles/${profileId}/role`,
+    {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ field, value }),
+    },
+  );
+  const payload = await parseJsonResponse<{ profiles: ProjectAssignedProfile[] }>(
+    response,
+    "Nie udało się zapisać roli projektowej.",
   );
   return payload.profiles;
 }

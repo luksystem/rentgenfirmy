@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { fetchProfilesWithProjectAccessServer } from "@/lib/supabase/project-access-server";
+import { fetchProjectNotificationRecipientsServer } from "@/lib/supabase/project-access-server";
 import type { UserNotificationKind } from "@/lib/notifications/types";
 import { sendNotificationChannels } from "@/lib/notifications/dispatch";
 
@@ -13,10 +13,13 @@ export async function notifyTeamAboutChangeRequestDecision(input: {
   clientResponseName: string;
 }) {
   const supabase = getSupabaseAdmin();
-  // Tylko osoby z dostępem do tego projektu (nie cała firma) — patrz profile_project_access.
-  const teamProfiles = await fetchProfilesWithProjectAccessServer(supabase, input.projectId).catch(
-    () => [],
-  );
+  // Tylko lider techniczny / operacyjny / programista przypisani do projektu — nie cały zespół
+  // z dostępem. Jeśli nikt nie ma jeszcze przypisanej roli, nikt nie zostanie powiadomiony
+  // (patrz zakładka "Użytkownicy" w projekcie, żeby oznaczyć odpowiedzialne osoby).
+  const teamProfiles = await fetchProjectNotificationRecipientsServer(
+    supabase,
+    input.projectId,
+  ).catch(() => []);
   if (!teamProfiles.length) {
     return;
   }
