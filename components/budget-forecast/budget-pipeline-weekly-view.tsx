@@ -17,14 +17,18 @@ import {
   buildYearWeeks,
   formatWeekStartLabel,
   mondayOf,
+  MONTH_LABELS_PL,
   type WeekColumn,
 } from "@/lib/budget-forecast/week-utils";
-import { formatMoney } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn, formatMoney } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 
 const WEEK_WIDTH_PX = 68;
 const LABEL_WIDTH_PX = 220;
 const ROW_HEIGHT_PX = 48;
+
+const QUARTER_LABELS = ["I kwartał", "II kwartał", "III kwartał", "IV kwartał"];
 
 const CONFIDENCE_CHIP_COLOR: Record<BudgetConfidenceLevel, string> = {
   ok: "#22c55e",
@@ -44,6 +48,13 @@ function buildMonthSegments(weeks: WeekColumn[]) {
     }
   }
   return segments;
+}
+
+/** Zwięzły zapis kwoty dla ciasnych komórek siatki (np. "418 tys." zamiast "417 941,91 zł"). */
+function formatCompactAmount(value: number): string {
+  if (Math.abs(value) < 1) return "0";
+  const rounded = Math.round(value / 1000);
+  return `${rounded.toLocaleString("pl-PL")} tys.`;
 }
 
 type DragState = {
@@ -90,6 +101,50 @@ export function BudgetPipelineWeeklyView() {
       .filter((entry) => Number(entry.expectedDate.slice(0, 4)) === year)
       .sort((a, b) => a.projectName.localeCompare(b.projectName) || a.expectedDate.localeCompare(b.expectedDate));
   }, [entries, year]);
+
+  const weeklyTotals = useMemo(() => {
+    const totals = new Array(weeks.length).fill(0) as number[];
+    for (const entry of rows) {
+      const start = mondayOf(entry.expectedDate);
+      const idx = weekIndexByStart.get(start);
+      if (idx !== undefined) totals[idx] += entry.amountGross;
+    }
+    return totals;
+  }, [rows, weeks.length, weekIndexByStart]);
+
+  const weeklyCumulative = useMemo(() => {
+    let running = 0;
+    return weeklyTotals.map((value) => (running += value));
+  }, [weeklyTotals]);
+
+  const monthlyTotals = useMemo(() => {
+    const totals = new Array(12).fill(0) as number[];
+    for (const entry of rows) {
+      const month = Number(entry.expectedDate.slice(5, 7)) - 1;
+      totals[month] += entry.amountGross;
+    }
+    return totals;
+  }, [rows]);
+
+  const monthlyCumulative = useMemo(() => {
+    let running = 0;
+    return monthlyTotals.map((value) => (running += value));
+  }, [monthlyTotals]);
+
+  const quarterlyTotals = useMemo(() => {
+    const totals = [0, 0, 0, 0];
+    monthlyTotals.forEach((value, i) => {
+      totals[Math.floor(i / 3)] += value;
+    });
+    return totals;
+  }, [monthlyTotals]);
+
+  const quarterlyCumulative = useMemo(() => {
+    let running = 0;
+    return quarterlyTotals.map((value) => (running += value));
+  }, [quarterlyTotals]);
+
+  const yearTotal = useMemo(() => monthlyTotals.reduce((sum, value) => sum + value, 0), [monthlyTotals]);
 
   function weekIndexForEntry(entry: ProjectRevenueForecastWithProject): number {
     const start = mondayOf(entry.expectedDate);
@@ -259,15 +314,146 @@ export function BudgetPipelineWeeklyView() {
                       onPointerUp={(event) => void handlePointerUp(event)}
                       title={`${entry.projectName} · ${formatMoney(entry.amountGross)} · ${BUDGET_CONFIDENCE_LABELS[entry.confidence]}`}
                     >
-                      {formatMoney(entry.amountGross)}
+                      {formatCompactAmount(entry.amountGross)}
                     </div>
                   </div>
                 </div>
               );
             })}
+
+            {/* Podsumowanie: suma tygodnia */}
+            <div className="flex border-t-2 border-border bg-surface-muted/30">
+              <div
+                className="sticky left-0 z-10 shrink-0 border-r border-border/70 bg-surface-muted/30 px-3 py-2 text-xs font-semibold text-foreground"
+                style={{ width: LABEL_WIDTH_PX }}
+              >
+                Suma tygodnia
+              </div>
+              <div className="relative" style={{ width: timelineWidth, height: 32 }}>
+                {weeks.map((week) => (
+                  <div
+                    key={week.weekStart}
+                    className="absolute top-0 flex h-8 items-center justify-center border-l border-border/20 text-[11px] font-medium tabular-nums text-foreground"
+                    style={{ left: week.weekIndex * WEEK_WIDTH_PX, width: WEEK_WIDTH_PX }}
+                    title={formatMoney(weeklyTotals[week.weekIndex])}
+                  >
+                    {formatCompactAmount(weeklyTotals[week.weekIndex])}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Podsumowanie: narastająco */}
+            <div className="flex border-b border-border/70 bg-surface-muted/10">
+              <div
+                className="sticky left-0 z-10 shrink-0 border-r border-border/70 bg-surface-muted/10 px-3 py-2 text-xs font-semibold text-foreground"
+                style={{ width: LABEL_WIDTH_PX }}
+              >
+                Narastająco
+              </div>
+              <div className="relative" style={{ width: timelineWidth, height: 32 }}>
+                {weeks.map((week) => (
+                  <div
+                    key={week.weekStart}
+                    className={cn(
+                      "absolute top-0 flex h-8 items-center justify-center border-l border-border/20 text-[11px] font-medium tabular-nums",
+                      weeklyCumulative[week.weekIndex] < 0 ? "text-rose-400" : "text-muted",
+                    )}
+                    style={{ left: week.weekIndex * WEEK_WIDTH_PX, width: WEEK_WIDTH_PX }}
+                    title={formatMoney(weeklyCumulative[week.weekIndex])}
+                  >
+                    {formatCompactAmount(weeklyCumulative[week.weekIndex])}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
+
+      {rows.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card className="min-w-0">
+            <CardHeader>
+              <CardTitle>Miesiące</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-1 p-0">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border/60 text-left text-xs uppercase tracking-wide text-muted">
+                    <th className="px-4 py-2 font-medium">Miesiąc</th>
+                    <th className="px-4 py-2 text-right font-medium">Suma</th>
+                    <th className="px-4 py-2 text-right font-medium">Narastająco</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {MONTH_LABELS_PL.map((label, i) => (
+                    <tr key={label} className="border-b border-border/30 last:border-0">
+                      <td className="px-4 py-1.5 text-muted">{label}</td>
+                      <td className="px-4 py-1.5 text-right tabular-nums text-foreground">
+                        {formatMoney(monthlyTotals[i])}
+                      </td>
+                      <td
+                        className={cn(
+                          "px-4 py-1.5 text-right tabular-nums font-medium",
+                          monthlyCumulative[i] < 0 ? "text-rose-400" : "text-foreground",
+                        )}
+                      >
+                        {formatMoney(monthlyCumulative[i])}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+
+          <Card className="min-w-0">
+            <CardHeader>
+              <CardTitle>Kwartały</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-1 p-0">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border/60 text-left text-xs uppercase tracking-wide text-muted">
+                    <th className="px-4 py-2 font-medium">Kwartał</th>
+                    <th className="px-4 py-2 text-right font-medium">Suma</th>
+                    <th className="px-4 py-2 text-right font-medium">Narastająco</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {QUARTER_LABELS.map((label, i) => (
+                    <tr key={label} className="border-b border-border/30 last:border-0">
+                      <td className="px-4 py-1.5 text-muted">{label}</td>
+                      <td className="px-4 py-1.5 text-right tabular-nums text-foreground">
+                        {formatMoney(quarterlyTotals[i])}
+                      </td>
+                      <td
+                        className={cn(
+                          "px-4 py-1.5 text-right tabular-nums font-medium",
+                          quarterlyCumulative[i] < 0 ? "text-rose-400" : "text-foreground",
+                        )}
+                      >
+                        {formatMoney(quarterlyCumulative[i])}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+
+          <Card className="min-w-0">
+            <CardHeader>
+              <CardTitle>Rok {year}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex h-full flex-col items-start justify-center gap-1">
+              <p className="text-xs uppercase tracking-wide text-muted">Suma pipeline w roku</p>
+              <p className="text-2xl font-semibold text-foreground">{formatMoney(yearTotal)}</p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
     </div>
   );
 }
