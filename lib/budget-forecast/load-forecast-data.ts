@@ -39,6 +39,16 @@ export async function loadBudgetForecastDataset(horizonMonthsOverride?: number):
     fetchCompanySettlementEntriesByKindInRange(["payment", "schedule"], fromDate, toDate),
   ]);
 
+  // Gdy rata harmonogramu zostaje opłacona, aplikacja dopisuje osobny wiersz kind='payment'
+  // (source_id wskazujący na wiersz 'schedule'), ale NIE usuwa/nie oznacza oryginalnego wiersza
+  // harmonogramu. Bez tego wykluczenia opłacona rata liczyłaby się podwójnie: raz jako realna
+  // wpłata, raz jako wciąż "spodziewana" z harmonogramu.
+  const paidScheduleIds = new Set(
+    settlementEntries
+      .filter((entry) => entry.kind === "payment" && entry.sourceId)
+      .map((entry) => entry.sourceId as string),
+  );
+
   const actualPayments: MonthlyAmount[] = [];
   const scheduledEntries: MonthlyAmount[] = [];
   for (const entry of settlementEntries) {
@@ -46,7 +56,7 @@ export async function loadBudgetForecastDataset(horizonMonthsOverride?: number):
     const amount = { month: monthKey(entry.entryDate), amountGross: entry.amountGross };
     if (entry.kind === "payment") {
       actualPayments.push(amount);
-    } else if (entry.kind === "schedule") {
+    } else if (entry.kind === "schedule" && !paidScheduleIds.has(entry.id)) {
       scheduledEntries.push(amount);
     }
   }

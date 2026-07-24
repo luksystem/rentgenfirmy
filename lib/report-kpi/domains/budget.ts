@@ -113,7 +113,7 @@ async function loadForecastRowsServer(admin: AdminClient) {
     admin.from("project_revenue_forecasts").select("expected_date, amount_net, confidence"),
     admin
       .from("project_settlement_entries")
-      .select("kind, entry_date, amount_gross")
+      .select("id, kind, entry_date, amount_gross, source_id")
       .in("kind", ["payment", "schedule"])
       .gte("entry_date", fromDate)
       .lte("entry_date", toDate),
@@ -123,18 +123,29 @@ async function loadForecastRowsServer(admin: AdminClient) {
   if (pipelineRes.error) throw new Error(pipelineRes.error.message);
   if (settlementRes.error) throw new Error(settlementRes.error.message);
 
-  const actualPayments: MonthlyForecastInputs["actualPayments"] = [];
-  const scheduledEntries: MonthlyForecastInputs["scheduledEntries"] = [];
-  for (const entry of (settlementRes.data ?? []) as Array<{
+  const settlementRows = (settlementRes.data ?? []) as Array<{
+    id: string;
     kind: string;
     entry_date: string | null;
     amount_gross: number;
-  }>) {
+    source_id: string | null;
+  }>;
+
+  // Opłacona rata harmonogramu dostaje osobny wiersz kind='payment' (source_id -> wiersz
+  // 'schedule'), ale oryginalny wiersz harmonogramu zostaje w tabeli. Bez wykluczenia liczyłby
+  // się podwójnie: raz jako realna wpłata, raz jako wciąż "spodziewany" harmonogram.
+  const paidScheduleIds = new Set(
+    settlementRows.filter((row) => row.kind === "payment" && row.source_id).map((row) => row.source_id as string),
+  );
+
+  const actualPayments: MonthlyForecastInputs["actualPayments"] = [];
+  const scheduledEntries: MonthlyForecastInputs["scheduledEntries"] = [];
+  for (const entry of settlementRows) {
     if (!entry.entry_date) continue;
     const amount = { month: entry.entry_date, amountGross: entry.amount_gross };
     if (entry.kind === "payment") {
       actualPayments.push(amount);
-    } else if (entry.kind === "schedule") {
+    } else if (entry.kind === "schedule" && !paidScheduleIds.has(entry.id)) {
       scheduledEntries.push(amount);
     }
   }
