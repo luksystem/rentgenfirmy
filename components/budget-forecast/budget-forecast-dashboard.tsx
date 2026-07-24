@@ -1,21 +1,28 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Package, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BudgetForecastSlidersPanel } from "@/components/budget-forecast/budget-forecast-sliders-panel";
 import { BudgetForecastTable } from "@/components/budget-forecast/budget-forecast-table";
 import { BudgetForecastChart } from "@/components/budget-forecast/budget-forecast-chart";
 import { BudgetScenarioActionsPanel } from "@/components/budget-forecast/budget-scenario-actions-panel";
+import { BudgetPipelineEntryDialog } from "@/components/budget-forecast/budget-pipeline-entry-dialog";
+import { BudgetCostItemDialog } from "@/components/budget-forecast/budget-cost-item-dialog";
 import { buildMonthlyForecast } from "@/lib/budget-forecast/engine";
 import { loadBudgetForecastDataset, type BudgetForecastDataset } from "@/lib/budget-forecast/load-forecast-data";
 import { saveBudgetForecastSettings } from "@/lib/supabase/budget-forecast-settings-repository";
 import { getUserDisplayName, hasFullAppAccess } from "@/lib/auth/types";
 import { useAuthStore } from "@/store/auth-store";
+import { useAppStore } from "@/store/app-store";
 import type { BudgetConfidenceLevel } from "@/lib/budget-forecast/types";
 
 export function BudgetForecastDashboard() {
   const profile = useAuthStore((state) => state.profile);
   const canManageSettings = Boolean(profile && hasFullAppAccess(profile.role));
+  const projects = useAppStore((state) => state.projects);
+  const activeProjects = useMemo(() => projects.filter((p) => p.isActive), [projects]);
 
   const [dataset, setDataset] = useState<BudgetForecastDataset | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,31 +39,27 @@ export function BudgetForecastDashboard() {
     frozen: 0,
   });
 
-  useEffect(() => {
-    let cancelled = false;
+  const [pipelineDialogOpen, setPipelineDialogOpen] = useState(false);
+  const [costDialogOpen, setCostDialogOpen] = useState(false);
+
+  function refresh() {
     setLoading(true);
     setError(null);
-
     void loadBudgetForecastDataset()
       .then((loaded) => {
-        if (cancelled) return;
         setDataset(loaded);
         setOpeningBalance(loaded.settings.openingBalance);
         setVariableCostPercent(loaded.settings.variableCostPercent);
         setConfidenceWeights(loaded.settings.confidenceWeights);
       })
       .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Nie udało się wczytać prognozy.");
-        }
+        setError(err instanceof Error ? err.message : "Nie udało się wczytać prognozy.");
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      .finally(() => setLoading(false));
+  }
 
-    return () => {
-      cancelled = true;
-    };
+  useEffect(() => {
+    refresh();
   }, []);
 
   const rows = useMemo(() => {
@@ -122,10 +125,24 @@ export function BudgetForecastDashboard() {
   return (
     <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="grid min-w-0 gap-6">
+        {canManageSettings ? (
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" onClick={() => setPipelineDialogOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Dodaj spodziewany wpływ
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => setCostDialogOpen(true)}>
+              <Package className="h-4 w-4" />
+              Dodaj koszt stały
+            </Button>
+          </div>
+        ) : null}
+
         <BudgetScenarioActionsPanel
           actions={dataset?.scenarioActions ?? []}
           onActionsChange={(next) => setDataset(dataset ? { ...dataset, scenarioActions: next } : dataset)}
           canManage={canManageSettings}
+          compact
         />
         <BudgetForecastChart rows={rows} />
         <BudgetForecastTable rows={rows} />
@@ -142,6 +159,23 @@ export function BudgetForecastDashboard() {
         onSave={() => void handleSave()}
         saving={saving}
         dirty={dirty}
+      />
+
+      <BudgetPipelineEntryDialog
+        open={pipelineDialogOpen}
+        onOpenChange={setPipelineDialogOpen}
+        projects={activeProjects}
+        entry={null}
+        onSaved={refresh}
+        onImported={refresh}
+      />
+      <BudgetCostItemDialog
+        open={costDialogOpen}
+        onOpenChange={setCostDialogOpen}
+        item={null}
+        onSaved={(saved) =>
+          setDataset((prev) => (prev ? { ...prev, costItems: [saved, ...prev.costItems] } : prev))
+        }
       />
     </div>
   );

@@ -82,7 +82,7 @@ export function rowToProjectRevenueForecast(row: ProjectRevenueForecastRow): Pro
     id: row.id,
     projectId: row.project_id,
     expectedDate: row.expected_date,
-    amountGross: num(row.amount_gross),
+    amountNet: num(row.amount_net),
     confidence: isBudgetConfidenceLevel(row.confidence) ? row.confidence : "medium",
     notes: row.notes ?? "",
     createdBy: row.created_by,
@@ -97,7 +97,7 @@ export function projectRevenueForecastToInsertRow(
   return {
     project_id: input.projectId,
     expected_date: input.expectedDate,
-    amount_gross: input.amountGross,
+    amount_net: input.amountNet,
     confidence: input.confidence,
     notes: input.notes ?? "",
   };
@@ -108,7 +108,7 @@ export function projectRevenueForecastToUpdateRow(
 ): ProjectRevenueForecastUpdate {
   const row: ProjectRevenueForecastUpdate = {};
   if (patch.expectedDate !== undefined) row.expected_date = patch.expectedDate;
-  if (patch.amountGross !== undefined) row.amount_gross = patch.amountGross;
+  if (patch.amountNet !== undefined) row.amount_net = patch.amountNet;
   if (patch.confidence !== undefined) row.confidence = patch.confidence;
   if (patch.notes !== undefined) row.notes = patch.notes;
   row.updated_at = new Date().toISOString();

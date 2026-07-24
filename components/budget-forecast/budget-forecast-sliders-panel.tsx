@@ -1,7 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/input";
+import { Field } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BUDGET_CONFIDENCE_LEVELS,
@@ -36,15 +37,11 @@ export function BudgetForecastSlidersPanel({
         <CardTitle>Założenia prognozy</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-5">
-        <Field label="Saldo otwarcia (zł)">
-          <Input
-            type="number"
-            step="0.01"
+        <Field label="Saldo otwarcia netto (zł)">
+          <NumericInput
             value={assumptions.openingBalance}
             disabled={!canManageSettings}
-            onChange={(event) =>
-              onChange({ ...assumptions, openingBalance: Number(event.target.value) || 0 })
-            }
+            onChange={(value) => onChange({ ...assumptions, openingBalance: value })}
           />
         </Field>
 

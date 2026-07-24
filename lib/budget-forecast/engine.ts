@@ -12,7 +12,8 @@ export type MonthlyAmount = { month: string; amountGross: number };
 
 export type PipelineForecastAmount = {
   month: string;
-  amountGross: number;
+  /** Kwota netto (pipeline planujemy w netto, w odróżnieniu od realnych wpłat, które są brutto). */
+  amountNet: number;
   confidence: BudgetConfidenceLevel;
 };
 
@@ -89,8 +90,8 @@ function groupPipelineWeightedByMonth(
   const weighted: Record<string, number> = {};
   for (const entry of entries) {
     const key = monthKey(entry.month);
-    raw[key] = (raw[key] ?? 0) + entry.amountGross;
-    weighted[key] = (weighted[key] ?? 0) + entry.amountGross * resolveConfidenceWeight(entry.confidence, weights);
+    raw[key] = (raw[key] ?? 0) + entry.amountNet;
+    weighted[key] = (weighted[key] ?? 0) + entry.amountNet * resolveConfidenceWeight(entry.confidence, weights);
   }
   return { raw, weighted };
 }

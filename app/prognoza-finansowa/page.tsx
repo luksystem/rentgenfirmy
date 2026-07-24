@@ -31,7 +31,7 @@ const PIPELINE_VIEW_LABELS: Record<PipelineView, string> = {
 
 export default function BudgetForecastPage() {
   const [tab, setTab] = useState<BudgetForecastTab>("prognoza");
-  const [pipelineView, setPipelineView] = useState<PipelineView>("lista");
+  const [pipelineView, setPipelineView] = useState<PipelineView>("timesheet");
 
   return (
     <>

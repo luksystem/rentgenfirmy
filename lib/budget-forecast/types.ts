@@ -56,7 +56,8 @@ export type ProjectRevenueForecast = {
   projectId: string;
   /** Konkretna data ("YYYY-MM-DD"), nie tylko miesiąc — pozwala na widok tygodniowy. */
   expectedDate: string;
-  amountGross: number;
+  /** Kwota netto — pipeline planujemy w netto. */
+  amountNet: number;
   confidence: BudgetConfidenceLevel;
   notes: string;
   createdBy: string | null;
@@ -67,7 +68,7 @@ export type ProjectRevenueForecast = {
 export type ProjectRevenueForecastInput = {
   projectId: string;
   expectedDate: string;
-  amountGross: number;
+  amountNet: number;
   confidence: BudgetConfidenceLevel;
   notes?: string;
 };

@@ -1,80 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Field, Input, Select, Textarea } from "@/components/ui/input";
-import {
-  BUDGET_COST_CADENCE_LABELS,
-  BUDGET_COST_CADENCES,
   BUDGET_SCENARIO_EFFECT_TYPE_LABELS,
-  BUDGET_SCENARIO_EFFECT_TYPES,
-  currentMonthKey,
-  type BudgetCostCadence,
   type BudgetScenarioAction,
-  type BudgetScenarioEffectType,
 } from "@/lib/budget-forecast/types";
 import {
-  createBudgetScenarioAction,
-  deleteBudgetScenarioAction,
   fetchAllBudgetScenarioActions,
   updateBudgetScenarioAction,
 } from "@/lib/supabase/budget-scenario-action-repository";
 import { cn, formatMoney } from "@/lib/utils";
-
-type Direction = "increase" | "decrease";
-
-type DraftState = {
-  name: string;
-  effectType: BudgetScenarioEffectType;
-  direction: Direction;
-  amount: string;
-  cadence: BudgetCostCadence;
-  intervalMonths: string;
-  month: string;
-  startMonth: string;
-  endMonth: string;
-  notes: string;
-};
-
-function emptyDraft(): DraftState {
-  return {
-    name: "",
-    effectType: "cost",
-    direction: "decrease",
-    amount: "",
-    cadence: "monthly",
-    intervalMonths: "3",
-    month: currentMonthKey().slice(0, 7),
-    startMonth: currentMonthKey().slice(0, 7),
-    endMonth: "",
-    notes: "",
-  };
-}
-
-function draftFromAction(action: BudgetScenarioAction): DraftState {
-  return {
-    name: action.name,
-    effectType: action.effectType,
-    direction: action.amount < 0 ? "decrease" : "increase",
-    amount: String(Math.abs(action.amount)),
-    cadence: action.cadence,
-    intervalMonths: action.intervalMonths ? String(action.intervalMonths) : "3",
-    month: action.month ? action.month.slice(0, 7) : currentMonthKey().slice(0, 7),
-    startMonth: action.startMonth.slice(0, 7),
-    endMonth: action.endMonth ? action.endMonth.slice(0, 7) : "",
-    notes: action.notes,
-  };
-}
+import { BudgetScenarioActionDialog } from "@/components/budget-forecast/budget-scenario-action-dialog";
 
 function describeSchedule(action: BudgetScenarioAction) {
   if (action.cadence === "one_off") {
@@ -92,11 +32,14 @@ export function BudgetScenarioActionsPanel({
   actions: actionsProp,
   onActionsChange,
   canManage,
+  compact = false,
 }: {
   /** Gdy pominięte — panel sam pobiera i zarządza swoją listą (tryb samodzielny, np. w Timesheet). */
   actions?: BudgetScenarioAction[];
   onActionsChange?: (next: BudgetScenarioAction[]) => void;
   canManage: boolean;
+  /** Wersja skrócona — bez opisu, krótsza lista (np. obok innych przycisków szybkiego dodawania). */
+  compact?: boolean;
 }) {
   const isControlled = actionsProp !== undefined;
   const [ownActions, setOwnActions] = useState<BudgetScenarioAction[]>([]);
@@ -111,9 +54,7 @@ export function BudgetScenarioActionsPanel({
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<DraftState>(emptyDraft());
-  const [saving, setSaving] = useState(false);
+  const [editingAction, setEditingAction] = useState<BudgetScenarioAction | null>(null);
 
   useEffect(() => {
     if (isControlled) return;
@@ -127,15 +68,22 @@ export function BudgetScenarioActionsPanel({
   }, []);
 
   function openCreateDialog() {
-    setEditingId(null);
-    setDraft(emptyDraft());
+    setEditingAction(null);
     setDialogOpen(true);
   }
 
   function openEditDialog(action: BudgetScenarioAction) {
-    setEditingId(action.id);
-    setDraft(draftFromAction(action));
+    setEditingAction(action);
     setDialogOpen(true);
+  }
+
+  function handleSaved(saved: BudgetScenarioAction) {
+    const exists = actions.some((item) => item.id === saved.id);
+    updateActions(exists ? actions.map((item) => (item.id === saved.id ? saved : item)) : [saved, ...actions]);
+  }
+
+  function handleDeleted(id: string) {
+    updateActions(actions.filter((item) => item.id !== id));
   }
 
   async function handleToggle(action: BudgetScenarioAction) {
@@ -150,53 +98,6 @@ export function BudgetScenarioActionsPanel({
     } catch (err) {
       updateActions(actions);
       setError(err instanceof Error ? err.message : "Nie udało się przełączyć akcji.");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function handleSaveDraft() {
-    setSaving(true);
-    setError(null);
-    try {
-      const magnitude = Math.abs(Number(draft.amount) || 0);
-      const amount = draft.direction === "decrease" ? -magnitude : magnitude;
-      const input = {
-        name: draft.name.trim(),
-        effectType: draft.effectType,
-        amount,
-        cadence: draft.cadence,
-        intervalMonths: draft.cadence === "every_n_months" ? Number(draft.intervalMonths) || 1 : null,
-        month: draft.cadence === "one_off" ? `${draft.month}-01` : null,
-        startMonth: draft.cadence === "one_off" ? currentMonthKey() : `${draft.startMonth}-01`,
-        endMonth: draft.endMonth ? `${draft.endMonth}-01` : null,
-        isEnabled: true,
-        notes: draft.notes.trim(),
-      };
-
-      if (editingId) {
-        const updated = await updateBudgetScenarioAction(editingId, input);
-        updateActions(actions.map((item) => (item.id === editingId ? updated : item)));
-      } else {
-        const created = await createBudgetScenarioAction(input);
-        updateActions([created, ...actions]);
-      }
-      setDialogOpen(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Nie udało się zapisać akcji.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDelete(action: BudgetScenarioAction) {
-    setBusyId(action.id);
-    setError(null);
-    try {
-      await deleteBudgetScenarioAction(action.id);
-      updateActions(actions.filter((item) => item.id !== action.id));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Nie udało się usunąć akcji.");
     } finally {
       setBusyId(null);
     }
@@ -218,10 +119,12 @@ export function BudgetScenarioActionsPanel({
         ) : null}
       </CardHeader>
       <CardContent className="grid gap-3">
-        <p className="text-sm text-muted">
-          Przełączalne „co jeśli” — np. zwolnienie pracownika, nowa umowa, redukcja kosztów. Włącz/wyłącz,
-          żeby zobaczyć wpływ na wykres i tabelę na żywo, bez zapisywania osobnych scenariuszy.
-        </p>
+        {!compact ? (
+          <p className="text-sm text-muted">
+            Przełączalne „co jeśli” — np. zwolnienie pracownika, nowa umowa, redukcja kosztów. Włącz/wyłącz,
+            żeby zobaczyć wpływ na wykres i tabelę na żywo, bez zapisywania osobnych scenariuszy.
+          </p>
+        ) : null}
 
         {error ? (
           <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
@@ -230,9 +133,11 @@ export function BudgetScenarioActionsPanel({
         ) : null}
 
         {actions.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted">Brak zdefiniowanych akcji symulacyjnych.</p>
+          <p className={cn("text-center text-sm text-muted", compact ? "py-2" : "py-4")}>
+            Brak zdefiniowanych akcji symulacyjnych.
+          </p>
         ) : (
-          <div className="grid gap-2">
+          <div className={cn("grid gap-2", compact && "max-h-48 overflow-y-auto pr-1")}>
             {actions.map((action) => (
               <div
                 key={action.id}
@@ -260,20 +165,9 @@ export function BudgetScenarioActionsPanel({
                     {formatMoney(action.amount)}
                   </Badge>
                   {canManage ? (
-                    <>
-                      <Button type="button" variant="secondary" size="sm" onClick={() => openEditDialog(action)}>
-                        Edytuj
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        disabled={busyId === action.id}
-                        onClick={() => void handleDelete(action)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => openEditDialog(action)}>
+                      Edytuj
+                    </Button>
                   ) : null}
                 </div>
               </div>
@@ -282,120 +176,13 @@ export function BudgetScenarioActionsPanel({
         )}
       </CardContent>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Edytuj akcję" : "Nowa akcja symulacyjna"}</DialogTitle>
-          </DialogHeader>
-
-          <div className="grid gap-4">
-            <Field label="Nazwa">
-              <Input
-                placeholder="np. Zwolnienie Jana Kowalskiego"
-                value={draft.name}
-                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-              />
-            </Field>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Field label="Rodzaj wpływu">
-                <Select
-                  value={draft.effectType}
-                  onChange={(e) => setDraft({ ...draft, effectType: e.target.value as BudgetScenarioEffectType })}
-                >
-                  {BUDGET_SCENARIO_EFFECT_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {BUDGET_SCENARIO_EFFECT_TYPE_LABELS[type]}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Kierunek">
-                <Select
-                  value={draft.direction}
-                  onChange={(e) => setDraft({ ...draft, direction: e.target.value as Direction })}
-                >
-                  <option value="decrease">Zmniejszenie</option>
-                  <option value="increase">Zwiększenie</option>
-                </Select>
-              </Field>
-              <Field label="Kwota (zł)">
-                <Input
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  value={draft.amount}
-                  onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
-                />
-              </Field>
-            </div>
-
-            <Field label="Cykliczność">
-              <Select
-                value={draft.cadence}
-                onChange={(e) => setDraft({ ...draft, cadence: e.target.value as BudgetCostCadence })}
-              >
-                {BUDGET_COST_CADENCES.map((cadence) => (
-                  <option key={cadence} value={cadence}>
-                    {BUDGET_COST_CADENCE_LABELS[cadence]}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-
-            {draft.cadence === "one_off" ? (
-              <Field label="Miesiąc wystąpienia">
-                <Input
-                  type="month"
-                  value={draft.month}
-                  onChange={(e) => setDraft({ ...draft, month: e.target.value })}
-                />
-              </Field>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Od miesiąca">
-                  <Input
-                    type="month"
-                    value={draft.startMonth}
-                    onChange={(e) => setDraft({ ...draft, startMonth: e.target.value })}
-                  />
-                </Field>
-                <Field label="Do miesiąca (opcjonalnie)">
-                  <Input
-                    type="month"
-                    value={draft.endMonth}
-                    onChange={(e) => setDraft({ ...draft, endMonth: e.target.value })}
-                  />
-                </Field>
-              </div>
-            )}
-
-            {draft.cadence === "every_n_months" ? (
-              <Field label="Co ile miesięcy">
-                <Input
-                  type="number"
-                  min={1}
-                  value={draft.intervalMonths}
-                  onChange={(e) => setDraft({ ...draft, intervalMonths: e.target.value })}
-                />
-              </Field>
-            ) : null}
-
-            <Field label="Notatki (opcjonalnie)">
-              <Textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
-            </Field>
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setDialogOpen(false)}>
-              Anuluj
-            </Button>
-            <Button type="button" onClick={() => void handleSaveDraft()} disabled={saving || !draft.name.trim()}>
-              {saving ? "Zapisywanie..." : "Zapisz"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <BudgetScenarioActionDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        action={editingAction}
+        onSaved={handleSaved}
+        onDeleted={handleDeleted}
+      />
     </Card>
   );
 }

@@ -55,7 +55,7 @@ export async function loadBudgetForecastDataset(horizonMonthsOverride?: number):
     .filter((entry) => months.includes(monthKey(entry.expectedDate)))
     .map((entry) => ({
       month: entry.expectedDate,
-      amountGross: entry.amountGross,
+      amountNet: entry.amountNet,
       confidence: entry.confidence,
       projectId: entry.projectId,
       projectName: entry.projectName,

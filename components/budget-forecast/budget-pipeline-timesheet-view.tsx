@@ -1,10 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, Minus, Trash2 } from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Minus,
+  Package,
+  Plus,
+  TrendingDown,
+} from "lucide-react";
 import {
   Bar,
   CartesianGrid,
+  Cell,
   ComposedChart,
   Legend as RechartsLegend,
   Line,
@@ -17,24 +36,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClientOnlyChart } from "@/components/charts";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Field, Input, Select } from "@/components/ui/input";
 import { hasFullAppAccess } from "@/lib/auth/types";
 import {
-  deleteProjectRevenueForecast,
   fetchAllProjectRevenueForecastsWithProjectNames,
   updateProjectRevenueForecast,
 } from "@/lib/supabase/project-revenue-forecast-repository";
+import { fetchAllBudgetCostItems } from "@/lib/supabase/budget-cost-item-repository";
+import { fetchAllBudgetScenarioActions } from "@/lib/supabase/budget-scenario-action-repository";
+import { fetchBudgetForecastSettings } from "@/lib/supabase/budget-forecast-settings-repository";
+import { expandAmountToMonths } from "@/lib/budget-forecast/engine";
 import {
   BUDGET_CONFIDENCE_LABELS,
   BUDGET_CONFIDENCE_LEVELS,
   type BudgetConfidenceLevel,
+  type BudgetCostItem,
+  type BudgetScenarioAction,
   type ProjectRevenueForecastWithProject,
 } from "@/lib/budget-forecast/types";
 import {
@@ -42,16 +58,23 @@ import {
   MONTH_LABELS_PL,
   QUARTER_LABELS_PL,
   snapDateToGranularity,
+  toDateOnly,
   type PeriodColumn,
   type TimesheetGranularity,
 } from "@/lib/budget-forecast/week-utils";
 import { cn, formatMoney } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
+import { useAppStore } from "@/store/app-store";
 import { BudgetScenarioActionsPanel } from "@/components/budget-forecast/budget-scenario-actions-panel";
+import { BudgetPipelineEntryDialog } from "@/components/budget-forecast/budget-pipeline-entry-dialog";
+import { BudgetCostItemDialog } from "@/components/budget-forecast/budget-cost-item-dialog";
+import { BudgetScenarioActionDialog } from "@/components/budget-forecast/budget-scenario-action-dialog";
 
 const PERIOD_WIDTH_PX: Record<TimesheetGranularity, number> = { week: 68, month: 96 };
 const LABEL_WIDTH_PX = 220;
-const ROW_HEIGHT_PX = 48;
+const PROJECT_ROW_BASE_HEIGHT_PX = 44;
+const LANE_HEIGHT_PX = 26;
+const SUMMARY_ROW_HEIGHT_PX = 36;
 const CLICK_THRESHOLD_PX = 5;
 
 const GRANULARITY_LABELS: Record<TimesheetGranularity, string> = { week: "Tydzień", month: "Miesiąc" };
@@ -63,6 +86,9 @@ const CONFIDENCE_CHIP_COLOR: Record<BudgetConfidenceLevel, string> = {
   low: "#a1a1aa",
   frozen: "#71717a",
 };
+
+const COST_COLOR = "#f43f5e";
+const REVENUE_SCENARIO_COLOR = "#22c55e";
 
 function buildGroupSegments(periods: PeriodColumn[]) {
   const segments: Array<{ label: string; startIndex: number; count: number }> = [];
@@ -79,8 +105,9 @@ function buildGroupSegments(periods: PeriodColumn[]) {
 /** Zwięzły zapis kwoty dla ciasnych komórek siatki (np. "418 tys." zamiast "417 941,91 zł"). */
 function formatCompactAmount(value: number): string {
   if (Math.abs(value) < 1) return "0";
-  const rounded = Math.round(value / 1000);
-  return `${rounded.toLocaleString("pl-PL")} tys.`;
+  const sign = value < 0 ? "-" : "";
+  const rounded = Math.round(Math.abs(value) / 1000);
+  return `${sign}${rounded.toLocaleString("pl-PL")} tys.`;
 }
 
 function TrendArrow({ current, previous }: { current: number; previous: number }) {
@@ -93,6 +120,81 @@ function TrendArrow({ current, previous }: { current: number; previous: number }
   return <ArrowDownRight className="h-3 w-3 shrink-0 text-rose-400" />;
 }
 
+type CadenceSchedule = {
+  cadence: BudgetCostItem["cadence"];
+  intervalMonths: number | null;
+  month: string | null;
+  startMonth: string;
+  endMonth: string | null;
+};
+
+/** Rozkłada pozycję cykliczną (koszt/akcja) na kolumny siatki — dla granulacji tygodniowej
+ * pokazuje ją w pierwszym tygodniu danego miesiąca, bo cykliczność liczona jest w miesiącach. */
+function mapRecurringAmountToPeriods(
+  schedule: CadenceSchedule,
+  amount: number,
+  periods: PeriodColumn[],
+  granularity: TimesheetGranularity,
+  year: number,
+): Record<string, number> {
+  const monthKeys = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, "0")}-01`);
+  const perMonth = expandAmountToMonths(schedule, amount, monthKeys);
+
+  if (granularity === "month") {
+    return perMonth;
+  }
+
+  const result: Record<string, number> = {};
+  for (const [monthStart, value] of Object.entries(perMonth)) {
+    const targetPeriod = periods.find((p) => p.periodStart.slice(0, 7) === monthStart.slice(0, 7));
+    if (targetPeriod) {
+      result[targetPeriod.periodStart] = (result[targetPeriod.periodStart] ?? 0) + value;
+    }
+  }
+  return result;
+}
+
+type ProjectRowEntry = {
+  entry: ProjectRevenueForecastWithProject;
+  periodIndex: number;
+  lane: number;
+};
+
+type ProjectRow = {
+  projectId: string;
+  projectName: string;
+  entries: ProjectRowEntry[];
+  laneCount: number;
+};
+
+function groupEntriesByProject(
+  rows: ProjectRevenueForecastWithProject[],
+  periodIndexFor: (entry: ProjectRevenueForecastWithProject) => number,
+): ProjectRow[] {
+  const byProject = new Map<string, ProjectRow>();
+  for (const entry of rows) {
+    let row = byProject.get(entry.projectId);
+    if (!row) {
+      row = { projectId: entry.projectId, projectName: entry.projectName, entries: [], laneCount: 1 };
+      byProject.set(entry.projectId, row);
+    }
+    row.entries.push({ entry, periodIndex: periodIndexFor(entry), lane: 0 });
+  }
+
+  const result = Array.from(byProject.values());
+  for (const row of result) {
+    const occupiedAtPeriod = new Map<number, number>();
+    for (const item of row.entries) {
+      const lane = occupiedAtPeriod.get(item.periodIndex) ?? 0;
+      item.lane = lane;
+      occupiedAtPeriod.set(item.periodIndex, lane + 1);
+    }
+    row.laneCount = Math.max(1, ...Array.from(occupiedAtPeriod.values()));
+  }
+  result.sort((a, b) => a.projectName.localeCompare(b.projectName));
+  return result;
+}
+
 type DragState = {
   entryId: string;
   originalIndex: number;
@@ -100,28 +202,40 @@ type DragState = {
   pointerId: number;
 };
 
-type EditDraft = {
-  date: string;
-  amount: string;
-  confidence: BudgetConfidenceLevel;
-  notes: string;
-};
-
 export function BudgetPipelineTimesheetView() {
   const profile = useAuthStore((state) => state.profile);
   const canManage = Boolean(profile && hasFullAppAccess(profile.role));
+  const projects = useAppStore((state) => state.projects);
+  const activeProjects = useMemo(() => projects.filter((p) => p.isActive), [projects]);
 
   const [granularity, setGranularity] = useState<TimesheetGranularity>("week");
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [entries, setEntries] = useState<ProjectRevenueForecastWithProject[]>([]);
+  const [costItems, setCostItems] = useState<BudgetCostItem[]>([]);
+  const [scenarioActions, setScenarioActions] = useState<BudgetScenarioAction[]>([]);
+  const [openingBalance, setOpeningBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const didAutoScroll = useRef(false);
+
+  const [costsExpanded, setCostsExpanded] = useState(false);
+  const [revenueActionsExpanded, setRevenueActionsExpanded] = useState(false);
+  const [costActionsExpanded, setCostActionsExpanded] = useState(false);
 
   const [editingEntry, setEditingEntry] = useState<ProjectRevenueForecastWithProject | null>(null);
-  const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
-  const [savingEdit, setSavingEdit] = useState(false);
+  const [pipelineDialogOpen, setPipelineDialogOpen] = useState(false);
+  const [pipelineDefaults, setPipelineDefaults] = useState<{ projectId?: string; date?: string }>({});
+
+  const [editingCostItem, setEditingCostItem] = useState<BudgetCostItem | null>(null);
+  const [costDialogOpen, setCostDialogOpen] = useState(false);
+  const [costDefaultMonth, setCostDefaultMonth] = useState<string | undefined>(undefined);
+
+  const [editingScenarioAction, setEditingScenarioAction] = useState<BudgetScenarioAction | null>(null);
+  const [scenarioDialogOpen, setScenarioDialogOpen] = useState(false);
+  const [scenarioDefaults, setScenarioDefaults] = useState<{ month?: string; effectType?: "cost" | "revenue" }>({});
 
   const periods = useMemo(() => buildYearPeriodColumns(year, granularity), [year, granularity]);
   const groupSegments = useMemo(() => buildGroupSegments(periods), [periods]);
@@ -131,6 +245,7 @@ export function BudgetPipelineTimesheetView() {
     return map;
   }, [periods]);
   const periodWidth = PERIOD_WIDTH_PX[granularity];
+  const todayKey = useMemo(() => toDateOnly(new Date()), []);
 
   useEffect(() => {
     reload();
@@ -139,16 +254,24 @@ export function BudgetPipelineTimesheetView() {
   function reload() {
     setLoading(true);
     setError(null);
-    void fetchAllProjectRevenueForecastsWithProjectNames()
-      .then(setEntries)
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Nie udało się wczytać pipeline."))
+    Promise.all([
+      fetchAllProjectRevenueForecastsWithProjectNames(),
+      fetchAllBudgetCostItems(),
+      fetchAllBudgetScenarioActions(),
+      fetchBudgetForecastSettings(),
+    ])
+      .then(([pipelineEntries, costs, actions, settings]) => {
+        setEntries(pipelineEntries);
+        setCostItems(costs);
+        setScenarioActions(actions);
+        setOpeningBalance(settings.openingBalance);
+      })
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Nie udało się wczytać danych."))
       .finally(() => setLoading(false));
   }
 
   const rows = useMemo(() => {
-    return entries
-      .filter((entry) => Number(entry.expectedDate.slice(0, 4)) === year)
-      .sort((a, b) => a.projectName.localeCompare(b.projectName) || a.expectedDate.localeCompare(b.expectedDate));
+    return entries.filter((entry) => Number(entry.expectedDate.slice(0, 4)) === year);
   }, [entries, year]);
 
   function periodIndexForEntry(entry: ProjectRevenueForecastWithProject): number {
@@ -156,56 +279,169 @@ export function BudgetPipelineTimesheetView() {
     return periodIndexByStart.get(snapped) ?? 0;
   }
 
-  const periodTotals = useMemo(() => {
+  const projectRows = useMemo(
+    () => groupEntriesByProject(rows, periodIndexForEntry),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rows, periods, granularity],
+  );
+
+  const activeCostItems = useMemo(() => costItems.filter((item) => item.isActive), [costItems]);
+  const enabledRevenueActions = useMemo(
+    () => scenarioActions.filter((a) => a.isEnabled && a.effectType === "revenue"),
+    [scenarioActions],
+  );
+  const enabledCostActions = useMemo(
+    () => scenarioActions.filter((a) => a.isEnabled && a.effectType === "cost"),
+    [scenarioActions],
+  );
+  const costActionsAll = useMemo(() => scenarioActions.filter((a) => a.effectType === "cost"), [scenarioActions]);
+  const revenueActionsAll = useMemo(() => scenarioActions.filter((a) => a.effectType === "revenue"), [scenarioActions]);
+
+  function sumByPeriod(items: Array<{ amount: number } & CadenceSchedule>): number[] {
+    const totals = new Array(periods.length).fill(0) as number[];
+    for (const item of items) {
+      const perPeriod = mapRecurringAmountToPeriods(item, item.amount, periods, granularity, year);
+      for (const [periodStart, value] of Object.entries(perPeriod)) {
+        const idx = periodIndexByStart.get(periodStart);
+        if (idx !== undefined) totals[idx] += value;
+      }
+    }
+    return totals;
+  }
+
+  const pipelinePeriodTotals = useMemo(() => {
     const totals = new Array(periods.length).fill(0) as number[];
     for (const entry of rows) {
-      const idx = periodIndexForEntry(entry);
-      totals[idx] += entry.amountGross;
+      totals[periodIndexForEntry(entry)] += entry.amountNet;
     }
     return totals;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, periods.length, periodIndexByStart, granularity]);
+  }, [rows, periods, periodIndexByStart, granularity]);
 
-  const periodCumulative = useMemo(() => {
-    let running = 0;
-    return periodTotals.map((value) => (running += value));
-  }, [periodTotals]);
+  const costPeriodTotals = useMemo(
+    () => sumByPeriod(activeCostItems),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeCostItems, periods, granularity, year],
+  );
+  const revenueScenarioPeriodTotals = useMemo(
+    () => sumByPeriod(enabledRevenueActions),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [enabledRevenueActions, periods, granularity, year],
+  );
+  const costScenarioPeriodTotals = useMemo(
+    () => sumByPeriod(enabledCostActions),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [enabledCostActions, periods, granularity, year],
+  );
 
-  const monthlyTotals = useMemo(() => {
+  const netPeriodTotals = useMemo(
+    () =>
+      periods.map(
+        (_, i) =>
+          (pipelinePeriodTotals[i] ?? 0) +
+          (revenueScenarioPeriodTotals[i] ?? 0) -
+          (costPeriodTotals[i] ?? 0) -
+          (costScenarioPeriodTotals[i] ?? 0),
+      ),
+    [periods, pipelinePeriodTotals, revenueScenarioPeriodTotals, costPeriodTotals, costScenarioPeriodTotals],
+  );
+
+  const netCumulative = useMemo(() => {
+    let running = openingBalance;
+    return netPeriodTotals.map((value) => (running += value));
+  }, [netPeriodTotals, openingBalance]);
+
+  // Rozliczenie miesięczne/kwartalne (niezależnie od granulacji siatki) — do kart podsumowania.
+  const monthColumns = useMemo(() => buildYearPeriodColumns(year, "month"), [year]);
+  const monthlyPipeline = useMemo(() => {
     const totals = new Array(12).fill(0) as number[];
     for (const entry of rows) {
-      const month = Number(entry.expectedDate.slice(5, 7)) - 1;
-      totals[month] += entry.amountGross;
+      totals[Number(entry.expectedDate.slice(5, 7)) - 1] += entry.amountNet;
     }
     return totals;
   }, [rows]);
+  const monthlyCost = useMemo(() => {
+    const totals = new Array(12).fill(0) as number[];
+    for (const item of activeCostItems) {
+      const perMonth = expandAmountToMonths(item, item.amount, monthColumns.map((m) => m.periodStart));
+      for (const [monthStart, value] of Object.entries(perMonth)) {
+        const idx = monthColumns.findIndex((m) => m.periodStart === monthStart);
+        if (idx !== -1) totals[idx] += value;
+      }
+    }
+    return totals;
+  }, [activeCostItems, monthColumns]);
+  const monthlyRevenueScenario = useMemo(() => {
+    const totals = new Array(12).fill(0) as number[];
+    for (const action of enabledRevenueActions) {
+      const perMonth = expandAmountToMonths(action, action.amount, monthColumns.map((m) => m.periodStart));
+      for (const [monthStart, value] of Object.entries(perMonth)) {
+        const idx = monthColumns.findIndex((m) => m.periodStart === monthStart);
+        if (idx !== -1) totals[idx] += value;
+      }
+    }
+    return totals;
+  }, [enabledRevenueActions, monthColumns]);
+  const monthlyCostScenario = useMemo(() => {
+    const totals = new Array(12).fill(0) as number[];
+    for (const action of enabledCostActions) {
+      const perMonth = expandAmountToMonths(action, action.amount, monthColumns.map((m) => m.periodStart));
+      for (const [monthStart, value] of Object.entries(perMonth)) {
+        const idx = monthColumns.findIndex((m) => m.periodStart === monthStart);
+        if (idx !== -1) totals[idx] += value;
+      }
+    }
+    return totals;
+  }, [enabledCostActions, monthColumns]);
 
+  const monthlyNet = useMemo(
+    () =>
+      monthlyPipeline.map(
+        (_, i) => monthlyPipeline[i] + monthlyRevenueScenario[i] - monthlyCost[i] - monthlyCostScenario[i],
+      ),
+    [monthlyPipeline, monthlyRevenueScenario, monthlyCost, monthlyCostScenario],
+  );
   const monthlyCumulative = useMemo(() => {
-    let running = 0;
-    return monthlyTotals.map((value) => (running += value));
-  }, [monthlyTotals]);
+    let running = openingBalance;
+    return monthlyNet.map((value) => (running += value));
+  }, [monthlyNet, openingBalance]);
 
-  const quarterlyTotals = useMemo(() => {
+  const quarterlyNet = useMemo(() => {
     const totals = [0, 0, 0, 0];
-    monthlyTotals.forEach((value, i) => {
+    monthlyNet.forEach((value, i) => {
       totals[Math.floor(i / 3)] += value;
     });
     return totals;
-  }, [monthlyTotals]);
-
+  }, [monthlyNet]);
   const quarterlyCumulative = useMemo(() => {
-    let running = 0;
-    return quarterlyTotals.map((value) => (running += value));
-  }, [quarterlyTotals]);
+    let running = openingBalance;
+    return quarterlyNet.map((value) => (running += value));
+  }, [quarterlyNet, openingBalance]);
 
-  const yearTotal = useMemo(() => monthlyTotals.reduce((sum, value) => sum + value, 0), [monthlyTotals]);
-  const maxMonthly = Math.max(...monthlyTotals, 1);
-  const maxQuarterly = Math.max(...quarterlyTotals, 1);
+  const yearTotal = useMemo(() => monthlyNet.reduce((sum, value) => sum + value, 0), [monthlyNet]);
+  const maxMonthlyAbs = Math.max(...monthlyNet.map((v) => Math.abs(v)), 1);
+  const maxQuarterlyAbs = Math.max(...quarterlyNet.map((v) => Math.abs(v)), 1);
 
   const chartData = useMemo(
-    () => periods.map((p, i) => ({ label: p.label, total: periodTotals[i] ?? 0, cumulative: periodCumulative[i] ?? 0 })),
-    [periods, periodTotals, periodCumulative],
+    () =>
+      periods.map((p, i) => ({
+        label: p.label,
+        total: netPeriodTotals[i] ?? 0,
+        cumulative: netCumulative[i] ?? 0,
+      })),
+    [periods, netPeriodTotals, netCumulative],
   );
+
+  // Auto-scroll do bieżącego okresu przy pierwszym wczytaniu / zmianie granulacji.
+  useEffect(() => {
+    if (loading || !scrollRef.current) return;
+    const currentStart = snapDateToGranularity(todayKey, granularity);
+    const idx = periodIndexByStart.get(currentStart);
+    if (idx === undefined) return;
+    const targetScroll = Math.max(0, idx * periodWidth - periodWidth * 2);
+    scrollRef.current.scrollLeft = targetScroll;
+    didAutoScroll.current = true;
+  }, [loading, granularity, year, periodIndexByStart, periodWidth, todayKey]);
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>, entry: ProjectRevenueForecastWithProject) {
     if (!canManage) return;
@@ -237,7 +473,8 @@ export function BudgetPipelineTimesheetView() {
     setDrag(null);
 
     if (Math.abs(current.offsetPx) < CLICK_THRESHOLD_PX) {
-      openEditDialog(entry);
+      setEditingEntry(entry);
+      setPipelineDialogOpen(true);
       return;
     }
 
@@ -259,54 +496,34 @@ export function BudgetPipelineTimesheetView() {
     }
   }
 
-  function openEditDialog(entry: ProjectRevenueForecastWithProject) {
-    setEditingEntry(entry);
-    setEditDraft({
-      date: entry.expectedDate.slice(0, 10),
-      amount: String(entry.amountGross),
-      confidence: entry.confidence,
-      notes: entry.notes,
-    });
+  function periodIndexFromClick(event: ReactMouseEvent<HTMLDivElement>): number {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    return Math.min(Math.max(Math.floor(x / periodWidth), 0), periods.length - 1);
   }
 
-  function closeEditDialog() {
+  function handleProjectRowBackgroundClick(event: ReactMouseEvent<HTMLDivElement>, projectId: string) {
+    if (!canManage) return;
+    const idx = periodIndexFromClick(event);
     setEditingEntry(null);
-    setEditDraft(null);
+    setPipelineDefaults({ projectId, date: periods[idx]?.periodStart });
+    setPipelineDialogOpen(true);
   }
 
-  async function handleSaveEdit() {
-    if (!editingEntry || !editDraft) return;
-    setSavingEdit(true);
-    setError(null);
-    try {
-      const updated = await updateProjectRevenueForecast(editingEntry.id, {
-        expectedDate: editDraft.date,
-        amountGross: Number(editDraft.amount) || 0,
-        confidence: editDraft.confidence,
-        notes: editDraft.notes.trim(),
-      });
-      setEntries((prev) => prev.map((e) => (e.id === editingEntry.id ? { ...e, ...updated } : e)));
-      closeEditDialog();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Nie udało się zapisać zmian.");
-    } finally {
-      setSavingEdit(false);
-    }
+  function handleCostAggregateClick(event: ReactMouseEvent<HTMLDivElement>) {
+    if (!canManage) return;
+    const idx = periodIndexFromClick(event);
+    setEditingCostItem(null);
+    setCostDefaultMonth(periods[idx]?.periodStart.slice(0, 7));
+    setCostDialogOpen(true);
   }
 
-  async function handleDeleteEdit() {
-    if (!editingEntry) return;
-    setSavingEdit(true);
-    setError(null);
-    try {
-      await deleteProjectRevenueForecast(editingEntry.id);
-      setEntries((prev) => prev.filter((e) => e.id !== editingEntry.id));
-      closeEditDialog();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Nie udało się usunąć pozycji.");
-    } finally {
-      setSavingEdit(false);
-    }
+  function handleScenarioAggregateClick(event: ReactMouseEvent<HTMLDivElement>, effectType: "cost" | "revenue") {
+    if (!canManage) return;
+    const idx = periodIndexFromClick(event);
+    setEditingScenarioAction(null);
+    setScenarioDefaults({ month: periods[idx]?.periodStart.slice(0, 7), effectType });
+    setScenarioDialogOpen(true);
   }
 
   if (loading) {
@@ -341,6 +558,49 @@ export function BudgetPipelineTimesheetView() {
             </Button>
           ))}
         </div>
+
+        {canManage ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                setEditingEntry(null);
+                setPipelineDefaults({});
+                setPipelineDialogOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              Dodaj spodziewany wpływ
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setEditingCostItem(null);
+                setCostDefaultMonth(undefined);
+                setCostDialogOpen(true);
+              }}
+            >
+              <Package className="h-4 w-4" />
+              Koszty stałe
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setEditingScenarioAction(null);
+                setScenarioDefaults({});
+                setScenarioDialogOpen(true);
+              }}
+            >
+              <TrendingDown className="h-4 w-4" />
+              Dodaj akcję
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-4 text-xs text-muted">
@@ -351,7 +611,13 @@ export function BudgetPipelineTimesheetView() {
             {BUDGET_CONFIDENCE_LABELS[level]}
           </span>
         ))}
-        {canManage ? <span className="ml-auto">Kliknij pozycję, żeby edytować · przeciągnij, żeby przesunąć.</span> : null}
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: COST_COLOR }} />
+          Koszty
+        </span>
+        {canManage ? (
+          <span className="ml-auto">Kliknij, żeby edytować lub dodać · przeciągnij pozycję, żeby przesunąć.</span>
+        ) : null}
       </div>
 
       {error ? (
@@ -360,10 +626,10 @@ export function BudgetPipelineTimesheetView() {
         </p>
       ) : null}
 
-      {rows.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted">Brak pozycji pipeline w {year} roku.</p>
+      {rows.length === 0 && costItems.length === 0 && scenarioActions.length === 0 ? (
+        <p className="py-8 text-center text-sm text-muted">Brak danych w {year} roku.</p>
       ) : (
-        <div className="min-w-0 overflow-x-auto rounded-2xl border border-border/80">
+        <div ref={scrollRef} className="min-w-0 overflow-x-auto rounded-2xl border border-border/80">
           <div style={{ minWidth: LABEL_WIDTH_PX + timelineWidth }}>
             {/* Nagłówek: grupy (miesiące dla tygodni / kwartały dla miesięcy) */}
             <div className="flex border-b border-border/70 bg-surface-muted/20">
@@ -396,7 +662,12 @@ export function BudgetPipelineTimesheetView() {
                 {periods.map((period) => (
                   <div
                     key={period.periodStart}
-                    className="absolute top-0 flex h-6 items-center justify-center border-l border-border/30 text-[10px] text-muted"
+                    className={cn(
+                      "absolute top-0 flex h-6 items-center justify-center border-l border-border/30 text-[10px]",
+                      period.periodStart === snapDateToGranularity(todayKey, granularity)
+                        ? "font-semibold text-accent"
+                        : "text-muted",
+                    )}
                     style={{ left: period.index * periodWidth, width: periodWidth }}
                   >
                     {period.label}
@@ -405,22 +676,22 @@ export function BudgetPipelineTimesheetView() {
               </div>
             </div>
 
-            {/* Wiersze pozycji pipeline */}
-            {rows.map((entry) => {
-              const periodIndex = periodIndexForEntry(entry);
-              const isDragging = drag?.entryId === entry.id;
-              const offsetPx = isDragging ? drag.offsetPx : 0;
-
+            {/* Wiersze projektów (pipeline) */}
+            {projectRows.map((row) => {
+              const rowHeight = Math.max(PROJECT_ROW_BASE_HEIGHT_PX, row.laneCount * LANE_HEIGHT_PX + 16);
               return (
-                <div key={entry.id} className="flex border-b border-border/40">
+                <div key={row.projectId} className="flex border-b border-border/40">
                   <div
                     className="sticky left-0 z-10 flex shrink-0 flex-col justify-center gap-0.5 border-r border-border/70 bg-surface px-3 py-1"
-                    style={{ width: LABEL_WIDTH_PX, height: ROW_HEIGHT_PX }}
+                    style={{ width: LABEL_WIDTH_PX, height: rowHeight }}
                   >
-                    <p className="truncate text-xs font-medium text-foreground">{entry.projectName}</p>
-                    <p className="truncate text-[11px] text-muted">{formatMoney(entry.amountGross)}</p>
+                    <p className="truncate text-xs font-medium text-foreground">{row.projectName}</p>
                   </div>
-                  <div className="relative" style={{ width: timelineWidth, height: ROW_HEIGHT_PX }}>
+                  <div
+                    className="relative"
+                    style={{ width: timelineWidth, height: rowHeight, cursor: canManage ? "copy" : "default" }}
+                    onClick={(event) => handleProjectRowBackgroundClick(event, row.projectId)}
+                  >
                     {periods.map((period) => (
                       <div
                         key={period.periodStart}
@@ -428,83 +699,190 @@ export function BudgetPipelineTimesheetView() {
                         style={{ left: period.index * periodWidth, width: periodWidth }}
                       />
                     ))}
-                    <div
-                      role="button"
-                      className="absolute top-1/2 flex items-center justify-center rounded-lg px-1 text-[11px] font-medium text-white shadow-sm"
-                      style={{
-                        left: periodIndex * periodWidth + 2,
-                        width: periodWidth - 4,
-                        height: ROW_HEIGHT_PX - 12,
-                        transform: `translate(${offsetPx}px, -50%)`,
-                        backgroundColor: CONFIDENCE_CHIP_COLOR[entry.confidence],
-                        cursor: canManage ? "grab" : "pointer",
-                        touchAction: "none",
-                        zIndex: isDragging ? 20 : 1,
-                        transition: isDragging ? "none" : "left 0.15s ease",
-                      }}
-                      onPointerDown={(event) => handlePointerDown(event, entry)}
-                      onPointerMove={handlePointerMove}
-                      onPointerUp={(event) => void handlePointerUp(event, entry)}
-                      title={`${entry.projectName} · ${formatMoney(entry.amountGross)} · ${BUDGET_CONFIDENCE_LABELS[entry.confidence]}`}
-                    >
-                      {formatCompactAmount(entry.amountGross)}
-                    </div>
+                    {row.entries.map(({ entry, periodIndex, lane }) => {
+                      const isDragging = drag?.entryId === entry.id;
+                      const offsetPx = isDragging ? drag.offsetPx : 0;
+                      return (
+                        <div
+                          key={entry.id}
+                          className="absolute flex items-center justify-center rounded-lg px-1 text-[11px] font-medium text-white shadow-sm"
+                          style={{
+                            left: periodIndex * periodWidth + 2,
+                            top: 6 + lane * LANE_HEIGHT_PX,
+                            width: periodWidth - 4,
+                            height: LANE_HEIGHT_PX - 4,
+                            transform: `translateX(${offsetPx}px)`,
+                            backgroundColor: CONFIDENCE_CHIP_COLOR[entry.confidence],
+                            cursor: canManage ? "grab" : "pointer",
+                            touchAction: "none",
+                            zIndex: isDragging ? 20 : 1,
+                            transition: isDragging ? "none" : "left 0.15s ease",
+                          }}
+                          onPointerDown={(event) => handlePointerDown(event, entry)}
+                          onPointerMove={handlePointerMove}
+                          onPointerUp={(event) => void handlePointerUp(event, entry)}
+                          onClick={(event) => event.stopPropagation()}
+                          title={`${formatMoney(entry.amountNet)} · ${BUDGET_CONFIDENCE_LABELS[entry.confidence]}`}
+                        >
+                          {formatCompactAmount(entry.amountNet)}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
             })}
 
-            {/* Podsumowanie: suma okresu */}
+            {/* Koszty stałe */}
+            <RecurringCategoryRow
+              label="Koszty stałe"
+              color={COST_COLOR}
+              expanded={costsExpanded}
+              onToggleExpand={() => setCostsExpanded((v) => !v)}
+              periods={periods}
+              periodWidth={periodWidth}
+              timelineWidth={timelineWidth}
+              totals={costPeriodTotals}
+              onBackgroundClick={handleCostAggregateClick}
+              canManage={canManage}
+            />
+            {costsExpanded
+              ? costItems.map((item) => (
+                  <RecurringItemRow
+                    key={item.id}
+                    label={item.name}
+                    dimmed={!item.isActive}
+                    color={COST_COLOR}
+                    periods={periods}
+                    periodWidth={periodWidth}
+                    timelineWidth={timelineWidth}
+                    values={mapRecurringAmountToPeriods(item, item.amount, periods, granularity, year)}
+                    onClick={() => {
+                      setEditingCostItem(item);
+                      setCostDialogOpen(true);
+                    }}
+                    canManage={canManage}
+                  />
+                ))
+              : null}
+
+            {/* Wpływy symulacyjne */}
+            <RecurringCategoryRow
+              label="Wpływy symulacyjne"
+              color={REVENUE_SCENARIO_COLOR}
+              expanded={revenueActionsExpanded}
+              onToggleExpand={() => setRevenueActionsExpanded((v) => !v)}
+              periods={periods}
+              periodWidth={periodWidth}
+              timelineWidth={timelineWidth}
+              totals={revenueScenarioPeriodTotals}
+              onBackgroundClick={(event) => handleScenarioAggregateClick(event, "revenue")}
+              canManage={canManage}
+            />
+            {revenueActionsExpanded
+              ? revenueActionsAll.map((action) => (
+                  <RecurringItemRow
+                    key={action.id}
+                    label={action.name}
+                    dimmed={!action.isEnabled}
+                    color={REVENUE_SCENARIO_COLOR}
+                    periods={periods}
+                    periodWidth={periodWidth}
+                    timelineWidth={timelineWidth}
+                    values={mapRecurringAmountToPeriods(action, action.amount, periods, granularity, year)}
+                    onClick={() => {
+                      setEditingScenarioAction(action);
+                      setScenarioDialogOpen(true);
+                    }}
+                    canManage={canManage}
+                  />
+                ))
+              : null}
+
+            {/* Koszty symulacyjne */}
+            <RecurringCategoryRow
+              label="Koszty symulacyjne"
+              color={COST_COLOR}
+              expanded={costActionsExpanded}
+              onToggleExpand={() => setCostActionsExpanded((v) => !v)}
+              periods={periods}
+              periodWidth={periodWidth}
+              timelineWidth={timelineWidth}
+              totals={costScenarioPeriodTotals}
+              onBackgroundClick={(event) => handleScenarioAggregateClick(event, "cost")}
+              canManage={canManage}
+            />
+            {costActionsExpanded
+              ? costActionsAll.map((action) => (
+                  <RecurringItemRow
+                    key={action.id}
+                    label={action.name}
+                    dimmed={!action.isEnabled}
+                    color={COST_COLOR}
+                    periods={periods}
+                    periodWidth={periodWidth}
+                    timelineWidth={timelineWidth}
+                    values={mapRecurringAmountToPeriods(action, action.amount, periods, granularity, year)}
+                    onClick={() => {
+                      setEditingScenarioAction(action);
+                      setScenarioDialogOpen(true);
+                    }}
+                    canManage={canManage}
+                  />
+                ))
+              : null}
+
+            {/* Podsumowanie: wynik netto okresu */}
             <div className="flex border-t-2 border-border bg-surface-muted/30">
               <div
-                className="sticky left-0 z-10 shrink-0 border-r border-border/70 bg-surface-muted/30 px-3 py-2 text-xs font-semibold text-foreground"
+                className="sticky left-0 z-10 shrink-0 border-r border-border/70 bg-surface-muted/30 px-3 py-2 text-sm font-semibold text-foreground"
                 style={{ width: LABEL_WIDTH_PX }}
               >
-                Suma {granularity === "week" ? "tygodnia" : "miesiąca"}
+                Wynik netto {granularity === "week" ? "tygodnia" : "miesiąca"}
               </div>
-              <div className="relative" style={{ width: timelineWidth, height: 32 }}>
+              <div className="relative" style={{ width: timelineWidth, height: SUMMARY_ROW_HEIGHT_PX }}>
                 {periods.map((period) => (
                   <div
                     key={period.periodStart}
-                    className="absolute top-0 flex h-8 items-center justify-center gap-0.5 border-l border-border/20 text-[11px] font-medium tabular-nums text-foreground"
-                    style={{ left: period.index * periodWidth, width: periodWidth }}
-                    title={formatMoney(periodTotals[period.index])}
+                    className={cn(
+                      "absolute top-0 flex items-center justify-center gap-1 border-l border-border/20 text-sm font-semibold tabular-nums",
+                      netPeriodTotals[period.index] < 0 ? "text-rose-400" : "text-foreground",
+                    )}
+                    style={{ left: period.index * periodWidth, width: periodWidth, height: SUMMARY_ROW_HEIGHT_PX }}
+                    title={formatMoney(netPeriodTotals[period.index])}
                   >
                     {period.index > 0 ? (
-                      <TrendArrow current={periodTotals[period.index]} previous={periodTotals[period.index - 1]} />
+                      <TrendArrow current={netPeriodTotals[period.index]} previous={netPeriodTotals[period.index - 1]} />
                     ) : null}
-                    {formatCompactAmount(periodTotals[period.index])}
+                    {formatCompactAmount(netPeriodTotals[period.index])}
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Podsumowanie: narastająco */}
+            {/* Podsumowanie: narastająco (płynność) */}
             <div className="flex border-b border-border/70 bg-surface-muted/10">
               <div
-                className="sticky left-0 z-10 shrink-0 border-r border-border/70 bg-surface-muted/10 px-3 py-2 text-xs font-semibold text-foreground"
+                className="sticky left-0 z-10 shrink-0 border-r border-border/70 bg-surface-muted/10 px-3 py-2 text-sm font-semibold text-foreground"
                 style={{ width: LABEL_WIDTH_PX }}
               >
-                Narastająco
+                Narastająco (płynność)
               </div>
-              <div className="relative" style={{ width: timelineWidth, height: 32 }}>
+              <div className="relative" style={{ width: timelineWidth, height: SUMMARY_ROW_HEIGHT_PX }}>
                 {periods.map((period) => (
                   <div
                     key={period.periodStart}
                     className={cn(
-                      "absolute top-0 flex h-8 items-center justify-center gap-0.5 border-l border-border/20 text-[11px] font-medium tabular-nums",
-                      periodCumulative[period.index] < 0 ? "text-rose-400" : "text-muted",
+                      "absolute top-0 flex items-center justify-center gap-1 border-l border-border/20 text-sm font-semibold tabular-nums",
+                      netCumulative[period.index] < 0 ? "text-rose-400" : "text-foreground",
                     )}
-                    style={{ left: period.index * periodWidth, width: periodWidth }}
-                    title={formatMoney(periodCumulative[period.index])}
+                    style={{ left: period.index * periodWidth, width: periodWidth, height: SUMMARY_ROW_HEIGHT_PX }}
+                    title={formatMoney(netCumulative[period.index])}
                   >
                     {period.index > 0 ? (
-                      <TrendArrow
-                        current={periodCumulative[period.index]}
-                        previous={periodCumulative[period.index - 1]}
-                      />
+                      <TrendArrow current={netCumulative[period.index]} previous={netCumulative[period.index - 1]} />
                     ) : null}
-                    {formatCompactAmount(periodCumulative[period.index])}
+                    {formatCompactAmount(netCumulative[period.index])}
                   </div>
                 ))}
               </div>
@@ -513,209 +891,286 @@ export function BudgetPipelineTimesheetView() {
         </div>
       )}
 
-      {rows.length > 0 ? (
-        <Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Wynik netto i płynność ({granularity === "week" ? "tygodniowo" : "miesięcznie"})</CardTitle>
+        </CardHeader>
+        <CardContent className="h-64 w-full min-w-0 sm:h-72">
+          <ClientOnlyChart>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
+              <ComposedChart data={chartData} margin={{ left: 8, right: 16, top: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#27272a" />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#a1a1aa" }} />
+                <YAxis tick={{ fontSize: 11, fill: "#a1a1aa" }} tickFormatter={(v) => formatMoney(v)} width={90} />
+                <Tooltip
+                  formatter={((value: unknown, name: unknown) => [
+                    formatMoney(Number(Array.isArray(value) ? value[0] : value)),
+                    name === "total" ? "Wynik netto okresu" : "Narastająco (płynność)",
+                  ]) as (value: unknown, name: unknown) => [string, string]}
+                />
+                <RechartsLegend
+                  formatter={(value: string) => (value === "total" ? "Wynik netto okresu" : "Narastająco (płynność)")}
+                  wrapperStyle={{ fontSize: 12, color: "#a1a1aa" }}
+                />
+                <ReferenceLine y={0} stroke="#71717a" strokeDasharray="4 4" />
+                <Bar dataKey="total" name="total" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                  {chartData.map((point) => (
+                    <Cell key={point.label} fill={point.total < 0 ? "#f43f5e" : "#3b82f6"} />
+                  ))}
+                </Bar>
+                <Line type="monotone" dataKey="cumulative" name="cumulative" stroke="#22c55e" strokeWidth={2} dot={false} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </ClientOnlyChart>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card className="min-w-0">
           <CardHeader>
-            <CardTitle>
-              Wpływy {granularity === "week" ? "tygodniowo" : "miesięcznie"} i saldo narastające
-            </CardTitle>
+            <CardTitle>Miesiące</CardTitle>
           </CardHeader>
-          <CardContent className="h-64 w-full min-w-0 sm:h-72">
-            <ClientOnlyChart>
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
-                <ComposedChart data={chartData} margin={{ left: 8, right: 16, top: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#27272a" />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#a1a1aa" }} />
-                  <YAxis tick={{ fontSize: 11, fill: "#a1a1aa" }} tickFormatter={(v) => formatMoney(v)} width={90} />
-                  <Tooltip
-                    formatter={((value: unknown, name: unknown) => [
-                      formatMoney(Number(Array.isArray(value) ? value[0] : value)),
-                      name === "total" ? "Suma okresu" : "Narastająco",
-                    ]) as (value: unknown, name: unknown) => [string, string]}
-                  />
-                  <RechartsLegend
-                    formatter={(value: string) => (value === "total" ? "Suma okresu" : "Narastająco")}
-                    wrapperStyle={{ fontSize: 12, color: "#a1a1aa" }}
-                  />
-                  <ReferenceLine y={0} stroke="#71717a" strokeDasharray="4 4" />
-                  <Bar dataKey="total" name="total" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                  <Line type="monotone" dataKey="cumulative" name="cumulative" stroke="#22c55e" strokeWidth={2} dot={false} />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </ClientOnlyChart>
+          <CardContent className="grid gap-1 p-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/60 text-left text-xs uppercase tracking-wide text-muted">
+                  <th className="px-4 py-2 font-medium">Miesiąc</th>
+                  <th className="px-4 py-2 text-right font-medium">Wynik netto</th>
+                  <th className="px-4 py-2 text-right font-medium">Narastająco</th>
+                </tr>
+              </thead>
+              <tbody>
+                {MONTH_LABELS_PL.map((label, i) => (
+                  <tr
+                    key={label}
+                    className="border-b border-border/30 last:border-0"
+                    style={{
+                      background: `linear-gradient(to right, ${monthlyNet[i] < 0 ? "rgba(244,63,94,0.10)" : "rgba(59,130,246,0.10)"} ${(Math.abs(monthlyNet[i]) / maxMonthlyAbs) * 100}%, transparent ${(Math.abs(monthlyNet[i]) / maxMonthlyAbs) * 100}%)`,
+                    }}
+                  >
+                    <td className="px-4 py-1.5 text-muted">{label}</td>
+                    <td
+                      className={cn(
+                        "px-4 py-1.5 text-right tabular-nums",
+                        monthlyNet[i] < 0 ? "text-rose-400" : "text-foreground",
+                      )}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        {i > 0 ? <TrendArrow current={monthlyNet[i]} previous={monthlyNet[i - 1]} /> : null}
+                        {formatMoney(monthlyNet[i])}
+                      </span>
+                    </td>
+                    <td
+                      className={cn(
+                        "px-4 py-1.5 text-right tabular-nums font-medium",
+                        monthlyCumulative[i] < 0 ? "text-rose-400" : "text-foreground",
+                      )}
+                    >
+                      {formatMoney(monthlyCumulative[i])}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </CardContent>
         </Card>
-      ) : null}
 
-      {rows.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card className="min-w-0">
-            <CardHeader>
-              <CardTitle>Miesiące</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-1 p-0">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border/60 text-left text-xs uppercase tracking-wide text-muted">
-                    <th className="px-4 py-2 font-medium">Miesiąc</th>
-                    <th className="px-4 py-2 text-right font-medium">Suma</th>
-                    <th className="px-4 py-2 text-right font-medium">Narastająco</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {MONTH_LABELS_PL.map((label, i) => (
-                    <tr
-                      key={label}
-                      className="border-b border-border/30 last:border-0"
-                      style={{
-                        background: `linear-gradient(to right, rgba(59,130,246,0.10) ${(monthlyTotals[i] / maxMonthly) * 100}%, transparent ${(monthlyTotals[i] / maxMonthly) * 100}%)`,
-                      }}
+        <Card className="min-w-0">
+          <CardHeader>
+            <CardTitle>Kwartały</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-1 p-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/60 text-left text-xs uppercase tracking-wide text-muted">
+                  <th className="px-4 py-2 font-medium">Kwartał</th>
+                  <th className="px-4 py-2 text-right font-medium">Wynik netto</th>
+                  <th className="px-4 py-2 text-right font-medium">Narastająco</th>
+                </tr>
+              </thead>
+              <tbody>
+                {QUARTER_LABELS_PL.map((label, i) => (
+                  <tr
+                    key={label}
+                    className="border-b border-border/30 last:border-0"
+                    style={{
+                      background: `linear-gradient(to right, ${quarterlyNet[i] < 0 ? "rgba(244,63,94,0.10)" : "rgba(34,197,94,0.10)"} ${(Math.abs(quarterlyNet[i]) / maxQuarterlyAbs) * 100}%, transparent ${(Math.abs(quarterlyNet[i]) / maxQuarterlyAbs) * 100}%)`,
+                    }}
+                  >
+                    <td className="px-4 py-1.5 text-muted">{label}</td>
+                    <td
+                      className={cn(
+                        "px-4 py-1.5 text-right tabular-nums",
+                        quarterlyNet[i] < 0 ? "text-rose-400" : "text-foreground",
+                      )}
                     >
-                      <td className="px-4 py-1.5 text-muted">{label}</td>
-                      <td className="px-4 py-1.5 text-right tabular-nums text-foreground">
-                        <span className="inline-flex items-center gap-1">
-                          {i > 0 ? <TrendArrow current={monthlyTotals[i]} previous={monthlyTotals[i - 1]} /> : null}
-                          {formatMoney(monthlyTotals[i])}
-                        </span>
-                      </td>
-                      <td
-                        className={cn(
-                          "px-4 py-1.5 text-right tabular-nums font-medium",
-                          monthlyCumulative[i] < 0 ? "text-rose-400" : "text-foreground",
-                        )}
-                      >
-                        {formatMoney(monthlyCumulative[i])}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-
-          <Card className="min-w-0">
-            <CardHeader>
-              <CardTitle>Kwartały</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-1 p-0">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border/60 text-left text-xs uppercase tracking-wide text-muted">
-                    <th className="px-4 py-2 font-medium">Kwartał</th>
-                    <th className="px-4 py-2 text-right font-medium">Suma</th>
-                    <th className="px-4 py-2 text-right font-medium">Narastająco</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {QUARTER_LABELS_PL.map((label, i) => (
-                    <tr
-                      key={label}
-                      className="border-b border-border/30 last:border-0"
-                      style={{
-                        background: `linear-gradient(to right, rgba(34,197,94,0.10) ${(quarterlyTotals[i] / maxQuarterly) * 100}%, transparent ${(quarterlyTotals[i] / maxQuarterly) * 100}%)`,
-                      }}
+                      <span className="inline-flex items-center gap-1">
+                        {i > 0 ? <TrendArrow current={quarterlyNet[i]} previous={quarterlyNet[i - 1]} /> : null}
+                        {formatMoney(quarterlyNet[i])}
+                      </span>
+                    </td>
+                    <td
+                      className={cn(
+                        "px-4 py-1.5 text-right tabular-nums font-medium",
+                        quarterlyCumulative[i] < 0 ? "text-rose-400" : "text-foreground",
+                      )}
                     >
-                      <td className="px-4 py-1.5 text-muted">{label}</td>
-                      <td className="px-4 py-1.5 text-right tabular-nums text-foreground">
-                        <span className="inline-flex items-center gap-1">
-                          {i > 0 ? (
-                            <TrendArrow current={quarterlyTotals[i]} previous={quarterlyTotals[i - 1]} />
-                          ) : null}
-                          {formatMoney(quarterlyTotals[i])}
-                        </span>
-                      </td>
-                      <td
-                        className={cn(
-                          "px-4 py-1.5 text-right tabular-nums font-medium",
-                          quarterlyCumulative[i] < 0 ? "text-rose-400" : "text-foreground",
-                        )}
-                      >
-                        {formatMoney(quarterlyCumulative[i])}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
+                      {formatMoney(quarterlyCumulative[i])}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
 
-          <Card className="min-w-0 overflow-hidden border-accent/30 bg-gradient-to-br from-accent/10 via-transparent to-transparent">
-            <CardHeader>
-              <CardTitle>Rok {year}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex h-full flex-col items-start justify-center gap-1">
-              <p className="text-xs uppercase tracking-wide text-muted">Suma pipeline w roku</p>
-              <p className="text-2xl font-semibold text-foreground">{formatMoney(yearTotal)}</p>
-            </CardContent>
-          </Card>
-        </div>
-      ) : null}
+        <Card className="min-w-0 overflow-hidden border-accent/30 bg-gradient-to-br from-accent/10 via-transparent to-transparent">
+          <CardHeader>
+            <CardTitle>Rok {year}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex h-full flex-col items-start justify-center gap-1">
+            <p className="text-xs uppercase tracking-wide text-muted">Wynik netto w roku</p>
+            <p className={cn("text-2xl font-semibold", yearTotal < 0 ? "text-rose-400" : "text-foreground")}>
+              {formatMoney(yearTotal)}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-      <BudgetScenarioActionsPanel canManage={canManage} />
+      <BudgetScenarioActionsPanel canManage={canManage} compact />
 
-      <Dialog open={Boolean(editingEntry)} onOpenChange={(open) => !open && closeEditDialog()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edytuj spodziewany wpływ</DialogTitle>
-          </DialogHeader>
+      <BudgetPipelineEntryDialog
+        open={pipelineDialogOpen}
+        onOpenChange={setPipelineDialogOpen}
+        projects={activeProjects}
+        entry={editingEntry}
+        defaultProjectId={pipelineDefaults.projectId}
+        defaultDate={pipelineDefaults.date}
+        onSaved={reload}
+        onDeleted={reload}
+        onImported={reload}
+      />
+      <BudgetCostItemDialog
+        open={costDialogOpen}
+        onOpenChange={setCostDialogOpen}
+        item={editingCostItem}
+        defaultMonth={costDefaultMonth}
+        onSaved={reload}
+        onDeleted={reload}
+      />
+      <BudgetScenarioActionDialog
+        open={scenarioDialogOpen}
+        onOpenChange={setScenarioDialogOpen}
+        action={editingScenarioAction}
+        defaultMonth={scenarioDefaults.month}
+        defaultEffectType={scenarioDefaults.effectType}
+        onSaved={reload}
+        onDeleted={reload}
+      />
+    </div>
+  );
+}
 
-          {editingEntry && editDraft ? (
-            <div className="grid gap-4">
-              <p className="text-sm text-muted">{editingEntry.projectName}</p>
+function RecurringCategoryRow({
+  label,
+  color,
+  expanded,
+  onToggleExpand,
+  periods,
+  periodWidth,
+  timelineWidth,
+  totals,
+  onBackgroundClick,
+  canManage,
+}: {
+  label: string;
+  color: string;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  periods: PeriodColumn[];
+  periodWidth: number;
+  timelineWidth: number;
+  totals: number[];
+  onBackgroundClick: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  canManage: boolean;
+}) {
+  return (
+    <div className="flex border-b border-border/40 bg-surface-muted/10">
+      <button
+        type="button"
+        onClick={onToggleExpand}
+        className="sticky left-0 z-10 flex shrink-0 items-center gap-1.5 border-r border-border/70 bg-surface-muted/10 px-3 py-1 text-left text-xs font-medium text-foreground hover:bg-surface-muted/30"
+        style={{ width: LABEL_WIDTH_PX, height: SUMMARY_ROW_HEIGHT_PX }}
+      >
+        {expanded ? <ChevronUp className="h-3.5 w-3.5 shrink-0" /> : <ChevronDown className="h-3.5 w-3.5 shrink-0" />}
+        <span className="truncate">{label}</span>
+      </button>
+      <div
+        className="relative"
+        style={{ width: timelineWidth, height: SUMMARY_ROW_HEIGHT_PX, cursor: canManage ? "copy" : "default" }}
+        onClick={onBackgroundClick}
+      >
+        {periods.map((period) => (
+          <div
+            key={period.periodStart}
+            className="absolute top-0 flex items-center justify-center border-l border-border/20 text-[11px] font-medium tabular-nums"
+            style={{ left: period.index * periodWidth, width: periodWidth, height: SUMMARY_ROW_HEIGHT_PX, color }}
+          >
+            {totals[period.index] ? formatCompactAmount(totals[period.index]) : ""}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Data">
-                  <Input
-                    type="date"
-                    value={editDraft.date}
-                    onChange={(e) => setEditDraft({ ...editDraft, date: e.target.value })}
-                  />
-                </Field>
-                <Field label="Kwota (zł)">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={editDraft.amount}
-                    onChange={(e) => setEditDraft({ ...editDraft, amount: e.target.value })}
-                  />
-                </Field>
-              </div>
-
-              <Field label="Pewność">
-                <Select
-                  value={editDraft.confidence}
-                  onChange={(e) => setEditDraft({ ...editDraft, confidence: e.target.value as BudgetConfidenceLevel })}
-                >
-                  {BUDGET_CONFIDENCE_LEVELS.map((level) => (
-                    <option key={level} value={level}>
-                      {BUDGET_CONFIDENCE_LABELS[level]}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-
-              <Field label="Notatki (opcjonalnie)">
-                <Input value={editDraft.notes} onChange={(e) => setEditDraft({ ...editDraft, notes: e.target.value })} />
-              </Field>
-            </div>
-          ) : null}
-
-          <DialogFooter className="sm:justify-between">
-            <Button type="button" variant="destructive" onClick={() => void handleDeleteEdit()} disabled={savingEdit}>
-              <Trash2 className="h-4 w-4" />
-              Usuń
-            </Button>
-            <div className="flex gap-2">
-              <Button type="button" variant="secondary" onClick={closeEditDialog}>
-                Anuluj
-              </Button>
-              <Button type="button" onClick={() => void handleSaveEdit()} disabled={savingEdit}>
-                {savingEdit ? "Zapisywanie..." : "Zapisz"}
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+function RecurringItemRow({
+  label,
+  dimmed,
+  color,
+  periods,
+  periodWidth,
+  timelineWidth,
+  values,
+  onClick,
+  canManage,
+}: {
+  label: string;
+  dimmed: boolean;
+  color: string;
+  periods: PeriodColumn[];
+  periodWidth: number;
+  timelineWidth: number;
+  values: Record<string, number>;
+  onClick: () => void;
+  canManage: boolean;
+}) {
+  return (
+    <div className={cn("flex border-b border-border/30", dimmed && "opacity-40")}>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={!canManage}
+        className="sticky left-0 z-10 flex shrink-0 items-center border-r border-border/70 bg-surface px-3 py-1 pl-8 text-left text-xs text-muted hover:bg-surface-muted/30 disabled:cursor-default"
+        style={{ width: LABEL_WIDTH_PX, height: 28 }}
+      >
+        <span className="truncate">{label}</span>
+      </button>
+      <div
+        className="relative"
+        style={{ width: timelineWidth, height: 28, cursor: canManage ? "pointer" : "default" }}
+        onClick={canManage ? onClick : undefined}
+      >
+        {periods.map((period) => (
+          <div
+            key={period.periodStart}
+            className="absolute top-0 flex items-center justify-center border-l border-border/10 text-[10px] tabular-nums"
+            style={{ left: period.index * periodWidth, width: periodWidth, height: 28, color }}
+          >
+            {values[period.periodStart] ? formatCompactAmount(values[period.periodStart]) : ""}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
