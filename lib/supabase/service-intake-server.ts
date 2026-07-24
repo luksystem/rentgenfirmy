@@ -529,6 +529,41 @@ async function notifyServiceIntakeSubmitted(record: ServiceIntakeRecord) {
   });
 }
 
+/**
+ * Priorytet numeru do SMS: podpięty klient > podpięty kontakt (metadata.contactId) >
+ * opcjonalny telefon wpisany bezpośrednio na zgłoszeniu.
+ */
+async function resolveServiceIntakeSmsPhone(record: ServiceIntakeRecord): Promise<string | null> {
+  const supabase = getSupabaseAdmin();
+
+  if (record.clientId) {
+    const { data } = await supabase
+      .from("clients")
+      .select("phone")
+      .eq("id", record.clientId)
+      .maybeSingle();
+    const clientPhone = (data?.phone as string | undefined)?.trim();
+    if (clientPhone) {
+      return clientPhone;
+    }
+  }
+
+  const contactId = (record.metadataJson as Record<string, unknown> | null)?.contactId;
+  if (typeof contactId === "string" && contactId) {
+    const { data } = await supabase
+      .from("contacts")
+      .select("phone")
+      .eq("id", contactId)
+      .maybeSingle();
+    const contactPhone = (data?.phone as string | undefined)?.trim();
+    if (contactPhone) {
+      return contactPhone;
+    }
+  }
+
+  return record.contactPhone?.trim() || null;
+}
+
 async function notifyServiceIntakeClientSms(input: {
   actionId: "service_intake_submitted" | "service_intake_status";
   record: ServiceIntakeRecord;
@@ -536,8 +571,11 @@ async function notifyServiceIntakeClientSms(input: {
   threadUrl: string;
   statusLabel?: string;
 }) {
-  const phone = input.record.contactPhone?.trim();
-  if (!phone || !isChannelEnabled(input.settings.routing, input.actionId, "sms")) {
+  if (!isChannelEnabled(input.settings.routing, input.actionId, "sms")) {
+    return;
+  }
+  const phone = await resolveServiceIntakeSmsPhone(input.record);
+  if (!phone) {
     return;
   }
   const template = input.settings.templates[input.actionId];
