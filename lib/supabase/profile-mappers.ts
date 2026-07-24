@@ -19,6 +19,7 @@ export function mapProfileRow(row: ProfileRow): UserProfile {
     allProjectsAccess: row.all_projects_access !== false,
     avatarUrl: row.avatar_url ?? null,
     aboutMe: row.about_me ?? "",
+    clientId: row.client_id ?? null,
     monthlyReviewEnabled: row.monthly_review_enabled !== false,
     offerApprovalBypass: row.offer_approval_bypass === true,
     createdAt: row.created_at,

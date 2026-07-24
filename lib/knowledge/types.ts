@@ -7,8 +7,22 @@ export const KNOWLEDGE_SOURCE_TYPES = [
   "note",
   "image",
   "csv",
+  "smart_home_article",
+  "smart_home_faq",
 ] as const;
 export type KnowledgeSourceType = (typeof KNOWLEDGE_SOURCE_TYPES)[number];
+
+/** Typy zarządzane ręcznie w `/baza-wiedzy` — pozostałe typy to automatyczne mirrory z innych modułów. */
+export const MANUAL_KNOWLEDGE_SOURCE_TYPES: KnowledgeSourceType[] = [
+  "pdf",
+  "text",
+  "whatsapp",
+  "link",
+  "youtube",
+  "note",
+  "image",
+  "csv",
+];
 
 export const KNOWLEDGE_SOURCE_TYPE_LABELS: Record<KnowledgeSourceType, string> = {
   pdf: "PDF",
@@ -19,6 +33,8 @@ export const KNOWLEDGE_SOURCE_TYPE_LABELS: Record<KnowledgeSourceType, string> =
   note: "Wpisany tekst",
   image: "Zdjęcie (analiza AI)",
   csv: "Plik CSV",
+  smart_home_article: "Artykuł Wiedzy Smart Home",
+  smart_home_faq: "FAQ Wiedzy Smart Home",
 };
 
 export const KNOWLEDGE_SOURCE_STATUSES = ["pending", "processing", "ready", "error"] as const;

@@ -29,6 +29,11 @@ export type SmartHomeKbArticleMedia = {
   url: string | null;
 };
 
+export type SmartHomeKbArticleStep = {
+  title: string;
+  bodyHtml: string;
+};
+
 export type SmartHomeKbArticle = {
   id: string;
   categoryId: string | null;
@@ -36,6 +41,9 @@ export type SmartHomeKbArticle = {
   title: string;
   summary: string;
   bodyHtml: string;
+  contextHtml: string;
+  steps: SmartHomeKbArticleStep[];
+  tipsHtml: string;
   youtubeUrl: string | null;
   coverImageStoragePath: string | null;
   coverImageUrl: string | null;
@@ -57,6 +65,45 @@ export type SmartHomeKbFaqItem = {
   status: SmartHomeKbStatus;
   createdAt: string;
   updatedAt: string;
+};
+
+export type SmartHomeKbPathTemplateItem = {
+  id: string;
+  templateId: string;
+  articleId: string;
+  sortOrder: number;
+};
+
+export type SmartHomeKbPathTemplate = {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+  items: SmartHomeKbPathTemplateItem[];
+};
+
+export type SmartHomeKbClientPathItem = {
+  id: string;
+  pathId: string;
+  articleId: string;
+  sortOrder: number;
+  completedAt: string | null;
+  createdAt: string;
+};
+
+export type SmartHomeKbClientPathStatus = "active" | "archived";
+
+export type SmartHomeKbClientPath = {
+  id: string;
+  clientId: string;
+  name: string;
+  description: string;
+  sourceTemplateId: string | null;
+  status: SmartHomeKbClientPathStatus;
+  createdAt: string;
+  updatedAt: string;
+  items: SmartHomeKbClientPathItem[];
 };
 
 const COMBINING_DIACRITICS_PATTERN = new RegExp("[\\u0300-\\u036f]", "g");

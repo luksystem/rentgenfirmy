@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Plus, Settings2 } from "lucide-react";
+import { Loader2, Plus, Sparkles, Settings2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { KbFilters } from "@/components/smart-home-kb/kb-filters";
@@ -9,9 +9,13 @@ import { KbArticleCard } from "@/components/smart-home-kb/kb-article-card";
 import { KbArticleFormDialog } from "@/components/smart-home-kb/kb-article-form-dialog";
 import { KbFaqSection } from "@/components/smart-home-kb/kb-faq-section";
 import { KbTaxonomyManagerDialog } from "@/components/smart-home-kb/kb-taxonomy-manager-dialog";
+import { KbAiSettingsDialog } from "@/components/smart-home-kb/kb-ai-settings-dialog";
+import { KbAiSearchBox } from "@/components/smart-home-kb/kb-ai-search-box";
+import { KbClientPathView } from "@/components/smart-home-kb/kb-client-path-view";
 import { isStaffRole } from "@/lib/permissions/can-module-action";
 import type { SmartHomeKbArticle } from "@/lib/smart-home-kb/types";
 import { useSmartHomeKbStore } from "@/store/smart-home-kb-store";
+import { useSmartHomeKbPathsStore } from "@/store/smart-home-kb-paths-store";
 import { useAuthStore } from "@/store/auth-store";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +23,13 @@ type ViewMode = "articles" | "faq";
 
 export function KbMainView() {
   const role = useAuthStore((state) => state.profile?.role);
+  const clientId = useAuthStore((state) => state.profile?.clientId ?? null);
   const canManage = role ? isStaffRole(role) : false;
+
+  const ensureClientPaths = useSmartHomeKbPathsStore((state) => state.ensureClientPaths);
+  const clientPaths = useSmartHomeKbPathsStore((state) =>
+    clientId ? state.clientPathsByClientId[clientId] : undefined,
+  );
 
   const ensure = useSmartHomeKbStore((state) => state.ensure);
   const search = useSmartHomeKbStore((state) => state.search);
@@ -38,10 +48,18 @@ export function KbMainView() {
   const [articleFormOpen, setArticleFormOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<SmartHomeKbArticle | null>(null);
   const [taxonomyOpen, setTaxonomyOpen] = useState(false);
+  const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
+  const isAdministrator = useAuthStore((state) => state.isAdministrator);
 
   useEffect(() => {
     void ensure();
   }, [ensure]);
+
+  useEffect(() => {
+    if (role === "klient" && clientId) {
+      void ensureClientPaths(clientId);
+    }
+  }, [role, clientId, ensureClientPaths]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -77,6 +95,35 @@ export function KbMainView() {
     await removeArticle(article.id);
   }
 
+  const isKlientWithClient = role === "klient" && Boolean(clientId);
+  const pathsLoading = isKlientWithClient && clientPaths === undefined;
+  const activePaths = (clientPaths ?? []).filter((path) => path.status === "active");
+  const showClientPathView = isKlientWithClient && activePaths.length > 0;
+
+  if (pathsLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-muted" />
+      </div>
+    );
+  }
+
+  if (showClientPathView && clientId) {
+    return (
+      <>
+        <PageHeader
+          eyebrow="Wiedza"
+          title="Twoja ścieżka szkoleniowa"
+          description="Przejdź przez materiały w podanej kolejności — możesz odznaczać ukończone kroki."
+        />
+        <div className="mb-6">
+          <KbAiSearchBox />
+        </div>
+        <KbClientPathView clientId={clientId} />
+      </>
+    );
+  }
+
   return (
     <>
       <PageHeader
@@ -90,6 +137,12 @@ export function KbMainView() {
                 <Settings2 className="h-3.5 w-3.5" />
                 Kategorie i tagi
               </Button>
+              {isAdministrator ? (
+                <Button type="button" variant="outline" size="sm" onClick={() => setAiSettingsOpen(true)}>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Ustawienia AI
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 size="sm"
@@ -188,6 +241,7 @@ export function KbMainView() {
         categories={categories}
         tags={tags}
       />
+      <KbAiSettingsDialog open={aiSettingsOpen} onOpenChange={setAiSettingsOpen} />
     </>
   );
 }

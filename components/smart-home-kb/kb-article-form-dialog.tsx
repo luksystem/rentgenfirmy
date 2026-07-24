@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ImagePlus, Loader2, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ImagePlus, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,17 +16,21 @@ import { YoutubeEmbed } from "@/components/smart-home-kb/youtube-embed";
 import { isValidYoutubeUrl } from "@/lib/smart-home-kb/youtube";
 import type {
   SmartHomeKbArticle,
+  SmartHomeKbArticleStep,
   SmartHomeKbCategory,
   SmartHomeKbStatus,
   SmartHomeKbTag,
 } from "@/lib/smart-home-kb/types";
+import { restructureSmartHomeKbContent } from "@/lib/supabase/smart-home-kb-ai-client";
 import { useSmartHomeKbStore } from "@/store/smart-home-kb-store";
 import { useAuthStore } from "@/store/auth-store";
 
 type FormState = {
   title: string;
   summary: string;
-  bodyHtml: string;
+  contextHtml: string;
+  steps: SmartHomeKbArticleStep[];
+  tipsHtml: string;
   categoryId: string | null;
   youtubeUrl: string;
   status: SmartHomeKbStatus;
@@ -34,7 +38,17 @@ type FormState = {
 };
 
 function emptyForm(): FormState {
-  return { title: "", summary: "", bodyHtml: "", categoryId: null, youtubeUrl: "", status: "published", tagIds: [] };
+  return {
+    title: "",
+    summary: "",
+    contextHtml: "",
+    steps: [],
+    tipsHtml: "",
+    categoryId: null,
+    youtubeUrl: "",
+    status: "published",
+    tagIds: [],
+  };
 }
 
 export function KbArticleFormDialog({
@@ -66,6 +80,9 @@ export function KbArticleFormDialog({
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiDraftText, setAiDraftText] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,7 +99,9 @@ export function KbArticleFormDialog({
       setForm({
         title: article.title,
         summary: article.summary,
-        bodyHtml: article.bodyHtml,
+        contextHtml: article.contextHtml,
+        steps: article.steps,
+        tipsHtml: article.tipsHtml,
         categoryId: article.categoryId,
         youtubeUrl: article.youtubeUrl ?? "",
         status: article.status,
@@ -107,6 +126,53 @@ export function KbArticleFormDialog({
   );
   const showTagSuggestions = tagInputActive && tagSuggestions.length > 0;
   const exactTagMatch = tags.some((tag) => tag.name.toLowerCase() === trimmedTagInput);
+
+  function addStep() {
+    setForm((prev) => ({ ...prev, steps: [...prev.steps, { title: "", bodyHtml: "" }] }));
+  }
+
+  function removeStep(index: number) {
+    setForm((prev) => ({ ...prev, steps: prev.steps.filter((_, i) => i !== index) }));
+  }
+
+  function updateStep(index: number, patch: Partial<SmartHomeKbArticleStep>) {
+    setForm((prev) => ({
+      ...prev,
+      steps: prev.steps.map((step, i) => (i === index ? { ...step, ...patch } : step)),
+    }));
+  }
+
+  function moveStep(index: number, direction: -1 | 1) {
+    setForm((prev) => {
+      const target = index + direction;
+      if (target < 0 || target >= prev.steps.length) {
+        return prev;
+      }
+      const steps = [...prev.steps];
+      [steps[index], steps[target]] = [steps[target], steps[index]];
+      return { ...prev, steps };
+    });
+  }
+
+  async function handleAiRestructure() {
+    setAiError(null);
+    setAiLoading(true);
+    try {
+      const result = await restructureSmartHomeKbContent(aiDraftText);
+      setForm((prev) => ({
+        ...prev,
+        contextHtml: result.contextHtml,
+        steps: result.steps,
+        tipsHtml: result.tipsHtml,
+      }));
+    } catch (restructureError) {
+      setAiError(
+        restructureError instanceof Error ? restructureError.message : "Nie udało się uporządkować treści.",
+      );
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   async function addTagByName(name: string) {
     const trimmed = name.trim();
@@ -143,7 +209,9 @@ export function KbArticleFormDialog({
       const input = {
         title: form.title,
         summary: form.summary,
-        bodyHtml: form.bodyHtml,
+        contextHtml: form.contextHtml,
+        steps: form.steps,
+        tipsHtml: form.tipsHtml,
         categoryId: form.categoryId,
         youtubeUrl: form.youtubeUrl.trim() || null,
         status: form.status,
@@ -328,12 +396,91 @@ export function KbArticleFormDialog({
             ) : null}
           </Field>
 
-          <Field label="Treść artykułu">
+          <div className="grid gap-2 rounded-xl border border-dashed border-border p-3">
+            <Field label="Uporządkuj z AI (opcjonalnie)">
+              <Textarea
+                value={aiDraftText}
+                onChange={(event) => setAiDraftText(event.target.value)}
+                rows={3}
+                placeholder="Wklej lub napisz dowolny opis — AI rozłoży go na Kontekst / Kroki / Wskazówki poniżej."
+              />
+            </Field>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-muted">Wynik nadpisze pola poniżej — możesz je potem swobodnie poprawić.</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={aiLoading || !aiDraftText.trim()}
+                onClick={() => void handleAiRestructure()}
+              >
+                {aiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                Uporządkuj z AI
+              </Button>
+            </div>
+            {aiError ? <p className="text-sm text-rose-400">{aiError}</p> : null}
+          </div>
+
+          <Field label="Kontekst">
             <RichTextarea
-              value={form.bodyHtml}
-              onChange={(value) => setForm((prev) => ({ ...prev, bodyHtml: value }))}
-              rows={8}
-              placeholder="Opisz krok po kroku..."
+              value={form.contextHtml}
+              onChange={(value) => setForm((prev) => ({ ...prev, contextHtml: value }))}
+              rows={3}
+              placeholder="Czego dotyczy ten artykuł — krótkie wprowadzenie."
+            />
+          </Field>
+
+          <Field label="Kroki">
+            <div className="grid gap-2">
+              {form.steps.map((step, index) => (
+                <div key={index} className="grid gap-2 rounded-xl border border-border bg-surface-muted/20 p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xs font-semibold text-accent">
+                      {index + 1}
+                    </span>
+                    <Input
+                      value={step.title}
+                      onChange={(event) => updateStep(index, { title: event.target.value })}
+                      placeholder="Tytuł kroku (opcjonalnie)"
+                      className="h-8 flex-1"
+                    />
+                    <Button type="button" variant="ghost" size="sm" disabled={index === 0} onClick={() => moveStep(index, -1)}>
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={index === form.steps.length - 1}
+                      onClick={() => moveStep(index, 1)}
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => removeStep(index)}>
+                      <X className="h-3.5 w-3.5 text-rose-400" />
+                    </Button>
+                  </div>
+                  <RichTextarea
+                    value={step.bodyHtml}
+                    onChange={(value) => updateStep(index, { bodyHtml: value })}
+                    rows={2}
+                    placeholder="Opis kroku..."
+                  />
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={addStep}>
+                <Plus className="h-3.5 w-3.5" />
+                Dodaj krok
+              </Button>
+            </div>
+          </Field>
+
+          <Field label="Wskazówki">
+            <RichTextarea
+              value={form.tipsHtml}
+              onChange={(value) => setForm((prev) => ({ ...prev, tipsHtml: value }))}
+              rows={3}
+              placeholder="Uwagi, ostrzeżenia, częste błędy..."
             />
           </Field>
 

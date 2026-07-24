@@ -9,8 +9,8 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { RichHtml } from "@/components/ui/rich-html";
 import { YoutubeEmbed } from "@/components/smart-home-kb/youtube-embed";
+import { KbArticleStructuredView } from "@/components/smart-home-kb/kb-article-structured-view";
 import { KbArticleFormDialog } from "@/components/smart-home-kb/kb-article-form-dialog";
 import { KbFaqSection } from "@/components/smart-home-kb/kb-faq-section";
 import { isStaffRole } from "@/lib/permissions/can-module-action";
@@ -139,7 +139,7 @@ export default function SmartHomeKnowledgeBaseArticlePage() {
 
         <Card>
           <div className="p-5">
-            <RichHtml html={article.bodyHtml} variant="document" fallback="Brak treści." />
+            <KbArticleStructuredView article={article} />
           </div>
         </Card>
 

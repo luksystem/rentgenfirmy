@@ -45,6 +45,8 @@ export type UserProfile = {
   allProjectsAccess: boolean;
   /** Publiczny URL awatara (opcjonalnie). */
   avatarUrl: string | null;
+  /** Powiązany rekord klienta (tylko rola klient) — ustawiane z zakładki "Ścieżka szkoleniowa" w module Klienci. */
+  clientId: string | null;
   /** Krótka notatka „O mnie”. */
   aboutMe: string;
   createdAt: string;

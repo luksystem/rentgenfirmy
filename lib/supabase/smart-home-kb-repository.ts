@@ -9,12 +9,14 @@ import {
   slugifySmartHomeKb,
   type SmartHomeKbArticle,
   type SmartHomeKbArticleMedia,
+  type SmartHomeKbArticleStep,
   type SmartHomeKbCategory,
   type SmartHomeKbFaqItem,
   type SmartHomeKbStatus,
   type SmartHomeKbTag,
 } from "@/lib/smart-home-kb/types";
 import { getSupabase } from "@/lib/supabase/client";
+import { chunkText } from "@/lib/knowledge/chunking";
 
 export const SMART_HOME_KB_BUCKET = "smart-home-kb-media";
 export const SMART_HOME_KB_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
@@ -24,6 +26,142 @@ type SupabaseClientLike = ReturnType<typeof getSupabase>;
 
 function isStatus(value: string): value is SmartHomeKbStatus {
   return value === "draft" || value === "published";
+}
+
+function stripHtmlToPlainText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+}
+
+/**
+ * Zasila istniejący mechanizm AI (sugestie przy zgłoszeniach serwisowych) treścią opublikowanych
+ * artykułów/FAQ Wiedzy Smart Home — mirror do knowledge_sources/knowledge_chunks, bez zmian w
+ * samym mechanizmie wyszukiwania/sugestii.
+ */
+async function syncKnowledgeSourceMirror(
+  supabase: SupabaseClientLike,
+  input: { id: string; type: "smart_home_article" | "smart_home_faq"; title: string; description: string; plainText: string },
+): Promise<void> {
+  const now = new Date().toISOString();
+  const { error: upsertError } = await supabase.from("knowledge_sources").upsert(
+    {
+      id: input.id,
+      type: input.type,
+      title: input.title || "(bez tytułu)",
+      description: input.description,
+      status: "ready",
+      char_count: input.plainText.length,
+      created_by_name: "Wiedza Smart Home",
+      updated_at: now,
+    },
+    { onConflict: "id" },
+  );
+  if (upsertError) {
+    return;
+  }
+
+  const { error: deleteError } = await supabase.from("knowledge_chunks").delete().eq("source_id", input.id);
+  if (deleteError) {
+    return;
+  }
+
+  const chunks = chunkText(input.plainText);
+  if (chunks.length === 0) {
+    return;
+  }
+
+  await supabase.from("knowledge_chunks").insert(
+    chunks.map((content, index) => ({ source_id: input.id, chunk_index: index, content })),
+  );
+}
+
+async function removeKnowledgeSourceMirror(supabase: SupabaseClientLike, id: string): Promise<void> {
+  await supabase.from("knowledge_sources").delete().eq("id", id);
+}
+
+function articlePlainText(article: {
+  title: string;
+  summary: string;
+  contextHtml: string;
+  steps: SmartHomeKbArticleStep[];
+  tipsHtml: string;
+  bodyHtml: string;
+}): string {
+  const stepsText = article.steps
+    .map((step) => `${step.title ? `${step.title}: ` : ""}${stripHtmlToPlainText(step.bodyHtml)}`)
+    .join("\n");
+  return [
+    article.title,
+    article.summary,
+    stripHtmlToPlainText(article.contextHtml),
+    stepsText,
+    stripHtmlToPlainText(article.tipsHtml),
+    stripHtmlToPlainText(article.bodyHtml),
+  ]
+    .filter((part) => part.trim().length > 0)
+    .join("\n\n");
+}
+
+/** Publikuje/aktualizuje lub usuwa mirror artykułu w bazie wiedzy AI, w zależności od statusu. */
+async function syncArticleKnowledgeMirror(
+  supabase: SupabaseClientLike,
+  article: {
+    id: string;
+    title: string;
+    summary: string;
+    contextHtml: string;
+    steps: SmartHomeKbArticleStep[];
+    tipsHtml: string;
+    bodyHtml: string;
+    status: SmartHomeKbStatus;
+  },
+): Promise<void> {
+  if (article.status !== "published") {
+    await removeKnowledgeSourceMirror(supabase, article.id);
+    return;
+  }
+  await syncKnowledgeSourceMirror(supabase, {
+    id: article.id,
+    type: "smart_home_article",
+    title: article.title,
+    description: article.summary,
+    plainText: articlePlainText(article),
+  });
+}
+
+async function syncFaqKnowledgeMirror(
+  supabase: SupabaseClientLike,
+  faq: { id: string; question: string; answerHtml: string; status: SmartHomeKbStatus },
+): Promise<void> {
+  if (faq.status !== "published") {
+    await removeKnowledgeSourceMirror(supabase, faq.id);
+    return;
+  }
+  await syncKnowledgeSourceMirror(supabase, {
+    id: faq.id,
+    type: "smart_home_faq",
+    title: faq.question,
+    description: "",
+    plainText: `${faq.question}\n\n${stripHtmlToPlainText(faq.answerHtml)}`,
+  });
+}
+
+function parseArticleSteps(value: unknown): SmartHomeKbArticleStep[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+    .map((item) => ({
+      title: typeof item.title === "string" ? item.title : "",
+      bodyHtml: typeof item.bodyHtml === "string" ? item.bodyHtml : "",
+    }));
 }
 
 function rowToCategory(row: SmartHomeKbCategoryRow): SmartHomeKbCategory {
@@ -123,6 +261,9 @@ async function rowToArticle(
     title: row.title,
     summary: row.summary,
     bodyHtml: row.body_html,
+    contextHtml: row.context_html,
+    steps: parseArticleSteps(row.steps),
+    tipsHtml: row.tips_html,
     youtubeUrl: row.youtube_url,
     coverImageStoragePath: row.cover_image_storage_path,
     coverImageUrl: row.cover_image_storage_path
@@ -355,7 +496,9 @@ async function syncArticleTags(
 export type SmartHomeKbArticleInput = {
   title: string;
   summary: string;
-  bodyHtml: string;
+  contextHtml: string;
+  steps: SmartHomeKbArticleStep[];
+  tipsHtml: string;
   categoryId: string | null;
   youtubeUrl: string | null;
   status: SmartHomeKbStatus;
@@ -375,7 +518,9 @@ export async function createSmartHomeKbArticle(
       slug,
       title: input.title.trim(),
       summary: input.summary.trim(),
-      body_html: input.bodyHtml,
+      context_html: input.contextHtml,
+      steps: input.steps,
+      tips_html: input.tipsHtml,
       category_id: input.categoryId,
       youtube_url: input.youtubeUrl?.trim() || null,
       status: input.status,
@@ -395,6 +540,7 @@ export async function createSmartHomeKbArticle(
   if (!created) {
     throw new Error("Nie udało się odczytać utworzonego artykułu.");
   }
+  await syncArticleKnowledgeMirror(supabase, created);
   return created;
 }
 
@@ -409,7 +555,9 @@ export async function updateSmartHomeKbArticle(
     .update({
       title: input.title.trim(),
       summary: input.summary.trim(),
-      body_html: input.bodyHtml,
+      context_html: input.contextHtml,
+      steps: input.steps,
+      tips_html: input.tipsHtml,
       category_id: input.categoryId,
       youtube_url: input.youtubeUrl?.trim() || null,
       status: input.status,
@@ -429,6 +577,7 @@ export async function updateSmartHomeKbArticle(
   if (!updated) {
     throw new Error("Nie udało się odczytać zaktualizowanego artykułu.");
   }
+  await syncArticleKnowledgeMirror(supabase, updated);
   return updated;
 }
 
@@ -449,6 +598,8 @@ export async function deleteSmartHomeKbArticle(id: string): Promise<void> {
   if (error) {
     throw new Error(error.message);
   }
+
+  await removeKnowledgeSourceMirror(supabase, id);
 
   const row = existing as {
     cover_image_storage_path: string | null;
@@ -620,7 +771,9 @@ export async function createSmartHomeKbFaqItem(
   if (error) {
     throw new Error(error.message);
   }
-  return rowToFaqItem(data as SmartHomeKbFaqItemRow);
+  const faq = rowToFaqItem(data as SmartHomeKbFaqItemRow);
+  await syncFaqKnowledgeMirror(supabase, faq);
+  return faq;
 }
 
 export async function updateSmartHomeKbFaqItem(
@@ -644,7 +797,9 @@ export async function updateSmartHomeKbFaqItem(
   if (error) {
     throw new Error(error.message);
   }
-  return rowToFaqItem(data as SmartHomeKbFaqItemRow);
+  const faq = rowToFaqItem(data as SmartHomeKbFaqItemRow);
+  await syncFaqKnowledgeMirror(supabase, faq);
+  return faq;
 }
 
 export async function deleteSmartHomeKbFaqItem(id: string): Promise<void> {
@@ -653,6 +808,7 @@ export async function deleteSmartHomeKbFaqItem(id: string): Promise<void> {
   if (error) {
     throw new Error(error.message);
   }
+  await removeKnowledgeSourceMirror(supabase, id);
 }
 
 export type SmartHomeKbSearchResult = {

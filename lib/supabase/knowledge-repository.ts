@@ -6,7 +6,7 @@ import {
   type KnowledgeBaseSettings,
 } from "@/lib/knowledge/settings";
 import type { KnowledgeChunk, KnowledgeSource, KnowledgeSourceType } from "@/lib/knowledge/types";
-import { KNOWLEDGE_SOURCE_TYPES } from "@/lib/knowledge/types";
+import { KNOWLEDGE_SOURCE_TYPES, MANUAL_KNOWLEDGE_SOURCE_TYPES } from "@/lib/knowledge/types";
 import { getSupabase } from "@/lib/supabase/client";
 
 export const KNOWLEDGE_BASE_BUCKET = "knowledge-base";
@@ -50,11 +50,13 @@ function rowToKnowledgeChunk(row: KnowledgeChunkRow): KnowledgeChunk {
   };
 }
 
+/** Zwraca tylko źródła zarządzane ręcznie w tym module — mirrory z Wiedzy Smart Home są zarządzane tam. */
 export async function fetchKnowledgeSources(): Promise<KnowledgeSource[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("knowledge_sources")
     .select("*")
+    .in("type", MANUAL_KNOWLEDGE_SOURCE_TYPES)
     .order("created_at", { ascending: false });
 
   if (error) {
