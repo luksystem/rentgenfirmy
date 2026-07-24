@@ -10,6 +10,7 @@ import { KbPathTemplateManagerDialog } from "@/components/smart-home-kb/kb-path-
 import { useSmartHomeKbStore } from "@/store/smart-home-kb-store";
 import { useSmartHomeKbPathsStore } from "@/store/smart-home-kb-paths-store";
 import type { SmartHomeKbClientPath } from "@/lib/smart-home-kb/types";
+import { cn } from "@/lib/utils";
 
 const EMPTY_CLIENT_PATHS: SmartHomeKbClientPath[] = [];
 
@@ -29,8 +30,8 @@ export function ClientTrainingPathPanel({ clientId }: { clientId: string }) {
   const unlinkClientAccount = useSmartHomeKbPathsStore((state) => state.unlinkClientAccount);
   const createClientPath = useSmartHomeKbPathsStore((state) => state.createClientPath);
   const createClientPathFromTemplate = useSmartHomeKbPathsStore((state) => state.createClientPathFromTemplate);
+  const renameClientPath = useSmartHomeKbPathsStore((state) => state.renameClientPath);
   const removeClientPath = useSmartHomeKbPathsStore((state) => state.removeClientPath);
-
   const setClientPathArticles = useSmartHomeKbPathsStore((state) => state.setClientPathArticles);
 
   const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
@@ -124,6 +125,18 @@ export function ClientTrainingPathPanel({ clientId }: { clientId: string }) {
     await removeClientPath(clientId, pathId);
   }
 
+  async function handleRenamePath(path: SmartHomeKbClientPath, nextName: string) {
+    const trimmed = nextName.trim();
+    if (!trimmed || trimmed === path.name) {
+      return;
+    }
+    try {
+      await renameClientPath(clientId, path.id, { name: trimmed, description: path.description });
+    } catch (renameError) {
+      setError(renameError instanceof Error ? renameError.message : "Nie udało się zmienić nazwy ścieżki.");
+    }
+  }
+
   return (
     <div className="grid gap-6">
       <Card>
@@ -178,19 +191,28 @@ export function ClientTrainingPathPanel({ clientId }: { clientId: string }) {
         {clientPaths.map((path) => (
           <Card key={path.id}>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between gap-2">
-                <button
+              <div className="flex items-center gap-2">
+                <Input
+                  defaultValue={path.name}
+                  className="h-8 min-w-0 flex-1 font-medium"
+                  onBlur={(event) => void handleRenamePath(path, event.target.value)}
+                />
+                <Button
                   type="button"
-                  className="min-w-0 flex-1 text-left"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setExpandedPathId((prev) => (prev === path.id ? null : path.id))}
+                  aria-label={expandedPathId === path.id ? "Zwiń" : "Rozwiń"}
                 >
-                  <p className="truncate text-sm font-medium text-foreground">{path.name}</p>
-                  <p className="text-xs text-muted">{path.items.length} krok(ów)</p>
-                </button>
+                  <ChevronDown
+                    className={cn("h-4 w-4 transition", expandedPathId === path.id && "rotate-180")}
+                  />
+                </Button>
                 <Button type="button" variant="ghost" size="sm" onClick={() => void handleRemovePath(path.id)}>
                   <Trash2 className="h-3.5 w-3.5 text-rose-400" />
                 </Button>
               </div>
+              <p className="mt-1 text-xs text-muted">{path.items.length} krok(ów)</p>
               {expandedPathId === path.id ? (
                 <div className="mt-3">
                   <KbArticleOrderPicker
