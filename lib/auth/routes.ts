@@ -22,6 +22,10 @@ export function isRoleNavPermissionsAdminRoute(pathname: string) {
   return pathname === "/ustawienia/uprawnienia" || pathname.startsWith("/ustawienia/uprawnienia/");
 }
 
+export function isReportKpiSettingsAdminRoute(pathname: string) {
+  return pathname === "/raport/ustawienia-kpi" || pathname.startsWith("/raport/ustawienia-kpi/");
+}
+
 export function shouldCheckNavModuleAccess(pathname: string) {
   if (isPublicAppRoute(pathname)) {
     return false;
@@ -43,7 +47,11 @@ export function canAccessPathByNavPermissions(
   role: UserRole,
   config: RoleNavPermissionsConfig,
 ): boolean {
-  if (isRoleNavPermissionsAdminRoute(pathname) || isAdminRoute(pathname)) {
+  if (
+    isRoleNavPermissionsAdminRoute(pathname) ||
+    isReportKpiSettingsAdminRoute(pathname) ||
+    isAdminRoute(pathname)
+  ) {
     return isAdministratorRole(role);
   }
 

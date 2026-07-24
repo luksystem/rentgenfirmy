@@ -14,22 +14,15 @@ import type { Interruption, Project, QuickWin, TrendComparison, WeeklyReport } f
 
 export type { QuickWin, TrendComparison };
 
+// compareCounts/formatTrendHelper żyją teraz w lib/report-kpi/kpi-engine.ts (generyczny silnik
+// trendu używany też przez pozostałe kafelki Raportu firmowego) — re-eksport dla wstecznej
+// kompatybilności istniejących importów w tym pliku i w components/report-content.tsx.
+import { compareCounts, formatTrendHelper } from "@/lib/report-kpi/kpi-engine";
+export { compareCounts, formatTrendHelper };
+
 const WAITING_COUNT_WARN = 5;
 const CLOSING_COUNT_WARN = 4;
 const WAITING_SHARE_WARN = 0.35;
-
-export function compareCounts(current: number, previous: number): TrendComparison {
-  const delta = current - previous;
-
-  return {
-    current,
-    previous,
-    delta,
-    direction: delta > 0 ? "up" : delta < 0 ? "down" : "same",
-    percentChange:
-      previous === 0 ? (current === 0 ? 0 : null) : Math.round((delta / previous) * 100),
-  };
-}
 
 export function countInterruptionsBetween(
   interruptions: Interruption[],
@@ -71,25 +64,6 @@ export function interruptionTrends(
     weekly: periodComparison,
     previousPeriodLabel: formatPeriodLabel(prev),
   };
-}
-
-export function formatTrendHelper(trend: TrendComparison, periodLabel: string) {
-  if (trend.current === 0 && trend.previous === 0) {
-    return `Brak przerwań: ${periodLabel}`;
-  }
-
-  const arrow = trend.direction === "up" ? "↑" : trend.direction === "down" ? "↓" : "→";
-  const deltaLabel =
-    trend.delta === 0
-      ? "bez zmiany"
-      : `${arrow} ${Math.abs(trend.delta)} (${trend.delta > 0 ? "więcej" : "mniej"})`;
-
-  const percentLabel =
-    trend.percentChange !== null && trend.previous > 0
-      ? `, ${trend.percentChange > 0 ? "+" : ""}${trend.percentChange}%`
-      : "";
-
-  return `${deltaLabel} vs ${periodLabel}${percentLabel}`;
 }
 
 export function generateQuickWins(

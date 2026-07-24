@@ -27,6 +27,38 @@ export function createLast30Period(end = new Date()): ReportPeriod {
   };
 }
 
+export function createDayPeriod(date = new Date()): ReportPeriod {
+  const iso = toISODate(date);
+
+  return { mode: "custom", startDate: iso, endDate: iso };
+}
+
+export function createQuarterPeriod(end = new Date()): ReportPeriod {
+  const quarterStartMonth = Math.floor(end.getMonth() / 3) * 3;
+  const start = new Date(end.getFullYear(), quarterStartMonth, 1);
+
+  return { mode: "custom", startDate: toISODate(start), endDate: toISODate(end) };
+}
+
+export function createYearPeriod(end = new Date()): ReportPeriod {
+  const start = new Date(end.getFullYear(), 0, 1);
+
+  return { mode: "custom", startDate: toISODate(start), endDate: toISODate(end) };
+}
+
+/**
+ * Przesuwa datę o `months` miesięcy kalendarzowych, przycinając dzień do długości
+ * miesiąca docelowego (np. 31 stycznia - 1 miesiąc = 28/29 lutego, nie "3 marca").
+ */
+export function shiftMonths(date: Date, months: number): Date {
+  const day = date.getDate();
+  const shifted = new Date(date.getFullYear(), date.getMonth() + months, 1);
+  const daysInTargetMonth = new Date(shifted.getFullYear(), shifted.getMonth() + 1, 0).getDate();
+  shifted.setDate(Math.min(day, daysInTargetMonth));
+
+  return shifted;
+}
+
 export function createThisMonthPeriod(end = new Date()): ReportPeriod {
   const start = new Date(end.getFullYear(), end.getMonth(), 1);
 
