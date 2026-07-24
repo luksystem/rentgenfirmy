@@ -86,13 +86,12 @@ export default function SmartHomeKnowledgeBaseArticlePage() {
 
   return (
     <>
-      <Link
-        href="/wiedza-smart-home"
-        className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" />
-        Wróć do bazy wiedzy
-      </Link>
+      <Button asChild variant="outline" size="sm" className="mb-4">
+        <Link href="/wiedza-smart-home">
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Wróć do bazy wiedzy
+        </Link>
+      </Button>
 
       <PageHeader
         eyebrow={category?.name ?? "Wiedza Smart Home"}

@@ -61,6 +61,7 @@ export function KbArticleFormDialog({
 
   const [form, setForm] = useState<FormState>(emptyForm());
   const [tagInput, setTagInput] = useState("");
+  const [tagInputActive, setTagInputActive] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
@@ -98,21 +99,27 @@ export function KbArticleFormDialog({
     .map((id) => tags.find((tag) => tag.id === id))
     .filter((tag): tag is SmartHomeKbTag => Boolean(tag));
 
+  const trimmedTagInput = tagInput.trim().toLowerCase();
   const tagSuggestions = tags.filter(
     (tag) =>
       !form.tagIds.includes(tag.id) &&
-      tagInput.trim().length > 0 &&
-      tag.name.toLowerCase().includes(tagInput.trim().toLowerCase()),
+      (trimmedTagInput.length === 0 || tag.name.toLowerCase().includes(trimmedTagInput)),
   );
+  const showTagSuggestions = tagInputActive && tagSuggestions.length > 0;
+  const exactTagMatch = tags.some((tag) => tag.name.toLowerCase() === trimmedTagInput);
 
   async function addTagByName(name: string) {
     const trimmed = name.trim();
     if (!trimmed) {
       return;
     }
-    const tag = await ensureTag(trimmed);
-    setForm((prev) => (prev.tagIds.includes(tag.id) ? prev : { ...prev, tagIds: [...prev.tagIds, tag.id] }));
-    setTagInput("");
+    try {
+      const tag = await ensureTag(trimmed);
+      setForm((prev) => (prev.tagIds.includes(tag.id) ? prev : { ...prev, tagIds: [...prev.tagIds, tag.id] }));
+      setTagInput("");
+    } catch (tagError) {
+      setError(tagError instanceof Error ? tagError.message : "Nie udało się dodać tagu.");
+    }
   }
 
   function removeTagId(id: string) {
@@ -267,20 +274,33 @@ export function KbArticleFormDialog({
                 <Input
                   value={tagInput}
                   onChange={(event) => setTagInput(event.target.value)}
+                  onFocus={() => setTagInputActive(true)}
+                  onBlur={() => window.setTimeout(() => setTagInputActive(false), 150)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();
                       void addTagByName(tagInput);
                     }
                   }}
-                  placeholder="Wpisz nazwę i naciśnij Enter, by dodać nowy tag"
+                  placeholder="Szukaj istniejącego tagu lub wpisz nowy i naciśnij Enter"
                 />
-                {tagSuggestions.length > 0 ? (
-                  <div className="absolute z-10 mt-1 w-full rounded-xl border border-border bg-surface-elevated p-1 shadow-card">
-                    {tagSuggestions.slice(0, 6).map((tag) => (
+                {showTagSuggestions ? (
+                  <div className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-border bg-surface-elevated p-1 shadow-card">
+                    {trimmedTagInput.length > 0 && !exactTagMatch ? (
+                      <button
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        className="block w-full rounded-lg px-2 py-1.5 text-left text-sm text-accent hover:bg-surface-muted"
+                        onClick={() => void addTagByName(tagInput)}
+                      >
+                        Utwórz nowy tag „{tagInput.trim()}”
+                      </button>
+                    ) : null}
+                    {tagSuggestions.map((tag) => (
                       <button
                         key={tag.id}
                         type="button"
+                        onMouseDown={(event) => event.preventDefault()}
                         className="block w-full rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-muted"
                         onClick={() => void addTagByName(tag.name)}
                       >
@@ -290,6 +310,10 @@ export function KbArticleFormDialog({
                   </div>
                 ) : null}
               </div>
+              <p className="text-xs text-muted">
+                Wybieraj z istniejących tagów, żeby uniknąć duplikatów podobnych nazw. Usunięcie tagu tutaj
+                tylko odłącza go od tego artykułu — żeby usunąć tag całkowicie, zrób to w „Kategorie i tagi”.
+              </p>
             </div>
           </Field>
 

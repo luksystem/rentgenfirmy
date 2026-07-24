@@ -26,12 +26,15 @@ export function KbTaxonomyManagerDialog({
 }) {
   const createCategory = useSmartHomeKbStore((state) => state.createCategory);
   const removeCategory = useSmartHomeKbStore((state) => state.removeCategory);
+  const ensureTag = useSmartHomeKbStore((state) => state.ensureTag);
   const renameTag = useSmartHomeKbStore((state) => state.renameTag);
   const removeTag = useSmartHomeKbStore((state) => state.removeTag);
 
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDescription, setNewCategoryDescription] = useState("");
   const [savingCategory, setSavingCategory] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [savingTag, setSavingTag] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleAddCategory(event: React.FormEvent) {
@@ -49,6 +52,54 @@ export function KbTaxonomyManagerDialog({
       setError(submitError instanceof Error ? submitError.message : "Nie udało się dodać kategorii.");
     } finally {
       setSavingCategory(false);
+    }
+  }
+
+  async function handleRemoveCategory(id: string) {
+    setError(null);
+    try {
+      await removeCategory(id);
+    } catch (removeError) {
+      setError(removeError instanceof Error ? removeError.message : "Nie udało się usunąć kategorii.");
+    }
+  }
+
+  async function handleAddTag(event: React.FormEvent) {
+    event.preventDefault();
+    if (!newTagName.trim()) {
+      return;
+    }
+    setSavingTag(true);
+    setError(null);
+    try {
+      await ensureTag(newTagName);
+      setNewTagName("");
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Nie udało się dodać tagu.");
+    } finally {
+      setSavingTag(false);
+    }
+  }
+
+  async function handleRenameTag(id: string, currentName: string, nextValue: string) {
+    const trimmed = nextValue.trim();
+    if (!trimmed || trimmed === currentName) {
+      return;
+    }
+    setError(null);
+    try {
+      await renameTag(id, trimmed);
+    } catch (renameError) {
+      setError(renameError instanceof Error ? renameError.message : "Nie udało się zmienić nazwy tagu.");
+    }
+  }
+
+  async function handleRemoveTag(id: string) {
+    setError(null);
+    try {
+      await removeTag(id);
+    } catch (removeError) {
+      setError(removeError instanceof Error ? removeError.message : "Nie udało się usunąć tagu.");
     }
   }
 
@@ -78,7 +129,7 @@ export function KbTaxonomyManagerDialog({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => void removeCategory(category.id)}
+                    onClick={() => void handleRemoveCategory(category.id)}
                   >
                     <Trash2 className="h-3.5 w-3.5 text-rose-400" />
                   </Button>
@@ -124,24 +175,31 @@ export function KbTaxonomyManagerDialog({
                   <Input
                     defaultValue={tag.name}
                     className="h-8"
-                    onBlur={(event) => {
-                      const value = event.target.value.trim();
-                      if (value && value !== tag.name) {
-                        void renameTag(tag.id, value);
-                      }
-                    }}
+                    onBlur={(event) => void handleRenameTag(tag.id, tag.name, event.target.value)}
                   />
-                  <Button type="button" variant="ghost" size="sm" onClick={() => void removeTag(tag.id)}>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => void handleRemoveTag(tag.id)}>
                     <Trash2 className="h-3.5 w-3.5 text-rose-400" />
                   </Button>
                 </div>
               ))}
-              {tags.length === 0 ? (
-                <p className="text-xs text-muted">
-                  Tagi tworzysz bezpośrednio w formularzu artykułu — tu możesz je porządkować.
-                </p>
-              ) : null}
+              {tags.length === 0 ? <p className="text-xs text-muted">Brak tagów — dodaj pierwszy poniżej.</p> : null}
             </div>
+
+            <form onSubmit={handleAddTag} className="grid gap-2 rounded-xl border border-dashed border-border p-3">
+              <Field label="Nowy tag">
+                <Input
+                  value={newTagName}
+                  onChange={(event) => setNewTagName(event.target.value)}
+                  placeholder="np. termostaty"
+                />
+              </Field>
+              <div className="flex justify-end">
+                <Button type="submit" size="sm" disabled={savingTag}>
+                  {savingTag ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                  Dodaj tag
+                </Button>
+              </div>
+            </form>
           </section>
 
           {error ? <p className="text-sm text-rose-400">{error}</p> : null}
