@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Link2, Loader2, Plus, Settings2, Trash2, Unlink } from "lucide-react";
+import { ChevronDown, Link2, Loader2, Plus, Settings2, Trash2, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
@@ -29,8 +29,8 @@ export function ClientTrainingPathPanel({ clientId }: { clientId: string }) {
   const unlinkClientAccount = useSmartHomeKbPathsStore((state) => state.unlinkClientAccount);
   const createClientPath = useSmartHomeKbPathsStore((state) => state.createClientPath);
   const createClientPathFromTemplate = useSmartHomeKbPathsStore((state) => state.createClientPathFromTemplate);
-  const renameClientPath = useSmartHomeKbPathsStore((state) => state.renameClientPath);
   const removeClientPath = useSmartHomeKbPathsStore((state) => state.removeClientPath);
+
   const setClientPathArticles = useSmartHomeKbPathsStore((state) => state.setClientPathArticles);
 
   const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
