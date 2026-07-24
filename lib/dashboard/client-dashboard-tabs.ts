@@ -2,6 +2,7 @@ import type { ClientDashboardTab } from "@/components/dashboard/client-dashboard
 
 export const CLIENT_DASHBOARD_TABS: ClientDashboardTab[] = [
   "home",
+  "chat",
   "project",
   "integrations",
   "overview",
@@ -22,6 +23,7 @@ export const CLIENT_DASHBOARD_TABS: ClientDashboardTab[] = [
   "links",
   "time-tracking",
   "project-users",
+  "training",
 ];
 
 export function isClientDashboardTab(value: string | null): value is ClientDashboardTab {

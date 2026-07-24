@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { DashboardSpaceShell } from "@/components/dashboard/dashboard-space-shell";
 import { DashboardSectionCard } from "@/components/dashboard/dashboard-section-card";
+import { ChatPanel } from "@/components/chat/chat-panel";
 import { TEAM_DASHBOARD_SECTIONS } from "@/lib/dashboard/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAppStore } from "@/store/app-store";
@@ -38,7 +39,9 @@ export default function TeamDashboardPage() {
       <div className="mb-4 grid gap-3">
         {TEAM_DASHBOARD_SECTIONS.map((section) => (
           <DashboardSectionCard key={section.id} section={section}>
-            {section.id === "subcontractors" ? (
+            {section.id === "chat" ? (
+              <ChatPanel projectId={project.id} defaultRoomKind="main" embedded />
+            ) : section.id === "subcontractors" ? (
               <p className="text-sm text-muted">
                 Moduł dla <strong className="font-medium text-foreground">naszych podwykonawców</strong>{" "}
                 (nie firm u klienta): zlecenia, oferty, zapytania ofertowe, rozliczenia i status

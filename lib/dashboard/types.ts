@@ -73,6 +73,7 @@ export type ClientDashboardSectionId =
   | "documentation";
 
 export type TeamDashboardSectionId =
+  | "chat"
   | "subcontractors"
   | "coordination"
   | "files"
@@ -86,6 +87,12 @@ export type TeamDashboardSection = {
 };
 
 export const TEAM_DASHBOARD_SECTIONS: TeamDashboardSection[] = [
+  {
+    id: "chat",
+    title: "Czat projektu",
+    description: "Pokój Główny i dodatkowe kanały zespołu dla tego projektu.",
+    status: "active",
+  },
   {
     id: "subcontractors",
     title: "Nasi podwykonawcy",

@@ -29,6 +29,7 @@ const VIEW_EXPORT: PermissionActionKey[] = ["view", "export"];
 /** Akcje dostępne do konfiguracji w danym module menu. */
 export const NAV_MODULE_SUPPORTED_ACTIONS: Record<NavModuleKey, PermissionActionKey[]> = {
   start: VIEW_ONLY,
+  chat: CRUD,
   "my-work-tasks": CRUD,
   "my-work-dashboard": VIEW_ONLY,
   "my-work-time": CRUD_EXPORT,

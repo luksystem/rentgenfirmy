@@ -12,11 +12,13 @@ import {
   FileText,
   FolderOpen,
   GitBranch,
+  GraduationCap,
   HardHat,
   Home,
   KeyRound,
   LayoutGrid,
   Link2,
+  MessageCircle,
   Receipt,
   Star,
   StickyNote,
@@ -45,6 +47,7 @@ import { ClientDashboardHome } from "@/components/dashboard/client-dashboard-hom
 import { ClientDashboardOverview } from "@/components/dashboard/client-dashboard-overview";
 import { ClientInfoCard } from "@/components/dashboard/client-info-card";
 import { ClientProjectsPanel } from "@/components/dashboard/client-projects-panel";
+import { ClientTrainingPathPanel } from "@/components/dashboard/client-training-path-panel";
 import { ProjectContentPanel } from "@/components/dashboard/project-content-panel";
 import { ProjectBillingBudgetPanel } from "@/components/dashboard/project-billing-budget-panel";
 import { ProjectSettlementsPanel } from "@/components/dashboard/project-settlements-panel";
@@ -53,6 +56,7 @@ import { ProjectUsersPanel } from "@/components/dashboard/project-users-panel";
 import { ProcessPipeline } from "@/components/process/process-pipeline";
 import { ProjectProcessPipelineSection } from "@/components/process/project-process-pipeline-section";
 import { PublicKanbanEmbedded } from "@/components/process/public-kanban-embedded";
+import { ChatPanel } from "@/components/chat/chat-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClientProjectSummary } from "@/components/dashboard/client-project-summary";
@@ -116,6 +120,7 @@ const EMPTY_SATISFACTION: ProjectSatisfactionBundle = {
 
 export type ClientDashboardTab =
   | "home"
+  | "chat"
   | "project"
   | "integrations"
   | "overview"
@@ -135,7 +140,8 @@ export type ClientDashboardTab =
   | "credentials"
   | "links"
   | "time-tracking"
-  | "project-users";
+  | "project-users"
+  | "training";
 
 const EMPTY_AGREEMENTS: ProjectClientAgreement[] = [];
 const EMPTY_CHANGE_REQUESTS: ProjectChangeRequest[] = [];
@@ -169,6 +175,7 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   icon: React.ComponentType<{ className?: string }>;
 }> = [
   { id: "home", label: "HOME", icon: Home },
+  { id: "chat", label: "Czat", icon: MessageCircle },
   { id: "process", label: "Proces", icon: GitBranch },
   { id: "goals", label: "Cele", icon: Target },
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
@@ -183,6 +190,7 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "satisfaction", label: "Ocena", icon: Star },
   { id: "credentials", label: "Hasła", icon: KeyRound },
   { id: "links", label: "Linki", icon: Link2 },
+  { id: "training", label: "Ścieżka szkoleniowa", icon: GraduationCap },
 ];
 
 const TEAM_PROJECT_TAB = {
@@ -1609,6 +1617,10 @@ export function ClientDashboardView({
     switch (tab) {
       case "home":
         return renderHomeSection();
+      case "chat":
+        return !readOnly && selectedProject ? (
+          <ChatPanel projectId={selectedProject.id} defaultRoomKind="client" embedded />
+        ) : null;
       case "project":
         return !readOnly ? renderProjectSettingsSection() : null;
       case "integrations":
@@ -1649,6 +1661,8 @@ export function ClientDashboardView({
         return !readOnly ? renderTimeTrackingPanel() : null;
       case "project-users":
         return !readOnly ? renderProjectUsersPanel() : null;
+      case "training":
+        return !readOnly ? <ClientTrainingPathPanel clientId={client.id} /> : null;
       default:
         return null;
     }

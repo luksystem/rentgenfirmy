@@ -2,6 +2,7 @@ import { COMMERCIAL_MODULES } from "@/lib/modules/commercial-modules";
 
 export type NavModuleKey =
   | "start"
+  | "chat"
   | "my-work-tasks"
   | "my-work-dashboard"
   | "my-work-time"
@@ -67,6 +68,18 @@ export const NAV_MODULE_GROUPS: NavModuleGroupDefinition[] = [
         label: "Start",
         href: "/",
         routePrefixes: ["/"],
+      },
+    ],
+  },
+  {
+    key: "komunikacja",
+    label: "Komunikacja",
+    modules: [
+      {
+        key: "chat",
+        label: "Czat",
+        href: "/czat",
+        routePrefixes: ["/czat"],
       },
     ],
   },

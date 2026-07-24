@@ -26,6 +26,7 @@ import {
   LogOut,
   Key,
   Menu,
+  MessageCircle,
   PalmtreeIcon,
   PauseCircle,
   PhoneCall,
@@ -89,6 +90,7 @@ type NavGroup = {
 
 const NAV_MODULE_ICONS: Record<NavModuleKey, React.ComponentType<{ className?: string }>> = {
   start: Home,
+  chat: MessageCircle,
   "my-work-tasks": ListTodo,
   "my-work-dashboard": LayoutDashboard,
   "my-work-time": Timer,
@@ -377,6 +379,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const monthlyReviewPendingForMeCount = useNavBadgeStore(
     (state) => state.monthlyReviewPendingForMeCount,
   );
+  const chatUnreadCount = useNavBadgeStore((state) => state.chatUnreadCount);
   const startNavBadgePolling = useNavBadgeStore((state) => state.startPolling);
 
   const handleKanbanOverdueCountChange = useCallback((count: number) => {
@@ -438,6 +441,9 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
     }
     if (href === "/oferty/zgloszenia") {
       return serviceIntakeBadges;
+    }
+    if (href === "/czat") {
+      return { newBadgeCount: chatUnreadCount };
     }
     if (href === "/kontakty") {
       return { newBadgeCount: contactsNewCount };

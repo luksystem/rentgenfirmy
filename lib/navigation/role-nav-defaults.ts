@@ -14,6 +14,7 @@ const FULL_NAV_ACCESS: NavModuleKey[] = [...ALL_NAV_MODULE_KEYS];
 
 const PODWYKONAWCA_NAV_ACCESS: NavModuleKey[] = [
   "start",
+  "chat",
   "my-work-tasks",
   "my-work-dashboard",
   "my-work-time",
@@ -32,6 +33,7 @@ const PODWYKONAWCA_NAV_ACCESS: NavModuleKey[] = [
 /** Kadry i Płace — ludzie, czas, urlopy, faktury, raporty. */
 const OFFICE_NAV_ACCESS: NavModuleKey[] = [
   "start",
+  "chat",
   "my-work-tasks",
   "my-work-dashboard",
   "my-work-time",
@@ -57,8 +59,8 @@ export const DEFAULT_ROLE_NAV_ACCESS: Record<UserRole, NavModuleKey[]> = {
   instalator: FULL_NAV_ACCESS,
   office: OFFICE_NAV_ACCESS,
   podwykonawca: PODWYKONAWCA_NAV_ACCESS,
-  klient: ["visualizations", "smart-home-knowledge", "account-settings", "change-password"],
-  gosc: [],
+  klient: ["chat", "visualizations", "smart-home-knowledge", "account-settings", "change-password"],
+  gosc: ["chat"],
 };
 
 function allActionsForModules(modules: NavModuleKey[]): Partial<Record<NavModuleKey, PermissionActionKey[]>> {

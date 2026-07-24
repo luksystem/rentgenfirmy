@@ -466,6 +466,9 @@ export type SmartHomeKbArticleRow = {
   title: string;
   summary: string;
   body_html: string;
+  context_html: string;
+  steps: unknown;
+  tips_html: string;
   youtube_url: string | null;
   cover_image_storage_path: string | null;
   status: string;
@@ -482,6 +485,9 @@ export type SmartHomeKbArticleInsert = {
   title: string;
   summary?: string;
   body_html?: string;
+  context_html?: string;
+  steps?: unknown;
+  tips_html?: string;
   youtube_url?: string | null;
   cover_image_storage_path?: string | null;
   status?: string;
@@ -548,6 +554,86 @@ export type SmartHomeKbFaqItemInsert = {
 };
 
 export type SmartHomeKbFaqItemUpdate = Partial<SmartHomeKbFaqItemInsert>;
+
+export type SmartHomeKbPathTemplateRow = {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SmartHomeKbPathTemplateInsert = {
+  id?: string;
+  name: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type SmartHomeKbPathTemplateUpdate = Partial<SmartHomeKbPathTemplateInsert>;
+
+export type SmartHomeKbPathTemplateItemRow = {
+  id: string;
+  template_id: string;
+  article_id: string;
+  sort_order: number;
+  created_at: string;
+};
+
+export type SmartHomeKbPathTemplateItemInsert = {
+  id?: string;
+  template_id: string;
+  article_id: string;
+  sort_order?: number;
+  created_at?: string;
+};
+
+export type SmartHomeKbPathTemplateItemUpdate = Partial<SmartHomeKbPathTemplateItemInsert>;
+
+export type SmartHomeKbClientPathRow = {
+  id: string;
+  client_id: string;
+  name: string;
+  description: string;
+  source_template_id: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SmartHomeKbClientPathInsert = {
+  id?: string;
+  client_id: string;
+  name: string;
+  description?: string;
+  source_template_id?: string | null;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type SmartHomeKbClientPathUpdate = Partial<SmartHomeKbClientPathInsert>;
+
+export type SmartHomeKbClientPathItemRow = {
+  id: string;
+  path_id: string;
+  article_id: string;
+  sort_order: number;
+  completed_at: string | null;
+  created_at: string;
+};
+
+export type SmartHomeKbClientPathItemInsert = {
+  id?: string;
+  path_id: string;
+  article_id: string;
+  sort_order?: number;
+  completed_at?: string | null;
+  created_at?: string;
+};
+
+export type SmartHomeKbClientPathItemUpdate = Partial<SmartHomeKbClientPathItemInsert>;
 
 export type ProcessProtocolTemplateRow = {
   id: string;
@@ -1419,6 +1505,7 @@ export type ProjectDocumentRow = {
   created_by_name: string;
   created_at: string;
   updated_at: string;
+  chat_message_id: string | null;
 };
 
 export type RequisitionRow = {
@@ -1615,6 +1702,7 @@ export type ProfileRow = {
   about_me: string;
   monthly_review_enabled: boolean;
   offer_approval_bypass: boolean;
+  client_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -1638,6 +1726,7 @@ export type ProfileInsert = {
   about_me?: string;
   monthly_review_enabled?: boolean;
   offer_approval_bypass?: boolean;
+  client_id?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -2616,6 +2705,30 @@ export type Database = {
         Update: SmartHomeKbFaqItemUpdate;
         Relationships: [];
       };
+      smart_home_kb_path_templates: {
+        Row: SmartHomeKbPathTemplateRow;
+        Insert: SmartHomeKbPathTemplateInsert;
+        Update: SmartHomeKbPathTemplateUpdate;
+        Relationships: [];
+      };
+      smart_home_kb_path_template_items: {
+        Row: SmartHomeKbPathTemplateItemRow;
+        Insert: SmartHomeKbPathTemplateItemInsert;
+        Update: SmartHomeKbPathTemplateItemUpdate;
+        Relationships: [];
+      };
+      smart_home_kb_client_paths: {
+        Row: SmartHomeKbClientPathRow;
+        Insert: SmartHomeKbClientPathInsert;
+        Update: SmartHomeKbClientPathUpdate;
+        Relationships: [];
+      };
+      smart_home_kb_client_path_items: {
+        Row: SmartHomeKbClientPathItemRow;
+        Insert: SmartHomeKbClientPathItemInsert;
+        Update: SmartHomeKbClientPathItemUpdate;
+        Relationships: [];
+      };
       process_protocol_templates: {
         Row: ProcessProtocolTemplateRow;
         Insert: ProcessProtocolTemplateInsert;
@@ -2927,6 +3040,282 @@ export type Database = {
         Row: ProjectDocumentRow;
         Insert: Partial<ProjectDocumentRow> & Pick<ProjectDocumentRow, "title">;
         Update: Partial<ProjectDocumentRow>;
+        Relationships: [];
+      };
+      chat_rooms: {
+        Row: {
+          id: string;
+          project_id: string;
+          client_id: string | null;
+          service_intake_request_id: string | null;
+          kind: string;
+          name: string;
+          slug: string;
+          is_default: boolean;
+          is_archived: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          client_id?: string | null;
+          service_intake_request_id?: string | null;
+          kind: string;
+          name: string;
+          slug: string;
+          is_default?: boolean;
+          is_archived?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<{
+          project_id: string;
+          client_id: string | null;
+          service_intake_request_id: string | null;
+          kind: string;
+          name: string;
+          slug: string;
+          is_default: boolean;
+          is_archived: boolean;
+          created_by: string | null;
+          updated_at: string;
+        }>;
+        Relationships: [];
+      };
+      chat_room_members: {
+        Row: {
+          id: string;
+          room_id: string;
+          profile_id: string;
+          role_in_room: string;
+          muted: boolean;
+          pinned_room: boolean;
+          last_read_message_id: string | null;
+          last_read_at: string | null;
+          added_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          room_id: string;
+          profile_id: string;
+          role_in_room?: string;
+          muted?: boolean;
+          pinned_room?: boolean;
+          last_read_message_id?: string | null;
+          last_read_at?: string | null;
+          added_by?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<{
+          room_id: string;
+          profile_id: string;
+          role_in_room: string;
+          muted: boolean;
+          pinned_room: boolean;
+          last_read_message_id: string | null;
+          last_read_at: string | null;
+          added_by: string | null;
+        }>;
+        Relationships: [];
+      };
+      chat_client_members: {
+        Row: {
+          id: string;
+          client_id: string;
+          profile_id: string;
+          is_primary: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          client_id: string;
+          profile_id: string;
+          is_primary?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<{
+          client_id: string;
+          profile_id: string;
+          is_primary: boolean;
+        }>;
+        Relationships: [];
+      };
+      chat_messages: {
+        Row: {
+          id: string;
+          room_id: string;
+          author_id: string | null;
+          is_system: boolean;
+          system_event_kind: string | null;
+          system_event_payload: Record<string, unknown> | null;
+          body: string;
+          reply_to_id: string | null;
+          is_edited: boolean;
+          edited_at: string | null;
+          is_deleted: boolean;
+          deleted_at: string | null;
+          is_important: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          room_id: string;
+          author_id?: string | null;
+          is_system?: boolean;
+          system_event_kind?: string | null;
+          system_event_payload?: Record<string, unknown> | null;
+          body?: string;
+          reply_to_id?: string | null;
+          is_edited?: boolean;
+          edited_at?: string | null;
+          is_deleted?: boolean;
+          deleted_at?: string | null;
+          is_important?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<{
+          body: string;
+          is_edited: boolean;
+          edited_at: string | null;
+          is_deleted: boolean;
+          deleted_at: string | null;
+          is_important: boolean;
+        }>;
+        Relationships: [];
+      };
+      chat_message_edits: {
+        Row: {
+          id: string;
+          message_id: string;
+          previous_body: string;
+          edited_by: string;
+          edited_at: string;
+        };
+        Insert: {
+          id?: string;
+          message_id: string;
+          previous_body: string;
+          edited_by: string;
+          edited_at?: string;
+        };
+        Update: Partial<{
+          previous_body: string;
+        }>;
+        Relationships: [];
+      };
+      chat_attachments: {
+        Row: {
+          id: string;
+          message_id: string;
+          project_document_id: string | null;
+          file_name: string;
+          mime_type: string | null;
+          size_bytes: number | null;
+          storage_path: string;
+          kind: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          message_id: string;
+          project_document_id?: string | null;
+          file_name: string;
+          mime_type?: string | null;
+          size_bytes?: number | null;
+          storage_path: string;
+          kind?: string;
+          created_at?: string;
+        };
+        Update: Partial<{
+          project_document_id: string | null;
+          file_name: string;
+          mime_type: string | null;
+          size_bytes: number | null;
+          kind: string;
+        }>;
+        Relationships: [];
+      };
+      chat_reactions: {
+        Row: {
+          id: string;
+          message_id: string;
+          profile_id: string;
+          emoji: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          message_id: string;
+          profile_id: string;
+          emoji: string;
+          created_at?: string;
+        };
+        Update: Partial<{
+          emoji: string;
+        }>;
+        Relationships: [];
+      };
+      chat_reads: {
+        Row: {
+          id: string;
+          message_id: string;
+          profile_id: string;
+          read_at: string;
+        };
+        Insert: {
+          id?: string;
+          message_id: string;
+          profile_id: string;
+          read_at?: string;
+        };
+        Update: Partial<{
+          read_at: string;
+        }>;
+        Relationships: [];
+      };
+      chat_mentions: {
+        Row: {
+          id: string;
+          message_id: string;
+          mentioned_profile_id: string | null;
+          is_all: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          message_id: string;
+          mentioned_profile_id?: string | null;
+          is_all?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<{
+          mentioned_profile_id: string | null;
+          is_all: boolean;
+        }>;
+        Relationships: [];
+      };
+      chat_pins: {
+        Row: {
+          id: string;
+          room_id: string;
+          message_id: string;
+          pinned_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          room_id: string;
+          message_id: string;
+          pinned_by?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<{
+          pinned_by: string | null;
+        }>;
         Relationships: [];
       };
       requisitions: {
