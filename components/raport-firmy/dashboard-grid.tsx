@@ -9,7 +9,8 @@ const DOMAIN_SUBTITLES: Record<DomainReport["domain"], string> = {
   growth: "Ranking XP · oceny miesięczne · cele managerów",
   sales: "Oferty · rozliczenia · zapotrzebowania",
   service: "Zgłoszenia serwisowe · przeglądy",
-  budget: "Przychód, faktury, należności — widoczne tylko dla admina",
+  deployment: "Tablice kanban · kamienie milowe procesów",
+  budget: "Przychód, prognoza płynności, faktury — widoczne tylko dla admina",
 };
 
 export function DashboardGrid({
@@ -23,7 +24,13 @@ export function DashboardGrid({
   onOpenDomain: (domain: DomainReport["domain"] | "projects") => void;
   onOpenSettings: () => void;
 }) {
-  const domains: DomainReport[] = [payload.team, payload.growth, payload.sales, payload.service];
+  const domains: DomainReport[] = [
+    payload.team,
+    payload.growth,
+    payload.sales,
+    payload.service,
+    payload.deployment,
+  ];
   const attentionItems = domains
     .flatMap((domain) =>
       domain.quickWins
@@ -82,11 +89,16 @@ export function DashboardGrid({
             subtitle={DOMAIN_SUBTITLES.service}
             onOpen={() => onOpenDomain("service")}
           />
+          <DomainTile
+            report={payload.deployment}
+            subtitle={DOMAIN_SUBTITLES.deployment}
+            onOpen={() => onOpenDomain("deployment")}
+          />
           <button type="button" onClick={() => onOpenDomain("projects")} className="text-left">
             <Card className="cursor-pointer transition hover:border-accent/40 hover:shadow-md">
               <CardContent className="grid gap-2 py-4">
                 <p className="font-semibold text-foreground">Projekty</p>
-                <p className="text-xs text-muted">Stan wdrożeń — szczegółowy raport operacyjny</p>
+                <p className="text-xs text-muted">Stan projektów — szczegółowy raport operacyjny</p>
                 <div className="border-t border-border pt-2 text-xs font-semibold text-accent">
                   Zobacz szczegóły →
                 </div>

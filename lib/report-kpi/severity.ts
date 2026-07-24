@@ -2,15 +2,28 @@ import type { TrendComparison } from "@/lib/types";
 import type { DeltaTone, KpiPolarity, Severity } from "@/lib/report-kpi/types";
 
 /**
- * Progi zawsze działają jako "sufit" (im wyżej, tym gorzej) — to jest znaczenie pola
- * warning_threshold/critical_threshold w konfiguracji admina. Polaryzacja KPI nie wpływa
- * na tę ocenę, tylko na kolor delty (evaluateDeltaTone) — to dwie osobne decyzje.
+ * Domyślnie (increase-is-bad) progi działają jako "sufit" — im wyżej, tym gorzej
+ * (np. zadania przeterminowane). Dla increase-is-good progi działają jako "podłoga" —
+ * im niżej, tym gorzej (np. prognozowane saldo gotówkowe: admin ustawia próg jako
+ * minimum, nie maksimum). To jedyny wpływ polaryzacji na severity — sam kierunek
+ * porównania z progiem; kolor delty to osobna decyzja (evaluateDeltaTone).
  */
 export function evaluateSeverity(
   value: number,
   warningThreshold: number | null,
   criticalThreshold: number | null,
+  polarity: KpiPolarity = "increase-is-bad",
 ): Severity {
+  if (polarity === "increase-is-good") {
+    if (criticalThreshold !== null && value <= criticalThreshold) {
+      return "critical";
+    }
+    if (warningThreshold !== null && value <= warningThreshold) {
+      return "warning";
+    }
+    return "good";
+  }
+
   if (criticalThreshold !== null && value >= criticalThreshold) {
     return "critical";
   }

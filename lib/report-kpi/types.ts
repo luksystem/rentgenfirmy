@@ -2,7 +2,7 @@ import type { QuickWin, TrendComparison } from "@/lib/types";
 
 export type ComparisonPeriodKind = "none" | "day" | "week" | "month" | "quarter" | "year";
 
-export type KpiDomain = "team" | "growth" | "sales" | "service" | "budget";
+export type KpiDomain = "team" | "growth" | "sales" | "service" | "deployment" | "budget";
 
 /** Czy wzrost wartości jest dobrą czy złą wiadomością — steruje wyłącznie kolorem delty, nie progami. */
 export type KpiPolarity = "increase-is-bad" | "increase-is-good";
@@ -70,6 +70,7 @@ export type RaportFirmyPayload = {
   growth: DomainReport;
   sales: DomainReport;
   service: DomainReport;
+  deployment: DomainReport;
   budget?: DomainReport;
 };
 
@@ -213,6 +214,42 @@ export const KPI_DEFINITIONS: Record<string, KpiDefinition> = {
     key: "budget.invoices_to_issue",
     domain: "budget",
     label: "Faktury do wystawienia",
+    polarity: "increase-is-bad",
+    unit: "count",
+  },
+  "budget.cashflow_balance_3m": {
+    key: "budget.cashflow_balance_3m",
+    domain: "budget",
+    label: "Prognozowane saldo za 3 miesiące",
+    polarity: "increase-is-good",
+    unit: "currency",
+  },
+  "budget.months_to_negative_balance": {
+    key: "budget.months_to_negative_balance",
+    domain: "budget",
+    label: "Miesięcy do ujemnego salda",
+    polarity: "increase-is-good",
+    unit: "count",
+  },
+
+  "deployment.kanban_tasks_overdue": {
+    key: "deployment.kanban_tasks_overdue",
+    domain: "deployment",
+    label: "Zadania kanban przeterminowane",
+    polarity: "increase-is-bad",
+    unit: "count",
+  },
+  "deployment.kanban_tasks_new_from_client": {
+    key: "deployment.kanban_tasks_new_from_client",
+    domain: "deployment",
+    label: "Nowe zadania od klienta (nieprzejrzane)",
+    polarity: "increase-is-bad",
+    unit: "count",
+  },
+  "deployment.milestones_overdue": {
+    key: "deployment.milestones_overdue",
+    domain: "deployment",
+    label: "Kamienie milowe po terminie",
     polarity: "increase-is-bad",
     unit: "count",
   },

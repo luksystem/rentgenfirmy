@@ -188,7 +188,8 @@ export default function ReportPage() {
     growth: { title: "Ocena i rozwój", description: "Ranking XP, oceny miesięczne, cele managerów." },
     sales: { title: "Sprzedaż i cashflow", description: "Oferty, rozliczenia, zapotrzebowania." },
     service: { title: "Serwis", description: "Zgłoszenia serwisowe i przeglądy." },
-    budget: { title: "Budżet firmy", description: "Przychód, faktury, należności." },
+    deployment: { title: "Wdrożenia", description: "Tablice kanban i kamienie milowe procesów projektów." },
+    budget: { title: "Budżet firmy", description: "Przychód, prognoza płynności, faktury." },
   };
 
   return (

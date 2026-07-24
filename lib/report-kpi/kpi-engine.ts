@@ -116,7 +116,12 @@ export function computeKpiResult(params: {
   const { value, previousValue, config, definition } = params;
 
   const trend = previousValue === null ? null : compareCounts(value, previousValue);
-  const severity = evaluateSeverity(value, config.warningThreshold, config.criticalThreshold);
+  const severity = evaluateSeverity(
+    value,
+    config.warningThreshold,
+    config.criticalThreshold,
+    definition.polarity,
+  );
   const deltaTone = trend ? evaluateDeltaTone(trend, definition.polarity) : "neutral";
 
   return {

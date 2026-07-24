@@ -30,6 +30,17 @@ describe("evaluateSeverity", () => {
     expect(evaluateSeverity(4, null, 10)).toBe("good");
     expect(evaluateSeverity(10, null, 10)).toBe("critical");
   });
+
+  it("increase-is-good: progi jako podłoga — im niżej, tym gorzej", () => {
+    expect(evaluateSeverity(50_000, 20_000, 5_000, "increase-is-good")).toBe("good");
+    expect(evaluateSeverity(20_000, 20_000, 5_000, "increase-is-good")).toBe("warning");
+    expect(evaluateSeverity(5_000, 20_000, 5_000, "increase-is-good")).toBe("critical");
+    expect(evaluateSeverity(-1_000, 20_000, 5_000, "increase-is-good")).toBe("critical");
+  });
+
+  it("increase-is-good bez progów -> zawsze good, niezależnie jak niska wartość", () => {
+    expect(evaluateSeverity(-1_000_000, null, null, "increase-is-good")).toBe("good");
+  });
 });
 
 describe("evaluateDeltaTone", () => {

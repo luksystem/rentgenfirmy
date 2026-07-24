@@ -8,6 +8,7 @@ import { computeTeamDomainReport } from "@/lib/report-kpi/domains/team";
 import { computeGrowthDomainReport } from "@/lib/report-kpi/domains/growth";
 import { computeSalesDomainReport } from "@/lib/report-kpi/domains/sales";
 import { computeServiceDomainReport } from "@/lib/report-kpi/domains/service";
+import { computeDeploymentDomainReport } from "@/lib/report-kpi/domains/deployment";
 import { computeBudgetDomainReport } from "@/lib/report-kpi/domains/budget";
 import type { RaportFirmyPayload } from "@/lib/report-kpi/types";
 
@@ -18,11 +19,12 @@ export async function GET() {
     const configByKey = await fetchReportKpiConfigMapServer(admin);
     const asOf = new Date();
 
-    const [team, growth, sales, service] = await Promise.all([
+    const [team, growth, sales, service, deployment] = await Promise.all([
       computeTeamDomainReport(admin, asOf, configByKey),
       computeGrowthDomainReport(admin, asOf, configByKey),
       computeSalesDomainReport(admin, asOf, configByKey),
       computeServiceDomainReport(admin, asOf, configByKey),
+      computeDeploymentDomainReport(admin, asOf, configByKey),
     ]);
 
     const payload: RaportFirmyPayload = {
@@ -31,6 +33,7 @@ export async function GET() {
       growth,
       sales,
       service,
+      deployment,
     };
 
     // Budżet dokładany tylko dla administratora — dla innych ról klucz `budget` w ogóle
