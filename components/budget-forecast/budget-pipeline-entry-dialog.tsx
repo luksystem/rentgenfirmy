@@ -16,8 +16,11 @@ import {
   deleteProjectRevenueForecast,
   updateProjectRevenueForecast,
 } from "@/lib/supabase/project-revenue-forecast-repository";
-import { fetchProjectSettlementEntries } from "@/lib/supabase/project-settlement-repository";
-import type { ProjectSettlementEntry } from "@/lib/settlements/types";
+import {
+  createProjectSettlementEntry,
+  fetchProjectSettlementEntries,
+} from "@/lib/supabase/project-settlement-repository";
+import { addDaysIso, DEFAULT_AGREEMENT_VAT_RATE, type ProjectSettlementEntry } from "@/lib/settlements/types";
 import {
   BUDGET_CONFIDENCE_LABELS,
   BUDGET_CONFIDENCE_LEVELS,
@@ -49,6 +52,7 @@ export function BudgetPipelineEntryDialog({
   entry,
   defaultProjectId,
   defaultDate,
+  actorName,
   onSaved,
   onDeleted,
   onImported,
@@ -60,15 +64,19 @@ export function BudgetPipelineEntryDialog({
   entry: ProjectRevenueForecast | null;
   defaultProjectId?: string;
   defaultDate?: string;
+  /** Wymagane, gdy checkbox "dodaj do harmonogramu" jest dostępny — zapisywane jako autor raty. */
+  actorName: string;
   onSaved: (entry: ProjectRevenueForecast) => void;
   onDeleted?: (id: string) => void;
-  /** Wywoływane po imporcie z harmonogramu (mogło powstać kilka pozycji naraz). */
+  /** Wywoływane po imporcie z harmonogramu lub dodaniu bezpośrednio jako rata harmonogramu
+   * (mogło powstać kilka pozycji naraz albo powstał wiersz innego typu niż ProjectRevenueForecast). */
   onImported?: () => void;
 }) {
   const isEdit = Boolean(entry);
   const [mode, setMode] = useState<Mode>("manual");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [addToSchedule, setAddToSchedule] = useState(false);
 
   const [manual, setManual] = useState<ManualDraft>({
     projectId: "",
@@ -92,6 +100,7 @@ export function BudgetPipelineEntryDialog({
     if (!open) return;
     setError(null);
     setMode("manual");
+    setAddToSchedule(false);
     if (entry) {
       setManual({
         projectId: entry.projectId,
@@ -150,6 +159,26 @@ export function BudgetPipelineEntryDialog({
     setSaving(true);
     setError(null);
     try {
+      if (!entry && addToSchedule) {
+        const amountNet = Number(manual.amount) || 0;
+        await createProjectSettlementEntry(
+          manual.projectId,
+          {
+            kind: "schedule",
+            source: "manual",
+            title: manual.notes.trim() || "Rata harmonogramu (dodana ręcznie)",
+            amountNet,
+            vatRate: DEFAULT_AGREEMENT_VAT_RATE,
+            entryDate: manual.date,
+            dueDate: addDaysIso(manual.date, 14),
+          },
+          actorName,
+        );
+        onImported?.();
+        onOpenChange(false);
+        return;
+      }
+
       const saved = entry
         ? await updateProjectRevenueForecast(entry.id, {
             expectedDate: manual.date,
@@ -289,20 +318,40 @@ export function BudgetPipelineEntryDialog({
                 </Field>
               </div>
 
-              <Field label="Pewność">
-                <Select
-                  value={manual.confidence}
-                  onChange={(e) => setManual({ ...manual, confidence: e.target.value as BudgetConfidenceLevel })}
-                >
-                  {BUDGET_CONFIDENCE_LEVELS.map((level) => (
-                    <option key={level} value={level}>
-                      {BUDGET_CONFIDENCE_LABELS[level]}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
+              {!isEdit ? (
+                <label className="flex items-start gap-3 rounded-xl border border-border/70 px-3 py-3">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-blue-500"
+                    checked={addToSchedule}
+                    onChange={(e) => setAddToSchedule(e.target.checked)}
+                  />
+                  <span className="text-sm text-foreground">
+                    Dodaj do harmonogramu spłat klienta
+                    <span className="block text-xs text-muted">
+                      Zamiast prognozy powstanie realna rata harmonogramu, widoczna też w rozliczeniach
+                      projektu. Bez pewności — liczy się w 100% jak reszta harmonogramu.
+                    </span>
+                  </span>
+                </label>
+              ) : null}
 
-              <Field label="Notatki (opcjonalnie)">
+              {!addToSchedule ? (
+                <Field label="Pewność">
+                  <Select
+                    value={manual.confidence}
+                    onChange={(e) => setManual({ ...manual, confidence: e.target.value as BudgetConfidenceLevel })}
+                  >
+                    {BUDGET_CONFIDENCE_LEVELS.map((level) => (
+                      <option key={level} value={level}>
+                        {BUDGET_CONFIDENCE_LABELS[level]}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              ) : null}
+
+              <Field label={addToSchedule ? "Tytuł raty (opcjonalnie)" : "Notatki (opcjonalnie)"}>
                 <Input value={manual.notes} onChange={(e) => setManual({ ...manual, notes: e.target.value })} />
               </Field>
             </div>
@@ -321,7 +370,7 @@ export function BudgetPipelineEntryDialog({
                   Anuluj
                 </Button>
                 <Button type="button" onClick={() => void handleSaveManual()} disabled={saving || !manual.projectId}>
-                  {saving ? "Zapisywanie..." : "Zapisz"}
+                  {saving ? "Zapisywanie..." : addToSchedule ? "Dodaj do harmonogramu" : "Zapisz"}
                 </Button>
               </div>
             </DialogFooter>

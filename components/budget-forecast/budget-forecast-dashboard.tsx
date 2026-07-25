@@ -165,6 +165,7 @@ export function BudgetForecastDashboard() {
         onOpenChange={setPipelineDialogOpen}
         projects={activeProjects}
         entry={null}
+        actorName={profile ? getUserDisplayName(profile) : "Zespół"}
         onSaved={refresh}
         onImported={refresh}
       />

@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { hasFullAppAccess } from "@/lib/auth/types";
+import { getUserDisplayName, hasFullAppAccess } from "@/lib/auth/types";
 import { fetchAllProjectRevenueForecastsWithProjectNames } from "@/lib/supabase/project-revenue-forecast-repository";
 import {
   BUDGET_CONFIDENCE_LABELS,
@@ -170,6 +170,7 @@ export function BudgetPipelineOverview() {
         onOpenChange={setDialogOpen}
         projects={activeProjects}
         entry={editingEntry}
+        actorName={profile ? getUserDisplayName(profile) : "Zespół"}
         onSaved={reload}
         onDeleted={reload}
         onImported={reload}

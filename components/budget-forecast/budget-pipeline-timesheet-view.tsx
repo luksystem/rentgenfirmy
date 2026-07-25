@@ -36,7 +36,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClientOnlyChart } from "@/components/charts";
-import { hasFullAppAccess } from "@/lib/auth/types";
+import { getUserDisplayName, hasFullAppAccess } from "@/lib/auth/types";
 import {
   fetchAllProjectRevenueForecastsWithProjectNames,
   updateProjectRevenueForecast,
@@ -232,6 +232,7 @@ type DragState = {
 export function BudgetPipelineTimesheetView() {
   const profile = useAuthStore((state) => state.profile);
   const canManage = Boolean(profile && hasFullAppAccess(profile.role));
+  const actorName = profile ? getUserDisplayName(profile) : "Zespół";
   const projects = useAppStore((state) => state.projects);
   const activeProjects = useMemo(() => projects.filter((p) => p.isActive), [projects]);
 
@@ -1199,6 +1200,7 @@ export function BudgetPipelineTimesheetView() {
         entry={editingEntry}
         defaultProjectId={pipelineDefaults.projectId}
         defaultDate={pipelineDefaults.date}
+        actorName={actorName}
         onSaved={reload}
         onDeleted={reload}
         onImported={reload}
