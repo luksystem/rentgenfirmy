@@ -44,6 +44,8 @@ import {
 import { fetchAllBudgetCostItems } from "@/lib/supabase/budget-cost-item-repository";
 import { fetchAllBudgetScenarioActions } from "@/lib/supabase/budget-scenario-action-repository";
 import { fetchBudgetForecastSettings } from "@/lib/supabase/budget-forecast-settings-repository";
+import { fetchAllCompanyScheduleEntries } from "@/lib/supabase/project-settlement-repository";
+import type { ProjectSettlementEntry } from "@/lib/settlements/types";
 import { expandAmountToMonths } from "@/lib/budget-forecast/engine";
 import {
   BUDGET_CONFIDENCE_LABELS,
@@ -89,6 +91,7 @@ const CONFIDENCE_CHIP_COLOR: Record<BudgetConfidenceLevel, string> = {
 
 const COST_COLOR = "#f43f5e";
 const REVENUE_SCENARIO_COLOR = "#22c55e";
+const SCHEDULE_CHIP_COLOR = "#8b5cf6";
 
 function buildGroupSegments(periods: PeriodColumn[]) {
   const segments: Array<{ label: string; startIndex: number; count: number }> = [];
@@ -154,8 +157,28 @@ function mapRecurringAmountToPeriods(
   return result;
 }
 
-type ProjectRowEntry = {
+type PipelineChip = {
+  kind: "pipeline";
+  id: string;
+  projectId: string;
+  projectName: string;
+  date: string;
   entry: ProjectRevenueForecastWithProject;
+};
+
+type ScheduleChip = {
+  kind: "schedule";
+  id: string;
+  projectId: string;
+  projectName: string;
+  date: string;
+  entry: ProjectSettlementEntry;
+};
+
+type TimesheetChip = PipelineChip | ScheduleChip;
+
+type ProjectRowEntry = {
+  chip: TimesheetChip;
   periodIndex: number;
   lane: number;
 };
@@ -168,17 +191,17 @@ type ProjectRow = {
 };
 
 function groupEntriesByProject(
-  rows: ProjectRevenueForecastWithProject[],
-  periodIndexFor: (entry: ProjectRevenueForecastWithProject) => number,
+  chips: TimesheetChip[],
+  periodIndexFor: (chip: TimesheetChip) => number,
 ): ProjectRow[] {
   const byProject = new Map<string, ProjectRow>();
-  for (const entry of rows) {
-    let row = byProject.get(entry.projectId);
+  for (const chip of chips) {
+    let row = byProject.get(chip.projectId);
     if (!row) {
-      row = { projectId: entry.projectId, projectName: entry.projectName, entries: [], laneCount: 1 };
-      byProject.set(entry.projectId, row);
+      row = { projectId: chip.projectId, projectName: chip.projectName, entries: [], laneCount: 1 };
+      byProject.set(chip.projectId, row);
     }
-    row.entries.push({ entry, periodIndex: periodIndexFor(entry), lane: 0 });
+    row.entries.push({ chip, periodIndex: periodIndexFor(chip), lane: 0 });
   }
 
   const result = Array.from(byProject.values());
@@ -211,6 +234,7 @@ export function BudgetPipelineTimesheetView() {
   const [granularity, setGranularity] = useState<TimesheetGranularity>("week");
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [entries, setEntries] = useState<ProjectRevenueForecastWithProject[]>([]);
+  const [scheduleEntries, setScheduleEntries] = useState<ProjectSettlementEntry[]>([]);
   const [costItems, setCostItems] = useState<BudgetCostItem[]>([]);
   const [scenarioActions, setScenarioActions] = useState<BudgetScenarioAction[]>([]);
   const [openingBalance, setOpeningBalance] = useState(0);
@@ -256,12 +280,14 @@ export function BudgetPipelineTimesheetView() {
     setError(null);
     Promise.all([
       fetchAllProjectRevenueForecastsWithProjectNames(),
+      fetchAllCompanyScheduleEntries(),
       fetchAllBudgetCostItems(),
       fetchAllBudgetScenarioActions(),
       fetchBudgetForecastSettings(),
     ])
-      .then(([pipelineEntries, costs, actions, settings]) => {
+      .then(([pipelineEntries, schedule, costs, actions, settings]) => {
         setEntries(pipelineEntries);
+        setScheduleEntries(schedule);
         setCostItems(costs);
         setScenarioActions(actions);
         setOpeningBalance(settings.openingBalance);
@@ -270,19 +296,58 @@ export function BudgetPipelineTimesheetView() {
       .finally(() => setLoading(false));
   }
 
+  const projectNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const project of projects) map.set(project.id, project.name);
+    return map;
+  }, [projects]);
+
   const rows = useMemo(() => {
     return entries.filter((entry) => Number(entry.expectedDate.slice(0, 4)) === year);
   }, [entries, year]);
+
+  const scheduleRows = useMemo(() => {
+    return scheduleEntries.filter((entry) => entry.entryDate && Number(entry.entryDate.slice(0, 4)) === year);
+  }, [scheduleEntries, year]);
 
   function periodIndexForEntry(entry: ProjectRevenueForecastWithProject): number {
     const snapped = snapDateToGranularity(entry.expectedDate, granularity);
     return periodIndexByStart.get(snapped) ?? 0;
   }
 
+  function periodIndexForSchedule(entry: ProjectSettlementEntry): number {
+    const snapped = snapDateToGranularity(entry.entryDate as string, granularity);
+    return periodIndexByStart.get(snapped) ?? 0;
+  }
+
+  const chips = useMemo<TimesheetChip[]>(() => {
+    const pipelineChips: PipelineChip[] = rows.map((entry) => ({
+      kind: "pipeline",
+      id: `pipeline:${entry.id}`,
+      projectId: entry.projectId,
+      projectName: entry.projectName,
+      date: entry.expectedDate,
+      entry,
+    }));
+    const scheduleChips: ScheduleChip[] = scheduleRows.map((entry) => ({
+      kind: "schedule",
+      id: `schedule:${entry.id}`,
+      projectId: entry.projectId,
+      projectName: projectNameById.get(entry.projectId) ?? "Nieznany projekt",
+      date: entry.entryDate as string,
+      entry,
+    }));
+    return [...pipelineChips, ...scheduleChips];
+  }, [rows, scheduleRows, projectNameById]);
+
+  function periodIndexForChip(chip: TimesheetChip): number {
+    return chip.kind === "pipeline" ? periodIndexForEntry(chip.entry) : periodIndexForSchedule(chip.entry);
+  }
+
   const projectRows = useMemo(
-    () => groupEntriesByProject(rows, periodIndexForEntry),
+    () => groupEntriesByProject(chips, periodIndexForChip),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rows, periods, granularity],
+    [chips, periods, granularity],
   );
 
   const activeCostItems = useMemo(() => costItems.filter((item) => item.isActive), [costItems]);
@@ -318,6 +383,15 @@ export function BudgetPipelineTimesheetView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, periods, periodIndexByStart, granularity]);
 
+  const schedulePeriodTotals = useMemo(() => {
+    const totals = new Array(periods.length).fill(0) as number[];
+    for (const entry of scheduleRows) {
+      totals[periodIndexForSchedule(entry)] += entry.amountGross;
+    }
+    return totals;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scheduleRows, periods, periodIndexByStart, granularity]);
+
   const costPeriodTotals = useMemo(
     () => sumByPeriod(activeCostItems),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -339,11 +413,19 @@ export function BudgetPipelineTimesheetView() {
       periods.map(
         (_, i) =>
           (pipelinePeriodTotals[i] ?? 0) +
+          (schedulePeriodTotals[i] ?? 0) +
           (revenueScenarioPeriodTotals[i] ?? 0) -
           (costPeriodTotals[i] ?? 0) -
           (costScenarioPeriodTotals[i] ?? 0),
       ),
-    [periods, pipelinePeriodTotals, revenueScenarioPeriodTotals, costPeriodTotals, costScenarioPeriodTotals],
+    [
+      periods,
+      pipelinePeriodTotals,
+      schedulePeriodTotals,
+      revenueScenarioPeriodTotals,
+      costPeriodTotals,
+      costScenarioPeriodTotals,
+    ],
   );
 
   const netCumulative = useMemo(() => {
@@ -360,6 +442,13 @@ export function BudgetPipelineTimesheetView() {
     }
     return totals;
   }, [rows]);
+  const monthlySchedule = useMemo(() => {
+    const totals = new Array(12).fill(0) as number[];
+    for (const entry of scheduleRows) {
+      totals[Number((entry.entryDate as string).slice(5, 7)) - 1] += entry.amountGross;
+    }
+    return totals;
+  }, [scheduleRows]);
   const monthlyCost = useMemo(() => {
     const totals = new Array(12).fill(0) as number[];
     for (const item of activeCostItems) {
@@ -397,9 +486,10 @@ export function BudgetPipelineTimesheetView() {
   const monthlyNet = useMemo(
     () =>
       monthlyPipeline.map(
-        (_, i) => monthlyPipeline[i] + monthlyRevenueScenario[i] - monthlyCost[i] - monthlyCostScenario[i],
+        (_, i) =>
+          monthlyPipeline[i] + monthlySchedule[i] + monthlyRevenueScenario[i] - monthlyCost[i] - monthlyCostScenario[i],
       ),
-    [monthlyPipeline, monthlyRevenueScenario, monthlyCost, monthlyCostScenario],
+    [monthlyPipeline, monthlySchedule, monthlyRevenueScenario, monthlyCost, monthlyCostScenario],
   );
   const monthlyCumulative = useMemo(() => {
     let running = openingBalance;
@@ -615,6 +705,13 @@ export function BudgetPipelineTimesheetView() {
           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: COST_COLOR }} />
           Koszty
         </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="h-2.5 w-2.5 rounded-full border border-dashed border-white/60"
+            style={{ backgroundColor: SCHEDULE_CHIP_COLOR }}
+          />
+          Harmonogram spłat
+        </span>
         {canManage ? (
           <span className="ml-auto">Kliknij, żeby edytować lub dodać · przeciągnij pozycję, żeby przesunąć.</span>
         ) : null}
@@ -626,7 +723,7 @@ export function BudgetPipelineTimesheetView() {
         </p>
       ) : null}
 
-      {rows.length === 0 && costItems.length === 0 && scenarioActions.length === 0 ? (
+      {rows.length === 0 && scheduleRows.length === 0 && costItems.length === 0 && scenarioActions.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted">Brak danych w {year} roku.</p>
       ) : (
         <div ref={scrollRef} className="min-w-0 overflow-x-auto rounded-2xl border border-border/80">
@@ -699,12 +796,36 @@ export function BudgetPipelineTimesheetView() {
                         style={{ left: period.index * periodWidth, width: periodWidth }}
                       />
                     ))}
-                    {row.entries.map(({ entry, periodIndex, lane }) => {
+                    {row.entries.map(({ chip, periodIndex, lane }) => {
+                      if (chip.kind === "schedule") {
+                        const entry = chip.entry;
+                        return (
+                          <div
+                            key={chip.id}
+                            className="absolute flex items-center justify-center rounded-lg border border-dashed border-white/60 px-1 text-[11px] font-medium text-white shadow-sm"
+                            style={{
+                              left: periodIndex * periodWidth + 2,
+                              top: 6 + lane * LANE_HEIGHT_PX,
+                              width: periodWidth - 4,
+                              height: LANE_HEIGHT_PX - 4,
+                              backgroundColor: SCHEDULE_CHIP_COLOR,
+                              cursor: "default",
+                              zIndex: 1,
+                            }}
+                            onClick={(event) => event.stopPropagation()}
+                            title={`${formatMoney(entry.amountGross)} · Harmonogram spłat${entry.title ? " · " + entry.title : ""}`}
+                          >
+                            {formatCompactAmount(entry.amountGross)}
+                          </div>
+                        );
+                      }
+
+                      const entry = chip.entry;
                       const isDragging = drag?.entryId === entry.id;
                       const offsetPx = isDragging ? drag.offsetPx : 0;
                       return (
                         <div
-                          key={entry.id}
+                          key={chip.id}
                           className="absolute flex items-center justify-center rounded-lg px-1 text-[11px] font-medium text-white shadow-sm"
                           style={{
                             left: periodIndex * periodWidth + 2,

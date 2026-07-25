@@ -76,6 +76,22 @@ export async function fetchProjectSettlementEntries(
   return (data ?? []).map((row) => rowToSettlementEntry(row as EntryRow));
 }
 
+/** Wszystkie wpisy harmonogramu spłat (kind='schedule') całej firmy, bez ograniczenia dat —
+ * do wizualizacji Timesheet w Pipeline (kafelki harmonogramu obok ręcznie dodanych pozycji). */
+export async function fetchAllCompanyScheduleEntries(): Promise<ProjectSettlementEntry[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("project_settlement_entries")
+    .select("*")
+    .eq("kind", "schedule");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row) => rowToSettlementEntry(row as EntryRow));
+}
+
 /** Wpisy rozliczeń całej firmy (nie per-projekt) w danym oknie dat — do prognozy płynności. */
 export async function fetchCompanySettlementEntriesByKindInRange(
   kinds: Array<"payment" | "schedule">,
