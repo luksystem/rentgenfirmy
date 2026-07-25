@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Send, XCircle } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, CheckCircle2, Eye, Send, Settings2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, Input } from "@/components/ui/input";
@@ -18,6 +19,8 @@ type DistributionResult = {
   channel: string;
   ok: boolean;
   error?: string;
+  subject?: string;
+  message?: string;
 };
 
 function toDateInputValue(iso: string) {
@@ -51,6 +54,7 @@ export function PlanDistributionDialog({
   >({});
   const [notifyAdmins, setNotifyAdmins] = useState(false);
   const [sending, setSending] = useState(false);
+  const [mode, setMode] = useState<"idle" | "preview" | "sent">("idle");
   const [results, setResults] = useState<DistributionResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +64,7 @@ export function PlanDistributionDialog({
     setFrom(toDateInputValue(defaultFrom));
     setTo(toDateInputValue(defaultTo));
     setResults(null);
+    setMode("idle");
     setError(null);
   }, [open, loadTeamProfiles, defaultFrom, defaultTo]);
 
@@ -125,32 +130,37 @@ export function PlanDistributionDialog({
     }
   }
 
-  async function send() {
+  function buildRequestBody(dryRun: boolean) {
+    return {
+      from,
+      to,
+      employeeIds: [...selectedEmployeeIds],
+      clientSelections: Object.entries(clientSettings)
+        .filter(([clientId]) => candidateClientIds.has(clientId))
+        .map(([clientId, settings]) => ({ clientId, ...settings })),
+      notifyAdmins,
+      dryRun,
+    };
+  }
+
+  async function runDistribute(dryRun: boolean) {
     setSending(true);
     setError(null);
-    setResults(null);
     try {
       const response = await fetch("/api/resource-plan/distribute", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from,
-          to,
-          employeeIds: [...selectedEmployeeIds],
-          clientSelections: Object.entries(clientSettings)
-            .filter(([clientId]) => candidateClientIds.has(clientId))
-            .map(([clientId, settings]) => ({ clientId, ...settings })),
-          notifyAdmins,
-        }),
+        body: JSON.stringify(buildRequestBody(dryRun)),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(payload?.error ?? "Nie udało się rozesłać planu.");
+        throw new Error(payload?.error ?? "Nie udało się przygotować rozsyłki.");
       }
       setResults(payload.results ?? []);
+      setMode(dryRun ? "preview" : "sent");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Nie udało się rozesłać planu.");
+      setError(err instanceof Error ? err.message : "Nie udało się przygotować rozsyłki.");
     } finally {
       setSending(false);
     }
@@ -282,35 +292,76 @@ export function PlanDistributionDialog({
             Wyślij podsumowanie do administratorów (e-mail)
           </label>
 
+          <p className="flex items-center gap-1.5 text-[11px] text-muted">
+            <Settings2 className="h-3 w-3 shrink-0" />
+            Treść tych wiadomości (temat, tekst) edytujesz w{" "}
+            <Link href="/ustawienia/email" className="underline underline-offset-2" target="_blank">
+              Ustawienia → E-mail → Plan zasobów — rozsyłanie
+            </Link>
+            .
+          </p>
+
           {error ? (
             <div className="flex items-center gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
               <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {error}
             </div>
           ) : null}
 
-          <Button
-            type="button"
-            disabled={sending || (selectedEmployeeIds.size === 0 && Object.keys(clientSettings).length === 0 && !notifyAdmins)}
-            onClick={() => void send()}
-          >
-            <Send className="mr-1.5 h-4 w-4" />
-            {sending ? "Wysyłanie…" : "Roześlij"}
-          </Button>
+          {mode !== "sent" ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={sending || (selectedEmployeeIds.size === 0 && Object.keys(clientSettings).length === 0 && !notifyAdmins)}
+                onClick={() => void runDistribute(true)}
+              >
+                <Eye className="mr-1.5 h-4 w-4" />
+                {sending && mode === "idle" ? "Przygotowywanie…" : "Pokaż podgląd"}
+              </Button>
+              {mode === "preview" ? (
+                <Button type="button" disabled={sending} onClick={() => void runDistribute(false)}>
+                  <Send className="mr-1.5 h-4 w-4" />
+                  {sending ? "Wysyłanie…" : `Wyślij (${results?.length ?? 0})`}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
 
           {results ? (
-            <div className="grid gap-1">
+            <div className="grid gap-2">
+              <p className="text-xs font-medium text-foreground">
+                {mode === "preview" ? "Podgląd — jeszcze nic nie zostało wysłane" : "Wynik wysyłki"}
+              </p>
               {results.map((result, index) => (
                 <div
                   key={index}
                   className={cn(
-                    "flex items-center gap-2 rounded-lg border px-2 py-1.5 text-xs",
-                    result.ok ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-rose-500/30 bg-rose-500/10 text-rose-300",
+                    "grid gap-1 rounded-lg border px-2 py-1.5 text-xs",
+                    result.ok
+                      ? mode === "preview"
+                        ? "border-border/70 bg-surface"
+                        : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                      : "border-rose-500/30 bg-rose-500/10 text-rose-300",
                   )}
                 >
-                  {result.ok ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> : <XCircle className="h-3.5 w-3.5 shrink-0" />}
-                  <span className="font-medium">{result.recipientName}</span>
-                  <span className="text-muted">({result.channel})</span>
-                  {result.error ? <span>— {result.error}</span> : null}
+                  <div className="flex items-center gap-2">
+                    {mode === "sent" ? (
+                      result.ok ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                      ) : (
+                        <XCircle className="h-3.5 w-3.5 shrink-0" />
+                      )
+                    ) : null}
+                    <span className="font-medium">{result.recipientName}</span>
+                    <span className="text-muted">({result.channel})</span>
+                    {result.error ? <span>— {result.error}</span> : null}
+                  </div>
+                  {result.message ? (
+                    <div className="rounded-md bg-surface-muted/40 p-2 text-[11px] whitespace-pre-line text-foreground/80">
+                      {result.subject ? <div className="mb-1 font-medium text-foreground">{result.subject}</div> : null}
+                      {result.message}
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>

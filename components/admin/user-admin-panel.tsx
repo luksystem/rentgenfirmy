@@ -18,6 +18,7 @@ import {
 import { ADMIN_SETUP_ERROR_CODE, ADMIN_SETUP_STEPS } from "@/lib/auth/admin-setup";
 import { UserResourceProfileEditor } from "@/components/admin/user-resource-profile-editor";
 import { UserProjectAccessEditor } from "@/components/admin/user-project-access-editor";
+import { UserSlackEditor } from "@/components/admin/user-slack-editor";
 import { cn, formatDateTime } from "@/lib/utils";
 
 type UserFormState = UserProfileInput & {
@@ -700,6 +701,11 @@ export function UserAdminPanel() {
             <Card className={cn("lg:col-span-2", mobileView === "list" && "hidden lg:block")}>
               <CardContent className="py-6">
                 <UserProjectAccessEditor user={selectedUser} />
+              </CardContent>
+            </Card>
+            <Card className={cn("lg:col-span-2", mobileView === "list" && "hidden lg:block")}>
+              <CardContent className="py-6">
+                <UserSlackEditor userId={selectedUser.id} />
               </CardContent>
             </Card>
           </>

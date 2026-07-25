@@ -12,7 +12,8 @@ export type NotificationRoutingCategory =
   | "urlopy"
   | "moja_praca"
   | "cele"
-  | "zmiany";
+  | "zmiany"
+  | "plan_zasobow";
 
 export const NOTIFICATION_ROUTING_CATEGORY_LABELS: Record<NotificationRoutingCategory, string> = {
   projekty: "Projekty i ustalenia",
@@ -23,6 +24,7 @@ export const NOTIFICATION_ROUTING_CATEGORY_LABELS: Record<NotificationRoutingCat
   moja_praca: "Moja praca",
   cele: "Cele",
   zmiany: "Wnioski o zmianę",
+  plan_zasobow: "Plan zasobów — rozsyłanie",
 };
 
 export type NotificationScheduleDefaults = {
@@ -271,6 +273,51 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     supportsSms: true,
     emailTemplateKind: "settlement_report",
     defaults: { email: { client: true }, push: false, sms: false },
+  },
+  {
+    id: "resource_plan_employee_digest",
+    label: "Roześlij plan — pracownik",
+    description:
+      "Ręczna wysyłka planu pracy pracownikowi z Planu Zasobów (\"Roześlij plan\") — na Slacku, e-mail jako fallback gdy brak Slack ID.",
+    category: "plan_zasobow",
+    emailAudiences: ["user"],
+    supportsPush: false,
+    supportsSms: false,
+    emailTemplateKind: "resource_plan_employee_digest",
+    defaults: { email: { user: true }, push: false, sms: false },
+  },
+  {
+    id: "resource_plan_client_summary",
+    label: "Roześlij plan — podsumowanie dla klienta",
+    description: "Ręczna wysyłka podsumowania wykonanych/zaplanowanych prac klientowi (e-mail lub SMS, do wyboru przy wysyłce).",
+    category: "plan_zasobow",
+    emailAudiences: ["client"],
+    supportsPush: false,
+    supportsSms: true,
+    emailTemplateKind: "resource_plan_client_summary",
+    defaults: { email: { client: true }, push: false, sms: false },
+  },
+  {
+    id: "resource_plan_client_offer_notice",
+    label: "Roześlij plan — zapowiedź oferty dla klienta",
+    description: "Ręczna wysyłka krótkiej zapowiedzi, że klient wkrótce dostanie ofertę (samą ofertę wysyła się z modułu Oferty).",
+    category: "plan_zasobow",
+    emailAudiences: ["client"],
+    supportsPush: false,
+    supportsSms: true,
+    emailTemplateKind: "resource_plan_client_offer_notice",
+    defaults: { email: { client: true }, push: false, sms: false },
+  },
+  {
+    id: "resource_plan_admin_summary",
+    label: "Roześlij plan — podsumowanie dla administratorów",
+    description: "Ręczna wysyłka zbiorczego podsumowania planu (liczba elementów, godziny, osoby) do administratorów.",
+    category: "plan_zasobow",
+    emailAudiences: ["user"],
+    supportsPush: false,
+    supportsSms: false,
+    emailTemplateKind: "resource_plan_admin_summary",
+    defaults: { email: { user: true }, push: false, sms: false },
   },
 ];
 

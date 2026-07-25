@@ -22,6 +22,8 @@ export type PlanningAssistantProposalItem = {
   plannedHours: number;
   assigneeId: string | null;
   assigneeName: string;
+  projectId: string | null;
+  clientId: string | null;
   matchQuality: PlanningMatchQuality;
   missingCompetencyNames: string[];
 };
@@ -32,9 +34,19 @@ export type PlanningAssistantProposal = {
   warnings: string[];
 };
 
+export type PlanningAssistantProjectAssignment = {
+  projectId: string;
+  projectName: string;
+  clientId: string | null;
+};
+
 export type PlanningAssistantInput = {
   templateItem: DictionaryItem;
+  /** Ilość sztuk bez przypisania do konkretnego projektu — ignorowane, gdy podano `projectAssignments`
+   *  (wtedy jedna sztuka = jeden wybrany projekt, np. "6 rozdzielni w 6 różnych projektach"). */
   quantity: number;
+  /** Konkretne projekty, po jednym na sztukę — multiselect w dialogu. */
+  projectAssignments?: PlanningAssistantProjectAssignment[];
   deadlineIso: string;
   startFromIso?: string;
   titlePrefix?: string;
@@ -185,13 +197,17 @@ export function computePlanningAssistantProposal(params: {
     return { items: [], deadlineAtRisk: true, warnings };
   }
 
+  const projectAssignments = input.projectAssignments ?? [];
+  const effectiveQuantity = projectAssignments.length > 0 ? projectAssignments.length : input.quantity;
+
   const items: PlanningAssistantProposalItem[] = [];
   let deadlineAtRisk = false;
 
-  for (let unitIndex = 1; unitIndex <= input.quantity; unitIndex += 1) {
+  for (let unitIndex = 1; unitIndex <= effectiveQuantity; unitIndex += 1) {
     const candidate = candidates[(unitIndex - 1) % candidates.length];
     const dailyHoursLimit = candidate.profile.dailyHoursLimit ?? 8;
     const scheduled = scheduleUnitForCandidate(candidate, hoursPerUnit, dailyHoursLimit, deadline);
+    const project = projectAssignments[unitIndex - 1] ?? null;
 
     if (!scheduled) {
       deadlineAtRisk = true;
@@ -205,12 +221,14 @@ export function computePlanningAssistantProposal(params: {
     items.push({
       key: `${input.templateItem.id}-${unitIndex}`,
       unitIndex,
-      title: `${titlePrefix} ${unitIndex}/${input.quantity}`,
+      title: project ? `${titlePrefix} — ${project.projectName}` : `${titlePrefix} ${unitIndex}/${effectiveQuantity}`,
       startAt: scheduled.startAt,
       endAt: scheduled.endAt,
       plannedHours: hoursPerUnit,
       assigneeId: candidate.profile.id,
       assigneeName: getUserDisplayName(candidate.profile),
+      projectId: project?.projectId ?? null,
+      clientId: project?.clientId ?? null,
       matchQuality: candidate.matchQuality,
       missingCompetencyNames: candidate.missingCompetencyNames,
     });

@@ -26,6 +26,10 @@ export const EMAIL_TEMPLATE_KINDS = [
   "goal_review_due",
   "warranty_expiring",
   "settlement_report",
+  "resource_plan_employee_digest",
+  "resource_plan_client_summary",
+  "resource_plan_client_offer_notice",
+  "resource_plan_admin_summary",
 ] as const;
 
 export type EmailTemplateKind = (typeof EMAIL_TEMPLATE_KINDS)[number];
@@ -188,6 +192,27 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<EmailTemplateKind, TemplateVariabl
     { key: "project_name", label: "Nazwa projektu", channels: ["all"] },
     { key: "client_name", label: "Imię i nazwisko klienta", channels: ["email"] },
     { key: "public_url", label: "Link do dashboardu", channels: ["all"] },
+  ],
+  resource_plan_employee_digest: [
+    { key: "employee_name", label: "Imię i nazwisko pracownika", channels: ["all"] },
+    { key: "range_label", label: "Zakres dat", channels: ["all"] },
+    { key: "items_block", label: "Lista zadań w zakresie (wielolinijkowa)", channels: ["all"] },
+  ],
+  resource_plan_client_summary: [
+    { key: "client_name", label: "Imię i nazwisko klienta", channels: ["all"] },
+    { key: "range_label", label: "Zakres dat", channels: ["all"] },
+    { key: "done_block", label: "Zrealizowane prace + feedback (wielolinijkowa)", channels: ["all"] },
+    { key: "upcoming_block", label: "Zaplanowane prace (wielolinijkowa)", channels: ["all"] },
+  ],
+  resource_plan_client_offer_notice: [
+    { key: "client_name", label: "Imię i nazwisko klienta", channels: ["all"] },
+    { key: "range_label", label: "Zakres dat", channels: ["all"] },
+  ],
+  resource_plan_admin_summary: [
+    { key: "range_label", label: "Zakres dat", channels: ["all"] },
+    { key: "item_count", label: "Liczba elementów planu", channels: ["all"] },
+    { key: "total_hours", label: "Suma godzin", channels: ["all"] },
+    { key: "assignee_count", label: "Liczba zaangażowanych osób", channels: ["all"] },
   ],
 };
 
@@ -457,6 +482,62 @@ export function defaultEmailTemplates(): Record<EmailTemplateKind, EmailTemplate
       disclaimer: "",
       emailEnabled: true,
       sms: 'Rozliczenie projektu "{{project_name}}" gotowe: {{public_url}}',
+      smsManagedElsewhere: false,
+      pushTitle: "",
+      pushBody: "",
+    },
+    resource_plan_employee_digest: {
+      label: "Plan pracy dla pracownika",
+      description:
+        "Wysyłka planu pracy pracownikowi z Planu Zasobów (\"Roześlij plan\") — treść trafia na Slacka, e-mail jest fallbackiem gdy brak Slack ID.",
+      subject: "Twój plan pracy ({{range_label}})",
+      body: "Cześć {{employee_name}}!\n\nTwój plan na {{range_label}}:\n\n{{items_block}}",
+      eyebrow: "Plan zasobów",
+      disclaimer: "",
+      emailEnabled: true,
+      sms: "",
+      smsManagedElsewhere: false,
+      pushTitle: "",
+      pushBody: "",
+    },
+    resource_plan_client_summary: {
+      label: "Podsumowanie prac dla klienta",
+      description: "Wysyłka podsumowania wykonanych/zaplanowanych prac klientowi z Planu Zasobów (\"Roześlij plan\").",
+      subject: "Podsumowanie prac ({{range_label}})",
+      body:
+        "Dzień dobry {{client_name}},\n\npodsumowanie prac w okresie {{range_label}}:\n\n{{done_block}}\n\n{{upcoming_block}}\n\nW razie pytań prosimy o kontakt.",
+      eyebrow: "Plan zasobów",
+      disclaimer: "",
+      emailEnabled: true,
+      sms: "Dzien dobry {{client_name}}, podsumowanie prac ({{range_label}}) wyslalismy mailem. W razie pytan prosimy o kontakt.",
+      smsManagedElsewhere: false,
+      pushTitle: "",
+      pushBody: "",
+    },
+    resource_plan_client_offer_notice: {
+      label: "Zapowiedź oferty dla klienta",
+      description: "Krótka zapowiedź, że klient wkrótce dostanie ofertę — samą ofertę wysyła się osobno z modułu Oferty.",
+      subject: "Przygotowujemy dla Państwa ofertę",
+      body:
+        "Dzień dobry {{client_name}},\n\ndziękujemy za dotychczasową współpracę w okresie {{range_label}} — przygotowujemy dla Państwa ofertę na kolejny etap prac, wkrótce się z Państwem skontaktujemy.\n\nW razie pytań prosimy o kontakt.",
+      eyebrow: "Plan zasobów",
+      disclaimer: "",
+      emailEnabled: true,
+      sms: "Dzien dobry {{client_name}}, przygotowujemy dla Panstwa oferte na kolejny etap prac - wkrotce sie skontaktujemy.",
+      smsManagedElsewhere: false,
+      pushTitle: "",
+      pushBody: "",
+    },
+    resource_plan_admin_summary: {
+      label: "Podsumowanie planu dla administratorów",
+      description: "Zbiorcze podsumowanie planu (liczba elementów, godziny, osoby) wysyłane do administratorów.",
+      subject: "Podsumowanie planu ({{range_label}})",
+      body:
+        "Podsumowanie planu {{range_label}}: {{item_count}} elementów, ~{{total_hours}}h, {{assignee_count}} osób zaangażowanych.",
+      eyebrow: "Plan zasobów",
+      disclaimer: "",
+      emailEnabled: true,
+      sms: "",
       smsManagedElsewhere: false,
       pushTitle: "",
       pushBody: "",

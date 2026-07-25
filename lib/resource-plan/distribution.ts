@@ -1,6 +1,10 @@
-// Asystent rozsyłania planów — buduje treść wiadomości dla pracowników (plan pracy w zakresie
-// dat) i klientów (informacja o planowanym przyjeździe) z elementów planu zasobów. Czysta logika,
-// bez I/O — wysyłką (Slack/e-mail/SMS) zajmuje się app/api/resource-plan/distribute/route.ts.
+// Asystent rozsyłania planów — buduje zmienne {{var}} podstawiane w szablonach z Ustawienia >
+// E-mail (kinds: resource_plan_employee_digest / resource_plan_client_summary /
+// resource_plan_client_offer_notice / resource_plan_admin_summary — patrz
+// lib/email/email-settings.ts i lib/email/notification-routing.ts). Samo renderowanie
+// (podstawienie {{var}} do treści skonfigurowanej przez użytkownika w ustawieniach) robi
+// app/api/resource-plan/distribute/route.ts przez renderEmailSubject/renderEmailTemplateString/
+// renderPlainTemplateString — ten plik dostarcza tylko dane wejściowe, bez I/O.
 
 import type { ResourcePlanItem } from "@/lib/resource-plan/types";
 
@@ -23,78 +27,82 @@ function formatRange(startAt: string, endAt: string): string {
   return start === end ? formatDate(startAt) : `${formatDate(startAt)} – ${formatDate(endAt)}`;
 }
 
-export function buildEmployeeDigestMessage(params: {
+export function formatRangeLabel(from: string, to: string): string {
+  return `${formatDate(from)} – ${formatDate(to)}`;
+}
+
+export function buildEmployeeDigestVariables(params: {
   employeeName: string;
   from: string;
   to: string;
   items: DistributionPlanItem[];
-}): string {
+}): Record<string, string> {
   const { employeeName, from, to, items } = params;
-  const rangeLabel = `${formatDate(from)} – ${formatDate(to)}`;
-  if (items.length === 0) {
-    return `Cześć ${employeeName}! W okresie ${rangeLabel} nie masz jeszcze żadnych zaplanowanych zadań w Planie Zasobów.`;
-  }
-  const lines = items
-    .slice()
-    .sort((a, b) => a.startAt.localeCompare(b.startAt))
-    .map((item) => `• ${item.title || "Element planu"} — ${formatRange(item.startAt, item.endAt)}`);
-  return [`Cześć ${employeeName}! Twój plan na ${rangeLabel}:`, ...lines].join("\n");
+  const itemsBlock =
+    items.length === 0
+      ? "Brak zaplanowanych zadań w tym okresie."
+      : items
+          .slice()
+          .sort((a, b) => a.startAt.localeCompare(b.startAt))
+          .map((item) => `• ${item.title || "Element planu"} — ${formatRange(item.startAt, item.endAt)}`)
+          .join("\n");
+
+  return {
+    employee_name: employeeName,
+    range_label: formatRangeLabel(from, to),
+    items_block: itemsBlock,
+  };
 }
 
-export function buildClientDigestMessage(params: {
+export function buildClientSummaryVariables(params: {
   clientName: string;
   from: string;
   to: string;
   items: DistributionPlanItem[];
-  /** "summary" (domyślnie) — co zrobiono / co planujemy; "offer_notice" — krótka zapowiedź
-   *  oferty, bez szczegółów prac (samą ofertę wysyła się dalej z istniejącego modułu Oferty). */
-  messageType?: ClientDigestMessageType;
-}): string {
-  const { clientName, from, to, items, messageType = "summary" } = params;
-  const rangeLabel = `${formatDate(from)} – ${formatDate(to)}`;
-
-  if (messageType === "offer_notice") {
-    return [
-      `Dzień dobry ${clientName},`,
-      `dziękujemy za dotychczasową współpracę w okresie ${rangeLabel} — przygotowujemy dla Państwa ofertę na kolejny etap prac, wkrótce się z Państwem skontaktujemy.`,
-      "W razie pytań prosimy o kontakt.",
-    ].join("\n");
-  }
-
-  if (items.length === 0) {
-    return `Dzień dobry ${clientName}, informujemy, że w okresie ${rangeLabel} nie mamy jeszcze zaplanowanych prac u Państwa.`;
-  }
-
+}): Record<string, string> {
+  const { clientName, from, to, items } = params;
   const done = items.filter((item) => item.completionFeedback.trim().length > 0);
   const upcoming = items.filter((item) => item.completionFeedback.trim().length === 0);
 
-  const doneLines = done.map((item) => `• ${item.title || "Prace"} — ${item.completionFeedback.trim()}`);
+  const doneBlock =
+    done.length > 0
+      ? `Zrealizowane:\n${done.map((item) => `• ${item.title || "Prace"} — ${item.completionFeedback.trim()}`).join("\n")}`
+      : "";
   const upcomingRanges = [...new Set(upcoming.map((item) => formatRange(item.startAt, item.endAt)))];
   const upcomingTitles = [...new Set(upcoming.map((item) => item.title).filter(Boolean))];
+  const upcomingBlock =
+    upcoming.length > 0 ? `Zaplanowane: ${upcomingTitles.join(", ")} — termin: ${upcomingRanges.join(", ")}.` : "";
 
-  return [
-    `Dzień dobry ${clientName},`,
-    `podsumowanie prac w okresie ${rangeLabel}:`,
-    doneLines.length > 0 ? `Zrealizowane:\n${doneLines.join("\n")}` : null,
-    upcoming.length > 0
-      ? `Zaplanowane: ${upcomingTitles.join(", ")} — termin: ${upcomingRanges.join(", ")}.`
-      : null,
-    "W razie pytań prosimy o kontakt.",
-  ]
-    .filter(Boolean)
-    .join("\n");
+  return {
+    client_name: clientName,
+    range_label: formatRangeLabel(from, to),
+    done_block: doneBlock,
+    upcoming_block: upcomingBlock,
+  };
 }
 
-export function buildAdminSummaryMessage(params: { from: string; to: string; items: DistributionPlanItem[] }): string {
+export function buildClientOfferNoticeVariables(params: { clientName: string; from: string; to: string }): Record<string, string> {
+  return {
+    client_name: params.clientName,
+    range_label: formatRangeLabel(params.from, params.to),
+  };
+}
+
+export function buildAdminSummaryVariables(params: { from: string; to: string; items: DistributionPlanItem[] }): Record<string, string> {
   const { from, to, items } = params;
-  const rangeLabel = `${formatDate(from)} – ${formatDate(to)}`;
   const totalHours = items.reduce(
     (sum, item) =>
       sum + (item.plannedHours ?? Math.max(0, (new Date(item.endAt).getTime() - new Date(item.startAt).getTime()) / 3_600_000)),
     0,
   );
   const assignees = new Set(items.map((item) => item.assigneeId).filter(Boolean));
-  return `Podsumowanie planu ${rangeLabel}: ${items.length} elementów, ~${Math.round(totalHours)}h, ${assignees.size} osób zaangażowanych.`;
+
+  return {
+    range_label: formatRangeLabel(from, to),
+    item_count: String(items.length),
+    total_hours: String(Math.round(totalHours)),
+    assignee_count: String(assignees.size),
+  };
 }
 
 /** Elementy planu, które dotykają zakresu [from, to] (nakładanie, jak w Gantcie/liście). */

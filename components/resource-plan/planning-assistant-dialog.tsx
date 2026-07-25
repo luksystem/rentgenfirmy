@@ -78,7 +78,8 @@ export function PlanningAssistantDialog({
   const [templateId, setTemplateId] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [deadline, setDeadline] = useState("");
-  const [projectId, setProjectId] = useState("");
+  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
+  const [projectFilter, setProjectFilter] = useState("");
   const [proposal, setProposal] = useState<PlanningAssistantProposal | null>(null);
   const [removedKeys, setRemovedKeys] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
@@ -106,6 +107,21 @@ export function PlanningAssistantDialog({
   const selectedTemplate = templateOptions.find((option) => option.id === templateId) ?? null;
   const visibleItems = proposal ? proposal.items.filter((item) => !removedKeys.has(item.key)) : [];
 
+  const activeProjects = projects.filter((project) => project.isActive);
+  const filteredProjects = projectFilter.trim()
+    ? activeProjects.filter((project) => project.name.toLowerCase().includes(projectFilter.trim().toLowerCase()))
+    : activeProjects;
+  const selectedProjects = activeProjects.filter((project) => selectedProjectIds.has(project.id));
+
+  function toggleProject(projectId: string) {
+    setSelectedProjectIds((current) => {
+      const next = new Set(current);
+      if (next.has(projectId)) next.delete(projectId);
+      else next.add(projectId);
+      return next;
+    });
+  }
+
   function buildProposal() {
     setError(null);
     if (!selectedTemplate) {
@@ -116,8 +132,8 @@ export function PlanningAssistantDialog({
       setError("Podaj termin.");
       return;
     }
-    if (quantity < 1) {
-      setError("Ilość musi być co najmniej 1.");
+    if (selectedProjects.length === 0 && quantity < 1) {
+      setError("Ilość musi być co najmniej 1 albo wybierz projekty.");
       return;
     }
 
@@ -125,6 +141,11 @@ export function PlanningAssistantDialog({
       input: {
         templateItem: selectedTemplate,
         quantity,
+        projectAssignments: selectedProjects.map((project) => ({
+          projectId: project.id,
+          projectName: project.name,
+          clientId: project.clientId ?? null,
+        })),
         deadlineIso: deadline,
         startFromIso: todayIso(),
       },
@@ -142,13 +163,12 @@ export function PlanningAssistantDialog({
     if (!selectedTemplate || visibleItems.length === 0) return;
     setSaving(true);
     setError(null);
-    const project = projects.find((p) => p.id === projectId) ?? null;
     const meta = selectedTemplate.metadata as Record<string, unknown>;
     try {
       for (const item of visibleItems) {
         const input: ResourcePlanItemInput = {
-          projectId: project?.id ?? null,
-          clientId: project?.clientId ?? null,
+          projectId: item.projectId,
+          clientId: item.clientId,
           processStageId: null,
           taskId: null,
           serviceIntakeRequestId: null,
@@ -168,7 +188,7 @@ export function PlanningAssistantDialog({
           laborBudget: (meta.laborBudget as number | null) ?? null,
           materialBudget: (meta.materialBudget as number | null) ?? null,
           travelBudget: (meta.travelBudget as number | null) ?? null,
-          notes: `Wygenerowane przez asystenta planowania — ${selectedTemplate.name} (${item.unitIndex}/${quantity}).`,
+          notes: `Wygenerowane przez asystenta planowania — ${selectedTemplate.name} (${item.unitIndex}/${proposal?.items.length ?? visibleItems.length}).`,
           completionFeedback: "",
           acceptedRisk: false,
           linkedGroupId: null,
@@ -213,29 +233,50 @@ export function PlanningAssistantDialog({
                 ))}
               </Select>
             </Field>
-            <Field label="Ilość sztuk">
+            <Field label={selectedProjects.length > 0 ? "Ilość sztuk (wg wybranych projektów)" : "Ilość sztuk"}>
               <Input
                 type="number"
                 min={1}
-                value={quantity}
+                disabled={selectedProjects.length > 0}
+                value={selectedProjects.length > 0 ? selectedProjects.length : quantity}
                 onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
               />
             </Field>
-            <Field label="Termin (do kiedy)">
+            <Field label="Termin (do kiedy)" className="sm:col-span-2">
               <Input type="date" value={deadline} onChange={(event) => setDeadline(event.target.value)} />
             </Field>
-            <Field label="Projekt (opcjonalnie)">
-              <Select value={projectId} onChange={(event) => setProjectId(event.target.value)}>
-                <option value="">Bez projektu</option>
-                {projects
-                  .filter((project) => project.isActive)
-                  .map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-              </Select>
-            </Field>
+          </div>
+
+          <div className="grid gap-2">
+            <p className="text-xs font-medium text-foreground">
+              Projekty (opcjonalnie) — zaznacz kilka, żeby zaplanować po jednej sztuce w każdym z nich (np. 6
+              rozdzielni w 6 różnych projektach)
+            </p>
+            <Input
+              placeholder="Szukaj projektu…"
+              value={projectFilter}
+              onChange={(event) => setProjectFilter(event.target.value)}
+              className="h-8 text-xs"
+            />
+            <div className="grid max-h-40 gap-1 overflow-y-auto rounded-lg border border-border/70 p-2">
+              {filteredProjects.length === 0 ? (
+                <p className="text-xs text-muted">Brak pasujących projektów.</p>
+              ) : (
+                filteredProjects.map((project) => (
+                  <label key={project.id} className="flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={selectedProjectIds.has(project.id)}
+                      onChange={() => toggleProject(project.id)}
+                    />
+                    {project.name}
+                  </label>
+                ))
+              )}
+            </div>
+            {selectedProjects.length > 0 ? (
+              <p className="text-[11px] text-muted">Wybrano: {selectedProjects.map((p) => p.name).join(", ")}</p>
+            ) : null}
           </div>
 
           {error ? (

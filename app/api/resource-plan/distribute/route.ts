@@ -4,19 +4,23 @@ import { jsonError, HttpError } from "@/lib/auth/http-error";
 import { hasFullAppAccess, getUserDisplayName } from "@/lib/auth/types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
-  buildAdminSummaryMessage,
-  buildClientDigestMessage,
-  buildEmployeeDigestMessage,
+  buildAdminSummaryVariables,
+  buildClientOfferNoticeVariables,
+  buildClientSummaryVariables,
+  buildEmployeeDigestVariables,
   filterItemsInRange,
   type DistributionPlanItem,
 } from "@/lib/resource-plan/distribution";
 import { sendSlackDirectMessage } from "@/lib/slack/send-slack";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { sendSms } from "@/lib/sms/sendSms";
-import { buildEmailShell, escapeEmailHtml } from "@/lib/email/layout";
+import { buildEmailShell } from "@/lib/email/layout";
+import { renderEmailSubject, renderEmailTemplateString } from "@/lib/email/template-render";
+import { renderPlainTemplateString } from "@/lib/notifications/dispatch";
 import { fetchEmailSettingsServer } from "@/lib/supabase/email-settings-server";
 import { resolveCompanyProfileDocumentServer } from "@/lib/supabase/company-profile-server";
 import { formatPartyName } from "@/lib/party/display-name";
+import type { EmailTemplateSettings } from "@/lib/email/email-settings";
 
 type ClientSelection = { clientId: string; channel: "email" | "sms"; messageType: "summary" | "offer_notice" };
 
@@ -27,6 +31,9 @@ type DistributionResult = {
   channel: string;
   ok: boolean;
   error?: string;
+  /** Podgląd wysyłanej treści — zawsze wypełnione (także przy realnej wysyłce, nie tylko dryRun). */
+  subject?: string;
+  message?: string;
 };
 
 function parseBody(body: unknown) {
@@ -53,21 +60,18 @@ function parseBody(body: unknown) {
         }))
     : [];
   const notifyAdmins = record.notifyAdmins === true;
-  return { from, to, employeeIds, clientSelections, notifyAdmins };
+  const dryRun = record.dryRun === true;
+  return { from, to, employeeIds, clientSelections, notifyAdmins, dryRun };
 }
 
-async function sendPlainEmail(input: {
+async function sendRenderedEmail(input: {
   to: string;
   subject: string;
-  text: string;
+  bodyHtml: string;
   brand: Awaited<ReturnType<typeof fetchEmailSettingsServer>>["brand"];
   company: Awaited<ReturnType<typeof resolveCompanyProfileDocumentServer>> | null;
 }) {
-  const html = buildEmailShell({
-    content: `<p style="white-space:pre-line;">${escapeEmailHtml(input.text)}</p>`,
-    brand: input.brand,
-    company: input.company,
-  });
+  const html = buildEmailShell({ content: input.bodyHtml, brand: input.brand, company: input.company });
   await sendTransactionalEmail({ to: input.to, subject: input.subject, html });
 }
 
@@ -79,31 +83,50 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { from, to, employeeIds, clientSelections, notifyAdmins } = parseBody(body);
+    const { from, to, employeeIds, clientSelections, notifyAdmins, dryRun } = parseBody(body);
 
     const admin = getSupabaseAdmin();
     const results: DistributionResult[] = [];
 
     const { data: itemRows, error: itemsError } = await admin
       .from("resource_plan_items")
-      .select("id, title, start_at, end_at, planned_hours, assignee_id, client_id, completion_feedback")
+      .select("id, title, start_at, end_at, planned_hours, assignee_id, client_id, project_id, completion_feedback")
       .lte("start_at", `${to}T23:59:59`)
       .gte("end_at", `${from}T00:00:00`);
     if (itemsError) {
       throw new Error(itemsError.message);
     }
 
+    // Klient elementu bywa ustawiony tylko przez projekt (item.client_id puste, project_id
+    // wskazuje projekt z klientem) — bez tego dociągnięcia podsumowania dla takich klientów
+    // wychodziłyby puste, mimo że w Gantcie/dialogu i tak są liczeni jako "klienci z pracami".
+    const projectIds = [...new Set((itemRows ?? []).map((row) => row.project_id as string | null).filter(Boolean))] as string[];
+    const clientIdByProjectId = new Map<string, string | null>();
+    if (projectIds.length > 0) {
+      const { data: projectRows, error: projectsError } = await admin
+        .from("projects")
+        .select("id, client_id")
+        .in("id", projectIds);
+      if (projectsError) {
+        throw new Error(projectsError.message);
+      }
+      (projectRows ?? []).forEach((row) => clientIdByProjectId.set(row.id as string, row.client_id as string | null));
+    }
+
     const items: DistributionPlanItem[] = filterItemsInRange(
-      (itemRows ?? []).map((row) => ({
-        id: row.id as string,
-        title: row.title as string,
-        startAt: row.start_at as string,
-        endAt: row.end_at as string,
-        plannedHours: row.planned_hours as number | null,
-        assigneeId: row.assignee_id as string | null,
-        clientId: row.client_id as string | null,
-        completionFeedback: (row.completion_feedback as string | null) ?? "",
-      })),
+      (itemRows ?? []).map((row) => {
+        const projectId = row.project_id as string | null;
+        return {
+          id: row.id as string,
+          title: row.title as string,
+          startAt: row.start_at as string,
+          endAt: row.end_at as string,
+          plannedHours: row.planned_hours as number | null,
+          assigneeId: row.assignee_id as string | null,
+          clientId: (row.client_id as string | null) ?? (projectId ? clientIdByProjectId.get(projectId) ?? null : null),
+          completionFeedback: (row.completion_feedback as string | null) ?? "",
+        };
+      }),
       `${from}T00:00:00`,
       `${to}T23:59:59`,
     );
@@ -111,7 +134,16 @@ export async function POST(request: Request) {
     const settings = await fetchEmailSettingsServer();
     const company = await resolveCompanyProfileDocumentServer().catch(() => null);
 
+    function renderPlain(template: EmailTemplateSettings, variables: Record<string, string>) {
+      return {
+        subject: renderEmailSubject(template.subject, variables),
+        plainBody: renderPlainTemplateString(template.body, variables),
+        emailHtml: renderEmailTemplateString(template.body, variables),
+      };
+    }
+
     if (employeeIds.length > 0) {
+      const template = settings.templates.resource_plan_employee_digest;
       const { data: employeeRows, error: employeesError } = await admin
         .from("profiles")
         .select("id, first_name, last_name, email, slack_user_id")
@@ -123,11 +155,23 @@ export async function POST(request: Request) {
       for (const employee of employeeRows ?? []) {
         const name = getUserDisplayName({ firstName: employee.first_name, lastName: employee.last_name, email: employee.email });
         const employeeItems = items.filter((item) => item.assigneeId === employee.id);
-        const message = buildEmployeeDigestMessage({ employeeName: name, from, to, items: employeeItems });
+        const variables = buildEmployeeDigestVariables({ employeeName: name, from, to, items: employeeItems });
+        const rendered = renderPlain(template, variables);
         const slackUserId = (employee as { slack_user_id: string | null }).slack_user_id;
 
         if (slackUserId) {
-          const sent = await sendSlackDirectMessage({ slackUserId, text: message });
+          if (dryRun) {
+            results.push({
+              kind: "employee",
+              recipientId: employee.id,
+              recipientName: name,
+              channel: "slack",
+              ok: true,
+              message: rendered.plainBody,
+            });
+            continue;
+          }
+          const sent = await sendSlackDirectMessage({ slackUserId, text: rendered.plainBody });
           results.push({
             kind: "employee",
             recipientId: employee.id,
@@ -135,17 +179,38 @@ export async function POST(request: Request) {
             channel: "slack",
             ok: sent.ok,
             error: sent.ok ? undefined : "error" in sent ? sent.error : "Slack nie skonfigurowany (SLACK_BOT_TOKEN).",
+            message: rendered.plainBody,
           });
         } else if (employee.email) {
+          if (dryRun) {
+            results.push({
+              kind: "employee",
+              recipientId: employee.id,
+              recipientName: name,
+              channel: "email",
+              ok: true,
+              subject: rendered.subject,
+              message: rendered.plainBody,
+            });
+            continue;
+          }
           try {
-            await sendPlainEmail({
+            await sendRenderedEmail({
               to: employee.email,
-              subject: `Twój plan pracy (${from} – ${to})`,
-              text: message,
+              subject: rendered.subject,
+              bodyHtml: rendered.emailHtml,
               brand: settings.brand,
               company,
             });
-            results.push({ kind: "employee", recipientId: employee.id, recipientName: name, channel: "email", ok: true });
+            results.push({
+              kind: "employee",
+              recipientId: employee.id,
+              recipientName: name,
+              channel: "email",
+              ok: true,
+              subject: rendered.subject,
+              message: rendered.plainBody,
+            });
           } catch (error) {
             results.push({
               kind: "employee",
@@ -184,28 +249,50 @@ export async function POST(request: Request) {
         if (!client) continue;
         const name = formatPartyName({ firstName: client.first_name, lastName: client.last_name });
         const clientItems = items.filter((item) => item.clientId === client.id);
-        const message = buildClientDigestMessage({
-          clientName: name,
-          from,
-          to,
-          items: clientItems,
-          messageType: selection.messageType,
-        });
+        const template =
+          selection.messageType === "offer_notice"
+            ? settings.templates.resource_plan_client_offer_notice
+            : settings.templates.resource_plan_client_summary;
+        const variables =
+          selection.messageType === "offer_notice"
+            ? buildClientOfferNoticeVariables({ clientName: name, from, to })
+            : buildClientSummaryVariables({ clientName: name, from, to, items: clientItems });
+        const rendered = renderPlain(template, variables);
 
         if (selection.channel === "email") {
           if (!client.email) {
             results.push({ kind: "client", recipientId: client.id, recipientName: name, channel: "email", ok: false, error: "Brak adresu e-mail." });
             continue;
           }
+          if (dryRun) {
+            results.push({
+              kind: "client",
+              recipientId: client.id,
+              recipientName: name,
+              channel: "email",
+              ok: true,
+              subject: rendered.subject,
+              message: rendered.plainBody,
+            });
+            continue;
+          }
           try {
-            await sendPlainEmail({
+            await sendRenderedEmail({
               to: client.email,
-              subject: "Planowane prace u Państwa",
-              text: message,
+              subject: rendered.subject,
+              bodyHtml: rendered.emailHtml,
               brand: settings.brand,
               company,
             });
-            results.push({ kind: "client", recipientId: client.id, recipientName: name, channel: "email", ok: true });
+            results.push({
+              kind: "client",
+              recipientId: client.id,
+              recipientName: name,
+              channel: "email",
+              ok: true,
+              subject: rendered.subject,
+              message: rendered.plainBody,
+            });
           } catch (error) {
             results.push({
               kind: "client",
@@ -217,13 +304,25 @@ export async function POST(request: Request) {
             });
           }
         } else {
+          const smsText = renderPlainTemplateString(template.sms, variables);
           if (!client.phone) {
             results.push({ kind: "client", recipientId: client.id, recipientName: name, channel: "sms", ok: false, error: "Brak numeru telefonu." });
             continue;
           }
+          if (dryRun) {
+            results.push({
+              kind: "client",
+              recipientId: client.id,
+              recipientName: name,
+              channel: "sms",
+              ok: true,
+              message: smsText,
+            });
+            continue;
+          }
           try {
-            await sendSms({ phone: client.phone, message, metadata: { type: "resource_plan_distribution" } });
-            results.push({ kind: "client", recipientId: client.id, recipientName: name, channel: "sms", ok: true });
+            await sendSms({ phone: client.phone, message: smsText, metadata: { type: "resource_plan_distribution" } });
+            results.push({ kind: "client", recipientId: client.id, recipientName: name, channel: "sms", ok: true, message: smsText });
           } catch (error) {
             results.push({
               kind: "client",
@@ -239,6 +338,7 @@ export async function POST(request: Request) {
     }
 
     if (notifyAdmins) {
+      const template = settings.templates.resource_plan_admin_summary;
       const { data: adminRows, error: adminError } = await admin
         .from("profiles")
         .select("id, first_name, last_name, email")
@@ -247,7 +347,8 @@ export async function POST(request: Request) {
       if (adminError) {
         throw new Error(adminError.message);
       }
-      const message = buildAdminSummaryMessage({ from, to, items });
+      const variables = buildAdminSummaryVariables({ from, to, items });
+      const rendered = renderPlain(template, variables);
       for (const adminProfile of adminRows ?? []) {
         const name = getUserDisplayName({
           firstName: adminProfile.first_name,
@@ -258,15 +359,35 @@ export async function POST(request: Request) {
           results.push({ kind: "admin", recipientId: adminProfile.id, recipientName: name, channel: "email", ok: false, error: "Brak adresu e-mail." });
           continue;
         }
+        if (dryRun) {
+          results.push({
+            kind: "admin",
+            recipientId: adminProfile.id,
+            recipientName: name,
+            channel: "email",
+            ok: true,
+            subject: rendered.subject,
+            message: rendered.plainBody,
+          });
+          continue;
+        }
         try {
-          await sendPlainEmail({
+          await sendRenderedEmail({
             to: adminProfile.email,
-            subject: `Podsumowanie planu (${from} – ${to})`,
-            text: message,
+            subject: rendered.subject,
+            bodyHtml: rendered.emailHtml,
             brand: settings.brand,
             company,
           });
-          results.push({ kind: "admin", recipientId: adminProfile.id, recipientName: name, channel: "email", ok: true });
+          results.push({
+            kind: "admin",
+            recipientId: adminProfile.id,
+            recipientName: name,
+            channel: "email",
+            ok: true,
+            subject: rendered.subject,
+            message: rendered.plainBody,
+          });
         } catch (error) {
           results.push({
             kind: "admin",
@@ -280,7 +401,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ results });
+    return NextResponse.json({ results, dryRun });
   } catch (error) {
     return jsonError(error);
   }
