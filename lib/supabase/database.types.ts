@@ -1801,6 +1801,8 @@ export type ProfileRow = {
   monthly_review_enabled: boolean;
   offer_approval_bypass: boolean;
   client_id: string | null;
+  /** ID użytkownika w Slacku (np. U0123ABC456) — do wysyłki powiadomień DM. */
+  slack_user_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -1825,6 +1827,7 @@ export type ProfileInsert = {
   monthly_review_enabled?: boolean;
   offer_approval_bypass?: boolean;
   client_id?: string | null;
+  slack_user_id?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -2099,6 +2102,7 @@ export type ResourcePlanItemRow = {
   material_budget: number | null;
   travel_budget: number | null;
   notes: string;
+  completion_feedback: string;
   accepted_risk: boolean;
   created_by: string | null;
   /** Elementy z tym samym linked_group_id to części jednego przydziału podzielonego w czasie. */
@@ -2133,6 +2137,7 @@ export type ResourcePlanItemInsert = {
   material_budget?: number | null;
   travel_budget?: number | null;
   notes?: string;
+  completion_feedback?: string;
   accepted_risk?: boolean;
   created_by?: string | null;
   linked_group_id?: string | null;

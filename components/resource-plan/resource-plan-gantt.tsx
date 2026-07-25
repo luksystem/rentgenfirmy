@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
-import { AlertTriangle, ChevronLeft, ChevronRight, Plus, Scissors, ShieldCheck, X } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Plus, Scissors, Send, ShieldCheck, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
@@ -45,6 +45,9 @@ import { useProcessStore } from "@/store/process-store";
 import { useResourcePlanStore } from "@/store/resource-plan-store";
 import { useUserResourceStore } from "@/store/user-resource-store";
 import { ResourcePlanSidePanel } from "@/components/resource-plan/resource-plan-side-panel";
+import { ResourcePlanWorkloadPanel } from "@/components/resource-plan/resource-plan-workload-panel";
+import { PlanningAssistantDialog } from "@/components/resource-plan/planning-assistant-dialog";
+import { PlanDistributionDialog } from "@/components/resource-plan/plan-distribution-dialog";
 import { LeavePlanningPreviewDialog } from "@/components/leave/leave-planning-preview-dialog";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -114,6 +117,8 @@ export function ResourcePlanGantt() {
   const [defaultStartIso, setDefaultStartIso] = useState<string | undefined>(undefined);
   const [initialTemplateId, setInitialTemplateId] = useState<string | undefined>(undefined);
   const [dragWarning, setDragWarning] = useState<string | null>(null);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [distributionOpen, setDistributionOpen] = useState(false);
   const [dragHoverRowId, setDragHoverRowId] = useState<string | null>(null);
 
   const dayWidthPx = GANTT_ZOOM_DAY_WIDTH_PX[zoom];
@@ -548,6 +553,24 @@ export function ResourcePlanGantt() {
               <Plus className="mr-1.5 h-4 w-4" />
               Nowy element planu
             </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full sm:w-auto"
+              onClick={() => setAssistantOpen(true)}
+            >
+              <Sparkles className="mr-1.5 h-4 w-4" />
+              Asystent planowania
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full sm:w-auto"
+              onClick={() => setDistributionOpen(true)}
+            >
+              <Send className="mr-1.5 h-4 w-4" />
+              Roześlij plan
+            </Button>
           </div>
         </div>
       </div>
@@ -756,6 +779,20 @@ export function ResourcePlanGantt() {
           </div>
         </div>
       )}
+
+      {!showInitialLoading ? (
+        <ResourcePlanWorkloadPanel
+          items={visibleItems}
+          from={from}
+          to={to}
+          teamProfiles={teamProfiles}
+          resourceProfilesById={resourceProfilesById}
+          teamOptions={teamOptions}
+        />
+      ) : null}
+
+      <PlanningAssistantDialog open={assistantOpen} onOpenChange={setAssistantOpen} />
+      <PlanDistributionDialog open={distributionOpen} onOpenChange={setDistributionOpen} defaultFrom={from} defaultTo={to} />
 
       <ResourcePlanSidePanel
         open={panelOpen}

@@ -42,6 +42,7 @@ type ResourcePlanItemRow = {
   material_budget: number | null;
   travel_budget: number | null;
   notes: string;
+  completion_feedback: string;
   accepted_risk: boolean;
   created_by: string | null;
   linked_group_id: string | null;
@@ -85,6 +86,7 @@ function rowToItem(row: ResourcePlanItemRow, participants: ResourcePlanParticipa
     materialBudget: row.material_budget,
     travelBudget: row.travel_budget,
     notes: row.notes,
+    completionFeedback: row.completion_feedback,
     acceptedRisk: row.accepted_risk,
     createdBy: row.created_by,
     linkedGroupId: row.linked_group_id,

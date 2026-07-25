@@ -45,6 +45,9 @@ export type ResourcePlanItem = {
   materialBudget: number | null;
   travelBudget: number | null;
   notes: string;
+  /** Krótki feedback pracownika po zakończeniu — wejście do podsumowań wysyłanych klientowi
+   *  (lib/resource-plan/distribution.ts). Ustawiane przy oznaczeniu elementu jako "Zakończone". */
+  completionFeedback: string;
   /** Koordynator świadomie zatwierdził wyjątek/ostrzeżenie (Etap 5 — nie blokujemy zapisu). */
   acceptedRisk: boolean;
   createdBy: string | null;
@@ -84,6 +87,7 @@ export type ResourcePlanItemInput = {
   materialBudget: number | null;
   travelBudget: number | null;
   notes: string;
+  completionFeedback: string;
   acceptedRisk: boolean;
   linkedGroupId: string | null;
   shiftWithLinkedGroup: boolean;
@@ -124,6 +128,7 @@ export function resourcePlanItemToInput(item: ResourcePlanItem): ResourcePlanIte
     materialBudget: item.materialBudget,
     travelBudget: item.travelBudget,
     notes: item.notes,
+    completionFeedback: item.completionFeedback,
     acceptedRisk: item.acceptedRisk,
     linkedGroupId: item.linkedGroupId,
     shiftWithLinkedGroup: item.shiftWithLinkedGroup,

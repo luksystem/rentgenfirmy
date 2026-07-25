@@ -12,6 +12,7 @@ import type { ProcessStage } from "@/lib/process/types";
 import { ensureAnchoredTemplateSnapshot } from "@/lib/supabase/process-repository";
 import { fetchProcessTemplateByProjectType, getOrCreateProjectProcess } from "@/lib/supabase/process-repository";
 import { pickLinkedGroupSharedFields } from "@/lib/supabase/resource-plan-repository";
+import { fetchProjectAccessibleProfiles } from "@/lib/supabase/project-access-repository";
 import type { ResourcePlanItem, ResourcePlanItemInput, ResourcePlanParticipant } from "@/lib/resource-plan/types";
 import { resourcePlanItemToInput } from "@/lib/resource-plan/types";
 import { participantContributedHours, participantEffectiveRange } from "@/lib/resource-plan/participant-contribution";
@@ -68,6 +69,7 @@ function defaultInput(defaultStartIso?: string): ResourcePlanItemInput {
     materialBudget: null,
     travelBudget: null,
     notes: "",
+    completionFeedback: "",
     acceptedRisk: false,
     linkedGroupId: null,
     shiftWithLinkedGroup: false,
@@ -318,6 +320,21 @@ export function ResourcePlanSidePanel({
       processStageId: null,
     }));
     setStage(null);
+
+    if (!projectId) return;
+    // Domyślnie podpowiadamy lidera technicznego projektu jako odpowiedzialnego, o ile nikt
+    // inny nie jest jeszcze wybrany — koordynator może to zawsze nadpisać ręcznie.
+    fetchProjectAccessibleProfiles(projectId)
+      .then((profiles) => {
+        const technicalLead = profiles.find((profile) => profile.technicalLead);
+        if (!technicalLead) return;
+        setInput((current) =>
+          current.projectId === projectId && !current.assigneeId
+            ? { ...current, assigneeId: technicalLead.id }
+            : current,
+        );
+      })
+      .catch(() => undefined);
   }
 
   function selectStage(stageId: string) {

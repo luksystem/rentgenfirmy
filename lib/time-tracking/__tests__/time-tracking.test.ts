@@ -324,6 +324,7 @@ describe("plan time suggestions", () => {
       materialBudget: null,
       travelBudget: null,
       notes: "",
+      completionFeedback: "",
       acceptedRisk: false,
       createdBy: null,
       linkedGroupId: null,

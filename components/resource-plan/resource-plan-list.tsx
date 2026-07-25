@@ -151,10 +151,20 @@ export function ResourcePlanList() {
     if (!completedStatus || item.statusItemId === completedStatus.id) {
       return;
     }
+    // Krótki feedback trafia do cotygodniowych podsumowań wysyłanych klientowi (patrz
+    // lib/resource-plan/distribution.ts) — stąd pytamy o niego właśnie przy zamykaniu elementu.
+    const feedback = window.prompt(
+      "Krótkie podsumowanie wykonanych prac (trafi do podsumowania dla klienta):",
+      item.completionFeedback,
+    );
+    if (feedback === null) {
+      return;
+    }
     try {
       await updateItem(item.id, {
         ...resourcePlanItemToInput(item),
         statusItemId: completedStatus.id,
+        completionFeedback: feedback,
       });
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "Nie udało się zakończyć przydziału.");
