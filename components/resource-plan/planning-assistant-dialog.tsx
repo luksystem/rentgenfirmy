@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, ShieldAlert, ShieldCheck, ShieldQuestion, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, Input, Select } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { getUserDisplayName } from "@/lib/auth/types";
 import {
   computePlanningAssistantProposal,
   type PlanningAssistantProposal,
@@ -72,7 +71,6 @@ export function PlanningAssistantDialog({
   const ensureProfiles = useUserResourceStore((state) => state.ensureProfiles);
 
   const projects = useAppStore((state) => state.projects);
-  const clients = useAppStore((state) => state.clients);
 
   const allItems = useResourcePlanStore((state) => state.allItems());
   const createItem = useResourcePlanStore((state) => state.createItem);
