@@ -583,6 +583,22 @@ export async function updateProjectSettlementEntry(
   return { entry };
 }
 
+/** Aktualizuje wyłącznie datę raty harmonogramu (kind='schedule') — używane przy przeciąganiu
+ * kafelka na Timesheet w Pipeline, żeby nie ruszać pozostałych pól pozycji rozliczenia. Ta sama
+ * tabela zasila harmonogram spłat widoczny na karcie klienta, więc zmiana jest widoczna tam od razu. */
+export async function updateScheduleEntryDate(entryId: string, entryDate: string): Promise<void> {
+  const supabase = getSupabase();
+  const { error } = await supabase
+    .from("project_settlement_entries")
+    .update({ entry_date: entryDate, updated_at: new Date().toISOString() })
+    .eq("id", entryId)
+    .eq("kind", "schedule");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export async function deleteProjectSettlementEntry(entryId: string): Promise<void> {
   const supabase = getSupabase();
   const { error } = await supabase.from("project_settlement_entries").delete().eq("id", entryId);

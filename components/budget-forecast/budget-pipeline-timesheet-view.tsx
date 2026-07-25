@@ -44,7 +44,10 @@ import {
 import { fetchAllBudgetCostItems } from "@/lib/supabase/budget-cost-item-repository";
 import { fetchAllBudgetScenarioActions } from "@/lib/supabase/budget-scenario-action-repository";
 import { fetchBudgetForecastSettings } from "@/lib/supabase/budget-forecast-settings-repository";
-import { fetchAllCompanyScheduleEntries } from "@/lib/supabase/project-settlement-repository";
+import {
+  fetchAllCompanyScheduleEntries,
+  updateScheduleEntryDate,
+} from "@/lib/supabase/project-settlement-repository";
 import type { ProjectSettlementEntry } from "@/lib/settlements/types";
 import { expandAmountToMonths } from "@/lib/budget-forecast/engine";
 import {
@@ -219,7 +222,8 @@ function groupEntriesByProject(
 }
 
 type DragState = {
-  entryId: string;
+  chipId: string;
+  kind: "pipeline" | "schedule";
   originalIndex: number;
   offsetPx: number;
   pointerId: number;
@@ -533,13 +537,14 @@ export function BudgetPipelineTimesheetView() {
     didAutoScroll.current = true;
   }, [loading, granularity, year, periodIndexByStart, periodWidth, todayKey]);
 
-  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>, entry: ProjectRevenueForecastWithProject) {
+  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>, chip: TimesheetChip) {
     if (!canManage) return;
     event.preventDefault();
     (event.target as Element).setPointerCapture(event.pointerId);
     const state: DragState = {
-      entryId: entry.id,
-      originalIndex: periodIndexForEntry(entry),
+      chipId: chip.id,
+      kind: chip.kind,
+      originalIndex: periodIndexForChip(chip),
       offsetPx: 0,
       pointerId: event.pointerId,
     };
@@ -555,7 +560,7 @@ export function BudgetPipelineTimesheetView() {
     setDrag(next);
   }
 
-  async function handlePointerUp(event: ReactPointerEvent<HTMLDivElement>, entry: ProjectRevenueForecastWithProject) {
+  async function handlePointerUp(event: ReactPointerEvent<HTMLDivElement>, chip: TimesheetChip) {
     const current = dragRef.current;
     if (!current || current.pointerId !== event.pointerId) return;
     (event.target as Element).releasePointerCapture(event.pointerId);
@@ -563,8 +568,10 @@ export function BudgetPipelineTimesheetView() {
     setDrag(null);
 
     if (Math.abs(current.offsetPx) < CLICK_THRESHOLD_PX) {
-      setEditingEntry(entry);
-      setPipelineDialogOpen(true);
+      if (chip.kind === "pipeline") {
+        setEditingEntry(chip.entry);
+        setPipelineDialogOpen(true);
+      }
       return;
     }
 
@@ -574,14 +581,32 @@ export function BudgetPipelineTimesheetView() {
     const newPeriodStart = periods[newIndex]?.periodStart;
     if (!newPeriodStart) return;
 
-    const found = entries.find((e) => e.id === current.entryId);
-    if (!found || snapDateToGranularity(found.expectedDate, granularity) === newPeriodStart) return;
+    if (chip.kind === "pipeline") {
+      const found = entries.find((e) => e.id === chip.entry.id);
+      if (!found || snapDateToGranularity(found.expectedDate, granularity) === newPeriodStart) return;
 
-    setEntries((prev) => prev.map((e) => (e.id === current.entryId ? { ...e, expectedDate: newPeriodStart } : e)));
+      setEntries((prev) => prev.map((e) => (e.id === chip.entry.id ? { ...e, expectedDate: newPeriodStart } : e)));
+      try {
+        await updateProjectRevenueForecast(chip.entry.id, { expectedDate: newPeriodStart });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Nie udało się przesunąć pozycji.");
+        reload();
+      }
+      return;
+    }
+
+    const foundSchedule = scheduleEntries.find((e) => e.id === chip.entry.id);
+    if (!foundSchedule?.entryDate || snapDateToGranularity(foundSchedule.entryDate, granularity) === newPeriodStart) {
+      return;
+    }
+
+    setScheduleEntries((prev) =>
+      prev.map((e) => (e.id === chip.entry.id ? { ...e, entryDate: newPeriodStart } : e)),
+    );
     try {
-      await updateProjectRevenueForecast(current.entryId, { expectedDate: newPeriodStart });
+      await updateScheduleEntryDate(chip.entry.id, newPeriodStart);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Nie udało się przesunąć pozycji.");
+      setError(err instanceof Error ? err.message : "Nie udało się przesunąć raty harmonogramu.");
       reload();
     }
   }
@@ -797,6 +822,9 @@ export function BudgetPipelineTimesheetView() {
                       />
                     ))}
                     {row.entries.map(({ chip, periodIndex, lane }) => {
+                      const isDragging = drag?.chipId === chip.id;
+                      const offsetPx = isDragging ? drag.offsetPx : 0;
+
                       if (chip.kind === "schedule") {
                         const entry = chip.entry;
                         return (
@@ -808,12 +836,18 @@ export function BudgetPipelineTimesheetView() {
                               top: 6 + lane * LANE_HEIGHT_PX,
                               width: periodWidth - 4,
                               height: LANE_HEIGHT_PX - 4,
+                              transform: `translateX(${offsetPx}px)`,
                               backgroundColor: SCHEDULE_CHIP_COLOR,
-                              cursor: "default",
-                              zIndex: 1,
+                              cursor: canManage ? "grab" : "default",
+                              touchAction: "none",
+                              zIndex: isDragging ? 20 : 1,
+                              transition: isDragging ? "none" : "left 0.15s ease",
                             }}
+                            onPointerDown={(event) => handlePointerDown(event, chip)}
+                            onPointerMove={handlePointerMove}
+                            onPointerUp={(event) => void handlePointerUp(event, chip)}
                             onClick={(event) => event.stopPropagation()}
-                            title={`${formatMoney(entry.amountGross)} · Harmonogram spłat${entry.title ? " · " + entry.title : ""}`}
+                            title={`${formatMoney(entry.amountGross)} · Harmonogram spłat${entry.title ? " · " + entry.title : ""}${canManage ? " · przeciągnij, żeby zmienić datę raty" : ""}`}
                           >
                             {formatCompactAmount(entry.amountGross)}
                           </div>
@@ -821,8 +855,6 @@ export function BudgetPipelineTimesheetView() {
                       }
 
                       const entry = chip.entry;
-                      const isDragging = drag?.entryId === entry.id;
-                      const offsetPx = isDragging ? drag.offsetPx : 0;
                       return (
                         <div
                           key={chip.id}
@@ -839,9 +871,9 @@ export function BudgetPipelineTimesheetView() {
                             zIndex: isDragging ? 20 : 1,
                             transition: isDragging ? "none" : "left 0.15s ease",
                           }}
-                          onPointerDown={(event) => handlePointerDown(event, entry)}
+                          onPointerDown={(event) => handlePointerDown(event, chip)}
                           onPointerMove={handlePointerMove}
-                          onPointerUp={(event) => void handlePointerUp(event, entry)}
+                          onPointerUp={(event) => void handlePointerUp(event, chip)}
                           onClick={(event) => event.stopPropagation()}
                           title={`${formatMoney(entry.amountNet)} · ${BUDGET_CONFIDENCE_LABELS[entry.confidence]}`}
                         >
