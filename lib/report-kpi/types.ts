@@ -122,6 +122,13 @@ export const KPI_DEFINITIONS: Record<string, KpiDefinition> = {
     polarity: "increase-is-bad",
     unit: "count",
   },
+  "team.rework_entries": {
+    key: "team.rework_entries",
+    domain: "team",
+    label: "Poprawki i nieplanowane kończenia",
+    polarity: "increase-is-bad",
+    unit: "count",
+  },
 
   "growth.xp_points_awarded": {
     key: "growth.xp_points_awarded",

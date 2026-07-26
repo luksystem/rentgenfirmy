@@ -40,6 +40,7 @@ import type {
   TimeEntryStatus,
   TimeEntryType,
   TimeEntryView,
+  TimeEntryWorkNature,
   TimeTrackingMeta,
   UpdateTimeEntryInput,
 } from "@/lib/time-tracking/types";
@@ -56,6 +57,7 @@ type TimeEntryRow = {
   break_minutes: number;
   category_id: string;
   entry_type_id: string;
+  work_nature: string | null;
   description: string;
   billable: boolean;
   project_id: string | null;
@@ -241,6 +243,7 @@ export function mapTimeEntryRow(row: TimeEntryRow): TimeEntry {
     breakMinutes: row.break_minutes,
     categoryId: row.category_id,
     entryTypeId: row.entry_type_id,
+    workNature: (row.work_nature as TimeEntryWorkNature | null) ?? null,
     description: row.description,
     billable: row.billable,
     projectId: row.project_id,
@@ -552,7 +555,8 @@ export async function createTimeEntryServer(
     input.entryTypeId,
   );
 
-  const validationError = validateTimeEntryInput(input, category, entryType);
+  const createdFrom = options?.createdFrom ?? "manual";
+  const validationError = validateTimeEntryInput(input, category, entryType, createdFrom);
   if (validationError) {
     throw new Error(validationError);
   }
@@ -580,6 +584,9 @@ export async function createTimeEntryServer(
     break_minutes: input.breakMinutes ?? 0,
     category_id: input.categoryId,
     entry_type_id: input.entryTypeId,
+    work_nature: entryType.countsAsWork
+      ? input.workNature ?? (createdFrom === "manual" ? null : "new_work")
+      : null,
     description: input.description?.trim() ?? "",
     billable: entryType.allowsBillable ? billable : false,
     project_id: input.projectId ?? null,
@@ -594,7 +601,7 @@ export async function createTimeEntryServer(
     cost_rate_snapshot: costRateSnapshot,
     client_rate_snapshot: clientRateSnapshot,
     status: "draft",
-    created_from: options?.createdFrom ?? "manual",
+    created_from: createdFrom,
   };
 
   const { data, error } = await admin
@@ -668,6 +675,7 @@ export async function updateTimeEntryServer(
     breakMinutes: input.breakMinutes ?? entry.breakMinutes,
     categoryId,
     entryTypeId,
+    workNature: input.workNature !== undefined ? input.workNature : entry.workNature,
     description: input.description !== undefined ? input.description : entry.description,
     billable: input.billable !== undefined ? input.billable : entry.billable,
     projectId: input.projectId !== undefined ? input.projectId : entry.projectId,
@@ -678,7 +686,7 @@ export async function updateTimeEntryServer(
     delegation: input.delegation ?? entry.delegation,
   };
 
-  const validationError = validateTimeEntryInput(merged, category, entryType);
+  const validationError = validateTimeEntryInput(merged, category, entryType, entry.createdFrom);
   if (validationError) {
     throw new Error(validationError);
   }
@@ -707,6 +715,9 @@ export async function updateTimeEntryServer(
     break_minutes: merged.breakMinutes ?? 0,
     category_id: merged.categoryId,
     entry_type_id: merged.entryTypeId,
+    work_nature: entryType.countsAsWork
+      ? merged.workNature ?? (entry.createdFrom === "manual" ? null : "new_work")
+      : null,
     description: merged.description?.trim() ?? "",
     billable,
     project_id: merged.projectId ?? null,

@@ -103,9 +103,41 @@ describe("time-tracking validation", () => {
         categoryId: projectCategory.id,
         entryTypeId: workType.id,
         projectId: "project-1",
+        workNature: "new_work",
       },
       projectCategory,
       workType,
+    );
+    expect(error).toBeNull();
+  });
+
+  it("requires work nature for manual work entries", () => {
+    const error = validateTimeEntryInput(
+      {
+        date: "2026-07-12",
+        durationMinutes: 60,
+        categoryId: projectCategory.id,
+        entryTypeId: workType.id,
+        projectId: "project-1",
+      },
+      projectCategory,
+      workType,
+    );
+    expect(error).toMatch(/rodzaj pracy/i);
+  });
+
+  it("does not require work nature for automated (plan) entries", () => {
+    const error = validateTimeEntryInput(
+      {
+        date: "2026-07-12",
+        durationMinutes: 60,
+        categoryId: projectCategory.id,
+        entryTypeId: workType.id,
+        projectId: "project-1",
+      },
+      projectCategory,
+      workType,
+      "plan",
     );
     expect(error).toBeNull();
   });

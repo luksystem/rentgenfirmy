@@ -6,6 +6,16 @@ export type TimesheetStatus = TimeEntryStatus;
 
 export type TimeEntryCreatedFrom = "manual" | "timer" | "plan" | "mission" | "leave" | "import";
 
+/** Rodzaj pracy — czy wpis to nowy zakres, poprawka wcześniejszej pracy, czy nieplanowane dokończenie. */
+export const TIME_ENTRY_WORK_NATURES = ["new_work", "rework", "unplanned_closing"] as const;
+export type TimeEntryWorkNature = (typeof TIME_ENTRY_WORK_NATURES)[number];
+
+export const TIME_ENTRY_WORK_NATURE_LABELS: Record<TimeEntryWorkNature, string> = {
+  new_work: "Nowa praca",
+  rework: "Poprawka",
+  unplanned_closing: "Nieplanowane kończenie",
+};
+
 export type TimeCategory = {
   id: string;
   name: string;
@@ -46,6 +56,7 @@ export type TimeEntry = {
   breakMinutes: number;
   categoryId: string;
   entryTypeId: string;
+  workNature: TimeEntryWorkNature | null;
   description: string;
   billable: boolean;
   projectId: string | null;
@@ -97,6 +108,7 @@ export type CreateTimeEntryInput = {
   breakMinutes?: number;
   categoryId: string;
   entryTypeId: string;
+  workNature?: TimeEntryWorkNature | null;
   description?: string;
   billable?: boolean;
   projectId?: string | null;

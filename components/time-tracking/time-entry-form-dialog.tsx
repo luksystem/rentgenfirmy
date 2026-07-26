@@ -14,7 +14,13 @@ import { ProjectSelectSearchable } from "@/components/goals/project-select-searc
 import { TeamProfileSelect } from "@/components/process/team-profile-select";
 import { parseDurationInput } from "@/lib/time-tracking/format";
 import type { UserProfile } from "@/lib/auth/types";
-import type { TimeEntryView, UpdateTimeEntryInput } from "@/lib/time-tracking/types";
+import {
+  TIME_ENTRY_WORK_NATURES,
+  TIME_ENTRY_WORK_NATURE_LABELS,
+  type TimeEntryView,
+  type TimeEntryWorkNature,
+  type UpdateTimeEntryInput,
+} from "@/lib/time-tracking/types";
 import type { WorkMission } from "@/lib/supabase/work-missions-server";
 import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 import { createTimeEntry, updateTimeEntry } from "@/lib/supabase/time-tracking-repository";
@@ -27,6 +33,7 @@ export type TimeEntryFormValues = {
   durationInput: string;
   categoryId: string;
   entryTypeId: string;
+  workNature: TimeEntryWorkNature | "";
   projectId: string;
   missionId: string;
   description: string;
@@ -42,6 +49,7 @@ function emptyForm(date: string, categoryId = "", entryTypeId = "", userId = "")
     durationInput: "1h",
     categoryId,
     entryTypeId,
+    workNature: "",
     projectId: "",
     missionId: "",
     description: "",
@@ -67,6 +75,7 @@ function entryToFormValues(entry: TimeEntryView): TimeEntryFormValues {
     durationInput,
     categoryId: entry.categoryId,
     entryTypeId: entry.entryTypeId,
+    workNature: entry.workNature ?? "",
     projectId: entry.projectId ?? "",
     missionId: entry.missionId ?? "",
     description: entry.description,
@@ -248,6 +257,10 @@ export function TimeEntryFormDialog({
       window.alert("Wybierz kategorię i typ wpisu.");
       return;
     }
+    if (selectedEntryType?.countsAsWork && !values.workNature) {
+      window.alert("Wybierz rodzaj pracy (nowa praca / poprawka / nieplanowane kończenie).");
+      return;
+    }
     if (allowUserSelection && !values.userId) {
       window.alert("Wybierz pracownika.");
       return;
@@ -260,6 +273,7 @@ export function TimeEntryFormDialog({
         durationMinutes,
         categoryId: values.categoryId,
         entryTypeId: values.entryTypeId,
+        workNature: values.workNature || null,
         description: values.description,
         billable: values.billable,
         projectId: values.projectId || null,
@@ -383,6 +397,27 @@ export function TimeEntryFormDialog({
                 </Select>
               </Field>
             </div>
+
+            {selectedEntryType?.countsAsWork ? (
+              <Field label="Rodzaj pracy *">
+                <Select
+                  value={values.workNature}
+                  onChange={(event) =>
+                    setValues((current) => ({
+                      ...current,
+                      workNature: event.target.value as TimeEntryWorkNature | "",
+                    }))
+                  }
+                >
+                  <option value="">— wybierz —</option>
+                  {TIME_ENTRY_WORK_NATURES.map((nature) => (
+                    <option key={nature} value={nature}>
+                      {TIME_ENTRY_WORK_NATURE_LABELS[nature]}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            ) : null}
 
             <ProjectSelectSearchable
               projects={projects}

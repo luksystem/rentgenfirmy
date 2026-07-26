@@ -75,6 +75,54 @@ async function sumOvertimeMinutes(admin: AdminClient, fromIso: string, toIso: st
   return Math.round(overtimeMinutes / 60);
 }
 
+async function countReworkEntries(admin: AdminClient, fromIso: string, toIso: string) {
+  const { count, error } = await admin
+    .from("time_entries")
+    .select("id", { count: "exact", head: true })
+    .in("work_nature", ["rework", "unplanned_closing"])
+    .gte("date", fromIso)
+    .lte("date", toIso);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+async function fetchTopReworkEntries(
+  admin: AdminClient,
+  fromIso: string,
+  toIso: string,
+): Promise<DetailRow[]> {
+  const { data, error } = await admin
+    .from("time_entries")
+    .select("id, date, duration_minutes, work_nature, description, projects(name)")
+    .in("work_nature", ["rework", "unplanned_closing"])
+    .gte("date", fromIso)
+    .lte("date", toIso)
+    .order("date", { ascending: false })
+    .limit(5);
+  if (error) throw new Error(error.message);
+
+  type Row = {
+    id: string;
+    date: string;
+    duration_minutes: number;
+    work_nature: "rework" | "unplanned_closing";
+    description: string;
+    projects: { name: string } | null;
+  };
+
+  const natureLabel: Record<Row["work_nature"], string> = {
+    rework: "Poprawka",
+    unplanned_closing: "Nieplanowane kończenie",
+  };
+
+  return ((data ?? []) as unknown as Row[]).map((row) => ({
+    id: row.id,
+    label: row.projects?.name ?? row.description ?? "Bez projektu",
+    sublabel: `${natureLabel[row.work_nature]} · ${row.date} · ${Math.round(row.duration_minutes / 60)}h`,
+    severity: "warning" as const,
+  }));
+}
+
 async function countPendingLeaveRequests(admin: AdminClient, fromIso: string, toIso: string) {
   const { count, error } = await admin
     .from("leave_requests")
@@ -205,6 +253,24 @@ export async function computeTeamDomainReport(
     );
   }
 
+  const reworkConfig = configByKey.get("team.rework_entries");
+  let reworkWindow: ReturnType<typeof resolveComparisonWindow> | null = null;
+  if (reworkConfig?.enabled) {
+    reworkWindow = resolveComparisonWindow(asOf, "week");
+    const [value, previousValue] = await Promise.all([
+      countReworkEntries(admin, reworkWindow.current.startDate, reworkWindow.current.endDate),
+      countReworkEntries(admin, reworkWindow.previous.startDate, reworkWindow.previous.endDate),
+    ]);
+    kpis.push(
+      computeKpiResult({
+        value,
+        previousValue,
+        config: reworkConfig,
+        definition: KPI_DEFINITIONS["team.rework_entries"],
+      }),
+    );
+  }
+
   const leaveConfig = configByKey.get("team.pending_leave_requests");
   if (leaveConfig?.enabled) {
     const window = resolveComparisonWindow(asOf, "week");
@@ -234,7 +300,15 @@ export async function computeTeamDomainReport(
     });
   }
 
-  const detailRows = overdueKpi && overdueKpi.value > 0 ? await fetchTopOverdueWorkItems(admin) : [];
+  const reworkKpi = kpis.find((kpi) => kpi.key === "team.rework_entries");
+
+  const [overdueRows, reworkRows] = await Promise.all([
+    overdueKpi && overdueKpi.value > 0 ? fetchTopOverdueWorkItems(admin) : Promise.resolve([]),
+    reworkKpi && reworkKpi.value > 0 && reworkWindow
+      ? fetchTopReworkEntries(admin, reworkWindow.current.startDate, reworkWindow.current.endDate)
+      : Promise.resolve([]),
+  ]);
+  const detailRows = [...overdueRows, ...reworkRows];
 
   return {
     domain: "team",
