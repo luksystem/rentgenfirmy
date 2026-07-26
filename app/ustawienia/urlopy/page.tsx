@@ -34,7 +34,7 @@ export default function LeaveSettingsPage() {
 
         <div className="rounded-xl border border-border/80 bg-surface-muted/15 p-4 text-sm text-muted">
           Powiadomienia SMS o urlopach (prośba do przełożonego, decyzja do pracownika) włączasz w{" "}
-          <Link href="/ustawienia/sms" className="text-accent hover:underline">
+          <Link href="/ustawienia/powiadomienia?tab=sms" className="text-accent hover:underline">
             ustawieniach SMS
           </Link>
           .

@@ -331,7 +331,10 @@ export function EmailSettingsView() {
               Zaznacz kanały i odbiorców dla każdego zdarzenia. E-mail: klient / branża / użytkownik /
               skrzynka serwisowa. Push i SMS tam, gdzie mają sens. Zapisz ustawienia, aby SMS-y
               zsynchronizowały się z regułami w{" "}
-              <a href="/ustawienia/sms" className="text-accent underline-offset-2 hover:underline">
+              <a
+                href="/ustawienia/powiadomienia?tab=sms"
+                className="text-accent underline-offset-2 hover:underline"
+              >
                 Wysyłki SMS
               </a>
               .

@@ -17,7 +17,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = getSupabase();
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
+    } = supabase.auth.onAuthStateChange((event) => {
+      // TOKEN_REFRESHED odpala się cyklicznie w tle (odświeżenie tokenu, powrót na kartę) —
+      // nie zmienia użytkownika/profilu, a przeładowanie stanu (isLoading) resetowało formularze
+      // w komponentach zależnych od isLoading/isAdministrator (np. ustawienia e-mail).
+      if (event === "TOKEN_REFRESHED") {
+        return;
+      }
       void initialize();
     });
 

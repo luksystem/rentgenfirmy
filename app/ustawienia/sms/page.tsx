@@ -1,5 +1,5 @@
-import { SmsSettingsView } from "@/components/settings/sms-settings-view";
+import { redirect } from "next/navigation";
 
 export default function SmsSettingsPage() {
-  return <SmsSettingsView />;
+  redirect("/ustawienia/powiadomienia?tab=sms");
 }

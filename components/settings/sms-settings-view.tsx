@@ -254,7 +254,7 @@ export function SmsSettingsView() {
 
         <p className="text-sm text-muted">
           SMS o wnioskach urlopowych (nowy wniosek / decyzja) włączasz teraz w{" "}
-          <a href="/ustawienia/email" className="text-accent underline">
+          <a href="/ustawienia/powiadomienia?tab=email" className="text-accent underline">
             Ustawieniach e-mail → tabela „Kiedy wysyłać”
           </a>{" "}
           — tam też edytujesz treść.

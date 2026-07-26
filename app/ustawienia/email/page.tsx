@@ -1,5 +1,5 @@
-import { EmailSettingsView } from "@/components/settings/email-settings-view";
+import { redirect } from "next/navigation";
 
 export default function EmailSettingsPage() {
-  return <EmailSettingsView />;
+  redirect("/ustawienia/powiadomienia?tab=email");
 }

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function LegacySmsTestPage() {
-  redirect("/ustawienia/sms");
+  redirect("/ustawienia/powiadomienia?tab=sms");
 }

@@ -295,8 +295,12 @@ export function PlanDistributionDialog({
           <p className="flex items-center gap-1.5 text-[11px] text-muted">
             <Settings2 className="h-3 w-3 shrink-0" />
             Treść tych wiadomości (temat, tekst) edytujesz w{" "}
-            <Link href="/ustawienia/email" className="underline underline-offset-2" target="_blank">
-              Ustawienia → E-mail → Plan zasobów — rozsyłanie
+            <Link
+              href="/ustawienia/powiadomienia?tab=email"
+              className="underline underline-offset-2"
+              target="_blank"
+            >
+              Ustawienia → Powiadomienia → E-mail → Plan zasobów — rozsyłanie
             </Link>
             .
           </p>

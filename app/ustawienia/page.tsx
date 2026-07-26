@@ -193,41 +193,14 @@ export default function SettingsPage() {
       <Card className="mb-6 border border-border/80">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
           <div>
-            <p className="font-medium text-foreground">Powiadomienia push</p>
+            <p className="font-medium text-foreground">Powiadomienia</p>
             <p className="mt-1 text-sm text-muted">
-              Włącz powiadomienia systemowe na tym urządzeniu, wyślij test i zarządzaj subskrypcją.
+              Push, e-mail i SMS w jednym miejscu: kiedy i do kogo wysyłać, szablony, branding,
+              subskrypcja push na tym urządzeniu i testy wysyłki.
             </p>
           </div>
           <Button variant="secondary" asChild>
-            <Link href="/ustawienia/powiadomienia">Otwórz powiadomienia push</Link>
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card className="mb-6 border border-border/80">
-        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
-          <div>
-            <p className="font-medium text-foreground">Ustawienia e-mail</p>
-            <p className="mt-1 text-sm text-muted">
-              Kiedy wysyłać e-mail / push / SMS, szablony, branding i test wysyłki.
-            </p>
-          </div>
-          <Button variant="secondary" asChild>
-            <Link href="/ustawienia/email">Otwórz ustawienia e-mail</Link>
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card className="mb-6 border border-border/80">
-        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
-          <div>
-            <p className="font-medium text-foreground">Wysyłki SMS</p>
-            <p className="mt-1 text-sm text-muted">
-              Reguły automatycznej wysyłki SMS, treści wiadomości i test ręczny.
-            </p>
-          </div>
-          <Button variant="secondary" asChild>
-            <Link href="/ustawienia/sms">Otwórz wysyłki SMS</Link>
+            <Link href="/ustawienia/powiadomienia">Otwórz powiadomienia</Link>
           </Button>
         </CardContent>
       </Card>
