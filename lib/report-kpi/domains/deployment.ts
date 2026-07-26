@@ -2,20 +2,24 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { toISODate } from "@/lib/utils";
 import { computeKpiResult, resolveComparisonWindow } from "@/lib/report-kpi/kpi-engine";
 import { computeTileSeverity, computeTileTrend } from "@/lib/report-kpi/tile-rollup";
-import { KPI_DEFINITIONS, type DomainReport, type ReportKpiConfigRow } from "@/lib/report-kpi/types";
+import { KPI_DEFINITIONS, type DetailRow, type DomainReport, type ReportKpiConfigRow } from "@/lib/report-kpi/types";
 import type { QuickWin } from "@/lib/types";
 
 type AdminClient = SupabaseClient;
 
-async function countOverdueKanbanTasks(admin: AdminClient, fromIso: string, toIso: string) {
+/**
+ * Zadania przeterminowane "na dzień asOfIso" — prosty punktowy warunek (due_date < asOfIso),
+ * nie okno [from,to]. Okno dnia (current=dziś, previous=wczoraj) dawałoby sprzeczny warunek
+ * "due_date < dziś ORAZ due_date w [dziś,dziś]", czyli zawsze 0 — stąd dwa niezależne
+ * zapytania: dziś vs wczoraj, każde jako osobna migawka "ile jest przeterminowanych na ten dzień".
+ */
+async function countOverdueKanbanTasksAsOf(admin: AdminClient, asOfIso: string) {
   const { count, error } = await admin
     .from("process_kanban_tasks")
     .select("id", { count: "exact", head: true })
     .is("closed_at", null)
     .not("due_date", "is", null)
-    .lt("due_date", toISODate(new Date()))
-    .gte("due_date", fromIso)
-    .lte("due_date", toIso);
+    .lt("due_date", asOfIso);
   if (error) throw new Error(error.message);
   return count ?? 0;
 }
@@ -53,6 +57,48 @@ async function countOverdueMilestones(admin: AdminClient) {
   return count;
 }
 
+type OverdueKanbanTaskRow = {
+  id: string;
+  title: string;
+  due_date: string;
+  process_kanban_columns: {
+    process_kanban_boards: {
+      project_process_items: {
+        project_id: string | null;
+        projects: { name: string } | null;
+      } | null;
+    } | null;
+  } | null;
+};
+
+async function fetchOverdueKanbanTaskRows(admin: AdminClient): Promise<DetailRow[]> {
+  const { data, error } = await admin
+    .from("process_kanban_tasks")
+    .select(
+      "id, title, due_date, process_kanban_columns(process_kanban_boards(project_process_items(project_id, projects(name))))",
+    )
+    .is("closed_at", null)
+    .not("due_date", "is", null)
+    .lt("due_date", toISODate(new Date()))
+    .order("due_date", { ascending: true })
+    .limit(5);
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as unknown as OverdueKanbanTaskRow[]).map((row) => {
+    const projectItem = row.process_kanban_columns?.process_kanban_boards?.project_process_items ?? null;
+    const projectId = projectItem?.project_id ?? null;
+    const projectName = projectItem?.projects?.name ?? null;
+
+    return {
+      id: row.id,
+      label: row.title || "Zadanie bez tytułu",
+      sublabel: [projectName, `Termin: ${row.due_date}`].filter(Boolean).join(" · "),
+      severity: "critical" as const,
+      href: projectId ? `/projekty/${projectId}/proces` : "/tablice-wdrozen",
+    };
+  });
+}
+
 export async function computeDeploymentDomainReport(
   admin: AdminClient,
   asOf: Date,
@@ -64,8 +110,8 @@ export async function computeDeploymentDomainReport(
   if (overdueConfig?.enabled) {
     const window = resolveComparisonWindow(asOf, "day");
     const [value, previousValue] = await Promise.all([
-      countOverdueKanbanTasks(admin, window.current.startDate, window.current.endDate),
-      countOverdueKanbanTasks(admin, window.previous.startDate, window.previous.endDate),
+      countOverdueKanbanTasksAsOf(admin, window.current.endDate),
+      countOverdueKanbanTasksAsOf(admin, window.previous.endDate),
     ]);
     kpis.push(
       computeKpiResult({
@@ -126,6 +172,9 @@ export async function computeDeploymentDomainReport(
     });
   }
 
+  const detailRows =
+    overdueKanbanKpi && overdueKanbanKpi.value > 0 ? await fetchOverdueKanbanTaskRows(admin) : [];
+
   return {
     domain: "deployment",
     label: "Wdrożenia",
@@ -133,6 +182,6 @@ export async function computeDeploymentDomainReport(
     severity: computeTileSeverity(kpis),
     trend: computeTileTrend(kpis),
     quickWins,
-    detailRows: [],
+    detailRows,
   };
 }

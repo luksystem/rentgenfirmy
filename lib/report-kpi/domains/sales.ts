@@ -1,5 +1,4 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { toISODate } from "@/lib/utils";
 import { computeKpiResult, resolveComparisonWindow } from "@/lib/report-kpi/kpi-engine";
 import { computeTileSeverity, computeTileTrend } from "@/lib/report-kpi/tile-rollup";
 import { KPI_DEFINITIONS, type DomainReport, type ReportKpiConfigRow } from "@/lib/report-kpi/types";
@@ -41,14 +40,17 @@ async function countOpenRequisitions(admin: AdminClient) {
   return count ?? 0;
 }
 
-async function countOverdueRequisitions(admin: AdminClient, fromIso: string, toIso: string) {
+/**
+ * Zapotrzebowania przeterminowane "na dzień asOfIso" — prosty punktowy warunek, nie okno
+ * [from,to]. Okno dnia (current=dziś, previous=wczoraj) dawałoby sprzeczny warunek
+ * "order_due_at < dziś ORAZ order_due_at w [dziś,dziś]", czyli zawsze 0.
+ */
+async function countOverdueRequisitionsAsOf(admin: AdminClient, asOfIso: string) {
   const { count, error } = await admin
     .from("requisitions")
     .select("id", { count: "exact", head: true })
     .eq("status", "approved")
-    .lt("order_due_at", toISODate(new Date()))
-    .gte("order_due_at", fromIso)
-    .lte("order_due_at", toIso);
+    .lt("order_due_at", asOfIso);
   if (error) throw new Error(error.message);
   return count ?? 0;
 }
@@ -111,8 +113,8 @@ export async function computeSalesDomainReport(
   if (requisitionsOverdueConfig?.enabled) {
     const window = resolveComparisonWindow(asOf, "day");
     const [value, previousValue] = await Promise.all([
-      countOverdueRequisitions(admin, window.current.startDate, window.current.endDate),
-      countOverdueRequisitions(admin, window.previous.startDate, window.previous.endDate),
+      countOverdueRequisitionsAsOf(admin, window.current.endDate),
+      countOverdueRequisitionsAsOf(admin, window.previous.endDate),
     ]);
     kpis.push(
       computeKpiResult({

@@ -14,14 +14,17 @@ const WAITING_WORK_ITEM_STATUSES = ["blocked", "needs_clarification", "pending_a
  * tylko dla jednego KPI. Nadgodziny = suma zalogowanych godzin ponad tę przybliżoną pojemność. */
 const STANDARD_WEEKLY_MINUTES_PER_PERSON = 40 * 60;
 
-async function countOverdueWorkItems(admin: AdminClient, fromIso: string, toIso: string) {
+/**
+ * Zadania przeterminowane "na dzień asOfIso" — prosty punktowy warunek (due_date < asOfIso),
+ * nie okno [from,to]. Okno dnia (current=dziś, previous=wczoraj) dawałoby sprzeczny warunek
+ * "due_date < dziś ORAZ due_date w [dziś,dziś]", czyli zawsze 0 — stąd migawka dziś vs wczoraj.
+ */
+async function countOverdueWorkItemsAsOf(admin: AdminClient, asOfIso: string) {
   const { count, error } = await admin
     .from("work_items")
     .select("id", { count: "exact", head: true })
     .not("status", "in", `(${OPEN_WORK_ITEM_STATUSES_EXCLUDED.join(",")})`)
-    .lt("due_date", toISODate(new Date()))
-    .gte("due_date", fromIso)
-    .lte("due_date", toIso);
+    .lt("due_date", asOfIso);
   if (error) throw new Error(error.message);
   return count ?? 0;
 }
@@ -111,8 +114,8 @@ export async function computeTeamDomainReport(
   if (overdueConfig?.enabled) {
     const window = resolveComparisonWindow(asOf, "day");
     const [value, previousValue] = await Promise.all([
-      countOverdueWorkItems(admin, window.current.startDate, window.current.endDate),
-      countOverdueWorkItems(admin, window.previous.startDate, window.previous.endDate),
+      countOverdueWorkItemsAsOf(admin, window.current.endDate),
+      countOverdueWorkItemsAsOf(admin, window.previous.endDate),
     ]);
     kpis.push(
       computeKpiResult({
