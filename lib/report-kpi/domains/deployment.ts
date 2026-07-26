@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toISODate } from "@/lib/utils";
+import { formatPartyName } from "@/lib/party/display-name";
 import { computeKpiResult, resolveComparisonWindow } from "@/lib/report-kpi/kpi-engine";
 import { computeTileSeverity, computeTileTrend } from "@/lib/report-kpi/tile-rollup";
 import { KPI_DEFINITIONS, type DetailRow, type DomainReport, type ReportKpiConfigRow } from "@/lib/report-kpi/types";
@@ -129,11 +130,14 @@ async function fetchOverdueKanbanTaskRows(admin: AdminClient): Promise<DetailRow
 
   const clientIds = [...new Set(projects.map((row) => row.client_id).filter((id): id is string => Boolean(id)))];
   const { data: clientRows, error: clientsError } = clientIds.length
-    ? await admin.from("clients").select("id, full_name").in("id", clientIds)
-    : { data: [] as Array<{ id: string; full_name: string }>, error: null };
+    ? await admin.from("clients").select("id, first_name, last_name").in("id", clientIds)
+    : { data: [] as Array<{ id: string; first_name: string; last_name: string }>, error: null };
   if (clientsError) throw new Error(clientsError.message);
   const clientNameById = new Map(
-    ((clientRows ?? []) as Array<{ id: string; full_name: string }>).map((row) => [row.id, row.full_name]),
+    ((clientRows ?? []) as Array<{ id: string; first_name: string; last_name: string }>).map((row) => [
+      row.id,
+      formatPartyName({ firstName: row.first_name, lastName: row.last_name }),
+    ]),
   );
 
   return tasks.map((task) => {
