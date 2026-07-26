@@ -31,6 +31,8 @@ export type TradeCatalogItem = {
   addressPostalCode?: string;
   lat?: number | null;
   lng?: number | null;
+  /** Gdy true: przy tworzeniu nowego projektu ta branża tworzy się automatycznie, pusta (bez wykonawcy). */
+  isDefaultInProject?: boolean;
 };
 
 export type { TradeCompanyItem } from "@/lib/trades/company-types";
@@ -313,6 +315,7 @@ function normalizeTradeCategoryItems(input?: unknown): TradeCatalogItem[] {
         name,
         communicationProtocols: [...row.communicationProtocols],
         description: row.description ?? "",
+        isDefaultInProject: Boolean(row.isDefaultInProject),
       });
       continue;
     }
@@ -322,6 +325,7 @@ function normalizeTradeCategoryItems(input?: unknown): TradeCatalogItem[] {
         ...new Set([...existing.communicationProtocols, ...row.communicationProtocols]),
       ],
       description: existing.description?.trim() || row.description || "",
+      isDefaultInProject: existing.isDefaultInProject || Boolean(row.isDefaultInProject),
     });
   }
 
@@ -409,6 +413,7 @@ function parseTradeCatalogRows(input?: unknown): TradeCatalogItem[] {
           Number.isFinite((value as TradeCatalogItem).lng)
             ? Number((value as TradeCatalogItem).lng)
             : null,
+        isDefaultInProject: Boolean((value as TradeCatalogItem).isDefaultInProject),
       };
     })
     .filter((item): item is TradeCatalogItem => item !== null);

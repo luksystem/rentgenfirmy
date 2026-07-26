@@ -2,11 +2,13 @@
 
 import { create } from "zustand";
 import type { ProjectTrade, ProjectTradeInput } from "@/lib/dashboard/trade-types";
+import type { TradeCatalogItem } from "@/lib/field-options";
 import { mergeCompanyIntoPool } from "@/lib/trades/company-pool";
 import {
   addProjectTrade,
   deleteProjectTrade,
   fetchProjectTrades,
+  seedDefaultProjectTrades,
   updateProjectTrade,
 } from "@/lib/supabase/project-trade-repository";
 import { useAppStore } from "@/store/app-store";
@@ -49,6 +51,7 @@ type ProjectTradeStore = {
   loadingProjects: Record<string, boolean>;
   ensureTrades: (projectId: string, options?: { force?: boolean }) => Promise<ProjectTrade[]>;
   seedProjectTrades: (projectId: string, trades: ProjectTrade[]) => void;
+  seedDefaultTrades: (projectId: string, catalogItems: TradeCatalogItem[]) => Promise<void>;
   addTrade: (projectId: string, input: ProjectTradeInput) => Promise<void>;
   updateTrade: (projectId: string, tradeId: string, input: ProjectTradeInput) => Promise<void>;
   removeTrade: (projectId: string, tradeId: string) => Promise<void>;
@@ -63,6 +66,15 @@ export const useProjectTradeStore = create<ProjectTradeStore>((set, get) => ({
       byProject: { ...get().byProject, [projectId]: trades },
       loadingProjects: { ...get().loadingProjects, [projectId]: false },
     });
+  },
+
+  seedDefaultTrades: async (projectId, catalogItems) => {
+    const created = await seedDefaultProjectTrades(projectId, catalogItems);
+    if (created.length === 0) {
+      return;
+    }
+    const list = [...(get().byProject[projectId] ?? []), ...created];
+    set({ byProject: { ...get().byProject, [projectId]: list } });
   },
 
   ensureTrades: async (projectId, options) => {

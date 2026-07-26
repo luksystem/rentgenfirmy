@@ -1,4 +1,6 @@
 import type { ProjectTrade, ProjectTradeInput } from "@/lib/dashboard/trade-types";
+import type { TradeCatalogItem } from "@/lib/field-options";
+import { tradeCatalogItemToProjectTradeInput } from "@/lib/trades/catalog-location";
 import { getSupabase } from "@/lib/supabase/client";
 
 type TradeRow = {
@@ -117,6 +119,36 @@ export async function updateProjectTrade(tradeId: string, input: ProjectTradeInp
   }
 
   return rowToTrade(data as TradeRow);
+}
+
+/**
+ * Tworzy puste pozycje (bez wykonawcy) dla branż oznaczonych "Domyślnie w projekcie" —
+ * pomija branże, które już mają pozycję w tym projekcie (po nazwie, bez rozróżniania wielkości liter).
+ */
+export async function seedDefaultProjectTrades(
+  projectId: string,
+  catalogItems: TradeCatalogItem[],
+): Promise<ProjectTrade[]> {
+  const defaults = catalogItems.filter(
+    (item) => item.isDefaultInProject && item.name.trim(),
+  );
+  if (defaults.length === 0) {
+    return [];
+  }
+
+  const existing = await fetchProjectTrades(projectId);
+  const existingNames = new Set(existing.map((trade) => trade.name.trim().toLowerCase()));
+
+  const created: ProjectTrade[] = [];
+  for (const item of defaults) {
+    if (existingNames.has(item.name.trim().toLowerCase())) {
+      continue;
+    }
+    const trade = await addProjectTrade(projectId, tradeCatalogItemToProjectTradeInput(item));
+    created.push(trade);
+    existingNames.add(item.name.trim().toLowerCase());
+  }
+  return created;
 }
 
 export async function deleteProjectTrade(tradeId: string) {

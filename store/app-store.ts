@@ -176,6 +176,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       const created = await createProject(project);
       const processStore = useProcessStore.getState();
       await processStore.ensureProjectProcess(created.id, created.type);
+
+      const defaultTrades = get().fieldOptions.tradeCatalogItems.filter(
+        (item) => item.isDefaultInProject,
+      );
+      if (defaultTrades.length > 0) {
+        // Dynamiczny import — project-trade-store.ts importuje useAppStore (cykl przy statycznym imporcie).
+        const { useProjectTradeStore } = await import("@/store/project-trade-store");
+        await useProjectTradeStore
+          .getState()
+          .seedDefaultTrades(created.id, defaultTrades)
+          .catch(() => undefined);
+      }
+
       const process = processStore.getProjectProcess(created.id);
       const template = process
         ? resolveAnchoredProcessTemplate(process, processStore.getTemplateByProjectType(created.type))

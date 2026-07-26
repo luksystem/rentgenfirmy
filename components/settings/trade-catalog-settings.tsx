@@ -124,6 +124,7 @@ export function TradeCatalogSettings() {
           ...new Set(item.communicationProtocols.map((entry) => entry.trim()).filter(Boolean)),
         ],
         description: item.description?.trim() ?? "",
+        isDefaultInProject: Boolean(item.isDefaultInProject),
       }))
       .filter((item) => item.name);
 
@@ -216,6 +217,22 @@ export function TradeCatalogSettings() {
                   placeholder="Krótki opis zakresu branży w projekcie"
                 />
               </Field>
+
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground/90">
+                <input
+                  type="checkbox"
+                  checked={category.isDefaultInProject ?? false}
+                  onChange={(event) =>
+                    updateCategory(index, { isDefaultInProject: event.target.checked })
+                  }
+                  className="h-4 w-4 rounded border-border"
+                />
+                Domyślnie w projekcie
+              </label>
+              <p className="-mt-2 text-xs text-muted">
+                Przy tworzeniu nowego projektu ta branża doda się automatycznie jako pusta pozycja
+                (bez wykonawcy) w module Klienci → Wykonawcy — zostaje tylko do uzupełnienia.
+              </p>
 
               <div className="grid gap-2">
                 <p className="text-sm font-medium text-foreground">Mapa protokołów komunikacyjnych</p>
