@@ -76,3 +76,10 @@ export function sortKanbanColumnTasks(tasks: KanbanTask[], sortMode: KanbanColum
 export function countOpenKanbanTasks(tasks: KanbanTask[]) {
   return tasks.filter((task) => !task.closedAt).length;
 }
+
+/** Otwarte zadania z terminem w przeszłości — zamknięte zadania nigdy nie liczą się jako przeterminowane. */
+export function countOverdueKanbanTasks(tasks: KanbanTask[]) {
+  return tasks.filter(
+    (task) => !task.closedAt && task.dueDate && getMilestoneDateStatus(task.dueDate) === "overdue",
+  ).length;
+}

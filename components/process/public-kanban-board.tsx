@@ -10,7 +10,13 @@ import { KanbanTaskDetailModal } from "@/components/process/kanban-task-detail";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useKanbanRealtime } from "@/hooks/use-kanban-realtime";
-import { KANBAN_DRAG_HINT, KANBAN_MOBILE_MOVE_HINT, countOpenKanbanTasks, sortKanbanColumnTasks } from "@/lib/process/kanban-ui";
+import {
+  KANBAN_DRAG_HINT,
+  KANBAN_MOBILE_MOVE_HINT,
+  countOpenKanbanTasks,
+  countOverdueKanbanTasks,
+  sortKanbanColumnTasks,
+} from "@/lib/process/kanban-ui";
 import {
   buildKanbanTaskActivityMap,
   collectKanbanAssigneeOptions,
@@ -293,9 +299,9 @@ export function PublicKanbanBoard({
 
       <div className="flex shrink-0 gap-2 overflow-x-auto pb-1 md:hidden">
         {board.columns.map((column) => {
-          const count = countOpenKanbanTasks(
-            board.tasks.filter((task) => task.columnId === column.id),
-          );
+          const columnTasksForNav = board.tasks.filter((task) => task.columnId === column.id);
+          const count = countOpenKanbanTasks(columnTasksForNav);
+          const hasOverdue = countOverdueKanbanTasks(columnTasksForNav) > 0;
           const isActive = column.id === activeColumnId;
 
           return (
@@ -311,7 +317,15 @@ export function PublicKanbanBoard({
               )}
             >
               {column.title}
-              <span className={cn("ml-1.5 tabular-nums", isActive ? "opacity-90" : "opacity-70")}>{count}</span>
+              <span
+                className={cn(
+                  "ml-1.5 inline-flex min-w-[1.1rem] items-center justify-center rounded-full px-1 tabular-nums",
+                  isActive ? "opacity-90" : "opacity-100",
+                  hasOverdue ? "bg-rose-500/20 font-semibold text-rose-200" : "opacity-70",
+                )}
+              >
+                {count}
+              </span>
             </button>
           );
         })}
@@ -325,6 +339,7 @@ export function PublicKanbanBoard({
           const columnTasks = getColumnTasks(column.id);
           const tasks = sortKanbanColumnTasks(columnTasks, sortMode);
           const openCount = countOpenKanbanTasks(columnTasks);
+          const overdueCount = countOverdueKanbanTasks(columnTasks);
           const isDropTarget = Boolean(dragTaskId && dragOverColumnId === column.id);
 
           return (
@@ -368,7 +383,12 @@ export function PublicKanbanBoard({
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-foreground">{column.title}</p>
-                    <p className="text-xs text-muted">{openCount} aktywnych</p>
+                    <p className="text-xs text-muted">
+                      {openCount} aktywnych
+                      {overdueCount > 0 ? (
+                        <span className="text-rose-300"> · {overdueCount} po terminie</span>
+                      ) : null}
+                    </p>
                   </div>
                   <span className="hidden rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted md:inline">
                     Etap {index + 1}

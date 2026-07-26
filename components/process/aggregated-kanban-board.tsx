@@ -20,6 +20,7 @@ import {
   KANBAN_MOBILE_COLUMN_SHELL_CLASS,
   KANBAN_MOBILE_COLUMNS_SCROLLER_CLASS,
   countOpenKanbanTasks,
+  countOverdueKanbanTasks,
   sortKanbanColumnTasks,
 } from "@/lib/process/kanban-ui";
 import {
@@ -382,6 +383,11 @@ export function AggregatedKanbanBoard({
         openCountForColumn={(columnId) =>
           countOpenKanbanTasks(board.tasks.filter((task) => task.columnId === columnId))
         }
+        badgeToneForColumn={(columnId) => {
+          const columnTasks = board.tasks.filter((task) => task.columnId === columnId);
+          if (countOverdueKanbanTasks(columnTasks) > 0) return "overdue";
+          return countOpenKanbanTasks(columnTasks) > 0 ? "ok" : "empty";
+        }}
       />
       </div>
 
@@ -390,6 +396,7 @@ export function AggregatedKanbanBoard({
           const columnTasks = getColumnTasks(column.id);
           const tasks = sortKanbanColumnTasks(columnTasks, sortMode);
           const openCount = countOpenKanbanTasks(columnTasks);
+          const overdueCount = countOverdueKanbanTasks(columnTasks);
           const isDropTarget = Boolean(
             dragTaskId && dragOverColumnId === column.id && isDropTargetAllowed(column.id),
           );
@@ -431,7 +438,12 @@ export function AggregatedKanbanBoard({
             >
               <div className="shrink-0 border-b border-border/60 px-3 py-2.5">
                 <p className="text-sm font-semibold text-foreground">{column.title}</p>
-                <p className="text-xs text-muted">{openCount} aktywnych</p>
+                <p className="text-xs text-muted">
+                  {openCount} aktywnych
+                  {overdueCount > 0 ? (
+                    <span className="text-rose-300"> · {overdueCount} po terminie</span>
+                  ) : null}
+                </p>
               </div>
 
               <div
