@@ -72,6 +72,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { useAppStore } from "@/store/app-store";
 import { BudgetScenarioActionsPanel } from "@/components/budget-forecast/budget-scenario-actions-panel";
 import { BudgetPipelineEntryDialog } from "@/components/budget-forecast/budget-pipeline-entry-dialog";
+import { BudgetScheduleEntryDialog } from "@/components/budget-forecast/budget-schedule-entry-dialog";
 import { BudgetCostItemDialog } from "@/components/budget-forecast/budget-cost-item-dialog";
 import { BudgetScenarioActionDialog } from "@/components/budget-forecast/budget-scenario-action-dialog";
 
@@ -257,6 +258,10 @@ export function BudgetPipelineTimesheetView() {
   const [editingEntry, setEditingEntry] = useState<ProjectRevenueForecastWithProject | null>(null);
   const [pipelineDialogOpen, setPipelineDialogOpen] = useState(false);
   const [pipelineDefaults, setPipelineDefaults] = useState<{ projectId?: string; date?: string }>({});
+
+  const [editingScheduleEntry, setEditingScheduleEntry] = useState<ProjectSettlementEntry | null>(null);
+  const [editingScheduleProjectName, setEditingScheduleProjectName] = useState<string | undefined>(undefined);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
 
   const [editingCostItem, setEditingCostItem] = useState<BudgetCostItem | null>(null);
   const [costDialogOpen, setCostDialogOpen] = useState(false);
@@ -572,6 +577,10 @@ export function BudgetPipelineTimesheetView() {
       if (chip.kind === "pipeline") {
         setEditingEntry(chip.entry);
         setPipelineDialogOpen(true);
+      } else {
+        setEditingScheduleEntry(chip.entry);
+        setEditingScheduleProjectName(chip.projectName);
+        setScheduleDialogOpen(true);
       }
       return;
     }
@@ -848,7 +857,7 @@ export function BudgetPipelineTimesheetView() {
                             onPointerMove={handlePointerMove}
                             onPointerUp={(event) => void handlePointerUp(event, chip)}
                             onClick={(event) => event.stopPropagation()}
-                            title={`${formatMoney(entry.amountGross)} · Harmonogram spłat${entry.title ? " · " + entry.title : ""}${canManage ? " · przeciągnij, żeby zmienić datę raty" : ""}`}
+                            title={`${formatMoney(entry.amountGross)} · Harmonogram spłat${entry.title ? " · " + entry.title : ""}${canManage ? " · kliknij, żeby edytować · przeciągnij, żeby zmienić datę" : ""}`}
                           >
                             {formatCompactAmount(entry.amountGross)}
                           </div>
@@ -1204,6 +1213,14 @@ export function BudgetPipelineTimesheetView() {
         onSaved={reload}
         onDeleted={reload}
         onImported={reload}
+      />
+      <BudgetScheduleEntryDialog
+        open={scheduleDialogOpen}
+        onOpenChange={setScheduleDialogOpen}
+        entry={editingScheduleEntry}
+        projectName={editingScheduleProjectName}
+        onSaved={reload}
+        onDeleted={reload}
       />
       <BudgetCostItemDialog
         open={costDialogOpen}
