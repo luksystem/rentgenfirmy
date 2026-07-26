@@ -57,42 +57,97 @@ async function countOverdueMilestones(admin: AdminClient) {
   return count;
 }
 
-type OverdueKanbanTaskRow = {
-  id: string;
-  title: string;
-  due_date: string;
-  process_kanban_columns: {
-    process_kanban_boards: {
-      project_process_items: {
-        project_id: string | null;
-        projects: { name: string } | null;
-      } | null;
-    } | null;
-  } | null;
-};
-
+/**
+ * Rozwiązanie zadanie kanban -> projekt/klient idzie 4 skokami FK
+ * (task -> kolumna -> tablica -> element procesu -> projekt -> klient). Zamiast kruchego,
+ * głęboko zagnieżdżonego selecta PostgREST (który przy niejednoznacznej relacji potrafi po
+ * cichu zwrócić null i wylądować na domyślnym /tablice-wdrozen), robimy to jawnymi,
+ * wsadowymi zapytaniami — mniej eleganckie, ale łatwe do zweryfikowania krok po kroku.
+ * Deep-link do KONKRETNEGO zadania na tablicy nie istnieje w tym module (proces-kanban-board
+ * otwiera zadanie tylko przez lokalny stan komponentu, bez parametru w URL) — najlepsze
+ * dostępne miejsce docelowe to strona procesu danego projektu.
+ */
 async function fetchOverdueKanbanTaskRows(admin: AdminClient): Promise<DetailRow[]> {
-  const { data, error } = await admin
+  const { data: taskRows, error: tasksError } = await admin
     .from("process_kanban_tasks")
-    .select(
-      "id, title, due_date, process_kanban_columns(process_kanban_boards(project_process_items(project_id, projects(name))))",
-    )
+    .select("id, title, due_date, column_id")
     .is("closed_at", null)
     .not("due_date", "is", null)
     .lt("due_date", toISODate(new Date()))
     .order("due_date", { ascending: true })
     .limit(5);
-  if (error) throw new Error(error.message);
+  if (tasksError) throw new Error(tasksError.message);
 
-  return ((data ?? []) as unknown as OverdueKanbanTaskRow[]).map((row) => {
-    const projectItem = row.process_kanban_columns?.process_kanban_boards?.project_process_items ?? null;
-    const projectId = projectItem?.project_id ?? null;
-    const projectName = projectItem?.projects?.name ?? null;
+  const tasks = (taskRows ?? []) as Array<{
+    id: string;
+    title: string;
+    due_date: string;
+    column_id: string;
+  }>;
+  if (tasks.length === 0) {
+    return [];
+  }
+
+  const columnIds = [...new Set(tasks.map((task) => task.column_id))];
+  const { data: columnRows, error: columnsError } = await admin
+    .from("process_kanban_columns")
+    .select("id, board_id")
+    .in("id", columnIds);
+  if (columnsError) throw new Error(columnsError.message);
+  const boardIdByColumn = new Map(
+    ((columnRows ?? []) as Array<{ id: string; board_id: string }>).map((row) => [row.id, row.board_id]),
+  );
+
+  const boardIds = [...new Set([...boardIdByColumn.values()])];
+  const { data: boardRows, error: boardsError } = boardIds.length
+    ? await admin.from("process_kanban_boards").select("id, project_process_item_id").in("id", boardIds)
+    : { data: [] as Array<{ id: string; project_process_item_id: string }>, error: null };
+  if (boardsError) throw new Error(boardsError.message);
+  const itemIdByBoard = new Map(
+    ((boardRows ?? []) as Array<{ id: string; project_process_item_id: string }>).map((row) => [
+      row.id,
+      row.project_process_item_id,
+    ]),
+  );
+
+  const itemIds = [...new Set([...itemIdByBoard.values()])];
+  const { data: itemRows, error: itemsError } = itemIds.length
+    ? await admin.from("project_process_items").select("id, project_id").in("id", itemIds)
+    : { data: [] as Array<{ id: string; project_id: string | null }>, error: null };
+  if (itemsError) throw new Error(itemsError.message);
+  const projectIdByItem = new Map(
+    ((itemRows ?? []) as Array<{ id: string; project_id: string | null }>).map((row) => [row.id, row.project_id]),
+  );
+
+  const projectIds = [...new Set([...projectIdByItem.values()].filter((id): id is string => Boolean(id)))];
+  const { data: projectRows, error: projectsError } = projectIds.length
+    ? await admin.from("projects").select("id, name, client_id").in("id", projectIds)
+    : { data: [] as Array<{ id: string; name: string; client_id: string | null }>, error: null };
+  if (projectsError) throw new Error(projectsError.message);
+  const projects = (projectRows ?? []) as Array<{ id: string; name: string; client_id: string | null }>;
+  const projectById = new Map(projects.map((row) => [row.id, row]));
+
+  const clientIds = [...new Set(projects.map((row) => row.client_id).filter((id): id is string => Boolean(id)))];
+  const { data: clientRows, error: clientsError } = clientIds.length
+    ? await admin.from("clients").select("id, full_name").in("id", clientIds)
+    : { data: [] as Array<{ id: string; full_name: string }>, error: null };
+  if (clientsError) throw new Error(clientsError.message);
+  const clientNameById = new Map(
+    ((clientRows ?? []) as Array<{ id: string; full_name: string }>).map((row) => [row.id, row.full_name]),
+  );
+
+  return tasks.map((task) => {
+    const boardId = boardIdByColumn.get(task.column_id);
+    const itemId = boardId ? itemIdByBoard.get(boardId) : undefined;
+    const projectId = itemId ? (projectIdByItem.get(itemId) ?? null) : null;
+    const project = projectId ? projectById.get(projectId) : undefined;
+    const clientName = project?.client_id ? clientNameById.get(project.client_id) : undefined;
+    const context = [clientName, project?.name].filter(Boolean).join(" — ");
 
     return {
-      id: row.id,
-      label: row.title || "Zadanie bez tytułu",
-      sublabel: [projectName, `Termin: ${row.due_date}`].filter(Boolean).join(" · "),
+      id: task.id,
+      label: task.title || "Zadanie bez tytułu",
+      sublabel: [context, `Termin: ${task.due_date}`].filter(Boolean).join(" · "),
       severity: "critical" as const,
       href: projectId ? `/projekty/${projectId}/proces` : "/tablice-wdrozen",
     };

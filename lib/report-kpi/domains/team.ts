@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toISODate } from "@/lib/utils";
+import { workItemLinkUrl } from "@/lib/my-work/types";
 import { computeKpiResult, resolveComparisonWindow } from "@/lib/report-kpi/kpi-engine";
 import { computeTileSeverity, computeTileTrend } from "@/lib/report-kpi/tile-rollup";
 import { KPI_DEFINITIONS, type DetailRow, type DomainReport, type ReportKpiConfigRow } from "@/lib/report-kpi/types";
@@ -87,20 +88,31 @@ async function countPendingLeaveRequests(admin: AdminClient, fromIso: string, to
 async function fetchTopOverdueWorkItems(admin: AdminClient): Promise<DetailRow[]> {
   const { data, error } = await admin
     .from("work_items")
-    .select("id, title, due_date")
+    .select("id, title, due_date, projects(name), clients(full_name)")
     .not("status", "in", `(${OPEN_WORK_ITEM_STATUSES_EXCLUDED.join(",")})`)
     .lt("due_date", toISODate(new Date()))
     .order("due_date", { ascending: true })
     .limit(5);
   if (error) throw new Error(error.message);
 
-  return ((data ?? []) as Array<{ id: string; title: string; due_date: string }>).map((row) => ({
-    id: row.id,
-    label: row.title,
-    sublabel: `Termin: ${row.due_date}`,
-    severity: "critical" as const,
-    href: "/moja-praca",
-  }));
+  type Row = {
+    id: string;
+    title: string;
+    due_date: string;
+    projects: { name: string } | null;
+    clients: { full_name: string } | null;
+  };
+
+  return ((data ?? []) as unknown as Row[]).map((row) => {
+    const context = [row.clients?.full_name, row.projects?.name].filter(Boolean).join(" — ");
+    return {
+      id: row.id,
+      label: row.title,
+      sublabel: [context, `Termin: ${row.due_date}`].filter(Boolean).join(" · "),
+      severity: "critical" as const,
+      href: workItemLinkUrl(row.id),
+    };
+  });
 }
 
 export async function computeTeamDomainReport(
