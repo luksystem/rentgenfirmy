@@ -162,6 +162,7 @@ export function ResourcePlanGantt() {
   const statusOptions = useDictionaryStore((state) => state.byKey("plan_status"));
   const riskOptions = useDictionaryStore((state) => state.byKey("risk_level"));
   const teamOptions = useDictionaryStore((state) => state.byKey("team"));
+  const roleOptions = useDictionaryStore((state) => state.byKey("operational_role"));
   const templateOptions = useDictionaryStore((state) => state.byKey("plan_item_template"));
 
   const ensureProfiles = useUserResourceStore((state) => state.ensureProfiles);
@@ -788,6 +789,7 @@ export function ResourcePlanGantt() {
           teamProfiles={teamProfiles}
           resourceProfilesById={resourceProfilesById}
           teamOptions={teamOptions}
+          roleOptions={roleOptions}
         />
       ) : null}
 

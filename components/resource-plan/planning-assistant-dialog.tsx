@@ -76,7 +76,8 @@ export function PlanningAssistantDialog({
   const createItem = useResourcePlanStore((state) => state.createItem);
 
   const [templateId, setTemplateId] = useState("");
-  const [quantity, setQuantity] = useState(1);
+  const [quantityInput, setQuantityInput] = useState("1");
+  const quantity = Math.max(1, Number.parseInt(quantityInput, 10) || 0);
   const [deadline, setDeadline] = useState("");
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
   const [projectFilter, setProjectFilter] = useState("");
@@ -238,8 +239,9 @@ export function PlanningAssistantDialog({
                 type="number"
                 min={1}
                 disabled={selectedProjects.length > 0}
-                value={selectedProjects.length > 0 ? selectedProjects.length : quantity}
-                onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
+                value={selectedProjects.length > 0 ? String(selectedProjects.length) : quantityInput}
+                onChange={(event) => setQuantityInput(event.target.value)}
+                onBlur={() => setQuantityInput(String(quantity))}
               />
             </Field>
             <Field label="Termin (do kiedy)" className="sm:col-span-2">
