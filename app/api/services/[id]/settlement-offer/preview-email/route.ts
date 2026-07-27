@@ -4,17 +4,19 @@ import { jsonError } from "@/lib/auth/http-error";
 import { previewOfferEmailServer } from "@/lib/supabase/offer-send-server";
 
 export async function POST(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   try {
     const { profile } = await requireAuthenticatedProfile();
     const { id } = await context.params;
+    const body = (await request.json().catch(() => null)) as { note?: string } | null;
 
     const { subject, html, to, service } = await previewOfferEmailServer({
       serviceId: id,
       kind: "settlement",
       actingProfile: profile,
+      note: body?.note,
     });
 
     return NextResponse.json({ subject, html, to, service });

@@ -133,7 +133,7 @@ function offerPublicUrl(service: ServiceRecord, kind: OfferKind) {
   return absoluteAppUrl(`/oferta/${token}`);
 }
 
-async function buildEmailForService(service: ServiceRecord, kind: OfferKind) {
+async function buildEmailForService(service: ServiceRecord, kind: OfferKind, note?: string | null) {
   const [settings, company] = await Promise.all([
     fetchEmailSettingsServer(),
     resolveCompanyProfileDocumentServer().catch(() => null),
@@ -161,6 +161,7 @@ async function buildEmailForService(service: ServiceRecord, kind: OfferKind) {
     kind,
     brand: settings.brand,
     company,
+    senderNote: note,
   });
 
   return { ...email, to: service.client.email.trim() };
@@ -170,13 +171,14 @@ export async function previewOfferEmailServer(input: {
   serviceId: string;
   kind: OfferKind;
   actingProfile: Pick<UserProfile, "id" | "role" | "offerApprovalBypass">;
+  note?: string | null;
 }) {
   const service = await fetchServiceOrThrow(input.serviceId);
   assertOfferAllowedForKind(service, input.kind);
   assertCanSend(service, input.kind, input.actingProfile);
 
   const withToken = await ensureOfferToken(service, input.kind);
-  const email = await buildEmailForService(withToken, input.kind);
+  const email = await buildEmailForService(withToken, input.kind, input.note);
 
   return { ...email, service: withToken };
 }
@@ -187,6 +189,7 @@ export async function sendOfferEmailServer(input: {
   serviceId: string;
   kind: OfferKind;
   actingProfile: Pick<UserProfile, "id" | "role" | "offerApprovalBypass">;
+  note?: string | null;
 }) {
   const service = await fetchServiceOrThrow(input.serviceId);
   assertOfferAllowedForKind(service, input.kind);
@@ -202,7 +205,7 @@ export async function sendOfferEmailServer(input: {
     if (!withToken.client.email.trim()) {
       throw new HttpError(400, "Brak adresu e-mail klienta.");
     }
-    const email = await buildEmailForService(withToken, input.kind);
+    const email = await buildEmailForService(withToken, input.kind, input.note);
     result = await sendTransactionalEmail({ to: email.to, subject: email.subject, html: email.html });
   }
 

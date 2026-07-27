@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AcceptedOfferPdfButton } from "@/components/work-order/accepted-offer-pdf-button";
@@ -38,8 +38,12 @@ import { OfferEmailPreviewDialog } from "@/components/service/offer-email-previe
 
 type EmailPreview = { subject: string; html: string; to: string };
 
-async function postJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { method: "POST" });
+async function postJson<T>(url: string, body?: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(data?.error ?? "Nie udało się wykonać operacji.");
@@ -64,6 +68,8 @@ export function ClientOfferPanel({
   const [preview, setPreview] = useState<EmailPreview | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [note, setNote] = useState("");
+  const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [copied, setCopied] = useState(false);
   const [canShare, setCanShare] = useState(false);
   const router = useRouter();
@@ -222,8 +228,12 @@ export function ClientOfferPanel({
   }
 
   async function handleOpenPreview() {
+    if (noteDebounceRef.current) {
+      clearTimeout(noteDebounceRef.current);
+    }
     setPreviewError(null);
     setPreview(null);
+    setNote("");
     setPreviewOpen(true);
     try {
       const data = await postJson<EmailPreview & { service: ServiceRecord }>(
@@ -239,12 +249,28 @@ export function ClientOfferPanel({
     }
   }
 
+  function handleNoteChange(nextNote: string) {
+    setNote(nextNote);
+    if (noteDebounceRef.current) {
+      clearTimeout(noteDebounceRef.current);
+    }
+    noteDebounceRef.current = setTimeout(() => {
+      void postJson<EmailPreview & { service: ServiceRecord }>(
+        `/api/services/${service.id}/client-offer/preview-email`,
+        { note: nextNote },
+      )
+        .then((data) => setPreview({ subject: data.subject, html: data.html, to: data.to }))
+        .catch(() => undefined);
+    }, 600);
+  }
+
   async function handleConfirmSend() {
     setSending(true);
     setPreviewError(null);
     try {
       const data = await postJson<{ service: ServiceRecord; emailSkipped: boolean }>(
         `/api/services/${service.id}/client-offer/send`,
+        { note },
       );
       replaceService(data.service);
       onServiceUpdated(data.service);
@@ -417,6 +443,8 @@ export function ClientOfferPanel({
       preview={preview}
       sending={sending}
       error={previewError}
+      note={note}
+      onNoteChange={handleNoteChange}
       onConfirmSend={() => void handleConfirmSend()}
     />
     </>

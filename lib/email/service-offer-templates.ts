@@ -56,6 +56,8 @@ export function buildOfferSendEmail(input: {
   kind: "estimate" | "settlement";
   brand: EmailBrandSettings;
   company?: CompanyProfileDocument | null;
+  /** Osobista notatka nadawcy wpisana przed wysyłką — pokazana w mailu jako wyróżniony akapit. */
+  senderNote?: string | null;
 }) {
   const name = input.clientName.trim() || "Państwo";
   const title = input.offerTitle.trim() || (input.kind === "settlement" ? "rozliczenie" : "oferta");
@@ -76,6 +78,13 @@ export function buildOfferSendEmail(input: {
 
   const materialItemsHtml = buildMaterialItemsHtml(input.materialItems ?? []);
 
+  const senderNote = input.senderNote?.trim();
+  const senderNoteHtml = senderNote
+    ? `<p style="margin:0 0 16px;padding:12px 14px;background:#f8fafc;border-left:3px solid #0f172a;border-radius:6px;font-size:14px;line-height:1.6;color:#111827;white-space:pre-wrap;">
+        ${escapeEmailHtml(senderNote)}
+      </p>`
+    : "";
+
   const content = `
     <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#111827;">
       Dzień dobry ${escapeEmailHtml(name)},
@@ -85,6 +94,7 @@ export function buildOfferSendEmail(input: {
       <strong>${escapeEmailHtml(title)}</strong>
       do przejrzenia i decyzji.
     </p>
+    ${senderNoteHtml}
     ${amountHtml}
     ${materialItemsHtml}
     <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#111827;">

@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Field, Textarea } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +17,8 @@ export function OfferEmailPreviewDialog({
   preview,
   sending,
   error,
+  note,
+  onNoteChange,
   onConfirmSend,
 }: {
   open: boolean;
@@ -23,6 +26,8 @@ export function OfferEmailPreviewDialog({
   preview: { subject: string; html: string; to: string } | null;
   sending: boolean;
   error: string | null;
+  note: string;
+  onNoteChange: (note: string) => void;
   onConfirmSend: () => void;
 }) {
   return (
@@ -34,6 +39,16 @@ export function OfferEmailPreviewDialog({
             Sprawdź treść przed wysyłką — dopiero kliknięcie „Wyślij” wysyła maila.
           </DialogDescription>
         </DialogHeader>
+
+        <Field label="Twoja notatka (opcjonalnie — dołączy się do maila)">
+          <Textarea
+            value={note}
+            onChange={(event) => onNoteChange(event.target.value)}
+            rows={3}
+            placeholder="Np. dodatkowy komentarz dla klienta…"
+            disabled={sending}
+          />
+        </Field>
 
         {preview ? (
           <div className="grid gap-3">
