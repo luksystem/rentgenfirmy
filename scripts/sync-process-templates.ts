@@ -68,6 +68,16 @@ async function main() {
     } · ${summary.skipped} pominięto · ${summary.errors} błędów`,
   );
 
+  if (summary.orphanedStageReferences.length > 0) {
+    console.log("");
+    console.log(
+      `OSIEROCONE ODNIESIENIA (${summary.orphanedStageReferences.length}) — stage_id spoza aktualnego template_snapshot:`,
+    );
+    for (const orphan of summary.orphanedStageReferences) {
+      console.log(`  [${orphan.sourceTable}] projekt ${orphan.projectId}, stage_id=${orphan.stageId} — ${orphan.detail}`);
+    }
+  }
+
   if (summary.errors > 0) {
     process.exit(1);
   }

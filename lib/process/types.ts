@@ -47,6 +47,60 @@ export type ProcessStageRoleRequirement = {
   minCount: number;
 };
 
+export const COMMUNICATION_PHASES = ["CZUWANIE", "STANDARD", "INTENSYWNA", "KRYTYCZNA"] as const;
+export type CommunicationPhase = (typeof COMMUNICATION_PHASES)[number];
+
+/** Kody ról procesowych — finalne, /docs/08 D10. Nie zmieniać istniejących, tylko dodawać. */
+export const PROCESS_ROLE_CODES = [
+  "wlasciciel",
+  "opiekun_projektu",
+  "koordynator_operacyjny",
+  "koordynator_techniczny",
+  "projektant",
+  "wdrozeniowiec",
+  "lider_montazu",
+  "instalator",
+  "asystent_procesu",
+] as const;
+export type ProcessRoleCode = (typeof PROCESS_ROLE_CODES)[number];
+
+/** Etykiety ról procesowych do komunikatów dla człowieka — nie do UI uprawnień (/docs/04 §9). */
+export const PROCESS_ROLE_LABELS: Record<ProcessRoleCode, string> = {
+  wlasciciel: "Właściciel",
+  opiekun_projektu: "Opiekun projektu",
+  koordynator_operacyjny: "Koordynator operacyjny",
+  koordynator_techniczny: "Koordynator techniczny",
+  projektant: "Projektant",
+  wdrozeniowiec: "Wdrożeniowiec",
+  lider_montazu: "Lider montażu",
+  instalator: "Instalator",
+  asystent_procesu: "Asystent procesu",
+};
+
+/**
+ * Forma narzędnika ("kim/czym jest") do zdań typu "Opiekunem projektu jest już X" —
+ * osobna mapa, bo polska deklinacja nie da się wyprowadzić automatycznie z mianownika.
+ */
+export const PROCESS_ROLE_LABELS_INSTRUMENTAL: Record<ProcessRoleCode, string> = {
+  wlasciciel: "Właścicielem",
+  opiekun_projektu: "Opiekunem projektu",
+  koordynator_operacyjny: "Koordynatorem operacyjnym",
+  koordynator_techniczny: "Koordynatorem technicznym",
+  projektant: "Projektantem",
+  wdrozeniowiec: "Wdrożeniowcem",
+  lider_montazu: "Liderem montażu",
+  instalator: "Instalatorem",
+  asystent_procesu: "Asystentem procesu",
+};
+
+/** Jeden wiersz macierzy odpowiedzialności rola x etap (/docs/02 §10). Standard firmy (D1). */
+export type ProcessStageRoleResponsibility = {
+  roleCode: string;
+  isGlowny: boolean;
+  isWspiera: boolean;
+  isKomunikuje: boolean;
+};
+
 export type ProcessStage = {
   id: string;
   templateId: string;
@@ -77,6 +131,27 @@ export type ProcessStage = {
   requiredCompetencies?: ProcessStageCompetencyRequirement[];
   /** ID innych etapów tego samego szablonu, od których zależy ten etap. */
   dependsOnStageIds?: string[];
+  /** Faza bazowa komunikacji, standard firmy (/docs/03 §2). Nieedytowalne per projekt (D1). */
+  baseCommunicationPhase?: CommunicationPhase | null;
+  /** Waga komunikacyjna — seed, NULL do kalibracji w fazie obciążenia (/docs/05 §4.3). */
+  weightComm?: number | null;
+  /** Waga koordynacyjna — seed, NULL do kalibracji. */
+  weightCoord?: number | null;
+  /** SLA w dniach dla elementów etapu, np. {"rozstrzygniecie": 7, "poprawki_dok": 7}. */
+  slaDays?: Record<string, number>;
+  /**
+   * Czy etap wymaga Lidera Etapu na poziomie projektu (project_stage_leads).
+   * NIEZALEŻNE od requiresLeader (ostrzeżenie w walidacji Planu Zasobów) — dwa różne poziomy.
+   */
+  requiresProjectStageLead?: boolean;
+  /** Macierz odpowiedzialności rola x etap (/docs/02 §10). Standard firmy (D1). */
+  roleResponsibility?: ProcessStageRoleResponsibility[];
+  /**
+   * Stabilny slug etapu, niezależny od title. NIEZMIENNY po utworzeniu (trigger DB
+   * process_stages_code_immutable) — wszystko semantyczne kluczuje na code, nie na title.
+   * Rozbicie/przemianowanie etapu w przyszłości = nowy wiersz z nowym code.
+   */
+  code?: string;
 };
 
 export type ProcessTemplate = {

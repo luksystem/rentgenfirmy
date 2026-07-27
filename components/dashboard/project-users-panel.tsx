@@ -127,17 +127,25 @@ export function ProjectUsersPanel({ projectId }: { projectId: string }) {
                     </td>
                     {ROLE_FIELDS.map(({ field }) => {
                       const key = `${profile.id}:${field}`;
+                      const source = profile.roleSources[field];
                       return (
                         <td key={field} className="px-4 py-3 text-center">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 rounded border-border accent-blue-500 disabled:opacity-50"
-                            checked={profile[field]}
-                            disabled={!canEditRoles || busyKey === key}
-                            onChange={(event) =>
-                              void toggleRole(profile.id, field, event.target.checked)
-                            }
-                          />
+                          <div className="flex items-center justify-center gap-1.5">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-border accent-blue-500 disabled:opacity-50"
+                              checked={profile[field]}
+                              disabled={!canEditRoles || busyKey === key}
+                              onChange={(event) =>
+                                void toggleRole(profile.id, field, event.target.checked)
+                              }
+                            />
+                            {source === "fallback" ? (
+                              <Badge tone="waiting" className="text-[10px]">
+                                zastępczo
+                              </Badge>
+                            ) : null}
+                          </div>
                         </td>
                       );
                     })}
@@ -164,6 +172,7 @@ export function ProjectUsersPanel({ projectId }: { projectId: string }) {
                   <div className="mt-1 grid gap-1.5">
                     {ROLE_FIELDS.map(({ field, label }) => {
                       const key = `${profile.id}:${field}`;
+                      const source = profile.roleSources[field];
                       return (
                         <label key={field} className="flex items-center gap-2 text-sm text-foreground">
                           <input
@@ -176,6 +185,11 @@ export function ProjectUsersPanel({ projectId }: { projectId: string }) {
                             }
                           />
                           {label}
+                          {source === "fallback" ? (
+                            <Badge tone="waiting" className="text-[10px]">
+                              zastępczo
+                            </Badge>
+                          ) : null}
                         </label>
                       );
                     })}

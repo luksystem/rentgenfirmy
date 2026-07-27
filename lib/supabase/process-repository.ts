@@ -70,17 +70,24 @@ export async function fetchTemplatesGraphWithClient(
 
   const stageIds = (stages ?? []).map((row) => row.id);
 
-  const [roleReqResult, competencyReqResult, dependencyResult] = stageIds.length
+  const [roleReqResult, competencyReqResult, dependencyResult, responsibilityResult] = stageIds.length
     ? await Promise.all([
         supabase.from("process_stage_role_requirements").select("*").in("stage_id", stageIds),
         supabase.from("process_stage_competency_requirements").select("*").in("stage_id", stageIds),
         supabase.from("process_stage_dependencies").select("*").in("stage_id", stageIds),
+        supabase.from("process_stage_role_responsibility").select("*").in("stage_id", stageIds),
       ])
-    : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
+    : [
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+      ];
 
   if (roleReqResult.error) throw new Error(roleReqResult.error.message);
   if (competencyReqResult.error) throw new Error(competencyReqResult.error.message);
   if (dependencyResult.error) throw new Error(dependencyResult.error.message);
+  if (responsibilityResult.error) throw new Error(responsibilityResult.error.message);
 
   const roleReqByStage = new Map<string, typeof roleReqResult.data>();
   (roleReqResult.data ?? []).forEach((row) => {
@@ -101,6 +108,13 @@ export async function fetchTemplatesGraphWithClient(
     const list = dependencyByStage.get(row.stage_id) ?? [];
     list.push(row);
     dependencyByStage.set(row.stage_id, list);
+  });
+
+  const responsibilityByStage = new Map<string, typeof responsibilityResult.data>();
+  (responsibilityResult.data ?? []).forEach((row) => {
+    const list = responsibilityByStage.get(row.stage_id) ?? [];
+    list.push(row);
+    responsibilityByStage.set(row.stage_id, list);
   });
 
   const { data: milestones, error: milestonesError } = stageIds.length
@@ -154,6 +168,7 @@ export async function fetchTemplatesGraphWithClient(
       roles: roleReqByStage.get(row.id) ?? [],
       competencies: competencyReqByStage.get(row.id) ?? [],
       dependencies: dependencyByStage.get(row.id) ?? [],
+      responsibilities: responsibilityByStage.get(row.id) ?? [],
     });
     const list = stagesByTemplate.get(row.template_id) ?? [];
     list.push(mapped);
@@ -244,6 +259,11 @@ async function insertTemplateStagesGraph(template: ProcessTemplate) {
       can_run_in_parallel: stage.canRunInParallel ?? false,
       requires_leader: stage.requiresLeader ?? false,
       allows_trainee: stage.allowsTrainee ?? true,
+      // code jest NOT NULL i niezmienne po utworzeniu (docs/08, migracja 215) — jeśli stage
+      // niesie już code (odczytany wcześniej z bazy), zachowujemy go; w przeciwnym razie
+      // baza ma siatkę bezpieczeństwa (migracja 220, trigger 'stage_<position>'), ale wolę
+      // nadać świadomie tu, żeby nie polegać wyłącznie na fallbacku.
+      code: stage.code ?? `stage_${stage.position}`,
     });
     if (error) {
       throw new Error(error.message);
@@ -595,27 +615,26 @@ export async function updateProjectProcessMilestoneDate(
   return rowToProjectProcess(data);
 }
 
+/**
+ * Jedyna droga zmiany aktywnego etapu. Idzie przez RPC set_project_active_stage
+ * (nie zwykły .update()), żeby project_stage_history odnotowała zmianę z atrybucją
+ * (kto, przez app) zamiast jako source='direct_db' — patrz migracja 211 i /docs/08.
+ */
 export async function updateProjectProcessActiveStage(
   projectId: string,
   stageId: string | null,
 ) {
-  const process = await fetchProjectProcess(projectId);
-  if (!process) {
-    throw new Error("Nie znaleziono procesu projektu.");
-  }
-
-  const updated: ProjectProcess = {
-    ...process,
-    activeStageId: stageId,
-    updatedAt: new Date().toISOString(),
-  };
-
   const supabase = getSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const { data, error } = await supabase
-    .from("project_processes")
-    .update(projectProcessToUpdate(updated))
-    .eq("project_id", projectId)
-    .select("*")
+    .rpc("set_project_active_stage", {
+      p_project_id: projectId,
+      p_stage_id: stageId,
+      p_user_id: user?.id ?? null,
+    })
     .single();
 
   if (error) {

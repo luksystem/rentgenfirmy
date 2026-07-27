@@ -15,6 +15,7 @@ import type {
   ProcessStageCompetencyRequirementRow,
   ProcessStageDependencyRow,
   ProcessStageRoleRequirementRow,
+  ProcessStageRoleResponsibilityRow,
   ProcessStageRow,
   ProcessTemplateRow,
   ProjectProcessRow,
@@ -75,6 +76,7 @@ export function rowToProcessStage(
     roles?: ProcessStageRoleRequirementRow[];
     competencies?: ProcessStageCompetencyRequirementRow[];
     dependencies?: ProcessStageDependencyRow[];
+    responsibilities?: ProcessStageRoleResponsibilityRow[];
   },
 ): ProcessStage {
   return {
@@ -101,6 +103,18 @@ export function rowToProcessStage(
       minLevelItemId: c.min_level_item_id,
     })),
     dependsOnStageIds: (requirements?.dependencies ?? []).map((d) => d.depends_on_stage_id),
+    baseCommunicationPhase: row.base_communication_phase ?? null,
+    weightComm: row.weight_comm ?? null,
+    weightCoord: row.weight_coord ?? null,
+    slaDays: row.sla_days ?? {},
+    requiresProjectStageLead: Boolean(row.requires_project_stage_lead),
+    roleResponsibility: (requirements?.responsibilities ?? []).map((r) => ({
+      roleCode: r.role_code,
+      isGlowny: Boolean(r.is_glowny),
+      isWspiera: Boolean(r.is_wspiera),
+      isKomunikuje: Boolean(r.is_komunikuje),
+    })),
+    code: row.code,
   };
 }
 

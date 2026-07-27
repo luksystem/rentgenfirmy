@@ -37,6 +37,14 @@ export default function NoContactPage() {
         description="Projekty, w których data kolejnego kontaktu minęła i nie było aktywności dłużej niż 14 dni."
       />
 
+      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+        <strong>Ta strona jest nieaktualna.</strong> „Data ostatniego kontaktu" poniżej pochodzi
+        z pola, które jest ustawiane raz przy tworzeniu projektu i nigdy potem nieaktualizowane —
+        nie odzwierciedla realnego kontaktu z klientem. Docelowo tę stronę przejmie rejestr
+        zdarzeń komunikacyjnych (docs/08 D18); do tego czasu traktuj liczby poniżej jako
+        orientacyjne, nie wiarygodne.
+      </div>
+
       <div className="grid gap-3 md:hidden">
         {staleProjects.map((project) => (
           <MobileListCard

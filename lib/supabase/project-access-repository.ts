@@ -7,7 +7,13 @@ export type ProjectRoleFlags = {
   developer: boolean;
 };
 
-export type ProjectAssignedProfile = UserProfile & ProjectRoleFlags;
+export type ProjectRoleSlotSource = "obsada" | "fallback" | "zastepstwo" | "przejecie_czerwone";
+
+export type ProjectAssignedProfile = UserProfile &
+  ProjectRoleFlags & {
+    /** Źródło slotu pod każdą rolą — brak klucza = nieobsadzona. UI musi odróżnić 'fallback' od 'obsada'. */
+    roleSources: Partial<Record<keyof ProjectRoleFlags, ProjectRoleSlotSource>>;
+  };
 
 async function parseJsonResponse<T>(response: Response, fallbackError: string): Promise<T> {
   const payload = await response.json().catch(() => ({}));

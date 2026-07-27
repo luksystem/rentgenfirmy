@@ -25,12 +25,25 @@ export type BulkProcessTemplateSyncResult = {
   message?: string;
 };
 
+export type OrphanedStageReference = {
+  sourceTable: string;
+  projectId: string;
+  stageId: string;
+  detail: string;
+};
+
 export type BulkProcessTemplateSyncSummary = {
   total: number;
   synced: number;
   skipped: number;
   errors: number;
   results: BulkProcessTemplateSyncResult[];
+  /**
+   * Wiersze project_stage_leads / project_stage_history wskazujące na stage_id, który po tej
+   * synchronizacji nie istnieje już w template_snapshot żadnego projektu (/docs/08, "miękkie
+   * odniesienia mają cenę"). Nieblokujące — tylko do przeglądu po synchronizacji.
+   */
+  orphanedStageReferences: OrphanedStageReference[];
 };
 
 async function fetchProjectProcessAdmin(admin: AdminClient, projectId: string) {
@@ -278,11 +291,26 @@ export async function syncAllProjectProcessFromTemplates(options?: {
     }
   }
 
+  let orphanedStageReferences: OrphanedStageReference[] = [];
+  if (!dryRun) {
+    const { data: orphanRows, error: orphanError } = await admin.rpc("report_orphaned_stage_references");
+    if (orphanError) {
+      throw new Error(orphanError.message);
+    }
+    orphanedStageReferences = (orphanRows ?? []).map((row) => ({
+      sourceTable: row.source_table,
+      projectId: row.project_id,
+      stageId: row.stage_id,
+      detail: row.detail,
+    }));
+  }
+
   return {
     total: results.length,
     synced: results.filter((entry) => entry.status === "synced").length,
     skipped: results.filter((entry) => entry.status === "skipped").length,
     errors: results.filter((entry) => entry.status === "error").length,
     results,
+    orphanedStageReferences,
   };
 }

@@ -489,9 +489,14 @@ export function ProjectForm({
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Status przepływu" error={errors.flowStatus?.message}>
           <Select {...register("flowStatus")}>
-            {flowStatusNames(fieldOptions).map((status) => (
-              <option key={status}>{status}</option>
-            ))}
+            {flowStatusNames(fieldOptions)
+              // "Oczekuje" wycofane z wyboru — wartość zostaje w konfiguracji (nie usuwamy
+              // z enuma), tylko znika z listy dla NOWYCH wyborów. Projekt, który ma to
+              // ustawione dziś, nadal widzi swoją wartość, żeby select się nie wyzerował.
+              .filter((status) => status !== "Oczekuje" || status === flowStatus)
+              .map((status) => (
+                <option key={status}>{status}</option>
+              ))}
           </Select>
         </Field>
         <Field label="Etap" error={errors.stage?.message}>

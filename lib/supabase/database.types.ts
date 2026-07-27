@@ -2217,6 +2217,12 @@ export type ProcessStageRow = {
   allows_trainee: boolean;
   for_closing: boolean;
   created_at: string;
+  base_communication_phase: "CZUWANIE" | "STANDARD" | "INTENSYWNA" | "KRYTYCZNA" | null;
+  weight_comm: number | null;
+  weight_coord: number | null;
+  sla_days: Record<string, number>;
+  requires_project_stage_lead: boolean;
+  code: string;
 };
 
 export type ProcessStageRoleRequirementRow = {
@@ -2224,6 +2230,16 @@ export type ProcessStageRoleRequirementRow = {
   stage_id: string;
   role_item_id: string;
   min_count: number;
+  created_at: string;
+};
+
+export type ProcessStageRoleResponsibilityRow = {
+  id: string;
+  stage_id: string;
+  role_code: string;
+  is_glowny: boolean;
+  is_wspiera: boolean;
+  is_komunikuje: boolean;
   created_at: string;
 };
 
@@ -2272,6 +2288,68 @@ export type ProcessItemRow = {
   default_payload: unknown;
   is_internal_acceptance: boolean;
   created_at: string;
+  artifact_type: string | null;
+};
+
+export type RoleRow = {
+  code: string;
+  name: string;
+  description: string;
+  is_client_facing: boolean;
+  max_holders: number;
+  uses_project_slot: boolean;
+  created_at: string;
+};
+
+export type ProjectRoleSlotRow = {
+  id: string;
+  project_id: string;
+  role_code: string;
+  user_id: string;
+  from_date: string;
+  to_date: string | null;
+  source: "obsada" | "fallback" | "zastepstwo" | "przejecie_czerwone";
+  source_ref: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type RoleFallbackRow = {
+  role_code: string;
+  fallback_role_code: string;
+  priority: number;
+};
+
+export type ArtifactSecondSignatureRequirementRow = {
+  id: string;
+  artifact_type: string;
+  required_role_codes: string[];
+  description: string;
+};
+
+export type ProjectRoleSlotMigrationConflictRow = {
+  id: string;
+  project_id: string;
+  source_field: "is_technical_lead" | "is_operational_lead" | "is_developer";
+  target_role_codes: string[];
+  conflicting_user_ids: string[];
+  detected_at: string;
+  resolved: boolean;
+  resolved_role_code: string | null;
+  resolved_user_id: string | null;
+  resolved_at: string | null;
+  resolved_note: string | null;
+};
+
+/** Wstrzymanie projektu (docs/08 D19 §4) — modyfikator, nie status. */
+export type ProjectHoldRow = {
+  id: string;
+  project_id: string;
+  reason: string;
+  agreed_with: string;
+  expected_return_date: string;
+  created_by: string | null;
+  created_at: string;
 };
 
 export type ProjectProcessRow = {
@@ -2284,6 +2362,41 @@ export type ProjectProcessRow = {
   active_stage_id: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type ProjectStageLeadRow = {
+  id: string;
+  project_id: string;
+  stage_id: string;
+  user_id: string;
+  since: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectStageLeadHistoryRow = {
+  id: string;
+  project_id: string;
+  stage_id: string;
+  user_id: string;
+  from_date: string;
+  to_date: string | null;
+  handover_from: string | null;
+  handover_note: string | null;
+  created_at: string;
+};
+
+export type ProjectStageHistoryRow = {
+  id: string;
+  project_id: string;
+  stage_id: string;
+  entered_at: string;
+  exited_at: string | null;
+  changed_by: string | null;
+  milestone_reached: boolean;
+  backfilled: boolean;
+  source: "app" | "direct_db";
+  created_at: string;
 };
 
 export type ProjectProcessItemRow = {
@@ -3712,6 +3825,13 @@ export type Database = {
         Update: Partial<ProcessStageDependencyRow>;
         Relationships: [];
       };
+      process_stage_role_responsibility: {
+        Row: ProcessStageRoleResponsibilityRow;
+        Insert: Partial<ProcessStageRoleResponsibilityRow> &
+          Pick<ProcessStageRoleResponsibilityRow, "stage_id" | "role_code">;
+        Update: Partial<ProcessStageRoleResponsibilityRow>;
+        Relationships: [];
+      };
       process_elements: {
         Row: ProcessElementRow;
         Insert: Partial<ProcessElementRow> & Pick<ProcessElementRow, "kind" | "title">;
@@ -3722,6 +3842,49 @@ export type Database = {
         Row: ProcessItemRow;
         Insert: Partial<ProcessItemRow> & Pick<ProcessItemRow, "milestone_id" | "title" | "kind">;
         Update: Partial<ProcessItemRow>;
+        Relationships: [];
+      };
+      role: {
+        Row: RoleRow;
+        Insert: Partial<RoleRow> & Pick<RoleRow, "code" | "name">;
+        Update: Partial<RoleRow>;
+        Relationships: [];
+      };
+      project_role_slot: {
+        Row: ProjectRoleSlotRow;
+        Insert: Partial<ProjectRoleSlotRow> &
+          Pick<ProjectRoleSlotRow, "project_id" | "role_code" | "user_id" | "source">;
+        Update: Partial<ProjectRoleSlotRow>;
+        Relationships: [];
+      };
+      role_fallback: {
+        Row: RoleFallbackRow;
+        Insert: Partial<RoleFallbackRow> & Pick<RoleFallbackRow, "role_code" | "fallback_role_code">;
+        Update: Partial<RoleFallbackRow>;
+        Relationships: [];
+      };
+      artifact_second_signature_requirement: {
+        Row: ArtifactSecondSignatureRequirementRow;
+        Insert: Partial<ArtifactSecondSignatureRequirementRow> &
+          Pick<ArtifactSecondSignatureRequirementRow, "artifact_type" | "required_role_codes">;
+        Update: Partial<ArtifactSecondSignatureRequirementRow>;
+        Relationships: [];
+      };
+      project_role_slot_migration_conflict: {
+        Row: ProjectRoleSlotMigrationConflictRow;
+        Insert: Partial<ProjectRoleSlotMigrationConflictRow> &
+          Pick<
+            ProjectRoleSlotMigrationConflictRow,
+            "project_id" | "source_field" | "target_role_codes" | "conflicting_user_ids"
+          >;
+        Update: Partial<ProjectRoleSlotMigrationConflictRow>;
+        Relationships: [];
+      };
+      project_holds: {
+        Row: ProjectHoldRow;
+        Insert: Partial<ProjectHoldRow> &
+          Pick<ProjectHoldRow, "project_id" | "reason" | "agreed_with" | "expected_return_date">;
+        Update: Partial<ProjectHoldRow>;
         Relationships: [];
       };
       project_processes: {
@@ -3735,6 +3898,27 @@ export type Database = {
         Insert: Partial<ProjectProcessItemRow> &
           Pick<ProjectProcessItemRow, "project_id" | "template_item_id" | "kind">;
         Update: Partial<ProjectProcessItemRow>;
+        Relationships: [];
+      };
+      project_stage_leads: {
+        Row: ProjectStageLeadRow;
+        Insert: Partial<ProjectStageLeadRow> &
+          Pick<ProjectStageLeadRow, "project_id" | "stage_id" | "user_id">;
+        Update: Partial<ProjectStageLeadRow>;
+        Relationships: [];
+      };
+      project_stage_lead_history: {
+        Row: ProjectStageLeadHistoryRow;
+        Insert: Partial<ProjectStageLeadHistoryRow> &
+          Pick<ProjectStageLeadHistoryRow, "project_id" | "stage_id" | "user_id" | "from_date">;
+        Update: Partial<ProjectStageLeadHistoryRow>;
+        Relationships: [];
+      };
+      project_stage_history: {
+        Row: ProjectStageHistoryRow;
+        Insert: Partial<ProjectStageHistoryRow> &
+          Pick<ProjectStageHistoryRow, "project_id" | "stage_id" | "entered_at">;
+        Update: Partial<ProjectStageHistoryRow>;
         Relationships: [];
       };
       process_internal_acceptance_configs: {
@@ -4270,6 +4454,42 @@ export type Database = {
       record_client_view: {
         Args: { p_client_id: string };
         Returns: ClientRecentViewRow;
+      };
+      set_project_active_stage: {
+        Args: { p_project_id: string; p_stage_id: string | null; p_user_id?: string | null };
+        Returns: ProjectProcessRow;
+      };
+      report_orphaned_stage_references: {
+        Args: Record<string, never>;
+        Returns: {
+          source_table: string;
+          project_id: string;
+          stage_id: string;
+          detail: string;
+        }[];
+      };
+      report_project_role_slot_migration: {
+        Args: Record<string, never>;
+        Returns: {
+          project_id: string;
+          project_name: string;
+          role_code: string;
+          user_id: string;
+          user_name: string;
+          source: string;
+          source_ref: string | null;
+        }[];
+      };
+      report_project_role_slot_conflicts: {
+        Args: Record<string, never>;
+        Returns: {
+          conflict_id: string;
+          project_id: string;
+          project_name: string;
+          source_field: string;
+          target_role_codes: string[];
+          conflicting_users: string[] | null;
+        }[];
       };
     };
     Enums: Record<string, never>;

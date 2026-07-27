@@ -60,6 +60,25 @@ export function parseProcessTemplateSnapshot(value: unknown): ProcessTemplate | 
         dependsOnStageIds: (Array.isArray(stage.dependsOnStageIds) ? stage.dependsOnStageIds : []).map((id) =>
           String(id),
         ),
+        baseCommunicationPhase: (stage.baseCommunicationPhase ??
+          null) as ProcessTemplate["stages"][number]["baseCommunicationPhase"],
+        weightComm: stage.weightComm == null ? null : Number(stage.weightComm),
+        weightCoord: stage.weightCoord == null ? null : Number(stage.weightCoord),
+        slaDays: isRecord(stage.slaDays)
+          ? Object.fromEntries(
+              Object.entries(stage.slaDays).map(([key, days]) => [key, Number(days)]),
+            )
+          : {},
+        requiresProjectStageLead: stage.requiresProjectStageLead === true,
+        roleResponsibility: (Array.isArray(stage.roleResponsibility) ? stage.roleResponsibility : [])
+          .filter(isRecord)
+          .map((responsibility) => ({
+            roleCode: String(responsibility.roleCode ?? ""),
+            isGlowny: responsibility.isGlowny === true,
+            isWspiera: responsibility.isWspiera === true,
+            isKomunikuje: responsibility.isKomunikuje === true,
+          })),
+        code: typeof stage.code === "string" ? stage.code : undefined,
         milestones: sortByPosition(
           (Array.isArray(stage.milestones) ? stage.milestones : [])
             .filter(isRecord)
