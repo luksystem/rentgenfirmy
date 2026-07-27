@@ -45,6 +45,7 @@ export function MyWorkDetailPanel({
   onEdit,
   onRequestTakeover,
   onCompleteAllocation,
+  onResolveClarification,
 }: {
   detail: WorkItemDetail | null;
   open: boolean;
@@ -59,6 +60,8 @@ export function MyWorkDetailPanel({
   onEdit?: () => void;
   onRequestTakeover?: () => Promise<void>;
   onCompleteAllocation?: () => Promise<void>;
+  /** "Wymaga wyjaśnienia" nie mialo zadnej akcji dla wykonawcy — pozwala wrocic do "Przyjete". */
+  onResolveClarification?: () => Promise<void>;
 }) {
   const profile = useAuthStore((state) => state.profile);
   const teamProfiles = useMyWorkStore((state) => state.teamProfiles);
@@ -66,10 +69,13 @@ export function MyWorkDetailPanel({
   const canManage = useCanManageWorkItems(profile?.role);
   const [commentBody, setCommentBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [resolving, setResolving] = useState(false);
 
   if (!detail) return null;
   const { item, comments, logs, acceptances } = detail;
   const isAssignee = profile?.id === item.assignedUserId;
+  const canResolveClarification =
+    isAssignee && item.status === "needs_clarification" && Boolean(onResolveClarification);
   const canAccept = isAssignee && (item.status === "sent" || item.status === "pending_ack");
   const canComplete =
     isAssignee && ["accepted", "in_progress", "blocked", "risk_reported"].includes(item.status);
@@ -111,6 +117,16 @@ export function MyWorkDetailPanel({
       setCommentBody("");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleResolveClarification() {
+    if (!onResolveClarification) return;
+    setResolving(true);
+    try {
+      await onResolveClarification();
+    } finally {
+      setResolving(false);
     }
   }
 
@@ -257,6 +273,15 @@ export function MyWorkDetailPanel({
           ) : null}
           {canAccept ? (
             <Button onClick={onAccept}>Przyjmij zadanie</Button>
+          ) : null}
+          {canResolveClarification ? (
+            <Button
+              variant="secondary"
+              disabled={resolving}
+              onClick={() => void handleResolveClarification()}
+            >
+              {resolving ? "Zapisywanie…" : "Wyjaśnione — wracam do realizacji"}
+            </Button>
           ) : null}
           {isAssignee && item.status === "accepted" ? (
             <Button variant="secondary" onClick={() => void onStart()}>

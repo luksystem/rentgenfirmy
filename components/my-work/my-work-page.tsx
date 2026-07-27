@@ -309,6 +309,9 @@ export function MyWorkPage() {
         onComment={async (body) => {
           if (selectedDetail) await commentOnItem(selectedDetail.item.id, body);
         }}
+        onResolveClarification={async () => {
+          if (selectedDetail) await moveItemStatus(selectedDetail.item.id, "accepted");
+        }}
         onReportObstacle={() => setObstacleOpen(true)}
         onEdit={() => {
           setDetailOpen(false);
