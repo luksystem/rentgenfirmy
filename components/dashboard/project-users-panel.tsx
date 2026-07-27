@@ -6,10 +6,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { USER_ROLE_LABELS, getUserDisplayName, hasFullAppAccess } from "@/lib/auth/types";
 import { profileHasAllProjectsAccess } from "@/lib/project-access/rules";
 import {
-  fetchProjectAccessibleProfiles,
+  fetchProjectAccessibleProfilesWithSlots,
   setProjectRoleFlag,
   type ProjectAssignedProfile,
   type ProjectRoleFlags,
+  type ProjectRoleSlotEntry,
+  type ProjectRoleSlotSource,
 } from "@/lib/supabase/project-access-repository";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -19,10 +21,57 @@ const ROLE_FIELDS: { field: keyof ProjectRoleFlags; label: string }[] = [
   { field: "developer", label: "Programista" },
 ];
 
+const SLOT_SOURCE_LABELS: Record<ProjectRoleSlotSource, string> = {
+  obsada: "obsada",
+  fallback: "zastępczo (fallback)",
+  zastepstwo: "zastępstwo",
+  przejecie_czerwone: "przejęcie (czerwony)",
+};
+
+const SLOT_SOURCE_TONES: Record<ProjectRoleSlotSource, "active" | "waiting" | "blue" | "critical"> = {
+  obsada: "active",
+  fallback: "waiting",
+  zastepstwo: "blue",
+  przejecie_czerwone: "critical",
+};
+
+function ProjectRoleSlotsList({ slots }: { slots: ProjectRoleSlotEntry[] }) {
+  if (!slots.length) {
+    return null;
+  }
+
+  return (
+    <div className="grid gap-2 rounded-2xl border border-border/80 p-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted">
+        Faktyczna obsada slotów (odczyt, nieagregowany)
+      </p>
+      <div className="grid gap-1.5">
+        {slots.map((slot) => (
+          <div
+            key={slot.roleCode}
+            className="flex flex-wrap items-center justify-between gap-2 border-b border-border/30 py-1.5 last:border-b-0"
+          >
+            <span className="text-sm font-medium text-foreground">{slot.roleLabel}</span>
+            <div className="flex items-center gap-2 text-sm text-muted">
+              <span>{slot.profile ? getUserDisplayName(slot.profile) : "— nieobsadzony —"}</span>
+              {slot.source ? (
+                <Badge tone={SLOT_SOURCE_TONES[slot.source]} className="text-[10px]">
+                  {SLOT_SOURCE_LABELS[slot.source]}
+                </Badge>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ProjectUsersPanel({ projectId }: { projectId: string }) {
   const currentProfile = useAuthStore((state) => state.profile);
   const canEditRoles = currentProfile ? hasFullAppAccess(currentProfile.role) : false;
   const [profiles, setProfiles] = useState<ProjectAssignedProfile[]>([]);
+  const [slots, setSlots] = useState<ProjectRoleSlotEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -32,16 +81,18 @@ export function ProjectUsersPanel({ projectId }: { projectId: string }) {
     setLoading(true);
     setError(null);
 
-    void fetchProjectAccessibleProfiles(projectId)
+    void fetchProjectAccessibleProfilesWithSlots(projectId)
       .then((loaded) => {
         if (!cancelled) {
-          setProfiles(loaded);
+          setProfiles(loaded.profiles);
+          setSlots(loaded.slots);
         }
       })
       .catch((err: unknown) => {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Nie udało się wczytać użytkowników.");
           setProfiles([]);
+          setSlots([]);
         }
       })
       .finally(() => {
@@ -60,7 +111,8 @@ export function ProjectUsersPanel({ projectId }: { projectId: string }) {
     setBusyKey(key);
     try {
       const updated = await setProjectRoleFlag(projectId, profileId, field, value);
-      setProfiles(updated);
+      setProfiles(updated.profiles);
+      setSlots(updated.slots);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Nie udało się zapisać roli.");
     } finally {
@@ -200,6 +252,8 @@ export function ProjectUsersPanel({ projectId }: { projectId: string }) {
           </div>
         </>
       )}
+
+      <ProjectRoleSlotsList slots={slots} />
     </div>
   );
 }

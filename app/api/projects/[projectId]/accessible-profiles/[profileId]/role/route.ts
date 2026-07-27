@@ -6,6 +6,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   assertUserCanAccessProjectServer,
   fetchProjectAssignedProfilesServer,
+  fetchProjectRoleSlotsServer,
   setProjectRoleFlagServer,
   type ProjectRoleFlags,
 } from "@/lib/supabase/project-access-server";
@@ -37,8 +38,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     await assertUserCanAccessProjectServer(admin, profile, projectId);
 
     await setProjectRoleFlagServer(admin, { projectId, profileId, field, value });
-    const profiles = await fetchProjectAssignedProfilesServer(admin, projectId);
-    return NextResponse.json({ profiles });
+    const [profiles, slots] = await Promise.all([
+      fetchProjectAssignedProfilesServer(admin, projectId),
+      fetchProjectRoleSlotsServer(admin, projectId),
+    ]);
+    return NextResponse.json({ profiles, slots });
   } catch (error) {
     return jsonError(error);
   }

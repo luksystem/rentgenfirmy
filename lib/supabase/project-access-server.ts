@@ -1,7 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getUserDisplayName, STAFF_ROLES, type UserProfile } from "@/lib/auth/types";
 import { HttpError } from "@/lib/auth/http-error";
-import { PROCESS_ROLE_LABELS_INSTRUMENTAL, type ProcessRoleCode } from "@/lib/process/types";
+import {
+  PROCESS_ROLE_CODES,
+  PROCESS_ROLE_LABELS,
+  PROCESS_ROLE_LABELS_INSTRUMENTAL,
+  type ProcessRoleCode,
+} from "@/lib/process/types";
 import { profileHasAllProjectsAccess, roleHasImplicitAllProjects } from "@/lib/project-access/rules";
 import type { ProfileProjectAccessState } from "@/lib/project-access/types";
 import { mapProfileRow } from "@/lib/supabase/profile-mappers";
@@ -237,6 +242,75 @@ export async function fetchProjectAssignedProfilesServer(
       operationalLead: Boolean(operationalSource),
       developer: Boolean(developerSource),
       roleSources,
+    };
+  });
+}
+
+export type ProjectRoleSlotEntry = {
+  roleCode: ProcessRoleCode;
+  roleLabel: string;
+  profile: UserProfile | null;
+  source: ProjectRoleSlotSource | null;
+};
+
+/**
+ * Odczyt PEŁNEJ, nieagregowanej obsady siedmiu slotów projektowych (docs/08, "Rozstrzygnięcie
+ * w sprawie widoczności ról w UI": zapis może być zagregowany, odczyt nie może). W odróżnieniu
+ * od `fetchProjectAssignedProfilesServer` (grupuje 6 z 7 kodów pod 3 checkboxy) ta funkcja
+ * pokazuje każdy kod osobno, w tym `wlasciciel` i `asystent_procesu`, które nie mają dziś
+ * żadnego checkboxa. Lista kodów i kolejność wyświetlania pochodzi z `role.uses_project_slot`
+ * (dana, nie stała w kodzie, D9) — PROCESS_ROLE_CODES służy tylko do ustalenia kolejności.
+ */
+export async function fetchProjectRoleSlotsServer(
+  admin: AdminClient,
+  projectId: string,
+): Promise<ProjectRoleSlotEntry[]> {
+  const { data: roleRows, error: roleError } = await admin
+    .from("role")
+    .select("code")
+    .eq("uses_project_slot", true);
+  if (roleError) {
+    throw new Error(roleError.message);
+  }
+
+  const roleCodes = (roleRows ?? [])
+    .map((row) => row.code as ProcessRoleCode)
+    .sort((a, b) => PROCESS_ROLE_CODES.indexOf(a) - PROCESS_ROLE_CODES.indexOf(b));
+
+  const { data: slotRows, error: slotError } = await admin
+    .from("project_role_slot")
+    .select("role_code, user_id, source")
+    .eq("project_id", projectId)
+    .is("to_date", null);
+  if (slotError) {
+    throw new Error(slotError.message);
+  }
+
+  const slotByRole = new Map<string, { userId: string; source: ProjectRoleSlotSource }>();
+  (slotRows ?? []).forEach((row) => {
+    slotByRole.set(row.role_code, { userId: row.user_id, source: row.source as ProjectRoleSlotSource });
+  });
+
+  const profileIds = [...new Set([...slotByRole.values()].map((entry) => entry.userId))];
+  const profilesById = new Map<string, UserProfile>();
+  if (profileIds.length) {
+    const { data: profileRows, error: profilesError } = await admin
+      .from("profiles")
+      .select("*")
+      .in("id", profileIds);
+    if (profilesError) {
+      throw new Error(profilesError.message);
+    }
+    (profileRows ?? []).forEach((row) => profilesById.set(row.id as string, mapProfileRow(row)));
+  }
+
+  return roleCodes.map((roleCode) => {
+    const slot = slotByRole.get(roleCode);
+    return {
+      roleCode,
+      roleLabel: PROCESS_ROLE_LABELS[roleCode] ?? roleCode,
+      profile: slot ? profilesById.get(slot.userId) ?? null : null,
+      source: slot ? slot.source : null,
     };
   });
 }

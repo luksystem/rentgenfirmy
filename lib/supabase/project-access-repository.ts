@@ -62,12 +62,32 @@ export async function fetchProjectAccessibleProfiles(
   return payload.profiles;
 }
 
+export type ProjectRoleSlotEntry = {
+  roleCode: string;
+  roleLabel: string;
+  profile: UserProfile | null;
+  source: ProjectRoleSlotSource | null;
+};
+
+/** Jak fetchProjectAccessibleProfiles, ale w jednym zapytaniu dokłada nieagregowaną (7-slotową) obsadę — patrz project-users-panel.tsx. */
+export async function fetchProjectAccessibleProfilesWithSlots(
+  projectId: string,
+): Promise<{ profiles: ProjectAssignedProfile[]; slots: ProjectRoleSlotEntry[] }> {
+  const response = await fetch(`/api/projects/${projectId}/accessible-profiles`, {
+    credentials: "include",
+  });
+  return parseJsonResponse<{ profiles: ProjectAssignedProfile[]; slots: ProjectRoleSlotEntry[] }>(
+    response,
+    "Nie udało się wczytać użytkowników projektu.",
+  );
+}
+
 export async function setProjectRoleFlag(
   projectId: string,
   profileId: string,
   field: keyof ProjectRoleFlags,
   value: boolean,
-): Promise<ProjectAssignedProfile[]> {
+): Promise<{ profiles: ProjectAssignedProfile[]; slots: ProjectRoleSlotEntry[] }> {
   const response = await fetch(
     `/api/projects/${projectId}/accessible-profiles/${profileId}/role`,
     {
@@ -77,9 +97,8 @@ export async function setProjectRoleFlag(
       body: JSON.stringify({ field, value }),
     },
   );
-  const payload = await parseJsonResponse<{ profiles: ProjectAssignedProfile[] }>(
+  return parseJsonResponse<{ profiles: ProjectAssignedProfile[]; slots: ProjectRoleSlotEntry[] }>(
     response,
     "Nie udało się zapisać roli projektowej.",
   );
-  return payload.profiles;
 }

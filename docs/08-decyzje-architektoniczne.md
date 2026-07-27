@@ -478,6 +478,69 @@ wierszy) i 218 (`project_holds` + `project_active_holds`), filtr "Oczekuje" w UI
 
 ---
 
+## D20. Widoczność ról w UI — zapis zagregowany, odczyt nieagregowany
+
+**Status: zatwierdzone przez właściciela.**
+
+**Zasada:** zapis może zostać zagregowany, odczyt nie może.
+
+### 1. Zrobione teraz (ta tura)
+
+Trzy checkboxy (`ProjectUsersPanel`, "Osoby z dostępem do projektu") zostają jako sposób ZAPISU —
+odzwierciedlają rzeczywistą obsadę firmy, gdzie jedna osoba trzyma parę slotów jednocześnie
+(lider operacyjny = `opiekun_projektu` + `koordynator_operacyjny`, lider techniczny =
+`koordynator_techniczny` + `projektant`). Powód pozostawienia: fallback już dziś obsadza sloty
+pojedynczo, więc trzy zagregowane checkboxy mogłyby milcząco pokazywać stan niezgodny z bazą,
+gdyby nie było obok nich odczytu źródła prawdy.
+
+Pod checkboxami dodana lista faktycznych slotów w trybie WYŁĄCZNIE ODCZYTU: rola | osoba | źródło
+(obsada/fallback/zastępstwo/przejęcie), dla wszystkich siedmiu kodów z `role.uses_project_slot =
+true` — w tym `wlasciciel` i `asystent_procesu`, które wcześniej nie miały żadnej reprezentacji w
+UI.
+
+Implementacja: `lib/supabase/project-access-server.ts` (`fetchProjectRoleSlotsServer`,
+`ProjectRoleSlotEntry`) — czyta `role.uses_project_slot` jako dane (D9), nie hardkoduje listy
+siedmiu kodów; kolejność wyświetlania bierze z `PROCESS_ROLE_CODES` (kolejność, nie flaga).
+Endpoint `GET /api/projects/[projectId]/accessible-profiles` i `PATCH .../[profileId]/role` zwracają
+teraz `{ profiles, slots }` łącznie (jeden request zamiast dwóch). UI:
+`components/dashboard/project-users-panel.tsx`, blok `ProjectRoleSlotsList`, wspólny dla
+desktopu i mobile (lista, nie tabela — nie wymaga osobnego layoutu per breakpoint).
+
+### 2. Pełny edytor siedmiu slotów — świadomy deliverable, nie efekt uboczny
+
+**Nie zbudowany teraz.** Musi wejść do sekwencji faz jako osobna, nazwana pozycja z własnym
+szacunkiem — **przed** fazą komunikacji zawierającą "przejęcie przy czerwonym" (docs/04 §4.4:
+`effective_phase = KRYTYCZNA` lub zdrowie etapu czerwone → slot `opiekun_projektu` przepinany na
+`wlasciciel`, `source='przejecie_czerwone'`) i **przed** fazą zastępstw urlopowych (docs/04 §6).
+
+Powód: przejęcie przy czerwonym przepina wyłącznie slot `opiekun_projektu`, zostawiając
+`koordynator_operacyjny` przy dotychczasowej osobie — to samo dla zastępstwa urlopowego, które
+działa per pojedynczy slot, nie per grupa. Zagregowane UI (trzy checkboxy) nie umie ani pokazać
+takiego stanu (dwie osoby pod jedną etykietą "Lider operacyjny"), ani go zapisać (przepięcie
+jednego slotu z pary wymagałoby zdjęcia i ponownego zaznaczenia całej pary, gubiąc informację,
+który slot faktycznie się zmienił). Mechanizmy te są zaplanowane jako jedna operacja — "przepięcie
+slotu z podaniem powodu" (docs/04 §4, akapit wprowadzający) — więc edytor musi istnieć zanim
+którykolwiek z nich zacznie zapisywać do `project_role_slot`.
+
+**Uwaga o numeracji faz:** docs/04 §8 numeruje to lokalnie jako fazy modułu (3 = fazy komunikacji
+z przejęciem, 5 = zastępstwa); globalna, zatwierdzona przez właściciela sekwencja 15 faz z
+szacunkami (ustalona w tej samej turze rozmowy co D19, po przeplanowaniu ROT/raport/pilotaż) nie
+została jeszcze przepisana do tego pliku — żyje dziś tylko w historii rozmowy. Kimkolwiek
+realizującym którąkolwiek z tych dwóch faz: przed startem sprawdzić, czy edytor siedmiu slotów już
+istnieje; jeśli nie, dopisać go jako pierwszy krok danej fazy, nie zakładać, że wystarczą trzy
+checkboxy.
+
+### 3. Rozdzielenie ról w firmie — świadomie poza zakresem
+
+Nie planujemy "rozdzielenia ról w firmie" (np. rozdzielenie `opiekun_projektu` od
+`koordynator_operacyjny` na dwie różne osoby na stałe) jako zadania UI — to decyzja kadrowa
+właściciela, nie coś, co system ma sugerować czy przygotowywać proaktywnie. Zakres §1–2 powyżej to
+wyłącznie to, żeby interfejs był **gotowy** na taką decyzję w momencie, gdy zapadnie (bo dane i
+mechanizm przepięcia slotu już działają per-slot od fazy 2) — nie żeby ją planować czy zachęcać do
+niej.
+
+---
+
 ## Kolejność decyzji względem faz
 
 | Decyzja | Blokuje | Status |
@@ -491,6 +554,8 @@ wierszy) i 218 (`project_holds` + `project_active_holds`), filtr "Oczekuje" w UI
 | D17 | faza 2 | zatwierdzone, zrealizowane (tabela konfliktów, zero przypadków w danych produkcyjnych) |
 | D18 | faza 7/8 (rejestr zdarzeń komunikacyjnych, silnik faz) | częściowo nadpisane przez D19 — patrz notka przy D18 |
 | D19 | nowa faza „Cykl życia projektu" + rozszerzenia faz sygnałów/ROT/is_active/komunikacji — patrz przeplanowanie poniżej | zatwierdzone; część zrealizowana od razu (§3, §4, §7 — migracje 217-218), reszta materiał na fazy 4+ |
+| D20 §1 | — | zatwierdzone, zrealizowane (lista odczytu 7 slotów w `ProjectUsersPanel`) |
+| D20 §2 | faza komunikacji z przejęciem przy czerwonym (docs/04 §4.4) + faza zastępstw urlopowych (docs/04 §6) | zatwierdzone, do realizacji jako osobna, nazwana pozycja w sekwencji, przed obiema tymi fazami |
 
 ---
 
