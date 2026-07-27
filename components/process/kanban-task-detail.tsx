@@ -671,7 +671,7 @@ export function KanbanTaskDetailModal({
                         profile={resolveCommentProfile(comment.authorName)}
                         name={comment.authorName}
                         size="xs"
-                        subtitle={comment.authorSide === "client" ? "Klient" : "Zespół"}
+                        subtitle={`${comment.authorSide === "client" ? "Klient" : "Zespół"} · ${formatKanbanEventDate(comment.createdAt)}`}
                       />
                       {isOwn && onUpdateComment && onDeleteComment ? (
                         <div className="flex shrink-0 gap-1">

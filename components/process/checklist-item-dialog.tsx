@@ -120,8 +120,11 @@ export function ChecklistItemDialog({
                 {QUICK_STATUSES.map(({ status: nextStatus, label, icon: Icon }) => {
                   const styles = INTERNAL_ACCEPTANCE_STATUS_STYLES[nextStatus];
                   const selected = status === nextStatus;
-                  const blocked =
+                  const blockedByDocumentation =
                     nextStatus === "PASSED" && Boolean(passedBlockedReason) && !selected;
+                  const blockedByConfirmation =
+                    nextStatus === "NOT_APPLICABLE" && status === "PASSED";
+                  const blocked = blockedByDocumentation || blockedByConfirmation;
                   return (
                     <Button
                       key={nextStatus}
@@ -129,7 +132,13 @@ export function ChecklistItemDialog({
                       size="sm"
                       variant="secondary"
                       disabled={saving || selected || blocked}
-                      title={blocked ? (passedBlockedReason ?? undefined) : undefined}
+                      title={
+                        blockedByDocumentation
+                          ? (passedBlockedReason ?? undefined)
+                          : blockedByConfirmation
+                            ? "Odznacz najpierw checkbox zatwierdzenia przy pozycji, aby wybrać „Nie dotyczy”."
+                            : undefined
+                      }
                       onClick={() => onStatusChange(nextStatus)}
                       className={cn(
                         "h-auto flex-col gap-1.5 border py-3 text-xs font-semibold",

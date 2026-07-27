@@ -19,6 +19,7 @@ import type { ProcessElementPlacement } from "@/lib/supabase/process-element-rep
 import {
   PROCESS_ITEM_KINDS,
   PROCESS_ITEM_KIND_LABELS,
+  type ChecklistItemPayload,
   type ProcessElement,
   type ProcessItemKind,
 } from "@/lib/process/types";
@@ -34,7 +35,17 @@ export function ProcessElementEditor({
   onSave: (element: ProcessElement) => Promise<void>;
   onDelete?: () => Promise<void>;
 }) {
-  const [element, setElement] = useState(initialElement);
+  // Normalizujemy checklistę tylko raz przy montowaniu — normalizacja na kazdym renderze
+  // (np. wymuszanie .trim() na nazwie listy) psula wpisywanie spacji i kasowanie tresci w locie.
+  const [element, setElement] = useState<ProcessElement>(() => {
+    if (initialElement.kind === "checklist" && !initialElement.isInternalAcceptance) {
+      return {
+        ...initialElement,
+        defaultPayload: normalizeChecklistPayload(initialElement.defaultPayload),
+      };
+    }
+    return initialElement;
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -177,7 +188,7 @@ export function ProcessElementEditor({
         {element.kind === "checklist" && !element.isInternalAcceptance ? (
           <TemplateChecklistLinesEditor
             label="Punkty checklisty (wzorzec)"
-            payload={normalizeChecklistPayload(element.defaultPayload)}
+            payload={element.defaultPayload as ChecklistItemPayload}
             onChange={(defaultPayload) => setElement({ ...element, defaultPayload })}
           />
         ) : element.kind === "checklist" && element.isInternalAcceptance ? (

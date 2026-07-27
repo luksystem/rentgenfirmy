@@ -23,7 +23,10 @@ import {
   isTerminalWorkItemStatus,
   workItemLinkUrl,
 } from "@/lib/my-work/types";
-import { assertWorkItemStatusTransition } from "@/lib/my-work/state-machine";
+import {
+  assertWorkItemStatusTransition,
+  canTransitionWorkItemStatus,
+} from "@/lib/my-work/state-machine";
 import { resolveSourceLinkForItem } from "@/lib/my-work/link-resolver";
 import { mapProfileRow } from "@/lib/supabase/profile-mappers";
 import { assertAssigneeHasProjectAccessServer } from "@/lib/supabase/project-access-server";
@@ -991,6 +994,24 @@ export async function addWorkItemCommentServer(
   }
 
   await appendWorkItemLog(admin, { workItemId: id, userId: actor.id, action: "comment_added" });
+
+  // Odpowiedź kogoś innego niż wykonawca na "Do skomentowania" (wymaga wyjaśnień / zgłoszono
+  // ryzyko) wraca zadanie do zwykłego obiegu ("Wysłane") - wykonawca musi je zaakceptować ponownie,
+  // zamiast zadanie wisiało bezterminowo w "Do skomentowania" mimo udzielonej odpowiedzi.
+  const isAssignee = detail.item.assignedUserId === actor.id;
+  const needsResponse =
+    detail.item.status === "needs_clarification" || detail.item.status === "risk_reported";
+  if (!isAssignee && needsResponse && canTransitionWorkItemStatus(detail.item.status, "sent")) {
+    const { error: statusError } = await admin
+      .from("work_items")
+      .update({ status: "sent", updated_at: now })
+      .eq("id", id);
+    if (!statusError) {
+      await syncWorkItemPatchToSource(admin, detail.item, { status: "sent" });
+      await appendWorkItemLog(admin, { workItemId: id, userId: actor.id, action: "status:sent" });
+    }
+  }
+
   return fetchWorkItemDetail(admin, id, actor.id, actor);
 }
 

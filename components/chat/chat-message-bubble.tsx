@@ -7,7 +7,12 @@ import type { ChatAttachment, ChatMessageWithExtras } from "@/lib/chat/types";
 import { ChatEmojiPicker } from "@/components/chat/chat-emoji-picker";
 
 function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleString("pl-PL", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function initials(name: string | null) {

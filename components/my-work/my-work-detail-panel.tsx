@@ -20,7 +20,7 @@ import {
   type WorkItemDetail,
 } from "@/lib/my-work/types";
 import { workItemLogActionLabel } from "@/lib/my-work/display-labels";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import { canEditWorkItem } from "@/lib/my-work/permissions";
 import { UserIdentity } from "@/components/user-avatar";
 import { useMentionOptionsFromProfiles } from "@/hooks/use-team-mention-options";
@@ -196,7 +196,7 @@ export function MyWorkDetailPanel({
                       profile={authorProfile}
                       name={comment.authorName}
                       size="xs"
-                      subtitle={formatDate(comment.createdAt)}
+                      subtitle={formatDateTime(comment.createdAt)}
                     />
                     <p className="mt-2 whitespace-pre-wrap">{comment.body}</p>
                   </div>
@@ -227,7 +227,7 @@ export function MyWorkDetailPanel({
               <div className="grid gap-2">
                 {acceptances.map((entry) => (
                   <div key={entry.id} className="rounded-lg bg-surface-muted px-3 py-2 text-xs text-muted">
-                    {WORK_ITEM_ACCEPTANCE_ACTION_LABELS[entry.action]} · {formatDate(entry.createdAt)}
+                    {WORK_ITEM_ACCEPTANCE_ACTION_LABELS[entry.action]} · {formatDateTime(entry.createdAt)}
                     {entry.comment ? <p className="mt-1">{entry.comment}</p> : null}
                   </div>
                 ))}
@@ -241,7 +241,7 @@ export function MyWorkDetailPanel({
               <div className="grid gap-1 text-xs text-muted">
                 {logs.slice(0, 8).map((log) => (
                   <p key={log.id}>
-                    {workItemLogActionLabel(log.action)} · {formatDate(log.createdAt)}
+                    {workItemLogActionLabel(log.action)} · {formatDateTime(log.createdAt)}
                   </p>
                 ))}
               </div>

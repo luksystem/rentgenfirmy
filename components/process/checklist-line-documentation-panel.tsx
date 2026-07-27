@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { AGREEMENT_ATTACHMENT_SIGNED_URL_TTL_SEC } from "@/lib/dashboard/agreement-attachments";
 import { attachSignedUrlsToChecklistAttachments } from "@/lib/supabase/checklist-attachments-repository";
 import type { ChecklistLine, ChecklistLineAttachment } from "@/lib/process/types";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 
 /** Odśwież podpisane URL-e zanim wygasną (TTL/2), żeby nie trafić na wygasły token w trakcie sesji. */
 const SIGNED_URL_REFRESH_INTERVAL_MS = (AGREEMENT_ATTACHMENT_SIGNED_URL_TTL_SEC * 1000) / 2;
@@ -289,8 +289,12 @@ export function ChecklistLineDocumentationPanel({
                 ) : (
                   <p className="truncate text-sm font-medium text-foreground">{attachment.fileName}</p>
                 )}
-                {attachment.uploadedBy ? (
-                  <p className="text-[11px] text-muted">{attachment.uploadedBy}</p>
+                {attachment.uploadedBy || attachment.uploadedAt ? (
+                  <p className="text-[11px] text-muted">
+                    {attachment.uploadedBy}
+                    {attachment.uploadedBy && attachment.uploadedAt ? " · " : null}
+                    {attachment.uploadedAt ? formatDateTime(attachment.uploadedAt) : null}
+                  </p>
                 ) : null}
               </div>
               {!readOnly ? (

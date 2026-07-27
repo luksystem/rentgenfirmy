@@ -8,7 +8,7 @@ const TRANSITIONS: Record<WorkItemStatus, WorkItemStatus[]> = {
   pending_ack: ["accepted", "needs_clarification", "risk_reported", "not_done", "cancelled"],
   accepted: ["in_progress", "blocked", "needs_clarification", "risk_reported", "cancelled"],
   needs_clarification: ["sent", "accepted", "in_progress", "cancelled"],
-  risk_reported: ["blocked", "in_progress", "needs_clarification", "cancelled"],
+  risk_reported: ["blocked", "in_progress", "needs_clarification", "sent", "cancelled"],
   in_progress: ["blocked", "done", "pending_verification", "deferred", "not_done", "cancelled"],
   blocked: ["in_progress", "deferred", "not_done", "cancelled"],
   done: ["pending_verification", "in_progress"],
