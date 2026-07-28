@@ -8,6 +8,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   Clock,
+  FileClock,
   FileEdit,
   FileText,
   FolderOpen,
@@ -36,6 +37,7 @@ import { ProjectSystemCredentialsPanel } from "@/components/dashboard/project-sy
 import { ProjectFunctionalitySurveyPanel, FunctionalitySurveyClientEmbed } from "@/components/client-functionality/project-functionality-survey-panel";
 import { ProjectSpecificationPanel } from "@/components/dashboard/project-specification-panel";
 import { ProjectTradesPanel } from "@/components/dashboard/project-trades-panel";
+import { StageReportsPanel } from "@/components/dashboard/stage-reports-panel";
 import { StageSatisfactionPrompt } from "@/components/dashboard/stage-satisfaction-prompt";
 import { ProjectMeetingNotesPanel } from "@/components/dashboard/project-meeting-notes-panel";
 import { ProjectDocumentsPanel } from "@/components/dashboard/project-documents-panel";
@@ -134,6 +136,7 @@ export type ClientDashboardTab =
   | "specification"
   | "functionality-survey"
   | "trades"
+  | "stage-reports"
   | "satisfaction"
   | "notes"
   | "documentation"
@@ -185,6 +188,7 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "specification", label: "Specyfikacja", icon: FileText },
   { id: "functionality-survey", label: "Ankieta funkcji", icon: ClipboardList },
   { id: "trades", label: "Wykonawcy", icon: HardHat },
+  { id: "stage-reports", label: "Raporty etapowe", icon: FileClock },
   { id: "notes", label: "Notatki", icon: StickyNote },
   { id: "documentation", label: "Dokumentacja", icon: FolderOpen },
   { id: "satisfaction", label: "Ocena", icon: Star },
@@ -1362,6 +1366,19 @@ export function ClientDashboardView({
     );
   }
 
+  function renderStageReportsPanel() {
+    return (
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
+        <h2 className="page-section-title mb-3 text-base font-semibold">Raporty etapowe</h2>
+        <p className="mb-4 text-sm text-muted">
+          Zamrożone raporty zamknięcia etapu — treść ustala się w chwili zatwierdzenia i już się nie
+          zmienia. Faza pilotażu: dostępne tylko dla wybranych projektów.
+        </p>
+        <StageReportsPanel projectId={selectedProject.id} projectName={selectedProject.name} />
+      </div>
+    );
+  }
+
   function renderDocumentationPanel() {
     return (
       <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
@@ -1647,6 +1664,8 @@ export function ClientDashboardView({
         return enableSpecification ? renderFunctionalitySurveyPanel() : null;
       case "trades":
         return enableTrades ? renderTradesPanel() : null;
+      case "stage-reports":
+        return !readOnly ? renderStageReportsPanel() : null;
       case "notes":
         return enableMeetingNotes ? renderMeetingNotesPanel() : null;
       case "documentation":

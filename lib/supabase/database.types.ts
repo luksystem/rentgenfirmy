@@ -25,11 +25,14 @@ export type ProjectRow = {
   system_handover_at: string | null;
   warranty_duration_months: number | null;
   warranty_ends_at: string | null;
+  /** Faza 5 pilotaż (docs/08) — gdy false, UI generowania raportów etapowych jest ukryte dla tego projektu. */
+  stage_reports_pilot_enabled: boolean;
 };
 
-export type ProjectInsert = Omit<ProjectRow, "id" | "created_at"> & {
+export type ProjectInsert = Omit<ProjectRow, "id" | "created_at" | "stage_reports_pilot_enabled"> & {
   id?: string;
   created_at?: string;
+  stage_reports_pilot_enabled?: boolean;
 };
 
 export type ProjectUpdate = Partial<ProjectInsert>;
@@ -1297,6 +1300,25 @@ export type ProjectSpecificationItemRow = {
   description: string;
   notes: string;
   position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Faza 5 (Generator raportu etapowego) — docs/08. Dokument ZAMROZONY po zatwierdzeniu (trigger w bazie). */
+export type ProjectStageReportRow = {
+  id: string;
+  project_id: string;
+  stage_id: string;
+  milestone_id: string;
+  status: string;
+  content: unknown;
+  coordinator_comment: string;
+  generated_at: string;
+  generated_by: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  sent_at: string | null;
+  sent_by: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -3849,6 +3871,13 @@ export type Database = {
         Insert: Partial<OperationalRoleCompetencyRow> &
           Pick<OperationalRoleCompetencyRow, "role_item_id" | "competency_item_id">;
         Update: Partial<OperationalRoleCompetencyRow>;
+        Relationships: [];
+      };
+      project_stage_reports: {
+        Row: ProjectStageReportRow;
+        Insert: Partial<ProjectStageReportRow> &
+          Pick<ProjectStageReportRow, "project_id" | "stage_id" | "milestone_id" | "content">;
+        Update: Partial<ProjectStageReportRow>;
         Relationships: [];
       };
       process_stage_dependencies: {

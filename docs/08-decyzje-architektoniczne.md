@@ -705,6 +705,76 @@ faktycznie potrzebne w praktyce.
 **Nawigacja:** nowy moduł `rot` (`lib/navigation/nav-modules.ts`, grupa "Projekty", `/rot`),
 uprawnienia `VIEW_ONLY` (`lib/permissions/module-actions.ts`) — ROT to widok/raport, nie zasób CRUD.
 
+**Odkryte przy weryfikacji fazy 5, dotyczy też tego modułu:** `app_settings` ma zapisaną,
+nadpisującą konfigurację `role_nav_permissions` (wersja 2) sprzed istnienia modułu `rot` — role
+inne niż `administrator` (który ma twardy bypass w `canAccessNavModule`) NIE widzą linku ROT w menu
+i strona `/rot` przekierowuje ich na `/`, dopóki ktoś z pełnym dostępem ręcznie nie doda `rot` do
+listy modułów danej roli w ekranie uprawnień. To zamierzone działanie systemu uprawnień (biała
+lista per rola, nadpisania nie dziedziczą nowych domyślnych modułów automatycznie), nie błąd — ale
+oznacza, że **każdy nowy moduł nawigacji dodany w kolejnych fazach będzie wymagał tego samego
+ręcznego kroku** po stronie właściciela, zanim ktokolwiek poza administratorem go zobaczy.
+
+---
+
+## D24. Faza 5 (Generator raportu etapowego) — implementacja
+
+**Status: zrealizowane (migracja 226).**
+
+Szablon (docs/role/03 §3, 8 sekcji + klauzula) zamknięty i niezmieniony. Zrealizowano wyłącznie
+mechanikę generowania, wg sześciu punktów właściciela:
+
+1. **Zamrożenie:** `project_stage_reports.content` (jsonb) i `coordinator_comment` są niezmienne od
+   momentu, gdy `status <> 'wygenerowany'` — wymuszone triggerem `project_stage_reports_freeze`
+   (nie tylko app-code), zweryfikowane na produkcji w transakcji z rollbackiem (próba zmiany treści
+   po zatwierdzeniu poprawnie się nie udała).
+2. **Stany `wygenerowany → zatwierdzony → wyslany`** — trigger `project_stage_reports_transitions`
+   wymusza: zatwierdzenie wymaga niepustego `coordinator_comment` + `approved_at`/`approved_by`;
+   wysłanie wymaga `sent_at`/`sent_by`. Regeneracja (przycisk "Odśwież treść") działa tylko, dopóki
+   status pozostaje `wygenerowany` — upsert po `(project_id, milestone_id)`.
+3. **`sent_at` obowiązkowe** — wymuszone triggerem, nie tylko walidacją formularza. Nazwane i
+   skomentowane pod kątem przyszłej migracji do `communication_event` (faza 9): `sent_at`/`sent_by`
+   → `event_at`/`actor`.
+4. **Puste sekcje jawne** — `carriedOverItems`/`clientNeeds` to zawsze tablice (mogą być puste), UI
+   (`renderStageReportText`) drukuje "brak pozycji otwartych"/"nic w tej chwili", nigdy nie ukrywa
+   sekcji.
+5. **Bez blokady zamknięcia etapu** — `project_stage_reports` nie ma żadnego FK ani triggera
+   wpływającego na `project_processes`/`project_stage_history`. Świadomie odłożone do fazy 11c.
+6. **UI:** panel "Raporty etapowe" w dashboardzie projektu (`components/dashboard/stage-reports-panel.tsx`,
+   zakładka `stage-reports` w `client-dashboard-view.tsx`, tylko po stronie zespołu — nie w
+   `PUBLIC_CLIENT_TAB_CONFIG`) — pokazuje kamienie milowe gotowe do wygenerowania (wszystkie
+   elementy mają `completedAt`) oraz listę dotychczasowych raportów z przyciskiem "Kopiuj treść".
+   Osobny top-level widok `/rot`-owego typu ("widok etapu") **nie powstał** — generowanie i lista
+   są w jednym, wspólnym panelu projektu zamiast w dwóch miejscach (uproszczenie względem
+   dosłownego brzmienia punktu 6, opisane niżej).
+
+**Mapowanie sekcji na dane (nieoczywiste, warte zapisania):**
+- "PRZENIESIONE DO NASTĘPNEGO ETAPU" i "CZEGO POTRZEBUJEMY OD PAŃSTWA" czerpią z `report_rot_items()`
+  (faza 4) dla danego projektu — pierwsza sekcja to wszystkie pozycje ROT ≠ `ZAMKNIETE`, druga to
+  podzbiór z `category='OCZEKIWANIE_DECYZJA_INWESTORA'` — dokładnie zgodnie z D13 ("kategoria
+  OCZEKIWANIE_DECYZJA_INWESTORA zasila sekcję czego potrzebujemy od Państwa"). To bezpośrednie
+  potwierdzenie, że kolejność faz (ROT przed raportem) była słuszna.
+- "Kamień milowy osiągnięty" — brak w kodzie mechanizmu "reached" (sprawdzone przy inwentaryzacji:
+  `milestoneDates` to tylko planowana data, `project_stage_history.milestone_reached` to martwa
+  kolumna, nigdzie niezapisywana). Zdefiniowane na potrzeby tej fazy jako: wszystkie elementy
+  kamienia milowego mają wpis w `project_processes.completions` — obliczane, nie przechowywane.
+- "ZMIANY W TYM ETAPIE" — `project_change_requests` nie ma odniesienia do etapu; zakres wyznaczony
+  przez okno `[project_stage_history.entered_at, exited_at lub teraz)` dla danego wejścia w etap.
+- "DOKUMENTY DO PAŃSTWA WGLĄDU" — tylko elementy z już włączonym publicznym linkiem
+  (`project_process_item_public_access.public_enabled=true`). Generowanie raportu **nie włącza
+  linków automatycznie** — to byłby efekt uboczny zmieniający cudze ustawienia widoczności; opiekun
+  włącza ręcznie przed generowaniem, jeśli chce dany dokument w raporcie. Świadome zawężenie zakresu
+  względem `ChecklistLineAttachment` (zdjęcia) — te mają tylko czasowe, podpisane URL-e (TTL), które
+  zepsułyby się w zamrożonym dokumencie; nie próbowano ich obejść.
+- Pola z dosłownego szablonu, których dziś nic nie śledzi ("numer"/"właściciel"/"termin" per pozycja
+  ROT, "potrzebne do"/"skutek zwłoki" per decyzja odroczona) drukują się jako jawny placeholder
+  ("nie śledzone dziś"), nie są zmyślane — dokładnie ta sama zasada uczciwości co dla pustych sekcji.
+
+**Pilotaż bez rozgałęzienia kodu:** `projects.stage_reports_pilot_enabled boolean default false` —
+gdy `false`, panel pokazuje wyłącznie komunikat i przełącznik (widoczny dla `hasFullAppAccess`) do
+włączenia; żadna ścieżka kodu generowania/zatwierdzania/wysyłki nie jest warunkowana per-rola ani
+zduplikowana. Właściciel włącza flagę ręcznie dla 3 wybranych projektów po starcie — dobór
+konkretnych projektów pilotażowych to decyzja biznesowa, celowo nie podjęta tutaj automatycznie.
+
 ---
 
 ## Finalna sekwencja faz
@@ -724,8 +794,8 @@ notka o tym pod D20 §2, teraz nieaktualna.
 | 2 | Sloty ról i fallback | — | **zrealizowane** |
 | 3 | Kompetencje | M | **zrealizowane** (D21/D22, migracje 221-222) |
 | 4 | ROT jako widok (4 źródła + Macierz Interfejsów) | L | **zrealizowane** (D23, migracje 223-225) — grupowanie po podmiocie odłożone, patrz D23 |
-| 5 | Generator raportu etapowego (wysyłka ręczna) | M | do realizacji — **następna** |
-| — | Pilotaż: 3 projekty, 2-3 raporty, zbiórka reakcji klienta/opiekuna → poprawki treści przed 11c | proces, nie kod | do realizacji |
+| 5 | Generator raportu etapowego (wysyłka ręczna) | M | **zrealizowane** (D24, migracja 226) — pilotaż flagą, wybór 3 projektów czeka na właściciela |
+| — | Pilotaż: 3 projekty, 2-3 raporty, zbiórka reakcji klienta/opiekuna → poprawki treści przed 11c | proces, nie kod | **następna** — czeka na realny pilotaż (nie kod), potem wraca jako poprawki treści |
 | 6 | Cykl życia projektu | L | do realizacji |
 | 7 | Warstwa sygnałów + zdrowie etapu (czyta z ROT, D3) | M | do realizacji |
 | 8 | Czas pracy | M | do realizacji |
@@ -768,6 +838,7 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D21 | faza 3 (Kompetencje) | zatwierdzone, zrealizowane (migracje 221-222: `operational_role_competency`, potwierdzenie `user_competency`, mapa luk) |
 | D22 | faza zastępstw urlopowych (`project_role_competency`, dług na przyszłość) | zatwierdzone; korekta D4/D7/D15 zrealizowana od razu, `project_role_competency` materiał na fazę zastępstw |
 | D23 | faza 4 (ROT) | zatwierdzone, zrealizowane (migracje 223-225: historia kanbana triggerem, `report_rot_items()`, `project_trades.hired_by`) — grupowanie ROT po podmiocie świadomie odłożone |
+| D24 | faza 5 (Generator raportu etapowego) | zatwierdzone, zrealizowane (migracja 226: `project_stage_reports`, zamrożenie triggerem, pilotaż flagą) — wybór 3 pilotowych projektów czeka na właściciela |
 
 ---
 
