@@ -6,7 +6,16 @@ import { type Resolver, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { ClientSelectWithCreate } from "@/components/client-select-with-create";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { hasFullAppAccess } from "@/lib/auth/types";
 import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
 import {
   defaultStageTitleFromTemplate,
@@ -23,8 +32,18 @@ import {
 } from "@/lib/field-options";
 import { priorities, type Project, type ProjectInput } from "@/lib/types";
 import { computeWarrantyEndsAt, formatProjectDuration, formatWarrantyEndDate } from "@/lib/project/warranty";
+import {
+  PROJECT_COVERAGE_KINDS,
+  PROJECT_COVERAGE_KIND_LABELS,
+  type ProjectCoveragePeriod,
+} from "@/lib/project/coverage-types";
 import { projectCreatedAtToDateInput } from "@/lib/supabase/mappers";
-import { toISODate } from "@/lib/utils";
+import {
+  addProjectCoveragePeriod,
+  fetchProjectCoveragePeriods,
+} from "@/lib/supabase/project-coverage-repository";
+import { clearProjectManualClose, setProjectManualClose } from "@/lib/supabase/repository";
+import { formatDate, toISODate } from "@/lib/utils";
 import {
   applyWaitingPriority,
   countWaitingFlags,
@@ -32,6 +51,7 @@ import {
 } from "@/lib/waiting-priority";
 import { zodStringOption } from "@/lib/zod-helpers";
 import { useAppStore } from "@/store/app-store";
+import { useAuthStore } from "@/store/auth-store";
 import { useProcessStore } from "@/store/process-store";
 
 type FormValues = {
@@ -167,6 +187,249 @@ function createDefaultValues(
     warrantyDurationMonths: 12,
     createdAt: toISODate(new Date()),
   };
+}
+
+/**
+ * Faza 6 (Cykl życia projektu, docs/08 D19/D25) — status przestał być swobodnie edytowalny.
+ * Liczony automatycznie z etapu procesu + pokrycia serwisowego (trigger/cron w bazie). Jedyna
+ * dozwolona ręczna zmiana to rezygnacja klienta — reszta pola jest tu tylko do odczytu.
+ */
+function ProjectLifecycleStatusPanel({ project }: { project: Project }) {
+  const currentProfile = useAuthStore((state) => state.profile);
+  const canManage = currentProfile ? hasFullAppAccess(currentProfile.role) : false;
+  const [localProject, setLocalProject] = useState(project);
+  const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLocalProject(project);
+  }, [project]);
+
+  async function handleManualClose() {
+    if (!currentProfile || !reason.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await setProjectManualClose(localProject.id, reason.trim(), currentProfile.id);
+      setLocalProject(updated);
+      setReasonDialogOpen(false);
+      setReason("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Błąd zapisu rezygnacji.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleResume() {
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await clearProjectManualClose(localProject.id);
+      setLocalProject(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Błąd wznowienia projektu.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Field label="Status przepływu">
+      <div className="rounded-xl border border-border bg-surface-muted px-3 py-2.5 text-sm text-foreground">
+        {localProject.flowStatus}
+      </div>
+      <p className="mt-1 text-xs text-muted">
+        Liczony automatycznie z etapu procesu i pokrycia serwisowego.
+      </p>
+      {error ? <p className="mt-1 text-xs text-rose-400">{error}</p> : null}
+
+      {canManage ? (
+        localProject.manualCloseReason ? (
+          <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs">
+            <p className="font-medium text-foreground">Rezygnacja klienta</p>
+            <p className="mt-1 text-muted">{localProject.manualCloseReason}</p>
+            {localProject.manualCloseAt ? (
+              <p className="mt-1 text-muted">{formatDate(localProject.manualCloseAt)}</p>
+            ) : null}
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="mt-2"
+              disabled={busy}
+              onClick={() => void handleResume()}
+            >
+              Wznów projekt
+            </Button>
+          </div>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="mt-2"
+            onClick={() => setReasonDialogOpen(true)}
+          >
+            Oznacz jako Wygaszony — rezygnacja klienta
+          </Button>
+        )
+      ) : null}
+
+      <Dialog open={reasonDialogOpen} onOpenChange={setReasonDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rezygnacja klienta</DialogTitle>
+            <DialogDescription>
+              Jedyna dozwolona ręczna zmiana statusu — projekt przechodzi na „Wygaszony”
+              niezależnie od etapu i pokrycia, dopóki ktoś go ręcznie nie wznowi.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder="Powód rezygnacji…"
+            rows={3}
+          />
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => setReasonDialogOpen(false)}>
+              Anuluj
+            </Button>
+            <Button type="button" disabled={!reason.trim() || busy} onClick={() => void handleManualClose()}>
+              Potwierdź rezygnację
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Field>
+  );
+}
+
+/**
+ * Faza 6 (Cykl życia projektu, docs/08 D19 §2a/D25) — historia pokrycia serwisowego. Append-only:
+ * tylko podgląd + dodawanie nowego wiersza, nigdy edycja istniejącego (pierwotna gwarancja
+ * zostaje nietknięta jako fakt historyczny).
+ */
+function ProjectCoveragePeriodsPanel({ projectId }: { projectId: string }) {
+  const currentProfile = useAuthStore((state) => state.profile);
+  const [periods, setPeriods] = useState<ProjectCoveragePeriod[] | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [kind, setKind] = useState<(typeof PROJECT_COVERAGE_KINDS)[number]>("przedluzenie");
+  const [startsAt, setStartsAt] = useState(() => toISODate(new Date()));
+  const [endsAt, setEndsAt] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchProjectCoveragePeriods(projectId)
+      .then((rows) => {
+        if (!cancelled) setPeriods(rows);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Błąd wczytywania pokrycia.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  async function handleAdd() {
+    if (!currentProfile || !endsAt) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const created = await addProjectCoveragePeriod(
+        projectId,
+        { kind, startsAt, endsAt, note },
+        currentProfile.id,
+      );
+      setPeriods((current) => [...(current ?? []), created]);
+      setDialogOpen(false);
+      setNote("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Błąd zapisu pokrycia.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-4 border-t border-border/60 pt-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-foreground">Historia pokrycia</p>
+        <Button type="button" size="sm" variant="secondary" onClick={() => setDialogOpen(true)}>
+          Dodaj przedłużenie / umowę serwisową
+        </Button>
+      </div>
+      {error ? <p className="mt-1 text-xs text-rose-400">{error}</p> : null}
+      {periods === null ? (
+        <p className="mt-2 text-xs text-muted">Ładowanie…</p>
+      ) : periods.length === 0 ? (
+        <p className="mt-2 text-xs text-muted">Brak zapisanej historii pokrycia.</p>
+      ) : (
+        <div className="mt-2 grid gap-1.5">
+          {periods.map((period) => (
+            <div
+              key={period.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/50 bg-surface-muted/20 px-2.5 py-1.5 text-xs"
+            >
+              <span className="font-medium text-foreground">{PROJECT_COVERAGE_KIND_LABELS[period.kind]}</span>
+              <span className="text-muted">
+                {formatDate(period.startsAt)} – {formatDate(period.endsAt)}
+                {period.note ? ` · ${period.note}` : ""}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Dodaj fakt pokrycia</DialogTitle>
+            <DialogDescription>
+              Append-only — nowy wiersz, nigdy edycja pierwotnej gwarancji. Aktywne pokrycie w
+              dniu dzisiejszym automatycznie utrzymuje status „Zamknięty”.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <Field label="Rodzaj">
+              <Select value={kind} onChange={(event) => setKind(event.target.value as typeof kind)}>
+                {PROJECT_COVERAGE_KINDS.filter((k) => k !== "gwarancja_pierwotna").map((k) => (
+                  <option key={k} value={k}>
+                    {PROJECT_COVERAGE_KIND_LABELS[k]}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Od">
+                <Input type="date" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} />
+              </Field>
+              <Field label="Do">
+                <Input type="date" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} />
+              </Field>
+            </div>
+            <Field label="Notatka">
+              <Textarea value={note} onChange={(event) => setNote(event.target.value)} rows={2} />
+            </Field>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => setDialogOpen(false)}>
+              Anuluj
+            </Button>
+            <Button type="button" disabled={!endsAt || busy} onClick={() => void handleAdd()}>
+              Zapisz
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }
 
 function WaitingCheckbox({
@@ -487,18 +750,16 @@ export function ProjectForm({
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Status przepływu" error={errors.flowStatus?.message}>
-          <Select {...register("flowStatus")}>
-            {flowStatusNames(fieldOptions)
-              // "Oczekuje" wycofane z wyboru — wartość zostaje w konfiguracji (nie usuwamy
-              // z enuma), tylko znika z listy dla NOWYCH wyborów. Projekt, który ma to
-              // ustawione dziś, nadal widzi swoją wartość, żeby select się nie wyzerował.
-              .filter((status) => status !== "Oczekuje" || status === flowStatus)
-              .map((status) => (
-                <option key={status}>{status}</option>
-              ))}
-          </Select>
-        </Field>
+        {project ? (
+          <ProjectLifecycleStatusPanel project={project} />
+        ) : (
+          <Field label="Status przepływu">
+            <div className="rounded-xl border border-border bg-surface-muted px-3 py-2.5 text-sm text-foreground">
+              {flowStatus}
+            </div>
+            <p className="mt-1 text-xs text-muted">Nowy projekt startuje jako „W trakcie”.</p>
+          </Field>
+        )}
         <Field label="Etap" error={errors.stage?.message}>
           <Select {...register("stage")} disabled={!stageTemplateReady}>
             {stageOptions.map((stage) => (
@@ -621,6 +882,7 @@ export function ProjectForm({
           Koniec gwarancji liczony jest od daty przekazania systemu. Przedłużenie z akceptacją klienta
           ustawisz w dashboardzie klienta.
         </p>
+        {project ? <ProjectCoveragePeriodsPanel projectId={project.id} /> : null}
       </div>
       ) : null}
 

@@ -779,8 +779,7 @@ konkretnych projektów pilotażowych to decyzja biznesowa, celowo nie podjęta t
 
 ## D25. Faza 6 (Cykl życia projektu) — status jako funkcja, z "grandfather" dla danych historycznych
 
-**Status: zrealizowane częściowo (migracje 227-230) — backend gotowy i zweryfikowany, UI nie
-zbudowane, patrz "Świadomie NIE zrobione" niżej.**
+**Status: zrealizowane (migracje 227-230, backend; UI opisane niżej).**
 
 ### Dwa realne konflikty znalezione przy inwentaryzacji, oba rozstrzygnięte przez właściciela
 
@@ -842,17 +841,22 @@ zmiany wyniku formuły — start w 100% bezpieczny, zero projektów zmienia stat
   `anon`/`authenticated` przez `/rest/v1/rpc/...` bez autoryzacji. Cofnięte — te funkcje są
   wyłącznie do wywołania przez triggery i cron.
 
-### Świadomie NIE zrobione w tej turze — UI
+### UI — zrealizowane w kolejnej turze
 
-- **Blokada pola statusu w `components/project-form.tsx`.** Pole jest dziś nadal swobodnie
-  edytowalne (`<Select {...register("flowStatus")}>`) — działa bez konfliktu dla 120
-  niezweryfikowanych projektów (automat ich nie rusza), ale dla 2 zweryfikowanych ręczna edycja
-  zostanie nadpisana przy najbliższym zdarzeniu wyzwalającym (zmiana etapu, nowe pokrycie, albo
-  cron o 3:00). Trzeba zablokować pole (tylko odczyt) i dodać osobną akcję "Rezygnacja klienta"
-  (dialog z wymaganym powodem, zapisuje `manual_close_reason`/`at`/`by`).
-- **UI zarządzania `project_coverage_periods`** (dodawanie przedłużenia/umowy serwisowej) —
-  repozytorium (`lib/supabase/project-coverage-repository.ts`) gotowe, brak panelu w dashboardzie
-  projektu.
+- **Pole statusu w `components/project-form.tsx` zablokowane (tylko odczyt).** Zastąpione
+  komponentem `ProjectLifecycleStatusPanel` — pokazuje bieżący `flowStatus` jako tekst + krótkie
+  wyjaśnienie ("liczony automatycznie z etapu procesu i pokrycia serwisowego"). Dla
+  administratorów/managerów (`hasFullAppAccess`) dochodzi akcja **"Oznacz jako Wygaszony —
+  rezygnacja klienta"** (dialog z wymaganym powodem → `setProjectManualClose`, zapisuje
+  `manual_close_reason`/`at`/`by`, trigger w bazie od razu ustawia `flow_status='Wygaszony'`) oraz,
+  gdy `manual_close_reason` jest już ustawiony, **"Wznów projekt"** (`clearProjectManualClose` —
+  czyści `manual_close_reason` i jawnie ustawia `flow_status='W trakcie'` w tym samym zapytaniu,
+  zgodnie z D19 §2b: "wraca tylko ręcznie i na w trakcie", nie do gwarancji/zamkniętego).
+- **Panel `project_coverage_periods`** (`ProjectCoveragePeriodsPanel`, w sekcji "Gwarancja"
+  formularza projektu, tylko `variant="full"`) — lista dotychczasowych wpisów (append-only,
+  wyłącznie odczyt) + dialog dodawania nowego faktu pokrycia (przedłużenie/umowa serwisowa;
+  pierwotna gwarancja nie jest tu dodawalna ręcznie — to wyłącznie seed z migracji 227). Insert
+  triggeruje natychmiastowe przeliczenie statusu (migracja 228).
 - **Komunikat do klienta przy wznowieniu pokrycia** (D19 §2c) — zależny od silnika komunikatów
   (faza 9), świadomie nie teraz, zgodnie z oryginalną decyzją.
 
@@ -877,7 +881,7 @@ notka o tym pod D20 §2, teraz nieaktualna.
 | 4 | ROT jako widok (4 źródła + Macierz Interfejsów) | L | **zrealizowane** (D23, migracje 223-225) — grupowanie po podmiocie odłożone, patrz D23 |
 | 5 | Generator raportu etapowego (wysyłka ręczna) | M | **zrealizowane** (D24, migracja 226) — pilotaż flagą, wybór 3 projektów czeka na właściciela |
 | — | Pilotaż: 3 projekty, 2-3 raporty, zbiórka reakcji klienta/opiekuna → poprawki treści przed 11c | proces, nie kod | **następna** — czeka na realny pilotaż (nie kod), potem wraca jako poprawki treści |
-| 6 | Cykl życia projektu | L | **backend zrealizowany** (D25, migracje 227-230, "grandfather" dla danych historycznych) — UI (blokada pola, rezygnacja klienta, panel pokrycia) do zrobienia |
+| 6 | Cykl życia projektu | L | **zrealizowane** (D25, migracje 227-230, "grandfather" dla danych historycznych; UI: blokada pola, rezygnacja klienta, panel pokrycia) |
 | 7 | Warstwa sygnałów + zdrowie etapu (czyta z ROT, D3) | M | do realizacji |
 | 8 | Czas pracy | M | do realizacji |
 | 9 | Rejestr zdarzeń komunikacyjnych | L | do realizacji |
@@ -920,7 +924,7 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D22 | faza zastępstw urlopowych (`project_role_competency`, dług na przyszłość) | zatwierdzone; korekta D4/D7/D15 zrealizowana od razu, `project_role_competency` materiał na fazę zastępstw |
 | D23 | faza 4 (ROT) | zatwierdzone, zrealizowane (migracje 223-225: historia kanbana triggerem, `report_rot_items()`, `project_trades.hired_by`) — grupowanie ROT po podmiocie świadomie odłożone |
 | D24 | faza 5 (Generator raportu etapowego) | zatwierdzone, zrealizowane (migracja 226: `project_stage_reports`, zamrożenie triggerem, pilotaż flagą) — wybór 3 pilotowych projektów czeka na właściciela |
-| D25 | faza 6 (Cykl życia projektu) | zatwierdzone; backend zrealizowany i zweryfikowany (migracje 227-230, "grandfather" dla 120/122 projektów) — UI (blokada pola statusu, akcja rezygnacji, panel pokrycia) do zrobienia |
+| D25 | faza 6 (Cykl życia projektu) | zatwierdzone, zrealizowane (migracje 227-230, "grandfather" dla 120/122 projektów; UI: blokada pola statusu, akcja rezygnacji, panel pokrycia) |
 
 ---
 

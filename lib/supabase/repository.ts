@@ -138,6 +138,63 @@ export async function updateProjectStage(id: string, stage: string): Promise<Pro
   return rowToProject(data);
 }
 
+/**
+ * Faza 6 (Cykl życia projektu, docs/08 D19/D25) — jedyna dozwolona ręczna zmiana statusu.
+ * Ustawienie manual_close_reason nadpisuje formułę bezwarunkowo (trigger w bazie ustawia
+ * flow_status='Wygaszony' od razu — patrz recompute_flow_status_on_manual_close_change).
+ */
+export async function setProjectManualClose(
+  id: string,
+  reason: string,
+  actorId: string,
+): Promise<Project> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("projects")
+    .update({
+      manual_close_reason: reason,
+      manual_close_at: new Date().toISOString(),
+      manual_close_by: actorId,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToProject(data);
+}
+
+/**
+ * Wznowienie po rezygnacji klienta — wraca wyłącznie na "W trakcie" (docs/08 D19 §2b: "wraca
+ * tylko ręcznie i na w trakcie", nie do gwarancji/zamkniętego). Ustawiane jawnie w tym samym
+ * update co czyszczenie manual_close_reason — trigger po stronie bazy przeliczy ponownie tylko
+ * jeśli projekt jest "zweryfikowany" (backfilled=false); dla większości (grandfathered) to
+ * jawne ustawienie jest jedynym źródłem prawdy.
+ */
+export async function clearProjectManualClose(id: string): Promise<Project> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("projects")
+    .update({
+      manual_close_reason: null,
+      manual_close_at: null,
+      manual_close_by: null,
+      flow_status: "W trakcie",
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToProject(data);
+}
+
 export async function deleteProjectRecord(id: string): Promise<void> {
   const supabase = getSupabase();
   const { error } = await supabase.from("projects").delete().eq("id", id);
