@@ -27,12 +27,22 @@ export type ProjectRow = {
   warranty_ends_at: string | null;
   /** Faza 5 pilotaż (docs/08) — gdy false, UI generowania raportów etapowych jest ukryte dla tego projektu. */
   stage_reports_pilot_enabled: boolean;
+  /** Faza 6 (docs/08 D19) — jedyna dozwolona ręczna zmiana statusu ("rezygnacja klienta"). */
+  manual_close_reason: string | null;
+  manual_close_at: string | null;
+  manual_close_by: string | null;
 };
 
-export type ProjectInsert = Omit<ProjectRow, "id" | "created_at" | "stage_reports_pilot_enabled"> & {
+export type ProjectInsert = Omit<
+  ProjectRow,
+  "id" | "created_at" | "stage_reports_pilot_enabled" | "manual_close_reason" | "manual_close_at" | "manual_close_by"
+> & {
   id?: string;
   created_at?: string;
   stage_reports_pilot_enabled?: boolean;
+  manual_close_reason?: string | null;
+  manual_close_at?: string | null;
+  manual_close_by?: string | null;
 };
 
 export type ProjectUpdate = Partial<ProjectInsert>;
@@ -1302,6 +1312,19 @@ export type ProjectSpecificationItemRow = {
   position: number;
   created_at: string;
   updated_at: string;
+};
+
+/** Faza 6 (Cykl życia projektu) — docs/08 D19 §2a. Append-only, nigdy edycja/usunięcie istniejącego wiersza. */
+export type ProjectCoveragePeriodRow = {
+  id: string;
+  project_id: string;
+  kind: string;
+  starts_at: string;
+  ends_at: string;
+  source_ref: string | null;
+  note: string;
+  created_by: string | null;
+  created_at: string;
 };
 
 /** Faza 5 (Generator raportu etapowego) — docs/08. Dokument ZAMROZONY po zatwierdzeniu (trigger w bazie). */
@@ -3878,6 +3901,13 @@ export type Database = {
         Insert: Partial<ProjectStageReportRow> &
           Pick<ProjectStageReportRow, "project_id" | "stage_id" | "milestone_id" | "content">;
         Update: Partial<ProjectStageReportRow>;
+        Relationships: [];
+      };
+      project_coverage_periods: {
+        Row: ProjectCoveragePeriodRow;
+        Insert: Partial<ProjectCoveragePeriodRow> &
+          Pick<ProjectCoveragePeriodRow, "project_id" | "kind" | "starts_at" | "ends_at">;
+        Update: Partial<ProjectCoveragePeriodRow>;
         Relationships: [];
       };
       process_stage_dependencies: {

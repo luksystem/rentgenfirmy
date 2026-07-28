@@ -67,6 +67,9 @@ export function rowToProject(row: ProjectRow): Project {
     systemHandoverAt: row.system_handover_at ?? undefined,
     warrantyDurationMonths: row.warranty_duration_months ?? undefined,
     warrantyEndsAt: row.warranty_ends_at ?? undefined,
+    manualCloseReason: row.manual_close_reason,
+    manualCloseAt: row.manual_close_at,
+    manualCloseBy: row.manual_close_by,
   };
 }
 
@@ -98,6 +101,9 @@ export function projectToInsert(
     system_handover_at: project.systemHandoverAt ?? null,
     warranty_duration_months: project.warrantyDurationMonths ?? null,
     warranty_ends_at: project.warrantyEndsAt ?? null,
+    manual_close_reason: project.manualCloseReason ?? null,
+    manual_close_at: project.manualCloseAt ?? null,
+    manual_close_by: project.manualCloseBy ?? null,
     created_at: project.createdAt,
   };
 }

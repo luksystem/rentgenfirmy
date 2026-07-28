@@ -777,6 +777,87 @@ konkretnych projektów pilotażowych to decyzja biznesowa, celowo nie podjęta t
 
 ---
 
+## D25. Faza 6 (Cykl życia projektu) — status jako funkcja, z "grandfather" dla danych historycznych
+
+**Status: zrealizowane częściowo (migracje 227-230) — backend gotowy i zweryfikowany, UI nie
+zbudowane, patrz "Świadomie NIE zrobione" niżej.**
+
+### Dwa realne konflikty znalezione przy inwentaryzacji, oba rozstrzygnięte przez właściciela
+
+**1. Brak etapu zamykającego w 2 z 8 szablonów (16 projektów, w tym 10 dziś "Zamknięty").**
+`process_stages.for_closing` to dowolny checkbox administracyjny per etap, per szablon — 0 lub
+wiele etapów może go mieć. Szablony "Proces — BMS" (15 projektów) i "Proces — Przemysłowe"
+(1 projekt) mają go **zero** — formuła D19 nigdy by dla nich nie wykryła "Etap 10 osiągnięty".
+**Decyzja: fallback w kodzie, nie poprawka danych** — gdy szablon nie ma żadnego etapu
+`for_closing`, "osiągnięty" = dotarcie do etapu o najwyższej pozycji w tym szablonie. Odporne też
+na przyszłe szablony bez ręcznego oznaczania.
+
+**2. `active_stage_id`/`project_stage_history` nie odzwierciedla realnego postępu dla większości
+projektów.** Sucha próbka (SELECT bez zapisu) na produkcji: z formułą D19 zastosowaną dosłownie,
+**62 z 76 dzisiejszych "Zamkniętych" projektów** zostałyby cofnięte na "W trakcie", bo ich
+`active_stage_id` wciąż wskazuje "Etap 1 — Uruchomienie projektu" (nigdy nieaktualizowany od
+backfillu w migracji 211/fazie 1). `project_stage_history` ma ten sam problem (74 projekty,
+każdy z dokładnie jednym, wciąż "otwartym" wierszem od backfillu). To nie luka konfiguracji —
+to fakt: zespół w praktyce nie aktualizował tego pola.
+
+**Decyzja właściciela: "grandfather", automat działa tylko naprzód.** Mechanizm liczy
+`flow_status` **tylko** dla projektów z co najmniej jednym PRAWDZIWYM przejściem etapu
+(`project_stage_history.backfilled = false`) — odróżnione od jednorazowego backfillu przez
+istniejącą kolumnę `backfilled` (zero nowych pól potrzebnych). Reszta (dziś 120 ze 122
+projektów) zostaje nietknięta, dopóki ktoś naprawdę nie przesunie etapu przez istniejący
+mechanizm (`set_project_active_stage`) — co automatycznie wstawia wiersz `backfilled=false` i
+od tej chwili automat przejmuje status tego projektu. Właściciel: będzie mógł przejrzeć projekty
+i ustawić w nich właściwe etapy, żeby "odblokować" automat per projekt.
+**Zweryfikowane na produkcji przed włączeniem: dziś 2/122 projekty są "zweryfikowane", oba bez
+zmiany wyniku formuły — start w 100% bezpieczny, zero projektów zmienia status w chwili wdrożenia.**
+
+### Mechanizm (migracje 227-230)
+
+- `project_coverage_periods` (append-only, RLS bez polityki UPDATE/DELETE) — seedowana jednym
+  wierszem `gwarancja_pierwotna` z `system_handover_at`/`warranty_duration_months` (formuła zgodna
+  z `lib/project/warranty.ts::resolveProjectWarrantyEndsAt`).
+- `projects.manual_close_reason`/`manual_close_at`/`manual_close_by` — jedyna dozwolona ręczna
+  zmiana (D19 §1: "rezygnacja klienta"), nadpisuje formułę bezwarunkowo, niezależnie od
+  "grandfather" (działa na każdym projekcie, zweryfikowanym czy nie).
+- `recompute_project_flow_status(p_project_id uuid default null)` — pojedyncza funkcja SQL, jedno
+  zapytanie UPDATE z CTE, bez rozjazdu między cronem a wywołaniem natychmiastowym (w
+  przeciwieństwie do istniejącego cronu `is_active`, który robi to w TS z osobnymi update'ami per
+  wiersz — tu cała logika jest w SQL, bo formuła nie wymaga stanu w pamięci jak histereza
+  `is_active`).
+- Natychmiastowe przeliczenie: trigger na `project_processes` (zmiana `active_stage_id`),
+  `project_coverage_periods` (nowy wiersz), `projects` (zmiana `manual_close_reason`).
+- Cron dobowy `0 3 * * *` (15 min PRZED cronem `is_active` o 3:15 — `is_active` czyta
+  `isClosedFlowStatus` jako wejście, więc musi widzieć świeży status) — łapie przejścia zależne
+  wyłącznie od daty (koniec pokrycia mija dziś) bez żadnego triggera na wejściu.
+- **Błąd znaleziony i naprawiony przy weryfikacji (migracja 229):** Postgres wykonuje triggery
+  `AFTER` na tym samym zdarzeniu w kolejności alfabetycznej nazwy. Pierwsza nazwa triggera
+  (`project_processes_recompute_flow_status`) sortowała się PRZED istniejącym
+  `project_stage_change_history`, więc przeliczenie działo się zanim wiersz `backfilled=false` w
+  ogóle powstał — projekt wyglądał jak wciąż niezweryfikowany. Naprawione zmianą nazwy
+  (`project_stage_history_then_recompute_flow_status`), zweryfikowane ponownie na produkcji w
+  transakcji z rollbackiem.
+- **Błąd bezpieczeństwa znaleziony i naprawiony (migracja 230):** `get_advisors` wykrył, że
+  `recompute_project_flow_status`/`trigger_recompute_project_flow_status_cron` miały domyślny
+  `GRANT EXECUTE TO PUBLIC` (standardowe zachowanie `CREATE FUNCTION`) — wywoływalne przez
+  `anon`/`authenticated` przez `/rest/v1/rpc/...` bez autoryzacji. Cofnięte — te funkcje są
+  wyłącznie do wywołania przez triggery i cron.
+
+### Świadomie NIE zrobione w tej turze — UI
+
+- **Blokada pola statusu w `components/project-form.tsx`.** Pole jest dziś nadal swobodnie
+  edytowalne (`<Select {...register("flowStatus")}>`) — działa bez konfliktu dla 120
+  niezweryfikowanych projektów (automat ich nie rusza), ale dla 2 zweryfikowanych ręczna edycja
+  zostanie nadpisana przy najbliższym zdarzeniu wyzwalającym (zmiana etapu, nowe pokrycie, albo
+  cron o 3:00). Trzeba zablokować pole (tylko odczyt) i dodać osobną akcję "Rezygnacja klienta"
+  (dialog z wymaganym powodem, zapisuje `manual_close_reason`/`at`/`by`).
+- **UI zarządzania `project_coverage_periods`** (dodawanie przedłużenia/umowy serwisowej) —
+  repozytorium (`lib/supabase/project-coverage-repository.ts`) gotowe, brak panelu w dashboardzie
+  projektu.
+- **Komunikat do klienta przy wznowieniu pokrycia** (D19 §2c) — zależny od silnika komunikatów
+  (faza 9), świadomie nie teraz, zgodnie z oryginalną decyzją.
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed
@@ -796,7 +877,7 @@ notka o tym pod D20 §2, teraz nieaktualna.
 | 4 | ROT jako widok (4 źródła + Macierz Interfejsów) | L | **zrealizowane** (D23, migracje 223-225) — grupowanie po podmiocie odłożone, patrz D23 |
 | 5 | Generator raportu etapowego (wysyłka ręczna) | M | **zrealizowane** (D24, migracja 226) — pilotaż flagą, wybór 3 projektów czeka na właściciela |
 | — | Pilotaż: 3 projekty, 2-3 raporty, zbiórka reakcji klienta/opiekuna → poprawki treści przed 11c | proces, nie kod | **następna** — czeka na realny pilotaż (nie kod), potem wraca jako poprawki treści |
-| 6 | Cykl życia projektu | L | do realizacji |
+| 6 | Cykl życia projektu | L | **backend zrealizowany** (D25, migracje 227-230, "grandfather" dla danych historycznych) — UI (blokada pola, rezygnacja klienta, panel pokrycia) do zrobienia |
 | 7 | Warstwa sygnałów + zdrowie etapu (czyta z ROT, D3) | M | do realizacji |
 | 8 | Czas pracy | M | do realizacji |
 | 9 | Rejestr zdarzeń komunikacyjnych | L | do realizacji |
@@ -839,6 +920,7 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D22 | faza zastępstw urlopowych (`project_role_competency`, dług na przyszłość) | zatwierdzone; korekta D4/D7/D15 zrealizowana od razu, `project_role_competency` materiał na fazę zastępstw |
 | D23 | faza 4 (ROT) | zatwierdzone, zrealizowane (migracje 223-225: historia kanbana triggerem, `report_rot_items()`, `project_trades.hired_by`) — grupowanie ROT po podmiocie świadomie odłożone |
 | D24 | faza 5 (Generator raportu etapowego) | zatwierdzone, zrealizowane (migracja 226: `project_stage_reports`, zamrożenie triggerem, pilotaż flagą) — wybór 3 pilotowych projektów czeka na właściciela |
+| D25 | faza 6 (Cykl życia projektu) | zatwierdzone; backend zrealizowany i zweryfikowany (migracje 227-230, "grandfather" dla 120/122 projektów) — UI (blokada pola statusu, akcja rezygnacji, panel pokrycia) do zrobienia |
 
 ---
 

@@ -55,11 +55,25 @@ export type Project = {
   systemHandoverAt?: string;
   warrantyDurationMonths?: number;
   warrantyEndsAt?: string;
+  /**
+   * Jedyna dozwolona ręczna zmiana statusu (Faza 6, docs/08 D19 §1: "rezygnacja klienta").
+   * Gdy ustawione, flow_status = Wygaszony niezależnie od reszty formuły (wymuszone triggerem w bazie).
+   */
+  manualCloseReason?: string | null;
+  manualCloseAt?: string | null;
+  manualCloseBy?: string | null;
 };
 
 export type ProjectInput = Omit<
   Project,
-  "id" | "lastChangedBy" | "lastChangedAt" | "lastContactDate" | "createdAt"
+  | "id"
+  | "lastChangedBy"
+  | "lastChangedAt"
+  | "lastContactDate"
+  | "createdAt"
+  | "manualCloseReason"
+  | "manualCloseAt"
+  | "manualCloseBy"
 > & {
   lastContactDate?: string;
   clientId?: string | null;
