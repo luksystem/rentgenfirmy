@@ -35,4 +35,6 @@ export type RotItem = {
   openedAt: string;
   /** Dni od otwarcia (docs/04 D13: "oferty w negocjacji bez ruchu > 5 dni" na checklistę opiekuna). */
   daysOpen: number;
+  /** Faza 7 (D3/D26) — opcjonalna data kontroli, adnotacja z rot_item_reviews. */
+  reviewDate: string | null;
 };

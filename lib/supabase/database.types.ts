@@ -2295,6 +2295,17 @@ export type ProcessStageRow = {
   sla_days: Record<string, number>;
   requires_project_stage_lead: boolean;
   code: string;
+  health_yellow_threshold: number;
+  health_red_threshold: number;
+  stale_acceptance_days: number;
+};
+
+export type RotItemReviewRow = {
+  source_type: string;
+  source_id: string;
+  review_date: string;
+  set_by: string | null;
+  set_at: string;
 };
 
 export type ProcessStageRoleRequirementRow = {
@@ -3936,6 +3947,13 @@ export type Database = {
         Update: Partial<ProjectCoveragePeriodRow>;
         Relationships: [];
       };
+      rot_item_reviews: {
+        Row: RotItemReviewRow;
+        Insert: Partial<RotItemReviewRow> &
+          Pick<RotItemReviewRow, "source_type" | "source_id" | "review_date">;
+        Update: Partial<RotItemReviewRow>;
+        Relationships: [];
+      };
       process_stage_dependencies: {
         Row: ProcessStageDependencyRow;
         Insert: Partial<ProcessStageDependencyRow> &
@@ -4639,6 +4657,22 @@ export type Database = {
           detail: string | null;
           opened_at: string;
           days_open: number;
+          review_date: string | null;
+        }[];
+      };
+      report_stage_health: {
+        Args: Record<string, never>;
+        Returns: {
+          project_id: string;
+          project_name: string;
+          stage_id: string;
+          stage_title: string;
+          open_blockers_count: number;
+          overdue_reviews_count: number;
+          stale_acceptances_count: number;
+          overdue_tasks_count: number;
+          raw_score: number;
+          band: string;
         }[];
       };
     };

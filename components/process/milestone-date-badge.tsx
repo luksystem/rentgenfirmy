@@ -16,17 +16,23 @@ export function MilestoneDateBadge({
   editable = false,
   disabled = false,
   onSave,
+  title = "Kliknij, aby ustawić datę kamienia milowego",
+  emptyLabel = "Ustaw datę",
+  ariaLabel = "Planowana data kamienia milowego",
 }: {
   date: string | null | undefined;
   editable?: boolean;
   disabled?: boolean;
   onSave?: (date: string | null) => Promise<void>;
+  title?: string;
+  emptyLabel?: string;
+  ariaLabel?: string;
 }) {
   const [saving, setSaving] = useState(false);
   const status = getMilestoneDateStatus(date);
   const classes = MILESTONE_DATE_STATUS_CLASSES[status];
   const formatted = formatMilestoneDate(date);
-  const label = formatted ?? "Ustaw datę";
+  const label = formatted ?? emptyLabel;
   const isDisabled = disabled || saving;
 
   async function handleChange(value: string) {
@@ -66,7 +72,7 @@ export function MilestoneDateBadge({
         classes.badge,
         isDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:brightness-110",
       )}
-      title="Kliknij, aby ustawić datę kamienia milowego"
+      title={title}
       onPointerDown={(event) => event.stopPropagation()}
     >
       <span className={cn("h-1.5 w-1.5 rounded-full", classes.dot)} />
@@ -77,7 +83,7 @@ export function MilestoneDateBadge({
         className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
         value={milestoneDateToInput(date)}
         disabled={isDisabled}
-        aria-label="Planowana data kamienia milowego"
+        aria-label={ariaLabel}
         onChange={(event) => void handleChange(event.target.value)}
         onClick={(event) => event.stopPropagation()}
       />

@@ -55,7 +55,14 @@ import {
   type ProjectProcess,
   type ProjectProcessItem,
 } from "@/lib/process/types";
+import { STAGE_HEALTH_BAND_LABELS, type ProjectStageHealth } from "@/lib/stage-health/types";
 import { useProcessStore } from "@/store/process-store";
+
+const STAGE_HEALTH_BAND_CLASSES: Record<ProjectStageHealth["band"], string> = {
+  green: "bg-emerald-500/15 text-emerald-300",
+  yellow: "bg-amber-400/15 text-amber-300",
+  red: "bg-rose-500/15 text-rose-300",
+};
 
 const kindIcon: Record<ProcessItemKind, React.ComponentType<{ className?: string }>> = {
   checklist: CheckCircle2,
@@ -97,6 +104,8 @@ type ProcessPipelineProps = {
   onAddItem?: (milestoneId: string, input: { title: string; kind: ProcessItemKind }) => Promise<void>;
   /** Usunięcie elementu dodanego doraźnie do projektu (elementId puste = nie pochodzi z katalogu). */
   onRemoveItem?: (itemId: string) => Promise<void>;
+  /** Faza 7 (D3/D26) — zdrowie AKTYWNEGO etapu tego projektu (report_stage_health), jeśli dostępne. */
+  activeStageHealth?: ProjectStageHealth | null;
 };
 
 export function ProcessPipeline({
@@ -123,6 +132,7 @@ export function ProcessPipeline({
   onSetActiveStage,
   onAddItem,
   onRemoveItem,
+  activeStageHealth,
 }: ProcessPipelineProps) {
   const [activeItem, setActiveItem] = useState<ProcessItem | null>(null);
   const [settingActiveStageId, setSettingActiveStageId] = useState<string | null>(null);
@@ -414,6 +424,24 @@ export function ProcessPipeline({
                             <span className="flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[9px] normal-case tracking-normal text-white shadow-sm">
                               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden />
                               Aktywny etap
+                            </span>
+                          ) : null}
+                          {isActiveStage && activeStageHealth ? (
+                            <span
+                              className={cn(
+                                "flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] normal-case tracking-normal shadow-sm",
+                                STAGE_HEALTH_BAND_CLASSES[activeStageHealth.band],
+                              )}
+                              title={[
+                                `Zdrowie etapu: ${STAGE_HEALTH_BAND_LABELS[activeStageHealth.band]}`,
+                                `Blokady: ${activeStageHealth.openBlockersCount}`,
+                                `ROT po dacie kontroli: ${activeStageHealth.overdueReviewsCount}`,
+                                `Akceptacje oczekujące: ${activeStageHealth.staleAcceptancesCount}`,
+                                `Zadania przeterminowane: ${activeStageHealth.overdueTasksCount}`,
+                              ].join(" · ")}
+                            >
+                              <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />
+                              {STAGE_HEALTH_BAND_LABELS[activeStageHealth.band]}
                             </span>
                           ) : null}
                         </p>

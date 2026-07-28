@@ -862,6 +862,82 @@ zmiany wyniku formuły — start w 100% bezpieczny, zero projektów zmienia stat
 
 ---
 
+## D26. Faza 7 (Warstwa sygnałów + zdrowie etapu) — `report_stage_health()`, data kontroli w ROT
+
+**Status: zrealizowane (migracje 232-233).**
+
+### Zakres i granica z "zdrowiem projektu"
+
+"Zdrowie etapu" (zielony/żółty/czerwony, docs/role/01 §6/§9) to **nowy, osobny koncept** od
+istniejącego "zdrowia projektu" (`lib/projects/project-health.ts`, liczonego z celów/notatek ze
+spotkań/kanbanu/zmian projektowych) — potwierdzone przez inwentaryzację `docs/role/*` (D3):
+zdrowie etapu jest per-etap, nie per-projekt, i czerpie z zupełnie innych sygnałów. Zdrowie
+projektu **pozostaje nietknięte** — zdrowie etapu jest pierwszym konsumentem wspólnej warstwy
+sygnałów zapowiedzianej w D3; modyfikatory fazy komunikacji (drugi konsument) to faza 11b.
+
+### Cztery sygnały (D3), każdy policzony dla AKTYWNEGO etapu projektu
+
+1. **Otwarte blokady** — `project_change_requests`/`project_client_agreements` z
+   `status='pending_client' AND blocks_next_stage=true`, liczone dla całego projektu niezależnie
+   od tego, który konkretny etap docelowo blokują (nierozstrzygnięta blokada to ryzyko dla całego
+   projektu, nie tylko etapu, do którego jest przypięta).
+2. **Pozycje ROT po dacie kontroli** — nowość, patrz niżej.
+3. **Akceptacje oczekujące > N dni** — z istniejącego `report_rot_items()`
+   (`category=OCZEKIWANIE_DECYZJA_INWESTORA`), próg N czytany z szablonu etapu
+   (`stale_acceptance_days`).
+4. **Zadania przeterminowane (kanban)** — świadome uproszczenie: liczone na poziomie **całego
+   projektu**, nie scoped do konkretnego etapu. Dokładne scopowanie wymagałoby parsowania
+   `template_snapshot` JSONB w SQL; projekt zwykle ma aktywną pracę w jednym etapie na raz, więc
+   przybliżenie jest tu wystarczające na start.
+
+Progi z szablonu (D3, zgodnie z "kod zna mechanizmy, szablon zna wartości"):
+`process_stages.health_yellow_threshold`/`health_red_threshold` (suma sygnałów `>=` próg →
+pasmo; domyślnie 1/3) i `stale_acceptance_days` (domyślnie 7).
+
+### Data kontroli w ROT — nowa tabela, nie nowa kolumna w czterech źródłach
+
+D19 §3 zapowiadał "pozycje z właścicielem i datą kontroli", nigdy niezbudowane. Cztery źródła ROT
+(kanban/zmiany projektowe/szybkie oferty/ustalenia) są heterogeniczne — dodanie kolumny do każdego
+złamałoby "jedna informacja ma jedno miejsce" (data kontroli nie jest częścią żadnego z tych
+bytów, jest adnotacją O pozycji ROT). Rozwiązanie: jedna nowa tabela `rot_item_reviews
+(source_type, source_id, review_date, set_by, set_at)`, klucz główny na
+`(source_type, source_id)`, którą `report_rot_items()` dołącza `LEFT JOIN`. Wymagało `DROP
+FUNCTION` + odtworzenia `report_rot_items()` (Postgres nie pozwala zmienić `RETURNS TABLE` przez
+`CREATE OR REPLACE`) — treść czterech CTE przepisana bez zmian, dodany tylko `review_date`.
+
+### Mechanizm (migracje 232-233)
+
+- `report_stage_health()` — pojedyncza funkcja SQL (wzorzec `report_rot_items`/
+  `report_competency_gap_map`), łączy aktywny etap projektu (`project_processes.active_stage_id`
+  dopasowany do `process_stages.id`) z czterema sygnałami, zwraca `raw_score` i `band`. Projekty
+  bez aktywnego etapu lub z nieistniejącym/osieroconym `active_stage_id` są po prostu pominięte
+  (inner join na `process_stages`) — nie błąd, brak wiersza.
+- **Błąd bezpieczeństwa znaleziony i naprawiony (migracja 233) — ten sam wzorzec co D25/migracja
+  230.** `DROP FUNCTION` + `CREATE FUNCTION` na `report_rot_items()` zresetował grant (utracił
+  wcześniejsze `EXECUTE TO authenticated`, wrócił do domyślnego `PUBLIC`/`anon`); nowa
+  `report_stage_health()` dostała ten sam domyślny grant. Cofnięte `REVOKE ... FROM public, anon`,
+  nadane jawnie `GRANT EXECUTE TO authenticated`.
+- **Weryfikacja tablicą prawdy na produkcji (transakcje z rollbackiem), zgodnie ze standardem
+  testowym (b) z `docs/CLAUDE.md`:** granica progu (`raw_score` dokładnie na progu →
+  odpowiednie pasmo, `>=` nie `>`), wkład każdego z 4 sygnałów osobno (w tym `overdue_reviews`,
+  które nie miało jeszcze danych produkcyjnych — przetestowane wstawieniem przeszłej i przyszłej
+  daty kontroli), osierocony `active_stage_id` i `NULL active_stage_id` (oba: projekt cicho
+  pominięty, brak błędu).
+
+### UI
+
+- `app/rot/page.tsx` — data kontroli widoczna jako `MilestoneDateBadge` (rozszerzony o opcjonalne
+  `title`/`emptyLabel`/`ariaLabel`, żeby dało się go użyć poza kontekstem kamieni milowych) przy
+  każdej pozycji ROT; edytowalna wyłącznie dla `hasFullAppAccess` (zgodne z polityką RLS zapisu na
+  `rot_item_reviews`). Pozycja po dacie kontroli i wciąż otwarta → dodatkowy czerwony badge "Po
+  dacie kontroli".
+- `components/process/process-pipeline.tsx` — badge zdrowia etapu przy pigułce "Aktywny etap"
+  (zielony/żółty/czerwony, tooltip z rozbiciem na 4 sygnały). `ProjectProcessPipelineSection`
+  pobiera `report_stage_health()` przy montowaniu i filtruje do bieżącego projektu; błąd pobrania
+  nie blokuje reszty pipeline'u (wskaźnik pomocniczy, nie krytyczna ścieżka).
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed
@@ -882,7 +958,7 @@ notka o tym pod D20 §2, teraz nieaktualna.
 | 5 | Generator raportu etapowego (wysyłka ręczna) | M | **zrealizowane** (D24, migracja 226) — pilotaż flagą, wybór 3 projektów czeka na właściciela |
 | — | Pilotaż: 3 projekty, 2-3 raporty, zbiórka reakcji klienta/opiekuna → poprawki treści przed 11c | proces, nie kod | **następna** — czeka na realny pilotaż (nie kod), potem wraca jako poprawki treści |
 | 6 | Cykl życia projektu | L | **zrealizowane** (D25, migracje 227-230, "grandfather" dla danych historycznych; UI: blokada pola, rezygnacja klienta, panel pokrycia) |
-| 7 | Warstwa sygnałów + zdrowie etapu (czyta z ROT, D3) | M | do realizacji |
+| 7 | Warstwa sygnałów + zdrowie etapu (czyta z ROT, D3) | M | **zrealizowane** (D26, migracje 232-233) |
 | 8 | Czas pracy | M | do realizacji |
 | 9 | Rejestr zdarzeń komunikacyjnych | L | do realizacji |
 | 10 | `is_active`: persist + rozbicie osi | M | do realizacji |
@@ -911,7 +987,7 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 |---|---|---|
 | D1 + D6 | faza 1 | zatwierdzone, zrealizowane |
 | D4 + D7 + D15 | faza 2 | zatwierdzone, zrealizowane (backfill + raport) |
-| D3 | faza 4 (warstwa sygnałów) | zatwierdzone, do realizacji |
+| D3 | faza 7 (warstwa sygnałów) | zatwierdzone, zrealizowane (D26) |
 | D2 + D9 + D12 + D13 + D14 | faza 5 (ROT) | zatwierdzone, do realizacji |
 | D5 → D8 + D11 | faza 10/11 (planowanie) | zatwierdzone, do realizacji |
 | D16 | — | świadomo pozostawiona granica zakresu, nie blokuje żadnej konkretnej fazy — wpięcie czeka na fazę, która realnie tworzy te trzy artefakty jako osobne, taggowalne elementy |
@@ -925,6 +1001,7 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D23 | faza 4 (ROT) | zatwierdzone, zrealizowane (migracje 223-225: historia kanbana triggerem, `report_rot_items()`, `project_trades.hired_by`) — grupowanie ROT po podmiocie świadomie odłożone |
 | D24 | faza 5 (Generator raportu etapowego) | zatwierdzone, zrealizowane (migracja 226: `project_stage_reports`, zamrożenie triggerem, pilotaż flagą) — wybór 3 pilotowych projektów czeka na właściciela |
 | D25 | faza 6 (Cykl życia projektu) | zatwierdzone, zrealizowane (migracje 227-230, "grandfather" dla 120/122 projektów; UI: blokada pola statusu, akcja rezygnacji, panel pokrycia) |
+| D26 | faza 7 (Warstwa sygnałów + zdrowie etapu) | zatwierdzone, zrealizowane (migracje 232-233: `rot_item_reviews`, `report_rot_items()` z `review_date`, `report_stage_health()`, progi w `process_stages`; UI: badge zdrowia etapu w pipeline, data kontroli w ROT) |
 
 ---
 

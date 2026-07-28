@@ -15,6 +15,8 @@ import {
 import { hasFullAppAccess, isAdministratorRole } from "@/lib/auth/types";
 import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
+import { fetchStageHealth } from "@/lib/supabase/stage-health-repository";
+import type { ProjectStageHealth } from "@/lib/stage-health/types";
 import { useAuthStore } from "@/store/auth-store";
 import { useProcessStore } from "@/store/process-store";
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
@@ -69,6 +71,7 @@ export function ProjectProcessPipelineSection({
   const [repairDialogOpen, setRepairDialogOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [stageHealth, setStageHealth] = useState<ProjectStageHealth | null>(null);
 
   const anchoredTemplate = useMemo(
     () => resolveAnchoredProcessTemplate(process, liveTemplate),
@@ -110,6 +113,22 @@ export function ProjectProcessPipelineSection({
     projectId,
     process.updatedAt,
   ]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchStageHealth()
+      .then((rows) => {
+        if (!cancelled) {
+          setStageHealth(rows.find((row) => row.projectId === projectId) ?? null);
+        }
+      })
+      .catch(() => {
+        // Zdrowie etapu to nienatrętny wskaźnik — brak danych nie blokuje pipeline'u.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, process.activeStageId, process.updatedAt]);
 
   async function handleConfirmSync() {
     setSyncing(true);
@@ -192,6 +211,7 @@ export function ProjectProcessPipelineSection({
         onSetActiveStage={(stageId) => setActiveStage(projectId, stageId)}
         onAddItem={(milestoneId, input) => addProjectProcessItem(projectId, milestoneId, input)}
         onRemoveItem={(itemId) => removeProjectProcessItem(projectId, itemId)}
+        activeStageHealth={stageHealth}
       />
 
       <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>

@@ -2,13 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import { MilestoneDateBadge } from "@/components/process/milestone-date-badge";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProjectEdit } from "@/components/project-edit-provider";
+import { hasFullAppAccess } from "@/lib/auth/types";
 import { ROT_CATEGORY_LABELS, ROT_SOURCE_LABELS, ROT_STATUS_LABELS, type RotItem, type RotStatus } from "@/lib/rot/types";
-import { fetchRotItems } from "@/lib/supabase/rot-repository";
+import { clearRotItemReviewDate, fetchRotItems, setRotItemReviewDate } from "@/lib/supabase/rot-repository";
 import { useAppStore } from "@/store/app-store";
+import { useAuthStore } from "@/store/auth-store";
 
 const STATUS_ORDER: RotStatus[] = ["CZEKA_NA_ZEWNETRZNE", "W_TOKU", "ZAMKNIETE"];
 
@@ -18,8 +21,20 @@ const STATUS_TONES: Record<RotStatus, "waiting" | "blue" | "closed"> = {
   ZAMKNIETE: "closed",
 };
 
-function RotItemRow({ item, onOpenProject }: { item: RotItem; onOpenProject: (projectId: string) => void }) {
+function RotItemRow({
+  item,
+  onOpenProject,
+  canEditReview,
+  onSaveReviewDate,
+}: {
+  item: RotItem;
+  onOpenProject: (projectId: string) => void;
+  canEditReview: boolean;
+  onSaveReviewDate: (item: RotItem, date: string | null) => Promise<void>;
+}) {
   const stale = item.rotStatus !== "ZAMKNIETE" && item.daysOpen > 5;
+  const reviewOverdue =
+    item.rotStatus !== "ZAMKNIETE" && !!item.reviewDate && item.reviewDate.slice(0, 10) < new Date().toISOString().slice(0, 10);
   return (
     <div className="flex flex-col gap-1.5 rounded-xl border border-border/60 bg-surface-muted/10 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -45,6 +60,24 @@ function RotItemRow({ item, onOpenProject }: { item: RotItem; onOpenProject: (pr
               {item.daysOpen} dni bez ruchu
             </Badge>
           ) : null}
+          {reviewOverdue ? (
+            <Badge tone="critical" className="text-[10px]">
+              <AlertTriangle className="h-3 w-3" />
+              Po dacie kontroli
+            </Badge>
+          ) : null}
+          {canEditReview ? (
+            <MilestoneDateBadge
+              date={item.reviewDate}
+              editable
+              onSave={(date) => onSaveReviewDate(item, date)}
+              title="Kliknij, aby ustawić datę kontroli tej pozycji"
+              emptyLabel="Ustaw datę kontroli"
+              ariaLabel="Data kontroli pozycji ROT"
+            />
+          ) : (
+            <MilestoneDateBadge date={item.reviewDate} />
+          )}
         </div>
       </div>
       <p className="text-sm text-foreground/90">{item.title}</p>
@@ -60,6 +93,8 @@ export default function RotPage() {
 
   const projects = useAppStore((state) => state.projects);
   const { openProjectEdit } = useProjectEdit();
+  const profile = useAuthStore((state) => state.profile);
+  const canEditReview = profile ? hasFullAppAccess(profile.role) : false;
 
   useEffect(() => {
     let cancelled = false;
@@ -78,6 +113,21 @@ export default function RotPage() {
   function handleOpenProject(projectId: string) {
     const project = projects.find((p) => p.id === projectId);
     if (project) openProjectEdit(project);
+  }
+
+  async function handleSaveReviewDate(item: RotItem, date: string | null) {
+    if (date) {
+      await setRotItemReviewDate(item.sourceType, item.sourceId, date, profile?.id);
+    } else {
+      await clearRotItemReviewDate(item.sourceType, item.sourceId);
+    }
+    setItems((current) =>
+      (current ?? []).map((row) =>
+        row.sourceType === item.sourceType && row.sourceId === item.sourceId
+          ? { ...row, reviewDate: date }
+          : row,
+      ),
+    );
   }
 
   const grouped = useMemo(() => {
@@ -120,6 +170,8 @@ export default function RotPage() {
                         key={`${item.sourceType}-${item.sourceId}`}
                         item={item}
                         onOpenProject={handleOpenProject}
+                        canEditReview={canEditReview}
+                        onSaveReviewDate={handleSaveReviewDate}
                       />
                     ))}
                   </div>
@@ -150,6 +202,8 @@ export default function RotPage() {
                         key={`${item.sourceType}-${item.sourceId}`}
                         item={item}
                         onOpenProject={handleOpenProject}
+                        canEditReview={canEditReview}
+                        onSaveReviewDate={handleSaveReviewDate}
                       />
                     ))}
                   </div>
