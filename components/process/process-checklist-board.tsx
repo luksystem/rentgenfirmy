@@ -275,31 +275,6 @@ export function ProcessChecklistBoard({
                       activeLineId === line.id && styles.rowActive,
                     )}
                   >
-                    {!readOnly ? (
-                      <label
-                        className="flex shrink-0 cursor-pointer items-center self-stretch px-2.5"
-                        title="Zatwierdź pozycję (Spełnia)"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-border"
-                          checked={status === "PASSED"}
-                          disabled={savingLineId === line.id}
-                          onChange={(event) => {
-                            const nextStatus: InternalAcceptanceStatus = event.target.checked
-                              ? "PASSED"
-                              : "NOT_STARTED";
-                            const blockReason = getChecklistDocumentationBlockReason(line, nextStatus);
-                            if (blockReason) {
-                              setError(blockReason);
-                              return;
-                            }
-                            void persistLinePatch(section.id, line.id, { status: nextStatus });
-                          }}
-                        />
-                      </label>
-                    ) : null}
                     <button
                       type="button"
                       onClick={() => {
