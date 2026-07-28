@@ -124,7 +124,10 @@ export function ChecklistItemDialog({
                     nextStatus === "PASSED" && Boolean(passedBlockedReason) && !selected;
                   const blockedByConfirmation =
                     nextStatus === "NOT_APPLICABLE" && status === "PASSED";
-                  const blocked = blockedByDocumentation || blockedByConfirmation;
+                  const blockedByRequiredResolution =
+                    nextStatus === "NOT_APPLICABLE" && Boolean(line.blockNotApplicable);
+                  const blocked =
+                    blockedByDocumentation || blockedByConfirmation || blockedByRequiredResolution;
                   return (
                     <Button
                       key={nextStatus}
@@ -135,9 +138,11 @@ export function ChecklistItemDialog({
                       title={
                         blockedByDocumentation
                           ? (passedBlockedReason ?? undefined)
-                          : blockedByConfirmation
-                            ? "Odznacz najpierw checkbox zatwierdzenia przy pozycji, aby wybrać „Nie dotyczy”."
-                            : undefined
+                          : blockedByRequiredResolution
+                            ? "Ten punkt wymaga rozstrzygnięcia jako „Spełnia” albo „Problem” — „Nie dotyczy” jest zablokowane."
+                            : blockedByConfirmation
+                              ? "Odznacz najpierw checkbox zatwierdzenia przy pozycji, aby wybrać „Nie dotyczy”."
+                              : undefined
                       }
                       onClick={() => onStatusChange(nextStatus)}
                       className={cn(

@@ -201,6 +201,8 @@ export type ChecklistLine = {
   requireDocumentation?: boolean;
   /** Podpowiedź przy realizacji (np. „dodaj zdjęcie szafy rack”). */
   documentationHint?: string;
+  /** Blokuje status "Nie dotyczy" — pracownik musi rozwiązać punkt jako Spełnia albo Problem. */
+  blockNotApplicable?: boolean;
   attachments?: ChecklistLineAttachment[];
   /** Punkt dodany ręcznie do instancji projektu, poza szablonem. */
   isCustom?: boolean;

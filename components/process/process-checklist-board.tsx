@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronDown, ChevronUp, Paperclip, Plus, StickyNote, Trash2 } from "lucide-react";
+import { Ban, CheckCircle2, ChevronDown, ChevronUp, Paperclip, Plus, StickyNote, Trash2 } from "lucide-react";
 import type { ChecklistDocumentationUploadContext } from "@/components/process/checklist-line-documentation-panel";
 import { ChecklistItemDialog } from "@/components/process/checklist-item-dialog";
 import { ChecklistMobileNav } from "@/components/process/checklist-mobile-nav";
@@ -317,6 +317,12 @@ export function ProcessChecklistBoard({
                               <Paperclip
                                 className="ml-1.5 inline h-3.5 w-3.5 align-text-bottom text-amber-300/90"
                                 aria-label="Wymaga dokumentacji"
+                              />
+                            ) : null}
+                            {line.blockNotApplicable ? (
+                              <Ban
+                                className="ml-1.5 inline h-3.5 w-3.5 align-text-bottom text-rose-300/90"
+                                aria-label="Wymaga rozstrzygnięcia — Nie dotyczy zablokowane"
                               />
                             ) : null}
                           </span>

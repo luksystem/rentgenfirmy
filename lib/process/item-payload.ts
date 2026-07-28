@@ -88,6 +88,7 @@ export function cloneTemplatePayloadForProject(templatePayload: ChecklistItemPay
         status: "NOT_STARTED" as const,
         requireDocumentation: line.requireDocumentation,
         documentationHint: line.documentationHint,
+        blockNotApplicable: line.blockNotApplicable,
         isCustom: false,
       })),
     })),
@@ -176,6 +177,7 @@ export function mergeChecklistPayloadWithTemplate(
           status: "NOT_STARTED" as const,
           requireDocumentation: templateLine.requireDocumentation,
           documentationHint: templateLine.documentationHint,
+          blockNotApplicable: templateLine.blockNotApplicable,
         };
       }
       return {
@@ -183,6 +185,7 @@ export function mergeChecklistPayloadWithTemplate(
         text: templateLine.text,
         requireDocumentation: templateLine.requireDocumentation,
         documentationHint: templateLine.documentationHint,
+        blockNotApplicable: templateLine.blockNotApplicable,
       };
     });
 
@@ -278,6 +281,7 @@ function normalizeChecklistLine(entry: unknown): ChecklistLine | null {
       requireDocumentation: Boolean(raw.requireDocumentation),
       documentationHint:
         typeof raw.documentationHint === "string" ? raw.documentationHint : undefined,
+      blockNotApplicable: Boolean(raw.blockNotApplicable),
       isCustom: Boolean(raw.isCustom),
     };
   }
@@ -308,6 +312,7 @@ function normalizeChecklistLine(entry: unknown): ChecklistLine | null {
     requireDocumentation: Boolean(raw.requireDocumentation),
     documentationHint:
       typeof raw.documentationHint === "string" ? raw.documentationHint : undefined,
+    blockNotApplicable: Boolean(raw.blockNotApplicable),
     attachments: Array.isArray(raw.attachments)
       ? raw.attachments
           .map((attachment) => normalizeChecklistLineAttachment(attachment))

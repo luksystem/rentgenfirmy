@@ -217,6 +217,19 @@ export function TemplateChecklistLinesEditor({
                   />
                   Wymagaj dokumentacji przy Spełnia
                 </label>
+                <label className="flex items-center gap-2 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    className="rounded border-border"
+                    checked={Boolean(line.blockNotApplicable)}
+                    onChange={(event) =>
+                      updateLineFields(section.id, lineIndex, {
+                        blockNotApplicable: event.target.checked,
+                      })
+                    }
+                  />
+                  Zablokuj „Nie dotyczy” (wymagaj Spełnia lub Problem)
+                </label>
                 {line.requireDocumentation ? (
                   <Input
                     value={line.documentationHint ?? ""}
