@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { BadgeCheck, Plus, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { resolveDictionaryIcon } from "@/lib/resource-plan/icon-options";
+import { useAuthStore } from "@/store/auth-store";
 import { useDictionaryStore } from "@/store/dictionary-store";
 import { useUserResourceStore } from "@/store/user-resource-store";
 
@@ -55,6 +57,8 @@ export function UserResourceProfileEditor({ userId }: { userId: string }) {
   const setTeams = useUserResourceStore((state) => state.setTeams);
   const upsertCompetency = useUserResourceStore((state) => state.upsertCompetency);
   const removeCompetency = useUserResourceStore((state) => state.removeCompetency);
+  const confirmCompetency = useUserResourceStore((state) => state.confirmCompetency);
+  const currentProfile = useAuthStore((state) => state.profile);
   const addCertificate = useUserResourceStore((state) => state.addCertificate);
   const removeCertificate = useUserResourceStore((state) => state.removeCertificate);
 
@@ -102,6 +106,16 @@ export function UserResourceProfileEditor({ userId }: { userId: string }) {
       setNewCompetencyLevelId("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Błąd zapisu kompetencji.");
+    }
+  }
+
+  async function handleConfirmCompetency(competencyItemId: string) {
+    if (!currentProfile) return;
+    setError(null);
+    try {
+      await confirmCompetency(userId, competencyItemId, currentProfile.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Błąd potwierdzania kompetencji.");
     }
   }
 
@@ -193,7 +207,7 @@ export function UserResourceProfileEditor({ userId }: { userId: string }) {
                 className="flex flex-col gap-2 rounded-xl border border-border/60 bg-surface-muted/15 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
               >
                 <span className="min-w-0 text-sm text-foreground">{meta?.name ?? "—"}</span>
-                <div className="flex items-center justify-between gap-2 sm:justify-end">
+                <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
                   {level ? (
                     <span
                       className="rounded-full px-2 py-0.5 text-xs font-medium"
@@ -202,6 +216,22 @@ export function UserResourceProfileEditor({ userId }: { userId: string }) {
                       {level.name}
                     </span>
                   ) : null}
+                  {competency.confirmedAt ? (
+                    <Badge tone="active" className="text-[10px]">
+                      <BadgeCheck className="h-3 w-3" />
+                      potwierdzone {formatDate(competency.confirmedAt)}
+                    </Badge>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs"
+                      onClick={() => void handleConfirmCompetency(competency.competencyItemId)}
+                    >
+                      Potwierdź
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     size="sm"

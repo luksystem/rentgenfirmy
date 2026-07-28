@@ -28,6 +28,8 @@ function rowToCompetency(row: UserCompetencyRow): UserCompetency {
     competencyItemId: row.competency_item_id,
     levelItemId: row.level_item_id,
     notes: row.notes,
+    confirmedBy: row.confirmed_by,
+    confirmedAt: row.confirmed_at,
   };
 }
 
@@ -140,6 +142,7 @@ export async function setUserTeams(
   if (error) throw new Error(error.message);
 }
 
+/** Każda edycja (dodanie/zmiana poziomu) czyści potwierdzenie — dotyczyło konkretnego poziomu, nie kompetencji w ogóle. */
 export async function upsertUserCompetency(
   userId: string,
   competencyItemId: string,
@@ -150,9 +153,33 @@ export async function upsertUserCompetency(
   const { data, error } = await supabase
     .from("user_competencies")
     .upsert(
-      { user_id: userId, competency_item_id: competencyItemId, level_item_id: levelItemId, notes },
+      {
+        user_id: userId,
+        competency_item_id: competencyItemId,
+        level_item_id: levelItemId,
+        notes,
+        confirmed_by: null,
+        confirmed_at: null,
+      },
       { onConflict: "user_id,competency_item_id" },
     )
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return rowToCompetency(data);
+}
+
+export async function confirmUserCompetency(
+  userId: string,
+  competencyItemId: string,
+  confirmedBy: string,
+): Promise<UserCompetency> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("user_competencies")
+    .update({ confirmed_by: confirmedBy, confirmed_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .eq("competency_item_id", competencyItemId)
     .select("*")
     .single();
   if (error) throw new Error(error.message);

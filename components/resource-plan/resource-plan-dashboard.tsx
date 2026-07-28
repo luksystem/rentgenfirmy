@@ -6,13 +6,16 @@ import { BarPanel, PiePanel } from "@/components/charts";
 import { MetricCard } from "@/components/metric-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { hasFullAppAccess } from "@/lib/auth/types";
 import { computeResourcePlanDashboardMetrics } from "@/lib/resource-plan/dashboard-metrics";
 import type { ResourcePlanItem } from "@/lib/resource-plan/types";
 import { useAppStore } from "@/store/app-store";
+import { useAuthStore } from "@/store/auth-store";
 import { useDictionaryStore } from "@/store/dictionary-store";
 import { useProcessStore } from "@/store/process-store";
 import { useResourcePlanStore } from "@/store/resource-plan-store";
 import { useUserResourceStore } from "@/store/user-resource-store";
+import { CompetencyGapMapCard } from "@/components/resource-plan/competency-gap-map-card";
 import { ResourcePlanSidePanel } from "@/components/resource-plan/resource-plan-side-panel";
 
 function startOfMonthIso(offsetMonths = 0) {
@@ -53,6 +56,9 @@ export function ResourcePlanDashboard() {
 
   const ensureProfiles = useUserResourceStore((state) => state.ensureProfiles);
   const resourceProfilesById = useUserResourceStore((state) => state.byUser);
+
+  const currentProfile = useAuthStore((state) => state.profile);
+  const canSeeGapMap = currentProfile ? hasFullAppAccess(currentProfile.role) : false;
 
   useEffect(() => {
     void ensureDictionaries();
@@ -252,6 +258,8 @@ export function ResourcePlanDashboard() {
               )}
             </CardContent>
           </Card>
+
+          {canSeeGapMap ? <CompetencyGapMapCard /> : null}
         </>
       )}
 

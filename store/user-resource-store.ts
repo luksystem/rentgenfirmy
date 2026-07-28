@@ -10,6 +10,7 @@ import type {
 import {
   addUserAbsence,
   addUserCertificate,
+  confirmUserCompetency,
   deleteUserAbsence,
   deleteUserCertificate,
   fetchUserResourceProfilesBatch,
@@ -32,6 +33,7 @@ type UserResourceStore = {
   setTeams: (userId: string, teams: { teamItemId: string; isLead: boolean }[]) => Promise<void>;
   upsertCompetency: (userId: string, competencyItemId: string, levelItemId: string | null, notes?: string) => Promise<void>;
   removeCompetency: (userId: string, competencyItemId: string) => Promise<void>;
+  confirmCompetency: (userId: string, competencyItemId: string, confirmedBy: string) => Promise<void>;
   addCertificate: (userId: string, input: UserCertificateInput) => Promise<void>;
   updateCertificate: (userId: string, id: string, input: Partial<UserCertificateInput>) => Promise<void>;
   removeCertificate: (userId: string, id: string) => Promise<void>;
@@ -99,6 +101,13 @@ export const useUserResourceStore = create<UserResourceStore>((set, get) => ({
     const saved = await upsertUserCompetency(userId, competencyItemId, levelItemId, notes);
     const current = get().byUser[userId] ?? emptyProfile();
     const competencies = [...current.competencies.filter((c) => c.competencyItemId !== competencyItemId), saved];
+    set({ byUser: { ...get().byUser, [userId]: { ...current, competencies } } });
+  },
+
+  confirmCompetency: async (userId, competencyItemId, confirmedBy) => {
+    const saved = await confirmUserCompetency(userId, competencyItemId, confirmedBy);
+    const current = get().byUser[userId] ?? emptyProfile();
+    const competencies = current.competencies.map((c) => (c.competencyItemId === competencyItemId ? saved : c));
     set({ byUser: { ...get().byUser, [userId]: { ...current, competencies } } });
   },
 

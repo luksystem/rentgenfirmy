@@ -20,6 +20,7 @@ import {
   type PlanItemTemplateMetadata,
 } from "@/lib/resource-plan/plan-item-template";
 import { ResourcePlanCompetencyRequirementsEditor } from "@/components/resource-plan/resource-plan-competency-requirements-editor";
+import { OperationalRoleCompetencyEditor } from "@/components/settings/operational-role-competency-editor";
 import { useDictionaryStore } from "@/store/dictionary-store";
 
 const COLOR_SWATCHES = [
@@ -52,6 +53,7 @@ function DictionaryItemRow({
   const [expanded, setExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
   const isTemplate = item.dictionaryKey === "plan_item_template";
+  const isOperationalRole = item.dictionaryKey === "operational_role";
   const [templateMeta, setTemplateMeta] = useState<PlanItemTemplateMetadata>(() =>
     readPlanItemTemplateMetadata(item.metadata),
   );
@@ -299,6 +301,12 @@ function DictionaryItemRow({
                 onChange={(requiredCompetencies) => setTemplateMeta({ ...templateMeta, requiredCompetencies })}
                 description="Po wybraniu szablonu w planie zasobów te kompetencje trafią do przydziału i będą używane przy sugestiach osób."
               />
+            </div>
+          ) : null}
+
+          {isOperationalRole ? (
+            <div className="rounded-xl border border-border/60 bg-surface-muted/10 p-3">
+              <OperationalRoleCompetencyEditor roleItemId={item.id} />
             </div>
           ) : null}
 

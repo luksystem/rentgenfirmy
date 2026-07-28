@@ -1960,6 +1960,9 @@ export type UserCompetencyRow = {
   competency_item_id: string;
   level_item_id: string | null;
   notes: string;
+  /** Faza 3 (Kompetencje, docs/04 §3.1) — kto i kiedy zweryfikował wpis; null = niepotwierdzone. */
+  confirmed_by: string | null;
+  confirmed_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -1970,6 +1973,8 @@ export type UserCompetencyInsert = {
   competency_item_id: string;
   level_item_id?: string | null;
   notes?: string;
+  confirmed_by?: string | null;
+  confirmed_at?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -2249,6 +2254,25 @@ export type ProcessStageCompetencyRequirementRow = {
   competency_item_id: string;
   min_level_item_id: string | null;
   created_at: string;
+};
+
+/** Faza 3 (Kompetencje) — role_item_id klucz na resource_dictionary_items(operational_role), nie role.code (docs/08 D21/D22). */
+export type OperationalRoleCompetencyRow = {
+  id: string;
+  role_item_id: string;
+  competency_item_id: string;
+  min_level_item_id: string | null;
+  is_required: boolean;
+  created_at: string;
+};
+
+export type OperationalRoleCompetencyInsert = {
+  id?: string;
+  role_item_id: string;
+  competency_item_id: string;
+  min_level_item_id?: string | null;
+  is_required?: boolean;
+  created_at?: string;
 };
 
 export type ProcessStageDependencyRow = {
@@ -3818,6 +3842,13 @@ export type Database = {
         Update: Partial<ProcessStageCompetencyRequirementRow>;
         Relationships: [];
       };
+      operational_role_competency: {
+        Row: OperationalRoleCompetencyRow;
+        Insert: Partial<OperationalRoleCompetencyRow> &
+          Pick<OperationalRoleCompetencyRow, "role_item_id" | "competency_item_id">;
+        Update: Partial<OperationalRoleCompetencyRow>;
+        Relationships: [];
+      };
       process_stage_dependencies: {
         Row: ProcessStageDependencyRow;
         Insert: Partial<ProcessStageDependencyRow> &
@@ -4489,6 +4520,16 @@ export type Database = {
           source_field: string;
           target_role_codes: string[];
           conflicting_users: string[] | null;
+        }[];
+      };
+      report_competency_gap_map: {
+        Args: Record<string, never>;
+        Returns: {
+          kind: string;
+          subject_label: string;
+          competency_label: string;
+          required_level_label: string;
+          qualified_people_count: number;
         }[];
       };
     };

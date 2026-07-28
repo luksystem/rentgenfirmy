@@ -7,6 +7,9 @@ export type UserCompetency = {
   competencyItemId: string;
   levelItemId: string | null;
   notes: string;
+  /** Faza 3 (Kompetencje, docs/04 §3.1) — kto i kiedy zweryfikował wpis; null = niepotwierdzone. */
+  confirmedBy: string | null;
+  confirmedAt: string | null;
 };
 
 export type UserTeamMembership = {

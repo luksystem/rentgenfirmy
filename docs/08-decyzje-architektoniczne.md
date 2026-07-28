@@ -112,7 +112,7 @@ odpowiadający na inne pytanie:
 |---|---|---|
 | co wolno? | `profiles.role` | zostaje bez zmian — uprawnienia to inny wymiar niż odpowiedzialność (04 §9: nie budujemy uprawnień na rolach procesowych) |
 | za co odpowiada na tym projekcie? | `profile_project_access` (booleany) → `project_role_slot` | migracja |
-| co umie? | `user_operational_roles` → `user_competency` | przeniesienie do modelu kompetencji (nazwa myląca — to umiejętność, nie rola) |
+| ~~co umie?~~ → **jaką funkcję wykonuje na zadaniu?** | `user_operational_roles` | **zostaje bez zmian — SKORYGOWANE, patrz D22.** Trzeci, osobny wymiar (nie umiejętność), migracja do `user_competency` odwołana. |
 
 **Mapowanie migracji:** `is_technical_lead` → sloty `koordynator_techniczny` + `projektant` ·
 `is_operational_lead` → sloty `opiekun_projektu` + `koordynator_operacyjny` · `is_developer` →
@@ -541,6 +541,165 @@ niej.
 
 ---
 
+## D21. Faza 3 (Kompetencje) — operational_role_competency kluczuje na starym słowniku ról, nie na role.code
+
+**Status: zatwierdzone przez właściciela.**
+
+Inwentaryzacja przed implementacją (PROMPT 4, docs/role/07-prompty.md) wykazała, że `stage_competency`
+z modelu w docs/04 §3.1 **już istnieje i działa end-to-end** jako `process_stage_competency_requirements`
+— szablon → `template_snapshot` → walidacja ostrzegawcza w Planie Zasobów (`lib/resource-plan/validations.ts`,
+zawsze `severity: "warning"`, nigdy nie blokuje) → sugestie kandydatów (`suggestions.ts`) → edytor w
+panelu admina szablonu. Punkt 1 (połowa) i punkt 3 promptu były więc już zrobione — nic tam nie
+zmieniono.
+
+**Konflikt wykryty i rozstrzygnięty:** system ma dziś dwa niepowiązane pojęcia "rola":
+`role.code` (9 kodów D10, `project_role_slot`, fazy 1–2) oraz `resource_dictionary_items` z
+`dictionary_key='operational_role'` (starszy słownik Planu Zasobów, używany przez
+`user_operational_roles` i `process_stage_role_requirements`; docs/08 D4/D7/D15 już nazwało to
+rozjazdem i zaplanowało migrację `user_operational_roles` → `user_competency`, oznaczoną tam jako
+"do zrobienia", nieporuszoną w tej fazie — **korekta: ta migracja jest odwołana, patrz D22**).
+Docs/04 §3.1 nie precyzuje, na którą oś ma kluczować nowa tabela.
+
+Sprawdzone przy okazji: `process_stage_role_requirements` (wymagana liczba osób danej roli na
+etapie, osobny byt od kompetencji) **już kluczuje na `resource_dictionary_items`
+(`operational_role`)**, dokładnie tak samo jak decyzja poniżej — żadna równoległa tabela nie jest
+tam potrzebna, nic nie zmieniono.
+
+**Decyzja właściciela: nowa tabela `operational_role_competency` (`role_item_id`) kluczuje na
+`resource_dictionary_items` (`operational_role`), nie na `role.code`.** Powód: wpina się w
+istniejący, działający mechanizm Planu Zasobów (te same dictionary_key co
+`competency`/`competency_level`, ten sam wzorzec co `process_stage_role_requirements`) zamiast
+otwierać nową, osobną ścieżkę walidacji dla `project_role_slot`. Nazwa (poprawiona migracją 222 —
+pierwotnie `role_competency`) świadomie unika kolizji z `role.code`; **rozjazd wobec `role.code`
+nie jest już "odłożoną migracją" — patrz D22, korekta D4/D7/D15.**
+
+**Zrealizowane (migracje 221-222):**
+- `operational_role_competency` (`role_item_id`, `competency_item_id`, `min_level_item_id`,
+  `is_required`) — RLS jak `process_stage_competency_requirements`/`resource_dictionary_items`
+  (SELECT dla zalogowanych, zapis `has_full_app_access()`). Edytor:
+  `components/settings/operational-role-competency-editor.tsx`, wpięty w zakładkę "Role
+  operacyjne" w Ustawienia → Plan Zasobów.
+- `user_competencies.confirmed_by`/`confirmed_at` (docs/04 §3.1, punkt 2 promptu) — każda edycja
+  poziomu czyści potwierdzenie (dotyczyło konkretnego poziomu, nie kompetencji w ogóle); przycisk
+  "Potwierdź" w `components/admin/user-resource-profile-editor.tsx`. RLS bez zmian — to kolejna
+  akcja administracyjna, nie nowy poziom uprawnień.
+- `report_competency_gap_map()` (punkt 4 promptu, "widok dla właściciela") — role i etapy z
+  wymaganiem, dla których <2 osób ma kompetencję na **najwyższym zdefiniowanym poziomie**
+  (`resource_dictionary_items` `competency_level`, max `sort_order` — NIE zahardkodowany "poziom 3",
+  bo poziomy są danymi admina, nie stałą w kodzie; dziś to "Ekspert", ale mogłoby być cokolwiek).
+  Brak wiersza dla pary bez zdefiniowanego wymagania = brak wymagania, nie luka (ten sam standard
+  co `report_project_readiness`, 219). UI: `components/resource-plan/competency-gap-map-card.tsx`,
+  karta na dashboardzie Planu Zasobów, widoczna tylko dla `hasFullAppAccess` (zgodnie z "widok dla
+  właściciela" z promptu — nie ogólnodostępna).
+- Zweryfikowane na produkcji w transakcji z rollbackiem (syntetyczne dane, oba warianty: `rola` i
+  `etap`, zarówno luka jak i brak luki) — żadne dane testowe nie zostały w bazie.
+
+**Świadomie odłożone:** `is_required` dodany tylko na `operational_role_competency`, nie retrofitowany na
+`process_stage_competency_requirements` — jedyny zaplanowany konsument (blokada autonomicznego
+zastępstwa, docs/04 §3.1) należy do fazy zastępstw urlopowych, która jeszcze nie istnieje. Retrofit
+`is_required` na `stage_competency` zostawiony tej fazie, żeby dodać symetrycznie z realną logiką
+blokującą, nie samym polem bez konsumenta.
+
+---
+
+## D22. Korekta D4/D7/D15 — funkcja wykonawcza to trzeci, osobny wymiar, nie umiejętność
+
+**Status: zatwierdzone przez właściciela. Koryguje wiersz 3 tabeli w D4/D7/D15 powyżej.**
+
+**Co było błędne:** D4/D7/D15 sklasyfikowało `user_operational_roles` trafnie (to nie jest rola
+projektowa, `role.code`), ale wyciągnęło z tego za daleko idący wniosek — że skoro to nie
+odpowiedzialność za projekt, to musi być umiejętność, więc migruje do `user_competency`. Błąd:
+"nie X" nie implikuje "więc Y", gdy istnieje trzecia możliwość. Ta migracja nigdy nie została
+wykonana (docs/08 sam to odnotowywał jako "do zrobienia") — Faza 3 (D21) o mało nie odtworzyła tego
+samego błędu przy `role_competency`/`operational_role_competency`, co ujawniło, że wniosek trzeba
+było skorygować, zanim ktoś rzeczywiście wykona migrację i zepsuje Plan Zasobów.
+
+**Poprawny model — trzy niezależne osie, nie dwie:**
+
+| Oś | Pytanie | Byt | Co mierzy |
+|---|---|---|---|
+| Odpowiedzialność za projekt | za co odpowiada NA TYM PROJEKCIE? | `role.code` / `project_role_slot` (9 kodów D10) | jedna osoba na slot, per projekt — `opiekun_projektu`, `wdrozeniowiec`... |
+| Funkcja wykonawcza | jaką funkcję pełni PRZY ZADANIU? | `resource_dictionary_items` (`operational_role`) / `user_operational_roles` | wielu ludzi, niezależnie od projektu — Instalator, Programista, Serwisant... (Plan Zasobów) |
+| Kompetencja | jak dobrze coś umie? | `resource_dictionary_items` (`competency`/`competency_level`) / `user_competencies` | poziom (Junior…Ekspert) per konkretna umiejętność (Loxone, CCTV...) |
+
+`user_operational_roles` **zostaje bez zmian, żadna migracja do `user_competency` się nie
+odbywa** — nie dlatego, że korekta jest kosztowna, tylko dlatego, że pierwotny wniosek był
+merytorycznie błędny, nie tylko niedokończony.
+
+### Reguła rozstrzygająca redundancję (żeby nikt później ich nie scalił)
+
+`user_operational_roles` i `user_competencies` **wyglądają na redundantne, ale pełnią różne
+funkcje w tym samym mechanizmie walidacji (`lib/resource-plan/validations.ts`) i nie wolno ich
+scalać:**
+
+- **`user_operational_roles` BRAMKUJE** — czy dana osoba w ogóle może pełnić tę funkcję na
+  zadaniu. Brak wymaganej roli operacyjnej → `missing_role`, ostrzeżenie. Binarne: ma/nie ma.
+- **Kompetencja z poziomem RÓŻNICUJE** — jak dobrze, wśród osób, które już przeszły bramkę (albo
+  niezależnie od niej). Używana do **rankingu podpowiedzi** (`suggestions.ts`,
+  `scoreUserCompetencyMatch`), nie do blokowania. Stopniowalne: poziom 1–4 (dziś
+  Junior/Regular/Senior/Ekspert).
+
+Scalenie w jeden byt zgubiłoby tę różnicę — albo bramka straciłaby ostrość (stałaby się kolejnym
+stopniowalnym polem), albo ranking straciłby granularność (spłaszczyłby się do ma/nie ma). Obie
+tabele zostają, każda odpowiada na inne pytanie; korekta D4/D7/D15 nie jest optymalizacją do
+zrobienia później, tylko stwierdzeniem, że to nie jest duplikat.
+
+### Dług na przyszłość — `project_role_competency` (faza zastępstw, nie teraz)
+
+Ranking kandydatów do zastępstwa (docs/04 §6, "kto może zastąpić wdrożeniowca") będzie
+potrzebował wymagań kompetencyjnych **na kodach D10** (`role.code`/`project_role_slot`), nie na
+`operational_role`. To jest dokładnie ta oś, na którą `operational_role_competency` (D21)
+świadomie NIE kluczuje. Potrzebna będzie osobna tabela, roboczo `project_role_competency`
+(`role_code`, `competency_item_id`, `min_level_item_id`, `is_required`) — analogiczna do
+`operational_role_competency`, ale keyowana na `role.code` zamiast na
+`resource_dictionary_items`. Nie budować teraz — materiał na fazę zastępstw urlopowych (ta sama
+faza, przed którą D20 §2 wymaga pełnego edytora siedmiu slotów).
+
+---
+
+## Finalna sekwencja faz
+
+Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed
+cykl życia i warstwę sygnałów (uzasadnienie właściciela: ROT nie zależy od żadnej z tych dwóch faz,
+a sygnały odwrotnie — czerpią z ROT, więc muszą stać po nim), plus pilotaż jako osobny krok
+pośredni. **Bezpieczeństwo przestawienia zweryfikowane przed wdrożeniem — żadnej blokującej
+zależności nie znaleziono** (poprzednia kolejność miałaby warstwę sygnałów przed ROT, co
+zmusiłoby ją do dublowania logiki zbierania z surowych źródeł zamiast czytania z ROT; nowa
+kolejność to naprawia przy okazji). Ten zapis był wcześniej wyłącznie w historii rozmowy — patrz
+notka o tym pod D20 §2, teraz nieaktualna.
+
+| # | Faza | Szacunek | Status |
+|---|---|---|---|
+| 1 | Fundament: szablon i historia etapów | — | **zrealizowane** |
+| 2 | Sloty ról i fallback | — | **zrealizowane** |
+| 3 | Kompetencje | M | **zrealizowane** (D21/D22, migracje 221-222) |
+| 4 | ROT jako widok (4 źródła + Macierz Interfejsów) | L | do realizacji — **następna** |
+| 5 | Generator raportu etapowego (wysyłka ręczna) | M | do realizacji |
+| — | Pilotaż: 3 projekty, 2-3 raporty, zbiórka reakcji klienta/opiekuna → poprawki treści przed 11c | proces, nie kod | do realizacji |
+| 6 | Cykl życia projektu | L | do realizacji |
+| 7 | Warstwa sygnałów + zdrowie etapu (czyta z ROT, D3) | M | do realizacji |
+| 8 | Czas pracy | M | do realizacji |
+| 9 | Rejestr zdarzeń komunikacyjnych | L | do realizacji |
+| 10 | `is_active`: persist + rozbicie osi | M | do realizacji |
+| 11a | Fazy komunikacji — bramy | S-M | do realizacji |
+| 11b | Fazy komunikacji — silnik (modyfikatory, bezpiecznik, przejęcie czerwone) | L | do realizacji |
+| 11c | Wymagane komunikaty + blokada zamknięcia + wysyłka automatyczna | M-L | do realizacji |
+| 12 | Tryb serwisowy | M | do realizacji |
+| 13 | Zastępstwa urlopowe (+ `project_role_competency`, D22 dług) | M-L | do realizacji |
+| 14 | Obciążenie (+ checklista cykliczna KO) | L | do realizacji |
+| 15 | Planowanie | M | do realizacji |
+
+**S3 doprecyzowane:** obsługa inwestora (modyfikator do KRYTYCZNEJ, cotygodniowy status,
+bezpiecznik 25/30 dni) kompletuje się po **11b** — tam scenariusz jest obsłużony klientowsko w
+całości. Faza 14 dorzuca wyłącznie wewnętrzną checklistę koordynatora ("wejścia bez potwierdzonej
+gotowości frontu") — higienę pracy KO, nie coś, czego dotyczy inwestor.
+
+**Uwaga do D20 §2:** pełny edytor siedmiu slotów (przed fazą przejęcia przy czerwonym = 11b, i
+przed fazą zastępstw = 13) ma teraz konkretne miejsce w tej sekwencji — dopisać go jako pierwszy
+krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
+
+---
+
 ## Kolejność decyzji względem faz
 
 | Decyzja | Blokuje | Status |
@@ -556,6 +715,8 @@ niej.
 | D19 | nowa faza „Cykl życia projektu" + rozszerzenia faz sygnałów/ROT/is_active/komunikacji — patrz przeplanowanie poniżej | zatwierdzone; część zrealizowana od razu (§3, §4, §7 — migracje 217-218), reszta materiał na fazy 4+ |
 | D20 §1 | — | zatwierdzone, zrealizowane (lista odczytu 7 slotów w `ProjectUsersPanel`) |
 | D20 §2 | faza komunikacji z przejęciem przy czerwonym (docs/04 §4.4) + faza zastępstw urlopowych (docs/04 §6) | zatwierdzone, do realizacji jako osobna, nazwana pozycja w sekwencji, przed obiema tymi fazami |
+| D21 | faza 3 (Kompetencje) | zatwierdzone, zrealizowane (migracje 221-222: `operational_role_competency`, potwierdzenie `user_competency`, mapa luk) |
+| D22 | faza zastępstw urlopowych (`project_role_competency`, dług na przyszłość) | zatwierdzone; korekta D4/D7/D15 zrealizowana od razu, `project_role_competency` materiał na fazę zastępstw |
 
 ---
 
@@ -565,7 +726,8 @@ niej.
 |---|---|---|
 | `CLAUDE.md` | wiersz o zdrowiu — patrz D3 | zrobione |
 | `04` §0.2 | usunąć „edytowalne per projekt"; podział na standard firmy i dane własne projektu wg D1 | do zrobienia |
-| `04` §2 | dodać mapowanie migracji z `profile_project_access` i `user_operational_roles` wg D4; dopisać wyłączenie `lider_montazu`/`instalator` ze slotów | do zrobienia |
+| `04` §2 | dodać mapowanie migracji z `profile_project_access` wg D4 (BEZ `user_operational_roles` — ta migracja odwołana, D22); dopisać wyłączenie `lider_montazu`/`instalator` ze slotów | do zrobienia |
+| `04` §3.1 | dopisać trzecią oś "funkcja wykonawcza" (`operational_role`) obok roli i kompetencji wg D22; sprostować, że `user_operational_roles` nie migruje do kompetencji | do zrobienia |
 | `04` §2.3 | dopisać zastrzeżenie z D16 — mechanizm gotowy, niewpięty | do zrobienia |
 | `04` §4 | modyfikator ręczny z terminem wygaśnięcia jako mechanizm odstępstwa per projekt (D6, zawężony zakres) | do zrobienia |
 | `05` §8.5 | ROT z trzech źródeł wg D14; zadanie weryfikacyjne domknięte | do zrobienia |
