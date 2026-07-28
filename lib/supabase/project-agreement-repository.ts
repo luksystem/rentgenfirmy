@@ -89,6 +89,7 @@ export async function createProjectAgreement(
       acceptance_deadline_stage_id: normalized.acceptanceDeadlineStageId ?? null,
       blocks_next_stage: normalized.blocksNextStage ?? false,
       responsible_user_id: normalized.responsibleUserId ?? null,
+      source_contact_point_id: normalized.sourceContactPointId ?? null,
       created_by_name: author.name.trim() || "Zespół",
       created_by_side: author.side,
       position,

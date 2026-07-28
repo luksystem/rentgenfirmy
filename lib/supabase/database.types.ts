@@ -271,6 +271,7 @@ export type ProjectClientAgreementRow = {
   acceptance_deadline_stage_id: string | null;
   blocks_next_stage: boolean;
   responsible_user_id: string | null;
+  source_contact_point_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -302,6 +303,7 @@ export type ProjectClientAgreementInsert = {
   acceptance_deadline_stage_id?: string | null;
   blocks_next_stage?: boolean;
   responsible_user_id?: string | null;
+  source_contact_point_id?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -1357,6 +1359,24 @@ export type ProjectTradeRow = {
   description: string;
   /** Kto zatrudnia tego wykonawcę (Macierz Interfejsów, Faza 4 ROT). */
   hired_by: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TradeContactPointRow = {
+  id: string;
+  project_type: string;
+  trade_names: string[] | null;
+  title: string;
+  description: string;
+  category: string;
+  blocking_stage_id: string | null;
+  blocks_next_stage: boolean;
+  photo_storage_path: string | null;
+  photo_file_name: string | null;
+  photo_mime_type: string | null;
+  is_active: boolean;
   position: number;
   created_at: string;
   updated_at: string;
@@ -3285,6 +3305,12 @@ export type Database = {
         Row: ProjectTradeRow;
         Insert: Partial<ProjectTradeRow> & Pick<ProjectTradeRow, "project_id" | "name">;
         Update: Partial<ProjectTradeRow>;
+        Relationships: [];
+      };
+      trade_contact_points: {
+        Row: TradeContactPointRow;
+        Insert: Partial<TradeContactPointRow> & Pick<TradeContactPointRow, "project_type" | "title">;
+        Update: Partial<TradeContactPointRow>;
         Relationships: [];
       };
       project_meeting_notes: {

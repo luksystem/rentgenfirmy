@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Copy, Link2, Lock, Pencil, Plus, Send, Trash2, X } from "lucide-react";
+import { Check, Copy, Lightbulb, Link2, Lock, Pencil, Plus, Send, Trash2, X } from "lucide-react";
 import { AgreementCollaborationPanel } from "@/components/dashboard/agreement-collaboration-panel";
+import { ContactPointPhotoThumbnail } from "@/components/contact-point-photo-thumbnail";
 import { AgreementBatchDeliveryActions } from "@/components/dashboard/agreement-batch-delivery-actions";
 import { AgreementDeliveryActions } from "@/components/dashboard/agreement-delivery-actions";
 import { AgreementApprovalResponses } from "@/components/dashboard/agreement-approval-responses";
@@ -49,10 +50,18 @@ import { profileToOptionLabel } from "@/lib/supabase/profile-repository";
 import type { UserProfile } from "@/lib/auth/types";
 import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
 import { cn, formatDate } from "@/lib/utils";
+import { computeContactPointSuggestions, type ContactPointSuggestion } from "@/lib/dashboard/contact-point-suggestions";
+import type { TradeContactPoint } from "@/lib/dashboard/trade-contact-point-types";
+import {
+  downloadTradeContactPointPhoto,
+  fetchTradeContactPoints,
+} from "@/lib/supabase/trade-contact-point-repository";
+import { formatProjectTradeRoleLabel } from "@/lib/dashboard/trade-types";
 import { useProjectAgreementStore } from "@/store/project-agreement-store";
 import { useProjectTradeStore } from "@/store/project-trade-store";
 import { useProcessStore } from "@/store/process-store";
 import { useAppStore } from "@/store/app-store";
+import { useAuthStore } from "@/store/auth-store";
 
 const EMPTY_TRADES: import("@/lib/dashboard/trade-types").ProjectTrade[] = [];
 
@@ -658,6 +667,104 @@ export function ProjectAgreementsPanel({
     void ensureTrades(projectId);
   }, [ensureTrades, projectId]);
 
+  const currentProfileId = useAuthStore((state) => state.profile?.id ?? null);
+  const [contactPoints, setContactPoints] = useState<TradeContactPoint[]>([]);
+  const [applyingContactPointId, setApplyingContactPointId] = useState<string | null>(null);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (mode !== "team") {
+      return;
+    }
+    let cancelled = false;
+    void fetchTradeContactPoints()
+      .then((points) => {
+        if (!cancelled) {
+          setContactPoints(points);
+        }
+      })
+      .catch(() => {
+        // podpowiedzi są opcjonalne — brak katalogu punktów styku nie blokuje panelu ustaleń
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [mode]);
+
+  const contactPointSuggestions = useMemo(() => {
+    if (mode !== "team" || !currentProject) {
+      return [];
+    }
+    return computeContactPointSuggestions(currentProject.type, projectTrades, contactPoints, agreements);
+  }, [mode, currentProject, projectTrades, contactPoints, agreements]);
+
+  async function handleApplyContactPointSuggestion({ contactPoint, matchedTrades }: ContactPointSuggestion) {
+    setSuggestionsError(null);
+    const responsibleUserId =
+      currentProfileId && projectAccessibleProfiles.some((profile) => profile.id === currentProfileId)
+        ? currentProfileId
+        : (projectAccessibleProfiles[0]?.id ?? null);
+
+    if (!responsibleUserId) {
+      setSuggestionsError(
+        "Brak osób z dostępem do tego projektu — dodaj ustalenie ręcznie i wybierz osobę odpowiedzialną.",
+      );
+      return;
+    }
+
+    setApplyingContactPointId(contactPoint.id);
+    try {
+      const approverRoles: AgreementApproverRoleInput[] = [
+        { label: TEAM_APPROVER_ROLE_LABEL, isRequired: true, isTeamRole: true },
+        { label: "Klient", isRequired: true, isClientRole: true },
+        ...matchedTrades.map((trade) => ({ label: formatProjectTradeRoleLabel(trade), isRequired: true })),
+      ];
+
+      const created = await createAgreement(
+        projectId,
+        normalizeProjectAgreementInput({
+          title: contactPoint.title,
+          body: contactPoint.description,
+          category: contactPoint.category,
+          acceptanceDeadlineStageId: contactPoint.blockingStageId,
+          blocksNextStage: contactPoint.blocksNextStage,
+          sourceContactPointId: contactPoint.id,
+          responsibleUserId,
+          approverRoles,
+        }),
+        { name: authorName, side: "team" },
+      );
+
+      if (contactPoint.photoStoragePath) {
+        try {
+          const blob = await downloadTradeContactPointPhoto(contactPoint.photoStoragePath);
+          const file = new File([blob], contactPoint.photoFileName ?? "zdjecie.jpg", {
+            type: contactPoint.photoMimeType ?? blob.type,
+          });
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("authorName", authorName);
+          formData.append("authorSource", "team");
+          await fetch(`/api/project-agreement-attachments/${encodeURIComponent(created.id)}`, {
+            method: "POST",
+            body: formData,
+            credentials: "include",
+          });
+        } catch {
+          // zdjęcie referencyjne jest opcjonalne — brak kopii nie blokuje utworzenia ustalenia
+        }
+      }
+
+      await openEditDialog(created);
+    } catch (error) {
+      setSuggestionsError(
+        error instanceof Error ? error.message : "Nie udało się dodać ustalenia z podpowiedzi.",
+      );
+    } finally {
+      setApplyingContactPointId(null);
+    }
+  }
+
   const filtered = useMemo(() => {
     if (filter === "all") {
       return agreements.filter((entry) => entry.status !== "cancelled" || mode === "team");
@@ -904,6 +1011,54 @@ export function ProjectAgreementsPanel({
           </Button>
         ) : null}
       </div>
+
+      {mode === "team" && contactPointSuggestions.length > 0 ? (
+        <div className="grid gap-2 rounded-xl border border-dashed border-accent/40 bg-accent/5 p-3">
+          <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+            <Lightbulb className="h-4 w-4 text-accent" />
+            Sugerowane ustalenia ({contactPointSuggestions.length})
+          </p>
+          <p className="text-xs text-muted">
+            Na podstawie branż obecnych w tym projekcie i punktów styku zdefiniowanych w katalogu
+            branż (Ustawienia → Katalog branż → Punkty styku).
+          </p>
+          {suggestionsError ? <p className="text-xs text-rose-400">{suggestionsError}</p> : null}
+          <div className="grid gap-2">
+            {contactPointSuggestions.map((suggestion) => {
+              const { contactPoint, matchedTrades } = suggestion;
+              const applying = applyingContactPointId === contactPoint.id;
+              return (
+                <div
+                  key={contactPoint.id}
+                  className="flex flex-wrap items-start gap-3 rounded-lg border border-border/70 bg-surface p-3"
+                >
+                  {contactPoint.photoStoragePath ? (
+                    <ContactPointPhotoThumbnail storagePath={contactPoint.photoStoragePath} />
+                  ) : null}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground">{contactPoint.title}</p>
+                    <p className="text-xs text-muted">
+                      Branże: {matchedTrades.map((trade) => trade.name).join(" + ")}
+                    </p>
+                    {contactPoint.description ? (
+                      <p className="mt-1 break-words text-sm text-muted">{contactPoint.description}</p>
+                    ) : null}
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="shrink-0"
+                    disabled={applying}
+                    onClick={() => void handleApplyContactPointSuggestion(suggestion)}
+                  >
+                    {applying ? "Dodawanie…" : "Dodaj do projektu"}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
 
       {isLoading && !agreements.length ? (
         <p className="text-sm text-muted">Ładowanie ustaleń…</p>

@@ -45,11 +45,14 @@ export function TradeFormFields({
   onChange,
   categories = [],
   companyPool = [],
+  mode = "team",
 }: {
   form: ProjectTradeInput;
   onChange: (next: ProjectTradeInput) => void;
   categories?: TradeCatalogItem[];
   companyPool?: TradeCompanyItem[];
+  /** "client": tylko wybór branży z istniejącego katalogu (bez wpisywania nowej nazwy). */
+  mode?: "team" | "client";
 }) {
   const tradeNames = useMemo(() => {
     const names = uniqueTradeNames(categories);
@@ -86,7 +89,7 @@ export function TradeFormFields({
 
   return (
     <div className="grid gap-3">
-      {tradeNames.length > 0 ? (
+      {mode === "team" && tradeNames.length > 0 ? (
         <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/10 p-3">
           <p className="text-xs font-medium uppercase tracking-wide text-muted">Branża z katalogu</p>
           <div className="flex flex-wrap gap-1.5">
@@ -154,38 +157,67 @@ export function TradeFormFields({
         </div>
       ) : null}
 
-      <Field label="Branża *">
-        <Input
-          value={form.name}
-          placeholder="np. Klimatyzacja, Elektryka albo nowa nazwa (np. Ogród)"
-          list="trade-catalog-suggestions"
-          onChange={(event) => {
-            const nextName = event.target.value;
-            const category = categories.find(
-              (entry) => entry.name.trim().toLowerCase() === nextName.trim().toLowerCase(),
-            );
-            onChange({
-              ...form,
-              name: nextName,
-              company:
-                form.name.trim().toLowerCase() === nextName.trim().toLowerCase() ? form.company : "",
-              description: category?.description?.trim() || form.description,
-            });
-          }}
-        />
-        {tradeNames.length > 0 ? (
-          <datalist id="trade-catalog-suggestions">
-            {tradeNames.map((name) => (
-              <option key={name} value={name} />
+      {mode === "client" ? (
+        <Field label="Branża *">
+          <select
+            className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+            value={form.name}
+            onChange={(event) => {
+              const nextName = event.target.value;
+              const category = categories.find(
+                (entry) => entry.name.trim().toLowerCase() === nextName.trim().toLowerCase(),
+              );
+              onChange({
+                ...form,
+                name: nextName,
+                company:
+                  form.name.trim().toLowerCase() === nextName.trim().toLowerCase() ? form.company : "",
+                description: category?.description?.trim() || form.description,
+              });
+            }}
+          >
+            <option value="">— wybierz branżę —</option>
+            {categories.map((category) => (
+              <option key={category.name} value={category.name}>
+                {category.name}
+              </option>
             ))}
-          </datalist>
-        ) : null}
-        {isNewTradeCategory ? (
-          <p className="mt-1 text-xs text-muted">
-            Nowa branża zostanie dodana do katalogu przy zapisaniu wykonawcy.
-          </p>
-        ) : null}
-      </Field>
+          </select>
+        </Field>
+      ) : (
+        <Field label="Branża *">
+          <Input
+            value={form.name}
+            placeholder="np. Klimatyzacja, Elektryka albo nowa nazwa (np. Ogród)"
+            list="trade-catalog-suggestions"
+            onChange={(event) => {
+              const nextName = event.target.value;
+              const category = categories.find(
+                (entry) => entry.name.trim().toLowerCase() === nextName.trim().toLowerCase(),
+              );
+              onChange({
+                ...form,
+                name: nextName,
+                company:
+                  form.name.trim().toLowerCase() === nextName.trim().toLowerCase() ? form.company : "",
+                description: category?.description?.trim() || form.description,
+              });
+            }}
+          />
+          {tradeNames.length > 0 ? (
+            <datalist id="trade-catalog-suggestions">
+              {tradeNames.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+          ) : null}
+          {isNewTradeCategory ? (
+            <p className="mt-1 text-xs text-muted">
+              Nowa branża zostanie dodana do katalogu przy zapisaniu wykonawcy.
+            </p>
+          ) : null}
+        </Field>
+      )}
 
       <Field label="Firma wykonawcy">
         <Input

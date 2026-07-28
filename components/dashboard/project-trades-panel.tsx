@@ -25,9 +25,11 @@ const EMPTY_TRADES: ProjectTrade[] = [];
 export function ProjectTradesPanel({
   projectId,
   seedTrades,
+  mode = "team",
 }: {
   projectId: string;
   seedTrades?: ProjectTrade[];
+  mode?: "team" | "client";
 }) {
   const storeTrades = useProjectTradeStore((state) => state.byProject[projectId] ?? EMPTY_TRADES);
   const loading = useProjectTradeStore((state) => state.loadingProjects[projectId]);
@@ -144,12 +146,14 @@ export function ProjectTradesPanel({
           Wykonawcy przypisani do projektu. Firma trafia też do wspólnego katalogu branż.
         </p>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="outline" asChild>
-            <Link href="/ustawienia/branze">
-              <Settings className="mr-1 h-3.5 w-3.5" />
-              Ustawienia katalogu branż
-            </Link>
-          </Button>
+          {mode === "team" ? (
+            <Button type="button" size="sm" variant="outline" asChild>
+              <Link href="/ustawienia/branze">
+                <Settings className="mr-1 h-3.5 w-3.5" />
+                Ustawienia katalogu branż
+              </Link>
+            </Button>
+          ) : null}
           <Button type="button" size="sm" className="shrink-0" onClick={() => openCreate()}>
             <Plus className="mr-2 h-4 w-4" />
             Dodaj wykonawcę
@@ -270,6 +274,7 @@ export function ProjectTradesPanel({
             onChange={setForm}
             categories={categories}
             companyPool={companyPool}
+            mode={mode}
           />
           {error ? <p className="text-sm text-rose-400">{error}</p> : null}
           <div className="flex flex-col gap-2 sm:flex-row">

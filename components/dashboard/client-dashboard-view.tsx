@@ -1361,7 +1361,11 @@ export function ClientDashboardView({
           Wykonawcy przypisani do projektu — wykorzystasz ich przy rolach akceptacji w ustaleniach.
           Firmy dodane tutaj automatycznie trafiają do katalogu branż.
         </p>
-        <ProjectTradesPanel projectId={selectedProject.id} seedTrades={seedTrades} />
+        <ProjectTradesPanel
+          projectId={selectedProject.id}
+          seedTrades={seedTrades}
+          mode={readOnly ? "client" : "team"}
+        />
       </div>
     );
   }

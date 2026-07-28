@@ -49,6 +49,8 @@ export type ProjectClientAgreement = {
   blocksNextStage: boolean;
   /** Osoba odpowiedzialna po stronie zespołu — otrzymuje zadanie w Moja praca. */
   responsibleUserId: string | null;
+  /** Punkt styku (katalog branż), z którego powstała podpowiedź tego ustalenia — nie wraca na listę sugestii. */
+  sourceContactPointId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -68,6 +70,7 @@ export type ProjectAgreementInput = {
   acceptanceDeadlineStageId?: string | null;
   blocksNextStage?: boolean;
   responsibleUserId?: string | null;
+  sourceContactPointId?: string | null;
 };
 
 export function normalizeAgreementOptionalDate(value: string | null | undefined): string | null {
