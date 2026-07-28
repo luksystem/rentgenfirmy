@@ -657,6 +657,56 @@ faza, przed którą D20 §2 wymaga pełnego edytora siedmiu slotów).
 
 ---
 
+## D23. Faza 4 (ROT jako widok) — implementacja
+
+**Status: zrealizowane (migracje 223-225).**
+
+ROT pozostaje wyłącznie widokiem — cztery istniejące tabele (`process_kanban_tasks`,
+`project_change_requests`, `services`, `project_client_agreements`) zostają jedynym miejscem
+prawdy, zgodnie z D2/D9/D12/D13/D14 i zasadą nadrzędną "jedna informacja ma jedno miejsce".
+
+**D12 zrealizowane przez trigger, nie przez app-code.** Spec mówiła "zapis przy każdym
+`moveKanbanTask()`" — zamiast dopisywać zapis historii do trzech niezależnych ścieżek wywołania
+tej funkcji (`process-kanban-board.tsx`, `aggregated-kanban-board.tsx`, publiczny
+`app/api/kanban/[token]/route.ts`), `process_kanban_task_column_history` zapisuje się triggerem
+`AFTER INSERT OR UPDATE OF column_id` na `process_kanban_tasks` — ta sama gwarancja kompletności,
+odporna na czwartą ścieżkę wywołania w przyszłości, bez dotykania trzech miejsc w kodzie. Backfill
+zweryfikowany asercją (123=123 wierszy), trigger zweryfikowany na produkcji w transakcji z
+rollbackiem.
+
+**Doprecyzowanie nieujęte wprost w D14: karta kanbana liczy się do ROT tylko gdy `closed_at is
+null`.** `closed_at` to już istniejący, niezależny sygnał "zrobione" (`closeKanbanTask()`, używany
+dziś w `countOpenKanbanTasks`/`countOverdueKanbanTasks`) — ROT go respektuje zamiast liczyć status
+wyłącznie z kolumny, żeby zamknięta karta siedząca w zmapowanej kolumnie nie pokazywała się jako
+otwarty temat.
+
+**`report_rot_items()` zwraca wszystkie statusy, w tym `ZAMKNIETE`** — to rejestr, nie tylko lista
+otwartych. UI (`/rot`) domyślnie eksponuje `CZEKA_NA_ZEWNETRZNE`/`W_TOKU`, `ZAMKNIETE` jest zwinięte
+za jednym kliknięciem. `days_open` liczone od `submitted_at`/`created_at`/odpowiedzi na ofertę —
+używane do wizualnego ostrzeżenia >5 dni bez ruchu (checklista opiekuna, D13).
+
+**Czwarte źródło (`project_client_agreements`, wyłącznie `pending_client`) i Macierz Interfejsów**
+— uzgodnione w rozmowie roboczej wcześniej niż ta tura, nigdy nie zapisane jako D-decyzja; zapisane
+tu retroaktywnie razem z realizacją.
+
+**Zrealizowane w Macierzy Interfejsów:** `project_trades.hired_by` ("kto zatrudnia", wolny tekst —
+ten sam styl co pozostałe pola tabeli, bez nowego słownika) + pole w formularzu + wyświetlanie w
+`project-trades-panel.tsx`.
+
+**NIE zrealizowane, świadomie odłożone: grupowanie pozycji ROT po podmiocie (branży/wykonawcy).**
+Żadne z czterech źródeł ROT (kanban/zmiany/oferty/ustalenia) nie ma dziś odniesienia do
+`project_trades` — dodanie go wymagałoby wyboru, na którym źródle (jednym? wszystkich czterech?) i
+czy ręcznie tagowane czy wywnioskowane, co jest realną decyzją projektową, nie szczegółem
+implementacyjnym, i nie było nigdzie jednoznacznie rozstrzygnięte (tylko wspomniane jako "naturalne
+rozwinięcie" w rozmowie roboczej). Zgodnie z CLAUDE.md ("bądź krytyczny wobec specyfikacji, zgłoś
+zamiast zgadywać") — niezaimplementowane, do rozstrzygnięcia jako osobny punkt, jeśli okaże się
+faktycznie potrzebne w praktyce.
+
+**Nawigacja:** nowy moduł `rot` (`lib/navigation/nav-modules.ts`, grupa "Projekty", `/rot`),
+uprawnienia `VIEW_ONLY` (`lib/permissions/module-actions.ts`) — ROT to widok/raport, nie zasób CRUD.
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed
@@ -673,8 +723,8 @@ notka o tym pod D20 §2, teraz nieaktualna.
 | 1 | Fundament: szablon i historia etapów | — | **zrealizowane** |
 | 2 | Sloty ról i fallback | — | **zrealizowane** |
 | 3 | Kompetencje | M | **zrealizowane** (D21/D22, migracje 221-222) |
-| 4 | ROT jako widok (4 źródła + Macierz Interfejsów) | L | do realizacji — **następna** |
-| 5 | Generator raportu etapowego (wysyłka ręczna) | M | do realizacji |
+| 4 | ROT jako widok (4 źródła + Macierz Interfejsów) | L | **zrealizowane** (D23, migracje 223-225) — grupowanie po podmiocie odłożone, patrz D23 |
+| 5 | Generator raportu etapowego (wysyłka ręczna) | M | do realizacji — **następna** |
 | — | Pilotaż: 3 projekty, 2-3 raporty, zbiórka reakcji klienta/opiekuna → poprawki treści przed 11c | proces, nie kod | do realizacji |
 | 6 | Cykl życia projektu | L | do realizacji |
 | 7 | Warstwa sygnałów + zdrowie etapu (czyta z ROT, D3) | M | do realizacji |
@@ -717,6 +767,7 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D20 §2 | faza komunikacji z przejęciem przy czerwonym (docs/04 §4.4) + faza zastępstw urlopowych (docs/04 §6) | zatwierdzone, do realizacji jako osobna, nazwana pozycja w sekwencji, przed obiema tymi fazami |
 | D21 | faza 3 (Kompetencje) | zatwierdzone, zrealizowane (migracje 221-222: `operational_role_competency`, potwierdzenie `user_competency`, mapa luk) |
 | D22 | faza zastępstw urlopowych (`project_role_competency`, dług na przyszłość) | zatwierdzone; korekta D4/D7/D15 zrealizowana od razu, `project_role_competency` materiał na fazę zastępstw |
+| D23 | faza 4 (ROT) | zatwierdzone, zrealizowane (migracje 223-225: historia kanbana triggerem, `report_rot_items()`, `project_trades.hired_by`) — grupowanie ROT po podmiocie świadomie odłożone |
 
 ---
 

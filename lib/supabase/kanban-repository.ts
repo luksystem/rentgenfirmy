@@ -1,16 +1,18 @@
 import { kanbanActivityHref } from "@/lib/activity-log/hrefs";
 import { formatPartyName } from "@/lib/party/display-name";
-import type {
-  KanbanAuthorSide,
-  KanbanBoard,
-  KanbanComment,
-  KanbanColumn,
-  KanbanPriority,
-  KanbanTask,
-  KanbanTaskEvent,
-  KanbanTaskEventType,
-  KanbanTaskReaction,
-  KanbanTemplatePayload,
+import {
+  ROT_STATUSES,
+  type KanbanAuthorSide,
+  type KanbanBoard,
+  type KanbanComment,
+  type KanbanColumn,
+  type KanbanPriority,
+  type KanbanTask,
+  type KanbanTaskEvent,
+  type KanbanTaskEventType,
+  type KanbanTaskReaction,
+  type KanbanTemplatePayload,
+  type RotStatus,
 } from "@/lib/process/kanban-types";
 import { isKanbanReactionEmoji } from "@/lib/process/kanban-reactions";
 import type { MentionCandidate } from "@/lib/notifications/types";
@@ -69,6 +71,7 @@ type ColumnRow = {
   board_id: string;
   title: string;
   position: number;
+  rot_status: string | null;
   created_at: string;
 };
 
@@ -129,13 +132,30 @@ function isAuthorSide(value: string): value is KanbanAuthorSide {
   return value === "team" || value === "client";
 }
 
+function isRotStatus(value: string | null): value is RotStatus {
+  return value !== null && (ROT_STATUSES as readonly string[]).includes(value);
+}
+
 function rowToColumn(row: ColumnRow): KanbanColumn {
   return {
     id: row.id,
     boardId: row.board_id,
     title: row.title,
     position: row.position,
+    rotStatus: isRotStatus(row.rot_status) ? row.rot_status : null,
   };
+}
+
+/** Faza 4 (ROT) — administrator mapuje kolumnę na status ROT (docs/08 D14); null zdejmuje mapowanie. */
+export async function updateKanbanColumnRotStatus(columnId: string, rotStatus: RotStatus | null) {
+  const supabase = getSupabase();
+  const { error } = await supabase
+    .from("process_kanban_columns")
+    .update({ rot_status: rotStatus })
+    .eq("id", columnId);
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 function rowToTask(row: TaskRow): KanbanTask {

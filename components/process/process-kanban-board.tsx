@@ -37,9 +37,12 @@ import {
 import { collectKanbanAssigneeFilterOptions } from "@/lib/kanban/task-assignee";
 import {
   getKanbanPublicUrl,
+  ROT_STATUS_LABELS,
+  ROT_STATUSES,
   type KanbanAuthorSide,
   type KanbanBoard,
   type KanbanTemplatePayload,
+  type RotStatus,
 } from "@/lib/process/kanban-types";
 import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
 import { buildKanbanMentionCandidates, buildKanbanMentionOptionNames } from "@/lib/kanban/mention-candidates";
@@ -61,6 +64,7 @@ import {
   moveKanbanTask,
   setKanbanPublicEnabled,
   toggleKanbanTaskReaction,
+  updateKanbanColumnRotStatus,
   updateKanbanComment,
   updateKanbanTask,
 } from "@/lib/supabase/kanban-repository";
@@ -356,6 +360,12 @@ export function ProcessKanbanBoard({
     }
   }
 
+  /** Faza 4 (ROT) — mapowanie kolumny na status ROT, docs/08 D14. */
+  async function handleSetColumnRotStatus(columnId: string, rotStatus: RotStatus | "") {
+    await updateKanbanColumnRotStatus(columnId, rotStatus || null);
+    await refresh();
+  }
+
   function beginDrag(taskId: string) {
     dragTaskIdRef.current = taskId;
     setDragTaskId(taskId);
@@ -597,6 +607,21 @@ export function ProcessKanbanBoard({
                     <span className="text-rose-300"> · {overdueCount} po terminie</span>
                   ) : null}
                 </p>
+                <select
+                  value={column.rotStatus ?? ""}
+                  onChange={(event) =>
+                    void handleSetColumnRotStatus(column.id, event.target.value as RotStatus | "")
+                  }
+                  title="Status ROT dla tej kolumny"
+                  className="mt-1 w-full rounded-lg border border-border/60 bg-surface-muted/20 px-1.5 py-0.5 text-[10px] text-muted"
+                >
+                  <option value="">ROT: brak (poza rejestrem)</option>
+                  {ROT_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      ROT: {ROT_STATUS_LABELS[status]}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div

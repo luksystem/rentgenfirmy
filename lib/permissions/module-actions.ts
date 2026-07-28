@@ -44,6 +44,7 @@ export const NAV_MODULE_SUPPORTED_ACTIONS: Record<NavModuleKey, PermissionAction
   processes: CRUD,
   "resource-plan": CRUD,
   projects: CRUD,
+  rot: VIEW_ONLY,
   audit: CRUD_EXPORT,
   "work-orders": CRUD,
   documents: CRUD,

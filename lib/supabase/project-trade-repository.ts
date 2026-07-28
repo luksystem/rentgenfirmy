@@ -12,6 +12,7 @@ type TradeRow = {
   email: string;
   phone: string;
   description: string;
+  hired_by: string;
   position: number;
   created_at: string;
   updated_at: string;
@@ -27,6 +28,7 @@ function rowToTrade(row: TradeRow): ProjectTrade {
     email: row.email,
     phone: row.phone,
     description: row.description,
+    hiredBy: row.hired_by,
     position: row.position,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -41,6 +43,7 @@ function normalizeInput(input: ProjectTradeInput) {
     email: input.email?.trim() ?? "",
     phone: input.phone?.trim() ?? "",
     description: input.description?.trim() ?? "",
+    hired_by: input.hiredBy?.trim() ?? "",
   };
 }
 

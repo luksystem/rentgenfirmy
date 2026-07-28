@@ -182,6 +182,7 @@ async function fetchProjectContext(projectId: string) {
     email: string;
     phone: string;
     description: string;
+    hired_by: string;
     position: number;
     created_at: string;
     updated_at: string;
@@ -196,6 +197,7 @@ async function fetchProjectContext(projectId: string) {
     email: row.email,
     phone: row.phone,
     description: row.description,
+    hiredBy: row.hired_by,
     position: row.position,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

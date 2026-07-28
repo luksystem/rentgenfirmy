@@ -7,6 +7,8 @@ export type ProjectTrade = {
   email: string;
   phone: string;
   description: string;
+  /** Kto zatrudnia tego wykonawcę (Macierz Interfejsów, Faza 4 ROT) — wolny tekst. */
+  hiredBy: string;
   position: number;
   createdAt: string;
   updatedAt: string;
@@ -19,6 +21,7 @@ export type ProjectTradeInput = {
   email?: string;
   phone?: string;
   description?: string;
+  hiredBy?: string;
 };
 
 /** Etykieta roli akceptacji powiązanej z branżą. */

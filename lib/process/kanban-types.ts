@@ -26,11 +26,22 @@ export type KanbanTemplatePayload = {
   publicAuthorName?: string;
 };
 
+/** Faza 4 (ROT) — mapowanie kolumny na status ROT, docs/08 D14. Null = kolumna świadomie poza ROT. */
+export const ROT_STATUSES = ["CZEKA_NA_ZEWNETRZNE", "W_TOKU", "ZAMKNIETE"] as const;
+export type RotStatus = (typeof ROT_STATUSES)[number];
+
+export const ROT_STATUS_LABELS: Record<RotStatus, string> = {
+  CZEKA_NA_ZEWNETRZNE: "Czeka na zewnętrzne",
+  W_TOKU: "W toku",
+  ZAMKNIETE: "Zamknięte",
+};
+
 export type KanbanColumn = {
   id: string;
   boardId: string;
   title: string;
   position: number;
+  rotStatus: RotStatus | null;
 };
 
 export type KanbanTask = {

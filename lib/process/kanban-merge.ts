@@ -76,6 +76,9 @@ function buildMergedColumns(boards: KanbanBoard[]): KanbanColumn[] {
       boardId: "merged",
       title: meta.title,
       position: index,
+      // Widok scalony z wielu projektów — mapowanie ROT edytowalne tylko na realnej kolumnie
+      // pojedynczego projektu (docs/08 D14), nie na tym syntetycznym, agregowanym wierszu.
+      rotStatus: null,
     }));
 }
 

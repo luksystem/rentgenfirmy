@@ -1310,6 +1310,8 @@ export type ProjectTradeRow = {
   email: string;
   phone: string;
   description: string;
+  /** Kto zatrudnia tego wykonawcę (Macierz Interfejsów, Faza 4 ROT). */
+  hired_by: string;
   position: number;
   created_at: string;
   updated_at: string;
@@ -4008,6 +4010,13 @@ export type Database = {
         Update: Record<string, unknown>;
         Relationships: [];
       };
+      /** Faza 4 (ROT), docs/08 D12 — historia przejść między kolumnami, zapisywana triggerem. */
+      process_kanban_task_column_history: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
       user_notifications: {
         Row: {
           id: string;
@@ -4530,6 +4539,21 @@ export type Database = {
           competency_label: string;
           required_level_label: string;
           qualified_people_count: number;
+        }[];
+      };
+      report_rot_items: {
+        Args: Record<string, never>;
+        Returns: {
+          source_type: string;
+          source_id: string;
+          project_id: string;
+          project_name: string;
+          title: string;
+          rot_status: string;
+          category: string | null;
+          detail: string | null;
+          opened_at: string;
+          days_open: number;
         }[];
       };
     };

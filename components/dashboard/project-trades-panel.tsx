@@ -228,6 +228,11 @@ export function ProjectTradesPanel({
                 ) : null}
               </p>
             ) : null}
+            {trade.hiredBy ? (
+              <p className="mt-2 text-xs text-muted">
+                Zatrudnia: <span className="text-foreground/90">{trade.hiredBy}</span>
+              </p>
+            ) : null}
             {trade.description ? (
               <p className="mt-2 break-words whitespace-pre-wrap text-sm text-foreground/90">
                 {trade.description}

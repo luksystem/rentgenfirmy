@@ -23,6 +23,7 @@ export function emptyTradeInput(): ProjectTradeInput {
     email: "",
     phone: "",
     description: "",
+    hiredBy: "",
   };
 }
 
@@ -232,6 +233,13 @@ export function TradeFormFields({
           value={form.contactName ?? ""}
           placeholder="Imię i nazwisko"
           onChange={(event) => onChange({ ...form, contactName: event.target.value })}
+        />
+      </Field>
+      <Field label="Kto zatrudnia">
+        <Input
+          value={form.hiredBy ?? ""}
+          placeholder="np. Inwestor, Generalny wykonawca, konkretna firma"
+          onChange={(event) => onChange({ ...form, hiredBy: event.target.value })}
         />
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
