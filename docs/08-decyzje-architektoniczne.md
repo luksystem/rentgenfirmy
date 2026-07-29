@@ -1224,6 +1224,74 @@ Migracja: 251 (`report_rot_items()` — dwie zmiany w CASE, reszta bez zmian).
 
 ---
 
+## D31. Faza 8 (Czas pracy) — inwentaryzacja i propozycja dalszego zakresu
+
+**Status: inwentaryzacja zrealizowana, zakres dalszej pracy CZEKA NA DECYZJĘ właściciela — zatrzymano
+się tu świadomie zamiast zgadywać priorytet na module tej skali.**
+
+### Stan faktyczny: moduł w dużej mierze już istnieje
+
+`docs/czas-pracy/Rentgen_-_Kompletna_specyfikacja_modulu_Czas_Pracy.docx` opisuje bardzo szeroki
+moduł (TimeEntry, Timesheet, budżety, silnik kosztów, rentowność, AI — 9 własnych etapów wdrożenia).
+Przed planowaniem sprawdzono kod: **moduł "Czas pracy" już istnieje i pokrywa etapy 1-6 własnej
+specyfikacji w całości albo w większości.** To nie jest zielone pole.
+
+Zweryfikowane w kodzie (migracje 125, 127, 128, 154, 159, 160, 165, 207 + `lib/time-tracking/`,
+`lib/supabase/time-*`, `components/time-tracking/`, `app/moja-praca/czas-pracy`,
+`app/ustawienia/czas-pracy`):
+
+| Obszar specyfikacji | Stan |
+|---|---|
+| TimeEntry (model, ręczny wpis) | **gotowe** — `time_entries`, formularz, walidacje |
+| Timer start/pauza/stop | **gotowe** — `active_timers`, jeden aktywny timer na osobę |
+| Kategorie czasu | **gotowe** — CRUD w `/ustawienia/czas-pracy` |
+| Typy wpisów | **częściowe** — istnieją i działają, ale bez admin UI (zmiana = migracja SQL, nie edytor) |
+| Arkusz czasu (dzień/tydzień/miesiąc) | **gotowe** — `/moja-praca/czas-pracy/arkusz`, macierz zespołu |
+| Wysyłka → akceptacja managera | **gotowe** — pełny workflow + audyt (`time_entry_logs`) |
+| Integracja z urlopami | **gotowe** — dwukierunkowy sync z `leave_requests` |
+| Integracja z Planowaniem (Krok A/B) | **gotowe** — propozycje wpisów z `resource_plan_items` |
+| Integracja z Misjami | **częściowe** — `work_missions` + FK istnieją, formularz wpisu je czyta, ale **brak CRUD** (tworzenie/edycja misji tylko ręcznie w bazie — to samo potwierdza własna dokumentacja modułu, `docs/moja-praca/CZAS_PRACY.md`) |
+| Budżety godzin | **częściowe** — tylko per projekt (z `project_contract_quotas`), nie per etap/zadanie jak zakłada specyfikacja |
+| Silnik kosztów roboczogodziny | **częściowe** — `cost_rate_snapshot`/`client_rate_snapshot` zapisywane przy wpisie, ale **nigdzie dalej nie konsumowane** |
+| Rentowność projektu (z czasu pracy) | **brak** — snapshoty kosztu istnieją, ale nie ma raportu marży |
+| AI | **brak, świadomie odłożone** — potwierdzone w roadmapie własnej dokumentacji modułu |
+
+### Znaleziony dług, niezależny od tego, co jeszcze niezbudowane
+
+1. **`overtime_flag` to martwa kolumna** — nigdy nie zapisywana; nadgodziny liczone kruchym
+   dopasowaniem tekstowym po polskiej nazwie typu wpisu (`period-balance.ts`, `.includes("nadgodzin")`)
+   zamiast po kodzie/atrybucie. To dokładnie ten sam rodzaj problemu co reguła "odwiązanie od
+   etapów" (D27), tylko na typach wpisu zamiast na etapach.
+2. **Dwa równoległe, niepołączone systemy godzin projektu**: `time_entries` (ten moduł) i
+   `project_hourly_reports` (ręczne raportowanie T&M w rozliczeniach, migracja 158). Komentarz w
+   samej migracji 158 już wtedy zakładał *"docelowo zasilany czasem pracy zadań"* — nigdy zrobione.
+   To naruszenie zasady "jedna informacja ma jedno miejsce" z `docs/CLAUDE.md`.
+3. **`database.types.ts` nie zawiera żadnej tabeli czasu pracy** — cały moduł operuje na ręcznie
+   pisanych typach wierszy i jednym `any`-typowanym query builderze zamiast typach generowanych.
+   Ryzyko regresji przy każdej zmianie schematu.
+4. **`process_stage_id` nieosiągalny z formularza** — wypełniany tylko automatycznie przy akceptacji
+   propozycji z planu; ręczny wpis nigdy nie ma etapu, mimo że rozbicie projektowe po etapach istnieje.
+
+### Propozycja dalszego zakresu — do decyzji właściciela
+
+Pełna specyfikacja to kilka osobnych faz same w sobie (misje CRUD, budżety per etap, silnik
+rentowności, AI). Zamiast zgadywać priorytet, cztery kandydaci na "co dalej", możliwe do łączenia:
+
+- **(a) Higiena/dług** — napraw 4 punkty wyżej (overtime jako atrybut typu wpisu, spięcie
+  `project_hourly_reports` z `time_entries` albo świadome odrzucenie duplikatu, wygenerowanie typów,
+  `process_stage_id` w formularzu). Małe, konkretne, nie wymaga decyzji biznesowych.
+- **(b) Misje — CRUD** — dokończenie tworzenia/edycji misji w UI (dziś tylko ręcznie w bazie).
+- **(c) Budżety godzin per etap/zadanie + progi ostrzegawcze** — rozszerzenie dzisiejszego
+  budżetu projektowego zgodnie ze specyfikacją (50/80/90/100%).
+- **(d) Rentowność z czasu pracy** — raport marży łączący `cost_rate_snapshot`/`client_rate_snapshot`
+  z przychodem projektu. Wymaga decyzji, skąd brać przychód (patrz istniejący moduł rozliczeń) —
+  największe ryzyko dublowania z czymś, co już istnieje w `project-settlement-server.ts`.
+
+AI (etap 9 specyfikacji) świadomie pominięte w tej propozycji — sama specyfikacja każe budować go
+na końcu, po ustabilizowaniu modelu danych i historii.
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed
@@ -1245,7 +1313,7 @@ notka o tym pod D20 §2, teraz nieaktualna.
 | — | Pilotaż: 3 projekty, 2-3 raporty, zbiórka reakcji klienta/opiekuna → poprawki treści przed 11c | proces, nie kod | **następna** — czeka na realny pilotaż (nie kod), potem wraca jako poprawki treści |
 | 6 | Cykl życia projektu | L | **zrealizowane** (D25, migracje 227-230, "grandfather" dla danych historycznych; UI: blokada pola, rezygnacja klienta, panel pokrycia) |
 | 7 | Warstwa sygnałów + zdrowie etapu (czyta z ROT, D3) | M | **zrealizowane** (D26, migracje 232-233) |
-| 8 | Czas pracy | M | do realizacji |
+| 8 | Czas pracy | L (moduł już w dużej mierze istnieje — patrz D31) | inwentaryzacja zrealizowana, zakres dalszej pracy czeka na decyzję właściciela |
 | 9 | Rejestr zdarzeń komunikacyjnych | L | do realizacji |
 | 10 | `is_active`: persist + rozbicie osi | M | do realizacji |
 | 11a | Fazy komunikacji — bramy | S-M | do realizacji |
@@ -1292,6 +1360,7 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D28 | Krok A — terminy pochodne elementów procesu | zatwierdzone, zrealizowane |
 | D29 | Krok B — Zaplanuj, ostrzeżenia dobowe, sprawdzenie dwustronne | zatwierdzone, zrealizowane w zakresie (B8.3 odłożone) |
 | D30 | ROT — `accepted` jako stan końcowy | zatwierdzone, zrealizowane (migracja 251) |
+| D31 | faza 8 (Czas pracy) | inwentaryzacja zrealizowana, zakres dalszej pracy czeka na decyzję właściciela — 4 kandydaci (a-d) |
 
 ---
 
