@@ -5,6 +5,7 @@ import {
   buildKanbanNewActivityRows,
 } from "@/lib/notifications/kanban-activity";
 import { sendNotificationChannels } from "@/lib/notifications/dispatch";
+import { sendPushToUser } from "@/lib/push/send-push";
 import { fetchTeamProfilesServer } from "@/lib/supabase/profile-repository-server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { hasFullAppAccess } from "@/lib/auth/types";
@@ -21,7 +22,12 @@ async function fetchProfileEmails(profileIds: string[]): Promise<string[]> {
     .filter((email): email is string => Boolean(email));
 }
 
-export async function createKanbanMentionNotificationsServer(input: {
+/**
+ * Push dla wzmianek @ w komentarzach Kanbana. Wpis w user_notifications (dzwoneczek) powstaje
+ * już po stronie klienckiej (createKanbanMentionNotifications) — ta funkcja dokłada tylko
+ * brakującą wcześniej powiadomienie push, więc świadomie NIE zapisuje drugi raz do tej tabeli.
+ */
+export async function sendKanbanMentionPush(input: {
   commentId: string;
   taskId: string;
   taskTitle: string;
@@ -67,21 +73,18 @@ export async function createKanbanMentionNotificationsServer(input: {
   }
 
   const excerpt = input.body.trim().slice(0, NOTIFICATION_BODY_MAX_LENGTH);
-  const rows = [...profileIds].map((profileId) => ({
-    id: crypto.randomUUID(),
-    profile_id: profileId,
-    kind: "kanban_mention" as UserNotificationKind,
-    title: `${input.authorName} oznaczył Cię w Kanbanie`,
-    body: `${input.taskTitle}: ${excerpt}`,
-    link_url: input.linkUrl ?? "/tablice-wdrozen",
-    source_id: input.commentId,
-    created_at: new Date().toISOString(),
-  }));
+  const linkUrl = input.linkUrl ?? "/tablice-wdrozen";
 
-  const { error } = await supabase.from("user_notifications").insert(rows);
-  if (error && !error.message.toLowerCase().includes("does not exist")) {
-    throw new Error(error.message);
-  }
+  await Promise.all(
+    [...profileIds].map((profileId) =>
+      sendPushToUser(profileId, {
+        title: `${input.authorName} oznaczył Cię w Kanbanie`,
+        body: `${input.taskTitle}: ${excerpt}`,
+        url: linkUrl,
+        tag: `kanban-mention-${input.commentId}`,
+      }).catch((pushError) => console.warn("[kanban] mention push failed:", pushError)),
+    ),
+  );
 }
 
 export async function createKanbanNewActivityNotificationsServer(input: {

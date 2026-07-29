@@ -1029,6 +1029,31 @@ export async function addKanbanComment(input: {
       candidates: input.mentionCandidates,
       linkUrl: input.linkUrl,
     }).catch(() => undefined);
+
+    const mentionPushPayload = {
+      commentId: comment.id,
+      taskId: input.taskId,
+      taskTitle: input.taskTitle ?? "Zgłoszenie",
+      body,
+      authorName: input.authorName,
+      candidates: input.mentionCandidates,
+      linkUrl: input.linkUrl,
+    };
+
+    if (typeof window === "undefined") {
+      // Wywołanie z serwera (np. publiczna tablica Kanban przez token) — moduł z web-push
+      // i kluczem service-role nie może trafić do bundla przeglądarki, stąd dynamiczny import.
+      void import("@/lib/notifications/server")
+        .then(({ sendKanbanMentionPush }) => sendKanbanMentionPush(mentionPushPayload))
+        .catch(() => undefined);
+    } else {
+      void fetch("/api/kanban/mentions/notify", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(mentionPushPayload),
+      }).catch(() => undefined);
+    }
   }
 
   return comment;
