@@ -79,6 +79,8 @@ function buildMergedColumns(boards: KanbanBoard[]): KanbanColumn[] {
       // Widok scalony z wielu projektów — mapowanie ROT edytowalne tylko na realnej kolumnie
       // pojedynczego projektu (docs/08 D14), nie na tym syntetycznym, agregowanym wierszu.
       rotStatus: null,
+      category: null,
+      isRejestrTematow: false,
     }));
 }
 

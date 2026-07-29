@@ -1,6 +1,7 @@
 import { kanbanActivityHref } from "@/lib/activity-log/hrefs";
 import { formatPartyName } from "@/lib/party/display-name";
 import {
+  ROT_CATEGORIES,
   ROT_STATUSES,
   type KanbanAuthorSide,
   type KanbanBoard,
@@ -12,6 +13,7 @@ import {
   type KanbanTaskEventType,
   type KanbanTaskReaction,
   type KanbanTemplatePayload,
+  type RotCategory,
   type RotStatus,
 } from "@/lib/process/kanban-types";
 import { isKanbanReactionEmoji } from "@/lib/process/kanban-reactions";
@@ -72,6 +74,8 @@ type ColumnRow = {
   title: string;
   position: number;
   rot_status: string | null;
+  category: string | null;
+  is_rejestr_tematow: boolean;
   created_at: string;
 };
 
@@ -136,6 +140,10 @@ function isRotStatus(value: string | null): value is RotStatus {
   return value !== null && (ROT_STATUSES as readonly string[]).includes(value);
 }
 
+function isRotCategory(value: string | null): value is RotCategory {
+  return value !== null && (ROT_CATEGORIES as readonly string[]).includes(value);
+}
+
 function rowToColumn(row: ColumnRow): KanbanColumn {
   return {
     id: row.id,
@@ -143,15 +151,30 @@ function rowToColumn(row: ColumnRow): KanbanColumn {
     title: row.title,
     position: row.position,
     rotStatus: isRotStatus(row.rot_status) ? row.rot_status : null,
+    category: isRotCategory(row.category) ? row.category : null,
+    isRejestrTematow: row.is_rejestr_tematow,
   };
 }
 
-/** Faza 4 (ROT) — administrator mapuje kolumnę na status ROT (docs/08 D14); null zdejmuje mapowanie. */
-export async function updateKanbanColumnRotStatus(columnId: string, rotStatus: RotStatus | null) {
+/**
+ * Faza 4 (ROT, docs/08 D14) rozszerzone w D36 — administrator mapuje kolumnę na status/kategorię
+ * ROT wprost na żywej tablicy. To NADPISANIE domyślnej wartości skopiowanej z szablonu przy
+ * tworzeniu tablicy (ensureKanbanBoard), nie jedyny sposób konfiguracji. `is_rejestr_tematow`
+ * trzymany w synchronizacji z `rot_status is not null` — jeden control w UI (wybór statusu),
+ * nie osobny checkbox na żywej kolumnie (ten jest tylko w edytorze szablonu, D36 §3).
+ */
+export async function updateKanbanColumnRotConfig(
+  columnId: string,
+  config: { rotStatus: RotStatus | null; category?: RotCategory | null },
+) {
   const supabase = getSupabase();
   const { error } = await supabase
     .from("process_kanban_columns")
-    .update({ rot_status: rotStatus })
+    .update({
+      rot_status: config.rotStatus,
+      category: config.rotStatus ? (config.category ?? null) : null,
+      is_rejestr_tematow: config.rotStatus !== null,
+    })
     .eq("id", columnId);
   if (error) {
     throw new Error(error.message);
@@ -519,6 +542,10 @@ export async function ensureKanbanBoard(
       board_id: boardId,
       title: column.title,
       position: column.position,
+      // D36 — kopiowane z definicji kolumny w szablonie, tym samym mechanizmem co title/position.
+      rot_status: column.rotStatus ?? null,
+      category: column.rotStatus ? (column.category ?? null) : null,
+      is_rejestr_tematow: column.isRejestrTematow === true,
     })),
   );
 

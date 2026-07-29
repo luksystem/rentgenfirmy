@@ -2,9 +2,17 @@
 
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/input";
+import { Field, Input, Select } from "@/components/ui/input";
 import { moveItem, removeAt, withPositions } from "@/lib/process/template-editor-utils";
-import type { KanbanTemplatePayload } from "@/lib/process/kanban-types";
+import {
+  ROT_CATEGORIES,
+  ROT_CATEGORY_LABELS,
+  ROT_STATUS_LABELS,
+  ROT_STATUSES,
+  type KanbanTemplatePayload,
+  type RotCategory,
+  type RotStatus,
+} from "@/lib/process/kanban-types";
 
 export function KanbanTemplateColumnsEditor({
   payload,
@@ -22,12 +30,45 @@ export function KanbanTemplateColumnsEditor({
     });
   }
 
+  /** D36 — atrybuty ROT definicji kolumny: wybór statusu zeruje kategorię, wyłączenie ROT zeruje oba. */
+  function updateRot(index: number, rotStatus: RotStatus | "") {
+    onChange({
+      ...payload,
+      columns: payload.columns.map((column, columnIndex) =>
+        columnIndex === index
+          ? {
+              ...column,
+              rotStatus: rotStatus || null,
+              category: rotStatus ? column.category : null,
+              isRejestrTematow: Boolean(rotStatus),
+            }
+          : column,
+      ),
+    });
+  }
+
+  function updateRotCategory(index: number, category: RotCategory | "") {
+    onChange({
+      ...payload,
+      columns: payload.columns.map((column, columnIndex) =>
+        columnIndex === index ? { ...column, category: category || null } : column,
+      ),
+    });
+  }
+
   function addColumn() {
     onChange({
       ...payload,
       columns: [
         ...payload.columns,
-        { id: crypto.randomUUID(), title: "", position: payload.columns.length },
+        {
+          id: crypto.randomUUID(),
+          title: "",
+          position: payload.columns.length,
+          rotStatus: null,
+          category: null,
+          isRejestrTematow: false,
+        },
       ],
     });
   }
@@ -54,23 +95,56 @@ export function KanbanTemplateColumnsEditor({
         {payload.columns.map((column, index) => (
           <div
             key={column.id}
-            className="flex flex-wrap items-center gap-2 rounded-xl border border-border/70 bg-surface/40 p-2"
+            className="grid gap-2 rounded-xl border border-border/70 bg-surface/40 p-2"
           >
-            <Input
-              value={column.title}
-              placeholder={`Kolumna ${index + 1}`}
-              onChange={(event) => updateTitle(index, event.target.value)}
-            />
-            <div className="flex shrink-0 gap-1">
-              <Button type="button" size="sm" variant="secondary" disabled={index === 0} onClick={() => moveColumn(index, "up")}>
-                <ArrowUp className="h-3.5 w-3.5" />
-              </Button>
-              <Button type="button" size="sm" variant="secondary" disabled={index === payload.columns.length - 1} onClick={() => moveColumn(index, "down")}>
-                <ArrowDown className="h-3.5 w-3.5" />
-              </Button>
-              <Button type="button" size="sm" variant="secondary" disabled={payload.columns.length <= 1} onClick={() => removeColumn(index)}>
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                value={column.title}
+                placeholder={`Kolumna ${index + 1}`}
+                onChange={(event) => updateTitle(index, event.target.value)}
+              />
+              <div className="flex shrink-0 gap-1">
+                <Button type="button" size="sm" variant="secondary" disabled={index === 0} onClick={() => moveColumn(index, "up")}>
+                  <ArrowUp className="h-3.5 w-3.5" />
+                </Button>
+                <Button type="button" size="sm" variant="secondary" disabled={index === payload.columns.length - 1} onClick={() => moveColumn(index, "down")}>
+                  <ArrowDown className="h-3.5 w-3.5" />
+                </Button>
+                <Button type="button" size="sm" variant="secondary" disabled={payload.columns.length <= 1} onClick={() => removeColumn(index)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={column.rotStatus ?? ""}
+                onChange={(event) => updateRot(index, event.target.value as RotStatus | "")}
+                title="Status ROT domyślny dla nowych tablic z tego szablonu"
+                className="h-8 w-auto text-xs"
+              >
+                <option value="">ROT: poza rejestrem</option>
+                {ROT_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    ROT: {ROT_STATUS_LABELS[status]}
+                  </option>
+                ))}
+              </Select>
+              {column.rotStatus ? (
+                <Select
+                  value={column.category ?? ""}
+                  onChange={(event) => updateRotCategory(index, event.target.value as RotCategory | "")}
+                  title="Kategoria ROT domyślna dla nowych tablic z tego szablonu"
+                  className="h-8 w-auto text-xs"
+                >
+                  <option value="">Kategoria: brak</option>
+                  {ROT_CATEGORIES.map((category) => (
+                    <option key={category} value={category}>
+                      {ROT_CATEGORY_LABELS[category]}
+                    </option>
+                  ))}
+                </Select>
+              ) : null}
             </div>
           </div>
         ))}

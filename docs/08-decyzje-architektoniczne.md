@@ -1544,6 +1544,90 @@ poza: kolejne podobne prośby czekają na potwierdzenie listy, chyba że właśc
 
 ---
 
+## D37. Kanban ROT — korekta miejsca konfiguracji: atrybut kolumny w szablonie, nie tylko żywej tablicy
+
+**Status: mechanizm zrealizowany (migracja 256). Backfill (oba tory) NIE wykonany — czeka na
+zatwierdzenie mapowania, zgodnie z wyraźnym zastrzeżeniem właściciela.**
+
+Korekta względem wcześniejszego stanu: `rot_status` istniał dotąd wyłącznie jako atrybut ŻYWEJ
+kolumny (`process_kanban_columns`), ustawiany ręcznie per tablica, per projekt — nowa tablica
+zawsze startowała bez żadnego mapowania ROT. Właściciel wskazał właściwe miejsce: typ elementu
+procesu „Tablica Kanban" (`process_items.kind='kanban'`) ma `default_payload.columns[]` — to tu, w
+definicji kolumny w szablonie, powinny żyć `rot_status`, `category` (kategoria ROT) i
+`is_rejestr_tematow`, kopiowane do żywej tablicy dokładnie tym samym mechanizmem co dziś kopiowane
+`title`/`position` (`ensureKanbanBoard`, `lib/supabase/kanban-repository.ts`).
+
+**Zrealizowane:**
+- `process_kanban_columns` — dwie nowe kolumny: `category text` (check: `OCZEKIWANIE_DECYZJA_
+  INWESTORA`/`POZA_ZAKRESEM`), `is_rejestr_tematow boolean not null default false`.
+- `KanbanColumnTemplate` (`lib/process/kanban-types.ts`) — `rotStatus`/`category`/`isRejestrTematow`
+  jako pola definicji kolumny w szablonie (wcześniej: tylko `id`/`title`/`position`). `ROT_CATEGORIES`
+  przeniesione tu z `lib/rot/types.ts` (ten sam wzorzec co już przeniesione wcześniej `ROT_STATUSES`)
+  — `lib/rot/types.ts` re-eksportuje, żeby nie było dwóch źródeł prawdy dla tego samego typu.
+  `normalizeKanbanTemplatePayload` (`lib/process/kanban-payload.ts`) parsuje/waliduje nowe pola.
+- `ensureKanbanBoard` kopiuje `column.rotStatus`/`category`/`isRejestrTematow` do insertu nowej
+  tablicy — identyczny wzorzec jak `title`/`position`.
+- **Nadpisanie na żywej tablicy ZOSTAJE** (żądanie właściciela, punkt 2) — `updateKanbanColumnRotStatus`
+  przemianowane na `updateKanbanColumnRotConfig({rotStatus, category})`, wciąż wywoływane z selecta
+  na pasku kolumny (`process-kanban-board.tsx`), teraz z drugim selectem na kategorię, widocznym
+  tylko gdy status jest ustawiony. `is_rejestr_tematow` trzymany w synchronizacji z
+  `rot_status is not null` automatycznie w tej funkcji — jeden control w UI żywej tablicy, nie trzy
+  osobne pola (te trzy pola osobno są tylko w edytorze szablonu, patrz niżej).
+- **Edytor przy definicji kolumn w szablonie** (żądanie właściciela, punkt 3) —
+  `KanbanTemplateColumnsEditor` (`components/process/kanban-template-columns-editor.tsx`) — już
+  istniał dla title/position/dostępu publicznego, rozszerzony o te same dwa selecty (status +
+  kategoria) per kolumna definicji.
+- `report_rot_items()` — `kanban_items` filtruje teraz po `c.is_rejestr_tematow` (jawny atrybut, nie
+  tylko `rot_status is not null`) i czyta prawdziwą `c.category` zamiast zawsze `null`.
+
+**Świadomy efekt uboczny, ujawniony wprost:** `is_rejestr_tematow` domyślnie `false` dla WSZYSTKICH
+istniejących wierszy — ROT-y z kanbana (dotąd oparte tylko na `rot_status is not null`) **przestały
+się pokazywać w ROT do czasu backfillu** (patrz niżej). To tymczasowy spadek widoczności, nie utrata
+danych — same karty/kolumny/tablice nie zostały ruszone.
+
+### Punkt 5 — bezpieczeństwo „Wczytaj z szablonu" (sprawdzone, jak żądano)
+
+Prześledzone: `syncProjectProcessFromTemplate` → `ensureProjectProcessItems` →
+`ensureProjectProcessItemsAdmin`. Mechanizm jest **wyłącznie addytywny na poziomie `project_process_
+items`**: pobiera listę już istniejących wierszy projektu, wylicza, których pozycji z szablonu
+brakuje, i wstawia TYLKO brakujące (`upsert` z `ignoreDuplicates: true`, `onConflict: "project_id,
+template_item_id"`). Nigdy nie usuwa ani nie nadpisuje istniejących wierszy.
+
+**Kluczowe: ta funkcja w ogóle nie dotyka `process_kanban_boards`/`process_kanban_columns`/
+`process_kanban_tasks`.** Tablica kanban powstaje leniwie, osobno, dopiero gdy ktoś faktycznie
+otworzy stronę tej konkretnej tablicy (`ensureKanbanBoard`, wołane z `process-kanban-board.tsx`), i
+raz utworzona nigdy nie jest odwiedzana ponownie przez „Wczytaj z szablonu". **Wniosek: przycisk
+„Wczytaj z szablonu" jest bezpieczny dla tablicy z 28 kartami — nie zastępuje kolumn, nie dotyka ich
+wcale.** Jednocześnie to oznacza, że NIE jest to ścieżka aktualizacji istniejących tablic (backfill
+4b musi być osobną, dedykowaną operacją na `process_kanban_columns` wprost).
+
+### Punkt 4a — ile elementów „Tablica Kanban" w 8 szablonach (sprawdzone, NIE backfillowane)
+
+**1** (słownie: jeden) element typu `kind='kanban'` w całej bazie, across wszystkich 8 szablonów:
+„Wdrożenie systemu" w szablonie „Proces — DOM", 5 kolumn: Zgłoszone, W trakcie, Do przetestowania,
+Prace dodatkowe, Zatwierdzone. Poniżej „kilka" z przewidywania właściciela.
+
+### Punkt 4b — 39 tablic? Sprawdzone, realna liczba to 13
+
+Rozbieżność z liczbą podaną przez właściciela: w produkcji jest **13 tablic kanban** (`process_
+kanban_boards`), nie 39 — zgłoszone wprost, nie podstawione po cichu. 65 kolumn łącznie, i
+**wszystkie 13 tablic ma identyczny zestaw 5 tytułów kolumn** (bo wszystkie powstały z tego samego,
+jedynego elementu szablonu) — więc jedna reguła mapowania pokrywa 100% (65/65).
+
+**Proponowane mapowanie (do zatwierdzenia, NIE zastosowane):**
+
+| Kolumna | Sugerowany `rot_status` | Sugerowana `category` | Uzasadnienie |
+|---|---|---|---|
+| Zgłoszone | W_TOKU | — | Nowe zgłoszenie klienta z wdrożenia — nasza kolejka, nie oczekiwanie na kogoś |
+| W trakcie | W_TOKU | — | Praca w toku |
+| Do przetestowania | W_TOKU | — | Wciąż nasza odpowiedzialność |
+| Prace dodatkowe | CZEKA_NA_ZEWNETRZNE | OCZEKIWANIE_DECYZJA_INWESTORA | Dodatkowy zakres do zaakceptowania przez inwestora |
+| Zatwierdzone | ZAMKNIETE | — | Stan końcowy |
+
+Migracja: 256 (schemat + `report_rot_items()`).
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed
@@ -1618,6 +1702,7 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D34 | ROT (nawigacja do konkretnego elementu) | zatwierdzone, zrealizowane (`RotItemDetailPanel`); kanban świadomie bez pełnego osadzenia |
 | D35 | ROT (`client_offer_status` zamrożony na accepted) | zatwierdzone, zrealizowane (migracja 255) |
 | D36 | Duplikat szablonu „Dom"/„DOM" (literówka w kodzie) | zatwierdzone, zrealizowane — naprawiona literówka + usunięty duplikat (dwukrotnie, drugi raz się odtworzył) |
+| D37 | Kanban ROT — atrybut kolumny w szablonie | mechanizm zrealizowany (migracja 256); backfill (4a: 1 element, 4b: 13 tablic nie 39, mapowanie 100% jedną regułą) czeka na zatwierdzenie |
 
 ---
 

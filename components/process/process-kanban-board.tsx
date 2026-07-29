@@ -37,11 +37,14 @@ import {
 import { collectKanbanAssigneeFilterOptions } from "@/lib/kanban/task-assignee";
 import {
   getKanbanPublicUrl,
+  ROT_CATEGORIES,
+  ROT_CATEGORY_LABELS,
   ROT_STATUS_LABELS,
   ROT_STATUSES,
   type KanbanAuthorSide,
   type KanbanBoard,
   type KanbanTemplatePayload,
+  type RotCategory,
   type RotStatus,
 } from "@/lib/process/kanban-types";
 import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
@@ -64,7 +67,7 @@ import {
   moveKanbanTask,
   setKanbanPublicEnabled,
   toggleKanbanTaskReaction,
-  updateKanbanColumnRotStatus,
+  updateKanbanColumnRotConfig,
   updateKanbanComment,
   updateKanbanTask,
 } from "@/lib/supabase/kanban-repository";
@@ -360,9 +363,18 @@ export function ProcessKanbanBoard({
     }
   }
 
-  /** Faza 4 (ROT) — mapowanie kolumny na status ROT, docs/08 D14. */
+  /** Faza 4 (ROT, docs/08 D14) — nadpisanie na żywej tablicy, patrz D36. */
   async function handleSetColumnRotStatus(columnId: string, rotStatus: RotStatus | "") {
-    await updateKanbanColumnRotStatus(columnId, rotStatus || null);
+    await updateKanbanColumnRotConfig(columnId, { rotStatus: rotStatus || null });
+    await refresh();
+  }
+
+  async function handleSetColumnRotCategory(
+    columnId: string,
+    rotStatus: RotStatus | null,
+    category: RotCategory | "",
+  ) {
+    await updateKanbanColumnRotConfig(columnId, { rotStatus, category: category || null });
     await refresh();
   }
 
@@ -612,7 +624,7 @@ export function ProcessKanbanBoard({
                   onChange={(event) =>
                     void handleSetColumnRotStatus(column.id, event.target.value as RotStatus | "")
                   }
-                  title="Status ROT dla tej kolumny"
+                  title="Status ROT dla tej kolumny — nadpisuje wartość z szablonu tylko dla tej tablicy"
                   className="mt-1 w-full rounded-lg border border-border/60 bg-surface-muted/20 px-1.5 py-0.5 text-[10px] text-muted"
                 >
                   <option value="">ROT: brak (poza rejestrem)</option>
@@ -622,6 +634,27 @@ export function ProcessKanbanBoard({
                     </option>
                   ))}
                 </select>
+                {column.rotStatus ? (
+                  <select
+                    value={column.category ?? ""}
+                    onChange={(event) =>
+                      void handleSetColumnRotCategory(
+                        column.id,
+                        column.rotStatus,
+                        event.target.value as RotCategory | "",
+                      )
+                    }
+                    title="Kategoria ROT dla tej kolumny"
+                    className="mt-1 w-full rounded-lg border border-border/60 bg-surface-muted/20 px-1.5 py-0.5 text-[10px] text-muted"
+                  >
+                    <option value="">Kategoria: brak</option>
+                    {ROT_CATEGORIES.map((category) => (
+                      <option key={category} value={category}>
+                        {ROT_CATEGORY_LABELS[category]}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
               </div>
 
               <div

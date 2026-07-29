@@ -10,12 +10,6 @@ export const KANBAN_PRIORITY_LABELS: Record<KanbanPriority, string> = {
 
 export type KanbanAuthorSide = "team" | "client";
 
-export type KanbanColumnTemplate = {
-  id: string;
-  title: string;
-  position: number;
-};
-
 export type KanbanTemplatePayload = {
   columns: KanbanColumnTemplate[];
   /** Hasło do publicznego linku (zapisane w szablonie; hash trafia na tablicę przy wdrożeniu). */
@@ -36,12 +30,36 @@ export const ROT_STATUS_LABELS: Record<RotStatus, string> = {
   ZAMKNIETE: "Zamknięte",
 };
 
+/** D36 — kategoria ROT, tu (nie w lib/rot/types.ts) bo teraz atrybutem kolumny kanban jest tak samo
+ *  jak rotStatus (definicja tego typu musi żyć niżej niż oba miejsca, które jej używają). */
+export const ROT_CATEGORIES = ["OCZEKIWANIE_DECYZJA_INWESTORA", "POZA_ZAKRESEM"] as const;
+export type RotCategory = (typeof ROT_CATEGORIES)[number];
+
+export const ROT_CATEGORY_LABELS: Record<RotCategory, string> = {
+  OCZEKIWANIE_DECYZJA_INWESTORA: "Oczekiwanie na decyzję inwestora",
+  POZA_ZAKRESEM: "Poza zakresem",
+};
+
+/** D36 — atrybuty definicji kolumny w szablonie (process_items.kind='kanban', default_payload.
+ *  columns[]). Kopiowane do KanbanColumn przy tworzeniu tablicy (ensureKanbanBoard), tym samym
+ *  mechanizmem co title/position. Nadpisywalne per żywa tablica — patrz KanbanColumn niżej. */
+export type KanbanColumnTemplate = {
+  id: string;
+  title: string;
+  position: number;
+  rotStatus: RotStatus | null;
+  category: RotCategory | null;
+  isRejestrTematow: boolean;
+};
+
 export type KanbanColumn = {
   id: string;
   boardId: string;
   title: string;
   position: number;
   rotStatus: RotStatus | null;
+  category: RotCategory | null;
+  isRejestrTematow: boolean;
 };
 
 export type KanbanTask = {
@@ -161,9 +179,9 @@ export type KanbanPublicContext = {
 export function defaultKanbanTemplatePayload(): KanbanTemplatePayload {
   return {
     columns: [
-      { id: crypto.randomUUID(), title: "Problemy w trakcie", position: 0 },
-      { id: crypto.randomUUID(), title: "Rozwiązane", position: 1 },
-      { id: crypto.randomUUID(), title: "Testowane", position: 2 },
+      { id: crypto.randomUUID(), title: "Problemy w trakcie", position: 0, rotStatus: null, category: null, isRejestrTematow: false },
+      { id: crypto.randomUUID(), title: "Rozwiązane", position: 1, rotStatus: null, category: null, isRejestrTematow: false },
+      { id: crypto.randomUUID(), title: "Testowane", position: 2, rotStatus: null, category: null, isRejestrTematow: false },
     ],
   };
 }
