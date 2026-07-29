@@ -2159,6 +2159,8 @@ export type ResourcePlanItemRow = {
   inspection_id: string | null;
   /** null = element nie pochodzi z przeglądu; false = data wstępna; true = data ustalona. */
   inspection_date_confirmed: boolean | null;
+  /** Krok B (docs/08 D28) — blok zmaterializowany z zobowiązania ("Zaplanuj"). */
+  process_item_id: string | null;
   work_type_item_id: string | null;
   title: string;
   start_at: string;
@@ -2194,6 +2196,7 @@ export type ResourcePlanItemInsert = {
   service_intake_request_id?: string | null;
   inspection_id?: string | null;
   inspection_date_confirmed?: boolean | null;
+  process_item_id?: string | null;
   work_type_item_id?: string | null;
   title?: string;
   start_at: string;
@@ -4670,6 +4673,34 @@ export type Database = {
         Args: { p_agreement_id: string };
         Returns: undefined;
       };
+      report_leave_commitment_impact: {
+        Args: { p_profile_id: string; p_start_date: string; p_end_date: string };
+        Returns: {
+          kind: string;
+          project_id: string;
+          project_name: string;
+          item_id: string;
+          title: string;
+          window_start: string;
+          window_end: string;
+        }[];
+      };
+      report_commitment_warnings: {
+        Args: Record<string, never>;
+        Returns: {
+          warning_type: string;
+          project_id: string;
+          project_name: string;
+          item_id: string;
+          title: string;
+          termin_wynikajacy: string | null;
+          effort_days: number | null;
+          resource_plan_item_id: string | null;
+          responsible_user_id: string | null;
+          responsible_name: string | null;
+          detail: string;
+        }[];
+      };
       report_stage_commitments: {
         Args: { p_horizon_days?: number };
         Returns: {
@@ -4683,6 +4714,8 @@ export type Database = {
           termin_wynikajacy: string | null;
           data_planowana: string | null;
           data_ukonczenia: string | null;
+          effort_days: number | null;
+          resource_plan_item_id: string | null;
           responsible_user_id: string | null;
           responsible_name: string | null;
           responsible_source: string | null;

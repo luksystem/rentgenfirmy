@@ -1115,6 +1115,79 @@ druga wersja dopisuje `template_item_id`).
 
 ---
 
+## D29. Krok B — "Zaplanuj", ostrzeżenia dobowe, sprawdzenie dwustronne
+
+**Status: zrealizowane w całości zatwierdzonego zakresu (B7, B8.1, B8.2, B9 oba kierunki). B8.3
+(zależności międzyelementowe) świadomie odłożone przez właściciela — wbrew pierwotnej
+specyfikacji, patrz uzasadnienie niżej.**
+
+### B7 — Zaplanuj / Odplanuj
+
+`resource_plan_items.process_item_id` (unique, nullable) — blok zmaterializowany z zobowiązania,
+ten sam wzorzec co `inspection_id` (`task_id` na tej tabeli pozostaje martwym polem, nieużywanym).
+`planStageCommitment`/`unplanStageCommitment` (`lib/supabase/stage-commitments-repository.ts`)
+reużywają istniejące `createResourcePlanItem`/`deleteResourcePlanItem` — zero nowej ścieżki zapisu.
+
+Dwa uzupełnienia właściciela, oba w zakresie:
+- **Blok ukończonego zobowiązania nigdy nie znika ani nie przesuwa się dalej** — `data_ukonczenia`
+  wypełnione blokuje ruch kaskady (patrz niżej) i "Odplanuj" (UI nie pokazuje przycisku). Status w
+  Gantcie synchronizowany do słownikowego "Zakończone" triggerem
+  (`sync_resource_plan_item_status_on_item_completion`), żeby było widać zamknięcie bez usuwania
+  wiersza — dane zostają do kalibracji `lead_days`.
+- **Kaskada z A3 rozszerzona.** Sprawdzone przed założeniem, że to gotowe: `recompute_derived_
+  deadlines()` przesuwało tylko `data_planowana`, NIE ruszało zmaterializowanego bloku — po
+  pierwszym przesunięciu kamienia blok i zobowiązanie rozjeżdżałyby się cicho. Naprawione w tej
+  samej migracji (245), nie odkryte przy testach — zweryfikowane tablicą prawdy (blok przesuwa się
+  o deltę; blok ukończonego zobowiązania zostaje w miejscu).
+
+### B8.1/B8.2 — ostrzeżenia dobowe
+
+`report_commitment_warnings()`: `okno_krotsze` (dowolne niezakończone zobowiązanie, dni do terminu
+< `effort_days`) i `niedostepny` (odpowiedzialny ma zgłoszoną nieobecność w oknie wykonania).
+Powiadomienie realne — push + `user_notifications` (nowe `kind`: `commitment_window_warning`,
+`commitment_unavailable_warning`), dedup po `source_id`, świadomie poza skonfigurowanym systemem
+routingu e-mail (jak `warranty_expiring`) — brak dziś potrzeby konfigurowalności kanału dla tych
+dwóch. Cron `commitment-warnings`, 04:30 UTC, wzorzec `net.http_post` z migracji 179.
+
+### B9 kierunek 1 — sprawdzenie przy ustawianiu kamienia
+
+Rozwiązanie eleganckie zamiast osobnego mechanizmu: `niedostepny` w `report_commitment_warnings()`
+przestał wymagać zmaterializowanego bloku — dla niezaplanowanych zobowiązań sprawdza
+**hipotetyczne okno** `[termin_wynikajacy - effort_days, termin_wynikajacy]`. Ten sam raport
+obsługuje teraz i codzienny cron, i wywołanie natychmiastowe: `recompute_deadlines_on_milestone_
+date_change()` po przeliczeniu terminów woła od razu `/api/cron/commitment-warnings` (ten sam
+endpoint, ten sam dedup) zamiast czekać na jutro. Zweryfikowane: konflikt złapany 35 dni przed
+terminem w teście — dokładnie scenariusz "sześć tygodni wcześniej, nie tydzień" z uzasadnienia.
+
+### B9 kierunek 2 — sprawdzenie przy zatwierdzeniu urlopu
+
+**Stan faktyczny sprawdzony przed budową** (właściciel: "dobrze, że sprawdziłeś stan faktyczny
+zamiast uwierzyć w 'zaprojektowane'") — to, co istniało, to wyłącznie pasywny feed
+(`syncApprovedLeaveAbsence` → `user_absences`, czytany dopiero gdy ktoś otworzy dany przydział),
+nie powiadomienie. Zbudowane: `report_leave_commitment_impact(profileId, startDate, endDate)` —
+dla konkretnej osoby i konkretnego okna, zwraca zarówno zaplanowane bloki, JAK I niezaplanowane
+zobowiązania (te drugie były dla tego kierunku całkowicie niewidoczne). Wpięte w
+`app/api/leave-requests/[id]/decision/route.ts` po zatwierdzeniu — realne powiadomienie (push +
+`user_notifications`, `kind='leave_commitment_impact'`) do **zatwierdzającego** (może przeplanować
+pracę), nie do osoby idącej na urlop.
+
+### B8.3 — świadomie odłożone
+
+Właściciel poszedł wbrew własnej pierwotnej specyfikacji terminów pochodnych. Uzasadnienie
+zapisane na przyszłość: `lead_days` porządkuje elementy niejawnie (element z większym `lead_days`
+musi wypadać wcześniej — dwie daty już to wymuszają), ostrzeżenie o przerwanym łańcuchu jest w
+dużej mierze redundantne względem `okno_krotsze` (ten sam problem, ten sam alarm, na poprzedniku),
+realny ból (przypadek wdrożeniowca) to B9 kierunek 1, nie graf zależności, a koszt (nowy atrybut +
+edytor + obowiązek utrzymania grafu w każdym szablonie) to ta sama pułapka co ogólny mechanizm
+nadpisań z D6. **Warunek powrotu: konkretny przypadek z praktyki, w którym same daty nie
+wystarczyły — nie przewidywanie.**
+
+Migracje: 245 (`process_item_id`, status sync, rozszerzenie kaskady A3), 246 (`report_stage_
+commitments` +`effort_days`/`resource_plan_item_id`), 247-249 (`report_commitment_warnings`,
+cron, hipotetyczne okno), 250 (`report_leave_commitment_impact`).
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed

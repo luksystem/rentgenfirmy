@@ -20,6 +20,9 @@ export type StageCommitment = {
   terminWynikajacy: string | null;
   dataPlanowana: string | null;
   dataUkonczenia: string | null;
+  effortDays: number | null;
+  /** Krok B — id wiersza resource_plan_items, jeśli zobowiązanie zostało "Zaplanowane". */
+  resourcePlanItemId: string | null;
   responsibleUserId: string | null;
   responsibleName: string | null;
   responsibleSource: "assignee" | "macierz" | null;

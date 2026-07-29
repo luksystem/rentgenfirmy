@@ -54,6 +54,7 @@ function defaultInput(defaultStartIso?: string): ResourcePlanItemInput {
     serviceIntakeRequestId: null,
     inspectionId: null,
     inspectionDateConfirmed: null,
+    processItemId: null,
     workTypeItemId: null,
     title: "",
     startAt: start.toISOString(),

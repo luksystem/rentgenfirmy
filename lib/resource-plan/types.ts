@@ -30,6 +30,9 @@ export type ResourcePlanItem = {
   inspectionId: string | null;
   /** null = element nie pochodzi z przeglądu; false = data wstępna; true = data ustalona. */
   inspectionDateConfirmed: boolean | null;
+  /** Krok B (docs/08 D28) — blok zmaterializowany z zobowiązania procesu ("Zaplanuj"), patrz
+   *  lib/stage-commitments. */
+  processItemId: string | null;
   workTypeItemId: string | null;
   title: string;
   startAt: string;
@@ -72,6 +75,7 @@ export type ResourcePlanItemInput = {
   serviceIntakeRequestId: string | null;
   inspectionId: string | null;
   inspectionDateConfirmed: boolean | null;
+  processItemId: string | null;
   workTypeItemId: string | null;
   title: string;
   startAt: string;
@@ -113,6 +117,7 @@ export function resourcePlanItemToInput(item: ResourcePlanItem): ResourcePlanIte
     serviceIntakeRequestId: item.serviceIntakeRequestId,
     inspectionId: item.inspectionId,
     inspectionDateConfirmed: item.inspectionDateConfirmed,
+    processItemId: item.processItemId,
     workTypeItemId: item.workTypeItemId,
     title: item.title,
     startAt: item.startAt,

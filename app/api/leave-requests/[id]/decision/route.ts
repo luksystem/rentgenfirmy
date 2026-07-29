@@ -18,6 +18,7 @@ import { mapProfileRow } from "@/lib/supabase/profile-mappers";
 import { fetchLeaveCardTemplateSettingsServer } from "@/lib/supabase/leave-settings-server";
 import { LEAVE_CARDS_BUCKET } from "@/lib/supabase/leave-card-repository";
 import { createLeaveRequestDecidedNotificationServer } from "@/lib/notifications/server";
+import { notifyLeaveCommitmentImpact } from "@/lib/notifications/leave-commitment-impact-server";
 
 async function downloadStorageFile(
   admin: ReturnType<typeof getSupabaseAdmin>,
@@ -225,6 +226,17 @@ export async function POST(
       leaveTypeName,
       startDate: item.startDate,
       endDate: item.endDate,
+    }).catch(() => undefined);
+
+    // Krok B B9 kierunek 2 (docs/08 D28) — realne powiadomienie decydenta o wpływie na zobowiązania
+    // (zaplanowane i niezaplanowane), nie tylko pasywny wpis do user_absences.
+    await notifyLeaveCommitmentImpact(admin, {
+      leaveRequestId: id,
+      profileId: item.profileId,
+      profileName: employeeName,
+      startDate: item.startDate,
+      endDate: item.endDate,
+      approverUserId: userId,
     }).catch(() => undefined);
 
     await dispatchLeaveRequestDecidedSms({

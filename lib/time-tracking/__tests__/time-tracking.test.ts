@@ -341,6 +341,7 @@ describe("plan time suggestions", () => {
       serviceIntakeRequestId: null,
       inspectionId: null,
       inspectionDateConfirmed: null,
+      processItemId: null,
       workTypeItemId: null,
       title: "Montaż rozdzielni",
       startAt: "2026-07-14T08:00:00.000Z",

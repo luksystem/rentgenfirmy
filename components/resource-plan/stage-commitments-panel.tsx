@@ -6,8 +6,9 @@
 // osobna zakładka planu zasobów (nie jako nowy tor w istniejącym, złożonym Gantcie — mniejsze
 // ryzyko regresji istniejącej mechaniki przeciągania, ta sama treść funkcjonalna).
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Calendar, CheckCircle2, Circle } from "lucide-react";
+import { AlertTriangle, Calendar, CalendarCheck2, CalendarX2, CheckCircle2, Circle, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProjectEdit } from "@/components/project-edit-provider";
 import { MilestoneDateBadge } from "@/components/process/milestone-date-badge";
@@ -19,8 +20,10 @@ import {
 } from "@/lib/stage-commitments/types";
 import {
   fetchStageCommitments,
+  planStageCommitment,
   setStageCommitmentCompleted,
   setStageCommitmentPlannedDate,
+  unplanStageCommitment,
 } from "@/lib/supabase/stage-commitments-repository";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
@@ -39,16 +42,47 @@ function CommitmentRow({
   onOpenProject,
   onSavePlannedDate,
   onToggleDone,
+  onPlan,
+  onUnplan,
 }: {
   commitment: StageCommitment;
   canEdit: boolean;
   onOpenProject: (projectId: string) => void;
   onSavePlannedDate: (commitment: StageCommitment, date: string | null) => Promise<void>;
   onToggleDone: (commitment: StageCommitment) => Promise<void>;
+  onPlan: (commitment: StageCommitment) => Promise<void>;
+  onUnplan: (commitment: StageCommitment) => Promise<void>;
 }) {
+  const [planBusy, setPlanBusy] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
   const done = Boolean(commitment.dataUkonczenia);
+  const planned = Boolean(commitment.resourcePlanItemId);
   const overdue =
     !done && !!commitment.terminWynikajacy && commitment.terminWynikajacy < new Date().toISOString().slice(0, 10);
+
+  async function handlePlan() {
+    setPlanBusy(true);
+    setPlanError(null);
+    try {
+      await onPlan(commitment);
+    } catch (error) {
+      setPlanError(error instanceof Error ? error.message : "Nie udało się zaplanować.");
+    } finally {
+      setPlanBusy(false);
+    }
+  }
+
+  async function handleUnplan() {
+    setPlanBusy(true);
+    setPlanError(null);
+    try {
+      await onUnplan(commitment);
+    } catch (error) {
+      setPlanError(error instanceof Error ? error.message : "Nie udało się odplanować.");
+    } finally {
+      setPlanBusy(false);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-1.5 rounded-xl border border-border/60 bg-surface-muted/10 p-3">
@@ -93,6 +127,11 @@ function CommitmentRow({
               Po terminie
             </Badge>
           ) : null}
+          {planned ? (
+            <Badge tone="waiting" className="text-[10px]">
+              W planie
+            </Badge>
+          ) : null}
         </div>
       </div>
 
@@ -125,7 +164,37 @@ function CommitmentRow({
             ? `${commitment.responsibleName}${commitment.responsibleSource === "macierz" ? " (z macierzy ról)" : ""}`
             : "Brak widocznego odpowiedzialnego"}
         </span>
+        {canEdit ? (
+          planned ? (
+            !done ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={planBusy}
+                onClick={() => void handleUnplan()}
+                className="h-7 px-2 text-xs"
+              >
+                {planBusy ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <CalendarX2 className="mr-1 h-3 w-3" />}
+                Odplanuj
+              </Button>
+            ) : null
+          ) : (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={planBusy || (!commitment.dataPlanowana && !commitment.terminWynikajacy)}
+              onClick={() => void handlePlan()}
+              className="h-7 px-2 text-xs"
+            >
+              {planBusy ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <CalendarCheck2 className="mr-1 h-3 w-3" />}
+              Zaplanuj
+            </Button>
+          )
+        ) : null}
       </div>
+      {planError ? <p className="text-xs text-rose-400">{planError}</p> : null}
     </div>
   );
 }
@@ -172,6 +241,18 @@ export function StageCommitmentsPanel({ horizonDays = 21 }: { horizonDays?: numb
     setCommitments((current) =>
       (current ?? []).map((row) => (row.itemId === commitment.itemId ? { ...row, dataPlanowana: date } : row)),
     );
+  }
+
+  async function handlePlanCommitment(commitment: StageCommitment) {
+    await planStageCommitment(commitment);
+    const refreshed = await fetchStageCommitments(horizonDays);
+    setCommitments(refreshed);
+  }
+
+  async function handleUnplanCommitment(commitment: StageCommitment) {
+    await unplanStageCommitment(commitment);
+    const refreshed = await fetchStageCommitments(horizonDays);
+    setCommitments(refreshed);
   }
 
   async function handleToggleDone(commitment: StageCommitment) {
@@ -237,6 +318,8 @@ export function StageCommitmentsPanel({ horizonDays = 21 }: { horizonDays?: numb
                     onOpenProject={handleOpenProject}
                     onSavePlannedDate={handleSavePlannedDate}
                     onToggleDone={handleToggleDone}
+                    onPlan={handlePlanCommitment}
+                    onUnplan={handleUnplanCommitment}
                   />
                 ))}
               </div>

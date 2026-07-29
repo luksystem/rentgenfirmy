@@ -27,6 +27,7 @@ type ResourcePlanItemRow = {
   service_intake_request_id: string | null;
   inspection_id: string | null;
   inspection_date_confirmed: boolean | null;
+  process_item_id: string | null;
   work_type_item_id: string | null;
   title: string;
   start_at: string;
@@ -71,6 +72,7 @@ function rowToItem(row: ResourcePlanItemRow, participants: ResourcePlanParticipa
     serviceIntakeRequestId: row.service_intake_request_id,
     inspectionId: row.inspection_id,
     inspectionDateConfirmed: row.inspection_date_confirmed,
+    processItemId: row.process_item_id,
     workTypeItemId: row.work_type_item_id,
     title: row.title,
     startAt: row.start_at,

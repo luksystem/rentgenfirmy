@@ -175,6 +175,7 @@ export function PlanningAssistantDialog({
           serviceIntakeRequestId: null,
           inspectionId: null,
           inspectionDateConfirmed: null,
+          processItemId: null,
           workTypeItemId: (meta.workTypeItemId as string | null) ?? null,
           title: item.title,
           startAt: item.startAt,

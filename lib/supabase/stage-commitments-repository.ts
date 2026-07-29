@@ -1,8 +1,10 @@
-// Krok A A7 (docs/08 D27 2.4).
+// Krok A A7 / Krok B (docs/08 D27 2.4, D28).
 import { getSupabase } from "@/lib/supabase/client";
 import type { StageCommitment, StageCommitmentStatus } from "@/lib/stage-commitments/types";
+import type { ResourcePlanItemInput } from "@/lib/resource-plan/types";
 import { projectProcessItemPlannedDateUpdate } from "@/lib/supabase/process-item-mappers";
 import { updateProjectProcessCompletion } from "@/lib/supabase/process-repository";
+import { createResourcePlanItem, deleteResourcePlanItem } from "@/lib/supabase/resource-plan-repository";
 
 export async function fetchStageCommitments(horizonDays = 21): Promise<StageCommitment[]> {
   const supabase = getSupabase();
@@ -23,6 +25,8 @@ export async function fetchStageCommitments(horizonDays = 21): Promise<StageComm
     terminWynikajacy: row.termin_wynikajacy,
     dataPlanowana: row.data_planowana,
     dataUkonczenia: row.data_ukonczenia,
+    effortDays: row.effort_days,
+    resourcePlanItemId: row.resource_plan_item_id,
     responsibleUserId: row.responsible_user_id,
     responsibleName: row.responsible_name,
     responsibleSource: (row.responsible_source as StageCommitment["responsibleSource"]) ?? null,
@@ -52,6 +56,81 @@ export async function setStageCommitmentCompleted(
   completedByName?: string,
 ): Promise<void> {
   await updateProjectProcessCompletion(projectId, templateItemId, completed, completedByName);
+}
+
+/**
+ * Krok B B7 — "Zaplanuj": materializuje zobowiązanie jako blok resource_plan_items (`process_item_id`
+ * link). Godziny robocze 08:00-16:00, tyle dni ile `effortDays` (domyślnie 1, gdy szablon nie ma
+ * jeszcze wartości — element i tak jest wyliczalny tylko dzięki `lead_days`, `effort_days` to osobna
+ * wartość opcjonalna dla samego bloku).
+ */
+export async function planStageCommitment(commitment: StageCommitment): Promise<void> {
+  const startDateIso = commitment.dataPlanowana ?? commitment.terminWynikajacy;
+  if (!startDateIso) {
+    throw new Error("Brak daty do zaplanowania — ustaw najpierw termin lub datę planowaną.");
+  }
+  const days = Math.max(1, commitment.effortDays ?? 1);
+  const startAt = `${startDateIso}T08:00:00`;
+  const endDate = new Date(`${startDateIso}T00:00:00`);
+  endDate.setDate(endDate.getDate() + (days - 1));
+  const endAt = `${endDate.toISOString().slice(0, 10)}T16:00:00`;
+
+  const input: ResourcePlanItemInput = {
+    projectId: commitment.projectId,
+    clientId: null,
+    processStageId: commitment.stageId,
+    taskId: null,
+    serviceIntakeRequestId: null,
+    inspectionId: null,
+    inspectionDateConfirmed: null,
+    processItemId: commitment.itemId,
+    workTypeItemId: null,
+    title: `[Zobowiązanie] ${commitment.title}`,
+    startAt,
+    endAt,
+    plannedHours: days * 8,
+    actualHours: null,
+    assigneeId: commitment.responsibleUserId,
+    teamItemId: null,
+    statusItemId: null,
+    riskItemId: null,
+    riskNote: "",
+    laborBudget: null,
+    materialBudget: null,
+    travelBudget: null,
+    notes: "",
+    completionFeedback: "",
+    acceptedRisk: false,
+    linkedGroupId: null,
+    shiftWithLinkedGroup: false,
+    participants: commitment.responsibleUserId
+      ? [
+          {
+            userId: commitment.responsibleUserId,
+            roleItemId: null,
+            isLead: true,
+            involvementPercent: 100,
+            startAt: null,
+            endAt: null,
+          },
+        ]
+      : [],
+    requiredCompetencies: [],
+  };
+
+  await createResourcePlanItem(input);
+}
+
+/** Krok B B7 — "Odplanuj". Blok UKOŃCZONEGO zobowiązania nigdy nie jest usuwany (docs/08 D28) —
+ *  wołający musi to sprawdzić przed wywołaniem (UI ukrywa/blokuje przycisk). */
+export async function unplanStageCommitment(commitment: StageCommitment): Promise<void> {
+  if (commitment.dataUkonczenia) {
+    throw new Error("Nie można odplanować ukończonego zobowiązania — blok zostaje jako historia.");
+  }
+  if (!commitment.resourcePlanItemId) {
+    return;
+  }
+  await deleteResourcePlanItem(commitment.resourcePlanItemId);
 }
 
 export async function setStageCommitmentAssignee(
