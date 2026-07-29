@@ -4932,6 +4932,7 @@ export type Database = {
           opened_at: string;
           days_open: number;
           review_date: string | null;
+          termin: string | null;
         }[];
       };
       apply_warranty_extension_from_agreement: {

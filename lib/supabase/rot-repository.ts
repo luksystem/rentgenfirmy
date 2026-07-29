@@ -1,6 +1,7 @@
 // Faza 4 (ROT jako widok) — docs/08 D2/D9/D12/D13/D14.
 import { getSupabase } from "@/lib/supabase/client";
 import type { RotCategory, RotItem, RotSourceType } from "@/lib/rot/types";
+import { addDaysToIsoDate, toLocalIsoDate } from "@/lib/rot/review-date";
 import type { RotStatus } from "@/lib/process/kanban-types";
 
 export async function fetchRotItems(): Promise<RotItem[]> {
@@ -21,6 +22,7 @@ export async function fetchRotItems(): Promise<RotItem[]> {
     openedAt: row.opened_at,
     daysOpen: row.days_open,
     reviewDate: row.review_date,
+    termin: row.termin,
   }));
 }
 
@@ -41,6 +43,22 @@ export async function setRotItemReviewDate(
   if (error) {
     throw new Error(error.message);
   }
+}
+
+/**
+ * D33 — "przegląd bez zamknięcia": pozycja została sprawdzona, ale temat wciąż otwarty. Przesuwa
+ * datę kontroli o `intervalDays` do przodu od dziś, z zapisem kto/kiedy (ta sama tabela co ręczne
+ * nadpisanie — set_at już jest śladem audytowym przeglądu).
+ */
+export async function markRotItemReviewed(
+  sourceType: RotSourceType,
+  sourceId: string,
+  intervalDays: number,
+  actorId?: string,
+): Promise<string> {
+  const reviewDate = addDaysToIsoDate(toLocalIsoDate(new Date()), intervalDays);
+  await setRotItemReviewDate(sourceType, sourceId, reviewDate, actorId);
+  return reviewDate;
 }
 
 /** Faza 7 (D3/D26) — usunięcie daty kontroli pozycji ROT. */

@@ -8,10 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProjectEdit } from "@/components/project-edit-provider";
 import { hasFullAppAccess } from "@/lib/auth/types";
-import { DEFAULT_POLICY_THRESHOLDS } from "@/lib/policy-thresholds/types";
+import { DEFAULT_POLICY_THRESHOLDS, type PolicyThresholds } from "@/lib/policy-thresholds/types";
 import { ROT_CATEGORY_LABELS, ROT_SOURCE_LABELS, ROT_STATUS_LABELS, type RotItem, type RotStatus } from "@/lib/rot/types";
+import { computeSuggestedReviewDate } from "@/lib/rot/review-date";
 import { fetchPolicyThresholds } from "@/lib/supabase/policy-thresholds-repository";
-import { clearRotItemReviewDate, fetchRotItems, setRotItemReviewDate } from "@/lib/supabase/rot-repository";
+import {
+  clearRotItemReviewDate,
+  fetchRotItems,
+  markRotItemReviewed,
+  setRotItemReviewDate,
+} from "@/lib/supabase/rot-repository";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -28,17 +34,22 @@ function RotItemRow({
   onOpenProject,
   canEditReview,
   onSaveReviewDate,
-  stagnationDays,
+  onMarkReviewed,
+  thresholds,
 }: {
   item: RotItem;
   onOpenProject: (projectId: string) => void;
   canEditReview: boolean;
   onSaveReviewDate: (item: RotItem, date: string | null) => Promise<void>;
-  stagnationDays: number;
+  onMarkReviewed: (item: RotItem) => Promise<void>;
+  thresholds: PolicyThresholds;
 }) {
-  const stale = item.rotStatus !== "ZAMKNIETE" && item.daysOpen > stagnationDays;
+  const stale = item.rotStatus !== "ZAMKNIETE" && item.daysOpen > thresholds.rotStagnationDays;
+  const isAutoReviewDate = !item.reviewDate;
+  const effectiveReviewDate = item.reviewDate ?? computeSuggestedReviewDate(item, thresholds);
   const reviewOverdue =
-    item.rotStatus !== "ZAMKNIETE" && !!item.reviewDate && item.reviewDate.slice(0, 10) < new Date().toISOString().slice(0, 10);
+    item.rotStatus !== "ZAMKNIETE" &&
+    effectiveReviewDate.slice(0, 10) < new Date().toISOString().slice(0, 10);
   return (
     <div className="flex flex-col gap-1.5 rounded-xl border border-border/60 bg-surface-muted/10 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -70,18 +81,39 @@ function RotItemRow({
               Po dacie kontroli
             </Badge>
           ) : null}
+          {isAutoReviewDate ? (
+            <span title="Wyliczona automatycznie — nikt jeszcze jej nie ustawił ręcznie.">
+              <Badge tone="neutral" className="text-[10px]">
+                sugerowana
+              </Badge>
+            </span>
+          ) : null}
           {canEditReview ? (
             <MilestoneDateBadge
-              date={item.reviewDate}
+              date={effectiveReviewDate}
               editable
               onSave={(date) => onSaveReviewDate(item, date)}
-              title="Kliknij, aby ustawić datę kontroli tej pozycji"
+              title={
+                isAutoReviewDate
+                  ? "Data wyliczona automatycznie. Kliknij, aby nadpisać ręcznie."
+                  : "Kliknij, aby zmienić datę kontroli tej pozycji"
+              }
               emptyLabel="Ustaw datę kontroli"
               ariaLabel="Data kontroli pozycji ROT"
             />
           ) : (
-            <MilestoneDateBadge date={item.reviewDate} />
+            <MilestoneDateBadge date={effectiveReviewDate} />
           )}
+          {canEditReview && item.rotStatus !== "ZAMKNIETE" ? (
+            <button
+              type="button"
+              onClick={() => void onMarkReviewed(item)}
+              className="rounded-md border border-border/60 px-2 py-0.5 text-[10px] text-muted hover:bg-surface-muted/40 hover:text-foreground"
+              title="Sprawdzono, temat wciąż otwarty — przesuwa datę kontroli o interwał do przodu."
+            >
+              Przejrzano
+            </button>
+          ) : null}
         </div>
       </div>
       <p className="text-sm text-foreground/90">{item.title}</p>
@@ -94,7 +126,7 @@ export default function RotPage() {
   const [items, setItems] = useState<RotItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showClosed, setShowClosed] = useState(false);
-  const [stagnationDays, setStagnationDays] = useState(DEFAULT_POLICY_THRESHOLDS.rotStagnationDays);
+  const [thresholds, setThresholds] = useState<PolicyThresholds>(DEFAULT_POLICY_THRESHOLDS);
 
   const projects = useAppStore((state) => state.projects);
   const { openProjectEdit } = useProjectEdit();
@@ -111,8 +143,8 @@ export default function RotPage() {
         if (!cancelled) setError(err instanceof Error ? err.message : "Nie udało się wczytać ROT.");
       });
     void fetchPolicyThresholds()
-      .then((thresholds) => {
-        if (!cancelled) setStagnationDays(thresholds.rotStagnationDays);
+      .then((loaded) => {
+        if (!cancelled) setThresholds(loaded);
       })
       .catch(() => undefined);
     return () => {
@@ -135,6 +167,22 @@ export default function RotPage() {
       (current ?? []).map((row) =>
         row.sourceType === item.sourceType && row.sourceId === item.sourceId
           ? { ...row, reviewDate: date }
+          : row,
+      ),
+    );
+  }
+
+  async function handleMarkReviewed(item: RotItem) {
+    const nextDate = await markRotItemReviewed(
+      item.sourceType,
+      item.sourceId,
+      thresholds.rotReviewDefaultIntervalDays,
+      profile?.id,
+    );
+    setItems((current) =>
+      (current ?? []).map((row) =>
+        row.sourceType === item.sourceType && row.sourceId === item.sourceId
+          ? { ...row, reviewDate: nextDate }
           : row,
       ),
     );
@@ -182,7 +230,8 @@ export default function RotPage() {
                         onOpenProject={handleOpenProject}
                         canEditReview={canEditReview}
                         onSaveReviewDate={handleSaveReviewDate}
-                        stagnationDays={stagnationDays}
+                        onMarkReviewed={handleMarkReviewed}
+                        thresholds={thresholds}
                       />
                     ))}
                   </div>
@@ -215,7 +264,8 @@ export default function RotPage() {
                         onOpenProject={handleOpenProject}
                         canEditReview={canEditReview}
                         onSaveReviewDate={handleSaveReviewDate}
-                        stagnationDays={stagnationDays}
+                        onMarkReviewed={handleMarkReviewed}
+                        thresholds={thresholds}
                       />
                     ))}
                   </div>

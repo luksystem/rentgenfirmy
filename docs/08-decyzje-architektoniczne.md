@@ -1384,6 +1384,81 @@ breakdown`).
 
 ---
 
+## D33. ROT — automatyczna data kontroli + mechanizm przeglądu
+
+**Status: zrealizowane (migracje 253, 254). Nawigacja do konkretnej pozycji (panel boczny) — NIE
+zrealizowana w tym przejściu, patrz sekcja na końcu.**
+
+### Sprawdzone przed implementacją (na żądanie właściciela)
+
+1. **Ile z 39(38) projektów "W trakcie" ma wypełnione `milestone_dates`?** 8/38 (21%), średnio 0,42
+   kamienia na projekt, rozkład [0 kamieni: 30 projektów, 1: 4, 2: 2, 3: 1, 5: 1]. Potwierdza:
+   warunek działania Kroku A (terminy pochodne) jest dziś w dużej mierze niespełniony na produkcji.
+2. **Ile ustaleń ma `acceptance_deadline_stage_id`?** 12/26 (46%).
+3. **Czy pozycje ROT mają dziś jakąkolwiek datę kontroli?** 2/19 otwartych pozycji (11%) — dokładnie
+   ten sam wzorzec co `projects.last_contact_date`, na który powołał się właściciel: pole tylko-
+   ręczne umiera.
+
+### Reguły (zaimplementowane)
+
+`report_rot_items()` (migracja 253) zwraca teraz surowy fakt `termin` (nie gotową datę kontroli —
+ten sam wzorzec co istniejące `opened_at`/`days_open`, progi nadal aplikowane w TS, tak jak "bez
+ruchu" w `app/rot/page.tsx`). Źródła `termin`, tylko tam gdzie realnie istnieją w danych:
+- `zmiana_projektowa` / `ustalenie`: `acceptance_deadline_stage_id` → najwcześniejsza WYPEŁNIONA
+  data kamienia tego etapu (etap może mieć kilka kamieni, blokada dotyczy całego etapu).
+- `szybka_oferta`: data wygaśnięcia oferty/rozliczenia, tylko dla statusu `pending`.
+- `kanban`: brak źródła terminu w dzisiejszym modelu — zawsze `null`.
+
+`lib/rot/review-date.ts::computeSuggestedReviewDate()` (czysta funkcja, testy tablicy prawdy w
+`lib/rot/__tests__/review-date.test.ts`) liczy sugestię z `termin`/`opened_at`/`rotStatus` +
+`policy_thresholds` (3 nowe progi: `rotReviewBufferDays`=3, `rotReviewWaitingClientDays`=7 —
+spójne z modyfikatorem "akceptacja oczekująca > 7 dni", `rotReviewDefaultIntervalDays`=14):
+
+```
+pozycja z terminem                       -> termin minus rotReviewBufferDays
+CZEKA_NA_ZEWNETRZNE bez własnego terminu -> opened_at + rotReviewWaitingClientDays
+W_TOKU / kanban (bez terminu)            -> opened_at + rotReviewDefaultIntervalDays
+```
+
+**"Czeka na inną branżę" (data obiecana przez wykonawcę) świadomie NIE zaimplementowane** — ROT nie
+rozróżnia dziś "czeka na inwestora" od "czeka na inną branżę" jako osobnych kategorii (`category`
+ma tylko `OCZEKIWANIE_DECYZJA_INWESTORA`/`POZA_ZAKRESEM`), więc nie ma z czego wziąć "obiecanej
+daty". Zamiast zgadywać nową wartość kategorii, zostawione jako udokumentowana zależność — wraca
+razem z rozbudową kategorii ROT (skrzyżowanie z Fazą 8 D32: to ta sama luka, którą napotkało
+podpowiadanie `inna_branza_niegotowa` w formularzu czasu pracy).
+
+Manualne nadpisanie (istniejące od Fazy 7/D26, `rot_item_reviews`) ma zawsze pierwszeństwo —
+sugestia liczy się tylko, gdy nikt nie ustawił własnej daty. UI oznacza sugerowaną datę osobnym
+badge'em "sugerowana", żeby było widać co jest wyliczone, a co realnie zdecydowane.
+
+### Mechanizm przeglądu (bez zamknięcia)
+
+Nowy przycisk "Przejrzano" przy każdej otwartej pozycji (`markRotItemReviewed()`,
+`lib/supabase/rot-repository.ts`) — zapisuje `review_date = dziś + rotReviewDefaultIntervalDays` do
+tej samej tabeli `rot_item_reviews` co ręczne nadpisanie (więc `set_by`/`set_at` już są śladem
+audytowym przeglądu, bez nowej tabeli).
+
+**Gdzie wpięte — odpowiedź na pytanie właściciela:** jedna funkcja licząca przy odczycie widoku ROT
+(`computeSuggestedReviewDate`), nie osobna logika per źródło. Każde źródło w `report_rot_items()`
+dokłada tylko surowy składnik (`termin`), reszta rachunku jest wspólna — ten sam podział
+odpowiedzialności co już istniejące `opened_at`/`days_open`/próg "bez ruchu".
+
+Migracje: 253 (`report_rot_items()` — kolumna `termin`), 254 (seed 3 nowych progów w
+`policy_thresholds`).
+
+### Nawigacja z pozycji ROT do konkretnego elementu — NIE zrealizowana
+
+Zgłoszenie właściciela: dziś każda pozycja ROT prowadzi tylko do otwarcia projektu klienta, trzeba
+potem szukać właściwej sprawy. Chciane: link do konkretnego elementu (karta kanban / wniosek zmiany
+/ oferta / ustalenie), z panelem bocznym (nie pełną nawigacją) i przejściem do następnej pozycji bez
+gubienia miejsca na liście — zaproponować, czy reużyć wzorca `resource-plan-side-panel.tsx`.
+
+To osobny, samodzielny kawałek pracy (4 różne typy elementów, każdy z innym dzisiejszym sposobem
+otwierania), nie doklejony w tym samym przejściu co reguły dat — patrz następny wpis w tym pliku
+(albo rozmowa) na wynik analizy/rekomendację.
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed
@@ -1454,6 +1529,7 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D30 | ROT — `accepted` jako stan końcowy | zatwierdzone, zrealizowane (migracja 251) |
 | D31 | faza 8 (Czas pracy) | inwentaryzacja zrealizowana; właściciel wybrał inny zakres niż 4 kandydaci — patrz D32 |
 | D32 | faza 8 (Czas pracy) | zatwierdzone, zrealizowane (migracja 252: `role_code`/`work_type`/`work_cause`, `database.types.ts` dla modułu); dwa systemy godzin zbadane i opisane, naprawa czeka na decyzję |
+| D33 | ROT (data kontroli + mechanizm przeglądu) | zatwierdzone, zrealizowane (migracje 253-254); nawigacja do konkretnego elementu (panel boczny) — osobna, niezrealizowana pozycja |
 
 ---
 

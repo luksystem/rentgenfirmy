@@ -20,6 +20,15 @@ export type PolicyThresholds = {
   /** Zastępstwa (faza 8+) — nieobecność odpowiedzialnego krótsza niż N dni roboczych nie wymaga
    *  formalnego zastępstwa. */
   substituteRequiredWorkingDays: number;
+  /** ROT (D33) — sugerowana data kontroli dla pozycji z terminem = termin minus N dni. */
+  rotReviewBufferDays: number;
+  /** ROT (D33) — sugerowana data kontroli dla pozycji "czeka na zewnętrzne" bez własnego terminu
+   *  = data wysłania + N dni (spójne z modyfikatorem "akceptacja oczekująca > 7 dni"). */
+  rotReviewWaitingClientDays: number;
+  /** ROT (D33) — sugerowana data kontroli dla pozycji bez terminu i bez oczekiwania na zewnętrzne
+   *  (W_TOKU) = data utworzenia + N dni. Ten sam interwał przesuwa datę przy "przeglądzie bez
+   *  zamknięcia" (markRotItemReviewed). */
+  rotReviewDefaultIntervalDays: number;
 };
 
 export const DEFAULT_POLICY_THRESHOLDS: PolicyThresholds = {
@@ -31,6 +40,9 @@ export const DEFAULT_POLICY_THRESHOLDS: PolicyThresholds = {
   activityHysteresisLowDays: 30,
   activityHysteresisHighDays: 45,
   substituteRequiredWorkingDays: 2,
+  rotReviewBufferDays: 3,
+  rotReviewWaitingClientDays: 7,
+  rotReviewDefaultIntervalDays: 14,
 };
 
 export function normalizePolicyThresholds(value: Partial<PolicyThresholds> | null | undefined): PolicyThresholds {
