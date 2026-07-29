@@ -135,7 +135,7 @@ const DEFAULT_INTERRUPTION_TYPE_OPTIONS: InterruptionTypeOption[] = [
 ];
 
 export const DEFAULT_FIELD_OPTIONS: FieldOptions = {
-  projectTypes: ["Dom", "Sklep", "Serwis", "Inne"],
+  projectTypes: ["DOM", "Sklep", "Serwis", "Inne"],
   flowStatuses: DEFAULT_FLOW_STATUS_OPTIONS,
   nextStepOwners: [
     "Łukasz",

@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProjectEdit } from "@/components/project-edit-provider";
+import { RotItemDetailPanel } from "@/components/rot/rot-item-detail-panel";
 import { hasFullAppAccess } from "@/lib/auth/types";
 import { DEFAULT_POLICY_THRESHOLDS, type PolicyThresholds } from "@/lib/policy-thresholds/types";
 import { ROT_CATEGORY_LABELS, ROT_SOURCE_LABELS, ROT_STATUS_LABELS, type RotItem, type RotStatus } from "@/lib/rot/types";
@@ -31,14 +32,14 @@ const STATUS_TONES: Record<RotStatus, "waiting" | "blue" | "closed"> = {
 
 function RotItemRow({
   item,
-  onOpenProject,
+  onOpenDetail,
   canEditReview,
   onSaveReviewDate,
   onMarkReviewed,
   thresholds,
 }: {
   item: RotItem;
-  onOpenProject: (projectId: string) => void;
+  onOpenDetail: (item: RotItem) => void;
   canEditReview: boolean;
   onSaveReviewDate: (item: RotItem, date: string | null) => Promise<void>;
   onMarkReviewed: (item: RotItem) => Promise<void>;
@@ -55,8 +56,9 @@ function RotItemRow({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <button
           type="button"
-          onClick={() => onOpenProject(item.projectId)}
+          onClick={() => onOpenDetail(item)}
           className="min-w-0 truncate text-sm font-medium text-foreground hover:underline"
+          title="Otwórz tę pozycję (nie cały projekt)"
         >
           {item.projectName}
         </button>
@@ -127,6 +129,7 @@ export default function RotPage() {
   const [error, setError] = useState<string | null>(null);
   const [showClosed, setShowClosed] = useState(false);
   const [thresholds, setThresholds] = useState<PolicyThresholds>(DEFAULT_POLICY_THRESHOLDS);
+  const [detailKey, setDetailKey] = useState<string | null>(null);
 
   const projects = useAppStore((state) => state.projects);
   const { openProjectEdit } = useProjectEdit();
@@ -196,6 +199,34 @@ export default function RotPage() {
     return byStatus;
   }, [items]);
 
+  function itemKey(item: Pick<RotItem, "sourceType" | "sourceId">) {
+    return `${item.sourceType}-${item.sourceId}`;
+  }
+
+  function handleOpenDetail(item: RotItem) {
+    setDetailKey(itemKey(item));
+  }
+
+  const detailGroup = useMemo(() => {
+    if (!detailKey) return [];
+    for (const status of STATUS_ORDER) {
+      if (grouped[status].some((row) => itemKey(row) === detailKey)) {
+        return grouped[status];
+      }
+    }
+    return [];
+  }, [detailKey, grouped]);
+
+  const detailIndex = detailGroup.findIndex((row) => itemKey(row) === detailKey);
+  const detailItem = detailIndex >= 0 ? detailGroup[detailIndex] : null;
+
+  function handleNavigateDetail(direction: "prev" | "next") {
+    if (detailIndex < 0) return;
+    const nextIndex = direction === "prev" ? detailIndex - 1 : detailIndex + 1;
+    const nextItem = detailGroup[nextIndex];
+    if (nextItem) setDetailKey(itemKey(nextItem));
+  }
+
   return (
     <>
       <PageHeader
@@ -227,7 +258,7 @@ export default function RotPage() {
                       <RotItemRow
                         key={`${item.sourceType}-${item.sourceId}`}
                         item={item}
-                        onOpenProject={handleOpenProject}
+                        onOpenDetail={handleOpenDetail}
                         canEditReview={canEditReview}
                         onSaveReviewDate={handleSaveReviewDate}
                         onMarkReviewed={handleMarkReviewed}
@@ -261,7 +292,7 @@ export default function RotPage() {
                       <RotItemRow
                         key={`${item.sourceType}-${item.sourceId}`}
                         item={item}
-                        onOpenProject={handleOpenProject}
+                        onOpenDetail={handleOpenDetail}
                         canEditReview={canEditReview}
                         onSaveReviewDate={handleSaveReviewDate}
                         onMarkReviewed={handleMarkReviewed}
@@ -275,6 +306,15 @@ export default function RotPage() {
           </Card>
         </div>
       )}
+
+      <RotItemDetailPanel
+        item={detailItem}
+        onClose={() => setDetailKey(null)}
+        onOpenProject={handleOpenProject}
+        onNavigate={handleNavigateDetail}
+        hasPrev={detailIndex > 0}
+        hasNext={detailIndex >= 0 && detailIndex < detailGroup.length - 1}
+      />
     </>
   );
 }

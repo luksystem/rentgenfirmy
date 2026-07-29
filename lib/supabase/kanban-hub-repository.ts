@@ -221,7 +221,7 @@ function buildBoardEntries(graph: HubGraph, clientIdFilter?: string): KanbanHubB
       projectId: project.id,
       clientId,
       projectName: project.name?.trim() || "Projekt",
-      projectType: project.type?.trim() || "Dom",
+      projectType: project.type?.trim() || "DOM",
       templateItemId: item.template_item_id,
       openTaskCount: graph.boardOpenCounts.get(board.id) ?? 0,
       newTaskCount: graph.boardNewCounts.get(board.id) ?? 0,

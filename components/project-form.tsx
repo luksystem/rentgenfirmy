@@ -134,7 +134,7 @@ export function projectToFormValues(
     name: project.name,
     clientId: project.clientId ?? "",
     isActive: project.isActive,
-    type: pickOption(project.type, options.projectTypes, "Dom"),
+    type: pickOption(project.type, options.projectTypes, "DOM"),
     flowStatus: pickOption(project.flowStatus, flowStatusNames(options), defaultFlowStatus(options)),
     stage: pickOption(
       project.stage,
@@ -168,7 +168,7 @@ function createDefaultValues(
     name: "",
     clientId: "",
     isActive: true,
-    type: pickOption(undefined, options.projectTypes, "Dom"),
+    type: pickOption(undefined, options.projectTypes, "DOM"),
     flowStatus: defaultFlowStatus(options),
     stage: pickOption(undefined, stageOptions, defaultStage),
     priority: "Normalny",
@@ -500,7 +500,7 @@ export function ProjectForm({
     [project, projectProcesses, templates],
   );
 
-  const initialType = project?.type ?? pickOption(undefined, fieldOptions.projectTypes, "Dom");
+  const initialType = project?.type ?? pickOption(undefined, fieldOptions.projectTypes, "DOM");
   const initialTemplate = resolveStageTemplate(initialType);
   const initialStageOptions = stageTitlesFromTemplate(initialTemplate);
   const initialDefaultStage = defaultStageTitleFromTemplate(initialTemplate);

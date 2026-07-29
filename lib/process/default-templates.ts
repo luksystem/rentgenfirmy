@@ -22,8 +22,8 @@ function buildSeed(
 
 export const DEFAULT_PROCESS_TEMPLATE_SEEDS: TemplateSeed[] = [
   buildSeed(
-    "Dom",
-    "Proces — Dom",
+    "DOM",
+    "Proces — DOM",
     "Standardowy pipeline realizacji instalacji Smart Home w domu jednorodzinnym.",
     [
       {

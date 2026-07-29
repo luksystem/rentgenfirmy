@@ -1453,9 +1453,94 @@ potem szukać właściwej sprawy. Chciane: link do konkretnego elementu (karta k
 / oferta / ustalenie), z panelem bocznym (nie pełną nawigacją) i przejściem do następnej pozycji bez
 gubienia miejsca na liście — zaproponować, czy reużyć wzorca `resource-plan-side-panel.tsx`.
 
-To osobny, samodzielny kawałek pracy (4 różne typy elementów, każdy z innym dzisiejszym sposobem
-otwierania), nie doklejony w tym samym przejściu co reguły dat — patrz następny wpis w tym pliku
-(albo rozmowa) na wynik analizy/rekomendację.
+**Zrealizowane w kolejnym przejściu — patrz D34.**
+
+---
+
+## D34. ROT — nawigacja do konkretnego elementu (panel boczny)
+
+**Status: zrealizowane (`components/rot/rot-item-detail-panel.tsx`), z jednym świadomym wyjątkiem
+(kanban).**
+
+Analiza przed budową: `resource-plan-side-panel.tsx` (nazwa myląca) to nie osobny komponent panelu
+bocznego — to `<DialogContent fullscreen>`, zwykły pełnoekranowy modal. W projekcie nie ma
+dedykowanego Sheet/Drawer. Zamiast budować nowe, samodzielne edytory pojedynczego elementu dla
+wszystkich 4 typów źródeł (koszt zbliżony do przepisania czterech już istniejących, rozbudowanych
+modułów), reużyty istniejący mechanizm:
+
+- **`zmiana_projektowa`**: `ProjectChangeRequestsPanel` już miał (nieużywany dotąd) prop
+  `focusChangeRequestId` — rozwija właściwą pozycję na liście tego projektu.
+- **`ustalenie`**: `ProjectAgreementsPanel` już miał `focusAgreementId` (używany dotąd tylko
+  w widoku klienta z linku publicznego) — ten sam mechanizm.
+- **`szybka_oferta`**: `ServiceForm` jest w pełni samodzielny (`{ initialService }`, żadnych innych
+  wymaganych propsów) — osadzony wprost, dane z `useServiceStore().getServiceById()`.
+- **`kanban`**: **świadomie NIE osadzone.** `KanbanTaskDetailModal` wymaga ~20 propsów (kolumny,
+  komentarze, reakcje, załączniki, opcje przypisania, profile zespołu) dostarczanych dziś tylko
+  przez komponent tablicy-hosta — replikacja tego kontekstu wyłącznie dla ROT byłaby nieproporcjonalna
+  do wartości. Fallback: przycisk „Otwórz projekt” (dotychczasowe zachowanie), jawnie oznaczony w UI.
+
+Panel: `RotItemDetailPanel` (fullscreen Dialog jak reszta aplikacji) — nagłówek z nazwą projektu,
+typem źródła, przyciskiem „otwórz pełny projekt” (nawigacja pełnoekranowa jako opcja dodatkowa, nie
+domyślna — zgodnie z wymaganiem), Poprzednia/Następna (nawigacja w obrębie tej samej grupy statusu
+ROT co kliknięta pozycja) i Zamknij. Kliknięcie nazwy projektu w wierszu ROT otwiera ten panel
+zamiast nawigować do projektu — pełna nawigacja jest teraz tylko za jawnym kliknięciem ikony.
+
+---
+
+## D35. ROT — `client_offer_status='accepted'` zamrożony na zawsze (naprawione)
+
+**Status: zrealizowane (migracja 255).**
+
+Zgłoszenie właściciela z konkretnym przykładem: oferta „Montaż dodatkowych AccessPointów"
+(Nieszporski) wisiała w „W toku" mimo że usługa dawno przeszła do statusu „Rozliczony".
+
+Ten sam typ błędu co D30, ale subtelniejszy: `project_change_requests.status` faktycznie nigdy nie
+zmienia się z `accepted` (terminal z definicji). `services.client_offer_status` też zamraża się na
+`accepted` na zawsze — ale w przeciwieństwie do zmiany projektowej, **usługa, do której należy,
+dalej żyje** (`status`: Zaplanowany → W trakcie → Do rozliczenia → Rozliczony → Rozliczanie →
+Fakturowanie → Zakończona). ROT czytał tylko zamrożone pole `client_offer_status`, nie prawdziwy,
+wciąż zmieniający się status usługi.
+
+Naprawa: `client_offer_status='accepted'` zostaje `W_TOKU` tylko, dopóki usługa jest faktycznie w
+realizacji (`status` w `Zaplanowany`/`W trakcie`); gdy usługa przeszła do fazy rozliczenia,
+fakturowania lub zamknięcia, wątek akceptacji oferty jest już historią → `ZAMKNIETE`. Zweryfikowane
+na obu przykładach z produkcji: Nieszporski (status `Rozliczony`) → teraz `ZAMKNIETE`; Dębowscy
+Opoczno (status `Zaplanowany`, realnie w toku) → poprawnie zostaje `W_TOKU`.
+
+Migracja: 255.
+
+---
+
+## D36. Duplikat szablonu procesu „Dom"/„DOM" — literówka w kodzie źródłowym (naprawione)
+
+**Status: zrealizowane.**
+
+Zgłoszenie właściciela: elementy procesu przypisane do nieistniejącego szablonu „Dom" (przy realnym,
+używanym szablonie „DOM") nie dawały się usunąć. Zbadane i naprawione:
+
+- Znaleziona literówka w `lib/process/default-templates.ts:25` — domyślny seed szablonu miał
+  `projectType: "Dom"` (małe „o") zamiast `"DOM"`. Każde wywołanie mechanizmu „stwórz szablon dla
+  tego typu projektu, jeśli nie istnieje" (`ensureProcessTemplateForProjectType`) z literałem `"Dom"`
+  odtwarzało go od zera z tego seeda — stąd identyczna struktura (4 etapy, 8 kamieni, 23 elementy)
+  za każdym razem, w tym po pierwszym skasowaniu w tej samej rozmowie (odtworzyło się ponownie,
+  zanim właściciel zdążył zobaczyć listę — nie namierzone ze stuprocentową pewnością, co dokładnie
+  to wywołało za drugim razem, ale literówka w seedzie to jedyne miejsce w kodzie mogące wyprodukować
+  dokładnie taką strukturę).
+- Ta sama literówka poprawiona też w: `lib/field-options.ts` (domyślna lista typów projektu — dziś
+  nieużywana w produkcji, bo `field_options` w ustawieniach ma już poprawne `"DOM"`, ale zostawiona
+  martwa literówka to dług), `lib/supabase/kanban-hub-repository.ts` (kosmetyczny fallback etykiety,
+  nie wpływał na bazę), `components/project-form.tsx` (3 wystąpienia — fallback w `pickOption`,
+  nieszkodliwy dziś przy poprawnej liście `field_options`, ale krucha zależność).
+- Usunięto oba wystąpienia duplikatu z produkcji (cascade, zero zależności — `project_processes`,
+  `goals`, `process_stage_role_requirements/responsibility/dependencies`, `process_stage_competency_
+  requirements`, `process_internal_acceptance_configs` — zero wierszy odwołujących się do żadnego z
+  nich, zweryfikowane przed każdym usunięciem). Realny szablon „DOM" (10 etapów, 107 projektów) nie
+  tknięty.
+
+**Lekcja procesowa:** przy drugim wystąpieniu właściciel poprosił o listę PRZED usunięciem — pierwsze
+usunięcie wykonałem od razu na wyraźne polecenie „usuń", zanim ta prośba nadeszła (się rozminęły w
+czasie). Odnotowane wprost właścicielowi w rozmowie; nie ma z tego dodatkowej decyzji do zapisania
+poza: kolejne podobne prośby czekają na potwierdzenie listy, chyba że właściciel jawnie powie inaczej.
 
 ---
 
@@ -1529,7 +1614,10 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D30 | ROT — `accepted` jako stan końcowy | zatwierdzone, zrealizowane (migracja 251) |
 | D31 | faza 8 (Czas pracy) | inwentaryzacja zrealizowana; właściciel wybrał inny zakres niż 4 kandydaci — patrz D32 |
 | D32 | faza 8 (Czas pracy) | zatwierdzone, zrealizowane (migracja 252: `role_code`/`work_type`/`work_cause`, `database.types.ts` dla modułu); dwa systemy godzin zbadane i opisane, naprawa czeka na decyzję |
-| D33 | ROT (data kontroli + mechanizm przeglądu) | zatwierdzone, zrealizowane (migracje 253-254); nawigacja do konkretnego elementu (panel boczny) — osobna, niezrealizowana pozycja |
+| D33 | ROT (data kontroli + mechanizm przeglądu) | zatwierdzone, zrealizowane (migracje 253-254) |
+| D34 | ROT (nawigacja do konkretnego elementu) | zatwierdzone, zrealizowane (`RotItemDetailPanel`); kanban świadomie bez pełnego osadzenia |
+| D35 | ROT (`client_offer_status` zamrożony na accepted) | zatwierdzone, zrealizowane (migracja 255) |
+| D36 | Duplikat szablonu „Dom"/„DOM" (literówka w kodzie) | zatwierdzone, zrealizowane — naprawiona literówka + usunięty duplikat (dwukrotnie, drugi raz się odtworzył) |
 
 ---
 
