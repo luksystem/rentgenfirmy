@@ -1188,6 +1188,42 @@ cron, hipotetyczne okno), 250 (`report_leave_commitment_impact`).
 
 ---
 
+## D30. ROT — `accepted` jako stan końcowy, nie "w toku"
+
+**Status: zrealizowane (migracja 251).**
+
+Zgłoszenie właściciela: w sekcji "W toku" ROT wisiały pozycje bez ruchu, mimo że faktycznie
+zamknięte — oferta ze statusem rozliczenia "accepted", i (po doprecyzowaniu) 12 zaakceptowanych
+zmian projektowych na projekcie Zimnowłodzki.
+
+Zbadane oba wątki przed zmianą kodu:
+
+1. **`settlement_offer_status='accepted'` → było `W_TOKU`, powinno być `ZAMKNIETE`.** Mylone z
+   `client_offer_status='accepted'` (ta sama nazwa statusu, inne znaczenie). Klient akceptujący
+   *ofertę* dopiero uruchamia pracę (usługa → "Zaplanowany") — realnie w toku. Klient akceptujący
+   *rozliczenie* kończy temat (usługa → "Fakturowanie", `serviceStatusAfterSettlementAction`,
+   `lib/service/settlement-offer.ts`) — nic już nie czeka po stronie inwestora.
+
+2. **`project_change_requests.status='accepted'` → było `W_TOKU`, powinno być `ZAMKNIETE`.**
+   Sprawdzono `lib/supabase/project-change-request-repository.ts`: jedyne przejścia to
+   `draft → pending_client → (accepted | rejected | cancelled)`. Status nigdy nie zmienia się
+   *z* `accepted` na cokolwiek innego — moduł istnieje wyłącznie do zebrania decyzji klienta przed
+   etapem (`blocksNextStage`), po akceptacji nie ma żadnego dalszego stanu do śledzenia. Potwierdzone
+   na żywych danych: 12/12 zmian na projekcie Zimnowłodzki, wszystkie `accepted`, zawieszone w ROT
+   od tygodnia+ bez żadnej możliwości ruchu.
+
+**Wątek zbadany i NIE potwierdzony jako błąd:** hipoteza, że `project_client_agreements` może
+utknąć w `pending_client` mimo kompletu akceptacji wymaganych ról (błąd w `finalizeAgreementApprovals`).
+Sprawdzono: `respondToAgreementApproval` to jedyna ścieżka zapisu do `project_agreement_approvals`
+(także z publicznego `/api/ustalenie/[token]`) i zawsze na końcu woła `finalizeAgreementApprovals`,
+która realnie przełącza status na `accepted`, gdy wszystkie wymagane role mają `accepted`. Sprawdzone
+live wszystkich 14 ustaleń w `pending_client` na produkcji — żadne nie ma kompletu akceptacji.
+Mechanizm działa poprawnie na dzisiejszych danych; brak dowodu na błąd, więc bez zmian.
+
+Migracja: 251 (`report_rot_items()` — dwie zmiany w CASE, reszta bez zmian).
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed
@@ -1252,6 +1288,10 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D24 | faza 5 (Generator raportu etapowego) | zatwierdzone, zrealizowane (migracja 226: `project_stage_reports`, zamrożenie triggerem, pilotaż flagą) — wybór 3 pilotowych projektów czeka na właściciela |
 | D25 | faza 6 (Cykl życia projektu) | zatwierdzone, zrealizowane (migracje 227-230, "grandfather" dla 120/122 projektów; UI: blokada pola statusu, akcja rezygnacji, panel pokrycia) |
 | D26 | faza 7 (Warstwa sygnałów + zdrowie etapu) | zatwierdzone, zrealizowane (migracje 232-233: `rot_item_reviews`, `report_rot_items()` z `review_date`, `report_stage_health()`, progi w `process_stages`; UI: badge zdrowia etapu w pipeline, data kontroli w ROT) |
+| D27 | odwiązanie kodu od etapów (wsteczne i przyszłe) | zatwierdzone, zrealizowane |
+| D28 | Krok A — terminy pochodne elementów procesu | zatwierdzone, zrealizowane |
+| D29 | Krok B — Zaplanuj, ostrzeżenia dobowe, sprawdzenie dwustronne | zatwierdzone, zrealizowane w zakresie (B8.3 odłożone) |
+| D30 | ROT — `accepted` jako stan końcowy | zatwierdzone, zrealizowane (migracja 251) |
 
 ---
 
