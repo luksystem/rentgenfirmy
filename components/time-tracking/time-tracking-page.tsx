@@ -16,6 +16,11 @@ import { TimeTimesheetPanel } from "@/components/time-tracking/time-timesheet-pa
 import { TimeWeekReport } from "@/components/time-tracking/time-week-report";
 import { TimeEntriesPeriodBalance } from "@/components/time-tracking/time-entries-period-balance";
 import { TimePlanSuggestionsPanel } from "@/components/time-tracking/time-plan-suggestions-panel";
+import { WorkTypeBreakdownCard } from "@/components/time-tracking/work-type-breakdown-card";
+import {
+  fetchWorkTypeBreakdown,
+  type WorkTypeBreakdownRow,
+} from "@/lib/supabase/work-type-breakdown-repository";
 import {
   formatTimesheetPeriodLabel,
   resolveTimesheetPeriod,
@@ -53,6 +58,24 @@ export function TimeTrackingPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimeEntryView | null>(null);
   const [historyEntry, setHistoryEntry] = useState<TimeEntryView | null>(null);
+  const [companyWorkTypeRows, setCompanyWorkTypeRows] = useState<WorkTypeBreakdownRow[]>([]);
+
+  useEffect(() => {
+    if (!canManageTeam) {
+      return;
+    }
+    let cancelled = false;
+    void fetchWorkTypeBreakdown()
+      .then((rows) => {
+        if (!cancelled) setCompanyWorkTypeRows(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setCompanyWorkTypeRows([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [canManageTeam]);
 
   useEffect(() => {
     void ensureMeta();
@@ -151,6 +174,14 @@ export function TimeTrackingPage() {
               await rejectTimesheetById(id, input);
             }}
           />
+        ) : null}
+        {canManageTeam && companyWorkTypeRows.length > 0 ? (
+          <div className="grid gap-2">
+            <p className="text-sm font-semibold text-foreground">
+              Poprawki i dokończenia wg przyczyn — cała firma
+            </p>
+            <WorkTypeBreakdownCard rows={companyWorkTypeRows} />
+          </div>
         ) : null}
         <TimeWeekReport entries={entries} />
         <TimeEntriesPeriodBalance entries={entries} periodType={entriesPeriod.periodType} />

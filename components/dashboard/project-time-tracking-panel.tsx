@@ -8,6 +8,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TimeEntryFormDialog } from "@/components/time-tracking/time-entry-form-dialog";
 import { TimeEntryHistoryDialog } from "@/components/time-tracking/time-entry-history-dialog";
 import { ProjectHourBudgetCard } from "@/components/time-tracking/project-hour-budget-card";
+import { WorkTypeBreakdownCard } from "@/components/time-tracking/work-type-breakdown-card";
+import {
+  fetchWorkTypeBreakdown,
+  type WorkTypeBreakdownRow,
+} from "@/lib/supabase/work-type-breakdown-repository";
 import {
   canDeleteTimeEntryInUi,
   canEditTimeEntryInUi,
@@ -46,6 +51,7 @@ export function ProjectTimeTrackingPanel({ projectId }: { projectId: string }) {
   const [entries, setEntries] = useState<ProjectTimeEntryRow[]>([]);
   const [summary, setSummary] = useState<ProjectTimeSummary | null>(null);
   const [hourBudget, setHourBudget] = useState<ProjectHourBudgetSummary | null>(null);
+  const [workTypeRows, setWorkTypeRows] = useState<WorkTypeBreakdownRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -85,6 +91,20 @@ export function ProjectTimeTrackingPanel({ projectId }: { projectId: string }) {
   useEffect(() => {
     void loadEntries();
   }, [loadEntries]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchWorkTypeBreakdown({ projectId })
+      .then((rows) => {
+        if (!cancelled) setWorkTypeRows(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setWorkTypeRows([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, entries.length]);
 
   function openCreate() {
     setEditingEntry(null);
@@ -187,6 +207,13 @@ export function ProjectTimeTrackingPanel({ projectId }: { projectId: string }) {
               </ul>
             </CardContent>
           </Card>
+        ) : null}
+
+        {workTypeRows.length > 0 ? (
+          <div className="grid min-w-0 gap-2">
+            <p className="text-sm font-semibold text-foreground">Poprawki i dokończenia wg przyczyn</p>
+            <WorkTypeBreakdownCard rows={workTypeRows} />
+          </div>
         ) : null}
 
         {entries.length === 0 ? (

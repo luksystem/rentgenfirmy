@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import type { TimeCategoryRow } from "@/lib/supabase/database.types";
 import type { AdminTimeCategory } from "@/lib/time-tracking/types";
 
 export type { AdminTimeCategory };
@@ -15,20 +16,7 @@ export type AdminTimeCategoryInput = {
   code?: string;
 };
 
-type CategoryDbRow = {
-  id: string;
-  code: string;
-  name: string;
-  description: string;
-  color: string;
-  icon: string;
-  is_active: boolean;
-  sort_order: number;
-  default_billable: boolean;
-  requires_project: boolean;
-};
-
-function mapRow(row: CategoryDbRow): AdminTimeCategory {
+function mapRow(row: TimeCategoryRow): AdminTimeCategory {
   return {
     id: row.id,
     code: row.code,
@@ -53,9 +41,7 @@ function slugifyCode(value: string): string {
     .slice(0, 48);
 }
 
-/** Tabela time_categories nie jest w wygenerowanych typach Database. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function categoriesTable(): any {
+function categoriesTable() {
   return getSupabaseAdmin().from("time_categories");
 }
 
@@ -70,7 +56,7 @@ export async function listTimeCategoriesAdminServer(
   if (error) {
     throw new Error(error.message);
   }
-  return ((data ?? []) as unknown as CategoryDbRow[]).map(mapRow);
+  return (data ?? []).map(mapRow);
 }
 
 export async function createTimeCategoryAdminServer(
@@ -107,7 +93,7 @@ export async function createTimeCategoryAdminServer(
     throw new Error(error.message);
   }
 
-  return mapRow(data as unknown as CategoryDbRow);
+  return mapRow(data);
 }
 
 export async function updateTimeCategoryAdminServer(
@@ -139,7 +125,7 @@ export async function updateTimeCategoryAdminServer(
     throw new Error(error.message);
   }
 
-  return mapRow(data as unknown as CategoryDbRow);
+  return mapRow(data);
 }
 
 export async function deactivateTimeCategoryAdminServer(id: string): Promise<void> {

@@ -40,10 +40,12 @@ import type {
   TimeEntryStatus,
   TimeEntryType,
   TimeEntryView,
+  TimeEntryWorkCause,
   TimeEntryWorkNature,
   TimeTrackingMeta,
   UpdateTimeEntryInput,
 } from "@/lib/time-tracking/types";
+import type { ProcessRoleCode } from "@/lib/process/types";
 
 type AdminClient = SupabaseClient;
 
@@ -58,6 +60,8 @@ type TimeEntryRow = {
   category_id: string;
   entry_type_id: string;
   work_nature: string | null;
+  work_cause: string | null;
+  role_code: string | null;
   description: string;
   billable: boolean;
   project_id: string | null;
@@ -244,6 +248,8 @@ export function mapTimeEntryRow(row: TimeEntryRow): TimeEntry {
     categoryId: row.category_id,
     entryTypeId: row.entry_type_id,
     workNature: (row.work_nature as TimeEntryWorkNature | null) ?? null,
+    workCause: (row.work_cause as TimeEntryWorkCause | null) ?? null,
+    roleCode: (row.role_code as ProcessRoleCode | null) ?? null,
     description: row.description,
     billable: row.billable,
     projectId: row.project_id,
@@ -587,6 +593,8 @@ export async function createTimeEntryServer(
     work_nature: entryType.countsAsWork
       ? input.workNature ?? (createdFrom === "manual" ? null : "new_work")
       : null,
+    work_cause: entryType.countsAsWork ? input.workCause ?? null : null,
+    role_code: input.roleCode ?? null,
     description: input.description?.trim() ?? "",
     billable: entryType.allowsBillable ? billable : false,
     project_id: input.projectId ?? null,
@@ -594,7 +602,7 @@ export async function createTimeEntryServer(
     work_item_id: input.workItemId ?? null,
     service_id: input.serviceId ?? null,
     mission_id: input.missionId ?? null,
-    process_stage_id: options?.processStageId ?? null,
+    process_stage_id: options?.processStageId ?? input.processStageId ?? null,
     resource_plan_item_id: options?.resourcePlanItemId ?? null,
     remote_work: input.remoteWork ?? false,
     delegation: input.delegation ?? false,
@@ -676,10 +684,13 @@ export async function updateTimeEntryServer(
     categoryId,
     entryTypeId,
     workNature: input.workNature !== undefined ? input.workNature : entry.workNature,
+    workCause: input.workCause !== undefined ? input.workCause : entry.workCause,
+    roleCode: input.roleCode !== undefined ? input.roleCode : entry.roleCode,
     description: input.description !== undefined ? input.description : entry.description,
     billable: input.billable !== undefined ? input.billable : entry.billable,
     projectId: input.projectId !== undefined ? input.projectId : entry.projectId,
     clientId: input.clientId !== undefined ? input.clientId : entry.clientId,
+    processStageId: input.processStageId !== undefined ? input.processStageId : entry.processStageId,
     workItemId: input.workItemId !== undefined ? input.workItemId : entry.workItemId,
     serviceId: input.serviceId !== undefined ? input.serviceId : entry.serviceId,
     remoteWork: input.remoteWork ?? entry.remoteWork,
@@ -718,10 +729,13 @@ export async function updateTimeEntryServer(
     work_nature: entryType.countsAsWork
       ? merged.workNature ?? (entry.createdFrom === "manual" ? null : "new_work")
       : null,
+    work_cause: entryType.countsAsWork ? merged.workCause ?? null : null,
+    role_code: merged.roleCode ?? null,
     description: merged.description?.trim() ?? "",
     billable,
     project_id: merged.projectId ?? null,
     client_id: clientId,
+    process_stage_id: merged.processStageId ?? null,
     work_item_id: merged.workItemId ?? null,
     service_id: merged.serviceId ?? null,
     remote_work: merged.remoteWork ?? false,

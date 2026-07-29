@@ -15,12 +15,18 @@ import { TeamProfileSelect } from "@/components/process/team-profile-select";
 import { parseDurationInput } from "@/lib/time-tracking/format";
 import type { UserProfile } from "@/lib/auth/types";
 import {
+  TIME_ENTRY_WORK_CAUSE_LABELS,
+  TIME_ENTRY_WORK_CAUSES_BY_NATURE,
   TIME_ENTRY_WORK_NATURES,
   TIME_ENTRY_WORK_NATURE_LABELS,
+  type ProcessRoleCode,
   type TimeEntryView,
+  type TimeEntryWorkCause,
   type TimeEntryWorkNature,
   type UpdateTimeEntryInput,
 } from "@/lib/time-tracking/types";
+import { PROCESS_ROLE_CODES, PROCESS_ROLE_LABELS } from "@/lib/process/types";
+import { fetchProjectProcess } from "@/lib/supabase/process-repository";
 import type { WorkMission } from "@/lib/supabase/work-missions-server";
 import { fetchTeamProfiles } from "@/lib/supabase/profile-repository";
 import { createTimeEntry, updateTimeEntry } from "@/lib/supabase/time-tracking-repository";
@@ -34,7 +40,10 @@ export type TimeEntryFormValues = {
   categoryId: string;
   entryTypeId: string;
   workNature: TimeEntryWorkNature | "";
+  workCause: TimeEntryWorkCause | "";
+  roleCode: ProcessRoleCode | "";
   projectId: string;
+  processStageId: string;
   missionId: string;
   description: string;
   billable: boolean;
@@ -49,8 +58,11 @@ function emptyForm(date: string, categoryId = "", entryTypeId = "", userId = "")
     durationInput: "1h",
     categoryId,
     entryTypeId,
-    workNature: "",
+    workNature: "new_work",
+    workCause: "",
+    roleCode: "",
     projectId: "",
+    processStageId: "",
     missionId: "",
     description: "",
     billable: false,
@@ -75,8 +87,11 @@ function entryToFormValues(entry: TimeEntryView): TimeEntryFormValues {
     durationInput,
     categoryId: entry.categoryId,
     entryTypeId: entry.entryTypeId,
-    workNature: entry.workNature ?? "",
+    workNature: entry.workNature ?? "new_work",
+    workCause: entry.workCause ?? "",
+    roleCode: entry.roleCode ?? "",
     projectId: entry.projectId ?? "",
+    processStageId: entry.processStageId ?? "",
     missionId: entry.missionId ?? "",
     description: entry.description,
     billable: entry.billable,
@@ -121,6 +136,7 @@ export function TimeEntryFormDialog({
   );
   const [teamProfiles, setTeamProfiles] = useState<UserProfile[]>([]);
   const [missions, setMissions] = useState<WorkMission[]>([]);
+  const [projectStages, setProjectStages] = useState<{ id: string; title: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const defaultsAppliedRef = useRef(false);
 
@@ -238,6 +254,31 @@ export function TimeEntryFormDialog({
     };
   }, [open, values.date, values.userId, profile?.id]);
 
+  useEffect(() => {
+    if (!open || !values.projectId) {
+      setProjectStages([]);
+      return;
+    }
+
+    let cancelled = false;
+    void fetchProjectProcess(values.projectId)
+      .then((process) => {
+        if (cancelled) return;
+        const stages = (process?.templateSnapshot?.stages ?? [])
+          .slice()
+          .sort((a, b) => a.position - b.position)
+          .map((stage) => ({ id: stage.id, title: stage.title }));
+        setProjectStages(stages);
+      })
+      .catch(() => {
+        if (!cancelled) setProjectStages([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, values.projectId]);
+
   function handleCategoryChange(categoryId: string) {
     const category = categories.find((item) => item.id === categoryId);
     setValues((current) => ({
@@ -258,7 +299,11 @@ export function TimeEntryFormDialog({
       return;
     }
     if (selectedEntryType?.countsAsWork && !values.workNature) {
-      window.alert("Wybierz rodzaj pracy (nowa praca / poprawka / nieplanowane kończenie).");
+      window.alert("Wybierz rodzaj pracy (nowa praca / poprawka / nieplanowane kończenie / zmiana zakresu).");
+      return;
+    }
+    if (values.workNature && values.workNature !== "new_work" && !values.workCause) {
+      window.alert("Wybierz przyczynę.");
       return;
     }
     if (allowUserSelection && !values.userId) {
@@ -274,9 +319,12 @@ export function TimeEntryFormDialog({
         categoryId: values.categoryId,
         entryTypeId: values.entryTypeId,
         workNature: values.workNature || null,
+        workCause: values.workNature && values.workNature !== "new_work" ? values.workCause || null : null,
+        roleCode: values.roleCode || null,
         description: values.description,
         billable: values.billable,
         projectId: values.projectId || null,
+        processStageId: values.processStageId || null,
         missionId: values.missionId || null,
         remoteWork: values.remoteWork,
         delegation: values.delegation,
@@ -399,20 +447,69 @@ export function TimeEntryFormDialog({
             </div>
 
             {selectedEntryType?.countsAsWork ? (
-              <Field label="Rodzaj pracy *">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Rodzaj pracy *">
+                  <Select
+                    value={values.workNature}
+                    onChange={(event) => {
+                      const nextNature = event.target.value as TimeEntryWorkNature | "";
+                      setValues((current) => {
+                        if (!nextNature || nextNature === "new_work") {
+                          return { ...current, workNature: nextNature, workCause: "" };
+                        }
+                        const validCauses = TIME_ENTRY_WORK_CAUSES_BY_NATURE[nextNature];
+                        return {
+                          ...current,
+                          workNature: nextNature,
+                          workCause: validCauses.length === 1 ? validCauses[0] : "",
+                        };
+                      });
+                    }}
+                  >
+                    <option value="">— wybierz —</option>
+                    {TIME_ENTRY_WORK_NATURES.map((nature) => (
+                      <option key={nature} value={nature}>
+                        {TIME_ENTRY_WORK_NATURE_LABELS[nature]}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Rola">
+                  <Select
+                    value={values.roleCode}
+                    onChange={(event) =>
+                      setValues((current) => ({
+                        ...current,
+                        roleCode: event.target.value as ProcessRoleCode | "",
+                      }))
+                    }
+                  >
+                    <option value="">— nie dotyczy —</option>
+                    {PROCESS_ROLE_CODES.map((code) => (
+                      <option key={code} value={code}>
+                        {PROCESS_ROLE_LABELS[code]}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+            ) : null}
+
+            {values.workNature && values.workNature !== "new_work" ? (
+              <Field label="Przyczyna *">
                 <Select
-                  value={values.workNature}
+                  value={values.workCause}
                   onChange={(event) =>
                     setValues((current) => ({
                       ...current,
-                      workNature: event.target.value as TimeEntryWorkNature | "",
+                      workCause: event.target.value as TimeEntryWorkCause | "",
                     }))
                   }
                 >
                   <option value="">— wybierz —</option>
-                  {TIME_ENTRY_WORK_NATURES.map((nature) => (
-                    <option key={nature} value={nature}>
-                      {TIME_ENTRY_WORK_NATURE_LABELS[nature]}
+                  {TIME_ENTRY_WORK_CAUSES_BY_NATURE[values.workNature].map((cause) => (
+                    <option key={cause} value={cause}>
+                      {TIME_ENTRY_WORK_CAUSE_LABELS[cause]}
                     </option>
                   ))}
                 </Select>
@@ -424,12 +521,30 @@ export function TimeEntryFormDialog({
               clients={clients}
               value={values.projectId || null}
               onChange={(projectId) =>
-                setValues((current) => ({ ...current, projectId: projectId ?? "" }))
+                setValues((current) => ({ ...current, projectId: projectId ?? "", processStageId: "" }))
               }
               label={requiresProject ? "Projekt *" : "Projekt"}
               disabled={lockProject}
               usePortal
             />
+
+            {projectStages.length > 0 ? (
+              <Field label="Etap procesu">
+                <Select
+                  value={values.processStageId}
+                  onChange={(event) =>
+                    setValues((current) => ({ ...current, processStageId: event.target.value }))
+                  }
+                >
+                  <option value="">— brak —</option>
+                  {projectStages.map((stage) => (
+                    <option key={stage.id} value={stage.id}>
+                      {stage.title}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            ) : null}
 
             {missions.length > 0 ? (
               <Field label="Misja / delegacja">

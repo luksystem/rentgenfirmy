@@ -2884,9 +2884,274 @@ export type GoalAiSuggestionRow = {
   created_at: string;
 };
 
+// ── Czas pracy (Faza 8, /docs/08 D31) — migracje 125, 127, 128, 154, 159, 160, 207, 252 ──────────
+// Dotad brak w tym pliku ("WARUNEK, nie higiena" — bez tego .from("time_entries") itp. typuje na
+// `any` i kazda kolejna kolumna wymaga ponownego wynajdywania typu lokalnie w konsumentach).
+export type TimeCategoryRow = {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  color: string;
+  icon: string;
+  is_active: boolean;
+  sort_order: number;
+  default_billable: boolean;
+  requires_project: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TimeCategoryInsert = Omit<TimeCategoryRow, "id" | "created_at" | "updated_at"> & {
+  id?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type TimeCategoryUpdate = Partial<TimeCategoryInsert>;
+
+export type TimeEntryTypeRow = {
+  id: string;
+  code: string;
+  name: string;
+  counts_as_work: boolean;
+  counts_as_absence: boolean;
+  allows_billable: boolean;
+  requires_description: boolean;
+  requires_project: boolean;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TimeEntryTypeInsert = Omit<TimeEntryTypeRow, "id" | "created_at" | "updated_at"> & {
+  id?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type TimeEntryTypeUpdate = Partial<TimeEntryTypeInsert>;
+
+export type TimeEntryRow = {
+  id: string;
+  user_id: string;
+  date: string;
+  start_time: string | null;
+  end_time: string | null;
+  duration_minutes: number;
+  break_minutes: number;
+  category_id: string;
+  entry_type_id: string;
+  description: string;
+  billable: boolean;
+  project_id: string | null;
+  client_id: string | null;
+  process_stage_id: string | null;
+  work_item_id: string | null;
+  service_id: string | null;
+  mission_id: string | null;
+  leave_request_id: string | null;
+  resource_plan_item_id: string | null;
+  remote_work: boolean;
+  delegation: boolean;
+  overtime_flag: boolean;
+  cost_rate_snapshot: number | null;
+  client_rate_snapshot: number | null;
+  status: string;
+  created_from: string;
+  /** new_work/rework/unplanned_closing/scope_change — text+check od migracji 252 (bylo enum). */
+  work_nature: string | null;
+  /** Wymagane, gdy work_nature <> new_work (migracja 252). */
+  work_cause: string | null;
+  /** Rola procesowa (PROCESS_ROLE_CODES), w jakiej wykonano wpis (migracja 252). */
+  role_code: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TimeEntryInsert = Omit<
+  TimeEntryRow,
+  "id" | "created_at" | "updated_at" | "status" | "created_from" | "work_nature"
+> & {
+  id?: string;
+  created_at?: string;
+  updated_at?: string;
+  status?: string;
+  created_from?: string;
+  work_nature?: string | null;
+};
+
+export type TimeEntryUpdate = Partial<TimeEntryInsert>;
+
+export type TimeEntryLogRow = {
+  id: string;
+  time_entry_id: string;
+  action: string;
+  user_id: string | null;
+  old_value: Record<string, unknown> | null;
+  new_value: Record<string, unknown> | null;
+  comment: string;
+  created_at: string;
+};
+
+export type TimeEntryLogInsert = Omit<TimeEntryLogRow, "id" | "created_at"> & {
+  id?: string;
+  created_at?: string;
+};
+
+export type TimeEntryLogUpdate = Partial<TimeEntryLogInsert>;
+
+export type ActiveTimerRow = {
+  id: string;
+  user_id: string;
+  started_at: string;
+  date: string;
+  category_id: string;
+  entry_type_id: string;
+  description: string;
+  billable: boolean;
+  project_id: string | null;
+  client_id: string | null;
+  work_item_id: string | null;
+  service_id: string | null;
+  remote_work: boolean;
+  delegation: boolean;
+  break_minutes: number;
+  paused_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ActiveTimerInsert = Omit<ActiveTimerRow, "id" | "created_at" | "updated_at"> & {
+  id?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ActiveTimerUpdate = Partial<ActiveTimerInsert>;
+
+export type TimeSheetRow = {
+  id: string;
+  user_id: string;
+  period_type: string;
+  date_from: string;
+  date_to: string;
+  status: string;
+  submitted_at: string | null;
+  approved_by_id: string | null;
+  approved_at: string | null;
+  employee_comment: string;
+  manager_comment: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TimeSheetInsert = Omit<TimeSheetRow, "id" | "created_at" | "updated_at"> & {
+  id?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type TimeSheetUpdate = Partial<TimeSheetInsert>;
+
+export type WorkMissionRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  project_id: string | null;
+  client_id: string | null;
+  start_date: string;
+  end_date: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WorkMissionInsert = Omit<WorkMissionRow, "id" | "created_at" | "updated_at"> & {
+  id?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type WorkMissionUpdate = Partial<WorkMissionInsert>;
+
 export type Database = {
   public: {
     Tables: {
+      time_categories: {
+        Row: TimeCategoryRow;
+        Insert: TimeCategoryInsert;
+        Update: TimeCategoryUpdate;
+        Relationships: [];
+      };
+      time_entry_types: {
+        Row: TimeEntryTypeRow;
+        Insert: TimeEntryTypeInsert;
+        Update: TimeEntryTypeUpdate;
+        Relationships: [];
+      };
+      time_entries: {
+        Row: TimeEntryRow;
+        Insert: TimeEntryInsert;
+        Update: TimeEntryUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "time_categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "time_entries_entry_type_id_fkey";
+            columns: ["entry_type_id"];
+            isOneToOne: false;
+            referencedRelation: "time_entry_types";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "time_entries_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      time_entry_logs: {
+        Row: TimeEntryLogRow;
+        Insert: TimeEntryLogInsert;
+        Update: TimeEntryLogUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "time_entry_logs_time_entry_id_fkey";
+            columns: ["time_entry_id"];
+            isOneToOne: false;
+            referencedRelation: "time_entries";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      active_timers: {
+        Row: ActiveTimerRow;
+        Insert: ActiveTimerInsert;
+        Update: ActiveTimerUpdate;
+        Relationships: [];
+      };
+      time_sheets: {
+        Row: TimeSheetRow;
+        Insert: TimeSheetInsert;
+        Update: TimeSheetUpdate;
+        Relationships: [];
+      };
+      work_missions: {
+        Row: WorkMissionRow;
+        Insert: WorkMissionInsert;
+        Update: WorkMissionUpdate;
+        Relationships: [];
+      };
       projects: {
         Row: ProjectRow;
         Insert: ProjectInsert;
@@ -4720,6 +4985,18 @@ export type Database = {
           responsible_name: string | null;
           responsible_source: string | null;
           status: string;
+        }[];
+      };
+      report_work_type_breakdown: {
+        Args: { p_project_id?: string | null; p_month?: string | null };
+        Returns: {
+          project_id: string | null;
+          project_name: string | null;
+          month: string;
+          work_nature: string;
+          work_cause: string | null;
+          total_minutes: number;
+          entry_count: number;
         }[];
       };
       report_template_configuration_gaps: {

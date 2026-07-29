@@ -4,6 +4,7 @@ import type {
   TimeEntryCreatedFrom,
   TimeEntryType,
 } from "@/lib/time-tracking/types";
+import { TIME_ENTRY_WORK_CAUSES_BY_NATURE } from "@/lib/time-tracking/types";
 
 /**
  * createdFrom domyślnie "manual" — wpisy tworzone automatycznie (plan/timer/misja/urlop/import)
@@ -42,7 +43,20 @@ export function validateTimeEntryInput(
   }
 
   if (entryType.countsAsWork && createdFrom === "manual" && !input.workNature) {
-    return "Wybierz rodzaj pracy (nowa praca / poprawka / nieplanowane kończenie).";
+    return "Wybierz rodzaj pracy (nowa praca / poprawka / nieplanowane kończenie / zmiana zakresu).";
+  }
+
+  if (input.workNature && input.workNature !== "new_work" && !input.workCause) {
+    return "Wybierz przyczynę — wymagana dla każdego rodzaju pracy innego niż „Nowa praca”.";
+  }
+
+  if (
+    input.workNature &&
+    input.workNature !== "new_work" &&
+    input.workCause &&
+    !TIME_ENTRY_WORK_CAUSES_BY_NATURE[input.workNature].includes(input.workCause)
+  ) {
+    return "Wybrana przyczyna nie pasuje do rodzaju pracy.";
   }
 
   if (input.billable && !entryType.allowsBillable) {

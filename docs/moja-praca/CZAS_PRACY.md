@@ -29,11 +29,37 @@ Każdy wpis opisuje **ile** czasu (**duration_minutes**), **kiedy** (**date**, o
 | `resource_plan_item_id` | Powiązanie z elementem **Planu zasobów** (wpisy z planu) |
 | `leave_request_id` | Powiązanie z wnioskiem urlopowym (sync po akceptacji) |
 | `mission_id` | Powiązanie z misją / delegacją (`work_missions`) |
-| `process_stage_id` | Etap procesu (snapshot, bez twardego FK) |
+| `process_stage_id` | Etap procesu (snapshot, bez twardego FK). Ustawialne też ręcznie z formularza wpisu (od Fazy 8/D32) |
 | `billable` | Czy wpis podlega rozliczeniu z klientem |
-| `cost_rate_snapshot` / `client_rate_snapshot` | Stawki w momencie utworzenia wpisu (PLN/h) |
+| `cost_rate_snapshot` / `client_rate_snapshot` | Stawki w momencie utworzenia wpisu (PLN/h) — zbierane, ale dziś nieużywane w żadnym raporcie (patrz D32/dwa systemy godzin) |
+| `work_nature` | Rodzaj pracy — patrz niżej |
+| `work_cause` | Przyczyna, wymagana gdy `work_nature <> new_work` — patrz niżej |
+| `role_code` | Rola procesowa, w jakiej wykonano wpis (`PROCESS_ROLE_CODES`) — opcjonalne |
 | `created_from` | Skąd powstał wpis (patrz poniżej) |
 | `status` | Stan w workflow (patrz poniżej) |
+
+### Rodzaj pracy, przyczyna, rola (Faza 8, docs/08 D32 / docs/role/05-spec-obciazenie.md §3.4)
+
+Jedyny sposób zmierzenia, czy proces firmy faktycznie działa: procent czasu na poprawki i
+dokończenia, wg przyczyn. Pole istniało od migracji 207 jako `work_nature` (3 wartości) — Faza 8
+rozszerzyła je o 4. wartość i `work_cause`, zamiast dublować nowym polem.
+
+| `work_nature` | Znaczenie | Wymaga `work_cause`? |
+|---|---|---|
+| `new_work` (domyślne) | Nowa praca | Nie |
+| `rework` | Poprawka | Tak: `nasz_blad` / `blad_dokumentacji` / `blad_innej_branzy` |
+| `unplanned_closing` | Nieplanowane kończenie | Tak: `budowa_niegotowa` / `inna_branza_niegotowa` / `nie_zdazylismy` |
+| `scope_change` | Zmiana zakresu | Tak, jedyna możliwa: `zadanie_inwestora` (auto-wybierana) |
+
+Wymagane dla wpisów ręcznych (`created_from='manual'`) liczących się do pracy (`counts_as_work`).
+`work_cause` egzekwowane też na poziomie bazy (`time_entries_work_cause_required_check`).
+
+Raport `report_work_type_breakdown(project_id, month)` — udział czasu wg przyczyn, **per projekt i
+per miesiąc, nigdy per osoba** (świadomie — to miara procesu). Widoczny w panelu czasu pracy
+projektu i (dla managerów) zbiorczo w `Moja praca → Czas pracy`.
+
+**Nie zaimplementowane:** podpowiadanie `inna_branza_niegotowa` z kontekstu ROT — zależy od
+rozróżnienia w ROT "czeka na inwestora" vs "czeka na inną branżę", którego dziś nie ma.
 
 **Źródło wpisu (`created_from`):**
 

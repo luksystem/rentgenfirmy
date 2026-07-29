@@ -1292,6 +1292,98 @@ na końcu, po ustabilizowaniu modelu danych i historii.
 
 ---
 
+## D32. Faza 8 — wybór zakresu: role_code/work_type/work_cause (docs/role/05-spec-obciazenie.md §3.4)
+
+**Status: zrealizowane (migracja 252). Dwa niepołączone systemy godzin — zbadane i opisane, bez
+naprawy (decyzja właściciela wciąż otwarta).**
+
+Właściciel odrzucił wszystkich czterech kandydatów z D31 — realnym priorytetem Fazy 8 okazało się
+rozszerzenie `time_entries` wg `docs/role/05-spec-obciazenie.md §3.4`: `role_code`, `work_type`,
+`work_cause`. Uzasadnienie właściciela: procent czasu na poprawki/dokończenia to jedyny sposób
+zweryfikowania, czy cały standard (8 zbudowanych faz) faktycznie działa — bez tej liczby wszystko
+inne jest hipotezą.
+
+**Odkrycie przed implementacją — uniknięty duplikat.** `time_entries.work_nature` (migracja 207)
+już istniał: dokładnie ten sam koncept co specyfikowane `work_type`, tylko z 3 wartościami
+(`new_work`/`rework`/`unplanned_closing`) zamiast 4, bez `work_cause`, z UI w formularzu wpisu i
+firmowym KPI (`lib/report-kpi/domains/team.ts`, `team.rework_entries`) już go czytającym. Budowa
+osobnej kolumny `work_type` obok istniejącej `work_nature` byłaby dokładnie tym, przed czym
+ostrzega ta sama specyfikacja i CLAUDE.md ("jedna informacja ma jedno miejsce") — więc **rozszerzony
+istniejący mechanizm zamiast dublować**: dodano 4. wartość (`scope_change` = zmiana_zakresu),
+`work_cause`, `role_code`. Kolumna `work_nature` zamieniona z natywnego enuma na `text+check`
+(spójne z resztą modułu, unika ryzyka `ALTER TYPE ... ADD VALUE` w transakcji migracji).
+
+**Zaimplementowane (migracja 252):**
+- `work_nature` (było enum, teraz text+check): `new_work/rework/unplanned_closing/scope_change`,
+  domyślnie `new_work`.
+- `work_cause` (nowe, text+check, 7 wartości wg tabeli z §3.4), wymagane w bazie gdy
+  `work_nature <> new_work` (`time_entries_work_cause_required_check`).
+- `role_code` (nowe, text+check, wartości = `PROCESS_ROLE_CODES`).
+- `report_work_type_breakdown(project_id, month)` — agregacja minut per projekt/miesiąc/rodzaj/
+  przyczyna. **Świadomie bez `user_id`** — to miara procesu, nie ludzi (dosłowna zasada z §3.4:
+  "Nie używać udziału poprawek jako miary człowieka").
+- UI: w formularzu wpisu — "Rodzaj pracy" (4 opcje, domyślnie "Nowa praca"), "Rola" (opcjonalna,
+  `PROCESS_ROLE_CODES`), "Przyczyna" (pokazuje się dopiero gdy rodzaj ≠ nowa — jedno dodatkowe
+  kliknięcie, zero dla `zmiana_zakresu`, bo ma tylko jedną możliwą przyczynę i jest auto-wybierana);
+  "Etap procesu" (nowe pole, wcześniej ustawialne tylko automatycznie z akceptacji planu).
+- Raport wyświetlany per projekt (panel czasu pracy w projekcie) i per miesiąc dla całej firmy
+  (widok managera w Moja praca → Czas pracy) — oba przez ten sam komponent
+  `WorkTypeBreakdownCard`, żaden nie pokazuje rozbicia po osobie.
+- `database.types.ts` — dodano `Row/Insert/Update` dla wszystkich 7 tabel modułu czasu pracy
+  (`time_categories`, `time_entry_types`, `time_entries`, `time_entry_logs`, `active_timers`,
+  `time_sheets`, `work_missions`) **i zarejestrowano w `Database.public.Tables`** — to był realny
+  brak, nie kosmetyka: klienci Supabase w tym repo są parametryzowane `createClient<Database>()`,
+  więc bez wpisu w mapie `.from("time_entries")` faktycznie typuje się na `any` (potwierdzone:
+  `time-categories-admin-server.ts` miało jawny `// eslint-disable` i `(): any` z tego powodu —
+  usunięte przy okazji, `.from("time_categories")` jest teraz w pełni typowane).
+
+**Świadomie NIE zaimplementowane w tym przejściu:**
+- Podpowiadanie przyczyny z kontekstu ("projekt ma otwartą pozycję `OCZEKIWANIE NA INNĄ BRANŻĘ` →
+  podpowiedz `inna_branza_niegotowa`") — zależy od ROT rozróżniającej "czeka na inwestora" od "czeka
+  na inną branżę" jako osobnych kategorii; dziś ROT ma tylko `OCZEKIWANIE_DECYZJA_INWESTORA` (patrz
+  wątek ROT niżej/w kolejnej rozmowie). Zależność międzymodułowa, nie luka w tej fazie — wraca razem
+  z rozbudową kategorii ROT.
+- Twarde wymuszenie "obowiązkowe dla projektant" jako osobnej blokady niezależnej od formularza —
+  `work_nature` już było wymagane dla WSZYSTKICH ręcznych wpisów liczących się do pracy (nie tylko
+  projektanta) zanim ta faza się zaczęła, więc literalny wymóg specyfikacji jest już spełniony przez
+  istniejące zachowanie; wykrywanie "czy ta osoba jest dziś projektantem NA TYM projekcie" (przez
+  `project_role_slot`) i wymuszanie na tej podstawie odłożone jako nieproporcjonalne do wartości.
+- Migracja pozostałych 5 plików modułu (`time-sheets-server.ts`, `time-tracking-leave-sync-server.ts`,
+  `time-tracking-plan-server.ts`, `work-missions-server.ts`) z lokalnych typów wierszy na centralne
+  z `database.types.ts` — świadomie ograniczone do plików faktycznie dotykanych tą fazą
+  (`time-tracking-server.ts`, `time-categories-admin-server.ts`), żeby nie mnożyć ryzyka regresji na
+  żywym module bez wyraźnej potrzeby (zasada testowa (c) z CLAUDE.md). Pozostały dług, odnotowany.
+
+**Dwa niepołączone systemy godzin — zbadane, NIE naprawione (na wyraźną prośbę: opisać zakres,
+nie naprawiać).**
+
+- `time_entries` — aktywny, pełny system (ten moduł). Czytany przez: cały moduł Czas pracy,
+  `lib/time-tracking/project-hour-budget.ts` (budżet projektu z `project_contract_quotas`), firmowe
+  KPI `team.rework_entries`, teraz też `report_work_type_breakdown`.
+- `project_hourly_reports` — powstał w migracji 158 (moduł rozliczeń klienta, "Ręczne raportowanie
+  godzin (MVP)"), z komentarzem w samej migracji: *"Docelowo zasilany czasem pracy zadań"* — nigdy
+  zrobione. Ma pełne CRUD (`project-billing-repository.ts`: fetch/create/update/delete) i jest
+  pobierany do `project-settlement-store.ts` przez `fetchProjectSettlementBundle`
+  (`project-settlement-server.ts`), **ale zero komponentów UI go renderuje albo pozwala je
+  tworzyć/edytować** — sprawdzone: `grep hourlyReports` w `components/` nie zwraca nic. W
+  produkcji: **1 wiersz** w całej tabeli. To nie dwa aktywne, konkurujące systemy — to jeden aktywny
+  (`time_entries`) i jeden martwy z backendu bez frontu, dokładnie tak jak przewidział komentarz w
+  migracji 158, tylko że "docelowe zasilenie" nigdy nie nadeszło.
+- **Koszt scalenia:** ponieważ `project_hourly_reports` nie napędza dziś żadnego ekranu, "scalenie"
+  to w praktyce jednokierunkowe zasilenie: funkcja/widok budujący wiersze `project_hourly_reports`
+  (godziny, `role_label`, `amount_net/gross`) z zaakceptowanych, billable `time_entries` w oknie
+  rozliczeniowym, mnożąc godziny przez już istniejący `client_rate_snapshot` (patrz D31 — dziś
+  zbierany, ale nieużywany nigdzie indziej — to rozwiązałoby przy okazji i ten dług). Koszt: decyzja
+  o kluczu grupowania wierszy raportu (per `role_code`? per opis?) i o stawce VAT per linia (dziś
+  pole `vat_rate` nie ma żadnego automatycznego źródła). Alternatywa tańsza: skoro nic dziś nie
+  czyta `project_hourly_reports` z UI, można świadomie usunąć całą tę martwą ścieżkę (tabelę,
+  repozytorium, wpięcie do bundla) zamiast ją zasilać — decyzja właściciela, nie techniczna.
+
+Migracja: 252 (`work_nature` enum→text+check, `work_cause`, `role_code`, `report_work_type_
+breakdown`).
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed
@@ -1313,7 +1405,7 @@ notka o tym pod D20 §2, teraz nieaktualna.
 | — | Pilotaż: 3 projekty, 2-3 raporty, zbiórka reakcji klienta/opiekuna → poprawki treści przed 11c | proces, nie kod | **następna** — czeka na realny pilotaż (nie kod), potem wraca jako poprawki treści |
 | 6 | Cykl życia projektu | L | **zrealizowane** (D25, migracje 227-230, "grandfather" dla danych historycznych; UI: blokada pola, rezygnacja klienta, panel pokrycia) |
 | 7 | Warstwa sygnałów + zdrowie etapu (czyta z ROT, D3) | M | **zrealizowane** (D26, migracje 232-233) |
-| 8 | Czas pracy | L (moduł już w dużej mierze istnieje — patrz D31) | inwentaryzacja zrealizowana, zakres dalszej pracy czeka na decyzję właściciela |
+| 8 | Czas pracy | L (moduł już w dużej mierze istnieje — patrz D31) | **częściowo zrealizowane** (D32: `role_code`/`work_type`/`work_cause`, raport, `database.types.ts`) — reszta (higiena, misje CRUD, budżety per etap, rentowność, scalenie dwóch systemów godzin) czeka na decyzję |
 | 9 | Rejestr zdarzeń komunikacyjnych | L | do realizacji |
 | 10 | `is_active`: persist + rozbicie osi | M | do realizacji |
 | 11a | Fazy komunikacji — bramy | S-M | do realizacji |
@@ -1360,7 +1452,8 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D28 | Krok A — terminy pochodne elementów procesu | zatwierdzone, zrealizowane |
 | D29 | Krok B — Zaplanuj, ostrzeżenia dobowe, sprawdzenie dwustronne | zatwierdzone, zrealizowane w zakresie (B8.3 odłożone) |
 | D30 | ROT — `accepted` jako stan końcowy | zatwierdzone, zrealizowane (migracja 251) |
-| D31 | faza 8 (Czas pracy) | inwentaryzacja zrealizowana, zakres dalszej pracy czeka na decyzję właściciela — 4 kandydaci (a-d) |
+| D31 | faza 8 (Czas pracy) | inwentaryzacja zrealizowana; właściciel wybrał inny zakres niż 4 kandydaci — patrz D32 |
+| D32 | faza 8 (Czas pracy) | zatwierdzone, zrealizowane (migracja 252: `role_code`/`work_type`/`work_cause`, `database.types.ts` dla modułu); dwa systemy godzin zbadane i opisane, naprawa czeka na decyzję |
 
 ---
 
