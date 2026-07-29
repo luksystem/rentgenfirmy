@@ -291,6 +291,9 @@ async function insertTemplateStagesGraph(template: ProcessTemplate) {
             position: item.position,
             default_payload: item.defaultPayload,
             is_internal_acceptance: item.isInternalAcceptance ?? false,
+            starts_warranty: item.startsWarranty ?? false,
+            lead_days: item.leadDays ?? null,
+            effort_days: item.effortDays ?? null,
           })),
         );
 
@@ -428,10 +431,11 @@ export async function updateProjectProcessCompletion(
     throw new Error("Nie znaleziono procesu projektu.");
   }
 
+  const completedAt = new Date().toISOString();
   const completions = { ...process.completions };
   if (completed) {
     completions[itemId] = {
-      completedAt: new Date().toISOString(),
+      completedAt,
       completedBy,
     } satisfies ProcessItemCompletion;
   } else {
@@ -441,10 +445,22 @@ export async function updateProjectProcessCompletion(
   const updated: ProjectProcess = {
     ...process,
     completions,
-    updatedAt: new Date().toISOString(),
+    updatedAt: completedAt,
   };
 
   const supabase = getSupabase();
+
+  // Krok A (docs/08 D27 2.2) — data_ukonczenia na project_process_items jest źródłem prawdy,
+  // completions (jsonb wyżej) zostaje jako cache dla istniejącego pipeline'u, zapisywany z niej.
+  const { error: itemError } = await supabase
+    .from("project_process_items")
+    .update({ data_ukonczenia: completed ? completedAt : null })
+    .eq("project_id", projectId)
+    .eq("template_item_id", itemId);
+  if (itemError) {
+    throw new Error(itemError.message);
+  }
+
   const { data, error } = await supabase
     .from("project_processes")
     .update(projectProcessToUpdate(updated))

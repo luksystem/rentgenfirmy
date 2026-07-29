@@ -29,7 +29,15 @@ type ProcessItemSyncRow = {
   assignee_id: string | null;
   payload: unknown;
   signed_at: string | null;
+  termin_wynikajacy?: string | null;
+  data_planowana?: string | null;
 };
+
+/** Krok A (docs/08 D27 2.4 A4) — data_planowana ma pierwszeństwo (świadomie zaplanowana), inaczej
+ *  termin_wynikajacy jako podgląd wyliczonego terminu. */
+function resolveProcessItemDueDate(row: Pick<ProcessItemSyncRow, "termin_wynikajacy" | "data_planowana">) {
+  return row.data_planowana ?? row.termin_wynikajacy ?? undefined;
+}
 
 function isProcessItemKind(value: string): value is ProcessItemKind {
   return (
@@ -131,10 +139,11 @@ async function updateProjectProcessCompletionServer(
   }
 
   const process = rowToProjectProcess(processRow);
+  const completedAt = new Date().toISOString();
   const completions = { ...process.completions };
   if (completed) {
     completions[templateItemId] = {
-      completedAt: new Date().toISOString(),
+      completedAt,
       completedBy: completedBy ?? undefined,
     } satisfies ProcessItemCompletion;
   } else {
@@ -144,8 +153,18 @@ async function updateProjectProcessCompletionServer(
   const updated = {
     ...process,
     completions,
-    updatedAt: new Date().toISOString(),
+    updatedAt: completedAt,
   };
+
+  // Krok A (docs/08 D27 2.2) — data_ukonczenia jest źródłem prawdy, completions wyżej to cache.
+  const { error: itemError } = await admin
+    .from("project_process_items")
+    .update({ data_ukonczenia: completed ? completedAt : null })
+    .eq("project_id", projectId)
+    .eq("template_item_id", templateItemId);
+  if (itemError) {
+    throw new Error(itemError.message);
+  }
 
   const { error: updateError } = await admin
     .from("project_processes")
@@ -244,7 +263,7 @@ async function applyProcessItemMirrorToWorkItem(
 export async function syncWorkItemsFromProcessItemServer(admin: AdminClient, processItemId: string) {
   const { data: row, error } = await admin
     .from("project_process_items")
-    .select("id, project_id, template_item_id, kind, status, assignee_id, payload, signed_at")
+    .select("id, project_id, template_item_id, kind, status, assignee_id, payload, signed_at, termin_wynikajacy, data_planowana")
     .eq("id", processItemId)
     .maybeSingle();
   if (error) {
@@ -278,6 +297,7 @@ export async function syncWorkItemsFromProcessItemServer(admin: AdminClient, pro
     clientId: (project?.client_id as string | null) ?? null,
     assignedUserId: typedRow.assignee_id,
     status: workStatus,
+    dueDate: resolveProcessItemDueDate(typedRow),
   };
 
   await cancelProcessItemWorkItemsForOtherAssignees(admin, processItemId, typedRow.assignee_id);
@@ -297,7 +317,7 @@ export async function syncProcessItemsToWorkItemsServer(
 ) {
   const { data, error } = await admin
     .from("project_process_items")
-    .select("id, project_id, template_item_id, kind, status, assignee_id, payload, signed_at")
+    .select("id, project_id, template_item_id, kind, status, assignee_id, payload, signed_at, termin_wynikajacy, data_planowana")
     .eq("assignee_id", userId)
     .neq("kind", "kanban");
 
@@ -335,6 +355,7 @@ export async function syncProcessItemsToWorkItemsServer(
       clientId: clientByProject.get(row.project_id) ?? null,
       assignedUserId: userId,
       status: workStatus,
+      dueDate: resolveProcessItemDueDate(row),
     };
 
     await applyProcessItemMirrorToWorkItem(admin, {

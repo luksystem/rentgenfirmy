@@ -58,6 +58,9 @@ export function rowToProjectProcessItem(row: ProjectProcessItemRow): ProjectProc
     signedByName: row.signed_by_name ?? null,
     signatureNote: row.signature_note ?? null,
     blocksNextStage: Boolean(row.blocks_next_stage),
+    terminWynikajacy: row.termin_wynikajacy ?? null,
+    dataPlanowana: row.data_planowana ?? null,
+    dataUkonczenia: row.data_ukonczenia ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -92,6 +95,15 @@ export function projectProcessItemAssigneeUpdate(
     signed_by: null,
     signed_by_name: null,
     signature_note: null,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+/** Krok A (docs/08 D27 2.3) — reguła BLOKADY (data_planowana >= data kamienia) jest wymuszana
+ *  triggerem w bazie (validate_project_process_item_data_planowana), nie tutaj. */
+export function projectProcessItemPlannedDateUpdate(dataPlanowana: string | null) {
+  return {
+    data_planowana: dataPlanowana,
     updated_at: new Date().toISOString(),
   };
 }

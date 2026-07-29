@@ -275,13 +275,13 @@ async function respondToProjectAgreementLegacy(
     agreement.category === "warranty" &&
     agreement.proposedWarrantyEndDate
   ) {
-    const { error: projectError } = await supabase
-      .from("projects")
-      .update({ warranty_ends_at: agreement.proposedWarrantyEndDate })
-      .eq("id", agreement.projectId);
+    const { error: coverageError } = await supabase.rpc(
+      "apply_warranty_extension_from_agreement",
+      { p_agreement_id: agreement.id },
+    );
 
-    if (projectError) {
-      throw new Error(projectError.message);
+    if (coverageError) {
+      throw new Error(coverageError.message);
     }
   }
 

@@ -8,7 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProjectEdit } from "@/components/project-edit-provider";
 import { hasFullAppAccess } from "@/lib/auth/types";
+import { DEFAULT_POLICY_THRESHOLDS } from "@/lib/policy-thresholds/types";
 import { ROT_CATEGORY_LABELS, ROT_SOURCE_LABELS, ROT_STATUS_LABELS, type RotItem, type RotStatus } from "@/lib/rot/types";
+import { fetchPolicyThresholds } from "@/lib/supabase/policy-thresholds-repository";
 import { clearRotItemReviewDate, fetchRotItems, setRotItemReviewDate } from "@/lib/supabase/rot-repository";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
@@ -26,13 +28,15 @@ function RotItemRow({
   onOpenProject,
   canEditReview,
   onSaveReviewDate,
+  stagnationDays,
 }: {
   item: RotItem;
   onOpenProject: (projectId: string) => void;
   canEditReview: boolean;
   onSaveReviewDate: (item: RotItem, date: string | null) => Promise<void>;
+  stagnationDays: number;
 }) {
-  const stale = item.rotStatus !== "ZAMKNIETE" && item.daysOpen > 5;
+  const stale = item.rotStatus !== "ZAMKNIETE" && item.daysOpen > stagnationDays;
   const reviewOverdue =
     item.rotStatus !== "ZAMKNIETE" && !!item.reviewDate && item.reviewDate.slice(0, 10) < new Date().toISOString().slice(0, 10);
   return (
@@ -90,6 +94,7 @@ export default function RotPage() {
   const [items, setItems] = useState<RotItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showClosed, setShowClosed] = useState(false);
+  const [stagnationDays, setStagnationDays] = useState(DEFAULT_POLICY_THRESHOLDS.rotStagnationDays);
 
   const projects = useAppStore((state) => state.projects);
   const { openProjectEdit } = useProjectEdit();
@@ -105,6 +110,11 @@ export default function RotPage() {
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : "Nie udało się wczytać ROT.");
       });
+    void fetchPolicyThresholds()
+      .then((thresholds) => {
+        if (!cancelled) setStagnationDays(thresholds.rotStagnationDays);
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -172,6 +182,7 @@ export default function RotPage() {
                         onOpenProject={handleOpenProject}
                         canEditReview={canEditReview}
                         onSaveReviewDate={handleSaveReviewDate}
+                        stagnationDays={stagnationDays}
                       />
                     ))}
                   </div>
@@ -204,6 +215,7 @@ export default function RotPage() {
                         onOpenProject={handleOpenProject}
                         canEditReview={canEditReview}
                         onSaveReviewDate={handleSaveReviewDate}
+                        stagnationDays={stagnationDays}
                       />
                     ))}
                   </div>

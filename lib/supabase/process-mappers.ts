@@ -53,6 +53,9 @@ export function rowToProcessItem(
     position: row.position,
     defaultPayload,
     isInternalAcceptance: Boolean(row.is_internal_acceptance ?? element?.isInternalAcceptance),
+    startsWarranty: Boolean(row.starts_warranty),
+    leadDays: row.lead_days ?? null,
+    effortDays: row.effort_days ?? null,
   };
 }
 

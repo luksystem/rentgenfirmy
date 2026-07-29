@@ -34,7 +34,7 @@ Atrybut bez edytora to atrybut, którego nikt nie zmieni. Konfigurowalność lic
 - zmiany projektowe jako zadania — z akceptacjami, osobami, datami, blokowaniem od etapu
 - oferty dodatkowe per projekt
 - tablice kanban z wzorcem
-- zdrowie **projektu** (zielony/żółty/czerwony) — wdrożone, liczone z celów, notatek ze spotkań, zadań kanban i zmian projektowych. **Zdrowie etapu nie istnieje** — do zbudowania jako drugi konsument wspólnej warstwy sygnałów.
+- **zdrowie etapu (zielony / żółty / czerwony)** — wdrożone, do rozbudowy
 - tablica wdrożeniowa
 - asystent planowania
 - **integracja SMS**
@@ -59,19 +59,7 @@ Ok. 18 projektów równolegle. **Role są slotami na projekcie, nie polami na u�
 
 ## Dokumentacja
 
-Proces, role i specyfikacje modułów budowanych obecnie: `/docs/`, kolejność czytania w `/docs/00-README.md`. Prompty do zadań: `/docs/07-prompty.md`.
-
-Opisy istniejących modułów: `/docs/modules/[nazwa].md`, wg szablonu `/docs/modules/_TEMPLATE.md`.
-
-> **Zasada: dokumentacja modułu jest aktualizowana w tym samym commicie, co zmiana w module.**
-> Nie „przy okazji", nie „raz na kwartał". Osobny cykl aktualizacji nigdy nie działa — po trzech miesiącach opisuje stan sprzed trzech miesięcy, czyli jest gorszy niż jego brak, bo ludzie mu ufają.
-
-Praktycznie:
-- zmieniasz moduł → aktualizujesz jego plik w tym samym commicie
-- moduł bez pliku, którego dotykasz → utwórz plik przy tej okazji
-- nie pisz dokumentacji modułów, których nikt nie rusza; poczekaj na pierwszą większą zmianę
-
-Pisząc opis modułu: **opisuj tylko to, co robi kod.** Gdzie zamiar jest niejasny — zapytaj, zamiast zgadywać. Oznaczaj miejsca, gdzie zachowanie wygląda na przypadkowe albo niedokończone.
+Kolejność czytania w `00-README.md`. Prompty do zadań w `07-prompty.md`.
 
 ## Zasady pracy w tym repo
 
@@ -79,17 +67,3 @@ Pisząc opis modułu: **opisuj tylko to, co robi kod.** Gdzie zamiar jest niejas
 - Czego nie znajdziesz w kodzie — napisz „nie znalazłem".
 - Plan przed kodem. Faza pierwsza każdego modułu ma dawać wartość samodzielnie.
 - Bądź krytyczny wobec specyfikacji. Jeśli coś jest przekombinowane albo nie da się sensownie zamodelować — powiedz wprost.
-- Żaden wskaźnik nie jest miarą oceny pracownika. Nie buduj rankingów osób.
-- Żaden komunikat nie wychodzi do inwestora bez zatwierdzenia człowieka.
-
-## Standardy testowe (obowiązujące dla wszystkich przyszłych zmian)
-
-**a) Każda migracja seedująca asertuje liczbę zmienionych wierszy i rzuca wyjątkiem przy rozbieżności.**
-Znana z góry oczekiwana liczba (`v_expected`), po pętli/UPDATE-cie `get diagnostics` + `raise exception` przy niezgodności. Nie `raise warning` — ostrzeżenie ginie w konsoli SQL Editora.
-Powód: w fazie 1 seed dopasowujący etapy po tytule trafił w zero wierszy i migracja zgłosiła sukces. Naprawiona wersja (kluczująca na `process_stages.code`) miała asercję — złapała kolejny, realny błąd (pomyłka w ręcznym liczeniu macierzy odpowiedzialności, 36 zamiast 37). Migracja bez asercji, która nic nie zrobiła, jest gorsza niż migracja, która się wywala — cicha porażka wygląda jak sukces.
-
-**b) Każda funkcja wyliczająca stan ma test tablicy prawdy — wszystkie kombinacje wejść, nie tylko przypadek szczęśliwy.**
-Dotyczy w szczególności: tabeli bram faz komunikacji i funkcji statusu projektu (cykl życia, D19). Test szczęśliwej ścieżki nie łapie błędów na granicach (progi histerezy, wartości `null`, stany przejściowe) — te wychodzą dopiero na produkcji, na prawdziwych danych, gdzie są najdroższe do naprawienia.
-
-**c) Każda zmiana w module, który ma dziś działającego konsumenta, ma w zakresie osobną pozycję na regresję tego konsumenta.**
-Nie jako założenie „przecież nie ruszamy tej ścieżki" — jako jawna pozycja w planie/szacunku. Dotyczy zwłaszcza refaktorów dzielonej logiki (np. `suggestions.ts`/`planning-assistant.ts`) i zmian schematu pod polami czytanymi przez więcej niż jeden ekran.

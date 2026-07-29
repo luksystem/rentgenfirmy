@@ -60,6 +60,9 @@ export function ProcessTemplateEditor({
       position,
       defaultPayload: element.defaultPayload,
       isInternalAcceptance: element.isInternalAcceptance,
+      startsWarranty: false,
+      leadDays: null,
+      effortDays: null,
     };
   }
 
@@ -215,6 +218,62 @@ export function ProcessTemplateEditor({
                   : {
                       ...milestone,
                       items: withPositions(removeAt(milestone.items, itemIndex)),
+                    },
+              ),
+            },
+      ),
+    }));
+  }
+
+  function toggleMilestoneItemStartsWarranty(stageId: string, milestoneId: string, itemIndex: number) {
+    setTemplate((current) => ({
+      ...current,
+      stages: current.stages.map((stage) =>
+        stage.id !== stageId
+          ? stage
+          : {
+              ...stage,
+              milestones: stage.milestones.map((milestone) =>
+                milestone.id !== milestoneId
+                  ? milestone
+                  : {
+                      ...milestone,
+                      items: milestone.items.map((item, index) =>
+                        index !== itemIndex
+                          ? item
+                          : { ...item, startsWarranty: !item.startsWarranty },
+                      ),
+                    },
+              ),
+            },
+      ),
+    }));
+  }
+
+  function setMilestoneItemDerivedDeadlineField(
+    stageId: string,
+    milestoneId: string,
+    itemIndex: number,
+    field: "leadDays" | "effortDays",
+    rawValue: string,
+  ) {
+    const parsed = Number(rawValue);
+    const value = rawValue.trim() === "" || !Number.isFinite(parsed) ? null : Math.max(0, Math.round(parsed));
+    setTemplate((current) => ({
+      ...current,
+      stages: current.stages.map((stage) =>
+        stage.id !== stageId
+          ? stage
+          : {
+              ...stage,
+              milestones: stage.milestones.map((milestone) =>
+                milestone.id !== milestoneId
+                  ? milestone
+                  : {
+                      ...milestone,
+                      items: milestone.items.map((item, index) =>
+                        index !== itemIndex ? item : { ...item, [field]: value },
+                      ),
                     },
               ),
             },
@@ -435,6 +494,54 @@ export function ProcessTemplateEditor({
                           Edytuj wzorzec
                         </Link>
                       ) : null}
+                      <label className="mt-1.5 flex items-center gap-1.5 text-xs text-muted">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(item.startsWarranty)}
+                          onChange={() =>
+                            toggleMilestoneItemStartsWarranty(stage.id, milestone.id, itemIndex)
+                          }
+                        />
+                        Podpisanie rozpoczyna gwarancję (wypełnia datę przekazania systemu)
+                      </label>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-muted">
+                        <label className="flex items-center gap-1.5">
+                          Lead time (dni przed kamieniem)
+                          <Input
+                            type="number"
+                            min={0}
+                            className="h-7 w-16 px-2 text-xs"
+                            value={item.leadDays ?? ""}
+                            onChange={(event) =>
+                              setMilestoneItemDerivedDeadlineField(
+                                stage.id,
+                                milestone.id,
+                                itemIndex,
+                                "leadDays",
+                                event.target.value,
+                              )
+                            }
+                          />
+                        </label>
+                        <label className="flex items-center gap-1.5">
+                          Effort (dni roboty)
+                          <Input
+                            type="number"
+                            min={0}
+                            className="h-7 w-16 px-2 text-xs"
+                            value={item.effortDays ?? ""}
+                            onChange={(event) =>
+                              setMilestoneItemDerivedDeadlineField(
+                                stage.id,
+                                milestone.id,
+                                itemIndex,
+                                "effortDays",
+                                event.target.value,
+                              )
+                            }
+                          />
+                        </label>
+                      </div>
                     </div>
                     <div className="flex shrink-0 gap-1">
                       <Button

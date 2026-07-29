@@ -10,14 +10,16 @@ import { ResourcePlanList } from "@/components/resource-plan/resource-plan-list"
 import { ResourcePlanGantt } from "@/components/resource-plan/resource-plan-gantt";
 import { ResourcePlanDashboard } from "@/components/resource-plan/resource-plan-dashboard";
 import { ResourcePlanCalendar } from "@/components/resource-plan/resource-plan-calendar";
+import { StageCommitmentsPanel } from "@/components/resource-plan/stage-commitments-panel";
 
-type ViewMode = "gantt" | "list" | "calendar" | "dashboard";
+type ViewMode = "gantt" | "list" | "calendar" | "dashboard" | "zobowiazania";
 
 const VIEW_LABELS: Record<ViewMode, string> = {
   gantt: "Gantt",
   list: "Lista",
   calendar: "Kalendarz",
   dashboard: "Dashboard",
+  zobowiazania: "Zobowiązania",
 };
 
 export default function ResourcePlanPage() {
@@ -32,7 +34,7 @@ export default function ResourcePlanPage() {
         action={
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex gap-1 rounded-2xl border border-border/70 bg-surface-muted/20 p-1">
-              {(["gantt", "list", "calendar", "dashboard"] as const).map((mode) => (
+              {(["gantt", "list", "calendar", "dashboard", "zobowiazania"] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
@@ -61,6 +63,8 @@ export default function ResourcePlanPage() {
         <ResourcePlanList />
       ) : view === "calendar" ? (
         <ResourcePlanCalendar />
+      ) : view === "zobowiazania" ? (
+        <StageCommitmentsPanel />
       ) : (
         <ResourcePlanDashboard />
       )}

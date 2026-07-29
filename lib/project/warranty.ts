@@ -46,6 +46,12 @@ export function computeWarrantyEndsAt(
   return addMonthsToDate(handover, months);
 }
 
+/**
+ * Faza 7/D27 — project.warrantyEndsAt jest teraz cache'm mechanicznie utrzymywanym z
+ * project_coverage_periods (trigger sync_project_warranty_ends_at_from_coverage, migracja 239-240)
+ * — przedłużenie (D25, nowy wiersz project_coverage_periods) odświeża to pole automatycznie,
+ * więc ta funkcja nie musi nic wiedzieć o okresach pokrycia.
+ */
 export function resolveProjectWarrantyEndsAt(project: ProjectWarrantyFields) {
   if (project.warrantyEndsAt) {
     return project.warrantyEndsAt.slice(0, 10);

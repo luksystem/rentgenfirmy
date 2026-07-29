@@ -1,4 +1,5 @@
 import { isChannelEnabled, isEmailAudienceEnabled } from "@/lib/email/notification-routing";
+import { fetchPolicyThresholds } from "@/lib/supabase/policy-thresholds-repository";
 import { isWarrantyExpiringSoon, resolveProjectWarrantyEndsAt } from "@/lib/project/warranty";
 import { sendPushToUser } from "@/lib/push/send-push";
 import { sendTransactionalEmail } from "@/lib/email/send";
@@ -45,13 +46,18 @@ export async function runWarrantyExpiringNotificationsServer() {
     throw new Error(error.message);
   }
 
+  const thresholds = await fetchPolicyThresholds();
+
   const rows = (data ?? []) as ProjectWarrantyRow[];
   const expiring = rows.filter((row) =>
-    isWarrantyExpiringSoon({
-      warrantyEndsAt: row.warranty_ends_at ?? undefined,
-      systemHandoverAt: row.system_handover_at ?? undefined,
-      warrantyDurationMonths: row.warranty_duration_months ?? undefined,
-    }),
+    isWarrantyExpiringSoon(
+      {
+        warrantyEndsAt: row.warranty_ends_at ?? undefined,
+        systemHandoverAt: row.system_handover_at ?? undefined,
+        warrantyDurationMonths: row.warranty_duration_months ?? undefined,
+      },
+      thresholds.warrantyExpiryNoticeDays,
+    ),
   );
 
   if (!expiring.length) {

@@ -938,6 +938,183 @@ FUNCTION` + odtworzenia `report_rot_items()` (Postgres nie pozwala zmienić `RET
 
 ---
 
+## D27. Odwiązanie kodu od konkretnych etapów — audyt i naprawa
+
+**Status: zrealizowane (poza dwiema pozycjami czekającymi na decyzję właściciela).**
+
+Nowa reguła w `docs/CLAUDE.md`/`docs/role/CLAUDE.md`: kod nie odwołuje się do konkretnego etapu,
+kamienia ani elementu procesu po nazwie/numerze/pozycji — musi istnieć atrybut. Drugi warunek:
+atrybut bez edytora to dług, który trzeba jawnie odnotować.
+
+**Znalezione i naprawione:**
+
+1. `recompute_project_flow_status()` (migracja 228, D25) miała fallback pozycyjny — brak
+   `for_closing` w szablonie → uznanie etapu o najwyższej pozycji za zamykający. Naprawione
+   (migracja 234): projekt zamknięty, gdy **wszystkie** etapy `for_closing` są zakończone (aktywne
+   teraz LUB opuszczone wg `project_stage_history.exited_at`) — zero pozycji w formule. Brak
+   `for_closing` w ogóle → projekt nigdy się nie zamyka automatycznie, bez wyjątku. Nowa funkcja
+   diagnostyczna `report_template_configuration_gaps()` (wzorzec `report_orphaned_stage_references`)
+   wykrywa szablony bez `for_closing`. Zweryfikowane tablicą prawdy na produkcji (rollback
+   transactions): pojedynczy/wielokrotny `for_closing`, zero `for_closing`, grandfather nietknięty.
+2. `starts_warranty` — nowy atrybut na `process_items` (elemencie szablonu, nie etapie).
+   Podpisanie elementu z tą flagą wypełnia `projects.system_handover_at`, o ile puste (nigdy nie
+   nadpisuje ręcznej korekty). Zastępuje D19 §2a, które w treści zakładało "Etap 7" — nigdy
+   niezaimplementowane w kodzie, ale sformułowane tak, że dosłowna implementacja złamałaby nową
+   regułę. Edytor: checkbox przy elemencie w `process-template-editor.tsx`. Zweryfikowane tablicą
+   prawdy (flaga false/true×puste/wypełnione pole).
+3. Przedłużenie gwarancji nadpisywało `projects.warranty_ends_at` bezpośrednio w dwóch miejscach
+   (`project-agreement-repository.ts`, `project-agreement-collaboration-repository.ts`) — złamanie
+   D19 §2a ("nowy rekord, nigdy edycja pierwotnej"). Naprawione: nowa funkcja SECURITY DEFINER
+   `apply_warranty_extension_from_agreement()` tworzy wiersz `project_coverage_periods`
+   (`kind='przedluzenie'`, `starts_at` = koniec ostatniego istniejącego pokrycia lub pierwotnej
+   gwarancji, `ends_at` = data z Ustalenia). RPC zamiast bezpośredniego INSERT, bo polityka INSERT
+   na `project_coverage_periods` wymaga `has_full_app_access()`, a akceptacja Ustalenia przychodzi
+   też z panelu klienta (anon-key) — funkcja sama waliduje `status='accepted'` i `category='warranty'`,
+   więc nie da się jej nadużyć.
+   **Naprawione (nie odłożone — właściciel: "to nie jest dług techniczny").** Sprawdzone najpierw:
+   zero istniejących Ustaleń kategorii `warranty` w bazie — mechanizm teoretyczny, nikt jeszcze nie
+   skorzystał, ale naprawiono od razu, nie z Krokiem A. Zamiast przepinać ~10 żywych konsumentów
+   (`project-warranty-panel.tsx`, 3 ekrany klienckie, `projects-table.tsx`, `project-form.tsx`,
+   dwa warianty crona powiadomień, kontekst AI serwisu) na nowy parametr — inwazyjne, łatwo
+   pominąć jeden — `projects.warranty_ends_at` stał się **cache'm** mechanicznie utrzymywanym z
+   `project_coverage_periods` (źródło prawdy) triggerem po `INSERT`
+   (`sync_project_warranty_ends_at_from_coverage`, migracje 239-240). Ten sam wzorzec co
+   `flow_status` (D25) i `data_ukonczenia` (niżej, Krok A 2.2) — zero zmian w konsumentach.
+   **Test tablicy prawdy złapał realny błąd projektowy przed wdrożeniem:** pierwsza wersja
+   ("preferuj okres pokrycia aktywny dziś, inaczej najpóźniejszy") trzymała wyświetlaną datę na
+   **starej** wartości, gdy przedłużenie zaczyna się dokładnie tam, gdzie kończy się poprzedni
+   okres (typowy przypadek — okres jeszcze się "nie zaczął" w sensie kalendarzowym) — dokładnie
+   problem, który ta naprawa miała rozwiązać. Uproszczone do: zawsze najpóźniejszy znany koniec ze
+   wszystkich okresów, bez rozróżniania "aktywny dziś". Zweryfikowane w transakcjach rollback +
+   spot-check zerowej rozbieżności na istniejących zaseedowanych danych (migracja 227).
+4. Stałe wyciągnięte do `app_settings` (`id='policy_thresholds'`, wzorzec `field_options`):
+   `rotStagnationDays` (ROT, było zaszyte w `app/rot/page.tsx`) i `warrantyExpiryNoticeDays`
+   (było `WARRANTY_EXPIRY_NOTICE_DAYS` w `lib/project/warranty.ts`) — oba realnie podpięte pod
+   konsumentów. Pięć jeszcze niezaimplementowanych (bezpiecznik ciszy 30/90, ostrzeżenie 25,
+   histereza aktywności 30/45, próg zastępstwa 2 dni robocze) — zaseedowane jako konfiguracja
+   teraz, zero konsumenta jeszcze. **Dług jawnie odnotowany:** brak edytora UI dla
+   `policy_thresholds` — wartości zmienialne dziś tylko przez bazę. Naturalne miejsce: `/ustawienia`.
+
+**Do decyzji właściciela, nie ustawione:**
+
+- **BMS i Przemysłowe** — oba szablony mają dokładnie jeden etap ("Etap 1", generyczny placeholder,
+  14 i 1 projekt na żywo). Propozycja: ten jedyny etap dostaje `for_closing=true` w obu (nie ma
+  alternatywy — to jedyny etap, jaki istnieje). Pięć innych szablonów (Audio, drugi "Dom" z małą
+  literą — duplikat nazwy istniejącego "DOM", Sklep, Serwis, Inne) też nie ma `for_closing`, ale
+  mają zero żywych projektów — `report_template_configuration_gaps()` je widzi, priorytet niższy.
+- **Znalezisko produkcyjne i naprawa: `for_closing` na ETAP 9.** `ETAP 9 – Uruchomienie, testy i
+  przekazanie systemu` (szablon DOM) miał `for_closing=true` **razem z** Etapem 10 —
+  nieudokumentowane nigdzie jako kamień zamykający, przyczyna nieustalona (brak `updated_at` na
+  `process_stages`, brak audytu edycji szablonu — sprawdzone i potwierdzone jako luka). Właściciel
+  potwierdził: to pomyłka, Etap 9 to "Uruchomienie i przekazanie", po którym jeszcze jest
+  optymalizacja.
+  **Zasięg zbadany przed naprawą** (na żądanie właściciela, żeby nie naprawiać w ciemno): suchy
+  przebieg formuły z błędną flagą pokazał, że **65 z 76 zweryfikowanych projektów** zmieniłoby
+  `flow_status` przy najbliższym przeliczeniu (cron 03:00 UTC albo dowolny trigger na jednym z
+  tych projektów) — większość przeszła ręcznie z Etapu 1 prosto na Etap 10 (ta sama tura
+  przeglądania projektów co grandfather z D25) i nigdy nie miała Etapu 9 w historii, więc nowa
+  (poprawna) formuła "wszystkie etapy zamykające zakończone" widziała Etap 9 jako nigdy
+  nieukończony i cofała cały wynik — mimo że właściwy etap zamykający (10) był osiągnięty. Zero
+  z tych zmian jeszcze nie zaszło w zapisanych danych. Jako zabezpieczenie na czas badania
+  wstrzymano oba crony (`recompute-project-flow-status`, `recompute-active-projects` —
+  `cron.unschedule`) — nic nieodwracalnego nie stało się pod żadnym z dwóch (`flow_status`,
+  `is_active`) — oba są w pełni przeliczane na nowo przy każdym wywołaniu.
+  **Naprawa:** `for_closing=false` na Etapie 9 (ręczna korekta danych, nie migracja schematu).
+  Po naprawie: tylko **2 projekty** faktycznie zmieniły `flow_status` (reszta 74 bez zmian):
+  Jankiewicz Wygaszony → **W trakcie** (faktycznie stoi na Etapie 9, nie powinien wyglądać na
+  zamknięty) i Respondek DOM W trakcie → **Zamknięty** (faktycznie na Etapie 10 z aktywnym
+  pokryciem, nigdy nieprzeliczony po zweryfikowaniu etapu). Oba przeliczone (`recompute_project_
+  flow_status(null)`), oba crony przywrócone do oryginalnego harmonogramu.
+
+**Świadomie nienaprawione, do decyzji:**
+
+- `normalizeStageTitle` (`lib/process/stage-helpers.ts`) grupuje kanban po **tytule** etapu między
+  szablonami, nie po `id`/`code`. Inny rodzaj sprzężenia niż reszta audytu (identyfikacja etapu przez
+  tekst, nie przez pozycję) — zmiana nazwy etapu w jednym szablonie po cichu rozjeżdża grupowanie z
+  innymi szablonami o tej samej nazwie. Nie naprawione — brak zgody właściciela.
+- `process-pipeline.tsx:251` (`stages[stages.length - 1]` jako domyślnie rozwinięty etap) —
+  pozostawione świadomie, czysta wygoda UI, brak skutku biznesowego.
+
+Migracje: 234 (`recompute_project_flow_status` + `report_template_configuration_gaps`), 235-236
+(`starts_warranty` + trigger, z poprawką typu), 237 (`apply_warranty_extension_from_agreement`),
+238 (seed `policy_thresholds`).
+
+---
+
+## D28. Krok A — terminy pochodne elementów procesu
+
+**Status: mechanizm zrealizowany (A1-A4, A7). Seed (4 zatwierdzone pozycje Etapu 6) odłożony —
+elementy nie istnieją w bazie, patrz niżej.**
+
+### Model (docs/08 D27 2.1-2.3)
+
+- `process_items.lead_days`/`effort_days` — atrybuty szablonu (D1), nullable. `NULL` = element nie
+  uczestniczy w terminach pochodnych — dodanie/usunięcie/rozbicie elementu czy etapu nie wymaga
+  kodu, tylko odwiedzenia edytora (`process-template-editor.tsx`, pola liczbowe przy checkboxie
+  `starts_warranty`).
+- `project_process_items.termin_wynikajacy` (wyliczana, nigdy nieedytowalna) = data **własnego**
+  milestone'a elementu (`process_items.milestone_id` → `project_processes.milestone_dates`) minus
+  `lead_days`. Doprecyzowanie względem pierwotnego planu: liczone od milestone'a elementu, nie od
+  "kamienia etapu" — etap może mieć kilka kamieni.
+- `data_planowana` — nullable, edytowalna, **BLOKADA** (trigger `validate_project_process_item_
+  data_planowana`) gdy `>=` data kamienia. Przesunięcie kamienia przelicza `termin_wynikajacy`
+  (`recompute_derived_deadlines()`, trigger na `project_processes.milestone_dates` + na `INSERT`
+  nowych `project_process_items`) i **zachowuje odstęp** `data_planowana`, jeśli była już ustawiona.
+- `data_ukonczenia` (realna kolumna) — **źródło prawdy** (2.2). `project_processes.completions`
+  (jsonb) zostaje jako cache, zapisywany z tej kolumny — `updateProjectProcessCompletion` (klient)
+  i `updateProjectProcessCompletionServer` (serwer) piszą teraz obie ścieżki w tej samej operacji.
+  Backfill z istniejącego jsonb, z asercją liczby wierszy (migracja 242, standard testowy (a)).
+
+### Zweryfikowane tablicą prawdy na produkcji (transakcje rollback)
+
+`termin_wynikajacy`: brak daty kamienia → `NULL`; ustawienie kamienia → poprawne odejmowanie
+`lead_days`. Kaskada `data_planowana`: z ustawioną wartością → przesuwa się o deltę przy zmianie
+kamienia; bez ustawionej → zostaje `NULL`. BLOKADA: `data_planowana < kamień` → OK; `>=` → wyjątek
+(potwierdzone realnym błędem `RAISE EXCEPTION`). `report_stage_commitments()`: pozycja w oknie bez
+planu → `brak_planu`; poza oknem i niezrobiona → nie pokazuje się; `data_ukonczenia` ustawione →
+`zrobione` niezależnie od okna; `data_planowana > termin_wynikajacy` → `rozbieznosc`.
+
+### A4 — integracja z Zadaniami (rozszerzenie, nie duplikacja)
+
+`dueDate` dopisane do mirrora w `syncWorkItemsFromProcessItemServer`/`syncProcessItemsToWorkItemsServer`
+— `data_planowana` ma pierwszeństwo (świadomie zaplanowane), inaczej `termin_wynikajacy` jako
+podgląd. Zero nowych tabel.
+
+### A5/A6 — zakres UI, świadomie zmieniony względem pierwotnego planu
+
+Plan mówił "znaczniki w Gantcie, w osobnym torze". Zamiast ingerować w istniejący, złożony
+(1368 linii) mechanizm przeciągania w `resource-plan-gantt.tsx` — realne ryzyko regresji na
+działającym, interaktywnym komponencie bez możliwości pełnej weryfikacji wizualnej przeciągania —
+zbudowano **osobną zakładkę "Zobowiązania"** w Planie Zasobów (`stage-commitments-panel.tsx`,
+`report_stage_commitments()`). Ta sama treść funkcjonalna (znacznik terminu, nie blok w Gantcie —
+zero wiersza w `resource_plan_items` do czasu "Zaplanuj", które jest Krokiem B, nie A): lista
+pogrupowana wg statusu (rozbieżność / brak planu / zaplanowane / zrobione), szybka edycja daty
+planowanej i ukończenia wprost z listy. Uprawnienia: `hasFullAppAccess` (obejmuje koordynatora
+operacyjnego) lub `profile.id === responsibleUserId`. Zweryfikowane w przeglądarce — renderuje się
+bez błędów (pusto, bo dziś zero elementów ma `lead_days` — patrz niżej).
+
+### Dwa znaleziska treściowe, niezwiązane z mechanizmem, blokujące seed
+
+1. **Etapy 2-6 szablonu DOM (żywego, 107 aktywnych projektów) mają zero elementów procesu** —
+   struktura (etapy, kamienie) jest zaseedowana od Fazy 1, ale checklisty/tablice/protokoły
+   wewnątrz tych pięciu etapów nigdy nie powstały. Żadna z 4 zatwierdzonych pozycji Etapu 6
+   ("lista materiałów...", "program testowy rozdzielni", "raport testów prefabrykacji",
+   "checklista montażowa online") nie istnieje. Seed A1 (2.6) odłożony do czasu, aż ta treść
+   powstanie — osobna sprawa, większa niż terminy pochodne.
+2. **`process_stage_role_responsibility` jest dziś całkowicie pusta (0 wierszy)** w produkcji,
+   mimo że migracja 215 seedowała ją z asercją liczby wierszy (która musiała przejść, inaczej
+   migracja by się nie zastosowała). Przyczyna nieustalona — brak audytu, który by to wyjaśnił.
+   Skutek: fallback "odpowiedzialny z macierzy" (2.1, `report_stage_commitments()`) dziś zawsze
+   zwraca pustego odpowiedzialnego, gdy `assignee_id` nie jest ustawiony — zachowanie jest
+   poprawne/bezpieczne (nie zgaduje), po prostu nieużyteczne, dopóki macierz nie zostanie
+   odtworzona. Mechanizm zacznie działać automatycznie, gdy tabela się zapełni — nic w Kroku A
+   nie wymaga zmiany.
+
+Migracje: 241 (A1/A2/A3), 242 (backfill `data_ukonczenia`), 243-244 (`report_stage_commitments`,
+druga wersja dopisuje `template_item_id`).
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed

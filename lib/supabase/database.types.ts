@@ -2391,6 +2391,9 @@ export type ProcessItemRow = {
   is_internal_acceptance: boolean;
   created_at: string;
   artifact_type: string | null;
+  starts_warranty: boolean;
+  lead_days: number | null;
+  effort_days: number | null;
 };
 
 export type RoleRow = {
@@ -2517,6 +2520,9 @@ export type ProjectProcessItemRow = {
   signed_by_name: string | null;
   signature_note: string | null;
   blocks_next_stage: boolean;
+  termin_wynikajacy: string | null;
+  data_planowana: string | null;
+  data_ukonczenia: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -4658,6 +4664,38 @@ export type Database = {
           opened_at: string;
           days_open: number;
           review_date: string | null;
+        }[];
+      };
+      apply_warranty_extension_from_agreement: {
+        Args: { p_agreement_id: string };
+        Returns: undefined;
+      };
+      report_stage_commitments: {
+        Args: { p_horizon_days?: number };
+        Returns: {
+          project_id: string;
+          project_name: string;
+          stage_id: string;
+          stage_title: string;
+          item_id: string;
+          template_item_id: string;
+          title: string;
+          termin_wynikajacy: string | null;
+          data_planowana: string | null;
+          data_ukonczenia: string | null;
+          responsible_user_id: string | null;
+          responsible_name: string | null;
+          responsible_source: string | null;
+          status: string;
+        }[];
+      };
+      report_template_configuration_gaps: {
+        Args: Record<string, never>;
+        Returns: {
+          template_id: string;
+          template_name: string;
+          project_type: string;
+          gap: string;
         }[];
       };
       report_stage_health: {

@@ -556,10 +556,9 @@ async function applyWarrantyIfAccepted(agreement: ProjectClientAgreement) {
   }
 
   const supabase = getSupabase();
-  const { error } = await supabase
-    .from("projects")
-    .update({ warranty_ends_at: agreement.proposedWarrantyEndDate })
-    .eq("id", agreement.projectId);
+  const { error } = await supabase.rpc("apply_warranty_extension_from_agreement", {
+    p_agreement_id: agreement.id,
+  });
 
   if (error) {
     throw new Error(error.message);

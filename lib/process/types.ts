@@ -25,6 +25,14 @@ export type ProcessItem = {
   position: number;
   defaultPayload: ProcessElementPayload;
   isInternalAcceptance?: boolean;
+  /** Standard szablonu (D1), nieedytowalny per projekt — podpisanie tego elementu wypełnia
+   *  projects.systemHandoverAt, o ile puste (docs/CLAUDE.md: atrybut na elemencie, nie na etapie). */
+  startsWarranty?: boolean;
+  /** Krok A (docs/08 D27) — ile dni przed kamieniem milowym element musi być gotowy. NULL = element
+   *  nie uczestniczy w terminach pochodnych. Standard szablonu (D1), nieedytowalny per projekt. */
+  leadDays?: number | null;
+  /** Krok A — ile realnie dni zajmuje wykonanie elementu. */
+  effortDays?: number | null;
 };
 
 export type ProcessMilestone = {
@@ -243,6 +251,13 @@ export type ProjectProcessItem = {
   signatureNote: string | null;
   /** Ustawiane z poziomu projektu — jeśli true i element nie ukończony, blokuje kolejny etap. */
   blocksNextStage: boolean;
+  /** Krok A (docs/08 D27) — wyliczany, nigdy nieedytowalny bezpośrednio. Data własnego milestone'a
+   *  minus process_items.leadDays. NULL, gdy brak leadDays na elemencie lub brak daty kamienia. */
+  terminWynikajacy: string | null;
+  /** Krok A — kiedy faktycznie zaplanowano robotę. NULL = "termin istnieje, nikt nie zdecydował kiedy". */
+  dataPlanowana: string | null;
+  /** Krok A — źródło prawdy faktycznego wykonania (docs/08 D27 2.2). */
+  dataUkonczenia: string | null;
   createdAt: string;
   updatedAt: string;
 };
