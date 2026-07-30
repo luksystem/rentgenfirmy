@@ -99,7 +99,7 @@ export function KanbanTaskDetailModal({
       Pick<KanbanTask, "title" | "description" | "priority" | "dueDate" | "assigneeName" | "assigneeId" | "roleItemId">
     >,
   ) => Promise<void>;
-  onCloseTask: (closed: boolean) => Promise<void>;
+  onCloseTask: (closed: boolean, completionNote?: string | null) => Promise<void>;
   onDelete?: () => Promise<void>;
   onComment: () => Promise<void>;
   onUpdateComment?: (commentId: string, body: string) => Promise<void>;
@@ -319,8 +319,20 @@ export function KanbanTaskDetailModal({
     (column): column is { id: string; title: string } => column !== null && column.id !== stageId,
   );
   const canOfferMoveOnClose = Boolean(onMoveToColumn && closeMoveTargets.length > 0);
+  // D44 — karta zrodzona z ustalenia albo ze zmiany projektowej (D43).
+  const hasSourceLink = Boolean(task.sourceAgreementId || task.sourceChangeRequestId);
+  const [completionNote, setCompletionNote] = useState(task.completionNote ?? "");
 
   async function handleCloseTask(targetColumnId?: string) {
+    // D44 — opis realizacji wymagany TYLKO dla kart z linkiem zwrotnym. Zmiana mowi, co
+    // uzgodniono; zadanie, co mialo byc zrobione; a to, co faktycznie zrobiono, czasem rozni sie
+    // od obu. Bez tego dokumentacja powykonawcza zawiera nieprawde, ktora nastepna osoba
+    // odziedziczy jako fakt. Przy kartach bez zrodla nie pytamy — tam to byloby tylko tarcie.
+    if (hasSourceLink && !completionNote.trim()) {
+      setError("Napisz jednym zdaniem, co zostało zrobione — to wraca do ustalenia jako zapis realizacji.");
+      setCloseConfirmOpen(true);
+      return;
+    }
     setIsClosing(true);
     setError(null);
     try {
@@ -329,7 +341,7 @@ export function KanbanTaskDetailModal({
         await onMoveToColumn(targetColumnId);
         setStageId(targetColumnId);
       }
-      await onCloseTask(true);
+      await onCloseTask(true, hasSourceLink ? completionNote.trim() : null);
       setCloseConfirmOpen(false);
     } catch (closeError) {
       setError(closeError instanceof Error ? closeError.message : "Nie udało się zamknąć zgłoszenia.");
@@ -339,7 +351,7 @@ export function KanbanTaskDetailModal({
   }
 
   function requestCloseTask() {
-    if (canOfferMoveOnClose) {
+    if (hasSourceLink || canOfferMoveOnClose) {
       setCloseConfirmOpen(true);
       return;
     }
@@ -351,7 +363,7 @@ export function KanbanTaskDetailModal({
     setError(null);
     try {
       await flushPendingChanges();
-      await onCloseTask(false);
+      await onCloseTask(false, null);
     } catch (reopenError) {
       setError(reopenError instanceof Error ? reopenError.message : "Nie udało się ponownie otworzyć zgłoszenia.");
     } finally {
@@ -796,6 +808,22 @@ export function KanbanTaskDetailModal({
             <p className="mt-2 text-sm text-muted">
               Czy przenieść je też do innej kolumny?
             </p>
+          ) : null}
+          {hasSourceLink ? (
+            <div className="mt-3 grid gap-1.5">
+              <label className="text-sm font-medium text-foreground">Co zostało zrobione?</label>
+              <p className="text-xs text-muted">
+                Jedno zdanie. Wraca do ustalenia jako zapis realizacji — to, co faktycznie zrobiono,
+                bywa inne niż to, co uzgodniono.
+              </p>
+              <Textarea
+                rows={3}
+                autoFocus
+                value={completionNote}
+                onChange={(event) => setCompletionNote(event.target.value)}
+                placeholder="Np. Zamiast dwóch punktów wyszedł jeden — trasa nie przeszła przez strop."
+              />
+            </div>
           ) : null}
           {error ? <p className="mt-2 text-sm text-rose-400">{error}</p> : null}
           <div className="mt-4 grid gap-2">

@@ -18,6 +18,7 @@ export function ProcessItemResponsibleSection({
   part = "all",
   onAssign,
   onSign,
+  stageResponsible,
 }: {
   instance: ProjectProcessItem;
   teamProfiles: UserProfile[];
@@ -28,8 +29,20 @@ export function ProcessItemResponsibleSection({
   part?: "all" | "assignee" | "signature";
   onAssign: (assigneeId: string | null) => Promise<void>;
   onSign: (signatureNote: string) => Promise<void>;
+  /**
+   * Odpowiedzialny za ETAP, wyliczony z macierzy ról i obsady projektu (D42). Element bez własnego
+   * przypisania dziedziczy tę osobę — bo element zawsze ma odpowiedzialnego, a domyślnie jest nim
+   * ten, kto odpowiada za etap. Świadomie NIE kopiujemy tej osoby do wiersza przy tworzeniu:
+   * kopia rozjechałaby się przy pierwszej zmianie obsady, a mamy 564 elementy w bazie. Wskazanie
+   * ręczne zapisuje się normalnie i wygrywa.
+   */
+  stageResponsible?: { userId: string | null; name: string | null } | null;
 }) {
-  const [assigneeId, setAssigneeId] = useState(instance.assigneeId ?? "");
+  // Picker startuje na osobie z etapu, gdy nikt nie jest przypisany wprost — „domyślnie wybrana”
+  // ma znaczyć wybraną, nie tylko podpowiedzianą w opisie.
+  const [assigneeId, setAssigneeId] = useState(
+    instance.assigneeId ?? stageResponsible?.userId ?? "",
+  );
   const [signatureNote, setSignatureNote] = useState(instance.signatureNote ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -113,6 +126,18 @@ export function ProcessItemResponsibleSection({
               </Button>
             ) : null}
 
+            {!instance.assigneeName && stageResponsible?.name ? (
+              <p className="text-sm text-muted">
+                Odpowiada:{" "}
+                <strong className="text-foreground">{stageResponsible.name}</strong>{" "}
+                <span className="text-xs">(z etapu)</span>
+                <span className="mt-1 block text-xs font-normal">
+                  Nikt nie jest przypisany wprost, więc odpowiada osoba prowadząca ten etap.
+                  Możesz wskazać kogoś innego powyżej.
+                </span>
+              </p>
+            ) : null}
+
             {instance.assigneeName ? (
               <p className="text-sm text-muted">
                 Przypisano: <strong className="text-foreground">{instance.assigneeName}</strong>
@@ -169,12 +194,21 @@ export function ProcessItemResponsibleSection({
   );
 }
 
-export function formatAssigneeLabel(instance: ProjectProcessItem) {
+export function formatAssigneeLabel(
+  instance: ProjectProcessItem,
+  /** D42/D44 — odpowiedzialny za etap, użyty gdy element nie ma własnego przypisania. */
+  stageResponsibleName?: string | null,
+) {
   if (instance.signedAt && instance.signedByName) {
     return `Podpis: ${instance.signedByName}`;
   }
   if (instance.assigneeName) {
     return `Odp.: ${instance.assigneeName}`;
+  }
+  if (stageResponsibleName) {
+    // Oznaczone inaczej niż wskazanie ręczne — czytelnik ma wiedzieć, że to wynik reguły,
+    // a nie czyjaś decyzja.
+    return `Odp.: ${stageResponsibleName} (z etapu)`;
   }
   return null;
 }

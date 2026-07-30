@@ -76,6 +76,11 @@ export type KanbanTask = {
   roleItemId: string | null;
   createdBySide: KanbanAuthorSide;
   isNewForTeam: boolean;
+  /** D43 — karta zrodzona z ustalenia albo ze zmiany projektowej. Najwyzej jedno z dwoch. */
+  sourceAgreementId: string | null;
+  sourceChangeRequestId: string | null;
+  /** D44 — co FAKTYCZNIE zrobiono. Wymagane przy zamykaniu karty z linkiem zwrotnym. */
+  completionNote: string | null;
   createdAt: string;
   updatedAt: string;
 };

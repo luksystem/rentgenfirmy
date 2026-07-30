@@ -144,6 +144,9 @@ export function ProcessPipeline({
   stageResponsible,
 }: ProcessPipelineProps) {
   const [activeItem, setActiveItem] = useState<ProcessItem | null>(null);
+  // D44 — etap otwartego elementu; potrzebny, by element bez wlasnego przypisania odziedziczyl
+  // odpowiedzialnego ZA TEN etap, a nie za jakikolwiek.
+  const [activeItemStageId, setActiveItemStageId] = useState<string | null>(null);
   const [settingActiveStageId, setSettingActiveStageId] = useState<string | null>(null);
   const [addingToMilestoneId, setAddingToMilestoneId] = useState<string | null>(null);
   const [newItemTitle, setNewItemTitle] = useState("");
@@ -297,10 +300,11 @@ export function ProcessPipeline({
     });
   }
 
-  async function handleOpenItem(item: ProcessItem) {
+  async function handleOpenItem(item: ProcessItem, stageId: string) {
     if (interactive && projectId && !itemInstances?.[item.id]) {
       await ensureProjectProcessItems(projectId, template);
     }
+    setActiveItemStageId(stageId);
     setActiveItem(item);
   }
 
@@ -318,7 +322,11 @@ export function ProcessPipeline({
       return;
     }
     setPendingKanbanNote(note);
-    void handleOpenItem(target);
+    // Etap wyszukiwany z szablonu, bo tu nie wchodzimy z listy etapów.
+    const ownerStage = template.stages.find((entry) =>
+      entry.milestones.some((milestone) => milestone.items.some((i) => i.id === target.id)),
+    );
+    void handleOpenItem(target, ownerStage?.id ?? "");
   }
 
   function handleCreateTasksFromNote(note: string) {
@@ -605,7 +613,9 @@ export function ProcessPipeline({
                                 : checklistStats && checklistStats.total > 0
                                   ? `${PROCESS_ITEM_KIND_LABELS[item.kind]} · ${checklistStats.total} pkt.`
                                   : PROCESS_ITEM_KIND_LABELS[item.kind];
-                            const assigneeLabel = instance ? formatAssigneeLabel(instance) : null;
+                            const assigneeLabel = instance
+                              ? formatAssigneeLabel(instance, stageResponsible?.[stage.id]?.responsibleName)
+                              : null;
                             const publicHref =
                               !interactive ? kanbanPublicLinks?.[item.id] : undefined;
                             const canOpen = canOpenProcessItem(item, {
@@ -620,7 +630,7 @@ export function ProcessPipeline({
                                   <button
                                     type="button"
                                     disabled={!canOpen}
-                                    onClick={() => void handleOpenItem(item)}
+                                    onClick={() => void handleOpenItem(item, stage.id)}
                                     className={cn(
                                       "flex min-w-0 flex-1 items-start gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition",
                                       visualClasses.card,
@@ -796,6 +806,14 @@ export function ProcessPipeline({
         canManageAssignment={canManageAssignment}
         interactive={interactive}
         actorName={actorName}
+        stageResponsible={
+          activeItemStageId && stageResponsible?.[activeItemStageId]
+            ? {
+                userId: stageResponsible[activeItemStageId].responsibleUserId,
+                name: stageResponsible[activeItemStageId].responsibleName,
+              }
+            : null
+        }
         onSaveChecklist={
           activeItem && onSaveChecklist
             ? (payload) => onSaveChecklist(activeItem.id, payload)

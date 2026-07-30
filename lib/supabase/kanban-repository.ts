@@ -93,6 +93,9 @@ type TaskRow = {
   role_item_id: string | null;
   created_by_side: string;
   is_new_for_team: boolean;
+  source_agreement_id: string | null;
+  source_change_request_id: string | null;
+  completion_note: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -196,6 +199,9 @@ function rowToTask(row: TaskRow): KanbanTask {
     roleItemId: row.role_item_id ?? null,
     createdBySide: isAuthorSide(row.created_by_side) ? row.created_by_side : "team",
     isNewForTeam: row.is_new_for_team,
+    sourceAgreementId: row.source_agreement_id ?? null,
+    sourceChangeRequestId: row.source_change_request_id ?? null,
+    completionNote: row.completion_note ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -906,6 +912,13 @@ export async function closeKanbanTask(
   taskId: string,
   closed: boolean,
   actor?: { authorName: string; authorSide: KanbanAuthorSide },
+  /**
+   * D44 — "co zostalo zrobione". Wymagane tylko dla kart z linkiem zwrotnym; wymusza to UI,
+   * bo to jedyne miejsce, ktore wie, czy karta ma zrodlo. Trigger w bazie przenosi ten opis
+   * do rekordu zrodlowego RAZEM z data wykonania, wiec zapisujemy go PRZED zamknieciem
+   * w tym samym UPDATE — inaczej trigger zobaczylby jeszcze pusta wartosc.
+   */
+  completionNote?: string | null,
 ) {
   const supabase = getSupabase();
   const now = new Date().toISOString();
@@ -913,6 +926,7 @@ export async function closeKanbanTask(
     .from("process_kanban_tasks")
     .update({
       closed_at: closed ? now : null,
+      completion_note: closed ? (completionNote?.trim() || null) : null,
       updated_at: now,
     })
     .eq("id", taskId)

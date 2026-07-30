@@ -629,8 +629,8 @@ export function AggregatedKanbanBoard({
               await refresh();
             }
           }}
-          onCloseTask={async (closed) => {
-            await closeKanbanTask(activeTask.id, closed, { authorName, authorSide });
+          onCloseTask={async (closed, completionNote) => {
+            await closeKanbanTask(activeTask.id, closed, { authorName, authorSide }, completionNote);
             await refresh();
           }}
           onDelete={

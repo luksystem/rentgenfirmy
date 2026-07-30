@@ -58,6 +58,8 @@ type ProcessItemPanelProps = {
   teamProfiles?: UserProfile[];
   currentUserId?: string;
   canManageAssignment?: boolean;
+  /** D44 — odpowiedzialny za etap tego elementu; dziedziczony, gdy element nie ma przypisania. */
+  stageResponsible?: { userId: string | null; name: string | null } | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   interactive?: boolean;
@@ -84,6 +86,7 @@ export function ProcessItemPanel({
   teamProfiles = [],
   currentUserId,
   canManageAssignment = false,
+  stageResponsible,
   open,
   onOpenChange,
   interactive = false,
@@ -237,6 +240,7 @@ export function ProcessItemPanel({
               teamProfiles={teamProfiles}
               currentUserId={currentUserId}
               canManageAssignment={canManageAssignment}
+              stageResponsible={stageResponsible}
               onAssign={onAssign!}
               onSign={onSign!}
             />
@@ -279,6 +283,7 @@ export function ProcessItemPanel({
                   teamProfiles={teamProfiles}
                   currentUserId={currentUserId}
                   canManageAssignment={canManageAssignment}
+              stageResponsible={stageResponsible}
                   onAssign={onAssign!}
                   onSign={onSign!}
                 />
@@ -359,6 +364,7 @@ export function ProcessItemPanel({
               teamProfiles={teamProfiles}
               currentUserId={currentUserId}
               canManageAssignment={canManageAssignment}
+              stageResponsible={stageResponsible}
               onAssign={onAssign!}
               onSign={onSign!}
             />

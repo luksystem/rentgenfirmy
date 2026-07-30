@@ -822,8 +822,8 @@ export function ProcessKanbanBoard({
               return nextBoard;
             });
           }}
-          onCloseTask={async (closed) => {
-            await closeKanbanTask(activeTask.id, closed, { authorName, authorSide });
+          onCloseTask={async (closed, completionNote) => {
+            await closeKanbanTask(activeTask.id, closed, { authorName, authorSide }, completionNote);
             await refresh();
           }}
           onDelete={
