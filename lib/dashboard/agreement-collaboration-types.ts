@@ -70,6 +70,37 @@ export function isAgreementPendingTeamApproval(
   });
 }
 
+/**
+ * Status ustalenia zostaje "Oczekuje na klienta" dopóki KAŻDA wymagana rola nie zaakceptuje —
+ * łącznie z rolą zespołową. Gdy klient już odpowiedział, ale to zespół jest wąskim gardłem, ten
+ * sam etykietowy badge nadal mówi "Oczekuje na klienta", co myli zwłaszcza samego klienta (widzi,
+ * że już zaakceptował, a status twierdzi inaczej). Zwraca nadpisanie etykiety/tonu badge'a tylko
+ * w tym jednym, mylącym przypadku — w każdym innym `null` (zostaje domyślna etykieta statusu).
+ */
+export function getAgreementApprovalBadgeOverride(
+  roles: AgreementApproverRole[],
+  approvals: AgreementApproval[],
+): { label: string; tone: "warning" } | null {
+  const clientRole = roles.find((role) => role.isClientRole);
+  if (!clientRole) {
+    return null;
+  }
+  const clientApproval = approvals.find((entry) => entry.roleId === clientRole.id);
+  if (clientApproval?.status !== "accepted") {
+    return null;
+  }
+
+  const otherRolesPending = roles.some((role) => {
+    if (role.isClientRole || !role.isRequired) {
+      return false;
+    }
+    const approval = approvals.find((entry) => entry.roleId === role.id);
+    return (approval?.status ?? "pending") === "pending";
+  });
+
+  return otherRolesPending ? { label: "Oczekuje na zespół", tone: "warning" } : null;
+}
+
 export type AgreementComment = {
   id: string;
   agreementId: string;

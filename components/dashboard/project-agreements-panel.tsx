@@ -44,7 +44,10 @@ import { mergeAgreementsById } from "@/lib/dashboard/merge-agreements";
 import { findTradeCatalogItem } from "@/lib/field-options";
 import { createPublicClientAgreement } from "@/lib/dashboard/public-agreement-client";
 import { useAgreementApprovalHint } from "@/hooks/use-agreement-approval-hint";
-import { fetchAgreementApproverRoles } from "@/lib/supabase/project-agreement-collaboration-repository";
+import {
+  fetchAgreementApprovalBadgeOverride,
+  fetchAgreementApproverRoles,
+} from "@/lib/supabase/project-agreement-collaboration-repository";
 import { fetchProjectAccessibleProfiles } from "@/lib/supabase/project-access-repository";
 import { fetchStageResponsible } from "@/lib/supabase/stage-responsible-repository";
 import { profileToOptionLabel } from "@/lib/supabase/profile-repository";
@@ -218,6 +221,7 @@ function AgreementCard({
   const costLabel = formatAgreementCost(agreement);
   const isBlocking = isAgreementBlockingActive(agreement);
   const [hasExtraApproverRoles, setHasExtraApproverRoles] = useState(false);
+  const [badgeOverride, setBadgeOverride] = useState<{ label: string; tone: "warning" } | null>(null);
 
   useEffect(() => {
     if (!defaultExpanded || !cardRef.current) {
@@ -225,6 +229,28 @@ function AgreementCard({
     }
     cardRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [defaultExpanded, agreement.id]);
+
+  useEffect(() => {
+    if (agreement.status !== "pending_client" || !agreement.activeVersionId) {
+      setBadgeOverride(null);
+      return;
+    }
+    let cancelled = false;
+    void fetchAgreementApprovalBadgeOverride(agreement.id)
+      .then((override) => {
+        if (!cancelled) {
+          setBadgeOverride(override);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setBadgeOverride(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [agreement.id, agreement.status, agreement.activeVersionId, agreement.updatedAt]);
 
   useEffect(() => {
     if (mode !== "team" || !["draft", "rejected"].includes(agreement.status)) {
@@ -261,8 +287,8 @@ function AgreementCard({
       <AgreementCollapsibleShell
         title={meta.title}
         subtitle={meta.subtitle}
-        statusLabel={meta.statusLabel}
-        statusTone={meta.statusTone}
+        statusLabel={badgeOverride?.label ?? meta.statusLabel}
+        statusTone={badgeOverride?.tone ?? meta.statusTone}
         headerBadges={
           responsibleLabel ? (
             <span className="rounded-full border border-border/70 bg-surface-muted/30 px-2.5 py-0.5 text-[10px] font-medium text-foreground/85">

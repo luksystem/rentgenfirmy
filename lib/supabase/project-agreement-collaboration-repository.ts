@@ -9,6 +9,7 @@ import type {
 import {
   TEAM_APPROVER_ROLE_LABEL,
   buildAgreementApprovalProgressHint,
+  getAgreementApprovalBadgeOverride,
   isTeamApproverRole,
 } from "@/lib/dashboard/agreement-collaboration-types";
 import type {
@@ -840,6 +841,15 @@ export async function fetchAgreementApprovalProgressHint(agreementId: string) {
     return null;
   }
   return buildAgreementApprovalProgressHint(bundle.roles, bundle.approvals);
+}
+
+/** Nadpisanie etykiety/tonu statusu na karcie — patrz komentarz przy getAgreementApprovalBadgeOverride. */
+export async function fetchAgreementApprovalBadgeOverride(agreementId: string) {
+  const bundle = await fetchAgreementCollaboration(agreementId);
+  if (bundle.agreement.status !== "pending_client" || !bundle.activeVersion) {
+    return null;
+  }
+  return getAgreementApprovalBadgeOverride(bundle.roles, bundle.approvals);
 }
 
 export { replaceApproverRoles, createDefaultApproverRoles, createDefaultClientRole };
