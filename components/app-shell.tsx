@@ -66,6 +66,7 @@ import { NotificationsRealtimeSubscriber } from "@/components/notifications-real
 import { NavigateToClientDialog } from "@/components/quick-add/navigate-to-client-dialog";
 import { OpenClientPanelDialog } from "@/components/quick-add/open-client-panel-dialog";
 import { AddContractorDialog } from "@/components/quick-add/add-contractor-dialog";
+import { EmployeeReportDialog } from "@/components/process/employee-report-dialog";
 import { QuickAddMenuList } from "@/components/quick-add-menu";
 import { useAuthStore } from "@/store/auth-store";
 import { useLeaveStore } from "@/store/leave-store";
@@ -355,6 +356,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [employeeReportOpen, setEmployeeReportOpen] = useState(false);
   const [navigateToClientOpen, setNavigateToClientOpen] = useState(false);
   const [addContractorOpen, setAddContractorOpen] = useState(false);
   const [clientSearchOpen, setClientSearchOpen] = useState(false);
@@ -837,6 +839,10 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
                   setAddMenuOpen(false);
                   setAddContractorOpen(true);
                 }}
+                onEmployeeReport={() => {
+                  setAddMenuOpen(false);
+                  setEmployeeReportOpen(true);
+                }}
               />
             </div>
           </div>
@@ -847,6 +853,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
           onOpenChange={setNavigateToClientOpen}
         />
         <AddContractorDialog open={addContractorOpen} onOpenChange={setAddContractorOpen} />
+        <EmployeeReportDialog open={employeeReportOpen} onOpenChange={setEmployeeReportOpen} />
         <OpenClientPanelDialog open={clientSearchOpen} onOpenChange={setClientSearchOpen} />
 
         <button

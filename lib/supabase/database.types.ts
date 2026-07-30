@@ -322,6 +322,13 @@ export type ProjectClientAgreementInsert = {
   blocks_next_stage?: boolean;
   responsible_user_id?: string | null;
   source_contact_point_id?: string | null;
+  // D44 — sciezka zglaszania przez pracownika (migracja 270).
+  stage_id?: string | null;
+  is_urgent?: boolean;
+  created_by_id?: string | null;
+  closure_reason?: string | null;
+  completion_note?: string | null;
+  completed_at?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -374,6 +381,13 @@ export type ProjectChangeRequestInsert = {
   blocks_next_stage?: boolean;
   public_token?: string;
   public_enabled?: boolean;
+  // D44 — sciezka zglaszania przez pracownika (migracja 270).
+  stage_id?: string | null;
+  is_urgent?: boolean;
+  created_by_id?: string | null;
+  closure_reason?: string | null;
+  completion_note?: string | null;
+  completed_at?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -4434,6 +4448,12 @@ export type Database = {
         Relationships: [];
       };
       process_kanban_tasks: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      project_change_request_attachments: {
         Row: Record<string, unknown>;
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;

@@ -8,6 +8,7 @@ import {
   Clock3,
   FileUp,
   HardHat,
+  MessageSquareWarning,
   Navigation,
   Package,
   PhoneCall,
@@ -15,7 +16,7 @@ import {
 
 export type QuickAddMenuItem = {
   href?: string;
-  action?: "navigate-to" | "add-contractor";
+  action?: "navigate-to" | "add-contractor" | "employee-report";
   label: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -44,6 +45,13 @@ export function useQuickAddMenuItems(): QuickAddMenuItem[] {
 
   return useMemo(
     () => [
+      {
+        // D44 — na gorze, bo to jedyna pozycja uzywana w trakcie pracy, a nie po niej.
+        action: "employee-report" as const,
+        label: "Zglos cos z budowy",
+        description: "Zdjecie i opis — reszta wyliczy sie sama",
+        icon: MessageSquareWarning,
+      },
       {
         href: "/moja-praca/czas-pracy",
         label: "Czas pracy",
@@ -146,7 +154,7 @@ function MenuItemCard({
   item: QuickAddMenuItem;
   compact?: boolean;
   onNavigate?: () => void;
-  onAction?: (action: "navigate-to" | "add-contractor") => void;
+  onAction?: (action: NonNullable<QuickAddMenuItem["action"]>) => void;
 }) {
   const Icon = item.icon;
   const className =
@@ -199,11 +207,13 @@ function QuickAddMenuListInner({
   onNavigate,
   onNavigateToClient,
   onAddContractor,
+  onEmployeeReport,
   compact = false,
 }: {
   onNavigate?: () => void;
   onNavigateToClient?: () => void;
   onAddContractor?: () => void;
+  onEmployeeReport?: () => void;
   compact?: boolean;
 }) {
   const items = useQuickAddMenuItems();
@@ -223,6 +233,9 @@ function QuickAddMenuListInner({
             if (action === "add-contractor") {
               onAddContractor?.();
             }
+            if (action === "employee-report") {
+              onEmployeeReport?.();
+            }
           }}
         />
       ))}
@@ -234,11 +247,13 @@ export function QuickAddMenuList({
   onNavigate,
   onNavigateToClient,
   onAddContractor,
+  onEmployeeReport,
   compact = false,
 }: {
   onNavigate?: () => void;
   onNavigateToClient?: () => void;
   onAddContractor?: () => void;
+  onEmployeeReport?: () => void;
   compact?: boolean;
 }) {
   return (
@@ -251,6 +266,7 @@ export function QuickAddMenuList({
         onNavigate={onNavigate}
         onNavigateToClient={onNavigateToClient}
         onAddContractor={onAddContractor}
+        onEmployeeReport={onEmployeeReport}
         compact={compact}
       />
     </Suspense>
