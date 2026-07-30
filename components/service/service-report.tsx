@@ -491,11 +491,14 @@ export function ServiceReport({
   projectName,
   variant = "internal",
   optionalItemSelection,
+  precomputedCosts,
 }: {
   service: ServiceRecord;
   projectName?: string;
   variant?: "internal" | "client";
   optionalItemSelection?: ReadonlySet<string>;
+  /** Wyliczone po stronie serwera dla publicznej strony klienta — service.rates tam jest wyzerowane, więc trzeba pominąć rekalkulację. */
+  precomputedCosts?: { estimate: ServiceCostBreakdown; actual: ServiceCostBreakdown };
 }) {
   const projects = useAppStore((state) => state.projects);
   const { profile: companyProfile } = useCompanyProfile();
@@ -503,9 +506,9 @@ export function ServiceReport({
   const resolvedProjectName = resolveProjectLabel(service.projectId, projects, projectName);
   const settled = isServiceSettled(service);
   const meta = getServiceReportDocumentMeta(service);
-  const costs = buildServiceReportCosts(service);
+  const costs = precomputedCosts ?? buildServiceReportCosts(service);
   const billing = getServiceReportBillingBreakdown(service, costs);
-  const combined = getServiceCombinedBilling(service, optionalItemSelection ?? null);
+  const combined = getServiceCombinedBilling(service, optionalItemSelection ?? null, precomputedCosts);
   const billingDiscounts = getServiceReportBillingDiscounts(service);
   const workNote = getServiceReportWorkNote(service, settled);
   const materialsNote = getServiceReportMaterialsNote(service, settled);

@@ -20,8 +20,10 @@ import {
 } from "@/lib/service/report-document";
 import { hasActiveFixedPriceRows } from "@/lib/service/fixed-price";
 import { hasOptionalItems } from "@/lib/service/optional-items";
-import type { ServiceRecord } from "@/lib/service/types";
+import type { ServiceCostBreakdown, ServiceRecord } from "@/lib/service/types";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
+
+type OfferCosts = { estimate: ServiceCostBreakdown; actual: ServiceCostBreakdown };
 
 type OfferMeta = {
   status: string | null;
@@ -52,6 +54,7 @@ const FIXED_PRICE_SECTION_LINKS = [
 
 export function ClientOfferPage({ token }: { token: string }) {
   const [service, setService] = useState<ServiceRecord | null>(null);
+  const [costs, setCosts] = useState<OfferCosts | null>(null);
   const [offer, setOffer] = useState<OfferMeta | null>(null);
   const [offerKind, setOfferKind] = useState<OfferKind>("estimate");
   const [loading, setLoading] = useState(true);
@@ -75,6 +78,7 @@ export function ClientOfferPage({ token }: { token: string }) {
       }
 
       setService(payload.service as ServiceRecord);
+      setCosts((payload.costs as OfferCosts | undefined) ?? null);
       setOffer(payload.offer as OfferMeta);
       setOfferKind((payload.kind as OfferKind) ?? "estimate");
       const loaded = payload.service as ServiceRecord;
@@ -98,10 +102,10 @@ export function ClientOfferPage({ token }: { token: string }) {
     }
 
     const previewSelection = offer?.canRespond ? selectedOptionalIds : null;
-    const combined = getServiceCombinedBilling(service, previewSelection);
+    const combined = getServiceCombinedBilling(service, previewSelection, costs ?? undefined);
     const meta = getServiceReportDocumentMeta(service);
     return { combined, meta };
-  }, [offer?.canRespond, selectedOptionalIds, service]);
+  }, [costs, offer?.canRespond, selectedOptionalIds, service]);
 
   const isSettlementView = offerKind === "settlement";
   const isFixedPriceEstimate =
@@ -402,6 +406,7 @@ export function ClientOfferPage({ token }: { token: string }) {
               service={service}
               variant="client"
               optionalItemSelection={offer.canRespond ? selectedOptionalIds : undefined}
+              precomputedCosts={costs ?? undefined}
             />
           )}
         </div>

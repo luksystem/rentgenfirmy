@@ -88,6 +88,8 @@ export function getServiceReportDocumentMeta(
 export function getServiceCombinedBilling(
   service: ServiceRecord,
   clientPreviewSelection?: ReadonlySet<string> | null,
+  /** Wyliczone wcześniej po stronie serwera — pozwala pominąć rekalkulację z `service.rates` na publicznej stronie klienta, która dostaje `service` z wyzerowanymi stawkami (patrz getPublicOfferPayload). */
+  precomputedCosts?: { estimate: ServiceCostBreakdown; actual: ServiceCostBreakdown },
 ) {
   if (service.pricingModel === "fixed_price") {
     const breakdown = calculateFixedPriceBreakdown(
@@ -99,7 +101,7 @@ export function getServiceCombinedBilling(
     return buildCombinedBilling(service, base, clientPreviewSelection);
   }
 
-  const costs = buildServiceReportCosts(service);
+  const costs = precomputedCosts ?? buildServiceReportCosts(service);
   const base = getServiceReportBillingBreakdown(service, costs);
   return buildCombinedBilling(service, base, clientPreviewSelection);
 }

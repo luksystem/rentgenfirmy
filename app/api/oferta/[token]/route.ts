@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import {
-  getPublicOfferView,
-  getPublicSettlementView,
   isPublicOfferAvailable,
   isPublicOfferQuestionAvailable,
   isPublicSettlementOfferAvailable,
   isPublicSettlementOfferQuestionAvailable,
 } from "@/lib/supabase/client-offer-repository";
+import { toPublicOfferPayload } from "@/lib/service/client-offer-public-view";
 import {
   fetchServiceByPublicOfferToken,
   respondToClientOffer,
@@ -59,13 +58,13 @@ export async function GET(
         ? isPublicSettlementOfferQuestionAvailable()
         : isPublicOfferQuestionAvailable(service);
     const expired = isOfferExpired(offer.expiresAt);
-    const publicService =
-      kind === "settlement" ? getPublicSettlementView(service) : getPublicOfferView(service);
+    const { service: publicService, costs } = toPublicOfferPayload(service, kind);
 
     return NextResponse.json(
       {
         kind,
         service: publicService,
+        costs,
         offer: {
           status: offer.status,
           statusLabel: offer.status ? CLIENT_OFFER_STATUS_LABELS[offer.status] : null,
