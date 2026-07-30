@@ -1,4 +1,4 @@
-import { countBy, daysBetween } from "@/lib/utils";
+import { countBy } from "@/lib/utils";
 import { resolveSilenceState } from "@/lib/communication/types";
 import { DEFAULT_POLICY_THRESHOLDS } from "@/lib/policy-thresholds/types";
 import type { FieldOptions } from "@/lib/field-options";
