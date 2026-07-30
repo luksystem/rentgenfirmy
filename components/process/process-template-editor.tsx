@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { ProcessPipeline } from "@/components/process/process-pipeline";
 import { ProcessStageResourcePanel } from "@/components/process/process-stage-resource-panel";
+import { ProcessStageResponsibilityPanel } from "@/components/process/process-stage-responsibility-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
@@ -383,6 +384,16 @@ export function ProcessTemplateEditor({
               otherStages={template.stages
                 .filter((entry) => entry.id !== stage.id)
                 .map((entry) => ({ id: entry.id, title: entry.title }))}
+              onChange={(patch) =>
+                setTemplate((current) => ({
+                  ...current,
+                  stages: current.stages.map((entry) => (entry.id === stage.id ? { ...entry, ...patch } : entry)),
+                }))
+              }
+            />
+
+            <ProcessStageResponsibilityPanel
+              stage={stage}
               onChange={(patch) =>
                 setTemplate((current) => ({
                   ...current,
