@@ -91,5 +91,9 @@ Powód: w fazie 1 seed dopasowujący etapy po tytule trafił w zero wierszy i mi
 **b) Każda funkcja wyliczająca stan ma test tablicy prawdy — wszystkie kombinacje wejść, nie tylko przypadek szczęśliwy.**
 Dotyczy w szczególności: tabeli bram faz komunikacji i funkcji statusu projektu (cykl życia, D19). Test szczęśliwej ścieżki nie łapie błędów na granicach (progi histerezy, wartości `null`, stany przejściowe) — te wychodzą dopiero na produkcji, na prawdziwych danych, gdzie są najdroższe do naprawienia.
 
-**c) Każda zmiana w module, który ma dziś działającego konsumenta, ma w zakresie osobną pozycję na regresję tego konsumenta.**
+**c) Każda tabela lub kolumna wisząca na grafie szablonu procesu musi być objęta testem round-trip zapis → odczyt.**
+Graf szablonu (`process_templates` → `process_stages` → `process_milestones` → `process_items` plus wszystko, co wisi na `stage_id`/`milestone_id`) jest zapisywany hurtem przez `saveProcessTemplate`. Dopóki zapis kasował i wstawiał od nowa, każda kolumna nieujęta w tym zapisie wracała po cichu do wartości domyślnej, a każda tabela z `ON DELETE CASCADE` ginęła bezpowrotnie — tak zniknęła cała macierz `process_stage_role_responsibility` i pięć atrybutów etapu z fazy 1. Dowiedzieliśmy się o tym po miesiącach i przypadkiem.
+Zabezpieczenie: `lib/process/__tests__/template-save-roundtrip.test.ts` — asercja „kompletność mapowania" wywala się, gdy do `ProcessStage` dojdzie pole bez odwzorowania na kolumnę. Dopisanie kolumny bez dopisania jej do tego testu jest błędem, nie przeoczeniem.
+
+**d) Każda zmiana w module, który ma dziś działającego konsumenta, ma w zakresie osobną pozycję na regresję tego konsumenta.**
 Nie jako założenie „przecież nie ruszamy tej ścieżki" — jako jawna pozycja w planie/szacunku. Dotyczy zwłaszcza refaktorów dzielonej logiki (np. `suggestions.ts`/`planning-assistant.ts`) i zmian schematu pod polami czytanymi przez więcej niż jeden ekran.

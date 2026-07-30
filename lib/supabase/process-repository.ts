@@ -238,11 +238,24 @@ async function resolvePlacementElementId(
   return element.id;
 }
 
-async function insertTemplateStagesGraph(template: ProcessTemplate) {
+/**
+ * UPSERT, nie delete+insert (docs/08 D41).
+ *
+ * Poprzednia wersja kasowała etapy i wstawiała je od nowa, przez co KAŻDA kolumna nieobjęta tym
+ * insertem wracała do wartości domyślnej, a każda tabela wisząca na `stage_id` z `ON DELETE CASCADE`
+ * ginęła bezpowrotnie. Tak zniknęła cała macierz `process_stage_role_responsibility` (37 wierszy) i
+ * wszystkie atrybuty etapu z fazy 1 — dowiedzieliśmy się o tym przypadkiem, po miesiącach.
+ *
+ * Upsert odwraca domyślne zachowanie: to, czego payload nie zna, ZOSTAJE. Dzięki temu każda przyszła
+ * kolumna jest bezpieczna z założenia, bez pamiętania o dopisaniu jej tutaj. Kasowanie tego, co
+ * użytkownik faktycznie usunął w edytorze, robi `deleteOrphansFromTemplateGraph` niżej — jawnie,
+ * po id, a nie hurtem.
+ */
+export async function insertTemplateStagesGraph(template: ProcessTemplate) {
   const supabase = getSupabase();
 
   for (const stage of template.stages) {
-    const { error } = await supabase.from("process_stages").insert({
+    const { error } = await supabase.from("process_stages").upsert({
       id: stage.id,
       template_id: stage.templateId,
       title: stage.title,
@@ -264,13 +277,22 @@ async function insertTemplateStagesGraph(template: ProcessTemplate) {
       // baza ma siatkę bezpieczeństwa (migracja 220, trigger 'stage_<position>'), ale wolę
       // nadać świadomie tu, żeby nie polegać wyłącznie na fallbacku.
       code: stage.code ?? `stage_${stage.position}`,
+      // Atrybuty etapu z fazy 1 (docs/08 D19 §6, migracje 209/214) — dotąd POMINIĘTE w zapisie,
+      // więc każdy zapis szablonu zerował je do wartości domyślnych. `?? undefined` zamiast `?? null`:
+      // gdy payload ich nie zna (np. szablon zbudowany z seeda), kolumna zostaje nietknięta,
+      // a nie nadpisana nullem.
+      base_communication_phase: stage.baseCommunicationPhase ?? undefined,
+      weight_comm: stage.weightComm ?? undefined,
+      weight_coord: stage.weightCoord ?? undefined,
+      sla_days: stage.slaDays ?? undefined,
+      requires_project_stage_lead: stage.requiresProjectStageLead ?? undefined,
     });
     if (error) {
       throw new Error(error.message);
     }
 
     for (const milestone of stage.milestones) {
-      const { error: milestoneError } = await supabase.from("process_milestones").insert({
+      const { error: milestoneError } = await supabase.from("process_milestones").upsert({
         id: milestone.id,
         stage_id: milestone.stageId,
         title: milestone.title,
@@ -297,7 +319,7 @@ async function insertTemplateStagesGraph(template: ProcessTemplate) {
           })),
         );
 
-        const { error: itemsError } = await supabase.from("process_items").insert(placements);
+        const { error: itemsError } = await supabase.from("process_items").upsert(placements);
         if (itemsError) {
           throw new Error(itemsError.message);
         }
@@ -307,7 +329,59 @@ async function insertTemplateStagesGraph(template: ProcessTemplate) {
 
   // Drugi przebieg — wymagania i zależności wstawiamy po utworzeniu WSZYSTKICH etapów,
   // bo zależność może wskazywać na etap dalszy w kolejności wstawiania.
+  //
+  // Tabele-złączenia zastępujemy jawnie (delete-by-stage + insert), bo przy upsercie etapów nie ma
+  // już kaskady, która wcześniej robiła to „przypadkiem". Rozróżnienie jest istotne:
+  //   undefined  → payload nie zna tej listy (np. szablon z seeda) → NIE RUSZAMY
+  //   []         → użytkownik usunął wszystkie pozycje → czyścimy
+  // Bez tego rozróżnienia zapis szablonu zbudowanego z seeda wyczyściłby to, czego nie niesie.
   for (const stage of template.stages) {
+    if (stage.requiredRoles !== undefined) {
+      const { error } = await supabase
+        .from("process_stage_role_requirements")
+        .delete()
+        .eq("stage_id", stage.id);
+      if (error) throw new Error(error.message);
+    }
+    if (stage.requiredCompetencies !== undefined) {
+      const { error } = await supabase
+        .from("process_stage_competency_requirements")
+        .delete()
+        .eq("stage_id", stage.id);
+      if (error) throw new Error(error.message);
+    }
+    if (stage.dependsOnStageIds !== undefined) {
+      const { error } = await supabase
+        .from("process_stage_dependencies")
+        .delete()
+        .eq("stage_id", stage.id);
+      if (error) throw new Error(error.message);
+    }
+    // Macierz odpowiedzialności — to ONA zniknęła (docs/08 D41). Odczyt ją wczytywał
+    // (`stage.roleResponsibility`), zapis nie, więc obieg był jednokierunkowy.
+    if (stage.roleResponsibility !== undefined) {
+      const { error: deleteError } = await supabase
+        .from("process_stage_role_responsibility")
+        .delete()
+        .eq("stage_id", stage.id);
+      if (deleteError) throw new Error(deleteError.message);
+
+      if (stage.roleResponsibility.length) {
+        const { error: insertError } = await supabase
+          .from("process_stage_role_responsibility")
+          .insert(
+            stage.roleResponsibility.map((entry) => ({
+              stage_id: stage.id,
+              role_code: entry.roleCode,
+              is_glowny: entry.isGlowny,
+              is_wspiera: entry.isWspiera,
+              is_komunikuje: entry.isKomunikuje,
+            })),
+          );
+        if (insertError) throw new Error(insertError.message);
+      }
+    }
+
     if (stage.requiredRoles?.length) {
       const { error: rolesError } = await supabase.from("process_stage_role_requirements").insert(
         stage.requiredRoles.map((requirement) => ({
@@ -765,19 +839,67 @@ export async function saveProcessTemplate(template: ProcessTemplate) {
     throw new Error(updateError.message);
   }
 
-  const { error: deleteStagesError } = await supabase
-    .from("process_stages")
-    .delete()
-    .eq("template_id", template.id);
-
-  if (deleteStagesError) {
-    throw new Error(deleteStagesError.message);
-  }
-
+  // Najpierw upsert (etap istniejący zachowuje kolumny, których payload nie zna), POTEM usunięcie
+  // osieroconych. Kolejność ma znaczenie: przy odwrotnej, przeniesienie kamienia między etapami
+  // wyglądałoby chwilowo jak osierocenie i zostałoby skasowane.
   await insertTemplateStagesGraph({
     ...template,
     updatedAt: now,
   });
 
+  await deleteOrphansFromTemplateGraph(template);
+
   return fetchProcessTemplateByProjectType(template.projectType);
+}
+
+/**
+ * Usuwa z bazy to, co użytkownik faktycznie skasował w edytorze — po id, nie hurtem (docs/08 D41).
+ * Kasowanie etapu kaskaduje na jego kamienie, elementy i tabele-złączenia, więc wystarczy usunąć
+ * etapy, a potem kamienie i elementy w tych etapach, które zostały.
+ */
+async function deleteOrphansFromTemplateGraph(template: ProcessTemplate) {
+  const supabase = getSupabase();
+
+  const keptStageIds = template.stages.map((stage) => stage.id);
+  const keptMilestoneIds = template.stages.flatMap((stage) =>
+    stage.milestones.map((milestone) => milestone.id),
+  );
+  const keptItemIds = template.stages.flatMap((stage) =>
+    stage.milestones.flatMap((milestone) => milestone.items.map((item) => item.id)),
+  );
+
+  const { error: stagesError } = await supabase
+    .from("process_stages")
+    .delete()
+    .eq("template_id", template.id)
+    .not("id", "in", `(${keptStageIds.length ? keptStageIds.join(",") : "'-'"})`);
+  if (stagesError) {
+    throw new Error(stagesError.message);
+  }
+
+  if (!keptStageIds.length) {
+    return;
+  }
+
+  const { error: milestonesError } = await supabase
+    .from("process_milestones")
+    .delete()
+    .in("stage_id", keptStageIds)
+    .not("id", "in", `(${keptMilestoneIds.length ? keptMilestoneIds.join(",") : "'-'"})`);
+  if (milestonesError) {
+    throw new Error(milestonesError.message);
+  }
+
+  if (!keptMilestoneIds.length) {
+    return;
+  }
+
+  const { error: itemsError } = await supabase
+    .from("process_items")
+    .delete()
+    .in("milestone_id", keptMilestoneIds)
+    .not("id", "in", `(${keptItemIds.length ? keptItemIds.join(",") : "'-'"})`);
+  if (itemsError) {
+    throw new Error(itemsError.message);
+  }
 }
