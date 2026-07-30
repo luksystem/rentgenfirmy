@@ -2547,6 +2547,9 @@ export type ProjectProcessItemRow = {
   termin_wynikajacy: string | null;
   data_planowana: string | null;
   data_ukonczenia: string | null;
+  last_known_title: string | null;
+  last_known_stage_title: string | null;
+  last_known_milestone_title: string | null;
   created_at: string;
   updated_at: string;
 };

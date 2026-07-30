@@ -143,10 +143,17 @@ export function ProcessItemRepairDialog({
             return (
               <div key={orphan.id} className="grid gap-2 rounded-xl border border-border/70 bg-surface/40 p-3">
                 <p className="text-sm font-medium text-foreground">
-                  {PROCESS_ITEM_KIND_LABELS[orphan.kind]}
+                  {orphan.lastKnownTitle
+                    ? [orphan.lastKnownStageTitle, orphan.lastKnownMilestoneTitle, orphan.lastKnownTitle]
+                        .filter(Boolean)
+                        .join(" → ")
+                    : PROCESS_ITEM_KIND_LABELS[orphan.kind]}
                   {orphan.kind === "kanban" ? ` — ${kanbanTaskCounts[orphan.id] ?? 0} zadań` : ""}
                 </p>
-                <p className="text-xs text-muted">Ostatnia aktualizacja: {formatDateTime(orphan.updatedAt)}</p>
+                <p className="text-xs text-muted">
+                  {orphan.lastKnownTitle ? `${PROCESS_ITEM_KIND_LABELS[orphan.kind]} · ` : ""}
+                  Ostatnia aktualizacja: {formatDateTime(orphan.updatedAt)}
+                </p>
                 {candidates.length ? (
                   <div className="flex flex-wrap items-end gap-2">
                     <Field label="Podłącz do" className="min-w-[16rem] flex-1">

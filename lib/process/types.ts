@@ -258,6 +258,12 @@ export type ProjectProcessItem = {
   dataPlanowana: string | null;
   /** Krok A — źródło prawdy faktycznego wykonania (docs/08 D27 2.2). */
   dataUkonczenia: string | null;
+  /** Ostatnia znana nazwa/etap/kamień z chwili, gdy element został osierocony (sync do żywego
+   *  szablonu nadpisał template_snapshot) — jedyny ślad po co ten element był, skoro slot w
+   *  szablonie już nie istnieje. Null dla elementów jeszcze podłączonych do szablonu. */
+  lastKnownTitle: string | null;
+  lastKnownStageTitle: string | null;
+  lastKnownMilestoneTitle: string | null;
   createdAt: string;
   updatedAt: string;
 };

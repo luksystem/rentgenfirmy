@@ -5,6 +5,7 @@ import {
   collectTemplateItemIds,
   collectTemplateMilestoneIds,
 } from "@/lib/process/anchored-template";
+import { flattenProcessItems } from "@/lib/process/types";
 import type {
   ProcessItem,
   ProcessItemCompletion,
@@ -785,6 +786,45 @@ export async function syncProjectProcessFromTemplate(
   const itemIds = collectTemplateItemIds(snapshot);
   const milestoneIds = collectTemplateMilestoneIds(snapshot);
   const now = new Date().toISOString();
+
+  // Zanim nadpiszemy template_snapshot (poniżej) — dla elementów, które ten sync właśnie
+  // osieroci (ich templateItemId zniknie z nowego szablonu), zapisz ostatnią znaną nazwę/etap/
+  // kamień ze STAREGO snapshotu. To jedyny moment, w którym ta informacja jeszcze istnieje —
+  // po nadpisaniu snapshotu ślad po niej ginie bezpowrotnie.
+  if (process.templateSnapshot) {
+    const supabaseForOrphans = getSupabase();
+    const oldItemsById = new Map(
+      flattenProcessItems(process.templateSnapshot).map((item) => [item.id, item]),
+    );
+    const { data: existingItems, error: existingItemsError } = await supabaseForOrphans
+      .from("project_process_items")
+      .select("id, template_item_id")
+      .eq("project_id", projectId);
+
+    if (existingItemsError) {
+      throw new Error(existingItemsError.message);
+    }
+
+    const aboutToOrphan = (existingItems ?? []).filter(
+      (row) => !itemIds.has(row.template_item_id) && oldItemsById.has(row.template_item_id),
+    );
+
+    for (const row of aboutToOrphan) {
+      const oldItem = oldItemsById.get(row.template_item_id)!;
+      const { error: orphanUpdateError } = await supabaseForOrphans
+        .from("project_process_items")
+        .update({
+          last_known_title: oldItem.title,
+          last_known_stage_title: oldItem.stageTitle,
+          last_known_milestone_title: oldItem.milestoneTitle,
+        })
+        .eq("id", row.id);
+
+      if (orphanUpdateError) {
+        throw new Error(orphanUpdateError.message);
+      }
+    }
+  }
 
   const completions = Object.fromEntries(
     Object.entries(process.completions).filter(([itemId]) => itemIds.has(itemId)),

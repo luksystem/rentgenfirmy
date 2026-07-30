@@ -61,6 +61,9 @@ export function rowToProjectProcessItem(row: ProjectProcessItemRow): ProjectProc
     terminWynikajacy: row.termin_wynikajacy ?? null,
     dataPlanowana: row.data_planowana ?? null,
     dataUkonczenia: row.data_ukonczenia ?? null,
+    lastKnownTitle: row.last_known_title ?? null,
+    lastKnownStageTitle: row.last_known_stage_title ?? null,
+    lastKnownMilestoneTitle: row.last_known_milestone_title ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
