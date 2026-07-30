@@ -1830,6 +1830,79 @@ Migracja: 260.
 
 ---
 
+## D41. Zapis szablonu niszczył konfigurację — upsert zamiast delete+insert
+
+**Status: naprawione (kod) + zabezpieczone testem. Reseed danych — patrz D42.**
+
+`saveProcessTemplate()` kasował wszystkie etapy szablonu i wstawiał je od nowa. Skutek podwójny:
+każda kolumna nieujęta w insercie wracała do wartości domyślnej, a każda tabela z `ON DELETE CASCADE`
+na `stage_id` ginęła bezpowrotnie. Tak zniknęła macierz `process_stage_role_responsibility` (37
+wierszy zaseedowanych migracją 215, asercja przeszła) — odczyt ją wczytywał (`stage.roleResponsibility`),
+zapis nie, więc obieg był jednokierunkowy.
+
+**Zasięg, sprawdzony kolumna po kolumnie** (na żądanie właściciela, zanim cokolwiek ruszyliśmy):
+
+| Przenoszone poprawnie | Ginęły przy każdym zapisie |
+|---|---|
+| `lead_days`, `effort_days` (Krok A) | `base_communication_phase`, `weight_comm`, `weight_coord`, `sla_days`, `requires_project_stage_lead` (faza 1) |
+| `starts_warranty` (D27) | `health_yellow_threshold`, `health_red_threshold`, `stale_acceptance_days` (faza 7) |
+| `default_payload` — czyli mapowanie ROT kolumn kanbana (D37) | `milestones.planned_date`, `items.artifact_type` |
+| | cała `process_stage_role_responsibility` |
+
+Atrybuty fazy 1 były **już puste** (0 z 19 etapów) — zginęły tak samo jak macierz, tylko nikt tego
+nie zauważył. Progi zdrowia były wszędzie domyślne, więc tam nic realnie nie przepadło.
+
+**Naprawa systemowa, nie łatanie dziewięciu kolumn.** Zapis przestawiony na **upsert**, co odwraca
+domyślne zachowanie: czego payload nie zna, **zostaje**. Każda przyszła kolumna jest bezpieczna
+z założenia, bez pamiętania o dopisaniu jej do writera. Kasowanie tego, co użytkownik faktycznie
+usunął w edytorze, robi `deleteOrphansFromTemplateGraph` — po id, nie hurtem, i po upsercie (przy
+odwrotnej kolejności przeniesienie kamienia między etapami wyglądałoby na osierocenie).
+
+Tabele-złączenia zastępowane jawnie, z rozróżnieniem `undefined` (payload nie zna listy → nie
+ruszamy) od `[]` (użytkownik wyczyścił → kasujemy). Bez tego zapis szablonu zbudowanego z seeda
+wyczyściłby to, czego nie niesie.
+
+**Test round-trip zapisu** (`lib/process/__tests__/template-save-roundtrip.test.ts`) — drugi obok
+istniejącego testu podróży przez snapshot. Asercja „kompletność mapowania" wywala się, gdy do
+`ProcessStage` dojdzie pole bez odwzorowania na kolumnę. **Zweryfikowany negatywnie**: po usunięciu
+`base_communication_phase` z zapisu test faktycznie failuje z komunikatem wskazującym kolumnę.
+Reguła dopisana do `docs/CLAUDE.md` jako standard testowy (c).
+
+---
+
+## D42. Reseed macierzy i atrybutów fazy 1 + asystent procesu na wszystkich etapach
+
+**Status: zrealizowane (migracja 261), zweryfikowane na żywych danych.**
+
+Reseed z treści **migracji 215**, nie 209/214 — tamte kluczowały na tytułach etapów (`title ilike`),
+co je wywaliło za pierwszym razem. 215 idzie po `process_stages.code` i asertuje liczbę wierszy.
+
+**Asystent procesu jako „wspiera" na wszystkich 10 etapach** (zmiana wobec mojej wcześniejszej
+propozycji pięciu etapów). Właściciel kazał sprawdzić przed seedem, czy to nie zaleje fallbacku:
+**nie zaleje.** Wszystkie trzy funkcje czytające macierz (`report_stage_commitments`,
+`report_commitment_warnings`, `report_leave_commitment_impact`) używają **wyłącznie `is_glowny`` —
+`is_wspiera` i `is_komunikuje` nie sterują dziś niczym. Gdy faza 11b zacznie czytać `is_komunikuje`,
+temat wraca, ale dotyczy wtedy opiekuna (K na wszystkich 10 etapach), nie asystenta.
+
+**Wagi `weight_comm`/`weight_coord` świadomie NIE seedowane** — docs/role/05 §3.2 mówi wprost, że to
+wartości „seed" czekające na kalibrację, a liczba orientacyjna udająca pomiar jest gorsza niż jej brak.
+
+**Rozstrzygnięcie problemu z szablonami spoza DOM.** Kody `etap_01..etap_10` istnieją tylko w DOM,
+więc BMS/Audio/Przemysłowe/Serwis/Inne zostałyby z `base_communication_phase = NULL`, co w bramach
+fazy 11a czytałoby się jako brak komunikacji — trzy żywe projekty BMS w ciszy bez widocznego powodu.
+Zamiast zostawiać to jako pułapkę: **backfill na STANDARD + `DEFAULT 'STANDARD'` + `NOT NULL`**. Stan
+„brak fazy" przestaje być reprezentowalny, więc bramy 11a nie muszą obsługiwać NULL-a — nie ma jak go
+uzyskać. To mocniejsze niż sama wartość domyślna, o którą prosił właściciel.
+
+**Weryfikacja po wdrożeniu** — rozwiązywanie odpowiedzialnego działa dla wszystkich 10 etapów na
+realnym projekcie: Etap 7 „Dostawa rozdzielni" → Koordynator Techniczny → konkretna osoba, zgodnie
+z docs/02 §10. Zero „brak obsady" na DOM.
+
+Migracja: 261 (47 wierszy macierzy = 37 + 10 asystenta, `base_communication_phase` dla 19 etapów,
+`sla_days` dla etapów 6-7, `requires_project_stage_lead` dla etapu 8).
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed
@@ -1908,6 +1981,8 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D38 | faza 9A (rejestr zdarzeń + rozdzielone osie) | zatwierdzone, zrealizowane (migracje 258-259); 9B (pytanie dzienne, AI) odłożone jako osobna faza |
 | D39 | naprawa cronów (middleware blokował `/api/cron/*`) | naprawione i zweryfikowane end-to-end — dotyczyło wszystkich 9 cronów, defekt od początku, nie regresja |
 | D40 | faza 10 (kanban + Plan Zasobów jako źródła) | zatwierdzone, zrealizowane (migracja 260) — faza 10 zamknięta, pkt 4 (alert) odłożony do 11b |
+| D41 | zapis szablonu niszczył konfigurację | naprawione (upsert) + test round-trip zapisu, reguła w CLAUDE.md |
+| D42 | reseed macierzy i atrybutów fazy 1 | zatwierdzone, zrealizowane (migracja 261); asystent na 10 etapach, `base_communication_phase` NOT NULL z domyślną STANDARD |
 
 ---
 
