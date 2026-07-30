@@ -1872,7 +1872,7 @@ Reguła dopisana do `docs/CLAUDE.md` jako standard testowy (c).
 
 ## D42. Reseed macierzy i atrybutów fazy 1 + asystent procesu na wszystkich etapach
 
-**Status: zrealizowane (migracja 261), zweryfikowane na żywych danych.**
+**Status: zrealizowane (migracje 265 i 266), zweryfikowane na żywych danych.**
 
 Reseed z treści **migracji 215**, nie 209/214 — tamte kluczowały na tytułach etapów (`title ilike`),
 co je wywaliło za pierwszym razem. 215 idzie po `process_stages.code` i asertuje liczbę wierszy.
@@ -1898,8 +1898,52 @@ uzyskać. To mocniejsze niż sama wartość domyślna, o którą prosił właśc
 realnym projekcie: Etap 7 „Dostawa rozdzielni" → Koordynator Techniczny → konkretna osoba, zgodnie
 z docs/02 §10. Zero „brak obsady" na DOM.
 
-Migracja: 261 (47 wierszy macierzy = 37 + 10 asystenta, `base_communication_phase` dla 19 etapów,
+Migracja: 265 (47 wierszy macierzy = 37 + 10 asystenta, `base_communication_phase` dla 19 etapów,
 `sla_days` dla etapów 6-7, `requires_project_stage_lead` dla etapu 8).
+
+### 4a. Edytor macierzy odpowiedzialności
+
+Macierz była **atrybutem bez edytora** — a to okazało się gorsze niż zwykły dług z reguły
+w CLAUDE.md. Zapis szablonu ją kasował (D41), więc jedyne wpisy pochodziły z migracji i znikały
+przy pierwszej edycji szablonu przez człowieka. Edytor domyka pętlę: `ProcessStageResponsibilityPanel`
+w edytorze szablonu, per etap, checkboxy G/W/K.
+
+Dwie rzeczy, których pilnuje UI, bo baza ich nie wymusi:
+- **dokładnie jeden `is_glowny`** — przy zerze nikt się nie pokaże przy etapie, przy dwóch
+  rozwiązywanie cicho wybrałoby pierwszego z brzegu; obie sytuacje dostają twarde ostrzeżenie;
+- **badge „bez slotu"** dla `instalator` i `lider_montazu` (`uses_project_slot = false`) — wpis
+  w macierzy dla nich nigdy nie rozwiąże się na osobę, więc lepiej to powiedzieć przy zaznaczaniu
+  niż zostawić do odkrycia jako „brak obsady".
+
+Role czytane z tabeli `role` (9 kodów). To **nie** jest picker `operational_role` z panelu zasobów
+obok — trzy osie o podobnych nazwach są rozpisane w komentarzu `lib/supabase/role-repository.ts`.
+
+### 4b. Wyświetlanie odpowiedzialnego — jedna funkcja, jedno źródło
+
+`report_stage_responsible(project_id)` (migracja 266) jest **jedynym** źródłem dla wszystkich
+miejsc wyświetlania. Powód wprost z „jedna informacja ma jedno miejsce": cztery miejsca liczące
+to samo osobno rozjechałyby się przy pierwszej zmianie reguły.
+
+Zwraca łącznie odpowiedzialnego (macierz `is_glowny` → `project_role_slot` → `profiles`) **oraz,
+osobnym polem, lidera etapu** (`project_stage_leads`, kolumna `stage_id` typu TEXT — stąd rzutowanie).
+To dwie różne role i UI podpisuje je inaczej: odpowiedzialny prowadzi etap, lider montażu prowadzi
+brygadę. Mylenie ich było jawnym wymaganiem właściciela do uniknięcia.
+
+Reguły prezentacji, wszystkie w jednym komponencie `StageResponsibleLine`, żeby nie rozjechały się
+między miejscami:
+- **brak obsady pokazujemy jawnie**, nigdy pustym miejscem — puste miejsce czyta się jak
+  „nie dotyczy", a to jest dziura w obsadzie i ma być widać;
+- `slot_source = 'fallback'` → badge **„zastępczo"**;
+- etap **bez wpisu `is_glowny`** dostaje inny komunikat („brak roli w macierzy") niż etap z rolą,
+  ale bez człowieka („brak obsady") — naprawia się je w dwóch różnych miejscach, więc nie wolno
+  ich zlewać w jeden napis;
+- **bez przycisku „zmień odpowiedzialnego"** przy etapie — odpowiedzialny wynika z macierzy i obsady,
+  przycisk sugerowałby, że da się go tu nadpisać. Jedyny wyjątek to link „obsadź" przy braku obsady,
+  bo tam faktycznie leży rozwiązanie.
+
+Dane pobiera `ProjectProcessPipelineSection`, **nie** sam `ProcessPipeline` — ten sam pipeline
+renderuje publiczny dashboard klienta, a nazwiska obsady to informacja wewnętrzna. Brak propa =
+brak linijki, czyli domyślnie bezpiecznie.
 
 ---
 

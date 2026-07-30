@@ -56,6 +56,8 @@ import {
   type ProjectProcessItem,
 } from "@/lib/process/types";
 import { STAGE_HEALTH_BAND_LABELS, type ProjectStageHealth } from "@/lib/stage-health/types";
+import { StageResponsibleLine } from "@/components/process/stage-responsible-line";
+import type { StageResponsible } from "@/lib/supabase/stage-responsible-repository";
 import { useProcessStore } from "@/store/process-store";
 
 const STAGE_HEALTH_BAND_CLASSES: Record<ProjectStageHealth["band"], string> = {
@@ -106,6 +108,12 @@ type ProcessPipelineProps = {
   onRemoveItem?: (itemId: string) => Promise<void>;
   /** Faza 7 (D3/D26) — zdrowie AKTYWNEGO etapu tego projektu (report_stage_health), jeśli dostępne. */
   activeStageHealth?: ProjectStageHealth | null;
+  /**
+   * D42 pkt 4b — stageId → odpowiedzialny za etap (wyliczony z macierzy ról i obsady projektu).
+   * Podawane z zewnątrz, nie pobierane tutaj: ten sam pipeline renderuje publiczny dashboard
+   * klienta, gdzie obsada zespołu nie ma się pokazywać. Brak propa = brak linijki.
+   */
+  stageResponsible?: Record<string, StageResponsible>;
 };
 
 export function ProcessPipeline({
@@ -133,6 +141,7 @@ export function ProcessPipeline({
   onAddItem,
   onRemoveItem,
   activeStageHealth,
+  stageResponsible,
 }: ProcessPipelineProps) {
   const [activeItem, setActiveItem] = useState<ProcessItem | null>(null);
   const [settingActiveStageId, setSettingActiveStageId] = useState<string | null>(null);
@@ -477,6 +486,12 @@ export function ProcessPipeline({
                         ) : (
                           <p className="mt-1.5 text-xs text-muted">Brak elementów w etapie</p>
                         )}
+                        {/* D42 pkt 4b — przy KAŻDYM etapie, nie tylko aktywnym: na proces patrzy się
+                            z pytaniem „na czym stoi projekt", a to pytanie jest zawsze o osobę. */}
+                        <StageResponsibleLine
+                          data={stageResponsible?.[stage.id]}
+                          projectId={projectId}
+                        />
                         {isBlocked && blockReasons.length > 0 ? (
                           <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2 py-1.5 text-[11px] text-rose-200">
                             <Lock className="mt-0.5 h-3 w-3 shrink-0" />

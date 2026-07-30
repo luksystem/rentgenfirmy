@@ -16,6 +16,11 @@ import { hasFullAppAccess, isAdministratorRole } from "@/lib/auth/types";
 import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import { fetchStageHealth } from "@/lib/supabase/stage-health-repository";
+import {
+  fetchStageResponsible,
+  indexStageResponsibleByStageId,
+  type StageResponsible,
+} from "@/lib/supabase/stage-responsible-repository";
 import type { ProjectStageHealth } from "@/lib/stage-health/types";
 import { useAuthStore } from "@/store/auth-store";
 import { useProcessStore } from "@/store/process-store";
@@ -72,6 +77,9 @@ export function ProjectProcessPipelineSection({
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [stageHealth, setStageHealth] = useState<ProjectStageHealth | null>(null);
+  // D42 pkt 4b. Świadomie pobierane TUTAJ, a nie w ProcessPipeline — ten sam pipeline renderuje
+  // publiczny dashboard klienta, a nazwiska obsady to informacja wewnętrzna.
+  const [stageResponsible, setStageResponsible] = useState<Record<string, StageResponsible>>({});
 
   const anchoredTemplate = useMemo(
     () => resolveAnchoredProcessTemplate(process, liveTemplate),
@@ -130,6 +138,23 @@ export function ProjectProcessPipelineSection({
     };
   }, [projectId, process.activeStageId, process.updatedAt]);
 
+  useEffect(() => {
+    let cancelled = false;
+    void fetchStageResponsible(projectId)
+      .then((rows) => {
+        if (!cancelled) {
+          setStageResponsible(indexStageResponsibleByStageId(rows));
+        }
+      })
+      .catch(() => {
+        // Brak danych o odpowiedzialnych nie może wywalić widoku procesu — linijka po prostu
+        // się nie pokaże, a etapy zostają czytelne.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
   async function handleConfirmSync() {
     setSyncing(true);
     setSyncError(null);
@@ -187,6 +212,7 @@ export function ProjectProcessPipelineSection({
         canCustomizeChecklist={canCustomizeChecklist}
         interactive
         actorName={resolvedActorName}
+        stageResponsible={stageResponsible}
         onSaveMilestoneDate={(milestoneId, date) => saveMilestoneDate(projectId, milestoneId, date)}
         onSaveChecklist={(itemId, payload) =>
           saveChecklistPayload(projectId, itemId, payload, resolvedActorName)

@@ -5054,6 +5054,23 @@ export type Database = {
           status: string;
         }[];
       };
+      report_stage_responsible: {
+        Args: { p_project_id: string };
+        Returns: {
+          stage_id: string;
+          stage_code: string;
+          stage_title: string;
+          stage_position: number;
+          role_code: string | null;
+          role_name: string | null;
+          responsible_user_id: string | null;
+          responsible_name: string | null;
+          slot_source: string | null;
+          requires_project_stage_lead: boolean;
+          stage_lead_user_id: string | null;
+          stage_lead_name: string | null;
+        }[];
+      };
       report_work_type_breakdown: {
         Args: { p_project_id?: string | null; p_month?: string | null };
         Returns: {
