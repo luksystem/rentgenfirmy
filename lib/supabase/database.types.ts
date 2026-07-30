@@ -5066,6 +5066,8 @@ export type Database = {
           responsible_user_id: string | null;
           responsible_name: string | null;
           slot_source: string | null;
+          covered_by_role_code: string | null;
+          covered_by_role_name: string | null;
           requires_project_stage_lead: boolean;
           stage_lead_user_id: string | null;
           stage_lead_name: string | null;

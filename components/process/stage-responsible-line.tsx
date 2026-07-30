@@ -52,9 +52,13 @@ export function StageResponsibleLine({
             <span className="font-medium text-foreground">{data.responsibleName}</span>
             <span className="text-muted">({data.roleName})</span>
             {data.slotSource === "fallback" ? (
-              <span title="Slot nie jest obsadzony wprost — osoba podstawiona zastępczo.">
+              // Sam napis „zastępczo" mówiłby, że ktoś zastępuje, ale nie w czyim zastępstwie —
+              // a to jest właśnie ta informacja, po którą się patrzy.
+              <span
+                title={`Slot „${data.roleName}" nie jest obsadzony na tym projekcie. Odpowiedzialność pokrywa ${data.coveredByRoleName ?? "rola zastępcza"} zgodnie z łańcuchem zastępstw.`}
+              >
                 <Badge tone="waiting" className="text-[10px]">
-                  zastępczo
+                  zastępczo{data.coveredByRoleName ? ` jako ${data.coveredByRoleName}` : ""}
                 </Badge>
               </span>
             ) : null}

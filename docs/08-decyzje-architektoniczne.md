@@ -1945,6 +1945,41 @@ Dane pobiera `ProjectProcessPipelineSection`, **nie** sam `ProcessPipeline` — 
 renderuje publiczny dashboard klienta, a nazwiska obsady to informacja wewnętrzna. Brak propa =
 brak linijki, czyli domyślnie bezpiecznie.
 
+### 4c. Poprawka: rozwiązywanie idzie łańcuchem `role_fallback` (migracja 267)
+
+Pierwsza wersja robiła prosty join na slocie, więc rola bez obsady dawała „brak obsady" nawet gdy
+słownik `role_fallback` miał zdefiniowane podstawienie. Skutek uboczny: badge „zastępczo" **nie miał
+jak się zapalić** — w `project_role_slot` nie ma i nigdy nie będzie wierszy z `source = 'fallback'`,
+bo fallback jest **regułą wyliczaną**, nie zapisem obsady. Sama kolumna `source` sugerowała inaczej
+i na to się nabrałem.
+
+Funkcja chodzi teraz rekurencyjnym CTE: limit głębokości 5 i wykrywanie cyklu przez ścieżkę, bo
+`role_fallback` świadomie nie ma constraintu przeciw cyklom — obrona musi żyć w **każdym** czytelniku.
+Doszła kolumna `covered_by_role_name`: samo „zastępczo" mówi, że ktoś zastępuje, ale nie w czyim
+zastępstwie, a to jest właśnie ta informacja, po którą się patrzy.
+
+**Świadome dublowanie.** To druga implementacja tej samej reguły co `lib/process/role-fallback.ts`
+(tam: asystent planowania i zastępstwa urlopowe). Przepisanie tamtej na wołanie SQL kosztowałoby
+więcej niż jest warte — pilnuje tego asercja w migracji.
+
+**Asercja fikstuurowa zamiast asercji na żywych danych.** Żadne dzisiejsze dane nie ćwiczą łańcucha:
+jedyny projekt z dziurami (Borkowska, 6 etapów) ma nieobsadzonego projektanta, którego fallback
+wskazuje na koordynatora technicznego — również nieobsadzonego i bez dalszego ogniwa. Łańcuch
+dochodzi do końca bez pokrycia i **to jest poprawne**. Migracja więc: (1) asertuje stan zastany
+6/0, (2) wstawia tymczasowy slot w tej samej transakcji i żąda, żeby projektant rozwiązał się na
+niego ze źródłem `fallback` i właściwą rolą pokrywającą, (3) kasuje fikstuurę i sprawdza, że jej
+nie ma. Bez punktu (2) byłby to mechanizm, którego nikt nigdy nie wykonał.
+
+Przy okazji, do zapamiętania: `current_role` jest **słowem zarezerwowanym** w Postgresie (funkcja
+SQL, jak `current_user`) — nie da się go użyć jako nazwy kolumny w CTE.
+
+**Dług świadomie zostawiony (decyzja właściciela):** brak granularnego edytora obsady. Dziś trzy
+checkboxy w panelu „Klient / użytkownicy" ustawiają **pary** ról (`technicalLead` →
+`koordynator_techniczny` + `projektant`), a `wlasciciel` i `asystent_procesu` nie mają checkboxa
+w ogóle. Cała żywa obsada — 730 slotów, 122 projekty — pochodzi z jednego backfillu ze starych
+booleanów z 2026-07-27 i jest **identyczna na każdym projekcie** (jedna osoba na rolę). Mechanizm
+odpowiedzialnego jest poprawny, ale karmi się dziś atrapą i nie da się jej naprawić klikaniem.
+
 ---
 
 ## Finalna sekwencja faz

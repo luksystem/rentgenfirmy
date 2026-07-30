@@ -18,6 +18,10 @@ export type StageResponsible = {
   responsibleName: string | null;
   /** 'obsada' — slot obsadzony wprost; 'fallback' — podstawiony zastępczo (UI: badge „zastępczo”). */
   slotSource: string | null;
+  /** Rola, która faktycznie pokryła odpowiedzialność — wypełniona TYLKO przy 'fallback'. Bez tego
+   *  badge „zastępczo” mówiłby, że ktoś jest zastępstwem, ale nie za kogo. */
+  coveredByRoleCode: string | null;
+  coveredByRoleName: string | null;
   requiresProjectStageLead: boolean;
   stageLeadUserId: string | null;
   stageLeadName: string | null;
@@ -41,6 +45,8 @@ export async function fetchStageResponsible(projectId: string): Promise<StageRes
     responsibleUserId: row.responsible_user_id,
     responsibleName: row.responsible_name,
     slotSource: row.slot_source,
+    coveredByRoleCode: row.covered_by_role_code,
+    coveredByRoleName: row.covered_by_role_name,
     requiresProjectStageLead: row.requires_project_stage_lead,
     stageLeadUserId: row.stage_lead_user_id,
     stageLeadName: row.stage_lead_name,
