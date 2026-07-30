@@ -1751,6 +1751,49 @@ Migracje: 258 (`communication_events`, dwie osie, `sms_messages.project_id`,
 
 ---
 
+## D39. Wszystkie crony były martwe — middleware przekierowywał `/api/cron/*` na logowanie
+
+**Status: naprawione i zweryfikowane end-to-end na produkcji.**
+
+Odkryte przy weryfikacji Fazy 9A: osie aktywności nie wypełniły się po odpaleniu przelicznika.
+Zamiast założyć, że deploy jeszcze nie wszedł, sprawdzone `net._http_response` — **100% dzisiejszych
+wywołań cronów kończyło się 405** (86 z 86 wierszy, wszystkie `status_code=405`).
+
+**Przyczyna.** `/api/cron/*` nie było na liście ścieżek publicznych (`PUBLIC_PATH_PREFIXES` w
+`lib/auth/routes.ts` ani w jawnej liście prefiksów API w `middleware.ts`). pg_cron woła endpoint przez
+`net.http_post` i **nie ma sesji Supabase — nie ma jak jej mieć**. Middleware nie widział `user`,
+przekierowywał żądanie na `/logowanie`, a `NextResponse.redirect` zachowuje metodę — więc POST trafiał
+na trasę strony, która POST-a nie przyjmuje. Stąd 405.
+
+**Dlaczego to była zła warstwa.** Każdy route `/api/cron/*` uwierzytelnia się **własnym** sekretem
+(`Authorization: Bearer CRON_SECRET`, sprawdzanym w `isAuthorized()` wewnątrz route'a). To auth
+maszynowy, nie sesyjny. Sprawdzanie sesji w middleware nie dodawało bezpieczeństwa — tylko blokowało
+jedynego uprawnionego wołającego. Naprawa nie usuwa uwierzytelnienia, przenosi je tam, gdzie należy.
+
+**Skala — dotyczyło wszystkich 9 cronów**, w tym mechanizmów uznanych wcześniej za dostarczone:
+`recompute-project-flow-status` (status cyklu życia projektu, D25), `recompute-active-projects`
+(histereza `is_active`), `commitment-warnings` (Krok B, D29), `warranty-expiring` (D27),
+`settlement-auto-accept`, `offer-expiry-reminders`, `goal-review-due`, `requisition-order-overdue`,
+`telemetry-sync`.
+
+**To nie regresja — defekt od początku.** `git log -S'api/cron'` na `middleware.ts` i
+`lib/auth/routes.ts` nie pokazuje żadnego commita, w którym ta ścieżka byłaby publiczna. Mechanizmy
+działały wyłącznie wtedy, gdy odpalano je ręcznie z zalogowanej przeglądarki albo przez SQL — czyli
+dokładnie tak, jak weryfikowano je w tej i poprzednich turach. **Weryfikacja funkcji SQL w transakcji
+nigdy nie sprawdzała, czy cron ją w ogóle wywoła.** To luka w moim sposobie weryfikacji, nie tylko w
+kodzie.
+
+**Dowód naprawy (nie założenie).** Odpowiedzi HTTP przed deployem: 405 o 10:00, 10:05, 10:10, 10:15,
+10:20. Pierwsza po deployu, 10:25: **200** z realną treścią (`telemetry-sync` faktycznie odpytał
+miniserver Loxone). Następnie ręczne odpalenie `recompute-active-projects` → osie wypełnione dla
+22 projektów (nasza) i 8 (kliencka) z 122, przy 0 przed naprawą.
+
+**Wniosek na przyszłość:** przy każdym nowym cronie sprawdzać `net._http_response`, nie tylko to, czy
+funkcja SQL/endpoint działa wywołany ręcznie. Zielony test jednostkowy i zielony `execute_sql` nie
+mówią nic o tym, czy harmonogram dosięga aplikacji.
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed
@@ -1827,6 +1870,7 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D36 | Duplikat szablonu „Dom"/„DOM" (literówka w kodzie) | zatwierdzone, zrealizowane — naprawiona literówka + usunięty duplikat (dwukrotnie, drugi raz się odtworzył) |
 | D37 | Kanban ROT — atrybut kolumny w szablonie | zatwierdzone, zrealizowane (migracje 256-257: mechanizm + backfill czterotorowy, 2 ręczne ustawienia zachowane jako nadpisania) |
 | D38 | faza 9A (rejestr zdarzeń + rozdzielone osie) | zatwierdzone, zrealizowane (migracje 258-259); 9B (pytanie dzienne, AI) odłożone jako osobna faza |
+| D39 | naprawa cronów (middleware blokował `/api/cron/*`) | naprawione i zweryfikowane end-to-end — dotyczyło wszystkich 9 cronów, defekt od początku, nie regresja |
 
 ---
 
