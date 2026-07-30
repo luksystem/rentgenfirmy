@@ -17,7 +17,6 @@ import {
   GraduationCap,
   HardHat,
   Home,
-  KeyRound,
   LayoutGrid,
   Link2,
   MessageCircle,
@@ -194,8 +193,6 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "notes", label: "Notatki", icon: StickyNote },
   { id: "documentation", label: "Dokumentacja", icon: FolderOpen },
   { id: "satisfaction", label: "Ocena", icon: Star },
-  { id: "credentials", label: "Hasła", icon: KeyRound },
-  { id: "links", label: "Linki", icon: Link2 },
   { id: "training", label: "Ścieżka szkoleniowa", icon: GraduationCap },
 ];
 
@@ -871,7 +868,6 @@ export function ClientDashboardView({
     if (tab.id === "trades" && !enableTrades) return false;
     if (tab.id === "notes" && !enableMeetingNotes) return false;
     if (tab.id === "satisfaction" && !enableSatisfaction) return false;
-    if (tab.id === "credentials" && !enableCredentials) return false;
     return true;
   });
 
@@ -1423,6 +1419,7 @@ export function ClientDashboardView({
         seedContent={seedContent}
         enableCredentials={enableCredentials}
         enableContent={enableContent}
+        notesSlot={enableMeetingNotes ? renderMeetingNotesPanel() : undefined}
       />
     );
   }

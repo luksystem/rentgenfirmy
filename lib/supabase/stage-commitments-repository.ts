@@ -2,6 +2,7 @@
 import { getSupabase } from "@/lib/supabase/client";
 import type { StageCommitment, StageCommitmentStatus } from "@/lib/stage-commitments/types";
 import type { ResourcePlanItemInput } from "@/lib/resource-plan/types";
+import { addDaysToIsoDate } from "@/lib/rot/review-date";
 import { projectProcessItemPlannedDateUpdate } from "@/lib/supabase/process-item-mappers";
 import { updateProjectProcessCompletion } from "@/lib/supabase/process-repository";
 import { createResourcePlanItem, deleteResourcePlanItem } from "@/lib/supabase/resource-plan-repository";
@@ -71,9 +72,12 @@ export async function planStageCommitment(commitment: StageCommitment): Promise<
   }
   const days = Math.max(1, commitment.effortDays ?? 1);
   const startAt = `${startDateIso}T08:00:00`;
-  const endDate = new Date(`${startDateIso}T00:00:00`);
-  endDate.setDate(endDate.getDate() + (days - 1));
-  const endAt = `${endDate.toISOString().slice(0, 10)}T16:00:00`;
+  // UTC-safe arytmetyka dat — `new Date("...T00:00:00")` parsuje się w czasie LOKALNYM, a
+  // `.toISOString()` konwertuje na UTC. W Europe/Warsaw (UTC+1/+2) północ lokalna wypada w
+  // poprzednim dniu UTC, więc przy effortDays=1 (brak przesunięcia) data końcowa wychodziła
+  // wcześniejsza niż początkowa i wpadała w `check(end_at >= start_at)` — dokładnie ten sam błąd,
+  // który już raz naprawiono w computeSuggestedReviewDate (lib/rot/review-date.ts).
+  const endAt = `${addDaysToIsoDate(startDateIso, days - 1)}T16:00:00`;
 
   const input: ResourcePlanItemInput = {
     projectId: commitment.projectId,

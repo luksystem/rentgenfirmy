@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   FileText,
   FolderOpen,
@@ -8,6 +8,7 @@ import {
   KeyRound,
   Link2,
   LayoutGrid,
+  StickyNote,
 } from "lucide-react";
 import { ProjectContentPanel } from "@/components/dashboard/project-content-panel";
 import { ProjectDocumentsPanel } from "@/components/dashboard/project-documents-panel";
@@ -18,12 +19,13 @@ import type { SystemCredentialMeta } from "@/lib/dashboard/system-credentials-ty
 import type { ProjectDocument } from "@/lib/documents/types";
 import { cn, formatDateTime } from "@/lib/utils";
 
-type DocumentationSubTab = "view" | "documents" | "photos" | "credentials" | "links";
+type DocumentationSubTab = "view" | "documents" | "photos" | "notes" | "credentials" | "links";
 
 const SUB_TABS: Array<{ id: DocumentationSubTab; label: string; icon: typeof FolderOpen }> = [
   { id: "view", label: "Widok", icon: LayoutGrid },
   { id: "documents", label: "Dokumenty", icon: FileText },
   { id: "photos", label: "Zdjęcia", icon: ImageIcon },
+  { id: "notes", label: "Notatki", icon: StickyNote },
   { id: "credentials", label: "Hasła", icon: KeyRound },
   { id: "links", label: "Linki", icon: Link2 },
 ];
@@ -101,6 +103,7 @@ export function ProjectDocumentationPanel({
   seedContent,
   enableCredentials = true,
   enableContent = true,
+  notesSlot,
 }: {
   projectId: string;
   clientId: string;
@@ -111,6 +114,9 @@ export function ProjectDocumentationPanel({
   seedContent?: ProjectDashboardContent[];
   enableCredentials?: boolean;
   enableContent?: boolean;
+  /** Zawartość podzakładki "Notatki" — dostarczana przez rodzica (dzieli logikę odczytu z
+   *  samodzielną zakładką "Notatki" w głównym menu, żeby nie duplikować śledzenia przeczytania). */
+  notesSlot?: ReactNode;
 }) {
   const [subTab, setSubTab] = useState<DocumentationSubTab>("view");
   const { items: media, loading: mediaLoading } = useDocumentationMedia(projectId, publicToken);
@@ -125,6 +131,7 @@ export function ProjectDocumentationPanel({
       <div className="mb-4 flex w-full min-w-0 max-w-full gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {SUB_TABS.filter((tab) => tab.id !== "credentials" || enableCredentials)
           .filter((tab) => tab.id !== "links" || enableContent)
+          .filter((tab) => tab.id !== "notes" || Boolean(notesSlot))
           .map((tab) => {
             const Icon = tab.icon;
             const active = subTab === tab.id;
@@ -207,6 +214,16 @@ export function ProjectDocumentationPanel({
           </div>
 
           <div className="flex flex-wrap gap-2 border-t border-border/60 pt-3">
+            {notesSlot ? (
+              <button
+                type="button"
+                className="flex items-center gap-1.5 rounded-full border border-border/70 px-3 py-1.5 text-xs text-muted hover:text-foreground"
+                onClick={() => setSubTab("notes")}
+              >
+                <StickyNote className="h-3.5 w-3.5" />
+                Notatki
+              </button>
+            ) : null}
             {enableCredentials ? (
               <button
                 type="button"
@@ -274,6 +291,8 @@ export function ProjectDocumentationPanel({
           <p className="text-sm text-muted">Brak zdjęć w projekcie.</p>
         )
       ) : null}
+
+      {subTab === "notes" && notesSlot ? notesSlot : null}
 
       {subTab === "credentials" && enableCredentials ? (
         <ProjectSystemCredentialsPanel

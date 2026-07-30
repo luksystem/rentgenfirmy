@@ -45,7 +45,8 @@ function isProcessItemKind(value: string): value is ProcessItemKind {
     value === "protocol" ||
     value === "settlement" ||
     value === "kanban" ||
-    value === "note"
+    value === "note" ||
+    value === "snapshot"
   );
 }
 
