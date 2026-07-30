@@ -28,6 +28,7 @@ export function ProcessItemRepairDialog({
 }) {
   const fetchOrphanedProcessItems = useProcessStore((state) => state.fetchOrphanedProcessItems);
   const reassignOrphanedProcessItem = useProcessStore((state) => state.reassignOrphanedProcessItem);
+  const deleteOrphanedProcessItem = useProcessStore((state) => state.deleteOrphanedProcessItem);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +37,7 @@ export function ProcessItemRepairDialog({
   const [kanbanTaskCounts, setKanbanTaskCounts] = useState<Record<string, number>>({});
   const [selectedTarget, setSelectedTarget] = useState<Record<string, string>>({});
   const [connectingId, setConnectingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -91,6 +93,28 @@ export function ProcessItemRepairDialog({
       setError(connectError instanceof Error ? connectError.message : "Nie udało się podłączyć elementu.");
     } finally {
       setConnectingId(null);
+    }
+  }
+
+  async function handleDelete(orphan: ProjectProcessItem) {
+    const taskCount = kanbanTaskCounts[orphan.id] ?? 0;
+    const confirmed = window.confirm(
+      orphan.kind === "kanban" && taskCount > 0
+        ? `Usunąć ten element na stałe wraz z tablicą kanban (${taskCount} zadań)? Tej operacji nie można cofnąć.`
+        : "Usunąć ten element na stałe? Tej operacji nie można cofnąć.",
+    );
+    if (!confirmed) {
+      return;
+    }
+    setDeletingId(orphan.id);
+    setError(null);
+    try {
+      await deleteOrphanedProcessItem(projectId, orphan.id);
+      setOrphans((current) => current.filter((item) => item.id !== orphan.id));
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Nie udało się usunąć elementu.");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -154,6 +178,21 @@ export function ProcessItemRepairDialog({
                     Brak elementów tego samego typu w aktualnym szablonie.
                   </p>
                 )}
+                <div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    disabled={deletingId === orphan.id}
+                    onClick={() => void handleDelete(orphan)}
+                  >
+                    {deletingId === orphan.id ? "Usuwanie…" : "Usuń na stałe"}
+                  </Button>
+                  <p className="mt-1 text-[11px] text-muted">
+                    Usuwa element i jego dane bezpowrotnie — na własną odpowiedzialność, gdy nie ma
+                    do czego go podłączyć.
+                  </p>
+                </div>
               </div>
             );
           })}

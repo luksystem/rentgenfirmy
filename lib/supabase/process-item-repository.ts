@@ -461,3 +461,37 @@ export async function reassignProjectProcessItemToTemplateItem(
 
   return rowToProjectProcessItem(updated);
 }
+
+/**
+ * Trwale usuwa osierocony element (bez miejsca w aktualnym szablonie) razem z jego danymi
+ * (checklista / tablica kanban kaskadowo przez FK). Do użycia, gdy nie ma pasującego miejsca do
+ * podłączenia — świadoma decyzja administratora, nieodwracalna.
+ */
+export async function deleteOrphanedProjectProcessItem(
+  supabase: SupabaseClient,
+  projectId: string,
+  orphanItemId: string,
+) {
+  const { data: orphanRow, error: orphanError } = await supabase
+    .from("project_process_items")
+    .select("id")
+    .eq("id", orphanItemId)
+    .eq("project_id", projectId)
+    .maybeSingle();
+
+  if (orphanError) {
+    throw new Error(orphanError.message);
+  }
+  if (!orphanRow) {
+    throw new Error("Nie znaleziono elementu do usunięcia.");
+  }
+
+  const { error: deleteError } = await supabase
+    .from("project_process_items")
+    .delete()
+    .eq("id", orphanItemId);
+
+  if (deleteError) {
+    throw new Error(deleteError.message);
+  }
+}

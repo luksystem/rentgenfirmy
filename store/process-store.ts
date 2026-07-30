@@ -138,6 +138,7 @@ type ProcessStore = {
     orphanItemId: string,
     targetTemplateItemId: string,
   ) => Promise<void>;
+  deleteOrphanedProcessItem: (projectId: string, orphanItemId: string) => Promise<void>;
   loadTeamProfiles: () => Promise<void>;
   ensureTemplateForProjectType: (projectType: string) => Promise<ProcessTemplate>;
   saveTemplate: (template: ProcessTemplate) => Promise<void>;
@@ -462,6 +463,30 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
 
     if (!response.ok || !payload.itemsByTemplateId) {
       throw new Error(payload.error ?? "Nie udało się przełączyć elementu.");
+    }
+
+    set((state) => ({
+      projectProcessItems: {
+        ...state.projectProcessItems,
+        [projectId]: payload.itemsByTemplateId!,
+      },
+    }));
+  },
+
+  deleteOrphanedProcessItem: async (projectId, orphanItemId) => {
+    const response = await fetch(`/api/projects/${projectId}/process/reassign-item`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orphanItemId, action: "delete" }),
+    });
+    const payload = (await response.json()) as {
+      itemsByTemplateId?: Record<string, ProjectProcessItem>;
+      error?: string;
+    };
+
+    if (!response.ok || !payload.itemsByTemplateId) {
+      throw new Error(payload.error ?? "Nie udało się usunąć elementu.");
     }
 
     set((state) => ({

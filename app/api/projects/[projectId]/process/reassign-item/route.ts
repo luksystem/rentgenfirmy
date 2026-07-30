@@ -4,6 +4,7 @@ import { requireAdministratorProfile } from "@/lib/auth/api-auth";
 import { jsonError } from "@/lib/auth/http-error";
 import { flattenProcessItems } from "@/lib/process/types";
 import {
+  deleteOrphanedProjectProcessItem,
   fetchOrphanedProjectProcessItems,
   fetchProjectProcessItems,
   mapProjectProcessItemsByTemplateId,
@@ -69,19 +70,28 @@ export async function POST(
     const body = (await request.json()) as {
       orphanItemId?: string;
       targetTemplateItemId?: string;
+      action?: "delete";
     };
 
-    if (!body.orphanItemId || !body.targetTemplateItemId) {
+    if (!body.orphanItemId) {
       return NextResponse.json({ error: "Brak wymaganych pól." }, { status: 400 });
     }
 
     const supabase = getSupabaseServer();
-    await reassignProjectProcessItemToTemplateItem(
-      supabase,
-      projectId,
-      body.orphanItemId,
-      body.targetTemplateItemId,
-    );
+
+    if (body.action === "delete") {
+      await deleteOrphanedProjectProcessItem(supabase, projectId, body.orphanItemId);
+    } else {
+      if (!body.targetTemplateItemId) {
+        return NextResponse.json({ error: "Brak wymaganych pól." }, { status: 400 });
+      }
+      await reassignProjectProcessItemToTemplateItem(
+        supabase,
+        projectId,
+        body.orphanItemId,
+        body.targetTemplateItemId,
+      );
+    }
 
     const items = await fetchProjectProcessItems(projectId);
     return NextResponse.json({ itemsByTemplateId: mapProjectProcessItemsByTemplateId(items) });
