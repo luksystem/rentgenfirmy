@@ -214,6 +214,7 @@ function AgreementCard({
   const approvalHint = useAgreementApprovalHint(agreement);
   const costLabel = formatAgreementCost(agreement);
   const isBlocking = isAgreementBlockingActive(agreement);
+  const [hasExtraApproverRoles, setHasExtraApproverRoles] = useState(false);
 
   useEffect(() => {
     if (!defaultExpanded || !cardRef.current) {
@@ -221,6 +222,27 @@ function AgreementCard({
     }
     cardRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [defaultExpanded, agreement.id]);
+
+  useEffect(() => {
+    if (mode !== "team" || !["draft", "rejected"].includes(agreement.status)) {
+      return;
+    }
+    let cancelled = false;
+    void fetchAgreementApproverRoles(agreement.id)
+      .then((roles) => {
+        if (!cancelled) {
+          setHasExtraApproverRoles(roles.some((role) => !role.isTeamRole && !role.isClientRole));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHasExtraApproverRoles(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, agreement.id, agreement.status, agreement.updatedAt]);
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -319,16 +341,18 @@ function AgreementCard({
 
       {mode === "team" && agreement.status === "draft" ? (
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <Button
-            type="button"
-            size="sm"
-            className="w-full sm:w-auto"
-            disabled={busy}
-            onClick={() => void run(() => onSubmit(agreement.id))}
-          >
-            <Send className="mr-2 h-3.5 w-3.5" />
-            Wyślij do akceptacji klienta
-          </Button>
+          {!hasExtraApproverRoles ? (
+            <Button
+              type="button"
+              size="sm"
+              className="w-full sm:w-auto"
+              disabled={busy}
+              onClick={() => void run(() => onSubmit(agreement.id))}
+            >
+              <Send className="mr-2 h-3.5 w-3.5" />
+              Wyślij do akceptacji klienta
+            </Button>
+          ) : null}
           {onEdit ? (
             <Button
               type="button"

@@ -15,6 +15,8 @@ import {
   type AgreementCommentAuthorSource,
 } from "@/lib/dashboard/agreement-collaboration-types";
 import { formatAgreementCost } from "@/lib/dashboard/agreement-types";
+import { getUserDisplayName, hasFullAppAccess } from "@/lib/auth/types";
+import { useAuthStore } from "@/store/auth-store";
 import {
   addAgreementComment,
   fetchAgreementCollaboration,
@@ -76,6 +78,8 @@ export function AgreementCollaborationPanel({
   const [formError, setFormError] = useState<string | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const { candidates, mentionOptions } = useTeamMentionOptions(mode === "team" && !publicToken);
+  const currentProfile = useAuthStore((state) => state.profile);
+  const canApproveTeamRole = Boolean(currentProfile && hasFullAppAccess(currentProfile.role));
 
   const effectiveAuthorName = publicToken ? authorName.trim() : responderName.trim() || authorName.trim();
   const identityReady =
@@ -183,6 +187,17 @@ export function AgreementCollaborationPanel({
     [bundle],
   );
 
+  const pendingTeamApprovalBlockedForViewer = useMemo(() => {
+    if (!bundle || phase !== "awaiting_approvals" || mode !== "team" || canApproveTeamRole) {
+      return null;
+    }
+    return (
+      bundle.approvals.find(
+        (entry) => entry.status === "pending" && entry.role && isTeamApproverRole(entry.role),
+      ) ?? null
+    );
+  }, [bundle, mode, phase, canApproveTeamRole]);
+
   const pendingApprovalForViewer = useMemo(() => {
     if (!bundle || phase !== "awaiting_approvals") {
       return null;
@@ -193,6 +208,9 @@ export function AgreementCollaborationPanel({
       );
     }
     if (mode === "team") {
+      if (!canApproveTeamRole) {
+        return null;
+      }
       return (
         bundle.approvals.find(
           (entry) => entry.status === "pending" && entry.role && isTeamApproverRole(entry.role),
@@ -205,7 +223,7 @@ export function AgreementCollaborationPanel({
       );
     }
     return null;
-  }, [bundle, mode, phase, selectedRoleId]);
+  }, [bundle, mode, phase, selectedRoleId, canApproveTeamRole]);
 
   const notifyChanged = useCallback(async () => {
     await refresh();
@@ -355,7 +373,8 @@ export function AgreementCollaborationPanel({
     } else {
       const next = await respondToAgreementApproval(agreementId, pendingApprovalForViewer.roleId, {
         accepted,
-        respondedByName: effectiveAuthorName,
+        respondedByName: currentProfile ? getUserDisplayName(currentProfile) : effectiveAuthorName,
+        respondedByProfileId: currentProfile?.id,
         responseNote: responseNote,
       });
       if (
@@ -438,6 +457,10 @@ export function AgreementCollaborationPanel({
   const displayAgreement = bundle.activeVersion ?? bundle.agreement;
   const costLabel = formatAgreementCost(displayAgreement);
   const agreementStatus = bundle.agreement.status;
+  // Prosty "Wyślij do akceptacji klienta" (AgreementCard) wystarcza, gdy role akceptacji to tylko
+  // Zespół + Klient. Ten przycisk (wersjonowanie + osobne akceptacje per rola) ma sens tylko, gdy
+  // dochodzi dodatkowa rola (np. branża) - inaczej oba przyciski robią to samo i mylą.
+  const hasExtraApproverRoles = bundle.roles.some((role) => !role.isTeamRole && !role.isClientRole);
   const canOpenDiscussion =
     !bundle.agreement.discussionOpen && agreementStatus !== "cancelled";
   const isReopenDiscussion =
@@ -493,7 +516,7 @@ export function AgreementCollaborationPanel({
             </Button>
           ) : null}
           {!bundle.agreement.discussionOpen &&
-          (phase === "draft" || phase === "rejected") ? (
+          (phase === "rejected" || (phase === "draft" && hasExtraApproverRoles)) ? (
             <Button
               type="button"
               size="sm"
@@ -616,6 +639,15 @@ export function AgreementCollaborationPanel({
           >
             Wyślij komentarz
           </Button>
+        </div>
+      ) : null}
+
+      {pendingTeamApprovalBlockedForViewer ? (
+        <div className="grid gap-1 rounded-xl border border-border/70 bg-surface-muted/20 p-3">
+          <p className="text-sm font-medium text-foreground">Akceptacja wewnętrzna (Administrator)</p>
+          <p className="text-xs text-muted">
+            Wymaga roli Administrator lub Manager — Twoje konto nie może teraz zaakceptować.
+          </p>
         </div>
       ) : null}
 

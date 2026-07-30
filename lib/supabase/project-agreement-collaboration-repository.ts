@@ -190,6 +190,7 @@ function rowToApproval(row: {
   role_id: string;
   status: string;
   responded_by_name: string | null;
+  responded_by_profile_id?: string | null;
   response_note: string | null;
   responded_at: string | null;
 }): AgreementApproval {
@@ -199,6 +200,7 @@ function rowToApproval(row: {
     roleId: row.role_id,
     status: row.status as AgreementApproval["status"],
     respondedByName: row.responded_by_name,
+    respondedByProfileId: row.responded_by_profile_id ?? null,
     responseNote: row.response_note,
     respondedAt: row.responded_at,
   };
@@ -768,6 +770,8 @@ export async function respondToAgreementApproval(
     accepted: boolean;
     respondedByName: string;
     responseNote?: string;
+    /** Profil pracownika odpowiadajacego jako rola zespolowa - wymagane przez RLS (admin/manager). */
+    respondedByProfileId?: string;
   },
 ) {
   const supabase = getSupabase();
@@ -784,6 +788,7 @@ export async function respondToAgreementApproval(
     .update({
       status: input.accepted ? "accepted" : "rejected",
       responded_by_name: input.respondedByName.trim() || "Użytkownik",
+      responded_by_profile_id: input.respondedByProfileId ?? null,
       response_note: input.responseNote?.trim() || null,
       responded_at: now,
     })

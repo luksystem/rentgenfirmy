@@ -1237,6 +1237,7 @@ export type ProjectAgreementApprovalRow = {
   role_id: string;
   status: string;
   responded_by_name: string | null;
+  responded_by_profile_id: string | null;
   response_note: string | null;
   responded_at: string | null;
 };

@@ -102,6 +102,8 @@ export type AgreementApproval = {
   roleId: string;
   status: AgreementApprovalStatus;
   respondedByName: string | null;
+  /** Powiazany profil pracownika (tylko rola zespolowa) - potwierdza tozsamosc akceptujacego. */
+  respondedByProfileId: string | null;
   responseNote: string | null;
   respondedAt: string | null;
   role?: AgreementApproverRole;
