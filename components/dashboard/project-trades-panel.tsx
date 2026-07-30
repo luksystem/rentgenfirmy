@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Pencil, Plus, Settings, Trash2 } from "lucide-react";
+import { Pencil, Plus, RefreshCw, Settings, Trash2 } from "lucide-react";
 import { emptyTradeInput, TradeFormFields } from "@/components/dashboard/trade-form-fields";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +17,9 @@ import type { TradeCatalogItem } from "@/lib/field-options";
 import { findTradeCatalogItem } from "@/lib/field-options";
 import { tradeCatalogItemToProjectTradeInput } from "@/lib/trades/catalog-location";
 import type { TradeCompanyItem } from "@/lib/trades/company-types";
+import { isAdministratorRole } from "@/lib/auth/types";
 import { useAppStore } from "@/store/app-store";
+import { useAuthStore } from "@/store/auth-store";
 import { useProjectTradeStore } from "@/store/project-trade-store";
 
 const EMPTY_TRADES: ProjectTrade[] = [];
@@ -35,13 +37,18 @@ export function ProjectTradesPanel({
   const loading = useProjectTradeStore((state) => state.loadingProjects[projectId]);
   const ensureTrades = useProjectTradeStore((state) => state.ensureTrades);
   const seedProjectTrades = useProjectTradeStore((state) => state.seedProjectTrades);
+  const seedDefaultTrades = useProjectTradeStore((state) => state.seedDefaultTrades);
   const addTrade = useProjectTradeStore((state) => state.addTrade);
   const updateTrade = useProjectTradeStore((state) => state.updateTrade);
   const removeTrade = useProjectTradeStore((state) => state.removeTrade);
   const fieldOptions = useAppStore((state) => state.fieldOptions);
   const refreshFieldOptions = useAppStore((state) => state.refreshFieldOptions);
+  const currentProfile = useAuthStore((state) => state.profile);
+  const isAdmin = Boolean(currentProfile && isAdministratorRole(currentProfile.role));
   const [categories, setCategories] = useState<TradeCatalogItem[]>(fieldOptions.tradeCatalogItems);
   const [companyPool, setCompanyPool] = useState<TradeCompanyItem[]>(fieldOptions.tradeCompanies ?? []);
+  const [syncingDefaults, setSyncingDefaults] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const trades = storeTrades;
   const isLoading = loading && trades.length === 0;
 
@@ -116,6 +123,26 @@ export function ProjectTradesPanel({
     setDialogOpen(true);
   }
 
+  async function handleSyncDefaults() {
+    setSyncingDefaults(true);
+    setSyncMessage(null);
+    try {
+      const defaults = fieldOptions.tradeCatalogItems.filter((item) => item.isDefaultInProject);
+      const created = await seedDefaultTrades(projectId, defaults);
+      setSyncMessage(
+        created.length > 0
+          ? `Dodano brakujące domyślne branże (${created.length}): ${created.map((trade) => trade.name).join(", ")}.`
+          : "Wszystkie domyślne branże z katalogu są już dodane do tego projektu.",
+      );
+    } catch (syncError) {
+      setSyncMessage(
+        syncError instanceof Error ? syncError.message : "Nie udało się wczytać domyślnych branż.",
+      );
+    } finally {
+      setSyncingDefaults(false);
+    }
+  }
+
   async function handleSave() {
     if (!form.name.trim()) {
       setError("Podaj nazwę branży.");
@@ -154,6 +181,18 @@ export function ProjectTradesPanel({
               </Link>
             </Button>
           ) : null}
+          {mode === "team" && isAdmin ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={syncingDefaults}
+              onClick={() => void handleSyncDefaults()}
+            >
+              <RefreshCw className="mr-1 h-3.5 w-3.5" />
+              {syncingDefaults ? "Wczytywanie…" : "Wczytaj domyślne z katalogu"}
+            </Button>
+          ) : null}
           <Button type="button" size="sm" className="shrink-0" onClick={() => openCreate()}>
             <Plus className="mr-2 h-4 w-4" />
             Dodaj wykonawcę
@@ -161,6 +200,7 @@ export function ProjectTradesPanel({
         </div>
       </div>
 
+      {syncMessage ? <p className="text-sm text-muted">{syncMessage}</p> : null}
       {error && !dialogOpen ? <p className="text-sm text-rose-400">{error}</p> : null}
 
       {isLoading && !trades.length ? (

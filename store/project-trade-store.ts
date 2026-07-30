@@ -51,7 +51,7 @@ type ProjectTradeStore = {
   loadingProjects: Record<string, boolean>;
   ensureTrades: (projectId: string, options?: { force?: boolean }) => Promise<ProjectTrade[]>;
   seedProjectTrades: (projectId: string, trades: ProjectTrade[]) => void;
-  seedDefaultTrades: (projectId: string, catalogItems: TradeCatalogItem[]) => Promise<void>;
+  seedDefaultTrades: (projectId: string, catalogItems: TradeCatalogItem[]) => Promise<ProjectTrade[]>;
   addTrade: (projectId: string, input: ProjectTradeInput) => Promise<void>;
   updateTrade: (projectId: string, tradeId: string, input: ProjectTradeInput) => Promise<void>;
   removeTrade: (projectId: string, tradeId: string) => Promise<void>;
@@ -71,10 +71,11 @@ export const useProjectTradeStore = create<ProjectTradeStore>((set, get) => ({
   seedDefaultTrades: async (projectId, catalogItems) => {
     const created = await seedDefaultProjectTrades(projectId, catalogItems);
     if (created.length === 0) {
-      return;
+      return created;
     }
     const list = [...(get().byProject[projectId] ?? []), ...created];
     set({ byProject: { ...get().byProject, [projectId]: list } });
+    return created;
   },
 
   ensureTrades: async (projectId, options) => {
