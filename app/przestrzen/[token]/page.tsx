@@ -24,6 +24,7 @@ type PublicDashboardPayload = {
   projects: Project[];
   initialProjectId: string;
   processProgress: { percent: number; completed: number; total: number } | null;
+  hasHiddenProcessItems: boolean;
   process: ProjectProcess | null;
   template: ProcessTemplate | null;
   agreements: ProjectClientAgreement[];
@@ -120,6 +121,7 @@ function PublicDashboardPageContent() {
   const [processProgress, setProcessProgress] = useState<
     PublicDashboardPayload["processProgress"] | undefined
   >(undefined);
+  const [hasHiddenProcessItems, setHasHiddenProcessItems] = useState(false);
   const [agreements, setAgreements] = useState<ProjectClientAgreement[]>([]);
   const [changeRequests, setChangeRequests] = useState<ProjectChangeRequest[]>([]);
   const [offersGrossTotal, setOffersGrossTotal] = useState(0);
@@ -179,6 +181,7 @@ function PublicDashboardPageContent() {
     setProcess(payload.process);
     setTemplate(payload.template);
     setProcessProgress(payload.processProgress);
+    setHasHiddenProcessItems(payload.hasHiddenProcessItems ?? false);
     setAgreements(payload.agreements);
     setChangeRequests(payload.changeRequests ?? []);
     setOffersGrossTotal(payload.offersGrossTotal ?? 0);
@@ -469,6 +472,7 @@ function PublicDashboardPageContent() {
           process={process}
           template={template}
           processProgress={processProgress}
+          hasHiddenProcessItems={hasHiddenProcessItems}
           seedAgreements={features.agreements ? agreements : undefined}
           seedChangeRequests={features.changeRequests ? changeRequests : undefined}
           seedOffersGrossTotal={offersGrossTotal}

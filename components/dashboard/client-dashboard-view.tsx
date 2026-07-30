@@ -265,6 +265,7 @@ export function ClientDashboardView({
   enableCredentials = true,
   enableContent = true,
   processProgress,
+  hasHiddenProcessItems = false,
   seedAgreements,
   seedChangeRequests,
   seedOffersGrossTotal,
@@ -313,6 +314,9 @@ export function ClientDashboardView({
   enableCredentials?: boolean;
   enableContent?: boolean;
   processProgress?: { percent: number; completed: number; total: number } | null;
+  /** Procent w `processProgress` liczy się z całego procesu — ta flaga włącza notatkę przy nim,
+   *  że część elementów jest niewidoczna na liście poniżej (checkbox "Widoczne dla klienta"). */
+  hasHiddenProcessItems?: boolean;
   seedAgreements?: ProjectClientAgreement[];
   seedChangeRequests?: ProjectChangeRequest[];
   /** Suma zaakceptowanych ofert (widok publiczny) — liczona po stronie serwera. */
@@ -1196,6 +1200,7 @@ export function ClientDashboardView({
         selectedProjectId={selectedProjectId}
         onProjectChange={onProjectChange}
         progress={progress}
+        hasHiddenProcessItems={hasHiddenProcessItems}
         agreements={agreementSource}
         pendingAgreementsCount={pendingOtherAgreementsCount}
         pendingOffersCount={pendingOffersCount}
@@ -1242,6 +1247,7 @@ export function ClientDashboardView({
       <ClientDashboardOverview
         project={selectedProject}
         progress={progress}
+        hasHiddenProcessItems={hasHiddenProcessItems}
         agreements={agreementSource}
         pendingAgreementsCount={pendingOtherAgreementsCount}
         pendingWarrantyCount={pendingWarrantyCount}

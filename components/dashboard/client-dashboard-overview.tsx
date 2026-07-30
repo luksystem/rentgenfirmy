@@ -20,6 +20,7 @@ import type { Project } from "@/lib/types";
 export function ClientDashboardOverview({
   project,
   progress,
+  hasHiddenProcessItems = false,
   agreements,
   pendingAgreementsCount,
   pendingWarrantyCount,
@@ -30,6 +31,9 @@ export function ClientDashboardOverview({
 }: {
   project: Project;
   progress: { percent: number; completed: number; total: number } | null;
+  /** Procent liczy się z całego procesu — pokazuje notatkę, że część elementów jest niewidoczna
+   *  na liście poniżej (checkbox "Widoczne dla klienta" w szablonie). */
+  hasHiddenProcessItems?: boolean;
   agreements: ProjectClientAgreement[];
   pendingAgreementsCount: number;
   pendingWarrantyCount: number;
@@ -183,6 +187,12 @@ export function ClientDashboardOverview({
               <p className="mt-1 text-sm text-muted">
                 {progress.completed} / {progress.total} elementów ukończonych
               </p>
+              {hasHiddenProcessItems ? (
+                <p className="mt-1 text-xs text-muted">
+                  Procent uwzględnia cały proces — część elementów nie jest pokazywana na liście
+                  poniżej.
+                </p>
+              ) : null}
               {projectDurationLabel !== "—" ? (
                 <p className="mt-1 text-sm text-muted">
                   Czas trwania projektu:{" "}

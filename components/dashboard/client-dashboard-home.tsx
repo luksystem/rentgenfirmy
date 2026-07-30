@@ -75,10 +75,12 @@ const warrantyCardToneClass: Record<ReturnType<typeof getWarrantyStatus>["tone"]
 function ProcessProgressCard({
   progress,
   project,
+  hasHiddenProcessItems = false,
   onOpenProcess,
 }: {
   progress: { percent: number; completed: number; total: number };
   project: Project;
+  hasHiddenProcessItems?: boolean;
   onOpenProcess?: () => void;
 }) {
   const durationLabel = formatProjectDuration(project);
@@ -126,6 +128,11 @@ function ProcessProgressCard({
             <span className="font-semibold">{progress.completed}</span>
             <span className="text-muted"> / {progress.total} elementów ukończonych</span>
           </p>
+          {hasHiddenProcessItems ? (
+            <p className="mt-1 text-xs text-muted">
+              Procent uwzględnia cały proces — część elementów nie jest pokazywana na liście poniżej.
+            </p>
+          ) : null}
           {durationLabel !== "—" ? (
             <p className="mt-1 text-xs text-muted">
               Czas trwania projektu:{" "}
@@ -384,6 +391,7 @@ export function ClientDashboardHome({
   selectedProjectId,
   onProjectChange,
   progress,
+  hasHiddenProcessItems = false,
   agreements,
   pendingAgreementsCount,
   pendingOffersCount = 0,
@@ -414,6 +422,9 @@ export function ClientDashboardHome({
   selectedProjectId: string;
   onProjectChange?: (projectId: string) => void;
   progress: { percent: number; completed: number; total: number } | null;
+  /** Procent liczy się z całego procesu — pokazuje notatkę, że część elementów jest niewidoczna
+   *  na liście poniżej (checkbox "Widoczne dla klienta" w szablonie). */
+  hasHiddenProcessItems?: boolean;
   agreements: ProjectClientAgreement[];
   pendingAgreementsCount: number;
   pendingOffersCount?: number;
@@ -501,6 +512,7 @@ export function ClientDashboardHome({
           <ProcessProgressCard
             progress={progress}
             project={project}
+            hasHiddenProcessItems={hasHiddenProcessItems}
             onOpenProcess={onOpenTab ? () => onOpenTab("process") : undefined}
           />
         ) : (

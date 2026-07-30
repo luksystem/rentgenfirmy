@@ -59,7 +59,11 @@ import {
   settlementTablesExist,
 } from "@/lib/supabase/project-settlement-server";
 import type { ProjectSettlementsBundle } from "@/lib/settlements/types";
-import { filterProcessTemplateForClient, getProcessProgress } from "@/lib/process/types";
+import {
+  filterProcessTemplateForClient,
+  flattenProcessItems,
+  getProcessProgress,
+} from "@/lib/process/types";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
@@ -511,6 +515,9 @@ export type PublicDashboardPayload = {
   projects: Project[];
   initialProjectId: string;
   processProgress: { percent: number; completed: number; total: number } | null;
+  /** Procent liczy się z pełnego procesu (wszystkie elementy) — ta flaga mówi UI, że część
+   *  elementów jest niewidoczna na liście poniżej, więc warto pokazać o tym notatkę. */
+  hasHiddenProcessItems: boolean;
   process: ProjectProcess | null;
   template: ProcessTemplate | null;
   agreements: ProjectClientAgreement[];
@@ -768,6 +775,7 @@ export async function fetchPublicDashboardPayload(
         : (projects[0]?.id ?? "");
 
   let processProgress: PublicDashboardPayload["processProgress"] = null;
+  let hasHiddenProcessItems = false;
   let process: ProjectProcess | null = null;
   let template: ProcessTemplate | null = null;
 
@@ -792,8 +800,13 @@ export async function fetchPublicDashboardPayload(
     process = processRow ? rowToProjectProcess(processRow) : null;
     const rawTemplate = process?.templateSnapshot ?? loadedTemplate;
     template = rawTemplate ? filterProcessTemplateForClient(rawTemplate) : null;
-    if (process && template) {
-      processProgress = getProcessProgress(template, process);
+    if (process && rawTemplate) {
+      // Procent liczony z PEŁNEGO procesu (nie tylko widocznych elementów) — inaczej "100%"
+      // mogłoby pokazywać się klientowi, mimo że realnie zrobiona jest tylko część projektu.
+      processProgress = getProcessProgress(rawTemplate, process);
+      hasHiddenProcessItems = flattenProcessItems(rawTemplate).some(
+        (item) => item.visibleToClient !== true,
+      );
     }
   }
 
@@ -893,6 +906,7 @@ export async function fetchPublicDashboardPayload(
     projects,
     initialProjectId,
     processProgress,
+    hasHiddenProcessItems,
     process,
     template,
     agreements,
