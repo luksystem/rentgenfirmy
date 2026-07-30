@@ -1,35 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server-auth";
 import {
-  listTradePendingAgreementCounts,
-  sendProjectAgreementEmails,
+  previewAgreementEmailServer,
   type AgreementEmailScope,
 } from "@/lib/supabase/agreement-email-server";
-
-export async function GET(
-  _request: Request,
-  context: { params: Promise<{ projectId: string }> },
-) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  try {
-    const { projectId } = await context.params;
-    const pending = await listTradePendingAgreementCounts(projectId);
-    return NextResponse.json({ tradeBatches: pending });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Błąd pobierania podglądu wysyłki." },
-      { status: 500 },
-    );
-  }
-}
 
 export async function POST(
   request: Request,
@@ -46,7 +20,7 @@ export async function POST(
 
   try {
     const { projectId } = await context.params;
-    const body = (await request.json()) as {
+    const body = (await request.json().catch(() => ({}))) as {
       scope?: AgreementEmailScope;
       agreementId?: string;
       tradeId?: string;
@@ -57,7 +31,7 @@ export async function POST(
       return NextResponse.json({ error: "Brak zakresu wysyłki." }, { status: 400 });
     }
 
-    const result = await sendProjectAgreementEmails({
+    const preview = await previewAgreementEmailServer({
       projectId,
       scope: body.scope,
       agreementId: body.agreementId,
@@ -65,10 +39,10 @@ export async function POST(
       note: body.note,
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json(preview);
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Błąd wysyłki e-mail." },
+      { error: error instanceof Error ? error.message : "Błąd przygotowania podglądu." },
       { status: 500 },
     );
   }

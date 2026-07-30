@@ -227,12 +227,23 @@ function agreementsForTrade(
   });
 }
 
-export async function sendProjectAgreementEmails(input: {
+type AgreementEmailTarget = {
+  agreements: ProjectClientAgreement[];
+  recipientEmail: string;
+  recipientName: string;
+  intro: string;
+  subjectPrefix?: string;
+  audience: "client" | "trade";
+  projectName: string;
+  clientPhone: string;
+};
+
+async function resolveAgreementEmailTarget(input: {
   projectId: string;
   scope: AgreementEmailScope;
   agreementId?: string;
   tradeId?: string;
-}) {
+}): Promise<AgreementEmailTarget> {
   const context = await fetchProjectContext(input.projectId);
 
   let agreements: ProjectClientAgreement[] = [];
@@ -363,40 +374,96 @@ export async function sendProjectAgreementEmails(input: {
   }
 
   agreements = await ensurePublicLinks(agreements);
-  const entries = agreements.map(agreementToEmailEntry);
   const subjectPrefix =
     input.scope === "trade_pending" || input.scope === "single_trade"
       ? `[${formatProjectTradeRoleLabel(context.projectTrades.find((t) => t.id === input.tradeId) ?? { name: "Branża", company: "" })}] `
       : undefined;
+  const audience =
+    input.scope === "trade_pending" || input.scope === "single_trade" ? "trade" : "client";
+
+  return {
+    agreements,
+    recipientEmail,
+    recipientName,
+    intro,
+    subjectPrefix,
+    audience,
+    projectName: context.projectName,
+    clientPhone: context.clientPhone,
+  };
+}
+
+/** Buduje treść maila (podgląd) bez wysyłki — do dialogu "podgląd + notatka" przed potwierdzeniem. */
+export async function previewAgreementEmailServer(input: {
+  projectId: string;
+  scope: AgreementEmailScope;
+  agreementId?: string;
+  tradeId?: string;
+  note?: string | null;
+}) {
+  const target = await resolveAgreementEmailTarget(input);
+  const entries = target.agreements.map(agreementToEmailEntry);
 
   const [settings, company] = await Promise.all([
     fetchEmailSettingsServer(),
     resolveCompanyProfileDocumentServer(),
   ]);
 
-  const audience =
-    input.scope === "trade_pending" || input.scope === "single_trade" ? "trade" : "client";
+  const template = buildAgreementDeliveryEmail({
+    recipientName: target.recipientName,
+    projectName: target.projectName,
+    intro: target.intro,
+    entries,
+    subjectPrefix: target.subjectPrefix,
+    settings,
+    company,
+    senderNote: input.note,
+  });
 
-  if (!isEmailAudienceEnabled(settings.routing, "agreement_delivery", audience)) {
+  return {
+    subject: template.subject,
+    html: template.html,
+    to: target.recipientEmail,
+    agreementCount: target.agreements.length,
+  };
+}
+
+export async function sendProjectAgreementEmails(input: {
+  projectId: string;
+  scope: AgreementEmailScope;
+  agreementId?: string;
+  tradeId?: string;
+  note?: string | null;
+}) {
+  const target = await resolveAgreementEmailTarget(input);
+  const entries = target.agreements.map(agreementToEmailEntry);
+
+  const [settings, company] = await Promise.all([
+    fetchEmailSettingsServer(),
+    resolveCompanyProfileDocumentServer(),
+  ]);
+
+  if (!isEmailAudienceEnabled(settings.routing, "agreement_delivery", target.audience)) {
     throw new Error(
-      audience === "trade"
+      target.audience === "trade"
         ? "Wysyłka e-mail do branży jest wyłączona w Ustawieniach e-mail → Kiedy wysyłać."
         : "Wysyłka e-mail do klienta jest wyłączona w Ustawieniach e-mail → Kiedy wysyłać.",
     );
   }
 
   const template = buildAgreementDeliveryEmail({
-    recipientName: recipientName,
-    projectName: context.projectName,
-    intro,
+    recipientName: target.recipientName,
+    projectName: target.projectName,
+    intro: target.intro,
     entries,
-    subjectPrefix,
+    subjectPrefix: target.subjectPrefix,
     settings,
     company,
+    senderNote: input.note,
   });
 
   const result = await sendTransactionalEmail({
-    to: recipientEmail,
+    to: target.recipientEmail,
     subject: template.subject,
     html: template.html,
   });
@@ -410,21 +477,21 @@ export async function sendProjectAgreementEmails(input: {
   // SMS tylko do klienta (nie do branży) i tylko gdy chodzi o pojedyncze ustalenie — przy
   // wysyłce wielu ustaleń naraz nie ma jednego, sensownego linku do podania w SMS.
   if (
-    audience === "client" &&
+    target.audience === "client" &&
     entries.length === 1 &&
-    context.clientPhone.trim() &&
+    target.clientPhone.trim() &&
     isChannelEnabled(settings.routing, "agreement_delivery", "sms")
   ) {
     try {
-      const agreement = agreements[0];
+      const agreement = target.agreements[0];
       const message = renderPlainTemplateString(settings.templates.agreement_delivery.sms, {
         agreement_title: agreement.title,
-        project_name: context.projectName,
+        project_name: target.projectName,
         offer_url: agreement.publicToken ? `${absoluteAppUrl(`/ustalenie/${agreement.publicToken}`)}` : "",
       });
       if (message) {
         await sendSms({
-          phone: context.clientPhone.trim(),
+          phone: target.clientPhone.trim(),
           message,
           metadata: { type: "agreement_delivery", agreementId: agreement.id },
         });
@@ -436,8 +503,8 @@ export async function sendProjectAgreementEmails(input: {
 
   return {
     ok: true as const,
-    recipientEmail,
-    agreementCount: agreements.length,
+    recipientEmail: target.recipientEmail,
+    agreementCount: target.agreements.length,
     subject: template.subject,
   };
 }

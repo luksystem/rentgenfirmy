@@ -1,36 +1,29 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Mail, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  buildAgreementClientMailtoUrl,
-  buildTradeDeliveryLinks,
-} from "@/lib/dashboard/agreement-delivery";
+import { OfferEmailPreviewDialog } from "@/components/service/offer-email-preview-dialog";
+import { buildTradeDeliveryLinks } from "@/lib/dashboard/agreement-delivery";
 import type { ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
 import type { AgreementApproverRole } from "@/lib/dashboard/agreement-collaboration-types";
 import type { ProjectTrade } from "@/lib/dashboard/trade-types";
 import { fetchAgreementApproverRoles } from "@/lib/supabase/project-agreement-collaboration-repository";
 
-async function sendAgreementEmail(
-  projectId: string,
-  payload: {
-    scope: "single" | "single_trade" | "trade_pending" | "client_all_pending";
-    agreementId?: string;
-    tradeId?: string;
-  },
-) {
-  const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/agreements/send-email`, {
+type EmailPreview = { subject: string; html: string; to: string };
+
+async function postJson<T>(url: string, body?: unknown): Promise<T> {
+  const response = await fetch(url, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body ?? {}),
   });
-  const data = (await response.json()) as { error?: string; subject?: string };
+  const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.error ?? "Nie udało się wysłać e-maila.");
+    throw new Error(data?.error ?? "Nie udało się wykonać operacji.");
   }
-  return data;
+  return data as T;
 }
 
 export function AgreementDeliveryActions({
@@ -38,18 +31,23 @@ export function AgreementDeliveryActions({
   agreement,
   trades,
   clientEmail,
-  clientName,
 }: {
   projectId: string;
   agreement: ProjectClientAgreement;
   trades: ProjectTrade[];
   clientEmail?: string | null;
-  clientName?: string | null;
 }) {
   const [roles, setRoles] = useState<AgreementApproverRole[]>([]);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [preview, setPreview] = useState<EmailPreview | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [note, setNote] = useState("");
+  const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (agreement.status !== "pending_client") {
@@ -80,29 +78,17 @@ export function AgreementDeliveryActions({
     [agreement, roles, trades],
   );
 
-  const clientMailto = useMemo(() => {
-    if (!clientEmail?.trim()) {
-      return null;
-    }
-    return buildAgreementClientMailtoUrl({
-      agreement,
-      clientEmail,
-      clientName: clientName ?? undefined,
-    });
-  }, [agreement, clientEmail, clientName]);
-
   const runSend = useCallback(
-    async (key: string, payload: {
-      scope: "single" | "single_trade" | "trade_pending" | "client_all_pending";
-      agreementId?: string;
-      tradeId?: string;
-    }) => {
+    async (key: string, payload: { scope: "single_trade"; agreementId: string; tradeId: string }) => {
       setBusyKey(key);
       setError(null);
       setFeedback(null);
       try {
-        const result = await sendAgreementEmail(projectId, payload);
-        setFeedback(result.subject ? `Wysłano: ${result.subject}` : "E-mail wysłany.");
+        const data = await postJson<{ subject?: string }>(
+          `/api/projects/${encodeURIComponent(projectId)}/agreements/send-email`,
+          payload,
+        );
+        setFeedback(data.subject ? `Wysłano: ${data.subject}` : "E-mail wysłany.");
       } catch (sendError) {
         setError(sendError instanceof Error ? sendError.message : "Błąd wysyłki.");
       } finally {
@@ -112,11 +98,66 @@ export function AgreementDeliveryActions({
     [projectId],
   );
 
+  async function handleOpenPreview() {
+    if (noteDebounceRef.current) {
+      clearTimeout(noteDebounceRef.current);
+    }
+    setError(null);
+    setFeedback(null);
+    setPreviewError(null);
+    setPreview(null);
+    setNote("");
+    setPreviewOpen(true);
+    try {
+      const data = await postJson<EmailPreview>(
+        `/api/projects/${encodeURIComponent(projectId)}/agreements/preview-email`,
+        { scope: "single", agreementId: agreement.id },
+      );
+      setPreview(data);
+    } catch (loadError) {
+      setPreviewError(
+        loadError instanceof Error ? loadError.message : "Nie udało się przygotować podglądu.",
+      );
+    }
+  }
+
+  function handleNoteChange(nextNote: string) {
+    setNote(nextNote);
+    if (noteDebounceRef.current) {
+      clearTimeout(noteDebounceRef.current);
+    }
+    noteDebounceRef.current = setTimeout(() => {
+      void postJson<EmailPreview>(
+        `/api/projects/${encodeURIComponent(projectId)}/agreements/preview-email`,
+        { scope: "single", agreementId: agreement.id, note: nextNote },
+      )
+        .then((data) => setPreview(data))
+        .catch(() => undefined);
+    }, 600);
+  }
+
+  async function handleConfirmSend() {
+    setSending(true);
+    setPreviewError(null);
+    try {
+      const data = await postJson<{ subject?: string }>(
+        `/api/projects/${encodeURIComponent(projectId)}/agreements/send-email`,
+        { scope: "single", agreementId: agreement.id, note },
+      );
+      setFeedback(data.subject ? `Wysłano: ${data.subject}` : "E-mail wysłany.");
+      setPreviewOpen(false);
+    } catch (sendError) {
+      setPreviewError(sendError instanceof Error ? sendError.message : "Nie udało się wysłać maila.");
+    } finally {
+      setSending(false);
+    }
+  }
+
   if (agreement.status !== "pending_client") {
     return null;
   }
 
-  if (!tradeLinks.length && !clientMailto) {
+  if (!tradeLinks.length && !clientEmail?.trim()) {
     return null;
   }
 
@@ -133,28 +174,11 @@ export function AgreementDeliveryActions({
           <Button
             type="button"
             size="sm"
-            variant="secondary"
             className="w-full sm:w-auto"
-            disabled={busyKey !== null}
-            onClick={() =>
-              void runSend("client", { scope: "single", agreementId: agreement.id })
-            }
+            onClick={() => void handleOpenPreview()}
           >
-            {busyKey === "client" ? (
-              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Send className="mr-2 h-3.5 w-3.5" />
-            )}
-            Wyślij HTML do klienta
-          </Button>
-        ) : null}
-
-        {clientMailto ? (
-          <Button type="button" size="sm" variant="outline" className="w-full sm:w-auto" asChild>
-            <a href={clientMailto}>
-              <Mail className="mr-2 h-3.5 w-3.5" />
-              Kopia w kliencie poczty
-            </a>
+            <Send className="mr-2 h-3.5 w-3.5" />
+            Wyślij do klienta
           </Button>
         ) : null}
 
@@ -199,6 +223,17 @@ export function AgreementDeliveryActions({
 
       {feedback ? <p className="text-xs text-emerald-300">{feedback}</p> : null}
       {error ? <p className="text-xs text-rose-300">{error}</p> : null}
+
+      <OfferEmailPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        preview={preview}
+        sending={sending}
+        error={previewError}
+        note={note}
+        onNoteChange={handleNoteChange}
+        onConfirmSend={() => void handleConfirmSend()}
+      />
     </div>
   );
 }

@@ -33,7 +33,6 @@ import {
   type ProjectAgreementStatus,
   type ProjectClientAgreement,
 } from "@/lib/dashboard/agreement-types";
-import { formatPartyName } from "@/lib/party/display-name";
 import { DEFAULT_AGREEMENT_VAT_RATE, normalizeAgreementVatRate } from "@/lib/dashboard/agreement-cost";
 import {
   getAgreementPublicUrl,
@@ -169,7 +168,6 @@ function AgreementCard({
   authorName,
   projectTrades,
   clientEmail,
-  clientName,
   onSubmit,
   onCancel,
   onRespond,
@@ -189,7 +187,6 @@ function AgreementCard({
   authorName: string;
   projectTrades: import("@/lib/dashboard/trade-types").ProjectTrade[];
   clientEmail?: string | null;
-  clientName?: string | null;
   onSubmit: (id: string) => Promise<void>;
   onCancel: (id: string) => Promise<void>;
   onRespond: (
@@ -265,17 +262,19 @@ function AgreementCard({
           ) : null
         }
         preview={
-          <>
-            {agreement.communicationProtocols?.length ? (
-              <p className="text-xs text-muted">
-                Protokoły:{" "}
-                <span className="font-medium text-foreground/90">
-                  {agreement.communicationProtocols.join(", ")}
-                </span>
-              </p>
-            ) : null}
-            <AgreementApprovalResponses agreement={agreement} compact title="" />
-          </>
+          agreement.status === "accepted" ? null : (
+            <>
+              {agreement.communicationProtocols?.length ? (
+                <p className="text-xs text-muted">
+                  Protokoły:{" "}
+                  <span className="font-medium text-foreground/90">
+                    {agreement.communicationProtocols.join(", ")}
+                  </span>
+                </p>
+              ) : null}
+              <AgreementApprovalResponses agreement={agreement} compact title="" />
+            </>
+          )
         }
       >
       <AgreementApprovalResponses agreement={agreement} title="Notatki z akceptacji" />
@@ -315,7 +314,6 @@ function AgreementCard({
           agreement={agreement}
           trades={projectTrades}
           clientEmail={clientEmail}
-          clientName={clientName}
         />
       ) : null}
 
@@ -1073,8 +1071,6 @@ export function ProjectAgreementsPanel({
           projectId={projectId}
           agreements={agreements}
           clientEmail={projectClient?.email}
-          clientName={projectClient ? formatPartyName(projectClient) : undefined}
-          projectName={projects.find((entry) => entry.id === projectId)?.name}
         />
       ) : null}
 
@@ -1087,7 +1083,6 @@ export function ProjectAgreementsPanel({
             authorName={authorName}
             projectTrades={projectTrades}
             clientEmail={projectClient?.email}
-            clientName={projectClient ? formatPartyName(projectClient) : undefined}
             onSubmit={(id) => handleSubmit(id)}
             onCancel={(id) => handleCancel(id)}
             onRespond={(id, input) => handleRespond(id, input)}

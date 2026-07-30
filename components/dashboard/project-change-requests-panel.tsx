@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, Link2, Lock, Pencil, Plus, Send, Trash2, Wallet, X } from "lucide-react";
 import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-collapsible-shell";
 import { AgreementCostFields } from "@/components/dashboard/agreement-cost-fields";
+import { ChangeRequestBatchDeliveryActions } from "@/components/dashboard/change-request-batch-delivery-actions";
+import { OfferEmailPreviewDialog } from "@/components/service/offer-email-preview-dialog";
 import { Button } from "@/components/ui/button";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Field, Input, Textarea } from "@/components/ui/input";
@@ -79,11 +81,29 @@ function canEditChangeRequestContent(entry: ProjectChangeRequest) {
   return ["draft", "pending_client", "rejected"].includes(entry.status);
 }
 
+type ChangeRequestEmailPreview = { subject: string; html: string; to: string };
+
+async function postJson<T>(url: string, body?: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error ?? "Nie udało się wykonać operacji.");
+  }
+  return data as T;
+}
+
 function ChangeRequestCard({
   changeRequest,
   mode,
   authorName,
-  onSubmit,
+  projectId,
+  clientEmail,
+  onSent,
   onRespond,
   onDelete,
   onEdit,
@@ -93,7 +113,9 @@ function ChangeRequestCard({
   changeRequest: ProjectChangeRequest;
   mode: "team" | "client";
   authorName: string;
-  onSubmit: (id: string) => Promise<void>;
+  projectId: string;
+  clientEmail?: string | null;
+  onSent?: () => void | Promise<void>;
   onRespond: (
     id: string,
     input: { accepted: boolean; clientResponseName: string; clientResponseNote?: string },
@@ -110,6 +132,13 @@ function ChangeRequestCard({
   const costLabel = formatChangeRequestCost(changeRequest);
   const isBlocking = isChangeRequestBlockingActive(changeRequest);
 
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [preview, setPreview] = useState<ChangeRequestEmailPreview | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [note, setNote] = useState("");
+  const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (!defaultExpanded || !cardRef.current) {
       return;
@@ -123,6 +152,64 @@ function ChangeRequestCard({
       await action();
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleOpenPreview() {
+    if (noteDebounceRef.current) {
+      clearTimeout(noteDebounceRef.current);
+    }
+    setPreviewError(null);
+    setPreview(null);
+    setNote("");
+    setPreviewOpen(true);
+    try {
+      const data = await postJson<ChangeRequestEmailPreview>(
+        `/api/projects/${encodeURIComponent(projectId)}/change-requests/preview-email`,
+        { scope: "single", changeRequestId: changeRequest.id },
+      );
+      setPreview(data);
+    } catch (loadError) {
+      setPreviewError(
+        loadError instanceof Error ? loadError.message : "Nie udało się przygotować podglądu.",
+      );
+    }
+  }
+
+  function handleNoteChange(nextNote: string) {
+    setNote(nextNote);
+    if (noteDebounceRef.current) {
+      clearTimeout(noteDebounceRef.current);
+    }
+    noteDebounceRef.current = setTimeout(() => {
+      void postJson<ChangeRequestEmailPreview>(
+        `/api/projects/${encodeURIComponent(projectId)}/change-requests/preview-email`,
+        { scope: "single", changeRequestId: changeRequest.id, note: nextNote },
+      )
+        .then((data) => setPreview(data))
+        .catch(() => undefined);
+    }, 600);
+  }
+
+  async function handleConfirmSend() {
+    setSending(true);
+    setPreviewError(null);
+    try {
+      const data = await postJson<{ emailSkipped?: boolean }>(
+        `/api/projects/${encodeURIComponent(projectId)}/change-requests/send-email`,
+        { scope: "single", changeRequestId: changeRequest.id, note },
+      );
+      setPreviewOpen(false);
+      await onSent?.();
+      if (data.emailSkipped) {
+        window.alert(
+          "Zmiana została zgłoszona do klienta, ale e-mail nie został wysłany (brak konfiguracji RESEND_API_KEY). Skopiuj link i wyślij ręcznie.",
+        );
+      }
+    } catch (sendError) {
+      setPreviewError(sendError instanceof Error ? sendError.message : "Nie udało się wysłać maila.");
+    } finally {
+      setSending(false);
     }
   }
 
@@ -179,8 +266,9 @@ function ChangeRequestCard({
               type="button"
               size="sm"
               className="w-full sm:w-auto"
-              disabled={busy}
-              onClick={() => void run(() => onSubmit(changeRequest.id))}
+              disabled={busy || !clientEmail?.trim()}
+              title={!clientEmail?.trim() ? "Uzupełnij e-mail klienta w danych projektu." : undefined}
+              onClick={() => void handleOpenPreview()}
             >
               <Send className="mr-2 h-3.5 w-3.5" />
               Wyślij do akceptacji klienta
@@ -368,6 +456,16 @@ function ChangeRequestCard({
           </div>
         ) : null}
       </AgreementCollapsibleShell>
+      <OfferEmailPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        preview={preview}
+        sending={sending}
+        error={previewError}
+        note={note}
+        onNoteChange={handleNoteChange}
+        onConfirmSend={() => void handleConfirmSend()}
+      />
     </div>
   );
 }
@@ -398,7 +496,6 @@ export function ProjectChangeRequestsPanel({
   const loading = useProjectChangeRequestStore((state) => state.loadingProjects[projectId]);
   const ensureChangeRequests = useProjectChangeRequestStore((state) => state.ensureChangeRequests);
   const createChangeRequest = useProjectChangeRequestStore((state) => state.createChangeRequest);
-  const submitForClient = useProjectChangeRequestStore((state) => state.submitForClient);
   const respond = useProjectChangeRequestStore((state) => state.respond);
   const removeDraft = useProjectChangeRequestStore((state) => state.removeDraft);
   const removeChangeRequest = useProjectChangeRequestStore((state) => state.removeChangeRequest);
@@ -406,7 +503,14 @@ export function ProjectChangeRequestsPanel({
   const updateDraft = useProjectChangeRequestStore((state) => state.updateDraft);
 
   const projects = useAppStore((state) => state.projects);
+  const clients = useAppStore((state) => state.clients);
   const currentProject = useMemo(() => projects.find((entry) => entry.id === projectId), [projects, projectId]);
+  const projectClient = useMemo(() => {
+    if (!currentProject?.clientId) {
+      return null;
+    }
+    return clients.find((entry) => entry.id === currentProject.clientId) ?? null;
+  }, [clients, currentProject]);
 
   const ensureProjectProcess = useProcessStore((state) => state.ensureProjectProcess);
   const processTemplate = useProcessStore((state) =>
@@ -585,10 +689,6 @@ export function ProjectChangeRequestsPanel({
     }
   }
 
-  async function handleSubmit(id: string) {
-    await submitForClient(projectId, id);
-    await refreshLocal();
-  }
 
   async function handleRespond(
     id: string,
@@ -754,6 +854,15 @@ export function ProjectChangeRequestsPanel({
 
       {!isLoading && filtered.length === 0 ? <p className="text-sm text-muted">{emptyMessage}</p> : null}
 
+      {mode === "team" ? (
+        <ChangeRequestBatchDeliveryActions
+          projectId={projectId}
+          changeRequests={changeRequests}
+          clientEmail={projectClient?.email}
+          onSent={refreshLocal}
+        />
+      ) : null}
+
       <div className="grid min-w-0 max-w-full gap-3">
         {filtered.map((entry) => (
           <ChangeRequestCard
@@ -761,7 +870,9 @@ export function ProjectChangeRequestsPanel({
             changeRequest={entry}
             mode={mode}
             authorName={authorName}
-            onSubmit={(id) => handleSubmit(id)}
+            projectId={projectId}
+            clientEmail={projectClient?.email}
+            onSent={refreshLocal}
             onRespond={(id, input) => handleRespond(id, input)}
             onDelete={(id) => handleDelete(id)}
             onEdit={mode === "team" ? (item) => openEditDialog(item) : undefined}

@@ -1,9 +1,9 @@
 import type { CompanyProfileDocument } from "@/lib/company/company-profile-document";
 import {
-  PROJECT_AGREEMENT_CATEGORY_LABELS,
-  formatAgreementCost,
-  type ProjectClientAgreement,
-} from "@/lib/dashboard/agreement-types";
+  formatChangeRequestCost,
+  getChangeRequestPublicPath,
+  type ProjectChangeRequest,
+} from "@/lib/dashboard/change-request-types";
 import {
   defaultEmailSettings,
   type EmailSettings,
@@ -12,56 +12,36 @@ import { buildEmailShell, escapeEmailHtml } from "@/lib/email/layout";
 import { renderEmailSubject, renderEmailTemplateString } from "@/lib/email/template-render";
 import { absoluteAppUrl } from "@/lib/messages/app-url";
 
-export const AGREEMENT_BINDING_DISCLAIMER =
-  defaultEmailSettings().templates.agreement_delivery.disclaimer;
-
-export type AgreementEmailEntry = {
+export type ChangeRequestEmailEntry = {
   title: string;
   body: string;
-  categoryLabel: string;
   costLabel: string | null;
   costNote: string | null;
-  protocols: string[];
-  acceptUrl: string | null;
-  discussUrl: string | null;
+  openUrl: string | null;
 };
 
-export function resolveAgreementPublicUrl(token: string): string {
+export function resolveChangeRequestPublicUrl(token: string): string {
   if (!token) {
     return "";
   }
-  return absoluteAppUrl(`/ustalenie/${token}`);
+  return absoluteAppUrl(getChangeRequestPublicPath(token));
 }
 
-export function agreementAcceptUrl(token: string): string {
-  const url = resolveAgreementPublicUrl(token);
-  return url ? `${url}?focus=accept` : "";
-}
-
-export function agreementDiscussUrl(token: string): string {
-  const url = resolveAgreementPublicUrl(token);
-  return url ? `${url}?focus=discussion` : "";
-}
-
-export function agreementToEmailEntry(
-  agreement: ProjectClientAgreement,
-): AgreementEmailEntry {
-  const costLabel = formatAgreementCost(agreement);
-  const token = agreement.publicEnabled && agreement.publicToken ? agreement.publicToken : null;
+export function changeRequestToEmailEntry(
+  changeRequest: ProjectChangeRequest,
+): ChangeRequestEmailEntry {
+  const costLabel = formatChangeRequestCost(changeRequest);
+  const token = changeRequest.publicEnabled && changeRequest.publicToken ? changeRequest.publicToken : null;
 
   return {
-    title: agreement.title,
-    body: agreement.body,
-    categoryLabel: PROJECT_AGREEMENT_CATEGORY_LABELS[agreement.category],
+    title: changeRequest.title,
+    body: changeRequest.body,
     costLabel,
     costNote:
-      agreement.costNote?.trim() &&
-      agreement.costNote.trim() !== costLabel?.trim()
-        ? agreement.costNote.trim()
-        : agreement.costNote?.trim() || null,
-    protocols: agreement.communicationProtocols ?? [],
-    acceptUrl: token ? agreementAcceptUrl(token) : null,
-    discussUrl: token ? agreementDiscussUrl(token) : null,
+      changeRequest.costNote?.trim() && changeRequest.costNote.trim() !== costLabel?.trim()
+        ? changeRequest.costNote.trim()
+        : changeRequest.costNote?.trim() || null,
+    openUrl: token ? resolveChangeRequestPublicUrl(token) : null,
   };
 }
 
@@ -69,7 +49,7 @@ function emailButton(href: string, label: string, background: string, color = "#
   return `<a href="${href}" style="display:inline-block;margin:6px 10px 6px 0;padding:12px 22px;background:${background};color:${color};text-decoration:none;border-radius:10px;font-weight:600;font-size:14px;line-height:1.2;">${escapeEmailHtml(label)}</a>`;
 }
 
-export function renderAgreementBlock(entry: AgreementEmailEntry, index?: number): string {
+export function renderChangeRequestBlock(entry: ChangeRequestEmailEntry, index?: number): string {
   const heading =
     index != null
       ? `<h3 style="margin:0 0 8px;font-size:17px;color:#111827;">${index + 1}. ${escapeEmailHtml(entry.title)}</h3>`
@@ -87,47 +67,31 @@ export function renderAgreementBlock(entry: AgreementEmailEntry, index?: number)
     ? `<p style="margin:0 0 12px;color:#4b5563;"><strong>Notatka do kosztów:</strong> ${escapeEmailHtml(entry.costNote)}</p>`
     : "";
 
-  const protocols = entry.protocols.length
-    ? `<p style="margin:0 0 12px;color:#4b5563;"><strong>Protokoły:</strong> ${escapeEmailHtml(entry.protocols.join(", "))}</p>`
-    : "";
-
-  const buttons =
-    entry.acceptUrl || entry.discussUrl
-      ? `<div style="margin:16px 0 4px;">
-          ${entry.acceptUrl ? emailButton(entry.acceptUrl, "Przejdź do akceptacji", "#059669") : ""}
-          ${entry.discussUrl ? emailButton(entry.discussUrl, "Dyskusja / zmiany", "#2563eb") : ""}
-        </div>
-        ${
-          entry.discussUrl
-            ? `<p style="margin:8px 0 0;font-size:13px;color:#6b7280;line-height:1.5;">Jeśli chcesz przekazać więcej informacji lub zmienić coś w ustaleniach, kliknij przycisk „Dyskusja / zmiany”.</p>`
-            : ""
-        }`
-      : `<p style="margin:12px 0 0;color:#b45309;">Brak publicznego linku — skontaktuj się z zespołem projektowym.</p>`;
+  const button = entry.openUrl
+    ? `<div style="margin:16px 0 4px;">${emailButton(entry.openUrl, "Przejdź do decyzji", "#2563eb")}</div>`
+    : `<p style="margin:12px 0 0;color:#b45309;">Brak publicznego linku — skontaktuj się z zespołem projektowym.</p>`;
 
   return `<div style="margin:0 0 24px;padding:20px;border:1px solid #e5e7eb;border-radius:14px;background:#fafafa;">
     ${heading}
-    <p style="margin:0 0 10px;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;">${escapeEmailHtml(entry.categoryLabel)}</p>
     ${body}
     ${cost}
     ${costNote}
-    ${protocols}
-    ${buttons}
+    ${button}
   </div>`;
 }
 
-export function buildAgreementDeliveryEmail(input: {
+export function buildChangeRequestDeliveryEmail(input: {
   recipientName?: string;
   projectName?: string;
   intro: string;
-  entries: AgreementEmailEntry[];
-  subjectPrefix?: string;
+  entries: ChangeRequestEmailEntry[];
   settings?: EmailSettings;
   company?: CompanyProfileDocument | null;
   /** Osobista notatka nadawcy wpisana przed wysyłką — pokazana w mailu jako wyróżniony akapit. */
   senderNote?: string | null;
 }) {
   const settings = input.settings ?? defaultEmailSettings();
-  const template = settings.templates.agreement_delivery;
+  const template = settings.templates.change_request_delivery;
 
   const greeting = input.recipientName?.trim()
     ? `<p style="margin:0 0 12px;font-size:16px;color:#111827;">Dzień dobry ${escapeEmailHtml(input.recipientName.trim())},</p>`
@@ -144,7 +108,7 @@ export function buildAgreementDeliveryEmail(input: {
 
   const blocks = input.entries
     .map((entry, index) =>
-      renderAgreementBlock(entry, input.entries.length > 1 ? index : undefined),
+      renderChangeRequestBlock(entry, input.entries.length > 1 ? index : undefined),
     )
     .join("");
 
@@ -153,14 +117,14 @@ export function buildAgreementDeliveryEmail(input: {
     {
       intro: input.intro,
       project_name: input.projectName?.trim() ?? "",
-      agreement_title: input.entries[0]?.title ?? "",
+      change_request_title: input.entries[0]?.title ?? "",
       count: String(input.entries.length),
     },
     {
       greeting,
       project_line: projectLine,
       sender_note: senderNoteHtml,
-      agreements_block: blocks,
+      change_requests_block: blocks,
     },
   );
 
@@ -174,18 +138,15 @@ export function buildAgreementDeliveryEmail(input: {
 
   const subjectBase =
     input.entries.length === 1
-      ? `Ustalenie do akceptacji: ${input.entries[0].title}`
-      : `${input.entries.length} ustaleń do akceptacji${input.projectName ? ` — ${input.projectName}` : ""}`;
+      ? `Zmiana do akceptacji: ${input.entries[0].title}`
+      : `${input.entries.length} zmian do akceptacji${input.projectName ? ` — ${input.projectName}` : ""}`;
 
   const subject = renderEmailSubject(template.subject, {
     subject_base: subjectBase,
-    agreement_title: input.entries[0]?.title ?? "",
+    change_request_title: input.entries[0]?.title ?? "",
     count: String(input.entries.length),
     project_name: input.projectName?.trim() ?? "",
   });
 
-  return {
-    subject: input.subjectPrefix ? `${input.subjectPrefix}${subject}` : subject,
-    html,
-  };
+  return { subject, html };
 }

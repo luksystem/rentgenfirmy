@@ -162,6 +162,17 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     defaults: { email: { user: false }, push: true, sms: false },
   },
   {
+    id: "change_request_delivery",
+    label: "Wysłanie zmiany do akceptacji",
+    description: "Ręczna wysyłka wniosku o zmianę do klienta z linkiem do decyzji.",
+    category: "zmiany",
+    emailAudiences: ["client"],
+    supportsPush: false,
+    supportsSms: false,
+    emailTemplateKind: "change_request_delivery",
+    defaults: { email: { client: true }, push: false, sms: false },
+  },
+  {
     id: "change_request_client_responded",
     label: "Klient odpowiedział na wniosek o zmianę",
     description: "Akceptacja lub odrzucenie wniosku o zmianę przez klienta.",
