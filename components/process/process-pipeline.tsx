@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
+  Camera,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -72,6 +73,7 @@ const kindIcon: Record<ProcessItemKind, React.ComponentType<{ className?: string
   settlement: Receipt,
   kanban: LayoutGrid,
   note: StickyNote,
+  snapshot: Camera,
 };
 
 type ProcessPipelineProps = {

@@ -65,6 +65,17 @@ export const DEFAULT_PROCESS_ELEMENT_KIND_META: ProcessElementKindMeta[] = [
     sortOrder: 50,
     isActive: true,
   },
+  {
+    kind: "snapshot",
+    label: "Zdjęcie do klienta",
+    description:
+      "Pracownik wrzuca jedno zdjęcie z notatką — klient dostaje SMS z linkiem i mail ze zdjęciem, odpowiedzialny za etap dostaje push.",
+    icon: "camera",
+    supportsPublicLink: false,
+    supportsInternalAcceptance: false,
+    sortOrder: 60,
+    isActive: true,
+  },
 ];
 
 export function getProcessKindMetaMap(meta = DEFAULT_PROCESS_ELEMENT_KIND_META) {

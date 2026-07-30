@@ -1,6 +1,13 @@
 import type { KanbanTemplatePayload } from "@/lib/process/kanban-types";
 
-export const PROCESS_ITEM_KINDS = ["checklist", "protocol", "settlement", "kanban", "note"] as const;
+export const PROCESS_ITEM_KINDS = [
+  "checklist",
+  "protocol",
+  "settlement",
+  "kanban",
+  "note",
+  "snapshot",
+] as const;
 
 export type ProcessItemKind = (typeof PROCESS_ITEM_KINDS)[number];
 
@@ -233,7 +240,38 @@ export type ChecklistItemPayload = {
   note?: string;
 };
 
-export type ProcessElementPayload = ChecklistItemPayload | KanbanTemplatePayload;
+/** Szablon elementu "Zdjęcie do klienta" — wiadomość widoczna klientowi przy odebranym zdjęciu
+ *  (np. "Miło mi tworzyć dla Państwa rozdzielnię..."), definiowana raz w katalogu elementów. */
+export type SnapshotTemplatePayload = {
+  clientMessage: string;
+};
+
+export function isSnapshotTemplatePayload(value: unknown): value is SnapshotTemplatePayload {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    typeof (value as Record<string, unknown>).clientMessage === "string"
+  );
+}
+
+export type ProcessElementPayload = ChecklistItemPayload | KanbanTemplatePayload | SnapshotTemplatePayload;
+
+/** Zdjęcie faktycznie wysłane klientowi dla elementu typu "snapshot" w konkretnym projekcie. */
+export type ProjectProcessSnapshot = {
+  id: string;
+  projectProcessItemId: string;
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number | null;
+  employeeNote: string | null;
+  uploadedBy: string | null;
+  uploadedByName: string;
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type ProjectProcessItemStatus = "open" | "in_progress" | "completed";
 
@@ -290,6 +328,7 @@ export const PROCESS_ITEM_KIND_LABELS: Record<ProcessItemKind, string> = {
   settlement: "Rozliczenie",
   kanban: "Tablica Kanban",
   note: "Notatka / dokument",
+  snapshot: "Zdjęcie do klienta",
 };
 
 /** Podpięcie istniejącej notatki lub dokumentu (albo nowo utworzonych) do kroku procesu typu „note”. */

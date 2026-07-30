@@ -8,6 +8,7 @@ import type {
   ChecklistSection,
   ProcessElementPayload,
   ProcessItemKind,
+  SnapshotTemplatePayload,
 } from "@/lib/process/types";
 
 export function emptyChecklistPayload(): ChecklistItemPayload {
@@ -205,10 +206,39 @@ export function mergeChecklistPayloadWithTemplate(
     (section) => !mergedSections.some((merged) => merged.id === section.id),
   );
 
+  // Sekcja-widmo: jeśli osierocona sekcja ma tę samą nazwę co sekcja już obecna w wyniku, to jest to
+  // ta sama koncepcyjnie lista pod innym (niedopasowanym) id — a nie druga, odrębna lista. Dokładamy
+  // jej punkty (pomijając te o identycznym tekście) do istniejącej sekcji zamiast tworzyć duplikat.
+  // Bez tego niestabilne id w domyślnym payloadzie (np. zastępczy punkt z tytułu elementu) potrafiło
+  // przy każdej synchronizacji dokładać kolejną kopię tej samej listy.
+  const finalSections: ChecklistSection[] = mergedSections.map((section) => ({
+    ...section,
+    lines: [...section.lines],
+  }));
+  for (const orphaned of orphanedSections) {
+    const target = finalSections.find((section) => section.name === orphaned.name);
+    if (target) {
+      const existingTexts = new Set(target.lines.map((line) => line.text));
+      target.lines.push(...orphaned.lines.filter((line) => !existingTexts.has(line.text)));
+    } else {
+      finalSections.push(orphaned);
+    }
+  }
+
   return {
-    sections: withChecklistSectionPositions([...mergedSections, ...orphanedSections]),
+    sections: withChecklistSectionPositions(finalSections),
     note: existing.note,
   };
+}
+
+export function normalizeSnapshotTemplatePayload(raw: unknown): SnapshotTemplatePayload {
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const clientMessage = (raw as Record<string, unknown>).clientMessage;
+    if (typeof clientMessage === "string") {
+      return { clientMessage };
+    }
+  }
+  return { clientMessage: "" };
 }
 
 export function resolveElementDefaultPayload(
@@ -219,6 +249,10 @@ export function resolveElementDefaultPayload(
   if (kind === "kanban") {
     const normalized = normalizeKanbanTemplatePayload(raw);
     return normalized.columns.length ? normalized : defaultKanbanTemplatePayload();
+  }
+
+  if (kind === "snapshot") {
+    return normalizeSnapshotTemplatePayload(raw);
   }
 
   const normalized = normalizeChecklistPayload(raw);
@@ -235,12 +269,39 @@ export function templatePayloadFromTitle(title: string, kind: ProcessItemKind): 
     return defaultKanbanTemplatePayload();
   }
 
+  if (kind === "snapshot") {
+    return { clientMessage: "" };
+  }
+
   if (kind !== "checklist") {
     return emptyChecklistPayload();
   }
 
   const text = title.trim();
-  return text ? checklistPayloadFromTexts([text]) : emptyChecklistPayload();
+  if (!text) {
+    return emptyChecklistPayload();
+  }
+  // Id musi być stabilne (nie crypto.randomUUID()) — ta funkcja jest wywoływana za każdym razem, gdy
+  // liczony jest domyślny payload elementu (np. przy każdej synchronizacji procesu projektu).
+  // Losowe id powodowało, że mergeChecklistPayloadWithTemplate nigdy nie rozpoznawał tej sekcji jako
+  // tej samej co poprzednio i przy każdej synchronizacji dokładał kolejną duplikat sekcję.
+  return {
+    sections: [
+      {
+        id: "title-fallback-section",
+        name: "Checklista",
+        position: 0,
+        lines: [
+          {
+            id: "title-fallback-line",
+            text,
+            checked: false,
+            status: "NOT_STARTED",
+          },
+        ],
+      },
+    ],
+  };
 }
 
 function normalizeChecklistLineAttachment(entry: unknown): ChecklistLineAttachment | null {

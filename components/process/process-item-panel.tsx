@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   ArrowLeft,
+  Camera,
   CheckCircle2,
   FileCheck2,
   Lock,
@@ -17,6 +18,7 @@ import { ProcessKanbanBoard } from "@/components/process/process-kanban-board";
 import { ProcessNoteLinksBoard } from "@/components/process/process-note-links-board";
 import { ProcessProtocolBoard } from "@/components/process/process-protocol-board";
 import { ProcessSettlementPanel } from "@/components/process/process-settlement-panel";
+import { ProcessSnapshotBoard } from "@/components/process/process-snapshot-board";
 import { ProcessItemResponsibleSection } from "@/components/process/process-item-responsible-section";
 import { ProcessPublicLinkControls } from "@/components/process/process-public-link-controls";
 import { TemplateChecklistLinesEditor } from "@/components/process/template-checklist-lines-editor";
@@ -32,6 +34,7 @@ import { useProcessItemRemoteSync } from "@/hooks/use-process-item-remote-sync";
 import type { UserProfile } from "@/lib/auth/types";
 import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
 import {
+  isSnapshotTemplatePayload,
   PROCESS_ITEM_KIND_LABELS,
   type ChecklistItemPayload,
   type ProcessItem,
@@ -48,6 +51,7 @@ const kindIcon = {
   settlement: Receipt,
   kanban: LayoutGrid,
   note: StickyNote,
+  snapshot: Camera,
 } as const;
 
 type ProcessItemPanelProps = {
@@ -490,6 +494,24 @@ export function ProcessItemPanel({
             </div>
           ) : null}
 
+          {item.kind === "snapshot" && projectId && resolvedInstance && interactive ? (
+            <ProcessSnapshotBoard
+              projectId={projectId}
+              projectProcessItemId={resolvedInstance.id}
+              clientMessage={
+                isSnapshotTemplatePayload(item.defaultPayload) ? item.defaultPayload.clientMessage : ""
+              }
+              onToggleComplete={onToggleComplete}
+            />
+          ) : item.kind === "snapshot" ? (
+            <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4">
+              <p className="text-sm font-medium text-foreground">Zdjęcie do klienta</p>
+              <p className="mt-2 text-sm text-muted">
+                Zdjęcie zostanie wysłane mailem i SMS-em po dodaniu przez zespół podczas realizacji.
+              </p>
+            </div>
+          ) : null}
+
           {completed && item.kind !== "kanban" && !isInternalAcceptance ? (
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm">
               <p className="font-medium text-emerald-200">Ukończono</p>
@@ -502,7 +524,11 @@ export function ProcessItemPanel({
             </div>
           ) : null}
 
-          {interactive && item.kind !== "checklist" && item.kind !== "kanban" && !isInternalAcceptance ? (
+          {interactive &&
+          item.kind !== "checklist" &&
+          item.kind !== "kanban" &&
+          item.kind !== "snapshot" &&
+          !isInternalAcceptance ? (
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -512,7 +538,7 @@ export function ProcessItemPanel({
                 {completed ? "Cofnij ukończenie" : "Oznacz jako ukończone"}
               </Button>
             </div>
-          ) : item.kind !== "checklist" && item.kind !== "kanban" && !isInternalAcceptance ? (
+          ) : item.kind !== "checklist" && item.kind !== "kanban" && item.kind !== "snapshot" && !isInternalAcceptance ? (
             <p className={cn("text-sm", completed ? "text-emerald-300" : "text-muted")}>
               {completed ? "Element ukończony" : "Element oczekuje na realizację"}
             </p>

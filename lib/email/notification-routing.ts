@@ -173,6 +173,18 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     defaults: { email: { client: true }, push: false, sms: false },
   },
   {
+    id: "process_snapshot_delivered",
+    label: "Zdjęcie do klienta (proces)",
+    description:
+      "Zdjęcie z notatką wysłane klientowi po wgraniu przez pracownika elementu procesu typu „Zdjęcie do klienta”.",
+    category: "projekty",
+    emailAudiences: ["client"],
+    supportsPush: false,
+    supportsSms: true,
+    emailTemplateKind: "process_snapshot_delivered",
+    defaults: { email: { client: true }, push: false, sms: true },
+  },
+  {
     id: "change_request_client_responded",
     label: "Klient odpowiedział na wniosek o zmianę",
     description: "Akceptacja lub odrzucenie wniosku o zmianę przez klienta.",

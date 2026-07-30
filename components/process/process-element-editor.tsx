@@ -5,7 +5,7 @@ import { useState } from "react";
 import { TemplateChecklistLinesEditor } from "@/components/process/template-checklist-lines-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Field, Input, Select } from "@/components/ui/input";
+import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { defaultKanbanTemplatePayload } from "@/lib/process/kanban-types";
 import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
 import { KanbanTemplateColumnsEditor } from "@/components/process/kanban-template-columns-editor";
@@ -17,11 +17,13 @@ import {
 } from "@/lib/process/item-payload";
 import type { ProcessElementPlacement } from "@/lib/supabase/process-element-repository";
 import {
+  isSnapshotTemplatePayload,
   PROCESS_ITEM_KINDS,
   PROCESS_ITEM_KIND_LABELS,
   type ChecklistItemPayload,
   type ProcessElement,
   type ProcessItemKind,
+  type SnapshotTemplatePayload,
 } from "@/lib/process/types";
 
 export function ProcessElementEditor({
@@ -96,7 +98,11 @@ export function ProcessElementEditor({
             ? flattenChecklistLines(normalizeChecklistPayload(current.defaultPayload)).length
               ? current.defaultPayload
               : templatePayloadFromTitle(current.title, kind)
-            : templatePayloadFromTitle(current.title, kind),
+            : kind === "snapshot"
+              ? isSnapshotTemplatePayload(current.defaultPayload)
+                ? current.defaultPayload
+                : templatePayloadFromTitle(current.title, kind)
+              : templatePayloadFromTitle(current.title, kind),
     }));
   }
 
@@ -206,6 +212,26 @@ export function ProcessElementEditor({
             }
             onChange={(defaultPayload) => setElement({ ...element, defaultPayload })}
           />
+        ) : element.kind === "snapshot" ? (
+          <Field label="Wiadomość dla klienta (widoczna przy odebranym zdjęciu)">
+            <Textarea
+              value={
+                isSnapshotTemplatePayload(element.defaultPayload)
+                  ? element.defaultPayload.clientMessage
+                  : ""
+              }
+              onChange={(event) =>
+                setElement({
+                  ...element,
+                  defaultPayload: {
+                    clientMessage: event.target.value,
+                  } satisfies SnapshotTemplatePayload,
+                })
+              }
+              rows={3}
+              placeholder="np. Miło mi tworzyć dla Państwa rozdzielnię…"
+            />
+          </Field>
         ) : element.kind === "note" ? (
           <p className="rounded-xl border border-accent/30 bg-accent/5 p-3 text-sm text-muted">
             W projekcie zespół podepnie tu istniejącą notatkę ze spotkania i/lub dokument, albo utworzy

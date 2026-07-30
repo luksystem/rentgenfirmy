@@ -42,7 +42,7 @@ import { StageReportsPanel } from "@/components/dashboard/stage-reports-panel";
 import { ProjectCommunicationPanel } from "@/components/dashboard/project-communication-panel";
 import { StageSatisfactionPrompt } from "@/components/dashboard/stage-satisfaction-prompt";
 import { ProjectMeetingNotesPanel } from "@/components/dashboard/project-meeting-notes-panel";
-import { ProjectDocumentsPanel } from "@/components/dashboard/project-documents-panel";
+import { ProjectDocumentationPanel } from "@/components/dashboard/project-documentation-panel";
 import { ProjectIntegrationsTab } from "@/components/project/project-integrations-tab";
 import { ClientProjectSettingsPanel } from "@/components/dashboard/client-project-settings-panel";
 import { ClientOffersPanel } from "@/components/dashboard/client-offers-panel";
@@ -171,8 +171,6 @@ const PUBLIC_CLIENT_TAB_CONFIG: Array<{
   { id: "notes", label: "Notatki", icon: StickyNote },
   { id: "documentation", label: "Dokumentacja", icon: FolderOpen },
   { id: "satisfaction", label: "Ocena", icon: Star },
-  { id: "credentials", label: "Hasła", icon: KeyRound },
-  { id: "links", label: "Linki", icon: Link2 },
 ];
 
 const TEAM_MAIN_TAB_CONFIG: Array<{
@@ -858,7 +856,6 @@ export function ClientDashboardView({
     if (tab.id === "trades" && !enableTrades) return false;
     if (tab.id === "notes" && !enableMeetingNotes) return false;
     if (tab.id === "satisfaction" && !enableSatisfaction) return false;
-    if (tab.id === "credentials" && !enableCredentials) return false;
     return true;
   });
 
@@ -1416,15 +1413,17 @@ export function ClientDashboardView({
 
   function renderDocumentationPanel() {
     return (
-      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
-        <h2 className="page-section-title mb-3 text-base font-semibold">Dokumentacja projektu</h2>
-        <ProjectDocumentsPanel
-          projectId={selectedProject.id}
-          clientId={client.id}
-          mode={readOnly ? "client" : "team"}
-          seedDocuments={seedDocuments}
-        />
-      </div>
+      <ProjectDocumentationPanel
+        projectId={selectedProject.id}
+        clientId={client.id}
+        readOnly={readOnly}
+        publicToken={readOnly ? publicDashboardToken : undefined}
+        seedDocuments={seedDocuments}
+        seedCredentials={seedCredentials}
+        seedContent={seedContent}
+        enableCredentials={enableCredentials}
+        enableContent={enableContent}
+      />
     );
   }
 

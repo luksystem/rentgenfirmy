@@ -114,6 +114,42 @@ describe("mergeChecklistPayloadWithTemplate", () => {
     const merged = mergeChecklistPayloadWithTemplate(projectInstance, emptyChecklistPayload());
     expect(merged).toEqual(projectInstance);
   });
+
+  it("scala zamiast duplikować, gdy szablonowa sekcja ma tę samą nazwę co osierocona (niestabilne id)", () => {
+    // Regresja: zastępczy payload liczony z tytułu elementu (gdy katalog nie ma zdefiniowanych
+    // punktów) potrafił dostać niestabilne id przy każdej synchronizacji, przez co ta sama
+    // koncepcyjnie lista "Checklista" dokładała się jako kolejna, odrębna sekcja zamiast się scalić.
+    const projectInstance = {
+      sections: [
+        {
+          id: "old-random-id",
+          name: "Checklista",
+          position: 0,
+          lines: [
+            { id: "old-line-id", text: "Tytuł elementu", checked: false, status: "NOT_STARTED" as const },
+            { id: "custom-1", text: "punkt", checked: false, status: "NOT_STARTED" as const, isCustom: true },
+          ],
+        },
+      ],
+    };
+    const freshTemplate = {
+      sections: [
+        {
+          id: "new-random-id",
+          name: "Checklista",
+          position: 0,
+          lines: [{ id: "new-line-id", text: "Tytuł elementu", checked: false, status: "NOT_STARTED" as const }],
+        },
+      ],
+    };
+
+    const merged = mergeChecklistPayloadWithTemplate(projectInstance, freshTemplate);
+
+    expect(merged.sections).toHaveLength(1);
+    expect(merged.sections[0].lines.map((line) => line.text).sort()).toEqual(
+      ["Tytuł elementu", "punkt"].sort(),
+    );
+  });
 });
 
 describe("getChecklistLineAssignee", () => {
