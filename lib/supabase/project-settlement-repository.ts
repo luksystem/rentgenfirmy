@@ -133,6 +133,9 @@ async function fetchServicesForProject(projectId: string): Promise<ServiceRecord
 }
 
 type AutoChargeSeed = {
+  /** Domyślnie 'charge'. 'schedule' — używane np. przy automatycznym dopisywaniu raty
+   * harmonogramu spłat dla zaakceptowanej zmiany projektowej. */
+  kind?: "charge" | "schedule";
   source: "contract" | "offer" | "change_request" | "hourly" | "agreement";
   sourceId: string | null;
   title: string;
@@ -259,7 +262,9 @@ function offerChargeSeed(service: ServiceRecord): AutoChargeSeed | null {
   };
 }
 
-function changeRequestChargeSeed(entry: ProjectChangeRequest): AutoChargeSeed | null {
+function changeRequestSeedBase(
+  entry: ProjectChangeRequest,
+): Omit<AutoChargeSeed, "kind" | "source" | "sourceId"> | null {
   if (entry.status !== "accepted") {
     return null;
   }
@@ -274,8 +279,6 @@ function changeRequestChargeSeed(entry: ProjectChangeRequest): AutoChargeSeed | 
     gross ?? Math.round(amountNet * (1 + vatRate / 100) * 100) / 100;
 
   return {
-    source: "change_request",
-    sourceId: entry.id,
     title: `Zmiana: ${entry.title}`,
     amountNet,
     vatRate,
@@ -283,6 +286,20 @@ function changeRequestChargeSeed(entry: ProjectChangeRequest): AutoChargeSeed | 
     entryDate: entry.clientRespondedAt?.slice(0, 10) ?? entry.updatedAt.slice(0, 10),
     notes: entry.costNote ?? undefined,
   };
+}
+
+function changeRequestChargeSeed(entry: ProjectChangeRequest): AutoChargeSeed | null {
+  const base = changeRequestSeedBase(entry);
+  if (!base) return null;
+  return { ...base, kind: "charge", source: "change_request", sourceId: entry.id };
+}
+
+// Zaakceptowana zmiana projektowa dopisuje się też jako rata harmonogramu spłat (nie tylko
+// jako należność) — klient ma zobaczyć spodziewany termin płatności, nie tylko kwotę do zapłaty.
+function changeRequestScheduleSeed(entry: ProjectChangeRequest): AutoChargeSeed | null {
+  const base = changeRequestSeedBase(entry);
+  if (!base) return null;
+  return { ...base, kind: "schedule", source: "change_request", sourceId: entry.id };
 }
 
 function contractChargeSeed(settings: ProjectBillingSettings): AutoChargeSeed | null {
@@ -309,9 +326,10 @@ async function upsertAutoCharge(
   seed: AutoChargeSeed,
   existing: ProjectSettlementEntry[],
 ): Promise<void> {
+  const kind = seed.kind ?? "charge";
   const match = existing.find(
     (entry) =>
-      entry.kind === "charge" &&
+      entry.kind === kind &&
       entry.source === seed.source &&
       (entry.sourceId ?? null) === (seed.sourceId ?? null),
   );
@@ -326,7 +344,7 @@ async function upsertAutoCharge(
   const now = new Date().toISOString();
   const payload = {
     project_id: projectId,
-    kind: "charge" as const,
+    kind,
     source: seed.source,
     source_id: seed.sourceId,
     title: seed.title,
@@ -366,13 +384,14 @@ async function removeStaleLinkedCharges(
   existing: ProjectSettlementEntry[],
   keepKeys: Set<string>,
 ): Promise<void> {
-  // Usuwamy powiązane należności gdy zniknie źródło (także po ręcznej edycji kwoty).
+  // Usuwamy powiązane należności (i powiązane raty harmonogramu) gdy zniknie źródło
+  // (także po ręcznej edycji kwoty).
   const linkedSources = new Set(["contract", "offer", "change_request", "hourly", "agreement"]);
   const toRemove = existing.filter((entry) => {
-    if (entry.kind !== "charge" || !linkedSources.has(entry.source)) {
+    if ((entry.kind !== "charge" && entry.kind !== "schedule") || !linkedSources.has(entry.source)) {
       return false;
     }
-    const key = `${entry.source}:${entry.sourceId ?? ""}`;
+    const key = `${entry.kind}:${entry.source}:${entry.sourceId ?? ""}`;
     return !keepKeys.has(key);
   });
 
@@ -424,9 +443,13 @@ export async function syncProjectSettlementCharges(projectId: string): Promise<v
   }
 
   for (const cr of changeRequests) {
-    const seed = changeRequestChargeSeed(cr);
-    if (seed) {
-      seeds.push(seed);
+    const chargeSeed = changeRequestChargeSeed(cr);
+    if (chargeSeed) {
+      seeds.push(chargeSeed);
+    }
+    const scheduleSeed = changeRequestScheduleSeed(cr);
+    if (scheduleSeed) {
+      seeds.push(scheduleSeed);
     }
   }
 
@@ -437,7 +460,7 @@ export async function syncProjectSettlementCharges(projectId: string): Promise<v
     }
   }
 
-  const keepKeys = new Set(seeds.map((seed) => `${seed.source}:${seed.sourceId ?? ""}`));
+  const keepKeys = new Set(seeds.map((seed) => `${seed.kind ?? "charge"}:${seed.source}:${seed.sourceId ?? ""}`));
 
   for (const seed of seeds) {
     await upsertAutoCharge(projectId, seed, existing);

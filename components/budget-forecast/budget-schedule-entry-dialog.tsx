@@ -23,6 +23,10 @@ import {
   type ProjectSettlementEntry,
 } from "@/lib/settlements/types";
 import type { AgreementVatRate } from "@/lib/dashboard/agreement-cost";
+import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
+import { formatDate } from "@/lib/utils";
+import { useAppStore } from "@/store/app-store";
+import { useProcessStore } from "@/store/process-store";
 
 /**
  * Edycja raty harmonogramu spłat (kind='schedule') bezpośrednio z Timesheet w Pipeline.
@@ -55,6 +59,14 @@ export function BudgetScheduleEntryDialog({
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
 
+  const projects = useAppStore((state) => state.projects);
+  const process = useProcessStore((state) =>
+    entry ? (state.projectProcesses[entry.projectId] ?? null) : null,
+  );
+  const getTemplateByProjectType = useProcessStore((state) => state.getTemplateByProjectType);
+  const ensureProjectProcess = useProcessStore((state) => state.ensureProjectProcess);
+  const [stageInfoLoading, setStageInfoLoading] = useState(false);
+
   useEffect(() => {
     if (!open || !entry) return;
     setError(null);
@@ -66,6 +78,32 @@ export function BudgetScheduleEntryDialog({
     setDueDate(entry.dueDate ?? "");
     setNotes(entry.notes);
   }, [open, entry]);
+
+  useEffect(() => {
+    if (!open || !entry?.processStageId) return;
+    const project = projects.find((p) => p.id === entry.projectId);
+    if (!project) return;
+    setStageInfoLoading(true);
+    void ensureProjectProcess(entry.projectId, project.type).finally(() => setStageInfoLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, entry?.projectId, entry?.processStageId]);
+
+  const template =
+    entry && process
+      ? resolveAnchoredProcessTemplate(process, getTemplateByProjectType(projects.find((p) => p.id === entry.projectId)?.type ?? ""))
+      : null;
+  const linkedStage = entry?.processStageId
+    ? (template?.stages.find((s) => s.id === entry.processStageId) ?? null)
+    : null;
+  const stageDate = linkedStage
+    ? (linkedStage.milestones.map((m) => process?.milestoneDates[m.id]).find((d) => d) ?? null)
+    : null;
+
+  function applyStageDate() {
+    if (!stageDate) return;
+    setEntryDate(stageDate);
+    setDueDate(addDaysIso(stageDate, 14));
+  }
 
   async function handleSave() {
     if (!entry) return;
@@ -155,6 +193,28 @@ export function BudgetScheduleEntryDialog({
               <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </Field>
           </div>
+
+          {entry?.processStageId ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/70 px-3 py-2">
+              {stageInfoLoading ? (
+                <p className="text-xs text-muted">Sprawdzam datę etapu...</p>
+              ) : stageDate ? (
+                <>
+                  <p className="text-xs text-muted">
+                    Etap „{linkedStage?.title}” ma ustaloną datę: {formatDate(stageDate)}
+                  </p>
+                  <Button type="button" variant="secondary" size="sm" onClick={applyStageDate}>
+                    Ustaw z daty etapu
+                  </Button>
+                </>
+              ) : (
+                <p className="text-xs text-amber-400">
+                  Etap „{linkedStage?.title ?? "?"}” nie ma jeszcze ustalonej daty — nie można pobrać terminu.
+                  Data raty pozostaje bez zmian, dopóki nie ustawisz jej ręcznie.
+                </p>
+              )}
+            </div>
+          ) : null}
 
           <Field label="Notatka">
             <Textarea value={notes} rows={2} onChange={(e) => setNotes(e.target.value)} />
