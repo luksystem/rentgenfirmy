@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Copy, Link2, Lock, Pencil, Plus, Send, Trash2, Wallet, X } from "lucide-react";
+import { Check, Copy, Link2, ListChecks, Lock, Pencil, Plus, Send, Trash2, Wallet, X } from "lucide-react";
 import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-collapsible-shell";
 import { AgreementCostFields } from "@/components/dashboard/agreement-cost-fields";
 import { ChangeRequestBatchDeliveryActions } from "@/components/dashboard/change-request-batch-delivery-actions";
 import { OfferEmailPreviewDialog } from "@/components/service/offer-email-preview-dialog";
+import { TaskFromSourceDialog } from "@/components/process/task-from-source-dialog";
 import { Button } from "@/components/ui/button";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Field, Input, Textarea } from "@/components/ui/input";
@@ -126,6 +127,7 @@ function ChangeRequestCard({
   blockingStageLabel?: string | null;
 }) {
   const [busy, setBusy] = useState(false);
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [responseNote, setResponseNote] = useState("");
   const cardRef = useRef<HTMLDivElement | null>(null);
   const meta = buildChangeRequestCollapsibleMeta(changeRequest);
@@ -400,6 +402,33 @@ function ChangeRequestCard({
               <Trash2 className="mr-2 h-3.5 w-3.5" />
               Usuń
             </Button>
+          </div>
+        ) : null}
+
+        {/* D43 — dostępne w każdym statusie, nie tylko w szkicu: praca nad zmianą zaczyna się
+            zwykle PO akceptacji klienta, więc ograniczenie do draftu wycięłoby główny przypadek. */}
+        {mode === "team" ? (
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="w-full sm:w-auto"
+              disabled={busy}
+              onClick={() => setTaskDialogOpen(true)}
+            >
+              <ListChecks className="mr-2 h-3.5 w-3.5" />
+              Utwórz zadanie
+            </Button>
+            <TaskFromSourceDialog
+              open={taskDialogOpen}
+              onOpenChange={setTaskDialogOpen}
+              projectId={projectId}
+              authorName={authorName}
+              defaultTitle={changeRequest.title}
+              defaultDescription={changeRequest.body ?? ""}
+              sourceChangeRequestId={changeRequest.id}
+            />
           </div>
         ) : null}
 

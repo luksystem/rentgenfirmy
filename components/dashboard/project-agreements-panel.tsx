@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Copy, Lightbulb, Link2, Lock, Pencil, Plus, Send, Trash2, X } from "lucide-react";
+import { Check, Copy, Lightbulb, Link2, ListChecks, Lock, Pencil, Plus, Send, Trash2, X } from "lucide-react";
 import { AgreementCollaborationPanel } from "@/components/dashboard/agreement-collaboration-panel";
 import { ContactPointPhotoThumbnail } from "@/components/contact-point-photo-thumbnail";
 import { AgreementBatchDeliveryActions } from "@/components/dashboard/agreement-batch-delivery-actions";
@@ -10,6 +10,7 @@ import { AgreementApprovalResponses } from "@/components/dashboard/agreement-app
 import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-collapsible-shell";
 import { AgreementApproverRoleField } from "@/components/dashboard/agreement-approver-role-field";
 import { AgreementCostFields } from "@/components/dashboard/agreement-cost-fields";
+import { TaskFromSourceDialog } from "@/components/process/task-from-source-dialog";
 import { Button } from "@/components/ui/button";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Field, Input, Textarea } from "@/components/ui/input";
@@ -45,6 +46,7 @@ import { createPublicClientAgreement } from "@/lib/dashboard/public-agreement-cl
 import { useAgreementApprovalHint } from "@/hooks/use-agreement-approval-hint";
 import { fetchAgreementApproverRoles } from "@/lib/supabase/project-agreement-collaboration-repository";
 import { fetchProjectAccessibleProfiles } from "@/lib/supabase/project-access-repository";
+import { fetchStageResponsible } from "@/lib/supabase/stage-responsible-repository";
 import { profileToOptionLabel } from "@/lib/supabase/profile-repository";
 import type { UserProfile } from "@/lib/auth/types";
 import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
@@ -208,6 +210,7 @@ function AgreementCard({
   blockingStageLabel?: string | null;
 }) {
   const [busy, setBusy] = useState(false);
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [responseNote, setResponseNote] = useState("");
   const cardRef = useRef<HTMLDivElement | null>(null);
   const meta = buildAgreementCollapsibleMeta(agreement);
@@ -337,6 +340,33 @@ function AgreementCard({
           trades={projectTrades}
           clientEmail={clientEmail}
         />
+      ) : null}
+
+      {/* D43 — dostępne w każdym statusie, nie tylko w szkicu: praca nad ustaleniem zaczyna się
+          zwykle PO akceptacji klienta, więc ograniczenie do draftu wycięłoby główny przypadek. */}
+      {mode === "team" ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="w-full sm:w-auto"
+            disabled={busy}
+            onClick={() => setTaskDialogOpen(true)}
+          >
+            <ListChecks className="mr-2 h-3.5 w-3.5" />
+            Utwórz zadanie
+          </Button>
+          <TaskFromSourceDialog
+            open={taskDialogOpen}
+            onOpenChange={setTaskDialogOpen}
+            projectId={projectId ?? agreement.projectId}
+            authorName={authorName}
+            defaultTitle={agreement.title}
+            defaultDescription={agreement.body ?? ""}
+            sourceAgreementId={agreement.id}
+          />
+        </div>
       ) : null}
 
       {mode === "team" && agreement.status === "draft" ? (
@@ -593,6 +623,35 @@ export function ProjectAgreementsPanel({
     [projects, projectId],
   );
   const ensureProjectProcess = useProcessStore((state) => state.ensureProjectProcess);
+  const activeStageId = useProcessStore(
+    (state) => state.getProjectProcess(projectId)?.activeStageId ?? null,
+  );
+  // D43 — właściciel WYLICZONY dla ustaleń bez wskazanej osoby. Bierzemy etap bieżący projektu:
+  // ustalenie nie ma własnej przynależności do etapu, a etap bieżący to jedyna sensowna odpowiedź
+  // na pytanie „kto to teraz prowadzi”. Gdy powstanie z tego zadanie, właściciel karty wynika
+  // z etapu WYBRANEJ TABLICY i może być inny — to celowe, bo tam manager podjął decyzję.
+  const [derivedResponsible, setDerivedResponsible] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (mode !== "team" || !activeStageId) {
+      setDerivedResponsible(null);
+      return;
+    }
+    let cancelled = false;
+    void fetchStageResponsible(projectId)
+      .then((rows) => {
+        if (cancelled) return;
+        setDerivedResponsible(
+          rows.find((row) => row.stageId === activeStageId)?.responsibleName ?? null,
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setDerivedResponsible(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, projectId, activeStageId]);
   const processTemplate = useProcessStore((state) =>
     currentProject
       ? resolveAnchoredProcessTemplate(
@@ -861,10 +920,9 @@ export function ProjectAgreementsPanel({
       return;
     }
 
-    if (mode === "team" && !publicDashboardToken && !form.responsibleUserId) {
-      setSaveError("Wybierz osobę odpowiedzialną.");
-      return;
-    }
+    // D43 — osoba odpowiedzialna PRZESTAJE być wymagana. Gdy nie jest wskazana, właścicielem jest
+    // główny odpowiedzialny za etap z macierzy ról (D42), a UI oznacza to etykietą „z etapu”.
+    // Schemat był nullable od początku, więc to zmiana wyłącznie w walidacji.
 
     if (hasIncompleteApproverRole(form.approverRoles)) {
       setSaveError("Uzupełnij nazwę każdej dodanej roli akceptacji lub usuń pustą rolę.");
@@ -1125,9 +1183,13 @@ export function ProjectAgreementsPanel({
             responsibleLabel={
               agreement.responsibleUserId
                 ? (responsibleLabelByUserId.get(agreement.responsibleUserId) ?? "Osoba odpowiedzialna")
-                : null
+                : derivedResponsible
+                  ? `${derivedResponsible} (z etapu)`
+                  : null
             }
-            showMissingResponsibleBadge={mode === "team"}
+            // Badge „brak odpowiedzialnego" tylko wtedy, gdy NIC nie da się wyliczyć — wskazanie
+            // przestało być wymagane, więc jego brak sam w sobie nie jest już usterką.
+            showMissingResponsibleBadge={mode === "team" && !derivedResponsible}
           />
         ))}
       </div>

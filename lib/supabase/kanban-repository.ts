@@ -740,6 +740,13 @@ export async function createKanbanTask(input: {
   dueDate?: string | null;
   authorSide: KanbanAuthorSide;
   authorName: string;
+  /** D43 — karta zrodzona z ustalenia albo ze zmiany projektowej. Najwyżej jedno z dwóch
+   *  (baza pilnuje checkiem). Rozszerzenie tej funkcji, a nie druga ścieżka tworzenia, bo
+   *  zdarzenia, powiadomienia i log aktywności mają zostać wspólne. */
+  sourceAgreementId?: string | null;
+  sourceChangeRequestId?: string | null;
+  assigneeId?: string | null;
+  assigneeName?: string | null;
 }) {
   const supabase = getSupabase();
   const title = input.title.trim();
@@ -768,6 +775,10 @@ export async function createKanbanTask(input: {
       position: (typeof lastTask?.position === "number" ? lastTask.position : -1) + 1,
       created_by_side: input.authorSide,
       is_new_for_team: input.authorSide === "client",
+      source_agreement_id: input.sourceAgreementId ?? null,
+      source_change_request_id: input.sourceChangeRequestId ?? null,
+      assignee_id: input.assigneeId ?? null,
+      assignee_name: input.assigneeName ?? null,
       created_at: now,
       updated_at: now,
     })

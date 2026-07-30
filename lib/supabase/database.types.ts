@@ -5054,6 +5054,19 @@ export type Database = {
           status: string;
         }[];
       };
+      report_task_targets: {
+        Args: { p_project_id: string };
+        Returns: {
+          project_process_item_id: string;
+          item_title: string;
+          stage_id: string | null;
+          stage_title: string | null;
+          stage_position: number | null;
+          is_active_stage: boolean;
+          board_id: string | null;
+          payload: unknown;
+        }[];
+      };
       report_board_task_owner: {
         Args: { p_board_id: string };
         Returns: {
