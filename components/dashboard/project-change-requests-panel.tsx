@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, Link2, ListChecks, Lock, Pencil, Plus, Send, Trash2, Wallet, X } from "lucide-react";
 import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-collapsible-shell";
 import { AgreementCostFields } from "@/components/dashboard/agreement-cost-fields";
 import { ChangeRequestBatchDeliveryActions } from "@/components/dashboard/change-request-batch-delivery-actions";
 import { OfferEmailPreviewDialog } from "@/components/service/offer-email-preview-dialog";
 import { TaskFromSourceDialog } from "@/components/process/task-from-source-dialog";
+import { AgreementAttachmentGallery } from "@/components/dashboard/agreement-attachment-gallery";
+import type { AgreementAttachment } from "@/lib/dashboard/agreement-attachment-types";
+import {
+  fetchChangeRequestAttachments,
+  uploadChangeRequestAttachment,
+} from "@/lib/supabase/project-change-request-attachments-repository";
 import { Button } from "@/components/ui/button";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Field, Input, Textarea } from "@/components/ui/input";
@@ -128,6 +134,21 @@ function ChangeRequestCard({
 }) {
   const [busy, setBusy] = useState(false);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  // D44 — zmiany nie mialy zadnej galerii, wiec zdjecie ze zgloszenia bylo niewidoczne nawet po
+  // poprawnym wgraniu. Reuzywamy komponentu ustalen zamiast pisac drugi, prawie taki sam.
+  const [attachments, setAttachments] = useState<AgreementAttachment[]>([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadPhotoError, setUploadPhotoError] = useState<string | null>(null);
+
+  const reloadAttachments = useCallback(() => {
+    void fetchChangeRequestAttachments(changeRequest.id)
+      .then(setAttachments)
+      .catch(() => setAttachments([]));
+  }, [changeRequest.id]);
+
+  useEffect(() => {
+    reloadAttachments();
+  }, [reloadAttachments]);
   const [responseNote, setResponseNote] = useState("");
   const cardRef = useRef<HTMLDivElement | null>(null);
   const meta = buildChangeRequestCollapsibleMeta(changeRequest);
@@ -403,6 +424,34 @@ function ChangeRequestCard({
               Usuń
             </Button>
           </div>
+        ) : null}
+
+        {attachments.length > 0 || mode === "team" ? (
+          <AgreementAttachmentGallery
+            attachments={attachments}
+            allowUpload={mode === "team"}
+            uploading={uploadingPhoto}
+            uploadError={uploadPhotoError}
+            onUpload={async (file) => {
+              setUploadingPhoto(true);
+              setUploadPhotoError(null);
+              try {
+                await uploadChangeRequestAttachment({
+                  changeRequestId: changeRequest.id,
+                  file,
+                  authorName,
+                  authorSource: "team",
+                });
+                reloadAttachments();
+              } catch (uploadError) {
+                setUploadPhotoError(
+                  uploadError instanceof Error ? uploadError.message : "Nie udało się wgrać pliku.",
+                );
+              } finally {
+                setUploadingPhoto(false);
+              }
+            }}
+          />
         ) : null}
 
         {/* D43 — dostępne w każdym statusie, nie tylko w szkicu: praca nad zmianą zaczyna się

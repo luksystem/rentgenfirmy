@@ -30,6 +30,9 @@ export type EmployeeReportResult = {
   target: EmployeeReportTarget;
   recordId: string;
   photoUploaded: boolean;
+  /** Powod nieudanego wgrania zdjecia. Zgloszenie i tak powstalo — ale uzytkownik ma sie o tym
+   *  dowiedziec, zamiast myslec, ze zdjecie doszlo. Cisza tutaj kosztowala juz jeden test. */
+  photoError: string | null;
 };
 
 export async function createEmployeeReport(
@@ -73,6 +76,7 @@ export async function createEmployeeReport(
   // Zdjęcie jest opcjonalne i NIE może wywalić zgłoszenia. Człowiek stoi na budowie i zdążył już
   // opisać problem — utrata tego opisu przez błąd uploadu byłaby gorsza niż brak zdjęcia.
   let photoUploaded = false;
+  let photoError: string | null = null;
   if (input.photo) {
     try {
       if (routing.target === "change_request") {
@@ -92,10 +96,11 @@ export async function createEmployeeReport(
         });
       }
       photoUploaded = true;
-    } catch {
+    } catch (err) {
       photoUploaded = false;
+      photoError = err instanceof Error ? err.message : "Nie udało się wgrać zdjęcia.";
     }
   }
 
-  return { target: routing.target, recordId, photoUploaded };
+  return { target: routing.target, recordId, photoUploaded, photoError };
 }

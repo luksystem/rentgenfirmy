@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, Select, Textarea } from "@/components/ui/input";
+import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { BillingImpactAnswer } from "@/lib/process/employee-report-routing";
 import { createEmployeeReport } from "@/lib/supabase/employee-report-repository";
@@ -32,6 +32,10 @@ import { useProcessStore } from "@/store/process-store";
  * Nic z tego nie tworzy zadania. Powstaje szkic w Ustaleniach albo Zmianach, a manager decyduje.
  */
 const STEPS = ["Co się dzieje", "Gdzie", "Rozliczenie", "Pilność"] as const;
+
+function input_photoFailed(result: { photoUploaded: boolean; photoError: string | null }) {
+  return !result.photoUploaded && result.photoError !== null;
+}
 
 export function EmployeeReportDialog({
   open,
@@ -55,6 +59,7 @@ export function EmployeeReportDialog({
   const [description, setDescription] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [projectId, setProjectId] = useState(fixedProjectId ?? "");
+  const [projectQuery, setProjectQuery] = useState("");
   const [stageId, setStageId] = useState<string>("");
   const [billingImpact, setBillingImpact] = useState<BillingImpactAnswer | null>(null);
   const [isUrgent, setIsUrgent] = useState<boolean | null>(null);
@@ -67,6 +72,7 @@ export function EmployeeReportDialog({
     setDescription("");
     setPhoto(null);
     setProjectId(fixedProjectId ?? "");
+    setProjectQuery("");
     setStageId("");
     setBillingImpact(null);
     setIsUrgent(null);
@@ -77,6 +83,16 @@ export function EmployeeReportDialog({
     () => projects.find((entry) => entry.id === projectId) ?? null,
     [projects, projectId],
   );
+
+  // Alfabetycznie i z wyszukiwarką — projektów jest ponad sto, a człowiek na budowie zna nazwisko
+  // klienta, nie pozycję na liście. `localeCompare` z "pl", żeby Ł i Ż nie lądowały na końcu.
+  const projectOptions = useMemo(() => {
+    const query = projectQuery.trim().toLowerCase();
+    return projects
+      .filter((entry) => !query || entry.name.toLowerCase().includes(query))
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name, "pl"));
+  }, [projects, projectQuery]);
 
   useEffect(() => {
     if (projectId && selectedProject) {
@@ -123,6 +139,17 @@ export function EmployeeReportDialog({
         createdByName: displayName || profile?.email || "Pracownik",
         photo,
       });
+      // Zgloszenie powstalo — ale jesli zdjecie nie doszlo, mowimy o tym wprost i NIE zamykamy
+      // okna. Cichy sukces przy brakujacym dowodzie jest gorszy niz widoczny blad.
+      if (input_photoFailed(result)) {
+        setPhoto(null);
+        setError(
+          `Zgłoszenie zapisane, ale zdjęcie się nie wgrało: ${result.photoError}. ` +
+            "Możesz dodać je później w zmianie projektowej.",
+        );
+        onCreated?.({ target: result.target });
+        return;
+      }
       onCreated?.({ target: result.target });
       onOpenChange(false);
     } catch (err) {
@@ -183,6 +210,15 @@ export function EmployeeReportDialog({
           {step === 1 ? (
             <>
               <Field label="Projekt">
+                {!fixedProjectId ? (
+                  <Input
+                    autoFocus
+                    value={projectQuery}
+                    onChange={(event) => setProjectQuery(event.target.value)}
+                    placeholder="Szukaj po nazwisku lub nazwie…"
+                    className="mb-1.5"
+                  />
+                ) : null}
                 <Select
                   value={projectId}
                   disabled={Boolean(fixedProjectId)}
@@ -192,12 +228,17 @@ export function EmployeeReportDialog({
                   }}
                 >
                   <option value="">— wybierz —</option>
-                  {projects.map((project) => (
+                  {projectOptions.map((project) => (
                     <option key={project.id} value={project.id}>
                       {project.name}
                     </option>
                   ))}
                 </Select>
+                {!fixedProjectId && projectQuery.trim() && projectOptions.length === 0 ? (
+                  <p className="mt-1 text-xs text-amber-300">
+                    Nic nie pasuje do „{projectQuery.trim()}”.
+                  </p>
+                ) : null}
               </Field>
               <Field label="Etap">
                 <Select value={stageId} onChange={(event) => setStageId(event.target.value)}>

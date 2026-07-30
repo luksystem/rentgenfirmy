@@ -11,6 +11,8 @@ import {
   validateAgreementAttachmentFile,
 } from "@/lib/dashboard/agreement-attachments";
 import { getSupabase } from "@/lib/supabase/client";
+import { AGREEMENT_ATTACHMENT_SIGNED_URL_TTL_SEC } from "@/lib/dashboard/agreement-attachments";
+import type { AgreementAttachment } from "@/lib/dashboard/agreement-attachment-types";
 
 export const CHANGE_REQUEST_ATTACHMENTS_BUCKET = "change-request-attachments";
 
@@ -73,4 +75,48 @@ export async function uploadChangeRequestAttachment(input: {
   }
 
   return { id: attachmentId, storagePath };
+}
+
+/**
+ * Zwraca zalaczniki w ksztalcie `AgreementAttachment`, zeby dalo sie ponownie uzyc gotowej galerii
+ * zamiast pisac drugi, prawie identyczny komponent. Pole `agreementId` niesie tu id ZMIANY —
+ * galeria go nie uzywa, sluzy wylacznie prezentacji.
+ */
+export async function fetchChangeRequestAttachments(
+  changeRequestId: string,
+): Promise<AgreementAttachment[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("project_change_request_attachments")
+    .select("*")
+    .eq("change_request_id", changeRequestId)
+    .order("position", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const rows = (data ?? []) as Record<string, unknown>[];
+  return Promise.all(
+    rows.map(async (row) => {
+      const storagePath = row.storage_path as string;
+      const { data: signed } = await supabase.storage
+        .from(CHANGE_REQUEST_ATTACHMENTS_BUCKET)
+        .createSignedUrl(storagePath, AGREEMENT_ATTACHMENT_SIGNED_URL_TTL_SEC);
+      return {
+        id: row.id as string,
+        agreementId: row.change_request_id as string,
+        storagePath,
+        fileName: row.file_name as string,
+        mimeType: row.mime_type as string,
+        mediaKind: (row.media_kind === "image" ? "image" : "file") as AgreementAttachment["mediaKind"],
+        sizeBytes: Number(row.size_bytes ?? 0),
+        position: Number(row.position ?? 0),
+        uploadedByName: (row.uploaded_by_name as string) ?? "",
+        uploadedBySource: (row.uploaded_by_source as AgreementAttachment["uploadedBySource"]) ?? "team",
+        createdAt: row.created_at as string,
+        url: signed?.signedUrl ?? null,
+      };
+    }),
+  );
 }
