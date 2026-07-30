@@ -1663,6 +1663,94 @@ Migracje: 256 (schemat + `report_rot_items()`), 257 (backfill czterotorowy).
 
 ---
 
+## D38. Faza 9A — rejestr zdarzeń komunikacyjnych i rozdzielone osie aktywności
+
+**Status: zrealizowane (migracje 258-259). 9B (jedno pytanie dziennie, notatki głosowe, AI) świadomie
+odłożone jako osobna faza.**
+
+Zamknięcie luki, którą D18 i D19 §5 nazwały trzy razy i której nigdy nie zbudowano.
+
+### Co było zepsute (potwierdzone w kodzie, nie z dokumentów)
+
+1. **`projects.last_contact_date` jest martwe.** Sprawdzone wszystkie 8 miejsc użycia: ustawiane raz
+   przy tworzeniu projektu (`withAudit()`), potem żaden formularz go nie dotyka — jedyne wystąpienie
+   w panelu projektu to przepisanie starej wartości. `/bez-kontaktu` liczyła z niego
+   `daysBetween(...) > 14`, czyli **pokazywała śmieci** (strona miała baner „nieaktualna").
+2. **`lastActivityAt` był liczony i wyrzucany.** `recomputeActiveProjectsServer()` zbierał go z 6
+   tabel w pamięci, zostawiała się tylko flaga `is_active`. Bezpiecznik ciszy potrzebuje surowej daty.
+3. **Jedna oś maskowała najgorszy przypadek.** `mergeActivity()` scalał wszystko jednym `MAX()` —
+   „klient pisze, my milczymy" wyglądało identycznie jak stan zdrowy.
+
+### Zbudowane
+
+**`communication_events`** (migracja 258) — RĘCZNE fakty kontaktu. **Świadomie nie materializuje
+zdarzeń pochodnych**: akceptacje klienta, wysłane raporty i SMS-y mają już swoje tabele, a kopiowanie
+ich tutaj łamie „jedna informacja ma jedno miejsce". Rejestr jako przekrój powstaje przy odczycie
+(`report_communication_events` — ręczne wpisy + 7 źródeł pochodnych), zgodnie z CLAUDE.md („gdzie
+potrzebny przekrój — budujemy widok, nie nową tabelę").
+
+**Dwie trwałe osie** `projects.last_internal_activity_at` / `last_client_activity_at`, uzupełniane
+tym samym cronem. Przypisanie kierunku: klienckie są wyłącznie pola odpowiedzi klienta
+(`client_responded_at`, `client_offer_responded_at`, `settlement_offer_responded_at`) i wiersze, które
+klient sam utworzył (`created_by_side='client'`). Dołożone dwa źródła, których nie było:
+`communication_events` i `sms_messages`.
+
+**Osie zapisują się NIEZALEŻNIE od `autoDetectActiveProjects`** — ta flaga rządzi wyłącznie histerezą
+`is_active`. Gdyby siedziały pod tym samym `if`, wyłączenie auto-wykrywania cicho zabiłoby fundament
+fazy 11. Osie nigdy nie cofają się do null: brak nowej aktywności zostawia poprzednią datę.
+`combined` (dokładnie ten sam `MAX()` co wcześniej) dalej napędza `is_active` — flaga nie zmienia
+zachowania przy tej refaktoryzacji.
+
+**Przycisk „Odezwaliśmy się do klienta"** — cztery doprecyzowania właściciela, wszystkie w zakresie:
+- (a) **jeden przycisk, jedna oś.** Zapisuje wyłącznie `wychodzace`. Kierunku od klienta nie łapiemy
+  ręcznie: gdy nie odpowiadamy, nikt nie kliknie, więc oś kliencka ustawiana ręcznie byłaby
+  systematycznie zawyżona. Efekt uboczny jest pożądany — „my nie reagujemy" wychodzi samo.
+- (b) **data wsteczna** (ludzie nie klikają w momencie rozmowy). Data przyszła odrzucana
+  **triggerem w bazie**, nie tylko walidacją formularza — wpis „w przód" cicho uśpiłby bezpiecznik
+  ciszy. `CHECK` nie mógł użyć `now()` (nieimmutable), stąd trigger.
+- (c) **w widoku projektu** — nowa zakładka „Kontakt" (tylko po stronie zespołu, nie w
+  `PUBLIC_CLIENT_TAB_CONFIG`), razem z rejestrem zdarzeń.
+- (d) **wersja zbiorcza** na `/bez-kontaktu`: jedna data dla całej serii, potem klikanie po wierszach.
+  Wiersz po kliknięciu **zostaje** z potwierdzeniem „Zapisano" zamiast znikać — znikający wiersz
+  przesuwa pozostałe pod kursorem i prowadzi do kliknięcia niewłaściwego projektu.
+
+**Atomowość zapisu (migracja 259).** `log_outgoing_contact()` wstawia zdarzenie **i** odświeża cache
+osi w jednej operacji. Bez tego kliknięcie nie zdjęłoby projektu z listy ciszy do następnego przebiegu
+crona, czyli opiekun klikałby ten sam projekt kilka razy. Ten sam wzorzec co D27 2.2 (cache pisany w
+tej samej operacji co źródło). `greatest(coalesce(...))` — cache nigdy nie cofa się przy wpisie
+wstecznym: rozmowa z zeszłego tygodnia nie „postarza" projektu, w którym odezwaliśmy się wczoraj.
+
+**Ujednolicona definicja ciszy.** `/bez-kontaktu` miała zaszyte 14 dni przy specyfikacji mówiącej 25
+(ostrzeżenie) / 30 (bezpiecznik) — dwie sprzeczne definicje w jednym systemie. Strona czyta teraz
+`policy_thresholds.silenceWarningDays` (25), bez stałych w kodzie. Baner „nieaktualna" zdjęty, strona
+przemianowana na „Cisza w projektach", sortowana najgorszym przypadkiem na górze.
+
+`resolveSilenceState()` (`lib/communication/types.ts`) — czysta funkcja, cztery kombinacje z D18,
+**14 testów tablicy prawdy** (standard (b) z CLAUDE.md): wszystkie cztery stany, brak danych na każdej
+osi osobno, dokładnie na progu vs dzień po progu, data w przyszłości, niepoprawna data, oraz
+że próg 25 zapala się wcześniej niż 30.
+
+### Korekta rekomendacji w trakcie
+
+Zaproponowałem backfill `sms_messages.project_id` z `metadata->>'projectId'`. **Sprawdzenie na
+produkcji wywróciło tę rekomendację**: klucz występuje w 2 z 20 wierszy i **w żadnym nie ma wartości**
+(zawsze null). Backfillu nie ma i być nie może. Kolumna dodana mimo to — działa od nowych wysyłek, a
+zapytania o osie już ją czytają, więc zacznie działać sama, bez kolejnej migracji.
+
+### Świadomie nie zrobione
+
+- **9B**: jedno pytanie dziennie dla ekip, notatki głosowe, transkrypcja AI z czterema twardymi
+  regułami (docs/role/03 §5). Osobna faza.
+- **Alert „projekt porzucony administracyjnie"** (D19 §5.4) — zostaje na 11b razem z silnikiem faz;
+  dziś powstałoby powiadomienie bez odbiorcy.
+- **Wpięcie `sms_messages.project_id` w ścieżkę wysyłki** — kolumna istnieje, ale nadawca jej jeszcze
+  nie wypełnia. Odnotowany dług: dopóki tego nie ma, SMS nie zasila osi.
+
+Migracje: 258 (`communication_events`, dwie osie, `sms_messages.project_id`,
+`report_communication_events`), 259 (`log_outgoing_contact` — atomowy zapis z cache'em).
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed
@@ -1685,7 +1773,7 @@ notka o tym pod D20 §2, teraz nieaktualna.
 | 6 | Cykl życia projektu | L | **zrealizowane** (D25, migracje 227-230, "grandfather" dla danych historycznych; UI: blokada pola, rezygnacja klienta, panel pokrycia) |
 | 7 | Warstwa sygnałów + zdrowie etapu (czyta z ROT, D3) | M | **zrealizowane** (D26, migracje 232-233) |
 | 8 | Czas pracy | L (moduł już w dużej mierze istnieje — patrz D31) | **częściowo zrealizowane** (D32: `role_code`/`work_type`/`work_cause`, raport, `database.types.ts`) — reszta (higiena, misje CRUD, budżety per etap, rentowność, scalenie dwóch systemów godzin) czeka na decyzję |
-| 9 | Rejestr zdarzeń komunikacyjnych | L | do realizacji |
+| 9 | Rejestr zdarzeń komunikacyjnych | L | **9A zrealizowane** (D38, migracje 258-259: rejestr, rozdzielone osie, przycisk kontaktu, ujednolicona cisza); 9B (pytanie dzienne dla ekip, notatki głosowe, AI) — osobna faza |
 | 10 | `is_active`: persist + rozbicie osi | M | do realizacji |
 | 11a | Fazy komunikacji — bramy | S-M | do realizacji |
 | 11b | Fazy komunikacji — silnik (modyfikatory, bezpiecznik, przejęcie czerwone) | L | do realizacji |
@@ -1738,6 +1826,7 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D35 | ROT (`client_offer_status` zamrożony na accepted) | zatwierdzone, zrealizowane (migracja 255) |
 | D36 | Duplikat szablonu „Dom"/„DOM" (literówka w kodzie) | zatwierdzone, zrealizowane — naprawiona literówka + usunięty duplikat (dwukrotnie, drugi raz się odtworzył) |
 | D37 | Kanban ROT — atrybut kolumny w szablonie | zatwierdzone, zrealizowane (migracje 256-257: mechanizm + backfill czterotorowy, 2 ręczne ustawienia zachowane jako nadpisania) |
+| D38 | faza 9A (rejestr zdarzeń + rozdzielone osie) | zatwierdzone, zrealizowane (migracje 258-259); 9B (pytanie dzienne, AI) odłożone jako osobna faza |
 
 ---
 

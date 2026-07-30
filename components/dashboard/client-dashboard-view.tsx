@@ -9,6 +9,7 @@ import {
   ClipboardList,
   Clock,
   FileClock,
+  PhoneOutgoing,
   FileEdit,
   FileText,
   FolderOpen,
@@ -38,6 +39,7 @@ import { ProjectFunctionalitySurveyPanel, FunctionalitySurveyClientEmbed } from 
 import { ProjectSpecificationPanel } from "@/components/dashboard/project-specification-panel";
 import { ProjectTradesPanel } from "@/components/dashboard/project-trades-panel";
 import { StageReportsPanel } from "@/components/dashboard/stage-reports-panel";
+import { ProjectCommunicationPanel } from "@/components/dashboard/project-communication-panel";
 import { StageSatisfactionPrompt } from "@/components/dashboard/stage-satisfaction-prompt";
 import { ProjectMeetingNotesPanel } from "@/components/dashboard/project-meeting-notes-panel";
 import { ProjectDocumentsPanel } from "@/components/dashboard/project-documents-panel";
@@ -137,6 +139,7 @@ export type ClientDashboardTab =
   | "functionality-survey"
   | "trades"
   | "stage-reports"
+  | "communication"
   | "satisfaction"
   | "notes"
   | "documentation"
@@ -189,6 +192,7 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "functionality-survey", label: "Ankieta funkcji", icon: ClipboardList },
   { id: "trades", label: "Wykonawcy", icon: HardHat },
   { id: "stage-reports", label: "Raporty etapowe", icon: FileClock },
+  { id: "communication", label: "Kontakt", icon: PhoneOutgoing },
   { id: "notes", label: "Notatki", icon: StickyNote },
   { id: "documentation", label: "Dokumentacja", icon: FolderOpen },
   { id: "satisfaction", label: "Ocena", icon: Star },
@@ -1383,6 +1387,27 @@ export function ClientDashboardView({
     );
   }
 
+  /** Faza 9A (docs/08 D18/D19 §5) — rejestr zdarzeń komunikacyjnych + „Odezwaliśmy się do klienta". */
+  function renderCommunicationPanel() {
+    return (
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
+        <h2 className="page-section-title mb-3 text-base font-semibold">Kontakt z klientem</h2>
+        <p className="mb-4 text-sm text-muted">
+          Rejestr faktów kontaktu — bez treści rozmów. Zdarzenia z systemu (odpowiedzi klienta,
+          wysłane raporty, SMS-y) dopisują się same; przycisk służy do kontaktu poza systemem, np.
+          telefonu albo WhatsAppa.
+        </p>
+        <ProjectCommunicationPanel
+          projectId={selectedProject.id}
+          axes={{
+            lastInternalActivityAt: selectedProject.lastInternalActivityAt ?? null,
+            lastClientActivityAt: selectedProject.lastClientActivityAt ?? null,
+          }}
+        />
+      </div>
+    );
+  }
+
   function renderDocumentationPanel() {
     return (
       <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
@@ -1670,6 +1695,8 @@ export function ClientDashboardView({
         return enableTrades ? renderTradesPanel() : null;
       case "stage-reports":
         return !readOnly ? renderStageReportsPanel() : null;
+      case "communication":
+        return !readOnly ? renderCommunicationPanel() : null;
       case "notes":
         return enableMeetingNotes ? renderMeetingNotesPanel() : null;
       case "documentation":

@@ -70,6 +70,8 @@ export function rowToProject(row: ProjectRow): Project {
     manualCloseReason: row.manual_close_reason,
     manualCloseAt: row.manual_close_at,
     manualCloseBy: row.manual_close_by,
+    lastInternalActivityAt: row.last_internal_activity_at,
+    lastClientActivityAt: row.last_client_activity_at,
   };
 }
 

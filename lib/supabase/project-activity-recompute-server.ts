@@ -16,6 +16,8 @@ type ActivityRow = {
   client_offer_responded_at?: string | null;
   settlement_offer_responded_at?: string | null;
   date?: string | null;
+  /** Faza 9A — zmianę projektową może utworzyć klient; rozstrzyga o przypisaniu do osi. */
+  created_by_side?: string | null;
 };
 
 function mergeActivity(
@@ -40,9 +42,25 @@ function dateToIsoEndOfDay(date: string | null | undefined): string | null {
   return `${date.trim()}T23:59:59.999Z`;
 }
 
-async function fetchActivityByProject(
-  lookbackDays: number,
-): Promise<Map<string, string>> {
+/**
+ * Faza 9A (docs/08 D18/D19 §5) — dwie osie zamiast jednej.
+ *
+ * `combined` napędza histerezę `is_active` (zachowanie bez zmian — dokładnie ten sam `MAX()` co
+ * wcześniej, żeby flaga nie zmieniła się przy tej refaktoryzacji). `internal`/`client` to nowe,
+ * TRWAŁE osie: jeden `MAX()` obu maskuje najgroźniejszy przypadek z czterech (klient pisze, my
+ * milczymy) pod tym samym „aktywny", co stan zdrowy.
+ *
+ * Przypisanie kierunku: klienckie są wyłącznie pola odpowiedzi klienta (`client_responded_at`,
+ * `client_offer_responded_at`, `settlement_offer_responded_at`) oraz wiersze, które klient sam
+ * utworzył (`created_by_side='client'`). Wszystko inne to nasza strona.
+ */
+type ActivityAxes = {
+  combined: Map<string, string>;
+  internal: Map<string, string>;
+  client: Map<string, string>;
+};
+
+async function fetchActivityByProject(lookbackDays: number): Promise<ActivityAxes> {
   const admin = getSupabaseAdmin();
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - lookbackDays);
@@ -56,10 +74,12 @@ async function fetchActivityByProject(
     timeEntries,
     services,
     meetingNotes,
+    communicationEvents,
+    smsMessages,
   ] = await Promise.all([
     admin
       .from("project_change_requests")
-      .select("project_id, created_at, updated_at, submitted_at, client_responded_at")
+      .select("project_id, created_at, updated_at, submitted_at, client_responded_at, created_by_side")
       .gte("updated_at", cutoffIso),
     admin
       .from("project_client_agreements")
@@ -86,6 +106,18 @@ async function fetchActivityByProject(
       .from("project_meeting_notes")
       .select("project_id, created_at, updated_at, published_at")
       .gte("updated_at", cutoffIso),
+    // Faza 9A — ręczne fakty kontaktu. Kierunek bierzemy z wiersza, nie zgadujemy.
+    admin
+      .from("communication_events")
+      .select("project_id, direction, event_at")
+      .gte("event_at", cutoffIso),
+    // SMS: zawsze wychodzące. Dziś zwróci 0 wierszy (project_id bez backfillu, patrz migracja 258),
+    // zacznie działać samo od nowych wysyłek — bez kolejnej zmiany w kodzie.
+    admin
+      .from("sms_messages")
+      .select("project_id, created_at, sent_at")
+      .not("project_id", "is", null)
+      .gte("created_at", cutoffIso),
   ]);
 
   for (const result of [
@@ -95,69 +127,69 @@ async function fetchActivityByProject(
     timeEntries,
     services,
     meetingNotes,
+    communicationEvents,
+    smsMessages,
   ]) {
     if (result.error) {
       throw new Error(result.error.message);
     }
   }
 
-  const map = new Map<string, string>();
+  const combined = new Map<string, string>();
+  const internal = new Map<string, string>();
+  const client = new Map<string, string>();
+
+  /** Dokłada do osi kierunkowej i do combined jednym wywołaniem. */
+  const add = (
+    axis: Map<string, string>,
+    projectId: string | null | undefined,
+    ...timestamps: Array<string | null | undefined>
+  ) => {
+    mergeActivity(axis, projectId, ...timestamps);
+    mergeActivity(combined, projectId, ...timestamps);
+  };
 
   for (const row of (changeRequests.data ?? []) as ActivityRow[]) {
-    mergeActivity(
-      map,
-      row.project_id,
-      row.created_at,
-      row.updated_at,
-      row.submitted_at,
-      row.client_responded_at,
-    );
+    // Zmianę projektową może utworzyć klient — wtedy jej powstanie jest sygnałem klienckim.
+    const ownAxis = row.created_by_side === "client" ? client : internal;
+    add(ownAxis, row.project_id, row.created_at, row.updated_at, row.submitted_at);
+    add(client, row.project_id, row.client_responded_at);
   }
   for (const row of (agreements.data ?? []) as ActivityRow[]) {
-    mergeActivity(
-      map,
-      row.project_id,
-      row.created_at,
-      row.updated_at,
-      row.submitted_at,
-      row.client_responded_at,
-    );
+    add(internal, row.project_id, row.created_at, row.updated_at, row.submitted_at);
+    add(client, row.project_id, row.client_responded_at);
   }
   for (const row of (documents.data ?? []) as ActivityRow[]) {
-    mergeActivity(map, row.project_id, row.created_at, row.updated_at);
+    add(internal, row.project_id, row.created_at, row.updated_at);
   }
   for (const row of (timeEntries.data ?? []) as ActivityRow[]) {
-    mergeActivity(
-      map,
-      row.project_id,
-      dateToIsoEndOfDay(row.date),
-      row.created_at,
-      row.updated_at,
-    );
+    add(internal, row.project_id, dateToIsoEndOfDay(row.date), row.created_at, row.updated_at);
   }
   for (const row of (services.data ?? []) as ActivityRow[]) {
-    mergeActivity(
-      map,
-      row.project_id,
-      row.created_at,
-      row.updated_at,
-      row.client_offer_responded_at,
-      row.settlement_offer_responded_at,
-    );
+    add(internal, row.project_id, row.created_at, row.updated_at);
+    add(client, row.project_id, row.client_offer_responded_at, row.settlement_offer_responded_at);
   }
   for (const row of (meetingNotes.data ?? []) as Array<
     ActivityRow & { published_at?: string | null }
   >) {
-    mergeActivity(
-      map,
-      row.project_id,
-      row.created_at,
-      row.updated_at,
-      row.published_at,
-    );
+    add(internal, row.project_id, row.created_at, row.updated_at, row.published_at);
+  }
+  for (const row of (communicationEvents.data ?? []) as Array<{
+    project_id: string | null;
+    direction: string | null;
+    event_at: string | null;
+  }>) {
+    add(row.direction === "przychodzace" ? client : internal, row.project_id, row.event_at);
+  }
+  for (const row of (smsMessages.data ?? []) as Array<{
+    project_id: string | null;
+    created_at: string | null;
+    sent_at: string | null;
+  }>) {
+    add(internal, row.project_id, row.sent_at, row.created_at);
   }
 
-  return map;
+  return { combined, internal, client };
 }
 
 export type RecomputeActiveProjectsResult = {
@@ -166,6 +198,8 @@ export type RecomputeActiveProjectsResult = {
   activated: number;
   deactivated: number;
   unchanged: number;
+  /** Faza 9A — ile projektów dostało nową datę na którejś z osi aktywności. */
+  axesUpdated: number;
 };
 
 export async function recomputeActiveProjectsServer(
@@ -175,22 +209,14 @@ export async function recomputeActiveProjectsServer(
     settingsOverride ?? (await fetchProjectActivitySettingsServer()),
   );
 
-  if (!settings.autoDetectActiveProjects) {
-    return {
-      autoDetectEnabled: false,
-      scanned: 0,
-      activated: 0,
-      deactivated: 0,
-      unchanged: 0,
-    };
-  }
-
   const admin = getSupabaseAdmin();
   const lookbackDays = settings.deactivateAfterDays + 7;
 
   const [{ data: projects, error: projectsError }, { data: fieldOptionsRow }, activityByProject] =
     await Promise.all([
-      admin.from("projects").select("id, is_active, flow_status"),
+      admin
+        .from("projects")
+        .select("id, is_active, flow_status, last_internal_activity_at, last_client_activity_at"),
       admin.from("app_settings").select("data").eq("id", "field_options").maybeSingle(),
       fetchActivityByProject(lookbackDays),
     ]);
@@ -205,28 +231,64 @@ export async function recomputeActiveProjectsServer(
   let activated = 0;
   let deactivated = 0;
   let unchanged = 0;
+  let axesUpdated = 0;
 
-  const updates: Array<{ id: string; is_active: boolean }> = [];
+  type ProjectUpdate = {
+    id: string;
+    is_active?: boolean;
+    last_internal_activity_at?: string | null;
+    last_client_activity_at?: string | null;
+  };
+  const updates: ProjectUpdate[] = [];
 
   for (const project of projects ?? []) {
-    const desired = computeDesiredIsActive({
-      currentlyActive: Boolean(project.is_active),
-      isClosed: isClosedFlowStatus(project.flow_status, fieldOptions),
-      lastActivityAt: activityByProject.get(project.id) ?? null,
-      settings,
-      now,
-    });
+    const patch: ProjectUpdate = { id: project.id };
 
-    if (desired === null) {
-      unchanged += 1;
-      continue;
+    /**
+     * Faza 9A — osie zapisujemy NIEZALEŻNIE od `autoDetectActiveProjects`. Ta flaga rządzi wyłącznie
+     * histerezą `is_active`; osie są surowym faktem, którego potrzebuje bezpiecznik ciszy. Gdyby
+     * siedziały pod tym samym `if`, wyłączenie auto-wykrywania cicho zabiłoby fundament fazy 11.
+     * Osie nigdy nie cofają się do null — brak nowej aktywności zostawia poprzednią datę.
+     */
+    const nextInternal = activityByProject.internal.get(project.id) ?? null;
+    const nextClient = activityByProject.client.get(project.id) ?? null;
+    const mergedInternal = maxIsoTimestamp([project.last_internal_activity_at, nextInternal]);
+    const mergedClient = maxIsoTimestamp([project.last_client_activity_at, nextClient]);
+
+    if (mergedInternal !== (project.last_internal_activity_at ?? null)) {
+      patch.last_internal_activity_at = mergedInternal;
+    }
+    if (mergedClient !== (project.last_client_activity_at ?? null)) {
+      patch.last_client_activity_at = mergedClient;
     }
 
-    updates.push({ id: project.id, is_active: desired });
-    if (desired) {
-      activated += 1;
-    } else {
-      deactivated += 1;
+    if (settings.autoDetectActiveProjects) {
+      const desired = computeDesiredIsActive({
+        currentlyActive: Boolean(project.is_active),
+        isClosed: isClosedFlowStatus(project.flow_status, fieldOptions),
+        lastActivityAt: activityByProject.combined.get(project.id) ?? null,
+        settings,
+        now,
+      });
+
+      if (desired === null) {
+        unchanged += 1;
+      } else {
+        patch.is_active = desired;
+        if (desired) {
+          activated += 1;
+        } else {
+          deactivated += 1;
+        }
+      }
+    }
+
+    // Same `id` = nic do zapisania dla tego projektu.
+    if (Object.keys(patch).length > 1) {
+      if (patch.last_internal_activity_at !== undefined || patch.last_client_activity_at !== undefined) {
+        axesUpdated += 1;
+      }
+      updates.push(patch);
     }
   }
 
@@ -235,11 +297,8 @@ export async function recomputeActiveProjectsServer(
   for (let i = 0; i < updates.length; i += chunkSize) {
     const chunk = updates.slice(i, i + chunkSize);
     await Promise.all(
-      chunk.map(async (item) => {
-        const { error } = await admin
-          .from("projects")
-          .update({ is_active: item.is_active })
-          .eq("id", item.id);
+      chunk.map(async ({ id, ...patch }) => {
+        const { error } = await admin.from("projects").update(patch).eq("id", id);
         if (error) {
           throw new Error(error.message);
         }
@@ -248,11 +307,12 @@ export async function recomputeActiveProjectsServer(
   }
 
   return {
-    autoDetectEnabled: true,
+    autoDetectEnabled: settings.autoDetectActiveProjects,
     scanned: projects?.length ?? 0,
     activated,
     deactivated,
     unchanged,
+    axesUpdated,
   };
 }
 

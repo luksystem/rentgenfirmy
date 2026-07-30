@@ -31,11 +31,24 @@ export type ProjectRow = {
   manual_close_reason: string | null;
   manual_close_at: string | null;
   manual_close_by: string | null;
+  /**
+   * Faza 9A (docs/08 D18/D19 §5) — trwałe, ROZDZIELONE osie aktywności. Wcześniej `lastActivityAt`
+   * liczony w pamięci i wyrzucany; jeden MAX() obu osi maskuje przypadek "klient pisze, my milczymy".
+   */
+  last_internal_activity_at: string | null;
+  last_client_activity_at: string | null;
 };
 
 export type ProjectInsert = Omit<
   ProjectRow,
-  "id" | "created_at" | "stage_reports_pilot_enabled" | "manual_close_reason" | "manual_close_at" | "manual_close_by"
+  | "id"
+  | "created_at"
+  | "stage_reports_pilot_enabled"
+  | "manual_close_reason"
+  | "manual_close_at"
+  | "manual_close_by"
+  | "last_internal_activity_at"
+  | "last_client_activity_at"
 > & {
   id?: string;
   created_at?: string;
@@ -43,6 +56,9 @@ export type ProjectInsert = Omit<
   manual_close_reason?: string | null;
   manual_close_at?: string | null;
   manual_close_by?: string | null;
+  /** Faza 9A — wypełniane cronem, nie przy tworzeniu projektu. */
+  last_internal_activity_at?: string | null;
+  last_client_activity_at?: string | null;
 };
 
 export type ProjectUpdate = Partial<ProjectInsert>;
@@ -3077,9 +3093,50 @@ export type WorkMissionInsert = Omit<WorkMissionRow, "id" | "created_at" | "upda
 
 export type WorkMissionUpdate = Partial<WorkMissionInsert>;
 
+// ── Rejestr zdarzeń komunikacyjnych (Faza 9A, /docs/08 D18/D19) — migracja 258 ───────────────────
+export type CommunicationEventRow = {
+  id: string;
+  project_id: string;
+  /** 'wychodzace' = my do klienta, 'przychodzace' = klient do nas. */
+  direction: string;
+  channel: string;
+  event_at: string;
+  actor_id: string | null;
+  actor_name: string;
+  note: string;
+  created_at: string;
+};
+
+export type CommunicationEventInsert = Omit<
+  CommunicationEventRow,
+  "id" | "created_at" | "channel" | "actor_name" | "note"
+> & {
+  id?: string;
+  created_at?: string;
+  channel?: string;
+  actor_name?: string;
+  note?: string;
+};
+
+export type CommunicationEventUpdate = Partial<CommunicationEventInsert>;
+
 export type Database = {
   public: {
     Tables: {
+      communication_events: {
+        Row: CommunicationEventRow;
+        Insert: CommunicationEventInsert;
+        Update: CommunicationEventUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "communication_events_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       time_categories: {
         Row: TimeCategoryRow;
         Insert: TimeCategoryInsert;
@@ -4061,6 +4118,8 @@ export type Database = {
           sent_at: string | null;
           delivered_at: string | null;
           created_at: string;
+          /** Faza 9A — przypięcie SMS do projektu (bez backfillu, działa od nowych wysyłek). */
+          project_id: string | null;
         };
         Insert: {
           id?: string;
@@ -4068,6 +4127,7 @@ export type Database = {
           message: string;
           provider?: string;
           provider_message_id?: string | null;
+          project_id?: string | null;
           status?: string;
           error_message?: string | null;
           metadata?: Record<string, unknown>;
@@ -4080,6 +4140,7 @@ export type Database = {
           message: string;
           provider: string;
           provider_message_id: string | null;
+          project_id: string | null;
           status: string;
           error_message: string | null;
           metadata: Record<string, unknown>;
@@ -4998,6 +5059,27 @@ export type Database = {
           work_cause: string | null;
           total_minutes: number;
           entry_count: number;
+        }[];
+      };
+      log_outgoing_contact: {
+        Args: {
+          p_project_id: string;
+          p_event_at: string;
+          p_actor_id?: string | null;
+          p_actor_name?: string;
+          p_note?: string;
+        };
+        Returns: undefined;
+      };
+      report_communication_events: {
+        Args: { p_project_id: string };
+        Returns: {
+          source: string;
+          direction: string;
+          channel: string;
+          event_at: string | null;
+          actor_name: string;
+          title: string;
         }[];
       };
       report_template_configuration_gaps: {

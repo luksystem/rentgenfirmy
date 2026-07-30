@@ -62,6 +62,14 @@ export type Project = {
   manualCloseReason?: string | null;
   manualCloseAt?: string | null;
   manualCloseBy?: string | null;
+  /**
+   * Faza 9A (docs/08 D18/D19 §5) — rozdzielone osie aktywności, uzupełniane cronem.
+   * `lastContactDate` powyżej jest MARTWE (ustawiane raz przy tworzeniu projektu, nigdy potem) —
+   * te dwa pola je zastępują. Nie scalać ich w jedno: MAX() obu maskuje przypadek
+   * "klient pisze, my milczymy".
+   */
+  lastInternalActivityAt?: string | null;
+  lastClientActivityAt?: string | null;
 };
 
 export type ProjectInput = Omit<
@@ -74,6 +82,8 @@ export type ProjectInput = Omit<
   | "manualCloseReason"
   | "manualCloseAt"
   | "manualCloseBy"
+  | "lastInternalActivityAt"
+  | "lastClientActivityAt"
 > & {
   lastContactDate?: string;
   clientId?: string | null;
