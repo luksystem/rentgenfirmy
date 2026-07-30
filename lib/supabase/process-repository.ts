@@ -317,6 +317,7 @@ export async function insertTemplateStagesGraph(template: ProcessTemplate) {
             starts_warranty: item.startsWarranty ?? false,
             lead_days: item.leadDays ?? null,
             effort_days: item.effortDays ?? null,
+            visible_to_client: item.visibleToClient ?? false,
           })),
         );
 

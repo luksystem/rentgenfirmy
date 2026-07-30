@@ -102,6 +102,7 @@ export function parseProcessTemplateSnapshot(value: unknown): ProcessTemplate | 
                     startsWarranty: item.startsWarranty === true,
                     leadDays: item.leadDays == null ? null : Number(item.leadDays),
                     effortDays: item.effortDays == null ? null : Number(item.effortDays),
+                    visibleToClient: item.visibleToClient === true,
                   })),
               ),
             })),

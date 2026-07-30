@@ -64,6 +64,7 @@ export function ProcessTemplateEditor({
       startsWarranty: false,
       leadDays: null,
       effortDays: null,
+      visibleToClient: false,
     };
   }
 
@@ -243,6 +244,31 @@ export function ProcessTemplateEditor({
                         index !== itemIndex
                           ? item
                           : { ...item, startsWarranty: !item.startsWarranty },
+                      ),
+                    },
+              ),
+            },
+      ),
+    }));
+  }
+
+  function toggleMilestoneItemVisibleToClient(stageId: string, milestoneId: string, itemIndex: number) {
+    setTemplate((current) => ({
+      ...current,
+      stages: current.stages.map((stage) =>
+        stage.id !== stageId
+          ? stage
+          : {
+              ...stage,
+              milestones: stage.milestones.map((milestone) =>
+                milestone.id !== milestoneId
+                  ? milestone
+                  : {
+                      ...milestone,
+                      items: milestone.items.map((item, index) =>
+                        index !== itemIndex
+                          ? item
+                          : { ...item, visibleToClient: !item.visibleToClient },
                       ),
                     },
               ),
@@ -514,6 +540,16 @@ export function ProcessTemplateEditor({
                           }
                         />
                         Podpisanie rozpoczyna gwarancję (wypełnia datę przekazania systemu)
+                      </label>
+                      <label className="mt-1.5 flex items-center gap-1.5 text-xs text-muted">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(item.visibleToClient)}
+                          onChange={() =>
+                            toggleMilestoneItemVisibleToClient(stage.id, milestone.id, itemIndex)
+                          }
+                        />
+                        Widoczne dla klienta (domyślnie ukryte na publicznym dashboardzie)
                       </label>
                       <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-muted">
                         <label className="flex items-center gap-1.5">

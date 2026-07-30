@@ -575,7 +575,9 @@ export function ProcessPipeline({
                         </div>
 
                         <div className="mt-3 grid gap-2">
-                          {milestone.items.map((item) => {
+                          {milestone.items
+                            .filter((item) => interactive || item.visibleToClient)
+                            .map((item) => {
                             const instance = itemInstances?.[item.id];
                             const visualState = getProcessItemVisualState(
                               process?.completions?.[item.id],

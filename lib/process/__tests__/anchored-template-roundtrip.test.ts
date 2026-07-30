@@ -107,6 +107,7 @@ function buildFullTemplate(): ProcessTemplate {
                 startsWarranty: false,
                 leadDays: 5,
                 effortDays: 2,
+                visibleToClient: false,
               },
             ],
           },

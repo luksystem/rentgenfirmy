@@ -2418,6 +2418,7 @@ export type ProcessItemRow = {
   starts_warranty: boolean;
   lead_days: number | null;
   effort_days: number | null;
+  visible_to_client: boolean;
 };
 
 export type RoleRow = {

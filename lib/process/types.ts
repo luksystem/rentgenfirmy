@@ -33,6 +33,9 @@ export type ProcessItem = {
   leadDays?: number | null;
   /** Krok A — ile realnie dni zajmuje wykonanie elementu. */
   effortDays?: number | null;
+  /** Domyślnie false — element jest niewidoczny na publicznym dashboardzie klienta, dopóki admin
+   *  świadomie nie zaznaczy tego w edytorze szablonu. */
+  visibleToClient?: boolean;
 };
 
 export type ProcessMilestone = {
@@ -328,6 +331,22 @@ export function getProcessProgress(template: ProcessTemplate, process: ProjectPr
     total,
     completed,
     percent: total > 0 ? Math.round((completed / total) * 100) : 0,
+  };
+}
+
+/** Kopia szablonu okrojona do elementów oznaczonych "Widoczne dla klienta" — używana przy budowie
+ *  publicznego payloadu dashboardu, żeby elementy niewidoczne nigdy nie trafiły do przeglądarki
+ *  klienta (nie tylko UI-owe ukrycie). */
+export function filterProcessTemplateForClient(template: ProcessTemplate): ProcessTemplate {
+  return {
+    ...template,
+    stages: template.stages.map((stage) => ({
+      ...stage,
+      milestones: stage.milestones.map((milestone) => ({
+        ...milestone,
+        items: milestone.items.filter((item) => item.visibleToClient === true),
+      })),
+    })),
   };
 }
 

@@ -56,6 +56,7 @@ export function rowToProcessItem(
     startsWarranty: Boolean(row.starts_warranty),
     leadDays: row.lead_days ?? null,
     effortDays: row.effort_days ?? null,
+    visibleToClient: Boolean(row.visible_to_client),
   };
 }
 

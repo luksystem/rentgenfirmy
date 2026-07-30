@@ -59,7 +59,7 @@ import {
   settlementTablesExist,
 } from "@/lib/supabase/project-settlement-server";
 import type { ProjectSettlementsBundle } from "@/lib/settlements/types";
-import { getProcessProgress } from "@/lib/process/types";
+import { filterProcessTemplateForClient, getProcessProgress } from "@/lib/process/types";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
 import type { Client } from "@/lib/service/types";
 import type { Project } from "@/lib/types";
@@ -790,7 +790,8 @@ export async function fetchPublicDashboardPayload(
     }
 
     process = processRow ? rowToProjectProcess(processRow) : null;
-    template = process?.templateSnapshot ?? loadedTemplate;
+    const rawTemplate = process?.templateSnapshot ?? loadedTemplate;
+    template = rawTemplate ? filterProcessTemplateForClient(rawTemplate) : null;
     if (process && template) {
       processProgress = getProcessProgress(template, process);
     }
