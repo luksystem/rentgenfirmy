@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, Lightbulb, Link2, ListChecks, Lock, Pencil, Plus, Send, Trash2, X } from "lucide-react";
 import { AgreementCollaborationPanel } from "@/components/dashboard/agreement-collaboration-panel";
 import { ContactPointPhotoThumbnail } from "@/components/contact-point-photo-thumbnail";
@@ -11,6 +11,10 @@ import { AgreementCollapsibleShell } from "@/components/dashboard/agreement-coll
 import { AgreementApproverRoleField } from "@/components/dashboard/agreement-approver-role-field";
 import { AgreementCostFields } from "@/components/dashboard/agreement-cost-fields";
 import { TaskFromSourceDialog } from "@/components/process/task-from-source-dialog";
+import {
+  fetchSourceTask,
+  type SourceTaskSummary,
+} from "@/lib/supabase/task-from-source-repository";
 import { Button } from "@/components/ui/button";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { Field, Input, Textarea } from "@/components/ui/input";
@@ -214,6 +218,17 @@ function AgreementCard({
 }) {
   const [busy, setBusy] = useState(false);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [sourceTask, setSourceTask] = useState<SourceTaskSummary | null>(null);
+
+  const reloadSourceTask = useCallback(() => {
+    void fetchSourceTask({ agreementId: agreement.id })
+      .then(setSourceTask)
+      .catch(() => setSourceTask(null));
+  }, [agreement.id]);
+
+  useEffect(() => {
+    reloadSourceTask();
+  }, [reloadSourceTask]);
   const [responseNote, setResponseNote] = useState("");
   const cardRef = useRef<HTMLDivElement | null>(null);
   const meta = buildAgreementCollapsibleMeta(agreement);
@@ -368,31 +383,45 @@ function AgreementCard({
         />
       ) : null}
 
-      {/* D43 — dostępne w każdym statusie, nie tylko w szkicu: praca nad ustaleniem zaczyna się
-          zwykle PO akceptacji klienta, więc ograniczenie do draftu wycięłoby główny przypadek. */}
       {mode === "team" ? (
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="w-full sm:w-auto"
-            disabled={busy}
-            onClick={() => setTaskDialogOpen(true)}
-          >
-            <ListChecks className="mr-2 h-3.5 w-3.5" />
-            Utwórz zadanie
-          </Button>
-          <TaskFromSourceDialog
-            open={taskDialogOpen}
-            onOpenChange={setTaskDialogOpen}
-            projectId={projectId ?? agreement.projectId}
-            authorName={authorName}
-            defaultTitle={agreement.title}
-            defaultDescription={agreement.body ?? ""}
-            sourceAgreementId={agreement.id}
-          />
-        </div>
+        sourceTask ? (
+          // Jedno zrodlo = jedno zadanie. Dwa zadania z jednego ustalenia rozjechalyby
+          // synchronizacje completed_at: zamkniecie jednego oznaczyloby rzecz jako wykonana,
+          // choc drugie wciaz trwa. Wiele prac rozwiazuja PODZADANIA na karcie.
+          <p className="rounded-lg border border-border/60 bg-surface/30 px-3 py-2 text-xs text-muted">
+            Zadanie zostało już utworzone:{" "}
+            <strong className="text-foreground">{sourceTask.title}</strong>
+            {sourceTask.columnTitle ? ` — kolumna „${sourceTask.columnTitle}”` : ""}
+            {sourceTask.closedAt ? " · zamknięte" : ""}
+            <span className="mt-1 block">
+              Kolejne prace dodaj jako podzadania na tej karcie, nie jako osobne zadanie.
+            </span>
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="w-full sm:w-auto"
+              disabled={busy}
+              onClick={() => setTaskDialogOpen(true)}
+            >
+              <ListChecks className="mr-2 h-3.5 w-3.5" />
+              Utwórz zadanie
+            </Button>
+            <TaskFromSourceDialog
+              open={taskDialogOpen}
+              onOpenChange={setTaskDialogOpen}
+              projectId={projectId ?? agreement.projectId}
+              authorName={authorName}
+              defaultTitle={agreement.title}
+              defaultDescription={agreement.body ?? ""}
+              sourceAgreementId={agreement.id}
+              onCreated={reloadSourceTask}
+            />
+          </div>
+        )
       ) : null}
 
       {mode === "team" && agreement.status === "draft" ? (

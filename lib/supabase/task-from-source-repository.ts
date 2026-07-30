@@ -136,3 +136,56 @@ export async function createTaskFromSource(input: TaskFromSourceInput) {
     assigneeName: owner?.responsibleName ?? null,
   });
 }
+
+export type SourceTaskSummary = {
+  id: string;
+  title: string;
+  columnTitle: string | null;
+  closedAt: string | null;
+};
+
+/**
+ * D43/D44 — zadanie już utworzone z tego ustalenia albo z tej zmiany.
+ *
+ * Jedno źródło = jedno zadanie: taka była decyzja przy wyborze linku jako kolumny, a wiele prac
+ * z jednego ustalenia rozwiązują PODZADANIA. UI musi to wiedzieć, żeby nie pozwolić utworzyć
+ * drugiego — bez tego dwa zadania z jednego ustalenia rozjeżdżają synchronizację `completed_at`
+ * (zamknięcie jednego oznaczyłoby ustalenie jako wykonane, choć drugie wciąż trwa).
+ */
+export async function fetchSourceTask(input: {
+  agreementId?: string | null;
+  changeRequestId?: string | null;
+}): Promise<SourceTaskSummary | null> {
+  const supabase = getSupabase();
+  let query = supabase
+    .from("process_kanban_tasks")
+    .select("id, title, closed_at, column_id")
+    .limit(1);
+
+  if (input.agreementId) {
+    query = query.eq("source_agreement_id", input.agreementId);
+  } else if (input.changeRequestId) {
+    query = query.eq("source_change_request_id", input.changeRequestId);
+  } else {
+    return null;
+  }
+
+  const { data, error } = await query.maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+
+  const row = data as { id: string; title: string; closed_at: string | null; column_id: string };
+  const { data: column } = await supabase
+    .from("process_kanban_columns")
+    .select("title")
+    .eq("id", row.column_id)
+    .maybeSingle();
+
+  return {
+    id: row.id,
+    title: row.title,
+    columnTitle: (column as { title?: string } | null)?.title ?? null,
+    closedAt: row.closed_at,
+  };
+}

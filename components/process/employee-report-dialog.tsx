@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Camera, Check, ChevronLeft } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Camera, Check, ChevronDown, ChevronLeft, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,8 +33,10 @@ import { useProcessStore } from "@/store/process-store";
  */
 const STEPS = ["Co się dzieje", "Gdzie", "Rozliczenie", "Pilność"] as const;
 
-function input_photoFailed(result: { photoUploaded: boolean; photoError: string | null }) {
-  return !result.photoUploaded && result.photoError !== null;
+/** Czy któreś zdjęcie nie doszło. Zgłoszenie i tak powstało — ale cisza o brakującym dowodzie
+ *  jest gorsza niż widoczny błąd, więc okno zostaje otwarte z komunikatem. */
+function somePhotoFailed(result: { photosUploaded: number; photoError: string | null }, picked: number) {
+  return result.photosUploaded < picked && result.photoError !== null;
 }
 
 export function EmployeeReportDialog({
@@ -57,9 +59,13 @@ export function EmployeeReportDialog({
 
   const [step, setStep] = useState(0);
   const [description, setDescription] = useState("");
-  const [photo, setPhoto] = useState<File | null>(null);
+  const [photos, setPhotos] = useState<File[]>([]);
+  // Podglądy tworzone z obiektów File; zwalniane w useEffekcie, żeby nie ciekła pamięć na telefonie.
+  const [previews, setPreviews] = useState<string[]>([]);
   const [projectId, setProjectId] = useState(fixedProjectId ?? "");
   const [projectQuery, setProjectQuery] = useState("");
+  const [projectListOpen, setProjectListOpen] = useState(false);
+  const projectBoxRef = useRef<HTMLDivElement | null>(null);
   const [stageId, setStageId] = useState<string>("");
   const [billingImpact, setBillingImpact] = useState<BillingImpactAnswer | null>(null);
   const [isUrgent, setIsUrgent] = useState<boolean | null>(null);
@@ -70,14 +76,33 @@ export function EmployeeReportDialog({
     if (!open) return;
     setStep(0);
     setDescription("");
-    setPhoto(null);
+    setPhotos([]);
     setProjectId(fixedProjectId ?? "");
     setProjectQuery("");
+    setProjectListOpen(false);
     setStageId("");
     setBillingImpact(null);
     setIsUrgent(null);
     setError(null);
   }, [open, fixedProjectId]);
+
+  useEffect(() => {
+    const urls = photos.map((file) => URL.createObjectURL(file));
+    setPreviews(urls);
+    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+  }, [photos]);
+
+  // Zamknięcie listy kliknięciem obok — ten sam wzorzec co w ClientSelectWithCreate.
+  useEffect(() => {
+    if (!projectListOpen) return;
+    function handlePointerDown(event: MouseEvent) {
+      if (!projectBoxRef.current?.contains(event.target as Node)) {
+        setProjectListOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [projectListOpen]);
 
   const selectedProject = useMemo(
     () => projects.find((entry) => entry.id === projectId) ?? null,
@@ -137,15 +162,15 @@ export function EmployeeReportDialog({
         isUrgent,
         createdById: profile?.id ?? null,
         createdByName: displayName || profile?.email || "Pracownik",
-        photo,
+        photos,
       });
       // Zgloszenie powstalo — ale jesli zdjecie nie doszlo, mowimy o tym wprost i NIE zamykamy
       // okna. Cichy sukces przy brakujacym dowodzie jest gorszy niz widoczny blad.
-      if (input_photoFailed(result)) {
-        setPhoto(null);
+      if (somePhotoFailed(result, photos.length)) {
+        setPhotos([]);
         setError(
-          `Zgłoszenie zapisane, ale zdjęcie się nie wgrało: ${result.photoError}. ` +
-            "Możesz dodać je później w zmianie projektowej.",
+          `Zgłoszenie zapisane, ale wgrało się ${result.photosUploaded} z ${photos.length} zdjęć: ` +
+            `${result.photoError}. Resztę możesz dodać później w ustaleniu albo zmianie.`,
         );
         onCreated?.({ target: result.target });
         return;
@@ -184,17 +209,43 @@ export function EmployeeReportDialog({
         <div className="grid gap-4">
           {step === 0 ? (
             <>
-              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface-muted/30 px-4 py-6 text-sm text-muted hover:border-accent/40">
+              {previews.length > 0 ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {previews.map((url, index) => (
+                    <div key={url} className="relative aspect-square overflow-hidden rounded-lg border border-border">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt={`Zdjęcie ${index + 1}`} className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        aria-label="Usuń zdjęcie"
+                        onClick={() => setPhotos((current) => current.filter((_, i) => i !== index))}
+                        className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface-muted/30 px-4 py-5 text-sm text-muted hover:border-accent/40">
                 <Camera className="h-5 w-5" />
-                {photo ? photo.name : "Dodaj zdjęcie (opcjonalnie)"}
+                {photos.length ? `Dodaj kolejne (${photos.length})` : "Dodaj zdjęcie (opcjonalnie)"}
                 <input
                   type="file"
                   accept="image/*"
-                  capture="environment"
+                  multiple
                   className="hidden"
-                  onChange={(event) => setPhoto(event.target.files?.[0] ?? null)}
+                  onChange={(event) => {
+                    const picked = event.target.files ? Array.from(event.target.files) : [];
+                    event.target.value = "";
+                    if (picked.length) {
+                      setPhotos((current) => [...current, ...picked]);
+                    }
+                  }}
                 />
               </label>
+
               <Field label="Co się dzieje?">
                 <Textarea
                   rows={4}
@@ -209,36 +260,71 @@ export function EmployeeReportDialog({
 
           {step === 1 ? (
             <>
+              {/* Jedna kontrolka, nie dwie: pole wpisywania JEST listą. Rozdzielenie szukajki
+                  od selecta zmuszało do przeskakiwania między nimi — wzorzec wzięty
+                  z ClientSelectWithCreate, żeby zachowywało się tak samo jak reszta aplikacji. */}
               <Field label="Projekt">
-                {!fixedProjectId ? (
-                  <Input
-                    autoFocus
-                    value={projectQuery}
-                    onChange={(event) => setProjectQuery(event.target.value)}
-                    placeholder="Szukaj po nazwisku lub nazwie…"
-                    className="mb-1.5"
-                  />
-                ) : null}
-                <Select
-                  value={projectId}
-                  disabled={Boolean(fixedProjectId)}
-                  onChange={(event) => {
-                    setProjectId(event.target.value);
-                    setStageId("");
-                  }}
-                >
-                  <option value="">— wybierz —</option>
-                  {projectOptions.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </Select>
-                {!fixedProjectId && projectQuery.trim() && projectOptions.length === 0 ? (
-                  <p className="mt-1 text-xs text-amber-300">
-                    Nic nie pasuje do „{projectQuery.trim()}”.
-                  </p>
-                ) : null}
+                <div ref={projectBoxRef} className="relative">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                    <Input
+                      autoFocus={!fixedProjectId}
+                      disabled={Boolean(fixedProjectId)}
+                      value={selectedProject && !projectListOpen ? selectedProject.name : projectQuery}
+                      placeholder="Wpisz nazwisko lub nazwę…"
+                      className="pl-9 pr-10"
+                      onFocus={() => setProjectListOpen(true)}
+                      onChange={(event) => {
+                        setProjectQuery(event.target.value);
+                        setProjectListOpen(true);
+                        if (!event.target.value.trim()) {
+                          setProjectId("");
+                          setStageId("");
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={Boolean(fixedProjectId)}
+                      aria-label="Rozwiń listę projektów"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted hover:bg-surface-muted"
+                      onClick={() => setProjectListOpen((current) => !current)}
+                    >
+                      <ChevronDown
+                        className={cn("h-4 w-4 transition", projectListOpen && "rotate-180")}
+                      />
+                    </button>
+                  </div>
+
+                  {projectListOpen && !fixedProjectId ? (
+                    <div className="absolute z-40 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-border bg-surface-elevated p-1 shadow-card">
+                      {projectOptions.length === 0 ? (
+                        <p className="px-3 py-2 text-sm text-muted">
+                          Nic nie pasuje do „{projectQuery.trim()}”.
+                        </p>
+                      ) : (
+                        projectOptions.map((project) => (
+                          <button
+                            key={project.id}
+                            type="button"
+                            className={cn(
+                              "flex w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-surface-muted",
+                              project.id === projectId ? "text-accent" : "text-foreground",
+                            )}
+                            onClick={() => {
+                              setProjectId(project.id);
+                              setProjectQuery(project.name);
+                              setStageId("");
+                              setProjectListOpen(false);
+                            }}
+                          >
+                            {project.name}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  ) : null}
+                </div>
               </Field>
               <Field label="Etap">
                 <Select value={stageId} onChange={(event) => setStageId(event.target.value)}>

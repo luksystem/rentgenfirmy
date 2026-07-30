@@ -23,13 +23,14 @@ export type EmployeeReportInput = {
   isUrgent: boolean;
   createdById: string | null;
   createdByName: string;
-  photo?: File | null;
+  photos?: File[];
 };
 
 export type EmployeeReportResult = {
   target: EmployeeReportTarget;
   recordId: string;
-  photoUploaded: boolean;
+  /** Ile zdjec faktycznie doszlo. */
+  photosUploaded: number;
   /** Powod nieudanego wgrania zdjecia. Zgloszenie i tak powstalo — ale uzytkownik ma sie o tym
    *  dowiedziec, zamiast myslec, ze zdjecie doszlo. Cisza tutaj kosztowala juz jeden test. */
   photoError: string | null;
@@ -73,34 +74,34 @@ export async function createEmployeeReport(
 
   const recordId = (data as { id: string }).id;
 
-  // Zdjęcie jest opcjonalne i NIE może wywalić zgłoszenia. Człowiek stoi na budowie i zdążył już
+  // Zdjęcia są opcjonalne i NIE mogą wywalić zgłoszenia. Człowiek stoi na budowie i zdążył już
   // opisać problem — utrata tego opisu przez błąd uploadu byłaby gorsza niż brak zdjęcia.
-  let photoUploaded = false;
+  // Wgrywamy po kolei i liczymy sukcesy: jedno uszkodzone zdjęcie nie może przekreślić reszty.
+  let photosUploaded = 0;
   let photoError: string | null = null;
-  if (input.photo) {
+  for (const photo of input.photos ?? []) {
     try {
       if (routing.target === "change_request") {
         await uploadChangeRequestAttachment({
           changeRequestId: recordId,
-          file: input.photo,
+          file: photo,
           authorName: shared.created_by_name,
           authorSource: "team",
         });
       } else {
         await uploadAgreementAttachmentWithClient({
           agreementId: recordId,
-          file: input.photo,
+          file: photo,
           authorName: shared.created_by_name,
           authorSource: "team",
           supabase,
         });
       }
-      photoUploaded = true;
+      photosUploaded += 1;
     } catch (err) {
-      photoUploaded = false;
       photoError = err instanceof Error ? err.message : "Nie udało się wgrać zdjęcia.";
     }
   }
 
-  return { target: routing.target, recordId, photoUploaded, photoError };
+  return { target: routing.target, recordId, photosUploaded, photoError };
 }
