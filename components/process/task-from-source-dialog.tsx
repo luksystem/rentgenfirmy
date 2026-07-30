@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Field, Input, Textarea } from "@/components/ui/input";
+import { resolveTaskOwnerState } from "@/lib/process/task-owner-state";
 import {
   createTaskFromSource,
   fetchBoardTaskOwner,
@@ -90,6 +91,12 @@ export function TaskFromSourceDialog({
   const selected = useMemo(
     () => targets.find((target) => target.projectProcessItemId === selectedId) ?? null,
     [targets, selectedId],
+  );
+
+  const ownerState = useMemo(
+    () =>
+      selected ? resolveTaskOwnerState({ hasBoard: Boolean(selected.boardId), owner }) : null,
+    [selected, owner],
   );
 
   // Właściciela da się pokazać dopiero, gdy tablica istnieje — dla niezmaterializowanych
@@ -208,22 +215,25 @@ export function TaskFromSourceDialog({
           </div>
 
           {/* Odpowiedzialny pokazany, nie wybierany. Trzy różne stany, bo naprawia się je gdzie indziej. */}
-          {selected ? (
+          {ownerState ? (
             <p className="rounded-lg border border-border/60 bg-surface/30 px-3 py-2 text-xs">
               <span className="text-muted">Odpowiedzialny: </span>
-              {!selected.boardId ? (
+              {ownerState.kind === "pending_board" ? (
                 <span className="text-muted">ustali się po utworzeniu tablicy</span>
-              ) : owner?.responsibleName ? (
+              ) : ownerState.kind === "assigned" || ownerState.kind === "fallback" ? (
                 <>
-                  <span className="font-medium text-foreground">{owner.responsibleName}</span>
-                  <span className="text-muted"> ({owner.roleName})</span>
-                  {owner.slotSource === "fallback" ? (
+                  <span className="font-medium text-foreground">{ownerState.name}</span>
+                  {ownerState.roleName ? (
+                    <span className="text-muted"> ({ownerState.roleName})</span>
+                  ) : null}
+                  {ownerState.kind === "fallback" ? (
                     <span className="text-amber-300"> — zastępczo</span>
                   ) : null}
                 </>
-              ) : owner?.stageId ? (
+              ) : ownerState.kind === "no_staffing" ? (
                 <span className="font-medium text-rose-300">
-                  brak obsady — zadanie powstanie bez przypisania
+                  brak obsady{ownerState.roleName ? ` (${ownerState.roleName})` : ""} — zadanie
+                  powstanie bez przypisania
                 </span>
               ) : (
                 <span className="font-medium text-amber-300">
