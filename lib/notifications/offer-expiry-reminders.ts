@@ -194,7 +194,7 @@ async function notifyTeamPush(input: {
   expiresAt: string;
   kind: OfferKind;
 }) {
-  const profiles = await fetchTeamProfilesServer().catch(() => []);
+  const profiles = await fetchTeamProfilesServer("service-offers").catch(() => []);
   if (!profiles.length) {
     return;
   }

@@ -98,7 +98,7 @@ export async function createKanbanNewActivityNotificationsServer(input: {
 }) {
   const teamProfileIds =
     input.teamProfileIds ??
-    (await fetchTeamProfilesServer().catch(() => [])).map((profile) => profile.id);
+    (await fetchTeamProfilesServer("implementation-boards").catch(() => [])).map((profile) => profile.id);
 
   if (!teamProfileIds.length) {
     return;

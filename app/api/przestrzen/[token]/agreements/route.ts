@@ -50,7 +50,7 @@ async function resolveProjectId(token: string, projectId: string | null) {
 }
 
 async function notifyTeamAboutClientAgreement(projectId: string, title: string, clientName: string) {
-  const teamProfiles = await fetchTeamProfilesServer().catch(() => []);
+  const teamProfiles = await fetchTeamProfilesServer("projects").catch(() => []);
   if (!teamProfiles.length) {
     return;
   }

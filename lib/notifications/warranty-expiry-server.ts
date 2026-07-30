@@ -65,7 +65,9 @@ export async function runWarrantyExpiringNotificationsServer() {
   }
 
   const teamProfiles =
-    pushEnabled || emailUserEnabled ? await fetchTeamProfilesServer().catch(() => []) : [];
+    pushEnabled || emailUserEnabled
+      ? await fetchTeamProfilesServer("projects").catch(() => [])
+      : [];
   const company = emailUserEnabled || emailClientEnabled
     ? await resolveCompanyProfileDocumentServer().catch(() => null)
     : null;

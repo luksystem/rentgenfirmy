@@ -609,7 +609,7 @@ async function notifyServiceIntakeTeamPush(input: {
     return;
   }
 
-  const teamProfiles = await fetchTeamProfilesServer().catch(() => []);
+  const teamProfiles = await fetchTeamProfilesServer("service-requests").catch(() => []);
   if (!teamProfiles.length) {
     return;
   }

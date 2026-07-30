@@ -14,7 +14,7 @@ export async function notifyTeamAboutAgreementResponse(input: {
   clientResponseName: string;
   clientResponseNote?: string | null;
 }) {
-  const teamProfiles = await fetchTeamProfilesServer().catch(() => []);
+  const teamProfiles = await fetchTeamProfilesServer("projects").catch(() => []);
   if (!teamProfiles.length) {
     return;
   }

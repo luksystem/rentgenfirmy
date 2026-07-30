@@ -9,7 +9,7 @@ export async function createServiceIntakePreliminaryOfferNotifications(input: {
   projectName: string;
   estimatedNetTotal: number;
 }) {
-  const profiles = await fetchTeamProfilesServer().catch(() => []);
+  const profiles = await fetchTeamProfilesServer("service-offers").catch(() => []);
   if (!profiles.length) {
     return;
   }

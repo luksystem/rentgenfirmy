@@ -9,7 +9,7 @@ export async function createClientOfferAcceptedNotifications(input: {
   intakeReference: string | null;
   kind: "estimate" | "settlement";
 }) {
-  const profiles = await fetchTeamProfilesServer().catch(() => []);
+  const profiles = await fetchTeamProfilesServer("service-offers").catch(() => []);
   if (!profiles.length) {
     return;
   }

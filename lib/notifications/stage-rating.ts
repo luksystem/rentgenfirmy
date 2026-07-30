@@ -13,7 +13,7 @@ export async function notifyTeamAboutClientStageRating(input: {
     return;
   }
 
-  const teamProfiles = await fetchTeamProfilesServer().catch(() => []);
+  const teamProfiles = await fetchTeamProfilesServer("projects").catch(() => []);
   if (!teamProfiles.length) {
     return;
   }
