@@ -1,4 +1,6 @@
 import { countBy, daysBetween } from "@/lib/utils";
+import { resolveSilenceState } from "@/lib/communication/types";
+import { DEFAULT_POLICY_THRESHOLDS } from "@/lib/policy-thresholds/types";
 import type { FieldOptions } from "@/lib/field-options";
 import {
   isClosedFlowStatus,
@@ -66,12 +68,34 @@ export function priorityWeight(priority: Priority) {
   }[priority];
 }
 
-export function isWithoutContact(project: Project, options: FieldOptions) {
-  const today = new Date();
+/**
+ * Faza 9A (docs/08 D38) — JEDNA definicja ciszy w całym systemie.
+ *
+ * Wcześniej: `nextContactDate < dziś AND daysBetween(lastContactDate) > 14`. Oba warunki były
+ * zepsute — `lastContactDate` jest martwe (ustawiane raz przy tworzeniu projektu, nigdy potem),
+ * a zaszyte 14 dni stało w sprzeczności ze specyfikacją (25 ostrzeżenie / 30 bezpiecznik).
+ *
+ * Teraz: rozdzielone osie aktywności + próg z ustawień globalnych. Domyślnie
+ * `silenceWarningDays`, żeby wywołania bez dostępu do async ustawień (badge na kanbanie, licznik
+ * kategorii) miały tę samą definicję co strona „Cisza w projektach", a nie własną.
+ */
+export function isWithoutContact(
+  project: Project,
+  options: FieldOptions,
+  silenceDays: number = DEFAULT_POLICY_THRESHOLDS.silenceWarningDays,
+) {
+  if (isClosedFlowStatus(project.flowStatus, options)) {
+    return false;
+  }
+
   return (
-    new Date(project.nextContactDate) < today &&
-    daysBetween(project.lastContactDate) > 14 &&
-    !isClosedFlowStatus(project.flowStatus, options)
+    resolveSilenceState(
+      {
+        lastInternalActivityAt: project.lastInternalActivityAt ?? null,
+        lastClientActivityAt: project.lastClientActivityAt ?? null,
+      },
+      silenceDays,
+    ) !== "zdrowo"
   );
 }
 

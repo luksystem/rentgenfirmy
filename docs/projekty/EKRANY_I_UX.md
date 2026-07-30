@@ -85,7 +85,7 @@ do szablonów procesów.
 |-------|------|
 | `/do-zamkniecia` | Tabela projektów na aktywnym etapie zamykającym + status W trakcie/Oczekujące |
 | `/oczekujace` | Filtr statusu Oczekujące |
-| `/bez-kontaktu` | Reguła dat kontaktu (`lib/domain.ts`) |
+| `/bez-kontaktu` | „Cisza w projektach" — rozdzielone osie aktywności (`lib/communication/types.ts::resolveSilenceState`), próg z `policy_thresholds.silenceWarningDays`. Zbiorczy przycisk „Odezwaliśmy się". Faza 9A / docs/08 D38 |
 
 Dashboard (**Główne** `/`) — licznik „Do zamknięcia” i link z filtrem `category=forClosing`;
 licznik korzysta z tej samej mapy `buildProjectClosingFlagsMap`.

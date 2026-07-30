@@ -41,6 +41,11 @@ export async function middleware(request: NextRequest) {
 
   const isPublic =
     isPublicAppRoute(pathname) ||
+    // Crony (pg_cron → net.http_post) nie mają i nie mogą mieć sesji Supabase. Uwierzytelniają się
+    // własnym sekretem `Bearer CRON_SECRET` sprawdzanym W ROUTE — to auth maszynowy, nie sesyjny.
+    // Bez tego wyjątku middleware przekierowywał POST na /logowanie, co dawało 405 i CICHO wyłączało
+    // WSZYSTKIE crony (patrz docs/08 D39).
+    pathname.startsWith("/api/cron/") ||
     pathname.startsWith("/api/oferta/") ||
     pathname.startsWith("/api/kanban/") ||
     pathname.startsWith("/api/odbior/") ||
