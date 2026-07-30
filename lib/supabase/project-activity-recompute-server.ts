@@ -76,6 +76,8 @@ async function fetchActivityByProject(lookbackDays: number): Promise<ActivityAxe
     meetingNotes,
     communicationEvents,
     smsMessages,
+    kanbanActivity,
+    resourcePlanItems,
   ] = await Promise.all([
     admin
       .from("project_change_requests")
@@ -118,6 +120,19 @@ async function fetchActivityByProject(lookbackDays: number): Promise<ActivityAxe
       .select("project_id, created_at, sent_at")
       .not("project_id", "is", null)
       .gte("created_at", cutoffIso),
+    /**
+     * Faza 10 (docs/08 D19 §5 pkt 3) — KANBAN, źródło oznaczone w decyzji jako krytyczne: „tam
+     * będzie żył ROT, więc bez tego źródła projekt prowadzony wzorowo na rejestrze wygląda jak
+     * porzucony". Po D37 na tablicach żyje 66 pozycji ROT, więc to już nie teoria.
+     * Droga karta → projekt to cztery skoki, dlatego join siedzi w SQL (migracja 260).
+     */
+    admin.rpc("report_kanban_activity_by_project", { p_since: cutoffIso }),
+    // Faza 10 — przydziały w Planie Zasobów. Zawsze nasza strona (klient nie planuje ekip).
+    admin
+      .from("resource_plan_items")
+      .select("project_id, created_at, updated_at")
+      .not("project_id", "is", null)
+      .gte("updated_at", cutoffIso),
   ]);
 
   for (const result of [
@@ -129,6 +144,8 @@ async function fetchActivityByProject(lookbackDays: number): Promise<ActivityAxe
     meetingNotes,
     communicationEvents,
     smsMessages,
+    kanbanActivity,
+    resourcePlanItems,
   ]) {
     if (result.error) {
       throw new Error(result.error.message);
@@ -187,6 +204,22 @@ async function fetchActivityByProject(lookbackDays: number): Promise<ActivityAxe
     sent_at: string | null;
   }>) {
     add(internal, row.project_id, row.sent_at, row.created_at);
+  }
+  // Faza 10 — kanban: karta zgłoszona przez klienta to sygnał kliencki, nasza to nasz.
+  for (const row of (kanbanActivity.data ?? []) as Array<{
+    project_id: string | null;
+    team_at: string | null;
+    client_at: string | null;
+  }>) {
+    add(internal, row.project_id, row.team_at);
+    add(client, row.project_id, row.client_at);
+  }
+  for (const row of (resourcePlanItems.data ?? []) as Array<{
+    project_id: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+  }>) {
+    add(internal, row.project_id, row.created_at, row.updated_at);
   }
 
   return { combined, internal, client };

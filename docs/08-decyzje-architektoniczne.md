@@ -1794,6 +1794,42 @@ mówią nic o tym, czy harmonogram dosięga aplikacji.
 
 ---
 
+## D40. Faza 10 — kanban i Plan Zasobów jako źródła aktywności (domknięcie)
+
+**Status: zrealizowane (migracja 260). Faza 10 zamknięta.**
+
+Inwentaryzacja przed pracą wykazała, że **9A zjadła większość Fazy 10** — z czterech punktów D19 §5:
+
+| Punkt D19 §5 | Stan |
+|---|---|
+| 1. `last_activity_at` jako trwała kolumna | zrobione w 9A (jako dwie osie) |
+| 2. Rozbicie na `last_internal_activity_at` / `last_client_activity_at` | zrobione w 9A |
+| 3. Dodatkowe źródła: kanban, Plan Zasobów, `communication_event` | `communication_event` + SMS w 9A; **kanban i Plan Zasobów — tutaj** |
+| 4. Alert „projekt porzucony administracyjnie" | świadomie odłożone do 11b (dziś powstałoby powiadomienie bez odbiorcy) |
+
+Zostało więc jedno źródło — to oznaczone w decyzji jako **krytyczne**: „tam będzie żył ROT, więc bez
+tego źródła projekt prowadzony wzorowo na rejestrze wygląda jak porzucony". Po D37 na tablicach
+kanban żyje **66 pozycji ROT**, więc przestało to być teoretyczne.
+
+**`report_kanban_activity_by_project(p_since)`** (migracja 260) — droga od karty do projektu to
+cztery skoki (`task → column → board → project_process_item → project`), dlatego join siedzi w SQL,
+a nie jest sklejany z czterech zapytań w TS. Kierunek rozstrzygany po `created_by_side`: karta
+zgłoszona przez klienta to sygnał **kliencki** (dokładnie przypadek „klient pisze na tablicy, my
+milczymy"), nasza to nasz. `closed_at` świadomie nie jest źródłem — zamknięcie karty jest naszą
+czynnością i już siedzi w `updated_at`.
+
+**Plan Zasobów** — `resource_plan_items` ma `project_id` bezpośrednio, więc zwykłe zapytanie.
+Zawsze oś nasza (klient nie planuje ekip).
+
+**Pomiar przed wdrożeniem** (D19 cytował 2/122 z poprzedniej tury; dane się zmieniły, więc
+zmierzone ponownie): 6 projektów ma aktywność na kanbanie, 2 w Planie Zasobów. **7 projektów zyskuje
+świeższą oś naszą, 2 — kliencką.** Dwa z kliencką to Ujma i Hernacka — projekty, na których klient
+sam zakłada karty. Bez tego źródła oba wyglądałyby na ciche po naszej stronie i po klienta.
+
+Migracja: 260.
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed
@@ -1817,7 +1853,7 @@ notka o tym pod D20 §2, teraz nieaktualna.
 | 7 | Warstwa sygnałów + zdrowie etapu (czyta z ROT, D3) | M | **zrealizowane** (D26, migracje 232-233) |
 | 8 | Czas pracy | L (moduł już w dużej mierze istnieje — patrz D31) | **częściowo zrealizowane** (D32: `role_code`/`work_type`/`work_cause`, raport, `database.types.ts`) — reszta (higiena, misje CRUD, budżety per etap, rentowność, scalenie dwóch systemów godzin) czeka na decyzję |
 | 9 | Rejestr zdarzeń komunikacyjnych | L | **9A zrealizowane** (D38, migracje 258-259: rejestr, rozdzielone osie, przycisk kontaktu, ujednolicona cisza); 9B (pytanie dzienne dla ekip, notatki głosowe, AI) — osobna faza |
-| 10 | `is_active`: persist + rozbicie osi | M | do realizacji |
+| 10 | `is_active`: persist + rozbicie osi | M | **zrealizowane** (D38 pkt 1-2 + D40 pkt 3, migracje 258-260); pkt 4 (alert „porzucony administracyjnie") odłożony do 11b — dziś nie ma silnika, do którego by go wpiąć |
 | 11a | Fazy komunikacji — bramy | S-M | do realizacji |
 | 11b | Fazy komunikacji — silnik (modyfikatory, bezpiecznik, przejęcie czerwone) | L | do realizacji |
 | 11c | Wymagane komunikaty + blokada zamknięcia + wysyłka automatyczna | M-L | do realizacji |
@@ -1871,6 +1907,7 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D37 | Kanban ROT — atrybut kolumny w szablonie | zatwierdzone, zrealizowane (migracje 256-257: mechanizm + backfill czterotorowy, 2 ręczne ustawienia zachowane jako nadpisania) |
 | D38 | faza 9A (rejestr zdarzeń + rozdzielone osie) | zatwierdzone, zrealizowane (migracje 258-259); 9B (pytanie dzienne, AI) odłożone jako osobna faza |
 | D39 | naprawa cronów (middleware blokował `/api/cron/*`) | naprawione i zweryfikowane end-to-end — dotyczyło wszystkich 9 cronów, defekt od początku, nie regresja |
+| D40 | faza 10 (kanban + Plan Zasobów jako źródła) | zatwierdzone, zrealizowane (migracja 260) — faza 10 zamknięta, pkt 4 (alert) odłożony do 11b |
 
 ---
 

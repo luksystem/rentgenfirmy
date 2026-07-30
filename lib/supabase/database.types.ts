@@ -5065,6 +5065,14 @@ export type Database = {
           entry_count: number;
         }[];
       };
+      report_kanban_activity_by_project: {
+        Args: { p_since: string };
+        Returns: {
+          project_id: string;
+          team_at: string | null;
+          client_at: string | null;
+        }[];
+      };
       log_outgoing_contact: {
         Args: {
           p_project_id: string;
