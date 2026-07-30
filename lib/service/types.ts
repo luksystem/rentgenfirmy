@@ -235,6 +235,8 @@ export type ServiceRecord = {
     message: string | null;
     respondedAt: string | null;
     lastClientMessage: string | null;
+    /** Kiedy bieżący link został faktycznie wysłany mailem — blokuje ponowną wysyłkę do czasu regeneracji linku. */
+    sentAt: string | null;
   };
   clientOfferHistory: ClientOfferHistoryEntry[];
   clientOfferAcceptedDocument: ClientOfferAcceptedDocument | null;
@@ -245,6 +247,7 @@ export type ServiceRecord = {
     message: string | null;
     respondedAt: string | null;
     lastClientMessage: string | null;
+    sentAt: string | null;
   };
   settlementOfferHistory: ClientOfferHistoryEntry[];
   settlementOfferAcceptedDocument: ClientOfferAcceptedDocument | null;

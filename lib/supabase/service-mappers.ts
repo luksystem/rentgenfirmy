@@ -156,6 +156,7 @@ function normalizeSettlementOffer(row: ServiceRow): ServiceRecord["settlementOff
     message: row.settlement_offer_message ?? null,
     respondedAt: row.settlement_offer_responded_at ?? null,
     lastClientMessage: row.settlement_offer_last_client_message ?? null,
+    sentAt: row.settlement_offer_sent_at ?? null,
   };
 }
 
@@ -196,6 +197,7 @@ function normalizeClientOffer(row: ServiceRow): ServiceRecord["clientOffer"] {
     message: row.client_offer_message ?? null,
     respondedAt: row.client_offer_responded_at ?? null,
     lastClientMessage: row.client_offer_last_client_message ?? null,
+    sentAt: row.client_offer_sent_at ?? null,
   };
 }
 
@@ -276,6 +278,7 @@ export function serviceToInsert(service: ServiceRecord): ServiceInsert {
     client_offer_message: service.clientOffer.message,
     client_offer_responded_at: service.clientOffer.respondedAt,
     client_offer_last_client_message: service.clientOffer.lastClientMessage,
+    client_offer_sent_at: service.clientOffer.sentAt,
     client_offer_history: service.clientOfferHistory,
     client_offer_accepted_document: service.clientOfferAcceptedDocument,
     settlement_offer_token: service.settlementOffer.token,
@@ -284,6 +287,7 @@ export function serviceToInsert(service: ServiceRecord): ServiceInsert {
     settlement_offer_message: service.settlementOffer.message,
     settlement_offer_responded_at: service.settlementOffer.respondedAt,
     settlement_offer_last_client_message: service.settlementOffer.lastClientMessage,
+    settlement_offer_sent_at: service.settlementOffer.sentAt,
     settlement_offer_history: service.settlementOfferHistory,
     settlement_offer_accepted_document: service.settlementOfferAcceptedDocument,
     estimate_approval_status: service.estimateApproval.status,

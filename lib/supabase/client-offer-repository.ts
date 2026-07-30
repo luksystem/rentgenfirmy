@@ -49,6 +49,7 @@ export async function regenerateClientOfferForService(
       message: null,
       respondedAt: null,
       lastClientMessage: previousFeedback,
+      sentAt: null,
     },
   };
 
@@ -123,6 +124,7 @@ export async function regenerateSettlementOfferForService(
       message: null,
       respondedAt: null,
       lastClientMessage: previousFeedback,
+      sentAt: null,
     },
   };
 

@@ -90,6 +90,7 @@ function makeService(
     message: null,
     respondedAt: null,
     lastClientMessage: null,
+    sentAt: null,
   };
   const emptyApproval: ServiceRecord["estimateApproval"] = {
     status: null,

@@ -289,7 +289,10 @@ export function ClientOfferPanel({
   // Wysyłka sama dogenerowuje token przez ensureOfferToken() po stronie serwera — przycisk nie
   // powinien czekać, aż ktoś wcześniej ręcznie kliknie "Utwórz link" (inaczej admin decydujący
   // o akceptacji nigdy go nie widział, bo wnioskodawca nie mógł wygenerować linku przed akceptacją).
-  const canSend = canGenerateClientOffer(service) && approvalOk;
+  // Po faktycznej wysyłce (sentAt) przycisk blokujemy — dwie osoby nie mogą wysłać tego samego
+  // linku osobno (np. po zmianie kwot w międzyczasie); serwer i tak pilnuje tego atomowo.
+  const alreadySent = Boolean(service.clientOffer.sentAt);
+  const canSend = canGenerateClientOffer(service) && approvalOk && !alreadySent;
   const offerActive = isClientOfferActive(service.clientOffer, service.status);
   const regenerationHint = getOfferRegenerationHint(service);
   const generateBlockReason = getClientOfferGenerateBlockReason(service);
@@ -428,6 +431,14 @@ export function ClientOfferPanel({
 
         {!canGenerate && generateBlockReason ? (
           <p className="text-xs text-muted">{generateBlockReason}</p>
+        ) : null}
+
+        {alreadySent && canGenerateClientOffer(service) && approvalOk ? (
+          <p className="rounded-xl border border-sky-500/25 bg-sky-500/8 px-3 py-2 text-xs text-foreground">
+            Ta wycena została już wysłana e-mailem {formatDate(service.clientOffer.sentAt as string)}.
+            Aby wysłać ponownie (np. po zmianie kwot), wygeneruj nowy link przyciskiem „
+            {getRegenerateOfferLabel(service)}” — poprzedni link przestanie działać.
+          </p>
         ) : null}
 
         {canSend ? (

@@ -18,6 +18,7 @@ function settlementService(overrides: Partial<ServiceRecord["settlementOffer"]>)
       message: null,
       respondedAt: null,
       lastClientMessage: null,
+      sentAt: null,
       ...overrides,
     },
   } as ServiceRecord;

@@ -90,6 +90,7 @@ async function ensureOfferToken(service: ServiceRecord, kind: OfferKind): Promis
     message: null,
     respondedAt: null,
     lastClientMessage: previousFeedback,
+    sentAt: null,
   };
 
   const updated: ServiceRecord =
@@ -185,6 +186,64 @@ export async function previewOfferEmailServer(input: {
 
 const STATUS_AFTER_SETTLEMENT_SEND: ServiceStatus = "Rozliczanie";
 
+const OFFER_ALREADY_SENT_MESSAGE: Record<OfferKind, string> = {
+  estimate: "Ta wycena została już wysłana do klienta. Wygeneruj nowy link, aby wysłać ponownie.",
+  settlement: "To rozliczenie zostało już wysłane do klienta. Wygeneruj nowy link, aby wysłać ponownie.",
+};
+
+/**
+ * Blokada podwójnej wysyłki (dwie osoby klikające "Wyślij" niemal jednocześnie, np. po tym jak
+ * ktoś zmienił kwoty w międzyczasie). Warunkowy UPDATE ... WHERE sent_at IS NULL jest atomowy —
+ * jeśli ktoś inny zdąży pierwszy, ten update nie trafi w żaden wiersz i rzucamy 409 zamiast wysyłać
+ * drugi mail z ewentualnie inną treścią.
+ */
+async function claimOfferSendLock(
+  service: ServiceRecord,
+  kind: OfferKind,
+): Promise<{ claimedAt: string }> {
+  const token = kind === "estimate" ? service.clientOffer.token : service.settlementOffer.token;
+  if (!token) {
+    throw new Error("Brak tokenu oferty do wysyłki.");
+  }
+  const claimedAt = new Date().toISOString();
+
+  const supabase = getSupabaseAdmin();
+  const query =
+    kind === "estimate"
+      ? supabase
+          .from("services")
+          .update({ client_offer_sent_at: claimedAt })
+          .eq("id", service.id)
+          .eq("client_offer_token", token)
+          .is("client_offer_sent_at", null)
+      : supabase
+          .from("services")
+          .update({ settlement_offer_sent_at: claimedAt })
+          .eq("id", service.id)
+          .eq("settlement_offer_token", token)
+          .is("settlement_offer_sent_at", null);
+
+  const { data, error } = await query.select("id").maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  if (!data) {
+    throw new HttpError(409, OFFER_ALREADY_SENT_MESSAGE[kind]);
+  }
+
+  return { claimedAt };
+}
+
+async function releaseOfferSendLock(serviceId: string, kind: OfferKind) {
+  const supabase = getSupabaseAdmin();
+  if (kind === "estimate") {
+    await supabase.from("services").update({ client_offer_sent_at: null }).eq("id", serviceId);
+  } else {
+    await supabase.from("services").update({ settlement_offer_sent_at: null }).eq("id", serviceId);
+  }
+}
+
 export async function sendOfferEmailServer(input: {
   serviceId: string;
   kind: OfferKind;
@@ -196,17 +255,31 @@ export async function sendOfferEmailServer(input: {
   assertCanSend(service, input.kind, input.actingProfile);
 
   const withToken = await ensureOfferToken(service, input.kind);
+  await claimOfferSendLock(withToken, input.kind);
+
   const settings = await fetchEmailSettingsServer();
   const emailEnabled = isEmailAudienceEnabled(settings.routing, "client_offer_sent", "client");
   const smsEnabled = isChannelEnabled(settings.routing, "client_offer_sent", "sms");
 
   let result: { skipped?: boolean } = {};
-  if (emailEnabled) {
-    if (!withToken.client.email.trim()) {
-      throw new HttpError(400, "Brak adresu e-mail klienta.");
+  try {
+    if (emailEnabled) {
+      if (!withToken.client.email.trim()) {
+        throw new HttpError(400, "Brak adresu e-mail klienta.");
+      }
+      const email = await buildEmailForService(withToken, input.kind, input.note);
+      result = await sendTransactionalEmail({ to: email.to, subject: email.subject, html: email.html });
     }
-    const email = await buildEmailForService(withToken, input.kind, input.note);
-    result = await sendTransactionalEmail({ to: email.to, subject: email.subject, html: email.html });
+  } catch (sendError) {
+    // Nic nie dotarlo do klienta - zdejmij blokade, zeby dalo sie sprobowac ponownie bez
+    // zmuszania do regeneracji linku z powodu przejsciowego bledu wysylki.
+    await releaseOfferSendLock(withToken.id, input.kind).catch(() => undefined);
+    throw sendError;
+  }
+
+  if (result.skipped) {
+    // Brak konfiguracji RESEND_API_KEY - mail nie wyszedl, wiec blokada nie powinna obowiazywac.
+    await releaseOfferSendLock(withToken.id, input.kind).catch(() => undefined);
   }
 
   if (smsEnabled && withToken.client.phone.trim()) {

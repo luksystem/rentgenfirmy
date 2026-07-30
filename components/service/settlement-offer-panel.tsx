@@ -74,8 +74,10 @@ export function SettlementOfferPanel({
     : false;
   const canGenerate = canGenerateSettlementOffer(service) && approvalOk;
   // Wysyłka sama dogenerowuje token przez ensureOfferToken() po stronie serwera — patrz analogiczny
-  // komentarz w client-offer-panel.tsx.
-  const canSend = canGenerateSettlementOffer(service) && approvalOk;
+  // komentarz w client-offer-panel.tsx. Po faktycznej wysyłce (sentAt) blokujemy ponowne wysłanie
+  // tego samego linku, dopóki ktoś świadomie nie wygeneruje nowego.
+  const alreadySent = Boolean(service.settlementOffer.sentAt);
+  const canSend = canGenerateSettlementOffer(service) && approvalOk && !alreadySent;
   const generateBlockReason = getSettlementOfferGenerateBlockReason(service);
 
   async function handleOpenPreview() {
@@ -318,6 +320,14 @@ export function SettlementOfferPanel({
 
         {!canGenerate && generateBlockReason ? (
           <p className="text-xs text-muted">{generateBlockReason}</p>
+        ) : null}
+
+        {alreadySent && canGenerateSettlementOffer(service) && approvalOk ? (
+          <p className="rounded-xl border border-sky-500/25 bg-sky-500/8 px-3 py-2 text-xs text-foreground">
+            To rozliczenie zostało już wysłane e-mailem {formatDate(service.settlementOffer.sentAt as string)}.
+            Aby wysłać ponownie (np. po zmianie kwot), wygeneruj nowy link rozliczenia — poprzedni
+            przestanie działać.
+          </p>
         ) : null}
 
         {canSend ? (

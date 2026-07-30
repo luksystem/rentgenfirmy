@@ -123,6 +123,7 @@ export type ServiceRow = {
   client_offer_message?: string | null;
   client_offer_responded_at?: string | null;
   client_offer_last_client_message?: string | null;
+  client_offer_sent_at?: string | null;
   client_offer_history?: unknown;
   client_offer_accepted_document?: unknown;
   ai_estimate?: unknown;
@@ -136,6 +137,7 @@ export type ServiceRow = {
   settlement_offer_message?: string | null;
   settlement_offer_responded_at?: string | null;
   settlement_offer_last_client_message?: string | null;
+  settlement_offer_sent_at?: string | null;
   settlement_offer_history?: unknown;
   settlement_offer_accepted_document?: unknown;
   estimate_approval_status?: string | null;
@@ -1789,6 +1791,7 @@ export type ServiceInsert = {
   client_offer_message?: string | null;
   client_offer_responded_at?: string | null;
   client_offer_last_client_message?: string | null;
+  client_offer_sent_at?: string | null;
   client_offer_history?: unknown;
   client_offer_accepted_document?: unknown;
   ai_estimate?: unknown;
@@ -1802,6 +1805,7 @@ export type ServiceInsert = {
   settlement_offer_message?: string | null;
   settlement_offer_responded_at?: string | null;
   settlement_offer_last_client_message?: string | null;
+  settlement_offer_sent_at?: string | null;
   settlement_offer_history?: unknown;
   settlement_offer_accepted_document?: unknown;
   estimate_approval_status?: string | null;
