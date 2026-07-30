@@ -47,14 +47,6 @@ export function getClientOfferGenerateBlockReason(service: ServiceRecord) {
   return "Klient zaakceptował ofertę. Nowy link nie może zastąpić zaakceptowanej wersji — otwórz zapisany dokument zaakceptowanej wyceny (PDF).";
 }
 
-export function canSendClientOffer(service: ServiceRecord) {
-  return Boolean(
-    service.status === "Oczekuje na klienta" &&
-      service.clientOffer.token &&
-      service.clientOffer.status === "pending",
-  );
-}
-
 export function isClientOfferActive(
   offer: ClientOfferState,
   serviceStatus?: ServiceStatus,

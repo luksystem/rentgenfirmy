@@ -16,7 +16,6 @@ import {
 } from "@/lib/service/client-offer-delivery";
 import {
   canGenerateClientOffer,
-  canSendClientOffer,
   CLIENT_OFFER_STATUS_LABELS,
   getClientOfferGenerateBlockReason,
   getClientOfferUrl,
@@ -287,7 +286,10 @@ export function ClientOfferPanel({
 
   const approvalOk = currentProfile ? canGenerateOrSendOffer(service.estimateApproval, currentProfile) : false;
   const canGenerate = canGenerateClientOffer(service) && approvalOk;
-  const canSend = canSendClientOffer(service) && approvalOk;
+  // Wysyłka sama dogenerowuje token przez ensureOfferToken() po stronie serwera — przycisk nie
+  // powinien czekać, aż ktoś wcześniej ręcznie kliknie "Utwórz link" (inaczej admin decydujący
+  // o akceptacji nigdy go nie widział, bo wnioskodawca nie mógł wygenerować linku przed akceptacją).
+  const canSend = canGenerateClientOffer(service) && approvalOk;
   const offerActive = isClientOfferActive(service.clientOffer, service.status);
   const regenerationHint = getOfferRegenerationHint(service);
   const generateBlockReason = getClientOfferGenerateBlockReason(service);

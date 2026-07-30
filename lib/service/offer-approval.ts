@@ -13,6 +13,13 @@ export const OFFER_APPROVAL_HISTORY_TYPES = [
 ] as const;
 export type OfferApprovalHistoryEntryType = (typeof OFFER_APPROVAL_HISTORY_TYPES)[number];
 
+export const OFFER_APPROVAL_HISTORY_LABELS: Record<OfferApprovalHistoryEntryType, string> = {
+  requested: "Zgłoszono do akceptacji",
+  approved: "Zaakceptowano",
+  question_asked: "Zadano pytanie do wnioskodawcy",
+  sent: "Wysłano do klienta",
+};
+
 export type OfferApprovalHistoryEntry = {
   id: string;
   at: string;

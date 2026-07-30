@@ -26,10 +26,6 @@ export function getSettlementOfferGenerateBlockReason(service: ServiceRecord) {
   return null;
 }
 
-export function canSendSettlementOffer(service: ServiceRecord) {
-  return Boolean(service.settlementOffer.token && service.settlementOffer.status === "pending");
-}
-
 /**
  * Rozliczenie nie wygasa — link działa zawsze, dopóki klient nie odpowie. `expiresAt` to termin
  * automatycznej akceptacji (patrz `lib/notifications/settlement-auto-accept.ts`), nie ważność linku.

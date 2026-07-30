@@ -11,7 +11,6 @@ import {
 } from "@/lib/service/client-offer-delivery";
 import {
   canGenerateSettlementOffer,
-  canSendSettlementOffer,
   getSettlementOfferGenerateBlockReason,
   getSettlementOfferUrl,
 } from "@/lib/service/settlement-offer";
@@ -74,7 +73,9 @@ export function SettlementOfferPanel({
     ? canGenerateOrSendOffer(service.settlementApproval, currentProfile)
     : false;
   const canGenerate = canGenerateSettlementOffer(service) && approvalOk;
-  const canSend = canSendSettlementOffer(service) && approvalOk;
+  // Wysyłka sama dogenerowuje token przez ensureOfferToken() po stronie serwera — patrz analogiczny
+  // komentarz w client-offer-panel.tsx.
+  const canSend = canGenerateSettlementOffer(service) && approvalOk;
   const generateBlockReason = getSettlementOfferGenerateBlockReason(service);
 
   async function handleOpenPreview() {

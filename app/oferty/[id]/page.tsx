@@ -15,6 +15,8 @@ export default function EditOfferPage() {
   const id = String(params.id);
   const getServiceById = useServiceStore((s) => s.getServiceById);
   const markIntakeOfferReviewed = useServiceStore((s) => s.markIntakeOfferReviewed);
+  const hydrated = useServiceStore((s) => s.hydrated);
+  const isLoading = useServiceStore((s) => s.isLoading);
   const service = getServiceById(id);
 
   useEffect(() => {
@@ -26,6 +28,10 @@ export default function EditOfferPage() {
   }, [markIntakeOfferReviewed, service]);
 
   if (!service) {
+    if (!hydrated || isLoading) {
+      return <p className="text-muted">Wczytywanie oferty…</p>;
+    }
+
     return (
       <div className="grid gap-4">
         <p className="text-muted">Nie znaleziono oferty.</p>
