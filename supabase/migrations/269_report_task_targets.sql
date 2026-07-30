@@ -1,15 +1,18 @@
 -- D43 krok 2 — cele dla pickera tablicy.
 --
--- Tablice sa materializowane LENIWIE: 107 projektow ma element kanbanowy, ale tablic istnieje 13.
--- Picker nie moze wiec listowac tablic — listuje ELEMENTY KANBANOWE projektu, a tablica powstaje
--- dopiero przy zatwierdzeniu (ensureKanbanBoard). board_id null = jeszcze nie istnieje, i to jest
--- normalny stan, nie blad.
+-- Tablice sa materializowane LENIWIE: 107 projektow ma zywy element kanbanowy, ale tablic istnieje
+-- 13. Picker listuje wiec ELEMENTY KANBANOWE projektu, nie tablice; tablica powstaje przy
+-- zatwierdzeniu (ensureKanbanBoard). board_id null = jeszcze nie istnieje, i to normalny stan.
 --
--- is_active_stage niesie kolejnosc, o ktora prosil wlasciciel: etap biezacy priorytetowo,
--- reszta dostepna. Sortowanie zostaje tutaj, zeby UI nie wymyslalo wlasnego.
+-- LEFT JOIN na process_items, nie JOIN. Pierwsza wersja miala inner joina i cicho gubila 2 z 13
+-- istniejacych tablic — w tym jedna z prawdziwa karta na Kobicu. Powod: 564 wierszy
+-- project_process_items wskazuje na template_item_id, ktorego nie ma w process_items, a kolumna
+-- NIE MA klucza obcego. Ukrycie celu, na ktorym wisi praca, byloby gorsze niz pokazanie go bez
+-- tytulu z szablonu. Stad 120 celow, a nie 107: 107 zywych + 13 z martwa referencja.
 --
--- Migracja jest idempotentna (create or replace + same asercje), wiec bezpieczna do ponownego
--- uruchomienia — zastosowana przy zerwanym polaczeniu z Supabase, stan wymagal potwierdzenia.
+-- active_stage_id jest typu TEXT (nie uuid) — stad rzutowanie. Bez niego flaga "etap biezacy"
+-- bylaby wszedzie false i priorytet z ustalen wlasciciela cicho przestalby dzialac; asercja
+-- na dole tego pilnuje.
 create or replace function public.report_task_targets(p_project_id uuid)
 returns table (
   project_process_item_id uuid,
@@ -27,15 +30,15 @@ set search_path = public
 as $$
   select
     ppi.id,
-    pi.title,
+    coalesce(pi.title, 'Element spoza aktualnego szablonu'),
     m.stage_id,
     s.title,
     s.position,
-    coalesce(pp.active_stage_id = m.stage_id, false),
+    coalesce(pp.active_stage_id = m.stage_id::text, false),
     b.id,
     ppi.payload
   from project_process_items ppi
-  join process_items pi on pi.id = ppi.template_item_id
+  left join process_items pi on pi.id = ppi.template_item_id
   left join process_milestones m on m.id = pi.milestone_id
   left join process_stages s on s.id = m.stage_id
   left join project_processes pp on pp.project_id = ppi.project_id
@@ -43,38 +46,51 @@ as $$
   where ppi.project_id = p_project_id
     and ppi.kind = 'kanban'
   order by
-    coalesce(pp.active_stage_id = m.stage_id, false) desc,   -- etap biezacy na gorze
+    coalesce(pp.active_stage_id = m.stage_id::text, false) desc,
     s.position nulls last,
-    pi.title;
+    coalesce(pi.title, '');
 $$;
 
 comment on function public.report_task_targets is
   'D43 — elementy kanbanowe projektu jako cele dla zadania z ustalenia/zmiany. board_id null '
-  'oznacza tablice jeszcze niezmaterializowana (tworzona leniwie przez ensureKanbanBoard).';
+  'oznacza tablice jeszcze niezmaterializowana. LEFT JOIN na process_items celowo: 564 wierszy '
+  'ma martwe template_item_id (brak FK), a cel z praca nie moze zniknac z listy.';
 
 grant execute on function public.report_task_targets(uuid) to authenticated;
 revoke execute on function public.report_task_targets(uuid) from public, anon;
 
 do $$
 declare
-  v_projektow integer;
   v_celow integer;
+  v_martwych integer;
   v_z_tablica integer;
+  v_aktywnych integer;
+  v_tablic integer;
 begin
-  select count(distinct ppi.project_id) into v_projektow
-  from project_process_items ppi where ppi.kind = 'kanban';
-
-  select count(*), count(*) filter (where board_id is not null)
-  into v_celow, v_z_tablica
+  select count(*),
+         count(*) filter (where item_title = 'Element spoza aktualnego szablonu'),
+         count(*) filter (where board_id is not null),
+         count(*) filter (where is_active_stage)
+  into v_celow, v_martwych, v_z_tablica, v_aktywnych
   from projects p cross join lateral report_task_targets(p.id);
 
-  -- Inwentaryzacja: 107 elementow kanbanowych na 107 projektach, 13 zmaterializowanych tablic.
-  if v_celow <> 107 then
-    raise exception 'Oczekiwano 107 celow, jest %', v_celow;
+  select count(*) into v_tablic from process_kanban_boards;
+
+  -- 120 = 107 zywych elementow kanbanowych + 13 z martwa referencja do szablonu.
+  if v_celow <> 120 then
+    raise exception 'Oczekiwano 120 celow, jest %', v_celow;
   end if;
-  if v_z_tablica <> 13 then
-    raise exception 'Oczekiwano 13 celow z gotowa tablica, jest %', v_z_tablica;
+  if v_martwych <> 13 then
+    raise exception 'Oczekiwano 13 celow z martwa referencja, jest %', v_martwych;
+  end if;
+  -- KAZDA istniejaca tablica musi byc osiagalna z pickera, takze ta z martwym szablonem.
+  if v_z_tablica <> v_tablic then
+    raise exception 'Picker gubi tablice: istnieje %, widocznych %', v_tablic, v_z_tablica;
+  end if;
+  if v_aktywnych = 0 then
+    raise exception 'Zaden cel nie trafil w etap biezacy — rzutowanie active_stage_id nie dziala.';
   end if;
 
-  raise notice 'OK: % celow na % projektach, % z gotowa tablica.', v_celow, v_projektow, v_z_tablica;
+  raise notice 'OK: % celow (% martwych), %/% tablic widocznych, % na etapie biezacym.',
+    v_celow, v_martwych, v_z_tablica, v_tablic, v_aktywnych;
 end $$;
