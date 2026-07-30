@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { KanbanAttachment, KanbanAuthorSide } from "@/lib/process/kanban-types";
 import {
   extensionForMimeType,
@@ -7,6 +8,7 @@ import {
 } from "@/lib/process/kanban-attachments";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getSupabase } from "@/lib/supabase/client";
+import type { Database } from "@/lib/supabase/database.types";
 
 export const KANBAN_ATTACHMENTS_BUCKET = "kanban-attachments";
 
@@ -141,14 +143,17 @@ export async function taskBelongsToBoard(taskId: string, boardId: string) {
   return column.board_id === boardId;
 }
 
-export async function uploadKanbanTaskAttachment(input: {
-  boardId: string;
-  taskId: string;
-  file: File;
-  authorName: string;
-  authorSide: KanbanAuthorSide;
-  setAsCardCover?: boolean;
-}) {
+async function performKanbanAttachmentUpload(
+  supabase: SupabaseClient<Database>,
+  input: {
+    boardId: string;
+    taskId: string;
+    file: File;
+    authorName: string;
+    authorSide: KanbanAuthorSide;
+    setAsCardCover?: boolean;
+  },
+) {
   const validation = validateKanbanAttachmentFile({
     type: input.file.type,
     size: input.file.size,
@@ -162,8 +167,6 @@ export async function uploadKanbanTaskAttachment(input: {
   if (!belongs) {
     throw new Error("Nie znaleziono zgłoszenia na tej tablicy.");
   }
-
-  const supabase = getSupabaseAdmin();
 
   if (validation.mediaKind === "video") {
     const { count, error: countError } = await supabase
@@ -244,8 +247,31 @@ export async function uploadKanbanTaskAttachment(input: {
   }
 
   const attachment = rowToAttachment(data as AttachmentRow);
-  const [withUrl] = await attachSignedUrlsAdmin([attachment]);
+  const [withUrl] = await attachSignedUrlsToAttachments([attachment]);
   return withUrl;
+}
+
+export async function uploadKanbanTaskAttachment(input: {
+  boardId: string;
+  taskId: string;
+  file: File;
+  authorName: string;
+  authorSide: KanbanAuthorSide;
+  setAsCardCover?: boolean;
+}) {
+  return performKanbanAttachmentUpload(getSupabaseAdmin(), input);
+}
+
+/** Wariant kliencki (sesja zalogowanego zespołu) — do użycia z wewnętrznych tablic Kanban. */
+export async function uploadKanbanTaskAttachmentClient(input: {
+  boardId: string;
+  taskId: string;
+  file: File;
+  authorName: string;
+  authorSide: KanbanAuthorSide;
+  setAsCardCover?: boolean;
+}) {
+  return performKanbanAttachmentUpload(getSupabase(), input);
 }
 
 async function fetchAttachmentRow(attachmentId: string) {
@@ -263,12 +289,15 @@ async function fetchAttachmentRow(attachmentId: string) {
   return (data as AttachmentRow | null) ?? null;
 }
 
-export async function setKanbanTaskAttachmentCover(input: {
-  boardId: string;
-  taskId: string;
-  attachmentId: string;
-  isCardCover: boolean;
-}) {
+async function performSetKanbanTaskAttachmentCover(
+  supabase: SupabaseClient<Database>,
+  input: {
+    boardId: string;
+    taskId: string;
+    attachmentId: string;
+    isCardCover: boolean;
+  },
+) {
   const belongs = await taskBelongsToBoard(input.taskId, input.boardId);
   if (!belongs) {
     throw new Error("Nie znaleziono zgłoszenia na tej tablicy.");
@@ -282,8 +311,6 @@ export async function setKanbanTaskAttachmentCover(input: {
   if (row.media_kind !== "image") {
     throw new Error("Okładką karty może być tylko zdjęcie.");
   }
-
-  const supabase = getSupabaseAdmin();
 
   if (input.isCardCover) {
     const { error: clearError } = await supabase
@@ -309,8 +336,27 @@ export async function setKanbanTaskAttachmentCover(input: {
   }
 
   const attachment = rowToAttachment(data as AttachmentRow);
-  const [withUrl] = await attachSignedUrlsAdmin([attachment]);
+  const [withUrl] = await attachSignedUrlsToAttachments([attachment]);
   return withUrl;
+}
+
+export async function setKanbanTaskAttachmentCover(input: {
+  boardId: string;
+  taskId: string;
+  attachmentId: string;
+  isCardCover: boolean;
+}) {
+  return performSetKanbanTaskAttachmentCover(getSupabaseAdmin(), input);
+}
+
+/** Wariant kliencki (sesja zalogowanego zespołu) — do użycia z wewnętrznych tablic Kanban. */
+export async function setKanbanTaskAttachmentCoverClient(input: {
+  boardId: string;
+  taskId: string;
+  attachmentId: string;
+  isCardCover: boolean;
+}) {
+  return performSetKanbanTaskAttachmentCover(getSupabase(), input);
 }
 
 export async function clearKanbanTaskAttachmentCover(input: { boardId: string; taskId: string }) {

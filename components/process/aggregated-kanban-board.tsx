@@ -57,6 +57,10 @@ import {
   updateKanbanComment,
   updateKanbanTask,
 } from "@/lib/supabase/kanban-repository";
+import {
+  setKanbanTaskAttachmentCoverClient,
+  uploadKanbanTaskAttachmentClient,
+} from "@/lib/supabase/kanban-attachments-repository";
 import { useKanbanCacheStore } from "@/store/kanban-cache-store";
 import { useDictionaryStore } from "@/store/dictionary-store";
 import { useProcessStore } from "@/store/process-store";
@@ -560,6 +564,39 @@ export function AggregatedKanbanBoard({
           roleOptions={roleOptions}
           useProfileAssignee={authorSide === "team"}
           canDelete={authorSide === "team"}
+          allowAttachmentUpload
+          onUploadAttachment={async (file, options) => {
+            const sourceBoard = Object.values(useKanbanCacheStore.getState().boardsByItemId).find(
+              (entry) => entry.tasks.some((task) => task.id === activeTask.id),
+            );
+            if (!sourceBoard) {
+              throw new Error("Nie znaleziono tablicy dla tego zgłoszenia.");
+            }
+            await uploadKanbanTaskAttachmentClient({
+              boardId: sourceBoard.id,
+              taskId: activeTask.id,
+              file,
+              authorName,
+              authorSide,
+              setAsCardCover: options?.setAsCardCover,
+            });
+            await refresh();
+          }}
+          onSetAttachmentCover={async (attachmentId, isCardCover) => {
+            const sourceBoard = Object.values(useKanbanCacheStore.getState().boardsByItemId).find(
+              (entry) => entry.tasks.some((task) => task.id === activeTask.id),
+            );
+            if (!sourceBoard) {
+              throw new Error("Nie znaleziono tablicy dla tego zgłoszenia.");
+            }
+            await setKanbanTaskAttachmentCoverClient({
+              boardId: sourceBoard.id,
+              taskId: activeTask.id,
+              attachmentId,
+              isCardCover,
+            });
+            await refresh();
+          }}
           columns={board.columns.map((column) => ({ id: column.id, title: column.title }))}
           currentColumnId={activeTask.columnId}
           onMoveToColumn={async (columnId) => {

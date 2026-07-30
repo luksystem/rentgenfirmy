@@ -71,6 +71,10 @@ import {
   updateKanbanComment,
   updateKanbanTask,
 } from "@/lib/supabase/kanban-repository";
+import {
+  setKanbanTaskAttachmentCoverClient,
+  uploadKanbanTaskAttachmentClient,
+} from "@/lib/supabase/kanban-attachments-repository";
 
 export function ProcessKanbanBoard({
   projectProcessItemId,
@@ -780,6 +784,27 @@ export function ProcessKanbanBoard({
             await refresh();
           }}
           canDelete={authorSide === "team"}
+          allowAttachmentUpload
+          onUploadAttachment={async (file, options) => {
+            await uploadKanbanTaskAttachmentClient({
+              boardId: board.id,
+              taskId: activeTask.id,
+              file,
+              authorName,
+              authorSide,
+              setAsCardCover: options?.setAsCardCover,
+            });
+            await refresh();
+          }}
+          onSetAttachmentCover={async (attachmentId, isCardCover) => {
+            await setKanbanTaskAttachmentCoverClient({
+              boardId: board.id,
+              taskId: activeTask.id,
+              attachmentId,
+              isCardCover,
+            });
+            await refresh();
+          }}
           commentDraft={commentDraft}
           onCommentDraftChange={setCommentDraft}
           onClose={() => setActiveTaskId(null)}
