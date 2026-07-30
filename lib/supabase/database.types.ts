@@ -2418,6 +2418,20 @@ export type ProcessElementRow = {
   updated_at: string;
 };
 
+export type ProjectProcessSnapshotRow = {
+  id: string;
+  project_process_item_id: string;
+  storage_path: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number | null;
+  employee_note: string | null;
+  uploaded_by: string | null;
+  uploaded_by_name: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ProcessItemRow = {
   id: string;
   milestone_id: string;
@@ -4394,6 +4408,13 @@ export type Database = {
         Update: Partial<ProjectProcessItemRow>;
         Relationships: [];
       };
+      project_process_snapshots: {
+        Row: ProjectProcessSnapshotRow;
+        Insert: Partial<ProjectProcessSnapshotRow> &
+          Pick<ProjectProcessSnapshotRow, "project_process_item_id" | "storage_path" | "file_name" | "mime_type" | "uploaded_by_name">;
+        Update: Partial<ProjectProcessSnapshotRow>;
+        Relationships: [];
+      };
       project_stage_leads: {
         Row: ProjectStageLeadRow;
         Insert: Partial<ProjectStageLeadRow> &
@@ -4494,6 +4515,7 @@ export type Database = {
           link_url: string | null;
           source_id: string | null;
           read_at: string | null;
+          pushed_at?: string | null;
           created_at: string;
         };
         Insert: {
@@ -4505,6 +4527,8 @@ export type Database = {
           link_url?: string | null;
           source_id?: string | null;
           read_at?: string | null;
+          /** D44 — kiedy dosłano push (przekaźnik cronowy). NULL = jeszcze nie próbowano. */
+          pushed_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -4516,6 +4540,8 @@ export type Database = {
           link_url?: string | null;
           source_id?: string | null;
           read_at?: string | null;
+          /** D44 — kiedy dosłano push (przekaźnik cronowy). NULL = jeszcze nie próbowano. */
+          pushed_at?: string | null;
           created_at?: string;
         };
         Relationships: [];
