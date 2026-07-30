@@ -14,7 +14,6 @@ import { useProcessStore } from "@/store/process-store";
 export default function ProcessTemplatePage() {
   const params = useParams();
   const projectType = decodeURIComponent(String(params.projectType));
-  const projectTypes = useAppStore((state) => state.fieldOptions.projectTypes);
   const isInitialized = useAppStore((state) => state.isInitialized);
   const processError = useProcessStore((state) => state.error);
   const hydrate = useProcessStore((state) => state.hydrate);
@@ -29,7 +28,7 @@ export default function ProcessTemplatePage() {
   useEffect(() => {
     void (async () => {
       try {
-        await hydrate(projectTypes);
+        await hydrate();
         await ensureTemplateForProjectType(projectType);
       } catch (error) {
         setLoadError(error instanceof Error ? error.message : "Błąd ładowania szablonu.");
@@ -37,7 +36,7 @@ export default function ProcessTemplatePage() {
         setReady(true);
       }
     })();
-  }, [ensureTemplateForProjectType, hydrate, projectType, projectTypes]);
+  }, [ensureTemplateForProjectType, hydrate, projectType]);
 
   const template = getTemplateByProjectType(projectType);
 

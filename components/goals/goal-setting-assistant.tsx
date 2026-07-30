@@ -38,7 +38,6 @@ export function GoalSettingAssistant() {
   const profile = useAuthStore((state) => state.profile);
   const projects = useAppStore((state) => state.projects);
   const clients = useAppStore((state) => state.clients);
-  const fieldOptions = useAppStore((state) => state.fieldOptions);
 
   const processHydrated = useProcessStore((state) => state.hydrated);
   const processHydrate = useProcessStore((state) => state.hydrate);
@@ -62,8 +61,8 @@ export function GoalSettingAssistant() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!processHydrated) void processHydrate(fieldOptions.projectTypes);
-  }, [processHydrated, processHydrate, fieldOptions.projectTypes]);
+    if (!processHydrated) void processHydrate();
+  }, [processHydrated, processHydrate]);
 
   useEffect(() => {
     if (!goalHydrated) void goalHydrate();

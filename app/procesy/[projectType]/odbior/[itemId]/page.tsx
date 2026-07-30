@@ -21,7 +21,6 @@ export default function ProcessInternalAcceptanceConfigPage() {
   const projectType = decodeURIComponent(String(params.projectType));
   const processItemId = String(params.itemId);
 
-  const projectTypes = useAppStore((state) => state.fieldOptions.projectTypes);
   const isInitialized = useAppStore((state) => state.isInitialized);
   const hydrate = useProcessStore((state) => state.hydrate);
   const ensureTemplateForProjectType = useProcessStore((state) => state.ensureTemplateForProjectType);
@@ -43,7 +42,7 @@ export default function ProcessInternalAcceptanceConfigPage() {
   useEffect(() => {
     void (async () => {
       try {
-        await hydrate(projectTypes);
+        await hydrate();
         await ensureTemplateForProjectType(projectType);
       } catch (error) {
         setLoadError(error instanceof Error ? error.message : "Błąd ładowania szablonu.");
@@ -51,7 +50,7 @@ export default function ProcessInternalAcceptanceConfigPage() {
         setReady(true);
       }
     })();
-  }, [ensureTemplateForProjectType, hydrate, projectType, projectTypes]);
+  }, [ensureTemplateForProjectType, hydrate, projectType]);
 
   useEffect(() => {
     if (!processItem?.isInternalAcceptance) {

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { useAppStore } from "@/store/app-store";
 import { useProcessStore } from "@/store/process-store";
 
 export function ProjectProcessLink({
@@ -15,16 +14,15 @@ export function ProjectProcessLink({
   projectType: string;
   variant?: "link" | "button";
 }) {
-  const projectTypes = useAppStore((state) => state.fieldOptions.projectTypes);
   const hydrate = useProcessStore((state) => state.hydrate);
   const hydrated = useProcessStore((state) => state.hydrated);
   const getProjectProgress = useProcessStore((state) => state.getProjectProgress);
 
   useEffect(() => {
     if (!hydrated) {
-      void hydrate(projectTypes);
+      void hydrate();
     }
-  }, [hydrate, hydrated, projectTypes]);
+  }, [hydrate, hydrated]);
 
   const progress = getProjectProgress(projectId, projectType);
   const label = progress

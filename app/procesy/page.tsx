@@ -24,8 +24,8 @@ export default function ProcesyPage() {
   const [creatingType, setCreatingType] = useState<string | null>(null);
 
   useEffect(() => {
-    void hydrate(projectTypes);
-  }, [hydrate, projectTypes]);
+    void hydrate();
+  }, [hydrate]);
 
   async function handleCreateTemplate(projectType: string) {
     setCreatingType(projectType);

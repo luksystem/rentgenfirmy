@@ -9,11 +9,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/input";
 import { flattenChecklistLines, normalizeChecklistPayload } from "@/lib/process/item-payload";
 import { PROCESS_ITEM_KIND_LABELS } from "@/lib/process/types";
-import { useAppStore } from "@/store/app-store";
 import { useProcessStore } from "@/store/process-store";
 
 export default function ProcessElementsPage() {
-  const projectTypes = useAppStore((state) => state.fieldOptions.projectTypes);
   const elements = useProcessStore((state) => state.elements);
   const isLoading = useProcessStore((state) => state.isLoading);
   const hydrated = useProcessStore((state) => state.hydrated);
@@ -23,8 +21,8 @@ export default function ProcessElementsPage() {
   const [nameFilter, setNameFilter] = useState("");
 
   useEffect(() => {
-    void hydrate(projectTypes);
-  }, [hydrate, projectTypes]);
+    void hydrate();
+  }, [hydrate]);
 
   const filteredElements = useMemo(() => {
     const query = nameFilter.trim().toLocaleLowerCase("pl");

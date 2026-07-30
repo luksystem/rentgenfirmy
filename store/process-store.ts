@@ -105,8 +105,8 @@ type ProcessStore = {
   hydrated: boolean;
   isLoading: boolean;
   error: string | null;
-  hydrate: (projectTypes: string[]) => Promise<void>;
-  refresh: (projectTypes: string[]) => Promise<void>;
+  hydrate: () => Promise<void>;
+  refresh: () => Promise<void>;
   getTemplateByProjectType: (projectType: string) => ProcessTemplate | undefined;
   getProjectProcess: (projectId: string) => ProjectProcess | undefined;
   getProjectProcessItem: (projectId: string, templateItemId: string) => ProjectProcessItem | undefined;
@@ -282,7 +282,7 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
   isLoading: false,
   error: null,
 
-  hydrate: async (projectTypes) => {
+  hydrate: async () => {
     const state = get();
     if (state.hydrated) {
       return;
@@ -298,7 +298,7 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
 
     hydratePromise = (async () => {
       try {
-        const [fetchedTemplates, processes, elements, kanbanNewTaskCount, kanbanOverdueTaskCount] =
+        const [templates, processes, elements, kanbanNewTaskCount, kanbanOverdueTaskCount] =
           await Promise.all([
             fetchProcessTemplates(),
             fetchProjectProcesses(),
@@ -306,17 +306,6 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
             countNewKanbanTasksForTeam().catch(() => 0),
             countOverdueKanbanTasks().catch(() => 0),
           ]);
-
-        const missingProjectTypes = projectTypes.filter(
-          (projectType) => !fetchedTemplates.some((template) => template.projectType === projectType),
-        );
-        let templates = fetchedTemplates;
-        if (missingProjectTypes.length) {
-          for (const projectType of missingProjectTypes) {
-            await ensureProcessTemplateForProjectType(projectType);
-          }
-          templates = await fetchProcessTemplates();
-        }
 
         set({
           templates,
@@ -341,10 +330,10 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
     return hydratePromise;
   },
 
-  refresh: async (projectTypes) => {
+  refresh: async () => {
     hydratePromise = null;
     set({ hydrated: false });
-    await get().hydrate(projectTypes);
+    await get().hydrate();
   },
 
   getTemplateByProjectType: (projectType) =>
@@ -407,7 +396,7 @@ export const useProcessStore = create<ProcessStore>((set, get) => ({
     }));
   },
 
-  syncProjectProcessFromTemplate: async (projectId, _projectType) => {
+  syncProjectProcessFromTemplate: async (projectId) => {
     const response = await fetch(`/api/projects/${projectId}/process/sync-template`, {
       method: "POST",
       credentials: "include",

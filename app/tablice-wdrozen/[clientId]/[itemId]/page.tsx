@@ -22,7 +22,6 @@ export default function KanbanHubBoardPage() {
   const projectProcessItemId = String(params.itemId);
 
   const clients = useAppStore((state) => state.clients);
-  const projectTypes = useAppStore((state) => state.fieldOptions.projectTypes);
   const displayName = useAuthStore((state) => state.displayName);
 
   const hydrate = useProcessStore((state) => state.hydrate);
@@ -56,8 +55,8 @@ export default function KanbanHubBoardPage() {
   }, [boardEntry, templates]);
 
   useEffect(() => {
-    void hydrate(projectTypes);
-  }, [hydrate, projectTypes]);
+    void hydrate();
+  }, [hydrate]);
 
   useEffect(() => {
     void (async () => {

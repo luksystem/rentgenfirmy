@@ -21,7 +21,6 @@ export default function ProjectProcessPage() {
     state.projects.find((entry) => entry.id === projectId),
   );
   const isInitialized = useAppStore((state) => state.isInitialized);
-  const projectTypes = useAppStore((state) => state.fieldOptions.projectTypes);
   const processError = useProcessStore((state) => state.error);
 
   const hydrate = useProcessStore((state) => state.hydrate);
@@ -44,7 +43,7 @@ export default function ProjectProcessPage() {
 
     void (async () => {
       try {
-        await hydrate(projectTypes);
+        await hydrate();
         await loadTeamProfiles();
         await ensureProjectProcess(project.id, project.type);
       } catch (error) {
@@ -58,7 +57,6 @@ export default function ProjectProcessPage() {
     hydrate,
     loadTeamProfiles,
     project,
-    projectTypes,
   ]);
 
   if (!isInitialized) {

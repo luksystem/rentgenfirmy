@@ -37,7 +37,6 @@ function ClientDashboardPageContent() {
 
   const clients = useAppStore((state) => state.clients);
   const projects = useAppStore((state) => state.projects);
-  const fieldOptions = useAppStore((state) => state.fieldOptions);
   const hydrateDashboard = useDashboardStore((state) => state.hydrate);
   const spaces = useDashboardStore((state) => state.spaces);
   const hydrateProcess = useProcessStore((state) => state.hydrate);
@@ -84,8 +83,8 @@ function ClientDashboardPageContent() {
   const selectedProject = clientProjects.find((project) => project.id === selectedProjectId);
 
   useEffect(() => {
-    void hydrateProcess(fieldOptions.projectTypes);
-  }, [fieldOptions.projectTypes, hydrateProcess]);
+    void hydrateProcess();
+  }, [hydrateProcess]);
 
   useEffect(() => {
     if (!selectedProject?.type || !selectedProjectId) {

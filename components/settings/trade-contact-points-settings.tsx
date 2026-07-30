@@ -60,8 +60,7 @@ export function TradeContactPointsSettings() {
   const templates = useProcessStore((state) => state.templates);
 
   useEffect(() => {
-    void processHydrate(projectTypes);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    void processHydrate();
   }, [processHydrate]);
 
   const [points, setPoints] = useState<TradeContactPoint[]>([]);

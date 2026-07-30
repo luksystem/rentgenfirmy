@@ -8,14 +8,12 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { fetchProcessElementPlacements, type ProcessElementPlacement } from "@/lib/supabase/process-element-repository";
-import { useAppStore } from "@/store/app-store";
 import { useProcessStore } from "@/store/process-store";
 
 export default function ProcessElementPage() {
   const params = useParams();
   const router = useRouter();
   const elementId = String(params.id);
-  const projectTypes = useAppStore((state) => state.fieldOptions.projectTypes);
   const elements = useProcessStore((state) => state.elements);
   const hydrate = useProcessStore((state) => state.hydrate);
   const saveElement = useProcessStore((state) => state.saveElement);
@@ -25,7 +23,7 @@ export default function ProcessElementPage() {
 
   useEffect(() => {
     void (async () => {
-      await hydrate(projectTypes);
+      await hydrate();
       try {
         const loaded = await fetchProcessElementPlacements(elementId);
         setPlacements(loaded);
@@ -34,7 +32,7 @@ export default function ProcessElementPage() {
       }
       setReady(true);
     })();
-  }, [elementId, hydrate, projectTypes]);
+  }, [elementId, hydrate]);
 
   const element = elements.find((entry) => entry.id === elementId);
 
