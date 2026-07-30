@@ -1546,8 +1546,8 @@ poza: kolejne podobne prośby czekają na potwierdzenie listy, chyba że właśc
 
 ## D37. Kanban ROT — korekta miejsca konfiguracji: atrybut kolumny w szablonie, nie tylko żywej tablicy
 
-**Status: mechanizm zrealizowany (migracja 256). Backfill (oba tory) NIE wykonany — czeka na
-zatwierdzenie mapowania, zgodnie z wyraźnym zastrzeżeniem właściciela.**
+**Status: zrealizowane w całości — mechanizm (migracja 256) + backfill (migracja 257, mapowanie
+zatwierdzone przez właściciela).**
 
 Korekta względem wcześniejszego stanu: `rot_status` istniał dotąd wyłącznie jako atrybut ŻYWEJ
 kolumny (`process_kanban_columns`), ustawiany ręcznie per tablica, per projekt — nowa tablica
@@ -1614,9 +1614,9 @@ kanban_boards`), nie 39 — zgłoszone wprost, nie podstawione po cichu. 65 kolu
 **wszystkie 13 tablic ma identyczny zestaw 5 tytułów kolumn** (bo wszystkie powstały z tego samego,
 jedynego elementu szablonu) — więc jedna reguła mapowania pokrywa 100% (65/65).
 
-**Proponowane mapowanie (do zatwierdzenia, NIE zastosowane):**
+**Mapowanie (zatwierdzone i zastosowane, migracja 257):**
 
-| Kolumna | Sugerowany `rot_status` | Sugerowana `category` | Uzasadnienie |
+| Kolumna | `rot_status` | `category` | Uzasadnienie |
 |---|---|---|---|
 | Zgłoszone | W_TOKU | — | Nowe zgłoszenie klienta z wdrożenia — nasza kolejka, nie oczekiwanie na kogoś |
 | W trakcie | W_TOKU | — | Praca w toku |
@@ -1624,7 +1624,42 @@ jedynego elementu szablonu) — więc jedna reguła mapowania pokrywa 100% (65/6
 | Prace dodatkowe | CZEKA_NA_ZEWNETRZNE | OCZEKIWANIE_DECYZJA_INWESTORA | Dodatkowy zakres do zaakceptowania przez inwestora |
 | Zatwierdzone | ZAMKNIETE | — | Stan końcowy |
 
-Migracja: 256 (schemat + `report_rot_items()`).
+### Backfill — cztery tory, nie dwa (migracja 257)
+
+**Trzeci tor znaleziony przy weryfikacji, nie był w zadaniu.** Tablica kanban powstaje z
+**zakotwiczonego snapshotu projektu** (`project_processes.template_snapshot` → `resolveAnchoredProcess
+Template` → `ProcessItemPanel` → `templatePayload` → `ensureKanbanBoard`), NIE z żywego szablonu. Bez
+tego toru 94 projekty DOM, które jeszcze nie otworzyły swojej tablicy, tworzyłyby ją dalej bez
+konfiguracji ROT — backfill „szablon + żywe tablice" wyglądałby na kompletny i cicho nie działał dla
+większości projektów.
+
+| Tor | Zakres | Wierszy | Asercja |
+|---|---|---|---|
+| 1 | żywy szablon (`process_items.default_payload`) | 1 | ✓ |
+| 2a | kolumny z RĘCZNYM `rot_status` — tylko `is_rejestr_tematow=true` | 6 | ✓ |
+| 2b | kolumny bez statusu — mapowanie heurystyczne | 59 | ✓ |
+| 3 | snapshoty projektów (`template_snapshot`, zagnieżdżony jsonb) | 107 | ✓ |
+
+**Konflikt ujawniony przed nadpisaniem, ręczne ustawienia zachowane.** 6 kolumn miało już ręcznie
+ustawiony `rot_status`, z czego **2 odwrotnie niż mapowanie heurystyczne**: „Do przetestowania" =
+`CZEKA_NA_ZEWNETRZNE` (mapowanie mówi `W_TOKU`) i „Prace dodatkowe" = `W_TOKU` (mapowanie mówi
+`CZEKA_NA_ZEWNETRZNE`), po jednej tablicy każde. Nie nadpisane — ręczne ustawienie ma pierwszeństwo
+(pkt 2 tej decyzji). Dostały wyłącznie `is_rejestr_tematow=true`, żeby wróciły do ROT dokładnie w
+stanie, w jakim działały przed migracją 256. **Otwarte pytanie dla właściciela: te 2 kolumny zostają
+niespójne z pozostałymi 12 tablicami — czy to celowa różnica na tym konkretnym projekcie, czy
+literówka do wyrównania?**
+
+Tor 3 (najbardziej ryzykowny — zagnieżdżone przepisanie jsonb `stages[] → milestones[] → items[] →
+defaultPayload.columns[]`) zweryfikowany **dry-runem tylko-do-czytania na żywym projekcie przed
+wdrożeniem**: 10 etapów → 10, 7 elementów → 7, `id`/`title`/`position` kolumn niezmienione, dołożone
+tylko 3 nowe klucze. Każdy poziom ma guard `jsonb_typeof(...)='array'` — brakujący poziom zostaje bez
+zmian zamiast zerować snapshot.
+
+**Skutek w ROT:** kanban wrócił z **20 → 66 pozycji**. Wzrost nie jest błędem — przed backfillem
+skonfigurowane były tylko 1-2 tablice z 13, teraz wszystkie. Weryfikacja po wdrożeniu: 107/107
+snapshotów kompletnych, 65/65 kolumn z `is_rejestr_tematow=true`.
+
+Migracje: 256 (schemat + `report_rot_items()`), 257 (backfill czterotorowy).
 
 ---
 
@@ -1702,7 +1737,7 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D34 | ROT (nawigacja do konkretnego elementu) | zatwierdzone, zrealizowane (`RotItemDetailPanel`); kanban świadomie bez pełnego osadzenia |
 | D35 | ROT (`client_offer_status` zamrożony na accepted) | zatwierdzone, zrealizowane (migracja 255) |
 | D36 | Duplikat szablonu „Dom"/„DOM" (literówka w kodzie) | zatwierdzone, zrealizowane — naprawiona literówka + usunięty duplikat (dwukrotnie, drugi raz się odtworzył) |
-| D37 | Kanban ROT — atrybut kolumny w szablonie | mechanizm zrealizowany (migracja 256); backfill (4a: 1 element, 4b: 13 tablic nie 39, mapowanie 100% jedną regułą) czeka na zatwierdzenie |
+| D37 | Kanban ROT — atrybut kolumny w szablonie | zatwierdzone, zrealizowane (migracje 256-257: mechanizm + backfill czterotorowy, 2 ręczne ustawienia zachowane jako nadpisania) |
 
 ---
 
