@@ -5,6 +5,7 @@
 import { getSupabase } from "@/lib/supabase/client";
 import { COMMUNICATION_PHASES, type CommunicationPhase } from "@/lib/process/types";
 import { resolveCommunicationGate, type CommunicationGateResult } from "@/lib/communication/gate";
+import { fetchPolicyThresholds } from "@/lib/supabase/policy-thresholds-repository";
 
 export type ProjectCommunicationGate = CommunicationGateResult & {
   projectId: string;
@@ -18,7 +19,10 @@ function isCommunicationPhase(value: string | null): value is CommunicationPhase
 
 export async function fetchCommunicationGates(): Promise<ProjectCommunicationGate[]> {
   const supabase = getSupabase();
-  const { data, error } = await supabase.rpc("report_communication_gate_inputs");
+  const [{ data, error }, thresholds] = await Promise.all([
+    supabase.rpc("report_communication_gate_inputs"),
+    fetchPolicyThresholds(),
+  ]);
   if (error) {
     throw new Error(error.message);
   }
@@ -31,6 +35,10 @@ export async function fetchCommunicationGates(): Promise<ProjectCommunicationGat
       activeStageBasePhase: isCommunicationPhase(row.active_stage_base_phase)
         ? row.active_stage_base_phase
         : null,
+      silenceThresholds: {
+        inProgressDays: thresholds.silenceTimeoutInProgressDays,
+        holdDays: thresholds.silenceTimeoutHoldDays,
+      },
     });
     return {
       ...gate,

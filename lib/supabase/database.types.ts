@@ -5117,6 +5117,18 @@ export type Database = {
         };
         Returns: void;
       };
+      report_warranty_review_due: {
+        Args: Record<string, never>;
+        Returns: {
+          project_id: string;
+          project_name: string;
+          client_id: string | null;
+          milestone: string;
+          due_date: string;
+          is_overdue: boolean;
+          inspection_exists: boolean;
+        }[];
+      };
       report_board_task_owner: {
         Args: { p_board_id: string };
         Returns: {

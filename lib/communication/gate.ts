@@ -35,6 +35,13 @@ export type CommunicationGateInput = {
   /** `base_communication_phase` etapu wskazanego przez `active_stage_id`. Null = brak etapu
    *  aktywnego albo etap nie rozwiązuje się w bieżącym szablonie (miękkie odniesienie). */
   activeStageBasePhase: CommunicationPhase | null;
+  /**
+   * Dni bezpiecznika ciszy — z `PolicyThresholds` (`app_settings`), NIE stała w kodzie. Poprawka
+   * po pierwszej wersji: 30/90 były wpisane na sztywno tutaj, mimo że `PolicyThresholds` już miał
+   * dokładnie te same wartości jako domyślne (`silenceTimeoutInProgressDays`/`silenceTimeoutHoldDays`)
+   * — naruszenie własnej zasady "kod zna mechanizmy, szablon zna wartości".
+   */
+  silenceThresholds: { inProgressDays: number; holdDays: number };
 };
 
 export type CommunicationGateResult = {
@@ -42,7 +49,7 @@ export type CommunicationGateResult = {
   gateNumber: 1 | 2 | 3 | 4 | 5;
   regime: CommunicationRegime;
   /** Dni bezpiecznika ciszy przypisane temu stanowi. Null = bezpiecznik nie dotyczy (gate 1-3). */
-  silenceBreakerDays: 30 | 90 | null;
+  silenceBreakerDays: number | null;
   /** Czy modyfikatory z fazy 11b mają w ogóle zastosowanie w tym stanie. */
   modifiersEnabled: boolean;
 };
@@ -70,17 +77,27 @@ export function resolveCommunicationGate(input: CommunicationGateInput): Communi
   // Pozostałe wartości flow_status traktujemy jak "w trakcie" (dziś jedyna trzecia wartość) —
   // gate 4/5, wiersze 4-5.
   if (input.hasActiveHold) {
-    return { gateNumber: 4, regime: "CZUWANIE", silenceBreakerDays: 90, modifiersEnabled: false };
+    return {
+      gateNumber: 4,
+      regime: "CZUWANIE",
+      silenceBreakerDays: input.silenceThresholds.holdDays,
+      modifiersEnabled: false,
+    };
   }
 
   if (input.activeStageBasePhase === null) {
-    return { gateNumber: 5, regime: "nieustalona", silenceBreakerDays: 30, modifiersEnabled: true };
+    return {
+      gateNumber: 5,
+      regime: "nieustalona",
+      silenceBreakerDays: input.silenceThresholds.inProgressDays,
+      modifiersEnabled: true,
+    };
   }
 
   return {
     gateNumber: 5,
     regime: input.activeStageBasePhase,
-    silenceBreakerDays: 30,
+    silenceBreakerDays: input.silenceThresholds.inProgressDays,
     modifiersEnabled: true,
   };
 }

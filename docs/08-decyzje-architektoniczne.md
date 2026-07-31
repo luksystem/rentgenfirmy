@@ -2158,6 +2158,58 @@ istniejącej funkcji.
 
 ---
 
+## D47. Faza 12 (Tryb serwisowy) + poprawka D45 (progi z ustaleń, nie na sztywno)
+
+**Status: zatwierdzone przez właściciela, zrealizowane (migracje 279-281).**
+
+**Poprawka błędu z D45.** `resolveCommunicationGate` miała 30/90 (dni bezpiecznika) wpisane na
+sztywno w kodzie — inwentaryzacja fazy 12 wykazała, że `PolicyThresholds`
+(`lib/policy-thresholds/types.ts`) już ma dokładnie te same wartości jako `silenceTimeoutInProgressDays`/
+`silenceTimeoutHoldDays`, tylko nigdy nieużywane. Naruszenie własnej zasady "kod zna mechanizmy,
+szablon zna wartości". Naprawione: funkcja przyjmuje progi jako parametr wejściowy, wołający
+(`communication-gate-repository.ts`) czyta je z `PolicyThresholds`. Test tablicy prawdy dostał
+strażnika regresji (różne liczby na wejściu muszą wyjść na wyjściu).
+
+**Odkryty przy okazji: `PolicyThresholds` nie miał ŻADNEGO ekranu edycji.** Fetch/save w
+repozytorium istniały od dawna, zero UI. `PolicyThresholdsEditor` (`components/settings/`),
+sekcja na `/ustawienia`, wszystkie 11 progów z opisami — w tym `warrantyExpiryNoticeDays`,
+o który pytał właściciel przy fazie 12 ("powiadomienie dokladnie w ustawieniach").
+
+**Faza 12 — trzy punkty z D19 §6, jeden już gotowy.** Punkt "jedno powiadomienie przed końcem
+pokrycia" **już istniał w całości** (cron `warranty-expiring`, próg z `PolicyThresholds`) — zero
+nowego kodu, tylko potwierdzenie i domknięcie ustawień powyżej.
+
+**Przeglądy po 3 i 12 miesiącach — korekta założenia D19.** Specyfikacja mówiła "reużyj moduł
+`inspections`" — trafnie co do **kształtu** tabeli (ma `project_id`, protokół z podpisem), błędnie
+co do **mechanizmu**: `inspections` jest zbudowany wokół katalogu systemów bezpieczeństwa
+(SSP/SSWiN/CCTV/KD/BMS) z cyklicznym generatorem `planInspectionsForClient` — nie ma pojęcia
+jednorazowego, kurtuazyjnego przeglądu "cały projekt, dwa razy". Właściciel rozstrzygnął: **nie
+generujemy przeglądów automatycznie** — moduł zakłada tworzenie ręczne, więc system tylko
+**ostrzega**, a człowiek tworzy przegląd istniejącą ścieżką.
+
+Zbudowane: `report_warranty_review_due()` — czyste fakty (kamień 3mc/12mc od
+`project_coverage_periods.kind='gwarancja_pierwotna'.starts_at`, czy `inspections` ma już wiersz
+dla tego projektu w rozsądnym oknie wokół kamienia). Zero nowej tabeli, zero automatycznego
+insertu. Cron `warranty-review-due` (04:30 UTC, wzorem `warranty-expiring`) wysyła powiadomienie
+do opiekuna projektu (z łańcuchem `role_fallback`) z linkiem do `/przeglady`.
+
+**Świadomie NIE przez `sendNotificationChannels`/`lib/email/*`.** Te dwa pliki miały w chwili
+budowy ~294 wierszy niezacommitowanych zmian z równoległej sesji (przed nową zasadą "jedna sesja
+na repo/branch" — patrz pamięć `user-parallel-sessions`). Zamiast ryzykować konflikt bez
+możliwości merge'a (working tree, nie branch) — powiadomienie idzie wprost do
+`user_notifications` (ten sam wzorzec co D44 `employee_report_*`), push przez istniejący
+przekaźnik cykliczny (`push-relay-server.ts`, rozszerzony o nowy rodzaj), bez e-maila. Jeśli
+e-mail okaże się potrzebny, dopięcie do pełnego routingu to osobny, mały krok — nie blokował tej
+fazy.
+
+Zweryfikowane na żywych danych, nie fikstuurą: 3 projekty (Hernacki Krzepice, Majewski Mateusz,
+Sopoliński) mają dziś realnie przekroczone oba kamienie, zero wierszy w `inspections` w całej
+bazie — asercja migracji sprawdza dokładnie te 6 wierszy. Wszystkie trzy mają obsadzonego
+opiekuna projektu, więc pierwszy realny przebieg crona (jutro, 04:30 UTC) wygeneruje 6
+prawdziwych powiadomień, nie zero.
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed
@@ -2185,7 +2237,7 @@ notka o tym pod D20 §2, teraz nieaktualna.
 | 11a | Fazy komunikacji — bramy | S-M | **zrealizowane** (D45, migracja 276) — silnik (modyfikatory, bezpiecznik, przejęcie czerwone) zostaje 11b |
 | 11b | Fazy komunikacji — silnik (modyfikatory, bezpiecznik, przejęcie czerwone) | L | do realizacji |
 | 11c | Wymagane komunikaty + blokada zamknięcia + wysyłka automatyczna | M-L | do realizacji |
-| 12 | Tryb serwisowy | M | do realizacji |
+| 12 | Tryb serwisowy | M | **zrealizowane** (D47, migracje 279-281) |
 | 13 | Zastępstwa urlopowe (+ `project_role_competency`, D22 dług) | M-L | do realizacji |
 | 14 | Obciążenie (+ checklista cykliczna KO) | L | do realizacji |
 | 15 | Planowanie | M | do realizacji |

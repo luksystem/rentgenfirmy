@@ -33,6 +33,7 @@ export const USER_NOTIFICATION_KINDS = [
   "service_intake_status",
   "requisition_order_overdue",
   "process_snapshot_uploaded",
+  "warranty_review_due",
 ] as const;
 
 export const SALES_NOTIFICATION_KINDS = [

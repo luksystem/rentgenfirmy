@@ -9,6 +9,7 @@ import {
   InterruptionTypesOptionsEditor,
 } from "@/components/field-options-editor";
 import { PageHeader } from "@/components/page-header";
+import { PolicyThresholdsEditor } from "@/components/settings/policy-thresholds-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -402,6 +403,8 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
+
+            <PolicyThresholdsEditor canEdit={isAdministrator} />
 
             <BlockerReasonsOptionsEditor
               items={draft.blockerReasons}

@@ -7,6 +7,10 @@ function input(patch: Partial<CommunicationGateInput> = {}): CommunicationGateIn
     coverageActiveToday: false,
     hasActiveHold: false,
     activeStageBasePhase: "STANDARD",
+    // Te same wartości co domyślne w PolicyThresholds (30/90) — testy pilnują kolejności
+    // priorytetów w bramie, nie konkretnych liczb progów, więc dowolna wartość by wystarczyła;
+    // biorę realne domyślne, żeby test czytał się jak żywy scenariusz.
+    silenceThresholds: { inProgressDays: 30, holdDays: 90 },
     ...patch,
   };
 }
@@ -82,5 +86,19 @@ describe("resolveCommunicationGate — D19 §6, pięć wierszy tabeli", () => {
   it("nieznana wartość flow_status traktowana jak 'w trakcie' (dziś jedyna trzecia wartość w bazie)", () => {
     const result = resolveCommunicationGate(input({ flowStatus: "coś nowego" }));
     expect(result.gateNumber).toBe(5);
+  });
+
+  it("dni bezpiecznika PRZYCHODZĄ z ustawień, nie są wpisane na sztywno w funkcji", () => {
+    // Strażnik regresji: pierwsza wersja miała 30/90 zaszyte w kodzie zamiast czytać
+    // PolicyThresholds — inne liczby na wejściu muszą wyjść na wyjściu.
+    const gate4 = resolveCommunicationGate(
+      input({ hasActiveHold: true, silenceThresholds: { inProgressDays: 7, holdDays: 365 } }),
+    );
+    expect(gate4.silenceBreakerDays).toBe(365);
+
+    const gate5 = resolveCommunicationGate(
+      input({ silenceThresholds: { inProgressDays: 7, holdDays: 365 } }),
+    );
+    expect(gate5.silenceBreakerDays).toBe(7);
   });
 });

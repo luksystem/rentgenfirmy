@@ -16,6 +16,7 @@ const PUSH_RELAY_KINDS = [
   "employee_report_accepted",
   "employee_report_completed",
   "employee_report_closed",
+  "warranty_review_due",
 ] as const;
 
 /**
