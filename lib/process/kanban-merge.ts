@@ -1,4 +1,4 @@
-import type { KanbanBoard, KanbanColumn, KanbanTask } from "@/lib/process/kanban-types";
+import type { KanbanBoard, KanbanColumn, KanbanTask, RotStatus } from "@/lib/process/kanban-types";
 
 export type KanbanTaskSource = {
   taskId: string;
@@ -8,6 +8,9 @@ export type KanbanTaskSource = {
   projectName: string;
   sourceColumnId: string;
   sourceColumnTitle: string;
+  /** Status ROT realnej kolumny projektu (nie zawsze ten sam co inne zadania w tej samej scalonej
+   *  kolumnie widoku zbiorczego — każdy projekt mapuje ROT niezależnie na swojej kolumnie). */
+  sourceColumnRotStatus: RotStatus | null;
 };
 
 export function getKanbanTaskProjectKey(source: Pick<KanbanTaskSource, "projectId" | "projectName">) {
@@ -125,6 +128,7 @@ export function mergeKanbanBoards(boards: KanbanBoard[]): MergedKanbanView | nul
         projectName: board.projectName,
         sourceColumnId: task.columnId,
         sourceColumnTitle: sourceColumn.title,
+        sourceColumnRotStatus: sourceColumn.rotStatus,
       });
 
       tasks.push({ ...task, columnId: mergedColumnId });

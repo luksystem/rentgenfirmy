@@ -212,8 +212,14 @@ export function AggregatedKanbanBoard({
     [mentionCandidates],
   );
   const boardStats = useMemo(
-    () => (board ? computeKanbanBoardStats(board) : null),
-    [board],
+    () =>
+      board
+        ? computeKanbanBoardStats(
+            board,
+            (task) => mergedView?.taskSources.get(task.id)?.sourceColumnRotStatus,
+          )
+        : null,
+    [board, mergedView],
   );
   const projectOptions = useMemo(() => {
     if (!mergedView) {
@@ -389,7 +395,9 @@ export function AggregatedKanbanBoard({
         }
         badgeToneForColumn={(columnId) => {
           const columnTasks = board.tasks.filter((task) => task.columnId === columnId);
-          if (countOverdueKanbanTasks(columnTasks) > 0) return "overdue";
+          const rotStatusResolver = (task: (typeof columnTasks)[number]) =>
+            mergedView?.taskSources.get(task.id)?.sourceColumnRotStatus;
+          if (countOverdueKanbanTasks(columnTasks, rotStatusResolver) > 0) return "overdue";
           return countOpenKanbanTasks(columnTasks) > 0 ? "ok" : "empty";
         }}
       />
@@ -400,7 +408,10 @@ export function AggregatedKanbanBoard({
           const columnTasks = getColumnTasks(column.id);
           const tasks = sortKanbanColumnTasks(columnTasks, sortMode);
           const openCount = countOpenKanbanTasks(columnTasks);
-          const overdueCount = countOverdueKanbanTasks(columnTasks);
+          const overdueCount = countOverdueKanbanTasks(
+            columnTasks,
+            (task) => mergedView?.taskSources.get(task.id)?.sourceColumnRotStatus,
+          );
           const isDropTarget = Boolean(
             dragTaskId && dragOverColumnId === column.id && isDropTargetAllowed(column.id),
           );
@@ -468,6 +479,7 @@ export function AggregatedKanbanBoard({
                     showProjectLabel
                     projectName={mergedView.taskSources.get(task.id)?.projectName}
                     isDragging={dragTaskId === task.id}
+                    columnRotStatus={mergedView.taskSources.get(task.id)?.sourceColumnRotStatus}
                     onOpen={() => setActiveTaskId(task.id)}
                     onDragStart={() => beginDrag(task.id)}
                     onDragEnd={clearDragState}

@@ -1,4 +1,4 @@
-import type { KanbanPriority, KanbanTask } from "@/lib/process/kanban-types";
+import type { KanbanPriority, KanbanTask, RotStatus } from "@/lib/process/kanban-types";
 import { getMilestoneDateStatus, MILESTONE_DATE_STATUS_CLASSES } from "@/lib/process/dates";
 import type { KanbanTaskActivity } from "@/lib/process/kanban-task-meta";
 import { sortKanbanColumnTasksWithMode, type KanbanColumnSortMode } from "@/lib/process/kanban-task-meta";
@@ -10,8 +10,16 @@ export const KANBAN_PRIORITY_DOT_CLASSES: Record<KanbanPriority, string> = {
   urgent: "bg-rose-500",
 };
 
-export function getKanbanDueDateTextClasses(dueDate: string | null | undefined) {
-  const status = getMilestoneDateStatus(dueDate);
+/**
+ * Kolumna ze statusem ROT "Czeka na zewnętrzne" nigdy nie pokazuje karty jako przeterminowanej —
+ * opóźnienie nie zależy od zespołu (ten sam mechanizm co countOverdueKanbanTasks).
+ */
+export function getKanbanDueDateTextClasses(
+  dueDate: string | null | undefined,
+  columnRotStatus?: RotStatus | null,
+) {
+  const rawStatus = getMilestoneDateStatus(dueDate);
+  const status = rawStatus === "overdue" && columnRotStatus === "CZEKA_NA_ZEWNETRZNE" ? "none" : rawStatus;
   switch (status) {
     case "overdue":
       return "text-rose-300";
@@ -77,9 +85,27 @@ export function countOpenKanbanTasks(tasks: KanbanTask[]) {
   return tasks.filter((task) => !task.closedAt).length;
 }
 
-/** Otwarte zadania z terminem w przeszłości — zamknięte zadania nigdy nie liczą się jako przeterminowane. */
-export function countOverdueKanbanTasks(tasks: KanbanTask[]) {
+/**
+ * Otwarte zadania z terminem w przeszłości — zamknięte zadania nigdy nie liczą się jako
+ * przeterminowane. Kolumna ze statusem ROT "Czeka na zewnętrzne" też nigdy — opóźnienie nie zależy
+ * od zespołu, więc termin karty w takiej kolumnie nie powinien straszyć jako zaległość.
+ *
+ * Drugi argument przyjmuje albo jeden status (wszystkie zadania z tej samej, realnej kolumny), albo
+ * funkcję per-zadanie — potrzebną w widoku zbiorczym (Tablice wdrożeń), gdzie jedna scalona kolumna
+ * (dopasowana po nazwie) łączy zadania z różnych projektów, a każdy projekt mapuje ROT niezależnie
+ * na swojej własnej, realnej kolumnie.
+ */
+export function countOverdueKanbanTasks(
+  tasks: KanbanTask[],
+  columnRotStatus?: RotStatus | null | ((task: KanbanTask) => RotStatus | null | undefined),
+) {
+  const resolveRotStatus =
+    typeof columnRotStatus === "function" ? columnRotStatus : () => columnRotStatus;
   return tasks.filter(
-    (task) => !task.closedAt && task.dueDate && getMilestoneDateStatus(task.dueDate) === "overdue",
+    (task) =>
+      !task.closedAt &&
+      task.dueDate &&
+      getMilestoneDateStatus(task.dueDate) === "overdue" &&
+      resolveRotStatus(task) !== "CZEKA_NA_ZEWNETRZNE",
   ).length;
 }

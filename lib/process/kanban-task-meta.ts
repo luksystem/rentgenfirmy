@@ -1,5 +1,6 @@
 import type {
   KanbanBoard,
+  KanbanColumn,
   KanbanComment,
   KanbanPriority,
   KanbanTask,
@@ -241,12 +242,22 @@ function hasKanbanTaskActivity(
 }
 
 export function computeKanbanBoardStats(
-  board: Pick<KanbanBoard, "tasks" | "comments" | "events">,
+  board: Pick<KanbanBoard, "tasks" | "comments" | "events" | "columns">,
+  /**
+   * W widoku zbiorczym (Tablice wdrożeń) `board.columns` to scalone, syntetyczne kolumny bez
+   * własnego statusu ROT (dopasowanie po nazwie łączy zadania z różnych projektów) — tam trzeba
+   * podać resolver per zadanie (np. z realnej kolumny źródłowej z mergeKanbanBoards).
+   */
+  resolveColumnRotStatus?: (task: KanbanTask) => KanbanColumn["rotStatus"] | undefined,
 ): KanbanBoardStats {
   let openIdle = 0;
   let inProgress = 0;
   let closed = 0;
   let overdue = 0;
+
+  const columnRotStatusById = new Map(board.columns.map((column) => [column.id, column.rotStatus]));
+  const getRotStatus =
+    resolveColumnRotStatus ?? ((task: KanbanTask) => columnRotStatusById.get(task.columnId));
 
   for (const task of board.tasks) {
     if (task.closedAt) {
@@ -254,7 +265,12 @@ export function computeKanbanBoardStats(
       continue;
     }
 
-    if (task.dueDate && getMilestoneDateStatus(task.dueDate) === "overdue") {
+    // Kolumna "Czeka na zewnętrzne" — opóźnienie nie zależy od zespołu, nie liczy się jako zaległość.
+    if (
+      getRotStatus(task) !== "CZEKA_NA_ZEWNETRZNE" &&
+      task.dueDate &&
+      getMilestoneDateStatus(task.dueDate) === "overdue"
+    ) {
       overdue += 1;
     }
 

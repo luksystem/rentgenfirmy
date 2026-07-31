@@ -566,7 +566,8 @@ export function ProcessKanbanBoard({
         }
         badgeToneForColumn={(columnId) => {
           const columnTasks = board.tasks.filter((task) => task.columnId === columnId);
-          if (countOverdueKanbanTasks(columnTasks) > 0) return "overdue";
+          const rotStatus = board.columns.find((column) => column.id === columnId)?.rotStatus;
+          if (countOverdueKanbanTasks(columnTasks, rotStatus) > 0) return "overdue";
           return countOpenKanbanTasks(columnTasks) > 0 ? "ok" : "empty";
         }}
       />
@@ -577,7 +578,7 @@ export function ProcessKanbanBoard({
           const columnTasks = getColumnTasks(column.id);
           const tasks = sortKanbanColumnTasks(columnTasks, sortMode);
           const openCount = countOpenKanbanTasks(columnTasks);
-          const overdueCount = countOverdueKanbanTasks(columnTasks);
+          const overdueCount = countOverdueKanbanTasks(columnTasks, column.rotStatus);
           const isDropTarget = Boolean(dragTaskId && dragOverColumnId === column.id);
 
           return (
@@ -677,6 +678,7 @@ export function ProcessKanbanBoard({
                     isNew={task.isNewForTeam && authorSide === "team"}
                     showAssignee
                     isDragging={dragTaskId === task.id}
+                    columnRotStatus={column.rotStatus}
                     onOpen={() => setActiveTaskId(task.id)}
                     onDragStart={() => beginDrag(task.id)}
                     onDragEnd={clearDragState}

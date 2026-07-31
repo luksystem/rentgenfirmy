@@ -301,7 +301,7 @@ export function PublicKanbanBoard({
         {board.columns.map((column) => {
           const columnTasksForNav = board.tasks.filter((task) => task.columnId === column.id);
           const count = countOpenKanbanTasks(columnTasksForNav);
-          const hasOverdue = countOverdueKanbanTasks(columnTasksForNav) > 0;
+          const hasOverdue = countOverdueKanbanTasks(columnTasksForNav, column.rotStatus) > 0;
           const isActive = column.id === activeColumnId;
 
           return (
@@ -339,7 +339,7 @@ export function PublicKanbanBoard({
           const columnTasks = getColumnTasks(column.id);
           const tasks = sortKanbanColumnTasks(columnTasks, sortMode);
           const openCount = countOpenKanbanTasks(columnTasks);
-          const overdueCount = countOverdueKanbanTasks(columnTasks);
+          const overdueCount = countOverdueKanbanTasks(columnTasks, column.rotStatus);
           const isDropTarget = Boolean(dragTaskId && dragOverColumnId === column.id);
 
           return (
@@ -415,6 +415,7 @@ export function PublicKanbanBoard({
                       showProjectLabel={showProjectLabel}
                       projectName={board.projectName}
                       isDragging={dragTaskId === task.id}
+                      columnRotStatus={column.rotStatus}
                       onOpen={() => setActiveTaskId(task.id)}
                       onDragStart={() => beginDrag(task.id)}
                       onDragEnd={clearDragState}

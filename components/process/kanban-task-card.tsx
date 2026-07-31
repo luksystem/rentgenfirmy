@@ -11,6 +11,7 @@ import {
   type KanbanPriority,
   type KanbanTask,
   type KanbanTaskReaction,
+  type RotStatus,
 } from "@/lib/process/kanban-types";
 import type { KanbanTaskActivity } from "@/lib/process/kanban-task-meta";
 import {
@@ -35,6 +36,7 @@ export function KanbanTaskCardView({
   projectName,
   showChevron = false,
   isDragging,
+  columnRotStatus,
   onOpen,
   onDragStart,
   onDragEnd,
@@ -53,6 +55,8 @@ export function KanbanTaskCardView({
   projectName?: string;
   showChevron?: boolean;
   isDragging?: boolean;
+  /** Kolumna "Czeka na zewnętrzne" — termin karty nie liczy się jako przeterminowany. */
+  columnRotStatus?: RotStatus | null;
   onOpen: () => void;
   onDragStart: () => void;
   onDragEnd?: () => void;
@@ -208,7 +212,12 @@ export function KanbanTaskCardView({
           Zamknięte
         </p>
       ) : showDueDate || isNew ? (
-        <p className={cn("mt-2 text-[11px] font-medium", getKanbanDueDateTextClasses(task.dueDate))}>
+        <p
+          className={cn(
+            "mt-2 text-[11px] font-medium",
+            getKanbanDueDateTextClasses(task.dueDate, columnRotStatus),
+          )}
+        >
           {showDueDate ? (task.dueDate ? formatMilestoneDate(task.dueDate) : "Bez terminu") : null}
           {showDueDate && isNew ? " · " : null}
           {isNew ? "NOWY" : null}
