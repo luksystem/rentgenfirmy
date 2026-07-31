@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Download, X } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,13 +9,25 @@ import { Button } from "@/components/ui/button";
 import { CreateLeaveRequestDialog } from "@/components/leave/create-leave-request-dialog";
 import { LeaveStatusBadge } from "@/components/leave/leave-status-badge";
 import { SubstitutionCoveragePanel } from "@/components/leave/substitution-coverage-panel";
+import { SubstitutionProposalsPanel } from "@/components/leave/substitution-proposals-panel";
 import { formatDate } from "@/lib/utils";
 import { countLeaveDays, countLeaveWorkingDays } from "@/lib/leave/types";
 import { fetchLeaveCardLink } from "@/lib/supabase/leave-request-repository";
 import { useDictionaryStore } from "@/store/dictionary-store";
 import { useLeaveStore } from "@/store/leave-store";
+import { cn } from "@/lib/utils";
+
+const TABS = [
+  { key: "wnioski", label: "Wnioski" },
+  { key: "zastepstwa", label: "Zastępstwa" },
+] as const;
+type TabKey = (typeof TABS)[number]["key"];
 
 export default function AvailabilityPage() {
+  const searchParams = useSearchParams();
+  const initialTab: TabKey = searchParams.get("tab") === "zastepstwa" ? "zastepstwa" : "wnioski";
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
+
   const ensureMyRequests = useLeaveStore((state) => state.ensureMyRequests);
   const myRequests = useLeaveStore((state) => state.myRequests);
   const myRequestsHydrated = useLeaveStore((state) => state.myRequestsHydrated);
@@ -64,10 +77,30 @@ export default function AvailabilityPage() {
         eyebrow="Moja praca"
         title="Dostępność"
         description="Zgłaszaj urlopy i inne rodzaje dostępności — wniosek trafi do przełożonego i administratorów."
-        action={<CreateLeaveRequestDialog />}
+        action={activeTab === "wnioski" ? <CreateLeaveRequestDialog /> : undefined}
       />
 
-      {myRequestsLoading && !myRequestsHydrated ? (
+      <div className="mb-4 inline-flex gap-1 rounded-lg border border-border/60 bg-surface-muted p-1">
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key)}
+            className={cn(
+              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              activeTab === tab.key
+                ? "bg-surface text-foreground shadow-sm"
+                : "text-muted hover:text-foreground",
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "zastepstwa" ? (
+        <SubstitutionProposalsPanel />
+      ) : myRequestsLoading && !myRequestsHydrated ? (
         <p className="text-sm text-muted">Wczytywanie historii dostępności…</p>
       ) : sortedRequests.length === 0 ? (
         <Card>

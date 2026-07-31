@@ -75,7 +75,7 @@ export async function correctSubstitutionSlotServer(
   const title = `Propozycja zastępstwa: ${project?.name ?? "projekt"} / ${slot.role_code}`;
   const body = `${leaveRequest?.start_date}–${leaveRequest?.end_date} — karta przekazania czeka na akceptację.`;
   const sourceId = `leave_substitution_proposed:${slot.leave_request_id}:${newUserId}:corrected:${slot.id}`;
-  const linkUrl = "/moja-praca/zastepstwa";
+  const linkUrl = "/moja-praca/dostepnosc?tab=zastepstwa";
 
   await admin.from("user_notifications").insert({
     id: crypto.randomUUID(),

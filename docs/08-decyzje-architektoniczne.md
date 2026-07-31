@@ -2285,13 +2285,20 @@ sesje dzielą jeden indeks gita, nie tylko working tree. Właściciel zdecydowa�
 sesja ograniczona do modułu Rozdzielnie, robi własny commit/push), commit tej fazy odłożony do
 zakończenia całości, żeby nie mieszać się z jej wpisami.
 
-**Nowy moduł nawigacji wymaga osobnego backfillu uprawnień.** `/moja-praca/zastepstwa` dodany do
-`NavModuleKey` i domyślnej konfiguracji (`role-nav-defaults.ts`) — za mało. Realne uprawnienia dla
-istniejących ról żyją w `app_settings.role_nav_permissions` (nadpisuje kod dla ról już
-skonfigurowanych) — bez migracji 289 (dogranie `my-work-substitutions` tym samym rolom co
-`my-work-availability`) moduł byłby niewidoczny (przekierowanie na `/`) mimo poprawnego kodu.
-Zweryfikowane w przeglądarce po migracji: `/moja-praca/zastepstwa` i panel pokrycia pod
-`/moja-praca/dostepnosc` renderują się poprawnie na żywych danych.
+**Korekta po fakcie: `/moja-praca/zastepstwa` NIE zostaje osobnym modułem nawigacji.**
+Pierwsza wersja dodała nowy `NavModuleKey` (`my-work-substitutions`) z osobną pozycją w menu i
+osobnym backfillem uprawnień w `app_settings.role_nav_permissions` (migracja 289, przenumerowana na
+296 po kolizji numeru z równoległą sesją — patrz niżej) — zweryfikowana w przeglądarce, działająca.
+Właściciel zdecydował inaczej: „Zastępstwa" wchodzi jako **zakładka wewnątrz istniejącego modułu
+Dostępność**, nie osobny ekran. Migracja 297 cofa grant z 296 (martwe dane w
+`role_nav_permissions`, skoro moduł znika z kodu). Strona `/moja-praca/zastepstwa` usunięta;
+zawartość przeniesiona do `SubstitutionProposalsPanel`, renderowanego jako druga zakładka na
+`/moja-praca/dostepnosc` (przełącznik lokalnym stanem, bez routingu — pierwsza zakładka „Wnioski"
+to dotychczasowa zawartość strony). Linki w powiadomieniach (`leave_substitution_proposed`)
+zaktualizowane na `/moja-praca/dostepnosc?tab=zastepstwa` — strona czyta `?tab=` z URL, żeby
+głębokie linki nadal trafiały we właściwą zakładkę. Zweryfikowane w przeglądarce (przełączanie
+zakładek, zniknięcie przycisku „Nowy wniosek" na zakładce Zastępstwa, zero błędów konsoli poza
+znanym, niezwiązanym ostrzeżeniem o kluczach w `NavLink`).
 
 **Krok 2 (po fazie 14):** indeks obciążenia jako 4. kryterium rankingu, filtr „>3 projektów w
 INTENSYWNEJ/KRYTYCZNEJ" (§6.3, §7.4), §6.5 (sprzężenie zastępstwa z obciążeniem).

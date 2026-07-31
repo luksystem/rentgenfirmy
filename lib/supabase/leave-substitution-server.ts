@@ -229,7 +229,7 @@ async function notifyProposedCandidates(
       byCandidate.set(slot.proposedUserId as string, list);
     });
 
-  const linkUrl = "/moja-praca/zastepstwa";
+  const linkUrl = "/moja-praca/dostepnosc?tab=zastepstwa";
   for (const [candidateId, candidateSlots] of byCandidate) {
     const lines = candidateSlots.map((s) => `${s.projectName} / ${s.roleCode}`);
     const title = `Propozycja zastępstwa: ${input.profileName}, ${input.startDate}–${input.endDate}`;
