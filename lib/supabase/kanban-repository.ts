@@ -20,8 +20,10 @@ import { isKanbanReactionEmoji } from "@/lib/process/kanban-reactions";
 import type { MentionCandidate } from "@/lib/notifications/types";
 import { createKanbanMentionNotifications, createKanbanNewActivityNotifications, resolveKanbanPublicLinkForColumn, resolveKanbanPublicLinkForTask } from "@/lib/notifications/repository";
 import { resolveMentionTargets } from "@/lib/notifications/mentions";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { logActivity } from "@/lib/supabase/activity-log-repository";
 import { getSupabase } from "@/lib/supabase/client";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { fetchAttachmentsForTaskIds } from "@/lib/supabase/kanban-attachments-repository";
 
 async function logTeamKanbanActivity(input: {
@@ -283,13 +285,16 @@ function groupRowsByKey<T>(rows: T[], keyFn: (row: T) => string): Map<string, T[
   return map;
 }
 
-async function fetchBoardProjectInfoBatch(itemIds: string[]): Promise<Map<string, BoardProjectInfo>> {
+async function fetchBoardProjectInfoBatch(
+  itemIds: string[],
+  client?: SupabaseClient,
+): Promise<Map<string, BoardProjectInfo>> {
   const map = new Map<string, BoardProjectInfo>();
   if (!itemIds.length) {
     return map;
   }
 
-  const supabase = getSupabase();
+  const supabase = client ?? getSupabase();
   const { data: items, error: itemsError } = await supabase
     .from("project_process_items")
     .select("id, project_id")
@@ -380,12 +385,15 @@ function assembleKanbanBoard(
   };
 }
 
-export async function fetchKanbanBoardGraphsBatch(boardRows: BoardRow[]): Promise<KanbanBoard[]> {
+export async function fetchKanbanBoardGraphsBatch(
+  boardRows: BoardRow[],
+  client?: SupabaseClient,
+): Promise<KanbanBoard[]> {
   if (!boardRows.length) {
     return [];
   }
 
-  const supabase = getSupabase();
+  const supabase = client ?? getSupabase();
   const boardIds = boardRows.map((row) => row.id);
   const itemIds = [...new Set(boardRows.map((row) => row.project_process_item_id))];
 
@@ -395,7 +403,7 @@ export async function fetchKanbanBoardGraphsBatch(boardRows: BoardRow[]): Promis
       .select("*")
       .in("board_id", boardIds)
       .order("position", { ascending: true }),
-    fetchBoardProjectInfoBatch(itemIds),
+    fetchBoardProjectInfoBatch(itemIds, supabase),
   ]);
 
   if (columnsResult.error) {
@@ -443,7 +451,7 @@ export async function fetchKanbanBoardGraphsBatch(boardRows: BoardRow[]): Promis
           .in("task_id", taskIds)
           .order("created_at", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
-    taskIds.length ? fetchAttachmentsForTaskIds(taskIds) : Promise.resolve([]),
+    taskIds.length ? fetchAttachmentsForTaskIds(taskIds, supabase) : Promise.resolve([]),
   ]);
 
   if (commentsResult.error) {
@@ -497,8 +505,8 @@ export async function fetchKanbanBoardGraphsBatch(boardRows: BoardRow[]): Promis
   });
 }
 
-async function fetchBoardGraph(boardRow: BoardRow): Promise<KanbanBoard> {
-  const boards = await fetchKanbanBoardGraphsBatch([boardRow]);
+async function fetchBoardGraph(boardRow: BoardRow, client?: SupabaseClient): Promise<KanbanBoard> {
+  const boards = await fetchKanbanBoardGraphsBatch([boardRow], client);
   return boards[0];
 }
 
@@ -703,6 +711,39 @@ export async function countOverdueKanbanTasks() {
     .is("closed_at", null)
     .not("due_date", "is", null)
     .lt("due_date", today);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+}
+
+export async function countOverdueKanbanTasksForAssignee(userId: string) {
+  const supabase = getSupabase();
+  const today = new Date().toISOString().slice(0, 10);
+  const { count, error } = await supabase
+    .from("process_kanban_tasks")
+    .select("id", { count: "exact", head: true })
+    .eq("assignee_id", userId)
+    .is("closed_at", null)
+    .not("due_date", "is", null)
+    .lt("due_date", today);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+}
+
+export async function countOpenKanbanTasksForAssignee(userId: string) {
+  const supabase = getSupabase();
+  const { count, error } = await supabase
+    .from("process_kanban_tasks")
+    .select("id", { count: "exact", head: true })
+    .eq("assignee_id", userId)
+    .is("closed_at", null);
 
   if (error) {
     throw new Error(error.message);
@@ -1198,5 +1239,9 @@ export function getBoardIdFromGraph(board: KanbanBoard) {
 }
 
 export async function fetchBoardGraphAdmin(boardRow: BoardRow) {
-  return fetchBoardGraph(boardRow);
+  // Ścieżka publiczna (token) — brak zalogowanej sesji, więc RLS (authenticated-only na tabelach
+  // kanbana) blokowałoby kolumny/zadania/komentarze i zwracało puste wyniki bez błędu. Dostęp jest
+  // już zweryfikowany wcześniej przez sam sekretny token (fetchKanbanBoardAccessByToken), więc tu
+  // świadomie używamy klienta serwisowego zamiast klienta scopowanego sesją.
+  return fetchBoardGraph(boardRow, getSupabaseAdmin());
 }

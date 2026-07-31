@@ -97,12 +97,12 @@ export async function attachSignedUrlsAdmin(attachments: KanbanAttachment[]) {
   );
 }
 
-export async function fetchAttachmentsForTaskIds(taskIds: string[]) {
+export async function fetchAttachmentsForTaskIds(taskIds: string[], client?: SupabaseClient) {
   if (!taskIds.length) {
     return [];
   }
 
-  const supabase = getSupabase();
+  const supabase = client ?? getSupabase();
   const { data, error } = await supabase
     .from("process_kanban_task_attachments")
     .select("*")
