@@ -1959,6 +1959,7 @@ export type LeaveRequestRow = {
   generated_pdf_path: string | null;
   generated_pdf_name: string | null;
   google_calendar_event_id: string | null;
+  requires_substitution_planning: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -1979,11 +1980,62 @@ export type LeaveRequestInsert = {
   generated_pdf_path?: string | null;
   generated_pdf_name?: string | null;
   google_calendar_event_id?: string | null;
+  requires_substitution_planning?: boolean;
   created_at?: string;
   updated_at?: string;
 };
 
 export type LeaveRequestUpdate = Partial<Omit<LeaveRequestInsert, "id" | "profile_id">>;
+
+export type ProjectRoleCompetencyRow = {
+  id: string;
+  role_code: string;
+  competency_item_id: string;
+  min_level_item_id: string | null;
+  is_required: boolean;
+  created_at: string;
+};
+
+export type ProjectRoleCompetencyInsert = {
+  id?: string;
+  role_code: string;
+  competency_item_id: string;
+  min_level_item_id?: string | null;
+  is_required?: boolean;
+  created_at?: string;
+};
+
+export type LeaveSubstitutionSlotRow = {
+  id: string;
+  leave_request_id: string;
+  project_id: string;
+  role_code: string;
+  status: "proponowany" | "skorygowany" | "zaakceptowany" | "luka";
+  proposed_user_id: string | null;
+  proposed_via: "fallback" | "ranking" | null;
+  selected_user_id: string | null;
+  gap_reason: string | null;
+  accepted_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LeaveSubstitutionSlotInsert = {
+  id?: string;
+  leave_request_id: string;
+  project_id: string;
+  role_code: string;
+  status?: "proponowany" | "skorygowany" | "zaakceptowany" | "luka";
+  proposed_user_id?: string | null;
+  proposed_via?: "fallback" | "ranking" | null;
+  selected_user_id?: string | null;
+  gap_reason?: string | null;
+  accepted_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LeaveSubstitutionSlotUpdate = Partial<Omit<LeaveSubstitutionSlotInsert, "id" | "leave_request_id">>;
 
 export type UserNavFavoriteRow = {
   user_id: string;
@@ -4223,6 +4275,12 @@ export type Database = {
         Update: LeaveRequestUpdate;
         Relationships: [];
       };
+      leave_substitution_slot: {
+        Row: LeaveSubstitutionSlotRow;
+        Insert: LeaveSubstitutionSlotInsert;
+        Update: LeaveSubstitutionSlotUpdate;
+        Relationships: [];
+      };
       push_subscriptions: {
         Row: PushSubscriptionRow;
         Insert: PushSubscriptionInsert;
@@ -4272,6 +4330,13 @@ export type Database = {
         Insert: Partial<OperationalRoleCompetencyRow> &
           Pick<OperationalRoleCompetencyRow, "role_item_id" | "competency_item_id">;
         Update: Partial<OperationalRoleCompetencyRow>;
+        Relationships: [];
+      };
+      project_role_competency: {
+        Row: ProjectRoleCompetencyRow;
+        Insert: Partial<ProjectRoleCompetencyRow> &
+          Pick<ProjectRoleCompetencyRow, "role_code" | "competency_item_id">;
+        Update: Partial<ProjectRoleCompetencyRow>;
         Relationships: [];
       };
       project_stage_reports: {
@@ -4946,6 +5011,193 @@ export type Database = {
         }>;
         Relationships: [];
       };
+      switchboards: {
+        Row: {
+          id: string;
+          project_id: string;
+          name: string;
+          position: number;
+          last_imported_at: string | null;
+          completed_at: string | null;
+          completed_by_id: string | null;
+          completed_by_name: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          name: string;
+          position?: number;
+          last_imported_at?: string | null;
+          completed_at?: string | null;
+          completed_by_id?: string | null;
+          completed_by_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<{
+          name: string;
+          position: number;
+          last_imported_at: string | null;
+          completed_at: string | null;
+          completed_by_id: string | null;
+          completed_by_name: string | null;
+          updated_at: string;
+        }>;
+        Relationships: [
+          {
+            foreignKeyName: "switchboards_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      switchboard_circuits: {
+        Row: {
+          id: string;
+          switchboard_id: string;
+          project_id: string;
+          row_index: number;
+          merge_key: string;
+          section_name: string | null;
+          zug_no: string | null;
+          zug_sub_no: string | null;
+          circuit_no: string | null;
+          breaker_type: string | null;
+          breaker_no: string | null;
+          rcd_no: string | null;
+          slot_no: string | null;
+          connector_type: string | null;
+          circuit_description: string | null;
+          location: string | null;
+          detail_1: string | null;
+          detail_2: string | null;
+          detail_3: string | null;
+          status: string;
+          note: string | null;
+          is_stale: boolean;
+          employee_report_target: string | null;
+          employee_report_id: string | null;
+          updated_by_id: string | null;
+          updated_by_name: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          switchboard_id: string;
+          project_id: string;
+          row_index?: number;
+          merge_key: string;
+          section_name?: string | null;
+          zug_no?: string | null;
+          zug_sub_no?: string | null;
+          circuit_no?: string | null;
+          breaker_type?: string | null;
+          breaker_no?: string | null;
+          rcd_no?: string | null;
+          slot_no?: string | null;
+          connector_type?: string | null;
+          circuit_description?: string | null;
+          location?: string | null;
+          detail_1?: string | null;
+          detail_2?: string | null;
+          detail_3?: string | null;
+          status?: string;
+          note?: string | null;
+          is_stale?: boolean;
+          employee_report_target?: string | null;
+          employee_report_id?: string | null;
+          updated_by_id?: string | null;
+          updated_by_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<{
+          row_index: number;
+          merge_key: string;
+          section_name: string | null;
+          zug_no: string | null;
+          zug_sub_no: string | null;
+          circuit_no: string | null;
+          breaker_type: string | null;
+          breaker_no: string | null;
+          rcd_no: string | null;
+          slot_no: string | null;
+          connector_type: string | null;
+          circuit_description: string | null;
+          location: string | null;
+          detail_1: string | null;
+          detail_2: string | null;
+          detail_3: string | null;
+          status: string;
+          note: string | null;
+          is_stale: boolean;
+          employee_report_target: string | null;
+          employee_report_id: string | null;
+          updated_by_id: string | null;
+          updated_by_name: string | null;
+          updated_at: string;
+        }>;
+        Relationships: [
+          {
+            foreignKeyName: "switchboard_circuits_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "switchboard_circuits_switchboard_id_fkey";
+            columns: ["switchboard_id"];
+            isOneToOne: false;
+            referencedRelation: "switchboards";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      switchboard_circuit_history: {
+        Row: {
+          id: string;
+          circuit_id: string;
+          previous_status: string | null;
+          new_status: string;
+          note: string | null;
+          changed_by_id: string | null;
+          changed_by_name: string | null;
+          changed_at: string;
+        };
+        Insert: {
+          id?: string;
+          circuit_id: string;
+          previous_status?: string | null;
+          new_status: string;
+          note?: string | null;
+          changed_by_id?: string | null;
+          changed_by_name?: string | null;
+          changed_at?: string;
+        };
+        Update: Partial<{
+          previous_status: string | null;
+          new_status: string;
+          note: string | null;
+          changed_by_id: string | null;
+          changed_by_name: string | null;
+          changed_at: string;
+        }>;
+        Relationships: [
+          {
+            foreignKeyName: "switchboard_circuit_history_circuit_id_fkey";
+            columns: ["circuit_id"];
+            isOneToOne: false;
+            referencedRelation: "switchboard_circuits";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -5109,6 +5361,33 @@ export type Database = {
           meets_competency: boolean;
           is_available: boolean;
           continuity_from_previous_stage: boolean;
+        }[];
+      };
+      report_leave_substitution_slot_facts: {
+        Args: { p_profile_id: string; p_start_date: string; p_end_date: string };
+        Returns: {
+          project_id: string;
+          project_name: string;
+          role_code: string;
+          milestone_overlap: boolean;
+        }[];
+      };
+      report_substitution_candidates: {
+        Args: {
+          p_project_id: string;
+          p_role_code: string;
+          p_start_date: string;
+          p_end_date: string;
+          p_exclude_user_id: string;
+        };
+        Returns: {
+          user_id: string;
+          user_name: string | null;
+          familiarity_days: number;
+          meets_required_competency: boolean;
+          best_required_level_sort_order: number | null;
+          is_available: boolean;
+          is_wlasciciel: boolean;
         }[];
       };
       set_project_stage_lead: {

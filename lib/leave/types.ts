@@ -34,6 +34,7 @@ export type LeaveRequest = {
   generatedPdfPath: string | null;
   generatedPdfName: string | null;
   googleCalendarEventId: string | null;
+  requiresSubstitutionPlanning: boolean;
   createdAt: string;
   updatedAt: string;
 };

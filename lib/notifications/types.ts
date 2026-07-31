@@ -34,6 +34,10 @@ export const USER_NOTIFICATION_KINDS = [
   "requisition_order_overdue",
   "process_snapshot_uploaded",
   "warranty_review_due",
+  "leave_substitution_gap",
+  "leave_substitution_client_draft",
+  "leave_substitution_proposed",
+  "switchboard_wiring_completed",
 ] as const;
 
 export const SALES_NOTIFICATION_KINDS = [

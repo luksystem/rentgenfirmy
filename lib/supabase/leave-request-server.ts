@@ -21,6 +21,7 @@ export function mapLeaveRequestRow(row: LeaveRequestRow): LeaveRequest {
     generatedPdfPath: row.generated_pdf_path,
     generatedPdfName: row.generated_pdf_name,
     googleCalendarEventId: row.google_calendar_event_id,
+    requiresSubstitutionPlanning: row.requires_substitution_planning,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

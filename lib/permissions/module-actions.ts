@@ -34,6 +34,7 @@ export const NAV_MODULE_SUPPORTED_ACTIONS: Record<NavModuleKey, PermissionAction
   "my-work-dashboard": VIEW_ONLY,
   "my-work-time": CRUD_EXPORT,
   "my-work-availability": CRUD,
+  "my-work-substitutions": CRUD,
   "my-work-reviews": VIEW_EDIT,
   "my-work-xp": VIEW_ONLY,
   contacts: CRUD_EXPORT,

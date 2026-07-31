@@ -6,6 +6,7 @@ import type {
   LeaveRequestInput,
   LeaveRequestUpdateInput,
 } from "@/lib/leave/types";
+import type { LeaveSubstitutionSlot, MySubstitutionProposal } from "@/lib/leave/substitution-types";
 
 async function parseJsonResponse<T>(response: Response, fallbackError: string): Promise<T> {
   const payload = await response.json().catch(() => ({}));
@@ -138,6 +139,55 @@ export async function fetchLeaveCardLink(id: string): Promise<{ url: string; nam
     response,
     "Nie udało się przygotować karty urlopowej.",
   );
+}
+
+/** Faza 13 Krok 1 (docs/role/04 §6.2) — lista pokrycia dla wniosku wymagającego planowania zastępstwa. */
+export async function fetchSubstitutionSlots(leaveRequestId: string): Promise<LeaveSubstitutionSlot[]> {
+  const response = await fetch(`/api/leave-requests/${leaveRequestId}/substitution-slots`, {
+    credentials: "include",
+  });
+  const payload = await parseJsonResponse<{ items: LeaveSubstitutionSlot[] }>(
+    response,
+    "Nie udało się wczytać listy pokrycia.",
+  );
+  return payload.items;
+}
+
+/** §6.2 pkt 2 — wnioskujący koryguje wyjątki. */
+export async function correctSubstitutionSlot(
+  slotId: string,
+  selectedUserId: string,
+): Promise<LeaveSubstitutionSlot[]> {
+  const response = await fetch(`/api/leave-substitution-slots/${slotId}/correct`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ selectedUserId }),
+  });
+  const payload = await parseJsonResponse<{ items: LeaveSubstitutionSlot[] }>(
+    response,
+    "Nie udało się skorygować listy pokrycia.",
+  );
+  return payload.items;
+}
+
+/** §6.2 pkt 3 — kandydat akceptuje kartę przekazania jednym kliknięciem. */
+export async function acceptSubstitutionSlot(slotId: string): Promise<void> {
+  const response = await fetch(`/api/leave-substitution-slots/${slotId}/accept`, {
+    method: "POST",
+    credentials: "include",
+  });
+  await parseJsonResponse(response, "Nie udało się zaakceptować karty przekazania.");
+}
+
+/** §6.2 pkt 3 — propozycje zastępstwa skierowane do mnie, z kartą przekazania. */
+export async function fetchMySubstitutionProposals(): Promise<MySubstitutionProposal[]> {
+  const response = await fetch("/api/leave-substitution-slots", { credentials: "include" });
+  const payload = await parseJsonResponse<{ items: MySubstitutionProposal[] }>(
+    response,
+    "Nie udało się wczytać propozycji zastępstwa.",
+  );
+  return payload.items;
 }
 
 export async function fetchPendingLeaveRequestCount(): Promise<number> {

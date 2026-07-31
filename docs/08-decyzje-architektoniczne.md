@@ -2160,7 +2160,9 @@ istniejącej funkcji.
 
 ## D47. Faza 12 (Tryb serwisowy) + poprawka D45 (progi z ustaleń, nie na sztywno)
 
-**Status: zatwierdzone przez właściciela, zrealizowane (migracje 279-281).**
+**Status: zatwierdzone przez właściciela, zrealizowane (migracje 280-282; plik 279 przenumerowany na
+282 po kolizji numeru z równoległą sesją, DB nie jest tym dotknięte — historia migracji trzyma się po
+timestampie, nie po nazwie pliku).**
 
 **Poprawka błędu z D45.** `resolveCommunicationGate` miała 30/90 (dni bezpiecznika) wpisane na
 sztywno w kodzie — inwentaryzacja fazy 12 wykazała, że `PolicyThresholds`
@@ -2210,6 +2212,92 @@ prawdziwych powiadomień, nie zero.
 
 ---
 
+## D48. Faza 13 Krok 1 (Zastępstwa urlopowe — §6.1, §6.2, `project_role_competency`)
+
+**Status: zatwierdzone przez właściciela, zrealizowane (migracje 283-289).**
+
+**Zakres Kroku 1** (§6.1 wyzwalacz walidacji, §6.2 przebieg z rankingiem trzykryterialnym,
+`project_role_competency`), **świadomie BEZ** indeksu obciążenia i filtra „>3 projektów w
+INTENSYWNEJ/KRYTYCZNEJ" w rankingu (§6.3) ani §6.5 — oba odłożone do Kroku 2, po fazie 14
+(Obciążenie). Uzasadnienie właściciela: przy dzisiejszej obsadzie (te same osoby na 122
+projektach) kryteria oparte na liczbie projektów nie różnicują kandydatów — odłożenie nie kosztuje
+nic realnego. **Korekta przy inwentaryzacji:** sama brama komunikacyjna (11a) już działa dziś i
+NIE zależy od 11b — użyta wprost w §6.1 (warunek 2, per projekt), tylko agregat „>3 projektów"
+(§6.3/§7.4) faktycznie wymaga infrastruktury fazowej z 11b. Odnotowane, nie zmieniło decyzji o
+odłożeniu (drugi argument właściciela stoi niezależnie).
+
+**`project_role_competency` — seed zawężony do trzech wierszy, nie ośmiu z pierwszej propozycji.**
+Właściciel poprawił: „wymóg twardy ma znaczyć 'bez tego zastępstwo jest niebezpieczne', nie 'tak
+wygląda idealny kandydat'". Zatwierdzone: `wdrozeniowiec`×Loxone≥Ekspert,
+`koordynator_techniczny`×Loxone≥Senior, `opiekun_projektu`×Komunikacja z klientem≥Regular —
+wszystkie `is_required=true`, reszta ról bez wierszy (kompetencja zostaje kryterium sortującym, nie
+filtrem). Mapowanie „programowanie"→Loxone zatwierdzone wprost („wasze uruchomienia to konfiguracja
+Loxone, nie programowanie ogólne"). **Sprawdzone przed seedem** (na żądanie właściciela): 10/11 osób
+ma wpisy kompetencji w profilu (64 wiersze), seed bezpieczny. Realny skutek na żywych danych:
+`wdrozeniowiec` (dziś Kamil Pawłowski, Loxone: Regular) — luka wychodzi dokładnie jak przewidziano,
+jedyny kandydat spełniający próg trzyma slot `wlasciciel` na projekcie; `koordynator_techniczny`
+podobnie zwęża się do jednej osoby; `opiekun_projektu` ma zdrową pulę pięciu substytutów — próg tam
+nie blokuje niczego.
+
+**Mechanizm/fakty**, ten sam wzorzec co D42/D45/D46: `report_substitution_candidates()` i
+`report_leave_substitution_slot_facts()` zwracają wyłącznie fakty (dostępność, poziom kompetencji,
+dni znajomości projektu z `resource_plan_items`, nachodzenie na kamień milowy), zero logiki
+sortującej. Ranking (`rankSubstitutionCandidates`, filtr dostępność∩kompetencja osobno od
+sortowania: znajomość → poziom → `wlasciciel` na końcu z ujemną wagą) i wyzwalacz §6.1
+(`resolveSubstitutionTriggeredSlots`) żyją jako czyste funkcje TS z pełnym testem tablicy prawdy (12
++ 8 przypadków). `wlasciciel` z ujemną wagą zweryfikowany: przegrywa z KAŻDYM innym kandydatem, nie
+tylko w remisie — pojawia się jako jedyna propozycja wyłącznie gdy lista bez niego jest pusta.
+
+**§6.2 przebieg — reużyte istniejące mechanizmy, nie zbudowane od nowa.** Domyślny kandydat: najpierw
+`resolveRoleFallback` (D2, z wykluczonym slotem wnioskującego — traktowany jako wolny), jeśli
+posiadacz przechodzi próg kompetencji i jest dostępny; inaczej pierwszy z rankingu. Akceptacja →
+`project_role_slot` insert `source='zastepstwo'`, `source_ref=leave_request_id` — pole `source` już
+dopuszczało tę wartość od fazy 2 (D4), zero zmiany schematu. **Aktywacja/powrót slotu na cronie**
+(nowość, nieopisana wprost w specyfikacji): zamiast jednorazowego insertu z góry ustalonymi datami,
+dwie funkcje cronowe (`activate_leave_substitution_slots`/`revert_leave_substitution_slots`, wzorem
+`recompute_project_flow_status`) flipują slot dokładnie w dniu startu/końca urlopu — konieczne, bo
+unikalny indeks `project_role_slot` dopuszcza tylko jeden aktywny wiersz na (projekt, rola), a
+istniejący konsument (`resolveRoleFallbackForProject`) czyta wyłącznie „to_date IS NULL" jako
+„aktywne dziś", nie zakresy dat. **Świadomie automatyzujemy powrót** — zakaz z §9 dotyczy
+WYŁĄCZNIE przejęcia przy czerwonym (decyzja uznaniowa, kiedy wraca), nie zastępstwa urlopowego
+(data końca znana i zatwierdzona już przy akceptacji karty przekazania).
+
+**Brak kandydata → eskalacja z jawnie nazwaną luką** (§6.2 pkt 5), do wszystkich posiadaczy slotu
+`wlasciciel` na projekcie, treść wprost nazywa brakującą kompetencję i poziom („brak osoby z
+kompetencją Loxone ≥ Ekspert…"), nie „brak kandydatów" — zgodnie z żądaniem właściciela, to
+informacja zarządcza. Wniosek nigdy nie jest blokowany.
+
+**§6.2 pkt 6 (opiekun_projektu > 5 dni → komunikat do inwestora) — zakres zawężony, zaakceptowany
+przez właściciela.** Rejestr formalnych komunikatów z §10 nie istnieje (osobna, większa faza).
+Zamiast go budować: notyfikacja z gotowym tekstem szkicu, jawnie oznaczona „SZKIC DO SKOPIOWANIA I
+WYSŁANIA — nie wysłano automatycznie", zero nowej infrastruktury wysyłkowej. Odbiorca — doprecyzowanie
+właściciela: zastępca opiekuna na ten okres (z wygenerowanej listy pokrycia), a gdy zastępcy brak
+(slot=luka) — właściciel projektu. Nigdy wnioskujący.
+
+**Incydent równoległej sesji.** W trakcie budowy druga, równoległa sesja (moduł „Rozdzielnie")
+nadpisała `lib/supabase/database.types.ts` swoim zapisem opartym na stanie sprzed moich zmian —
+moje dopiski (`project_role_competency`, `leave_substitution_slot`, dwie funkcje RPC) zniknęły z
+pliku bez konfliktu gita (working tree, nie branch). Wykryte przez nagłe błędy `tsc` w
+NIEZWIĄZANYM pliku (`switchboard-repository.ts`). Odtworzone na aktualnym stanie pliku po
+potwierdzeniu przez właściciela. Osobno: mój wcześniejszy `git mv` (279→282, D47) trafił do commitu
+równoległej sesji pod jej komunikatem (`bd8fe57`) — nieszkodliwe treściowo, ale potwierdza że obie
+sesje dzielą jeden indeks gita, nie tylko working tree. Właściciel zdecydował: kontynuować (druga
+sesja ograniczona do modułu Rozdzielnie, robi własny commit/push), commit tej fazy odłożony do
+zakończenia całości, żeby nie mieszać się z jej wpisami.
+
+**Nowy moduł nawigacji wymaga osobnego backfillu uprawnień.** `/moja-praca/zastepstwa` dodany do
+`NavModuleKey` i domyślnej konfiguracji (`role-nav-defaults.ts`) — za mało. Realne uprawnienia dla
+istniejących ról żyją w `app_settings.role_nav_permissions` (nadpisuje kod dla ról już
+skonfigurowanych) — bez migracji 289 (dogranie `my-work-substitutions` tym samym rolom co
+`my-work-availability`) moduł byłby niewidoczny (przekierowanie na `/`) mimo poprawnego kodu.
+Zweryfikowane w przeglądarce po migracji: `/moja-praca/zastepstwa` i panel pokrycia pod
+`/moja-praca/dostepnosc` renderują się poprawnie na żywych danych.
+
+**Krok 2 (po fazie 14):** indeks obciążenia jako 4. kryterium rankingu, filtr „>3 projektów w
+INTENSYWNEJ/KRYTYCZNEJ" (§6.3, §7.4), §6.5 (sprzężenie zastępstwa z obciążeniem).
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed
@@ -2237,8 +2325,8 @@ notka o tym pod D20 §2, teraz nieaktualna.
 | 11a | Fazy komunikacji — bramy | S-M | **zrealizowane** (D45, migracja 276) — silnik (modyfikatory, bezpiecznik, przejęcie czerwone) zostaje 11b |
 | 11b | Fazy komunikacji — silnik (modyfikatory, bezpiecznik, przejęcie czerwone) | L | do realizacji |
 | 11c | Wymagane komunikaty + blokada zamknięcia + wysyłka automatyczna | M-L | do realizacji |
-| 12 | Tryb serwisowy | M | **zrealizowane** (D47, migracje 279-281) |
-| 13 | Zastępstwa urlopowe (+ `project_role_competency`, D22 dług) | M-L | do realizacji |
+| 12 | Tryb serwisowy | M | **zrealizowane** (D47, migracje 280-282) |
+| 13 | Zastępstwa urlopowe (+ `project_role_competency`, D22 dług) | M-L | **Krok 1 zrealizowany** (D48, migracje 283-289: §6.1 wyzwalacz, §6.2 przebieg + ranking, `project_role_competency`) — Krok 2 (indeks obciążenia, filtr faz, §6.5) czeka na fazę 14 |
 | 14 | Obciążenie (+ checklista cykliczna KO) | L | do realizacji |
 | 15 | Planowanie | M | do realizacji |
 

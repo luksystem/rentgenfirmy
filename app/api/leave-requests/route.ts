@@ -9,6 +9,12 @@ import {
   createLeaveRequestCreatedNotificationsServer,
 } from "@/lib/notifications/server";
 import { dispatchLeaveRequestCreatedSms } from "@/lib/leave/leave-sms";
+import { countLeaveWorkingDays } from "@/lib/leave/types";
+import {
+  generateSubstitutionCoverageList,
+  resolveTriggeredSubstitutionSlots,
+} from "@/lib/supabase/leave-substitution-server";
+import { draftClientCommunicationForCaretakerAbsence } from "@/lib/leave/leave-substitution-client-draft-server";
 
 export async function GET(request: Request) {
   try {
@@ -188,7 +194,45 @@ export async function POST(request: Request) {
       }).catch(() => undefined);
     }
 
-    return NextResponse.json({ item: leaveRequest }, { status: 201 });
+    // Faza 13 Krok 1 (docs/role/04 §6.1-§6.2) — poniżej progu brak walidacji, wniosek idzie
+    // dotychczasową ścieżką bez zmian. Błąd tej gałęzi NIE może cofnąć złożonego wniosku.
+    let finalLeaveRequest = leaveRequest;
+    try {
+      const triggeredSlots = await resolveTriggeredSubstitutionSlots(admin, targetProfileId, startDate, endDate);
+      if (triggeredSlots.length > 0) {
+        await admin
+          .from("leave_requests")
+          .update({ requires_substitution_planning: true })
+          .eq("id", leaveRequest.id);
+        finalLeaveRequest = { ...leaveRequest, requiresSubstitutionPlanning: true };
+
+        await generateSubstitutionCoverageList(admin, {
+          leaveRequestId: leaveRequest.id,
+          profileId: targetProfileId,
+          profileName: employeeName,
+          startDate,
+          endDate,
+          slots: triggeredSlots,
+        });
+
+        // §6.2 pkt 6 — nieobecność opiekun_projektu > 5 dni roboczych: szkic komunikatu do
+        // inwestora, do skopiowania i wysłania ręcznie (nie automatyczna wysyłka).
+        if (countLeaveWorkingDays(startDate, endDate) > 5) {
+          await draftClientCommunicationForCaretakerAbsence(admin, {
+            leaveRequestId: leaveRequest.id,
+            profileId: targetProfileId,
+            employeeName,
+            startDate,
+            endDate,
+            triggeredSlots,
+          }).catch(() => undefined);
+        }
+      }
+    } catch (substitutionError) {
+      console.warn("[leave-requests] substitution planning:", substitutionError);
+    }
+
+    return NextResponse.json({ item: finalLeaveRequest }, { status: 201 });
   } catch (error) {
     return jsonError(error);
   }

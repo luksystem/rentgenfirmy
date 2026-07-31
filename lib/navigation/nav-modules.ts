@@ -7,6 +7,7 @@ export type NavModuleKey =
   | "my-work-dashboard"
   | "my-work-time"
   | "my-work-availability"
+  | "my-work-substitutions"
   | "my-work-reviews"
   | "my-work-xp"
   | "contacts"
@@ -125,6 +126,12 @@ export const NAV_MODULE_GROUPS: NavModuleGroupDefinition[] = [
         label: "Dostępność",
         href: "/moja-praca/dostepnosc",
         routePrefixes: ["/moja-praca/dostepnosc"],
+      },
+      {
+        key: "my-work-substitutions",
+        label: "Zastępstwa",
+        href: "/moja-praca/zastepstwa",
+        routePrefixes: ["/moja-praca/zastepstwa"],
       },
       {
         key: "my-work-reviews",

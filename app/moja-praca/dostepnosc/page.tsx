@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreateLeaveRequestDialog } from "@/components/leave/create-leave-request-dialog";
 import { LeaveStatusBadge } from "@/components/leave/leave-status-badge";
+import { SubstitutionCoveragePanel } from "@/components/leave/substitution-coverage-panel";
 import { formatDate } from "@/lib/utils";
 import { countLeaveDays, countLeaveWorkingDays } from "@/lib/leave/types";
 import { fetchLeaveCardLink } from "@/lib/supabase/leave-request-repository";
@@ -96,6 +97,9 @@ export default function AvailabilityPage() {
                   {item.note ? <p className="mt-1 text-xs text-muted">„{item.note}”</p> : null}
                   {item.status === "rejected" && item.decisionNote ? (
                     <p className="mt-1 text-xs text-rose-300">Powód odrzucenia: {item.decisionNote}</p>
+                  ) : null}
+                  {item.requiresSubstitutionPlanning ? (
+                    <SubstitutionCoveragePanel leaveRequestId={item.id} />
                   ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
