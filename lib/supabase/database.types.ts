@@ -5117,6 +5117,19 @@ export type Database = {
           payload: unknown;
         }[];
       };
+      report_communication_gate_inputs: {
+        Args: Record<string, never>;
+        Returns: {
+          project_id: string;
+          project_name: string;
+          flow_status: string;
+          coverage_active_today: boolean;
+          has_active_hold: boolean;
+          active_stage_id: string | null;
+          active_stage_title: string | null;
+          active_stage_base_phase: string | null;
+        }[];
+      };
       report_board_task_owner: {
         Args: { p_board_id: string };
         Returns: {

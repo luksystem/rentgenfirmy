@@ -1982,6 +1982,122 @@ odpowiedzialnego jest poprawny, ale karmi się dziś atrapą i nie da się jej n
 
 ---
 
+## D43. Zadania z ustaleń i zmian projektowych
+
+**Status: zatwierdzone przez właściciela, zrealizowane (migracje 268-269). Zapisane tu retroaktywnie —
+decyzja i implementacja poszły w jednej turze rozmowy, bez osobnego zapisu D-decyzji w tamtym
+momencie.**
+
+Cztery decyzje właściciela, po jego korektach mojej pierwszej propozycji:
+
+1. **Manager wybiera tablicę** — priorytetowo z etapu bieżącego, ale może z innego. Tablice
+   materializują się leniwie (`ensureKanbanBoard`), więc picker (`report_task_targets`) listuje
+   **elementy** kanbanowe projektu, nie istniejące tablice — 107 projektów ma element, tablic
+   istniało 13.
+2. **Właściciel zadania wynika z ETAPU WYBRANEJ TABLICY**, nie z `acceptance_deadline_stage_id`
+   (to pole mówi „do kiedy klient odpowie", nie „gdzie to leży" — pierwsza propozycja czytała stąd
+   właściciela i była semantycznym naciąganiem, odrzuconym). `report_board_task_owner` idzie
+   łańcuchem tablica → element procesu → kamień → etap → `report_stage_responsible` (D42).
+3. **Link to KOLUMNA na `process_kanban_tasks`** (`source_agreement_id`/`source_change_request_id`,
+   check „najwyżej jedno"), nie tabela łącząca — wiele prac z jednego źródła rozwiązują
+   **podzadania**, nie wiele kart.
+4. **Ustalenia i zmiany projektowe traktowane identycznie** w całym mechanizmie.
+
+**Znalezisko przy budowie:** `project_process_items.template_item_id` **nie ma klucza obcego** do
+`process_items` — 564 wiersze z martwą referencją (skutek uboczny zapisu szablonu sprzed D41,
+delete+insert generował nowe id przy każdym zapisie). `report_task_targets` musiał dostać LEFT JOIN
+zamiast INNER JOIN, żeby nie gubić tablic z pracą zawieszoną na martwym elemencie (złapane
+asercją — inner join cicho gubił 2 z 13 tablic, w tym jedną z realną kartą). 440 z 460 sierotek
+bez odniesienia w żywym szablonie ani w snapshocie okazało się pustymi wierszami bez żadnej
+treści — świadomie **nie skasowane** (kasowanie danych, żeby dodać constraint, to odwrotna
+kolejność; constraint ma chronić dane, nie dane ustępować constraintowi).
+
+---
+
+## D44. Ścieżka zgłaszania przez pracownika
+
+**Status: zatwierdzone przez właściciela, zrealizowane (migracje 270-275). Zapisane tu
+retroaktywnie, jak D43.**
+
+Zgłoszenie **nie jest osobnym bytem** — formularz (4 kroki: zdjęcie+opis, projekt/etap,
+wpływ-na-rozliczenie, pilność) zapisuje szkic wprost w Ustaleniach albo Zmianach projektowych,
+zależnie od odpowiedzi na pytanie o rozliczenie (TAK → zmiana, NIE/NIE WIEM → ustalenie, ze
+śladem niepewności w treści). Trzeci byt wymagałby konwersji przy klasyfikacji, własnego cyklu
+życia i własnego miejsca w ROT.
+
+Pracownik odpowiada **wyłącznie binarnie** na pytanie o wpływ na rozliczenie — nie podaje kwoty,
+nie zna cennika. Nie wskazuje etapu twardo, tylko potwierdza podpowiedziany etap bieżący. Nie
+wskazuje właściciela — ten wynika z macierzy (D42). Żadna ścieżka **nie tworzy zadania** —
+o tym decyduje manager przy klasyfikacji, przez mechanizm z D43.
+
+**Reguła twarda, wymuszona triggerem w bazie, nie tylko w formularzu:** zamknięcie bez działania
+(`cancelled`/`rejected`) wymaga `closure_reason`, który wraca do zgłaszającego. Powód: zgłaszający,
+który nie dowiaduje się dlaczego nic z tego nie wyszło, uczy się że zgłoszenia znikają.
+Powiadomienia zwrotne (sklasyfikowane/zaakceptowane/wykonane/zamknięte-z-powodem) wysyłane
+**triggerem**, nie z UI, z tego samego powodu co wymuszenie powodu — status zmienia się wieloma
+ścieżkami, a wpięcie w jedną z nich zostawiłoby pozostałe ciche.
+
+**Przekaźnik pusha (migracje 274-275).** Powiadomienia tworzone triggerem omijają dispatcher w TS
+(`sendNotificationChannels`), więc push nigdy by nie poszedł. Zamiast przenosić tworzenie
+powiadomień do TS (i tracić gwarancję z powyższego akapitu) — `user_notifications.pushed_at` +
+cron co 5 minut czytający niewysłane wiersze. Znacznik stawiany zawsze, także przy braku
+subskrypcji i przy błędzie wysyłki, inaczej wiersz wracałby w kółko.
+
+**Poprawki po pierwszym teście na żywo:** brak polityk `storage.objects` dla nowego bucketu
+(migracja 270 założyła bucket, nie polityki — upload cicho padał, kod łykał błąd), brak galerii
+załączników dla zmian projektowych w ogóle, link w powiadomieniu wpisany z pamięci zamiast
+sprawdzony (`/projekty/{id}` nie istnieje — poprawny routing to
+`/przestrzenie/klient/{clientId}?project=...&tab=...`), wybór projektu z listy zamiast comboboksu
+z wyszukiwaniem (>100 projektów). Cztery już wysłane powiadomienia z martwym linkiem naprawione
+migracją, nie zostawione.
+
+---
+
+## D45. Faza 11a — bramy faz komunikacji
+
+**Status: zatwierdzone przez właściciela (D19 §6), zrealizowane (migracja 276).**
+
+Zakres świadomie zawężony do **bram**, zgodnie z podziałem 11a/11b w sekwencji faz: pięciowierszowa
+tabela D19 §6 decyduje, który reżim komunikacji obowiązuje projekt "dziś". Modyfikatory (+1 poziom,
+wygasające same), egzekwowanie bezpiecznika ciszy i "przejęcie czerwone" to **11b — silnik**,
+osobna, większa pozycja, nie tknięta w tej turze.
+
+**Podział mechanizm/dane, zgodnie z CLAUDE.md.** Sama tabela decyzyjna (5 wierszy, kolejność ma
+znaczenie — "pierwsza pasująca wygrywa") to **mechanizm**, niezależny od tego ile jest etapów —
+żyje jako czysta funkcja `resolveCommunicationGate` (`lib/communication/gate.ts`), z pełnym testem
+tablicy prawdy (10 przypadków, w tym kolejność warunków i przypadek graniczny) — zgodnie ze
+standardem testowym CLAUDE.md (b), który dla **tej konkretnej tabeli** jest wskazany wprost z
+nazwy. `report_communication_gate_inputs()` w bazie zwraca wyłącznie **fakty** (flow_status,
+pokrycie aktywne dziś z `project_coverage_periods`, wstrzymanie z `project_active_holds`, faza
+bazowa etapu aktywnego z `process_stages.base_communication_phase` — ta ostatnia już zbudowana
+jako atrybut szablonu w D42) — zero rozgałęzień decyzyjnych w SQL.
+
+**Stan „nieustalona" zamiast domyślnego STANDARD.** Gate 5 (projekt w trakcie, bez wstrzymania)
+czyta fazę wprost z etapu aktywnego. Gdyby etap aktywny nie istniał albo nie rozwiązywał się w
+bieżącym szablonie (miękkie odniesienie, ten sam wzorzec co `report_stage_responsible`), funkcja
+**nie zgaduje** domyślnej fazy — zwraca jawny stan `nieustalona`, bo to jest luka w danych
+(błąd synchronizacji szablonu), nie stan projektu. Zero takich projektów na produkcji dziś
+(zweryfikowane inwentaryzacją), ale asercja w migracji i test tablicy prawdy pilnują tego na
+przyszłość.
+
+**Rozstrzygnięcie „zamknięty" idzie po pokryciu, nie po samej etykiecie statusu.** `flow_status =
+'Zamknięty'` w praktyce implikuje pokrycie aktywne w chwili ostatniego przeliczenia (migracja 228),
+ale przeliczenie jest cronowe (raz na dobę) — brama sprawdza pokrycie niezależnie, żeby nie ufać
+stanowi, który mógł się zdezaktualizować w ciągu dnia.
+
+**UI: badge, nie strona.** Zgodnie z „faza pierwsza modułu daje wartość samodzielnie" — jedna
+linijka nad widokiem procesu (`CommunicationGateBadge`, w `ProjectProcessPipelineSection`, poza
+publicznym dashboardem klienta, ten sam wzorzec izolacji co `stageResponsible` w D42), pokazująca
+reżim, dni bezpiecznika (informacyjnie — nic go dziś nie egzekwuje) i jawną adnotację „bez
+modyfikatorów" dla fazy wziętej wprost z etapu, żeby nikt nie przeczytał wartości bazowej jako
+ostatecznej.
+
+Rozkład bram na produkcji po wdrożeniu (122 projekty): gate 1 (wygaszony) 68, gate 2 (zamknięty,
+poza pokryciem) 15, gate 3 (zamknięty, tryb serwisowy) 3, gate 4 (wstrzymanie) 0, gate 5 (w trakcie)
+36 — z tego STANDARD 20, KRYTYCZNA 8, INTENSYWNA 7, CZUWANIE 1. Zero „nieustalona".
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed
@@ -2006,7 +2122,7 @@ notka o tym pod D20 §2, teraz nieaktualna.
 | 8 | Czas pracy | L (moduł już w dużej mierze istnieje — patrz D31) | **częściowo zrealizowane** (D32: `role_code`/`work_type`/`work_cause`, raport, `database.types.ts`) — reszta (higiena, misje CRUD, budżety per etap, rentowność, scalenie dwóch systemów godzin) czeka na decyzję |
 | 9 | Rejestr zdarzeń komunikacyjnych | L | **9A zrealizowane** (D38, migracje 258-259: rejestr, rozdzielone osie, przycisk kontaktu, ujednolicona cisza); 9B (pytanie dzienne dla ekip, notatki głosowe, AI) — osobna faza |
 | 10 | `is_active`: persist + rozbicie osi | M | **zrealizowane** (D38 pkt 1-2 + D40 pkt 3, migracje 258-260); pkt 4 (alert „porzucony administracyjnie") odłożony do 11b — dziś nie ma silnika, do którego by go wpiąć |
-| 11a | Fazy komunikacji — bramy | S-M | do realizacji |
+| 11a | Fazy komunikacji — bramy | S-M | **zrealizowane** (D45, migracja 276) — silnik (modyfikatory, bezpiecznik, przejęcie czerwone) zostaje 11b |
 | 11b | Fazy komunikacji — silnik (modyfikatory, bezpiecznik, przejęcie czerwone) | L | do realizacji |
 | 11c | Wymagane komunikaty + blokada zamknięcia + wysyłka automatyczna | M-L | do realizacji |
 | 12 | Tryb serwisowy | M | do realizacji |

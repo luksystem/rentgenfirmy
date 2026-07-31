@@ -21,6 +21,11 @@ import {
   indexStageResponsibleByStageId,
   type StageResponsible,
 } from "@/lib/supabase/stage-responsible-repository";
+import { CommunicationGateBadge } from "@/components/process/communication-gate-badge";
+import {
+  fetchCommunicationGateForProject,
+  type ProjectCommunicationGate,
+} from "@/lib/supabase/communication-gate-repository";
 import type { ProjectStageHealth } from "@/lib/stage-health/types";
 import { useAuthStore } from "@/store/auth-store";
 import { useProcessStore } from "@/store/process-store";
@@ -80,6 +85,10 @@ export function ProjectProcessPipelineSection({
   // D42 pkt 4b. Świadomie pobierane TUTAJ, a nie w ProcessPipeline — ten sam pipeline renderuje
   // publiczny dashboard klienta, a nazwiska obsady to informacja wewnętrzna.
   const [stageResponsible, setStageResponsible] = useState<Record<string, StageResponsible>>({});
+  // Faza 11a (D19 §6) — reżim komunikacji projektu, tylko brama. Osobny fetch z tego samego
+  // powodu co stageResponsible: to informacja wewnętrzna, ProcessPipeline renderuje też publiczny
+  // dashboard klienta.
+  const [communicationGate, setCommunicationGate] = useState<ProjectCommunicationGate | null>(null);
 
   const anchoredTemplate = useMemo(
     () => resolveAnchoredProcessTemplate(process, liveTemplate),
@@ -155,6 +164,20 @@ export function ProjectProcessPipelineSection({
     };
   }, [projectId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    void fetchCommunicationGateForProject(projectId)
+      .then((gate) => {
+        if (!cancelled) setCommunicationGate(gate);
+      })
+      .catch(() => {
+        // Brama komunikacji to informacyjny badge — brak danych nie ma blokować widoku procesu.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
   async function handleConfirmSync() {
     setSyncing(true);
     setSyncError(null);
@@ -200,6 +223,8 @@ export function ProjectProcessPipelineSection({
           </div>
         </div>
       ) : null}
+
+      <CommunicationGateBadge gate={communicationGate} />
 
       <ProcessPipeline
         template={anchoredTemplate}
