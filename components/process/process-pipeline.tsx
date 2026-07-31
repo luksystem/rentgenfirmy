@@ -116,6 +116,8 @@ type ProcessPipelineProps = {
    * klienta, gdzie obsada zespołu nie ma się pokazywać. Brak propa = brak linijki.
    */
   stageResponsible?: Record<string, StageResponsible>;
+  /** D46 — odświeżenie stageResponsible po zapisaniu lidera etapu (dane wyliczane, żyją u rodzica). */
+  onStageLeadChanged?: () => void;
 };
 
 export function ProcessPipeline({
@@ -144,6 +146,7 @@ export function ProcessPipeline({
   onRemoveItem,
   activeStageHealth,
   stageResponsible,
+  onStageLeadChanged,
 }: ProcessPipelineProps) {
   const [activeItem, setActiveItem] = useState<ProcessItem | null>(null);
   // D44 — etap otwartego elementu; potrzebny, by element bez wlasnego przypisania odziedziczyl
@@ -501,6 +504,9 @@ export function ProcessPipeline({
                         <StageResponsibleLine
                           data={stageResponsible?.[stage.id]}
                           projectId={projectId}
+                          canEditStageLead={interactive && Boolean(canManageAssignment)}
+                          currentUserId={currentUserId}
+                          onStageLeadChanged={onStageLeadChanged}
                         />
                         {isBlocked && blockReasons.length > 0 ? (
                           <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2 py-1.5 text-[11px] text-rose-200">

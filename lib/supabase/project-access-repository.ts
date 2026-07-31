@@ -102,3 +102,24 @@ export async function setProjectRoleFlag(
     "Nie udało się zapisać roli projektowej.",
   );
 }
+
+/**
+ * D46 (D20 §2) — edytor pojedynczego slotu, osobna ścieżka od `setProjectRoleFlag` (ta ustawia
+ * PARY). `assigneeId = null` zdejmuje obsadę bez wskazania następcy.
+ */
+export async function setProjectRoleSlot(
+  projectId: string,
+  roleCode: string,
+  assigneeId: string | null,
+): Promise<{ profiles: ProjectAssignedProfile[]; slots: ProjectRoleSlotEntry[] }> {
+  const response = await fetch(`/api/projects/${projectId}/role-slot`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ roleCode, assigneeId }),
+  });
+  return parseJsonResponse<{ profiles: ProjectAssignedProfile[]; slots: ProjectRoleSlotEntry[] }>(
+    response,
+    "Nie udało się zapisać slotu roli.",
+  );
+}

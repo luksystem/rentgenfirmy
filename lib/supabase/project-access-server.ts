@@ -395,6 +395,61 @@ export async function setProjectRoleFlagServer(
   }
 }
 
+/**
+ * D46 (docs/08 D20 §2) — edytor pojedynczego slotu, niezależny od trzech zagregowanych
+ * checkboxów (`setProjectRoleFlagServer` powyżej). Te dwie ścieżki zapisu współistnieją celowo:
+ * checkboxy zostają jako szybki sposób ustawienia PARY (lider techniczny/operacyjny), ten edytor
+ * pozwala rozdzielić parę albo obsadzić `wlasciciel`/`asystent_procesu`, które nie mają checkboxa.
+ *
+ * W przeciwieństwie do `setProjectRoleFlagServer` — bez błędu 409 przy konflikcie. Tam konflikt
+ * ochrania przed przypadkowym nadpisaniem przez zagregowany checkbox; tu administrator EDYTUJE
+ * WPROST jeden slot, więc zmiana trzymającego jest zamierzonym działaniem, nie przypadkiem.
+ * `profileId = null` zdejmuje obsadę bez stawiania nikogo w jej miejsce.
+ */
+export async function setProjectRoleSlotServer(
+  admin: AdminClient,
+  input: { projectId: string; roleCode: ProcessRoleCode; profileId: string | null },
+) {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: existing, error: fetchError } = await admin
+    .from("project_role_slot")
+    .select("id, user_id")
+    .eq("project_id", input.projectId)
+    .eq("role_code", input.roleCode)
+    .is("to_date", null)
+    .maybeSingle();
+  if (fetchError) {
+    throw new Error(fetchError.message);
+  }
+
+  if (existing?.user_id === input.profileId) {
+    return;
+  }
+
+  if (existing) {
+    const { error: closeError } = await admin
+      .from("project_role_slot")
+      .update({ to_date: today })
+      .eq("id", existing.id);
+    if (closeError) {
+      throw new Error(closeError.message);
+    }
+  }
+
+  if (input.profileId) {
+    const { error: insertError } = await admin.from("project_role_slot").insert({
+      project_id: input.projectId,
+      role_code: input.roleCode,
+      user_id: input.profileId,
+      source: "obsada",
+    });
+    if (insertError) {
+      throw new Error(insertError.message);
+    }
+  }
+}
+
 /** Odbiorcy powiadomień projektowych (akceptacje itp.) — tylko liderzy i programista, nie cały zespół. */
 export async function fetchProjectNotificationRecipientsServer(
   admin: AdminClient,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { ProcessItemRepairDialog } from "@/components/process/process-item-repair-dialog";
 import { ProcessPipeline } from "@/components/process/process-pipeline";
@@ -147,22 +147,18 @@ export function ProjectProcessPipelineSection({
     };
   }, [projectId, process.activeStageId, process.updatedAt]);
 
-  useEffect(() => {
-    let cancelled = false;
+  const reloadStageResponsible = useCallback(() => {
     void fetchStageResponsible(projectId)
-      .then((rows) => {
-        if (!cancelled) {
-          setStageResponsible(indexStageResponsibleByStageId(rows));
-        }
-      })
+      .then((rows) => setStageResponsible(indexStageResponsibleByStageId(rows)))
       .catch(() => {
         // Brak danych o odpowiedzialnych nie może wywalić widoku procesu — linijka po prostu
         // się nie pokaże, a etapy zostają czytelne.
       });
-    return () => {
-      cancelled = true;
-    };
   }, [projectId]);
+
+  useEffect(() => {
+    reloadStageResponsible();
+  }, [reloadStageResponsible]);
 
   useEffect(() => {
     let cancelled = false;
@@ -238,6 +234,7 @@ export function ProjectProcessPipelineSection({
         interactive
         actorName={resolvedActorName}
         stageResponsible={stageResponsible}
+        onStageLeadChanged={reloadStageResponsible}
         onSaveMilestoneDate={(milestoneId, date) => saveMilestoneDate(projectId, milestoneId, date)}
         onSaveChecklist={(itemId, payload) =>
           saveChecklistPayload(projectId, itemId, payload, resolvedActorName)

@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { HardHat, UserRound } from "lucide-react";
+import { useState } from "react";
+import { HardHat, Pencil, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { StageLeadPickerDialog } from "@/components/process/stage-lead-picker-dialog";
 import type { StageResponsible } from "@/lib/supabase/stage-responsible-repository";
 
 /**
@@ -23,17 +25,29 @@ export function StageResponsibleLine({
   data,
   projectId,
   staffingHref,
+  /** D46 — lider etapu jest edytowalny, w odróżnieniu od odpowiedzialnego. Wymaga projectId i id
+   *  bieżącego użytkownika (do historii zmian: `changed_by uuid`, NIE nazwa wyświetlana); bez
+   *  nich przycisk się nie pokazuje. */
+  canEditStageLead = false,
+  currentUserId,
+  onStageLeadChanged,
 }: {
   data: StageResponsible | undefined;
   projectId?: string;
   staffingHref?: string;
+  canEditStageLead?: boolean;
+  currentUserId?: string;
+  onStageLeadChanged?: () => void;
 }) {
+  const [leadDialogOpen, setLeadDialogOpen] = useState(false);
+
   if (!data) {
     return null;
   }
 
   const hasRole = Boolean(data.roleCode);
   const href = staffingHref ?? (projectId ? `/projekty/${projectId}?panel=obsada` : null);
+  const canOpenLeadPicker = canEditStageLead && Boolean(projectId);
 
   return (
     <div className="mt-2 grid gap-1 border-t border-border/50 pt-2">
@@ -89,7 +103,34 @@ export function StageResponsibleLine({
           ) : (
             <span className="font-medium text-rose-300">brak wskazanego</span>
           )}
+          {canOpenLeadPicker ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setLeadDialogOpen(true);
+              }}
+              className="flex items-center gap-1 text-muted underline decoration-dotted underline-offset-2 hover:text-foreground"
+            >
+              <Pencil className="h-3 w-3" />
+              {data.stageLeadName ? "zmień" : "wskaż"}
+            </button>
+          ) : null}
         </div>
+      ) : null}
+
+      {canOpenLeadPicker && projectId ? (
+        <StageLeadPickerDialog
+          open={leadDialogOpen}
+          onOpenChange={setLeadDialogOpen}
+          projectId={projectId}
+          stageId={data.stageId}
+          stageTitle={data.stageTitle}
+          currentLeadUserId={data.stageLeadUserId}
+          currentLeadName={data.stageLeadName}
+          changedBy={currentUserId ?? null}
+          onSaved={onStageLeadChanged}
+        />
       ) : null}
     </div>
   );

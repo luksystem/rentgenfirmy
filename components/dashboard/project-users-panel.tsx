@@ -8,6 +8,7 @@ import { profileHasAllProjectsAccess } from "@/lib/project-access/rules";
 import {
   fetchProjectAccessibleProfilesWithSlots,
   setProjectRoleFlag,
+  setProjectRoleSlot,
   type ProjectAssignedProfile,
   type ProjectRoleFlags,
   type ProjectRoleSlotEntry,
@@ -35,7 +36,25 @@ const SLOT_SOURCE_TONES: Record<ProjectRoleSlotSource, "active" | "waiting" | "b
   przejecie_czerwone: "critical",
 };
 
-function ProjectRoleSlotsList({ slots }: { slots: ProjectRoleSlotEntry[] }) {
+/**
+ * D46 (D20 §2) — edytor siedmiu slotów, niezależny od trzech zagregowanych checkboxów wyżej.
+ * Checkboxy zostają jako szybki sposób ustawienia PARY (lider techniczny/operacyjny); ten edytor
+ * pozwala rozdzielić parę i obsadzić `wlasciciel`/`asystent_procesu`, które nie mają checkboxa.
+ * Odczyt zawsze pokazuje pełne siedem — edycja jest tylko dla `hasFullAppAccess` (`canEdit`).
+ */
+function ProjectRoleSlotsList({
+  slots,
+  candidateProfiles,
+  canEdit,
+  onAssign,
+  busyRoleCode,
+}: {
+  slots: ProjectRoleSlotEntry[];
+  candidateProfiles: ProjectAssignedProfile[];
+  canEdit: boolean;
+  onAssign: (roleCode: string, assigneeId: string | null) => void;
+  busyRoleCode: string | null;
+}) {
   if (!slots.length) {
     return null;
   }
@@ -43,7 +62,7 @@ function ProjectRoleSlotsList({ slots }: { slots: ProjectRoleSlotEntry[] }) {
   return (
     <div className="grid gap-2 rounded-2xl border border-border/80 p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-muted">
-        Faktyczna obsada slotów (odczyt, nieagregowany)
+        Obsada slotów (pełne siedem, nieagregowane)
       </p>
       <div className="grid gap-1.5">
         {slots.map((slot) => (
@@ -53,7 +72,23 @@ function ProjectRoleSlotsList({ slots }: { slots: ProjectRoleSlotEntry[] }) {
           >
             <span className="text-sm font-medium text-foreground">{slot.roleLabel}</span>
             <div className="flex items-center gap-2 text-sm text-muted">
-              <span>{slot.profile ? getUserDisplayName(slot.profile) : "— nieobsadzony —"}</span>
+              {canEdit ? (
+                <select
+                  className="rounded-lg border border-border bg-surface px-2 py-1 text-sm text-foreground"
+                  value={slot.profile?.id ?? ""}
+                  disabled={busyRoleCode === slot.roleCode}
+                  onChange={(event) => onAssign(slot.roleCode, event.target.value || null)}
+                >
+                  <option value="">— nieobsadzony —</option>
+                  {candidateProfiles.map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {getUserDisplayName(candidate)}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span>{slot.profile ? getUserDisplayName(slot.profile) : "— nieobsadzony —"}</span>
+              )}
               {slot.source ? (
                 <Badge tone={SLOT_SOURCE_TONES[slot.source]} className="text-[10px]">
                   {SLOT_SOURCE_LABELS[slot.source]}
@@ -117,6 +152,21 @@ export function ProjectUsersPanel({ projectId }: { projectId: string }) {
       setError(err instanceof Error ? err.message : "Nie udało się zapisać roli.");
     } finally {
       setBusyKey(null);
+    }
+  }
+
+  const [busySlotRole, setBusySlotRole] = useState<string | null>(null);
+
+  async function assignSlot(roleCode: string, assigneeId: string | null) {
+    setBusySlotRole(roleCode);
+    try {
+      const updated = await setProjectRoleSlot(projectId, roleCode, assigneeId);
+      setProfiles(updated.profiles);
+      setSlots(updated.slots);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nie udało się zapisać slotu roli.");
+    } finally {
+      setBusySlotRole(null);
     }
   }
 
@@ -253,7 +303,13 @@ export function ProjectUsersPanel({ projectId }: { projectId: string }) {
         </>
       )}
 
-      <ProjectRoleSlotsList slots={slots} />
+      <ProjectRoleSlotsList
+        slots={slots}
+        candidateProfiles={profiles}
+        canEdit={canEditRoles}
+        onAssign={(roleCode, assigneeId) => void assignSlot(roleCode, assigneeId)}
+        busyRoleCode={busySlotRole}
+      />
     </div>
   );
 }

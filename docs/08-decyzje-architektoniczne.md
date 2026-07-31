@@ -2098,6 +2098,66 @@ poza pokryciem) 15, gate 3 (zamknięty, tryb serwisowy) 3, gate 4 (wstrzymanie) 
 
 ---
 
+## D46. Edytor 7 slotów + lider etapu (D20 §2, jedna pozycja)
+
+**Status: zatwierdzone przez właściciela, zrealizowane (migracja 278).**
+
+Właściciel połączył dwa oddzielnie planowane kroki w jeden — ta sama okolica ekranu, rozbijanie na
+dwie tury kosztowałoby więcej w przełączaniu kontekstu niż w kodzie.
+
+**Korekta założenia.** Sądziłem, że 730 identycznych slotów (jedna osoba na rolę na każdym z 122
+projektów) to atrapa danych po backfillu. Właściciel: to prawda operacyjna, nie fikcja — przy
+jednym liderze operacyjnym, jednym technicznym i jednym programiście ci sami ludzie SĄ na każdym
+projekcie. Edytor jest budowany na przyszłość (zastępstwa, przejęcie przy czerwonym, rozdzielenie
+ról), nie po to, żeby "naprawić" dzisiejszy, poprawny stan.
+
+### 1. Edytor 7 slotów
+
+`setProjectRoleSlotServer` — druga ścieżka zapisu do `project_role_slot`, obok istniejącej
+`setProjectRoleFlagServer` (trzy zagregowane checkboxy, zapisujące PARY). Nowa ścieżka: jeden kod
+roli → jedna osoba, **bez błędu 409 przy konflikcie** — w przeciwieństwie do checkboxów, tu
+administrator edytuje slot wprost, więc zmiana trzymającego jest zamierzona, nie przypadkowa.
+Endpoint `PATCH /api/projects/[projectId]/role-slot`, UI: `ProjectRoleSlotsList` w
+`project-users-panel.tsx` z odczytu (D20 §1) zamieniona w edytor — siedem pickerów, w tym
+`wlasciciel`/`asystent_procesu`, które nigdy nie miały żadnego checkboxa.
+
+### 2. Lider etapu
+
+**Historia zmian, wcześniej nieistniejąca.** `project_stage_leads` nie miało żadnej tabeli
+historii — `set_project_stage_lead()` jest teraz **jedyną** drogą zapisu i wymusza
+`handover_note` (kto przejmuje, na czym stoi lista montażowa) przy **zastąpieniu** istniejącego
+lidera, nie przy pierwszym przypisaniu (nie ma czego przekazywać). Wymuszone w bazie (`raise
+exception`), nie tylko w formularzu.
+
+**Kto wskazuje, ilu, kiedy.** Wskazuje koordynator operacyjny (decyzja o zasobach, nie o
+technice). Jeden lider na etap — kilka ekip na budowie to kilku liderów DNIA
+(`is_lead` na `resource_plan_item_participants`), inny, już istniejący koncept; lider etapu jeden,
+inaczej nikt nie jest właścicielem ciągłości listy montażowej. Widoczny tylko przy
+`requires_project_stage_lead` (D42).
+
+**Ranking, nie pełna lista alfabetyczna — ale NIE ranking pracowników w rozumieniu CLAUDE.md.**
+Ta sama różnica co przy `suggestResourcePlanCandidates` (Etap 7 Planu Zasobów, D7/D21): to
+decyzja wspomagająca WYBÓR DO KONKRETNEJ ROLI, przejrzysta (`reasons[]`), z człowiekiem
+decydującym na końcu — nie wskaźnik oceniający pracownika. Reguła CLAUDE.md o zakazie rankingów
+osób dotyczy miar oceny, nie podpowiedzi przy przypisaniu.
+
+Pięć sygnałów w **jawnie ustalonej kolejności priorytetu** (nie suma ważonych punktów — właściciel
+podał kolejność wprost, "pierwszy priorytet bije drugi"): przydzielony do etapu → zna projekt →
+spełnia kompetencję → dostępny → ciągłość z poprzedniego etapu. Sortowanie leksykograficzne po
+krotce pięciu boole'i, z pełnym testem tablicy prawdy (`lib/resource-plan/stage-lead-ranking.ts`,
+9 przypadków) zgodnie ze standardem testowym (b) — ta sama zasada podziału mechanizm/fakty co
+`report_communication_gate_inputs` (D45) i `report_stage_responsible` (D42):
+`report_stage_lead_candidate_facts()` w bazie zwraca wyłącznie fakty, zero wagi/punktacji;
+decyzja o kolejności zapada w TS.
+
+**Znalezisko:** "ranking zastępstw", o który prosił właściciel do reużycia, **nie istnieje** —
+D22 świadomie odłożył `project_role_competency` (kompetencje na `role.code`, potrzebne rankingowi
+zastępstw) do fazy 13, jeszcze niezbudowanej. Zbudowany tu ranking jest nowym kodem, inspirowanym
+tym samym wzorcem co `suggestions.ts` (czysta funkcja, przejrzyste uzasadnienia), nie reużyciem
+istniejącej funkcji.
+
+---
+
 ## Finalna sekwencja faz
 
 Zatwierdzona przez właściciela (razem z D19), z dwiema poprawkami: ROT+raport przesunięte przed
@@ -2155,7 +2215,7 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D18 | faza 7/8 (rejestr zdarzeń komunikacyjnych, silnik faz) | częściowo nadpisane przez D19 — patrz notka przy D18 |
 | D19 | nowa faza „Cykl życia projektu" + rozszerzenia faz sygnałów/ROT/is_active/komunikacji — patrz przeplanowanie poniżej | zatwierdzone; część zrealizowana od razu (§3, §4, §7 — migracje 217-218), reszta materiał na fazy 4+ |
 | D20 §1 | — | zatwierdzone, zrealizowane (lista odczytu 7 slotów w `ProjectUsersPanel`) |
-| D20 §2 | faza komunikacji z przejęciem przy czerwonym (docs/04 §4.4) + faza zastępstw urlopowych (docs/04 §6) | zatwierdzone, do realizacji jako osobna, nazwana pozycja w sekwencji, przed obiema tymi fazami |
+| D20 §2 | faza komunikacji z przejęciem przy czerwonym (docs/04 §4.4) + faza zastępstw urlopowych (docs/04 §6) | **zrealizowane w zakresie D46** (edytor 7 slotów) — przed obiema tymi fazami, zgodnie z pierwotnym planem |
 | D21 | faza 3 (Kompetencje) | zatwierdzone, zrealizowane (migracje 221-222: `operational_role_competency`, potwierdzenie `user_competency`, mapa luk) |
 | D22 | faza zastępstw urlopowych (`project_role_competency`, dług na przyszłość) | zatwierdzone; korekta D4/D7/D15 zrealizowana od razu, `project_role_competency` materiał na fazę zastępstw |
 | D23 | faza 4 (ROT) | zatwierdzone, zrealizowane (migracje 223-225: historia kanbana triggerem, `report_rot_items()`, `project_trades.hired_by`) — grupowanie ROT po podmiocie świadomie odłożone |

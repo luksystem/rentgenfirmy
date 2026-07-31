@@ -5092,6 +5092,28 @@ export type Database = {
           active_stage_base_phase: string | null;
         }[];
       };
+      report_stage_lead_candidate_facts: {
+        Args: { p_project_id: string; p_stage_id: string };
+        Returns: {
+          user_id: string;
+          user_name: string | null;
+          assigned_to_stage: boolean;
+          known_project: boolean;
+          meets_competency: boolean;
+          is_available: boolean;
+          continuity_from_previous_stage: boolean;
+        }[];
+      };
+      set_project_stage_lead: {
+        Args: {
+          p_project_id: string;
+          p_stage_id: string;
+          p_user_id: string | null;
+          p_handover_note: string | null;
+          p_changed_by: string | null;
+        };
+        Returns: void;
+      };
       report_board_task_owner: {
         Args: { p_board_id: string };
         Returns: {
