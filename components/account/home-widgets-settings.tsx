@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { moveItem } from "@/lib/process/template-editor-utils";
 import {
   getAllowedHomeWidgets,
+  getHomeWidgetDefinition,
   HOME_WIDGET_CATEGORY_LABELS,
   resolveHomeWidgetIds,
   type HomeWidgetCategory,
@@ -21,7 +24,8 @@ export function HomeWidgetsSettings() {
   const navHydrated = useRoleNavPermissionsStore((state) => state.hydrated);
   const hydrateNavConfig = useRoleNavPermissionsStore((state) => state.hydrate);
 
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  /** Tablica = zarówno wybór, jak i kolejność wyświetlania na stronie głównej. */
+  const [orderedIds, setOrderedIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -39,8 +43,7 @@ export function HomeWidgetsSettings() {
     if (!profile || !navHydrated) {
       return;
     }
-    const ids = resolveHomeWidgetIds(profile.role, profile.homeWidgets, navConfig);
-    setSelected(new Set(ids));
+    setOrderedIds(resolveHomeWidgetIds(profile.role, profile.homeWidgets, navConfig));
   }, [profile, navConfig, navHydrated]);
 
   const grouped = useMemo(() => {
@@ -54,15 +57,13 @@ export function HomeWidgetsSettings() {
   }, [allowedWidgets]);
 
   function toggle(id: string) {
-    setSelected((current) => {
-      const next = new Set(current);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
+    setOrderedIds((current) =>
+      current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id],
+    );
+  }
+
+  function move(index: number, direction: "up" | "down") {
+    setOrderedIds((current) => moveItem(current, index, direction));
   }
 
   async function handleSave() {
@@ -73,7 +74,7 @@ export function HomeWidgetsSettings() {
       const response = await fetch("/api/account/home-widgets", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ widgetIds: Array.from(selected) }),
+        body: JSON.stringify({ widgetIds: orderedIds }),
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -117,7 +118,7 @@ export function HomeWidgetsSettings() {
                   <input
                     type="checkbox"
                     className="mt-0.5 h-4 w-4 rounded border-border bg-surface text-accent"
-                    checked={selected.has(widget.id)}
+                    checked={orderedIds.includes(widget.id)}
                     onChange={() => toggle(widget.id)}
                   />
                   <span>
@@ -129,6 +130,54 @@ export function HomeWidgetsSettings() {
             </div>
           </div>
         ))}
+
+        <div className="grid gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+            Kolejność na stronie głównej
+          </p>
+          {orderedIds.length ? (
+            <div className="grid gap-1.5">
+              {orderedIds.map((id, index) => {
+                const widget = getHomeWidgetDefinition(id);
+                if (!widget) {
+                  return null;
+                }
+                return (
+                  <div
+                    key={id}
+                    className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-surface-muted/10 px-3 py-2 text-sm"
+                  >
+                    <span className="text-foreground">{widget.label}</span>
+                    <div className="flex shrink-0 gap-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={index === 0}
+                        onClick={() => move(index, "up")}
+                        aria-label="Przesuń w górę"
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={index === orderedIds.length - 1}
+                        onClick={() => move(index, "down")}
+                        aria-label="Przesuń w dół"
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">Nie wybrano jeszcze żadnego widżetu.</p>
+          )}
+        </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <Button type="button" disabled={saving} onClick={() => void handleSave()}>

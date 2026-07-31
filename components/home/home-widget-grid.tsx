@@ -31,24 +31,20 @@ const WIDGET_COMPONENTS: Record<string, ComponentType> = {
 /** Widżety, które same zajmują pełną szerokość wiersza (mają już wewnętrzny grid/karty). */
 const FULL_WIDTH_WIDGETS = new Set(["quick-status", "project-metrics", "critical-projects"]);
 
+/** Renderuje widżety w kolejności wybranej przez usera (patrz Ustawienia konta). */
 export function HomeWidgetGrid({ widgetIds }: { widgetIds: string[] }) {
-  const fullWidth = widgetIds.filter((id) => FULL_WIDTH_WIDGETS.has(id) && WIDGET_COMPONENTS[id]);
-  const tiles = widgetIds.filter((id) => !FULL_WIDTH_WIDGETS.has(id) && WIDGET_COMPONENTS[id]);
+  const validIds = widgetIds.filter((id) => WIDGET_COMPONENTS[id]);
 
   return (
-    <div className="grid gap-4">
-      {fullWidth.map((id) => {
+    <div className="grid gap-4 md:grid-cols-2">
+      {validIds.map((id) => {
         const Widget = WIDGET_COMPONENTS[id];
-        return <Widget key={id} />;
+        return (
+          <div key={id} className={FULL_WIDTH_WIDGETS.has(id) ? "md:col-span-2" : undefined}>
+            <Widget />
+          </div>
+        );
       })}
-      {tiles.length ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {tiles.map((id) => {
-            const Widget = WIDGET_COMPONENTS[id];
-            return <Widget key={id} />;
-          })}
-        </div>
-      ) : null}
     </div>
   );
 }
