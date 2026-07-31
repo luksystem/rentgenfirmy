@@ -37,7 +37,12 @@ export function ChangeRequestBatchDeliveryActions({
   const pending = changeRequests.filter(
     (entry) => entry.status === "pending_client" && isChangeRequestPendingAttention(entry),
   );
-  const neverSent = pending.filter((entry) => !entry.sentAt);
+  // Paczka obejmuje też szkice (jeszcze nigdy nie wysłane klientowi wcale) — wysyłka w paczce jest
+  // ich pierwszym zgłoszeniem, razem z tymi już zgłoszonymi pojedynczo, ale nigdy nie ujętymi
+  // w paczce/przypomnieniu.
+  const neverSent = changeRequests.filter(
+    (entry) => entry.status === "draft" || (entry.status === "pending_client" && !entry.sentAt),
+  );
   const alreadySent = pending.filter((entry) => entry.sentAt);
 
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -161,7 +166,14 @@ export function ChangeRequestBatchDeliveryActions({
               disabled={sending}
               onChange={() => handleToggleSelected(entry.id)}
             />
-            <span className="min-w-0 flex-1 truncate text-foreground">{entry.title}</span>
+            <span className="min-w-0 flex-1 truncate text-foreground">
+              {entry.title}
+              {entry.status === "draft" ? (
+                <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                  Szkic
+                </span>
+              ) : null}
+            </span>
           </label>
         ))}
       </div>
@@ -169,7 +181,7 @@ export function ChangeRequestBatchDeliveryActions({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope, neverSent, selectedIds, sending]);
 
-  if (!pending.length || !clientEmail?.trim()) {
+  if ((!neverSent.length && !alreadySent.length) || !clientEmail?.trim()) {
     return null;
   }
 

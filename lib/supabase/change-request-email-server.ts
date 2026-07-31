@@ -66,18 +66,17 @@ async function fetchPendingChangeRequests(
   filter: { sentAt: "set" | "unset" } | { ids: string[] },
 ): Promise<ProjectChangeRequest[]> {
   const supabase = getSupabaseAdmin();
-  let query = supabase
-    .from("project_change_requests")
-    .select("*")
-    .eq("project_id", projectId)
-    .eq("status", "pending_client");
+  let query = supabase.from("project_change_requests").select("*").eq("project_id", projectId);
 
   if ("ids" in filter) {
-    query = query.in("id", filter.ids);
+    // Paczka może zawierać zarówno szkice (jeszcze nigdy nie wysłane klientowi wcale — wysyłka w
+    // paczce jest ich pierwszym zgłoszeniem) jak i zmiany już zgłoszone pojedynczo, ale jeszcze
+    // nigdy nie ujęte w paczce/przypomnieniu.
+    query = query.in("id", filter.ids).in("status", ["draft", "pending_client"]);
   } else if (filter.sentAt === "set") {
-    query = query.not("sent_at", "is", null);
+    query = query.eq("status", "pending_client").not("sent_at", "is", null);
   } else {
-    query = query.is("sent_at", null);
+    query = query.eq("status", "pending_client").is("sent_at", null);
   }
 
   const { data, error } = await query
@@ -300,13 +299,34 @@ export async function sendChangeRequestEmails(input: {
   // że już były wysłane.
   if (input.scope === "new_batch" || input.scope === "reminder") {
     const supabase = getSupabaseAdmin();
+    const now = new Date().toISOString();
+    const ids = target.changeRequests.map((entry) => entry.id);
+
+    // Paczka może zawierać szkice — wysyłka w niej jest ich pierwszym zgłoszeniem do klienta,
+    // więc dopiero teraz przechodzą w "Oczekuje na klienta" (ten sam moment co "single").
+    const draftIds = target.changeRequests
+      .filter((entry) => entry.status === "draft")
+      .map((entry) => entry.id);
+    if (draftIds.length) {
+      const { error: submitError } = await supabase
+        .from("project_change_requests")
+        .update({ status: "pending_client", submitted_at: now, updated_at: now })
+        .in("id", draftIds)
+        .eq("status", "draft");
+
+      if (submitError) {
+        throw new Error(submitError.message);
+      }
+
+      void import("@/lib/project-activity/touch-active").then(({ maybeActivateProjectFromActivity }) =>
+        maybeActivateProjectFromActivity(input.projectId),
+      );
+    }
+
     const { error } = await supabase
       .from("project_change_requests")
-      .update({ sent_at: new Date().toISOString() })
-      .in(
-        "id",
-        target.changeRequests.map((entry) => entry.id),
-      );
+      .update({ sent_at: now })
+      .in("id", ids);
 
     if (error) {
       throw new Error(error.message);
