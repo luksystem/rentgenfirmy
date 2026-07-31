@@ -51,6 +51,7 @@ type AgreementRow = {
   blocks_next_stage?: boolean | null;
   responsible_user_id?: string | null;
   source_contact_point_id?: string | null;
+  sent_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -102,6 +103,7 @@ export function rowToAgreement(row: AgreementRow): ProjectClientAgreement {
     blocksNextStage: Boolean(row.blocks_next_stage),
     responsibleUserId: row.responsible_user_id ?? null,
     sourceContactPointId: row.source_contact_point_id ?? null,
+    sentAt: row.sent_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

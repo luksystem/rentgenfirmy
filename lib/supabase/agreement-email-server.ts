@@ -22,7 +22,18 @@ import {
   rowToAgreement,
 } from "@/lib/supabase/project-agreement-collaboration-repository";
 
-export type AgreementEmailScope = "single" | "single_trade" | "client_all_pending" | "trade_pending";
+/**
+ * "reminder" — przypomnienie o ustaleniach już kiedyś ujętych w paczce/przypomnieniu
+ * (sent_at ustawiony), wciąż oczekujących na klienta. "new_batch" — pierwsza wysyłka wybranych
+ * (checkboxy) ustaleń, które jeszcze nigdy nie były w takiej paczce (sent_at puste) — po wysyłce
+ * ustawia sent_at.
+ */
+export type AgreementEmailScope =
+  | "single"
+  | "single_trade"
+  | "reminder"
+  | "new_batch"
+  | "trade_pending";
 
 type AgreementRow = Parameters<typeof rowToAgreement>[0];
 
@@ -54,13 +65,26 @@ function rowToRole(row: RoleRow): AgreementApproverRole {
   };
 }
 
-async function fetchPendingAgreements(projectId: string): Promise<ProjectClientAgreement[]> {
+async function fetchPendingAgreements(
+  projectId: string,
+  filter?: { sentAt: "set" | "unset" } | { ids: string[] },
+): Promise<ProjectClientAgreement[]> {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
+  let query = supabase
     .from("project_client_agreements")
     .select("*")
     .eq("project_id", projectId)
-    .eq("status", "pending_client")
+    .eq("status", "pending_client");
+
+  if (filter && "ids" in filter) {
+    query = query.in("id", filter.ids);
+  } else if (filter && filter.sentAt === "set") {
+    query = query.not("sent_at", "is", null);
+  } else if (filter && filter.sentAt === "unset") {
+    query = query.is("sent_at", null);
+  }
+
+  const { data, error } = await query
     .order("position", { ascending: true })
     .order("created_at", { ascending: false });
 
@@ -242,6 +266,7 @@ async function resolveAgreementEmailTarget(input: {
   projectId: string;
   scope: AgreementEmailScope;
   agreementId?: string;
+  agreementIds?: string[];
   tradeId?: string;
 }): Promise<AgreementEmailTarget> {
   const context = await fetchProjectContext(input.projectId);
@@ -325,13 +350,18 @@ async function resolveAgreementEmailTarget(input: {
     recipientName = trade.contactName.trim() || trade.company.trim() || trade.name;
     intro =
       "Prosimy o zapoznanie się z ustaleniem projektowym w ramach Państwa branży i wymaganą akceptację.";
-  } else if (input.scope === "client_all_pending") {
-    agreements = await fetchPendingAgreements(input.projectId);
-    if (!agreements.length) {
-      throw new Error("Brak ustaleń oczekujących na akceptację klienta.");
+  } else if (input.scope === "new_batch") {
+    const ids = input.agreementIds ?? [];
+    if (!ids.length) {
+      throw new Error("Wybierz co najmniej jedno ustalenie do wysłania.");
     }
     if (!context.clientEmail) {
       throw new Error("Klient nie ma adresu e-mail w systemie.");
+    }
+
+    agreements = await fetchPendingAgreements(input.projectId, { ids });
+    if (!agreements.length) {
+      throw new Error("Nie znaleziono wybranych ustaleń oczekujących na akceptację klienta.");
     }
 
     recipientEmail = context.clientEmail;
@@ -339,6 +369,21 @@ async function resolveAgreementEmailTarget(input: {
     intro = `Przesyłamy ${agreements.length} ${
       agreements.length === 1 ? "ustalenie" : agreements.length < 5 ? "ustalenia" : "ustaleń"
     } projektowych oczekujących na Państwa akceptację. Każde ustalenie można zaakceptować lub skomentować osobno — poniżej przyciski do każdego z nich.`;
+  } else if (input.scope === "reminder") {
+    if (!context.clientEmail) {
+      throw new Error("Klient nie ma adresu e-mail w systemie.");
+    }
+
+    agreements = await fetchPendingAgreements(input.projectId, { sentAt: "set" });
+    if (!agreements.length) {
+      throw new Error("Brak ustaleń do przypomnienia — żadne nie było jeszcze wysłane w paczce.");
+    }
+
+    recipientEmail = context.clientEmail;
+    recipientName = context.clientName;
+    intro = `Przypominamy o ${agreements.length} ${
+      agreements.length === 1 ? "ustaleniu" : agreements.length < 5 ? "ustaleniach" : "ustaleniach"
+    } projektowych wciąż oczekujących na Państwa akceptację. Każde ustalenie można zaakceptować lub skomentować osobno — poniżej przyciski do każdego z nich.`;
   } else if (input.scope === "trade_pending") {
     if (!input.tradeId) {
       throw new Error("Brak identyfikatora branży.");
@@ -398,6 +443,7 @@ export async function previewAgreementEmailServer(input: {
   projectId: string;
   scope: AgreementEmailScope;
   agreementId?: string;
+  agreementIds?: string[];
   tradeId?: string;
   note?: string | null;
 }) {
@@ -432,6 +478,7 @@ export async function sendProjectAgreementEmails(input: {
   projectId: string;
   scope: AgreementEmailScope;
   agreementId?: string;
+  agreementIds?: string[];
   tradeId?: string;
   note?: string | null;
 }) {
@@ -498,6 +545,24 @@ export async function sendProjectAgreementEmails(input: {
       }
     } catch (smsError) {
       console.warn("[agreement-delivery] sms failed:", smsError);
+    }
+  }
+
+  // Paczka i przypomnienie oznaczają wysłane ustalenia jako "ujęte w paczce" — dzięki temu kolejne
+  // "Wyślij paczkę do akceptacji" nie proponuje ich ponownie, a "Przypomnij o akceptacjach" wie,
+  // że już były wysłane.
+  if (input.scope === "new_batch" || input.scope === "reminder") {
+    const supabase = getSupabaseAdmin();
+    const { error } = await supabase
+      .from("project_client_agreements")
+      .update({ sent_at: new Date().toISOString() })
+      .in(
+        "id",
+        target.agreements.map((entry) => entry.id),
+      );
+
+    if (error) {
+      throw new Error(error.message);
     }
   }
 

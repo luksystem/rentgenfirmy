@@ -290,6 +290,7 @@ export type ProjectClientAgreementRow = {
   blocks_next_stage: boolean;
   responsible_user_id: string | null;
   source_contact_point_id: string | null;
+  sent_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -322,6 +323,7 @@ export type ProjectClientAgreementInsert = {
   blocks_next_stage?: boolean;
   responsible_user_id?: string | null;
   source_contact_point_id?: string | null;
+  sent_at?: string | null;
   // D44 — sciezka zglaszania przez pracownika (migracja 270).
   stage_id?: string | null;
   is_urgent?: boolean;

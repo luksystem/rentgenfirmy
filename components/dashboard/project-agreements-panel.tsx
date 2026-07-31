@@ -1208,6 +1208,9 @@ export function ProjectAgreementsPanel({
           projectId={projectId}
           agreements={agreements}
           clientEmail={projectClient?.email}
+          onSent={async () => {
+            await ensureAgreements(projectId, { force: true });
+          }}
         />
       ) : null}
 

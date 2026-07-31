@@ -51,6 +51,9 @@ export type ProjectClientAgreement = {
   responsibleUserId: string | null;
   /** Punkt styku (katalog branż), z którego powstała podpowiedź tego ustalenia — nie wraca na listę sugestii. */
   sourceContactPointId: string | null;
+  /** Ostatnia wysyłka pakietowa/przypomnienie (Wyślij paczkę do akceptacji / Przypomnij o
+   *  akceptacjach) — null, dopóki ustalenie nie zostało ujęte w takiej wysyłce. */
+  sentAt: string | null;
   createdAt: string;
   updatedAt: string;
 };

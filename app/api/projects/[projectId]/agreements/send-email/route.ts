@@ -49,6 +49,7 @@ export async function POST(
     const body = (await request.json()) as {
       scope?: AgreementEmailScope;
       agreementId?: string;
+      agreementIds?: string[];
       tradeId?: string;
       note?: string;
     };
@@ -61,6 +62,7 @@ export async function POST(
       projectId,
       scope: body.scope,
       agreementId: body.agreementId,
+      agreementIds: body.agreementIds,
       tradeId: body.tradeId,
       note: body.note,
     });
