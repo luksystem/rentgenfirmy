@@ -356,6 +356,7 @@ export type ProjectChangeRequestRow = {
   blocks_next_stage: boolean;
   public_token: string;
   public_enabled: boolean;
+  sent_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -381,6 +382,7 @@ export type ProjectChangeRequestInsert = {
   blocks_next_stage?: boolean;
   public_token?: string;
   public_enabled?: boolean;
+  sent_at?: string | null;
   // D44 — sciezka zglaszania przez pracownika (migracja 270).
   stage_id?: string | null;
   is_urgent?: boolean;

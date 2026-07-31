@@ -14,7 +14,12 @@ import {
   type ChangeRequestRow,
 } from "@/lib/supabase/project-change-request-repository";
 
-export type ChangeRequestEmailScope = "single" | "client_all_pending";
+/**
+ * "reminder" — przypomnienie o zmianach już kiedyś ujętych w paczce/przypomnieniu (sent_at ustawiony),
+ * wciąż oczekujących na klienta. "new_batch" — pierwsza wysyłka wybranych (checkboxy) zmian, które
+ * jeszcze nigdy nie były w takiej paczce (sent_at puste) — po wysyłce ustawia sent_at.
+ */
+export type ChangeRequestEmailScope = "single" | "reminder" | "new_batch";
 
 async function fetchProjectContext(projectId: string) {
   const supabase = getSupabaseAdmin();
@@ -56,13 +61,26 @@ async function fetchProjectContext(projectId: string) {
   return { projectName: String(project.name ?? "Projekt"), clientEmail, clientName };
 }
 
-async function fetchPendingChangeRequests(projectId: string): Promise<ProjectChangeRequest[]> {
+async function fetchPendingChangeRequests(
+  projectId: string,
+  filter: { sentAt: "set" | "unset" } | { ids: string[] },
+): Promise<ProjectChangeRequest[]> {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
+  let query = supabase
     .from("project_change_requests")
     .select("*")
     .eq("project_id", projectId)
-    .eq("status", "pending_client")
+    .eq("status", "pending_client");
+
+  if ("ids" in filter) {
+    query = query.in("id", filter.ids);
+  } else if (filter.sentAt === "set") {
+    query = query.not("sent_at", "is", null);
+  } else {
+    query = query.is("sent_at", null);
+  }
+
+  const { data, error } = await query
     .order("position", { ascending: true })
     .order("created_at", { ascending: false });
 
@@ -110,6 +128,7 @@ async function resolveChangeRequestEmailTarget(input: {
   projectId: string;
   scope: ChangeRequestEmailScope;
   changeRequestId?: string;
+  changeRequestIds?: string[];
 }): Promise<ChangeRequestEmailTarget> {
   const context = await fetchProjectContext(input.projectId);
 
@@ -148,16 +167,31 @@ async function resolveChangeRequestEmailTarget(input: {
     changeRequests = [await ensurePublicLink(changeRequest)];
     intro =
       "Przesyłamy zmianę w projekcie do Państwa akceptacji. Poniżej znajdują się szczegóły, koszt oraz przycisk do decyzji.";
-  } else {
-    const pending = await fetchPendingChangeRequests(input.projectId);
-    if (!pending.length) {
-      throw new Error("Brak zmian oczekujących na akceptację klienta.");
+  } else if (input.scope === "new_batch") {
+    const ids = input.changeRequestIds ?? [];
+    if (!ids.length) {
+      throw new Error("Wybierz co najmniej jedną zmianę do wysłania.");
     }
 
-    changeRequests = await Promise.all(pending.map((entry) => ensurePublicLink(entry)));
+    const selected = await fetchPendingChangeRequests(input.projectId, { ids });
+    if (!selected.length) {
+      throw new Error("Nie znaleziono wybranych zmian oczekujących na akceptację klienta.");
+    }
+
+    changeRequests = await Promise.all(selected.map((entry) => ensurePublicLink(entry)));
     intro = `Przesyłamy ${changeRequests.length} ${
       changeRequests.length === 1 ? "zmianę" : changeRequests.length < 5 ? "zmiany" : "zmian"
     } w projekcie oczekujących na Państwa akceptację. Każdą zmianę można zaakceptować lub odrzucić osobno — poniżej przycisk do każdej z nich.`;
+  } else {
+    const pending = await fetchPendingChangeRequests(input.projectId, { sentAt: "set" });
+    if (!pending.length) {
+      throw new Error("Brak zmian do przypomnienia — żadna nie była jeszcze wysłana w paczce.");
+    }
+
+    changeRequests = await Promise.all(pending.map((entry) => ensurePublicLink(entry)));
+    intro = `Przypominamy o ${changeRequests.length} ${
+      changeRequests.length === 1 ? "zmianie" : changeRequests.length < 5 ? "zmianach" : "zmianach"
+    } w projekcie wciąż oczekujących na Państwa akceptację. Każdą zmianę można zaakceptować lub odrzucić osobno — poniżej przycisk do każdej z nich.`;
   }
 
   return {
@@ -174,6 +208,7 @@ export async function previewChangeRequestEmailServer(input: {
   projectId: string;
   scope: ChangeRequestEmailScope;
   changeRequestId?: string;
+  changeRequestIds?: string[];
   note?: string | null;
 }) {
   const target = await resolveChangeRequestEmailTarget(input);
@@ -206,6 +241,7 @@ export async function sendChangeRequestEmails(input: {
   projectId: string;
   scope: ChangeRequestEmailScope;
   changeRequestId?: string;
+  changeRequestIds?: string[];
   note?: string | null;
 }) {
   const target = await resolveChangeRequestEmailTarget(input);
@@ -257,6 +293,24 @@ export async function sendChangeRequestEmails(input: {
     void import("@/lib/project-activity/touch-active").then(({ maybeActivateProjectFromActivity }) =>
       maybeActivateProjectFromActivity(input.projectId),
     );
+  }
+
+  // Paczka i przypomnienie oznaczają wysłane zmiany jako "ujęte w paczce" — dzięki temu kolejne
+  // "Wyślij paczkę do akceptacji" nie proponuje ich ponownie, a "Przypomnij o akceptacjach" wie,
+  // że już były wysłane.
+  if (input.scope === "new_batch" || input.scope === "reminder") {
+    const supabase = getSupabaseAdmin();
+    const { error } = await supabase
+      .from("project_change_requests")
+      .update({ sent_at: new Date().toISOString() })
+      .in(
+        "id",
+        target.changeRequests.map((entry) => entry.id),
+      );
+
+    if (error) {
+      throw new Error(error.message);
+    }
   }
 
   return {

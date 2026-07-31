@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Send } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Bell, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OfferEmailPreviewDialog } from "@/components/service/offer-email-preview-dialog";
 import { isChangeRequestPendingAttention, type ProjectChangeRequest } from "@/lib/dashboard/change-request-types";
 
 type EmailPreview = { subject: string; html: string; to: string };
+type BatchScope = "reminder" | "new_batch";
 
 async function postJson<T>(url: string, body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -36,30 +37,30 @@ export function ChangeRequestBatchDeliveryActions({
   const pending = changeRequests.filter(
     (entry) => entry.status === "pending_client" && isChangeRequestPendingAttention(entry),
   );
+  const neverSent = pending.filter((entry) => !entry.sentAt);
+  const alreadySent = pending.filter((entry) => entry.sentAt);
 
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [scope, setScope] = useState<BatchScope | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [preview, setPreview] = useState<EmailPreview | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [note, setNote] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  async function handleOpenPreview() {
-    if (noteDebounceRef.current) {
-      clearTimeout(noteDebounceRef.current);
-    }
-    setError(null);
-    setFeedback(null);
+  async function loadPreview(nextScope: BatchScope, ids: Set<string>, currentNote: string) {
     setPreviewError(null);
     setPreview(null);
-    setNote("");
-    setPreviewOpen(true);
     try {
       const data = await postJson<EmailPreview>(
         `/api/projects/${encodeURIComponent(projectId)}/change-requests/preview-email`,
-        { scope: "client_all_pending" },
+        {
+          scope: nextScope,
+          changeRequestIds: nextScope === "new_batch" ? [...ids] : undefined,
+          note: currentNote,
+        },
       );
       setPreview(data);
     } catch (loadError) {
@@ -69,28 +70,68 @@ export function ChangeRequestBatchDeliveryActions({
     }
   }
 
+  function handleOpenReminderPreview() {
+    if (noteDebounceRef.current) {
+      clearTimeout(noteDebounceRef.current);
+    }
+    setFeedback(null);
+    setNote("");
+    setScope("reminder");
+    setPreviewOpen(true);
+    void loadPreview("reminder", new Set(), "");
+  }
+
+  function handleOpenNewBatchPreview() {
+    if (noteDebounceRef.current) {
+      clearTimeout(noteDebounceRef.current);
+    }
+    const allIds = new Set(neverSent.map((entry) => entry.id));
+    setFeedback(null);
+    setNote("");
+    setSelectedIds(allIds);
+    setScope("new_batch");
+    setPreviewOpen(true);
+    void loadPreview("new_batch", allIds, "");
+  }
+
+  function handleToggleSelected(id: string) {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedIds(next);
+    void loadPreview("new_batch", next, note);
+  }
+
   function handleNoteChange(nextNote: string) {
     setNote(nextNote);
+    if (!scope) {
+      return;
+    }
     if (noteDebounceRef.current) {
       clearTimeout(noteDebounceRef.current);
     }
     noteDebounceRef.current = setTimeout(() => {
-      void postJson<EmailPreview>(
-        `/api/projects/${encodeURIComponent(projectId)}/change-requests/preview-email`,
-        { scope: "client_all_pending", note: nextNote },
-      )
-        .then((data) => setPreview(data))
-        .catch(() => undefined);
+      void loadPreview(scope, selectedIds, nextNote);
     }, 600);
   }
 
   async function handleConfirmSend() {
+    if (!scope) {
+      return;
+    }
     setSending(true);
     setPreviewError(null);
     try {
       const data = await postJson<{ subject?: string }>(
         `/api/projects/${encodeURIComponent(projectId)}/change-requests/send-email`,
-        { scope: "client_all_pending", note },
+        {
+          scope,
+          changeRequestIds: scope === "new_batch" ? [...selectedIds] : undefined,
+          note,
+        },
       );
       setFeedback(data.subject ? `Wysłano: ${data.subject}` : "E-mail wysłany.");
       setPreviewOpen(false);
@@ -102,6 +143,32 @@ export function ChangeRequestBatchDeliveryActions({
     }
   }
 
+  const selectionSlot = useMemo(() => {
+    if (scope !== "new_batch") {
+      return null;
+    }
+    return (
+      <div className="grid gap-1.5 rounded-xl border border-border/70 bg-surface-muted/25 p-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+          Zmiany do wysłania ({selectedIds.size}/{neverSent.length})
+        </p>
+        {neverSent.map((entry) => (
+          <label key={entry.id} className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={selectedIds.has(entry.id)}
+              disabled={sending}
+              onChange={() => handleToggleSelected(entry.id)}
+            />
+            <span className="min-w-0 flex-1 truncate text-foreground">{entry.title}</span>
+          </label>
+        ))}
+      </div>
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope, neverSent, selectedIds, sending]);
+
   if (!pending.length || !clientEmail?.trim()) {
     return null;
   }
@@ -111,25 +178,38 @@ export function ChangeRequestBatchDeliveryActions({
       <div className="min-w-0">
         <p className="text-sm font-medium text-foreground">Zbiorcza wysyłka zmian</p>
         <p className="mt-1 text-xs text-muted">
-          Wyślij w jednym mailu wszystkie oczekujące zmiany ({pending.length}) — z kosztami i
-          przyciskiem do decyzji dla każdej.
+          Wyślij w jednym mailu zmiany oczekujące na akceptację — z kosztami i przyciskiem do decyzji
+          dla każdej.
         </p>
       </div>
 
       <div className="flex min-w-0 w-full flex-col gap-2 sm:flex-row sm:flex-wrap">
-        <Button
-          type="button"
-          size="sm"
-          className="h-auto w-full min-w-0 whitespace-normal text-left sm:w-auto"
-          onClick={() => void handleOpenPreview()}
-        >
-          <Send className="mr-2 h-3.5 w-3.5 shrink-0" />
-          Wszystkie oczekujące → klient ({pending.length})
-        </Button>
+        {neverSent.length ? (
+          <Button
+            type="button"
+            size="sm"
+            className="h-auto w-full min-w-0 whitespace-normal text-left sm:w-auto"
+            onClick={handleOpenNewBatchPreview}
+          >
+            <Send className="mr-2 h-3.5 w-3.5 shrink-0" />
+            Wyślij paczkę do akceptacji ({neverSent.length})
+          </Button>
+        ) : null}
+        {alreadySent.length ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-auto w-full min-w-0 whitespace-normal text-left sm:w-auto"
+            onClick={handleOpenReminderPreview}
+          >
+            <Bell className="mr-2 h-3.5 w-3.5 shrink-0" />
+            Przypomnij o akceptacjach ({alreadySent.length})
+          </Button>
+        ) : null}
       </div>
 
       {feedback ? <p className="text-xs text-emerald-300">{feedback}</p> : null}
-      {error ? <p className="text-xs text-rose-300">{error}</p> : null}
 
       <OfferEmailPreviewDialog
         open={previewOpen}
@@ -140,6 +220,8 @@ export function ChangeRequestBatchDeliveryActions({
         note={note}
         onNoteChange={handleNoteChange}
         onConfirmSend={() => void handleConfirmSend()}
+        confirmDisabled={scope === "new_batch" && selectedIds.size === 0}
+        selection={selectionSlot}
       />
     </div>
   );

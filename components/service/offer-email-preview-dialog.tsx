@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/input";
 import {
@@ -20,6 +21,9 @@ export function OfferEmailPreviewDialog({
   note,
   onNoteChange,
   onConfirmSend,
+  confirmDisabled = false,
+  confirmLabel = "Wyślij",
+  selection,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -29,6 +33,11 @@ export function OfferEmailPreviewDialog({
   note: string;
   onNoteChange: (note: string) => void;
   onConfirmSend: () => void;
+  /** Dodatkowy warunek blokujący wysyłkę (np. brak zaznaczonych pozycji do paczki). */
+  confirmDisabled?: boolean;
+  confirmLabel?: string;
+  /** Slot nad podglądem — np. checkboxy wyboru pozycji do paczkowej wysyłki. */
+  selection?: ReactNode;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -39,6 +48,8 @@ export function OfferEmailPreviewDialog({
             Sprawdź treść przed wysyłką — dopiero kliknięcie „Wyślij” wysyła maila.
           </DialogDescription>
         </DialogHeader>
+
+        {selection}
 
         <Field label="Twoja notatka (opcjonalnie — dołączy się do maila)">
           <Textarea
@@ -84,9 +95,9 @@ export function OfferEmailPreviewDialog({
           <Button
             type="button"
             onClick={onConfirmSend}
-            disabled={!preview || sending || !preview.to}
+            disabled={!preview || sending || !preview.to || confirmDisabled}
           >
-            {sending ? "Wysyłanie…" : "Wyślij"}
+            {sending ? "Wysyłanie…" : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

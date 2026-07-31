@@ -105,6 +105,7 @@ type ChangeRequestRow = {
   blocks_next_stage: boolean;
   public_token?: string | null;
   public_enabled?: boolean | null;
+  sent_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -244,6 +245,7 @@ function rowToChangeRequest(row: ChangeRequestRow): ProjectChangeRequest {
     blocksNextStage: Boolean(row.blocks_next_stage),
     publicToken: row.public_token ?? null,
     publicEnabled: Boolean(row.public_enabled),
+    sentAt: row.sent_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

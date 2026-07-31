@@ -33,6 +33,9 @@ export type ProjectChangeRequest = {
   publicToken: string | null;
   /** Czy publiczny link jest aktywny (wyłączany po decyzji klienta). */
   publicEnabled: boolean;
+  /** Ostatnia wysyłka pakietowa/przypomnienie (nie: pojedyncze zgłoszenie do klienta) — null,
+   *  dopóki zmiana nie została ujęta w mailu "Wyślij paczkę do akceptacji" / "Przypomnij o akceptacjach". */
+  sentAt: string | null;
   createdAt: string;
   updatedAt: string;
 };

@@ -23,6 +23,7 @@ export async function POST(
     const body = (await request.json().catch(() => ({}))) as {
       scope?: ChangeRequestEmailScope;
       changeRequestId?: string;
+      changeRequestIds?: string[];
       note?: string;
     };
 
@@ -34,6 +35,7 @@ export async function POST(
       projectId,
       scope: body.scope,
       changeRequestId: body.changeRequestId,
+      changeRequestIds: body.changeRequestIds,
       note: body.note,
     });
 
