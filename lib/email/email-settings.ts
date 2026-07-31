@@ -32,6 +32,16 @@ export const EMAIL_TEMPLATE_KINDS = [
   "resource_plan_client_summary",
   "resource_plan_client_offer_notice",
   "resource_plan_admin_summary",
+  "stage_dom_1_uruchomienie",
+  "stage_dom_2_dane_projektowe",
+  "stage_dom_3_projektowanie",
+  "stage_dom_4_instalacja",
+  "stage_dom_5_koordynacja",
+  "stage_dom_6_prefabrykacja",
+  "stage_dom_7_rozdzielnia",
+  "stage_dom_8_montaze",
+  "stage_dom_9_uruchomienie_testy",
+  "stage_dom_10_optymalizacja",
 ] as const;
 
 export type EmailTemplateKind = (typeof EMAIL_TEMPLATE_KINDS)[number];
@@ -86,6 +96,17 @@ export type TemplateVariableDescriptor = {
   html?: boolean;
   channels: TemplateVariableChannel[];
 };
+
+/** Wspólne placeholdery dla 10 maili podsumowujących zamknięcie etapu procesu DOM. */
+const STAGE_DOM_VARIABLES: TemplateVariableDescriptor[] = [
+  { key: "client_name", label: "Imię i nazwisko klienta", channels: ["all"] },
+  { key: "project_name", label: "Nazwa projektu", channels: ["all"] },
+  {
+    key: "pending_items_block",
+    label: "Czekające na decyzję: zmiany projektu, ustalenia, oferty (wklej ręcznie z ROT)",
+    channels: ["all"],
+  },
+];
 
 export const EMAIL_TEMPLATE_VARIABLES: Record<EmailTemplateKind, TemplateVariableDescriptor[]> = {
   agreement_delivery: [
@@ -237,6 +258,16 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<EmailTemplateKind, TemplateVariabl
     { key: "total_hours", label: "Suma godzin", channels: ["all"] },
     { key: "assignee_count", label: "Liczba zaangażowanych osób", channels: ["all"] },
   ],
+  stage_dom_1_uruchomienie: STAGE_DOM_VARIABLES,
+  stage_dom_2_dane_projektowe: STAGE_DOM_VARIABLES,
+  stage_dom_3_projektowanie: STAGE_DOM_VARIABLES,
+  stage_dom_4_instalacja: STAGE_DOM_VARIABLES,
+  stage_dom_5_koordynacja: STAGE_DOM_VARIABLES,
+  stage_dom_6_prefabrykacja: STAGE_DOM_VARIABLES,
+  stage_dom_7_rozdzielnia: STAGE_DOM_VARIABLES,
+  stage_dom_8_montaze: STAGE_DOM_VARIABLES,
+  stage_dom_9_uruchomienie_testy: STAGE_DOM_VARIABLES,
+  stage_dom_10_optymalizacja: STAGE_DOM_VARIABLES,
 };
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -585,6 +616,156 @@ export function defaultEmailTemplates(): Record<EmailTemplateKind, EmailTemplate
       body:
         "Podsumowanie planu {{range_label}}: {{item_count}} elementów, ~{{total_hours}}h, {{assignee_count}} osób zaangażowanych.",
       eyebrow: "Plan zasobów",
+      disclaimer: "",
+      emailEnabled: true,
+      sms: "",
+      smsManagedElsewhere: false,
+      pushTitle: "",
+      pushBody: "",
+    },
+    stage_dom_1_uruchomienie: {
+      label: "Etap 1 — Uruchomienie projektu",
+      description:
+        "Ręczny mail po osiągnięciu kamienia milowego „Projekt uruchomiony”. Wyślij, zanim przejdziecie do zbierania danych projektowych.",
+      subject: "{{project_name}} — zamykamy etap: Uruchomienie projektu",
+      body:
+        "Dzień dobry {{client_name}},\n\nzamykamy etap „Uruchomienie projektu” — kamień milowy: Projekt uruchomiony.\n\nCo zrobiliśmy w tym etapie:\n• założyliśmy Państwa projekt i dostęp do Rentgena,\n• uruchomiliśmy kanał komunikacji i przedstawiliśmy zespół i role,\n• przygotowaliśmy dokumenty startowe i rozliczyliśmy pierwszą transzę.\n\nCo dalej — etap „Zebranie danych projektowych”:\nkompletujemy projekt architektoniczny i branżowy oraz kontakty do ekip wykonawczych, z którymi trzeba skoordynować instalację.\n\nCzeka na Państwa decyzję:\n{{pending_items_block}}",
+      eyebrow: "Etap zamknięty",
+      disclaimer: "",
+      emailEnabled: true,
+      sms: "",
+      smsManagedElsewhere: false,
+      pushTitle: "",
+      pushBody: "",
+    },
+    stage_dom_2_dane_projektowe: {
+      label: "Etap 2 — Zebranie danych projektowych",
+      description:
+        "Ręczny mail po osiągnięciu kamienia milowego „Komplet danych projektowych”. Wyślij przed spotkaniem projektowym.",
+      subject: "{{project_name}} — zamykamy etap: Zebranie danych projektowych",
+      body:
+        "Dzień dobry {{client_name}},\n\nzamykamy etap „Zebranie danych projektowych” — kamień milowy: Komplet danych projektowych.\n\nCo zrobiliśmy w tym etapie:\n• zebraliśmy projekt architektoniczny i branżowy oraz rzuty,\n• skompletowaliśmy kontakty do wykonawców (elektryk, hydraulik, HVAC, pompa ciepła, rolety, stolarka, alarm, kierownik budowy),\n• zweryfikowaliśmy kompletność dokumentacji.\n\nCo dalej — etap „Projektowanie i akceptacja projektu”:\numawiamy spotkanie projektowe i przechodzimy dom pomieszczenie po pomieszczeniu, żeby ustalić działanie systemu.\n\nCzeka na Państwa decyzję:\n{{pending_items_block}}",
+      eyebrow: "Etap zamknięty",
+      disclaimer: "",
+      emailEnabled: true,
+      sms: "",
+      smsManagedElsewhere: false,
+      pushTitle: "",
+      pushBody: "",
+    },
+    stage_dom_3_projektowanie: {
+      label: "Etap 3 — Projektowanie i akceptacja projektu",
+      description:
+        "Ręczny mail po osiągnięciu kamienia milowego „Projekt zaakceptowany do realizacji”. Wyślij przed startem instalacji elektrycznej.",
+      subject: "{{project_name}} — zamykamy etap: Projektowanie i akceptacja projektu",
+      body:
+        "Dzień dobry {{client_name}},\n\nzamykamy etap „Projektowanie i akceptacja projektu” — kamień milowy: Projekt zaakceptowany do realizacji.\n\nCo zrobiliśmy w tym etapie:\n• przeszliśmy dom pomieszczenie po pomieszczeniu i ustaliliśmy działanie systemu (przyciski, sceny, czujki, rolety, HVAC, alarm, sieć, audio, integracje),\n• nanieśliśmy poprawki po spotkaniu i przygotowaliśmy finalną dokumentację,\n• uzyskaliśmy akceptację projektu.\n\nCo dalej — etap „Instalacja elektryczna i okablowanie”:\nwybieramy wykonawcę instalacji, robimy wizję lokalną i ustalamy trasy kablowe przed realizacją.\n\nCzeka na Państwa decyzję:\n{{pending_items_block}}",
+      eyebrow: "Etap zamknięty",
+      disclaimer: "",
+      emailEnabled: true,
+      sms: "",
+      smsManagedElsewhere: false,
+      pushTitle: "",
+      pushBody: "",
+    },
+    stage_dom_4_instalacja: {
+      label: "Etap 4 — Instalacja elektryczna i okablowanie",
+      description:
+        "Ręczny mail po osiągnięciu kamienia milowego „Instalacja odebrana”. Wyślij, gdy zaczyna się przerwa budowlana na tynki.",
+      subject: "{{project_name}} — zamykamy etap: Instalacja elektryczna i okablowanie",
+      body:
+        "Dzień dobry {{client_name}},\n\nzamykamy etap „Instalacja elektryczna i okablowanie” — kamień milowy: Instalacja odebrana.\n\nCo zrobiliśmy w tym etapie:\n• wykonaliśmy instalację zgodnie z projektem, przewody są opisane i pogrupowane,\n• ustaliliśmy miejsce i sposób mocowania rozdzielni oraz szafy Rack,\n• podpisaliśmy protokół odbioru instalacji.\n\nCo dalej — etap „Koordynacja przed montażem”:\nwykorzystujemy przerwę budowlaną na kontrolę instalacji po tynkach, zamknięcie ewentualnych zmian i przygotowanie projektu do produkcji rozdzielni.\n\nCzeka na Państwa decyzję:\n{{pending_items_block}}",
+      eyebrow: "Etap zamknięty",
+      disclaimer: "",
+      emailEnabled: true,
+      sms: "",
+      smsManagedElsewhere: false,
+      pushTitle: "",
+      pushBody: "",
+    },
+    stage_dom_5_koordynacja: {
+      label: "Etap 5 — Koordynacja przed montażem",
+      description:
+        "Ręczny mail po osiągnięciu kamienia milowego „Projekt zamknięty do produkcji”. Wyślij przed startem prefabrykacji.",
+      subject: "{{project_name}} — zamykamy etap: Koordynacja przed montażem",
+      body:
+        "Dzień dobry {{client_name}},\n\nzamykamy etap „Koordynacja przed montażem” — kamień milowy: Projekt zamknięty do produkcji.\n\nCo zrobiliśmy w tym etapie:\n• sprawdziliśmy instalację po tynkach i zamknęliśmy zmiany wynikające z faktycznego okablowania,\n• ustaliliśmy i rozliczyliśmy koszty dodatkowe (Karta Zmian Projektu),\n• przygotowaliśmy projekt wykonawczy do produkcji rozdzielni i ustaliliśmy termin dostawy oraz Internet na czas uruchomienia.\n\nCo dalej — etap „Prefabrykacja rozdzielni”:\nprodukujemy i testujemy rozdzielnię oraz przygotowujemy szczegółową listę prac dla ekipy na budowie.\n\nCzeka na Państwa decyzję:\n{{pending_items_block}}",
+      eyebrow: "Etap zamknięty",
+      disclaimer: "",
+      emailEnabled: true,
+      sms: "",
+      smsManagedElsewhere: false,
+      pushTitle: "",
+      pushBody: "",
+    },
+    stage_dom_6_prefabrykacja: {
+      label: "Etap 6 — Prefabrykacja rozdzielni",
+      description:
+        "Ręczny mail po osiągnięciu kamienia milowego „Rozdzielnia gotowa do montażu”. Wyślij przed transportem rozdzielni na budowę.",
+      subject: "{{project_name}} — zamykamy etap: Prefabrykacja rozdzielni",
+      body:
+        "Dzień dobry {{client_name}},\n\nzamykamy etap „Prefabrykacja rozdzielni” — kamień milowy: Rozdzielnia gotowa do montażu.\n\nCo zrobiliśmy w tym etapie:\n• wyprodukowaliśmy kompletną rozdzielnię i sprawdziliśmy ją programem testowym,\n• nanieśliśmy poprawki do dokumentacji wykryte podczas testów,\n• przygotowaliśmy szczegółową checklistę montażową dla ekipy na budowie.\n\nCo dalej — etap „Dostawa i podłączenie rozdzielni”:\ntransportujemy, montujemy i podłączamy rozdzielnię, a po podpisaniu protokołu przekazania zaczyna biec gwarancja na urządzenia.\n\nCzeka na Państwa decyzję:\n{{pending_items_block}}",
+      eyebrow: "Etap zamknięty",
+      disclaimer: "",
+      emailEnabled: true,
+      sms: "",
+      smsManagedElsewhere: false,
+      pushTitle: "",
+      pushBody: "",
+    },
+    stage_dom_7_rozdzielnia: {
+      label: "Etap 7 — Dostawa i podłączenie rozdzielni",
+      description:
+        "Ręczny mail po osiągnięciu kamienia milowego „Rozdzielnia przekazana inwestorowi”. Wyślij przed startem montaży.",
+      subject: "{{project_name}} — zamykamy etap: Dostawa i podłączenie rozdzielni",
+      body:
+        "Dzień dobry {{client_name}},\n\nzamykamy etap „Dostawa i podłączenie rozdzielni” — kamień milowy: Rozdzielnia przekazana inwestorowi.\n\nCo zrobiliśmy w tym etapie:\n• dostarczyliśmy, ustawiliśmy i podłączyliśmy rozdzielnię, podpisaliśmy protokół przekazania,\n• przekazaliśmy aplikację i przeprowadziliśmy wstępne szkolenie,\n• od podpisania protokołu biegnie gwarancja na urządzenia, rozliczyliśmy drugą transzę (30%).\n\nCo dalej — etap „Montaże urządzeń”:\nmontujemy czujki, przyciski, panele, kamery i pozostały osprzęt, ewentualnie biały montaż.\n\nCzeka na Państwa decyzję:\n{{pending_items_block}}",
+      eyebrow: "Etap zamknięty",
+      disclaimer: "",
+      emailEnabled: true,
+      sms: "",
+      smsManagedElsewhere: false,
+      pushTitle: "",
+      pushBody: "",
+    },
+    stage_dom_8_montaze: {
+      label: "Etap 8 — Montaże urządzeń",
+      description:
+        "Ręczny mail po osiągnięciu kamienia milowego „Gotowość do uruchomienia”. Wyślij przed testami funkcjonalnymi.",
+      subject: "{{project_name}} — zamykamy etap: Montaże urządzeń",
+      body:
+        "Dzień dobry {{client_name}},\n\nzamykamy etap „Montaże urządzeń” — kamień milowy: Gotowość do uruchomienia.\n\nCo zrobiliśmy w tym etapie:\n• zamontowaliśmy wszystkie możliwe elementy systemu, opisaliśmy elementy niemożliwe do montażu wraz z przyczyną,\n• wykonaliśmy pomiary i odbiór wewnętrzny montażu.\n\nCo dalej — etap „Uruchomienie, testy i przekazanie systemu”:\nrobimy pełny odbiór wewnętrzny, testy funkcjonalne wszystkich systemów, przekazanie i szkolenie.\n\nCzeka na Państwa decyzję:\n{{pending_items_block}}",
+      eyebrow: "Etap zamknięty",
+      disclaimer: "",
+      emailEnabled: true,
+      sms: "",
+      smsManagedElsewhere: false,
+      pushTitle: "",
+      pushBody: "",
+    },
+    stage_dom_9_uruchomienie_testy: {
+      label: "Etap 9 — Uruchomienie, testy i przekazanie systemu",
+      description:
+        "Ręczny mail po osiągnięciu kamienia milowego „System przekazany inwestorowi”. Wyślij po przekazaniu i szkoleniu klienta.",
+      subject: "{{project_name}} — zamykamy etap: Uruchomienie i przekazanie systemu",
+      body:
+        "Dzień dobry {{client_name}},\n\nzamykamy etap „Uruchomienie, testy i przekazanie systemu” — kamień milowy: System przekazany inwestorowi.\n\nCo zrobiliśmy w tym etapie:\n• wykonaliśmy pełny odbiór wewnętrzny i testy funkcjonalne wszystkich systemów,\n• zamknęliśmy usterki krytyczne i przeszkoliliśmy Państwa z obsługi,\n• uruchomiliśmy Tablicę Wdrożeniową do zgłaszania uwag w czasie użytkowania.\n\nCo dalej — etap „Optymalizacja po zamieszkaniu”:\npo 1–2 miesiącach realnego użytkowania donastroimy sceny, harmonogramy i automatykę na podstawie Państwa uwag.\n\nCzeka na Państwa decyzję:\n{{pending_items_block}}",
+      eyebrow: "Etap zamknięty",
+      disclaimer: "",
+      emailEnabled: true,
+      sms: "",
+      smsManagedElsewhere: false,
+      pushTitle: "",
+      pushBody: "",
+    },
+    stage_dom_10_optymalizacja: {
+      label: "Etap 10 — Optymalizacja po zamieszkaniu",
+      description:
+        "Ręczny mail po osiągnięciu kamienia milowego „Projekt zakończony i przekazany do serwisu” — formalne zamknięcie wdrożenia.",
+      subject: "{{project_name}} — zamykamy wdrożenie: Optymalizacja po zamieszkaniu",
+      body:
+        "Dzień dobry {{client_name}},\n\nzamykamy etap „Optymalizacja po zamieszkaniu” — kamień milowy: Projekt zakończony i przekazany do serwisu.\n\nCo zrobiliśmy w tym etapie:\n• omówiliśmy uwagi zebrane na Tablicy Wdrożeniowej w okresie użytkowania,\n• wykonaliśmy uzgodnione korekty scen, harmonogramów i automatyki,\n• rozliczyliśmy ostatnią transzę (10%).\n\nCo dalej:\nto formalny koniec wdrożenia — projekt przechodzi pod opiekę działu serwisu na wypadek przyszłych zgłoszeń.\n\nCzeka na Państwa decyzję:\n{{pending_items_block}}",
+      eyebrow: "Wdrożenie zakończone",
       disclaimer: "",
       emailEnabled: true,
       sms: "",
