@@ -1873,6 +1873,8 @@ export type ProfileRow = {
   client_id: string | null;
   /** ID użytkownika w Slacku (np. U0123ABC456) — do wysyłki powiadomień DM. */
   slack_user_id: string | null;
+  /** Wybrane widżety strony głównej. NULL = domyślny zestaw dla roli. */
+  home_widgets: string[] | null;
   created_at: string;
   updated_at: string;
 };
@@ -1898,6 +1900,7 @@ export type ProfileInsert = {
   offer_approval_bypass?: boolean;
   client_id?: string | null;
   slack_user_id?: string | null;
+  home_widgets?: string[] | null;
   created_at?: string;
   updated_at?: string;
 };

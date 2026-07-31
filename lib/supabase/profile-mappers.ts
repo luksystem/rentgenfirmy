@@ -22,6 +22,7 @@ export function mapProfileRow(row: ProfileRow): UserProfile {
     clientId: row.client_id ?? null,
     monthlyReviewEnabled: row.monthly_review_enabled !== false,
     offerApprovalBypass: row.offer_approval_bypass === true,
+    homeWidgets: Array.isArray(row.home_widgets) ? row.home_widgets : null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

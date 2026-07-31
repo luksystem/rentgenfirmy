@@ -49,6 +49,8 @@ export type UserProfile = {
   clientId: string | null;
   /** Krótka notatka „O mnie”. */
   aboutMe: string;
+  /** Wybrane przez usera widżety strony głównej. NULL = domyślny zestaw dla roli. */
+  homeWidgets: string[] | null;
   createdAt: string;
   updatedAt: string;
 };

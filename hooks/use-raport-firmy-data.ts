@@ -9,18 +9,47 @@ type State = {
   error: string | null;
 };
 
-export function useRaportFirmyData() {
-  const [state, setState] = useState<State>({ data: null, isLoading: true, error: null });
+let cachedData: RaportFirmyPayload | null = null;
+let inFlightPromise: Promise<RaportFirmyPayload> | null = null;
 
-  const refetch = useCallback(async () => {
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+async function loadRaportFirmyData(): Promise<RaportFirmyPayload> {
+  if (inFlightPromise) {
+    return inFlightPromise;
+  }
+  inFlightPromise = (async () => {
     try {
       const response = await fetch("/api/raport-firmy", { credentials: "include" });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(payload?.error ?? "Nie udało się wczytać raportu firmowego.");
       }
-      setState({ data: payload as RaportFirmyPayload, isLoading: false, error: null });
+      cachedData = payload as RaportFirmyPayload;
+      return cachedData;
+    } finally {
+      inFlightPromise = null;
+    }
+  })();
+  return inFlightPromise;
+}
+
+/** Kilka widżetów strony głównej może montować się naraz — dane są cache'owane i współdzielone,
+ * żeby jeden wybór kilku kafelków nie odpalał kilku identycznych zapytań do /api/raport-firmy. */
+export function useRaportFirmyData() {
+  const [state, setState] = useState<State>({
+    data: cachedData,
+    isLoading: !cachedData,
+    error: null,
+  });
+
+  const load = useCallback(async (force: boolean) => {
+    if (!force && cachedData) {
+      setState({ data: cachedData, isLoading: false, error: null });
+      return;
+    }
+    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+    try {
+      const data = await loadRaportFirmyData();
+      setState({ data, isLoading: false, error: null });
     } catch (error) {
       setState({
         data: null,
@@ -31,8 +60,8 @@ export function useRaportFirmyData() {
   }, []);
 
   useEffect(() => {
-    void refetch();
-  }, [refetch]);
+    void load(false);
+  }, [load]);
 
-  return { ...state, refetch };
+  return { ...state, refetch: () => load(true) };
 }
