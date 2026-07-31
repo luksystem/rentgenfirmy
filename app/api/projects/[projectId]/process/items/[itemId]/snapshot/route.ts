@@ -60,8 +60,39 @@ export async function POST(
     if (!instance) {
       return NextResponse.json({ error: "Nie znaleziono elementu procesu." }, { status: 404 });
     }
-    if (instance.kind !== "snapshot") {
+
+    // `project_process_items.kind` to zamrożona kopia z chwili utworzenia instancji — jeśli ktoś
+    // później zmienił typ elementu w katalogu (np. z checklisty na snapshot), ta kolumna zostaje
+    // nieaktualna. Rozstrzygamy więc po aktualnym typie z szablonu/katalogu, a nie po tej kopii.
+    const { data: templateItem, error: templateItemError } = await supabase
+      .from("process_items")
+      .select("kind, element_id")
+      .eq("id", instance.template_item_id)
+      .maybeSingle();
+    if (templateItemError) {
+      throw new Error(templateItemError.message);
+    }
+    let liveKind: string | null = templateItem?.kind ?? null;
+    if (templateItem?.element_id) {
+      const { data: element, error: elementError } = await supabase
+        .from("process_elements")
+        .select("kind")
+        .eq("id", templateItem.element_id)
+        .maybeSingle();
+      if (elementError) {
+        throw new Error(elementError.message);
+      }
+      if (element?.kind) {
+        liveKind = element.kind;
+      }
+    }
+
+    if (liveKind !== "snapshot") {
       return NextResponse.json({ error: "Ten element nie obsługuje zdjęć do klienta." }, { status: 400 });
+    }
+
+    if (instance.kind !== "snapshot") {
+      await supabase.from("project_process_items").update({ kind: "snapshot" }).eq("id", itemId);
     }
 
     const snapshot = await uploadProcessSnapshotAdmin({
