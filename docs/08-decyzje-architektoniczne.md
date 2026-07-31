@@ -2167,7 +2167,7 @@ krok fazy 11b albo 13, cokolwiek ruszy pierwsze.
 | D29 | Krok B — Zaplanuj, ostrzeżenia dobowe, sprawdzenie dwustronne | zatwierdzone, zrealizowane w zakresie (B8.3 odłożone) |
 | D30 | ROT — `accepted` jako stan końcowy | zatwierdzone, zrealizowane (migracja 251) |
 | D31 | faza 8 (Czas pracy) | inwentaryzacja zrealizowana; właściciel wybrał inny zakres niż 4 kandydaci — patrz D32 |
-| D32 | faza 8 (Czas pracy) | zatwierdzone, zrealizowane (migracja 252: `role_code`/`work_type`/`work_cause`, `database.types.ts` dla modułu); dwa systemy godzin zbadane i opisane, naprawa czeka na decyzję |
+| D32 | faza 8 (Czas pracy) | zatwierdzone, zrealizowane (migracja 252: `role_code`/`work_type`/`work_cause`, `database.types.ts` dla modułu); **domknięte** — dwa systemy godzin: `project_hourly_reports` usunięte (migracja 277, martwy kod, zero komponentów UI), `time_entries` zostaje jako jedyny |
 | D33 | ROT (data kontroli + mechanizm przeglądu) | zatwierdzone, zrealizowane (migracje 253-254) |
 | D34 | ROT (nawigacja do konkretnego elementu) | zatwierdzone, zrealizowane (`RotItemDetailPanel`); kanban świadomie bez pełnego osadzenia |
 | D35 | ROT (`client_offer_status` zamrożony na accepted) | zatwierdzone, zrealizowane (migracja 255) |

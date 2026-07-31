@@ -1510,38 +1510,6 @@ export type ProjectContractQuotaInsert = {
 
 export type ProjectContractQuotaUpdate = Partial<ProjectContractQuotaInsert>;
 
-export type ProjectHourlyReportRow = {
-  id: string;
-  project_id: string;
-  work_date: string;
-  hours: number | string;
-  role_label: string;
-  amount_net: number | string | null;
-  vat_rate: number | string | null;
-  amount_gross: number | string | null;
-  notes: string;
-  created_by_name: string;
-  created_at: string;
-  updated_at: string;
-};
-
-export type ProjectHourlyReportInsert = {
-  id?: string;
-  project_id: string;
-  work_date: string;
-  hours?: number;
-  role_label?: string;
-  amount_net?: number | null;
-  vat_rate?: number | null;
-  amount_gross?: number | null;
-  notes?: string;
-  created_by_name?: string;
-  created_at?: string;
-  updated_at?: string;
-};
-
-export type ProjectHourlyReportUpdate = Partial<ProjectHourlyReportInsert>;
-
 export type ProjectSettlementEntryRow = {
   id: string;
   project_id: string;
@@ -3714,12 +3682,6 @@ export type Database = {
         Row: ProjectContractQuotaRow;
         Insert: ProjectContractQuotaInsert;
         Update: ProjectContractQuotaUpdate;
-        Relationships: [];
-      };
-      project_hourly_reports: {
-        Row: ProjectHourlyReportRow;
-        Insert: ProjectHourlyReportInsert;
-        Update: ProjectHourlyReportUpdate;
         Relationships: [];
       };
       project_settlement_entries: {

@@ -490,7 +490,6 @@ export async function fetchProjectSettlementsBundle(
   return {
     settings: settings ?? emptyBillingSettings(projectId),
     quotas,
-    hourlyReports: [],
     entries,
     hourBudget: null,
   };

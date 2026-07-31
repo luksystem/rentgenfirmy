@@ -98,31 +98,6 @@ export type ProjectContractQuotaInput = {
   position?: number;
 };
 
-export type ProjectHourlyReport = {
-  id: string;
-  projectId: string;
-  workDate: string;
-  hours: number;
-  roleLabel: string;
-  amountNet: number | null;
-  vatRate: number | null;
-  amountGross: number | null;
-  notes: string;
-  createdByName: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type ProjectHourlyReportInput = {
-  workDate: string;
-  hours: number;
-  roleLabel?: string;
-  amountNet?: number | null;
-  vatRate?: number | null;
-  amountGross?: number | null;
-  notes?: string;
-};
-
 export type ProjectSettlementEntry = {
   id: string;
   projectId: string;
@@ -167,7 +142,6 @@ export type ProjectSettlementEntryInput = {
 export type ProjectSettlementsBundle = {
   settings: ProjectBillingSettings | null;
   quotas: ProjectContractQuota[];
-  hourlyReports: ProjectHourlyReport[];
   entries: ProjectSettlementEntry[];
   /** Zużycie godzin z time_entries — gdy model godzinowy włączony */
   hourBudget?: ProjectHourBudgetSummary | null;

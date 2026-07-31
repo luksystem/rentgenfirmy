@@ -6,7 +6,6 @@ import {
   normalizeAgreementVatRate,
   type ProjectBillingSettings,
   type ProjectContractQuota,
-  type ProjectHourlyReport,
   type ProjectSettlementEntry,
   type ProjectSettlementsBundle,
 } from "@/lib/settlements/types";
@@ -40,7 +39,7 @@ export async function fetchProjectSettlementsBundleServer(
 ): Promise<ProjectSettlementsBundle> {
   const supabase = getSupabaseAdmin();
 
-  const [settingsRes, quotasRes, hoursRes, entriesRes] = await Promise.all([
+  const [settingsRes, quotasRes, entriesRes] = await Promise.all([
     supabase.from("project_billing_settings").select("*").eq("project_id", projectId).maybeSingle(),
     supabase
       .from("project_contract_quotas")
@@ -48,23 +47,17 @@ export async function fetchProjectSettlementsBundleServer(
       .eq("project_id", projectId)
       .order("position", { ascending: true }),
     supabase
-      .from("project_hourly_reports")
-      .select("*")
-      .eq("project_id", projectId)
-      .order("work_date", { ascending: false }),
-    supabase
       .from("project_settlement_entries")
       .select("*")
       .eq("project_id", projectId)
       .order("entry_date", { ascending: false, nullsFirst: false }),
   ]);
 
-  for (const result of [settingsRes, quotasRes, hoursRes, entriesRes]) {
+  for (const result of [settingsRes, quotasRes, entriesRes]) {
     if (result.error && isMissingTableError(result.error.message)) {
       return {
         settings: emptyBillingSettings(projectId),
         quotas: [],
-        hourlyReports: [],
         entries: [],
         hourBudget: null,
       };
@@ -128,34 +121,6 @@ export async function fetchProjectSettlementsBundleServer(
     position: row.position,
     notes: row.notes ?? "",
     timeCategoryId: row.time_category_id ?? null,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }));
-
-  const hourlyReports: ProjectHourlyReport[] = ((hoursRes.data ?? []) as Array<{
-    id: string;
-    project_id: string;
-    work_date: string;
-    hours: number | string;
-    role_label: string;
-    amount_net: number | string | null;
-    vat_rate: number | string | null;
-    amount_gross: number | string | null;
-    notes: string;
-    created_by_name: string;
-    created_at: string;
-    updated_at: string;
-  }>).map((row) => ({
-    id: row.id,
-    projectId: row.project_id,
-    workDate: row.work_date,
-    hours: Number(row.hours) || 0,
-    roleLabel: row.role_label ?? "",
-    amountNet: num(row.amount_net),
-    vatRate: num(row.vat_rate),
-    amountGross: num(row.amount_gross),
-    notes: row.notes ?? "",
-    createdByName: row.created_by_name,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }));
@@ -246,5 +211,5 @@ export async function fetchProjectSettlementsBundleServer(
     });
   }
 
-  return { settings, quotas, hourlyReports, entries, hourBudget };
+  return { settings, quotas, entries, hourBudget };
 }

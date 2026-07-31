@@ -7,7 +7,6 @@ const PROJECT_FILTERED_TABLES = [
   "project_settlement_entries",
   "project_billing_settings",
   "project_contract_quotas",
-  "project_hourly_reports",
 ] as const;
 
 /** Odświeża rozliczenia (kwoty, salda) po zmianach w ledgerze — zespół i publiczny dashboard klienta. */

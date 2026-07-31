@@ -6,15 +6,12 @@ import {
   type ProjectBillingSettingsInput,
   type ProjectContractQuota,
   type ProjectContractQuotaInput,
-  type ProjectHourlyReport,
-  type ProjectHourlyReportInput,
 } from "@/lib/settlements/types";
 import { getSupabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
 
 type SettingsRow = Database["public"]["Tables"]["project_billing_settings"]["Row"];
 type QuotaRow = Database["public"]["Tables"]["project_contract_quotas"]["Row"];
-type HourlyRow = Database["public"]["Tables"]["project_hourly_reports"]["Row"];
 
 function num(value: number | string | null | undefined): number | null {
   if (value == null) return null;
@@ -49,23 +46,6 @@ export function rowToContractQuota(row: QuotaRow): ProjectContractQuota {
     position: row.position,
     notes: row.notes ?? "",
     timeCategoryId: row.time_category_id ?? null,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
-
-export function rowToHourlyReport(row: HourlyRow): ProjectHourlyReport {
-  return {
-    id: row.id,
-    projectId: row.project_id,
-    workDate: row.work_date,
-    hours: Number(row.hours) || 0,
-    roleLabel: row.role_label ?? "",
-    amountNet: num(row.amount_net),
-    vatRate: num(row.vat_rate),
-    amountGross: num(row.amount_gross),
-    notes: row.notes ?? "",
-    createdByName: row.created_by_name,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -233,91 +213,6 @@ export async function updateProjectContractQuota(
 export async function deleteProjectContractQuota(quotaId: string): Promise<void> {
   const supabase = getSupabase();
   const { error } = await supabase.from("project_contract_quotas").delete().eq("id", quotaId);
-  if (error) {
-    throw new Error(error.message);
-  }
-}
-
-export async function fetchProjectHourlyReports(projectId: string): Promise<ProjectHourlyReport[]> {
-  const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from("project_hourly_reports")
-    .select("*")
-    .eq("project_id", projectId)
-    .order("work_date", { ascending: false })
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (data ?? []).map((row) => rowToHourlyReport(row as HourlyRow));
-}
-
-export async function createProjectHourlyReport(
-  projectId: string,
-  input: ProjectHourlyReportInput,
-  createdByName: string,
-): Promise<ProjectHourlyReport> {
-  const supabase = getSupabase();
-  const now = new Date().toISOString();
-  const { data, error } = await supabase
-    .from("project_hourly_reports")
-    .insert({
-      id: crypto.randomUUID(),
-      project_id: projectId,
-      work_date: input.workDate,
-      hours: input.hours,
-      role_label: input.roleLabel?.trim() ?? "",
-      amount_net: input.amountNet ?? null,
-      vat_rate: input.vatRate ?? null,
-      amount_gross: input.amountGross ?? null,
-      notes: input.notes?.trim() ?? "",
-      created_by_name: createdByName.trim() || "Zespół",
-      created_at: now,
-      updated_at: now,
-    })
-    .select("*")
-    .single();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return rowToHourlyReport(data as HourlyRow);
-}
-
-export async function updateProjectHourlyReport(
-  reportId: string,
-  input: ProjectHourlyReportInput,
-): Promise<ProjectHourlyReport> {
-  const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from("project_hourly_reports")
-    .update({
-      work_date: input.workDate,
-      hours: input.hours,
-      role_label: input.roleLabel?.trim() ?? "",
-      amount_net: input.amountNet ?? null,
-      vat_rate: input.vatRate ?? null,
-      amount_gross: input.amountGross ?? null,
-      notes: input.notes?.trim() ?? "",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", reportId)
-    .select("*")
-    .single();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return rowToHourlyReport(data as HourlyRow);
-}
-
-export async function deleteProjectHourlyReport(reportId: string): Promise<void> {
-  const supabase = getSupabase();
-  const { error } = await supabase.from("project_hourly_reports").delete().eq("id", reportId);
   if (error) {
     throw new Error(error.message);
   }

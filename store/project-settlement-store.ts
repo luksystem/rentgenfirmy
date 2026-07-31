@@ -9,8 +9,6 @@ import {
   type ProjectBillingSettingsInput,
   type ProjectContractQuota,
   type ProjectContractQuotaInput,
-  type ProjectHourlyReport,
-  type ProjectHourlyReportInput,
   type ProjectSettlementEntry,
   type ProjectSettlementEntryInput,
   type ProjectSettlementSummary,
@@ -18,16 +16,12 @@ import {
 } from "@/lib/settlements/types";
 import {
   createProjectContractQuota,
-  createProjectHourlyReport,
   deleteProjectContractQuota,
-  deleteProjectHourlyReport,
   updateProjectContractQuota,
-  updateProjectHourlyReport,
   upsertProjectBillingSettings,
 } from "@/lib/supabase/project-billing-repository";
 import {
   createProjectSettlementEntry,
-  deleteAutoChargeBySource,
   deleteProjectSettlementEntry,
   fetchProjectSettlementsBundle,
   syncProjectSettlementCharges,
@@ -57,17 +51,6 @@ type ProjectSettlementStore = {
     input: ProjectContractQuotaInput,
   ) => Promise<void>;
   removeQuota: (projectId: string, quotaId: string) => Promise<void>;
-  addHourlyReport: (
-    projectId: string,
-    input: ProjectHourlyReportInput,
-    createdByName: string,
-  ) => Promise<ProjectHourlyReport>;
-  updateHourlyReport: (
-    projectId: string,
-    reportId: string,
-    input: ProjectHourlyReportInput,
-  ) => Promise<void>;
-  removeHourlyReport: (projectId: string, reportId: string) => Promise<void>;
   addEntry: (
     projectId: string,
     input: ProjectSettlementEntryInput,
@@ -104,7 +87,6 @@ function patchBundle(
   const current = get().byProject[projectId] ?? {
     settings: emptyBillingSettings(projectId),
     quotas: [],
-    hourlyReports: [],
     entries: [],
   };
   setBundle(projectId, { ...current, ...patch }, set, get);
@@ -220,41 +202,6 @@ export const useProjectSettlementStore = create<ProjectSettlementStore>((set, ge
       get,
       set,
     );
-  },
-
-  addHourlyReport: async (projectId, input, createdByName) => {
-    const money = buildMoneyPayload(input.amountNet, input.vatRate);
-    const created = await createProjectHourlyReport(
-      projectId,
-      {
-        ...input,
-        amountNet: money?.amountNet ?? input.amountNet ?? null,
-        vatRate: money?.vatRate ?? input.vatRate ?? null,
-        amountGross: money?.amountGross ?? input.amountGross ?? null,
-      },
-      createdByName,
-    );
-    await syncProjectSettlementCharges(projectId);
-    await get().ensureSettlements(projectId, { force: true, showLoading: false, sync: false });
-    return created;
-  },
-
-  updateHourlyReport: async (projectId, reportId, input) => {
-    const money = buildMoneyPayload(input.amountNet, input.vatRate);
-    await updateProjectHourlyReport(reportId, {
-      ...input,
-      amountNet: money?.amountNet ?? input.amountNet ?? null,
-      vatRate: money?.vatRate ?? input.vatRate ?? null,
-      amountGross: money?.amountGross ?? input.amountGross ?? null,
-    });
-    await syncProjectSettlementCharges(projectId);
-    await get().ensureSettlements(projectId, { force: true, showLoading: false, sync: false });
-  },
-
-  removeHourlyReport: async (projectId, reportId) => {
-    await deleteProjectHourlyReport(reportId);
-    await deleteAutoChargeBySource(projectId, "hourly", reportId).catch(() => undefined);
-    await get().ensureSettlements(projectId, { force: true, showLoading: false, sync: false });
   },
 
   addEntry: async (projectId, input, createdByName) => {
