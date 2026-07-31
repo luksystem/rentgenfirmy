@@ -80,7 +80,7 @@ async function resolveSnapshotItemContext(projectId: string, templateItemId: str
   };
 }
 
-async function resolveStageResponsibleUserId(projectId: string, stageId: string | null) {
+export async function resolveStageResponsibleUserId(projectId: string, stageId: string | null) {
   if (!stageId) {
     return null;
   }

@@ -43,13 +43,17 @@ export function EmployeeReportDialog({
   open,
   onOpenChange,
   projectId: fixedProjectId,
+  initialDescription,
   onCreated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Podane, gdy wchodzimy z kontekstu projektu — krok 2 jest wtedy potwierdzeniem, nie wyborem. */
   projectId?: string;
-  onCreated?: (result: { target: "agreement" | "change_request" }) => void;
+  /** Wstępna treść kroku 1 — np. z modułu Rozdzielnie, gdzie opis pozycji już jest znany.
+   *  Użytkownik nadal może ją edytować, więc nic nie ląduje w Ustaleniach bez jego udziału. */
+  initialDescription?: string;
+  onCreated?: (result: { target: "agreement" | "change_request"; recordId: string }) => void;
 }) {
   const profile = useAuthStore((state) => state.profile);
   const displayName = useAuthStore((state) => state.displayName);
@@ -75,7 +79,7 @@ export function EmployeeReportDialog({
   useEffect(() => {
     if (!open) return;
     setStep(0);
-    setDescription("");
+    setDescription(initialDescription ?? "");
     setPhotos([]);
     setProjectId(fixedProjectId ?? "");
     setProjectQuery("");
@@ -84,7 +88,7 @@ export function EmployeeReportDialog({
     setBillingImpact(null);
     setIsUrgent(null);
     setError(null);
-  }, [open, fixedProjectId]);
+  }, [open, fixedProjectId, initialDescription]);
 
   useEffect(() => {
     const urls = photos.map((file) => URL.createObjectURL(file));
@@ -172,10 +176,10 @@ export function EmployeeReportDialog({
           `Zgłoszenie zapisane, ale wgrało się ${result.photosUploaded} z ${photos.length} zdjęć: ` +
             `${result.photoError}. Resztę możesz dodać później w ustaleniu albo zmianie.`,
         );
-        onCreated?.({ target: result.target });
+        onCreated?.({ target: result.target, recordId: result.recordId });
         return;
       }
-      onCreated?.({ target: result.target });
+      onCreated?.({ target: result.target, recordId: result.recordId });
       onOpenChange(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Nie udało się zapisać zgłoszenia.");

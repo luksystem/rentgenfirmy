@@ -26,11 +26,13 @@ import {
   Target,
   Users,
   Wallet,
+  Zap,
 } from "lucide-react";
 import { GoalCollectiveView } from "@/components/goals/goal-collective-view";
 import { ClientInspectionsPanel } from "@/components/dashboard/client-inspections-panel";
 import { ProjectAgreementsPanel } from "@/components/dashboard/project-agreements-panel";
 import { ProjectChangeRequestsPanel } from "@/components/dashboard/project-change-requests-panel";
+import { ProjectSwitchboardsPanel } from "@/components/dashboard/project-switchboards-panel";
 import { ProjectSatisfactionPanel } from "@/components/dashboard/project-satisfaction-panel";
 import { ProjectSatisfactionSummaryCard } from "@/components/dashboard/project-satisfaction-summary-card";
 import { ProjectSystemCredentialsPanel } from "@/components/dashboard/project-system-credentials-panel";
@@ -131,6 +133,7 @@ export type ClientDashboardTab =
   | "goals"
   | "agreements"
   | "changes"
+  | "switchboards"
   | "offers"
   | "settlements"
   | "inspections"
@@ -183,6 +186,7 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "goals", label: "Cele", icon: Target },
   { id: "agreements", label: "Ustalenia", icon: ClipboardCheck },
   { id: "changes", label: "Zmiany projektu", icon: FileEdit },
+  { id: "switchboards", label: "Rozdzielnie", icon: Zap },
   { id: "offers", label: "Oferty", icon: Receipt },
   { id: "inspections", label: "Przeglądy", icon: ClipboardCheck },
   { id: "specification", label: "Specyfikacja", icon: FileText },
@@ -1328,6 +1332,23 @@ export function ClientDashboardView({
     );
   }
 
+  function renderSwitchboardsPanel() {
+    return (
+      <div className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border border-border/80 bg-surface p-4">
+        <h2 className="page-section-title mb-3 text-base font-semibold">Rozdzielnie</h2>
+        <p className="mb-4 text-sm text-muted">
+          Wgraj arkusz „RW - Zugi” z dokumentacji projektu i oznaczaj status podłączenia każdej
+          pozycji zamiast robić to ręcznie w Excelu na budowie.
+        </p>
+        <ProjectSwitchboardsPanel
+          projectId={selectedProject.id}
+          authorName={teamAuthorName}
+          authorId={profile?.id ?? null}
+        />
+      </div>
+    );
+  }
+
   function renderSpecificationPanel() {
     return (
       <div className="rounded-2xl border border-border/80 bg-surface p-4">
@@ -1683,6 +1704,8 @@ export function ClientDashboardView({
         return enableAgreements ? renderAgreementsPanel() : null;
       case "changes":
         return enableChangeRequests ? renderChangeRequestsPanel() : null;
+      case "switchboards":
+        return !readOnly ? renderSwitchboardsPanel() : null;
       case "offers":
         return enableOffers ? renderOffersPanel() : null;
       case "settlements":
