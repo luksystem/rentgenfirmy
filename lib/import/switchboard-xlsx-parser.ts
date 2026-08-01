@@ -20,7 +20,9 @@ const SECTION_MARKER = "rozdzielnica";
 const FOOTER_MARKER = "notatki";
 
 // Kolumny 0-indeksowane (A=0 … Q=16), zgodnie z układem arkusza potwierdzonym na realnym pliku.
-const COL = {
+// Eksportowane — `lib/export/documentation-xlsx-export.ts` odtwarza ten sam układ przy eksporcie
+// z powrotem do Excela, żeby wyeksportowany plik dało się ponownie zaimportować.
+export const SWITCHBOARD_COL = {
   breakerType: 0, // A
   breakerNo: 1, // B
   slotNo: 2, // C
@@ -39,6 +41,8 @@ const COL = {
   status: 15, // P
   note: 16, // Q
 } as const;
+
+const COL = SWITCHBOARD_COL;
 
 // Kolumny liczone przy ocenie "czy to nagłówek sekcji czy pozycja" — A..O (bez P/Q: status i
 // notatka same w sobie nie świadczą o tym, że wiersz jest realną pozycją, a puste P jest wręcz

@@ -96,6 +96,7 @@ function useDocumentationMedia(projectId: string, publicToken?: string) {
 
 export function ProjectDocumentationPanel({
   projectId,
+  projectName,
   clientId,
   readOnly,
   publicToken,
@@ -109,6 +110,8 @@ export function ProjectDocumentationPanel({
   authorId,
 }: {
   projectId: string;
+  /** Tylko do sekcji "Dokumentacja techniczna" (zespół) — nazwa pliku przy eksporcie do Excela. */
+  projectName?: string;
   clientId: string;
   readOnly: boolean;
   publicToken?: string;
@@ -259,6 +262,7 @@ export function ProjectDocumentationPanel({
           {!readOnly ? (
             <ProjectTechnicalDocumentationUpload
               projectId={projectId}
+              projectName={projectName ?? "Projekt"}
               authorName={authorName ?? "Zespół"}
               authorId={authorId ?? null}
             />

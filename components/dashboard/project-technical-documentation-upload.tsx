@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as XLSX from "xlsx";
-import { Check, FileSpreadsheet, Upload } from "lucide-react";
+import { Check, Download, FileSpreadsheet, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +15,7 @@ import { detectMappedSheets, type MappedSheetDetection } from "@/lib/import/dete
 import { ALL_DOCUMENTATION_MODULE_CONFIGS } from "@/lib/import/documentation-module-configs";
 import { parseDocumentationModuleSheet } from "@/lib/import/documentation-module-parser";
 import { parseSwitchboardWorkbook } from "@/lib/import/switchboard-xlsx-parser";
+import { exportProjectDocumentationWorkbook } from "@/lib/export/documentation-xlsx-export";
 import { importParsedDocumentationModule } from "@/lib/supabase/documentation-module-repository";
 import {
   fetchProjectTechnicalDocument,
@@ -41,10 +42,12 @@ function formatBytes(bytes: number | null) {
 
 export function ProjectTechnicalDocumentationUpload({
   projectId,
+  projectName,
   authorName,
   authorId,
 }: {
   projectId: string;
+  projectName: string;
   authorName: string;
   authorId: string | null;
 }) {
@@ -58,6 +61,8 @@ export function ProjectTechnicalDocumentationUpload({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -128,6 +133,18 @@ export function ProjectTechnicalDocumentationUpload({
     }
   }
 
+  async function handleExport() {
+    setExporting(true);
+    setExportError(null);
+    try {
+      await exportProjectDocumentationWorkbook(projectId, projectName);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : "Nie udało się wyeksportować pliku.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/10 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -159,11 +176,19 @@ export function ProjectTechnicalDocumentationUpload({
             if (selected) void handleFileSelected(selected);
           }}
         />
-        <Button type="button" size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
-          <Upload className="mr-2 h-3.5 w-3.5" />
-          {existing ? "Wgraj nowszą wersję" : "Wgraj plik"}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" size="sm" variant="outline" disabled={exporting} onClick={() => void handleExport()}>
+            <Download className="mr-2 h-3.5 w-3.5" />
+            {exporting ? "Eksportowanie…" : "Eksportuj do Excela"}
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="mr-2 h-3.5 w-3.5" />
+            {existing ? "Wgraj nowszą wersję" : "Wgraj plik"}
+          </Button>
+        </div>
       </div>
+
+      {exportError ? <p className="text-sm text-rose-400">{exportError}</p> : null}
 
       <Dialog
         open={previewOpen}

@@ -270,6 +270,15 @@ export const DOCUMENTATION_SHEET_TYPES = [
 
 export type DocumentationSheetType = (typeof DOCUMENTATION_SHEET_TYPES)[number];
 
+export const DOCUMENTATION_SHEET_TYPE_LABELS: Record<DocumentationSheetType, string> = {
+  rw_zugi: "Rozdzielnie (RW-Zugi)",
+  rolety: "Rolety",
+  przyciski: "Przyciski",
+  alarm: "Alarm",
+  hvac: "HVAC",
+  rack: "RACK",
+};
+
 /** Szablon elementu "Arkusz dokumentacji" — który zmapowany arkusz ten element reprezentuje. */
 export type ArkuszDokumentacjiPayload = {
   sheetType: DocumentationSheetType;

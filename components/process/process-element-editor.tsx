@@ -17,9 +17,13 @@ import {
 } from "@/lib/process/item-payload";
 import type { ProcessElementPlacement } from "@/lib/supabase/process-element-repository";
 import {
+  DOCUMENTATION_SHEET_TYPES,
+  DOCUMENTATION_SHEET_TYPE_LABELS,
+  isArkuszDokumentacjiPayload,
   isSnapshotTemplatePayload,
   PROCESS_ITEM_KINDS,
   PROCESS_ITEM_KIND_LABELS,
+  type ArkuszDokumentacjiPayload,
   type ChecklistItemPayload,
   type ProcessElement,
   type ProcessItemKind,
@@ -102,7 +106,11 @@ export function ProcessElementEditor({
               ? isSnapshotTemplatePayload(current.defaultPayload)
                 ? current.defaultPayload
                 : templatePayloadFromTitle(current.title, kind)
-              : templatePayloadFromTitle(current.title, kind),
+              : kind === "arkusz_dokumentacji"
+                ? isArkuszDokumentacjiPayload(current.defaultPayload)
+                  ? current.defaultPayload
+                  : templatePayloadFromTitle(current.title, kind)
+                : templatePayloadFromTitle(current.title, kind),
     }));
   }
 
@@ -231,6 +239,35 @@ export function ProcessElementEditor({
               rows={3}
               placeholder="np. Miło mi tworzyć dla Państwa rozdzielnię…"
             />
+          </Field>
+        ) : element.kind === "arkusz_dokumentacji" ? (
+          <Field label="Arkusz z pliku dokumentacji technicznej">
+            <Select
+              value={
+                isArkuszDokumentacjiPayload(element.defaultPayload)
+                  ? element.defaultPayload.sheetType
+                  : "rw_zugi"
+              }
+              onChange={(event) =>
+                setElement({
+                  ...element,
+                  defaultPayload: {
+                    sheetType: event.target.value,
+                  } as ArkuszDokumentacjiPayload,
+                })
+              }
+            >
+              {DOCUMENTATION_SHEET_TYPES.map((sheetType) => (
+                <option key={sheetType} value={sheetType}>
+                  {DOCUMENTATION_SHEET_TYPE_LABELS[sheetType]}
+                </option>
+              ))}
+            </Select>
+            <p className="mt-2 text-xs text-muted">
+              Ten element pokaże w projekcie interaktywną listę pozycji z odpowiedniego arkusza
+              (statusy, notatki, historia) — dane pochodzą z pliku wgranego w zakładce
+              Dokumentacja. Nigdy niewidoczne dla klienta.
+            </p>
           </Field>
         ) : element.kind === "note" ? (
           <p className="rounded-xl border border-accent/30 bg-accent/5 p-3 text-sm text-muted">

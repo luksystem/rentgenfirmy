@@ -1411,6 +1411,7 @@ export function ClientDashboardView({
     return (
       <ProjectDocumentationPanel
         projectId={selectedProject.id}
+        projectName={selectedProject.name}
         clientId={client.id}
         readOnly={readOnly}
         publicToken={readOnly ? publicDashboardToken : undefined}
