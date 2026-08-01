@@ -495,10 +495,21 @@ function ModuleHeaderBar({
 }) {
   const progress = buildDocumentationModuleProgress(items);
   const isComplete = Boolean(mod.completedAt);
+  // Legenda zajmuje 2-3 wiersze zawiniętych chipów — na mobile domyślnie zwinięta, żeby lista
+  // pozycji dostała jak najwięcej ekranu pod stałym paskiem postępu. Na desktopie zawsze widoczna.
+  const [legendOpen, setLegendOpen] = useState(false);
 
   return (
     <div className="sticky top-0 z-10 grid gap-2 rounded-xl border border-border/70 bg-surface/95 p-3 backdrop-blur">
-      <div className="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={() => setLegendOpen((value) => !value)}
+        className="flex items-center justify-between text-left text-[11px] text-muted md:hidden"
+      >
+        Legenda statusów
+        <span className="text-accent">{legendOpen ? "Ukryj" : "Pokaż"}</span>
+      </button>
+      <div className={cn("flex-wrap items-center gap-2", legendOpen ? "flex" : "hidden", "md:flex")}>
         {SWITCHBOARD_CIRCUIT_STATUSES.map((status) => (
           <span key={status} className="flex items-center gap-1.5 text-[11px] text-muted">
             <span className={cn("h-2.5 w-2.5 rounded-full", SWITCHBOARD_CIRCUIT_STATUS_DOT_CLASS[status])} />
@@ -778,7 +789,7 @@ export function DocumentationModulePanel({
           />
           {completeError ? <p className="text-sm text-rose-400">{completeError}</p> : null}
 
-          <MobileFiltersPanel activeCount={filter !== "all" ? 1 : 0} onClear={() => setFilter("all")} title="Status" alwaysVisible>
+          <MobileFiltersPanel activeCount={filter !== "all" ? 1 : 0} onClear={() => setFilter("all")} title="Status">
             <div className="flex flex-wrap gap-1.5">
               {FILTER_ORDER.map((key) => (
                 <button

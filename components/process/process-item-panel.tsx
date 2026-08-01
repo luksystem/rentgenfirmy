@@ -195,8 +195,20 @@ export function ProcessItemPanel({
 
   const isChecklistInteractive =
     item.kind === "checklist" && !isInternalAcceptance && interactive && Boolean(onSaveChecklist);
+  // Osoba odpowiedzialna, blokowanie kolejnego etapu i link publiczny — widoczne tylko dla
+  // managera/admina (`canManageAssignment` = `hasFullAppAccess`), we wszystkich typach elementów,
+  // nie tylko w checklistach. Inne role (instalator, office, podwykonawca…) w ogóle ich nie widzą,
+  // nie tylko nie mogą edytować.
   const showResponsible =
-    interactive && resolvedInstance && onAssign && onSign && item.kind !== "kanban" && !isInternalAcceptance;
+    canManageAssignment &&
+    interactive &&
+    resolvedInstance &&
+    onAssign &&
+    onSign &&
+    item.kind !== "kanban" &&
+    !isInternalAcceptance;
+  const showBlockingToggle = canManageAssignment;
+  const showPublicLinkControls = canManageAssignment;
   const responsibleKey = `${resolvedInstance?.id ?? "new"}-${resolvedInstance?.updatedAt ?? ""}`;
 
   return (
@@ -330,7 +342,7 @@ export function ProcessItemPanel({
                 </div>
               ) : null}
 
-              {resolvedInstance ? (
+              {showBlockingToggle && resolvedInstance ? (
                 <label
                   className={cn(
                     "flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm",
@@ -359,12 +371,14 @@ export function ProcessItemPanel({
                 </label>
               ) : null}
 
-              <ProcessPublicLinkControls
-                projectProcessItemId={resolvedInstance!.id}
-                kind={item.kind}
-                isInternalAcceptance={isInternalAcceptance}
-                defaultOpen={false}
-              />
+              {showPublicLinkControls ? (
+                <ProcessPublicLinkControls
+                  projectProcessItemId={resolvedInstance!.id}
+                  kind={item.kind}
+                  isInternalAcceptance={isInternalAcceptance}
+                  defaultOpen={false}
+                />
+              ) : null}
             </>
           ) : null}
 
@@ -381,7 +395,7 @@ export function ProcessItemPanel({
             />
           ) : null}
 
-          {interactive && resolvedInstance && !isInternalAcceptance && !isChecklistInteractive ? (
+          {showBlockingToggle && interactive && resolvedInstance && !isInternalAcceptance && !isChecklistInteractive ? (
             <label
               className={cn(
                 "flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm",
@@ -410,7 +424,7 @@ export function ProcessItemPanel({
             </label>
           ) : null}
 
-          {interactive && resolvedInstance && item.kind !== "kanban" && !isChecklistInteractive ? (
+          {showPublicLinkControls && interactive && resolvedInstance && item.kind !== "kanban" && !isChecklistInteractive ? (
             <ProcessPublicLinkControls
               projectProcessItemId={resolvedInstance.id}
               kind={item.kind}
