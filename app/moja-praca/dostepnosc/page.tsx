@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Download, X } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
@@ -24,6 +24,14 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"];
 
 export default function AvailabilityPage() {
+  return (
+    <Suspense fallback={null}>
+      <AvailabilityPageContent />
+    </Suspense>
+  );
+}
+
+function AvailabilityPageContent() {
   const searchParams = useSearchParams();
   const initialTab: TabKey = searchParams.get("tab") === "zastepstwa" ? "zastepstwa" : "wnioski";
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
