@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { AlertCircle, UserRound } from "lucide-react";
 import { AgreementCollaborationPanel } from "@/components/dashboard/agreement-collaboration-panel";
 import { CollapsibleSection } from "@/components/dashboard/agreement-collapsible-shell";
@@ -20,6 +20,14 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function PublicAgreementPage() {
+  return (
+    <Suspense fallback={null}>
+      <PublicAgreementPageContent />
+    </Suspense>
+  );
+}
+
+function PublicAgreementPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const token = String(params.token ?? "");
