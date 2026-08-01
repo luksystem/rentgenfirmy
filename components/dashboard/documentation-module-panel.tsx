@@ -30,26 +30,34 @@ import {
   SWITCHBOARD_CIRCUIT_STATUS_BADGE_CLASS,
   SWITCHBOARD_CIRCUIT_STATUS_DOT_CLASS,
   SWITCHBOARD_CIRCUIT_STATUS_LABELS,
-  buildSwitchboardCircuitReportDescription,
-  buildSwitchboardProgress,
-  groupSwitchboardCircuitsBySection,
-  switchboardCircuitLabel,
   switchboardCircuitNeedsReport,
-  switchboardGroupDoneSummary,
-  type Switchboard,
-  type SwitchboardCircuit,
-  type SwitchboardCircuitHistoryEntry,
   type SwitchboardCircuitStatus,
 } from "@/lib/dashboard/switchboard-types";
 import {
-  createManualSwitchboardCircuit,
-  fetchSwitchboardCircuitHistory,
-  fetchSwitchboardsWithCircuits,
-  linkSwitchboardCircuitEmployeeReport,
-  setSwitchboardCompletion,
-  updateSwitchboardCircuitStatus,
-  type SwitchboardWithCircuits,
-} from "@/lib/supabase/switchboard-repository";
+  DOCUMENTATION_MODULE_LABELS,
+  buildDocumentationModuleProgress,
+  buildDocumentationModuleReportDescription,
+  documentationModuleItemLabel,
+  groupDocumentationModuleItemsBySection,
+  type DocumentationModule,
+  type DocumentationModuleItem,
+  type DocumentationModuleItemHistoryEntry,
+  type DocumentationModuleType,
+} from "@/lib/dashboard/documentation-module-types";
+import {
+  PRZYCISKI_KOLOR_OPTIONS,
+  PRZYCISKI_TYP_OPTIONS,
+} from "@/lib/import/documentation-module-configs";
+import {
+  createManualDocumentationModuleItem,
+  fetchDocumentationModuleItemHistory,
+  fetchDocumentationModulesWithItems,
+  linkDocumentationModuleItemEmployeeReport,
+  setDocumentationModuleCompletion,
+  updateDocumentationModuleItemRawField,
+  updateDocumentationModuleItemStatus,
+  type DocumentationModuleWithItems,
+} from "@/lib/supabase/documentation-module-repository";
 import { cn } from "@/lib/utils";
 
 type FilterKey = "all" | "notatki" | SwitchboardCircuitStatus;
@@ -78,96 +86,101 @@ function formatDateTime(value: string) {
   });
 }
 
-function CircuitCard({ circuit, onClick }: { circuit: SwitchboardCircuit; onClick: () => void }) {
+function ItemCard({ item, onClick }: { item: DocumentationModuleItem; onClick: () => void }) {
+  const rawEntries = Object.entries(item.rawFields).filter(([, value]) => value);
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
         "flex min-w-0 items-start justify-between gap-3 rounded-xl border border-border/70 bg-surface-muted/10 p-3 text-left transition hover:border-accent/30",
-        circuit.isStale && "opacity-60",
+        item.isStale && "opacity-60",
       )}
     >
       <div className="min-w-0">
         <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
-          <span>{switchboardCircuitLabel(circuit)}</span>
-          {circuit.isStale ? <span>· zniknęło z ostatniego importu</span> : null}
-          {circuit.note ? (
+          {item.source === "manual" ? <span>Dodane ręcznie</span> : null}
+          {item.isStale ? <span>· zniknęło z ostatniego importu</span> : null}
+          {item.note ? (
             <StickyNote className="h-3 w-3 shrink-0 text-amber-300" aria-label="Ma notatkę" />
           ) : null}
-          {circuit.employeeReportId ? (
+          {item.employeeReportId ? (
             <FileCheck className="h-3 w-3 shrink-0 text-emerald-400" aria-label="Zgłoszone do biura" />
           ) : null}
         </p>
-        <p className="truncate text-sm font-medium text-foreground">
-          {circuit.circuitDescription || circuit.circuitNo || circuit.location || "Bez opisu"}
-        </p>
-        {circuit.location && (circuit.circuitDescription || circuit.circuitNo) ? (
-          <p className="truncate text-xs text-muted">{circuit.location}</p>
+        <p className="truncate text-sm font-medium text-foreground">{documentationModuleItemLabel(item)}</p>
+        {item.location ? <p className="truncate text-xs text-muted">{item.location}</p> : null}
+        {rawEntries.length > 0 ? (
+          <p className="mt-1 truncate text-[11px] text-muted">
+            {rawEntries.map(([key, value]) => `${key}: ${value}`).join(" · ")}
+          </p>
         ) : null}
-        {circuit.note ? <p className="mt-1 truncate text-xs text-muted">{circuit.note}</p> : null}
+        {item.note ? <p className="mt-1 truncate text-xs text-muted">{item.note}</p> : null}
       </div>
       <span
         className={cn(
           "shrink-0 rounded-full border px-2 py-1 text-[11px] font-medium",
-          SWITCHBOARD_CIRCUIT_STATUS_BADGE_CLASS[circuit.status],
+          SWITCHBOARD_CIRCUIT_STATUS_BADGE_CLASS[item.status],
         )}
       >
-        {SWITCHBOARD_CIRCUIT_STATUS_LABELS[circuit.status]}
+        {SWITCHBOARD_CIRCUIT_STATUS_LABELS[item.status]}
       </span>
     </button>
   );
 }
 
-function CircuitStatusDialog({
-  circuit,
-  switchboardName,
+function ItemStatusDialog({
+  item,
+  moduleType,
+  moduleLabel,
   open,
   onOpenChange,
   authorName,
   authorId,
   onSaved,
 }: {
-  circuit: SwitchboardCircuit | null;
-  switchboardName: string;
+  item: DocumentationModuleItem | null;
+  moduleType: DocumentationModuleType;
+  moduleLabel: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   authorName: string;
   authorId: string | null;
-  onSaved: (updated: SwitchboardCircuit) => void;
+  onSaved: (updated: DocumentationModuleItem) => void;
 }) {
   const [status, setStatus] = useState<SwitchboardCircuitStatus>("nie_ruszone");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
-  const [latest, setLatest] = useState<SwitchboardCircuit | null>(null);
-  const [history, setHistory] = useState<SwitchboardCircuitHistoryEntry[]>([]);
+  const [latest, setLatest] = useState<DocumentationModuleItem | null>(null);
+  const [history, setHistory] = useState<DocumentationModuleItemHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [savingField, setSavingField] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || !circuit) return;
-    setStatus(circuit.status);
-    setNote(circuit.note ?? "");
+    if (!open || !item) return;
+    setStatus(item.status);
+    setNote(item.note ?? "");
     setError(null);
-    setLatest(circuit);
+    setLatest(item);
     setHistoryLoading(true);
-    fetchSwitchboardCircuitHistory(circuit.id)
+    fetchDocumentationModuleItemHistory(item.id)
       .then(setHistory)
       .catch(() => setHistory([]))
       .finally(() => setHistoryLoading(false));
-  }, [open, circuit]);
+  }, [open, item]);
 
-  if (!circuit) return null;
+  if (!item) return null;
 
+  const current = latest ?? item;
   const suggestsReport = switchboardCircuitNeedsReport(status);
-  const current = latest ?? circuit;
 
   async function handleSave() {
     setSaving(true);
     setError(null);
     try {
-      const updated = await updateSwitchboardCircuitStatus(circuit!.id, {
+      const updated = await updateDocumentationModuleItemStatus(item!.id, {
         status,
         note,
         updatedById: authorId,
@@ -178,8 +191,8 @@ function CircuitStatusDialog({
       setHistory((current) => [
         {
           id: `local-${Date.now()}`,
-          circuitId: circuit!.id,
-          previousStatus: circuit!.status,
+          itemId: item!.id,
+          previousStatus: item!.status,
           newStatus: updated.status,
           note: updated.note,
           changedById: authorId,
@@ -195,20 +208,78 @@ function CircuitStatusDialog({
     }
   }
 
+  async function handleFieldChange(fieldLabel: string, value: string) {
+    setSavingField(fieldLabel);
+    try {
+      const updated = await updateDocumentationModuleItemRawField(item!.id, fieldLabel, value);
+      setLatest(updated);
+      onSaved(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nie udało się zapisać pola.");
+    } finally {
+      setSavingField(null);
+    }
+  }
+
   const alreadyReported = Boolean(current.employeeReportId);
+  const rawEntries = Object.entries(current.rawFields);
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{switchboardCircuitLabel(circuit)}</DialogTitle>
+            <DialogTitle>{documentationModuleItemLabel(item)}</DialogTitle>
             <DialogDescription>
-              {[circuit.circuitDescription, circuit.location].filter(Boolean).join(" · ") || "Brak opisu"}
+              {[item.description, item.location].filter(Boolean).join(" · ") || "Brak opisu"}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4">
+            {moduleType === "przyciski" ? (
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Typ">
+                  <select
+                    className="w-full rounded-lg border border-border bg-surface-muted/20 px-2.5 py-2 text-sm text-foreground"
+                    value={current.rawFields["Typ"] ?? ""}
+                    disabled={savingField === "Typ"}
+                    onChange={(event) => void handleFieldChange("Typ", event.target.value)}
+                  >
+                    <option value="">—</option>
+                    {PRZYCISKI_TYP_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Kolor">
+                  <select
+                    className="w-full rounded-lg border border-border bg-surface-muted/20 px-2.5 py-2 text-sm text-foreground"
+                    value={current.rawFields["Kolor"] ?? ""}
+                    disabled={savingField === "Kolor"}
+                    onChange={(event) => void handleFieldChange("Kolor", event.target.value)}
+                  >
+                    <option value="">—</option>
+                    {PRZYCISKI_KOLOR_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+            ) : rawEntries.length > 0 ? (
+              <div className="grid gap-1 rounded-lg border border-border/60 bg-surface-muted/10 p-2.5 text-xs">
+                {rawEntries.map(([key, value]) => (
+                  <p key={key}>
+                    <span className="text-muted">{key}: </span>
+                    <span className="text-foreground">{value}</span>
+                  </p>
+                ))}
+              </div>
+            ) : null}
+
             <div className="grid gap-2">
               {SWITCHBOARD_CIRCUIT_STATUSES.map((value) => (
                 <button
@@ -306,16 +377,15 @@ function CircuitStatusDialog({
       <EmployeeReportDialog
         open={reportOpen}
         onOpenChange={setReportOpen}
-        projectId={circuit.projectId}
-        initialDescription={buildSwitchboardCircuitReportDescription(switchboardName, {
-          zugNo: circuit.zugNo,
-          zugSubNo: circuit.zugSubNo,
-          circuitDescription: circuit.circuitDescription,
-          location: circuit.location,
+        projectId={item.projectId}
+        initialDescription={buildDocumentationModuleReportDescription(moduleLabel, {
+          label: item.label,
+          description: item.description,
+          location: item.location,
           note,
         })}
         onCreated={({ target, recordId }) => {
-          void linkSwitchboardCircuitEmployeeReport(circuit.id, { target, recordId }).then(() => {
+          void linkDocumentationModuleItemEmployeeReport(item.id, { target, recordId }).then(() => {
             setLatest((prev) => (prev ? { ...prev, employeeReportTarget: target, employeeReportId: recordId } : prev));
           });
         }}
@@ -324,41 +394,41 @@ function CircuitStatusDialog({
   );
 }
 
-function AddCircuitDialog({
+function AddItemDialog({
   open,
   onOpenChange,
   onSave,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (input: { sectionName: string; zugNo: string; circuitDescription: string; location: string }) => Promise<void>;
+  onSave: (input: { sectionName: string; label: string; location: string; description: string }) => Promise<void>;
 }) {
   const [sectionName, setSectionName] = useState("");
-  const [zugNo, setZugNo] = useState("");
-  const [circuitDescription, setCircuitDescription] = useState("");
+  const [label, setLabel] = useState("");
   const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setSectionName("");
-      setZugNo("");
-      setCircuitDescription("");
+      setLabel("");
       setLocation("");
+      setDescription("");
       setError(null);
     }
   }, [open]);
 
   async function handleSave() {
-    if (!circuitDescription.trim() && !zugNo.trim()) {
-      setError("Podaj przynajmniej opis albo numer zuga.");
+    if (!label.trim() && !description.trim()) {
+      setError("Podaj przynajmniej etykietę albo opis pozycji.");
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      await onSave({ sectionName, zugNo, circuitDescription, location });
+      await onSave({ sectionName, label, location, description });
       onOpenChange(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Nie udało się dodać pozycji.");
@@ -382,11 +452,11 @@ function AddCircuitDialog({
           <Field label="Sekcja (opcjonalnie)">
             <Input value={sectionName} onChange={(event) => setSectionName(event.target.value)} />
           </Field>
-          <Field label="Zug (opcjonalnie)">
-            <Input value={zugNo} onChange={(event) => setZugNo(event.target.value)} />
+          <Field label="Etykieta / nr">
+            <Input value={label} onChange={(event) => setLabel(event.target.value)} />
           </Field>
           <Field label="Opis">
-            <Input value={circuitDescription} onChange={(event) => setCircuitDescription(event.target.value)} />
+            <Input value={description} onChange={(event) => setDescription(event.target.value)} />
           </Field>
           <Field label="Lokalizacja (pomieszczenie)">
             <Input value={location} onChange={(event) => setLocation(event.target.value)} />
@@ -408,23 +478,23 @@ function AddCircuitDialog({
   );
 }
 
-function SwitchboardHeaderBar({
-  switchboard,
-  circuits,
+function ModuleHeaderBar({
+  mod,
+  items,
   onComplete,
   onReopen,
-  onAddCircuit,
+  onAddItem,
   completing,
 }: {
-  switchboard: Switchboard;
-  circuits: SwitchboardCircuit[];
+  mod: DocumentationModule;
+  items: DocumentationModuleItem[];
   onComplete: () => void;
   onReopen: () => void;
-  onAddCircuit: () => void;
+  onAddItem: () => void;
   completing: boolean;
 }) {
-  const progress = buildSwitchboardProgress(circuits);
-  const isComplete = Boolean(switchboard.completedAt);
+  const progress = buildDocumentationModuleProgress(items);
+  const isComplete = Boolean(mod.completedAt);
 
   return (
     <div className="sticky top-0 z-10 grid gap-2 rounded-xl border border-border/70 bg-surface/95 p-3 backdrop-blur">
@@ -461,7 +531,7 @@ function SwitchboardHeaderBar({
         </p>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={onAddCircuit}>
+          <Button type="button" size="sm" variant="outline" onClick={onAddItem}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
             Dodaj pozycję
           </Button>
@@ -470,7 +540,7 @@ function SwitchboardHeaderBar({
             <>
               <p className="flex items-center gap-1.5 text-xs text-emerald-300">
                 <Check className="h-3.5 w-3.5" />
-                Zakończone przez {switchboard.completedByName} · {switchboard.completedAt ? formatDateTime(switchboard.completedAt) : ""}
+                Zakończone przez {mod.completedByName} · {mod.completedAt ? formatDateTime(mod.completedAt) : ""}
               </p>
               <Button type="button" size="sm" variant="ghost" disabled={completing} onClick={onReopen}>
                 <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
@@ -480,7 +550,7 @@ function SwitchboardHeaderBar({
           ) : (
             <Button type="button" size="sm" disabled={completing} onClick={onComplete}>
               <Check className="mr-1.5 h-3.5 w-3.5" />
-              Wpinanie rozdzielni zakończone
+              Zakończone
             </Button>
           )}
         </div>
@@ -489,97 +559,97 @@ function SwitchboardHeaderBar({
   );
 }
 
-export function ProjectSwitchboardsPanel({
+export function DocumentationModulePanel({
   projectId,
+  moduleType,
   authorName,
   authorId,
   onToggleComplete,
 }: {
   projectId: string;
+  moduleType: DocumentationModuleType;
   authorName: string;
   authorId: string | null;
   /** Odzwierciedla zakończenie/cofnięcie w elemencie procesu, gdy ten panel jest osadzony w
-   *  elemencie typu "arkusz_dokumentacji" (sheetType: "rw_zugi"). */
+   *  elemencie typu "arkusz_dokumentacji". Dla modułów z kilkoma podmodułami (RACK: SWITCH +
+   *  AUDIOSERVER) wywoływane z `true` dopiero, gdy WSZYSTKIE są zakończone. */
   onToggleComplete?: (completed: boolean) => void;
 }) {
-  const [boards, setBoards] = useState<SwitchboardWithCircuits[]>([]);
+  const [modules, setModules] = useState<DocumentationModuleWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [activeSwitchboardId, setActiveSwitchboardId] = useState<string | null>(null);
+  const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterKey>("all");
-  const [selectedCircuit, setSelectedCircuit] = useState<SwitchboardCircuit | null>(null);
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [selectedItem, setSelectedItem] = useState<DocumentationModuleItem | null>(null);
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [completing, setCompleting] = useState(false);
   const [completeError, setCompleteError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+
+  const moduleLabel = DOCUMENTATION_MODULE_LABELS[moduleType];
 
   const load = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const data = await fetchSwitchboardsWithCircuits(projectId);
-      setBoards(data);
-      setActiveSwitchboardId((current) => current ?? data[0]?.switchboard.id ?? null);
+      const data = await fetchDocumentationModulesWithItems(projectId, moduleType);
+      setModules(data);
+      setActiveModuleId((current) => current ?? data[0]?.module.id ?? null);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Nie udało się wczytać rozdzielnic.");
+      setLoadError(err instanceof Error ? err.message : "Nie udało się wczytać danych.");
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, moduleType]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const activeBoard = useMemo(
-    () => boards.find((b) => b.switchboard.id === activeSwitchboardId) ?? null,
-    [boards, activeSwitchboardId],
+  const activeEntry = useMemo(
+    () => modules.find((m) => m.module.id === activeModuleId) ?? null,
+    [modules, activeModuleId],
   );
 
-  const filteredCircuits = useMemo(() => {
-    const circuits = activeBoard?.circuits ?? [];
-    if (filter === "all") return circuits;
-    if (filter === "notatki") return circuits.filter((c) => c.note && c.note.trim().length > 0);
-    return circuits.filter((c) => c.status === filter);
-  }, [activeBoard, filter]);
+  const filteredItems = useMemo(() => {
+    const items = activeEntry?.items ?? [];
+    if (filter === "all") return items;
+    if (filter === "notatki") return items.filter((i) => i.note && i.note.trim().length > 0);
+    return items.filter((i) => i.status === filter);
+  }, [activeEntry, filter]);
 
   const filterCounts = useMemo(() => {
-    const circuits = activeBoard?.circuits ?? [];
+    const items = activeEntry?.items ?? [];
     const counts: Partial<Record<FilterKey, number>> = {
-      all: circuits.length,
-      notatki: circuits.filter((c) => c.note && c.note.trim().length > 0).length,
+      all: items.length,
+      notatki: items.filter((i) => i.note && i.note.trim().length > 0).length,
     };
     for (const status of SWITCHBOARD_CIRCUIT_STATUSES) {
-      counts[status] = circuits.filter((c) => c.status === status).length;
+      counts[status] = items.filter((i) => i.status === status).length;
     }
     return counts;
-  }, [activeBoard]);
+  }, [activeEntry]);
 
   const sections = useMemo(
-    () => groupSwitchboardCircuitsBySection(activeBoard?.circuits ?? []),
-    [activeBoard],
+    () => groupDocumentationModuleItemsBySection(activeEntry?.items ?? []),
+    [activeEntry],
   );
 
-  // Grupy Zug startują zwinięte (sekcje nie) — inicjalizujemy raz na rozdzielnicę, nie przy
-  // każdym odświeżeniu danych (np. po zapisaniu statusu), żeby nie kasować ręcznego rozwinięcia.
-  const initializedBoardsRef = useRef<Set<string>>(new Set());
+  // Sekcje startują zwinięte — inicjalizujemy raz na moduł, nie przy każdym odświeżeniu danych.
+  const initializedModulesRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    const boardId = activeBoard?.switchboard.id;
-    if (!boardId || initializedBoardsRef.current.has(boardId)) return;
-    initializedBoardsRef.current.add(boardId);
+    const moduleId = activeEntry?.module.id;
+    if (!moduleId || initializedModulesRef.current.has(moduleId)) return;
+    initializedModulesRef.current.add(moduleId);
 
-    const zugKeys = new Set<string>();
-    for (const section of sections) {
-      const sectionKey = `section::${section.sectionName ?? ""}`;
-      for (const entry of section.entries) {
-        if (entry.kind === "zug") zugKeys.add(`zug::${sectionKey}::${entry.zugNo}`);
-      }
-    }
-    setCollapsedGroups((current) => new Set([...current, ...zugKeys]));
-  }, [activeBoard?.switchboard.id, sections]);
+    const keys = sections
+      .filter((section) => section.sectionName)
+      .map((section) => `section::${section.sectionName ?? ""}`);
+    setCollapsedSections((current) => new Set([...current, ...keys]));
+  }, [activeEntry?.module.id, sections]);
 
-  function toggleGroup(key: string) {
-    setCollapsedGroups((current) => {
+  function toggleSection(key: string) {
+    setCollapsedSections((current) => {
       const next = new Set(current);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -587,38 +657,59 @@ export function ProjectSwitchboardsPanel({
     });
   }
 
-  function handleCircuitSaved(updated: SwitchboardCircuit) {
-    setBoards((current) =>
-      current.map((board) =>
-        board.switchboard.id !== updated.switchboardId
-          ? board
-          : { ...board, circuits: board.circuits.map((c) => (c.id === updated.id ? updated : c)) },
+  function handleItemSaved(updated: DocumentationModuleItem) {
+    setModules((current) =>
+      current.map((entry) =>
+        entry.module.id !== updated.moduleId
+          ? entry
+          : { ...entry, items: entry.items.map((i) => (i.id === updated.id ? updated : i)) },
       ),
     );
-    setSelectedCircuit(updated);
+    setSelectedItem(updated);
+  }
+
+  async function handleAddItem(input: { sectionName: string; label: string; location: string; description: string }) {
+    if (!activeEntry) return;
+    const created = await createManualDocumentationModuleItem(activeEntry.module.id, projectId, {
+      sectionName: input.sectionName,
+      label: input.label,
+      location: input.location,
+      description: input.description,
+      createdByName: authorName,
+    });
+    setModules((current) =>
+      current.map((entry) =>
+        entry.module.id !== created.moduleId ? entry : { ...entry, items: [...entry.items, created] },
+      ),
+    );
   }
 
   async function handleComplete() {
-    if (!activeBoard) return;
-    const progress = buildSwitchboardProgress(activeBoard.circuits);
-    const confirmMessage =
-      progress.total > 0 && progress.counts.podlaczone_i_sprawdzone < progress.total
-        ? `${progress.total - progress.counts.podlaczone_i_sprawdzone} pozycji nie jest jeszcze ` +
-          `"Podłączone i sprawdzone". Na pewno oznaczyć wpinanie jako zakończone?`
-        : "Na pewno oznaczyć wpinanie rozdzielni jako zakończone?";
-    if (!window.confirm(confirmMessage)) {
+    if (!activeEntry) return;
+    const progress = buildDocumentationModuleProgress(activeEntry.items);
+    if (
+      !window.confirm(
+        progress.total > 0 && progress.counts.podlaczone_i_sprawdzone < progress.total
+          ? `${progress.total - progress.counts.podlaczone_i_sprawdzone} pozycji nie jest jeszcze ` +
+              `"Podłączone i sprawdzone". Na pewno oznaczyć moduł jako zakończony?`
+          : "Na pewno oznaczyć moduł jako zakończony?",
+      )
+    ) {
       return;
     }
     setCompleting(true);
     setCompleteError(null);
     try {
-      const updated = await setSwitchboardCompletion(projectId, activeBoard.switchboard.id);
-      setBoards((current) =>
-        current.map((board) =>
-          board.switchboard.id === updated.id ? { ...board, switchboard: updated } : board,
-        ),
-      );
-      onToggleComplete?.(true);
+      const updated = await setDocumentationModuleCompletion(projectId, activeEntry.module.id);
+      let allComplete = false;
+      setModules((current) => {
+        const next = current.map((entry) =>
+          entry.module.id === updated.id ? { ...entry, module: updated } : entry,
+        );
+        allComplete = next.every((entry) => Boolean(entry.module.completedAt));
+        return next;
+      });
+      if (allComplete) onToggleComplete?.(true);
     } catch (err) {
       setCompleteError(err instanceof Error ? err.message : "Nie udało się zapisać zakończenia.");
     } finally {
@@ -627,15 +718,13 @@ export function ProjectSwitchboardsPanel({
   }
 
   async function handleReopen() {
-    if (!activeBoard) return;
+    if (!activeEntry) return;
     setCompleting(true);
     setCompleteError(null);
     try {
-      const updated = await setSwitchboardCompletion(projectId, activeBoard.switchboard.id, { reopen: true });
-      setBoards((current) =>
-        current.map((board) =>
-          board.switchboard.id === updated.id ? { ...board, switchboard: updated } : board,
-        ),
+      const updated = await setDocumentationModuleCompletion(projectId, activeEntry.module.id, { reopen: true });
+      setModules((current) =>
+        current.map((entry) => (entry.module.id === updated.id ? { ...entry, module: updated } : entry)),
       );
       onToggleComplete?.(false);
     } catch (err) {
@@ -645,46 +734,23 @@ export function ProjectSwitchboardsPanel({
     }
   }
 
-  async function handleAddCircuit(input: {
-    sectionName: string;
-    zugNo: string;
-    circuitDescription: string;
-    location: string;
-  }) {
-    if (!activeBoard) return;
-    const created = await createManualSwitchboardCircuit(activeBoard.switchboard.id, projectId, {
-      sectionName: input.sectionName,
-      zugNo: input.zugNo,
-      circuitDescription: input.circuitDescription,
-      location: input.location,
-      createdByName: authorName,
-    });
-    setBoards((current) =>
-      current.map((board) =>
-        board.switchboard.id !== created.switchboardId
-          ? board
-          : { ...board, circuits: [...board.circuits, created] },
-      ),
-    );
-  }
-
   return (
     <div className="grid min-w-0 max-w-full gap-3 overflow-x-hidden">
-      {boards.length > 1 ? (
+      {modules.length > 1 ? (
         <div className="flex flex-wrap gap-1.5">
-          {boards.map((board) => (
+          {modules.map((entry) => (
             <button
-              key={board.switchboard.id}
+              key={entry.module.id}
               type="button"
-              onClick={() => setActiveSwitchboardId(board.switchboard.id)}
+              onClick={() => setActiveModuleId(entry.module.id)}
               className={cn(
                 "rounded-full border px-3 py-1.5 text-sm font-medium transition",
-                activeSwitchboardId === board.switchboard.id
+                activeModuleId === entry.module.id
                   ? "border-accent/50 bg-accent/10 text-foreground"
                   : "border-border/70 text-muted hover:text-foreground",
               )}
             >
-              {board.switchboard.name}
+              {entry.module.name}
             </button>
           ))}
         </div>
@@ -693,21 +759,21 @@ export function ProjectSwitchboardsPanel({
       {loading ? <p className="text-sm text-muted">Ładowanie…</p> : null}
       {loadError ? <p className="text-sm text-rose-400">{loadError}</p> : null}
 
-      {!loading && boards.length === 0 ? (
+      {!loading && modules.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border/80 bg-surface-muted/10 p-4 text-sm text-muted">
-          Brak zaimportowanych rozdzielnic. Wgraj plik dokumentacji technicznej projektu w zakładce
-          Dokumentacja, żeby zacząć oznaczać statusy podłączenia na miejscu, zamiast w Excelu.
+          Brak zaimportowanych danych „{moduleLabel}”. Wgraj plik dokumentacji technicznej projektu w
+          zakładce Dokumentacja, żeby zacząć oznaczać statusy zamiast w Excelu.
         </p>
       ) : null}
 
-      {activeBoard ? (
+      {activeEntry ? (
         <>
-          <SwitchboardHeaderBar
-            switchboard={activeBoard.switchboard}
-            circuits={activeBoard.circuits}
+          <ModuleHeaderBar
+            mod={activeEntry.module}
+            items={activeEntry.items}
             onComplete={() => void handleComplete()}
             onReopen={() => void handleReopen()}
-            onAddCircuit={() => setAddOpen(true)}
+            onAddItem={() => setAddOpen(true)}
             completing={completing}
           />
           {completeError ? <p className="text-sm text-rose-400">{completeError}</p> : null}
@@ -734,12 +800,12 @@ export function ProjectSwitchboardsPanel({
           </MobileFiltersPanel>
 
           {filter !== "all" ? (
-            filteredCircuits.length === 0 ? (
+            filteredItems.length === 0 ? (
               <p className="text-sm text-muted">Brak pozycji dla tego filtra.</p>
             ) : (
               <div className="grid gap-2">
-                {filteredCircuits.map((circuit) => (
-                  <CircuitCard key={circuit.id} circuit={circuit} onClick={() => setSelectedCircuit(circuit)} />
+                {filteredItems.map((item) => (
+                  <ItemCard key={item.id} item={item} onClick={() => setSelectedItem(item)} />
                 ))}
               </div>
             )
@@ -747,18 +813,15 @@ export function ProjectSwitchboardsPanel({
             <div className="grid gap-3">
               {sections.map((section) => {
                 const sectionKey = `section::${section.sectionName ?? ""}`;
-                const sectionCollapsed = collapsedGroups.has(sectionKey);
-                const sectionCircuits = section.entries.flatMap((entry) =>
-                  entry.kind === "zug" ? entry.circuits : [entry.circuit],
-                );
-                const sectionSummary = switchboardGroupDoneSummary(sectionCircuits);
+                const sectionCollapsed = collapsedSections.has(sectionKey);
+                const doneCount = section.items.filter((i) => i.status === "podlaczone_i_sprawdzone").length;
 
                 return (
                   <div key={sectionKey} className="grid gap-2">
                     {section.sectionName ? (
                       <button
                         type="button"
-                        onClick={() => toggleGroup(sectionKey)}
+                        onClick={() => toggleSection(sectionKey)}
                         className="flex items-center gap-1.5 text-left text-sm font-semibold text-foreground"
                       >
                         {sectionCollapsed ? (
@@ -768,59 +831,16 @@ export function ProjectSwitchboardsPanel({
                         )}
                         {section.sectionName}
                         <span className="font-normal text-muted">
-                          — {sectionSummary.done}/{sectionSummary.total} podłączone i sprawdzone
+                          — {doneCount}/{section.items.length} podłączone i sprawdzone
                         </span>
                       </button>
                     ) : null}
 
                     {!sectionCollapsed ? (
                       <div className="grid gap-2 pl-1">
-                        {section.entries.map((entry, entryIndex) => {
-                          if (entry.kind === "loose") {
-                            return (
-                              <CircuitCard
-                                key={entry.circuit.id}
-                                circuit={entry.circuit}
-                                onClick={() => setSelectedCircuit(entry.circuit)}
-                              />
-                            );
-                          }
-
-                          const zugKey = `zug::${sectionKey}::${entry.zugNo}`;
-                          const zugCollapsed = collapsedGroups.has(zugKey);
-                          const zugSummary = switchboardGroupDoneSummary(entry.circuits);
-
-                          return (
-                            <div key={`${zugKey}-${entryIndex}`} className="rounded-xl border border-border/60 bg-surface-muted/5 p-2">
-                              <button
-                                type="button"
-                                onClick={() => toggleGroup(zugKey)}
-                                className="flex w-full items-center gap-1.5 px-1 py-1 text-left text-sm font-medium text-foreground"
-                              >
-                                {zugCollapsed ? (
-                                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                                ) : (
-                                  <ChevronDown className="h-3.5 w-3.5 shrink-0" />
-                                )}
-                                {entry.zugNo}
-                                <span className="font-normal text-muted">
-                                  — {zugSummary.done}/{zugSummary.total} podłączone i sprawdzone
-                                </span>
-                              </button>
-                              {!zugCollapsed ? (
-                                <div className="mt-2 grid gap-2">
-                                  {entry.circuits.map((circuit) => (
-                                    <CircuitCard
-                                      key={circuit.id}
-                                      circuit={circuit}
-                                      onClick={() => setSelectedCircuit(circuit)}
-                                    />
-                                  ))}
-                                </div>
-                              ) : null}
-                            </div>
-                          );
-                        })}
+                        {section.items.map((item) => (
+                          <ItemCard key={item.id} item={item} onClick={() => setSelectedItem(item)} />
+                        ))}
                       </div>
                     ) : null}
                   </div>
@@ -831,19 +851,20 @@ export function ProjectSwitchboardsPanel({
         </>
       ) : null}
 
-      <CircuitStatusDialog
-        circuit={selectedCircuit}
-        switchboardName={activeBoard?.switchboard.name ?? ""}
-        open={Boolean(selectedCircuit)}
+      <ItemStatusDialog
+        item={selectedItem}
+        moduleType={moduleType}
+        moduleLabel={moduleLabel}
+        open={Boolean(selectedItem)}
         onOpenChange={(open) => {
-          if (!open) setSelectedCircuit(null);
+          if (!open) setSelectedItem(null);
         }}
         authorName={authorName}
         authorId={authorId}
-        onSaved={handleCircuitSaved}
+        onSaved={handleItemSaved}
       />
 
-      <AddCircuitDialog open={addOpen} onOpenChange={setAddOpen} onSave={handleAddCircuit} />
+      <AddItemDialog open={addOpen} onOpenChange={setAddOpen} onSave={handleAddItem} />
     </div>
   );
 }

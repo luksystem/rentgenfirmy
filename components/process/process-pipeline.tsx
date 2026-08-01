@@ -18,6 +18,7 @@ import {
   StickyNote,
   Trash2,
   X,
+  Zap,
 } from "lucide-react";
 import { MilestoneDateBadge } from "@/components/process/milestone-date-badge";
 import { ProcessItemPanel } from "@/components/process/process-item-panel";
@@ -74,6 +75,7 @@ const kindIcon: Record<ProcessItemKind, React.ComponentType<{ className?: string
   kanban: LayoutGrid,
   note: StickyNote,
   snapshot: Camera,
+  arkusz_dokumentacji: Zap,
 };
 
 type ProcessPipelineProps = {

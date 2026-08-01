@@ -9,7 +9,8 @@ function isProcessItemKind(value: string): value is ProcessItemKind {
     value === "settlement" ||
     value === "kanban" ||
     value === "note" ||
-    value === "snapshot"
+    value === "snapshot" ||
+    value === "arkusz_dokumentacji"
   );
 }
 

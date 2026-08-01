@@ -1,10 +1,8 @@
 import "server-only";
 
-import type { ProcessTemplate } from "@/lib/process/types";
 import { sendPushToUser } from "@/lib/push/send-push";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { rowToProjectProcess } from "@/lib/supabase/process-mappers";
-import { fetchProcessTemplateByProjectTypeServer } from "@/lib/supabase/process-server";
+import { resolveStageIdByTitlePattern } from "@/lib/supabase/process-stage-title-lookup-server";
 import { resolveStageResponsibleUserId } from "@/lib/supabase/process-snapshot-notifications-server";
 
 // Etap "Dostawa i montaż rozdzielni" nie ma stałego id — różni się per szablon/projekt — więc
@@ -13,26 +11,7 @@ import { resolveStageResponsibleUserId } from "@/lib/supabase/process-snapshot-n
 const STAGE_TITLE_PATTERN = /rozdzieln/i;
 
 async function resolveSwitchboardStageId(projectId: string): Promise<string | null> {
-  const supabase = getSupabaseAdmin();
-  const [{ data: project, error: projectError }, { data: processRow, error: processError }] =
-    await Promise.all([
-      supabase.from("projects").select("type").eq("id", projectId).maybeSingle(),
-      supabase.from("project_processes").select("*").eq("project_id", projectId).maybeSingle(),
-    ]);
-
-  if (projectError) throw new Error(projectError.message);
-  if (processError) throw new Error(processError.message);
-  if (!project) return null;
-
-  const process = processRow ? rowToProjectProcess(processRow) : null;
-  const liveTemplate = process?.templateSnapshot
-    ? null
-    : await fetchProcessTemplateByProjectTypeServer(project.type, supabase);
-  const template: ProcessTemplate | null = process?.templateSnapshot ?? liveTemplate;
-  if (!template) return null;
-
-  const stage = template.stages.find((entry) => STAGE_TITLE_PATTERN.test(entry.title));
-  return stage?.id ?? null;
+  return resolveStageIdByTitlePattern(projectId, STAGE_TITLE_PATTERN);
 }
 
 /** Powiadamia osobę odpowiedzialną za etap "Dostawa i montaż rozdzielni" (push + w apce), że

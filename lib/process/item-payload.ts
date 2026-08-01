@@ -1,6 +1,7 @@
 import { normalizeKanbanTemplatePayload } from "@/lib/process/kanban-payload";
 import { defaultKanbanTemplatePayload } from "@/lib/process/kanban-types";
 import type {
+  ArkuszDokumentacjiPayload,
   ChecklistItemPayload,
   ChecklistLine,
   ChecklistLineAttachment,
@@ -10,6 +11,13 @@ import type {
   ProcessItemKind,
   SnapshotTemplatePayload,
 } from "@/lib/process/types";
+import { isArkuszDokumentacjiPayload } from "@/lib/process/types";
+
+/** Fallback niemal nigdy nie używany w praktyce — element bez poprawnego sheetType nie powinien
+ *  w ogóle powstać, ale typ zwrotny musi być total. */
+function normalizeArkuszDokumentacjiPayload(raw: unknown): ArkuszDokumentacjiPayload {
+  return isArkuszDokumentacjiPayload(raw) ? raw : { sheetType: "rw_zugi" };
+}
 
 export function emptyChecklistPayload(): ChecklistItemPayload {
   return { sections: [] };
@@ -255,6 +263,10 @@ export function resolveElementDefaultPayload(
     return normalizeSnapshotTemplatePayload(raw);
   }
 
+  if (kind === "arkusz_dokumentacji") {
+    return normalizeArkuszDokumentacjiPayload(raw);
+  }
+
   const normalized = normalizeChecklistPayload(raw);
   if (flattenChecklistLines(normalized).length > 0) {
     return normalized;
@@ -271,6 +283,10 @@ export function templatePayloadFromTitle(title: string, kind: ProcessItemKind): 
 
   if (kind === "snapshot") {
     return { clientMessage: "" };
+  }
+
+  if (kind === "arkusz_dokumentacji") {
+    return { sheetType: "rw_zugi" };
   }
 
   if (kind !== "checklist") {

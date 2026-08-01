@@ -28,7 +28,8 @@ function isProcessItemKind(value: string): value is ProcessItem["kind"] {
     value === "settlement" ||
     value === "kanban" ||
     value === "note" ||
-    value === "snapshot"
+    value === "snapshot" ||
+    value === "arkusz_dokumentacji"
   );
 }
 

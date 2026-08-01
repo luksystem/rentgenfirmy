@@ -5055,6 +5055,213 @@ export type Database = {
           },
         ];
       };
+      project_technical_documents: {
+        Row: {
+          id: string;
+          project_id: string;
+          storage_path: string;
+          file_name: string;
+          size_bytes: number | null;
+          uploaded_by_id: string | null;
+          uploaded_by_name: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          storage_path: string;
+          file_name: string;
+          size_bytes?: number | null;
+          uploaded_by_id?: string | null;
+          uploaded_by_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<{
+          storage_path: string;
+          file_name: string;
+          size_bytes: number | null;
+          uploaded_by_id: string | null;
+          uploaded_by_name: string | null;
+          updated_at: string;
+        }>;
+        Relationships: [
+          {
+            foreignKeyName: "project_technical_documents_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: true;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      documentation_modules: {
+        Row: {
+          id: string;
+          project_id: string;
+          module_type: string;
+          name: string;
+          position: number;
+          last_imported_at: string | null;
+          completed_at: string | null;
+          completed_by_id: string | null;
+          completed_by_name: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          module_type: string;
+          name: string;
+          position?: number;
+          last_imported_at?: string | null;
+          completed_at?: string | null;
+          completed_by_id?: string | null;
+          completed_by_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<{
+          module_type: string;
+          name: string;
+          position: number;
+          last_imported_at: string | null;
+          completed_at: string | null;
+          completed_by_id: string | null;
+          completed_by_name: string | null;
+          updated_at: string;
+        }>;
+        Relationships: [
+          {
+            foreignKeyName: "documentation_modules_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      documentation_module_items: {
+        Row: {
+          id: string;
+          module_id: string;
+          project_id: string;
+          row_index: number;
+          merge_key: string;
+          section_name: string | null;
+          label: string | null;
+          location: string | null;
+          description: string | null;
+          raw_fields: Record<string, unknown>;
+          status: string;
+          note: string | null;
+          is_stale: boolean;
+          source: string;
+          employee_report_target: string | null;
+          employee_report_id: string | null;
+          updated_by_id: string | null;
+          updated_by_name: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          module_id: string;
+          project_id: string;
+          row_index?: number;
+          merge_key: string;
+          section_name?: string | null;
+          label?: string | null;
+          location?: string | null;
+          description?: string | null;
+          raw_fields?: Record<string, unknown>;
+          status?: string;
+          note?: string | null;
+          is_stale?: boolean;
+          source?: string;
+          employee_report_target?: string | null;
+          employee_report_id?: string | null;
+          updated_by_id?: string | null;
+          updated_by_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<{
+          row_index: number;
+          merge_key: string;
+          section_name: string | null;
+          label: string | null;
+          location: string | null;
+          description: string | null;
+          raw_fields: Record<string, unknown>;
+          status: string;
+          note: string | null;
+          is_stale: boolean;
+          source: string;
+          employee_report_target: string | null;
+          employee_report_id: string | null;
+          updated_by_id: string | null;
+          updated_by_name: string | null;
+          updated_at: string;
+        }>;
+        Relationships: [
+          {
+            foreignKeyName: "documentation_module_items_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "documentation_module_items_module_id_fkey";
+            columns: ["module_id"];
+            isOneToOne: false;
+            referencedRelation: "documentation_modules";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      documentation_module_item_history: {
+        Row: {
+          id: string;
+          item_id: string;
+          previous_status: string | null;
+          new_status: string;
+          note: string | null;
+          changed_by_id: string | null;
+          changed_by_name: string | null;
+          changed_at: string;
+        };
+        Insert: {
+          id?: string;
+          item_id: string;
+          previous_status?: string | null;
+          new_status: string;
+          note?: string | null;
+          changed_by_id?: string | null;
+          changed_by_name?: string | null;
+          changed_at?: string;
+        };
+        Update: Partial<{
+          previous_status: string | null;
+          new_status: string;
+          note: string | null;
+          changed_by_id: string | null;
+          changed_by_name: string | null;
+          changed_at: string;
+        }>;
+        Relationships: [
+          {
+            foreignKeyName: "documentation_module_item_history_item_id_fkey";
+            columns: ["item_id"];
+            isOneToOne: false;
+            referencedRelation: "documentation_module_items";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       switchboard_circuits: {
         Row: {
           id: string;
@@ -5079,6 +5286,7 @@ export type Database = {
           status: string;
           note: string | null;
           is_stale: boolean;
+          source: string;
           employee_report_target: string | null;
           employee_report_id: string | null;
           updated_by_id: string | null;
@@ -5109,6 +5317,7 @@ export type Database = {
           status?: string;
           note?: string | null;
           is_stale?: boolean;
+          source?: string;
           employee_report_target?: string | null;
           employee_report_id?: string | null;
           updated_by_id?: string | null;
@@ -5136,6 +5345,7 @@ export type Database = {
           status: string;
           note: string | null;
           is_stale: boolean;
+          source: string;
           employee_report_target: string | null;
           employee_report_id: string | null;
           updated_by_id: string | null;

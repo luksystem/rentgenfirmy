@@ -38,6 +38,7 @@ export const USER_NOTIFICATION_KINDS = [
   "leave_substitution_client_draft",
   "leave_substitution_proposed",
   "switchboard_wiring_completed",
+  "documentation_module_completed",
 ] as const;
 
 export const SALES_NOTIFICATION_KINDS = [

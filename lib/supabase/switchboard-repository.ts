@@ -56,6 +56,7 @@ function rowToSwitchboardCircuit(row: SwitchboardCircuitRow): SwitchboardCircuit
     status: row.status as SwitchboardCircuitStatus,
     note: row.note,
     isStale: row.is_stale,
+    source: (row.source as "import" | "manual") ?? "import",
     employeeReportTarget: row.employee_report_target as "agreement" | "change_request" | null,
     employeeReportId: row.employee_report_id,
     updatedById: row.updated_by_id,
@@ -165,7 +166,7 @@ export async function importParsedSwitchboards(
 
     const { data: existingCircuits, error: existingCircuitsError } = await supabase
       .from("switchboard_circuits")
-      .select("id, merge_key")
+      .select("id, merge_key, source")
       .eq("switchboard_id", switchboardId);
     if (existingCircuitsError) throw new Error(existingCircuitsError.message);
 
@@ -220,8 +221,10 @@ export async function importParsedSwitchboards(
       if (upsertError) throw new Error(upsertError.message);
     }
 
+    // Ręcznie dodane pozycje nigdy nie mają odpowiednika w pliku (inny sposób powstania
+    // merge_key), więc bez tego wyjątku KAŻDY import oznaczałby je jako "zniknęły z pliku".
     const staleIds = (existingCircuits ?? [])
-      .filter((row) => !importedKeys.has(row.merge_key))
+      .filter((row) => row.source !== "manual" && !importedKeys.has(row.merge_key))
       .map((row) => row.id);
     if (staleIds.length > 0) {
       const { error: staleError } = await supabase
@@ -240,6 +243,57 @@ export async function importParsedSwitchboards(
   }
 
   return results;
+}
+
+/**
+ * Dodaje pozycję ręcznie z poziomu Rentgena (nie z importu pliku) — np. coś dograne na budowie,
+ * czego nie było w oryginalnym arkuszu. `merge_key` dostaje prefiks "manual:" + losowy fragment,
+ * żeby NIGDY nie kolidował z kluczem wygenerowanym przez parser pliku przy późniejszym imporcie.
+ */
+export async function createManualSwitchboardCircuit(
+  switchboardId: string,
+  projectId: string,
+  input: {
+    sectionName?: string | null;
+    zugNo?: string | null;
+    circuitDescription?: string | null;
+    location?: string | null;
+    createdByName: string;
+  },
+): Promise<SwitchboardCircuit> {
+  const supabase = getSupabase();
+  const now = new Date().toISOString();
+
+  const { data: maxRow } = await supabase
+    .from("switchboard_circuits")
+    .select("row_index")
+    .eq("switchboard_id", switchboardId)
+    .order("row_index", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const nextRowIndex = ((maxRow as { row_index?: number } | null)?.row_index ?? 0) + 1;
+
+  const { data, error } = await supabase
+    .from("switchboard_circuits")
+    .insert({
+      switchboard_id: switchboardId,
+      project_id: projectId,
+      row_index: nextRowIndex,
+      merge_key: `manual:${crypto.randomUUID()}`,
+      section_name: input.sectionName?.trim() || null,
+      zug_no: input.zugNo?.trim() || null,
+      circuit_description: input.circuitDescription?.trim() || null,
+      location: input.location?.trim() || null,
+      status: "nie_ruszone",
+      source: "manual",
+      updated_by_name: input.createdByName.trim() || "Instalator",
+      updated_at: now,
+    })
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return rowToSwitchboardCircuit(data as SwitchboardCircuitRow);
 }
 
 export async function updateSwitchboardCircuitStatus(

@@ -11,7 +11,11 @@ import {
   Receipt,
   ShieldCheck,
   StickyNote,
+  Zap,
 } from "lucide-react";
+import { DocumentationModulePanel } from "@/components/dashboard/documentation-module-panel";
+import { ProjectSwitchboardsPanel } from "@/components/dashboard/project-switchboards-panel";
+import type { DocumentationModuleType } from "@/lib/dashboard/documentation-module-types";
 import { ProcessChecklistBoard } from "@/components/process/process-checklist-board";
 import { ProcessInternalAcceptanceBoard } from "@/components/process/process-internal-acceptance-board";
 import { ProcessKanbanBoard } from "@/components/process/process-kanban-board";
@@ -34,6 +38,7 @@ import { useProcessItemRemoteSync } from "@/hooks/use-process-item-remote-sync";
 import type { UserProfile } from "@/lib/auth/types";
 import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
 import {
+  isArkuszDokumentacjiPayload,
   isSnapshotTemplatePayload,
   PROCESS_ITEM_KIND_LABELS,
   type ChecklistItemPayload,
@@ -52,6 +57,7 @@ const kindIcon = {
   kanban: LayoutGrid,
   note: StickyNote,
   snapshot: Camera,
+  arkusz_dokumentacji: Zap,
 } as const;
 
 type ProcessItemPanelProps = {
@@ -183,7 +189,8 @@ export function ProcessItemPanel({
     item.kind === "checklist" &&
     Boolean(onSaveChecklist);
   const isBoardItem = item.kind === "checklist" || isInternalAcceptance;
-  const isFullscreen = item.kind === "kanban" || (interactive && isBoardItem);
+  const isFullscreen =
+    item.kind === "kanban" || item.kind === "arkusz_dokumentacji" || (interactive && isBoardItem);
   const showMobileNavPadding = interactive && isBoardItem;
 
   const isChecklistInteractive =
@@ -512,7 +519,48 @@ export function ProcessItemPanel({
             </div>
           ) : null}
 
-          {completed && item.kind !== "kanban" && !isInternalAcceptance ? (
+          {item.kind === "arkusz_dokumentacji" && projectId && interactive ? (
+            (() => {
+              const payload = isArkuszDokumentacjiPayload(item.defaultPayload) ? item.defaultPayload : null;
+              if (!payload) {
+                return (
+                  <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4">
+                    <p className="text-sm font-medium text-foreground">Arkusz dokumentacji</p>
+                    <p className="mt-2 text-sm text-muted">Nieprawidłowa konfiguracja elementu.</p>
+                  </div>
+                );
+              }
+              if (payload.sheetType === "rw_zugi") {
+                return (
+                  <ProjectSwitchboardsPanel
+                    projectId={projectId}
+                    authorName={actorName ?? "Zespół"}
+                    authorId={currentUserId ?? null}
+                    onToggleComplete={onToggleComplete}
+                  />
+                );
+              }
+              return (
+                <DocumentationModulePanel
+                  projectId={projectId}
+                  moduleType={payload.sheetType as DocumentationModuleType}
+                  authorName={actorName ?? "Zespół"}
+                  authorId={currentUserId ?? null}
+                  onToggleComplete={onToggleComplete}
+                />
+              );
+            })()
+          ) : item.kind === "arkusz_dokumentacji" ? (
+            <div className="rounded-xl border border-border/70 bg-surface-muted/30 p-4">
+              <p className="text-sm font-medium text-foreground">Arkusz dokumentacji</p>
+              <p className="mt-2 text-sm text-muted">
+                Dane techniczne (statusy podłączenia, notatki) będą dostępne po otwarciu tego elementu
+                w widoku zespołu.
+              </p>
+            </div>
+          ) : null}
+
+          {completed && item.kind !== "kanban" && item.kind !== "arkusz_dokumentacji" && !isInternalAcceptance ? (
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm">
               <p className="font-medium text-emerald-200">Ukończono</p>
               <p className="mt-1 text-muted">
@@ -528,6 +576,7 @@ export function ProcessItemPanel({
           item.kind !== "checklist" &&
           item.kind !== "kanban" &&
           item.kind !== "snapshot" &&
+          item.kind !== "arkusz_dokumentacji" &&
           !isInternalAcceptance ? (
             <div className="flex flex-wrap gap-2">
               <Button
@@ -538,7 +587,11 @@ export function ProcessItemPanel({
                 {completed ? "Cofnij ukończenie" : "Oznacz jako ukończone"}
               </Button>
             </div>
-          ) : item.kind !== "checklist" && item.kind !== "kanban" && item.kind !== "snapshot" && !isInternalAcceptance ? (
+          ) : item.kind !== "checklist" &&
+            item.kind !== "kanban" &&
+            item.kind !== "snapshot" &&
+            item.kind !== "arkusz_dokumentacji" &&
+            !isInternalAcceptance ? (
             <p className={cn("text-sm", completed ? "text-emerald-300" : "text-muted")}>
               {completed ? "Element ukończony" : "Element oczekuje na realizację"}
             </p>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Camera, CheckCircle2, FileCheck2, LayoutGrid, Receipt, StickyNote } from "lucide-react";
+import { Camera, CheckCircle2, FileCheck2, LayoutGrid, Receipt, StickyNote, Zap } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +23,7 @@ const kindIcons: Record<ProcessItemKind, React.ComponentType<{ className?: strin
   kanban: LayoutGrid,
   note: StickyNote,
   snapshot: Camera,
+  arkusz_dokumentacji: Zap,
 };
 
 export default function ProcessKindTypesPage() {

@@ -7,6 +7,7 @@ export const PROCESS_ITEM_KINDS = [
   "kanban",
   "note",
   "snapshot",
+  "arkusz_dokumentacji",
 ] as const;
 
 export type ProcessItemKind = (typeof PROCESS_ITEM_KINDS)[number];
@@ -255,7 +256,41 @@ export function isSnapshotTemplatePayload(value: unknown): value is SnapshotTemp
   );
 }
 
-export type ProcessElementPayload = ChecklistItemPayload | KanbanTemplatePayload | SnapshotTemplatePayload;
+// Arkusze zmapowane z ogólnego pliku dokumentacji technicznej projektu (jeden plik, wgrywany raz
+// w zakładce Dokumentacja — patrz `lib/import/detect-mapped-sheets.ts`). Każda wartość odpowiada
+// jednemu elementowi procesu typu "arkusz_dokumentacji" osadzonemu na właściwym etapie.
+export const DOCUMENTATION_SHEET_TYPES = [
+  "rw_zugi",
+  "rolety",
+  "przyciski",
+  "alarm",
+  "hvac",
+  "rack",
+] as const;
+
+export type DocumentationSheetType = (typeof DOCUMENTATION_SHEET_TYPES)[number];
+
+/** Szablon elementu "Arkusz dokumentacji" — który zmapowany arkusz ten element reprezentuje. */
+export type ArkuszDokumentacjiPayload = {
+  sheetType: DocumentationSheetType;
+};
+
+export function isArkuszDokumentacjiPayload(value: unknown): value is ArkuszDokumentacjiPayload {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    (DOCUMENTATION_SHEET_TYPES as readonly string[]).includes(
+      (value as Record<string, unknown>).sheetType as string,
+    )
+  );
+}
+
+export type ProcessElementPayload =
+  | ChecklistItemPayload
+  | KanbanTemplatePayload
+  | SnapshotTemplatePayload
+  | ArkuszDokumentacjiPayload;
 
 /** Zdjęcie faktycznie wysłane klientowi dla elementu typu "snapshot" w konkretnym projekcie. */
 export type ProjectProcessSnapshot = {
@@ -329,6 +364,7 @@ export const PROCESS_ITEM_KIND_LABELS: Record<ProcessItemKind, string> = {
   kanban: "Tablica Kanban",
   note: "Notatka / dokument",
   snapshot: "Zdjęcie do klienta",
+  arkusz_dokumentacji: "Arkusz dokumentacji",
 };
 
 /** Podpięcie istniejącej notatki lub dokumentu (albo nowo utworzonych) do kroku procesu typu „note”. */

@@ -76,6 +76,17 @@ export const DEFAULT_PROCESS_ELEMENT_KIND_META: ProcessElementKindMeta[] = [
     sortOrder: 60,
     isActive: true,
   },
+  {
+    kind: "arkusz_dokumentacji",
+    label: "Arkusz dokumentacji",
+    description:
+      "Interaktywna lista pozycji ze wgranego pliku dokumentacji technicznej (rozdzielnia, rolety, przyciski, alarm, HVAC, RACK) — statusy, notatki, historia zmian. Nigdy niewidoczny dla klienta.",
+    icon: "zap",
+    supportsPublicLink: false,
+    supportsInternalAcceptance: false,
+    sortOrder: 70,
+    isActive: true,
+  },
 ];
 
 export function getProcessKindMetaMap(meta = DEFAULT_PROCESS_ELEMENT_KIND_META) {

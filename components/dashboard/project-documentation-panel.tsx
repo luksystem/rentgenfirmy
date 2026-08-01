@@ -13,6 +13,7 @@ import {
 import { ProjectContentPanel } from "@/components/dashboard/project-content-panel";
 import { ProjectDocumentsPanel } from "@/components/dashboard/project-documents-panel";
 import { ProjectSystemCredentialsPanel } from "@/components/dashboard/project-system-credentials-panel";
+import { ProjectTechnicalDocumentationUpload } from "@/components/dashboard/project-technical-documentation-upload";
 import type { ProjectDashboardContent } from "@/lib/dashboard/content-types";
 import type { DocumentationMediaItem } from "@/lib/dashboard/documentation-media-types";
 import type { SystemCredentialMeta } from "@/lib/dashboard/system-credentials-types";
@@ -104,6 +105,8 @@ export function ProjectDocumentationPanel({
   enableCredentials = true,
   enableContent = true,
   notesSlot,
+  authorName,
+  authorId,
 }: {
   projectId: string;
   clientId: string;
@@ -117,6 +120,9 @@ export function ProjectDocumentationPanel({
   /** Zawartość podzakładki "Notatki" — dostarczana przez rodzica (dzieli logikę odczytu z
    *  samodzielną zakładką "Notatki" w głównym menu, żeby nie duplikować śledzenia przeczytania). */
   notesSlot?: ReactNode;
+  /** Tylko do sekcji "Dokumentacja techniczna" (zespół) — kto wgrywa plik. */
+  authorName?: string;
+  authorId?: string | null;
 }) {
   const [subTab, setSubTab] = useState<DocumentationSubTab>("view");
   const { items: media, loading: mediaLoading } = useDocumentationMedia(projectId, publicToken);
@@ -250,6 +256,13 @@ export function ProjectDocumentationPanel({
 
       {subTab === "documents" ? (
         <div className="grid gap-4">
+          {!readOnly ? (
+            <ProjectTechnicalDocumentationUpload
+              projectId={projectId}
+              authorName={authorName ?? "Zespół"}
+              authorId={authorId ?? null}
+            />
+          ) : null}
           <ProjectDocumentsPanel
             projectId={projectId}
             clientId={clientId}

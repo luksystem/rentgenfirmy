@@ -82,6 +82,7 @@ export type SwitchboardCircuit = {
   status: SwitchboardCircuitStatus;
   note: string | null;
   isStale: boolean;
+  source: "import" | "manual";
   employeeReportTarget: "agreement" | "change_request" | null;
   employeeReportId: string | null;
   updatedById: string | null;
