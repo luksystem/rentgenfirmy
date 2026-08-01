@@ -250,7 +250,14 @@ export function ProcessItemPanel({
             item.kind === "kanban"
               ? "flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain [scrollbar-gutter:stable] [scrollbar-width:thin]"
               : "grid gap-4",
-            isFullscreen && item.kind !== "kanban" && "min-h-0 flex-1 overflow-y-auto overscroll-y-contain",
+            isFullscreen &&
+              item.kind !== "kanban" &&
+              // overflow-x i overflow-y RAZEM i jawnie — samo "overflow-x-hidden" na elemencie z
+              // domyślnym (visible) overflow-y każe przeglądarce automatycznie doliczyć mu własne
+              // overflow-y:auto (reguła specyfikacji CSS Overflow dla pary x/y), co tworzyło
+              // DRUGI, niezamierzony kontener przewijania wewnątrz panelu (np. dokumentacji
+              // modułów) zamiast jednego spójnego przewijania całej zawartości.
+              "min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain",
             showMobileNavPadding && "pb-36 md:pb-0",
             isFullscreen && "pt-3",
           )}

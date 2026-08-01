@@ -496,11 +496,13 @@ function ModuleHeaderBar({
   const progress = buildDocumentationModuleProgress(items);
   const isComplete = Boolean(mod.completedAt);
   // Legenda zajmuje 2-3 wiersze zawiniętych chipów — na mobile domyślnie zwinięta, żeby lista
-  // pozycji dostała jak najwięcej ekranu pod stałym paskiem postępu. Na desktopie zawsze widoczna.
+  // pozycji dostała jak najwięcej ekranu. Na desktopie zawsze widoczna.
   const [legendOpen, setLegendOpen] = useState(false);
 
+  // Świadomie NIE sticky: przypięty nagłówek sprawiał, że na mobile wyglądało to jak "przewija
+  // się tylko lista pod spodem", zamiast naturalnego przewijania całej zawartości jednym gestem.
   return (
-    <div className="sticky top-0 z-10 grid gap-2 rounded-xl border border-border/70 bg-surface/95 p-3 backdrop-blur">
+    <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/10 p-3">
       <button
         type="button"
         onClick={() => setLegendOpen((value) => !value)}
@@ -746,7 +748,7 @@ export function DocumentationModulePanel({
   }
 
   return (
-    <div className="grid min-w-0 max-w-full gap-3 overflow-x-hidden">
+    <div className="grid min-w-0 max-w-full gap-3">
       {modules.length > 1 ? (
         <div className="flex flex-wrap gap-1.5">
           {modules.map((entry) => (
