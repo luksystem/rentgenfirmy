@@ -23,8 +23,15 @@ export function renderStageReportText(content: StageReportContent, coordinatorCo
     lines.push("  brak ukończonych pozycji");
   } else {
     for (const item of content.completedItems) {
-      const kindLabel = item.kind === "protocol" ? "protokół" : "checklista";
-      lines.push(`  • ${item.title} (${kindLabel})${item.completedAt ? ` — ${formatDate(item.completedAt)}` : ""}`);
+      const kindLabel =
+        item.kind === "protocol" ? "protokół" : item.kind === "kanban" ? "tablica kanban" : "checklista";
+      const taskCount =
+        item.kind === "kanban" && item.closedTaskCount != null
+          ? `, ${item.closedTaskCount} ${item.closedTaskCount === 1 ? "zadanie" : "zadań"} zamkniętych`
+          : "";
+      lines.push(
+        `  • ${item.title} (${kindLabel}${taskCount})${item.completedAt ? ` — ${formatDate(item.completedAt)}` : ""}`,
+      );
     }
   }
   lines.push("");

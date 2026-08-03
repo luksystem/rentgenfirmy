@@ -149,16 +149,81 @@ export async function buildStageReportContent(
   const completedDocItems = milestone.items.filter(
     (item) => (item.kind === "checklist" || item.kind === "protocol") && completions[item.id]?.completedAt,
   );
-  const completedItems: StageReportCompletedItem[] = completedDocItems.map((item) => ({
-    title: item.title,
-    kind: item.kind as "checklist" | "protocol",
-    completedAt: completions[item.id]?.completedAt ?? null,
-  }));
+  const completedKanbanItems = milestone.items.filter(
+    (item) => item.kind === "kanban" && completions[item.id]?.completedAt,
+  );
+
+  const processItems = await fetchProjectProcessItems(projectId);
+  const processItemsByTemplateId = new Map(processItems.map((item) => [item.templateItemId, item]));
+
+  // Tablica kanban ukończa się dopiero, gdy nie ma już aktywnych zadań (zero otwartych) — liczba
+  // zamkniętych zadań w chwili generowania raportu to jedyny sensowny opis "co zostało zrobione"
+  // dla elementu, który nie ma checklisty do odhaczenia.
+  const kanbanProcessItemIds = completedKanbanItems
+    .map((item) => processItemsByTemplateId.get(item.id)?.id)
+    .filter((id): id is string => Boolean(id));
+  const closedTaskCountByProcessItemId = new Map<string, number>();
+  if (kanbanProcessItemIds.length > 0) {
+    const { data: boardRows, error: boardError } = await supabase
+      .from("process_kanban_boards")
+      .select("id, project_process_item_id")
+      .in("project_process_item_id", kanbanProcessItemIds);
+    if (boardError) throw new Error(boardError.message);
+    const boardIdByProcessItemId = new Map<string, string>(
+      (boardRows ?? []).map((row) => [row.project_process_item_id as string, row.id as string]),
+    );
+    const boardIds = (boardRows ?? []).map((row) => row.id as string);
+    if (boardIds.length > 0) {
+      // Zadania nie mają board_id wprost — trzeba przejść przez kolumny (column_id -> board_id).
+      const { data: columnRows, error: columnError } = await supabase
+        .from("process_kanban_columns")
+        .select("id, board_id")
+        .in("board_id", boardIds);
+      if (columnError) throw new Error(columnError.message);
+      const boardIdByColumnId = new Map<string, string>(
+        (columnRows ?? []).map((row) => [row.id as string, row.board_id as string]),
+      );
+      const columnIds = (columnRows ?? []).map((row) => row.id as string);
+
+      const closedCountByBoardId = new Map<string, number>();
+      if (columnIds.length > 0) {
+        const { data: taskRows, error: taskError } = await supabase
+          .from("process_kanban_tasks")
+          .select("column_id, closed_at")
+          .in("column_id", columnIds)
+          .not("closed_at", "is", null);
+        if (taskError) throw new Error(taskError.message);
+        for (const row of taskRows ?? []) {
+          const boardId = boardIdByColumnId.get(row.column_id as string);
+          if (!boardId) continue;
+          closedCountByBoardId.set(boardId, (closedCountByBoardId.get(boardId) ?? 0) + 1);
+        }
+      }
+      for (const [processItemId, boardId] of boardIdByProcessItemId) {
+        closedTaskCountByProcessItemId.set(processItemId, closedCountByBoardId.get(boardId) ?? 0);
+      }
+    }
+  }
+
+  const completedItems: StageReportCompletedItem[] = [
+    ...completedDocItems.map((item) => ({
+      title: item.title,
+      kind: item.kind as "checklist" | "protocol",
+      completedAt: completions[item.id]?.completedAt ?? null,
+    })),
+    ...completedKanbanItems.map((item) => {
+      const processItemId = processItemsByTemplateId.get(item.id)?.id;
+      return {
+        title: item.title,
+        kind: "kanban" as const,
+        completedAt: completions[item.id]?.completedAt ?? null,
+        closedTaskCount: processItemId ? closedTaskCountByProcessItemId.get(processItemId) ?? 0 : 0,
+      };
+    }),
+  ];
 
   // Dokumenty do wglądu: tylko elementy z JUŻ włączonym publicznym linkiem — generowanie raportu
   // nie zmienia cudzych ustawień widoczności jako efekt uboczny (opiekun włącza ręcznie, jeśli chce).
-  const processItems = await fetchProjectProcessItems(projectId);
-  const processItemsByTemplateId = new Map(processItems.map((item) => [item.templateItemId, item]));
   const relevantProcessItemIds = completedDocItems
     .map((item) => processItemsByTemplateId.get(item.id)?.id)
     .filter((id): id is string => Boolean(id));

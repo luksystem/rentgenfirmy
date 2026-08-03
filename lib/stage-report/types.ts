@@ -28,8 +28,10 @@ export const COMMUNICATION_PHASE_RHYTHM_LABELS: Record<CommunicationPhase, strin
 
 export type StageReportCompletedItem = {
   title: string;
-  kind: "checklist" | "protocol";
+  kind: "checklist" | "protocol" | "kanban";
   completedAt: string | null;
+  /** Tylko dla kind="kanban" — liczba zamkniętych zadań na tablicy w chwili generowania raportu. */
+  closedTaskCount?: number;
 };
 
 export type StageReportDocument = {
