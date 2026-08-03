@@ -85,6 +85,7 @@ export function ProcessKanbanBoard({
   embedded = false,
   initialClientText,
   onConsumeInitialClientText,
+  onOpenTaskCountChange,
 }: {
   projectProcessItemId: string;
   templatePayload: KanbanTemplatePayload | unknown;
@@ -94,6 +95,9 @@ export function ProcessKanbanBoard({
   embedded?: boolean;
   initialClientText?: string;
   onConsumeInitialClientText?: () => void;
+  /** Wołane po każdym załadowaniu/zmianie tablicy z aktualną liczbą zadań otwartych i wszystkich —
+   *  do automatycznego domykania elementu procesu, gdy tablica nie ma już aktywnych zadań. */
+  onOpenTaskCountChange?: (openCount: number, totalCount: number) => void;
 }) {
   const cachedBoard = useKanbanCacheStore((state) => state.boardsByItemId[projectProcessItemId]);
   const ensureBoard = useKanbanCacheStore((state) => state.ensureBoard);
@@ -202,6 +206,11 @@ export function ProcessKanbanBoard({
       setBoard(cachedBoard);
     }
   }, [cachedBoard]);
+
+  useEffect(() => {
+    if (!board) return;
+    onOpenTaskCountChange?.(countOpenKanbanTasks(board.tasks), board.tasks.length);
+  }, [board, onOpenTaskCountChange]);
 
   useKanbanRealtime(board?.id ?? null, async () => {
     await refresh({ force: true, showLoading: false });

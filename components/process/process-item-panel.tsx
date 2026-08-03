@@ -173,15 +173,35 @@ export function ProcessItemPanel({
     [item, projectId, setItemBlocksNextStage],
   );
 
+  const completed =
+    Boolean(completion) ||
+    resolvedInstance?.status === "completed" ||
+    Boolean(resolvedInstance?.signedAt);
+
+  /**
+   * Tablice kanban nie mają checklisty do odhaczenia — w przeciwieństwie do checklisty (auto-
+   * ukończenie przy completed===total, `deriveProcessItemStatus`), tablica kanban nie miała
+   * ŻADNEGO mechanizmu ukończenia, ani automatycznego, ani ręcznego (przycisk „Oznacz jako
+   * ukończone” jawnie wyklucza `kind === "kanban"` niżej). Element z pustą tablicą (0 aktywnych
+   * zadań) wisiał jako nieukończony na zawsze. Domykamy przez tę samą ścieżkę co ręczne ukończenie
+   * (onToggleComplete → toggleItemCompletion), żeby nie dublować mechanizmu zapisu.
+   */
+  const handleKanbanOpenTaskCountChange = useCallback(
+    (openCount: number, totalCount: number) => {
+      if (!onToggleComplete) return;
+      const shouldBeComplete = totalCount > 0 && openCount === 0;
+      if (shouldBeComplete !== completed) {
+        onToggleComplete(shouldBeComplete);
+      }
+    },
+    [completed, onToggleComplete],
+  );
+
   if (!item) {
     return null;
   }
 
   const isInternalAcceptance = Boolean(item.isInternalAcceptance ?? resolvedInstance?.isInternalAcceptance);
-  const completed =
-    Boolean(completion) ||
-    resolvedInstance?.status === "completed" ||
-    Boolean(resolvedInstance?.signedAt);
   const Icon = isInternalAcceptance ? ShieldCheck : kindIcon[item.kind];
   const canEditChecklistStructure =
     interactive &&
@@ -462,6 +482,7 @@ export function ProcessItemPanel({
                 embedded
                 initialClientText={initialKanbanNote ?? undefined}
                 onConsumeInitialClientText={onConsumeKanbanNote}
+                onOpenTaskCountChange={handleKanbanOpenTaskCountChange}
               />
             </div>
           ) : null}

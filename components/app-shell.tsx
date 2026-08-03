@@ -65,6 +65,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { NotificationsRealtimeSubscriber } from "@/components/notifications-realtime-subscriber";
 import { NavigateToClientDialog } from "@/components/quick-add/navigate-to-client-dialog";
 import { OpenClientPanelDialog } from "@/components/quick-add/open-client-panel-dialog";
+import { LogClientContactDialog } from "@/components/quick-add/log-client-contact-dialog";
 import { AddContractorDialog } from "@/components/quick-add/add-contractor-dialog";
 import { EmployeeReportDialog } from "@/components/process/employee-report-dialog";
 import { QuickAddMenuList } from "@/components/quick-add-menu";
@@ -360,6 +361,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
   const [navigateToClientOpen, setNavigateToClientOpen] = useState(false);
   const [addContractorOpen, setAddContractorOpen] = useState(false);
   const [clientSearchOpen, setClientSearchOpen] = useState(false);
+  const [logClientContactOpen, setLogClientContactOpen] = useState(false);
   const isAdministrator = useAuthStore((state) => state.isAdministrator);
   const profile = useAuthStore((state) => state.profile);
   const profileRole = useAuthStore((state) => state.profile?.role);
@@ -843,6 +845,10 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
                   setAddMenuOpen(false);
                   setEmployeeReportOpen(true);
                 }}
+                onLogClientContact={() => {
+                  setAddMenuOpen(false);
+                  setLogClientContactOpen(true);
+                }}
               />
             </div>
           </div>
@@ -855,6 +861,7 @@ function AppShellAuthenticated({ children }: { children: React.ReactNode }) {
         <AddContractorDialog open={addContractorOpen} onOpenChange={setAddContractorOpen} />
         <EmployeeReportDialog open={employeeReportOpen} onOpenChange={setEmployeeReportOpen} />
         <OpenClientPanelDialog open={clientSearchOpen} onOpenChange={setClientSearchOpen} />
+        <LogClientContactDialog open={logClientContactOpen} onOpenChange={setLogClientContactOpen} />
 
         <button
           type="button"

@@ -12,11 +12,14 @@ import {
   Navigation,
   Package,
   PhoneCall,
+  PhoneOutgoing,
 } from "lucide-react";
+import { hasFullAppAccess } from "@/lib/auth/types";
+import { useAuthStore } from "@/store/auth-store";
 
 export type QuickAddMenuItem = {
   href?: string;
-  action?: "navigate-to" | "add-contractor" | "employee-report";
+  action?: "navigate-to" | "add-contractor" | "employee-report" | "log-client-contact";
   label: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -42,6 +45,8 @@ function buildDocumentQuickAddHref(pathname: string, searchParams: URLSearchPara
 export function useQuickAddMenuItems(): QuickAddMenuItem[] {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const profile = useAuthStore((state) => state.profile);
+  const canLogClientContact = profile ? hasFullAppAccess(profile.role) : false;
 
   return useMemo(
     () => [
@@ -52,6 +57,16 @@ export function useQuickAddMenuItems(): QuickAddMenuItem[] {
         description: "Zdjecie i opis — reszta wyliczy sie sama",
         icon: MessageSquareWarning,
       },
+      ...(canLogClientContact
+        ? [
+            {
+              action: "log-client-contact" as const,
+              label: "Kontakt z klientem",
+              description: "Wybierz klienta i projekt, odnotuj rozmowę",
+              icon: PhoneOutgoing,
+            },
+          ]
+        : []),
       {
         href: "/moja-praca/czas-pracy",
         label: "Czas pracy",
@@ -95,7 +110,7 @@ export function useQuickAddMenuItems(): QuickAddMenuItem[] {
         icon: Navigation,
       },
     ],
-    [pathname, searchParams],
+    [pathname, searchParams, canLogClientContact],
   );
 }
 
@@ -208,12 +223,14 @@ function QuickAddMenuListInner({
   onNavigateToClient,
   onAddContractor,
   onEmployeeReport,
+  onLogClientContact,
   compact = false,
 }: {
   onNavigate?: () => void;
   onNavigateToClient?: () => void;
   onAddContractor?: () => void;
   onEmployeeReport?: () => void;
+  onLogClientContact?: () => void;
   compact?: boolean;
 }) {
   const items = useQuickAddMenuItems();
@@ -236,6 +253,9 @@ function QuickAddMenuListInner({
             if (action === "employee-report") {
               onEmployeeReport?.();
             }
+            if (action === "log-client-contact") {
+              onLogClientContact?.();
+            }
           }}
         />
       ))}
@@ -248,12 +268,14 @@ export function QuickAddMenuList({
   onNavigateToClient,
   onAddContractor,
   onEmployeeReport,
+  onLogClientContact,
   compact = false,
 }: {
   onNavigate?: () => void;
   onNavigateToClient?: () => void;
   onAddContractor?: () => void;
   onEmployeeReport?: () => void;
+  onLogClientContact?: () => void;
   compact?: boolean;
 }) {
   return (
@@ -267,6 +289,7 @@ export function QuickAddMenuList({
         onNavigateToClient={onNavigateToClient}
         onAddContractor={onAddContractor}
         onEmployeeReport={onEmployeeReport}
+        onLogClientContact={onLogClientContact}
         compact={compact}
       />
     </Suspense>
