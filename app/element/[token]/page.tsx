@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ProcessChecklistBoard } from "@/components/process/process-checklist-board";
+import { PublicSwitchboardsView } from "@/components/process/public-switchboards-view";
 import { normalizeChecklistPayload } from "@/lib/process/item-payload";
 import type { PublicProcessItemPayload } from "@/lib/supabase/process-public-server";
 
@@ -62,10 +63,19 @@ export default function PublicProcessElementPage({
     );
   }
 
+  const eyebrow =
+    item.kind === "arkusz_dokumentacji" ? "Rozdzielnie — podgląd publiczny" : "Checklista — podgląd publiczny";
+
   return (
-    <main className="mx-auto flex min-h-svh max-w-3xl flex-col px-4 py-6">
+    <main
+      className={
+        item.kind === "arkusz_dokumentacji"
+          ? "mx-auto flex min-h-svh max-w-5xl flex-col px-4 py-6"
+          : "mx-auto flex min-h-svh max-w-3xl flex-col px-4 py-6"
+      }
+    >
       <header className="mb-4 shrink-0">
-        <p className="text-xs uppercase tracking-wide text-muted">Checklista — podgląd publiczny</p>
+        <p className="text-xs uppercase tracking-wide text-muted">{eyebrow}</p>
         <h1 className="text-2xl font-semibold text-foreground">{item.title}</h1>
         <p className="mt-1 text-sm text-muted">Klient: {item.clientName ?? "Klient nieprzypisany"}</p>
       </header>
@@ -78,6 +88,8 @@ export default function PublicProcessElementPage({
           defaultAssigneeId={item.assigneeId}
           defaultAssigneeName={item.assigneeName}
         />
+      ) : item.kind === "arkusz_dokumentacji" ? (
+        <PublicSwitchboardsView switchboards={item.switchboards ?? []} />
       ) : (
         <p className="text-sm text-muted">Ten typ elementu nie ma jeszcze publicznego widoku interaktywnego.</p>
       )}

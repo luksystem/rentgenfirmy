@@ -10,6 +10,7 @@ import type {
   ProjectProcessItem,
   ProjectProcessItemStatus,
 } from "@/lib/process/types";
+import { PROCESS_ITEM_KINDS } from "@/lib/process/types";
 import type { ProjectProcessItemRow } from "@/lib/supabase/database.types";
 
 function parseInternalAcceptanceState(value: unknown): InternalAcceptanceState | null {
@@ -20,14 +21,7 @@ function parseInternalAcceptanceState(value: unknown): InternalAcceptanceState |
 }
 
 function isProcessItemKind(value: string): value is ProcessItemKind {
-  return (
-    value === "checklist" ||
-    value === "protocol" ||
-    value === "settlement" ||
-    value === "kanban" ||
-    value === "note" ||
-    value === "snapshot"
-  );
+  return (PROCESS_ITEM_KINDS as readonly string[]).includes(value);
 }
 
 function isProjectProcessItemStatus(value: string): value is ProjectProcessItemStatus {
