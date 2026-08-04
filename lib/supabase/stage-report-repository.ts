@@ -13,11 +13,12 @@ import type {
   StageReportChange,
   StageReportCompletedItem,
   StageReportContent,
+  StageReportDelivery,
   StageReportDocument,
   StageReportRotItem,
   StageReportStatus,
 } from "@/lib/stage-report/types";
-import type { ProjectStageReportRow } from "@/lib/supabase/database.types";
+import type { ProjectStageReportDeliveryRow, ProjectStageReportRow } from "@/lib/supabase/database.types";
 
 export function rowToStageReport(row: ProjectStageReportRow): StageReport {
   return {
@@ -35,6 +36,30 @@ export function rowToStageReport(row: ProjectStageReportRow): StageReport {
     sentAt: row.sent_at,
     sentBy: row.sent_by,
   };
+}
+
+export function rowToStageReportDelivery(row: ProjectStageReportDeliveryRow): StageReportDelivery {
+  return {
+    id: row.id,
+    reportId: row.report_id,
+    sentAt: row.sent_at,
+    sentByName: row.sent_by_name,
+    recipientEmail: row.recipient_email,
+    subject: row.subject,
+    note: row.note,
+  };
+}
+
+/** Cała historia wysyłek tego raportu (append-only) — najnowsza pierwsza. */
+export async function fetchStageReportDeliveries(reportId: string): Promise<StageReportDelivery[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("project_stage_report_deliveries")
+    .select("*")
+    .eq("report_id", reportId)
+    .order("sent_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(rowToStageReportDelivery);
 }
 
 export async function fetchStageReports(projectId: string): Promise<StageReport[]> {

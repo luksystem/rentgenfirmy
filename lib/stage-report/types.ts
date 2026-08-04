@@ -96,3 +96,14 @@ export type StageReport = {
   sentAt: string | null;
   sentBy: string | null;
 };
+
+/** Jeden wpis w historii wysyłek maila raportu (project_stage_report_deliveries) — append-only. */
+export type StageReportDelivery = {
+  id: string;
+  reportId: string;
+  sentAt: string;
+  sentByName: string;
+  recipientEmail: string;
+  subject: string;
+  note: string;
+};

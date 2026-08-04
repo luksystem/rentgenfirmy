@@ -12,6 +12,7 @@ import { formatDate } from "@/lib/utils";
 import { fetchProjectProcess } from "@/lib/supabase/process-repository";
 import {
   approveStageReport,
+  fetchStageReportDeliveries,
   fetchStageReports,
   fetchStageReportsPilotEnabled,
   generateStageReport,
@@ -19,7 +20,7 @@ import {
   updateStageReportComment,
 } from "@/lib/supabase/stage-report-repository";
 import { renderStageReportText } from "@/lib/stage-report/render";
-import { STAGE_REPORT_STATUS_LABELS, type StageReport } from "@/lib/stage-report/types";
+import { STAGE_REPORT_STATUS_LABELS, type StageReport, type StageReportDelivery } from "@/lib/stage-report/types";
 import type { ProcessTemplate } from "@/lib/process/types";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -103,6 +104,20 @@ function ReportRow({ report, onChanged }: { report: StageReport; onChanged: () =
   const [sending, setSending] = useState(false);
   const [note, setNote] = useState("");
   const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [deliveries, setDeliveries] = useState<StageReportDelivery[] | null>(null);
+
+  const loadDeliveries = useCallback(() => {
+    void fetchStageReportDeliveries(report.id)
+      .then(setDeliveries)
+      .catch(() => setDeliveries([]));
+  }, [report.id]);
+
+  useEffect(() => {
+    if (report.status === "wyslany") {
+      loadDeliveries();
+    }
+  }, [report.status, loadDeliveries]);
 
   const text = useMemo(() => renderStageReportText(report.content, comment), [report.content, comment]);
 
@@ -200,6 +215,7 @@ function ReportRow({ report, onChanged }: { report: StageReport; onChanged: () =
     try {
       await postJson(`/api/stage-reports/${encodeURIComponent(report.id)}/send-email`, { note });
       setPreviewOpen(false);
+      loadDeliveries();
       onChanged();
     } catch (sendError) {
       setPreviewError(sendError instanceof Error ? sendError.message : "Nie udało się wysłać maila.");
@@ -265,6 +281,26 @@ function ReportRow({ report, onChanged }: { report: StageReport; onChanged: () =
             </div>
           ) : null}
         </div>
+
+        {report.status === "wyslany" && deliveries && deliveries.length > 0 ? (
+          <div className="grid gap-2 rounded-xl border border-border/60 bg-surface-muted/10 p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              Historia wysyłek ({deliveries.length})
+            </p>
+            <div className="grid gap-2">
+              {deliveries.map((delivery) => (
+                <div key={delivery.id} className="grid gap-0.5 border-b border-border/40 pb-2 text-xs last:border-b-0 last:pb-0">
+                  <p className="text-foreground">
+                    {formatDate(delivery.sentAt)} — {delivery.sentByName || "?"} → {delivery.recipientEmail || "brak adresu"}
+                  </p>
+                  {delivery.note.trim().length > 0 ? (
+                    <p className="text-muted">Komentarz: {delivery.note}</p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </CardContent>
 
       <OfferEmailPreviewDialog

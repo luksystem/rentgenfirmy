@@ -1385,6 +1385,19 @@ export type ProjectStageReportRow = {
   updated_at: string;
 };
 
+/** Faza 5 — historia wysylek maila raportu etapowego (append-only, jeden wiersz na wysylke). */
+export type ProjectStageReportDeliveryRow = {
+  id: string;
+  report_id: string;
+  sent_at: string;
+  sent_by: string | null;
+  sent_by_name: string;
+  recipient_email: string;
+  subject: string;
+  note: string;
+  created_at: string;
+};
+
 export type ProjectTradeRow = {
   id: string;
   project_id: string;
@@ -4344,6 +4357,12 @@ export type Database = {
         Insert: Partial<ProjectStageReportRow> &
           Pick<ProjectStageReportRow, "project_id" | "stage_id" | "milestone_id" | "content">;
         Update: Partial<ProjectStageReportRow>;
+        Relationships: [];
+      };
+      project_stage_report_deliveries: {
+        Row: ProjectStageReportDeliveryRow;
+        Insert: Partial<ProjectStageReportDeliveryRow> & Pick<ProjectStageReportDeliveryRow, "report_id">;
+        Update: Partial<ProjectStageReportDeliveryRow>;
         Relationships: [];
       };
       project_coverage_periods: {

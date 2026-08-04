@@ -1,6 +1,7 @@
 import "server-only";
 
 import { formatPartyName } from "@/lib/party/display-name";
+import { getUserDisplayName } from "@/lib/auth/types";
 import { buildStageReportDeliveryEmail } from "@/lib/email/stage-report-templates";
 import { isEmailAudienceEnabled } from "@/lib/email/notification-routing";
 import { sendTransactionalEmail } from "@/lib/email/send";
@@ -138,6 +139,32 @@ export async function sendStageReportEmailServer(input: {
     .select("*")
     .single();
   if (updateError) throw new Error(updateError.message);
+
+  const { data: senderProfile } = await admin
+    .from("profiles")
+    .select("first_name, last_name, email")
+    .eq("id", input.sentBy)
+    .maybeSingle();
+  const sentByName = senderProfile
+    ? getUserDisplayName({
+        firstName: senderProfile.first_name ?? "",
+        lastName: senderProfile.last_name ?? "",
+        email: senderProfile.email ?? "",
+      })
+    : "";
+
+  // Append-only historia — niezależna od project_stage_reports.sent_at/sent_by (te trzymają tylko
+  // ostatnią wysyłkę), więc "Wyślij ponownie" nie gubi śladu po poprzednich wysyłkach ani ich notatkach.
+  const { error: deliveryError } = await admin.from("project_stage_report_deliveries").insert({
+    report_id: input.reportId,
+    sent_at: now,
+    sent_by: input.sentBy,
+    sent_by_name: sentByName,
+    recipient_email: target.recipientEmail,
+    subject: template.subject,
+    note: input.note ?? "",
+  });
+  if (deliveryError) throw new Error(deliveryError.message);
 
   return {
     ok: true as const,
