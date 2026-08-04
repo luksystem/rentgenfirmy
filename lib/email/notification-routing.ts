@@ -90,6 +90,17 @@ export const NOTIFICATION_ACTION_DEFINITIONS: NotificationActionDefinition[] = [
     defaults: { email: { user: false }, push: true, sms: false },
   },
   {
+    id: "stage_report_delivery",
+    label: "Wysłanie raportu etapowego",
+    description: "Wysyłka zatwierdzonego raportu zamknięcia etapu (Faza 5) do klienta, z podglądem przed wysyłką.",
+    category: "projekty",
+    emailAudiences: ["client"],
+    supportsPush: false,
+    supportsSms: false,
+    emailTemplateKind: "stage_report_delivery",
+    defaults: { email: { client: true }, push: false, sms: false },
+  },
+  {
     id: "service_intake_submitted",
     label: "Nowe zgłoszenie serwisowe",
     description: "Potwierdzenie do klienta + kopia na skrzynkę serwisową po utworzeniu zgłoszenia.",

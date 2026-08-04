@@ -10,6 +10,7 @@ export const EMAIL_SETTINGS_ID = "email_settings";
 export const EMAIL_TEMPLATE_KINDS = [
   "agreement_delivery",
   "agreement_client_responded",
+  "stage_report_delivery",
   "service_intake_submitted",
   "service_intake_status",
   "client_offer_sent",
@@ -128,6 +129,14 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<EmailTemplateKind, TemplateVariabl
     { key: "agreement_title", label: "Tytuł ustalenia", channels: ["all"] },
     { key: "project_name", label: "Nazwa projektu", channels: ["all"] },
     { key: "response_note", label: "Notatka klienta", channels: ["email"] },
+  ],
+  stage_report_delivery: [
+    { key: "greeting", label: "Powitanie", html: true, channels: ["email"] },
+    { key: "project_name", label: "Nazwa projektu", channels: ["all"] },
+    { key: "stage_title", label: "Nazwa etapu", channels: ["all"] },
+    { key: "milestone_title", label: "Nazwa kamienia milowego", channels: ["all"] },
+    { key: "sender_note", label: "Notatka nadawcy (wpisana przy wysyłce)", html: true, channels: ["email"] },
+    { key: "report_block", label: "Treść raportu etapowego (generowana automatycznie)", html: true, channels: ["email"] },
   ],
   change_request_delivery: [
     { key: "greeting", label: "Powitanie", html: true, channels: ["email"] },
@@ -350,6 +359,21 @@ export function defaultEmailTemplates(): Record<EmailTemplateKind, EmailTemplate
       smsManagedElsewhere: false,
       pushTitle: "{{decision_label}}",
       pushBody: "{{responder_name}} — „{{agreement_title}}” w {{project_name}}.",
+    },
+    stage_report_delivery: {
+      label: "Raport etapowy — wysyłka do klienta",
+      description:
+        "Zatwierdzony raport zamknięcia etapu (Faza 5) wysyłany do klienta — treść raportu dogenerowywana automatycznie, nie do ręcznego wklejania.",
+      subject: "Raport z etapu: {{stage_title}} — {{project_name}}",
+      body: "{{greeting}}\n\nPrzesyłamy podsumowanie zakończonego etapu „{{stage_title}}” ({{milestone_title}}) w projekcie {{project_name}}.\n\n{{sender_note}}\n\n{{report_block}}",
+      eyebrow: "Raport etapowy",
+      disclaimer:
+        "Jeśli w ciągu 7 dni nie otrzymamy uwag do tego raportu, traktujemy go jako przyjęty do wiadomości.",
+      emailEnabled: true,
+      sms: "",
+      smsManagedElsewhere: false,
+      pushTitle: "",
+      pushBody: "",
     },
     service_intake_submitted: {
       label: "Zgłoszenie serwisowe — potwierdzenie",

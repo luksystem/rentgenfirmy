@@ -19,7 +19,7 @@ import type {
 } from "@/lib/stage-report/types";
 import type { ProjectStageReportRow } from "@/lib/supabase/database.types";
 
-function rowToStageReport(row: ProjectStageReportRow): StageReport {
+export function rowToStageReport(row: ProjectStageReportRow): StageReport {
   return {
     id: row.id,
     projectId: row.project_id,

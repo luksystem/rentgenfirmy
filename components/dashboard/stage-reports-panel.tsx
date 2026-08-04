@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Copy, RefreshCw, Send, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Field, Input, Textarea } from "@/components/ui/input";
+import { Field, Textarea } from "@/components/ui/input";
+import { OfferEmailPreviewDialog } from "@/components/service/offer-email-preview-dialog";
 import { hasFullAppAccess } from "@/lib/auth/types";
 import { formatDate } from "@/lib/utils";
 import { fetchProjectProcess } from "@/lib/supabase/process-repository";
@@ -14,7 +15,6 @@ import {
   fetchStageReports,
   fetchStageReportsPilotEnabled,
   generateStageReport,
-  markStageReportSent,
   setStageReportsPilotEnabled,
   updateStageReportComment,
 } from "@/lib/supabase/stage-report-repository";
@@ -75,12 +75,34 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+type StageReportEmailPreview = { subject: string; html: string; to: string };
+
+async function postJson<T>(url: string, body?: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error ?? "Nie udało się wykonać operacji.");
+  }
+  return data as T;
+}
+
 function ReportRow({ report, onChanged }: { report: StageReport; onChanged: () => void }) {
   const currentProfile = useAuthStore((state) => state.profile);
   const [comment, setComment] = useState(report.coordinatorComment);
-  const [sentAt, setSentAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [preview, setPreview] = useState<StageReportEmailPreview | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [note, setNote] = useState("");
+  const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const text = useMemo(() => renderStageReportText(report.content, comment), [report.content, comment]);
 
@@ -137,17 +159,52 @@ function ReportRow({ report, onChanged }: { report: StageReport; onChanged: () =
     }
   }
 
-  async function handleSend() {
-    if (!currentProfile || !sentAt) return;
-    setBusy(true);
-    setError(null);
+  async function handleOpenPreview() {
+    if (noteDebounceRef.current) {
+      clearTimeout(noteDebounceRef.current);
+    }
+    setPreviewError(null);
+    setPreview(null);
+    setNote("");
+    setPreviewOpen(true);
     try {
-      await markStageReportSent(report.id, new Date(sentAt).toISOString(), currentProfile.id);
+      const data = await postJson<StageReportEmailPreview>(
+        `/api/stage-reports/${encodeURIComponent(report.id)}/preview-email`,
+      );
+      setPreview(data);
+    } catch (loadError) {
+      setPreviewError(
+        loadError instanceof Error ? loadError.message : "Nie udało się przygotować podglądu.",
+      );
+    }
+  }
+
+  function handleNoteChange(nextNote: string) {
+    setNote(nextNote);
+    if (noteDebounceRef.current) {
+      clearTimeout(noteDebounceRef.current);
+    }
+    noteDebounceRef.current = setTimeout(() => {
+      void postJson<StageReportEmailPreview>(
+        `/api/stage-reports/${encodeURIComponent(report.id)}/preview-email`,
+        { note: nextNote },
+      )
+        .then((data) => setPreview(data))
+        .catch(() => undefined);
+    }, 600);
+  }
+
+  async function handleConfirmSend() {
+    setSending(true);
+    setPreviewError(null);
+    try {
+      await postJson(`/api/stage-reports/${encodeURIComponent(report.id)}/send-email`, { note });
+      setPreviewOpen(false);
       onChanged();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Błąd odnotowania wysyłki.");
+    } catch (sendError) {
+      setPreviewError(sendError instanceof Error ? sendError.message : "Nie udało się wysłać maila.");
     } finally {
-      setBusy(false);
+      setSending(false);
     }
   }
 
@@ -193,24 +250,33 @@ function ReportRow({ report, onChanged }: { report: StageReport; onChanged: () =
             </>
           ) : null}
           {report.status === "zatwierdzony" ? (
+            <Button type="button" size="sm" disabled={busy} onClick={() => void handleOpenPreview()}>
+              <Send className="mr-1.5 h-3.5 w-3.5" />
+              Wyślij
+            </Button>
+          ) : null}
+          {report.status === "wyslany" ? (
             <div className="flex flex-wrap items-center gap-2">
-              <Input
-                type="date"
-                value={sentAt}
-                onChange={(event) => setSentAt(event.target.value)}
-                className="w-auto"
-              />
-              <Button type="button" size="sm" disabled={busy || !sentAt} onClick={() => void handleSend()}>
+              <p className="text-xs text-muted">Wysłano {formatDate(report.sentAt!)}</p>
+              <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => void handleOpenPreview()}>
                 <Send className="mr-1.5 h-3.5 w-3.5" />
-                Odnotuj wysyłkę
+                Wyślij ponownie
               </Button>
             </div>
           ) : null}
-          {report.status === "wyslany" ? (
-            <p className="text-xs text-muted">Wysłano {formatDate(report.sentAt!)}</p>
-          ) : null}
         </div>
       </CardContent>
+
+      <OfferEmailPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        preview={preview}
+        sending={sending}
+        error={previewError}
+        note={note}
+        onNoteChange={handleNoteChange}
+        onConfirmSend={() => void handleConfirmSend()}
+      />
     </Card>
   );
 }
