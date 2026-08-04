@@ -18,6 +18,7 @@ export type NavModuleKey =
   | "resource-plan"
   | "projects"
   | "rot"
+  | "project-readiness"
   | "audit"
   | "work-orders"
   | "documents"
@@ -204,6 +205,12 @@ export const NAV_MODULE_GROUPS: NavModuleGroupDefinition[] = [
         label: "ROT",
         href: "/rot",
         routePrefixes: ["/rot"],
+      },
+      {
+        key: "project-readiness",
+        label: "Gotowość projektów",
+        href: "/gotowosc",
+        routePrefixes: ["/gotowosc"],
       },
       {
         key: "audit",

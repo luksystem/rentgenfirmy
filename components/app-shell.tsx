@@ -111,6 +111,7 @@ const NAV_MODULE_ICONS: Record<NavModuleKey, React.ComponentType<{ className?: s
   "resource-plan": CalendarRange,
   projects: FolderKanban,
   rot: Flag,
+  "project-readiness": ShieldCheck,
   audit: Activity,
   "work-orders": ClipboardList,
   documents: FileUp,

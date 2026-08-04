@@ -5451,6 +5451,22 @@ export type Database = {
           detail: string;
         }[];
       };
+      report_project_readiness: {
+        Args: Record<string, never>;
+        Returns: {
+          project_id: string;
+          project_name: string;
+          flow_status: string;
+          etap_aktualny: string;
+          sloty_obsadzone: string;
+          profil_klienta: string;
+          kanal_komunikacji: string;
+          rot_przeniesione_z_wlascicielem_i_data_kontroli: string;
+          podmioty_zewnetrzne_kto_zatrudnia: string;
+          lider_etapu: string;
+          data_ostatniego_kontaktu: string;
+        }[];
+      };
       report_project_role_slot_migration: {
         Args: Record<string, never>;
         Returns: {

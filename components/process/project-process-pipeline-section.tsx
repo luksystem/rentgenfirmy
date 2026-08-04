@@ -256,7 +256,9 @@ export function ProjectProcessPipelineSection({
         }
         agreements={agreements}
         changeRequests={changeRequests}
-        onSetActiveStage={(stageId) => setActiveStage(projectId, stageId)}
+        onSetActiveStage={
+          canManageAssignment ? (stageId) => setActiveStage(projectId, stageId) : undefined
+        }
         onAddItem={(milestoneId, input) => addProjectProcessItem(projectId, milestoneId, input)}
         onRemoveItem={(itemId) => removeProjectProcessItem(projectId, itemId)}
         activeStageHealth={stageHealth}

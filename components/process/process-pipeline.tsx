@@ -519,7 +519,12 @@ export function ProcessPipeline({
                         {onSetActiveStage ? (
                           <button
                             type="button"
-                            disabled={Boolean(settingActiveStageId)}
+                            disabled={Boolean(settingActiveStageId) || (isBlocked && !isActiveStage)}
+                            title={
+                              isBlocked && !isActiveStage
+                                ? `Etap zablokowany: ${blockReasons.join(" · ")}`
+                                : undefined
+                            }
                             onClick={(event) => {
                               event.stopPropagation();
                               void handleSetActiveStage(isActiveStage ? null : stage.id);
@@ -535,7 +540,9 @@ export function ProcessPipeline({
                               ? "Zapisywanie…"
                               : isActiveStage
                                 ? "Wyczyść aktywny etap"
-                                : "Oznacz jako aktywny etap"}
+                                : isBlocked
+                                  ? "Zablokowane"
+                                  : "Oznacz jako aktywny etap"}
                           </button>
                         ) : null}
                       </div>
