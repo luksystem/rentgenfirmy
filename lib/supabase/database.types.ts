@@ -5499,6 +5499,10 @@ export type Database = {
           days_open: number;
           review_date: string | null;
           termin: string | null;
+          stage_id: string | null;
+          stage_title: string | null;
+          origin_stage_id: string | null;
+          move_count: number | null;
         }[];
       };
       apply_warranty_extension_from_agreement: {

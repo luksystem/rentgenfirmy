@@ -53,6 +53,9 @@ export function RotItemDetailPanel({
                 <Badge tone="neutral" className="text-[10px]">
                   {ROT_SOURCE_LABELS[item.sourceType]}
                 </Badge>
+                <Badge tone={item.stageTitle ? "neutral" : "waiting"} className="text-[10px]">
+                  {item.stageTitle ?? "Bez przypisania"}
+                </Badge>
                 <span className="min-w-0 truncate text-sm font-semibold text-foreground">
                   {item.projectName}
                 </span>

@@ -23,6 +23,10 @@ export async function fetchRotItems(): Promise<RotItem[]> {
     daysOpen: row.days_open,
     reviewDate: row.review_date,
     termin: row.termin,
+    stageId: row.stage_id,
+    stageTitle: row.stage_title,
+    originStageId: row.origin_stage_id,
+    moveCount: row.move_count,
   }));
 }
 

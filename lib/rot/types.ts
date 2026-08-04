@@ -39,4 +39,12 @@ export type RotItem = {
   reviewDate: string | null;
   /** D33 — realny termin/deadline pozycji, gdy istnieje (wygaśnięcie oferty, kamień etapu blokady). */
   termin: string | null;
+  /** Wymiar etapu (D44) — null = "bez przypisania" (nie ukrywać). Kanban: live z tablicy/elementu
+   *  procesu. Zmiana/ustalenie: stage_id, tylko część ma ustawione (ścieżka zgłoszenia pracownika).
+   *  Szybka oferta: zawsze null — brak odniesienia w schemacie, świadomie. */
+  stageId: string | null;
+  stageTitle: string | null;
+  /** Przygotowanie pod 11c (przenoszenie pozycji między etapami) — tylko kanban, reszta zawsze null. */
+  originStageId: string | null;
+  moveCount: number | null;
 };

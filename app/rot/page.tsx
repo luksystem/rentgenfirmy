@@ -66,6 +66,15 @@ function RotItemRow({
           <Badge tone="neutral" className="text-[10px]">
             {ROT_SOURCE_LABELS[item.sourceType]}
           </Badge>
+          <Badge tone={item.stageTitle ? "neutral" : "waiting"} className="text-[10px]">
+            {item.stageTitle ?? "Bez przypisania"}
+          </Badge>
+          {item.moveCount != null && item.moveCount > 0 ? (
+            <Badge tone={item.moveCount >= 3 ? "critical" : "waiting"} className="text-[10px]">
+              {item.moveCount >= 3 ? <AlertTriangle className="h-3 w-3" /> : null}
+              przeniesiono {item.moveCount}×
+            </Badge>
+          ) : null}
           {item.category ? (
             <Badge tone="waiting" className="text-[10px]">
               {ROT_CATEGORY_LABELS[item.category]}
