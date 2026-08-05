@@ -26,6 +26,16 @@ import {
 import type { ChecklistItemPayload, ChecklistLine } from "@/lib/process/types";
 import { cn, formatDateTime } from "@/lib/utils";
 
+/** "Ogarnięte" nie jest statusem (status linii zostaje bez zmian) — ale wizualnie ma przykrywać
+ *  jego kolor na liście, żeby było widać, że problem został obsłużony i nie trzeba go dalej widzieć
+ *  jako czerwony/aktywny. Niebieski, żeby nie kolidować z żadnym z pięciu kolorów statusów. */
+const CHECKLIST_HANDLED_STYLES = {
+  badge: "border-blue-500/40 bg-blue-500/15 text-blue-300",
+  row: "border-blue-500/30 bg-blue-500/8 hover:border-blue-500/45",
+  rowActive: "border-blue-400/50 bg-blue-500/12",
+  dot: "bg-blue-400",
+};
+
 function applyLinePatch(
   payload: ChecklistItemPayload,
   sectionId: string,
@@ -295,7 +305,8 @@ export function ProcessChecklistBoard({
             <div className="grid gap-2">
               {section.lines.map((line) => {
                 const status = checklistLineStatus(line);
-                const styles = INTERNAL_ACCEPTANCE_STATUS_STYLES[status];
+                const handled = Boolean(line.handledAt);
+                const styles = handled ? CHECKLIST_HANDLED_STYLES : INTERNAL_ACCEPTANCE_STATUS_STYLES[status];
                 const assignee = getChecklistLineAssignee(line, defaultAssignee);
                 return (
                   <div
@@ -339,16 +350,23 @@ export function ProcessChecklistBoard({
                             styles.badge,
                           )}
                         >
-                          {INTERNAL_ACCEPTANCE_STATUS_LABELS[status]}
+                          {handled ? "Ogarnięte" : INTERNAL_ACCEPTANCE_STATUS_LABELS[status]}
                         </span>
                       </div>
-                      {assignee.assigneeName || line.checkedAt ? (
+                      {assignee.assigneeName || line.checkedAt || handled ? (
                         <p className="mt-1 pl-4 text-[11px] text-muted/80">
                           {assignee.assigneeName
                             ? `Odp.: ${assignee.assigneeName}${assignee.inherited ? " (checklista)" : ""}`
                             : null}
                           {assignee.assigneeName && line.checkedAt ? " · " : null}
                           {line.checkedAt ? formatDateTime(line.checkedAt) : null}
+                          {handled ? (
+                            <>
+                              {(assignee.assigneeName || line.checkedAt) && " · "}
+                              {line.handledByName ?? "—"}
+                              {line.handledNote ? `: ${line.handledNote}` : ""}
+                            </>
+                          ) : null}
                         </p>
                       ) : null}
                     </button>
