@@ -359,6 +359,9 @@ export type ProjectChangeRequestRow = {
   public_token: string;
   public_enabled: boolean;
   sent_at: string | null;
+  created_by_id: string | null;
+  completion_note: string | null;
+  completed_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -5182,6 +5185,10 @@ export type Database = {
           employee_report_id: string | null;
           updated_by_id: string | null;
           updated_by_name: string | null;
+          handled_at: string | null;
+          handled_by_id: string | null;
+          handled_by_name: string | null;
+          handled_note: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -5204,6 +5211,10 @@ export type Database = {
           employee_report_id?: string | null;
           updated_by_id?: string | null;
           updated_by_name?: string | null;
+          handled_at?: string | null;
+          handled_by_id?: string | null;
+          handled_by_name?: string | null;
+          handled_note?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -5223,6 +5234,10 @@ export type Database = {
           employee_report_id: string | null;
           updated_by_id: string | null;
           updated_by_name: string | null;
+          handled_at: string | null;
+          handled_by_id: string | null;
+          handled_by_name: string | null;
+          handled_note: string | null;
           updated_at: string;
         }>;
         Relationships: [
@@ -5310,6 +5325,10 @@ export type Database = {
           employee_report_id: string | null;
           updated_by_id: string | null;
           updated_by_name: string | null;
+          handled_at: string | null;
+          handled_by_id: string | null;
+          handled_by_name: string | null;
+          handled_note: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -5341,6 +5360,10 @@ export type Database = {
           employee_report_id?: string | null;
           updated_by_id?: string | null;
           updated_by_name?: string | null;
+          handled_at?: string | null;
+          handled_by_id?: string | null;
+          handled_by_name?: string | null;
+          handled_note?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -5369,6 +5392,10 @@ export type Database = {
           employee_report_id: string | null;
           updated_by_id: string | null;
           updated_by_name: string | null;
+          handled_at: string | null;
+          handled_by_id: string | null;
+          handled_by_name: string | null;
+          handled_note: string | null;
           updated_at: string;
         }>;
         Relationships: [

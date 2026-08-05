@@ -26,6 +26,7 @@ export async function POST(
       agreementIds?: string[];
       tradeId?: string;
       note?: string;
+      includePhoto?: boolean;
     };
 
     if (!body.scope) {
@@ -39,6 +40,7 @@ export async function POST(
       agreementIds: body.agreementIds,
       tradeId: body.tradeId,
       note: body.note,
+      includePhoto: body.includePhoto,
     });
 
     return NextResponse.json(preview);

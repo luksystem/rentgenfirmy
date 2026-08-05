@@ -13,6 +13,36 @@ import {
   rowToChangeRequest,
   type ChangeRequestRow,
 } from "@/lib/supabase/project-change-request-repository";
+import { CHANGE_REQUEST_ATTACHMENTS_BUCKET } from "@/lib/supabase/project-change-request-attachments-repository";
+
+/** Dłuższe okno niż standardowe (1h) — link ląduje w treści maila, więc musi przeżyć do momentu,
+ *  gdy klient go faktycznie otworzy, nie tylko do momentu wysyłki. */
+const EMAIL_PHOTO_SIGNED_URL_TTL_SEC = 60 * 60 * 24 * 7;
+
+/** Zdjęcie robocze z budowy trafia do maila tylko z PIERWSZEJ pozycji, tylko gdy nadawca tego nie
+ *  odznaczy (checkbox w podglądzie) — a nawet wtedy dopiero po sprawdzeniu, że w ogóle jest zdjęcie. */
+async function fetchFirstChangeRequestPhotoUrl(changeRequestId: string): Promise<string | null> {
+  const supabase = getSupabaseAdmin();
+  const { data } = await supabase
+    .from("project_change_request_attachments")
+    .select("storage_path")
+    .eq("change_request_id", changeRequestId)
+    .eq("media_kind", "image")
+    .order("position", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const storagePath = (data as { storage_path?: string } | null)?.storage_path;
+  if (!storagePath) {
+    return null;
+  }
+
+  const { data: signed } = await supabase.storage
+    .from(CHANGE_REQUEST_ATTACHMENTS_BUCKET)
+    .createSignedUrl(storagePath, EMAIL_PHOTO_SIGNED_URL_TTL_SEC);
+
+  return signed?.signedUrl ?? null;
+}
 
 /**
  * "reminder" — przypomnienie o zmianach już kiedyś ujętych w paczce/przypomnieniu (sent_at ustawiony),
@@ -202,6 +232,18 @@ async function resolveChangeRequestEmailTarget(input: {
   };
 }
 
+async function buildChangeRequestEmailEntries(
+  changeRequests: ProjectChangeRequest[],
+  includePhoto: boolean,
+) {
+  const entries = changeRequests.map(changeRequestToEmailEntry);
+  const photoUrl = entries.length ? await fetchFirstChangeRequestPhotoUrl(changeRequests[0].id) : null;
+  if (includePhoto && photoUrl) {
+    entries[0] = { ...entries[0], photoUrl };
+  }
+  return { entries, hasPhoto: Boolean(photoUrl) };
+}
+
 /** Buduje treść maila (podgląd) bez wysyłki ani zmiany statusu — do dialogu "podgląd + notatka". */
 export async function previewChangeRequestEmailServer(input: {
   projectId: string;
@@ -209,9 +251,13 @@ export async function previewChangeRequestEmailServer(input: {
   changeRequestId?: string;
   changeRequestIds?: string[];
   note?: string | null;
+  includePhoto?: boolean;
 }) {
   const target = await resolveChangeRequestEmailTarget(input);
-  const entries = target.changeRequests.map(changeRequestToEmailEntry);
+  const { entries, hasPhoto } = await buildChangeRequestEmailEntries(
+    target.changeRequests,
+    input.includePhoto ?? true,
+  );
 
   const [settings, company] = await Promise.all([
     fetchEmailSettingsServer(),
@@ -233,6 +279,7 @@ export async function previewChangeRequestEmailServer(input: {
     html: template.html,
     to: target.recipientEmail,
     changeRequestCount: target.changeRequests.length,
+    hasPhoto,
   };
 }
 
@@ -242,9 +289,13 @@ export async function sendChangeRequestEmails(input: {
   changeRequestId?: string;
   changeRequestIds?: string[];
   note?: string | null;
+  includePhoto?: boolean;
 }) {
   const target = await resolveChangeRequestEmailTarget(input);
-  const entries = target.changeRequests.map(changeRequestToEmailEntry);
+  const { entries } = await buildChangeRequestEmailEntries(
+    target.changeRequests,
+    input.includePhoto ?? true,
+  );
 
   const [settings, company] = await Promise.all([
     fetchEmailSettingsServer(),

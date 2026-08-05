@@ -37,7 +37,12 @@ import {
   getProcessItemVisualState,
   PROCESS_ITEM_VISUAL_CLASSES,
 } from "@/lib/process/item-completion-state";
-import { checklistProgress, hasChecklistLines, normalizeChecklistPayload } from "@/lib/process/item-payload";
+import {
+  checklistProgress,
+  flattenChecklistLines,
+  hasChecklistLines,
+  normalizeChecklistPayload,
+} from "@/lib/process/item-payload";
 import { canOpenProcessItem } from "@/lib/process/item-access";
 import {
   buildAgreementBlockSources,
@@ -604,11 +609,20 @@ export function ProcessPipeline({
                             .filter((item) => interactive || item.visibleToClient)
                             .map((item) => {
                             const instance = itemInstances?.[item.id];
-                            const visualState = getProcessItemVisualState(
-                              process?.completions?.[item.id],
-                              instance,
-                              item.kind,
-                            );
+                            const hasUnresolvedFailedLine =
+                              interactive &&
+                              item.kind === "checklist" &&
+                              Boolean(instance) &&
+                              flattenChecklistLines(instance!.payload).some(
+                                (line) => line.status === "FAILED" && !line.handledAt,
+                              );
+                            const visualState = hasUnresolvedFailedLine
+                              ? "failed"
+                              : getProcessItemVisualState(
+                                  process?.completions?.[item.id],
+                                  instance,
+                                  item.kind,
+                                );
                             const visualClasses = PROCESS_ITEM_VISUAL_CLASSES[visualState];
                             const Icon = kindIcon[item.kind] ?? CheckCircle2;
                             const FallbackIcon =

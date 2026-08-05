@@ -225,6 +225,12 @@ export type ChecklistLine = {
   attachments?: ChecklistLineAttachment[];
   /** Punkt dodany ręcznie do instancji projektu, poza szablonem. */
   isCustom?: boolean;
+  /** "Ogarnięte" — status linii zostaje bez zmian, ale punkt liczy się jako zrobiony (jak "Nie
+   *  dotyczy"), bo problem przeszedł na poziom ustaleń/zadań i nie ma dalej straszyć na checkliście.
+   *  Ustawiane też automatycznie po zgłoszeniu "Zgłoś do biura"/"Zgłoś zapotrzebowanie" z tej linii. */
+  handledAt?: string;
+  handledByName?: string;
+  handledNote?: string;
 };
 
 export type ChecklistSection = {

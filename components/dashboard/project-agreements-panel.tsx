@@ -47,6 +47,7 @@ import {
 import { mergeAgreementsById } from "@/lib/dashboard/merge-agreements";
 import { findTradeCatalogItem } from "@/lib/field-options";
 import { createPublicClientAgreement } from "@/lib/dashboard/public-agreement-client";
+import { uploadAgreementAttachment } from "@/lib/supabase/project-agreement-attachments-repository";
 import { useAgreementApprovalHint } from "@/hooks/use-agreement-approval-hint";
 import {
   fetchAgreementApprovalBadgeOverride,
@@ -765,6 +766,16 @@ export function ProjectAgreementsPanel({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [projectAccessibleProfiles, setProjectAccessibleProfiles] = useState<UserProfile[]>([]);
+  // Zdjecie dodawane juz przy tworzeniu, nie dopiero po zapisie — ten sam wzorzec co przy zmianach
+  // projektu (A3) i employee-report-dialog.tsx.
+  const [newPhotos, setNewPhotos] = useState<File[]>([]);
+  const [newPhotoPreviews, setNewPhotoPreviews] = useState<string[]>([]);
+
+  useEffect(() => {
+    const urls = newPhotos.map((file) => URL.createObjectURL(file));
+    setNewPhotoPreviews(urls);
+    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+  }, [newPhotos]);
 
   useEffect(() => {
     if (mode !== "team") {
@@ -939,6 +950,7 @@ export function ProjectAgreementsPanel({
     setEditingId(null);
     setForm(emptyInput());
     setSaveError(null);
+    setNewPhotos([]);
     setDialogOpen(true);
   }
 
@@ -955,6 +967,7 @@ export function ProjectAgreementsPanel({
         isTeamRole: role.isTeamRole,
       })),
     });
+    setNewPhotos([]);
     setDialogOpen(true);
   }
 
@@ -963,6 +976,33 @@ export function ProjectAgreementsPanel({
     setEditingId(null);
     setForm(emptyInput());
     setSaveError(null);
+    setNewPhotos([]);
+  }
+
+  async function uploadNewAgreementPhotos(agreementId: string) {
+    if (!newPhotos.length) {
+      return;
+    }
+    let uploaded = 0;
+    let lastPhotoError: string | null = null;
+    for (const file of newPhotos) {
+      try {
+        await uploadAgreementAttachment({
+          agreementId,
+          file,
+          authorName,
+          authorSource: mode,
+        });
+        uploaded += 1;
+      } catch (uploadError) {
+        lastPhotoError = uploadError instanceof Error ? uploadError.message : "Nieznany błąd.";
+      }
+    }
+    if (uploaded < newPhotos.length) {
+      window.alert(
+        `Ustalenie zapisane, ale wgrało się ${uploaded} z ${newPhotos.length} zdjęć: ${lastPhotoError}. Resztę dodaj później w galerii.`,
+      );
+    }
   }
 
   async function handleSave() {
@@ -1004,11 +1044,18 @@ export function ProjectAgreementsPanel({
         }
         await refreshLocalAgreements();
       } else if (publicDashboardToken) {
-        await createPublicClientAgreement(publicDashboardToken, projectId, payload, authorName);
+        const { agreement: created } = await createPublicClientAgreement(
+          publicDashboardToken,
+          projectId,
+          payload,
+          authorName,
+        );
+        await uploadNewAgreementPhotos(created.id);
         await refreshLocalAgreements();
         await onAgreementsChanged?.();
       } else {
-        await createAgreement(projectId, payload, { name: authorName, side: mode });
+        const created = await createAgreement(projectId, payload, { name: authorName, side: mode });
+        await uploadNewAgreementPhotos(created.id);
       }
       closeDialog();
     } catch (error) {
@@ -1372,6 +1419,55 @@ export function ProjectAgreementsPanel({
                 placeholder="np. wycena orientacyjna, do potwierdzenia po pomiarach"
               />
             </Field>
+
+            {!editingId ? (
+              <Field label="Zdjęcie (opcjonalnie)">
+                <div className="grid gap-2">
+                  {newPhotoPreviews.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-2">
+                      {newPhotoPreviews.map((url, index) => (
+                        <div
+                          key={url}
+                          className="relative aspect-square overflow-hidden rounded-lg border border-border"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={url}
+                            alt={`Zdjęcie ${index + 1}`}
+                            className="h-full w-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            aria-label="Usuń zdjęcie"
+                            onClick={() => setNewPhotos((current) => current.filter((_, i) => i !== index))}
+                            className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface-muted/30 px-4 py-4 text-sm text-muted hover:border-accent/40">
+                    <Plus className="h-4 w-4" />
+                    {newPhotos.length ? `Dodaj kolejne (${newPhotos.length})` : "Dodaj zdjęcie"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(event) => {
+                        const picked = event.target.files ? Array.from(event.target.files) : [];
+                        event.target.value = "";
+                        if (picked.length) {
+                          setNewPhotos((current) => [...current, ...picked]);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </Field>
+            ) : null}
 
             {mode === "team" ? (
               <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/10 p-3">

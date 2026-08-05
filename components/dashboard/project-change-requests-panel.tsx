@@ -92,7 +92,7 @@ function canEditChangeRequestContent(entry: ProjectChangeRequest) {
   return ["draft", "pending_client", "rejected"].includes(entry.status);
 }
 
-type ChangeRequestEmailPreview = { subject: string; html: string; to: string };
+type ChangeRequestEmailPreview = { subject: string; html: string; to: string; hasPhoto?: boolean };
 
 async function postJson<T>(url: string, body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -118,6 +118,7 @@ function ChangeRequestCard({
   onRespond,
   onDelete,
   onEdit,
+  onMarkHandled,
   defaultExpanded = false,
   blockingStageLabel,
 }: {
@@ -133,12 +134,16 @@ function ChangeRequestCard({
   ) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onEdit?: (entry: ProjectChangeRequest) => void;
+  onMarkHandled?: (id: string, reason: string) => Promise<void>;
   defaultExpanded?: boolean;
   blockingStageLabel?: string | null;
 }) {
   const [busy, setBusy] = useState(false);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [sourceTask, setSourceTask] = useState<SourceTaskSummary | null>(null);
+  const [handledDialogOpen, setHandledDialogOpen] = useState(false);
+  const [handledReason, setHandledReason] = useState("");
+  const [handledError, setHandledError] = useState<string | null>(null);
 
   const reloadSourceTask = useCallback(() => {
     void fetchSourceTask({ changeRequestId: changeRequest.id })
@@ -176,6 +181,10 @@ function ChangeRequestCard({
   const [sending, setSending] = useState(false);
   const [note, setNote] = useState("");
   const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Zdjecie robocze z budowy nie zawsze nadaje sie do pokazania klientowi — domyslnie wlaczone,
+  // jednym kliknieciem odznaczane. Odznaczenie musi przebudowac podglad, bo zdjecie jest wypalone
+  // w HTML maila po stronie serwera, nie doklejane po stronie klienta.
+  const [includePhoto, setIncludePhoto] = useState(true);
 
   useEffect(() => {
     if (!defaultExpanded || !cardRef.current) {
@@ -200,11 +209,12 @@ function ChangeRequestCard({
     setPreviewError(null);
     setPreview(null);
     setNote("");
+    setIncludePhoto(true);
     setPreviewOpen(true);
     try {
       const data = await postJson<ChangeRequestEmailPreview>(
         `/api/projects/${encodeURIComponent(projectId)}/change-requests/preview-email`,
-        { scope: "single", changeRequestId: changeRequest.id },
+        { scope: "single", changeRequestId: changeRequest.id, includePhoto: true },
       );
       setPreview(data);
     } catch (loadError) {
@@ -222,11 +232,21 @@ function ChangeRequestCard({
     noteDebounceRef.current = setTimeout(() => {
       void postJson<ChangeRequestEmailPreview>(
         `/api/projects/${encodeURIComponent(projectId)}/change-requests/preview-email`,
-        { scope: "single", changeRequestId: changeRequest.id, note: nextNote },
+        { scope: "single", changeRequestId: changeRequest.id, note: nextNote, includePhoto },
       )
         .then((data) => setPreview(data))
         .catch(() => undefined);
     }, 600);
+  }
+
+  function handleIncludePhotoChange(next: boolean) {
+    setIncludePhoto(next);
+    void postJson<ChangeRequestEmailPreview>(
+      `/api/projects/${encodeURIComponent(projectId)}/change-requests/preview-email`,
+      { scope: "single", changeRequestId: changeRequest.id, note, includePhoto: next },
+    )
+      .then((data) => setPreview(data))
+      .catch(() => undefined);
   }
 
   async function handleConfirmSend() {
@@ -235,7 +255,7 @@ function ChangeRequestCard({
     try {
       const data = await postJson<{ emailSkipped?: boolean }>(
         `/api/projects/${encodeURIComponent(projectId)}/change-requests/send-email`,
-        { scope: "single", changeRequestId: changeRequest.id, note },
+        { scope: "single", changeRequestId: changeRequest.id, note, includePhoto },
       );
       setPreviewOpen(false);
       await onSent?.();
@@ -250,6 +270,58 @@ function ChangeRequestCard({
       setSending(false);
     }
   }
+
+  async function handleConfirmMarkHandled() {
+    if (!handledReason.trim()) {
+      setHandledError("Podaj krótki powód — trafi do osoby, która to zgłosiła.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await onMarkHandled?.(changeRequest.id, handledReason.trim());
+      setHandledDialogOpen(false);
+      setHandledReason("");
+      setHandledError(null);
+    } catch (error) {
+      setHandledError(error instanceof Error ? error.message : "Nie udało się zapisać.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const taskAction =
+    mode === "team" && !sourceTask ? (
+      <>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="w-full sm:w-auto"
+          disabled={busy}
+          onClick={() => setTaskDialogOpen(true)}
+        >
+          <ListChecks className="mr-2 h-3.5 w-3.5" />
+          Utwórz zadanie
+        </Button>
+        {onMarkHandled && !changeRequest.completedAt ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="w-full sm:w-auto"
+            disabled={busy}
+            onClick={() => {
+              setHandledError(null);
+              setHandledReason("");
+              setHandledDialogOpen(true);
+            }}
+          >
+            <Check className="mr-2 h-3.5 w-3.5" />
+            Ogarnięte
+          </Button>
+        ) : null}
+      </>
+    ) : null;
 
   return (
     <div ref={cardRef} className="min-w-0 max-w-full">
@@ -274,8 +346,25 @@ function ChangeRequestCard({
         }
       >
         {changeRequest.body ? (
-          <p className="max-h-40 overflow-y-auto break-words whitespace-pre-wrap text-sm text-muted sm:max-h-none sm:overflow-visible">
+          <p
+            className={cn(
+              "max-h-40 overflow-y-auto break-words whitespace-pre-wrap text-sm text-muted sm:max-h-none sm:overflow-visible",
+              changeRequest.completedAt && "line-through opacity-70",
+            )}
+          >
             {changeRequest.body}
+          </p>
+        ) : null}
+
+        {changeRequest.completedAt ? (
+          <p className="break-words rounded-lg border border-border/60 bg-surface-muted/20 px-3 py-2 text-xs text-muted">
+            Ogarnięte {new Date(changeRequest.completedAt).toLocaleString("pl-PL")}
+            {changeRequest.completionNote ? (
+              <>
+                {" "}
+                — <span className="text-foreground">{changeRequest.completionNote}</span>
+              </>
+            ) : null}
           </p>
         ) : null}
 
@@ -335,6 +424,7 @@ function ChangeRequestCard({
               <Trash2 className="mr-2 h-3.5 w-3.5" />
               Usuń
             </Button>
+            {taskAction}
           </div>
         ) : null}
 
@@ -421,6 +511,7 @@ function ChangeRequestCard({
                 <Trash2 className="mr-2 h-3.5 w-3.5" />
                 Usuń
               </Button>
+              {taskAction}
             </div>
           </div>
         ) : null}
@@ -438,6 +529,7 @@ function ChangeRequestCard({
               <Trash2 className="mr-2 h-3.5 w-3.5" />
               Usuń
             </Button>
+            {taskAction}
           </div>
         ) : null}
 
@@ -469,45 +561,78 @@ function ChangeRequestCard({
           />
         ) : null}
 
+        {mode === "team" && sourceTask ? (
+          // Jedno zrodlo = jedno zadanie. Dwa zadania z jednego ustalenia rozjechalyby
+          // synchronizacje completed_at: zamkniecie jednego oznaczyloby rzecz jako wykonana,
+          // choc drugie wciaz trwa. Wiele prac rozwiazuja PODZADANIA na karcie.
+          <p className="rounded-lg border border-border/60 bg-surface/30 px-3 py-2 text-xs text-muted">
+            Zadanie zostało już utworzone:{" "}
+            <strong className="text-foreground">{sourceTask.title}</strong>
+            {sourceTask.columnTitle ? ` — kolumna „${sourceTask.columnTitle}”` : ""}
+            {sourceTask.closedAt ? " · zamknięte" : ""}
+            <span className="mt-1 block">
+              Kolejne prace dodaj jako podzadania na tej karcie, nie jako osobne zadanie.
+            </span>
+          </p>
+        ) : null}
         {mode === "team" ? (
-          sourceTask ? (
-            // Jedno zrodlo = jedno zadanie. Dwa zadania z jednego ustalenia rozjechalyby
-            // synchronizacje completed_at: zamkniecie jednego oznaczyloby rzecz jako wykonana,
-            // choc drugie wciaz trwa. Wiele prac rozwiazuja PODZADANIA na karcie.
-            <p className="rounded-lg border border-border/60 bg-surface/30 px-3 py-2 text-xs text-muted">
-              Zadanie zostało już utworzone:{" "}
-              <strong className="text-foreground">{sourceTask.title}</strong>
-              {sourceTask.columnTitle ? ` — kolumna „${sourceTask.columnTitle}”` : ""}
-              {sourceTask.closedAt ? " · zamknięte" : ""}
-              <span className="mt-1 block">
-                Kolejne prace dodaj jako podzadania na tej karcie, nie jako osobne zadanie.
-              </span>
-            </p>
-          ) : (
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="w-full sm:w-auto"
-                disabled={busy}
-                onClick={() => setTaskDialogOpen(true)}
-              >
-                <ListChecks className="mr-2 h-3.5 w-3.5" />
-                Utwórz zadanie
-              </Button>
-              <TaskFromSourceDialog
-                open={taskDialogOpen}
-                onOpenChange={setTaskDialogOpen}
-                projectId={projectId}
-                authorName={authorName}
-                defaultTitle={changeRequest.title}
-                defaultDescription={changeRequest.body ?? ""}
-                sourceChangeRequestId={changeRequest.id}
-                onCreated={reloadSourceTask}
-              />
-            </div>
-          )
+          <TaskFromSourceDialog
+            open={taskDialogOpen}
+            onOpenChange={setTaskDialogOpen}
+            projectId={projectId}
+            authorName={authorName}
+            defaultTitle={changeRequest.title}
+            defaultDescription={changeRequest.body ?? ""}
+            sourceChangeRequestId={changeRequest.id}
+            onCreated={reloadSourceTask}
+          />
+        ) : null}
+        {mode === "team" ? (
+          <Dialog open={handledDialogOpen} onOpenChange={setHandledDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Oznacz jako ogarnięte</DialogTitle>
+                <DialogDescription>
+                  Zmiana zostaje w obecnym statusie — to nie jest anulowanie ani odrzucenie, tylko
+                  informacja, że sprawa jest zamknięta bez udziału klienta. Powód wraca do osoby,
+                  która to zgłosiła.
+                </DialogDescription>
+              </DialogHeader>
+              <Field label="Powód (jedno zdanie)">
+                <Textarea
+                  value={handledReason}
+                  onChange={(event) => {
+                    setHandledReason(event.target.value);
+                    if (handledError) setHandledError(null);
+                  }}
+                  rows={2}
+                  placeholder="Np. Nieistotne, wykonane w ramach naszego zakresu."
+                />
+              </Field>
+              {handledError ? <p className="text-xs text-rose-400">{handledError}</p> : null}
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  disabled={busy}
+                  onClick={() => setHandledDialogOpen(false)}
+                >
+                  Anuluj
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                  disabled={busy || !handledReason.trim()}
+                  onClick={() => void handleConfirmMarkHandled()}
+                >
+                  Potwierdź
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         ) : null}
         {mode === "client" && changeRequest.status === "pending_client" ? (
           <div className="grid min-w-0 gap-2">
@@ -571,6 +696,19 @@ function ChangeRequestCard({
         note={note}
         onNoteChange={handleNoteChange}
         onConfirmSend={() => void handleConfirmSend()}
+        selection={
+          preview?.hasPhoto ? (
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={includePhoto}
+                disabled={sending}
+                onChange={(event) => handleIncludePhotoChange(event.target.checked)}
+              />
+              Dołącz zdjęcie ze zmiany do treści maila
+            </label>
+          ) : undefined
+        }
       />
     </div>
   );
@@ -607,6 +745,7 @@ export function ProjectChangeRequestsPanel({
   const removeChangeRequest = useProjectChangeRequestStore((state) => state.removeChangeRequest);
   const updateChangeRequest = useProjectChangeRequestStore((state) => state.updateChangeRequest);
   const updateDraft = useProjectChangeRequestStore((state) => state.updateDraft);
+  const markHandled = useProjectChangeRequestStore((state) => state.markHandled);
 
   const projects = useAppStore((state) => state.projects);
   const clients = useAppStore((state) => state.clients);
@@ -703,6 +842,16 @@ export function ProjectChangeRequestsPanel({
   const [form, setForm] = useState<ProjectChangeRequestInput>(emptyInput());
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Zdjecie dodawane juz przy tworzeniu, nie dopiero po zapisie — czlowiek stoi przed problemem
+  // i ma zdjecie pod reka od razu (ten sam wzorzec co employee-report-dialog.tsx).
+  const [newPhotos, setNewPhotos] = useState<File[]>([]);
+  const [newPhotoPreviews, setNewPhotoPreviews] = useState<string[]>([]);
+
+  useEffect(() => {
+    const urls = newPhotos.map((file) => URL.createObjectURL(file));
+    setNewPhotoPreviews(urls);
+    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+  }, [newPhotos]);
 
   useEffect(() => {
     void ensureChangeRequests(projectId);
@@ -741,6 +890,7 @@ export function ProjectChangeRequestsPanel({
     setEditingId(null);
     setForm(emptyInput());
     setSaveError(null);
+    setNewPhotos([]);
     setDialogOpen(true);
   }
 
@@ -748,6 +898,7 @@ export function ProjectChangeRequestsPanel({
     setEditingId(entry.id);
     setSaveError(null);
     setForm(changeRequestToInput(entry));
+    setNewPhotos([]);
     setDialogOpen(true);
   }
 
@@ -756,6 +907,7 @@ export function ProjectChangeRequestsPanel({
     setEditingId(null);
     setForm(emptyInput());
     setSaveError(null);
+    setNewPhotos([]);
   }
 
   async function handleSave() {
@@ -785,7 +937,29 @@ export function ProjectChangeRequestsPanel({
         }
         await refreshLocal();
       } else {
-        await createChangeRequest(projectId, payload, { name: authorName, side: mode });
+        const created = await createChangeRequest(projectId, payload, { name: authorName, side: mode });
+        if (newPhotos.length) {
+          let uploaded = 0;
+          let lastPhotoError: string | null = null;
+          for (const file of newPhotos) {
+            try {
+              await uploadChangeRequestAttachment({
+                changeRequestId: created.id,
+                file,
+                authorName,
+                authorSource: mode,
+              });
+              uploaded += 1;
+            } catch (uploadError) {
+              lastPhotoError = uploadError instanceof Error ? uploadError.message : "Nieznany błąd.";
+            }
+          }
+          if (uploaded < newPhotos.length) {
+            window.alert(
+              `Zmiana zapisana, ale wgrało się ${uploaded} z ${newPhotos.length} zdjęć: ${lastPhotoError}. Resztę dodaj później w galerii.`,
+            );
+          }
+        }
       }
       closeDialog();
     } catch (error) {
@@ -842,6 +1016,10 @@ export function ProjectChangeRequestsPanel({
     } else {
       await removeChangeRequest(projectId, id);
     }
+  }
+
+  async function handleMarkHandled(id: string, reason: string) {
+    await markHandled(projectId, id, reason);
   }
 
   const isLoading = Boolean(loading) && changeRequests.length === 0;
@@ -982,6 +1160,7 @@ export function ProjectChangeRequestsPanel({
             onRespond={(id, input) => handleRespond(id, input)}
             onDelete={(id) => handleDelete(id)}
             onEdit={mode === "team" ? (item) => openEditDialog(item) : undefined}
+            onMarkHandled={mode === "team" ? (id, reason) => handleMarkHandled(id, reason) : undefined}
             defaultExpanded={entry.id === focusChangeRequestId}
             blockingStageLabel={
               entry.acceptanceDeadlineStageId
@@ -1039,6 +1218,55 @@ export function ProjectChangeRequestsPanel({
                 placeholder="np. wycena orientacyjna, do potwierdzenia po pomiarach"
               />
             </Field>
+
+            {!editingId ? (
+              <Field label="Zdjęcie (opcjonalnie)">
+                <div className="grid gap-2">
+                  {newPhotoPreviews.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-2">
+                      {newPhotoPreviews.map((url, index) => (
+                        <div
+                          key={url}
+                          className="relative aspect-square overflow-hidden rounded-lg border border-border"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={url}
+                            alt={`Zdjęcie ${index + 1}`}
+                            className="h-full w-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            aria-label="Usuń zdjęcie"
+                            onClick={() => setNewPhotos((current) => current.filter((_, i) => i !== index))}
+                            className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface-muted/30 px-4 py-4 text-sm text-muted hover:border-accent/40">
+                    <Plus className="h-4 w-4" />
+                    {newPhotos.length ? `Dodaj kolejne (${newPhotos.length})` : "Dodaj zdjęcie"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(event) => {
+                        const picked = event.target.files ? Array.from(event.target.files) : [];
+                        event.target.value = "";
+                        if (picked.length) {
+                          setNewPhotos((current) => [...current, ...picked]);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </Field>
+            ) : null}
 
             <div className="grid gap-2 rounded-xl border border-border/70 bg-surface-muted/10 p-3">
               <p className="text-sm font-medium text-foreground">Deadline akceptacji</p>

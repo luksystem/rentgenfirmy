@@ -10,7 +10,7 @@ import type { AgreementApproverRole } from "@/lib/dashboard/agreement-collaborat
 import type { ProjectTrade } from "@/lib/dashboard/trade-types";
 import { fetchAgreementApproverRoles } from "@/lib/supabase/project-agreement-collaboration-repository";
 
-type EmailPreview = { subject: string; html: string; to: string };
+type EmailPreview = { subject: string; html: string; to: string; hasPhoto?: boolean };
 
 async function postJson<T>(url: string, body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -47,6 +47,7 @@ export function AgreementDeliveryActions({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [note, setNote] = useState("");
+  const [includePhoto, setIncludePhoto] = useState(true);
   const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -107,11 +108,12 @@ export function AgreementDeliveryActions({
     setPreviewError(null);
     setPreview(null);
     setNote("");
+    setIncludePhoto(true);
     setPreviewOpen(true);
     try {
       const data = await postJson<EmailPreview>(
         `/api/projects/${encodeURIComponent(projectId)}/agreements/preview-email`,
-        { scope: "single", agreementId: agreement.id },
+        { scope: "single", agreementId: agreement.id, includePhoto: true },
       );
       setPreview(data);
     } catch (loadError) {
@@ -129,11 +131,21 @@ export function AgreementDeliveryActions({
     noteDebounceRef.current = setTimeout(() => {
       void postJson<EmailPreview>(
         `/api/projects/${encodeURIComponent(projectId)}/agreements/preview-email`,
-        { scope: "single", agreementId: agreement.id, note: nextNote },
+        { scope: "single", agreementId: agreement.id, note: nextNote, includePhoto },
       )
         .then((data) => setPreview(data))
         .catch(() => undefined);
     }, 600);
+  }
+
+  function handleIncludePhotoChange(next: boolean) {
+    setIncludePhoto(next);
+    void postJson<EmailPreview>(
+      `/api/projects/${encodeURIComponent(projectId)}/agreements/preview-email`,
+      { scope: "single", agreementId: agreement.id, note, includePhoto: next },
+    )
+      .then((data) => setPreview(data))
+      .catch(() => undefined);
   }
 
   async function handleConfirmSend() {
@@ -142,7 +154,7 @@ export function AgreementDeliveryActions({
     try {
       const data = await postJson<{ subject?: string }>(
         `/api/projects/${encodeURIComponent(projectId)}/agreements/send-email`,
-        { scope: "single", agreementId: agreement.id, note },
+        { scope: "single", agreementId: agreement.id, note, includePhoto },
       );
       setFeedback(data.subject ? `Wysłano: ${data.subject}` : "E-mail wysłany.");
       setPreviewOpen(false);
@@ -233,6 +245,19 @@ export function AgreementDeliveryActions({
         note={note}
         onNoteChange={handleNoteChange}
         onConfirmSend={() => void handleConfirmSend()}
+        selection={
+          preview?.hasPhoto ? (
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={includePhoto}
+                disabled={sending}
+                onChange={(event) => handleIncludePhotoChange(event.target.checked)}
+              />
+              Dołącz zdjęcie z ustalenia do treści maila
+            </label>
+          ) : undefined
+        }
       />
     </div>
   );

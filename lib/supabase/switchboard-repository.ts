@@ -61,6 +61,10 @@ function rowToSwitchboardCircuit(row: SwitchboardCircuitRow): SwitchboardCircuit
     employeeReportId: row.employee_report_id,
     updatedById: row.updated_by_id,
     updatedByName: row.updated_by_name,
+    handledAt: row.handled_at,
+    handledById: row.handled_by_id,
+    handledByName: row.handled_by_name,
+    handledNote: row.handled_note,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -339,6 +343,30 @@ export async function linkSwitchboardCircuitEmployeeReport(
     .eq("id", circuitId);
 
   if (error) throw new Error(error.message);
+}
+
+/** "Ogarnięte" — niezależne od statusu montażu, ustawiane po zgłoszeniu do biura/zapotrzebowania
+ *  albo ręcznie. Status i historia zmian statusu zostają bez zmian. */
+export async function markSwitchboardCircuitHandled(
+  circuitId: string,
+  input: { note: string; actorId: string | null; actorName: string },
+): Promise<SwitchboardCircuit> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("switchboard_circuits")
+    .update({
+      handled_at: new Date().toISOString(),
+      handled_by_id: input.actorId,
+      handled_by_name: input.actorName.trim() || "Zespół",
+      handled_note: input.note.trim(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", circuitId)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return rowToSwitchboardCircuit(data as SwitchboardCircuitRow);
 }
 
 /** Pełna historia zmian statusu/notatki tej pozycji — zapisywana automatycznie przez trigger. */

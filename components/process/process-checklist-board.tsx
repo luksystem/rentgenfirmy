@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Ban, CheckCircle2, ChevronDown, ChevronUp, Paperclip, Plus, StickyNote, Trash2 } from "lucide-react";
 import type { ChecklistDocumentationUploadContext } from "@/components/process/checklist-line-documentation-panel";
 import { ChecklistItemDialog } from "@/components/process/checklist-item-dialog";
@@ -73,6 +73,7 @@ export function ProcessChecklistBoard({
   actorName = "Zespół",
   teamProfiles = [],
   publicToken,
+  projectId,
   projectProcessItemId,
   defaultAssigneeId = null,
   defaultAssigneeName = null,
@@ -86,6 +87,8 @@ export function ProcessChecklistBoard({
   actorName?: string;
   teamProfiles?: UserProfile[];
   publicToken?: string;
+  /** Obecne tylko w widoku zespołu — warunkuje przyciski eskalacji (Zgłoś do biura/zapotrzebowanie). */
+  projectId?: string;
   projectProcessItemId?: string;
   /** Osoba odpowiedzialna za całą checklistę — punkty bez własnego przypisania ją dziedziczą. */
   defaultAssigneeId?: string | null;
@@ -96,6 +99,20 @@ export function ProcessChecklistBoard({
   onCreateTasksFromNote?: (note: string) => void;
 }) {
   const [payload, setPayload] = useState(() => normalizeChecklistPayload(initialPayload));
+  // Zrodlo prawdy dla budowania patchy — nie domkniecie renderu, ktore bywa nieaktualne, gdy dwa
+  // zapisy (np. upload zdjecia i blur notatki) startuja prawie rownoczesnie.
+  const payloadRef = useRef(payload);
+  // WSZYSTKIE zapisy (patch linii, notatka, dodanie/usuniecie punktu) wysylaja caly obiekt payload,
+  // wiec kolejkujemy je jedna wspolna kolejka — inaczej drugi zapis liczy sie z tego samego,
+  // nieaktualnego stanu bazowego co pierwszy i jeden z nich znika (np. zdjecie przy rownoczesnej
+  // notatce). Kazdy kolejny zapis czeka na zatwierdzenie poprzedniego, zanim policzy swoj patch.
+  const pendingWriteRef = useRef<Promise<void>>(Promise.resolve());
+
+  function enqueueWrite(write: () => Promise<void>): Promise<void> {
+    const next = pendingWriteRef.current.catch(() => undefined).then(write);
+    pendingWriteRef.current = next;
+    return next;
+  }
   const [activeLineId, setActiveLineId] = useState<string | null>(null);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const [savingLineId, setSavingLineId] = useState<string | null>(null);
@@ -122,8 +139,16 @@ export function ProcessChecklistBoard({
     return undefined;
   }, [actor.name, projectProcessItemId, publicToken, readOnly]);
 
+  function updatePayload(
+    next: ChecklistItemPayload | ((current: ChecklistItemPayload) => ChecklistItemPayload),
+  ) {
+    const resolved = typeof next === "function" ? next(payloadRef.current) : next;
+    payloadRef.current = resolved;
+    setPayload(resolved);
+  }
+
   useEffect(() => {
-    setPayload(normalizeChecklistPayload(initialPayload));
+    updatePayload(normalizeChecklistPayload(initialPayload));
   }, [initialPayload]);
 
   const sections = useMemo(() => getChecklistSections(payload), [payload]);
@@ -158,10 +183,10 @@ export function ProcessChecklistBoard({
           throw new Error(body?.error ?? "Błąd zapisu.");
         }
         const body = (await response.json()) as { checklist: ChecklistItemPayload };
-        setPayload(normalizeChecklistPayload(body.checklist));
+        updatePayload(normalizeChecklistPayload(body.checklist));
       } else if (onSave) {
         await onSave(normalized);
-        setPayload(normalized);
+        updatePayload(normalized);
       }
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Błąd zapisu.");
@@ -169,23 +194,25 @@ export function ProcessChecklistBoard({
     }
   }
 
-  async function persistLinePatch(sectionId: string, lineId: string, patch: Partial<ChecklistLine>) {
-    setSavingLineId(lineId);
-    try {
-      await persist(applyLinePatch(payload, sectionId, lineId, patch, actor.name));
-    } finally {
-      setSavingLineId(null);
-    }
+  function persistLinePatch(sectionId: string, lineId: string, patch: Partial<ChecklistLine>) {
+    return enqueueWrite(async () => {
+      setSavingLineId(lineId);
+      try {
+        await persist(applyLinePatch(payloadRef.current, sectionId, lineId, patch, actor.name));
+      } finally {
+        setSavingLineId(null);
+      }
+    });
   }
 
   function handleLocalLinePatch(sectionId: string, lineId: string, patch: Partial<ChecklistLine>) {
-    setPayload((current) => applyLinePatch(current, sectionId, lineId, patch, actor.name));
+    updatePayload((current) => applyLinePatch(current, sectionId, lineId, patch, actor.name));
   }
 
-  async function handleAddCustomLine(sectionId: string) {
+  function handleAddCustomLine(sectionId: string) {
     const text = (customLineDrafts[sectionId] ?? "").trim();
     if (!text) {
-      return;
+      return Promise.resolve();
     }
     const newLine: ChecklistLine = {
       id: crypto.randomUUID(),
@@ -194,26 +221,30 @@ export function ProcessChecklistBoard({
       status: "NOT_STARTED",
       isCustom: true,
     };
-    const nextPayload: ChecklistItemPayload = {
-      ...payload,
-      sections: getChecklistSections(payload).map((section) =>
-        section.id === sectionId ? { ...section, lines: [...section.lines, newLine] } : section,
-      ),
-    };
     setCustomLineDrafts((current) => ({ ...current, [sectionId]: "" }));
-    await persist(nextPayload);
+    return enqueueWrite(async () => {
+      const nextPayload: ChecklistItemPayload = {
+        ...payloadRef.current,
+        sections: getChecklistSections(payloadRef.current).map((section) =>
+          section.id === sectionId ? { ...section, lines: [...section.lines, newLine] } : section,
+        ),
+      };
+      await persist(nextPayload);
+    });
   }
 
-  async function handleRemoveCustomLine(sectionId: string, lineId: string) {
-    const nextPayload: ChecklistItemPayload = {
-      ...payload,
-      sections: getChecklistSections(payload).map((section) =>
-        section.id === sectionId
-          ? { ...section, lines: section.lines.filter((line) => line.id !== lineId) }
-          : section,
-      ),
-    };
-    await persist(nextPayload);
+  function handleRemoveCustomLine(sectionId: string, lineId: string) {
+    return enqueueWrite(async () => {
+      const nextPayload: ChecklistItemPayload = {
+        ...payloadRef.current,
+        sections: getChecklistSections(payloadRef.current).map((section) =>
+          section.id === sectionId
+            ? { ...section, lines: section.lines.filter((line) => line.id !== lineId) }
+            : section,
+        ),
+      };
+      await persist(nextPayload);
+    });
   }
 
   const showMobileNav = sections.length > 1;
@@ -372,8 +403,8 @@ export function ProcessChecklistBoard({
             <Textarea
               value={payload.note ?? ""}
               disabled={Boolean(savingLineId)}
-              onChange={(event) => setPayload({ ...payload, note: event.target.value })}
-              onBlur={() => void persist({ ...payload })}
+              onChange={(event) => updatePayload((current) => ({ ...current, note: event.target.value }))}
+              onBlur={() => void enqueueWrite(() => persist(payloadRef.current))}
             />
             {onCreateTasksFromNote ? (
               <Button
@@ -430,7 +461,17 @@ export function ProcessChecklistBoard({
             handleLocalLinePatch(activeSectionId, activeLineId, patch);
           }
         }}
+        onMarkHandled={(note) => {
+          if (activeSectionId && activeLineId) {
+            void persistLinePatch(activeSectionId, activeLineId, {
+              handledAt: new Date().toISOString(),
+              handledByName: actor.name,
+              handledNote: note,
+            });
+          }
+        }}
         documentationUploadContext={documentationUploadContext}
+        projectId={!readOnly ? projectId : undefined}
       />
 
       <ChecklistMobileNav
@@ -464,8 +505,8 @@ export function ProcessChecklistBoard({
               <Textarea
                 value={payload.note ?? ""}
                 disabled={Boolean(savingLineId)}
-                onChange={(event) => setPayload({ ...payload, note: event.target.value })}
-                onBlur={() => void persist({ ...payload })}
+                onChange={(event) => updatePayload((current) => ({ ...current, note: event.target.value }))}
+                onBlur={() => void enqueueWrite(() => persist(payloadRef.current))}
                 rows={4}
                 className="max-h-[30vh]"
               />

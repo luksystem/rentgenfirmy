@@ -54,6 +54,10 @@ function rowToItem(row: ModuleItemRow): DocumentationModuleItem {
     employeeReportId: row.employee_report_id,
     updatedById: row.updated_by_id,
     updatedByName: row.updated_by_name,
+    handledAt: row.handled_at,
+    handledById: row.handled_by_id,
+    handledByName: row.handled_by_name,
+    handledNote: row.handled_note,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -367,6 +371,30 @@ export async function linkDocumentationModuleItemEmployeeReport(
     .eq("id", itemId);
 
   if (error) throw new Error(error.message);
+}
+
+/** "Ogarnięte" — niezależne od statusu montażu, ustawiane po zgłoszeniu do biura/zapotrzebowania
+ *  albo ręcznie. Status i historia zmian statusu zostają bez zmian. */
+export async function markDocumentationModuleItemHandled(
+  itemId: string,
+  input: { note: string; actorId: string | null; actorName: string },
+): Promise<DocumentationModuleItem> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("documentation_module_items")
+    .update({
+      handled_at: new Date().toISOString(),
+      handled_by_id: input.actorId,
+      handled_by_name: input.actorName.trim() || "Zespół",
+      handled_note: input.note.trim(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", itemId)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return rowToItem(data as ModuleItemRow);
 }
 
 export async function fetchDocumentationModuleItemHistory(

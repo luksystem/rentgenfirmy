@@ -11,6 +11,7 @@ import {
   deleteProjectChangeRequest,
   deleteProjectChangeRequestDraft,
   fetchProjectChangeRequests,
+  markChangeRequestHandled,
   respondToProjectChangeRequest,
   submitProjectChangeRequestForClient,
   updateProjectChangeRequest,
@@ -40,6 +41,7 @@ type ProjectChangeRequestStore = {
     input: { accepted: boolean; clientResponseName: string; clientResponseNote?: string },
   ) => Promise<ProjectChangeRequest>;
   cancel: (projectId: string, id: string) => Promise<void>;
+  markHandled: (projectId: string, id: string, reason: string) => Promise<void>;
   removeDraft: (projectId: string, id: string) => Promise<void>;
   removeChangeRequest: (projectId: string, id: string) => Promise<void>;
   invalidateProject: (projectId: string) => void;
@@ -133,6 +135,12 @@ export const useProjectChangeRequestStore = create<ProjectChangeRequestStore>((s
 
   cancel: async (projectId, id) => {
     const updated = await cancelProjectChangeRequest(id);
+    const list = (get().byProject[projectId] ?? []).map((entry) => (entry.id === id ? updated : entry));
+    setProjectChangeRequests(projectId, list, set, get);
+  },
+
+  markHandled: async (projectId, id, reason) => {
+    const updated = await markChangeRequestHandled(id, reason);
     const list = (get().byProject[projectId] ?? []).map((entry) => (entry.id === id ? updated : entry));
     setProjectChangeRequests(projectId, list, set, get);
   },

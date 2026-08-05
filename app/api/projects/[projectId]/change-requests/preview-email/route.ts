@@ -25,6 +25,7 @@ export async function POST(
       changeRequestId?: string;
       changeRequestIds?: string[];
       note?: string;
+      includePhoto?: boolean;
     };
 
     if (!body.scope) {
@@ -37,6 +38,7 @@ export async function POST(
       changeRequestId: body.changeRequestId,
       changeRequestIds: body.changeRequestIds,
       note: body.note,
+      includePhoto: body.includePhoto,
     });
 
     return NextResponse.json(preview);

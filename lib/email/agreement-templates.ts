@@ -24,6 +24,9 @@ export type AgreementEmailEntry = {
   protocols: string[];
   acceptUrl: string | null;
   discussUrl: string | null;
+  /** Zdjecie robocze z budowy — niekoniecznie nadaje sie do pokazania klientowi, wiec dolaczane
+   *  tylko dla pierwszej pozycji w mailu i tylko gdy nadawca tego nie odznaczy przed wyslaniem. */
+  photoUrl?: string | null;
 };
 
 export function resolveAgreementPublicUrl(token: string): string {
@@ -62,6 +65,7 @@ export function agreementToEmailEntry(
     protocols: agreement.communicationProtocols ?? [],
     acceptUrl: token ? agreementAcceptUrl(token) : null,
     discussUrl: token ? agreementDiscussUrl(token) : null,
+    photoUrl: null,
   };
 }
 
@@ -77,6 +81,10 @@ export function renderAgreementBlock(entry: AgreementEmailEntry, index?: number)
 
   const body = entry.body
     ? `<p style="margin:0 0 12px;color:#374151;white-space:pre-wrap;line-height:1.55;">${escapeEmailHtml(entry.body)}</p>`
+    : "";
+
+  const photo = entry.photoUrl
+    ? `<p style="margin:0 0 12px;"><img src="${escapeEmailHtml(entry.photoUrl)}" alt="Zdjęcie" style="max-width:100%;border-radius:12px;display:block;" /></p>`
     : "";
 
   const cost = entry.costLabel
@@ -107,6 +115,7 @@ export function renderAgreementBlock(entry: AgreementEmailEntry, index?: number)
   return `<div style="margin:0 0 24px;padding:20px;border:1px solid #e5e7eb;border-radius:14px;background:#fafafa;">
     ${heading}
     <p style="margin:0 0 10px;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;">${escapeEmailHtml(entry.categoryLabel)}</p>
+    ${photo}
     ${body}
     ${cost}
     ${costNote}

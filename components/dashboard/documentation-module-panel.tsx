@@ -11,7 +11,6 @@ import {
   MessageSquare,
   Plus,
   RotateCcw,
-  Send,
   StickyNote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,7 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
-import { EmployeeReportDialog } from "@/components/process/employee-report-dialog";
+import { ItemEscalationActions } from "@/components/process/item-escalation-actions";
 import {
   SWITCHBOARD_CIRCUIT_STATUSES,
   SWITCHBOARD_CIRCUIT_STATUS_BADGE_CLASS,
@@ -53,6 +52,7 @@ import {
   fetchDocumentationModuleItemHistory,
   fetchDocumentationModulesWithItems,
   linkDocumentationModuleItemEmployeeReport,
+  markDocumentationModuleItemHandled,
   setDocumentationModuleCompletion,
   updateDocumentationModuleItemRawField,
   updateDocumentationModuleItemStatus,
@@ -152,7 +152,6 @@ function ItemStatusDialog({
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [reportOpen, setReportOpen] = useState(false);
   const [latest, setLatest] = useState<DocumentationModuleItem | null>(null);
   const [history, setHistory] = useState<DocumentationModuleItemHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -221,7 +220,17 @@ function ItemStatusDialog({
     }
   }
 
-  const alreadyReported = Boolean(current.employeeReportId);
+  async function handleMarkHandled(note: string) {
+    const updated = await markDocumentationModuleItemHandled(item!.id, {
+      note,
+      actorId: authorId,
+      actorName: authorName,
+    });
+    setLatest(updated);
+    onSaved(updated);
+  }
+
+  const alreadyHandled = Boolean(current.handledAt);
   const rawEntries = Object.entries(current.rawFields);
 
   return (
@@ -324,10 +333,13 @@ function ItemStatusDialog({
 
             {suggestsReport ? (
               <div className="rounded-xl border border-dashed border-border/80 bg-surface-muted/15 p-3">
-                {alreadyReported ? (
+                {alreadyHandled ? (
                   <p className="flex items-center gap-1.5 text-xs text-muted">
                     <Check className="h-3.5 w-3.5 text-emerald-400" />
-                    Zgłoszone do biura.
+                    Ogarnięte
+                    {current.handledByName ? ` przez ${current.handledByName}` : ""}
+                    {current.handledAt ? `, ${formatDateTime(current.handledAt)}` : ""}
+                    {current.handledNote ? ` — ${current.handledNote}` : ""}
                   </p>
                 ) : (
                   <>
@@ -335,16 +347,24 @@ function ItemStatusDialog({
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-400" />
                       Ta pozycja wymaga uwagi biura — zgłoś ją, żeby ktoś to zobaczył.
                     </p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="w-full sm:w-auto"
-                      onClick={() => setReportOpen(true)}
-                    >
-                      <Send className="mr-2 h-3.5 w-3.5" />
-                      Zgłoś do biura
-                    </Button>
+                    <ItemEscalationActions
+                      projectId={item.projectId}
+                      itemTitle={documentationModuleItemLabel(item)}
+                      itemDescription={buildDocumentationModuleReportDescription(moduleLabel, {
+                        label: item.label,
+                        description: item.description,
+                        location: item.location,
+                        note,
+                      })}
+                      onReportCreated={({ target, recordId }) => {
+                        void linkDocumentationModuleItemEmployeeReport(item.id, { target, recordId }).then(() => {
+                          setLatest((prev) =>
+                            prev ? { ...prev, employeeReportTarget: target, employeeReportId: recordId } : prev,
+                          );
+                        });
+                      }}
+                      onHandled={(handledNote) => void handleMarkHandled(handledNote)}
+                    />
                   </>
                 )}
               </div>
@@ -373,23 +393,6 @@ function ItemStatusDialog({
           </div>
         </DialogContent>
       </Dialog>
-
-      <EmployeeReportDialog
-        open={reportOpen}
-        onOpenChange={setReportOpen}
-        projectId={item.projectId}
-        initialDescription={buildDocumentationModuleReportDescription(moduleLabel, {
-          label: item.label,
-          description: item.description,
-          location: item.location,
-          note,
-        })}
-        onCreated={({ target, recordId }) => {
-          void linkDocumentationModuleItemEmployeeReport(item.id, { target, recordId }).then(() => {
-            setLatest((prev) => (prev ? { ...prev, employeeReportTarget: target, employeeReportId: recordId } : prev));
-          });
-        }}
-      />
     </>
   );
 }

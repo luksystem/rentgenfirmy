@@ -36,6 +36,12 @@ export type ProjectChangeRequest = {
   /** Ostatnia wysyłka pakietowa/przypomnienie (nie: pojedyncze zgłoszenie do klienta) — null,
    *  dopóki zmiana nie została ujęta w mailu "Wyślij paczkę do akceptacji" / "Przypomnij o akceptacjach". */
   sentAt: string | null;
+  /** D44: ustawiane przyciskiem "Ogarnięte" — zmiana zostaje w swoim statusie, ale jest obsłużona
+   *  bez udziału klienta. Nie jest to nowy status (patrz completionNote — wymagany powód). */
+  completedAt: string | null;
+  completionNote: string | null;
+  /** Profil zgłaszającego (D44 employee-report) — null dla zmian tworzonych ręcznie przez zespół. */
+  createdById: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -140,7 +146,7 @@ export function formatChangeRequestCost(
   if (net != null) {
     parts.push(`netto ${net.toFixed(2)} PLN`);
   }
-  if (vatRate === 0 || vatRate === 8 || vatRate === 23) {
+  if ((net != null || gross != null) && (vatRate === 0 || vatRate === 8 || vatRate === 23)) {
     parts.push(`VAT ${vatRate}%`);
   }
   if (gross != null) {

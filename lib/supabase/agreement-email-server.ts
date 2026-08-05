@@ -21,6 +21,48 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   rowToAgreement,
 } from "@/lib/supabase/project-agreement-collaboration-repository";
+import { AGREEMENT_ATTACHMENTS_BUCKET } from "@/lib/supabase/project-agreement-attachments-repository";
+
+/** Dłuższe okno niż standardowe (1h) — link ląduje w treści maila, więc musi przeżyć do momentu,
+ *  gdy klient go faktycznie otworzy, nie tylko do momentu wysyłki. */
+const EMAIL_PHOTO_SIGNED_URL_TTL_SEC = 60 * 60 * 24 * 7;
+
+/** Zdjęcie robocze z budowy trafia do maila tylko z PIERWSZEJ pozycji, tylko gdy nadawca tego nie
+ *  odznaczy (checkbox w podglądzie) — a nawet wtedy dopiero po sprawdzeniu, że w ogóle jest zdjęcie. */
+async function fetchFirstAgreementPhotoUrl(agreementId: string): Promise<string | null> {
+  const supabase = getSupabaseAdmin();
+  const { data } = await supabase
+    .from("project_agreement_attachments")
+    .select("storage_path")
+    .eq("agreement_id", agreementId)
+    .eq("media_kind", "image")
+    .order("position", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const storagePath = (data as { storage_path?: string } | null)?.storage_path;
+  if (!storagePath) {
+    return null;
+  }
+
+  const { data: signed } = await supabase.storage
+    .from(AGREEMENT_ATTACHMENTS_BUCKET)
+    .createSignedUrl(storagePath, EMAIL_PHOTO_SIGNED_URL_TTL_SEC);
+
+  return signed?.signedUrl ?? null;
+}
+
+async function buildAgreementEmailEntries(
+  agreements: ProjectClientAgreement[],
+  includePhoto: boolean,
+) {
+  const entries = agreements.map(agreementToEmailEntry);
+  const photoUrl = entries.length ? await fetchFirstAgreementPhotoUrl(agreements[0].id) : null;
+  if (includePhoto && photoUrl) {
+    entries[0] = { ...entries[0], photoUrl };
+  }
+  return { entries, hasPhoto: Boolean(photoUrl) };
+}
 
 /**
  * "reminder" — przypomnienie o ustaleniach już kiedyś ujętych w paczce/przypomnieniu
@@ -446,9 +488,13 @@ export async function previewAgreementEmailServer(input: {
   agreementIds?: string[];
   tradeId?: string;
   note?: string | null;
+  includePhoto?: boolean;
 }) {
   const target = await resolveAgreementEmailTarget(input);
-  const entries = target.agreements.map(agreementToEmailEntry);
+  const { entries, hasPhoto } = await buildAgreementEmailEntries(
+    target.agreements,
+    input.includePhoto ?? true,
+  );
 
   const [settings, company] = await Promise.all([
     fetchEmailSettingsServer(),
@@ -471,6 +517,7 @@ export async function previewAgreementEmailServer(input: {
     html: template.html,
     to: target.recipientEmail,
     agreementCount: target.agreements.length,
+    hasPhoto,
   };
 }
 
@@ -481,9 +528,10 @@ export async function sendProjectAgreementEmails(input: {
   agreementIds?: string[];
   tradeId?: string;
   note?: string | null;
+  includePhoto?: boolean;
 }) {
   const target = await resolveAgreementEmailTarget(input);
-  const entries = target.agreements.map(agreementToEmailEntry);
+  const { entries } = await buildAgreementEmailEntries(target.agreements, input.includePhoto ?? true);
 
   const [settings, company] = await Promise.all([
     fetchEmailSettingsServer(),

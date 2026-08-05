@@ -47,6 +47,11 @@ export type DocumentationModuleItem = {
   employeeReportId: string | null;
   updatedById: string | null;
   updatedByName: string | null;
+  /** "Ogarnięte" — niezależne od statusu montażu; ustawiane po zgłoszeniu do biura/zapotrzebowania. */
+  handledAt: string | null;
+  handledById: string | null;
+  handledByName: string | null;
+  handledNote: string | null;
   createdAt: string;
   updatedAt: string;
 };

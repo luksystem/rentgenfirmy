@@ -314,6 +314,7 @@ export function ProcessItemPanel({
               <ProcessChecklistBoard
                 key={`${item.id}-${resolvedInstance?.updatedAt ?? "new"}-checklist`}
                 initialPayload={checklistPayload}
+                projectId={projectId}
                 projectProcessItemId={resolvedInstance?.id}
                 actorId={currentUserId}
                 actorName={actorName}

@@ -15,7 +15,7 @@ type TradeBatch = {
   count: number;
 };
 
-type EmailPreview = { subject: string; html: string; to: string };
+type EmailPreview = { subject: string; html: string; to: string; hasPhoto?: boolean };
 type ClientScope = "reminder" | "new_batch";
 
 async function postJson<T>(url: string, body?: unknown): Promise<T> {
@@ -55,6 +55,7 @@ export function AgreementBatchDeliveryActions({
   const [sending, setSending] = useState(false);
   const [note, setNote] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [includePhoto, setIncludePhoto] = useState(true);
   const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pendingAgreements = useMemo(
@@ -123,7 +124,12 @@ export function AgreementBatchDeliveryActions({
     }
   };
 
-  async function loadPreview(nextScope: ClientScope, ids: Set<string>, currentNote: string) {
+  async function loadPreview(
+    nextScope: ClientScope,
+    ids: Set<string>,
+    currentNote: string,
+    nextIncludePhoto: boolean,
+  ) {
     setPreviewError(null);
     setPreview(null);
     try {
@@ -133,6 +139,7 @@ export function AgreementBatchDeliveryActions({
           scope: nextScope,
           agreementIds: nextScope === "new_batch" ? [...ids] : undefined,
           note: currentNote,
+          includePhoto: nextIncludePhoto,
         },
       );
       setPreview(data);
@@ -150,9 +157,10 @@ export function AgreementBatchDeliveryActions({
     setError(null);
     setFeedback(null);
     setNote("");
+    setIncludePhoto(true);
     setScope("reminder");
     setPreviewOpen(true);
-    void loadPreview("reminder", new Set(), "");
+    void loadPreview("reminder", new Set(), "", true);
   }
 
   function handleOpenNewBatchPreview() {
@@ -163,10 +171,11 @@ export function AgreementBatchDeliveryActions({
     setError(null);
     setFeedback(null);
     setNote("");
+    setIncludePhoto(true);
     setSelectedIds(allIds);
     setScope("new_batch");
     setPreviewOpen(true);
-    void loadPreview("new_batch", allIds, "");
+    void loadPreview("new_batch", allIds, "", true);
   }
 
   function handleToggleSelected(id: string) {
@@ -177,7 +186,7 @@ export function AgreementBatchDeliveryActions({
       next.add(id);
     }
     setSelectedIds(next);
-    void loadPreview("new_batch", next, note);
+    void loadPreview("new_batch", next, note, includePhoto);
   }
 
   function handleNoteChange(nextNote: string) {
@@ -189,8 +198,16 @@ export function AgreementBatchDeliveryActions({
       clearTimeout(noteDebounceRef.current);
     }
     noteDebounceRef.current = setTimeout(() => {
-      void loadPreview(scope, selectedIds, nextNote);
+      void loadPreview(scope, selectedIds, nextNote, includePhoto);
     }, 600);
+  }
+
+  function handleIncludePhotoChange(next: boolean) {
+    setIncludePhoto(next);
+    if (!scope) {
+      return;
+    }
+    void loadPreview(scope, selectedIds, note, next);
   }
 
   async function handleConfirmSend() {
@@ -206,6 +223,7 @@ export function AgreementBatchDeliveryActions({
           scope,
           agreementIds: scope === "new_batch" ? [...selectedIds] : undefined,
           note,
+          includePhoto,
         },
       );
       setFeedback(data.subject ? `Wysłano: ${data.subject}` : "E-mail wysłany.");
@@ -219,30 +237,46 @@ export function AgreementBatchDeliveryActions({
   }
 
   const selectionSlot = useMemo(() => {
+    const photoCheckbox = preview?.hasPhoto ? (
+      <label className="flex items-center gap-2 text-sm text-foreground">
+        <input
+          type="checkbox"
+          checked={includePhoto}
+          disabled={sending}
+          onChange={(event) => handleIncludePhotoChange(event.target.checked)}
+        />
+        Dołącz zdjęcie z pierwszego ustalenia do treści maila
+      </label>
+    ) : null;
+
     if (scope !== "new_batch") {
-      return null;
+      return photoCheckbox;
     }
+
     return (
-      <div className="grid gap-1.5 rounded-xl border border-border/70 bg-surface-muted/25 p-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted">
-          Ustalenia do wysłania ({selectedIds.size}/{neverSent.length})
-        </p>
-        {neverSent.map((entry) => (
-          <label key={entry.id} className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="mt-0.5"
-              checked={selectedIds.has(entry.id)}
-              disabled={sending}
-              onChange={() => handleToggleSelected(entry.id)}
-            />
-            <span className="min-w-0 flex-1 truncate text-foreground">{entry.title}</span>
-          </label>
-        ))}
+      <div className="grid gap-2">
+        <div className="grid gap-1.5 rounded-xl border border-border/70 bg-surface-muted/25 p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">
+            Ustalenia do wysłania ({selectedIds.size}/{neverSent.length})
+          </p>
+          {neverSent.map((entry) => (
+            <label key={entry.id} className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={selectedIds.has(entry.id)}
+                disabled={sending}
+                onChange={() => handleToggleSelected(entry.id)}
+              />
+              <span className="min-w-0 flex-1 truncate text-foreground">{entry.title}</span>
+            </label>
+          ))}
+        </div>
+        {photoCheckbox}
       </div>
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope, neverSent, selectedIds, sending]);
+  }, [scope, neverSent, selectedIds, sending, preview?.hasPhoto, includePhoto]);
 
   if ((!neverSent.length && !alreadySent.length && !tradeBatches.length) || !clientEmail?.trim()) {
     return null;

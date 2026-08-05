@@ -62,6 +62,12 @@ export function isChecklistLineComplete(status: ChecklistLineStatus) {
   return status === "PASSED" || status === "NOT_APPLICABLE";
 }
 
+/** "Ogarnięte" liczy się jako zrobione tak jak "Nie dotyczy" — status linii zostaje bez zmian,
+ *  problem po prostu przestaje straszyć na checkliście, bo przeszedł na poziom ustaleń/zadań. */
+export function isChecklistLineDone(line: ChecklistLine): boolean {
+  return isChecklistLineComplete(checklistLineStatus(line)) || Boolean(line.handledAt);
+}
+
 export function checklistPayloadFromTexts(texts: string[], sectionName = "Checklista"): ChecklistItemPayload {
   return {
     sections: [
@@ -499,20 +505,22 @@ export function validateChecklistDocumentationRules(payload: ChecklistItemPayloa
 
 export function isChecklistPayloadComplete(payload: ChecklistItemPayload) {
   const lines = flattenChecklistLines(payload);
-  return lines.length > 0 && lines.every((line) => isChecklistLineComplete(checklistLineStatus(line)));
+  return lines.length > 0 && lines.every((line) => isChecklistLineDone(line));
 }
 
 export function checklistProgress(payload: ChecklistItemPayload) {
   const lines = flattenChecklistLines(payload);
   const total = lines.length;
-  const completed = lines.filter((line) => isChecklistLineComplete(checklistLineStatus(line))).length;
+  const completed = lines.filter((line) => isChecklistLineDone(line)).length;
   return { total, completed };
 }
 
 export function checklistSectionSummary(section: ChecklistSection) {
-  const failed = section.lines.filter((line) => checklistLineStatus(line) === "FAILED").length;
+  const failed = section.lines.filter(
+    (line) => checklistLineStatus(line) === "FAILED" && !line.handledAt,
+  ).length;
   const inProgress = section.lines.filter((line) => checklistLineStatus(line) === "IN_PROGRESS").length;
-  const complete = section.lines.every((line) => isChecklistLineComplete(checklistLineStatus(line)));
+  const complete = section.lines.every((line) => isChecklistLineDone(line));
 
   let tone: "failed" | "progress" | "complete" | "idle" = "idle";
   if (failed > 0) {

@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   checklistPayloadFromTexts,
+  checklistProgress,
   emptyChecklistPayload,
   getChecklistLineAssignee,
+  isChecklistLineDone,
   mergeChecklistPayloadWithTemplate,
   projectChecklistPayloadFromTemplate,
 } from "@/lib/process/item-payload";
+import type { ChecklistLine } from "@/lib/process/types";
 
 describe("projectChecklistPayloadFromTemplate", () => {
   it("kopiuje punkty z formatu sections do instancji projektu", () => {
@@ -149,6 +152,45 @@ describe("mergeChecklistPayloadWithTemplate", () => {
     expect(merged.sections[0].lines.map((line) => line.text).sort()).toEqual(
       ["Tytuł elementu", "punkt"].sort(),
     );
+  });
+});
+
+describe("isChecklistLineDone", () => {
+  function makeLine(overrides: Partial<ChecklistLine> = {}): ChecklistLine {
+    return { id: "line-1", text: "Punkt", checked: false, status: "NOT_STARTED", ...overrides };
+  }
+
+  it("nie jest zrobiony gdy status nieukończony i nie ogarnięte", () => {
+    expect(isChecklistLineDone(makeLine({ status: "FAILED" }))).toBe(false);
+    expect(isChecklistLineDone(makeLine({ status: "IN_PROGRESS" }))).toBe(false);
+  });
+
+  it("jest zrobiony dla PASSED/NOT_APPLICABLE niezależnie od handledAt", () => {
+    expect(isChecklistLineDone(makeLine({ status: "PASSED" }))).toBe(true);
+    expect(isChecklistLineDone(makeLine({ status: "NOT_APPLICABLE" }))).toBe(true);
+  });
+
+  it("jest zrobiony gdy ogarnięte, mimo statusu FAILED — status linii zostaje bez zmian", () => {
+    const line = makeLine({ status: "FAILED", handledAt: "2026-08-01T00:00:00Z" });
+    expect(isChecklistLineDone(line)).toBe(true);
+    expect(line.status).toBe("FAILED");
+  });
+
+  it("checklistProgress liczy ogarnięte linie jako zrobione", () => {
+    const payload = {
+      sections: [
+        {
+          id: "s1",
+          name: "Sekcja",
+          position: 0,
+          lines: [
+            makeLine({ id: "a", status: "FAILED", handledAt: "2026-08-01T00:00:00Z" }),
+            makeLine({ id: "b", status: "NOT_STARTED" }),
+          ],
+        },
+      ],
+    };
+    expect(checklistProgress(payload)).toEqual({ total: 2, completed: 1 });
   });
 });
 

@@ -18,6 +18,9 @@ export type ChangeRequestEmailEntry = {
   costLabel: string | null;
   costNote: string | null;
   openUrl: string | null;
+  /** Zdjecie robocze z budowy — niekoniecznie nadaje sie do pokazania klientowi, wiec dolaczane
+   *  tylko dla pierwszej pozycji w mailu i tylko gdy nadawca tego nie odznaczy przed wyslaniem. */
+  photoUrl?: string | null;
 };
 
 export function resolveChangeRequestPublicUrl(token: string): string {
@@ -42,6 +45,7 @@ export function changeRequestToEmailEntry(
         ? changeRequest.costNote.trim()
         : changeRequest.costNote?.trim() || null,
     openUrl: token ? resolveChangeRequestPublicUrl(token) : null,
+    photoUrl: null,
   };
 }
 
@@ -59,6 +63,10 @@ export function renderChangeRequestBlock(entry: ChangeRequestEmailEntry, index?:
     ? `<p style="margin:0 0 12px;color:#374151;white-space:pre-wrap;line-height:1.55;">${escapeEmailHtml(entry.body)}</p>`
     : "";
 
+  const photo = entry.photoUrl
+    ? `<p style="margin:0 0 12px;"><img src="${escapeEmailHtml(entry.photoUrl)}" alt="Zdjęcie" style="max-width:100%;border-radius:12px;display:block;" /></p>`
+    : "";
+
   const cost = entry.costLabel
     ? `<p style="margin:0 0 6px;color:#111827;"><strong>Koszt:</strong> ${escapeEmailHtml(entry.costLabel)}</p>`
     : "";
@@ -73,6 +81,7 @@ export function renderChangeRequestBlock(entry: ChangeRequestEmailEntry, index?:
 
   return `<div style="margin:0 0 24px;padding:20px;border:1px solid #e5e7eb;border-radius:14px;background:#fafafa;">
     ${heading}
+    ${photo}
     ${body}
     ${cost}
     ${costNote}

@@ -85,6 +85,10 @@ async function fetchPublicSwitchboards(
       employeeReportId: row.employee_report_id,
       updatedById: row.updated_by_id,
       updatedByName: row.updated_by_name,
+      handledAt: row.handled_at,
+      handledById: row.handled_by_id,
+      handledByName: row.handled_by_name,
+      handledNote: row.handled_note,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

@@ -1,6 +1,6 @@
 import type { ProcessItemCompletion, ProcessItemKind, ProjectProcessItem } from "@/lib/process/types";
 
-export type ProcessItemVisualState = "open" | "completed" | "signed";
+export type ProcessItemVisualState = "open" | "completed" | "signed" | "failed";
 
 export function getProcessItemVisualState(
   completion?: ProcessItemCompletion,
@@ -33,5 +33,11 @@ export const PROCESS_ITEM_VISUAL_CLASSES: Record<
   signed: {
     card: "border-emerald-500/30 bg-emerald-500/10",
     icon: "text-emerald-400",
+  },
+  // Checklista ma co najmniej jeden punkt "Problem" nieobsłużony (bez "Ogarnięte") — patrz
+  // process-pipeline.tsx, gdzie ten stan jest wymuszany niezaleznie od getProcessItemVisualState.
+  failed: {
+    card: "border-rose-500/40 bg-rose-500/10",
+    icon: "text-rose-400",
   },
 };

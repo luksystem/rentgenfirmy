@@ -39,6 +39,9 @@ export function rowToChangeRequest(row: ChangeRequestRow): ProjectChangeRequest 
     publicToken: row.public_token ?? null,
     publicEnabled: Boolean(row.public_enabled),
     sentAt: row.sent_at ?? null,
+    completedAt: row.completed_at ?? null,
+    completionNote: row.completion_note ?? null,
+    createdById: row.created_by_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -185,6 +188,29 @@ export async function setChangeRequestPublicEnabled(changeRequestId: string, ena
     .from("project_change_requests")
     .update({
       public_enabled: enabled,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", changeRequestId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return rowToChangeRequest(data as ChangeRequestRow);
+}
+
+/** "Ogarnięte" — zamyka zmianę bez udziału klienta, bez ruszania statusu/maszyny stanów.
+ *  Wymaga jednozdaniowego powodu, ktory trafia do zglaszajacego przez istniejacy trigger
+ *  notify_employee_report_author (migracja 271), jesli created_by_id jest ustawione. */
+export async function markChangeRequestHandled(changeRequestId: string, reason: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("project_change_requests")
+    .update({
+      completed_at: new Date().toISOString(),
+      completion_note: reason.trim(),
       updated_at: new Date().toISOString(),
     })
     .eq("id", changeRequestId)

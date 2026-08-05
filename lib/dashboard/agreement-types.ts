@@ -230,7 +230,7 @@ export function formatAgreementCost(agreement: Pick<
   if (net != null) {
     parts.push(`netto ${net.toFixed(2)} PLN`);
   }
-  if (vatRate === 0 || vatRate === 8 || vatRate === 23) {
+  if ((net != null || gross != null) && (vatRate === 0 || vatRate === 8 || vatRate === 23)) {
     parts.push(`VAT ${vatRate}%`);
   }
   if (gross != null) {
