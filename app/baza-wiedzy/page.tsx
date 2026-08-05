@@ -1,6 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/page-header";
+import { KnowledgeAskPanel } from "@/components/knowledge/knowledge-ask-panel";
 import { KnowledgeSettingsPanel } from "@/components/knowledge/knowledge-settings-panel";
 import { KnowledgeSourceManager } from "@/components/knowledge/knowledge-source-manager";
 
@@ -14,6 +15,7 @@ export default function KnowledgeBasePage() {
       />
 
       <div className="grid gap-6">
+        <KnowledgeAskPanel />
         <KnowledgeSettingsPanel />
         <KnowledgeSourceManager />
       </div>
