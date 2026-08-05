@@ -5,10 +5,10 @@ import { Camera, Check, ChevronDown, ChevronLeft, Search, X } from "lucide-react
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  StackedDialogContent,
 } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -190,7 +190,7 @@ export function EmployeeReportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <StackedDialogContent className="max-w-lg" showCloseButton>
         <DialogHeader>
           <DialogTitle>Zgłoś coś z budowy</DialogTitle>
           <DialogDescription>
@@ -439,7 +439,7 @@ export function EmployeeReportDialog({
             )}
           </div>
         </div>
-      </DialogContent>
+      </StackedDialogContent>
     </Dialog>
   );
 }

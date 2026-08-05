@@ -163,7 +163,12 @@ export function buildChangeRequestCollapsibleMeta(changeRequest: ProjectChangeRe
   return {
     title: changeRequest.title,
     subtitle: [changeRequest.createdByName, costLabel].filter(Boolean).join(" · "),
-    statusLabel: PROJECT_CHANGE_REQUEST_STATUS_LABELS[changeRequest.status],
-    statusTone: changeRequestStatusTone(changeRequest.status),
+    // "Ogarnięte" zostaje w statusie draft (nie rusza maszyny stanów), ale odznaka nie może dalej
+    // pokazywać "Szkic" — to myli, bo sprawa jest zamknięta, nie w toku. Ton "warning" (pomarańczowy)
+    // jest już użyty do tego samego koloru gdzie indziej w aplikacji.
+    statusLabel: changeRequest.completedAt
+      ? "Ogarnięte / nieistotne"
+      : PROJECT_CHANGE_REQUEST_STATUS_LABELS[changeRequest.status],
+    statusTone: changeRequest.completedAt ? "warning" : changeRequestStatusTone(changeRequest.status),
   };
 }

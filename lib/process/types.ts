@@ -452,29 +452,19 @@ export function flattenProcessItems(template: ProcessTemplate) {
   );
 }
 
-/** Czy etap zawierający dany element szablonu jest oznaczony jako „etap zamykający projekt”. */
-export function isTemplateItemOnClosingStage(template: ProcessTemplate, templateItemId: string): boolean {
-  return template.stages.some(
-    (stage) =>
-      Boolean(stage.forClosing) &&
-      stage.milestones.some((milestone) => milestone.items.some((item) => item.id === templateItemId)),
-  );
-}
-
-export type ClosingStageKanbanCandidate = {
+export type KanbanBoardCandidate = {
   templateItemId: string;
   title: string;
   stageTitle: string;
   milestoneTitle: string;
 };
 
-/** Tablice kanban leżące na etapach oznaczonych jako „etap zamykający projekt” — cele generowania tasków AI z notatki checklisty. */
-export function findClosingStageKanbanItems(template: ProcessTemplate): ClosingStageKanbanCandidate[] {
-  const result: ClosingStageKanbanCandidate[] = [];
+/** Wszystkie tablice kanban w szablonie (dowolny etap) — cele generowania tasków AI z notatki
+ *  checklisty. Wcześniej ograniczone do etapów zamykających projekt — rozszerzone na całość, żeby
+ *  "Utwórz taski z notatek" działało z każdej checklisty, nie tylko z tych na etapie zamykającym. */
+export function findKanbanBoardCandidates(template: ProcessTemplate): KanbanBoardCandidate[] {
+  const result: KanbanBoardCandidate[] = [];
   for (const stage of template.stages) {
-    if (!stage.forClosing) {
-      continue;
-    }
     for (const milestone of stage.milestones) {
       for (const item of milestone.items) {
         if (item.kind === "kanban") {

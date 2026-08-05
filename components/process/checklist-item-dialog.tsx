@@ -8,10 +8,10 @@ import { TeamProfileSelect } from "@/components/process/team-profile-select";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  StackedDialogContent,
   TopAnchoredDialogContent,
 } from "@/components/ui/dialog";
 import { Field, Input, Textarea } from "@/components/ui/input";
@@ -304,7 +304,7 @@ export function ChecklistItemDialog({
       </Dialog>
 
       <Dialog open={handledDialogOpen} onOpenChange={setHandledDialogOpen}>
-        <DialogContent>
+        <StackedDialogContent showCloseButton>
           <DialogHeader>
             <DialogTitle>Oznacz jako ogarnięte</DialogTitle>
             <DialogDescription>
@@ -344,7 +344,7 @@ export function ChecklistItemDialog({
               Potwierdź
             </Button>
           </div>
-        </DialogContent>
+        </StackedDialogContent>
       </Dialog>
     </>
   );

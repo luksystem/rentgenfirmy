@@ -79,8 +79,6 @@ type ProcessItemPanelProps = {
   onToggleComplete?: (completed: boolean) => void;
   actorName?: string;
   canCustomizeChecklist?: boolean;
-  /** Checklista leży na etapie oznaczonym jako „etap zamykający projekt”. */
-  isClosingStage?: boolean;
   /** Utwórz taski AI na tablicy wdrożeniowej z notatki tej checklisty (tylko widok zespołu). */
   onCreateTasksFromNote?: (note: string) => void;
   /** Notatka przekazana z checklisty do wstępnego wypełnienia panelu AI na tej tablicy kanban. */
@@ -106,7 +104,6 @@ export function ProcessItemPanel({
   onToggleComplete,
   actorName,
   canCustomizeChecklist = false,
-  isClosingStage = false,
   onCreateTasksFromNote,
   initialKanbanNote,
   onConsumeKanbanNote,
@@ -312,7 +309,10 @@ export function ProcessItemPanel({
           {isChecklistInteractive ? (
             <>
               <ProcessChecklistBoard
-                key={`${item.id}-${resolvedInstance?.updatedAt ?? "new"}-checklist`}
+                // Bez updatedAt w kluczu — komponent i tak synchronizuje tresc przez efekt na
+                // initialPayload; klucz z updatedAt przemontowywalby cala plansze (i zamykal
+                // otwarty dialog punktu) po KAZDYM zapisie, wlacznie z wlasnym zdjeciem/notatka.
+                key={`${item.id}-checklist`}
                 initialPayload={checklistPayload}
                 projectId={projectId}
                 projectProcessItemId={resolvedInstance?.id}
@@ -323,7 +323,7 @@ export function ProcessItemPanel({
                 defaultAssigneeName={resolvedInstance?.assigneeName}
                 onSave={onSaveChecklist}
                 raisedMobileNavForBack
-                onCreateTasksFromNote={isClosingStage ? onCreateTasksFromNote : undefined}
+                onCreateTasksFromNote={onCreateTasksFromNote}
               />
 
               {showResponsible ? (

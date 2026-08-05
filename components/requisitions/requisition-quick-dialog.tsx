@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  StackedDialogContent,
 } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import {
@@ -87,7 +87,7 @@ export function RequisitionQuickDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <StackedDialogContent showCloseButton>
         <DialogHeader>
           <DialogTitle>Zgłoś zapotrzebowanie</DialogTitle>
           <DialogDescription>
@@ -143,7 +143,7 @@ export function RequisitionQuickDialog({
             </Button>
           </div>
         </div>
-      </DialogContent>
+      </StackedDialogContent>
     </Dialog>
   );
 }
