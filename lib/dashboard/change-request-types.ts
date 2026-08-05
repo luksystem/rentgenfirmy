@@ -91,7 +91,7 @@ export const PROJECT_CHANGE_REQUEST_STATUS_LABELS: Record<ProjectChangeRequestSt
 
 export function changeRequestStatusTone(
   status: ProjectChangeRequestStatus,
-): "neutral" | "warning" | "success" | "danger" {
+): "neutral" | "warning" | "success" | "danger" | "info" {
   switch (status) {
     case "pending_client":
       return "warning";
@@ -164,11 +164,11 @@ export function buildChangeRequestCollapsibleMeta(changeRequest: ProjectChangeRe
     title: changeRequest.title,
     subtitle: [changeRequest.createdByName, costLabel].filter(Boolean).join(" · "),
     // "Ogarnięte" zostaje w statusie draft (nie rusza maszyny stanów), ale odznaka nie może dalej
-    // pokazywać "Szkic" — to myli, bo sprawa jest zamknięta, nie w toku. Ton "warning" (pomarańczowy)
-    // jest już użyty do tego samego koloru gdzie indziej w aplikacji.
+    // pokazywać "Szkic" — to myli, bo sprawa jest zamknięta, nie w toku. Ton "info" (niebieski),
+    // żeby odróżnić od "warning" (pomarańczowy, używany np. przy "Oczekuje na klienta").
     statusLabel: changeRequest.completedAt
       ? "Ogarnięte / nieistotne"
       : PROJECT_CHANGE_REQUEST_STATUS_LABELS[changeRequest.status],
-    statusTone: changeRequest.completedAt ? "warning" : changeRequestStatusTone(changeRequest.status),
+    statusTone: changeRequest.completedAt ? "info" : changeRequestStatusTone(changeRequest.status),
   };
 }

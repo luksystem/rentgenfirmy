@@ -116,7 +116,9 @@ export const PROJECT_AGREEMENT_STATUS_LABELS: Record<ProjectAgreementStatus, str
 
 export function agreementStatusTone(
   status: ProjectAgreementStatus,
-): "neutral" | "warning" | "success" | "danger" {
+  // "info" nigdy nie zwracane tu — poszerzone dla ChangeRequestStatusBadgeTone (Ogarnięte),
+  // które współdzieli ten sam typ tonu i tę samą odznakę w AgreementCollapsibleShell.
+): "neutral" | "warning" | "success" | "danger" | "info" {
   switch (status) {
     case "pending_client":
       return "warning";
@@ -136,6 +138,7 @@ export const AGREEMENT_STATUS_BADGE_CLASS: Record<AgreementStatusBadgeTone, stri
   warning: "border-amber-500/40 bg-amber-500/10 text-amber-200",
   success: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
   danger: "border-rose-500/40 bg-rose-500/10 text-rose-200",
+  info: "border-blue-500/40 bg-blue-500/10 text-blue-200",
 };
 
 /** Ustalenie ma deadline akceptacji i blokuje etap procesu, dopóki nie jest zaakceptowane. */
@@ -203,7 +206,7 @@ export function getAgreementStatusLabel(
 
 export function getAgreementStatusTone(
   agreement: Pick<ProjectClientAgreement, "status" | "discussionOpen">,
-): "neutral" | "warning" | "success" | "danger" {
+): "neutral" | "warning" | "success" | "danger" | "info" {
   if (isAgreementPendingAttention(agreement)) {
     return "warning";
   }

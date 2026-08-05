@@ -6,6 +6,7 @@ import {
   getChecklistLineAssignee,
   isChecklistLineDone,
   mergeChecklistPayloadWithTemplate,
+  normalizeChecklistPayload,
   projectChecklistPayloadFromTemplate,
 } from "@/lib/process/item-payload";
 import type { ChecklistLine } from "@/lib/process/types";
@@ -174,6 +175,34 @@ describe("isChecklistLineDone", () => {
     const line = makeLine({ status: "FAILED", handledAt: "2026-08-01T00:00:00Z" });
     expect(isChecklistLineDone(line)).toBe(true);
     expect(line.status).toBe("FAILED");
+  });
+
+  it("normalizeChecklistPayload zachowuje pola ogarnięte (regresja: persist() ucinał je przy każdym zapisie)", () => {
+    const payload = {
+      sections: [
+        {
+          id: "s1",
+          name: "Sekcja",
+          position: 0,
+          lines: [
+            {
+              id: "a",
+              text: "Punkt",
+              checked: false,
+              status: "FAILED",
+              handledAt: "2026-08-01T00:00:00Z",
+              handledByName: "Jan Kowalski",
+              handledNote: "Przeniesione do ustaleń.",
+            },
+          ],
+        },
+      ],
+    };
+    const normalized = normalizeChecklistPayload(payload);
+    const line = normalized.sections[0].lines[0];
+    expect(line.handledAt).toBe("2026-08-01T00:00:00Z");
+    expect(line.handledByName).toBe("Jan Kowalski");
+    expect(line.handledNote).toBe("Przeniesione do ustaleń.");
   });
 
   it("checklistProgress liczy ogarnięte linie jako zrobione", () => {

@@ -366,6 +366,9 @@ function normalizeChecklistLine(entry: unknown): ChecklistLine | null {
         typeof raw.documentationHint === "string" ? raw.documentationHint : undefined,
       blockNotApplicable: Boolean(raw.blockNotApplicable),
       isCustom: Boolean(raw.isCustom),
+      handledAt: typeof raw.handledAt === "string" ? raw.handledAt : undefined,
+      handledByName: typeof raw.handledByName === "string" ? raw.handledByName : undefined,
+      handledNote: typeof raw.handledNote === "string" ? raw.handledNote : undefined,
     };
   }
   const checked = Boolean(raw.checked);
@@ -402,6 +405,9 @@ function normalizeChecklistLine(entry: unknown): ChecklistLine | null {
           .filter((attachment): attachment is ChecklistLineAttachment => attachment !== null)
       : undefined,
     isCustom: Boolean(raw.isCustom),
+    handledAt: typeof raw.handledAt === "string" ? raw.handledAt : undefined,
+    handledByName: typeof raw.handledByName === "string" ? raw.handledByName : undefined,
+    handledNote: typeof raw.handledNote === "string" ? raw.handledNote : undefined,
   };
 }
 
