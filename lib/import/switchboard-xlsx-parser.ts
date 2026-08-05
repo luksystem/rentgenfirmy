@@ -70,6 +70,16 @@ const CONTENT_COLUMNS = [
 // całości zamiast robić z niego brzydki, wielozdaniowy tytuł sekcji.
 const STANDALONE_PARAGRAPH_MIN_LENGTH = 80;
 
+// Nagłówek sekcji bywa na tym samym wierszu co dłuższa instrukcja dla elektryka (np. "Blok
+// rozdzielczy dla lini sygnałowych z kontaktronów należy podłaczyć linie DI/1/1 - DI/2/10.") —
+// bez skrócenia taki tekst trafiał 1:1 jako nazwa sekcji w UI, wyglądając jak zepsuty, wielozdaniowy
+// nagłówek zamiast krótkiej etykiety w stylu "Złączki rezerwowe".
+const SECTION_NAME_MAX_LENGTH = 60;
+
+function shortenSectionName(text: string): string {
+  return text.length > SECTION_NAME_MAX_LENGTH ? `${text.slice(0, SECTION_NAME_MAX_LENGTH).trim()}…` : text;
+}
+
 // Wszystkie realne nagłówki sekcji w tym szablonie zaczynają się od jednego z tych słów
 // ("Złączki rezerwowe", "Złączki magistral", "Blok rozdzielczy dla…"). To dużo pewniejszy sygnał
 // niż "jedna wypełniona komórka" — pojedyncza komórka bez tego prefiksu (np. przypadkowy,
@@ -179,7 +189,7 @@ function classifyRow(row: unknown[]): RowClassification {
   }
 
   const sectionCell = filled.find((text) => SECTION_LABEL_PATTERN.test(text));
-  if (sectionCell) return { kind: "section-label", sectionName: sectionCell };
+  if (sectionCell) return { kind: "section-label", sectionName: shortenSectionName(sectionCell) };
 
   return { kind: "position" };
 }

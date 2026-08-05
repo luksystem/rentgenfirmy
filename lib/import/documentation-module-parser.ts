@@ -25,6 +25,14 @@ const STATUS_MAP: Record<string, SwitchboardCircuitStatus> = {
 // nie nazwa sekcji ani pozycja. Ten sam próg co w RW-Zugi.
 const STANDALONE_PARAGRAPH_MIN_LENGTH = 80;
 
+// Ten sam próg/skracanie co w RW-Zugi — nagłówek sekcji bywa wymieszany z dłuższą instrukcją w tym
+// samym wierszu, bez skrócenia trafiał 1:1 jako nazwa sekcji w UI.
+const SECTION_NAME_MAX_LENGTH = 60;
+
+function shortenSectionName(text: string): string {
+  return text.length > SECTION_NAME_MAX_LENGTH ? `${text.slice(0, SECTION_NAME_MAX_LENGTH).trim()}…` : text;
+}
+
 export class DocumentationModuleParseError extends Error {}
 
 export type DocumentationModuleColumnMap = {
@@ -152,7 +160,7 @@ function classifyRow(row: unknown[], block: DocumentationModuleBlock): RowClassi
     const sectionCell = filled.find((text) =>
       block.sectionPrefixes.some((prefix) => normalize(text).startsWith(prefix)),
     );
-    if (sectionCell) return { kind: "section-label", sectionName: sectionCell };
+    if (sectionCell) return { kind: "section-label", sectionName: shortenSectionName(sectionCell) };
   }
 
   return { kind: "position" };
