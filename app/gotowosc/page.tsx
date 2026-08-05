@@ -71,7 +71,7 @@ export default function ProjectReadinessPage() {
       <PageHeader
         eyebrow="Test gotowości projektu"
         title="Gotowość projektów"
-        description="report_project_readiness() (docs/09) — 3 z 8 pozycji są dziś sprawdzalne (etap aktualny, sloty obsadzone, lider etapu). Reszta zwraca „niedostępne”, bo pole jeszcze nie istnieje w schemacie — to świadomie NIE jest to samo co „nie spełnione”."
+        description="report_project_readiness() (docs/09) — 5 z 8 pozycji są dziś sprawdzalne (etap aktualny, sloty obsadzone, lider etapu, ROT z właścicielem i datą kontroli, data ostatniego kontaktu). Pozostałe 3 zwracają „niedostępne” — profil klienta i kanał komunikacji jako decyzja nie istnieją w schemacie, „kto zatrudnia” istnieje jako pole, ale jest w praktyce puste. „Niedostępne” świadomie NIE jest tym samym co „nie spełnione”."
       />
 
       {error ? <p className="mb-3 text-sm text-rose-400">{error}</p> : null}
