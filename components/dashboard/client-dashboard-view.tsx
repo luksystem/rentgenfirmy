@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
+  Archive,
   Briefcase,
   Cable,
   ClipboardCheck,
@@ -41,6 +42,8 @@ import { StageReportsPanel } from "@/components/dashboard/stage-reports-panel";
 import { ProjectCommunicationPanel } from "@/components/dashboard/project-communication-panel";
 import { StageSatisfactionPrompt } from "@/components/dashboard/stage-satisfaction-prompt";
 import { ProjectMeetingNotesPanel } from "@/components/dashboard/project-meeting-notes-panel";
+import { ProjectAcHistoryPanel } from "@/components/dashboard/project-ac-history-panel";
+import { fetchProjectAcLink } from "@/lib/supabase/project-ac-history-repository";
 import { ProjectDocumentationPanel } from "@/components/dashboard/project-documentation-panel";
 import { ProjectIntegrationsTab } from "@/components/project/project-integrations-tab";
 import { ClientProjectSettingsPanel } from "@/components/dashboard/client-project-settings-panel";
@@ -146,7 +149,8 @@ export type ClientDashboardTab =
   | "links"
   | "time-tracking"
   | "project-users"
-  | "training";
+  | "training"
+  | "ac-history";
 
 const EMPTY_AGREEMENTS: ProjectClientAgreement[] = [];
 const EMPTY_CHANGE_REQUESTS: ProjectChangeRequest[] = [];
@@ -194,6 +198,7 @@ const TEAM_MAIN_TAB_CONFIG: Array<{
   { id: "documentation", label: "Dokumentacja", icon: FolderOpen },
   { id: "satisfaction", label: "Ocena", icon: Star },
   { id: "training", label: "Ścieżka szkoleniowa", icon: GraduationCap },
+  { id: "ac-history", label: "Historia z AC", icon: Archive },
 ];
 
 const TEAM_PROJECT_TAB = {
@@ -370,6 +375,26 @@ export function ClientDashboardView({
       cancelled = true;
     };
   }, [client.id]);
+
+  const [hasAcHistory, setHasAcHistory] = useState(false);
+
+  useEffect(() => {
+    if (readOnly || !selectedProjectId) {
+      setHasAcHistory(false);
+      return;
+    }
+    let cancelled = false;
+    void fetchProjectAcLink(selectedProjectId)
+      .then((links) => {
+        if (!cancelled) setHasAcHistory(links.length > 0);
+      })
+      .catch(() => {
+        if (!cancelled) setHasAcHistory(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [readOnly, selectedProjectId]);
 
   const handleSelectTab = useCallback(
     (tab: ClientDashboardTab) => {
@@ -868,6 +893,7 @@ export function ClientDashboardView({
     if (tab.id === "trades" && !enableTrades) return false;
     if (tab.id === "notes" && !enableMeetingNotes) return false;
     if (tab.id === "satisfaction" && !enableSatisfaction) return false;
+    if (tab.id === "ac-history" && !hasAcHistory) return false;
     return true;
   });
 
@@ -1718,6 +1744,8 @@ export function ClientDashboardView({
         return !readOnly ? renderProjectUsersPanel() : null;
       case "training":
         return !readOnly ? <ClientTrainingPathPanel clientId={client.id} /> : null;
+      case "ac-history":
+        return !readOnly && hasAcHistory ? <ProjectAcHistoryPanel projectId={selectedProject.id} /> : null;
       default:
         return null;
     }

@@ -3200,6 +3200,48 @@ export type CommunicationEventInsert = Omit<
 
 export type CommunicationEventUpdate = Partial<CommunicationEventInsert>;
 
+// ── Import historii z ActiveCollab — migracja 304 ───────────────────────────────────────────────
+export type ProjectAcLinkRow = {
+  id: string;
+  project_id: string;
+  ac_project_id: number;
+  ac_zip: string;
+  ac_project_name: string;
+  match_score: number | null;
+  imported_at: string | null;
+  created_at: string;
+};
+
+export type ProjectAcLinkInsert = Omit<ProjectAcLinkRow, "id" | "created_at"> & {
+  id?: string;
+  created_at?: string;
+};
+
+export type ProjectAcLinkUpdate = Partial<ProjectAcLinkInsert>;
+
+export type ProjectAcHistoryItemRow = {
+  id: string;
+  project_id: string;
+  kind: string;
+  ac_id: number;
+  ac_task_id: number | null;
+  title: string;
+  body: string;
+  author_name: string;
+  is_completed: boolean;
+  attachment_names: string[];
+  ac_created_on: string | null;
+  ac_completed_on: string | null;
+  created_at: string;
+};
+
+export type ProjectAcHistoryItemInsert = Omit<ProjectAcHistoryItemRow, "id" | "created_at"> & {
+  id?: string;
+  created_at?: string;
+};
+
+export type ProjectAcHistoryItemUpdate = Partial<ProjectAcHistoryItemInsert>;
+
 export type Database = {
   public: {
     Tables: {
@@ -3210,6 +3252,34 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "communication_events_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      project_ac_link: {
+        Row: ProjectAcLinkRow;
+        Insert: ProjectAcLinkInsert;
+        Update: ProjectAcLinkUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "project_ac_link_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      project_ac_history_items: {
+        Row: ProjectAcHistoryItemRow;
+        Insert: ProjectAcHistoryItemInsert;
+        Update: ProjectAcHistoryItemUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "project_ac_history_items_project_id_fkey";
             columns: ["project_id"];
             isOneToOne: false;
             referencedRelation: "projects";
