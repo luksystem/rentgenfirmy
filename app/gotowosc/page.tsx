@@ -19,7 +19,7 @@ const READINESS_COLUMNS: { key: keyof ProjectReadinessRow; label: string }[] = [
   { key: "liderEtapu", label: "Lider etapu" },
   { key: "profilKlienta", label: "Profil klienta" },
   { key: "kanalKomunikacji", label: "Kanał komunikacji" },
-  { key: "rotPrzeniesioneZWlascicielemIDataKontroli", label: "ROT z właścicielem i datą kontroli" },
+  { key: "rotPrzeniesioneZWlascicielemIDataKontroli", label: "ROT — bez zaległości (data kontroli)" },
   { key: "podmiotyZewnetrzneKtoZatrudnia", label: "Podmioty zewnętrzne — kto zatrudnia" },
   { key: "dataOstatniegoKontaktu", label: "Data ostatniego kontaktu" },
 ];
@@ -71,7 +71,7 @@ export default function ProjectReadinessPage() {
       <PageHeader
         eyebrow="Test gotowości projektu"
         title="Gotowość projektów"
-        description="report_project_readiness() (docs/09) — 5 z 8 pozycji są dziś sprawdzalne (etap aktualny, sloty obsadzone, lider etapu, ROT z właścicielem i datą kontroli, data ostatniego kontaktu). Pozostałe 3 zwracają „niedostępne” — profil klienta i kanał komunikacji jako decyzja nie istnieją w schemacie, „kto zatrudnia” istnieje jako pole, ale jest w praktyce puste. „Niedostępne” świadomie NIE jest tym samym co „nie spełnione”."
+        description="report_project_readiness() (docs/09) — 5 z 8 pozycji są dziś sprawdzalne (etap aktualny, sloty obsadzone, lider etapu, ROT bez zaległości, data ostatniego kontaktu). ROT mierzy ZALEGŁOŚĆ (czy któraś otwarta pozycja jest po dacie kontroli — review_date albo sugerowana, gdy ręcznej brak), nie aktywność. Pozostałe 3 zwracają „niedostępne” — profil klienta i kanał komunikacji jako decyzja nie istnieją w schemacie, „kto zatrudnia” istnieje jako pole, ale jest w praktyce puste. „Niedostępne” świadomie NIE jest tym samym co „nie spełnione”."
       />
 
       {error ? <p className="mb-3 text-sm text-rose-400">{error}</p> : null}
@@ -105,7 +105,13 @@ export default function ProjectReadinessPage() {
                     </td>
                     {READINESS_COLUMNS.map((col) => (
                       <td key={col.key} className="py-2 pr-3 text-center">
-                        <StatusIcon status={row[col.key] as ProjectReadinessStatus} />
+                        <div className="flex items-center justify-center gap-1">
+                          <StatusIcon status={row[col.key] as ProjectReadinessStatus} />
+                          {col.key === "rotPrzeniesioneZWlascicielemIDataKontroli" &&
+                          row.rotPozycjiPoTerminie > 0 ? (
+                            <span className="text-xs text-rose-400">{row.rotPozycjiPoTerminie}</span>
+                          ) : null}
+                        </div>
                       </td>
                     ))}
                   </tr>

@@ -3,10 +3,21 @@ import { getSupabase } from "@/lib/supabase/client";
 import type { RotCategory, RotItem, RotSourceType } from "@/lib/rot/types";
 import { addDaysToIsoDate, toLocalIsoDate } from "@/lib/rot/review-date";
 import type { RotStatus } from "@/lib/process/kanban-types";
+import { fetchPolicyThresholds } from "@/lib/supabase/policy-thresholds-repository";
 
+/**
+ * Progi daty kontroli (bufor/oczekiwanie/interwał) idą jako PARAMETRY do report_rot_items() — SQL
+ * liczy effective_review_date (migracja 308), ale TS (fetchPolicyThresholds) zostaje jedynym
+ * miejscem, które CZYTA konfigurację z app_settings.
+ */
 export async function fetchRotItems(): Promise<RotItem[]> {
   const supabase = getSupabase();
-  const { data, error } = await supabase.rpc("report_rot_items");
+  const thresholds = await fetchPolicyThresholds();
+  const { data, error } = await supabase.rpc("report_rot_items", {
+    p_review_buffer_days: thresholds.rotReviewBufferDays,
+    p_review_waiting_client_days: thresholds.rotReviewWaitingClientDays,
+    p_review_default_interval_days: thresholds.rotReviewDefaultIntervalDays,
+  });
   if (error) {
     throw new Error(error.message);
   }
@@ -22,6 +33,7 @@ export async function fetchRotItems(): Promise<RotItem[]> {
     openedAt: row.opened_at,
     daysOpen: row.days_open,
     reviewDate: row.review_date,
+    effectiveReviewDate: row.effective_review_date,
     termin: row.termin,
     stageId: row.stage_id,
     stageTitle: row.stage_title,

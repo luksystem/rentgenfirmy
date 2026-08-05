@@ -2,6 +2,7 @@
 // wyłącznie jako funkcja SQL, uruchamialna ręcznie z SQL Editora. Ten plik jest pierwszym
 // wywołaniem z poziomu aplikacji (naprawa audytu bramy).
 import { getSupabase } from "@/lib/supabase/client";
+import { fetchPolicyThresholds } from "@/lib/supabase/policy-thresholds-repository";
 
 export const PROJECT_READINESS_STATUSES = ["spełnione", "nie_spełnione", "niedostępne"] as const;
 export type ProjectReadinessStatus = (typeof PROJECT_READINESS_STATUSES)[number];
@@ -18,11 +19,20 @@ export type ProjectReadinessRow = {
   podmiotyZewnetrzneKtoZatrudnia: ProjectReadinessStatus;
   liderEtapu: ProjectReadinessStatus;
   dataOstatniegoKontaktu: ProjectReadinessStatus;
+  /** Migracja 308 — ROT mierzy zaległość, nie aktywność; ta liczba jest surowym faktem do wglądu. */
+  rotPozycjiPoTerminie: number;
 };
 
+/** Progi daty kontroli idą jako PARAMETRY do report_project_readiness() (ten sam wzorzec co
+ *  fetchRotItems) — TS zostaje jedynym miejscem, które czyta konfigurację z app_settings. */
 export async function fetchProjectReadiness(): Promise<ProjectReadinessRow[]> {
   const supabase = getSupabase();
-  const { data, error } = await supabase.rpc("report_project_readiness");
+  const thresholds = await fetchPolicyThresholds();
+  const { data, error } = await supabase.rpc("report_project_readiness", {
+    p_review_buffer_days: thresholds.rotReviewBufferDays,
+    p_review_waiting_client_days: thresholds.rotReviewWaitingClientDays,
+    p_review_default_interval_days: thresholds.rotReviewDefaultIntervalDays,
+  });
   if (error) {
     throw new Error(error.message);
   }
@@ -39,5 +49,6 @@ export async function fetchProjectReadiness(): Promise<ProjectReadinessRow[]> {
     podmiotyZewnetrzneKtoZatrudnia: row.podmioty_zewnetrzne_kto_zatrudnia as ProjectReadinessStatus,
     liderEtapu: row.lider_etapu as ProjectReadinessStatus,
     dataOstatniegoKontaktu: row.data_ostatniego_kontaktu as ProjectReadinessStatus,
+    rotPozycjiPoTerminie: row.rot_pozycji_po_terminie,
   }));
 }

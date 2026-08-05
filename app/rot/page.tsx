@@ -11,7 +11,7 @@ import { RotItemDetailPanel } from "@/components/rot/rot-item-detail-panel";
 import { hasFullAppAccess } from "@/lib/auth/types";
 import { DEFAULT_POLICY_THRESHOLDS, type PolicyThresholds } from "@/lib/policy-thresholds/types";
 import { ROT_CATEGORY_LABELS, ROT_SOURCE_LABELS, ROT_STATUS_LABELS, type RotItem, type RotStatus } from "@/lib/rot/types";
-import { computeSuggestedReviewDate } from "@/lib/rot/review-date";
+import { toLocalIsoDate } from "@/lib/rot/review-date";
 import { fetchPolicyThresholds } from "@/lib/supabase/policy-thresholds-repository";
 import {
   clearRotItemReviewDate,
@@ -47,10 +47,9 @@ function RotItemRow({
 }) {
   const stale = item.rotStatus !== "ZAMKNIETE" && item.daysOpen > thresholds.rotStagnationDays;
   const isAutoReviewDate = !item.reviewDate;
-  const effectiveReviewDate = item.reviewDate ?? computeSuggestedReviewDate(item, thresholds);
+  const effectiveReviewDate = item.effectiveReviewDate;
   const reviewOverdue =
-    item.rotStatus !== "ZAMKNIETE" &&
-    effectiveReviewDate.slice(0, 10) < new Date().toISOString().slice(0, 10);
+    item.rotStatus !== "ZAMKNIETE" && effectiveReviewDate.slice(0, 10) < toLocalIsoDate(new Date());
   return (
     <div className="flex flex-col gap-1.5 rounded-xl border border-border/60 bg-surface-muted/10 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -137,6 +136,7 @@ export default function RotPage() {
   const [items, setItems] = useState<RotItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showClosed, setShowClosed] = useState(false);
+  const [onlyOverdue, setOnlyOverdue] = useState(false);
   const [thresholds, setThresholds] = useState<PolicyThresholds>(DEFAULT_POLICY_THRESHOLDS);
   const [detailKey, setDetailKey] = useState<string | null>(null);
 
@@ -172,16 +172,20 @@ export default function RotPage() {
   async function handleSaveReviewDate(item: RotItem, date: string | null) {
     if (date) {
       await setRotItemReviewDate(item.sourceType, item.sourceId, date, profile?.id);
-    } else {
-      await clearRotItemReviewDate(item.sourceType, item.sourceId);
+      setItems((current) =>
+        (current ?? []).map((row) =>
+          row.sourceType === item.sourceType && row.sourceId === item.sourceId
+            ? { ...row, reviewDate: date, effectiveReviewDate: date }
+            : row,
+        ),
+      );
+      return;
     }
-    setItems((current) =>
-      (current ?? []).map((row) =>
-        row.sourceType === item.sourceType && row.sourceId === item.sourceId
-          ? { ...row, reviewDate: date }
-          : row,
-      ),
-    );
+    // Czyszczenie: nowa data sugerowana (formuła) liczy się tylko w SQL — dociągnij świeży wiersz,
+    // zamiast zgadywać ją tutaj i ryzykować drugą implementację tej samej logiki.
+    await clearRotItemReviewDate(item.sourceType, item.sourceId);
+    const refreshed = await fetchRotItems();
+    setItems(refreshed);
   }
 
   async function handleMarkReviewed(item: RotItem) {
@@ -194,7 +198,7 @@ export default function RotPage() {
     setItems((current) =>
       (current ?? []).map((row) =>
         row.sourceType === item.sourceType && row.sourceId === item.sourceId
-          ? { ...row, reviewDate: nextDate }
+          ? { ...row, reviewDate: nextDate, effectiveReviewDate: nextDate }
           : row,
       ),
     );
@@ -202,11 +206,15 @@ export default function RotPage() {
 
   const grouped = useMemo(() => {
     const byStatus: Record<RotStatus, RotItem[]> = { CZEKA_NA_ZEWNETRZNE: [], W_TOKU: [], ZAMKNIETE: [] };
+    const todayIso = toLocalIsoDate(new Date());
     for (const item of items ?? []) {
+      if (onlyOverdue && !(item.rotStatus !== "ZAMKNIETE" && item.effectiveReviewDate.slice(0, 10) < todayIso)) {
+        continue;
+      }
       byStatus[item.rotStatus].push(item);
     }
     return byStatus;
-  }, [items]);
+  }, [items, onlyOverdue]);
 
   function itemKey(item: Pick<RotItem, "sourceType" | "sourceId">) {
     return `${item.sourceType}-${item.sourceId}`;
@@ -247,6 +255,16 @@ export default function RotPage() {
       {error ? (
         <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p>
       ) : null}
+
+      <label className="mb-3 flex items-center gap-2 text-sm text-muted">
+        <input
+          type="checkbox"
+          checked={onlyOverdue}
+          onChange={(event) => setOnlyOverdue(event.target.checked)}
+          className="h-4 w-4 rounded border-border/70"
+        />
+        Tylko po dacie kontroli
+      </label>
 
       {items === null ? (
         <p className="text-sm text-muted">Ładowanie…</p>

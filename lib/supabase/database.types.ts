@@ -5549,7 +5549,11 @@ export type Database = {
         }[];
       };
       report_project_readiness: {
-        Args: Record<string, never>;
+        Args: {
+          p_review_buffer_days?: number;
+          p_review_waiting_client_days?: number;
+          p_review_default_interval_days?: number;
+        };
         Returns: {
           project_id: string;
           project_name: string;
@@ -5562,6 +5566,7 @@ export type Database = {
           podmioty_zewnetrzne_kto_zatrudnia: string;
           lider_etapu: string;
           data_ostatniego_kontaktu: string;
+          rot_pozycji_po_terminie: number;
         }[];
       };
       report_project_role_slot_migration: {
@@ -5598,7 +5603,11 @@ export type Database = {
         }[];
       };
       report_rot_items: {
-        Args: Record<string, never>;
+        Args: {
+          p_review_buffer_days?: number;
+          p_review_waiting_client_days?: number;
+          p_review_default_interval_days?: number;
+        };
         Returns: {
           source_type: string;
           source_id: string;
@@ -5616,6 +5625,7 @@ export type Database = {
           stage_title: string | null;
           origin_stage_id: string | null;
           move_count: number | null;
+          effective_review_date: string;
         }[];
       };
       apply_warranty_extension_from_agreement: {
