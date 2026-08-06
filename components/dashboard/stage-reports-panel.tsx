@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Copy, RefreshCw, Send, ShieldCheck } from "lucide-react";
+import { Copy, Eye, EyeOff, RefreshCw, Send, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -106,6 +106,7 @@ function ReportRow({ report, onChanged }: { report: StageReport; onChanged: () =
   const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [deliveries, setDeliveries] = useState<StageReportDelivery[] | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const loadDeliveries = useCallback(() => {
     void fetchStageReportDeliveries(report.id)
@@ -250,11 +251,15 @@ function ReportRow({ report, onChanged }: { report: StageReport; onChanged: () =
 
         <div className="flex flex-wrap items-center gap-2">
           <CopyButton text={text} />
+          <Button type="button" size="sm" variant="ghost" onClick={() => setShowPreview((value) => !value)}>
+            {showPreview ? <EyeOff className="mr-1.5 h-3.5 w-3.5" /> : <Eye className="mr-1.5 h-3.5 w-3.5" />}
+            {showPreview ? "Ukryj podgląd" : "Podgląd"}
+          </Button>
           {report.status === "wygenerowany" ? (
             <>
               <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => void handleRegenerate()}>
                 <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                Odśwież treść
+                Generuj raport ponownie
               </Button>
               <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => void saveComment()}>
                 Zapisz komentarz
@@ -281,6 +286,12 @@ function ReportRow({ report, onChanged }: { report: StageReport; onChanged: () =
             </div>
           ) : null}
         </div>
+
+        {showPreview ? (
+          <pre className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded-xl border border-border/60 bg-surface-muted/10 p-3 text-xs text-foreground/90">
+            {text}
+          </pre>
+        ) : null}
 
         {report.status === "wyslany" && deliveries && deliveries.length > 0 ? (
           <div className="grid gap-2 rounded-xl border border-border/60 bg-surface-muted/10 p-3">
