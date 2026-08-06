@@ -90,13 +90,13 @@ export function ContractDocumentView({
           <p className="text-sm font-medium text-foreground">{formatMoney(baseNet)}</p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-muted">Udzielone rabaty</p>
+          <p className="text-[10px] uppercase tracking-wide text-muted">Oszczędzasz</p>
           <p className="text-sm font-medium text-emerald-400">
             {totalDiscounts > 0 ? `−${formatMoney(totalDiscounts)}` : "—"}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-[10px] uppercase tracking-wide text-muted">Cena końcowa</p>
+          <p className="text-[10px] uppercase tracking-wide text-muted">Cena końcowa brutto</p>
           <p className="text-base font-bold text-accent">{formatMoney(vatBreakdown.finalTotal)}</p>
         </div>
       </div>
@@ -341,12 +341,28 @@ export function ContractDocumentView({
                   <span className="tabular-nums text-muted">−{formatMoney(totals.itemDiscountNet)}</span>
                 </div>
               ) : null}
-              {totals.categoryDiscountNet > 0 ? (
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-foreground/90">Rabat za wybrane kategorie</span>
-                  <span className="tabular-nums text-muted">−{formatMoney(totals.categoryDiscountNet)}</span>
-                </div>
-              ) : null}
+              {contract.sections.map((section) => {
+                if (
+                  !isContractTableSection(section) ||
+                  section.group !== "option" ||
+                  section.category === "dodatki" ||
+                  !section.category ||
+                  section.categoryDiscountPercent <= 0 ||
+                  !selectedKeys.has(section.id)
+                ) {
+                  return null;
+                }
+                const discount = roundToCents(calculateTableNetTotal(section) * (section.categoryDiscountPercent / 100));
+                return (
+                  <div key={`cat-${section.id}`} className="flex items-center justify-between gap-3">
+                    <span className="text-foreground/90">
+                      Rabat „{CONTRACT_OPTION_CATEGORY_LABELS[section.category]}” — {section.title || "tabela"} (
+                      {section.categoryDiscountPercent}%)
+                    </span>
+                    <span className="tabular-nums text-muted">−{formatMoney(discount)}</span>
+                  </div>
+                );
+              })}
               {effectivePlan && effectivePlan.discountPercent > 0 ? (
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-foreground/90">
