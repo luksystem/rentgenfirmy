@@ -1,24 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { ContractDocumentView } from "@/components/contracts/contract-document-view";
 import { OfferValidityCountdown } from "@/components/service/offer-validity-countdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/input";
-import { computeFixedPriceRowNetValue } from "@/lib/service/fixed-price";
-import {
-  calculateContractTotals,
-  calculatePaymentScheduleAmounts,
-  calculateTableGrossTotal,
-  calculateTableNetTotal,
-} from "@/lib/contracts/totals";
-import {
-  CONTRACT_STATUS_LABELS,
-  isContractTableSection,
-  isContractTextSection,
-  type Contract,
-} from "@/lib/contracts/types";
-import { cn, formatDateTime, formatMoney } from "@/lib/utils";
+import { isContractTableSection, CONTRACT_STATUS_LABELS, type Contract } from "@/lib/contracts/types";
 
 type LoadState = {
   contract: Contract;
@@ -64,22 +52,6 @@ export function ClientContractPage({ token }: { token: string }) {
   useEffect(() => {
     void load();
   }, [load]);
-
-  const totals = useMemo(() => {
-    if (!state) {
-      return null;
-    }
-    return calculateContractTotals(state.contract.sections, {
-      optionOverrides: Object.fromEntries(Array.from(selectedOptionIds).map((id) => [id, true])),
-    });
-  }, [state, selectedOptionIds]);
-
-  const scheduleAmounts = useMemo(() => {
-    if (!state || !totals) {
-      return [];
-    }
-    return calculatePaymentScheduleAmounts(state.contract.paymentSchedule, totals);
-  }, [state, totals]);
 
   async function submit(action: "sign" | "reject") {
     if (action === "sign") {
@@ -132,6 +104,7 @@ export function ClientContractPage({ token }: { token: string }) {
   }
 
   const { contract, canRespond, isExpired } = state;
+  const canInteract = canRespond && !isExpired;
 
   return (
     <div className="mx-auto grid max-w-3xl gap-6 p-4 sm:p-8">
@@ -144,142 +117,27 @@ export function ClientContractPage({ token }: { token: string }) {
         ) : null}
       </div>
 
-      <Card>
-        <CardContent className="grid gap-1 pt-5 text-sm text-muted">
-          <p className="font-medium text-foreground">{contract.client.fullName}</p>
-          {contract.client.companyName ? <p>{contract.client.companyName}</p> : null}
-          {contract.client.nip ? <p>NIP: {contract.client.nip}</p> : null}
-          {contract.client.location ? <p>{contract.client.location}</p> : null}
-          {[contract.client.email, contract.client.phone].filter(Boolean).join(" · ")}
-        </CardContent>
-      </Card>
+      <ContractDocumentView
+        contract={contract}
+        selectedOptionIds={selectedOptionIds}
+        onToggleOption={
+          canInteract
+            ? (sectionId, checked) => {
+                setSelectedOptionIds((prev) => {
+                  const next = new Set(prev);
+                  if (checked) {
+                    next.add(sectionId);
+                  } else {
+                    next.delete(sectionId);
+                  }
+                  return next;
+                });
+              }
+            : undefined
+        }
+      />
 
-      <div className="grid gap-4">
-        {contract.sections.map((section) => {
-          if (isContractTextSection(section)) {
-            return (
-              <Card key={section.id}>
-                <CardContent className="pt-5">
-                  {section.title ? (
-                    <p className={cn("font-semibold text-foreground", section.struck && "line-through text-muted")}>
-                      {section.title}
-                    </p>
-                  ) : null}
-                  <p className={cn("mt-1 whitespace-pre-line text-sm text-foreground/90", section.struck && "line-through text-muted")}>
-                    {section.content}
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          }
-
-          if (!isContractTableSection(section)) {
-            return null;
-          }
-
-          const isOption = section.group === "option";
-          const selected = isOption ? selectedOptionIds.has(section.id) : true;
-
-          return (
-            <Card key={section.id} className={cn(isOption && !selected && "opacity-70")}>
-              <CardContent className="grid gap-3 pt-5">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="font-semibold text-foreground">{section.title || "Tabela pozycji"}</p>
-                    {section.description ? <p className="mt-1 text-sm text-muted">{section.description}</p> : null}
-                  </div>
-                  {isOption ? (
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        disabled={!canRespond || isExpired}
-                        onChange={(event) => {
-                          const next = new Set(selectedOptionIds);
-                          if (event.target.checked) {
-                            next.add(section.id);
-                          } else {
-                            next.delete(section.id);
-                          }
-                          setSelectedOptionIds(next);
-                        }}
-                        className="h-4 w-4 rounded border-border"
-                      />
-                      Opcja dodatkowa — dołącz do umowy
-                    </label>
-                  ) : null}
-                </div>
-
-                <div className="grid gap-2 text-sm">
-                  {section.rows
-                    .filter((row) => row.active)
-                    .map((row) => (
-                      <div key={row.id} className="flex items-center justify-between gap-3 border-b border-border/60 pb-2 last:border-0">
-                        <span className="text-foreground/90">
-                          {row.name} <span className="text-muted">— {row.quantity} {row.unit}</span>
-                        </span>
-                        <span className="tabular-nums text-foreground">{formatMoney(computeFixedPriceRowNetValue(row))} netto</span>
-                      </div>
-                    ))}
-                </div>
-
-                <p className="text-sm text-muted">
-                  Suma: <span className="font-semibold text-foreground">{formatMoney(calculateTableNetTotal(section))} netto</span>
-                  {" · "}
-                  <span className="font-semibold text-foreground">{formatMoney(calculateTableGrossTotal(section))} brutto</span>
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {totals ? (
-        <Card>
-          <CardContent className="pt-5">
-            <p className="text-base font-semibold text-foreground">
-              Wartość umowy: {formatMoney(totals.totalGross)} brutto
-            </p>
-            <p className="text-sm text-muted">(netto: {formatMoney(totals.totalNet)})</p>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {contract.paymentSchedule.length > 0 ? (
-        <Card>
-          <CardContent className="grid gap-2 pt-5">
-            <p className="font-semibold text-foreground">Harmonogram spłat</p>
-            {scheduleAmounts.map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
-                <span className="text-foreground/90">
-                  {item.label || "Rata"} <span className="text-muted">({item.percent}%)</span>
-                  {item.note ? <span className="text-muted"> — {item.note}</span> : null}
-                </span>
-                <span className="tabular-nums font-medium text-foreground">{formatMoney(item.amountGross)}</span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {contract.clientSignature || contract.companySignature ? (
-        <Card>
-          <CardContent className="grid gap-1 pt-5 text-sm text-muted">
-            {contract.clientSignature ? (
-              <p>
-                Podpis klienta: {contract.clientSignature.signerName} — {formatDateTime(contract.clientSignature.signedAt)}
-              </p>
-            ) : null}
-            {contract.companySignature ? (
-              <p>
-                Podpis firmy: {contract.companySignature.signerName} — {formatDateTime(contract.companySignature.signedAt)}
-              </p>
-            ) : null}
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {canRespond && !isExpired ? (
+      {canInteract ? (
         <Card>
           <CardContent className="grid gap-3 pt-5">
             <p className="font-semibold text-foreground">Podpisz umowę</p>

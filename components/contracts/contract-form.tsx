@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CommercialPartyPicker, type CommercialPartyKind } from "@/components/commercial-party-picker";
 import { ContractPaymentScheduleEditor } from "@/components/contracts/contract-payment-schedule-editor";
+import { ContractPreviewDialog } from "@/components/contracts/contract-preview-dialog";
 import { ContractSectionsEditor } from "@/components/contracts/contract-sections-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +39,7 @@ export function ContractForm({ initialContract }: { initialContract: Contract })
   );
   const [isSaving, setIsSaving] = useState(false);
   const [companySignerName, setCompanySignerName] = useState(displayName ?? "");
+  const [previewOpen, setPreviewOpen] = useState(false);
   const isNew = !useContractStore.getState().getContractById(initialContract.id);
 
   const totals = calculateContractTotals(contract.sections);
@@ -147,9 +149,14 @@ export function ContractForm({ initialContract }: { initialContract: Contract })
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle>Dane umowy</CardTitle>
-          <span className="rounded-full bg-surface-muted px-3 py-1 text-xs font-medium text-muted">
-            {CONTRACT_STATUS_LABELS[contract.status]}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-surface-muted px-3 py-1 text-xs font-medium text-muted">
+              {CONTRACT_STATUS_LABELS[contract.status]}
+            </span>
+            <Button type="button" variant="secondary" size="sm" onClick={() => setPreviewOpen(true)}>
+              Podgląd umowy
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -313,6 +320,8 @@ export function ContractForm({ initialContract }: { initialContract: Contract })
           {isSaving ? "Zapisywanie…" : "Zapisz umowę"}
         </Button>
       </div>
+
+      <ContractPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} contract={contract} />
     </div>
   );
 }

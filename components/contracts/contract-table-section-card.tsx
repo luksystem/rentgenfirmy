@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/input";
-import { ServiceFixedPriceTableRow } from "@/components/service/service-fixed-price-table";
+import { ContractRowCompact } from "@/components/contracts/contract-row-compact";
 import { createFixedPriceRow } from "@/lib/service/fixed-price";
 import { calculateTableGrossTotal, calculateTableNetTotal } from "@/lib/contracts/totals";
 import type { ContractTableGroup, ContractTableSection } from "@/lib/contracts/types";
@@ -106,13 +106,23 @@ export function ContractTableSectionCard({
         />
       </Field>
 
-      <div className="grid gap-3">
+      <div className="grid gap-1.5">
+        {section.rows.length > 0 ? (
+          <div className="hidden grid-cols-[1fr_5rem_4.5rem_6rem_4.5rem_7rem_auto_auto] gap-2 px-2 text-[11px] font-semibold uppercase tracking-wide text-muted sm:grid">
+            <span>Nazwa</span>
+            <span>Ilość</span>
+            <span>J.m.</span>
+            <span>Cena netto</span>
+            <span>VAT</span>
+            <span className="text-right">Wartość netto</span>
+            <span />
+            <span />
+          </div>
+        ) : null}
         {section.rows.map((row, rowIndex) => (
-          <ServiceFixedPriceTableRow
+          <ContractRowCompact
             key={row.id}
             row={row}
-            index={rowIndex}
-            showProductDescriptions={section.showProductDescriptions}
             disabled={disabled}
             onChange={(next) => updateRow(rowIndex, next)}
             onRemove={() => removeRow(rowIndex)}
