@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { OfferEmailPreviewDialog } from "@/components/service/offer-email-preview-dialog";
 import type { ProjectClientAgreement } from "@/lib/dashboard/agreement-types";
 import { isAgreementPendingAttention } from "@/lib/dashboard/agreement-types";
+import { submitProjectAgreementForClient } from "@/lib/supabase/project-agreement-repository";
 
 type TradeBatch = {
   tradeId: string;
@@ -65,9 +66,14 @@ export function AgreementBatchDeliveryActions({
       ),
     [agreements],
   );
+  // Paczka obejmuje też szkice (jeszcze nigdy nie wysłane klientowi wcale) — wysyłka w paczce jest
+  // ich pierwszym zgłoszeniem, tak samo jak w Zmianach projektu.
   const neverSent = useMemo(
-    () => pendingAgreements.filter((entry) => !entry.sentAt),
-    [pendingAgreements],
+    () =>
+      agreements.filter(
+        (entry) => entry.status === "draft" || (entry.status === "pending_client" && !entry.sentAt),
+      ),
+    [agreements],
   );
   const alreadySent = useMemo(
     () => pendingAgreements.filter((entry) => entry.sentAt),
@@ -217,6 +223,19 @@ export function AgreementBatchDeliveryActions({
     setSending(true);
     setPreviewError(null);
     try {
+      // Szkice w paczce trzeba najpierw opublikować (wersja + role akceptacji) dokładnie tak samo,
+      // jak robi to pojedynczy przycisk "Wyślij do akceptacji klienta" — dopiero opublikowane
+      // ustalenie ma działający link w mailu. Robimy to na kliencie (z sesją użytkownika), bo
+      // publikacja żyje w repo, które wymaga zalogowanego Supabase-klienta, nie service-role.
+      if (scope === "new_batch") {
+        const draftIds = agreements
+          .filter((entry) => selectedIds.has(entry.id) && entry.status === "draft")
+          .map((entry) => entry.id);
+        if (draftIds.length) {
+          await Promise.all(draftIds.map((id) => submitProjectAgreementForClient(id)));
+        }
+      }
+
       const data = await postJson<{ subject?: string }>(
         `/api/projects/${encodeURIComponent(projectId)}/agreements/send-email`,
         {
@@ -268,7 +287,14 @@ export function AgreementBatchDeliveryActions({
                 disabled={sending}
                 onChange={() => handleToggleSelected(entry.id)}
               />
-              <span className="min-w-0 flex-1 truncate text-foreground">{entry.title}</span>
+              <span className="min-w-0 flex-1 truncate text-foreground">
+                {entry.title}
+                {entry.status === "draft" ? (
+                  <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                    Szkic
+                  </span>
+                ) : null}
+              </span>
             </label>
           ))}
         </div>

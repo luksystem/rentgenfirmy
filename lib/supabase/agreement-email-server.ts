@@ -123,15 +123,19 @@ async function fetchPendingAgreements(
   let query = supabase
     .from("project_client_agreements")
     .select("*")
-    .eq("project_id", projectId)
-    .eq("status", "pending_client");
+    .eq("project_id", projectId);
 
+  // Paczka moze zawierac szkice — tak jak w Zmianach projektu, wysylka w niej jest ich pierwszym
+  // zgloszeniem do klienta. Klient (AgreementBatchDeliveryActions) publikuje kazdy szkic PRZED
+  // wywolaniem wysylki, wiec do tego momentu status w bazie jeszcze bywa 'draft'.
   if (filter && "ids" in filter) {
-    query = query.in("id", filter.ids);
+    query = query.in("id", filter.ids).in("status", ["draft", "pending_client"]);
   } else if (filter && filter.sentAt === "set") {
-    query = query.not("sent_at", "is", null);
+    query = query.eq("status", "pending_client").not("sent_at", "is", null);
   } else if (filter && filter.sentAt === "unset") {
-    query = query.is("sent_at", null);
+    query = query.eq("status", "pending_client").is("sent_at", null);
+  } else {
+    query = query.eq("status", "pending_client");
   }
 
   const { data, error } = await query
