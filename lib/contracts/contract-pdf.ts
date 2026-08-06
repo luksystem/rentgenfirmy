@@ -1,14 +1,17 @@
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, type PDFFont } from "pdf-lib";
 import { companyDisplayName, companyFooterLines, type CompanyProfile } from "@/lib/company/company-profile";
+import { DEFAULT_CONTRACT_MODULE_SETTINGS } from "@/lib/contracts/module-settings";
+import { renderContractText } from "@/lib/contracts/render-text";
 import {
   calculateContractTotals,
   calculatePaymentPlanInstallmentAmounts,
-  calculateTableGrossTotal,
   calculateTableNetTotal,
+  calculateVatBreakdown,
 } from "@/lib/contracts/totals";
-import { isContractTableSection, isContractTextSection, type Contract } from "@/lib/contracts/types";
+import { CONTRACT_OPTION_CATEGORY_LABELS, isContractTableSection, isContractTextSection, type Contract } from "@/lib/contracts/types";
 import { computeFixedPriceRowNetValue } from "@/lib/service/fixed-price";
+import { fetchContractModuleSettings } from "@/lib/supabase/contract-module-settings-repository";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 
 /**
@@ -98,12 +101,12 @@ export async function generateContractPdf(params: {
   y -= 6;
 
   drawWrapped("Strony umowy", fonts.bold, 12, 16);
-  drawWrapped(`Zleceniobiorca: ${companyDisplayName(company)}`, fonts.regular, 10, 14);
+  drawWrapped(`Wykonawca: ${companyDisplayName(company)}`, fonts.regular, 10, 14);
   for (const line of companyFooterLines(company)) {
     drawWrapped(line, fonts.regular, 9, 12, rgb(0.4, 0.4, 0.4));
   }
   y -= 4;
-  drawWrapped(`Zleceniodawca: ${contract.client.fullName || "—"}`, fonts.regular, 10, 14);
+  drawWrapped(`Zamawiający: ${contract.client.fullName || "—"}`, fonts.regular, 10, 14);
   if (contract.client.companyName) {
     drawWrapped(contract.client.companyName, fonts.regular, 9, 12);
   }
@@ -124,13 +127,17 @@ export async function generateContractPdf(params: {
     contract.paymentPlans[0] ??
     null;
   const totals = calculateContractTotals(contract.sections, { paymentPlan: effectivePlan });
+  const moduleSettings = await fetchContractModuleSettings().catch(() => DEFAULT_CONTRACT_MODULE_SETTINGS);
+  const vatBreakdown = calculateVatBreakdown(totals.totalNet, contract.vatDeclaration, moduleSettings);
+  const scaleToFinal = totals.totalNet > 0 ? vatBreakdown.finalTotal / totals.totalNet : 1;
 
   for (const section of contract.sections) {
     if (isContractTextSection(section)) {
       if (section.title) {
         drawWrapped(section.title, fonts.bold, 11, 15);
       }
-      const content = section.struck ? `[WYKREŚLONE] ${section.content}` : section.content;
+      const rendered = renderContractText(section.content, contract);
+      const content = section.struck ? `[WYKREŚLONE] ${rendered}` : rendered;
       drawWrapped(content, fonts.regular, 10, 14, section.struck ? rgb(0.55, 0.55, 0.55) : rgb(0.1, 0.1, 0.1));
       y -= 6;
       continue;
@@ -139,12 +146,17 @@ export async function generateContractPdf(params: {
     if (!isContractTableSection(section)) {
       continue;
     }
-    if (section.group === "option" && !section.selected) {
+    const isDodatki = section.group === "option" && section.category === "dodatki";
+    if (section.group === "option" && !isDodatki && !section.selected) {
+      continue;
+    }
+    if (isDodatki && section.selectedRowIds.length === 0) {
       continue;
     }
 
+    const categoryLabel = section.category ? CONTRACT_OPTION_CATEGORY_LABELS[section.category] : null;
     drawWrapped(
-      `${section.title || "Tabela pozycji"}${section.group === "option" ? " (opcja dodatkowa — wybrana)" : ""}`,
+      `${section.title || "Tabela pozycji"}${categoryLabel ? ` (${categoryLabel}${!isDodatki && section.categoryDiscountPercent > 0 ? ` — rabat ${section.categoryDiscountPercent}%` : ""})` : ""}`,
       fonts.bold,
       11,
       15,
@@ -152,20 +164,25 @@ export async function generateContractPdf(params: {
     if (section.description) {
       drawWrapped(section.description, fonts.regular, 9, 12, rgb(0.4, 0.4, 0.4));
     }
+    let tableNet = 0;
     for (const row of section.rows) {
       if (!row.active) {
         continue;
       }
+      if (isDodatki && !section.selectedRowIds.includes(row.id)) {
+        continue;
+      }
       const net = computeFixedPriceRowNetValue(row);
+      tableNet += net;
       drawWrapped(
-        `${row.name || "Pozycja"} — ${row.quantity} ${row.unit} × ${formatMoney(row.netUnitPrice)} = ${formatMoney(net)} netto (VAT ${row.vatRate ?? 23}%)`,
+        `${row.name || "Pozycja"} — ${row.quantity} ${row.unit} × ${formatMoney(row.netUnitPrice)} = ${formatMoney(net)} netto`,
         fonts.regular,
         9,
         13,
       );
     }
     drawWrapped(
-      `Suma tabeli — netto: ${formatMoney(calculateTableNetTotal(section))} · brutto: ${formatMoney(calculateTableGrossTotal(section))}`,
+      `Suma tabeli netto: ${formatMoney(isDodatki ? tableNet : calculateTableNetTotal(section))}`,
       fonts.bold,
       9,
       13,
@@ -176,20 +193,36 @@ export async function generateContractPdf(params: {
   if (totals.itemDiscountNet > 0) {
     drawWrapped(`Rabat na pozycjach: ${formatMoney(totals.itemDiscountNet)}`, fonts.regular, 10, 14);
   }
+  if (totals.categoryDiscountNet > 0) {
+    drawWrapped(`Rabat za wybrane kategorie: ${formatMoney(totals.categoryDiscountNet)}`, fonts.regular, 10, 14);
+  }
   if (effectivePlan && effectivePlan.discountPercent > 0) {
     drawWrapped(
-      `Rabat za wariant płatności „${effectivePlan.label}” (${effectivePlan.discountPercent}%): ${formatMoney(totals.planDiscountGross)}`,
+      `Rabat za wariant płatności „${effectivePlan.label}” (${effectivePlan.discountPercent}%): ${formatMoney(totals.planDiscountNet)}`,
+      fonts.regular,
+      10,
+      14,
+    );
+  }
+  drawWrapped(`Wartość umowy netto: ${formatMoney(totals.totalNet)}`, fonts.bold, 12, 18);
+  y -= 4;
+
+  drawWrapped("Rozliczenie VAT", fonts.bold, 12, 16);
+  if (vatBreakdown.inneNet > 0) {
+    drawWrapped(
+      `Część „inne” (0% VAT, rabat ${vatBreakdown.inneDiscountPercent}%): ${formatMoney(vatBreakdown.inneFinal)}`,
       fonts.regular,
       10,
       14,
     );
   }
   drawWrapped(
-    `Wartość umowy — netto: ${formatMoney(totals.totalNet)} · brutto: ${formatMoney(totals.totalGross)}`,
-    fonts.bold,
-    12,
-    18,
+    `Część rozliczana normalnie (VAT ${vatBreakdown.normalVatRatePercent}%): ${formatMoney(vatBreakdown.normalGross)}`,
+    fonts.regular,
+    10,
+    14,
   );
+  drawWrapped(`Razem do zapłaty: ${formatMoney(vatBreakdown.finalTotal)}`, fonts.bold, 12, 18);
   y -= 8;
 
   if (effectivePlan && effectivePlan.installments.length) {
@@ -202,9 +235,11 @@ export async function generateContractPdf(params: {
       16,
     );
     for (const item of calculatePaymentPlanInstallmentAmounts(effectivePlan, totals)) {
-      const splitNote = item.perMonthGross != null ? ` — ${item.splitOverMonths}× ${formatMoney(item.perMonthGross)}/mies.` : "";
+      const amountFinal = item.amountNet * scaleToFinal;
+      const perMonthFinal = item.perMonthNet != null ? item.perMonthNet * scaleToFinal : null;
+      const splitNote = perMonthFinal != null ? ` — ${item.splitOverMonths}× ${formatMoney(perMonthFinal)}/mies.` : "";
       drawWrapped(
-        `${item.label || "Rata"} — ${item.percent}% = ${formatMoney(item.amountGross)} brutto${splitNote}${item.note ? ` (${item.note})` : ""}`,
+        `${item.label || "Rata"} — ${item.percent}% = ${formatMoney(amountFinal)}${splitNote}${item.note ? ` (${item.note})` : ""}`,
         fonts.regular,
         10,
         14,
@@ -217,13 +252,13 @@ export async function generateContractPdf(params: {
   y -= 10;
   drawWrapped("Podpisy", fonts.bold, 12, 16);
   drawWrapped(
-    `Zleceniodawca: ${contract.clientSignature ? `${contract.clientSignature.signerName} — ${formatDateTime(contract.clientSignature.signedAt)}` : "brak podpisu"}`,
+    `Zamawiający: ${contract.clientSignature ? `${contract.clientSignature.signerName} — ${formatDateTime(contract.clientSignature.signedAt)}` : "brak podpisu"}`,
     fonts.regular,
     10,
     14,
   );
   drawWrapped(
-    `Zleceniobiorca: ${contract.companySignature ? `${contract.companySignature.signerName} — ${formatDateTime(contract.companySignature.signedAt)}` : "brak podpisu"}`,
+    `Wykonawca: ${contract.companySignature ? `${contract.companySignature.signerName} — ${formatDateTime(contract.companySignature.signedAt)}` : "brak podpisu"}`,
     fonts.regular,
     10,
     14,

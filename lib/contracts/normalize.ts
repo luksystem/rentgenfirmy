@@ -1,18 +1,25 @@
 import { normalizeFixedPriceRow } from "@/lib/service/fixed-price";
 import type { ServiceFixedPriceRow } from "@/lib/service/types";
 import {
+  CONTRACT_BUILDING_TYPES,
   CONTRACT_HISTORY_TYPES,
+  CONTRACT_OPTION_CATEGORIES,
+  CONTRACT_PAYER_TYPES,
   CONTRACT_STATUSES,
   CONTRACT_TABLE_GROUPS,
   type Contract,
+  type ContractBuildingType,
   type ContractClientSignature,
   type ContractCompanySignature,
   type ContractHistoryEntry,
   type ContractHistoryType,
+  type ContractOptionCategory,
+  type ContractPayerType,
   type ContractPaymentPlan,
   type ContractSection,
   type ContractStatus,
   type ContractTableGroup,
+  type ContractVatDeclaration,
 } from "@/lib/contracts/types";
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -34,6 +41,16 @@ function normalizeTableGroup(value: unknown): ContractTableGroup {
   return (CONTRACT_TABLE_GROUPS as readonly string[]).includes(value as string)
     ? (value as ContractTableGroup)
     : "main";
+}
+
+function normalizeOptionCategory(value: unknown): ContractOptionCategory | null {
+  return (CONTRACT_OPTION_CATEGORIES as readonly string[]).includes(value as string)
+    ? (value as ContractOptionCategory)
+    : null;
+}
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
 export function normalizeContractSections(value: unknown): ContractSection[] {
@@ -60,7 +77,10 @@ export function normalizeContractSections(value: unknown): ContractSection[] {
           description: asString(data.description),
           showProductDescriptions: data.showProductDescriptions === true,
           group: normalizeTableGroup(data.group),
+          category: normalizeOptionCategory(data.category),
+          categoryDiscountPercent: Math.min(100, Math.max(0, asNumber(data.categoryDiscountPercent))),
           selected: data.selected === true,
+          selectedRowIds: asStringArray(data.selectedRowIds),
           rows,
         };
       }
@@ -170,6 +190,29 @@ export function normalizeContractCompanySignature(value: unknown): ContractCompa
     return null;
   }
   return { signerName, signedAt, userId: typeof data.userId === "string" ? data.userId : null };
+}
+
+function normalizePayerType(value: unknown): ContractPayerType {
+  return (CONTRACT_PAYER_TYPES as readonly string[]).includes(value as string)
+    ? (value as ContractPayerType)
+    : "osoba_prywatna";
+}
+
+function normalizeBuildingType(value: unknown): ContractBuildingType | null {
+  return (CONTRACT_BUILDING_TYPES as readonly string[]).includes(value as string)
+    ? (value as ContractBuildingType)
+    : null;
+}
+
+export function normalizeContractVatDeclaration(value: unknown): ContractVatDeclaration {
+  const data = asObject(value);
+  const areaM2 = asNumber(data.areaM2, NaN);
+  return {
+    payerType: normalizePayerType(data.payerType),
+    buildingType: normalizeBuildingType(data.buildingType),
+    areaM2: Number.isFinite(areaM2) && areaM2 > 0 ? areaM2 : null,
+    innePercent: Math.min(100, Math.max(0, asNumber(data.innePercent))),
+  };
 }
 
 export function isContractExpired(contract: Pick<Contract, "tokenExpiresAt" | "status">) {

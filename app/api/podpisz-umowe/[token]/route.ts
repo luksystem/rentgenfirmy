@@ -64,16 +64,17 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   }
 
   const signerName = typeof data.signerName === "string" ? data.signerName : undefined;
-  const selectedOptionSectionIds = Array.isArray(data.selectedOptionSectionIds)
-    ? data.selectedOptionSectionIds.filter((id): id is string => typeof id === "string")
+  const selectedKeys = Array.isArray(data.selectedKeys)
+    ? data.selectedKeys.filter((id): id is string => typeof id === "string")
     : undefined;
   const selectedPaymentPlanId = typeof data.selectedPaymentPlanId === "string" ? data.selectedPaymentPlanId : null;
 
   try {
     const contract = await respondToContract(token, action, {
       signerName,
-      selectedOptionSectionIds,
+      selectedKeys,
       selectedPaymentPlanId,
+      vatDeclaration: data.vatDeclaration,
       ip: resolveClientIp(request),
     });
 

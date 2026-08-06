@@ -1,6 +1,7 @@
 import "server-only";
 
-import { appendContractHistory, isContractExpired } from "@/lib/contracts/normalize";
+import { appendContractHistory, isContractExpired, normalizeContractVatDeclaration } from "@/lib/contracts/normalize";
+import { contractRowSelectionKey } from "@/lib/contracts/totals";
 import { canRespondToContract, isContractTableSection, type Contract } from "@/lib/contracts/types";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { contractToInsert, rowToContract } from "@/lib/supabase/contract-mappers";
@@ -35,8 +36,9 @@ export async function respondToContract(
   action: RespondToContractAction,
   params: {
     signerName?: string;
-    selectedOptionSectionIds?: string[];
+    selectedKeys?: string[];
     selectedPaymentPlanId?: string | null;
+    vatDeclaration?: unknown;
     ip?: string | null;
   },
 ): Promise<Contract> {
@@ -70,10 +72,16 @@ export async function respondToContract(
       throw new Error("Podaj imię i nazwisko do podpisu.");
     }
 
-    const selected = new Set(params.selectedOptionSectionIds ?? []);
+    const selected = new Set(params.selectedKeys ?? []);
     const sections = contract.sections.map((section) => {
       if (!isContractTableSection(section) || section.group !== "option") {
         return section;
+      }
+      if (section.category === "dodatki") {
+        const selectedRowIds = section.rows
+          .filter((row) => selected.has(contractRowSelectionKey(section.id, row.id)))
+          .map((row) => row.id);
+        return { ...section, selectedRowIds };
       }
       return { ...section, selected: selected.has(section.id) };
     });
@@ -89,6 +97,7 @@ export async function respondToContract(
       status: "signed_client",
       sections,
       selectedPaymentPlanId,
+      vatDeclaration: normalizeContractVatDeclaration(params.vatDeclaration),
       clientSignature: {
         signerName,
         signedAt: new Date().toISOString(),

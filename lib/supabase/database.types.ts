@@ -1887,6 +1887,7 @@ export type ContractRow = {
   sections: unknown;
   payment_plans: unknown;
   selected_payment_plan_id: string | null;
+  vat_declaration: unknown;
   public_token: string | null;
   token_expires_at: string | null;
   token_sent_at: string | null;
@@ -1914,6 +1915,7 @@ export type ContractInsert = {
   sections?: unknown;
   payment_plans?: unknown;
   selected_payment_plan_id?: string | null;
+  vat_declaration?: unknown;
   public_token?: string | null;
   token_expires_at?: string | null;
   token_sent_at?: string | null;

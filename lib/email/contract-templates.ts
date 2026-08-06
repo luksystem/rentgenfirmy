@@ -16,7 +16,7 @@ export function buildContractSendEmail(input: {
   contractTitle: string;
   contractUrl: string;
   expiresAtLabel: string | null;
-  grossTotal: number | null;
+  netTotal: number | null;
   brand: EmailBrandSettings;
   company?: CompanyProfileDocument | null;
   /** Osobista notatka nadawcy wpisana przed wysyłką — pokazana w mailu jako wyróżniony akapit. */
@@ -28,9 +28,10 @@ export function buildContractSendEmail(input: {
   const subject = `Umowa do podpisania: ${title}`;
 
   const amountHtml =
-    input.grossTotal != null
+    input.netTotal != null
       ? `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#111827;">
-          Wartość umowy brutto: <strong>${escapeEmailHtml(money(input.grossTotal))}</strong>
+          Wartość umowy netto: <strong>${escapeEmailHtml(money(input.netTotal))}</strong> (VAT dolicza się
+          po wyborze rozliczenia w umowie)
         </p>`
       : "";
 

@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input, Select, Textarea } from "@/components/ui/input";
+import { Input, Textarea } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { computeFixedPriceRowNetValue } from "@/lib/service/fixed-price";
-import { VAT_RATES, type ServiceFixedPriceRow, type VatRate } from "@/lib/service/types";
+import type { ServiceFixedPriceRow } from "@/lib/service/types";
 import { cn, formatMoney } from "@/lib/utils";
 
 /**
@@ -39,7 +39,7 @@ export function ContractRowCompact({
         row.active ? "border-border/80 bg-surface-muted/20" : "border-border/50 bg-surface-muted/10 opacity-70",
       )}
     >
-      <div className="grid grid-cols-2 items-center gap-2 p-2 sm:grid-cols-[1fr_5rem_4.5rem_6rem_4.5rem_7rem_auto_auto]">
+      <div className="grid grid-cols-2 items-center gap-2 p-2 sm:grid-cols-[1fr_5rem_4.5rem_6rem_7rem_auto_auto]">
         <Input
           value={row.name}
           disabled={disabled}
@@ -69,23 +69,6 @@ export function ContractRowCompact({
           className="h-8 text-sm"
           aria-label="Cena netto"
         />
-        <Select
-          value={row.vatRate === null ? "" : String(row.vatRate)}
-          disabled={disabled}
-          onChange={(event) => {
-            const raw = event.target.value;
-            onChange({ ...row, vatRate: raw === "" ? null : (Number(raw) as VatRate) });
-          }}
-          className="h-8 text-sm"
-          aria-label="VAT"
-        >
-          <option value="">domyślny</option>
-          {VAT_RATES.map((rate) => (
-            <option key={rate} value={rate}>
-              {rate}%
-            </option>
-          ))}
-        </Select>
         <p className="col-span-2 text-right text-sm font-medium tabular-nums text-foreground sm:col-span-1">
           {formatMoney(netValue)}
         </p>

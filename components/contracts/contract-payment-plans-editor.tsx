@@ -6,6 +6,7 @@ import { Field, Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { createContractPaymentPlan, createContractPaymentPlanInstallment } from "@/lib/contracts/factory";
 import {
+  allSelectionKeys,
   calculateContractTotals,
   calculatePaymentPlanInstallmentAmounts,
   paymentPlanPercentSum,
@@ -84,8 +85,8 @@ function PaymentPlanInstallmentRow({
         className="h-8 text-xs"
       />
       <p className="text-xs text-muted">
-        {formatMoney(item.amountGross)} brutto
-        {item.perMonthGross != null ? ` · ${item.splitOverMonths}× ${formatMoney(item.perMonthGross)} / mies.` : ""}
+        {formatMoney(item.amountNet)} netto
+        {item.perMonthNet != null ? ` · ${item.splitOverMonths}× ${formatMoney(item.perMonthNet)} / mies.` : ""}
       </p>
     </div>
   );
@@ -106,11 +107,9 @@ function PaymentPlanCard({
   onRemove: () => void;
   disabled?: boolean;
 }) {
-  // Podgląd zakłada, że wszystkie opcje są zaznaczone — biuro widzi pełny możliwy zakres umowy.
+  // Podgląd zakłada, że wszystkie opcje/pozycje są zaznaczone — biuro widzi pełny możliwy zakres umowy.
   const totals = calculateContractTotals(sections, {
-    optionOverrides: Object.fromEntries(
-      sections.filter((section) => section.type === "table").map((section) => [section.id, true]),
-    ),
+    selectionOverrides: Object.fromEntries(allSelectionKeys(sections).map((key) => [key, true])),
     paymentPlan: plan,
   });
   const amounts = calculatePaymentPlanInstallmentAmounts(plan, totals);
@@ -179,8 +178,8 @@ function PaymentPlanCard({
       <p className={cn("text-sm", percentValid ? "text-muted" : "font-semibold text-rose-400")}>
         Suma rat: {percentSum}%{percentValid ? "" : " — musi wynosić 100%"}
         {" · "}
-        Cena po tym wariancie: <span className="font-medium text-foreground">{formatMoney(totals.totalGross)} brutto</span>
-        {plan.discountPercent > 0 ? ` (rabat ${plan.discountPercent}% = −${formatMoney(totals.planDiscountGross)})` : ""}
+        Cena po tym wariancie: <span className="font-medium text-foreground">{formatMoney(totals.totalNet)} netto</span>
+        {plan.discountPercent > 0 ? ` (rabat ${plan.discountPercent}% = −${formatMoney(totals.planDiscountNet)})` : ""}
       </p>
     </div>
   );

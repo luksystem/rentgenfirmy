@@ -88,6 +88,15 @@ export type ContractTextSection = {
 export const CONTRACT_TABLE_GROUPS = ["main", "option"] as const;
 export type ContractTableGroup = (typeof CONTRACT_TABLE_GROUPS)[number];
 
+export const CONTRACT_OPTION_CATEGORIES = ["instalacja", "instalacje_dodatkowe", "dodatki"] as const;
+export type ContractOptionCategory = (typeof CONTRACT_OPTION_CATEGORIES)[number];
+
+export const CONTRACT_OPTION_CATEGORY_LABELS: Record<ContractOptionCategory, string> = {
+  instalacja: "Instalacja (kompleksowa)",
+  instalacje_dodatkowe: "Instalacje dodatkowe",
+  dodatki: "Dodatki",
+};
+
 export type ContractTableSection = {
   id: string;
   type: "table";
@@ -95,8 +104,15 @@ export type ContractTableSection = {
   description: string;
   showProductDescriptions: boolean;
   group: ContractTableGroup;
-  /** Tylko dla group === "option": czy klient zaznaczył tę opcję przy podpisywaniu. */
+  /** Tylko dla group === "option" — jedna z 3 kategorii, decyduje o sposobie zaznaczania. */
+  category: ContractOptionCategory | null;
+  /** Rabat % doliczany do tej tabeli, gdy klient ją zaznaczy (kategorie instalacja/instalacje_dodatkowe). */
+  categoryDiscountPercent: number;
+  /** Zaznaczenie całej tabeli — zawsze true dla group="main"; dla group="option" tylko kategorie
+   * instalacja/instalacje_dodatkowe (kategoria "dodatki" zaznacza się per pozycja, patrz `selectedRowIds`). */
   selected: boolean;
+  /** Tylko dla category === "dodatki": id zaznaczonych przez klienta pozycji tej tabeli. */
+  selectedRowIds: string[];
   rows: ServiceFixedPriceRow[];
 };
 
@@ -131,6 +147,39 @@ export type ContractPaymentPlan = {
   discountPercent: number;
   installments: ContractPaymentPlanInstallment[];
 };
+
+export const CONTRACT_PAYER_TYPES = ["firma", "osoba_prywatna"] as const;
+export type ContractPayerType = (typeof CONTRACT_PAYER_TYPES)[number];
+
+export const CONTRACT_PAYER_TYPE_LABELS: Record<ContractPayerType, string> = {
+  firma: "Firma (23% VAT)",
+  osoba_prywatna: "Osoba prywatna",
+};
+
+export const CONTRACT_BUILDING_TYPES = ["dom_jednorodzinny", "lokal_mieszkalny"] as const;
+export type ContractBuildingType = (typeof CONTRACT_BUILDING_TYPES)[number];
+
+export const CONTRACT_BUILDING_TYPE_LABELS: Record<ContractBuildingType, string> = {
+  dom_jednorodzinny: "Budynek mieszkalny jednorodzinny (próg 300 m²)",
+  lokal_mieszkalny: "Lokal mieszkalny (próg 150 m²)",
+};
+
+/**
+ * Deklaracja rozliczenia VAT — wybierana przez klienta na stronie podpisu (patrz plan modułu
+ * Umowa). `payerType` ustala stawkę dla części rozliczanej "normalnie"; `innePercent` wydziela
+ * dodatkowo część kwoty rozliczaną jako "inne" (gotówka, 0% VAT + rabat z ustawień modułu).
+ */
+export type ContractVatDeclaration = {
+  payerType: ContractPayerType;
+  buildingType: ContractBuildingType | null;
+  areaM2: number | null;
+  /** 0–100, jaki % sumy netto rozliczany jest jako "inne" (gotówka, 0% VAT). */
+  innePercent: number;
+};
+
+export function emptyContractVatDeclaration(): ContractVatDeclaration {
+  return { payerType: "osoba_prywatna", buildingType: null, areaM2: null, innePercent: 0 };
+}
 
 export type ContractClientSignature = {
   signerName: string;
@@ -178,6 +227,8 @@ export type Contract = {
   paymentPlans: ContractPaymentPlan[];
   /** Wariant wybrany przez klienta przy podpisie — id z `paymentPlans` albo null (nie wybrano/brak wariantów). */
   selectedPaymentPlanId: string | null;
+  /** Deklaracja rozliczenia VAT wybrana przez klienta przy podpisie. */
+  vatDeclaration: ContractVatDeclaration;
   publicToken: string | null;
   tokenExpiresAt: string | null;
   tokenSentAt: string | null;

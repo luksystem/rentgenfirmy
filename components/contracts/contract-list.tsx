@@ -55,7 +55,7 @@ export function ContractList() {
             </div>
             <p className="mt-1 text-sm text-muted">{contract.client.fullName || "Brak klienta"}</p>
             <p className="mt-0.5 text-xs text-muted">
-              {formatDate(contract.createdAt)} · Wartość: {formatMoney(totals.totalGross)} brutto
+              {formatDate(contract.createdAt)} · Wartość: {formatMoney(totals.totalNet)} netto
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

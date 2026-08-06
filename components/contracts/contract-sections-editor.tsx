@@ -6,17 +6,20 @@ import { ContractTextSectionCard } from "@/components/contracts/contract-text-se
 import { ContractTableSectionCard } from "@/components/contracts/contract-table-section-card";
 import { InsertContentBlockDialog } from "@/components/contracts/insert-content-block-dialog";
 import { createContractTableSection, createContractTextSection } from "@/lib/contracts/factory";
+import type { ContractModuleSettings } from "@/lib/contracts/module-settings";
 import { isContractTableSection, type ContractContentBlock, type ContractSection } from "@/lib/contracts/types";
 
 export function ContractSectionsEditor({
   sections,
   onChange,
   contentBlocks,
+  moduleSettings,
   disabled = false,
 }: {
   sections: ContractSection[];
   onChange: (sections: ContractSection[]) => void;
   contentBlocks: ContractContentBlock[];
+  moduleSettings?: ContractModuleSettings;
   disabled?: boolean;
 }) {
   const [insertDialogOpen, setInsertDialogOpen] = useState(false);
@@ -91,6 +94,7 @@ export function ContractSectionsEditor({
                 section={section}
                 index={index}
                 disabled={disabled}
+                moduleSettings={moduleSettings}
                 onChange={(next) => updateSection(index, next)}
                 onRemove={() => removeSection(index)}
                 onMoveUp={index > 0 ? () => moveSection(index, -1) : undefined}

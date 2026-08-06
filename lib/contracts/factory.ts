@@ -1,8 +1,10 @@
 import { createFixedPriceRow } from "@/lib/service/fixed-price";
 import {
   emptyContractClient,
+  emptyContractVatDeclaration,
   type Contract,
   type ContractContentBlock,
+  type ContractOptionCategory,
   type ContractPaymentPlan,
   type ContractPaymentPlanInstallment,
   type ContractSection,
@@ -22,7 +24,10 @@ export function createContractTextSection(source?: Pick<ContractContentBlock, "i
   };
 }
 
-export function createContractTableSection(group: ContractTableSection["group"] = "main"): ContractTableSection {
+export function createContractTableSection(
+  group: ContractTableSection["group"] = "main",
+  options: { category?: ContractOptionCategory; categoryDiscountPercent?: number } = {},
+): ContractTableSection {
   return {
     id: crypto.randomUUID(),
     type: "table",
@@ -30,7 +35,10 @@ export function createContractTableSection(group: ContractTableSection["group"] 
     description: "",
     showProductDescriptions: false,
     group,
+    category: group === "option" ? (options.category ?? "dodatki") : null,
+    categoryDiscountPercent: options.categoryDiscountPercent ?? 0,
     selected: group === "main",
+    selectedRowIds: [],
     rows: [createFixedPriceRow()],
   };
 }
@@ -60,6 +68,7 @@ export function createEmptyContract(): Contract {
     sections: [],
     paymentPlans: [],
     selectedPaymentPlanId: null,
+    vatDeclaration: emptyContractVatDeclaration(),
     publicToken: null,
     tokenExpiresAt: null,
     tokenSentAt: null,
@@ -90,6 +99,7 @@ function cloneSectionWithNewIds(section: ContractSection): ContractSection {
     return {
       ...section,
       id: crypto.randomUUID(),
+      selectedRowIds: [],
       rows: section.rows.map((row) => ({ ...row, id: crypto.randomUUID() })),
     };
   }

@@ -7,8 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/input";
 import { resolveCompanyProfileDocument, type CompanyProfileDocument } from "@/lib/company/company-profile-document";
-import { isContractTableSection, CONTRACT_STATUS_LABELS, type Contract } from "@/lib/contracts/types";
+import { contractRowSelectionKey } from "@/lib/contracts/totals";
+import {
+  emptyContractVatDeclaration,
+  isContractTableSection,
+  CONTRACT_STATUS_LABELS,
+  type Contract,
+  type ContractVatDeclaration,
+} from "@/lib/contracts/types";
+import { DEFAULT_CONTRACT_MODULE_SETTINGS, type ContractModuleSettings } from "@/lib/contracts/module-settings";
 import { fetchCompanyProfile } from "@/lib/supabase/company-profile-repository";
+import { fetchContractModuleSettings } from "@/lib/supabase/contract-module-settings-repository";
 
 type LoadState = {
   contract: Contract;
@@ -25,12 +34,17 @@ export function ClientContractPage({ token }: { token: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [signerName, setSignerName] = useState("");
   const [confirmed, setConfirmed] = useState(false);
-  const [selectedOptionIds, setSelectedOptionIds] = useState<Set<string>>(() => new Set());
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const [selectedPaymentPlanId, setSelectedPaymentPlanId] = useState<string | null>(null);
+  const [vatDeclaration, setVatDeclaration] = useState<ContractVatDeclaration>(emptyContractVatDeclaration());
+  const [moduleSettings, setModuleSettings] = useState<ContractModuleSettings>(DEFAULT_CONTRACT_MODULE_SETTINGS);
 
   useEffect(() => {
     void fetchCompanyProfile()
       .then((profile) => setCompany(resolveCompanyProfileDocument(profile)))
+      .catch(() => undefined);
+    void fetchContractModuleSettings()
+      .then(setModuleSettings)
       .catch(() => undefined);
   }, []);
 
@@ -45,16 +59,24 @@ export function ClientContractPage({ token }: { token: string }) {
       }
       const loaded = payload as LoadState;
       setState(loaded);
-      setSelectedOptionIds(
-        new Set(
-          loaded.contract.sections
-            .filter((section) => isContractTableSection(section) && section.group === "option" && section.selected)
-            .map((section) => section.id),
-        ),
-      );
+      const keys = new Set<string>();
+      for (const section of loaded.contract.sections) {
+        if (!isContractTableSection(section) || section.group !== "option") {
+          continue;
+        }
+        if (section.category === "dodatki") {
+          for (const rowId of section.selectedRowIds) {
+            keys.add(contractRowSelectionKey(section.id, rowId));
+          }
+        } else if (section.selected) {
+          keys.add(section.id);
+        }
+      }
+      setSelectedKeys(keys);
       setSelectedPaymentPlanId(
         loaded.contract.selectedPaymentPlanId ?? loaded.contract.paymentPlans[0]?.id ?? null,
       );
+      setVatDeclaration(loaded.contract.vatDeclaration ?? emptyContractVatDeclaration());
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Nie udało się wczytać umowy.");
     } finally {
@@ -89,8 +111,9 @@ export function ClientContractPage({ token }: { token: string }) {
         body: JSON.stringify({
           action,
           signerName: action === "sign" ? signerName.trim() : undefined,
-          selectedOptionSectionIds: action === "sign" ? Array.from(selectedOptionIds) : undefined,
+          selectedKeys: action === "sign" ? Array.from(selectedKeys) : undefined,
           selectedPaymentPlanId: action === "sign" ? selectedPaymentPlanId : undefined,
+          vatDeclaration: action === "sign" ? vatDeclaration : undefined,
         }),
       });
       const payload = await response.json();
@@ -122,7 +145,7 @@ export function ClientContractPage({ token }: { token: string }) {
 
   return (
     <div className="min-h-screen bg-surface-muted/20 px-4 py-8 sm:px-8 sm:py-12 print:bg-white print:p-0">
-      <div className="mx-auto grid max-w-4xl gap-6 print:max-w-none print:gap-0">
+      <div className="mx-auto grid max-w-4xl min-w-0 gap-6 print:max-w-none print:gap-0">
         <div className="text-center sm:text-left print:hidden">
           <p className="text-xs font-semibold uppercase tracking-wide text-accent">Umowa do podpisania</p>
           <h1 className="mt-1 text-2xl font-semibold text-foreground sm:text-3xl">{contract.title || "Umowa"}</h1>
@@ -134,25 +157,28 @@ export function ClientContractPage({ token }: { token: string }) {
 
         <ContractDocumentView
           contract={contract}
-          selectedOptionIds={selectedOptionIds}
+          selectedKeys={selectedKeys}
           company={company}
           selectedPaymentPlanId={selectedPaymentPlanId}
           onSelectPaymentPlan={canInteract ? setSelectedPaymentPlanId : undefined}
-          onToggleOption={
+          onToggleSelection={
             canInteract
-              ? (sectionId, checked) => {
-                  setSelectedOptionIds((prev) => {
+              ? (key, checked) => {
+                  setSelectedKeys((prev) => {
                     const next = new Set(prev);
                     if (checked) {
-                      next.add(sectionId);
+                      next.add(key);
                     } else {
-                      next.delete(sectionId);
+                      next.delete(key);
                     }
                     return next;
                   });
                 }
               : undefined
           }
+          vatDeclaration={vatDeclaration}
+          onChangeVatDeclaration={canInteract ? setVatDeclaration : undefined}
+          moduleSettings={moduleSettings}
         />
 
         {canInteract ? (

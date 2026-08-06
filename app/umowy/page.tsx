@@ -21,6 +21,9 @@ export default function UmowyPage() {
             <Button variant="secondary" asChild>
               <Link href="/umowy/szablony">Szablony umów</Link>
             </Button>
+            <Button variant="secondary" asChild>
+              <Link href="/umowy/ustawienia">Ustawienia</Link>
+            </Button>
             <Button asChild>
               <Link href="/umowy/nowa">Nowa umowa</Link>
             </Button>

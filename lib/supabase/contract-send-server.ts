@@ -3,7 +3,7 @@ import "server-only";
 import { HttpError } from "@/lib/auth/http-error";
 import { appendContractHistory, isContractExpired } from "@/lib/contracts/normalize";
 import { calculateContractTotals } from "@/lib/contracts/totals";
-import type { Contract } from "@/lib/contracts/types";
+import { emptyContractVatDeclaration, type Contract } from "@/lib/contracts/types";
 import { buildContractSendEmail } from "@/lib/email/contract-templates";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { absoluteAppUrl } from "@/lib/messages/app-url";
@@ -67,6 +67,8 @@ async function ensureContractToken(contract: Contract): Promise<Contract> {
     tokenSentAt: null,
     clientSignature: null,
     companySignature: null,
+    selectedPaymentPlanId: null,
+    vatDeclaration: emptyContractVatDeclaration(),
     history: appendContractHistory(contract.history, {
       type: isRegeneration ? "link_regenerated" : "link_generated",
       message: isRegeneration ? "Wygenerowano ponownie link do podpisania." : "Wygenerowano link do podpisania.",
@@ -102,7 +104,7 @@ async function buildEmailForContract(contract: Contract, note?: string | null) {
     contractTitle: contract.title,
     contractUrl: contractPublicUrl(contract),
     expiresAtLabel: contract.tokenExpiresAt ? formatDate(contract.tokenExpiresAt) : null,
-    grossTotal: totals.totalGross,
+    netTotal: totals.totalNet,
     brand: settings.brand,
     company,
     senderNote: note,

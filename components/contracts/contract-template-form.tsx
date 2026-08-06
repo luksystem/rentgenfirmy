@@ -1,13 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ContractPaymentPlansEditor } from "@/components/contracts/contract-payment-plans-editor";
 import { ContractSectionsEditor } from "@/components/contracts/contract-sections-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/input";
+import { DEFAULT_CONTRACT_MODULE_SETTINGS, type ContractModuleSettings } from "@/lib/contracts/module-settings";
 import type { ContractTemplate } from "@/lib/contracts/types";
+import { fetchContractModuleSettings } from "@/lib/supabase/contract-module-settings-repository";
 import { useContractStore } from "@/store/contract-store";
 
 export function ContractTemplateForm({ initialTemplate }: { initialTemplate: ContractTemplate }) {
@@ -19,6 +21,11 @@ export function ContractTemplateForm({ initialTemplate }: { initialTemplate: Con
 
   const [template, setTemplate] = useState(initialTemplate);
   const [isSaving, setIsSaving] = useState(false);
+  const [moduleSettings, setModuleSettings] = useState<ContractModuleSettings>(DEFAULT_CONTRACT_MODULE_SETTINGS);
+
+  useEffect(() => {
+    void fetchContractModuleSettings().then(setModuleSettings).catch(() => undefined);
+  }, []);
 
   async function handleSave() {
     if (!template.name.trim()) {
@@ -92,6 +99,7 @@ export function ContractTemplateForm({ initialTemplate }: { initialTemplate: Con
             sections={template.sections}
             onChange={(sections) => setTemplate({ ...template, sections })}
             contentBlocks={contentBlocks}
+            moduleSettings={moduleSettings}
           />
         </CardContent>
       </Card>

@@ -2,17 +2,26 @@
 
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { ContractRowCompact } from "@/components/contracts/contract-row-compact";
 import { createFixedPriceRow } from "@/lib/service/fixed-price";
-import { calculateTableGrossTotal, calculateTableNetTotal } from "@/lib/contracts/totals";
-import type { ContractTableGroup, ContractTableSection } from "@/lib/contracts/types";
+import { calculateTableNetTotal } from "@/lib/contracts/totals";
+import {
+  CONTRACT_OPTION_CATEGORIES,
+  CONTRACT_OPTION_CATEGORY_LABELS,
+  type ContractOptionCategory,
+  type ContractTableSection,
+} from "@/lib/contracts/types";
+import type { ContractModuleSettings } from "@/lib/contracts/module-settings";
+import { discountPercentForCategory } from "@/lib/contracts/module-settings";
 import type { ServiceFixedPriceRow } from "@/lib/service/types";
 import { cn, formatMoney } from "@/lib/utils";
 
-const GROUP_OPTIONS: { value: ContractTableGroup; label: string; hint: string }[] = [
-  { value: "main", label: "Główna umowa", hint: "Zawsze wliczana do sumy umowy." },
-  { value: "option", label: "Opcja dodatkowa", hint: "Klient zaznacza ją przy podpisywaniu — dopiero wtedy wlicza się do sumy." },
-];
+const CATEGORY_HINTS: Record<ContractOptionCategory, string> = {
+  instalacja: "Cała tabela zaznaczana na raz przez klienta — z rabatem od jej sumy.",
+  instalacje_dodatkowe: "Cała tabela zaznaczana na raz przez klienta — z rabatem od jej sumy.",
+  dodatki: "Klient zaznacza każdą pozycję osobno — bez rabatu na poziomie kategorii.",
+};
 
 export function ContractTableSectionCard({
   section,
@@ -21,6 +30,7 @@ export function ContractTableSectionCard({
   onRemove,
   onMoveUp,
   onMoveDown,
+  moduleSettings,
   disabled,
 }: {
   section: ContractTableSection;
@@ -29,10 +39,10 @@ export function ContractTableSectionCard({
   onRemove: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
+  moduleSettings?: ContractModuleSettings;
   disabled?: boolean;
 }) {
   const netTotal = calculateTableNetTotal(section);
-  const grossTotal = calculateTableGrossTotal(section);
 
   function updateRow(rowIndex: number, next: ServiceFixedPriceRow) {
     onChange({ ...section, rows: section.rows.map((row, i) => (i === rowIndex ? next : row)) });
@@ -40,6 +50,22 @@ export function ContractTableSectionCard({
 
   function removeRow(rowIndex: number) {
     onChange({ ...section, rows: section.rows.filter((_, i) => i !== rowIndex) });
+  }
+
+  function setMain() {
+    onChange({ ...section, group: "main", category: null, categoryDiscountPercent: 0, selected: true });
+  }
+
+  function setCategory(category: ContractOptionCategory) {
+    const discount = moduleSettings ? discountPercentForCategory(moduleSettings, category) : 0;
+    onChange({
+      ...section,
+      group: "option",
+      category,
+      categoryDiscountPercent: category === section.category ? section.categoryDiscountPercent : discount,
+      selected: false,
+      selectedRowIds: [],
+    });
   }
 
   return (
@@ -63,31 +89,49 @@ export function ContractTableSectionCard({
         </div>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2">
-        {GROUP_OPTIONS.map((option) => (
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={setMain}
+          className={cn(
+            "rounded-xl border p-3 text-left text-xs transition",
+            section.group === "main"
+              ? "border-accent/60 bg-accent/10 text-foreground"
+              : "border-border/80 bg-surface-muted/20 text-muted hover:text-foreground",
+          )}
+        >
+          <p className="text-sm font-semibold">Główna umowa</p>
+          <p className="mt-1 text-muted">Zawsze wliczana do sumy umowy.</p>
+        </button>
+        {CONTRACT_OPTION_CATEGORIES.map((category) => (
           <button
-            key={option.value}
+            key={category}
             type="button"
             disabled={disabled}
-            onClick={() =>
-              onChange({
-                ...section,
-                group: option.value,
-                selected: option.value === "main" ? true : section.selected,
-              })
-            }
+            onClick={() => setCategory(category)}
             className={cn(
               "rounded-xl border p-3 text-left text-xs transition",
-              section.group === option.value
+              section.group === "option" && section.category === category
                 ? "border-accent/60 bg-accent/10 text-foreground"
                 : "border-border/80 bg-surface-muted/20 text-muted hover:text-foreground",
             )}
           >
-            <p className="text-sm font-semibold">{option.label}</p>
-            <p className="mt-1 text-muted">{option.hint}</p>
+            <p className="text-sm font-semibold">{CONTRACT_OPTION_CATEGORY_LABELS[category]}</p>
+            <p className="mt-1 text-muted">{CATEGORY_HINTS[category]}</p>
           </button>
         ))}
       </div>
+
+      {section.group === "option" && section.category && section.category !== "dodatki" ? (
+        <Field label={`Rabat za kategorię „${CONTRACT_OPTION_CATEGORY_LABELS[section.category]}” (%)`} className="sm:max-w-xs">
+          <NumericInput
+            value={section.categoryDiscountPercent}
+            disabled={disabled}
+            onChange={(value) => onChange({ ...section, categoryDiscountPercent: Math.min(100, Math.max(0, value)) })}
+          />
+        </Field>
+      ) : null}
 
       <Field label="Tytuł tabeli">
         <Input
@@ -108,12 +152,11 @@ export function ContractTableSectionCard({
 
       <div className="grid gap-1.5">
         {section.rows.length > 0 ? (
-          <div className="hidden grid-cols-[1fr_5rem_4.5rem_6rem_4.5rem_7rem_auto_auto] gap-2 px-2 text-[11px] font-semibold uppercase tracking-wide text-muted sm:grid">
+          <div className="hidden grid-cols-[1fr_5rem_4.5rem_6rem_7rem_auto_auto] gap-2 px-2 text-[11px] font-semibold uppercase tracking-wide text-muted sm:grid">
             <span>Nazwa</span>
             <span>Ilość</span>
             <span>J.m.</span>
             <span>Cena netto</span>
-            <span>VAT</span>
             <span className="text-right">Wartość netto</span>
             <span />
             <span />
@@ -141,8 +184,6 @@ export function ContractTableSectionCard({
 
       <p className="text-sm text-muted">
         Suma tabeli netto: <span className="font-semibold text-foreground">{formatMoney(netTotal)}</span>
-        {" · "}
-        brutto: <span className="font-semibold text-foreground">{formatMoney(grossTotal)}</span>
       </p>
     </div>
   );

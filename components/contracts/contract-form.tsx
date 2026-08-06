@@ -17,6 +17,7 @@ import {
   shareContract,
 } from "@/lib/contracts/contract-delivery";
 import { buildContractFromTemplate } from "@/lib/contracts/factory";
+import { DEFAULT_CONTRACT_MODULE_SETTINGS, type ContractModuleSettings } from "@/lib/contracts/module-settings";
 import { calculateContractTotals } from "@/lib/contracts/totals";
 import {
   CONTRACT_STATUS_LABELS,
@@ -25,6 +26,7 @@ import {
   type Contract,
 } from "@/lib/contracts/types";
 import { getContractDocumentSignedUrl, isContractLinkExpired } from "@/lib/supabase/contract-repository";
+import { fetchContractModuleSettings } from "@/lib/supabase/contract-module-settings-repository";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useContractStore } from "@/store/contract-store";
@@ -76,9 +78,14 @@ export function ContractForm({ initialContract }: { initialContract: Contract })
   const [emailNote, setEmailNote] = useState("");
   const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isNew = !useContractStore.getState().getContractById(initialContract.id);
+  const [moduleSettings, setModuleSettings] = useState<ContractModuleSettings>(DEFAULT_CONTRACT_MODULE_SETTINGS);
 
   useEffect(() => {
     setCanShare(canShareContract());
+  }, []);
+
+  useEffect(() => {
+    void fetchContractModuleSettings().then(setModuleSettings).catch(() => undefined);
   }, []);
 
   const totals = calculateContractTotals(contract.sections);
@@ -359,6 +366,7 @@ export function ContractForm({ initialContract }: { initialContract: Contract })
         <CardContent className="pt-5">
           <ContractSectionsEditor
             sections={contract.sections}
+            moduleSettings={moduleSettings}
             onChange={(sections) => setContract({ ...contract, sections })}
             contentBlocks={contentBlocks}
           />
@@ -381,8 +389,8 @@ export function ContractForm({ initialContract }: { initialContract: Contract })
         </CardHeader>
         <CardContent className="grid gap-3">
           <p className="text-sm text-muted">
-            Wartość umowy: <span className="font-semibold text-foreground">{formatMoney(totals.totalGross)} brutto</span>
-            {" "}(bez opcji dodatkowych — klient wybiera je przy podpisywaniu).
+            Wartość umowy (główna, bez opcji): <span className="font-semibold text-foreground">{formatMoney(totals.totalNet)} netto</span>
+            {" "}— VAT dolicza się dopiero po wyborze rozliczenia przez klienta przy podpisywaniu.
           </p>
 
           {hasLink && !isNew ? (

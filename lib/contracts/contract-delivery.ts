@@ -5,7 +5,7 @@ import { formatDate, formatMoney } from "@/lib/utils";
 /** Wzorem `lib/service/client-offer-delivery.ts` — ręczna wysyłka linku (bez maila z serwera). */
 export function buildContractEmailContent(contract: Contract, contractUrl: string) {
   const clientName = contract.client.fullName.trim() || "Państwo";
-  const total = calculateContractTotals(contract.sections).totalGross;
+  const total = calculateContractTotals(contract.sections).totalNet;
 
   const subject = `Umowa do podpisania: ${contract.title}`;
 
@@ -15,7 +15,7 @@ export function buildContractEmailContent(contract: Contract, contractUrl: strin
     "Przesyłamy umowę do przejrzenia i podpisania.",
     "",
     `Umowa: ${contract.title}`,
-    `Wartość brutto: ${formatMoney(total)}`,
+    `Wartość netto: ${formatMoney(total)}`,
     "",
     "Link do umowy:",
     contractUrl,

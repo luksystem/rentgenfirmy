@@ -1,27 +1,30 @@
 import { computeFixedPriceRowGrossNet, computeFixedPriceRowNetValue } from "@/lib/service/fixed-price";
-import type { ServiceFixedPriceRow, VatRate } from "@/lib/service/types";
+import type { ServiceFixedPriceRow } from "@/lib/service/types";
+import type { ContractModuleSettings } from "@/lib/contracts/module-settings";
 import {
   isContractTableSection,
   type ContractPaymentPlan,
   type ContractPaymentPlanInstallment,
   type ContractSection,
   type ContractTableSection,
+  type ContractVatDeclaration,
 } from "@/lib/contracts/types";
 
 /**
- * Silnik przeliczeń umowy: suma tabel głównych + zaznaczonych opcji, rabaty na pozycjach, rabat
- * za wybrany wariant płatności, kwoty rat. Jedno miejsce liczenia — używane w edytorze admina,
- * w podglądzie klienta (na żywo przy zaznaczaniu opcji/wariantu) i przy generowaniu PDF.
+ * Silnik przeliczeń umowy — wszystko liczone w NETTO aż do samego końca: suma tabel głównych +
+ * zaznaczonych opcji, rabaty na pozycjach, rabaty za kategorię (instalacja/instalacje dodatkowe),
+ * rabat za wybrany wariant płatności. VAT dolicza się dopiero na podstawie deklaracji płatnika
+ * (patrz `calculateVatBreakdown`) — jedno miejsce liczenia, używane w edytorze admina, w
+ * podglądzie klienta (na żywo) i przy generowaniu PDF.
  */
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-function rowGrossValue(row: ServiceFixedPriceRow, defaultVat: VatRate) {
-  const net = computeFixedPriceRowNetValue(row);
-  const vat = row.vatRate ?? defaultVat;
-  return roundMoney(net * (1 + vat / 100));
+/** Klucz zaznaczenia pojedynczej pozycji w tabeli kategorii "dodatki" (per-wiersz, nie cała tabela). */
+export function contractRowSelectionKey(sectionId: string, rowId: string) {
+  return `${sectionId}:${rowId}`;
 }
 
 /** Kwota rabatu na pozycji — różnica między ceną katalogową a ceną po rabacie procentowym wiersza. */
@@ -33,13 +36,6 @@ export function calculateTableNetTotal(table: Pick<ContractTableSection, "rows">
   return roundMoney(table.rows.reduce((sum, row) => sum + computeFixedPriceRowNetValue(row), 0));
 }
 
-export function calculateTableGrossTotal(
-  table: Pick<ContractTableSection, "rows">,
-  defaultVat: VatRate = 23,
-) {
-  return roundMoney(table.rows.reduce((sum, row) => sum + rowGrossValue(row, defaultVat), 0));
-}
-
 /** Suma rabatów udzielonych na pozycjach (aktywne wiersze) danej tabeli. */
 export function calculateTableDiscountAmount(table: Pick<ContractTableSection, "rows">) {
   return roundMoney(
@@ -49,91 +45,95 @@ export function calculateTableDiscountAmount(table: Pick<ContractTableSection, "
 
 export type ContractTotals = {
   mainNet: number;
-  mainGross: number;
+  /** Suma tabel opcjonalnych rzeczywiście wliczonych (zaznaczone instalacja/instalacje_dodatkowe + zaznaczone pozycje dodatków). */
   optionsNet: number;
-  optionsGross: number;
-  /** Suma rabatów na pozycjach (tylko liczone tabele: główne + zaznaczone opcje), netto. */
+  /** Suma rabatów na pozycjach (informacyjnie — już wliczona w netto wierszy). */
   itemDiscountNet: number;
-  /** Suma główna + zaznaczone opcje, przed rabatem za wariant płatności. */
+  /** Suma rabatów za zaznaczone kategorie (instalacja/instalacje_dodatkowe). */
+  categoryDiscountNet: number;
+  /** mainNet + optionsNet − categoryDiscountNet, przed rabatem za wariant płatności. */
   subtotalNet: number;
-  subtotalGross: number;
   planDiscountPercent: number;
   planDiscountNet: number;
-  planDiscountGross: number;
-  /** Suma końcowa po rabacie za wariant płatności — realna kwota do zapłaty. */
+  /** Suma końcowa netto — punkt wyjścia do rozliczenia VAT. */
   totalNet: number;
-  totalGross: number;
 };
 
 /**
- * `optionOverrides` pozwala podglądać "co jeśli klient zaznaczy tę opcję" bez mutowania sekcji.
- * `paymentPlan` — wariant płatności do zastosowania (jego `discountPercent` obniża sumę końcową);
- * pominięcie = brak rabatu za wariant.
+ * `selectionOverrides` pozwala podglądać wybór klienta bez mutowania sekcji — klucz to id sekcji
+ * (całe tabele instalacja/instalacje_dodatkowe) albo `contractRowSelectionKey` (pojedyncze pozycje
+ * w tabelach "dodatki"). `paymentPlan` — wariant płatności do zastosowania.
  */
 export function calculateContractTotals(
   sections: ContractSection[],
   options: {
-    defaultVat?: VatRate;
-    optionOverrides?: Record<string, boolean>;
+    selectionOverrides?: Record<string, boolean>;
     paymentPlan?: ContractPaymentPlan | null;
   } = {},
 ): ContractTotals {
-  const defaultVat = options.defaultVat ?? 23;
   let mainNet = 0;
-  let mainGross = 0;
   let optionsNet = 0;
-  let optionsGross = 0;
   let itemDiscountNet = 0;
+  let categoryDiscountNet = 0;
 
   for (const section of sections) {
     if (!isContractTableSection(section)) {
       continue;
     }
-    const net = calculateTableNetTotal(section);
-    const gross = calculateTableGrossTotal(section, defaultVat);
 
     if (section.group === "main") {
-      mainNet += net;
-      mainGross += gross;
+      mainNet += calculateTableNetTotal(section);
       itemDiscountNet += calculateTableDiscountAmount(section);
       continue;
     }
 
-    const selected = options.optionOverrides?.[section.id] ?? section.selected;
-    if (selected) {
-      optionsNet += net;
-      optionsGross += gross;
-      itemDiscountNet += calculateTableDiscountAmount(section);
+    if (section.category === "dodatki") {
+      for (const row of section.rows) {
+        if (!row.active) {
+          continue;
+        }
+        const key = contractRowSelectionKey(section.id, row.id);
+        const selected = options.selectionOverrides?.[key] ?? section.selectedRowIds.includes(row.id);
+        if (!selected) {
+          continue;
+        }
+        optionsNet += computeFixedPriceRowNetValue(row);
+        itemDiscountNet += calculateRowDiscountAmount(row);
+      }
+      continue;
     }
+
+    // instalacja / instalacje_dodatkowe — całą tabelą naraz
+    const selected = options.selectionOverrides?.[section.id] ?? section.selected;
+    if (!selected) {
+      continue;
+    }
+    const net = calculateTableNetTotal(section);
+    optionsNet += net;
+    itemDiscountNet += calculateTableDiscountAmount(section);
+    categoryDiscountNet += roundMoney(net * ((section.categoryDiscountPercent ?? 0) / 100));
   }
 
-  const subtotalNet = roundMoney(mainNet + optionsNet);
-  const subtotalGross = roundMoney(mainGross + optionsGross);
+  const subtotalNet = roundMoney(mainNet + optionsNet - categoryDiscountNet);
   const planDiscountPercent = Math.min(100, Math.max(0, options.paymentPlan?.discountPercent ?? 0));
   const planDiscountNet = roundMoney(subtotalNet * (planDiscountPercent / 100));
-  const planDiscountGross = roundMoney(subtotalGross * (planDiscountPercent / 100));
 
   return {
     mainNet: roundMoney(mainNet),
-    mainGross: roundMoney(mainGross),
     optionsNet: roundMoney(optionsNet),
-    optionsGross: roundMoney(optionsGross),
     itemDiscountNet: roundMoney(itemDiscountNet),
+    categoryDiscountNet: roundMoney(categoryDiscountNet),
     subtotalNet,
-    subtotalGross,
     planDiscountPercent,
     planDiscountNet,
-    planDiscountGross,
     totalNet: roundMoney(subtotalNet - planDiscountNet),
-    totalGross: roundMoney(subtotalGross - planDiscountGross),
   };
 }
 
 export type PaymentPlanInstallmentAmount = ContractPaymentPlanInstallment & {
   amountNet: number;
-  amountGross: number;
   /** Kwota jednej z N rozłożonych miesięcznych części (tylko gdy splitOverMonths > 1). */
-  perMonthGross: number | null;
+  perMonthNet: number | null;
 };
 
 export function calculatePaymentPlanInstallmentAmounts(
@@ -142,12 +142,10 @@ export function calculatePaymentPlanInstallmentAmounts(
 ): PaymentPlanInstallmentAmount[] {
   return plan.installments.map((item) => {
     const amountNet = roundMoney((item.percent / 100) * totals.totalNet);
-    const amountGross = roundMoney((item.percent / 100) * totals.totalGross);
     return {
       ...item,
       amountNet,
-      amountGross,
-      perMonthGross: item.splitOverMonths > 1 ? roundMoney(amountGross / item.splitOverMonths) : null,
+      perMonthNet: item.splitOverMonths > 1 ? roundMoney(amountNet / item.splitOverMonths) : null,
     };
   });
 }
@@ -163,11 +161,111 @@ export function isPaymentPlanComplete(plan: Pick<ContractPaymentPlan, "installme
   return Math.abs(paymentPlanPercentSum(plan) - 100) < 0.01;
 }
 
-/** Cena końcowa (brutto) danego wariantu, licząc od tej samej bazy (główna + zaznaczone opcje) — do porównywarki wariantów. */
-export function calculatePaymentPlanFinalGross(
+/**
+ * Zwraca klucze selekcji reprezentujące "wszystko zaznaczone" (wszystkie tabele opcjonalne +
+ * wszystkie pozycje "dodatki") — do podglądu pełnego możliwego zakresu umowy w panelu admina,
+ * zanim klient cokolwiek wybierze.
+ */
+export function allSelectionKeys(sections: ContractSection[]): string[] {
+  const keys: string[] = [];
+  for (const section of sections) {
+    if (!isContractTableSection(section) || section.group !== "option") {
+      continue;
+    }
+    if (section.category === "dodatki") {
+      for (const row of section.rows) {
+        keys.push(contractRowSelectionKey(section.id, row.id));
+      }
+    } else {
+      keys.push(section.id);
+    }
+  }
+  return keys;
+}
+
+/** Cena końcowa netto danego wariantu, licząc od tej samej bazy — do porównywarki wariantów. */
+export function calculatePaymentPlanFinalNet(
   sections: ContractSection[],
   plan: ContractPaymentPlan,
-  options: { defaultVat?: VatRate; optionOverrides?: Record<string, boolean> } = {},
+  options: { selectionOverrides?: Record<string, boolean> } = {},
 ) {
-  return calculateContractTotals(sections, { ...options, paymentPlan: plan }).totalGross;
+  return calculateContractTotals(sections, { ...options, paymentPlan: plan }).totalNet;
+}
+
+const VAT_RATE_PREFERENTIAL = 8;
+const VAT_RATE_STANDARD = 23;
+
+export type ContractVatBreakdown = {
+  /** Kwota (netto) rozliczana jako "inne" (gotówka). */
+  inneNet: number;
+  inneDiscountPercent: number;
+  inneDiscount: number;
+  /** Kwota "inne" po rabacie — bez VAT. */
+  inneFinal: number;
+  /** Kwota (netto) rozliczana "normalnie" wg typu płatnika. */
+  normalNet: number;
+  /** Efektywna (ew. mieszana przy przekroczeniu progu m2) stawka VAT części normalnej. */
+  normalVatRatePercent: number;
+  normalVat: number;
+  normalGross: number;
+  /** Czy do pełnego wyliczenia brakuje jeszcze danych (powierzchnia/typ budynku dla osoby prywatnej). */
+  needsAreaDeclaration: boolean;
+  /** Suma końcowa do zapłaty (inneFinal + normalGross). */
+  finalTotal: number;
+};
+
+/**
+ * Rozliczenie VAT na podstawie deklaracji klienta — stawka dla części "normalnej" zależy od typu
+ * płatnika (firma = 23% zawsze; osoba prywatna = 8%/23% wg progu powierzchni, proporcjonalnie przy
+ * przekroczeniu progu), a część oznaczona jako "inne" (gotówka) idzie z 0% VAT i dodatkowym
+ * rabatem z ustawień modułu. Gdy dane o powierzchni jeszcze nie są uzupełnione, konserwatywnie
+ * liczy 23% (żeby nie zaniżać ceny) i sygnalizuje to przez `needsAreaDeclaration`.
+ */
+export function calculateVatBreakdown(
+  totalNet: number,
+  declaration: ContractVatDeclaration,
+  settings: ContractModuleSettings,
+): ContractVatBreakdown {
+  const innePercent = Math.min(100, Math.max(0, declaration.innePercent));
+  const inneNet = roundMoney(totalNet * (innePercent / 100));
+  const normalNet = roundMoney(totalNet - inneNet);
+  const inneDiscount = roundMoney(inneNet * (settings.inneDiscountPercent / 100));
+  const inneFinal = roundMoney(inneNet - inneDiscount);
+
+  let normalVatRatePercent = VAT_RATE_STANDARD;
+  let needsAreaDeclaration = false;
+
+  if (declaration.payerType === "firma") {
+    normalVatRatePercent = VAT_RATE_STANDARD;
+  } else {
+    const threshold =
+      declaration.buildingType === "dom_jednorodzinny" ? 300 : declaration.buildingType === "lokal_mieszkalny" ? 150 : null;
+    if (!threshold || !declaration.areaM2) {
+      needsAreaDeclaration = true;
+      normalVatRatePercent = VAT_RATE_STANDARD;
+    } else if (declaration.areaM2 <= threshold) {
+      normalVatRatePercent = VAT_RATE_PREFERENTIAL;
+    } else {
+      const ratioPreferential = threshold / declaration.areaM2;
+      normalVatRatePercent = roundMoney(
+        ratioPreferential * VAT_RATE_PREFERENTIAL + (1 - ratioPreferential) * VAT_RATE_STANDARD,
+      );
+    }
+  }
+
+  const normalVat = roundMoney(normalNet * (normalVatRatePercent / 100));
+  const normalGross = roundMoney(normalNet + normalVat);
+
+  return {
+    inneNet,
+    inneDiscountPercent: settings.inneDiscountPercent,
+    inneDiscount,
+    inneFinal,
+    normalNet,
+    normalVatRatePercent,
+    normalVat,
+    normalGross,
+    needsAreaDeclaration,
+    finalTotal: roundMoney(inneFinal + normalGross),
+  };
 }

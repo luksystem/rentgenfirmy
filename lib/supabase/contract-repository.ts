@@ -1,6 +1,6 @@
 import { defaultClientOfferExpiry, resolveClientOfferExpiresAt } from "@/lib/service/offer-validity";
 import { appendContractHistory, isContractExpired } from "@/lib/contracts/normalize";
-import { canCompanySignContract, type Contract } from "@/lib/contracts/types";
+import { canCompanySignContract, emptyContractVatDeclaration, type Contract } from "@/lib/contracts/types";
 import { getSupabase } from "@/lib/supabase/client";
 import { contractToInsert, rowToContract } from "@/lib/supabase/contract-mappers";
 import { fetchCompanyProfile } from "@/lib/supabase/company-profile-repository";
@@ -77,6 +77,8 @@ export async function generateContractLink(contract: Contract): Promise<Contract
     tokenSentAt: null,
     clientSignature: null,
     companySignature: null,
+    selectedPaymentPlanId: null,
+    vatDeclaration: emptyContractVatDeclaration(),
     history: appendContractHistory(contract.history, {
       type: isRegeneration ? "link_regenerated" : "link_generated",
       message: isRegeneration ? "Wygenerowano ponownie link do podpisania." : "Wygenerowano link do podpisania.",
