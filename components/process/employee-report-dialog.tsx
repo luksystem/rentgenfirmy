@@ -156,11 +156,15 @@ export function EmployeeReportDialog({
     setError(null);
     try {
       const trimmed = description.trim();
+      // Tytuł = cały opis, złożony do jednej linii — pracownik nie ma wypełniać dwóch pól na to
+      // samo. Branie WYŁĄCZNIE pierwszej linii zawodziło, gdy opis zaczynał się od krótkiej
+      // etykiety pozycji (np. samego numeru zuga albo placeholdera "—" z modułów dokumentacji) —
+      // tytuł wtedy nie niósł żadnej informacji. Nigdy nie zostawiamy ustalenia/zmiany bez tytułu.
+      const title = trimmed.replace(/\s+/g, " ").slice(0, 200);
       const result = await createEmployeeReport({
         projectId,
         stageId: stageId || null,
-        // Pierwsza linia opisu jest tytułem — pracownik nie ma wypełniać dwóch pól na to samo.
-        title: trimmed.split("\n")[0].slice(0, 200),
+        title,
         body: trimmed,
         billingImpact,
         isUrgent,

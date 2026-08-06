@@ -32,7 +32,11 @@ export function ItemEscalationActions({
   const [reportOpen, setReportOpen] = useState(false);
   const [requisitionOpen, setRequisitionOpen] = useState(false);
 
-  const initialDescription = [itemTitle, itemDescription?.trim()].filter(Boolean).join("\n\n");
+  // "—" to placeholder braku etykiety (switchboardCircuitLabel/documentationModuleItemLabel) —
+  // dopisywanie go do opisu tylko zaśmieca tytuł, który zgłoszenie buduje z pierwszej linii.
+  const initialDescription = [itemTitle === "—" ? null : itemTitle, itemDescription?.trim()]
+    .filter(Boolean)
+    .join("\n\n");
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
