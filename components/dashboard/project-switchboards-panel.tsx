@@ -29,9 +29,11 @@ import {
   SWITCHBOARD_CIRCUIT_STATUS_BADGE_CLASS,
   SWITCHBOARD_CIRCUIT_STATUS_DOT_CLASS,
   SWITCHBOARD_CIRCUIT_STATUS_LABELS,
+  SWITCHBOARD_HANDLED_BADGE_CLASS,
   buildSwitchboardCircuitReportDescription,
   buildSwitchboardProgress,
   groupSwitchboardCircuitsBySection,
+  switchboardCircuitIsHandled,
   switchboardCircuitLabel,
   switchboardCircuitNeedsReport,
   switchboardGroupDoneSummary,
@@ -79,12 +81,14 @@ function formatDateTime(value: string) {
 }
 
 function CircuitCard({ circuit, onClick }: { circuit: SwitchboardCircuit; onClick: () => void }) {
+  const handled = switchboardCircuitIsHandled(circuit);
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
         "flex min-w-0 items-start justify-between gap-3 rounded-xl border border-border/70 bg-surface-muted/10 p-3 text-left transition hover:border-accent/30",
+        handled && "border-blue-500/30 bg-blue-500/5",
         circuit.isStale && "opacity-60",
       )}
     >
@@ -110,10 +114,10 @@ function CircuitCard({ circuit, onClick }: { circuit: SwitchboardCircuit; onClic
       <span
         className={cn(
           "shrink-0 rounded-full border px-2 py-1 text-[11px] font-medium",
-          SWITCHBOARD_CIRCUIT_STATUS_BADGE_CLASS[circuit.status],
+          handled ? SWITCHBOARD_HANDLED_BADGE_CLASS : SWITCHBOARD_CIRCUIT_STATUS_BADGE_CLASS[circuit.status],
         )}
       >
-        {SWITCHBOARD_CIRCUIT_STATUS_LABELS[circuit.status]}
+        {handled ? "Ogarnięte" : SWITCHBOARD_CIRCUIT_STATUS_LABELS[circuit.status]}
       </span>
     </button>
   );
@@ -472,7 +476,7 @@ function SwitchboardHeaderBar({
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted">
-          {progress.counts.podlaczone_i_sprawdzone}/{progress.total} podłączone i sprawdzone (
+          {progress.doneCount}/{progress.total} gotowe (podłączone i sprawdzone lub ogarnięte) (
           {progress.total > 0 ? Math.round(progress.doneRatio * 100) : 0}%)
         </p>
 
@@ -618,9 +622,9 @@ export function ProjectSwitchboardsPanel({
     if (!activeBoard) return;
     const progress = buildSwitchboardProgress(activeBoard.circuits);
     const confirmMessage =
-      progress.total > 0 && progress.counts.podlaczone_i_sprawdzone < progress.total
-        ? `${progress.total - progress.counts.podlaczone_i_sprawdzone} pozycji nie jest jeszcze ` +
-          `"Podłączone i sprawdzone". Na pewno oznaczyć wpinanie jako zakończone?`
+      progress.total > 0 && progress.doneCount < progress.total
+        ? `${progress.total - progress.doneCount} pozycji nie jest jeszcze gotowych ` +
+          `(podłączone i sprawdzone albo ogarnięte). Na pewno oznaczyć wpinanie jako zakończone?`
         : "Na pewno oznaczyć wpinanie rozdzielni jako zakończone?";
     if (!window.confirm(confirmMessage)) {
       return;
@@ -784,7 +788,7 @@ export function ProjectSwitchboardsPanel({
                         )}
                         {section.sectionName}
                         <span className="font-normal text-muted">
-                          — {sectionSummary.done}/{sectionSummary.total} podłączone i sprawdzone
+                          — {sectionSummary.done}/{sectionSummary.total} gotowe
                         </span>
                       </button>
                     ) : null}
@@ -820,7 +824,7 @@ export function ProjectSwitchboardsPanel({
                                 )}
                                 {entry.zugNo}
                                 <span className="font-normal text-muted">
-                                  — {zugSummary.done}/{zugSummary.total} podłączone i sprawdzone
+                                  — {zugSummary.done}/{zugSummary.total} gotowe
                                 </span>
                               </button>
                               {!zugCollapsed ? (

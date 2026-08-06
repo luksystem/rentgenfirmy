@@ -46,6 +46,22 @@ export function switchboardCircuitNeedsReport(status: SwitchboardCircuitStatus):
   return status === "wymaga_uwagi" || status === "problem";
 }
 
+// Niebieski — inny niż wszystkie sześć kolorów statusu montażu, żeby "ogarnięte/zgłoszone" było
+// jednoznacznie odróżnialne. W przeciwieństwie do checklisty PRZYKRYWA kolor statusu: dla instalatora
+// sprawa jest zamknięta (zrobił swoje, przekazał dalej), decyzję co dalej podejmuje manager przy
+// zamykaniu etapu.
+export const SWITCHBOARD_HANDLED_BADGE_CLASS = "border-blue-500/40 bg-blue-500/10 text-blue-200";
+export const SWITCHBOARD_HANDLED_DOT_CLASS = "bg-blue-400";
+
+/** Instalator przekazał sprawę dalej (zgłosił do biura albo ręcznie ogarnął) — z jego perspektywy
+ *  pozycja jest zamknięta, niezależnie od statusu montażu. Manager decyduje co dalej przy zamykaniu
+ *  etapu. */
+export function switchboardCircuitIsHandled(
+  circuit: Pick<SwitchboardCircuit, "handledAt" | "employeeReportId">,
+): boolean {
+  return Boolean(circuit.handledAt) || Boolean(circuit.employeeReportId);
+}
+
 export type Switchboard = {
   id: string;
   projectId: string;
@@ -180,16 +196,21 @@ export function groupSwitchboardCircuitsBySection(
   return sections;
 }
 
-/** Licznik "gotowe/łącznie" do nagłówka zwiniętej grupy Zug. */
+/** Licznik "gotowe/łącznie" do nagłówka zwiniętej grupy Zug — "gotowe" liczy też pozycje
+ *  ogarnięte/zgłoszone, nie tylko fizycznie podłączone i sprawdzone. */
 export function switchboardGroupDoneSummary(circuits: SwitchboardCircuit[]) {
   const total = circuits.length;
-  const done = circuits.filter((c) => c.status === "podlaczone_i_sprawdzone").length;
+  const done = circuits.filter(
+    (c) => c.status === "podlaczone_i_sprawdzone" || switchboardCircuitIsHandled(c),
+  ).length;
   return { total, done };
 }
 
 export type SwitchboardProgress = {
   total: number;
   counts: Record<SwitchboardCircuitStatus, number>;
+  /** Fizycznie podłączone i sprawdzone LUB ogarnięte/zgłoszone — instalator zamknął sprawę. */
+  doneCount: number;
   doneRatio: number;
 };
 
@@ -199,9 +220,13 @@ export function buildSwitchboardProgress(circuits: SwitchboardCircuit[]): Switch
   ) as Record<SwitchboardCircuitStatus, number>;
   for (const circuit of circuits) counts[circuit.status] += 1;
   const total = circuits.length;
+  const doneCount = circuits.filter(
+    (circuit) => circuit.status === "podlaczone_i_sprawdzone" || switchboardCircuitIsHandled(circuit),
+  ).length;
   return {
     total,
     counts,
-    doneRatio: total > 0 ? counts.podlaczone_i_sprawdzone / total : 0,
+    doneCount,
+    doneRatio: total > 0 ? doneCount / total : 0,
   };
 }

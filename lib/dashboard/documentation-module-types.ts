@@ -1,8 +1,13 @@
 import {
   SWITCHBOARD_CIRCUIT_STATUSES,
+  SWITCHBOARD_HANDLED_BADGE_CLASS,
   type SwitchboardCircuitStatus,
 } from "@/lib/dashboard/switchboard-types";
 import type { DocumentationSheetType } from "@/lib/process/types";
+
+// Ta sama semantyka co switchboardCircuitIsHandled/SWITCHBOARD_HANDLED_BADGE_CLASS — jeden kolor,
+// wspólny dla Rozdzielni i pięciu modułów siostrzanych.
+export const DOCUMENTATION_MODULE_HANDLED_BADGE_CLASS = SWITCHBOARD_HANDLED_BADGE_CLASS;
 
 export type DocumentationModuleType = Exclude<DocumentationSheetType, "rw_zugi">;
 
@@ -99,9 +104,20 @@ export function groupDocumentationModuleItemsBySection(
   return groups;
 }
 
+/** Instalator przekazał sprawę dalej (zgłosił do biura albo ręcznie ogarnął) — z jego perspektywy
+ *  pozycja jest zamknięta, niezależnie od statusu montażu. Manager decyduje co dalej przy zamykaniu
+ *  etapu. */
+export function documentationModuleItemIsHandled(
+  item: Pick<DocumentationModuleItem, "handledAt" | "employeeReportId">,
+): boolean {
+  return Boolean(item.handledAt) || Boolean(item.employeeReportId);
+}
+
 export type DocumentationModuleProgress = {
   total: number;
   counts: Record<SwitchboardCircuitStatus, number>;
+  /** Fizycznie podłączone i sprawdzone LUB ogarnięte/zgłoszone — instalator zamknął sprawę. */
+  doneCount: number;
   doneRatio: number;
 };
 
@@ -113,7 +129,10 @@ export function buildDocumentationModuleProgress(
   ) as Record<SwitchboardCircuitStatus, number>;
   for (const item of items) counts[item.status] += 1;
   const total = items.length;
-  return { total, counts, doneRatio: total > 0 ? counts.podlaczone_i_sprawdzone / total : 0 };
+  const doneCount = items.filter(
+    (item) => item.status === "podlaczone_i_sprawdzone" || documentationModuleItemIsHandled(item),
+  ).length;
+  return { total, counts, doneCount, doneRatio: total > 0 ? doneCount / total : 0 };
 }
 
 export function buildDocumentationModuleReportDescription(

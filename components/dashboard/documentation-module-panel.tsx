@@ -33,9 +33,11 @@ import {
   type SwitchboardCircuitStatus,
 } from "@/lib/dashboard/switchboard-types";
 import {
+  DOCUMENTATION_MODULE_HANDLED_BADGE_CLASS,
   DOCUMENTATION_MODULE_LABELS,
   buildDocumentationModuleProgress,
   buildDocumentationModuleReportDescription,
+  documentationModuleItemIsHandled,
   documentationModuleItemLabel,
   groupDocumentationModuleItemsBySection,
   type DocumentationModule,
@@ -88,12 +90,14 @@ function formatDateTime(value: string) {
 
 function ItemCard({ item, onClick }: { item: DocumentationModuleItem; onClick: () => void }) {
   const rawEntries = Object.entries(item.rawFields).filter(([, value]) => value);
+  const handled = documentationModuleItemIsHandled(item);
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
         "flex min-w-0 items-start justify-between gap-3 rounded-xl border border-border/70 bg-surface-muted/10 p-3 text-left transition hover:border-accent/30",
+        handled && "border-blue-500/30 bg-blue-500/5",
         item.isStale && "opacity-60",
       )}
     >
@@ -120,10 +124,10 @@ function ItemCard({ item, onClick }: { item: DocumentationModuleItem; onClick: (
       <span
         className={cn(
           "shrink-0 rounded-full border px-2 py-1 text-[11px] font-medium",
-          SWITCHBOARD_CIRCUIT_STATUS_BADGE_CLASS[item.status],
+          handled ? DOCUMENTATION_MODULE_HANDLED_BADGE_CLASS : SWITCHBOARD_CIRCUIT_STATUS_BADGE_CLASS[item.status],
         )}
       >
-        {SWITCHBOARD_CIRCUIT_STATUS_LABELS[item.status]}
+        {handled ? "Ogarnięte" : SWITCHBOARD_CIRCUIT_STATUS_LABELS[item.status]}
       </span>
     </button>
   );
@@ -542,7 +546,7 @@ function ModuleHeaderBar({
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted">
-          {progress.counts.podlaczone_i_sprawdzone}/{progress.total} podłączone i sprawdzone (
+          {progress.doneCount}/{progress.total} gotowe (podłączone i sprawdzone lub ogarnięte) (
           {progress.total > 0 ? Math.round(progress.doneRatio * 100) : 0}%)
         </p>
 
@@ -705,9 +709,9 @@ export function DocumentationModulePanel({
     const progress = buildDocumentationModuleProgress(activeEntry.items);
     if (
       !window.confirm(
-        progress.total > 0 && progress.counts.podlaczone_i_sprawdzone < progress.total
-          ? `${progress.total - progress.counts.podlaczone_i_sprawdzone} pozycji nie jest jeszcze ` +
-              `"Podłączone i sprawdzone". Na pewno oznaczyć moduł jako zakończony?`
+        progress.total > 0 && progress.doneCount < progress.total
+          ? `${progress.total - progress.doneCount} pozycji nie jest jeszcze gotowych ` +
+              `(podłączone i sprawdzone albo ogarnięte). Na pewno oznaczyć moduł jako zakończony?`
           : "Na pewno oznaczyć moduł jako zakończony?",
       )
     ) {
@@ -830,7 +834,9 @@ export function DocumentationModulePanel({
               {sections.map((section) => {
                 const sectionKey = `section::${section.sectionName ?? ""}`;
                 const sectionCollapsed = collapsedSections.has(sectionKey);
-                const doneCount = section.items.filter((i) => i.status === "podlaczone_i_sprawdzone").length;
+                const doneCount = section.items.filter(
+                  (i) => i.status === "podlaczone_i_sprawdzone" || documentationModuleItemIsHandled(i),
+                ).length;
 
                 return (
                   <div key={sectionKey} className="grid gap-2">
@@ -847,7 +853,7 @@ export function DocumentationModulePanel({
                         )}
                         {section.sectionName}
                         <span className="font-normal text-muted">
-                          — {doneCount}/{section.items.length} podłączone i sprawdzone
+                          — {doneCount}/{section.items.length} gotowe
                         </span>
                       </button>
                     ) : null}
