@@ -47,6 +47,10 @@ import { canOpenProcessItem } from "@/lib/process/item-access";
 import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
 import { ensureKanbanBoard } from "@/lib/supabase/kanban-repository";
 import { useKanbanCacheStore } from "@/store/kanban-cache-store";
+import { buildSwitchboardProgress } from "@/lib/dashboard/switchboard-types";
+import { fetchSwitchboardsWithCircuits } from "@/lib/supabase/switchboard-repository";
+import { buildDocumentationModuleProgress } from "@/lib/dashboard/documentation-module-types";
+import { fetchDocumentationModulesWithItems } from "@/lib/supabase/documentation-module-repository";
 import {
   buildAgreementBlockSources,
   buildProcessItemBlockSources,
@@ -56,8 +60,10 @@ import {
 import {
   findKanbanBoardCandidates,
   flattenProcessItems,
+  isArkuszDokumentacjiPayload,
   PROCESS_ITEM_KIND_LABELS,
   type ChecklistItemPayload,
+  type DocumentationSheetType,
   type ProcessItem,
   type ProcessItemKind,
   type ProcessTemplate,
@@ -323,6 +329,60 @@ export function ProcessPipeline({
   }
 
   const kanbanBoardCandidates = useMemo(() => findKanbanBoardCandidates(template), [template]);
+
+  // Arkusze importowane (Rozdzielnie + moduly dokumentacyjne) nie maja bezposredniego FK do
+  // elementu szablonu — sa powiazane tylko przez projectId + sheetType/moduleType z ich wlasnego
+  // defaultPayload. Zeby pokazac czytelny procent realizacji na kafelku (a nie dopiero po wejsciu
+  // w liste), doczytujemy postep osobno, raz na widok, dla kazdego wystepujacego w szablonie typu.
+  const arkuszSheetTypes = useMemo(() => {
+    const types = new Set<DocumentationSheetType>();
+    for (const entry of flattenProcessItems(template)) {
+      if (entry.kind === "arkusz_dokumentacji" && isArkuszDokumentacjiPayload(entry.defaultPayload)) {
+        types.add(entry.defaultPayload.sheetType);
+      }
+    }
+    return [...types];
+  }, [template]);
+
+  const [arkuszProgress, setArkuszProgress] = useState<
+    Partial<Record<DocumentationSheetType, { done: number; total: number }>>
+  >({});
+
+  useEffect(() => {
+    if (!interactive || !projectId || !arkuszSheetTypes.length) {
+      return;
+    }
+    let cancelled = false;
+    void Promise.all(
+      arkuszSheetTypes.map(async (sheetType) => {
+        if (sheetType === "rw_zugi") {
+          const boards = await fetchSwitchboardsWithCircuits(projectId);
+          const progress = buildSwitchboardProgress(boards.flatMap((entry) => entry.circuits));
+          return [sheetType, progress] as const;
+        }
+        const modules = await fetchDocumentationModulesWithItems(projectId, sheetType);
+        const progress = buildDocumentationModuleProgress(modules.flatMap((entry) => entry.items));
+        return [sheetType, progress] as const;
+      }),
+    )
+      .then((results) => {
+        if (cancelled) return;
+        setArkuszProgress(
+          Object.fromEntries(
+            results.map(([sheetType, progress]) => [
+              sheetType,
+              { done: progress.doneCount, total: progress.total },
+            ]),
+          ),
+        );
+      })
+      .catch(() => {
+        // Kafelek bez procentu jest lepszy niz wywalenie calego widoku procesu.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [interactive, projectId, arkuszSheetTypes]);
   const [pendingKanbanNote, setPendingKanbanNote] = useState<string | null>(null);
   const [noteBoardPickerOpen, setNoteBoardPickerOpen] = useState(false);
   const [pendingNoteText, setPendingNoteText] = useState("");
@@ -668,13 +728,20 @@ export function ProcessPipeline({
                                 : item.kind === "checklist" && !interactive && hasChecklistLines(item.defaultPayload)
                                   ? checklistProgress(normalizeChecklistPayload(item.defaultPayload))
                                   : null;
+                            const arkuszStats =
+                              item.kind === "arkusz_dokumentacji" &&
+                              isArkuszDokumentacjiPayload(item.defaultPayload)
+                                ? (arkuszProgress[item.defaultPayload.sheetType] ?? null)
+                                : null;
                             const kindLabel = item.isInternalAcceptance
                               ? "Odbiór wewnętrzny"
                               : item.kind === "kanban"
                                 ? PROCESS_ITEM_KIND_LABELS.kanban
                                 : checklistStats && checklistStats.total > 0
                                   ? `${PROCESS_ITEM_KIND_LABELS[item.kind]} · ${checklistStats.total} pkt.`
-                                  : PROCESS_ITEM_KIND_LABELS[item.kind];
+                                  : arkuszStats && arkuszStats.total > 0
+                                    ? `${PROCESS_ITEM_KIND_LABELS[item.kind]} · ${arkuszStats.total} poz.`
+                                    : PROCESS_ITEM_KIND_LABELS[item.kind];
                             const assigneeLabel = instance
                               ? formatAssigneeLabel(instance, stageResponsible?.[stage.id]?.responsibleName)
                               : null;
@@ -713,6 +780,11 @@ export function ProcessPipeline({
                                         {kindLabel}
                                         {checklistStats && checklistStats.total > 0
                                           ? ` · ${checklistStats.completed}/${checklistStats.total} gotowe`
+                                          : ""}
+                                        {arkuszStats && arkuszStats.total > 0
+                                          ? ` · ${arkuszStats.done}/${arkuszStats.total} gotowe (${Math.round(
+                                              (arkuszStats.done / arkuszStats.total) * 100,
+                                            )}%)`
                                           : ""}
                                         {assigneeLabel ? ` · ${assigneeLabel}` : ""}
                                       </span>
