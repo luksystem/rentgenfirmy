@@ -44,6 +44,9 @@ import {
   normalizeChecklistPayload,
 } from "@/lib/process/item-payload";
 import { canOpenProcessItem } from "@/lib/process/item-access";
+import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
+import { ensureKanbanBoard } from "@/lib/supabase/kanban-repository";
+import { useKanbanCacheStore } from "@/store/kanban-cache-store";
 import {
   buildAgreementBlockSources,
   buildProcessItemBlockSources,
@@ -348,6 +351,38 @@ export function ProcessPipeline({
     }
     setPendingNoteText(text);
     setNoteBoardPickerOpen(true);
+  }
+
+  /** "Przenieś na inną tablicę" (kanban-task-detail.tsx) — zakłada/wczytuje wybraną tablicę i
+   *  zwraca jej id + kolumny. Instancja procesu jest tu ensure'owana z pominięciem itemInstances
+   *  propa (moglaby byc nieaktualna od razu po ensureProjectProcessItems), wiec czytamy stan
+   *  store'a bezposrednio zaraz po zapewnieniu, ze jest zaladowany. */
+  async function resolveOtherBoardColumns(targetTemplateItemId: string) {
+    const target = flattenProcessItems(template).find((entry) => entry.id === targetTemplateItemId);
+    if (!target || !projectId) {
+      return null;
+    }
+    let liveInstance = useProcessStore.getState().projectProcessItems[projectId]?.[target.id];
+    if (!liveInstance) {
+      await ensureProjectProcessItems(projectId, template);
+      liveInstance = useProcessStore.getState().projectProcessItems[projectId]?.[target.id];
+    }
+    if (!liveInstance) {
+      return null;
+    }
+    const defaultPayload = isKanbanTemplatePayload(target.defaultPayload)
+      ? target.defaultPayload
+      : { columns: [] };
+    const board =
+      (await useKanbanCacheStore.getState().ensureBoard(liveInstance.id)) ??
+      (await ensureKanbanBoard(liveInstance.id, defaultPayload));
+    if (!board) {
+      return null;
+    }
+    return {
+      projectProcessItemId: liveInstance.id,
+      columns: board.columns.map((column) => ({ id: column.id, title: column.title })),
+    };
   }
 
   return (
@@ -866,6 +901,8 @@ export function ProcessPipeline({
         }
         initialKanbanNote={activeItem?.kind === "kanban" ? pendingKanbanNote : null}
         onConsumeKanbanNote={() => setPendingKanbanNote(null)}
+        kanbanBoardCandidates={interactive ? kanbanBoardCandidates : undefined}
+        onResolveOtherBoardColumns={interactive ? resolveOtherBoardColumns : undefined}
       />
 
       <Dialog open={noteBoardPickerOpen} onOpenChange={setNoteBoardPickerOpen}>

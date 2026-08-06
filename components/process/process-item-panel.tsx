@@ -42,6 +42,7 @@ import {
   isSnapshotTemplatePayload,
   PROCESS_ITEM_KIND_LABELS,
   type ChecklistItemPayload,
+  type KanbanBoardCandidate,
   type ProcessItem,
   type ProcessItemCompletion,
   type ProjectProcessItem,
@@ -84,6 +85,12 @@ type ProcessItemPanelProps = {
   /** Notatka przekazana z checklisty do wstępnego wypełnienia panelu AI na tej tablicy kanban. */
   initialKanbanNote?: string | null;
   onConsumeKanbanNote?: () => void;
+  /** Wszystkie tablice kanban w tym procesie (dowolny etap) — cele "Przenieś na inną tablicę". */
+  kanbanBoardCandidates?: KanbanBoardCandidate[];
+  /** Wczytuje/zakłada wybraną (inną) tablicę kanban i zwraca jej kolumny. */
+  onResolveOtherBoardColumns?: (
+    targetTemplateItemId: string,
+  ) => Promise<{ projectProcessItemId: string; columns: { id: string; title: string }[] } | null>;
 };
 
 export function ProcessItemPanel({
@@ -107,6 +114,8 @@ export function ProcessItemPanel({
   onCreateTasksFromNote,
   initialKanbanNote,
   onConsumeKanbanNote,
+  kanbanBoardCandidates,
+  onResolveOtherBoardColumns,
 }: ProcessItemPanelProps) {
   const [structureDraft, setStructureDraft] = useState<ChecklistItemPayload | null>(null);
   const [structureOpen, setStructureOpen] = useState(false);
@@ -481,6 +490,9 @@ export function ProcessItemPanel({
                 authorName={actorName ?? "Zespół"}
                 showPublicLink
                 embedded
+                templateItemId={item.id}
+                kanbanBoardCandidates={kanbanBoardCandidates}
+                onResolveOtherBoardColumns={onResolveOtherBoardColumns}
                 initialClientText={initialKanbanNote ?? undefined}
                 onConsumeInitialClientText={onConsumeKanbanNote}
                 onOpenTaskCountChange={handleKanbanOpenTaskCountChange}

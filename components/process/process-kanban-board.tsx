@@ -48,6 +48,7 @@ import {
   type RotStatus,
 } from "@/lib/process/kanban-types";
 import { isKanbanTemplatePayload } from "@/lib/process/kanban-payload";
+import type { KanbanBoardCandidate } from "@/lib/process/types";
 import { buildKanbanMentionCandidates, buildKanbanMentionOptionNames } from "@/lib/kanban/mention-candidates";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
@@ -86,6 +87,9 @@ export function ProcessKanbanBoard({
   initialClientText,
   onConsumeInitialClientText,
   onOpenTaskCountChange,
+  templateItemId,
+  kanbanBoardCandidates,
+  onResolveOtherBoardColumns,
 }: {
   projectProcessItemId: string;
   templatePayload: KanbanTemplatePayload | unknown;
@@ -98,6 +102,14 @@ export function ProcessKanbanBoard({
   /** Wołane po każdym załadowaniu/zmianie tablicy z aktualną liczbą zadań otwartych i wszystkich —
    *  do automatycznego domykania elementu procesu, gdy tablica nie ma już aktywnych zadań. */
   onOpenTaskCountChange?: (openCount: number, totalCount: number) => void;
+  /** Id elementu szablonu tej tablicy — do wykluczenia jej samej z listy celów przeniesienia. */
+  templateItemId?: string;
+  /** Wszystkie tablice kanban w tym procesie (dowolny etap) — cele "Przenieś na inną tablicę". */
+  kanbanBoardCandidates?: KanbanBoardCandidate[];
+  /** Wczytuje/zakłada wybraną (inną) tablicę i zwraca jej kolumny. */
+  onResolveOtherBoardColumns?: (
+    targetTemplateItemId: string,
+  ) => Promise<{ projectProcessItemId: string; columns: { id: string; title: string }[] } | null>;
 }) {
   const cachedBoard = useKanbanCacheStore((state) => state.boardsByItemId[projectProcessItemId]);
   const ensureBoard = useKanbanCacheStore((state) => state.ensureBoard);
@@ -285,6 +297,9 @@ export function ProcessKanbanBoard({
   }
 
   const activeTask = board?.tasks.find((task) => task.id === activeTaskId) ?? null;
+  const otherBoardCandidates = (kanbanBoardCandidates ?? []).filter(
+    (candidate) => candidate.templateItemId !== templateItemId,
+  );
   const dragTask = dragTaskId ? (board?.tasks.find((task) => task.id === dragTaskId) ?? null) : null;
   const activeComments = board?.comments.filter((c) => c.taskId === activeTaskId) ?? [];
   const activeReactions = board?.reactions ?? [];
@@ -792,6 +807,16 @@ export function ProcessKanbanBoard({
               (task) => task.columnId === columnId && task.id !== activeTask.id,
             );
             await moveKanbanTask(activeTask.id, columnId, columnTasks.length);
+            await refresh();
+          }}
+          boardCandidates={otherBoardCandidates}
+          onMoveToOtherBoard={onResolveOtherBoardColumns}
+          onConfirmMoveToOtherBoard={async (targetProjectProcessItemId, targetColumnId) => {
+            const targetBoard = useKanbanCacheStore.getState().boardsByItemId[targetProjectProcessItemId];
+            const position = targetBoard
+              ? targetBoard.tasks.filter((task) => task.columnId === targetColumnId).length
+              : 0;
+            await moveKanbanTask(activeTask.id, targetColumnId, position);
             await refresh();
           }}
           canDelete={authorSide === "team"}

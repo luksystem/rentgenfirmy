@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, History, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, History, Pencil, Trash2 } from "lucide-react";
 import { KanbanPriorityPicker } from "@/components/process/kanban-task-card";
 import {
   KanbanTaskAssigneeFields,
@@ -31,6 +31,7 @@ import type {
   KanbanTaskReaction,
 } from "@/lib/process/kanban-types";
 import { isOwnKanbanComment } from "@/lib/process/kanban-types";
+import type { KanbanBoardCandidate } from "@/lib/process/types";
 import type { DictionaryItem } from "@/lib/resource-plan/dictionary-types";
 import type { UserResourceProfile } from "@/lib/resource-plan/user-resource-types";
 import type { UserProfile } from "@/lib/auth/types";
@@ -53,6 +54,9 @@ export function KanbanTaskDetailModal({
   columns,
   currentColumnId,
   onMoveToColumn,
+  boardCandidates,
+  onMoveToOtherBoard,
+  onConfirmMoveToOtherBoard,
   assigneeOptions = [],
   mentionOptions = [],
   teamProfiles = [],
@@ -85,6 +89,14 @@ export function KanbanTaskDetailModal({
   columns?: { id: string; title: string }[];
   currentColumnId?: string;
   onMoveToColumn?: (columnId: string) => Promise<void>;
+  /** Inne tablice kanban w tym samym procesie (wykluczając bieżącą) — cel przeniesienia zadania. */
+  boardCandidates?: KanbanBoardCandidate[];
+  /** Wczytuje/zakłada wybraną tablicę i zwraca jej kolumny do wyboru w drugim kroku. */
+  onMoveToOtherBoard?: (
+    targetTemplateItemId: string,
+  ) => Promise<{ projectProcessItemId: string; columns: { id: string; title: string }[] } | null>;
+  /** Wykonuje faktyczne przeniesienie zadania na wybraną kolumnę innej tablicy. */
+  onConfirmMoveToOtherBoard?: (targetProjectProcessItemId: string, targetColumnId: string) => Promise<void>;
   assigneeOptions?: string[];
   mentionOptions?: string[];
   teamProfiles?: UserProfile[];
@@ -132,6 +144,15 @@ export function KanbanTaskDetailModal({
   const [coverUpdatingId, setCoverUpdatingId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [moveStep, setMoveStep] = useState<"board" | "column">("board");
+  const [moveTarget, setMoveTarget] = useState<{
+    projectProcessItemId: string;
+    columns: { id: string; title: string }[];
+  } | null>(null);
+  const [moveTargetTitle, setMoveTargetTitle] = useState("");
+  const [moveLoading, setMoveLoading] = useState(false);
+  const [moveError, setMoveError] = useState<string | null>(null);
   const [isClosingModal, setIsClosingModal] = useState(false);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
   const isFlushingRef = useRef(false);
@@ -279,6 +300,53 @@ export function KanbanTaskDetailModal({
       setError(moveError instanceof Error ? moveError.message : "Nie udało się przenieść zgłoszenia.");
     } finally {
       setIsMoving(false);
+    }
+  }
+
+  function openMoveDialog() {
+    setMoveStep("board");
+    setMoveTarget(null);
+    setMoveTargetTitle("");
+    setMoveError(null);
+    setMoveDialogOpen(true);
+  }
+
+  async function handlePickOtherBoard(candidate: KanbanBoardCandidate) {
+    if (!onMoveToOtherBoard) {
+      return;
+    }
+    setMoveLoading(true);
+    setMoveError(null);
+    try {
+      const resolved = await onMoveToOtherBoard(candidate.templateItemId);
+      if (!resolved || !resolved.columns.length) {
+        setMoveError("Ta tablica nie ma jeszcze żadnej kolumny.");
+        return;
+      }
+      setMoveTarget(resolved);
+      setMoveTargetTitle(`${candidate.stageTitle} → ${candidate.milestoneTitle} → ${candidate.title}`);
+      setMoveStep("column");
+    } catch (pickError) {
+      setMoveError(pickError instanceof Error ? pickError.message : "Nie udało się wczytać tablicy.");
+    } finally {
+      setMoveLoading(false);
+    }
+  }
+
+  async function handleConfirmMoveToOtherBoard(targetColumnId: string) {
+    if (!moveTarget || !onConfirmMoveToOtherBoard) {
+      return;
+    }
+    setMoveLoading(true);
+    setMoveError(null);
+    try {
+      await onConfirmMoveToOtherBoard(moveTarget.projectProcessItemId, targetColumnId);
+      setMoveDialogOpen(false);
+      onClose();
+    } catch (confirmError) {
+      setMoveError(confirmError instanceof Error ? confirmError.message : "Nie udało się przenieść zadania.");
+    } finally {
+      setMoveLoading(false);
     }
   }
 
@@ -567,6 +635,18 @@ export function KanbanTaskDetailModal({
               {isReopening ? "Otwieranie…" : "Otwórz ponownie"}
             </Button>
           )}
+          {boardCandidates && boardCandidates.length > 0 && onMoveToOtherBoard ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={isSaving || isClosing || isReopening || isMoving}
+              onClick={openMoveDialog}
+            >
+              <ArrowRightLeft className="mr-1.5 h-3.5 w-3.5" />
+              Przenieś na inną tablicę
+            </Button>
+          ) : null}
           {canDelete && onDelete ? (
             <Button
               type="button"
@@ -853,6 +933,63 @@ export function KanbanTaskDetailModal({
               className="w-full justify-center"
               disabled={isClosing}
               onClick={() => setCloseConfirmOpen(false)}
+            >
+              Anuluj
+            </Button>
+          </div>
+        </StackedDialogContent>
+      </Dialog>
+
+      <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
+        <StackedDialogContent showCloseButton aria-describedby={undefined}>
+          <DialogTitle className="text-lg font-semibold text-foreground">
+            {moveStep === "board" ? "Przenieś na inną tablicę" : `Wybierz kolumnę — ${moveTargetTitle}`}
+          </DialogTitle>
+          {moveError ? <p className="mt-2 text-sm text-rose-400">{moveError}</p> : null}
+          <div className="mt-4 grid gap-2">
+            {moveStep === "board" ? (
+              (boardCandidates ?? []).map((candidate) => (
+                <Button
+                  key={candidate.templateItemId}
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-start whitespace-normal text-left"
+                  disabled={moveLoading}
+                  onClick={() => void handlePickOtherBoard(candidate)}
+                >
+                  {candidate.stageTitle} → {candidate.milestoneTitle} → {candidate.title}
+                </Button>
+              ))
+            ) : (
+              <>
+                {(moveTarget?.columns ?? []).map((column) => (
+                  <Button
+                    key={column.id}
+                    type="button"
+                    className="w-full justify-center whitespace-normal text-center"
+                    disabled={moveLoading}
+                    onClick={() => void handleConfirmMoveToOtherBoard(column.id)}
+                  >
+                    {moveLoading ? "Przenoszenie…" : column.title}
+                  </Button>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-center"
+                  disabled={moveLoading}
+                  onClick={() => setMoveStep("board")}
+                >
+                  Wstecz
+                </Button>
+              </>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full justify-center"
+              disabled={moveLoading}
+              onClick={() => setMoveDialogOpen(false)}
             >
               Anuluj
             </Button>
