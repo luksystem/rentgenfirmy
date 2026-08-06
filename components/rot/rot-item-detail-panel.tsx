@@ -49,16 +49,28 @@ export function RotItemDetailPanel({
         {item ? (
           <div className="flex h-full min-h-0 flex-col">
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/70 px-4 py-3 sm:px-6">
-              <div className="flex min-w-0 items-center gap-2">
-                <Badge tone="neutral" className="text-[10px]">
-                  {ROT_SOURCE_LABELS[item.sourceType]}
-                </Badge>
-                <Badge tone={item.stageTitle ? "neutral" : "waiting"} className="text-[10px]">
-                  {item.stageTitle ?? "Bez przypisania"}
-                </Badge>
-                <span className="min-w-0 truncate text-sm font-semibold text-foreground">
-                  {item.projectName}
-                </span>
+              <div className="flex min-w-0 flex-col gap-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone="neutral" className="text-[10px]">
+                    {ROT_SOURCE_LABELS[item.sourceType]}
+                  </Badge>
+                  <Badge
+                    tone={item.stageTitle || item.inferredStageTitle ? "neutral" : "waiting"}
+                    className={`text-[10px] ${!item.stageTitle && item.inferredStageTitle ? "opacity-70" : ""}`}
+                  >
+                    {item.stageTitle ?? item.inferredStageTitle ?? "Bez przypisania"}
+                    {!item.stageTitle && item.inferredStageTitle ? " (wywnioskowany)" : ""}
+                  </Badge>
+                  <span className="min-w-0 truncate text-sm font-semibold text-foreground">
+                    {item.projectName}
+                  </span>
+                </div>
+                {item.moveCount != null && item.moveCount > 0 ? (
+                  <p className="text-xs text-amber-300">
+                    Pochodzi z etapu {item.originStageTitle ?? "nieznanego"}, przeniesiona {item.moveCount}×,
+                    czeka na: {item.carryOverReason ?? "—"}.
+                  </p>
+                ) : null}
               </div>
               <div className="flex items-center gap-1.5">
                 <Button

@@ -30,6 +30,19 @@ const STATUS_TONES: Record<RotStatus, "waiting" | "blue" | "closed"> = {
   ZAMKNIETE: "closed",
 };
 
+const UNASSIGNED_STAGE_KEY = "__bez_przypisania__";
+
+/** Klucz i etykieta etapu pozycji — wskazany (stageId) ma pierwszeństwo przed wywnioskowanym
+ *  (nigdy nie występują razem, patrz migracja 309). Klucz po id, nie po tytule — ten sam etap w
+ *  dwóch projektach ma ten sam process_stages.id. */
+function stageOf(item: RotItem): { key: string; title: string; inferred: boolean } {
+  if (item.stageId) return { key: item.stageId, title: item.stageTitle ?? item.stageId, inferred: false };
+  if (item.inferredStageId) {
+    return { key: item.inferredStageId, title: item.inferredStageTitle ?? item.inferredStageId, inferred: true };
+  }
+  return { key: UNASSIGNED_STAGE_KEY, title: "Bez przypisania", inferred: false };
+}
+
 function RotItemRow({
   item,
   onOpenDetail,
@@ -37,6 +50,7 @@ function RotItemRow({
   onSaveReviewDate,
   onMarkReviewed,
   thresholds,
+  showStatusBadge,
 }: {
   item: RotItem;
   onOpenDetail: (item: RotItem) => void;
@@ -44,12 +58,17 @@ function RotItemRow({
   onSaveReviewDate: (item: RotItem, date: string | null) => Promise<void>;
   onMarkReviewed: (item: RotItem) => Promise<void>;
   thresholds: PolicyThresholds;
+  /** Widok "Wg etapu" miesza statusy w jednej sekcji — status trzeba wtedy pokazać w wierszu,
+   *  żeby nie zgubić informacji, którą normalnie niesie nagłówek sekcji. */
+  showStatusBadge?: boolean;
 }) {
   const stale = item.rotStatus !== "ZAMKNIETE" && item.daysOpen > thresholds.rotStagnationDays;
   const isAutoReviewDate = !item.reviewDate;
   const effectiveReviewDate = item.effectiveReviewDate;
   const reviewOverdue =
     item.rotStatus !== "ZAMKNIETE" && effectiveReviewDate.slice(0, 10) < toLocalIsoDate(new Date());
+  const stage = stageOf(item);
+  const carriedOver = item.moveCount != null && item.moveCount > 0;
   return (
     <div className="flex flex-col gap-1.5 rounded-xl border border-border/60 bg-surface-muted/10 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -65,12 +84,25 @@ function RotItemRow({
           <Badge tone="neutral" className="text-[10px]">
             {ROT_SOURCE_LABELS[item.sourceType]}
           </Badge>
-          <Badge tone={item.stageTitle ? "neutral" : "waiting"} className="text-[10px]">
-            {item.stageTitle ?? "Bez przypisania"}
-          </Badge>
-          {item.moveCount != null && item.moveCount > 0 ? (
-            <Badge tone={item.moveCount >= 3 ? "critical" : "waiting"} className="text-[10px]">
-              {item.moveCount >= 3 ? <AlertTriangle className="h-3 w-3" /> : null}
+          {showStatusBadge ? (
+            <Badge tone={STATUS_TONES[item.rotStatus]} className="text-[10px]">
+              {ROT_STATUS_LABELS[item.rotStatus]}
+            </Badge>
+          ) : null}
+          <span
+            title={stage.inferred ? "Wywnioskowany z project_stage_history — nikt tego nie wskazał wprost." : undefined}
+          >
+            <Badge
+              tone={stage.key === UNASSIGNED_STAGE_KEY ? "waiting" : "neutral"}
+              className={`text-[10px] ${stage.inferred ? "opacity-70" : ""}`}
+            >
+              {stage.title}
+              {stage.inferred ? " (wywnioskowany)" : ""}
+            </Badge>
+          </span>
+          {carriedOver ? (
+            <Badge tone={item.moveCount! >= 3 ? "critical" : "waiting"} className="text-[10px]">
+              {item.moveCount! >= 3 ? <AlertTriangle className="h-3 w-3" /> : null}
               przeniesiono {item.moveCount}×
             </Badge>
           ) : null}
@@ -128,6 +160,12 @@ function RotItemRow({
       </div>
       <p className="text-sm text-foreground/90">{item.title}</p>
       {item.detail ? <p className="text-xs text-muted">{item.detail}</p> : null}
+      {carriedOver ? (
+        <p className="text-xs text-amber-300">
+          Pochodzi z etapu {item.originStageTitle ?? "nieznanego"}, przeniesiona {item.moveCount}×, czeka
+          na: {item.carryOverReason ?? "—"}.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -137,6 +175,8 @@ export default function RotPage() {
   const [error, setError] = useState<string | null>(null);
   const [showClosed, setShowClosed] = useState(false);
   const [onlyOverdue, setOnlyOverdue] = useState(false);
+  const [stageFilter, setStageFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"status" | "stage">("status");
   const [thresholds, setThresholds] = useState<PolicyThresholds>(DEFAULT_POLICY_THRESHOLDS);
   const [detailKey, setDetailKey] = useState<string | null>(null);
 
@@ -204,17 +244,55 @@ export default function RotPage() {
     );
   }
 
+  const filteredItems = useMemo(() => {
+    const todayIso = toLocalIsoDate(new Date());
+    return (items ?? []).filter((item) => {
+      if (onlyOverdue && !(item.rotStatus !== "ZAMKNIETE" && item.effectiveReviewDate.slice(0, 10) < todayIso)) {
+        return false;
+      }
+      if (stageFilter !== "all" && stageOf(item).key !== stageFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [items, onlyOverdue, stageFilter]);
+
   const grouped = useMemo(() => {
     const byStatus: Record<RotStatus, RotItem[]> = { CZEKA_NA_ZEWNETRZNE: [], W_TOKU: [], ZAMKNIETE: [] };
-    const todayIso = toLocalIsoDate(new Date());
-    for (const item of items ?? []) {
-      if (onlyOverdue && !(item.rotStatus !== "ZAMKNIETE" && item.effectiveReviewDate.slice(0, 10) < todayIso)) {
-        continue;
-      }
+    for (const item of filteredItems) {
       byStatus[item.rotStatus].push(item);
     }
     return byStatus;
-  }, [items, onlyOverdue]);
+  }, [filteredItems]);
+
+  /** Opcje filtra etapu — po id (stageOf.key), zeby ten sam etap w dwoch projektach byl jednym
+   *  wpisem. Liczone z NIEFILTROWANYCH pozycji, zeby wybranie etapu nie usuwalo go z listy opcji. */
+  const stageOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of items ?? []) {
+      const stage = stageOf(item);
+      if (!map.has(stage.key)) map.set(stage.key, stage.title);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1], "pl"));
+  }, [items]);
+
+  /** Widok "Wg etapu" — dodatkowy wymiar, nie nowa nawigacja: zamkniete pozycje pomijamy (pytanie
+   *  brzmi "co jest otwarte na etapie X", nie "co kiedykolwiek tam bylo"). */
+  const groupedByStage = useMemo(() => {
+    const map = new Map<string, { title: string; items: RotItem[] }>();
+    for (const item of filteredItems) {
+      if (item.rotStatus === "ZAMKNIETE") continue;
+      const stage = stageOf(item);
+      const bucket = map.get(stage.key) ?? { title: stage.title, items: [] };
+      bucket.items.push(item);
+      map.set(stage.key, bucket);
+    }
+    return Array.from(map.entries()).sort(([keyA, a], [keyB, b]) => {
+      if (keyA === UNASSIGNED_STAGE_KEY) return 1;
+      if (keyB === UNASSIGNED_STAGE_KEY) return -1;
+      return a.title.localeCompare(b.title, "pl");
+    });
+  }, [filteredItems]);
 
   function itemKey(item: Pick<RotItem, "sourceType" | "sourceId">) {
     return `${item.sourceType}-${item.sourceId}`;
@@ -226,13 +304,21 @@ export default function RotPage() {
 
   const detailGroup = useMemo(() => {
     if (!detailKey) return [];
+    if (viewMode === "stage") {
+      for (const [, bucket] of groupedByStage) {
+        if (bucket.items.some((row) => itemKey(row) === detailKey)) {
+          return bucket.items;
+        }
+      }
+      return [];
+    }
     for (const status of STATUS_ORDER) {
       if (grouped[status].some((row) => itemKey(row) === detailKey)) {
         return grouped[status];
       }
     }
     return [];
-  }, [detailKey, grouped]);
+  }, [detailKey, grouped, groupedByStage, viewMode]);
 
   const detailIndex = detailGroup.findIndex((row) => itemKey(row) === detailKey);
   const detailItem = detailIndex >= 0 ? detailGroup[detailIndex] : null;
@@ -256,18 +342,87 @@ export default function RotPage() {
         <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p>
       ) : null}
 
-      <label className="mb-3 flex items-center gap-2 text-sm text-muted">
-        <input
-          type="checkbox"
-          checked={onlyOverdue}
-          onChange={(event) => setOnlyOverdue(event.target.checked)}
-          className="h-4 w-4 rounded border-border/70"
-        />
-        Tylko po dacie kontroli
-      </label>
+      <div className="mb-3 flex flex-wrap items-center gap-4">
+        <label className="flex items-center gap-2 text-sm text-muted">
+          <input
+            type="checkbox"
+            checked={onlyOverdue}
+            onChange={(event) => setOnlyOverdue(event.target.checked)}
+            className="h-4 w-4 rounded border-border/70"
+          />
+          Tylko po dacie kontroli
+        </label>
+        <label className="flex items-center gap-2 text-sm text-muted">
+          Etap:
+          <select
+            value={stageFilter}
+            onChange={(event) => setStageFilter(event.target.value)}
+            className="rounded-md border border-border/70 bg-transparent px-2 py-1 text-sm text-foreground"
+          >
+            <option value="all">Wszystkie</option>
+            {stageOptions.map(([key, title]) => (
+              <option key={key} value={key}>
+                {title}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="flex items-center gap-1 text-sm text-muted">
+          Widok:
+          <button
+            type="button"
+            onClick={() => setViewMode("status")}
+            className={`rounded-md border px-2 py-1 text-xs ${
+              viewMode === "status" ? "border-accent/60 text-accent" : "border-border/70 text-muted"
+            }`}
+          >
+            Wg statusu
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("stage")}
+            className={`rounded-md border px-2 py-1 text-xs ${
+              viewMode === "stage" ? "border-accent/60 text-accent" : "border-border/70 text-muted"
+            }`}
+          >
+            Wg etapu
+          </button>
+        </div>
+      </div>
 
       {items === null ? (
         <p className="text-sm text-muted">Ładowanie…</p>
+      ) : viewMode === "stage" ? (
+        <div className="grid gap-4">
+          {groupedByStage.length === 0 ? (
+            <p className="text-sm text-muted">Brak otwartych pozycji.</p>
+          ) : (
+            groupedByStage.map(([key, bucket]) => (
+              <Card key={key}>
+                <CardContent className="grid gap-2 py-5">
+                  <div className="flex items-center gap-2">
+                    <Badge tone={key === UNASSIGNED_STAGE_KEY ? "waiting" : "neutral"}>{bucket.title}</Badge>
+                    <span className="text-xs text-muted">{bucket.items.length}</span>
+                  </div>
+                  <div className="grid gap-2">
+                    {bucket.items.map((item) => (
+                      <RotItemRow
+                        key={`${item.sourceType}-${item.sourceId}`}
+                        item={item}
+                        onOpenDetail={handleOpenDetail}
+                        canEditReview={canEditReview}
+                        onSaveReviewDate={handleSaveReviewDate}
+                        onMarkReviewed={handleMarkReviewed}
+                        thresholds={thresholds}
+                        showStatusBadge
+                      />
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
       ) : (
         <div className="grid gap-4">
           {STATUS_ORDER.filter((status) => status !== "ZAMKNIETE").map((status) => (

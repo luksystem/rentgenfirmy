@@ -49,5 +49,14 @@ export type RotItem = {
   stageTitle: string | null;
   /** Przygotowanie pod 11c (przenoszenie pozycji między etapami) — tylko kanban, reszta zawsze null. */
   originStageId: string | null;
+  originStageTitle: string | null;
   moveCount: number | null;
+  /** Warunek powrotu przy ostatnim przeniesieniu (np. "sufit zamontowany") — tylko kanban, nikt go
+   *  dziś nie ustawia (mechanizm przenoszenia powstaje w 11c). */
+  carryOverReason: string | null;
+  /** Etap WYWNIOSKOWANY z project_stage_history (tylko zmiana/ustalenie BEZ stage_id) — zgadnięcie
+   *  "w którym etapie był projekt w chwili powstania pozycji", nie wskazanie. Nigdy jednocześnie
+   *  z stageId — UI musi jawnie oznaczyć jako "wywnioskowany", nie mylić ze stageId/stageTitle. */
+  inferredStageId: string | null;
+  inferredStageTitle: string | null;
 };

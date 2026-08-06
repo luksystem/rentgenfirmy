@@ -5626,6 +5626,10 @@ export type Database = {
           origin_stage_id: string | null;
           move_count: number | null;
           effective_review_date: string;
+          origin_stage_title: string | null;
+          carry_over_reason: string | null;
+          inferred_stage_id: string | null;
+          inferred_stage_title: string | null;
         }[];
       };
       apply_warranty_extension_from_agreement: {

@@ -38,7 +38,11 @@ export async function fetchRotItems(): Promise<RotItem[]> {
     stageId: row.stage_id,
     stageTitle: row.stage_title,
     originStageId: row.origin_stage_id,
+    originStageTitle: row.origin_stage_title,
     moveCount: row.move_count,
+    carryOverReason: row.carry_over_reason,
+    inferredStageId: row.inferred_stage_id,
+    inferredStageTitle: row.inferred_stage_title,
   }));
 }
 
