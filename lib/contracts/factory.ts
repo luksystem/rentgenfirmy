@@ -1,4 +1,5 @@
 import { createFixedPriceRow } from "@/lib/service/fixed-price";
+import { DEFAULT_CONTRACT_MODULE_SETTINGS } from "@/lib/contracts/module-settings";
 import {
   emptyContractClient,
   emptyContractVatDeclaration,
@@ -69,6 +70,7 @@ export function createEmptyContract(): Contract {
     paymentPlans: [],
     selectedPaymentPlanId: null,
     vatDeclaration: emptyContractVatDeclaration(),
+    inneDiscountPercent: DEFAULT_CONTRACT_MODULE_SETTINGS.inneDiscountPercent,
     publicToken: null,
     tokenExpiresAt: null,
     tokenSentAt: null,

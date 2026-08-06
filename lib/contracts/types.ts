@@ -229,6 +229,9 @@ export type Contract = {
   selectedPaymentPlanId: string | null;
   /** Deklaracja rozliczenia VAT wybrana przez klienta przy podpisie. */
   vatDeclaration: ContractVatDeclaration;
+  /** Rabat % za rozliczenie "inne" (gotówka) — domyślnie z ustawień modułu w momencie utworzenia
+   * umowy, dalej edytowalny per umowa (patrz `lib/contracts/module-settings.ts`). */
+  inneDiscountPercent: number;
   publicToken: string | null;
   tokenExpiresAt: string | null;
   tokenSentAt: string | null;

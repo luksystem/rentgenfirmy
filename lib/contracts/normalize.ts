@@ -1,5 +1,6 @@
 import { normalizeFixedPriceRow } from "@/lib/service/fixed-price";
 import type { ServiceFixedPriceRow } from "@/lib/service/types";
+import { DEFAULT_CONTRACT_MODULE_SETTINGS } from "@/lib/contracts/module-settings";
 import {
   CONTRACT_BUILDING_TYPES,
   CONTRACT_HISTORY_TYPES,
@@ -213,6 +214,14 @@ export function normalizeContractVatDeclaration(value: unknown): ContractVatDecl
     areaM2: Number.isFinite(areaM2) && areaM2 > 0 ? areaM2 : null,
     innePercent: Math.min(100, Math.max(0, asNumber(data.innePercent))),
   };
+}
+
+/** Brak wartości w bazie (stare umowy sprzed tego pola) -> domyślna z ustawień modułu. */
+export function normalizeInneDiscountPercent(value: unknown): number {
+  if (value === null || value === undefined) {
+    return DEFAULT_CONTRACT_MODULE_SETTINGS.inneDiscountPercent;
+  }
+  return Math.min(100, Math.max(0, asNumber(value, DEFAULT_CONTRACT_MODULE_SETTINGS.inneDiscountPercent)));
 }
 
 export function isContractExpired(contract: Pick<Contract, "tokenExpiresAt" | "status">) {

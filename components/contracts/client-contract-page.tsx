@@ -15,9 +15,7 @@ import {
   type Contract,
   type ContractVatDeclaration,
 } from "@/lib/contracts/types";
-import { DEFAULT_CONTRACT_MODULE_SETTINGS, type ContractModuleSettings } from "@/lib/contracts/module-settings";
 import { fetchCompanyProfile } from "@/lib/supabase/company-profile-repository";
-import { fetchContractModuleSettings } from "@/lib/supabase/contract-module-settings-repository";
 
 type LoadState = {
   contract: Contract;
@@ -37,14 +35,10 @@ export function ClientContractPage({ token }: { token: string }) {
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const [selectedPaymentPlanId, setSelectedPaymentPlanId] = useState<string | null>(null);
   const [vatDeclaration, setVatDeclaration] = useState<ContractVatDeclaration>(emptyContractVatDeclaration());
-  const [moduleSettings, setModuleSettings] = useState<ContractModuleSettings>(DEFAULT_CONTRACT_MODULE_SETTINGS);
 
   useEffect(() => {
     void fetchCompanyProfile()
       .then((profile) => setCompany(resolveCompanyProfileDocument(profile)))
-      .catch(() => undefined);
-    void fetchContractModuleSettings()
-      .then(setModuleSettings)
       .catch(() => undefined);
   }, []);
 
@@ -178,7 +172,6 @@ export function ClientContractPage({ token }: { token: string }) {
           }
           vatDeclaration={vatDeclaration}
           onChangeVatDeclaration={canInteract ? setVatDeclaration : undefined}
-          moduleSettings={moduleSettings}
         />
 
         {canInteract ? (

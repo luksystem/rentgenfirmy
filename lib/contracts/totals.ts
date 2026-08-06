@@ -1,6 +1,5 @@
 import { computeFixedPriceRowGrossNet, computeFixedPriceRowNetValue } from "@/lib/service/fixed-price";
 import type { ServiceFixedPriceRow } from "@/lib/service/types";
-import type { ContractModuleSettings } from "@/lib/contracts/module-settings";
 import {
   isContractTableSection,
   type ContractPaymentPlan,
@@ -218,18 +217,20 @@ export type ContractVatBreakdown = {
  * Rozliczenie VAT na podstawie deklaracji klienta — stawka dla części "normalnej" zależy od typu
  * płatnika (firma = 23% zawsze; osoba prywatna = 8%/23% wg progu powierzchni, proporcjonalnie przy
  * przekroczeniu progu), a część oznaczona jako "inne" (gotówka) idzie z 0% VAT i dodatkowym
- * rabatem z ustawień modułu. Gdy dane o powierzchni jeszcze nie są uzupełnione, konserwatywnie
- * liczy 23% (żeby nie zaniżać ceny) i sygnalizuje to przez `needsAreaDeclaration`.
+ * rabatem `inneDiscountPercent` — to pole żyje na samej umowie (domyślnie z ustawień modułu w
+ * momencie utworzenia, dalej edytowalne per umowa), nie jest tu na nowo odczytywane z ustawień
+ * globalnych. Gdy dane o powierzchni jeszcze nie są uzupełnione, konserwatywnie liczy 23% (żeby
+ * nie zaniżać ceny) i sygnalizuje to przez `needsAreaDeclaration`.
  */
 export function calculateVatBreakdown(
   totalNet: number,
   declaration: ContractVatDeclaration,
-  settings: ContractModuleSettings,
+  inneDiscountPercent: number,
 ): ContractVatBreakdown {
   const innePercent = Math.min(100, Math.max(0, declaration.innePercent));
   const inneNet = roundMoney(totalNet * (innePercent / 100));
   const normalNet = roundMoney(totalNet - inneNet);
-  const inneDiscount = roundMoney(inneNet * (settings.inneDiscountPercent / 100));
+  const inneDiscount = roundMoney(inneNet * (inneDiscountPercent / 100));
   const inneFinal = roundMoney(inneNet - inneDiscount);
 
   let normalVatRatePercent = VAT_RATE_STANDARD;
@@ -258,7 +259,7 @@ export function calculateVatBreakdown(
 
   return {
     inneNet,
-    inneDiscountPercent: settings.inneDiscountPercent,
+    inneDiscountPercent,
     inneDiscount,
     inneFinal,
     normalNet,

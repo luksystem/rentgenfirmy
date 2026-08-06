@@ -1888,6 +1888,7 @@ export type ContractRow = {
   payment_plans: unknown;
   selected_payment_plan_id: string | null;
   vat_declaration: unknown;
+  inne_discount_percent: number | null;
   public_token: string | null;
   token_expires_at: string | null;
   token_sent_at: string | null;
@@ -1916,6 +1917,7 @@ export type ContractInsert = {
   payment_plans?: unknown;
   selected_payment_plan_id?: string | null;
   vat_declaration?: unknown;
+  inne_discount_percent?: number | null;
   public_token?: string | null;
   token_expires_at?: string | null;
   token_sent_at?: string | null;

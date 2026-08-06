@@ -10,6 +10,7 @@ import { OfferEmailPreviewDialog } from "@/components/service/offer-email-previe
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import {
   buildContractMailtoUrl,
   canShareContract,
@@ -85,7 +86,17 @@ export function ContractForm({ initialContract }: { initialContract: Contract })
   }, []);
 
   useEffect(() => {
-    void fetchContractModuleSettings().then(setModuleSettings).catch(() => undefined);
+    void fetchContractModuleSettings()
+      .then((settings) => {
+        setModuleSettings(settings);
+        // Nowa, jeszcze niezapisana umowa -> podciągnij aktualny domyślny rabat "inne" z ustawień
+        // (fabryka mogła użyć nieaktualnej stałej, zanim ustawienia zdążyły się pobrać).
+        if (isNew) {
+          setContract((prev) => ({ ...prev, inneDiscountPercent: settings.inneDiscountPercent }));
+        }
+      })
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const totals = calculateContractTotals(contract.sections);
@@ -392,6 +403,16 @@ export function ContractForm({ initialContract }: { initialContract: Contract })
             Wartość umowy (główna, bez opcji): <span className="font-semibold text-foreground">{formatMoney(totals.totalNet)} netto</span>
             {" "}— VAT dolicza się dopiero po wyborze rozliczenia przez klienta przy podpisywaniu.
           </p>
+
+          <Field
+            label={`Rabat za rozliczenie „inne” (%) — domyślnie ${moduleSettings.inneDiscountPercent}% z Umowy → Ustawienia, można nadpisać na tej umowie`}
+            className="sm:max-w-xs"
+          >
+            <NumericInput
+              value={contract.inneDiscountPercent}
+              onChange={(value) => setContract({ ...contract, inneDiscountPercent: Math.min(100, Math.max(0, value)) })}
+            />
+          </Field>
 
           {hasLink && !isNew ? (
             <div className="grid gap-1 text-sm text-muted">

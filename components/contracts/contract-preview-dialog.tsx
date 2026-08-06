@@ -11,12 +11,7 @@ import {
   type Contract,
   type ContractVatDeclaration,
 } from "@/lib/contracts/types";
-import {
-  DEFAULT_CONTRACT_MODULE_SETTINGS,
-  type ContractModuleSettings,
-} from "@/lib/contracts/module-settings";
 import { fetchCompanyProfile } from "@/lib/supabase/company-profile-repository";
-import { fetchContractModuleSettings } from "@/lib/supabase/contract-module-settings-repository";
 
 /**
  * Podgląd umowy dokładnie tak, jak zobaczy ją klient — reużywa `ContractDocumentView` z
@@ -56,7 +51,6 @@ export function ContractPreviewDialog({
   const [vatDeclaration, setVatDeclaration] = useState<ContractVatDeclaration>(
     contract.vatDeclaration ?? emptyContractVatDeclaration(),
   );
-  const [moduleSettings, setModuleSettings] = useState<ContractModuleSettings>(DEFAULT_CONTRACT_MODULE_SETTINGS);
 
   useEffect(() => {
     if (!open || company) {
@@ -64,9 +58,6 @@ export function ContractPreviewDialog({
     }
     void fetchCompanyProfile()
       .then((profile) => setCompany(resolveCompanyProfileDocument(profile)))
-      .catch(() => undefined);
-    void fetchContractModuleSettings()
-      .then(setModuleSettings)
       .catch(() => undefined);
   }, [open, company]);
 
@@ -109,7 +100,6 @@ export function ContractPreviewDialog({
           }}
           vatDeclaration={vatDeclaration}
           onChangeVatDeclaration={setVatDeclaration}
-          moduleSettings={moduleSettings}
         />
       </DialogContent>
     </Dialog>

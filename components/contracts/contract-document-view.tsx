@@ -5,7 +5,6 @@ import type { CompanyProfileDocument } from "@/lib/company/company-profile-docum
 import { Field } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { computeFixedPriceRowNetValue } from "@/lib/service/fixed-price";
-import type { ContractModuleSettings } from "@/lib/contracts/module-settings";
 import {
   allSelectionKeys,
   calculateContractTotals,
@@ -48,7 +47,6 @@ export function ContractDocumentView({
   onSelectPaymentPlan,
   vatDeclaration,
   onChangeVatDeclaration,
-  moduleSettings,
 }: {
   contract: Contract;
   selectedKeys: Set<string>;
@@ -61,7 +59,6 @@ export function ContractDocumentView({
   vatDeclaration: ContractVatDeclaration;
   /** Gdy pominięte, deklaracja VAT jest tylko do odczytu. */
   onChangeVatDeclaration?: (next: ContractVatDeclaration) => void;
-  moduleSettings: ContractModuleSettings;
 }) {
   // Mapa musi pokrywać WSZYSTKIE klucze (true i false), nie tylko zaznaczone — inaczej
   // odznaczenie pozycji domyślnie zaznaczonej w danych umowy nie miałoby żadnego efektu
@@ -74,7 +71,7 @@ export function ContractDocumentView({
     contract.paymentPlans.find((plan) => plan.id === selectedPaymentPlanId) ?? contract.paymentPlans[0] ?? null;
 
   const totals = calculateContractTotals(contract.sections, { selectionOverrides, paymentPlan: effectivePlan });
-  const vatBreakdown = calculateVatBreakdown(totals.totalNet, vatDeclaration, moduleSettings);
+  const vatBreakdown = calculateVatBreakdown(totals.totalNet, vatDeclaration, contract.inneDiscountPercent);
   const scaleToFinal = totals.totalNet > 0 ? vatBreakdown.finalTotal / totals.totalNet : 1;
   const scheduleAmounts = effectivePlan ? calculatePaymentPlanInstallmentAmounts(effectivePlan, totals) : [];
 
@@ -478,7 +475,7 @@ export function ContractDocumentView({
               ) : null}
 
               <Field
-                label={`% kwoty rozliczane jako „inne” — gotówka, 0% VAT, rabat ${moduleSettings.inneDiscountPercent}%`}
+                label={`% kwoty rozliczane jako „inne” — gotówka, 0% VAT, rabat ${contract.inneDiscountPercent}%`}
                 className="sm:max-w-sm"
               >
                 <NumericInput

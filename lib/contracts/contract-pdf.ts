@@ -1,7 +1,6 @@
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, type PDFFont } from "pdf-lib";
 import { companyDisplayName, companyFooterLines, type CompanyProfile } from "@/lib/company/company-profile";
-import { DEFAULT_CONTRACT_MODULE_SETTINGS } from "@/lib/contracts/module-settings";
 import { renderContractText } from "@/lib/contracts/render-text";
 import {
   calculateContractTotals,
@@ -11,7 +10,6 @@ import {
 } from "@/lib/contracts/totals";
 import { CONTRACT_OPTION_CATEGORY_LABELS, isContractTableSection, isContractTextSection, type Contract } from "@/lib/contracts/types";
 import { computeFixedPriceRowNetValue } from "@/lib/service/fixed-price";
-import { fetchContractModuleSettings } from "@/lib/supabase/contract-module-settings-repository";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 
 /**
@@ -127,8 +125,7 @@ export async function generateContractPdf(params: {
     contract.paymentPlans[0] ??
     null;
   const totals = calculateContractTotals(contract.sections, { paymentPlan: effectivePlan });
-  const moduleSettings = await fetchContractModuleSettings().catch(() => DEFAULT_CONTRACT_MODULE_SETTINGS);
-  const vatBreakdown = calculateVatBreakdown(totals.totalNet, contract.vatDeclaration, moduleSettings);
+  const vatBreakdown = calculateVatBreakdown(totals.totalNet, contract.vatDeclaration, contract.inneDiscountPercent);
   const scaleToFinal = totals.totalNet > 0 ? vatBreakdown.finalTotal / totals.totalNet : 1;
 
   for (const section of contract.sections) {
@@ -193,8 +190,24 @@ export async function generateContractPdf(params: {
   if (totals.itemDiscountNet > 0) {
     drawWrapped(`Rabat na pozycjach: ${formatMoney(totals.itemDiscountNet)}`, fonts.regular, 10, 14);
   }
-  if (totals.categoryDiscountNet > 0) {
-    drawWrapped(`Rabat za wybrane kategorie: ${formatMoney(totals.categoryDiscountNet)}`, fonts.regular, 10, 14);
+  for (const section of contract.sections) {
+    if (
+      !isContractTableSection(section) ||
+      section.group !== "option" ||
+      section.category === "dodatki" ||
+      !section.category ||
+      section.categoryDiscountPercent <= 0 ||
+      !section.selected
+    ) {
+      continue;
+    }
+    const catDiscount = calculateTableNetTotal(section) * (section.categoryDiscountPercent / 100);
+    drawWrapped(
+      `Rabat „${CONTRACT_OPTION_CATEGORY_LABELS[section.category]}” — ${section.title || "tabela"} (${section.categoryDiscountPercent}%): ${formatMoney(catDiscount)}`,
+      fonts.regular,
+      10,
+      14,
+    );
   }
   if (effectivePlan && effectivePlan.discountPercent > 0) {
     drawWrapped(

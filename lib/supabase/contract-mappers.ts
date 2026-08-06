@@ -14,6 +14,7 @@ import {
   normalizeContractSections,
   normalizeContractStatus,
   normalizeContractVatDeclaration,
+  normalizeInneDiscountPercent,
 } from "@/lib/contracts/normalize";
 import type { Contract, ContractContentBlock, ContractTemplate } from "@/lib/contracts/types";
 
@@ -37,6 +38,7 @@ export function rowToContract(row: ContractRow): Contract {
     paymentPlans: normalizeContractPaymentPlans(row.payment_plans),
     selectedPaymentPlanId: row.selected_payment_plan_id,
     vatDeclaration: normalizeContractVatDeclaration(row.vat_declaration),
+    inneDiscountPercent: normalizeInneDiscountPercent(row.inne_discount_percent),
     publicToken: row.public_token,
     tokenExpiresAt: row.token_expires_at,
     tokenSentAt: row.token_sent_at,
@@ -67,6 +69,7 @@ export function contractToInsert(contract: Contract): ContractInsert {
     payment_plans: contract.paymentPlans as unknown,
     selected_payment_plan_id: contract.selectedPaymentPlanId,
     vat_declaration: contract.vatDeclaration as unknown,
+    inne_discount_percent: contract.inneDiscountPercent,
     public_token: contract.publicToken,
     token_expires_at: contract.tokenExpiresAt,
     token_sent_at: contract.tokenSentAt,
