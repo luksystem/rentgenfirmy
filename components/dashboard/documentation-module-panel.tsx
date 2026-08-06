@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Check,
+  CheckCheck,
   ChevronDown,
   ChevronRight,
   Clock,
@@ -21,6 +22,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  StackedDialogContent,
 } from "@/components/ui/dialog";
 import { MobileFiltersPanel } from "@/components/mobile-filters-panel";
 import { ItemEscalationActions } from "@/components/process/item-escalation-actions";
@@ -160,6 +162,9 @@ function ItemStatusDialog({
   const [history, setHistory] = useState<DocumentationModuleItemHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [savingField, setSavingField] = useState<string | null>(null);
+  const [handledDialogOpen, setHandledDialogOpen] = useState(false);
+  const [handledReason, setHandledReason] = useState("");
+  const [handledError, setHandledError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !item) return;
@@ -167,6 +172,9 @@ function ItemStatusDialog({
     setNote(item.note ?? "");
     setError(null);
     setLatest(item);
+    setHandledDialogOpen(false);
+    setHandledReason("");
+    setHandledError(null);
     setHistoryLoading(true);
     fetchDocumentationModuleItemHistory(item.id)
       .then(setHistory)
@@ -234,7 +242,25 @@ function ItemStatusDialog({
     onSaved(updated);
   }
 
+  async function handleConfirmMarkHandled() {
+    if (!handledReason.trim()) {
+      setHandledError("Podaj krótki komentarz.");
+      return;
+    }
+    try {
+      await handleMarkHandled(handledReason.trim());
+      setHandledDialogOpen(false);
+      setHandledReason("");
+      setHandledError(null);
+    } catch (err) {
+      setHandledError(err instanceof Error ? err.message : "Nie udało się zapisać.");
+    }
+  }
+
   const alreadyHandled = Boolean(current.handledAt);
+  // Przy Problemie nie ma skrotu do "Ogarniete" — trzeba realnie eskalowac (Zglos do
+  // biura/zapotrzebowanie), tak samo jak na checklistach.
+  const canMarkHandledManually = status !== "problem";
   const rawEntries = Object.entries(current.rawFields);
 
   return (
@@ -335,44 +361,62 @@ function ItemStatusDialog({
               </Button>
             </div>
 
-            {suggestsReport ? (
-              <div className="rounded-xl border border-dashed border-border/80 bg-surface-muted/15 p-3">
-                {alreadyHandled ? (
-                  <p className="flex items-center gap-1.5 text-xs text-muted">
-                    <Check className="h-3.5 w-3.5 text-emerald-400" />
-                    Ogarnięte
-                    {current.handledByName ? ` przez ${current.handledByName}` : ""}
-                    {current.handledAt ? `, ${formatDateTime(current.handledAt)}` : ""}
-                    {current.handledNote ? ` — ${current.handledNote}` : ""}
-                  </p>
-                ) : (
-                  <>
+            <div className="rounded-xl border border-dashed border-border/80 bg-surface-muted/15 p-3">
+              {alreadyHandled ? (
+                <p className="flex items-center gap-1.5 text-xs text-muted">
+                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  Ogarnięte
+                  {current.handledByName ? ` przez ${current.handledByName}` : ""}
+                  {current.handledAt ? `, ${formatDateTime(current.handledAt)}` : ""}
+                  {current.handledNote ? ` — ${current.handledNote}` : ""}
+                </p>
+              ) : (
+                <>
+                  {suggestsReport ? (
                     <p className="mb-2 flex items-center gap-1.5 text-xs text-muted">
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-400" />
-                      Ta pozycja wymaga uwagi biura — zgłoś ją, żeby ktoś to zobaczył.
+                      {status === "problem"
+                        ? "Ta pozycja ma zgłoszony problem — zgłoś ją, żeby ktoś to zobaczył."
+                        : "Ta pozycja wymaga uwagi biura — zgłoś ją, żeby ktoś to zobaczył."}
                     </p>
-                    <ItemEscalationActions
-                      projectId={item.projectId}
-                      itemTitle={documentationModuleItemLabel(item)}
-                      itemDescription={buildDocumentationModuleReportDescription(moduleLabel, {
-                        label: item.label,
-                        description: item.description,
-                        location: item.location,
-                        note,
-                      })}
-                      onReportCreated={({ target, recordId }) => {
-                        void linkDocumentationModuleItemEmployeeReport(item.id, { target, recordId }).then(() => {
-                          setLatest((prev) =>
-                            prev ? { ...prev, employeeReportTarget: target, employeeReportId: recordId } : prev,
-                          );
-                        });
+                  ) : null}
+                  {canMarkHandledManually ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="mb-2 w-full sm:w-auto"
+                      onClick={() => {
+                        setHandledError(null);
+                        setHandledReason("");
+                        setHandledDialogOpen(true);
                       }}
-                      onHandled={(handledNote) => void handleMarkHandled(handledNote)}
-                    />
-                  </>
-                )}
-              </div>
-            ) : null}
+                    >
+                      <CheckCheck className="mr-2 h-3.5 w-3.5" />
+                      Ogarnięte
+                    </Button>
+                  ) : null}
+                  <ItemEscalationActions
+                    projectId={item.projectId}
+                    itemTitle={documentationModuleItemLabel(item)}
+                    itemDescription={buildDocumentationModuleReportDescription(moduleLabel, {
+                      label: item.label,
+                      description: item.description,
+                      location: item.location,
+                      note,
+                    })}
+                    onReportCreated={({ target, recordId }) => {
+                      void linkDocumentationModuleItemEmployeeReport(item.id, { target, recordId }).then(() => {
+                        setLatest((prev) =>
+                          prev ? { ...prev, employeeReportTarget: target, employeeReportId: recordId } : prev,
+                        );
+                      });
+                    }}
+                    onHandled={(handledNote) => void handleMarkHandled(handledNote)}
+                  />
+                </>
+              )}
+            </div>
 
             <div className="grid gap-1.5">
               <p className="flex items-center gap-1.5 text-xs font-medium text-muted">
@@ -396,6 +440,50 @@ function ItemStatusDialog({
             </div>
           </div>
         </DialogContent>
+      </Dialog>
+
+      <Dialog open={handledDialogOpen} onOpenChange={setHandledDialogOpen}>
+        <StackedDialogContent showCloseButton>
+          <DialogHeader>
+            <DialogTitle>Oznacz jako ogarnięte</DialogTitle>
+            <DialogDescription>
+              Status pozycji zostaje bez zmian — to informacja, że sprawa jest obsłużona i nie musi
+              dalej straszyć na liście.
+            </DialogDescription>
+          </DialogHeader>
+          <Field label="Komentarz">
+            <Textarea
+              value={handledReason}
+              onChange={(event) => {
+                setHandledReason(event.target.value);
+                if (handledError) setHandledError(null);
+              }}
+              rows={2}
+              placeholder="Np. Sprawdzone na miejscu, nie wymaga dalszych działań."
+            />
+          </Field>
+          {handledError ? <p className="text-xs text-rose-400">{handledError}</p> : null}
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => setHandledDialogOpen(false)}
+            >
+              Anuluj
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="w-full sm:w-auto"
+              disabled={!handledReason.trim()}
+              onClick={() => void handleConfirmMarkHandled()}
+            >
+              Potwierdź
+            </Button>
+          </div>
+        </StackedDialogContent>
       </Dialog>
     </>
   );
