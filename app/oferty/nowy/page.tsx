@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ServiceForm } from "@/components/service/service-form";
 import { PageHeader } from "@/components/page-header";
@@ -19,9 +19,18 @@ function NewOfferPageContent() {
   const note = searchParams.get("note");
   const clients = useAppStore((state) => state.clients);
   const contacts = useAppStore((state) => state.contacts);
+  const hydrated = useServiceStore((state) => state.hydrated);
   const createEmptyService = useServiceStore((state) => state.createEmptyService);
 
+  // createEmptyService() czyta settings.rates z magazynu W MOMENCIE WYWOŁANIA — dopoki
+  // ServiceHydrator (app/oferty/layout.tsx) nie skonczy asynchronicznego hydrate(), stawki w
+  // magazynie to jeszcze DEFAULT_SERVICE_SETTINGS (twarde wartosci zastepcze), nie te zapisane w
+  // Ustawieniach stawek. Licznik nizej (useState) zamraza tamten wynik na stale, wiec bez tego
+  // warunku nowa oferta dostawala domyslne stawki nawet po tym, jak realne juz sie doladowaly.
   const initialService = useMemo(() => {
+    if (!hydrated) {
+      return null;
+    }
     const base = createEmptyService();
     const resolvedProjectId = projectId && projectId.length > 0 ? projectId : null;
     const resolvedTitle = title?.trim() ? title.trim() : base.title;
@@ -59,9 +68,19 @@ function NewOfferPageContent() {
       client: clientToServiceClient(client),
       title: resolvedTitle,
     };
-  }, [clientId, contactId, clients, contacts, createEmptyService, projectId, title]);
+  }, [hydrated, clientId, contactId, clients, contacts, createEmptyService, projectId, title]);
 
-  const [service] = useState(initialService);
+  const [service, setService] = useState(initialService);
+
+  useEffect(() => {
+    if (!service && initialService) {
+      setService(initialService);
+    }
+  }, [initialService, service]);
+
+  if (!service) {
+    return <p className="text-sm text-muted">Ładowanie ustawień…</p>;
+  }
 
   return (
     <>
