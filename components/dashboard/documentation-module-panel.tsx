@@ -123,14 +123,21 @@ function ItemCard({ item, onClick }: { item: DocumentationModuleItem; onClick: (
         ) : null}
         {item.note ? <p className="mt-1 truncate text-xs text-muted">{item.note}</p> : null}
       </div>
-      <span
-        className={cn(
-          "shrink-0 rounded-full border px-2 py-1 text-[11px] font-medium",
-          handled ? DOCUMENTATION_MODULE_HANDLED_BADGE_CLASS : SWITCHBOARD_CIRCUIT_STATUS_BADGE_CLASS[item.status],
-        )}
-      >
-        {handled ? "Ogarnięte" : SWITCHBOARD_CIRCUIT_STATUS_LABELS[item.status]}
-      </span>
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        <span
+          className={cn(
+            "rounded-full border px-2 py-1 text-[11px] font-medium",
+            SWITCHBOARD_CIRCUIT_STATUS_BADGE_CLASS[item.status],
+          )}
+        >
+          {SWITCHBOARD_CIRCUIT_STATUS_LABELS[item.status]}
+        </span>
+        {handled ? (
+          <span className={cn("rounded-full border px-2 py-1 text-[11px] font-medium", DOCUMENTATION_MODULE_HANDLED_BADGE_CLASS)}>
+            Ogarnięte
+          </span>
+        ) : null}
+      </div>
     </button>
   );
 }

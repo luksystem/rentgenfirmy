@@ -113,14 +113,21 @@ function CircuitCard({ circuit, onClick }: { circuit: SwitchboardCircuit; onClic
         ) : null}
         {circuit.note ? <p className="mt-1 truncate text-xs text-muted">{circuit.note}</p> : null}
       </div>
-      <span
-        className={cn(
-          "shrink-0 rounded-full border px-2 py-1 text-[11px] font-medium",
-          handled ? SWITCHBOARD_HANDLED_BADGE_CLASS : SWITCHBOARD_CIRCUIT_STATUS_BADGE_CLASS[circuit.status],
-        )}
-      >
-        {handled ? "Ogarnięte" : SWITCHBOARD_CIRCUIT_STATUS_LABELS[circuit.status]}
-      </span>
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        <span
+          className={cn(
+            "rounded-full border px-2 py-1 text-[11px] font-medium",
+            SWITCHBOARD_CIRCUIT_STATUS_BADGE_CLASS[circuit.status],
+          )}
+        >
+          {SWITCHBOARD_CIRCUIT_STATUS_LABELS[circuit.status]}
+        </span>
+        {handled ? (
+          <span className={cn("rounded-full border px-2 py-1 text-[11px] font-medium", SWITCHBOARD_HANDLED_BADGE_CLASS)}>
+            Ogarnięte
+          </span>
+        ) : null}
+      </div>
     </button>
   );
 }

@@ -306,7 +306,10 @@ export function ProcessChecklistBoard({
               {section.lines.map((line) => {
                 const status = checklistLineStatus(line);
                 const handled = Boolean(line.handledAt);
-                const styles = handled ? CHECKLIST_HANDLED_STYLES : INTERNAL_ACCEPTANCE_STATUS_STYLES[status];
+                // Status wlasciwy zostaje widoczny w swoim kolorze — "ogarniete" to DODATKOWA
+                // niebieska odznaka obok, nie przykrycie statusu (inaczej ginie informacja, co
+                // dokladnie zostalo ogarniete).
+                const styles = INTERNAL_ACCEPTANCE_STATUS_STYLES[status];
                 const assignee = getChecklistLineAssignee(line, defaultAssignee);
                 return (
                   <div
@@ -344,14 +347,26 @@ export function ProcessChecklistBoard({
                             ) : null}
                           </span>
                         </div>
-                        <span
-                          className={cn(
-                            "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase",
-                            styles.badge,
-                          )}
-                        >
-                          {handled ? "Ogarnięte" : INTERNAL_ACCEPTANCE_STATUS_LABELS[status]}
-                        </span>
+                        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+                          <span
+                            className={cn(
+                              "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase",
+                              styles.badge,
+                            )}
+                          >
+                            {INTERNAL_ACCEPTANCE_STATUS_LABELS[status]}
+                          </span>
+                          {handled ? (
+                            <span
+                              className={cn(
+                                "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase",
+                                CHECKLIST_HANDLED_STYLES.badge,
+                              )}
+                            >
+                              Ogarnięte
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
                       {assignee.assigneeName || line.checkedAt || handled ? (
                         <p className="mt-1 pl-4 text-[11px] text-muted/80">
