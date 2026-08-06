@@ -32,6 +32,8 @@ export function ContractPreviewDialog({
   );
   const [selectedOptionIds, setSelectedOptionIds] = useState(initialSelected);
   const [company, setCompany] = useState<CompanyProfileDocument | null>(null);
+  const initialPlanId = contract.selectedPaymentPlanId ?? contract.paymentPlans[0]?.id ?? null;
+  const [selectedPaymentPlanId, setSelectedPaymentPlanId] = useState(initialPlanId);
 
   useEffect(() => {
     if (!open || company) {
@@ -48,6 +50,7 @@ export function ContractPreviewDialog({
       onOpenChange={(next) => {
         if (next) {
           setSelectedOptionIds(initialSelected);
+          setSelectedPaymentPlanId(initialPlanId);
         }
         onOpenChange(next);
       }}
@@ -63,6 +66,8 @@ export function ContractPreviewDialog({
           contract={contract}
           selectedOptionIds={selectedOptionIds}
           company={company}
+          selectedPaymentPlanId={selectedPaymentPlanId}
+          onSelectPaymentPlan={setSelectedPaymentPlanId}
           onToggleOption={(sectionId, checked) => {
             setSelectedOptionIds((prev) => {
               const next = new Set(prev);

@@ -61,7 +61,7 @@ async function ensureContractToken(contract: Contract): Promise<Contract> {
 
   const updated: Contract = {
     ...contract,
-    status: "sent",
+    status: "draft",
     publicToken: token,
     tokenExpiresAt: resolveClientOfferExpiresAt(contract.tokenExpiresAt) || defaultClientOfferExpiry(),
     tokenSentAt: null,
@@ -181,13 +181,19 @@ export async function sendContractEmailServer(input: { contractId: string; note?
     await releaseContractSendLock(withToken.id).catch(() => undefined);
   }
 
+  const actuallySent = !result.skipped;
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("contracts")
     .update({
+      // Status "sent" (Wysłana) dopiero po faktycznej wysyłce maila — nie przy samym
+      // wygenerowaniu linku ani gdy wysyłka została pominięta (brak RESEND_API_KEY).
+      ...(actuallySent ? { status: "sent" } : {}),
       history: appendContractHistory(withToken.history, {
         type: "sent",
-        message: "Wysłano umowę e-mailem do klienta.",
+        message: actuallySent
+          ? "Wysłano umowę e-mailem do klienta."
+          : "Próba wysyłki pominięta — brak konfiguracji e-mail (RESEND_API_KEY).",
       }),
       updated_at: new Date().toISOString(),
     })

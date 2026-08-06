@@ -3,7 +3,7 @@ import { PDFDocument, rgb, type PDFFont } from "pdf-lib";
 import { companyDisplayName, companyFooterLines, type CompanyProfile } from "@/lib/company/company-profile";
 import {
   calculateContractTotals,
-  calculatePaymentScheduleAmounts,
+  calculatePaymentPlanInstallmentAmounts,
   calculateTableGrossTotal,
   calculateTableNetTotal,
 } from "@/lib/contracts/totals";
@@ -119,7 +119,11 @@ export async function generateContractPdf(params: {
   }
   y -= 10;
 
-  const totals = calculateContractTotals(contract.sections);
+  const effectivePlan =
+    contract.paymentPlans.find((plan) => plan.id === contract.selectedPaymentPlanId) ??
+    contract.paymentPlans[0] ??
+    null;
+  const totals = calculateContractTotals(contract.sections, { paymentPlan: effectivePlan });
 
   for (const section of contract.sections) {
     if (isContractTextSection(section)) {
@@ -169,6 +173,17 @@ export async function generateContractPdf(params: {
     y -= 6;
   }
 
+  if (totals.itemDiscountNet > 0) {
+    drawWrapped(`Rabat na pozycjach: ${formatMoney(totals.itemDiscountNet)}`, fonts.regular, 10, 14);
+  }
+  if (effectivePlan && effectivePlan.discountPercent > 0) {
+    drawWrapped(
+      `Rabat za wariant płatności „${effectivePlan.label}” (${effectivePlan.discountPercent}%): ${formatMoney(totals.planDiscountGross)}`,
+      fonts.regular,
+      10,
+      14,
+    );
+  }
   drawWrapped(
     `Wartość umowy — netto: ${formatMoney(totals.totalNet)} · brutto: ${formatMoney(totals.totalGross)}`,
     fonts.bold,
@@ -177,11 +192,19 @@ export async function generateContractPdf(params: {
   );
   y -= 8;
 
-  if (contract.paymentSchedule.length) {
-    drawWrapped("Harmonogram spłat", fonts.bold, 12, 16);
-    for (const item of calculatePaymentScheduleAmounts(contract.paymentSchedule, totals)) {
+  if (effectivePlan && effectivePlan.installments.length) {
+    drawWrapped(
+      contract.paymentPlans.length > 1
+        ? `Harmonogram spłat — wariant „${effectivePlan.label}”`
+        : "Harmonogram spłat",
+      fonts.bold,
+      12,
+      16,
+    );
+    for (const item of calculatePaymentPlanInstallmentAmounts(effectivePlan, totals)) {
+      const splitNote = item.perMonthGross != null ? ` — ${item.splitOverMonths}× ${formatMoney(item.perMonthGross)}/mies.` : "";
       drawWrapped(
-        `${item.label || "Rata"} — ${item.percent}% = ${formatMoney(item.amountGross)} brutto${item.note ? ` (${item.note})` : ""}`,
+        `${item.label || "Rata"} — ${item.percent}% = ${formatMoney(item.amountGross)} brutto${splitNote}${item.note ? ` (${item.note})` : ""}`,
         fonts.regular,
         10,
         14,

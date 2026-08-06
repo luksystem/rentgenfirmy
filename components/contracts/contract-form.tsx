@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CommercialPartyPicker, type CommercialPartyKind } from "@/components/commercial-party-picker";
-import { ContractPaymentScheduleEditor } from "@/components/contracts/contract-payment-schedule-editor";
+import { ContractPaymentPlansEditor } from "@/components/contracts/contract-payment-plans-editor";
 import { ContractPreviewDialog } from "@/components/contracts/contract-preview-dialog";
 import { ContractSectionsEditor } from "@/components/contracts/contract-sections-editor";
 import { OfferEmailPreviewDialog } from "@/components/service/offer-email-preview-dialog";
@@ -266,11 +266,11 @@ export function ContractForm({ initialContract }: { initialContract: Contract })
       templateId: template.id,
       title: contract.title || built.title,
       sections: built.sections,
-      paymentSchedule: built.paymentSchedule,
+      paymentPlans: built.paymentPlans,
     });
   }
 
-  const isDraft = contract.status === "draft";
+  const hasLink = Boolean(contract.publicToken);
   const linkExpired = isContractLinkExpired(contract);
 
   return (
@@ -367,10 +367,10 @@ export function ContractForm({ initialContract }: { initialContract: Contract })
 
       <Card>
         <CardContent className="pt-5">
-          <ContractPaymentScheduleEditor
-            schedule={contract.paymentSchedule}
+          <ContractPaymentPlansEditor
+            plans={contract.paymentPlans}
             sections={contract.sections}
-            onChange={(paymentSchedule) => setContract({ ...contract, paymentSchedule })}
+            onChange={(paymentPlans) => setContract({ ...contract, paymentPlans })}
           />
         </CardContent>
       </Card>
@@ -385,7 +385,7 @@ export function ContractForm({ initialContract }: { initialContract: Contract })
             {" "}(bez opcji dodatkowych — klient wybiera je przy podpisywaniu).
           </p>
 
-          {!isDraft && !isNew ? (
+          {hasLink && !isNew ? (
             <div className="grid gap-1 text-sm text-muted">
               {contract.publicToken ? (
                 <p>

@@ -26,6 +26,7 @@ export function ClientContractPage({ token }: { token: string }) {
   const [signerName, setSignerName] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [selectedOptionIds, setSelectedOptionIds] = useState<Set<string>>(() => new Set());
+  const [selectedPaymentPlanId, setSelectedPaymentPlanId] = useState<string | null>(null);
 
   useEffect(() => {
     void fetchCompanyProfile()
@@ -50,6 +51,9 @@ export function ClientContractPage({ token }: { token: string }) {
             .filter((section) => isContractTableSection(section) && section.group === "option" && section.selected)
             .map((section) => section.id),
         ),
+      );
+      setSelectedPaymentPlanId(
+        loaded.contract.selectedPaymentPlanId ?? loaded.contract.paymentPlans[0]?.id ?? null,
       );
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Nie udało się wczytać umowy.");
@@ -86,6 +90,7 @@ export function ClientContractPage({ token }: { token: string }) {
           action,
           signerName: action === "sign" ? signerName.trim() : undefined,
           selectedOptionSectionIds: action === "sign" ? Array.from(selectedOptionIds) : undefined,
+          selectedPaymentPlanId: action === "sign" ? selectedPaymentPlanId : undefined,
         }),
       });
       const payload = await response.json();
@@ -116,9 +121,9 @@ export function ClientContractPage({ token }: { token: string }) {
   const canInteract = canRespond && !isExpired;
 
   return (
-    <div className="min-h-screen bg-surface-muted/20 px-4 py-8 sm:px-8 sm:py-12">
-      <div className="mx-auto grid max-w-3xl gap-6">
-        <div className="text-center sm:text-left">
+    <div className="min-h-screen bg-surface-muted/20 px-4 py-8 sm:px-8 sm:py-12 print:bg-white print:p-0">
+      <div className="mx-auto grid max-w-4xl gap-6 print:max-w-none print:gap-0">
+        <div className="text-center sm:text-left print:hidden">
           <p className="text-xs font-semibold uppercase tracking-wide text-accent">Umowa do podpisania</p>
           <h1 className="mt-1 text-2xl font-semibold text-foreground sm:text-3xl">{contract.title || "Umowa"}</h1>
           <p className="mt-1 text-sm text-muted">{CONTRACT_STATUS_LABELS[contract.status]}</p>
@@ -131,6 +136,8 @@ export function ClientContractPage({ token }: { token: string }) {
           contract={contract}
           selectedOptionIds={selectedOptionIds}
           company={company}
+          selectedPaymentPlanId={selectedPaymentPlanId}
+          onSelectPaymentPlan={canInteract ? setSelectedPaymentPlanId : undefined}
           onToggleOption={
             canInteract
               ? (sectionId, checked) => {
@@ -149,7 +156,7 @@ export function ClientContractPage({ token }: { token: string }) {
         />
 
         {canInteract ? (
-          <Card>
+          <Card className="print:hidden">
             <CardContent className="grid gap-3 pt-5">
               <p className="font-semibold text-foreground">Podpisz umowę</p>
               <Field label="Imię i nazwisko">

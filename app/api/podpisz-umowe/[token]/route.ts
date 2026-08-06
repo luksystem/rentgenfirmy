@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { CONTRACT_STATUS_LABELS } from "@/lib/contracts/types";
+import { CONTRACT_STATUS_LABELS, canRespondToContract } from "@/lib/contracts/types";
 import { isContractExpired } from "@/lib/contracts/normalize";
 import { fetchContractByPublicToken, respondToContract, type RespondToContractAction } from "@/lib/supabase/contract-server";
 
@@ -35,7 +35,7 @@ export async function GET(_request: Request, context: { params: Promise<{ token:
         contract,
         statusLabel: CONTRACT_STATUS_LABELS[contract.status],
         isExpired: isContractExpired(contract),
-        canRespond: contract.status === "sent" || contract.status === "negotiating",
+        canRespond: canRespondToContract(contract),
       },
       { headers: NO_STORE_HEADERS },
     );
@@ -67,11 +67,13 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   const selectedOptionSectionIds = Array.isArray(data.selectedOptionSectionIds)
     ? data.selectedOptionSectionIds.filter((id): id is string => typeof id === "string")
     : undefined;
+  const selectedPaymentPlanId = typeof data.selectedPaymentPlanId === "string" ? data.selectedPaymentPlanId : null;
 
   try {
     const contract = await respondToContract(token, action, {
       signerName,
       selectedOptionSectionIds,
+      selectedPaymentPlanId,
       ip: resolveClientIp(request),
     });
 

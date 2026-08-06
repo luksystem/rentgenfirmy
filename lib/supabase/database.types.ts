@@ -1853,7 +1853,7 @@ export type ContractTemplateRow = {
   description: string;
   is_active: boolean;
   sections: unknown;
-  payment_schedule: unknown;
+  payment_plans: unknown;
   created_at: string;
   updated_at: string;
 };
@@ -1864,7 +1864,7 @@ export type ContractTemplateInsert = {
   description?: string;
   is_active?: boolean;
   sections?: unknown;
-  payment_schedule?: unknown;
+  payment_plans?: unknown;
   created_at?: string;
   updated_at?: string;
 };
@@ -1885,7 +1885,8 @@ export type ContractRow = {
   client_nip: string;
   client_company_name: string;
   sections: unknown;
-  payment_schedule: unknown;
+  payment_plans: unknown;
+  selected_payment_plan_id: string | null;
   public_token: string | null;
   token_expires_at: string | null;
   token_sent_at: string | null;
@@ -1911,7 +1912,8 @@ export type ContractInsert = {
   client_nip?: string;
   client_company_name?: string;
   sections?: unknown;
-  payment_schedule?: unknown;
+  payment_plans?: unknown;
+  selected_payment_plan_id?: string | null;
   public_token?: string | null;
   token_expires_at?: string | null;
   token_sent_at?: string | null;

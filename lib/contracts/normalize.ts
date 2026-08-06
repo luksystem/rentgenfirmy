@@ -9,7 +9,7 @@ import {
   type ContractCompanySignature,
   type ContractHistoryEntry,
   type ContractHistoryType,
-  type ContractPaymentScheduleItem,
+  type ContractPaymentPlan,
   type ContractSection,
   type ContractStatus,
   type ContractTableGroup,
@@ -77,18 +77,31 @@ export function normalizeContractSections(value: unknown): ContractSection[] {
     .filter((section): section is ContractSection => section !== null);
 }
 
-export function normalizeContractPaymentSchedule(value: unknown): ContractPaymentScheduleItem[] {
+export function normalizeContractPaymentPlans(value: unknown): ContractPaymentPlan[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
   return value.map((entry) => {
     const data = asObject(entry);
+    const installments = Array.isArray(data.installments)
+      ? data.installments.map((rawItem) => {
+          const item = asObject(rawItem);
+          return {
+            id: asString(item.id) || crypto.randomUUID(),
+            label: asString(item.label),
+            percent: Math.min(100, Math.max(0, asNumber(item.percent))),
+            note: asString(item.note),
+            splitOverMonths: Math.max(1, Math.round(asNumber(item.splitOverMonths, 1))),
+          };
+        })
+      : [];
+
     return {
       id: asString(data.id) || crypto.randomUUID(),
       label: asString(data.label),
-      percent: Math.min(100, Math.max(0, asNumber(data.percent))),
-      note: asString(data.note),
+      discountPercent: Math.min(100, Math.max(0, asNumber(data.discountPercent))),
+      installments,
     };
   });
 }

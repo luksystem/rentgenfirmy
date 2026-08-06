@@ -3,7 +3,8 @@ import {
   emptyContractClient,
   type Contract,
   type ContractContentBlock,
-  type ContractPaymentScheduleItem,
+  type ContractPaymentPlan,
+  type ContractPaymentPlanInstallment,
   type ContractSection,
   type ContractTableSection,
   type ContractTemplate,
@@ -34,8 +35,17 @@ export function createContractTableSection(group: ContractTableSection["group"] 
   };
 }
 
-export function createContractPaymentScheduleItem(): ContractPaymentScheduleItem {
-  return { id: crypto.randomUUID(), label: "", percent: 0, note: "" };
+export function createContractPaymentPlanInstallment(): ContractPaymentPlanInstallment {
+  return { id: crypto.randomUUID(), label: "", percent: 0, note: "", splitOverMonths: 1 };
+}
+
+export function createContractPaymentPlan(): ContractPaymentPlan {
+  return {
+    id: crypto.randomUUID(),
+    label: "",
+    discountPercent: 0,
+    installments: [createContractPaymentPlanInstallment()],
+  };
 }
 
 export function createEmptyContract(): Contract {
@@ -48,7 +58,8 @@ export function createEmptyContract(): Contract {
     title: "",
     client: emptyContractClient(),
     sections: [],
-    paymentSchedule: [],
+    paymentPlans: [],
+    selectedPaymentPlanId: null,
     publicToken: null,
     tokenExpiresAt: null,
     tokenSentAt: null,
@@ -68,7 +79,7 @@ export function createEmptyContractTemplate(): ContractTemplate {
     description: "",
     isActive: true,
     sections: [],
-    paymentSchedule: [],
+    paymentPlans: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -102,6 +113,10 @@ export function buildContractFromTemplate(
     contactId: overrides.contactId ?? null,
     client: overrides.client ?? base.client,
     sections: template.sections.map(cloneSectionWithNewIds),
-    paymentSchedule: template.paymentSchedule.map((item) => ({ ...item, id: crypto.randomUUID() })),
+    paymentPlans: template.paymentPlans.map((plan) => ({
+      ...plan,
+      id: crypto.randomUUID(),
+      installments: plan.installments.map((item) => ({ ...item, id: crypto.randomUUID() })),
+    })),
   };
 }

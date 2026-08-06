@@ -1,7 +1,7 @@
 import "server-only";
 
 import { appendContractHistory, isContractExpired } from "@/lib/contracts/normalize";
-import { isContractTableSection, type Contract } from "@/lib/contracts/types";
+import { canRespondToContract, isContractTableSection, type Contract } from "@/lib/contracts/types";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { contractToInsert, rowToContract } from "@/lib/supabase/contract-mappers";
 
@@ -33,14 +33,19 @@ export type RespondToContractAction = "sign" | "reject";
 export async function respondToContract(
   token: string,
   action: RespondToContractAction,
-  params: { signerName?: string; selectedOptionSectionIds?: string[]; ip?: string | null },
+  params: {
+    signerName?: string;
+    selectedOptionSectionIds?: string[];
+    selectedPaymentPlanId?: string | null;
+    ip?: string | null;
+  },
 ): Promise<Contract> {
   const contract = await fetchContractByPublicToken(token);
   if (!contract) {
     throw new Error("Nie znaleziono umowy.");
   }
 
-  if (contract.status !== "sent" && contract.status !== "negotiating") {
+  if (!canRespondToContract(contract)) {
     throw new Error("Ta umowa nie oczekuje już na decyzję klienta.");
   }
 
@@ -73,10 +78,17 @@ export async function respondToContract(
       return { ...section, selected: selected.has(section.id) };
     });
 
+    const validPlanIds = new Set(contract.paymentPlans.map((plan) => plan.id));
+    const selectedPaymentPlanId =
+      params.selectedPaymentPlanId && validPlanIds.has(params.selectedPaymentPlanId)
+        ? params.selectedPaymentPlanId
+        : (contract.paymentPlans[0]?.id ?? null);
+
     updated = {
       ...contract,
       status: "signed_client",
       sections,
+      selectedPaymentPlanId,
       clientSignature: {
         signerName,
         signedAt: new Date().toISOString(),

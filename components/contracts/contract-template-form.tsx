@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ContractPaymentScheduleEditor } from "@/components/contracts/contract-payment-schedule-editor";
+import { ContractPaymentPlansEditor } from "@/components/contracts/contract-payment-plans-editor";
 import { ContractSectionsEditor } from "@/components/contracts/contract-sections-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,10 +98,10 @@ export function ContractTemplateForm({ initialTemplate }: { initialTemplate: Con
 
       <Card>
         <CardContent className="pt-5">
-          <ContractPaymentScheduleEditor
-            schedule={template.paymentSchedule}
+          <ContractPaymentPlansEditor
+            plans={template.paymentPlans}
             sections={template.sections}
-            onChange={(paymentSchedule) => setTemplate({ ...template, paymentSchedule })}
+            onChange={(paymentPlans) => setTemplate({ ...template, paymentPlans })}
           />
         </CardContent>
       </Card>

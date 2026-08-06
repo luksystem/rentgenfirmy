@@ -110,12 +110,26 @@ export function isContractTextSection(section: ContractSection): section is Cont
   return section.type === "text";
 }
 
-export type ContractPaymentScheduleItem = {
+export type ContractPaymentPlanInstallment = {
   id: string;
   label: string;
-  /** Procent aktualnej sumy umowy (główna + zaznaczone opcje), 0–100. */
+  /** Procent sumy umowy po ewentualnym rabacie za wariant (0–100). */
   percent: number;
   note: string;
+  /** Gdy > 1, ta rata dzieli się na N równych części w kolejnych miesiącach. */
+  splitOverMonths: number;
+};
+
+/**
+ * Wariant płatności — konfigurowalny tylko przez biuro (w umowie/szablonie), klient wybiera
+ * jeden z nich przy podpisywaniu. Wybór szybszej płatności może dawać dodatkowy rabat od całej
+ * sumy umowy (`discountPercent`), widoczny klientowi na żywo przed podpisem.
+ */
+export type ContractPaymentPlan = {
+  id: string;
+  label: string;
+  discountPercent: number;
+  installments: ContractPaymentPlanInstallment[];
 };
 
 export type ContractClientSignature = {
@@ -161,7 +175,9 @@ export type Contract = {
   title: string;
   client: ContractClient;
   sections: ContractSection[];
-  paymentSchedule: ContractPaymentScheduleItem[];
+  paymentPlans: ContractPaymentPlan[];
+  /** Wariant wybrany przez klienta przy podpisie — id z `paymentPlans` albo null (nie wybrano/brak wariantów). */
+  selectedPaymentPlanId: string | null;
   publicToken: string | null;
   tokenExpiresAt: string | null;
   tokenSentAt: string | null;
@@ -179,7 +195,7 @@ export type ContractTemplate = {
   description: string;
   isActive: boolean;
   sections: ContractSection[];
-  paymentSchedule: ContractPaymentScheduleItem[];
+  paymentPlans: ContractPaymentPlan[];
   createdAt: string;
   updatedAt: string;
 };
@@ -197,8 +213,19 @@ export type ContractContentBlock = {
 
 export type ContractContentBlockInput = Omit<ContractContentBlock, "id" | "createdAt" | "updatedAt">;
 
+/**
+ * Czy klient może (jeszcze) zareagować na umowę pod linkiem publicznym — oparte o obecność
+ * ważnego tokenu, nie o status "sent": status przełącza się na "Wysłana" dopiero po faktycznej
+ * wysyłce mailem (patrz `sendContractEmailServer`), ale link można też przekazać ręcznie (kopiuj/
+ * mailto/udostępnij) zanim to nastąpi — klient musi wtedy nadal móc podpisać.
+ */
 export function canRespondToContract(contract: Contract) {
-  return contract.status === "sent" || contract.status === "negotiating";
+  return (
+    Boolean(contract.publicToken) &&
+    contract.status !== "signed_client" &&
+    contract.status !== "signed_both" &&
+    contract.status !== "rejected"
+  );
 }
 
 export function canCompanySignContract(contract: Contract) {

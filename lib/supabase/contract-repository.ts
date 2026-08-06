@@ -61,7 +61,9 @@ export function isContractLinkExpired(contract: Contract) {
 
 /**
  * Generuje/regeneruje link publiczny do podpisania — zeruje ewentualne wcześniejsze podpisy
- * (nowy link = nowa runda podpisywania) i przełącza status na "sent".
+ * (nowy link = nowa runda podpisywania). Status zostaje "draft" — klient może już użyć linku
+ * (ręcznie przekazanego: kopiuj/mailto/udostępnij), ale odznaka "Wysłana" pojawia się dopiero po
+ * faktycznej wysyłce mailem przez `sendContractEmailServer`.
  */
 export async function generateContractLink(contract: Contract): Promise<Contract> {
   const token = crypto.randomUUID();
@@ -69,7 +71,7 @@ export async function generateContractLink(contract: Contract): Promise<Contract
 
   const updated: Contract = {
     ...contract,
-    status: "sent",
+    status: "draft",
     publicToken: token,
     tokenExpiresAt: resolveClientOfferExpiresAt(contract.tokenExpiresAt) || defaultClientOfferExpiry(),
     tokenSentAt: null,

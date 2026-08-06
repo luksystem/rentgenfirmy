@@ -35,7 +35,7 @@ export function ContractTemplateList() {
             </div>
             {template.description ? <p className="mt-1 text-sm text-muted">{template.description}</p> : null}
             <p className="mt-0.5 text-xs text-muted">
-              {template.sections.length} bloków treści · {template.paymentSchedule.length} rat ·{" "}
+              {template.sections.length} bloków treści · {template.paymentPlans.length} wariantów płatności ·{" "}
               {formatDate(template.updatedAt)}
             </p>
           </div>
