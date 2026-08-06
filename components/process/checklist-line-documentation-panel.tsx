@@ -132,15 +132,6 @@ export function ChecklistLineDocumentationPanel({
     void refreshAttachmentUrl(attachmentId);
   }
 
-  async function handleOpenAttachment(event: React.MouseEvent, attachment: ChecklistLineAttachment) {
-    event.preventDefault();
-    const freshUrl = await refreshAttachmentUrl(attachment.id);
-    const target = freshUrl ?? attachment.url;
-    if (target) {
-      window.open(target, "_blank", "noopener,noreferrer");
-    }
-  }
-
   if (!resolvedRequirement.requireDocumentation && !attachments.length) {
     return null;
   }
@@ -255,13 +246,7 @@ export function ChecklistLineDocumentationPanel({
               className="flex items-center gap-3 rounded-lg border border-border/60 bg-surface/50 p-2"
             >
               {attachment.mediaKind === "image" && attachment.url ? (
-                <a
-                  href={attachment.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="shrink-0"
-                  onClick={(event) => void handleOpenAttachment(event, attachment)}
-                >
+                <a href={attachment.url} target="_blank" rel="noreferrer" className="shrink-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={attachment.url}
@@ -282,7 +267,6 @@ export function ChecklistLineDocumentationPanel({
                     target="_blank"
                     rel="noreferrer"
                     className="truncate text-sm font-medium text-accent hover:underline"
-                    onClick={(event) => void handleOpenAttachment(event, attachment)}
                   >
                     {attachment.fileName}
                   </a>
