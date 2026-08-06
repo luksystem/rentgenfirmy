@@ -63,7 +63,13 @@ export function ContractDocumentView({
   onChangeVatDeclaration?: (next: ContractVatDeclaration) => void;
   moduleSettings: ContractModuleSettings;
 }) {
-  const selectionOverrides = Object.fromEntries(Array.from(selectedKeys).map((key) => [key, true]));
+  // Mapa musi pokrywać WSZYSTKIE klucze (true i false), nie tylko zaznaczone — inaczej
+  // odznaczenie pozycji domyślnie zaznaczonej w danych umowy nie miałoby żadnego efektu
+  // (silnik przeliczeń traktowałby brakujący klucz jako "nie nadpisano" i wracał do
+  // zapisanego `section.selected`/`selectedRowIds`, ignorując kliknięcie klienta).
+  const selectionOverrides = Object.fromEntries(
+    allSelectionKeys(contract.sections).map((key) => [key, selectedKeys.has(key)]),
+  );
   const effectivePlan: ContractPaymentPlan | null =
     contract.paymentPlans.find((plan) => plan.id === selectedPaymentPlanId) ?? contract.paymentPlans[0] ?? null;
 
