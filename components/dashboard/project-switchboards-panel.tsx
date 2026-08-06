@@ -56,12 +56,13 @@ import {
 } from "@/lib/supabase/switchboard-repository";
 import { cn } from "@/lib/utils";
 
-type FilterKey = "all" | "notatki" | SwitchboardCircuitStatus;
+type FilterKey = "all" | "notatki" | "ogarniete" | SwitchboardCircuitStatus;
 
 const FILTER_ORDER: FilterKey[] = [
   "all",
   "problem",
   "wymaga_uwagi",
+  "ogarniete",
   "notatki",
   ...SWITCHBOARD_CIRCUIT_STATUSES.filter((status) => status !== "problem" && status !== "wymaga_uwagi"),
 ];
@@ -69,6 +70,7 @@ const FILTER_ORDER: FilterKey[] = [
 const FILTER_LABELS: Record<FilterKey, string> = {
   all: "Wszystkie",
   notatki: "Z notatką",
+  ogarniete: "Ogarnięte",
   ...SWITCHBOARD_CIRCUIT_STATUS_LABELS,
 };
 
@@ -571,7 +573,7 @@ function SwitchboardHeaderBar({
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted">
-          {progress.doneCount}/{progress.total} gotowe (podłączone i sprawdzone lub ogarnięte) (
+          {progress.doneCount}/{progress.total} gotowe (podłączone lub ogarnięte) (
           {progress.total > 0 ? Math.round(progress.doneRatio * 100) : 0}%)
         </p>
 
@@ -655,6 +657,7 @@ export function ProjectSwitchboardsPanel({
     const circuits = activeBoard?.circuits ?? [];
     if (filter === "all") return circuits;
     if (filter === "notatki") return circuits.filter((c) => c.note && c.note.trim().length > 0);
+    if (filter === "ogarniete") return circuits.filter((c) => switchboardCircuitIsHandled(c));
     return circuits.filter((c) => c.status === filter);
   }, [activeBoard, filter]);
 
@@ -663,6 +666,7 @@ export function ProjectSwitchboardsPanel({
     const counts: Partial<Record<FilterKey, number>> = {
       all: circuits.length,
       notatki: circuits.filter((c) => c.note && c.note.trim().length > 0).length,
+      ogarniete: circuits.filter((c) => switchboardCircuitIsHandled(c)).length,
     };
     for (const status of SWITCHBOARD_CIRCUIT_STATUSES) {
       counts[status] = circuits.filter((c) => c.status === status).length;

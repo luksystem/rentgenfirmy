@@ -53,6 +53,12 @@ export function switchboardCircuitNeedsReport(status: SwitchboardCircuitStatus):
 export const SWITCHBOARD_HANDLED_BADGE_CLASS = "border-blue-500/40 bg-blue-500/10 text-blue-200";
 export const SWITCHBOARD_HANDLED_DOT_CLASS = "bg-blue-400";
 
+/** "Podłączone" to świadome podłączenie w rozdzielni — brakuje tylko sprawdzenia na obiekcie, więc
+ *  do liczników postępu liczy się tak samo jak "podłączone i sprawdzone". */
+export function switchboardStatusCountsAsDone(status: SwitchboardCircuitStatus): boolean {
+  return status === "podlaczone" || status === "podlaczone_i_sprawdzone";
+}
+
 /** Instalator przekazał sprawę dalej (zgłosił do biura albo ręcznie ogarnął) — z jego perspektywy
  *  pozycja jest zamknięta, niezależnie od statusu montażu. Manager decyduje co dalej przy zamykaniu
  *  etapu. */
@@ -201,7 +207,7 @@ export function groupSwitchboardCircuitsBySection(
 export function switchboardGroupDoneSummary(circuits: SwitchboardCircuit[]) {
   const total = circuits.length;
   const done = circuits.filter(
-    (c) => c.status === "podlaczone_i_sprawdzone" || switchboardCircuitIsHandled(c),
+    (c) => switchboardStatusCountsAsDone(c.status) || switchboardCircuitIsHandled(c),
   ).length;
   return { total, done };
 }
@@ -209,7 +215,7 @@ export function switchboardGroupDoneSummary(circuits: SwitchboardCircuit[]) {
 export type SwitchboardProgress = {
   total: number;
   counts: Record<SwitchboardCircuitStatus, number>;
-  /** Fizycznie podłączone i sprawdzone LUB ogarnięte/zgłoszone — instalator zamknął sprawę. */
+  /** Podłączone (i sprawdzone) LUB ogarnięte/zgłoszone — instalator zamknął sprawę. */
   doneCount: number;
   doneRatio: number;
 };
@@ -221,7 +227,7 @@ export function buildSwitchboardProgress(circuits: SwitchboardCircuit[]): Switch
   for (const circuit of circuits) counts[circuit.status] += 1;
   const total = circuits.length;
   const doneCount = circuits.filter(
-    (circuit) => circuit.status === "podlaczone_i_sprawdzone" || switchboardCircuitIsHandled(circuit),
+    (circuit) => switchboardStatusCountsAsDone(circuit.status) || switchboardCircuitIsHandled(circuit),
   ).length;
   return {
     total,

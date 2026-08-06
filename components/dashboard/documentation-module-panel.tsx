@@ -32,6 +32,7 @@ import {
   SWITCHBOARD_CIRCUIT_STATUS_DOT_CLASS,
   SWITCHBOARD_CIRCUIT_STATUS_LABELS,
   switchboardCircuitNeedsReport,
+  switchboardStatusCountsAsDone,
   type SwitchboardCircuitStatus,
 } from "@/lib/dashboard/switchboard-types";
 import {
@@ -64,12 +65,13 @@ import {
 } from "@/lib/supabase/documentation-module-repository";
 import { cn } from "@/lib/utils";
 
-type FilterKey = "all" | "notatki" | SwitchboardCircuitStatus;
+type FilterKey = "all" | "notatki" | "ogarniete" | SwitchboardCircuitStatus;
 
 const FILTER_ORDER: FilterKey[] = [
   "all",
   "problem",
   "wymaga_uwagi",
+  "ogarniete",
   "notatki",
   ...SWITCHBOARD_CIRCUIT_STATUSES.filter((status) => status !== "problem" && status !== "wymaga_uwagi"),
 ];
@@ -77,6 +79,7 @@ const FILTER_ORDER: FilterKey[] = [
 const FILTER_LABELS: Record<FilterKey, string> = {
   all: "Wszystkie",
   notatki: "Z notatką",
+  ogarniete: "Ogarnięte",
   ...SWITCHBOARD_CIRCUIT_STATUS_LABELS,
 };
 
@@ -641,7 +644,7 @@ function ModuleHeaderBar({
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted">
-          {progress.doneCount}/{progress.total} gotowe (podłączone i sprawdzone lub ogarnięte) (
+          {progress.doneCount}/{progress.total} gotowe (podłączone lub ogarnięte) (
           {progress.total > 0 ? Math.round(progress.doneRatio * 100) : 0}%)
         </p>
 
@@ -730,6 +733,7 @@ export function DocumentationModulePanel({
     const items = activeEntry?.items ?? [];
     if (filter === "all") return items;
     if (filter === "notatki") return items.filter((i) => i.note && i.note.trim().length > 0);
+    if (filter === "ogarniete") return items.filter((i) => documentationModuleItemIsHandled(i));
     return items.filter((i) => i.status === filter);
   }, [activeEntry, filter]);
 
@@ -738,6 +742,7 @@ export function DocumentationModulePanel({
     const counts: Partial<Record<FilterKey, number>> = {
       all: items.length,
       notatki: items.filter((i) => i.note && i.note.trim().length > 0).length,
+      ogarniete: items.filter((i) => documentationModuleItemIsHandled(i)).length,
     };
     for (const status of SWITCHBOARD_CIRCUIT_STATUSES) {
       counts[status] = items.filter((i) => i.status === status).length;
@@ -930,7 +935,7 @@ export function DocumentationModulePanel({
                 const sectionKey = `section::${section.sectionName ?? ""}`;
                 const sectionCollapsed = collapsedSections.has(sectionKey);
                 const doneCount = section.items.filter(
-                  (i) => i.status === "podlaczone_i_sprawdzone" || documentationModuleItemIsHandled(i),
+                  (i) => switchboardStatusCountsAsDone(i.status) || documentationModuleItemIsHandled(i),
                 ).length;
 
                 return (

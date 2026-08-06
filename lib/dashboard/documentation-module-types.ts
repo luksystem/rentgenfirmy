@@ -1,6 +1,7 @@
 import {
   SWITCHBOARD_CIRCUIT_STATUSES,
   SWITCHBOARD_HANDLED_BADGE_CLASS,
+  switchboardStatusCountsAsDone,
   type SwitchboardCircuitStatus,
 } from "@/lib/dashboard/switchboard-types";
 import type { DocumentationSheetType } from "@/lib/process/types";
@@ -116,7 +117,7 @@ export function documentationModuleItemIsHandled(
 export type DocumentationModuleProgress = {
   total: number;
   counts: Record<SwitchboardCircuitStatus, number>;
-  /** Fizycznie podłączone i sprawdzone LUB ogarnięte/zgłoszone — instalator zamknął sprawę. */
+  /** Podłączone (i sprawdzone) LUB ogarnięte/zgłoszone — instalator zamknął sprawę. */
   doneCount: number;
   doneRatio: number;
 };
@@ -130,7 +131,7 @@ export function buildDocumentationModuleProgress(
   for (const item of items) counts[item.status] += 1;
   const total = items.length;
   const doneCount = items.filter(
-    (item) => item.status === "podlaczone_i_sprawdzone" || documentationModuleItemIsHandled(item),
+    (item) => switchboardStatusCountsAsDone(item.status) || documentationModuleItemIsHandled(item),
   ).length;
   return { total, counts, doneCount, doneRatio: total > 0 ? doneCount / total : 0 };
 }
