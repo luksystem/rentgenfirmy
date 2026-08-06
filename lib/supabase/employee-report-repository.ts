@@ -12,6 +12,7 @@ import {
 } from "@/lib/process/employee-report-routing";
 import { uploadAgreementAttachmentWithClient } from "@/lib/supabase/project-agreement-attachments-repository";
 import { uploadChangeRequestAttachment } from "@/lib/supabase/project-change-request-attachments-repository";
+import { fetchStageResponsible } from "@/lib/supabase/stage-responsible-repository";
 
 export type EmployeeReportInput = {
   projectId: string;
@@ -67,7 +68,28 @@ export async function createEmployeeReport(
   const table =
     routing.target === "change_request" ? "project_change_requests" : "project_client_agreements";
 
-  const { data, error } = await supabase.from(table).insert(shared).select("id").single();
+  // Ustalenia maja pole "odpowiedzialny" (project_client_agreements.responsible_user_id) — zmiany
+  // projektowe go nie maja. Zgloszenie z budowy nie pyta o wlasciciela (pracownik go nie zna),
+  // wiec wynika z etapu przez macierz rol — jedno zrodlo prawdy z fetchStageResponsible, to samo,
+  // ktore pokazuje "Odpowiedzialny za etap" w widoku procesu. Bez tego ustalenie zostawaloby bez
+  // odpowiedzialnego, dopoki ktos recznie by go nie uzupelnil w edycji.
+  let responsibleUserId: string | null = null;
+  if (routing.target === "agreement" && input.stageId) {
+    try {
+      const stageResponsible = await fetchStageResponsible(input.projectId);
+      responsibleUserId =
+        stageResponsible.find((row) => row.stageId === input.stageId)?.responsibleUserId ?? null;
+    } catch {
+      responsibleUserId = null;
+    }
+  }
+
+  const insertPayload =
+    routing.target === "agreement"
+      ? { ...shared, responsible_user_id: responsibleUserId }
+      : shared;
+
+  const { data, error } = await supabase.from(table).insert(insertPayload).select("id").single();
   if (error) {
     throw new Error(error.message);
   }
