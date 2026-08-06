@@ -245,7 +245,7 @@ export function AgreementBatchDeliveryActions({
           disabled={sending}
           onChange={(event) => handleIncludePhotoChange(event.target.checked)}
         />
-        Dołącz zdjęcie z pierwszego ustalenia do treści maila
+        Dołącz zdjęcia do treści maila (po jednym z każdego ustalenia, które je ma)
       </label>
     ) : null;
 

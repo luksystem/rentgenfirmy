@@ -175,7 +175,7 @@ export function ChangeRequestBatchDeliveryActions({
           disabled={sending}
           onChange={(event) => handleIncludePhotoChange(event.target.checked)}
         />
-        Dołącz zdjęcie z pierwszej zmiany do treści maila
+        Dołącz zdjęcia do treści maila (po jednym z każdej zmiany, która je ma)
       </label>
     ) : null;
 

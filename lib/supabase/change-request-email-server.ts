@@ -19,8 +19,9 @@ import { CHANGE_REQUEST_ATTACHMENTS_BUCKET } from "@/lib/supabase/project-change
  *  gdy klient go faktycznie otworzy, nie tylko do momentu wysyłki. */
 const EMAIL_PHOTO_SIGNED_URL_TTL_SEC = 60 * 60 * 24 * 7;
 
-/** Zdjęcie robocze z budowy trafia do maila tylko z PIERWSZEJ pozycji, tylko gdy nadawca tego nie
- *  odznaczy (checkbox w podglądzie) — a nawet wtedy dopiero po sprawdzeniu, że w ogóle jest zdjęcie. */
+/** Zdjęcie robocze z budowy — po jednym z KAŻDEJ zmiany w mailu (nie tylko z pierwszej), tylko gdy
+ *  nadawca tego nie odznaczy (checkbox w podglądzie) — a nawet wtedy dopiero po sprawdzeniu, że
+ *  dana zmiana w ogóle ma zdjęcie. */
 async function fetchFirstChangeRequestPhotoUrl(changeRequestId: string): Promise<string | null> {
   const supabase = getSupabaseAdmin();
   const { data } = await supabase
@@ -237,11 +238,18 @@ async function buildChangeRequestEmailEntries(
   includePhoto: boolean,
 ) {
   const entries = changeRequests.map(changeRequestToEmailEntry);
-  const photoUrl = entries.length ? await fetchFirstChangeRequestPhotoUrl(changeRequests[0].id) : null;
-  if (includePhoto && photoUrl) {
-    entries[0] = { ...entries[0], photoUrl };
+  const photoUrls = await Promise.all(
+    changeRequests.map((changeRequest) => fetchFirstChangeRequestPhotoUrl(changeRequest.id)),
+  );
+  const hasPhoto = photoUrls.some((url) => url != null);
+  if (includePhoto) {
+    photoUrls.forEach((url, index) => {
+      if (url) {
+        entries[index] = { ...entries[index], photoUrl: url };
+      }
+    });
   }
-  return { entries, hasPhoto: Boolean(photoUrl) };
+  return { entries, hasPhoto };
 }
 
 /** Buduje treść maila (podgląd) bez wysyłki ani zmiany statusu — do dialogu "podgląd + notatka". */

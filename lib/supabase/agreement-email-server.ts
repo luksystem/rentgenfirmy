@@ -27,8 +27,9 @@ import { AGREEMENT_ATTACHMENTS_BUCKET } from "@/lib/supabase/project-agreement-a
  *  gdy klient go faktycznie otworzy, nie tylko do momentu wysyłki. */
 const EMAIL_PHOTO_SIGNED_URL_TTL_SEC = 60 * 60 * 24 * 7;
 
-/** Zdjęcie robocze z budowy trafia do maila tylko z PIERWSZEJ pozycji, tylko gdy nadawca tego nie
- *  odznaczy (checkbox w podglądzie) — a nawet wtedy dopiero po sprawdzeniu, że w ogóle jest zdjęcie. */
+/** Zdjęcie robocze z budowy — po jednym z KAŻDEGO ustalenia w mailu (nie tylko z pierwszego), tylko
+ *  gdy nadawca tego nie odznaczy (checkbox w podglądzie) — a nawet wtedy dopiero po sprawdzeniu, że
+ *  dane ustalenie w ogóle ma zdjęcie. */
 async function fetchFirstAgreementPhotoUrl(agreementId: string): Promise<string | null> {
   const supabase = getSupabaseAdmin();
   const { data } = await supabase
@@ -57,11 +58,18 @@ async function buildAgreementEmailEntries(
   includePhoto: boolean,
 ) {
   const entries = agreements.map(agreementToEmailEntry);
-  const photoUrl = entries.length ? await fetchFirstAgreementPhotoUrl(agreements[0].id) : null;
-  if (includePhoto && photoUrl) {
-    entries[0] = { ...entries[0], photoUrl };
+  const photoUrls = await Promise.all(
+    agreements.map((agreement) => fetchFirstAgreementPhotoUrl(agreement.id)),
+  );
+  const hasPhoto = photoUrls.some((url) => url != null);
+  if (includePhoto) {
+    photoUrls.forEach((url, index) => {
+      if (url) {
+        entries[index] = { ...entries[index], photoUrl: url };
+      }
+    });
   }
-  return { entries, hasPhoto: Boolean(photoUrl) };
+  return { entries, hasPhoto };
 }
 
 /**
