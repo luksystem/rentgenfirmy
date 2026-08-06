@@ -21,11 +21,15 @@ export const CONTRACT_STATUSES = [
 
 export type ContractStatus = (typeof CONTRACT_STATUSES)[number];
 
+/**
+ * Uproszczone etykiety statusu (Szkic/Wysłana/Podpisana) — nuanse (negocjacje, czeka na podpis
+ * firmy) są widoczne osobno w panelu wysyłki/podpisu, więc odznaka statusu może zostać prosta.
+ */
 export const CONTRACT_STATUS_LABELS: Record<ContractStatus, string> = {
   draft: "Szkic",
-  sent: "Wysłana do klienta",
-  negotiating: "Negocjacje",
-  signed_client: "Podpisana przez klienta — czeka na firmę",
+  sent: "Wysłana",
+  negotiating: "Wysłana",
+  signed_client: "Podpisana",
   signed_both: "Podpisana",
   rejected: "Odrzucona",
   expired: "Wygasła",
@@ -160,6 +164,7 @@ export type Contract = {
   paymentSchedule: ContractPaymentScheduleItem[];
   publicToken: string | null;
   tokenExpiresAt: string | null;
+  tokenSentAt: string | null;
   companySignature: ContractCompanySignature | null;
   clientSignature: ContractClientSignature | null;
   history: ContractHistoryEntry[];
@@ -198,4 +203,13 @@ export function canRespondToContract(contract: Contract) {
 
 export function canCompanySignContract(contract: Contract) {
   return contract.status === "signed_client";
+}
+
+/** Czy da się (jeszcze) wysłać/wygenerować link do podpisania tej umowy. */
+export function canSendContract(contract: Contract) {
+  return (
+    contract.status !== "signed_client" &&
+    contract.status !== "signed_both" &&
+    contract.status !== "rejected"
+  );
 }

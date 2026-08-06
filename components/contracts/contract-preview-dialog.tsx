@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ContractDocumentView } from "@/components/contracts/contract-document-view";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { resolveCompanyProfileDocument, type CompanyProfileDocument } from "@/lib/company/company-profile-document";
 import { isContractTableSection, type Contract } from "@/lib/contracts/types";
+import { fetchCompanyProfile } from "@/lib/supabase/company-profile-repository";
 
 /**
  * Podgląd umowy dokładnie tak, jak zobaczy ją klient — reużywa `ContractDocumentView` z
@@ -29,6 +31,16 @@ export function ContractPreviewDialog({
     [contract.sections],
   );
   const [selectedOptionIds, setSelectedOptionIds] = useState(initialSelected);
+  const [company, setCompany] = useState<CompanyProfileDocument | null>(null);
+
+  useEffect(() => {
+    if (!open || company) {
+      return;
+    }
+    void fetchCompanyProfile()
+      .then((profile) => setCompany(resolveCompanyProfileDocument(profile)))
+      .catch(() => undefined);
+  }, [open, company]);
 
   return (
     <Dialog
@@ -50,6 +62,7 @@ export function ContractPreviewDialog({
         <ContractDocumentView
           contract={contract}
           selectedOptionIds={selectedOptionIds}
+          company={company}
           onToggleOption={(sectionId, checked) => {
             setSelectedOptionIds((prev) => {
               const next = new Set(prev);

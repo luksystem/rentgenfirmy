@@ -1888,6 +1888,7 @@ export type ContractRow = {
   payment_schedule: unknown;
   public_token: string | null;
   token_expires_at: string | null;
+  token_sent_at: string | null;
   company_signature: unknown;
   client_signature: unknown;
   history: unknown;
@@ -1913,6 +1914,7 @@ export type ContractInsert = {
   payment_schedule?: unknown;
   public_token?: string | null;
   token_expires_at?: string | null;
+  token_sent_at?: string | null;
   company_signature?: unknown;
   client_signature?: unknown;
   history?: unknown;

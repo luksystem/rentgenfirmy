@@ -51,6 +51,7 @@ export function createEmptyContract(): Contract {
     paymentSchedule: [],
     publicToken: null,
     tokenExpiresAt: null,
+    tokenSentAt: null,
     companySignature: null,
     clientSignature: null,
     history: [],

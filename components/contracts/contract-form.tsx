@@ -1,22 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CommercialPartyPicker, type CommercialPartyKind } from "@/components/commercial-party-picker";
 import { ContractPaymentScheduleEditor } from "@/components/contracts/contract-payment-schedule-editor";
 import { ContractPreviewDialog } from "@/components/contracts/contract-preview-dialog";
 import { ContractSectionsEditor } from "@/components/contracts/contract-sections-editor";
+import { OfferEmailPreviewDialog } from "@/components/service/offer-email-preview-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
+import {
+  buildContractMailtoUrl,
+  canShareContract,
+  formatContractLinkExpiryHint,
+  shareContract,
+} from "@/lib/contracts/contract-delivery";
 import { buildContractFromTemplate } from "@/lib/contracts/factory";
 import { calculateContractTotals } from "@/lib/contracts/totals";
-import { CONTRACT_STATUS_LABELS, canCompanySignContract, type Contract } from "@/lib/contracts/types";
+import {
+  CONTRACT_STATUS_LABELS,
+  canCompanySignContract,
+  canSendContract,
+  type Contract,
+} from "@/lib/contracts/types";
 import { getContractDocumentSignedUrl, isContractLinkExpired } from "@/lib/supabase/contract-repository";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useContractStore } from "@/store/contract-store";
 import { formatDateTime, formatMoney } from "@/lib/utils";
+
+type EmailPreview = { subject: string; html: string; to: string };
+
+async function postJson<T>(url: string, body?: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error ?? "Nie udało się wykonać operacji.");
+  }
+  return data as T;
+}
 
 export function ContractForm({ initialContract }: { initialContract: Contract }) {
   const router = useRouter();
@@ -40,13 +67,29 @@ export function ContractForm({ initialContract }: { initialContract: Contract })
   const [isSaving, setIsSaving] = useState(false);
   const [companySignerName, setCompanySignerName] = useState(displayName ?? "");
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [canShare, setCanShare] = useState(false);
+  const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
+  const [emailPreview, setEmailPreview] = useState<EmailPreview | null>(null);
+  const [emailPreviewError, setEmailPreviewError] = useState<string | null>(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailNote, setEmailNote] = useState("");
+  const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isNew = !useContractStore.getState().getContractById(initialContract.id);
+
+  useEffect(() => {
+    setCanShare(canShareContract());
+  }, []);
 
   const totals = calculateContractTotals(contract.sections);
   const publicUrl =
     typeof window !== "undefined" && contract.publicToken
       ? `${window.location.origin}/podpisz-umowe/${contract.publicToken}`
       : null;
+  const mailtoUrl = useMemo(
+    () => (publicUrl ? buildContractMailtoUrl(contract, publicUrl) : null),
+    [contract, publicUrl],
+  );
 
   async function handleSave() {
     setIsSaving(true);
@@ -84,6 +127,92 @@ export function ContractForm({ initialContract }: { initialContract: Contract })
       window.alert("Nie udało się wygenerować linku.");
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleCopyLink() {
+    if (!publicUrl) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.alert("Nie udało się skopiować linku.");
+    }
+  }
+
+  async function handleShare() {
+    if (!publicUrl) {
+      return;
+    }
+    try {
+      await shareContract(contract, publicUrl);
+    } catch (shareError) {
+      if (shareError instanceof Error && shareError.name === "AbortError") {
+        return;
+      }
+      window.alert(shareError instanceof Error ? shareError.message : "Nie udało się udostępnić linku.");
+    }
+  }
+
+  async function handleOpenEmailPreview() {
+    if (noteDebounceRef.current) {
+      clearTimeout(noteDebounceRef.current);
+    }
+    setEmailPreviewError(null);
+    setEmailPreview(null);
+    setEmailNote("");
+    setEmailPreviewOpen(true);
+    try {
+      // Wysyłka czyta umowę z bazy, więc najpierw zapisz ewentualne niezapisane zmiany —
+      // inaczej mail poszedłby ze starą treścią/cenami.
+      const saved = await saveContract(contract);
+      setContract(saved);
+      const data = await postJson<EmailPreview & { contract: Contract }>(
+        `/api/umowy/${saved.id}/preview-email`,
+      );
+      setContract(data.contract);
+      setEmailPreview({ subject: data.subject, html: data.html, to: data.to });
+    } catch (loadError) {
+      setEmailPreviewError(
+        loadError instanceof Error ? loadError.message : "Nie udało się przygotować podglądu.",
+      );
+    }
+  }
+
+  function handleEmailNoteChange(nextNote: string) {
+    setEmailNote(nextNote);
+    if (noteDebounceRef.current) {
+      clearTimeout(noteDebounceRef.current);
+    }
+    noteDebounceRef.current = setTimeout(() => {
+      void postJson<EmailPreview & { contract: Contract }>(`/api/umowy/${contract.id}/preview-email`, {
+        note: nextNote,
+      })
+        .then((data) => setEmailPreview({ subject: data.subject, html: data.html, to: data.to }))
+        .catch(() => undefined);
+    }, 600);
+  }
+
+  async function handleConfirmSendEmail() {
+    setSendingEmail(true);
+    setEmailPreviewError(null);
+    try {
+      const data = await postJson<{ contract: Contract; emailSkipped: boolean }>(
+        `/api/umowy/${contract.id}/send`,
+        { note: emailNote },
+      );
+      setContract(data.contract);
+      setEmailPreviewOpen(false);
+      if (data.emailSkipped) {
+        window.alert("Brak konfiguracji RESEND_API_KEY — e-mail nie został wysłany.");
+      }
+    } catch (sendError) {
+      setEmailPreviewError(sendError instanceof Error ? sendError.message : "Nie udało się wysłać maila.");
+    } finally {
+      setSendingEmail(false);
     }
   }
 
@@ -264,6 +393,7 @@ export function ContractForm({ initialContract }: { initialContract: Contract })
                   {linkExpired ? <span className="ml-2 text-rose-400">(wygasł)</span> : null}
                 </p>
               ) : null}
+              {contract.tokenExpiresAt ? <p>{formatContractLinkExpiryHint(contract.tokenExpiresAt)}</p> : null}
               {contract.clientSignature ? (
                 <p>
                   Klient podpisał: {contract.clientSignature.signerName} —{" "}
@@ -279,7 +409,30 @@ export function ContractForm({ initialContract }: { initialContract: Contract })
             </div>
           ) : null}
 
+          {publicUrl ? (
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="secondary" size="sm" onClick={() => void handleCopyLink()}>
+                {copied ? "Skopiowano" : "Kopiuj link"}
+              </Button>
+              {mailtoUrl ? (
+                <Button type="button" variant="secondary" size="sm" asChild>
+                  <a href={mailtoUrl}>Wyślij e-mailem (klient pocztowy)</a>
+                </Button>
+              ) : null}
+              {canShare ? (
+                <Button type="button" variant="secondary" size="sm" onClick={() => void handleShare()}>
+                  Udostępnij
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap gap-2">
+            {!isNew && canSendContract(contract) && contract.client.email.trim() ? (
+              <Button type="button" onClick={() => void handleOpenEmailPreview()}>
+                Wyślij do klienta
+              </Button>
+            ) : null}
             <Button type="button" variant="secondary" disabled={isSaving || isNew} onClick={handleGenerateLink}>
               {contract.publicToken ? "Wygeneruj nowy link" : "Wygeneruj link do podpisania"}
             </Button>
@@ -287,6 +440,21 @@ export function ContractForm({ initialContract }: { initialContract: Contract })
               <p className="self-center text-xs text-muted">Zapisz umowę, żeby wygenerować link.</p>
             ) : null}
           </div>
+
+          {!isNew && canSendContract(contract) && !contract.client.email.trim() ? (
+            <p className="text-xs text-muted">
+              Uzupełnij e-mail klienta, żeby wysłać umowę z serwera. Możesz też skopiować link i wysłać go
+              SMS-em lub WhatsApp.
+            </p>
+          ) : null}
+
+          {contract.tokenSentAt ? (
+            <p className="rounded-xl border border-sky-500/25 bg-sky-500/8 px-3 py-2 text-xs text-foreground">
+              Ta umowa została już wysłana e-mailem {formatDateTime(contract.tokenSentAt)}. Aby wysłać
+              ponownie (np. po zmianie treści), wygeneruj nowy link przyciskiem „Wygeneruj nowy link” —
+              poprzedni link przestanie działać.
+            </p>
+          ) : null}
 
           {canCompanySignContract(contract) ? (
             <div className="grid gap-2 rounded-xl border border-amber-500/40 bg-amber-500/5 p-4">
@@ -322,6 +490,17 @@ export function ContractForm({ initialContract }: { initialContract: Contract })
       </div>
 
       <ContractPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} contract={contract} />
+      <OfferEmailPreviewDialog
+        open={emailPreviewOpen}
+        onOpenChange={setEmailPreviewOpen}
+        preview={emailPreview}
+        sending={sendingEmail}
+        error={emailPreviewError}
+        note={emailNote}
+        onNoteChange={handleEmailNoteChange}
+        onConfirmSend={() => void handleConfirmSendEmail()}
+        confirmLabel="Wyślij umowę"
+      />
     </div>
   );
 }

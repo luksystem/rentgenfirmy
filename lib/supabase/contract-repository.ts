@@ -72,6 +72,7 @@ export async function generateContractLink(contract: Contract): Promise<Contract
     status: "sent",
     publicToken: token,
     tokenExpiresAt: resolveClientOfferExpiresAt(contract.tokenExpiresAt) || defaultClientOfferExpiry(),
+    tokenSentAt: null,
     clientSignature: null,
     companySignature: null,
     history: appendContractHistory(contract.history, {

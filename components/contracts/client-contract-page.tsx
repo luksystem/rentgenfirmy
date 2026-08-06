@@ -6,7 +6,9 @@ import { OfferValidityCountdown } from "@/components/service/offer-validity-coun
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/input";
+import { resolveCompanyProfileDocument, type CompanyProfileDocument } from "@/lib/company/company-profile-document";
 import { isContractTableSection, CONTRACT_STATUS_LABELS, type Contract } from "@/lib/contracts/types";
+import { fetchCompanyProfile } from "@/lib/supabase/company-profile-repository";
 
 type LoadState = {
   contract: Contract;
@@ -17,12 +19,19 @@ type LoadState = {
 
 export function ClientContractPage({ token }: { token: string }) {
   const [state, setState] = useState<LoadState | null>(null);
+  const [company, setCompany] = useState<CompanyProfileDocument | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [signerName, setSignerName] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [selectedOptionIds, setSelectedOptionIds] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    void fetchCompanyProfile()
+      .then((profile) => setCompany(resolveCompanyProfileDocument(profile)))
+      .catch(() => undefined);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -107,68 +116,73 @@ export function ClientContractPage({ token }: { token: string }) {
   const canInteract = canRespond && !isExpired;
 
   return (
-    <div className="mx-auto grid max-w-3xl gap-6 p-4 sm:p-8">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-accent">Umowa</p>
-        <h1 className="mt-1 text-2xl font-semibold text-foreground">{contract.title || "Umowa"}</h1>
-        <p className="mt-1 text-sm text-muted">{CONTRACT_STATUS_LABELS[contract.status]}</p>
-        {canRespond && contract.tokenExpiresAt ? (
-          <OfferValidityCountdown expiresAt={contract.tokenExpiresAt} kind="estimate" />
+    <div className="min-h-screen bg-surface-muted/20 px-4 py-8 sm:px-8 sm:py-12">
+      <div className="mx-auto grid max-w-3xl gap-6">
+        <div className="text-center sm:text-left">
+          <p className="text-xs font-semibold uppercase tracking-wide text-accent">Umowa do podpisania</p>
+          <h1 className="mt-1 text-2xl font-semibold text-foreground sm:text-3xl">{contract.title || "Umowa"}</h1>
+          <p className="mt-1 text-sm text-muted">{CONTRACT_STATUS_LABELS[contract.status]}</p>
+          {canRespond && contract.tokenExpiresAt ? (
+            <OfferValidityCountdown expiresAt={contract.tokenExpiresAt} kind="estimate" />
+          ) : null}
+        </div>
+
+        <ContractDocumentView
+          contract={contract}
+          selectedOptionIds={selectedOptionIds}
+          company={company}
+          onToggleOption={
+            canInteract
+              ? (sectionId, checked) => {
+                  setSelectedOptionIds((prev) => {
+                    const next = new Set(prev);
+                    if (checked) {
+                      next.add(sectionId);
+                    } else {
+                      next.delete(sectionId);
+                    }
+                    return next;
+                  });
+                }
+              : undefined
+          }
+        />
+
+        {canInteract ? (
+          <Card>
+            <CardContent className="grid gap-3 pt-5">
+              <p className="font-semibold text-foreground">Podpisz umowę</p>
+              <Field label="Imię i nazwisko">
+                <Input value={signerName} onChange={(event) => setSignerName(event.target.value)} />
+              </Field>
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={confirmed}
+                  onChange={(event) => setConfirmed(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-border"
+                />
+                <span className="text-muted">Potwierdzam zapoznanie się z treścią umowy i akceptuję jej warunki.</span>
+              </label>
+
+              {error ? <p className="text-sm text-rose-400">{error}</p> : null}
+
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" disabled={submitting} onClick={() => void submit("sign")}>
+                  {submitting ? "Zapisywanie…" : "Podpisz umowę"}
+                </Button>
+                <Button type="button" variant="outline" disabled={submitting} onClick={() => void submit("reject")}>
+                  Odrzuć
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : isExpired && canRespond ? (
+          <p className="text-sm text-rose-400">
+            Link do podpisania umowy wygasł. Skontaktuj się z firmą, aby uzyskać nowy link.
+          </p>
         ) : null}
       </div>
-
-      <ContractDocumentView
-        contract={contract}
-        selectedOptionIds={selectedOptionIds}
-        onToggleOption={
-          canInteract
-            ? (sectionId, checked) => {
-                setSelectedOptionIds((prev) => {
-                  const next = new Set(prev);
-                  if (checked) {
-                    next.add(sectionId);
-                  } else {
-                    next.delete(sectionId);
-                  }
-                  return next;
-                });
-              }
-            : undefined
-        }
-      />
-
-      {canInteract ? (
-        <Card>
-          <CardContent className="grid gap-3 pt-5">
-            <p className="font-semibold text-foreground">Podpisz umowę</p>
-            <Field label="Imię i nazwisko">
-              <Input value={signerName} onChange={(event) => setSignerName(event.target.value)} />
-            </Field>
-            <label className="flex items-start gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={confirmed}
-                onChange={(event) => setConfirmed(event.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-border"
-              />
-              <span className="text-muted">Potwierdzam zapoznanie się z treścią umowy i akceptuję jej warunki.</span>
-            </label>
-
-            {error ? <p className="text-sm text-rose-400">{error}</p> : null}
-
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" disabled={submitting} onClick={() => void submit("sign")}>
-                {submitting ? "Zapisywanie…" : "Podpisz umowę"}
-              </Button>
-              <Button type="button" variant="outline" disabled={submitting} onClick={() => void submit("reject")}>
-                Odrzuć
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : isExpired && canRespond ? (
-        <p className="text-sm text-rose-400">Link do podpisania umowy wygasł. Skontaktuj się z firmą, aby uzyskać nowy link.</p>
-      ) : null}
     </div>
   );
 }

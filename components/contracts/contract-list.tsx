@@ -9,11 +9,13 @@ import { CONTRACT_STATUS_LABELS, type ContractStatus } from "@/lib/contracts/typ
 import { useContractStore } from "@/store/contract-store";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
 
+// Ten sam kolor dla statusów dzielących uproszczoną etykietę (Wysłana / Podpisana), żeby
+// odznaka koloru nigdy nie kłóciła się z widocznym tekstem.
 const STATUS_TONE: Record<ContractStatus, string> = {
   draft: "bg-surface-muted text-muted",
   sent: "bg-sky-500/15 text-sky-300",
-  negotiating: "bg-orange-500/15 text-orange-300",
-  signed_client: "bg-amber-500/15 text-amber-300",
+  negotiating: "bg-sky-500/15 text-sky-300",
+  signed_client: "bg-emerald-500/15 text-emerald-300",
   signed_both: "bg-emerald-500/15 text-emerald-300",
   rejected: "bg-rose-500/15 text-rose-300",
   expired: "bg-rose-500/10 text-rose-300",
