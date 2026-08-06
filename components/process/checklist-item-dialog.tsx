@@ -194,7 +194,9 @@ export function ChecklistItemDialog({
                 <p className="text-xs text-amber-200">{passedBlockedReason}</p>
               ) : null}
 
-              {!readOnly && onMarkHandled ? (
+              {/* Przy potwierdzonym Problemie nie ma skrótu do "Ogarnięte" — trzeba realnie
+                  eskalować (Zgłoś do biura/zapotrzebowanie), nie tylko wyciszyć punkt na liście. */}
+              {!readOnly && onMarkHandled && status !== "FAILED" ? (
                 <Button
                   type="button"
                   size="sm"
