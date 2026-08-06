@@ -1,4 +1,4 @@
-import { Calculator, FileText, type LucideIcon } from "lucide-react";
+import { Calculator, FileSignature, FileText, type LucideIcon } from "lucide-react";
 
 export const COMMERCIAL_MODULES = {
   serviceSettlement: {
@@ -12,6 +12,18 @@ export const COMMERCIAL_MODULES = {
     routesPrefix: "/oferty",
     available: true,
     icon: FileText,
+  },
+  contracts: {
+    id: "contracts",
+    label: "Umowy",
+    shortLabel: "Umowy",
+    eyebrow: "Sprzedaż",
+    description:
+      "Szablony treści, tabele główne i opcje dodatkowe, harmonogram spłat i podpis dwustronny.",
+    href: "/umowy",
+    routesPrefix: "/umowy",
+    available: true,
+    icon: FileSignature,
   },
   salesCalculations: {
     id: "sales-calculations",
@@ -44,6 +56,7 @@ export type CommercialModule = (typeof COMMERCIAL_MODULES)[keyof typeof COMMERCI
 
 export const COMMERCIAL_MODULE_LIST: CommercialModule[] = [
   COMMERCIAL_MODULES.serviceSettlement,
+  COMMERCIAL_MODULES.contracts,
   COMMERCIAL_MODULES.salesCalculations,
 ];
 

@@ -1827,6 +1827,102 @@ export type ServiceInsert = {
 
 export type ServiceUpdate = Partial<ServiceInsert>;
 
+export type ContractContentBlockRow = {
+  id: string;
+  title: string;
+  category: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ContractContentBlockInsert = {
+  id?: string;
+  title: string;
+  category?: string;
+  content?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ContractContentBlockUpdate = Partial<ContractContentBlockInsert>;
+
+export type ContractTemplateRow = {
+  id: string;
+  name: string;
+  description: string;
+  is_active: boolean;
+  sections: unknown;
+  payment_schedule: unknown;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ContractTemplateInsert = {
+  id?: string;
+  name: string;
+  description?: string;
+  is_active?: boolean;
+  sections?: unknown;
+  payment_schedule?: unknown;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ContractTemplateUpdate = Partial<ContractTemplateInsert>;
+
+export type ContractRow = {
+  id: string;
+  status: string;
+  template_id: string | null;
+  client_id: string | null;
+  contact_id: string | null;
+  title: string;
+  client_full_name: string;
+  client_location: string;
+  client_email: string;
+  client_phone: string;
+  client_nip: string;
+  client_company_name: string;
+  sections: unknown;
+  payment_schedule: unknown;
+  public_token: string | null;
+  token_expires_at: string | null;
+  company_signature: unknown;
+  client_signature: unknown;
+  history: unknown;
+  signed_document_storage_path: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ContractInsert = {
+  id?: string;
+  status?: string;
+  template_id?: string | null;
+  client_id?: string | null;
+  contact_id?: string | null;
+  title?: string;
+  client_full_name?: string;
+  client_location?: string;
+  client_email?: string;
+  client_phone?: string;
+  client_nip?: string;
+  client_company_name?: string;
+  sections?: unknown;
+  payment_schedule?: unknown;
+  public_token?: string | null;
+  token_expires_at?: string | null;
+  company_signature?: unknown;
+  client_signature?: unknown;
+  history?: unknown;
+  signed_document_storage_path?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ContractUpdate = Partial<ContractInsert>;
+
 export type WorkOrderRow = {
   id: string;
   source: string;
@@ -3411,6 +3507,46 @@ export type Database = {
         Insert: ClientInsert;
         Update: ClientUpdate;
         Relationships: [];
+      };
+      contract_content_blocks: {
+        Row: ContractContentBlockRow;
+        Insert: ContractContentBlockInsert;
+        Update: ContractContentBlockUpdate;
+        Relationships: [];
+      };
+      contract_templates: {
+        Row: ContractTemplateRow;
+        Insert: ContractTemplateInsert;
+        Update: ContractTemplateUpdate;
+        Relationships: [];
+      };
+      contracts: {
+        Row: ContractRow;
+        Insert: ContractInsert;
+        Update: ContractUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "contracts_template_id_fkey";
+            columns: ["template_id"];
+            isOneToOne: false;
+            referencedRelation: "contract_templates";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "contracts_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "contracts_contact_id_fkey";
+            columns: ["contact_id"];
+            isOneToOne: false;
+            referencedRelation: "contacts";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       client_recent_views: {
         Row: ClientRecentViewRow;

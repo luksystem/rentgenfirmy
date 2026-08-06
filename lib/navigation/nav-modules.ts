@@ -11,6 +11,7 @@ export type NavModuleKey =
   | "my-work-xp"
   | "contacts"
   | "service-offers"
+  | "contracts"
   | "sales-calculations"
   | "invoices"
   | "clients"
@@ -157,6 +158,12 @@ export const NAV_MODULE_GROUPS: NavModuleGroupDefinition[] = [
         href: COMMERCIAL_MODULES.serviceSettlement.href,
         routePrefixes: ["/oferty"],
         activeExcludePrefixes: ["/oferty/zgloszenia", "/oferty/ustawienia"],
+      },
+      {
+        key: "contracts",
+        label: COMMERCIAL_MODULES.contracts.label,
+        href: COMMERCIAL_MODULES.contracts.href,
+        routePrefixes: ["/umowy"],
       },
       {
         key: "sales-calculations",

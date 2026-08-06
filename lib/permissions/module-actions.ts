@@ -38,6 +38,7 @@ export const NAV_MODULE_SUPPORTED_ACTIONS: Record<NavModuleKey, PermissionAction
   "my-work-xp": VIEW_ONLY,
   contacts: CRUD_EXPORT,
   "service-offers": CRUD_EXPORT,
+  contracts: CRUD_EXPORT,
   "sales-calculations": CRUD,
   invoices: CRUD_EXPORT,
   clients: CRUD,

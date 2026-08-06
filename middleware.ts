@@ -47,6 +47,7 @@ export async function middleware(request: NextRequest) {
     // WSZYSTKIE crony (patrz docs/08 D39).
     pathname.startsWith("/api/cron/") ||
     pathname.startsWith("/api/oferta/") ||
+    pathname.startsWith("/api/podpisz-umowe/") ||
     pathname.startsWith("/api/kanban/") ||
     pathname.startsWith("/api/odbior/") ||
     pathname.startsWith("/api/element/") ||

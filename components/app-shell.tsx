@@ -104,6 +104,7 @@ const NAV_MODULE_ICONS: Record<NavModuleKey, React.ComponentType<{ className?: s
   "my-work-xp": Trophy,
   contacts: Contact,
   "service-offers": COMMERCIAL_MODULES.serviceSettlement.icon,
+  contracts: COMMERCIAL_MODULES.contracts.icon,
   "sales-calculations": COMMERCIAL_MODULES.salesCalculations.icon,
   invoices: Receipt,
   clients: Users,
