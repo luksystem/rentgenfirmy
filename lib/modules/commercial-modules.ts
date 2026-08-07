@@ -31,10 +31,10 @@ export const COMMERCIAL_MODULES = {
     shortLabel: "Kalkulacje",
     eyebrow: "Wyceny Smart Home",
     description:
-      "Interaktywne kalkulacje sprzedażowe dla klientów Smart Home — moduł w przygotowaniu.",
+      "Ankieta parametrów domu -> wyliczona wycena Smart Home (pakiet OPTIMUM) -> pozycje trafiają do umowy.",
     href: "/kalkulacje",
     routesPrefix: "/kalkulacje",
-    available: false,
+    available: true,
     icon: Calculator,
   },
 } as const satisfies Record<

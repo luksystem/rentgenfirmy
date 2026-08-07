@@ -1931,6 +1931,40 @@ export type ContractInsert = {
 
 export type ContractUpdate = Partial<ContractInsert>;
 
+export type CalculatorOfferRow = {
+  id: string;
+  status: string;
+  client_id: string | null;
+  contact_id: string | null;
+  title: string;
+  client_full_name: string;
+  client_location: string;
+  client_email: string;
+  client_phone: string;
+  answers: unknown;
+  contract_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CalculatorOfferInsert = {
+  id?: string;
+  status?: string;
+  client_id?: string | null;
+  contact_id?: string | null;
+  title?: string;
+  client_full_name?: string;
+  client_location?: string;
+  client_email?: string;
+  client_phone?: string;
+  answers?: unknown;
+  contract_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type CalculatorOfferUpdate = Partial<CalculatorOfferInsert>;
+
 export type WorkOrderRow = {
   id: string;
   source: string;
@@ -3552,6 +3586,34 @@ export type Database = {
             columns: ["contact_id"];
             isOneToOne: false;
             referencedRelation: "contacts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      calculator_offers: {
+        Row: CalculatorOfferRow;
+        Insert: CalculatorOfferInsert;
+        Update: CalculatorOfferUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "calculator_offers_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "calculator_offers_contact_id_fkey";
+            columns: ["contact_id"];
+            isOneToOne: false;
+            referencedRelation: "contacts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "calculator_offers_contract_id_fkey";
+            columns: ["contract_id"];
+            isOneToOne: false;
+            referencedRelation: "contracts";
             referencedColumns: ["id"];
           },
         ];
