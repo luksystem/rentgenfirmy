@@ -325,9 +325,9 @@ export function KnowledgeSourceManager() {
               {sources.map((source) => (
                 <li
                   key={source.id}
-                  className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border/70 bg-surface-muted/15 p-3"
+                  className="flex flex-col gap-3 rounded-xl border border-border/70 bg-surface-muted/15 p-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between"
                 >
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 sm:flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="break-words font-medium text-foreground">{source.title}</p>
                       <span className="rounded-full border border-border/60 px-2 py-0.5 text-[11px] text-muted">
@@ -349,8 +349,9 @@ export function KnowledgeSourceManager() {
                       {source.charCount > 0 ? ` · ${source.charCount.toLocaleString("pl-PL")} znaków` : ""}
                     </p>
                   </div>
-                  <div className="flex shrink-0 gap-2">
-                    {source.status === "error" || source.status === "ready" ? (
+                  <div className="flex flex-wrap shrink-0 gap-2">
+                    {source.status === "error" ||
+                    (source.status === "ready" && (source.storagePath || source.url)) ? (
                       <Button
                         type="button"
                         size="sm"
