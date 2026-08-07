@@ -158,6 +158,34 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
       <div className="grid gap-6">
+        <div className="sticky top-16 z-10 space-y-2 overflow-hidden rounded-2xl border border-accent/30 bg-surface-elevated/95 p-3 shadow-soft backdrop-blur xl:top-0 xl:z-20">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            <p className="min-w-0 truncate text-sm font-medium text-foreground">
+              {offer.title.trim() || "Kalkulacja"}
+            </p>
+            <p className="shrink-0 text-lg font-bold tabular-nums text-accent">
+              {formatMoney(totals.totalNet)} <span className="text-xs font-normal text-muted">netto</span>
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+            <span>
+              Baza <span className="font-medium tabular-nums text-foreground/90">{formatMoney(totals.baseSystem.totalNet)}</span>
+            </span>
+            <span>
+              Funkcjonalne <span className="font-medium tabular-nums text-foreground/90">{formatMoney(totals.functionalNet)}</span>
+            </span>
+            <span>
+              Dodatki <span className="font-medium tabular-nums text-foreground/90">{formatMoney(totals.addonsNet)}</span>
+            </span>
+            <span>
+              Elektryka <span className="font-medium tabular-nums text-foreground/90">{formatMoney(totals.electrical.finalNet)}</span>
+            </span>
+            <span>
+              Inne systemy <span className="font-medium tabular-nums text-foreground/90">{formatMoney(totals.otherSystems.finalNet)}</span>
+            </span>
+          </div>
+        </div>
+
         <Card>
           <CardContent className="grid gap-4 pt-5">
             <Field label="Tytuł kalkulacji">
