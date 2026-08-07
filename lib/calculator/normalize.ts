@@ -1,6 +1,5 @@
 import {
   CALCULATOR_ADDON_KEYS,
-  CALCULATOR_FUNCTIONAL_LEVELS,
   CALCULATOR_OFFER_STATUSES,
   CALCULATOR_OTHER_SYSTEM_KEYS,
   emptyCalculatorAnswers,
@@ -8,7 +7,6 @@ import {
   type CalculatorAddonKey,
   type CalculatorAnswers,
   type CalculatorClient,
-  type CalculatorFunctionalLevel,
   type CalculatorOfferStatus,
   type CalculatorOtherSystemKey,
 } from "@/lib/calculator/types";
@@ -22,18 +20,17 @@ function asNumber(value: unknown, fallback: number) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function asNullableNumber(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 function asBoolean(value: unknown, fallback: boolean) {
   return typeof value === "boolean" ? value : fallback;
 }
 
 function asString(value: unknown, fallback: string) {
   return typeof value === "string" ? value : fallback;
-}
-
-function normalizeLevel(value: unknown, fallback: CalculatorFunctionalLevel): CalculatorFunctionalLevel {
-  return (CALCULATOR_FUNCTIONAL_LEVELS as readonly string[]).includes(value as string)
-    ? (value as CalculatorFunctionalLevel)
-    : fallback;
 }
 
 export function normalizeCalculatorOfferStatus(value: unknown): CalculatorOfferStatus {
@@ -69,10 +66,9 @@ export function normalizeCalculatorAnswers(value: unknown): CalculatorAnswers {
     otherSystems[key] = asBoolean(otherSystemsData[key], fallback.otherSystems[key]);
   }
 
-  const puntyRecznie = data.liczbaPunktowElektrycznychRecznie;
-  const puntyRecznieNumber = Number(puntyRecznie);
-
   return {
+    odlegloscKm: asNumber(data.odlegloscKm, fallback.odlegloscKm),
+
     powierzchniaM2: asNumber(data.powierzchniaM2, fallback.powierzchniaM2),
     liczbaKondygnacji: asNumber(data.liczbaKondygnacji, fallback.liczbaKondygnacji),
     liczbaPomieszczenZOknami: asNumber(data.liczbaPomieszczenZOknami, fallback.liczbaPomieszczenZOknami),
@@ -104,12 +100,6 @@ export function normalizeCalculatorAnswers(value: unknown): CalculatorAnswers {
     systemWlamaniowy: asBoolean(data.systemWlamaniowy, fallback.systemWlamaniowy),
     alarmIKontrolaDostepu: asBoolean(data.alarmIKontrolaDostepu, fallback.alarmIKontrolaDostepu),
 
-    poziomOswietlenie: normalizeLevel(data.poziomOswietlenie, fallback.poziomOswietlenie),
-    poziomBezpieczenstwo: normalizeLevel(data.poziomBezpieczenstwo, fallback.poziomBezpieczenstwo),
-    poziomTemperatura: normalizeLevel(data.poziomTemperatura, fallback.poziomTemperatura),
-    poziomRolety: normalizeLevel(data.poziomRolety, fallback.poziomRolety),
-    poziomZewnetrzne: normalizeLevel(data.poziomZewnetrzne, fallback.poziomZewnetrzne),
-
     addons,
     iloscStacjiDokujacychZIpadem: asNumber(data.iloscStacjiDokujacychZIpadem, fallback.iloscStacjiDokujacychZIpadem),
 
@@ -118,11 +108,34 @@ export function normalizeCalculatorAnswers(value: unknown): CalculatorAnswers {
     iloscStrefMultiroom: asNumber(data.iloscStrefMultiroom, fallback.iloscStrefMultiroom),
     iloscGlosnikowMultiroom: asNumber(data.iloscGlosnikowMultiroom, fallback.iloscGlosnikowMultiroom),
 
-    liczbaPunktowElektrycznychRecznie: Number.isFinite(puntyRecznieNumber) ? puntyRecznieNumber : null,
+    instalacjaDoGlosnikow: asBoolean(data.instalacjaDoGlosnikow, fallback.instalacjaDoGlosnikow),
+    instalacjaDoMonitoringu: asBoolean(data.instalacjaDoMonitoringu, fallback.instalacjaDoMonitoringu),
+    instalacjaDoTelewizjiLubLan: asBoolean(data.instalacjaDoTelewizjiLubLan, fallback.instalacjaDoTelewizjiLubLan),
+    kanalyPrzepustyDoTv: asBoolean(data.kanalyPrzepustyDoTv, fallback.kanalyPrzepustyDoTv),
+    przylaczeDoDomu: asBoolean(data.przylaczeDoDomu, fallback.przylaczeDoDomu),
+    dlugoscPrzylaczaM: asNumber(data.dlugoscPrzylaczaM, fallback.dlugoscPrzylaczaM),
+    instalacjaMasztuAnteny: asBoolean(data.instalacjaMasztuAnteny, fallback.instalacjaMasztuAnteny),
+    rozdzielniaBudowlana: asBoolean(data.rozdzielniaBudowlana, fallback.rozdzielniaBudowlana),
+    formalnosciOdbiorowe: asBoolean(data.formalnosciOdbiorowe, fallback.formalnosciOdbiorowe),
+    pomiaryWewnetrzne: asBoolean(data.pomiaryWewnetrzne, fallback.pomiaryWewnetrzne),
+
+    iloscGniazd400V: asNullableNumber(data.iloscGniazd400V),
+    iloscObwodowGniazd230V: asNullableNumber(data.iloscObwodowGniazd230V),
+    iloscKolejnychGniazdObwody230V: asNullableNumber(data.iloscKolejnychGniazdObwody230V),
+    iloscObwodowOswietleniaWszystkich: asNullableNumber(data.iloscObwodowOswietleniaWszystkich),
+    iloscOswietleniaKolejne: asNullableNumber(data.iloscOswietleniaKolejne),
+    iloscGniazdLanTv: asNullableNumber(data.iloscGniazdLanTv),
+    iloscKabliGlosnikowych: asNullableNumber(data.iloscKabliGlosnikowych),
+    iloscKanalowTv: asNullableNumber(data.iloscKanalowTv),
+    dodatkoweBruzdowanieM: asNumber(data.dodatkoweBruzdowanieM, fallback.dodatkoweBruzdowanieM),
 
     trudnyKlientWspolczynnik: asNumber(data.trudnyKlientWspolczynnik, fallback.trudnyKlientWspolczynnik),
     platnoscZGory: asBoolean(data.platnoscZGory, fallback.platnoscZGory),
     istniejePodstawowyAlarm: asBoolean(data.istniejePodstawowyAlarm, fallback.istniejePodstawowyAlarm),
     tylkoRozdzielnia: asBoolean(data.tylkoRozdzielnia, fallback.tylkoRozdzielnia),
+    wspolczynnikProjekt: asNumber(data.wspolczynnikProjekt, fallback.wspolczynnikProjekt),
+    wspolczynnikRozdzielnica: asNumber(data.wspolczynnikRozdzielnica, fallback.wspolczynnikRozdzielnica),
+    wspolczynnikOutdoor: asNumber(data.wspolczynnikOutdoor, fallback.wspolczynnikOutdoor),
+    wspolczynnikAlarmTymczasowy: asNumber(data.wspolczynnikAlarmTymczasowy, fallback.wspolczynnikAlarmTymczasowy),
   };
 }

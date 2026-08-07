@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { CommercialPartyPicker, type CommercialPartyKind } from "@/components/commercial-party-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, Input, Select } from "@/components/ui/input";
+import { Field, Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { buildContractFromCalculatorOffer } from "@/lib/calculator/to-contract";
 import { calculateCalculatorTotals } from "@/lib/calculator/engine";
@@ -16,14 +16,11 @@ import {
   CALCULATOR_ADDON_KEYS,
   CALCULATOR_ADDON_LABELS,
   CALCULATOR_FUNCTIONAL_CATEGORY_LABELS,
-  CALCULATOR_FUNCTIONAL_LEVELS,
-  CALCULATOR_FUNCTIONAL_LEVEL_LABELS,
   CALCULATOR_OTHER_SYSTEM_KEYS,
   CALCULATOR_OTHER_SYSTEM_LABELS,
   calculatorClientFromServiceClient,
   type CalculatorAddonKey,
   type CalculatorAnswers,
-  type CalculatorFunctionalLevel,
   type CalculatorOffer,
   type CalculatorOtherSystemKey,
 } from "@/lib/calculator/types";
@@ -198,6 +195,13 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
           <CardContent className="grid gap-6 pt-5">
             <Section title="Parametry podstawowe">
               <div className="grid gap-4 sm:grid-cols-3">
+                <Field label="Odległość od siedziby [km]">
+                  <NumericInput
+                    value={a.odlegloscKm}
+                    decimals={false}
+                    onChange={(v) => setAnswers({ odlegloscKm: v })}
+                  />
+                </Field>
                 <Field label="Powierzchnia domu [m²]">
                   <NumericInput value={a.powierzchniaM2} onChange={(v) => setAnswers({ powierzchniaM2: v })} />
                 </Field>
@@ -309,30 +313,6 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
               ) : null}
             </Section>
 
-            <Section title="Poziom pakietu OPTIMUM per kategoria" description="Wybór biura — decyduje o cenie budżetu danej kategorii.">
-              <div className="grid gap-4 sm:grid-cols-2">
-                {(
-                  [
-                    ["oswietlenie", a.poziomOswietlenie, (v: CalculatorFunctionalLevel) => setAnswers({ poziomOswietlenie: v })],
-                    ["bezpieczenstwo", a.poziomBezpieczenstwo, (v: CalculatorFunctionalLevel) => setAnswers({ poziomBezpieczenstwo: v })],
-                    ["temperatura", a.poziomTemperatura, (v: CalculatorFunctionalLevel) => setAnswers({ poziomTemperatura: v })],
-                    ["rolety", a.poziomRolety, (v: CalculatorFunctionalLevel) => setAnswers({ poziomRolety: v })],
-                    ["zewnetrzne", a.poziomZewnetrzne, (v: CalculatorFunctionalLevel) => setAnswers({ poziomZewnetrzne: v })],
-                  ] as const
-                ).map(([category, value, onChange]) => (
-                  <Field key={category} label={CALCULATOR_FUNCTIONAL_CATEGORY_LABELS[category]}>
-                    <Select value={value} onChange={(event) => onChange(event.target.value as CalculatorFunctionalLevel)}>
-                      {CALCULATOR_FUNCTIONAL_LEVELS.map((level) => (
-                        <option key={level} value={level}>
-                          {CALCULATOR_FUNCTIONAL_LEVEL_LABELS[level]}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                ))}
-              </div>
-            </Section>
-
             <Section title="Dodatki">
               <div className="grid gap-2 sm:grid-cols-2">
                 {CALCULATOR_ADDON_KEYS.map((key) => (
@@ -382,15 +362,91 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
 
             <Section
               title="Instalacja elektryczna"
-              description="Domyślnie liczona zryczałtowanym modelem punktowym z parametrów domu. Można nadpisać ręcznie."
+              description="Pozycje i ilości liczone domyślnie z parametrów domu — każdą można nadpisać ręcznie poniżej (0 = licz automatycznie)."
             >
-              <Field label="Liczba punktów elektrycznych (ręcznie, opcjonalnie)" className="sm:max-w-xs">
-                <NumericInput
-                  value={a.liczbaPunktowElektrycznychRecznie ?? 0}
-                  decimals={false}
-                  onChange={(v) => setAnswers({ liczbaPunktowElektrycznychRecznie: v > 0 ? v : null })}
-                />
-              </Field>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Toggle label="Instalacja do głośników" checked={a.instalacjaDoGlosnikow} onChange={(v) => setAnswers({ instalacjaDoGlosnikow: v })} />
+                <Toggle label="Instalacja do monitoringu" checked={a.instalacjaDoMonitoringu} onChange={(v) => setAnswers({ instalacjaDoMonitoringu: v })} />
+                <Toggle label="Instalacja do TV / LAN" checked={a.instalacjaDoTelewizjiLubLan} onChange={(v) => setAnswers({ instalacjaDoTelewizjiLubLan: v })} />
+                <Toggle label="Kanały / przepusty do TV" checked={a.kanalyPrzepustyDoTv} onChange={(v) => setAnswers({ kanalyPrzepustyDoTv: v })} />
+                <Toggle label="Przyłącze elektryczne do domu" checked={a.przylaczeDoDomu} onChange={(v) => setAnswers({ przylaczeDoDomu: v })} />
+                <Toggle label="Instalacja masztu antenowego z anteną" checked={a.instalacjaMasztuAnteny} onChange={(v) => setAnswers({ instalacjaMasztuAnteny: v })} />
+                <Toggle label="Rozdzielnia budowlana na czas budowy" checked={a.rozdzielniaBudowlana} onChange={(v) => setAnswers({ rozdzielniaBudowlana: v })} />
+                <Toggle label="Formalności odbiorowe" checked={a.formalnosciOdbiorowe} onChange={(v) => setAnswers({ formalnosciOdbiorowe: v })} />
+                <Toggle label="Pomiary wewnętrzne i uziemienia" checked={a.pomiaryWewnetrzne} onChange={(v) => setAnswers({ pomiaryWewnetrzne: v })} />
+              </div>
+              {a.przylaczeDoDomu ? (
+                <Field label="Długość przyłącza [m]" className="sm:max-w-xs">
+                  <NumericInput value={a.dlugoscPrzylaczaM} decimals={false} onChange={(v) => setAnswers({ dlugoscPrzylaczaM: v })} />
+                </Field>
+              ) : null}
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field label="Gniazda — obwody 230V (0 = auto)">
+                  <NumericInput
+                    value={a.iloscObwodowGniazd230V ?? 0}
+                    decimals={false}
+                    onChange={(v) => setAnswers({ iloscObwodowGniazd230V: v > 0 ? v : null })}
+                  />
+                </Field>
+                <Field label="Gniazda — kolejne w obwodzie (0 = auto)">
+                  <NumericInput
+                    value={a.iloscKolejnychGniazdObwody230V ?? 0}
+                    decimals={false}
+                    onChange={(v) => setAnswers({ iloscKolejnychGniazdObwody230V: v > 0 ? v : null })}
+                  />
+                </Field>
+                <Field label="Gniazda 400V (0 = auto)">
+                  <NumericInput
+                    value={a.iloscGniazd400V ?? 0}
+                    decimals={false}
+                    onChange={(v) => setAnswers({ iloscGniazd400V: v > 0 ? v : null })}
+                  />
+                </Field>
+                <Field label="Oświetlenie — obwody (0 = auto)">
+                  <NumericInput
+                    value={a.iloscObwodowOswietleniaWszystkich ?? 0}
+                    decimals={false}
+                    onChange={(v) => setAnswers({ iloscObwodowOswietleniaWszystkich: v > 0 ? v : null })}
+                  />
+                </Field>
+                <Field label="Oświetlenie — kolejne w obwodzie (0 = auto)">
+                  <NumericInput
+                    value={a.iloscOswietleniaKolejne ?? 0}
+                    decimals={false}
+                    onChange={(v) => setAnswers({ iloscOswietleniaKolejne: v > 0 ? v : null })}
+                  />
+                </Field>
+                {a.instalacjaDoTelewizjiLubLan ? (
+                  <Field label="Gniazda LAN i TV łącznie (0 = auto)">
+                    <NumericInput
+                      value={a.iloscGniazdLanTv ?? 0}
+                      decimals={false}
+                      onChange={(v) => setAnswers({ iloscGniazdLanTv: v > 0 ? v : null })}
+                    />
+                  </Field>
+                ) : null}
+                {a.instalacjaDoGlosnikow ? (
+                  <Field label="Kable głośnikowe (0 = auto)">
+                    <NumericInput
+                      value={a.iloscKabliGlosnikowych ?? 0}
+                      decimals={false}
+                      onChange={(v) => setAnswers({ iloscKabliGlosnikowych: v > 0 ? v : null })}
+                    />
+                  </Field>
+                ) : null}
+                {a.kanalyPrzepustyDoTv ? (
+                  <Field label="Liczba kanałów TV (0 = auto)">
+                    <NumericInput
+                      value={a.iloscKanalowTv ?? 0}
+                      decimals={false}
+                      onChange={(v) => setAnswers({ iloscKanalowTv: v > 0 ? v : null })}
+                    />
+                  </Field>
+                ) : null}
+                <Field label="Dodatkowe bruzdowanie [m]">
+                  <NumericInput value={a.dodatkoweBruzdowanieM} decimals={false} onChange={(v) => setAnswers({ dodatkoweBruzdowanieM: v })} />
+                </Field>
+              </div>
             </Section>
 
             <Section title="Finanse i wyjątki">
@@ -406,6 +462,26 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
                 <Toggle label="Płatność z góry" checked={a.platnoscZGory} onChange={(v) => setAnswers({ platnoscZGory: v })} />
                 <Toggle label="Istnieje już podstawowy system alarmowy" checked={a.istniejePodstawowyAlarm} onChange={(v) => setAnswers({ istniejePodstawowyAlarm: v })} />
                 <Toggle label="Tylko rozdzielnia z peryferiami automatyki" checked={a.tylkoRozdzielnia} onChange={(v) => setAnswers({ tylkoRozdzielnia: v })} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Współczynniki mnożące (domyślnie 1,0 = bez zmian)</p>
+                <div className="mt-2 grid gap-4 sm:grid-cols-4">
+                  <Field label="Projekt">
+                    <NumericInput value={a.wspolczynnikProjekt} onChange={(v) => setAnswers({ wspolczynnikProjekt: v > 0 ? v : 1 })} />
+                  </Field>
+                  <Field label="Rozdzielnica">
+                    <NumericInput value={a.wspolczynnikRozdzielnica} onChange={(v) => setAnswers({ wspolczynnikRozdzielnica: v > 0 ? v : 1 })} />
+                  </Field>
+                  <Field label="Outdoor">
+                    <NumericInput value={a.wspolczynnikOutdoor} onChange={(v) => setAnswers({ wspolczynnikOutdoor: v > 0 ? v : 1 })} />
+                  </Field>
+                  <Field label="Alarm tymczasowy">
+                    <NumericInput
+                      value={a.wspolczynnikAlarmTymczasowy}
+                      onChange={(v) => setAnswers({ wspolczynnikAlarmTymczasowy: v > 0 ? v : 1 })}
+                    />
+                  </Field>
+                </div>
               </div>
             </Section>
           </CardContent>
@@ -433,20 +509,24 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
           </CardHeader>
           <CardContent className="grid gap-4 pt-0 text-sm">
             <div className="grid gap-1">
-              <p className="font-medium text-foreground">Baza systemu ({totals.baseSystem.tier === "do_80" ? "do 80 m²" : totals.baseSystem.tier === "od_80_do_150" ? "80–150 m²" : "150 m²+"})</p>
-              <Row label="Rozdzielnica — sprzęt" value={totals.baseSystem.rozdzielnicaSprzetNet} />
-              <Row label="Automatyka — baza" value={totals.baseSystem.automatykaBazaNet} />
+              <p className="font-medium text-foreground">
+                Baza systemu ({totals.baseSystem.wieleKondygnacji ? "wielokondygnacyjny" : "jedna kondygnacja"})
+              </p>
               <Row label="Projekt" value={totals.baseSystem.projektNet} />
-              <Row label="Wykonanie rozdzielni" value={totals.baseSystem.wykonanieRozdzielniNet} />
-              <Row label="Konfiguracja" value={totals.baseSystem.konfiguracjaNet} />
+              <Row label="Wykonanie rozdzielni" value={totals.baseSystem.rozdzielniaWykonanieNet} />
+              <Row label="Baza — sterownik, zasilanie, konfiguracja" value={totals.baseSystem.bazaZasilanieNet} />
             </div>
 
-            <div className="grid gap-1 border-t border-border/50 pt-3">
-              <p className="font-medium text-foreground">Kategorie funkcjonalne</p>
-              {totals.functional.map((item) => (
-                <Row key={item.category} label={`${CALCULATOR_FUNCTIONAL_CATEGORY_LABELS[item.category]} (${CALCULATOR_FUNCTIONAL_LEVEL_LABELS[item.level]})`} value={item.net} />
-              ))}
-            </div>
+            {totals.functional.some((item) => item.selected) ? (
+              <div className="grid gap-1 border-t border-border/50 pt-3">
+                <p className="font-medium text-foreground">Kategorie funkcjonalne</p>
+                {totals.functional
+                  .filter((item) => item.selected)
+                  .map((item) => (
+                    <Row key={item.category} label={CALCULATOR_FUNCTIONAL_CATEGORY_LABELS[item.category]} value={item.net} />
+                  ))}
+              </div>
+            ) : null}
 
             {totals.addonsNet > 0 ? (
               <div className="grid gap-1 border-t border-border/50 pt-3">
@@ -454,12 +534,14 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
               </div>
             ) : null}
 
-            <div className="grid gap-1 border-t border-border/50 pt-3">
-              <p className="font-medium text-foreground">Instalacja elektryczna</p>
-              <p className="text-xs text-muted">{totals.electrical.points} pkt</p>
-              <Row label="Wartość" value={totals.electrical.net} />
-              {totals.electrical.discountNet > 0 ? <Row label="Rabat kompleksowości" value={-totals.electrical.discountNet} muted /> : null}
-            </div>
+            {totals.electrical.items.length > 0 ? (
+              <div className="grid gap-1 border-t border-border/50 pt-3">
+                <p className="font-medium text-foreground">Instalacja elektryczna</p>
+                <p className="text-xs text-muted">{totals.electrical.items.length} pozycji</p>
+                <Row label="Wartość" value={totals.electrical.net} />
+                {totals.electrical.discountNet > 0 ? <Row label="Rabat kompleksowości" value={-totals.electrical.discountNet} muted /> : null}
+              </div>
+            ) : null}
 
             {totals.otherSystems.selectedNet > 0 ? (
               <div className="grid gap-1 border-t border-border/50 pt-3">

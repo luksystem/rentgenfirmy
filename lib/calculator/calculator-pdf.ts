@@ -4,9 +4,8 @@ import { companyDisplayName, companyFooterLines, type CompanyProfile } from "@/l
 import { calculateCalculatorTotals } from "@/lib/calculator/engine";
 import type { CalculatorSettings } from "@/lib/calculator/settings";
 import {
+  CALCULATOR_ADDON_LABELS,
   CALCULATOR_FUNCTIONAL_CATEGORY_LABELS,
-  CALCULATOR_FUNCTIONAL_LEVEL_LABELS,
-  CALCULATOR_HOUSE_SIZE_TIER_LABELS,
   CALCULATOR_OTHER_SYSTEM_LABELS,
   type CalculatorOffer,
 } from "@/lib/calculator/types";
@@ -107,7 +106,7 @@ export async function generateCalculatorOfferPdf(params: {
   const totals = calculateCalculatorTotals(offer.answers, settings);
 
   drawWrapped(
-    `Parametry domu: ${offer.answers.powierzchniaM2} m², ${offer.answers.liczbaKondygnacji} kondygnacj(a/e), próg cenowy: ${CALCULATOR_HOUSE_SIZE_TIER_LABELS[totals.baseSystem.tier]}`,
+    `Parametry domu: ${offer.answers.powierzchniaM2} m², ${offer.answers.liczbaKondygnacji} kondygnacj(a/e)`,
     fonts.regular,
     10,
     14,
@@ -115,39 +114,35 @@ export async function generateCalculatorOfferPdf(params: {
   y -= 10;
 
   drawWrapped("Baza systemu Inteligentnego Domu (pakiet OPTIMUM)", fonts.bold, 12, 16);
-  drawWrapped(`Rozdzielnica — sprzęt: ${formatMoney(totals.baseSystem.rozdzielnicaSprzetNet)}`, fonts.regular, 10, 14);
-  drawWrapped(`Automatyka — baza i zasilanie: ${formatMoney(totals.baseSystem.automatykaBazaNet)}`, fonts.regular, 10, 14);
-  drawWrapped(
-    `Projekt: ${formatMoney(totals.baseSystem.projektNet)}${totals.baseSystem.projektDiscountNet > 0 ? ` (rabat kompleksowości: ${formatMoney(totals.baseSystem.projektDiscountNet)})` : ""}`,
-    fonts.regular,
-    10,
-    14,
-  );
-  drawWrapped(`Wykonanie i podłączenie rozdzielni: ${formatMoney(totals.baseSystem.wykonanieRozdzielniNet)}`, fonts.regular, 10, 14);
-  drawWrapped(`Wstępna konfiguracja: ${formatMoney(totals.baseSystem.konfiguracjaNet)}`, fonts.regular, 10, 14);
+  drawWrapped(`Projekt: ${formatMoney(totals.baseSystem.projektNet)}`, fonts.regular, 10, 14);
+  drawWrapped(`Wykonanie i podłączenie rozdzielni: ${formatMoney(totals.baseSystem.rozdzielniaWykonanieNet)}`, fonts.regular, 10, 14);
+  drawWrapped(`Baza systemu — sterownik, zasilanie, konfiguracja: ${formatMoney(totals.baseSystem.bazaZasilanieNet)}`, fonts.regular, 10, 14);
   y -= 6;
 
-  drawWrapped("Kategorie funkcjonalne", fonts.bold, 11, 15);
-  for (const item of totals.functional) {
-    drawWrapped(
-      `${CALCULATOR_FUNCTIONAL_CATEGORY_LABELS[item.category]} — poziom ${CALCULATOR_FUNCTIONAL_LEVEL_LABELS[item.level]}: ${formatMoney(item.net)}`,
-      fonts.regular,
-      10,
-      14,
-    );
-  }
-  y -= 6;
-
-  if (totals.addonsNet > 0) {
-    drawWrapped("Dodatki (wybrane)", fonts.bold, 11, 15);
-    for (const item of totals.addons.filter((entry) => entry.selected)) {
-      drawWrapped(`${item.key}: ${formatMoney(item.net)}`, fonts.regular, 10, 14);
+  const selectedFunctional = totals.functional.filter((item) => item.selected);
+  if (selectedFunctional.length > 0) {
+    drawWrapped("Kategorie funkcjonalne", fonts.bold, 11, 15);
+    for (const item of selectedFunctional) {
+      drawWrapped(`${CALCULATOR_FUNCTIONAL_CATEGORY_LABELS[item.category]}: ${formatMoney(item.net)}`, fonts.regular, 10, 14);
     }
     y -= 6;
   }
 
-  drawWrapped(`Instalacja elektryczna (${totals.electrical.points} pkt): ${formatMoney(totals.electrical.finalNet)}`, fonts.bold, 11, 15);
-  y -= 6;
+  if (totals.addonsNet > 0) {
+    drawWrapped("Dodatki (wybrane)", fonts.bold, 11, 15);
+    for (const item of totals.addons.filter((entry) => entry.selected)) {
+      drawWrapped(`${CALCULATOR_ADDON_LABELS[item.key]}: ${formatMoney(item.net)}`, fonts.regular, 10, 14);
+    }
+    y -= 6;
+  }
+
+  if (totals.electrical.items.length > 0) {
+    drawWrapped(`Instalacja elektryczna (${totals.electrical.items.length} pozycji): ${formatMoney(totals.electrical.finalNet)}`, fonts.bold, 11, 15);
+    for (const entry of totals.electrical.items) {
+      drawWrapped(`${entry.label} — ${entry.quantity} × ${formatMoney(entry.unitPrice)} = ${formatMoney(entry.net)}`, fonts.regular, 9, 13);
+    }
+    y -= 6;
+  }
 
   if (totals.otherSystems.selectedNet > 0) {
     drawWrapped("Inne systemy", fonts.bold, 11, 15);

@@ -9,8 +9,8 @@ describe("buildContractSectionsFromCalculatorOffer", () => {
   it("mapuje bazę systemu na tabelę główną, elektrykę na kategorię instalacja, dodatki per pozycja", () => {
     const offer = createEmptyCalculatorOffer();
     offer.answers.powierzchniaM2 = 120;
+    offer.answers.strefaPrywatna = true;
     offer.answers.kompleksowaInstalacja = true;
-    offer.answers.liczbaPunktowElektrycznychRecznie = 250;
     offer.answers.addons.stacjaPogodowa = true;
     offer.answers.otherSystems.sieciLan = true;
 
@@ -24,7 +24,7 @@ describe("buildContractSectionsFromCalculatorOffer", () => {
     const electrical = tableSections.find((s) => s.category === "instalacja");
     expect(electrical).toBeDefined();
     expect(electrical!.selected).toBe(true); // kompleksowa instalacja -> od razu zaznaczona
-    expect(electrical!.rows[0].quantity).toBe(250);
+    expect(electrical!.rows.length).toBeGreaterThan(1); // gniazda wg strefaPrywatna + obsadzenie RG
 
     const otherSystems = tableSections.find((s) => s.category === "instalacje_dodatkowe");
     expect(otherSystems).toBeDefined();

@@ -1,83 +1,169 @@
 import { describe, expect, it } from "vitest";
-import { calculateCalculatorTotals, estimateElectricalPoints, resolveHouseSizeTier } from "@/lib/calculator/engine";
+import { calculateBaseSystem, calculateCalculatorTotals, calculateElectricalItems } from "@/lib/calculator/engine";
 import { DEFAULT_CALCULATOR_SETTINGS } from "@/lib/calculator/settings";
 import { emptyCalculatorAnswers } from "@/lib/calculator/types";
 
 /**
  * Weryfikacja silnika kalkulatora. Wartości startowe w `lib/calculator/settings.ts` zostały
- * przepisane z realnych, przeliczonych komórek pliku
- * "Oferta cenowa Luksystem INTELIGETNY DOM_Pakiety_v21.xlsx" (arkusze KALKULATOR/ZESTAWIENIE dla
- * ścieżki OPTIMUM, próg metrażowy 80-150 m²) — patrz komentarze w settings.ts. Tu sprawdzamy, że
- * transkrypcja się zgadza i że mechanika przeliczeń (progi, rabaty, proporcje) działa poprawnie —
- * nie da się odtworzyć pełnego uruchomienia arkusza Excela w tym środowisku, więc to najbliższe
- * dostępne potwierdzenie zgodności z liczbami źródłowymi.
+ * zweryfikowane EMPIRYCZNIE przeciw realnemu plikowi
+ * "Oferta cenowa Luksystem INTELIGETNY DOM_Pakiety_v21.xlsx" — przeliczonemu biblioteką
+ * `formulas` (nie tylko odczyt statycznych komórek) dla konkretnych scenariuszy wejściowych,
+ * ścieżka pakietu OPTIMUM. Testy niżej powtarzają te same scenariusze i sprawdzają zgodność
+ * 1:1 z realnymi wynikami arkusza (DANE!T108:T113, Pakiety!J41/J42).
  */
 
-describe("resolveHouseSizeTier", () => {
-  it("dzieli progi 80 / 150 m²", () => {
-    expect(resolveHouseSizeTier({ powierzchniaM2: 60 })).toBe("do_80");
-    expect(resolveHouseSizeTier({ powierzchniaM2: 80 })).toBe("do_80");
-    expect(resolveHouseSizeTier({ powierzchniaM2: 120 })).toBe("od_80_do_150");
-    expect(resolveHouseSizeTier({ powierzchniaM2: 150 })).toBe("od_80_do_150");
-    expect(resolveHouseSizeTier({ powierzchniaM2: 200 })).toBe("od_150");
-  });
-});
-
-describe("transkrypcja cen z arkusza (próg 80-150 m²)", () => {
-  const settings = DEFAULT_CALCULATOR_SETTINGS;
-
-  it("rozdzielnica sprzęt = KALKULATOR!D12 (7950)", () => {
-    expect(settings.baseSystem.rozdzielnicaSprzet.od_80_do_150).toBe(7950);
-  });
-
-  it("automatyka baza = KALKULATOR!D19 (7350)", () => {
-    expect(settings.baseSystem.automatykaBaza.od_80_do_150).toBe(7350);
-  });
-
-  it("kategorie funkcjonalne — poziom KOMFORT (ZESTAWIENIE!K72/P72/U72/Z72/AE72, zaokrąglone)", () => {
-    expect(settings.functional.oswietlenie.komfort).toBe(7850);
-    expect(settings.functional.bezpieczenstwo.komfort).toBe(9100);
-    expect(settings.functional.zewnetrzne.komfort).toBe(5000);
-  });
-});
-
-describe("calculateCalculatorTotals — mechanika przeliczeń", () => {
-  it("dom bez żadnych opcji liczy tylko bazę systemu + kategorie na poziomie domyślnym", () => {
+describe("calculateBaseSystem — zweryfikowane przeciw DANE!T109:T111", () => {
+  it("jedna kondygnacja: projekt=4000, wykonanie rozdzielni=14520, baza=12728.33", () => {
     const answers = emptyCalculatorAnswers();
-    answers.powierzchniaM2 = 120;
-    answers.liczbaDrzwiWejsciowych = 0; // domyślnie 1 (drzwi wejściowe zawsze są) -> tu celowo zerujemy dla czystego przypadku
+    answers.liczbaKondygnacji = 1;
+    const result = calculateBaseSystem(answers, DEFAULT_CALCULATOR_SETTINGS);
+
+    expect(result.wieleKondygnacji).toBe(false);
+    expect(result.projektNet).toBe(4000);
+    expect(result.rozdzielniaWykonanieNet).toBe(14520);
+    expect(result.bazaZasilanieNet).toBe(12728.33);
+  });
+
+  it("wiele kondygnacji: projekt=6000, wykonanie rozdzielni=17640, baza=11928.33", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.liczbaKondygnacji = 2;
+    const result = calculateBaseSystem(answers, DEFAULT_CALCULATOR_SETTINGS);
+
+    expect(result.wieleKondygnacji).toBe(true);
+    expect(result.projektNet).toBe(6000);
+    expect(result.rozdzielniaWykonanieNet).toBe(17640);
+    expect(result.bazaZasilanieNet).toBe(11928.33);
+  });
+
+  it("powierzchnia NIE wpływa na próg bazy systemu (potwierdzone empirycznie — tylko kondygnacje)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.liczbaKondygnacji = 1;
+    const small = calculateBaseSystem({ ...answers, powierzchniaM2: 60 }, DEFAULT_CALCULATOR_SETTINGS);
+    const large = calculateBaseSystem({ ...answers, powierzchniaM2: 250 }, DEFAULT_CALCULATOR_SETTINGS);
+
+    expect(small.totalNet).toBe(large.totalNet);
+  });
+
+  it("dom >= 400m² dostaje dopłatę do projektu (KALKULATOR!N29)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.powierzchniaM2 = 400;
+    const result = calculateBaseSystem(answers, DEFAULT_CALCULATOR_SETTINGS);
+    expect(result.projektNet).toBe(4000 + 2000);
+  });
+
+  it("współczynnik projekt (CRM!Q23) mnoży czysto tylko projekt — zweryfikowane ×2 -> 8000", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.wspolczynnikProjekt = 2;
+    const result = calculateBaseSystem(answers, DEFAULT_CALCULATOR_SETTINGS);
+    expect(result.projektNet).toBe(8000);
+    expect(result.rozdzielniaWykonanieNet).toBe(14520); // nietknięte
+  });
+});
+
+describe("calculateCalculatorTotals — kategorie funkcjonalne jako stała cena (nie poziom)", () => {
+  it("bez żadnej funkcjonalności — kategorie funkcjonalne = 0", () => {
+    const answers = emptyCalculatorAnswers();
     const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
-
-    expect(totals.addonsNet).toBe(0);
-    expect(totals.otherSystems.selectedNet).toBe(0);
-    expect(totals.electrical.net).toBe(0); // brak pomieszczeń/drzwi -> 0 punktów
-    expect(totals.mainNet).toBe(totals.baseSystem.totalNet + totals.functionalNet);
-    expect(totals.totalNet).toBe(totals.mainNet);
+    expect(totals.functionalNet).toBe(0);
+    expect(totals.functional.every((item) => !item.selected)).toBe(true);
   });
 
-  it("kompleksowa instalacja obniża cenę projektu i instalacji elektrycznej", () => {
-    const base = emptyCalculatorAnswers();
-    base.powierzchniaM2 = 120;
-    base.strefaPrywatna = true;
-    base.liczbaPunktowElektrycznychRecznie = 400;
-
-    const withoutDiscount = calculateCalculatorTotals(base, DEFAULT_CALCULATOR_SETTINGS);
-    const withDiscount = calculateCalculatorTotals(
-      { ...base, kompleksowaInstalacja: true },
-      DEFAULT_CALCULATOR_SETTINGS,
-    );
-
-    expect(withDiscount.baseSystem.projektDiscountNet).toBeGreaterThan(0);
-    expect(withDiscount.electrical.discountNet).toBeGreaterThan(0);
-    expect(withDiscount.totalNet).toBeLessThan(withoutDiscount.totalNet);
+  it("bezpieczeństwo (alarmIKontrolaDostepu) = 14930.70 (zweryfikowane, delta T112)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.alarmIKontrolaDostepu = true;
+    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const item = totals.functional.find((entry) => entry.category === "bezpieczenstwo");
+    expect(item?.net).toBe(14930.7);
   });
 
+  it("tylko rozdzielnia zeruje bezpieczeństwo mimo zaznaczonego alarmu (DANE!T112 formuła)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.alarmIKontrolaDostepu = true;
+    answers.tylkoRozdzielnia = true;
+    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const item = totals.functional.find((entry) => entry.category === "bezpieczenstwo");
+    expect(item?.net).toBe(0);
+  });
+
+  it("temperatura=4677.16, rolety=4369.40, zewnętrzne=4967.50, oświetlenie=2559.90 (zweryfikowane)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.sterowanieTemperatura = true;
+    answers.planujeRolety = true;
+    answers.sterowanieOgrodem = true;
+    answers.scenyOswietleniowe = true;
+    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const net = (category: string) => totals.functional.find((entry) => entry.category === category)?.net;
+    expect(net("temperatura")).toBe(4677.16);
+    expect(net("rolety")).toBe(4369.4);
+    expect(net("zewnetrzne")).toBe(4967.5);
+    expect(net("oswietlenie")).toBe(2559.9);
+  });
+
+  it("współczynnik outdoor (CRM!Q25) mnoży tylko zewnętrzne — zweryfikowane ×2 -> 9935", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.sterowanieOgrodem = true;
+    answers.wspolczynnikOutdoor = 2;
+    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const item = totals.functional.find((entry) => entry.category === "zewnetrzne");
+    expect(item?.net).toBe(9935);
+  });
+});
+
+describe("calculateElectricalItems — model itemizowany (ilości × stawka wg typu)", () => {
+  it("bez zaznaczonych pomieszczeń/toggle'ów — brak pozycji", () => {
+    const answers = emptyCalculatorAnswers();
+    const items = calculateElectricalItems(answers, DEFAULT_CALCULATOR_SETTINGS);
+    expect(items).toHaveLength(1); // tylko "obsadzenie rozdzielni głównej" (zawsze wliczone)
+    expect(items[0].key).toBe("obsadzenie_rg");
+  });
+
+  it("strefa prywatna generuje pozycję gniazd wg stawki ID (162 zł)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.strefaPrywatna = true;
+    const items = calculateElectricalItems(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const gniazda = items.find((entry) => entry.key === "gniazda_obwody");
+    expect(gniazda?.quantity).toBe(2);
+    expect(gniazda?.unitPrice).toBe(162);
+    expect(gniazda?.net).toBe(324);
+  });
+
+  it("ręczna ilość nadpisuje automatyczne wyliczenie", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.strefaPrywatna = true;
+    answers.iloscObwodowGniazd230V = 50;
+    const items = calculateElectricalItems(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const gniazda = items.find((entry) => entry.key === "gniazda_obwody");
+    expect(gniazda?.quantity).toBe(50);
+  });
+
+  it("monitoring liczony tylko gdy zaznaczona instalacja do monitoringu", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.iloscKamerMonitoringu = 8;
+    const withoutToggle = calculateElectricalItems(answers, DEFAULT_CALCULATOR_SETTINGS);
+    expect(withoutToggle.find((entry) => entry.key === "monitoring")).toBeUndefined();
+
+    answers.instalacjaDoMonitoringu = true;
+    const withToggle = calculateElectricalItems(answers, DEFAULT_CALCULATOR_SETTINGS);
+    expect(withToggle.find((entry) => entry.key === "monitoring")?.quantity).toBe(8);
+  });
+
+  it("kompleksowa instalacja daje rabat na sumę pozycji elektrycznych", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.strefaPrywatna = true;
+    answers.strefaOtwarta = true;
+    const bez = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const zRabatem = calculateCalculatorTotals({ ...answers, kompleksowaInstalacja: true }, DEFAULT_CALCULATOR_SETTINGS);
+    expect(zRabatem.electrical.discountNet).toBeGreaterThan(0);
+    expect(zRabatem.electrical.finalNet).toBeLessThan(bez.electrical.net);
+  });
+});
+
+describe("calculateCalculatorTotals — pozostała mechanika", () => {
   it("rabat na inne systemy jest proporcjonalny do liczby wybranych spośród wszystkich", () => {
     const answers = emptyCalculatorAnswers();
     answers.otherSystems.sieciLan = true;
     const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
 
-    // 1 z 8 systemów -> 1/8 max rabatu (15% domyślnie), zaokrąglone do 2 miejsc jak reszta kwot/procentów w silniku
     expect(totals.otherSystems.discountPercent).toBeCloseTo((1 / 8) * 15, 2);
     expect(totals.otherSystems.discountNet).toBeCloseTo(
       totals.otherSystems.selectedNet * (totals.otherSystems.discountPercent / 100),
@@ -87,19 +173,16 @@ describe("calculateCalculatorTotals — mechanika przeliczeń", () => {
 
   it("trudny klient (>1,0) mnoży wartość główną, ale nie instalację elektryczną/inne systemy", () => {
     const answers = emptyCalculatorAnswers();
-    answers.powierzchniaM2 = 100;
+    answers.alarmIKontrolaDostepu = true;
     const base = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
-    const trudny = calculateCalculatorTotals(
-      { ...answers, trudnyKlientWspolczynnik: 1.2 },
-      DEFAULT_CALCULATOR_SETTINGS,
-    );
+    const trudny = calculateCalculatorTotals({ ...answers, trudnyKlientWspolczynnik: 1.2 }, DEFAULT_CALCULATOR_SETTINGS);
 
     expect(trudny.mainNet).toBeCloseTo(base.mainNet * 1.2, 0);
   });
 
   it("płatność z góry obniża sumę końcową o skonfigurowany procent", () => {
     const answers = emptyCalculatorAnswers();
-    answers.powierzchniaM2 = 100;
+    answers.alarmIKontrolaDostepu = true;
     const base = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
     const zGory = calculateCalculatorTotals({ ...answers, platnoscZGory: true }, DEFAULT_CALCULATOR_SETTINGS);
 
@@ -121,21 +204,5 @@ describe("calculateCalculatorTotals — mechanika przeliczeń", () => {
     const ipad = totals.addons.find((item) => item.key === "ipad");
     expect(stacja?.net).toBe(DEFAULT_CALCULATOR_SETTINGS.addons.stacjaDokujacaIpad * 3);
     expect(ipad?.net).toBe(DEFAULT_CALCULATOR_SETTINGS.addons.ipad * 3);
-  });
-});
-
-describe("estimateElectricalPoints", () => {
-  it("ręczna wartość ma priorytet nad wyliczoną", () => {
-    const answers = emptyCalculatorAnswers();
-    answers.strefaPrywatna = true;
-    answers.liczbaPunktowElektrycznychRecznie = 999;
-    expect(estimateElectricalPoints(answers)).toBe(999);
-  });
-
-  it("bez ręcznej wartości liczy z parametrów pomieszczeń", () => {
-    const answers = emptyCalculatorAnswers();
-    answers.strefaPrywatna = true; // +2
-    answers.strefaOtwarta = true; // +4
-    expect(estimateElectricalPoints(answers)).toBeGreaterThan(0);
   });
 });

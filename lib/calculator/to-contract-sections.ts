@@ -2,13 +2,7 @@ import { createFixedPriceRow } from "@/lib/service/fixed-price";
 import type { ServiceFixedPriceRow } from "@/lib/service/types";
 import { createContractTableSection } from "@/lib/contracts/factory";
 import type { ContractSection } from "@/lib/contracts/types";
-import {
-  CALCULATOR_ADDON_LABELS,
-  CALCULATOR_FUNCTIONAL_CATEGORY_LABELS,
-  CALCULATOR_FUNCTIONAL_LEVEL_LABELS,
-  CALCULATOR_OTHER_SYSTEM_LABELS,
-  type CalculatorOffer,
-} from "@/lib/calculator/types";
+import { CALCULATOR_ADDON_LABELS, CALCULATOR_FUNCTIONAL_CATEGORY_LABELS, CALCULATOR_OTHER_SYSTEM_LABELS, type CalculatorOffer } from "@/lib/calculator/types";
 import {
   calculateAddons,
   calculateBaseSystem,
@@ -21,9 +15,10 @@ import type { CalculatorSettings } from "@/lib/calculator/settings";
 /**
  * Mapuje wynik silnika kalkulatora na sekcje tabel Umowy — dokładnie ten sam kształt, jaki
  * `ContractSectionsEditor`/`ContractDocumentView` już rozumieją (żadnych nowych pojęć po stronie
- * Umów). Kategorie: baza systemu -> tabela główna; instalacja elektryczna -> opcja "instalacja";
- * inne systemy -> opcja "instalacje_dodatkowe" (rabat proporcjonalny już wyliczony w silniku);
- * dodatki -> opcja "dodatki" (checkbox per pozycja).
+ * Umów). Kategorie: baza systemu + kategorie funkcjonalne -> tabela główna; instalacja
+ * elektryczna (itemizowana) -> opcja "instalacja"; inne systemy -> opcja "instalacje_dodatkowe"
+ * (rabat proporcjonalny już wyliczony w silniku); dodatki -> opcja "dodatki" (checkbox per
+ * pozycja).
  */
 
 function row(overrides: Partial<ServiceFixedPriceRow>): ServiceFixedPriceRow {
@@ -36,7 +31,7 @@ export function buildContractSectionsFromCalculatorOffer(
 ): ContractSection[] {
   const { answers } = offer;
   const electrical = calculateElectricalInstallation(answers, settings);
-  const baseSystem = calculateBaseSystem(answers, settings, electrical.points);
+  const baseSystem = calculateBaseSystem(answers, settings);
   const functional = calculateFunctionalBudgets(answers, settings);
   const addons = calculateAddons(answers, settings);
   const otherSystems = calculateOtherSystems(answers, settings);
@@ -47,45 +42,28 @@ export function buildContractSectionsFromCalculatorOffer(
   mainSection.title = "Baza systemu Inteligentnego Domu (pakiet OPTIMUM)";
   mainSection.description = "Wyliczone z kalkulatora ofert na podstawie ankiety parametrów domu.";
   mainSection.rows = [
-    row({ name: "Rozdzielnica — sprzęt", netUnitPrice: baseSystem.rozdzielnicaSprzetNet }),
-    row({ name: "Automatyka — baza i zasilanie", netUnitPrice: baseSystem.automatykaBazaNet }),
-    row({
-      name: "Projekt Inteligentnego Domu",
-      netUnitPrice: baseSystem.projektNet + baseSystem.projektDiscountNet,
-      percentDiscount:
-        baseSystem.projektDiscountNet > 0
-          ? Math.round((baseSystem.projektDiscountNet / (baseSystem.projektNet + baseSystem.projektDiscountNet)) * 100)
-          : 0,
-      description: answers.kompleksowaInstalacja ? "Rabat za kompleksową realizację" : "",
-      showDescription: answers.kompleksowaInstalacja,
-    }),
-    row({ name: "Wykonanie i podłączenie rozdzielni", netUnitPrice: baseSystem.wykonanieRozdzielniNet }),
-    row({ name: "Wstępna konfiguracja", netUnitPrice: baseSystem.konfiguracjaNet }),
-    ...functional.map((item) =>
-      row({
-        name: `${CALCULATOR_FUNCTIONAL_CATEGORY_LABELS[item.category]} — poziom ${CALCULATOR_FUNCTIONAL_LEVEL_LABELS[item.level]}`,
-        netUnitPrice: item.net,
-      }),
-    ),
+    row({ name: "Projekt Inteligentnego Domu", netUnitPrice: baseSystem.projektNet }),
+    row({ name: "Wykonanie i podłączenie rozdzielni", netUnitPrice: baseSystem.rozdzielniaWykonanieNet }),
+    row({ name: "Baza systemu — sterownik, zasilanie, konfiguracja", netUnitPrice: baseSystem.bazaZasilanieNet }),
+    ...functional
+      .filter((item) => item.selected)
+      .map((item) => row({ name: CALCULATOR_FUNCTIONAL_CATEGORY_LABELS[item.category], netUnitPrice: item.net })),
   ];
   sections.push(mainSection);
 
-  const electricalSection = createContractTableSection("option", {
-    category: "instalacja",
-    categoryDiscountPercent: settings.discounts.instalacjaKompleksowaPercent,
-  });
-  electricalSection.title = "Instalacja elektryczna";
-  electricalSection.description = "Wyliczona zryczałtowanym modelem punktowym — do weryfikacji z elektrykiem.";
-  electricalSection.selected = answers.kompleksowaInstalacja;
-  electricalSection.rows = [
-    row({
-      name: "Instalacja elektryczna — punkty",
-      quantity: electrical.points,
-      unit: "pkt",
-      netUnitPrice: settings.electrical.cenaZaPunkt,
-    }),
-  ];
-  sections.push(electricalSection);
+  if (electrical.items.length > 0) {
+    const electricalSection = createContractTableSection("option", {
+      category: "instalacja",
+      categoryDiscountPercent: settings.discounts.instalacjaKompleksowaPercent,
+    });
+    electricalSection.title = "Instalacja elektryczna";
+    electricalSection.description = "Wyliczona z ilości punktów wg parametrów domu — do weryfikacji z elektrykiem.";
+    electricalSection.selected = answers.kompleksowaInstalacja;
+    electricalSection.rows = electrical.items.map((entry) =>
+      row({ name: entry.label, quantity: entry.quantity, unit: "pkt", netUnitPrice: entry.unitPrice }),
+    );
+    sections.push(electricalSection);
+  }
 
   const selectedOtherSystems = otherSystems.items.filter((item) => item.selected);
   if (selectedOtherSystems.length > 0) {

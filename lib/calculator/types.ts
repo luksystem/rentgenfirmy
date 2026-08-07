@@ -9,6 +9,16 @@ import type { Contact } from "@/lib/contacts/types";
  * równoległego silnika "Easy System" — te dojdą później tym samym wzorcem). Liczymy wyłącznie
  * cenę dla klienta — bez wewnętrznej kalkulacji marży/kosztu sprzętu (świadomie pominięte,
  * patrz plan modułu).
+ *
+ * Model bazy systemu i kategorii funkcjonalnych zweryfikowany empirycznie przeciw źródłowemu
+ * plikowi (biblioteka `formulas` — przeliczenie arkusza z konkretnymi danymi wejściowymi, nie
+ * tylko odczyt statycznych komórek). Dwa ważne, potwierdzone w ten sposób odkrycia:
+ * 1. próg cenowy bazy systemu w ścieżce OPTIMUM zależy WYŁĄCZNIE od liczby kondygnacji
+ *    (1 vs >1), a nie od wpisanej powierzchni — mimo że arkusz sugeruje osobne progi metrażowe.
+ * 2. kategorie funkcjonalne (bezpieczeństwo/temperatura/rolety/zewnętrzne/oświetlenie wewn.) mają
+ *    dla OPTIMUM stałą cenę odblokowywaną checkboxem funkcjonalności — NIE trzypoziomowy wybór
+ *    Podstawa/Komfort/Prestiż (ten wybór istnieje w arkuszu, ale zasila wewnętrzną kalkulację
+ *    kosztu/marży, nie cenę sprzedaży, więc świadomie tu pominięty).
  */
 
 export const CALCULATOR_OFFER_STATUSES = ["draft", "ready", "converted"] as const;
@@ -18,15 +28,6 @@ export const CALCULATOR_OFFER_STATUS_LABELS: Record<CalculatorOfferStatus, strin
   draft: "Szkic",
   ready: "Gotowa",
   converted: "Przeniesiona do umowy",
-};
-
-export const CALCULATOR_HOUSE_SIZE_TIERS = ["do_80", "od_80_do_150", "od_150"] as const;
-export type CalculatorHouseSizeTier = (typeof CALCULATOR_HOUSE_SIZE_TIERS)[number];
-
-export const CALCULATOR_HOUSE_SIZE_TIER_LABELS: Record<CalculatorHouseSizeTier, string> = {
-  do_80: "do 80 m²",
-  od_80_do_150: "80–150 m²",
-  od_150: "150 m²+",
 };
 
 export const CALCULATOR_FUNCTIONAL_CATEGORIES = [
@@ -44,15 +45,6 @@ export const CALCULATOR_FUNCTIONAL_CATEGORY_LABELS: Record<CalculatorFunctionalC
   temperatura: "Sterowanie temperaturą",
   rolety: "Rolety / żaluzje / karnisze",
   zewnetrzne: "Zewnętrzne (ogród, elewacja)",
-};
-
-export const CALCULATOR_FUNCTIONAL_LEVELS = ["podstawa", "komfort", "prestiz"] as const;
-export type CalculatorFunctionalLevel = (typeof CALCULATOR_FUNCTIONAL_LEVELS)[number];
-
-export const CALCULATOR_FUNCTIONAL_LEVEL_LABELS: Record<CalculatorFunctionalLevel, string> = {
-  podstawa: "Podstawa",
-  komfort: "Komfort",
-  prestiz: "Prestiż",
 };
 
 export const CALCULATOR_ADDON_KEYS = [
@@ -115,6 +107,17 @@ export const CALCULATOR_OTHER_SYSTEM_LABELS: Record<CalculatorOtherSystemKey, st
   alarmTymczasowy: "Alarm tymczasowy na czas budowy",
 };
 
+/** Typ stawki punktu elektrycznego (El rozbudowa!B2:B6) — decyduje o cenie jednostkowej pozycji. */
+export const CALCULATOR_ELECTRICAL_RATE_TYPES = ["standard", "inteligentny", "gotowe_urzadzenie", "petla"] as const;
+export type CalculatorElectricalRateType = (typeof CALCULATOR_ELECTRICAL_RATE_TYPES)[number];
+
+export const CALCULATOR_ELECTRICAL_RATE_TYPE_LABELS: Record<CalculatorElectricalRateType, string> = {
+  standard: "Standard (ST)",
+  inteligentny: "Inteligentny Dom (ID)",
+  gotowe_urzadzenie: "Gotowe urządzenie (ID READY)",
+  petla: "Pętla / magistrala",
+};
+
 export type CalculatorClient = {
   fullName: string;
   location: string;
@@ -158,6 +161,9 @@ export function calculatorClientFromServiceClient(snapshot: ServiceClient): Calc
  * pogrupowane komentarzami wg sekcji formularza w UI.
  */
 export type CalculatorAnswers = {
+  // Dane kontaktowe / lokalizacja
+  odlegloscKm: number;
+
   // Parametry podstawowe
   powierzchniaM2: number;
   liczbaKondygnacji: number;
@@ -181,7 +187,7 @@ export type CalculatorAnswers = {
   liczbaPozostalychPomieszczen: number;
   liczbaBramGarazowych: number;
 
-  // Funkcjonalności
+  // Funkcjonalności — każda odblokowuje cenę stałą danej kategorii (patrz settings.functional)
   jestKominek: boolean;
   jestGaz: boolean;
   planujeRolety: boolean;
@@ -191,13 +197,6 @@ export type CalculatorAnswers = {
   sterowanieTemperatura: boolean;
   systemWlamaniowy: boolean;
   alarmIKontrolaDostepu: boolean;
-
-  // Poziom kategorii funkcjonalnych — wybór biura per oferta
-  poziomOswietlenie: CalculatorFunctionalLevel;
-  poziomBezpieczenstwo: CalculatorFunctionalLevel;
-  poziomTemperatura: CalculatorFunctionalLevel;
-  poziomRolety: CalculatorFunctionalLevel;
-  poziomZewnetrzne: CalculatorFunctionalLevel;
 
   // Dodatki — checkbox per pozycja
   addons: Record<CalculatorAddonKey, boolean>;
@@ -209,18 +208,45 @@ export type CalculatorAnswers = {
   iloscStrefMultiroom: number;
   iloscGlosnikowMultiroom: number;
 
-  // Instalacja elektryczna (uproszczony model punktowy)
-  liczbaPunktowElektrycznychRecznie: number | null;
+  // Instalacja elektryczna — toggle'e (CRM!U2:U12)
+  instalacjaDoGlosnikow: boolean;
+  instalacjaDoMonitoringu: boolean;
+  instalacjaDoTelewizjiLubLan: boolean;
+  kanalyPrzepustyDoTv: boolean;
+  przylaczeDoDomu: boolean;
+  dlugoscPrzylaczaM: number;
+  instalacjaMasztuAnteny: boolean;
+  rozdzielniaBudowlana: boolean;
+  formalnosciOdbiorowe: boolean;
+  pomiaryWewnetrzne: boolean;
+
+  // Instalacja elektryczna — ilości ręczne (CRM!U15:U29; null/0 = licz automatycznie z parametrów domu)
+  iloscGniazd400V: number | null;
+  iloscObwodowGniazd230V: number | null;
+  iloscKolejnychGniazdObwody230V: number | null;
+  iloscObwodowOswietleniaWszystkich: number | null;
+  iloscOswietleniaKolejne: number | null;
+  iloscGniazdLanTv: number | null;
+  iloscKabliGlosnikowych: number | null;
+  iloscKanalowTv: number | null;
+  dodatkoweBruzdowanieM: number;
 
   // Finanse / rabaty / wyjątki
   trudnyKlientWspolczynnik: number;
   platnoscZGory: boolean;
   istniejePodstawowyAlarm: boolean;
   tylkoRozdzielnia: boolean;
+  /** Współczynniki mnożące poszczególne składowe wyceny (CRM!Q23:Q26, domyślnie 1,0 = bez zmian). */
+  wspolczynnikProjekt: number;
+  wspolczynnikRozdzielnica: number;
+  wspolczynnikOutdoor: number;
+  wspolczynnikAlarmTymczasowy: number;
 };
 
 export function emptyCalculatorAnswers(): CalculatorAnswers {
   return {
+    odlegloscKm: 0,
+
     powierzchniaM2: 0,
     liczbaKondygnacji: 1,
     liczbaPomieszczenZOknami: 0,
@@ -252,12 +278,6 @@ export function emptyCalculatorAnswers(): CalculatorAnswers {
     systemWlamaniowy: false,
     alarmIKontrolaDostepu: false,
 
-    poziomOswietlenie: "komfort",
-    poziomBezpieczenstwo: "komfort",
-    poziomTemperatura: "komfort",
-    poziomRolety: "komfort",
-    poziomZewnetrzne: "komfort",
-
     addons: Object.fromEntries(CALCULATOR_ADDON_KEYS.map((key) => [key, false])) as Record<
       CalculatorAddonKey,
       boolean
@@ -272,12 +292,35 @@ export function emptyCalculatorAnswers(): CalculatorAnswers {
     iloscStrefMultiroom: 4,
     iloscGlosnikowMultiroom: 6,
 
-    liczbaPunktowElektrycznychRecznie: null,
+    instalacjaDoGlosnikow: false,
+    instalacjaDoMonitoringu: false,
+    instalacjaDoTelewizjiLubLan: false,
+    kanalyPrzepustyDoTv: false,
+    przylaczeDoDomu: false,
+    dlugoscPrzylaczaM: 0,
+    instalacjaMasztuAnteny: false,
+    rozdzielniaBudowlana: false,
+    formalnosciOdbiorowe: false,
+    pomiaryWewnetrzne: false,
+
+    iloscGniazd400V: null,
+    iloscObwodowGniazd230V: null,
+    iloscKolejnychGniazdObwody230V: null,
+    iloscObwodowOswietleniaWszystkich: null,
+    iloscOswietleniaKolejne: null,
+    iloscGniazdLanTv: null,
+    iloscKabliGlosnikowych: null,
+    iloscKanalowTv: null,
+    dodatkoweBruzdowanieM: 0,
 
     trudnyKlientWspolczynnik: 1,
     platnoscZGory: false,
     istniejePodstawowyAlarm: false,
     tylkoRozdzielnia: false,
+    wspolczynnikProjekt: 1,
+    wspolczynnikRozdzielnica: 1,
+    wspolczynnikOutdoor: 1,
+    wspolczynnikAlarmTymczasowy: 1,
   };
 }
 

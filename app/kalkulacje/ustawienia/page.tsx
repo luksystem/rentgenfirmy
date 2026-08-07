@@ -10,10 +10,10 @@ import { NumericInput } from "@/components/ui/numeric-input";
 import {
   CALCULATOR_ADDON_KEYS,
   CALCULATOR_ADDON_LABELS,
+  CALCULATOR_ELECTRICAL_RATE_TYPES,
+  CALCULATOR_ELECTRICAL_RATE_TYPE_LABELS,
   CALCULATOR_FUNCTIONAL_CATEGORIES,
   CALCULATOR_FUNCTIONAL_CATEGORY_LABELS,
-  CALCULATOR_HOUSE_SIZE_TIERS,
-  CALCULATOR_HOUSE_SIZE_TIER_LABELS,
   CALCULATOR_OTHER_SYSTEM_KEYS,
   CALCULATOR_OTHER_SYSTEM_LABELS,
 } from "@/lib/calculator/types";
@@ -63,7 +63,7 @@ export default function CalculatorSettingsPage() {
       <PageHeader
         eyebrow="Sprzedaż"
         title="Ustawienia kalkulatora ofert"
-        description="Cennik pakietu OPTIMUM — progi metrażowe, poziomy kategorii, dodatki i rabaty. Wartości startowe z pliku ofertowego, do zweryfikowania."
+        description="Cennik pakietu OPTIMUM — baza systemu, kategorie funkcjonalne, instalacja elektryczna, dodatki i rabaty. Wartości startowe zweryfikowane przeciw plikowi ofertowemu."
         action={
           <Button variant="secondary" asChild>
             <Link href="/kalkulacje">Kalkulacje</Link>
@@ -75,162 +75,210 @@ export default function CalculatorSettingsPage() {
 
       <Card>
         <CardContent className="grid gap-6 py-5">
-          <Section title="Rozdzielnica — sprzęt" description="Skrzynka + zugi + zabezpieczenia + materiały, wg progu metrażowego.">
-            <div className="grid gap-4 sm:grid-cols-3">
-              {CALCULATOR_HOUSE_SIZE_TIERS.map((tier) => (
-                <Field key={tier} label={CALCULATOR_HOUSE_SIZE_TIER_LABELS[tier]}>
-                  <NumericInput
-                    value={settings.baseSystem.rozdzielnicaSprzet[tier]}
-                    disabled={loading}
-                    onChange={(v) =>
-                      setSettings({
-                        ...settings,
-                        baseSystem: {
-                          ...settings.baseSystem,
-                          rozdzielnicaSprzet: { ...settings.baseSystem.rozdzielnicaSprzet, [tier]: v },
-                        },
-                      })
-                    }
-                  />
-                </Field>
-              ))}
-            </div>
-          </Section>
-
-          <Section title="Automatyka — baza i zasilanie" description="Sterownik + zasilanie buforowe/rezerwowe/KNX + zasilacze LED.">
-            <div className="grid gap-4 sm:grid-cols-3">
-              {CALCULATOR_HOUSE_SIZE_TIERS.map((tier) => (
-                <Field key={tier} label={CALCULATOR_HOUSE_SIZE_TIER_LABELS[tier]}>
-                  <NumericInput
-                    value={settings.baseSystem.automatykaBaza[tier]}
-                    disabled={loading}
-                    onChange={(v) =>
-                      setSettings({
-                        ...settings,
-                        baseSystem: { ...settings.baseSystem, automatykaBaza: { ...settings.baseSystem.automatykaBaza, [tier]: v } },
-                      })
-                    }
-                  />
-                </Field>
-              ))}
-            </div>
-          </Section>
-
-          <Section title="Projekt — dom jednokondygnacyjny">
-            <div className="grid gap-4 sm:grid-cols-3">
-              {CALCULATOR_HOUSE_SIZE_TIERS.map((tier) => (
-                <Field key={tier} label={CALCULATOR_HOUSE_SIZE_TIER_LABELS[tier]}>
-                  <NumericInput
-                    value={settings.baseSystem.projektJednaKondygnacja[tier]}
-                    disabled={loading}
-                    onChange={(v) =>
-                      setSettings({
-                        ...settings,
-                        baseSystem: {
-                          ...settings.baseSystem,
-                          projektJednaKondygnacja: { ...settings.baseSystem.projektJednaKondygnacja, [tier]: v },
-                        },
-                      })
-                    }
-                  />
-                </Field>
-              ))}
-            </div>
-          </Section>
-
-          <Section title="Projekt — dom wielokondygnacyjny">
-            <div className="grid gap-4 sm:grid-cols-3">
-              {CALCULATOR_HOUSE_SIZE_TIERS.map((tier) => (
-                <Field key={tier} label={CALCULATOR_HOUSE_SIZE_TIER_LABELS[tier]}>
-                  <NumericInput
-                    value={settings.baseSystem.projektWieleKondygnacji[tier]}
-                    disabled={loading}
-                    onChange={(v) =>
-                      setSettings({
-                        ...settings,
-                        baseSystem: {
-                          ...settings.baseSystem,
-                          projektWieleKondygnacji: { ...settings.baseSystem.projektWieleKondygnacji, [tier]: v },
-                        },
-                      })
-                    }
-                  />
-                </Field>
-              ))}
-            </div>
-          </Section>
-
-          <Section title="Wykonanie rozdzielni na budowie" description="Progi wg liczby punktów elektrycznych.">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Field label="< 300 pkt">
-                <NumericInput
-                  value={settings.baseSystem.wykonanieRozdzielniProg1}
-                  disabled={loading}
-                  onChange={(v) => setSettings({ ...settings, baseSystem: { ...settings.baseSystem, wykonanieRozdzielniProg1: v } })}
-                />
-              </Field>
-              <Field label="< 600 pkt">
-                <NumericInput
-                  value={settings.baseSystem.wykonanieRozdzielniProg2}
-                  disabled={loading}
-                  onChange={(v) => setSettings({ ...settings, baseSystem: { ...settings.baseSystem, wykonanieRozdzielniProg2: v } })}
-                />
-              </Field>
-              <Field label="≥ 600 pkt">
-                <NumericInput
-                  value={settings.baseSystem.wykonanieRozdzielniProg3}
-                  disabled={loading}
-                  onChange={(v) => setSettings({ ...settings, baseSystem: { ...settings.baseSystem, wykonanieRozdzielniProg3: v } })}
-                />
-              </Field>
-            </div>
-          </Section>
-
-          <Section title="Wstępna konfiguracja">
+          <Section title="Baza systemu" description="Projekt / wykonanie rozdzielni / sterownik i zasilanie — wg liczby kondygnacji.">
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Dom jednokondygnacyjny">
+              <Field label="Projekt — jedna kondygnacja">
                 <NumericInput
-                  value={settings.baseSystem.konfiguracjaJednaKondygnacja}
+                  value={settings.baseSystem.projektJednaKondygnacja}
                   disabled={loading}
-                  onChange={(v) => setSettings({ ...settings, baseSystem: { ...settings.baseSystem, konfiguracjaJednaKondygnacja: v } })}
+                  onChange={(v) => setSettings({ ...settings, baseSystem: { ...settings.baseSystem, projektJednaKondygnacja: v } })}
                 />
               </Field>
-              <Field label="Dom wielokondygnacyjny">
+              <Field label="Projekt — wiele kondygnacji">
                 <NumericInput
-                  value={settings.baseSystem.konfiguracjaWieleKondygnacji}
+                  value={settings.baseSystem.projektWieleKondygnacji}
                   disabled={loading}
-                  onChange={(v) => setSettings({ ...settings, baseSystem: { ...settings.baseSystem, konfiguracjaWieleKondygnacji: v } })}
+                  onChange={(v) => setSettings({ ...settings, baseSystem: { ...settings.baseSystem, projektWieleKondygnacji: v } })}
+                />
+              </Field>
+              <Field label="Próg dopłaty za duży dom [m²]">
+                <NumericInput
+                  value={settings.baseSystem.projektDuzyDomProgM2}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, baseSystem: { ...settings.baseSystem, projektDuzyDomProgM2: v } })}
+                />
+              </Field>
+              <Field label="Dopłata za duży dom">
+                <NumericInput
+                  value={settings.baseSystem.projektDuzyDomDoplata}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, baseSystem: { ...settings.baseSystem, projektDuzyDomDoplata: v } })}
+                />
+              </Field>
+              <Field label="Wykonanie rozdzielni — jedna kondygnacja">
+                <NumericInput
+                  value={settings.baseSystem.rozdzielniaWykonanieJednaKondygnacja}
+                  disabled={loading}
+                  onChange={(v) =>
+                    setSettings({ ...settings, baseSystem: { ...settings.baseSystem, rozdzielniaWykonanieJednaKondygnacja: v } })
+                  }
+                />
+              </Field>
+              <Field label="Wykonanie rozdzielni — wiele kondygnacji">
+                <NumericInput
+                  value={settings.baseSystem.rozdzielniaWykonanieWieleKondygnacji}
+                  disabled={loading}
+                  onChange={(v) =>
+                    setSettings({ ...settings, baseSystem: { ...settings.baseSystem, rozdzielniaWykonanieWieleKondygnacji: v } })
+                  }
+                />
+              </Field>
+              <Field label="Baza — sterownik/zasilanie — jedna kondygnacja">
+                <NumericInput
+                  value={settings.baseSystem.bazaZasilanieJednaKondygnacja}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, baseSystem: { ...settings.baseSystem, bazaZasilanieJednaKondygnacja: v } })}
+                />
+              </Field>
+              <Field label="Baza — sterownik/zasilanie — wiele kondygnacji">
+                <NumericInput
+                  value={settings.baseSystem.bazaZasilanieWieleKondygnacji}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, baseSystem: { ...settings.baseSystem, bazaZasilanieWieleKondygnacji: v } })}
                 />
               </Field>
             </div>
           </Section>
 
-          <Section title="Kategorie funkcjonalne" description="Cena za wybrany poziom (Podstawa/Komfort/Prestiż).">
-            <div className="grid gap-4">
+          <Section title="Kategorie funkcjonalne" description="Cena stała odblokowywana odpowiadającym checkboxem funkcjonalności.">
+            <div className="grid gap-4 sm:grid-cols-3">
               {CALCULATOR_FUNCTIONAL_CATEGORIES.map((category) => (
-                <div key={category} className="grid gap-2 rounded-xl border border-border/60 p-3">
-                  <p className="text-sm font-medium text-foreground">{CALCULATOR_FUNCTIONAL_CATEGORY_LABELS[category]}</p>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    {(["podstawa", "komfort", "prestiz"] as const).map((level) => (
-                      <Field key={level} label={level === "podstawa" ? "Podstawa" : level === "komfort" ? "Komfort" : "Prestiż"}>
-                        <NumericInput
-                          value={settings.functional[category][level]}
-                          disabled={loading}
-                          onChange={(v) =>
-                            setSettings({
-                              ...settings,
-                              functional: {
-                                ...settings.functional,
-                                [category]: { ...settings.functional[category], [level]: v },
-                              },
-                            })
-                          }
-                        />
-                      </Field>
-                    ))}
-                  </div>
-                </div>
+                <Field key={category} label={CALCULATOR_FUNCTIONAL_CATEGORY_LABELS[category]}>
+                  <NumericInput
+                    value={settings.functional[category]}
+                    disabled={loading}
+                    onChange={(v) => setSettings({ ...settings, functional: { ...settings.functional, [category]: v } })}
+                  />
+                </Field>
               ))}
+            </div>
+          </Section>
+
+          <Section title="Instalacja elektryczna — stawki wg typu punktu">
+            <div className="grid gap-4 sm:grid-cols-4">
+              {CALCULATOR_ELECTRICAL_RATE_TYPES.map((type) => (
+                <Field key={type} label={CALCULATOR_ELECTRICAL_RATE_TYPE_LABELS[type]}>
+                  <NumericInput
+                    value={settings.electrical.rates[type]}
+                    disabled={loading}
+                    onChange={(v) =>
+                      setSettings({
+                        ...settings,
+                        electrical: { ...settings.electrical, rates: { ...settings.electrical.rates, [type]: v } },
+                      })
+                    }
+                  />
+                </Field>
+              ))}
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Dystans referencyjny [km]" className="sm:max-w-xs">
+                <NumericInput
+                  value={settings.electrical.referencyjnyDystansKm}
+                  decimals={false}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, electrical: { ...settings.electrical, referencyjnyDystansKm: v } })}
+                />
+              </Field>
+              <Field label="Dopłata za km netto/punkt" className="sm:max-w-xs">
+                <NumericInput
+                  value={settings.electrical.doplataZaKmNettoNaPunkt}
+                  disabled={loading}
+                  onChange={(v) =>
+                    setSettings({ ...settings, electrical: { ...settings.electrical, doplataZaKmNettoNaPunkt: v } })
+                  }
+                />
+              </Field>
+            </div>
+          </Section>
+
+          <Section title="Instalacja elektryczna — pozycje ryczałtowe">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="Kanał TV">
+                <NumericInput
+                  value={settings.electrical.fixed.kanalTv}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, electrical: { ...settings.electrical, fixed: { ...settings.electrical.fixed, kanalTv: v } } })}
+                />
+              </Field>
+              <Field label="Antena z masztem">
+                <NumericInput
+                  value={settings.electrical.fixed.antenaZMasztem}
+                  disabled={loading}
+                  onChange={(v) =>
+                    setSettings({ ...settings, electrical: { ...settings.electrical, fixed: { ...settings.electrical.fixed, antenaZMasztem: v } } })
+                  }
+                />
+              </Field>
+              <Field label="Dzierżawa rozdzielni budowlanej">
+                <NumericInput
+                  value={settings.electrical.fixed.dzierzawaRozdzielniBudowlanej}
+                  disabled={loading}
+                  onChange={(v) =>
+                    setSettings({
+                      ...settings,
+                      electrical: { ...settings.electrical, fixed: { ...settings.electrical.fixed, dzierzawaRozdzielniBudowlanej: v } },
+                    })
+                  }
+                />
+              </Field>
+              <Field label="Obsadzenie rozdzielni głównej">
+                <NumericInput
+                  value={settings.electrical.fixed.obsadzenieRozdzielniGlownej}
+                  disabled={loading}
+                  onChange={(v) =>
+                    setSettings({
+                      ...settings,
+                      electrical: { ...settings.electrical, fixed: { ...settings.electrical.fixed, obsadzenieRozdzielniGlownej: v } },
+                    })
+                  }
+                />
+              </Field>
+              <Field label="Przyłącze — za metr">
+                <NumericInput
+                  value={settings.electrical.fixed.przylaczeZaMetr}
+                  disabled={loading}
+                  onChange={(v) =>
+                    setSettings({ ...settings, electrical: { ...settings.electrical, fixed: { ...settings.electrical.fixed, przylaczeZaMetr: v } } })
+                  }
+                />
+              </Field>
+              <Field label="Formalności odbiorowe">
+                <NumericInput
+                  value={settings.electrical.fixed.formalnosciOdbiorowe}
+                  disabled={loading}
+                  onChange={(v) =>
+                    setSettings({
+                      ...settings,
+                      electrical: { ...settings.electrical, fixed: { ...settings.electrical.fixed, formalnosciOdbiorowe: v } },
+                    })
+                  }
+                />
+              </Field>
+              <Field label="Pomiary wewnętrzne — za punkt">
+                <NumericInput
+                  value={settings.electrical.fixed.pomiaryWewnetrzneZaPunkt}
+                  disabled={loading}
+                  onChange={(v) =>
+                    setSettings({
+                      ...settings,
+                      electrical: { ...settings.electrical, fixed: { ...settings.electrical.fixed, pomiaryWewnetrzneZaPunkt: v } },
+                    })
+                  }
+                />
+              </Field>
+              <Field label="Dodatkowe bruzdowanie — za metr">
+                <NumericInput
+                  value={settings.electrical.fixed.dodatkoweBruzdowanieZaMetr}
+                  disabled={loading}
+                  onChange={(v) =>
+                    setSettings({
+                      ...settings,
+                      electrical: { ...settings.electrical, fixed: { ...settings.electrical.fixed, dodatkoweBruzdowanieZaMetr: v } },
+                    })
+                  }
+                />
+              </Field>
             </div>
           </Section>
 
@@ -262,27 +310,8 @@ export default function CalculatorSettingsPage() {
             </div>
           </Section>
 
-          <Section title="Instalacja elektryczna" description="Zryczałtowana cena za punkt (uproszczenie modelu 5-stawkowego).">
-            <Field label="Cena za punkt [netto]" className="sm:max-w-xs">
-              <NumericInput
-                value={settings.electrical.cenaZaPunkt}
-                disabled={loading}
-                onChange={(v) => setSettings({ ...settings, electrical: { ...settings.electrical, cenaZaPunkt: v } })}
-              />
-            </Field>
-          </Section>
-
           <Section title="Rabaty">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Projekt przy kompleksowej instalacji [%]">
-                <NumericInput
-                  value={settings.discounts.projektKompleksowaPercent}
-                  disabled={loading}
-                  onChange={(v) =>
-                    setSettings({ ...settings, discounts: { ...settings.discounts, projektKompleksowaPercent: Math.min(100, Math.max(0, v)) } })
-                  }
-                />
-              </Field>
+            <div className="grid gap-4 sm:grid-cols-3">
               <Field label="Instalacja elektryczna przy kompleksowości [%]">
                 <NumericInput
                   value={settings.discounts.instalacjaKompleksowaPercent}
