@@ -124,6 +124,10 @@ export function normalizeCalculatorAnswers(value: unknown): CalculatorAnswers {
     integracjaWentylacja: asBoolean(data.integracjaWentylacja, fallback.integracjaWentylacja),
     integracjaRekuperacja: asBoolean(data.integracjaRekuperacja, fallback.integracjaRekuperacja),
     integracjaPompaCiepla: asBoolean(data.integracjaPompaCiepla, fallback.integracjaPompaCiepla),
+    platneIntegracjeZInnymiSystemami: asBoolean(
+      data.platneIntegracjeZInnymiSystemami,
+      fallback.platneIntegracjeZInnymiSystemami,
+    ),
 
     szafkaRackLan: asBoolean(data.szafkaRackLan, fallback.szafkaRackLan),
     iloscAP: asNumber(data.iloscAP, fallback.iloscAP),

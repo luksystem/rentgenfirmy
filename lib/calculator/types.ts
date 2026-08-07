@@ -258,6 +258,8 @@ export type CalculatorAnswers = {
   integracjaWentylacja: boolean;
   integracjaRekuperacja: boolean;
   integracjaPompaCiepla: boolean;
+  /** CRM!Q5 "Płatne integracje z innymi systemami" — dodatkowy warunek (AND z checkboxem dodatku) zerujący cenę integracji, gdy false. Zweryfikowane empirycznie (realny przykład z Q5=false dał 0 zł mimo zaznaczonych integracji). */
+  platneIntegracjeZInnymiSystemami: boolean;
 
   // Pola zasilające listę materiałową (BOM) systemów LAN/TV/Wideodomofon/Monitoring/Multiroom
   // (InneSystemy!D:S) — zweryfikowane 1:1 na realnym przykładzie oferty (DANE!T119).
@@ -389,6 +391,7 @@ export function emptyCalculatorAnswers(): CalculatorAnswers {
     integracjaWentylacja: false,
     integracjaRekuperacja: false,
     integracjaPompaCiepla: false,
+    platneIntegracjeZInnymiSystemami: true,
 
     szafkaRackLan: false,
     iloscAP: 1,

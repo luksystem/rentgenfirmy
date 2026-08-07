@@ -425,6 +425,11 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
               {a.addons.integracjeZInnymiSystemami ? (
                 <div>
                   <p className="text-sm font-medium text-foreground">Integracje z innymi systemami — które?</p>
+                  <Toggle
+                    label="Integracje płatne (odznacz, jeśli mają być gratis / poza zakresem wyceny)"
+                    checked={a.platneIntegracjeZInnymiSystemami}
+                    onChange={(v) => setAnswers({ platneIntegracjeZInnymiSystemami: v })}
+                  />
                   <div className="mt-2 grid gap-2 sm:grid-cols-2">
                     <Toggle
                       label="Klimatyzacja"

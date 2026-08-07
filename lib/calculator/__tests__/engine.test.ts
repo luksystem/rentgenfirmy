@@ -396,6 +396,124 @@ describe("calculateCalculatorTotals — pozostała mechanika", () => {
     expect(totals.addonsNet).toBe(38616.48);
   });
 
+  it("integracje z innymi systemami — CRM!Q5 zeruje pozycję niezależnie od zaznaczonych integracji (znaleziony błąd, drugi realny przykład: Gorzelak, Q5=false)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.addons.integracjeZInnymiSystemami = true;
+    answers.integracjaKlimatyzacja = true;
+    answers.integracjaRekuperacja = true;
+
+    const platne = calculateAddons(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const niepatne = calculateAddons(
+      { ...answers, platneIntegracjeZInnymiSystemami: false },
+      DEFAULT_CALCULATOR_SETTINGS,
+    );
+
+    expect(platne.find((item) => item.key === "integracjeZInnymiSystemami")?.net).toBeGreaterThan(0);
+    expect(niepatne.find((item) => item.key === "integracjeZInnymiSystemami")?.net).toBe(0);
+  });
+
+  it("drugi realny przykład (Dewódzki, 3 kondygnacje, SATEL=true) — kategorie funkcjonalne i dodatki zgodne z arkuszem co do grosza", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.liczbaKondygnacji = 3;
+    answers.strefaPrywatna = true;
+    answers.strefaOtwarta = true;
+    answers.komunikacja = true;
+    answers.liczbaSypialniDodatkowych = 5;
+    answers.liczbaPomieszczenWilgotnych = 7;
+    answers.liczbaPozostalychPomieszczen = 3;
+    answers.iloscGarazy = 3;
+    answers.liczbaDrzwiWejsciowych = 2;
+    answers.liczbaWyjscNaTaras = 1;
+    answers.liczbaOkienOtwieranych = 12;
+    answers.czyOknaCzujnikiFabryczne = false;
+    answers.korzystamZArchitekta = true;
+
+    answers.jestKominek = true;
+    answers.jestGaz = true;
+    answers.planujeRolety = true;
+    answers.liczbaRolet = 14;
+    answers.sterowanieOgrodem = true;
+    answers.scenyOswietleniowe = true;
+    answers.sterowanieTemperatura = true;
+    answers.alarmIKontrolaDostepu = true;
+
+    answers.ledySciemniane = 36;
+    answers.czyCzujkiRecznie = true;
+    answers.iloscCzujekLoxone = 33;
+    answers.iloscCzujekSatel = 8;
+    answers.iloscCzujekBezpieczenstwa = 9;
+    answers.satelWOptimum = true;
+    answers.strefyOgrzewaniaPodlogowego = 16;
+    answers.iloscGrzejnikowSterowanych = 0;
+    answers.iloscOswietlenZewnetrznych = 4;
+    answers.iloscSekcjiPodlewania = 4;
+
+    answers.trudnyKlientWspolczynnik = 1.2;
+    answers.wspolczynnikProjekt = 2.5;
+
+    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const net = (category: string) => totals.functional.find((entry) => entry.category === category)?.net;
+
+    expect(totals.baseSystem.projektNet).toBe(15000);
+    expect(net("oswietlenie")).toBe(39783.96);
+    expect(net("bezpieczenstwo")).toBe(35128.14);
+    expect(net("temperatura")).toBe(16912.81); // Excel (bez zaokrągleń pośrednich) daje 16912.812
+    expect(net("rolety")).toBe(5243.28);
+    expect(net("zewnetrzne")).toBe(5961);
+
+    answers.addons.stacjaPogodowa = true;
+    answers.addons.czujnikiOtwarciaOkien = true;
+    answers.addons.przygotowanieDostepuDrzwi = true;
+    answers.iloscElektrozaczepow = 1;
+    answers.addons.klawiaturyNfc = true;
+    answers.iloscKlawiaturNfc = 1;
+    answers.addons.oswietlenieAwaryjne = true;
+    answers.addons.bezpieczenstwoPlusPlusPlus = true;
+    answers.addons.oswietlenieSciemniane230V = true;
+    answers.iloscOswSciemniane = 4;
+    answers.addons.stacjaDokujacaIpad = true;
+    answers.addons.ipad = true;
+    answers.addons.integracjeZInnymiSystemami = true;
+    answers.integracjaKlimatyzacja = true;
+    answers.integracjaRekuperacja = true;
+    answers.integracjaPompaCiepla = true;
+    answers.addons.dodatkowyLicznikPradu = true;
+
+    const totalsZDodatkami = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
+    expect(totalsZDodatkami.addonsNet).toBe(31365.36);
+  });
+
+  it("trzeci realny przykład (Gorzelak, 2 kondygnacje, SATEL=false) — Inne systemy zgodne z arkuszem co do grosza (DANE!T119=31598)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.trudnyKlientWspolczynnik = 1.1;
+
+    answers.otherSystems.sieciLan = true;
+    answers.szafkaRackLan = true;
+    answers.iloscAP = 5;
+
+    answers.otherSystems.wideodomofon = true;
+    answers.loxoneDoplataWideodomofon = true;
+
+    answers.otherSystems.monitoring = true;
+    answers.monitoringRejestrator = true;
+    answers.monitoring8Mpx = false;
+    answers.iloscKamerMonitoringu = 6;
+
+    answers.otherSystems.multiroom = true;
+    answers.iloscStrefMultiroom = 6;
+    answers.iloscGlosnikowMultiroom = 8;
+    answers.iloscSkrzynekMultiroom = 0;
+
+    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const net = (key: string) => totals.otherSystems.items.find((item) => item.key === key)?.net;
+
+    expect(net("sieciLan")).toBe(5960);
+    expect(net("wideodomofon")).toBe(5470);
+    expect(net("monitoring")).toBe(8100);
+    expect(net("multiroom")).toBe(12068);
+    expect(totals.otherSystems.selectedNet).toBe(31598);
+  });
+
   it("dodatki premium (gwarancje/dokumentacja) — bez współczynnika trudny klient, zgodne z DANE!T120 (3000 zł)", () => {
     const answers = emptyCalculatorAnswers();
     answers.trudnyKlientWspolczynnik = 1.2; // nie powinien dotknąć tych pozycji

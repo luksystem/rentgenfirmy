@@ -592,6 +592,11 @@ function addonQuantity(key: CalculatorAddonKey, answers: CalculatorAnswers): num
     case "bezpieczenstwoPlusPlusPlus":
       return 2; // El rozbudowa/DANE — stała ilość niezależna od parametrów domu (zweryfikowane)
     case "integracjeZInnymiSystemami":
+      // CRM!Q5 "Płatne integracje z innymi systemami" — dodatkowy warunek AND, zeruje pozycję
+      // niezależnie od checkboxa dodatku (zweryfikowane empirycznie: DANE!T91 formuła mnoży przez CRM!Q5).
+      if (!answers.platneIntegracjeZInnymiSystemami) {
+        return 0;
+      }
       return (
         (answers.integracjaKlimatyzacja ? 1 : 0) +
         (answers.integracjaWentylacja ? 1 : 0) +
