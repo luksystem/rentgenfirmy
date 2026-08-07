@@ -646,6 +646,7 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
                 <Toggle label="Płatność z góry" checked={a.platnoscZGory} onChange={(v) => setAnswers({ platnoscZGory: v })} />
                 <Toggle label="Istnieje już podstawowy system alarmowy" checked={a.istniejePodstawowyAlarm} onChange={(v) => setAnswers({ istniejePodstawowyAlarm: v })} />
                 <Toggle label="Tylko rozdzielnia z peryferiami automatyki" checked={a.tylkoRozdzielnia} onChange={(v) => setAnswers({ tylkoRozdzielnia: v })} />
+                <Toggle label="Rozszerzenie KNX (droższy wariant automatyki podstawowej)" checked={a.rozszerzenieKnx} onChange={(v) => setAnswers({ rozszerzenieKnx: v })} />
               </div>
               <div>
                 <p className="text-sm font-medium text-foreground">Współczynniki mnożące (domyślnie 1,0 = bez zmian)</p>

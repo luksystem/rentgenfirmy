@@ -236,6 +236,8 @@ export type CalculatorAnswers = {
   iloscOswietlenZewnetrznych: number;
   /** DANE — domyślnie 4, "STANDARD" założenie biura (nie CRM), feeduje kategorię Zewnętrzne. */
   iloscSekcjiPodlewania: number;
+  /** CRM!S10 "ROZSZERZENIE KNX" (tylko biuro) — droższy wariant automatyki podstawowej w bazie systemu (zweryfikowane empirycznie, realne przykłady). */
+  rozszerzenieKnx: boolean;
 
   // Dodatki — checkbox per pozycja, ilości dla pozycji skalujących się z parametrami domu
   // (zweryfikowane 1:1 na realnym przykładzie oferty, DANE!T77:T94)
@@ -371,6 +373,7 @@ export function emptyCalculatorAnswers(): CalculatorAnswers {
     iloscGrzejnikowSterowanych: 0,
     iloscOswietlenZewnetrznych: 4,
     iloscSekcjiPodlewania: 4,
+    rozszerzenieKnx: true,
 
     addons: Object.fromEntries(CALCULATOR_ADDON_KEYS.map((key) => [key, false])) as Record<
       CalculatorAddonKey,

@@ -110,6 +110,7 @@ export function normalizeCalculatorAnswers(value: unknown): CalculatorAnswers {
     iloscGrzejnikowSterowanych: asNumber(data.iloscGrzejnikowSterowanych, fallback.iloscGrzejnikowSterowanych),
     iloscOswietlenZewnetrznych: asNumber(data.iloscOswietlenZewnetrznych, fallback.iloscOswietlenZewnetrznych),
     iloscSekcjiPodlewania: asNumber(data.iloscSekcjiPodlewania, fallback.iloscSekcjiPodlewania),
+    rozszerzenieKnx: asBoolean(data.rozszerzenieKnx, fallback.rozszerzenieKnx),
 
     addons,
     iloscElektrozaczepow: asNumber(data.iloscElektrozaczepow, fallback.iloscElektrozaczepow),

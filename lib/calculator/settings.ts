@@ -24,9 +24,6 @@ export type CalculatorBaseSystemSettings = {
   /** Dopłata do projektu przy bardzo dużym domu (KALKULATOR!N29: >=400m² -> +2000). */
   projektDuzyDomProgM2: number;
   projektDuzyDomDoplata: number;
-  /** Baza systemu — sterownik, zasilanie, wstępna konfiguracja (DANE!T111, zweryfikowane). */
-  bazaZasilanieJednaKondygnacja: number;
-  bazaZasilanieWieleKondygnacji: number;
 };
 
 export const DEFAULT_BASE_SYSTEM_SETTINGS: CalculatorBaseSystemSettings = {
@@ -34,8 +31,91 @@ export const DEFAULT_BASE_SYSTEM_SETTINGS: CalculatorBaseSystemSettings = {
   projektWieleKondygnacji: 6000,
   projektDuzyDomProgM2: 400,
   projektDuzyDomDoplata: 2000,
-  bazaZasilanieJednaKondygnacja: 12728.33,
-  bazaZasilanieWieleKondygnacji: 11928.33,
+};
+
+/**
+ * Baza systemu — sterownik, zasilanie, wstępna konfiguracja, logistyka (DANE!T111 = KALKULATOR!
+ * N32+N35+N36+Parametry!D65). Zweryfikowane 1:1 na dwóch realnych przykładach oferty (15437.20 zł
+ * i 9483.916667 zł — dokładnie zgodne z arkuszem, w tym składowa logistyki zależna od odległości).
+ */
+export type CalculatorBazaZasilaniaSettings = {
+  /** Wstępna konfiguracja (KALKULATOR!N32) — wg liczby kondygnacji, ×współczynnik rozdzielnica. */
+  wstepnaKonfiguracjaJednaKondygnacja: number;
+  wstepnaKonfiguracjaWieleKondygnacji: number;
+  /** Automatyka podstawa (N35) — standard vs rozszerzenie KNX. */
+  automatykaPodstawaStandard: number;
+  automatykaPodstawaKnx: number;
+  /** Zasilanie buforowe + rezerwowe (N36) — stałe, niezależne od kondygnacji/KNX. */
+  zasilanieBuforoweRezerwowe: number;
+  /** Zasilanie KNX — dopłata gdy rozszerzenieKnx=true (N36). */
+  zasilanieKnxDoplata: number;
+  /** Zasilacze LED — cena za jednostkę modułu RGBW (ta sama ilość co w kategorii Oświetlenie, ZESTAWIENIE!L10/3×700). */
+  zasilaczeLedZaModulRgbw: number;
+  /** Zasilacze LED — dopłata gdy wybrany dodatek "Dodatkowy zasilacz UPS" (CRM!K7). */
+  zasilaczeLedUpsRoletyDoplata: number;
+  /** Linki i materiały dodatkowe (N36) — różne dla jednej/wielu kondygnacji. */
+  linkiMaterialyJednaKondygnacja: number;
+  linkiMaterialyWieleKondygnacji: number;
+  /** Oznaczniki/końcówki (N36) — stałe. */
+  oznaczniki: number;
+  /** Sprzęt przy "tylko rozdzielnia" (CRM!S8=true, SprzetRG!L36) — rzadki przypadek biurowy. */
+  tylkoRozdzielniaSprzet: number;
+  /** Logistyka (Parametry!D65 = WYJAZDY!L15 × trudny klient) — koszt paliwa za km (w obie strony, już ×0.85×2). */
+  logistykaPaliwoZaKm: number;
+  /** Logistyka — dieta za dzień/osobę, dolicza się gdy odległość jednostronna > logistykaProgDietyKm. */
+  logistykaDietaStawka: number;
+  logistykaProgDietyKm: number;
+  /** Logistyka — nocleg za dzień/osobę, dolicza się gdy odległość jednostronna > logistykaProgNoclegowKm. */
+  logistykaNoclegStawka: number;
+  logistykaProgNoclegowKm: number;
+  /** Logistyka — stawka za godzinę dojazdu, przeliczona już na złotówki za km. */
+  logistykaGodzinowaZaKm: number;
+  /** Logistyka — stała opłata (WYJAZDY!O4), niezależna od odległości. */
+  logistykaStalaOplata: number;
+};
+
+export const DEFAULT_BAZA_ZASILANIA_SETTINGS: CalculatorBazaZasilaniaSettings = {
+  wstepnaKonfiguracjaJednaKondygnacja: 2500,
+  wstepnaKonfiguracjaWieleKondygnacji: 1500,
+  automatykaPodstawaStandard: 2900,
+  automatykaPodstawaKnx: 4900,
+  zasilanieBuforoweRezerwowe: 1500,
+  zasilanieKnxDoplata: 450,
+  zasilaczeLedZaModulRgbw: 700 / 3,
+  zasilaczeLedUpsRoletyDoplata: 500,
+  linkiMaterialyJednaKondygnacja: 700,
+  linkiMaterialyWieleKondygnacji: 900,
+  oznaczniki: 150,
+  tylkoRozdzielniaSprzet: 13300,
+  logistykaPaliwoZaKm: 11.9,
+  logistykaDietaStawka: 30,
+  logistykaProgDietyKm: 80,
+  logistykaNoclegStawka: 70,
+  logistykaProgNoclegowKm: 120,
+  logistykaGodzinowaZaKm: 28 / 3,
+  logistykaStalaOplata: 500,
+};
+
+export const CALCULATOR_BAZA_ZASILANIA_LABELS: Record<keyof CalculatorBazaZasilaniaSettings, string> = {
+  wstepnaKonfiguracjaJednaKondygnacja: "Wstępna konfiguracja — jedna kondygnacja",
+  wstepnaKonfiguracjaWieleKondygnacji: "Wstępna konfiguracja — wiele kondygnacji",
+  automatykaPodstawaStandard: "Automatyka podstawa — standard",
+  automatykaPodstawaKnx: "Automatyka podstawa — rozszerzenie KNX",
+  zasilanieBuforoweRezerwowe: "Zasilanie buforowe + rezerwowe",
+  zasilanieKnxDoplata: "Zasilanie KNX — dopłata",
+  zasilaczeLedZaModulRgbw: "Zasilacze LED — za moduł RGBW",
+  zasilaczeLedUpsRoletyDoplata: "Zasilacze LED — dopłata za UPS rolet",
+  linkiMaterialyJednaKondygnacja: "Linki i materiały — jedna kondygnacja",
+  linkiMaterialyWieleKondygnacji: "Linki i materiały — wiele kondygnacji",
+  oznaczniki: "Oznaczniki / końcówki",
+  tylkoRozdzielniaSprzet: "Sprzęt przy „tylko rozdzielnia”",
+  logistykaPaliwoZaKm: "Logistyka — paliwo za km",
+  logistykaDietaStawka: "Logistyka — dieta (stawka)",
+  logistykaProgDietyKm: "Logistyka — próg diety [km, jednostronnie]",
+  logistykaNoclegStawka: "Logistyka — nocleg (stawka)",
+  logistykaProgNoclegowKm: "Logistyka — próg noclegu [km, jednostronnie]",
+  logistykaGodzinowaZaKm: "Logistyka — stawka godzinowa za km",
+  logistykaStalaOplata: "Logistyka — opłata stała",
 };
 
 /**
@@ -476,6 +556,7 @@ export const DEFAULT_DISCOUNT_SETTINGS: CalculatorDiscountSettings = {
 
 export type CalculatorSettings = {
   baseSystem: CalculatorBaseSystemSettings;
+  bazaZasilania: CalculatorBazaZasilaniaSettings;
   rozdzielnia: CalculatorRozdzielniaSettings;
   hardware: CalculatorHardwareCatalog;
   laborRatePerHour: number;
@@ -489,6 +570,7 @@ export type CalculatorSettings = {
 
 export const DEFAULT_CALCULATOR_SETTINGS: CalculatorSettings = {
   baseSystem: DEFAULT_BASE_SYSTEM_SETTINGS,
+  bazaZasilania: DEFAULT_BAZA_ZASILANIA_SETTINGS,
   rozdzielnia: DEFAULT_ROZDZIELNIA_SETTINGS,
   hardware: DEFAULT_HARDWARE_CATALOG,
   laborRatePerHour: DEFAULT_LABOR_RATE_PER_HOUR,
@@ -520,15 +602,13 @@ export function normalizeCalculatorSettings(value: unknown): CalculatorSettings 
     projektWieleKondygnacji: asNumber(baseSystemData.projektWieleKondygnacji, DEFAULT_BASE_SYSTEM_SETTINGS.projektWieleKondygnacji),
     projektDuzyDomProgM2: asNumber(baseSystemData.projektDuzyDomProgM2, DEFAULT_BASE_SYSTEM_SETTINGS.projektDuzyDomProgM2),
     projektDuzyDomDoplata: asNumber(baseSystemData.projektDuzyDomDoplata, DEFAULT_BASE_SYSTEM_SETTINGS.projektDuzyDomDoplata),
-    bazaZasilanieJednaKondygnacja: asNumber(
-      baseSystemData.bazaZasilanieJednaKondygnacja,
-      DEFAULT_BASE_SYSTEM_SETTINGS.bazaZasilanieJednaKondygnacja,
-    ),
-    bazaZasilanieWieleKondygnacji: asNumber(
-      baseSystemData.bazaZasilanieWieleKondygnacji,
-      DEFAULT_BASE_SYSTEM_SETTINGS.bazaZasilanieWieleKondygnacji,
-    ),
   };
+
+  const bazaZasilaniaData = asObject(data.bazaZasilania);
+  const bazaZasilania = {} as CalculatorBazaZasilaniaSettings;
+  for (const key of Object.keys(DEFAULT_BAZA_ZASILANIA_SETTINGS) as (keyof CalculatorBazaZasilaniaSettings)[]) {
+    bazaZasilania[key] = asNumber(bazaZasilaniaData[key], DEFAULT_BAZA_ZASILANIA_SETTINGS[key]);
+  }
 
   const rozdzielniaData = asObject(data.rozdzielnia);
   const rozdzielnia: CalculatorRozdzielniaSettings = {
@@ -643,6 +723,7 @@ export function normalizeCalculatorSettings(value: unknown): CalculatorSettings 
 
   return {
     baseSystem,
+    bazaZasilania,
     rozdzielnia,
     hardware,
     laborRatePerHour,

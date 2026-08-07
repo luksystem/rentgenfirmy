@@ -118,6 +118,55 @@ function calculateElectricalPointsTotal(answers: CalculatorAnswers, settings: Ca
   );
 }
 
+/**
+ * Baza systemu — sterownik, zasilanie, wstępna konfiguracja, logistyka (DANE!T111 =
+ * KALKULATOR!N32+N35+N36+Parametry!D65). Zweryfikowana 1:1 na dwóch realnych przykładach oferty
+ * (15437.20 zł i 9483.916667 zł). Logistyka (koszt dojazdu/diety/noclegów, WYJAZDY!L15) zależy od
+ * odległości od siedziby oraz skaluje się liczbą wybranych kategorii funkcjonalnych i tym, czy
+ * wybrano dodatek "Czujniki otwarcia okien" — te same wyjazdy montażowe co dla pozostałych
+ * elementów instalacji.
+ */
+function calculateBazaZasilania(answers: CalculatorAnswers, settings: CalculatorSettings): number {
+  const b = settings.bazaZasilania;
+  const wieleKondygnacji = answers.liczbaKondygnacji > 1;
+  const rozdzielniaWspolczynnik = Math.max(0, answers.wspolczynnikRozdzielnica || 1);
+  const wspSzefa = Math.max(0, answers.trudnyKlientWspolczynnik || 1);
+
+  const wstepnaKonfiguracja =
+    (wieleKondygnacji ? b.wstepnaKonfiguracjaWieleKondygnacji : b.wstepnaKonfiguracjaJednaKondygnacja) * rozdzielniaWspolczynnik;
+
+  const automatykaPodstawa =
+    (answers.rozszerzenieKnx ? b.automatykaPodstawaKnx : b.automatykaPodstawaStandard) +
+    (answers.tylkoRozdzielnia ? b.tylkoRozdzielniaSprzet : 0);
+
+  const zasilaczeLed =
+    rgbwModuleQty(answers) * b.zasilaczeLedZaModulRgbw +
+    (answers.addons.dodatkowyZasilaczUps ? b.zasilaczeLedUpsRoletyDoplata : 0);
+  const zasilanie = b.zasilanieBuforoweRezerwowe + (answers.rozszerzenieKnx ? b.zasilanieKnxDoplata : 0);
+  const linkiMaterialy = wieleKondygnacji ? b.linkiMaterialyWieleKondygnacji : b.linkiMaterialyJednaKondygnacja;
+  const zasilanieIDodatki = zasilaczeLed + zasilanie + linkiMaterialy + b.oznaczniki;
+
+  const selectedFunctionalCount =
+    (answers.alarmIKontrolaDostepu ? 1 : 0) +
+    (answers.sterowanieTemperatura ? 1 : 0) +
+    (answers.planujeRolety ? 1 : 0) +
+    (answers.sterowanieOgrodem ? 1 : 0) +
+    (answers.scenyOswietleniowe ? 1 : 0);
+  const czujnikiOtwarciaWyjazd = answers.addons.czujnikiOtwarciaOkien ? 1 : 0;
+  const dist = Math.max(0, answers.odlegloscKm);
+
+  const paliwo = dist * b.logistykaPaliwoZaKm;
+  const godziny = dist * b.logistykaGodzinowaZaKm;
+  const sumaOsobodni = 1 + 3 * czujnikiOtwarciaWyjazd + 1 + 3 * selectedFunctionalCount + 6 + 2 + 1;
+  const dieta = dist > b.logistykaProgDietyKm ? b.logistykaDietaStawka * sumaOsobodni : 0;
+  const sumaOsobodniMinusDzien = 3 * (czujnikiOtwarciaWyjazd - 1) + 3 * (selectedFunctionalCount - 1) + 3;
+  const nocleg = dist > b.logistykaProgNoclegowKm ? b.logistykaNoclegStawka * sumaOsobodniMinusDzien : 0;
+
+  const logistyka = (paliwo + dieta + nocleg + b.logistykaStalaOplata + godziny) * wspSzefa;
+
+  return roundMoney(wstepnaKonfiguracja + automatykaPodstawa + zasilanieIDodatki + logistyka);
+}
+
 export type CalculatorBaseSystemResult = {
   wieleKondygnacji: boolean;
   projektNet: number;
@@ -149,10 +198,7 @@ export function calculateBaseSystem(answers: CalculatorAnswers, settings: Calcul
         ? r.cenaPonizejProguWysokiego
         : r.cenaPowyzejProguWysokiego;
   const rozdzielniaWykonanieNet = roundMoney((sprzetRozdzielni + cenaProgowa) * rozdzielniaWspolczynnik);
-  const bazaZasilanieNet = roundMoney(
-    (wieleKondygnacji ? settings.baseSystem.bazaZasilanieWieleKondygnacji : settings.baseSystem.bazaZasilanieJednaKondygnacja) *
-      rozdzielniaWspolczynnik,
-  );
+  const bazaZasilanieNet = calculateBazaZasilania(answers, settings);
 
   return {
     wieleKondygnacji,
@@ -180,9 +226,14 @@ const FUNCTIONAL_GATE: Record<CalculatorFunctionalCategory, keyof CalculatorAnsw
 type CategoryBudget = { sprzet: number; godziny: number };
 
 /** ZESTAWIENIE!L column (kategoria Oświetlenie, poziom PRESTIŻ — stały domyślny dobór biura). */
+/** Ilość modułów RGBW (ZESTAWIENIE!L10) — współdzielona między kategorią Oświetlenie i "Zasilacze LED" w bazie zasilania. */
+function rgbwModuleQty(answers: CalculatorAnswers): number {
+  return answers.ledySciemniane > 0 ? roundUp(answers.ledySciemniane / 4) : answers.liczbaSypialniDodatkowych * 2;
+}
+
 function calculateOswietlenieBudget(answers: CalculatorAnswers, hw: CalculatorHardwareCatalog): CategoryBudget {
   const relayQty = roundUp(obwodyOswietleniaOnOff(answers) / 16);
-  const rgbwQty = answers.ledySciemniane > 0 ? roundUp(answers.ledySciemniane / 4) : answers.liczbaSypialniDodatkowych * 2;
+  const rgbwQty = rgbwModuleQty(answers);
   const czujkaLoxoneQty = answers.czyCzujkiRecznie
     ? answers.iloscCzujekLoxone
     : answers.satelWOptimum

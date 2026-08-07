@@ -15,11 +15,14 @@ import {
   CALCULATOR_OTHER_SYSTEM_LABELS,
 } from "@/lib/calculator/types";
 import {
+  CALCULATOR_BAZA_ZASILANIA_LABELS,
   CALCULATOR_HARDWARE_LABELS,
   CALCULATOR_OTHER_SYSTEMS_CATALOG_LABELS,
+  DEFAULT_BAZA_ZASILANIA_SETTINGS,
   DEFAULT_CALCULATOR_SETTINGS,
   DEFAULT_HARDWARE_CATALOG,
   DEFAULT_OTHER_SYSTEMS_CATALOG,
+  type CalculatorBazaZasilaniaSettings,
   type CalculatorHardwareCatalog,
   type CalculatorOtherSystemsCatalog,
   type CalculatorSettings,
@@ -111,20 +114,23 @@ export default function CalculatorSettingsPage() {
                   onChange={(v) => setSettings({ ...settings, baseSystem: { ...settings.baseSystem, projektDuzyDomDoplata: v } })}
                 />
               </Field>
-              <Field label="Baza — sterownik/zasilanie — jedna kondygnacja">
-                <NumericInput
-                  value={settings.baseSystem.bazaZasilanieJednaKondygnacja}
-                  disabled={loading}
-                  onChange={(v) => setSettings({ ...settings, baseSystem: { ...settings.baseSystem, bazaZasilanieJednaKondygnacja: v } })}
-                />
-              </Field>
-              <Field label="Baza — sterownik/zasilanie — wiele kondygnacji">
-                <NumericInput
-                  value={settings.baseSystem.bazaZasilanieWieleKondygnacji}
-                  disabled={loading}
-                  onChange={(v) => setSettings({ ...settings, baseSystem: { ...settings.baseSystem, bazaZasilanieWieleKondygnacji: v } })}
-                />
-              </Field>
+            </div>
+          </Section>
+
+          <Section
+            title="Baza zasilania"
+            description="Sterownik, zasilanie, wstępna konfiguracja i logistyka (koszt dojazdu/diety/noclegów) — silnik liczy logistykę automatycznie z odległości i wybranych funkcjonalności."
+          >
+            <div className="grid gap-4 sm:grid-cols-3">
+              {(Object.keys(DEFAULT_BAZA_ZASILANIA_SETTINGS) as (keyof CalculatorBazaZasilaniaSettings)[]).map((key) => (
+                <Field key={key} label={CALCULATOR_BAZA_ZASILANIA_LABELS[key]}>
+                  <NumericInput
+                    value={settings.bazaZasilania[key]}
+                    disabled={loading}
+                    onChange={(v) => setSettings({ ...settings, bazaZasilania: { ...settings.bazaZasilania, [key]: v } })}
+                  />
+                </Field>
+              ))}
             </div>
           </Section>
 

@@ -19,7 +19,7 @@ import { emptyCalculatorAnswers } from "@/lib/calculator/types";
  */
 
 describe("calculateBaseSystem — zweryfikowane przeciw DANE!T109:T111", () => {
-  it("jedna kondygnacja: projekt=4000, wykonanie rozdzielni=14520, baza=12728.33", () => {
+  it("jedna kondygnacja, odległość=0: projekt=4000, wykonanie rozdzielni=14520, baza=10700 (bez logistyki poza stałą opłatą 500 zł)", () => {
     const answers = emptyCalculatorAnswers();
     answers.liczbaKondygnacji = 1;
     const result = calculateBaseSystem(answers, DEFAULT_CALCULATOR_SETTINGS);
@@ -27,10 +27,10 @@ describe("calculateBaseSystem — zweryfikowane przeciw DANE!T109:T111", () => {
     expect(result.wieleKondygnacji).toBe(false);
     expect(result.projektNet).toBe(4000);
     expect(result.rozdzielniaWykonanieNet).toBe(14520);
-    expect(result.bazaZasilanieNet).toBe(12728.33);
+    expect(result.bazaZasilanieNet).toBe(10700);
   });
 
-  it("wiele kondygnacji: projekt=6000, wykonanie rozdzielni=17640, baza=11928.33", () => {
+  it("wiele kondygnacji, odległość=0: projekt=6000, wykonanie rozdzielni=17640, baza=9900", () => {
     const answers = emptyCalculatorAnswers();
     answers.liczbaKondygnacji = 2;
     const result = calculateBaseSystem(answers, DEFAULT_CALCULATOR_SETTINGS);
@@ -38,7 +38,7 @@ describe("calculateBaseSystem — zweryfikowane przeciw DANE!T109:T111", () => {
     expect(result.wieleKondygnacji).toBe(true);
     expect(result.projektNet).toBe(6000);
     expect(result.rozdzielniaWykonanieNet).toBe(17640);
-    expect(result.bazaZasilanieNet).toBe(11928.33);
+    expect(result.bazaZasilanieNet).toBe(9900);
   });
 
   it("powierzchnia NIE wpływa na próg bazy systemu (potwierdzone empirycznie — tylko kondygnacje)", () => {
@@ -329,14 +329,17 @@ describe("calculateCalculatorTotals — pozostała mechanika", () => {
     );
   });
 
-  it("trudny klient (>1,0) mnoży tylko kategorie funkcjonalne (per kategoria, jak WSP_SZEFA_1 w źródle), nie bazę systemu/elektrykę/inne systemy", () => {
+  it("trudny klient (>1,0) mnoży kategorie funkcjonalne w pełni oraz składową logistyki bazy zasilania (WSP_SZEFA_1 dotyczy obu, zgodnie z arkuszem — Parametry!D65 = WYJAZDY!L15 × WSP_SZEFA_1), ale nie projektu/rozdzielni", () => {
     const answers = emptyCalculatorAnswers();
     answers.alarmIKontrolaDostepu = true;
     const base = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
     const trudny = calculateCalculatorTotals({ ...answers, trudnyKlientWspolczynnik: 1.2 }, DEFAULT_CALCULATOR_SETTINGS);
 
     expect(trudny.functionalNet).toBeCloseTo(base.functionalNet * 1.2, 0);
-    expect(trudny.baseSystem.totalNet).toBe(base.baseSystem.totalNet);
+    expect(trudny.baseSystem.projektNet).toBe(base.baseSystem.projektNet);
+    expect(trudny.baseSystem.rozdzielniaWykonanieNet).toBe(base.baseSystem.rozdzielniaWykonanieNet);
+    // Przy odległości=0 logistyka to tylko stała opłata (500 zł) × współczynnik -> różnica = 500 × 0.2 = 100.
+    expect(trudny.baseSystem.bazaZasilanieNet - base.baseSystem.bazaZasilanieNet).toBeCloseTo(100, 2);
     expect(trudny.mainNet).toBeCloseTo(trudny.baseSystem.totalNet + trudny.functionalNet + trudny.addonsNet, 2);
   });
 
@@ -450,6 +453,8 @@ describe("calculateCalculatorTotals — pozostała mechanika", () => {
 
     answers.trudnyKlientWspolczynnik = 1.2;
     answers.wspolczynnikProjekt = 2.5;
+    answers.odlegloscKm = 90;
+    answers.rozszerzenieKnx = true;
 
     const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
     const net = (category: string) => totals.functional.find((entry) => entry.category === category)?.net;
@@ -481,11 +486,25 @@ describe("calculateCalculatorTotals — pozostała mechanika", () => {
 
     const totalsZDodatkami = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
     expect(totalsZDodatkami.addonsNet).toBe(31365.36);
+    // DANE!T111=15437.2 — baza zasilania zależna od odległości (90 km), KNX (S10=True) i logistyki
+    // (WYJAZDY!L15), z wliczonym dodatkiem "czujniki otwarcia okien" (wpływa na liczbę osobodni).
+    expect(totalsZDodatkami.baseSystem.bazaZasilanieNet).toBe(15437.2);
   });
 
   it("trzeci realny przykład (Gorzelak, 2 kondygnacje, SATEL=false) — Inne systemy zgodne z arkuszem co do grosza (DANE!T119=31598)", () => {
     const answers = emptyCalculatorAnswers();
     answers.trudnyKlientWspolczynnik = 1.1;
+    answers.liczbaKondygnacji = 2;
+    answers.liczbaSypialniDodatkowych = 3;
+    answers.ledySciemniane = 24;
+    answers.rozszerzenieKnx = false;
+    answers.odlegloscKm = 25;
+    answers.alarmIKontrolaDostepu = true;
+    answers.sterowanieTemperatura = true;
+    answers.planujeRolety = true;
+    answers.sterowanieOgrodem = true;
+    answers.scenyOswietleniowe = true;
+    answers.addons.czujnikiOtwarciaOkien = true;
 
     answers.otherSystems.sieciLan = true;
     answers.szafkaRackLan = true;
@@ -512,6 +531,8 @@ describe("calculateCalculatorTotals — pozostała mechanika", () => {
     expect(net("monitoring")).toBe(8100);
     expect(net("multiroom")).toBe(12068);
     expect(totals.otherSystems.selectedNet).toBe(31598);
+    // DANE!T111=9483.916667 (bez zaokrągleń pośrednich) — silnik zaokrągla do grosza -> 9483.92.
+    expect(totals.baseSystem.bazaZasilanieNet).toBe(9483.92);
   });
 
   it("dodatki premium (gwarancje/dokumentacja) — bez współczynnika trudny klient, zgodne z DANE!T120 (3000 zł)", () => {
