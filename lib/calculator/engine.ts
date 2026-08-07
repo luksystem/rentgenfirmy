@@ -44,6 +44,80 @@ function obwodyOswietleniaOnOff(answers: CalculatorAnswers): number {
   );
 }
 
+/** Ilość obwodów ściemnianych listw LED 24V (DANE!M17) — dodatkowa składowa punktów oświetlenia. */
+function obwodySciemnianeLed24V(answers: CalculatorAnswers): number {
+  return (
+    (answers.strefaPrywatna ? 2 : 0) +
+    (answers.strefaOtwarta ? 4 : 0) +
+    (answers.komunikacja ? 2 : 0) +
+    answers.liczbaSypialniDodatkowych +
+    answers.liczbaPomieszczenWilgotnych
+  );
+}
+
+/**
+ * Całkowita liczba punktów elektrycznych w instalacji (El rozbudowa!Q41) — decyduje o progu ceny
+ * "Wykonania Rozdzielni" w bazie systemu. Zweryfikowana na realnym przykładzie oferty: większość
+ * składowych (oświetlenie, rolety, monitoring, ogrzewanie, zewnętrzne) zgadza się co do punktu;
+ * blok "podstawowe wyposażenie" (zależny w źródle od zdublowanego arkusza SprzetSMART)
+ * przybliżony stałą punktową z ustawień zamiast w pełni odtworzony.
+ */
+function calculateElectricalPointsTotal(answers: CalculatorAnswers, settings: CalculatorSettings): number {
+  const gniazdaObwody =
+    (answers.strefaPrywatna ? 2 : 0) +
+    (answers.strefaOtwarta ? 4 : 0) +
+    (answers.komunikacja ? 1 : 0) +
+    answers.liczbaSypialniDodatkowych +
+    answers.liczbaPomieszczenWilgotnych +
+    answers.liczbaPozostalychPomieszczen +
+    answers.iloscGarazy;
+  const gniazdaKolejne =
+    (answers.strefaPrywatna ? 6 : 0) +
+    (answers.strefaOtwarta ? 8 : 0) +
+    (answers.komunikacja ? 3 : 0) +
+    answers.liczbaSypialniDodatkowych * 3 +
+    answers.liczbaPomieszczenWilgotnych +
+    answers.liczbaPozostalychPomieszczen +
+    answers.iloscGarazy * 6;
+  const gniazda400V = (answers.strefaOtwarta ? 1 : 0) + answers.iloscGarazy;
+
+  const oswietleniePunkty = obwodyOswietleniaOnOff(answers) + obwodySciemnianeLed24V(answers);
+  const oswietlenieKolejne = oswietleniePunkty * (answers.korzystamZArchitekta ? 1.5 : 0.5);
+
+  const rolety = answers.liczbaRolet;
+
+  const podstawoweWyposazenie =
+    settings.rozdzielnia.podstawoweWyposazeniePunkty + 1 + answers.liczbaOkienOtwieranych + 1;
+
+  const telewizja = answers.instalacjaDoTelewizjiLubLan
+    ? (answers.strefaPrywatna ? 2 : 0) + (answers.strefaOtwarta ? 2 : 0) + answers.liczbaSypialniDodatkowych + 5
+    : 0;
+  const glosniki = answers.instalacjaDoGlosnikow
+    ? (answers.strefaOtwarta ? 5 : 0) + (answers.strefaPrywatna ? 2 : 0) + answers.liczbaSypialniDodatkowych + answers.liczbaPozostalychPomieszczen
+    : 0;
+  const monitoring = answers.instalacjaDoMonitoringu ? answers.iloscKamerMonitoringu : 0;
+
+  const grzejnikiRozdzielacz = roundUp(answers.strefyOgrzewaniaPodlogowego / 5);
+
+  const zewnetrzneBaza = answers.iloscOswietlenZewnetrznych + answers.iloscSekcjiPodlewania;
+  const zewnetrzne = answers.sterowanieOgrodem ? zewnetrzneBaza + zewnetrzneBaza / 2 + 1 : 0;
+
+  return (
+    gniazdaObwody +
+    gniazdaKolejne +
+    gniazda400V +
+    oswietleniePunkty +
+    oswietlenieKolejne +
+    rolety +
+    podstawoweWyposazenie +
+    telewizja +
+    glosniki +
+    monitoring +
+    grzejnikiRozdzielacz +
+    zewnetrzne
+  );
+}
+
 export type CalculatorBaseSystemResult = {
   wieleKondygnacji: boolean;
   projektNet: number;
@@ -65,11 +139,16 @@ export function calculateBaseSystem(answers: CalculatorAnswers, settings: Calcul
   projektNet = roundMoney(projektNet * Math.max(0, answers.wspolczynnikProjekt || 1));
 
   const rozdzielniaWspolczynnik = Math.max(0, answers.wspolczynnikRozdzielnica || 1);
-  const rozdzielniaWykonanieNet = roundMoney(
-    (wieleKondygnacji
-      ? settings.baseSystem.rozdzielniaWykonanieWieleKondygnacji
-      : settings.baseSystem.rozdzielniaWykonanieJednaKondygnacja) * rozdzielniaWspolczynnik,
-  );
+  const r = settings.rozdzielnia;
+  const sprzetRozdzielni = (wieleKondygnacji ? r.sprzetWieleKondygnacji : r.sprzetJednaKondygnacja) * (1 + r.wzrostCenProcent / 100);
+  const punktyElektryczne = calculateElectricalPointsTotal(answers, settings);
+  const cenaProgowa =
+    punktyElektryczne < r.progPunktowNiski
+      ? r.cenaPonizejProguNiskiego
+      : punktyElektryczne < r.progPunktowWysoki
+        ? r.cenaPonizejProguWysokiego
+        : r.cenaPowyzejProguWysokiego;
+  const rozdzielniaWykonanieNet = roundMoney((sprzetRozdzielni + cenaProgowa) * rozdzielniaWspolczynnik);
   const bazaZasilanieNet = roundMoney(
     (wieleKondygnacji ? settings.baseSystem.bazaZasilanieWieleKondygnacji : settings.baseSystem.bazaZasilanieJednaKondygnacja) *
       rozdzielniaWspolczynnik,
@@ -349,7 +428,7 @@ export function calculateElectricalItems(
     answers.liczbaSypialniDodatkowych +
     answers.liczbaPomieszczenWilgotnych +
     answers.liczbaPozostalychPomieszczen +
-    answers.iloscGarazy * 6;
+    answers.iloscGarazy;
   items.push(
     item("gniazda_obwody", "Gniazda — obwody", "inteligentny", rate("inteligentny"), answers.iloscObwodowGniazd230V ?? gniazdaAuto),
   );
@@ -360,7 +439,8 @@ export function calculateElectricalItems(
     (answers.komunikacja ? 3 : 0) +
     answers.liczbaSypialniDodatkowych * 3 +
     answers.liczbaPomieszczenWilgotnych +
-    answers.liczbaPozostalychPomieszczen;
+    answers.liczbaPozostalychPomieszczen +
+    answers.iloscGarazy * 6;
   items.push(
     item(
       "gniazda_kolejne",
@@ -376,7 +456,7 @@ export function calculateElectricalItems(
     item("gniazda_400v", "Gniazda 400V", "gotowe_urzadzenie", rate("gotowe_urzadzenie"), answers.iloscGniazd400V ?? gniazda400Auto),
   );
 
-  const oswietlenieAuto = obwodyOswietleniaOnOff(answers);
+  const oswietlenieAuto = obwodyOswietleniaOnOff(answers) + obwodySciemnianeLed24V(answers);
   items.push(
     item(
       "oswietlenie_punkty",

@@ -109,24 +109,6 @@ export default function CalculatorSettingsPage() {
                   onChange={(v) => setSettings({ ...settings, baseSystem: { ...settings.baseSystem, projektDuzyDomDoplata: v } })}
                 />
               </Field>
-              <Field label="Wykonanie rozdzielni — jedna kondygnacja">
-                <NumericInput
-                  value={settings.baseSystem.rozdzielniaWykonanieJednaKondygnacja}
-                  disabled={loading}
-                  onChange={(v) =>
-                    setSettings({ ...settings, baseSystem: { ...settings.baseSystem, rozdzielniaWykonanieJednaKondygnacja: v } })
-                  }
-                />
-              </Field>
-              <Field label="Wykonanie rozdzielni — wiele kondygnacji">
-                <NumericInput
-                  value={settings.baseSystem.rozdzielniaWykonanieWieleKondygnacji}
-                  disabled={loading}
-                  onChange={(v) =>
-                    setSettings({ ...settings, baseSystem: { ...settings.baseSystem, rozdzielniaWykonanieWieleKondygnacji: v } })
-                  }
-                />
-              </Field>
               <Field label="Baza — sterownik/zasilanie — jedna kondygnacja">
                 <NumericInput
                   value={settings.baseSystem.bazaZasilanieJednaKondygnacja}
@@ -139,6 +121,79 @@ export default function CalculatorSettingsPage() {
                   value={settings.baseSystem.bazaZasilanieWieleKondygnacji}
                   disabled={loading}
                   onChange={(v) => setSettings({ ...settings, baseSystem: { ...settings.baseSystem, bazaZasilanieWieleKondygnacji: v } })}
+                />
+              </Field>
+            </div>
+          </Section>
+
+          <Section
+            title="Wykonanie rozdzielni"
+            description="Sprzęt rozdzielni wg liczby kondygnacji + cena progowa wg całkowitej liczby punktów elektrycznych w instalacji (silnik liczy ją automatycznie z odpowiedzi ankiety)."
+          >
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="Sprzęt rozdzielni — jedna kondygnacja">
+                <NumericInput
+                  value={settings.rozdzielnia.sprzetJednaKondygnacja}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, rozdzielnia: { ...settings.rozdzielnia, sprzetJednaKondygnacja: v } })}
+                />
+              </Field>
+              <Field label="Sprzęt rozdzielni — wiele kondygnacji">
+                <NumericInput
+                  value={settings.rozdzielnia.sprzetWieleKondygnacji}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, rozdzielnia: { ...settings.rozdzielnia, sprzetWieleKondygnacji: v } })}
+                />
+              </Field>
+              <Field label="Wzrost cen sprzętu [%]">
+                <NumericInput
+                  value={settings.rozdzielnia.wzrostCenProcent}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, rozdzielnia: { ...settings.rozdzielnia, wzrostCenProcent: v } })}
+                />
+              </Field>
+              <Field label="Próg punktów — niski">
+                <NumericInput
+                  value={settings.rozdzielnia.progPunktowNiski}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, rozdzielnia: { ...settings.rozdzielnia, progPunktowNiski: v } })}
+                />
+              </Field>
+              <Field label="Próg punktów — wysoki">
+                <NumericInput
+                  value={settings.rozdzielnia.progPunktowWysoki}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, rozdzielnia: { ...settings.rozdzielnia, progPunktowWysoki: v } })}
+                />
+              </Field>
+              <Field label="Cena poniżej progu niskiego">
+                <NumericInput
+                  value={settings.rozdzielnia.cenaPonizejProguNiskiego}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, rozdzielnia: { ...settings.rozdzielnia, cenaPonizejProguNiskiego: v } })}
+                />
+              </Field>
+              <Field label="Cena poniżej progu wysokiego">
+                <NumericInput
+                  value={settings.rozdzielnia.cenaPonizejProguWysokiego}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, rozdzielnia: { ...settings.rozdzielnia, cenaPonizejProguWysokiego: v } })}
+                />
+              </Field>
+              <Field label="Cena powyżej progu wysokiego">
+                <NumericInput
+                  value={settings.rozdzielnia.cenaPowyzejProguWysokiego}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, rozdzielnia: { ...settings.rozdzielnia, cenaPowyzejProguWysokiego: v } })}
+                />
+              </Field>
+              <Field label="Punkty — podstawowe wyposażenie (przybliżenie)">
+                <NumericInput
+                  value={settings.rozdzielnia.podstawoweWyposazeniePunkty}
+                  disabled={loading}
+                  onChange={(v) =>
+                    setSettings({ ...settings, rozdzielnia: { ...settings.rozdzielnia, podstawoweWyposazeniePunkty: v } })
+                  }
                 />
               </Field>
             </div>

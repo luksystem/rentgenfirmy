@@ -24,9 +24,6 @@ export type CalculatorBaseSystemSettings = {
   /** Dopłata do projektu przy bardzo dużym domu (KALKULATOR!N29: >=400m² -> +2000). */
   projektDuzyDomProgM2: number;
   projektDuzyDomDoplata: number;
-  /** Wykonanie i podłączenie rozdzielni na budowie (DANE!T110, zweryfikowane: 14520/17640). */
-  rozdzielniaWykonanieJednaKondygnacja: number;
-  rozdzielniaWykonanieWieleKondygnacji: number;
   /** Baza systemu — sterownik, zasilanie, wstępna konfiguracja (DANE!T111, zweryfikowane). */
   bazaZasilanieJednaKondygnacja: number;
   bazaZasilanieWieleKondygnacji: number;
@@ -37,10 +34,43 @@ export const DEFAULT_BASE_SYSTEM_SETTINGS: CalculatorBaseSystemSettings = {
   projektWieleKondygnacji: 6000,
   projektDuzyDomProgM2: 400,
   projektDuzyDomDoplata: 2000,
-  rozdzielniaWykonanieJednaKondygnacja: 14520,
-  rozdzielniaWykonanieWieleKondygnacji: 17640,
   bazaZasilanieJednaKondygnacja: 12728.33,
   bazaZasilanieWieleKondygnacji: 11928.33,
+};
+
+/**
+ * "Wykonanie Rozdzielni" (DANE!T110) — zweryfikowane jako suma DWÓCH niezależnych składowych
+ * (KALKULATOR!N30+N31), obie ostatecznie mnożone przez współczynnik rozdzielnica (CRM!Q24):
+ * 1) Sprzęt rozdzielni (skrzynka+zugi+zabezpieczenia) wg liczby kondygnacji, ×(1+wzrostCen);
+ * 2) Cena progowa wg CAŁKOWITEJ liczby punktów elektrycznych w instalacji (El rozbudowa!Q41) —
+ *    NIEZALEŻNA od liczby kondygnacji (formuła identyczna dla obu progów kondygnacji w źródle).
+ * Liczbę punktów liczy silnik z tych samych odpowiedzi co pozycje instalacji elektrycznej (patrz
+ * calculateElectricalPointsTotal w engine.ts) — przybliżenie bloku "podstawowe wyposażenie"
+ * (zależnego w źródle od zdublowanego arkusza SprzetSMART) stałą wartością punktową.
+ */
+export type CalculatorRozdzielniaSettings = {
+  sprzetJednaKondygnacja: number;
+  sprzetWieleKondygnacji: number;
+  wzrostCenProcent: number;
+  progPunktowNiski: number;
+  progPunktowWysoki: number;
+  cenaPonizejProguNiskiego: number;
+  cenaPonizejProguWysokiego: number;
+  cenaPowyzejProguWysokiego: number;
+  /** Punktowy odpowiednik bloku "podstawowe wyposażenie" (El rozbudowa, w. 10–32) — zweryfikowany empirycznie jako względnie stały. */
+  podstawoweWyposazeniePunkty: number;
+};
+
+export const DEFAULT_ROZDZIELNIA_SETTINGS: CalculatorRozdzielniaSettings = {
+  sprzetJednaKondygnacja: 7100,
+  sprzetWieleKondygnacji: 9700,
+  wzrostCenProcent: 20,
+  progPunktowNiski: 300,
+  progPunktowWysoki: 600,
+  cenaPonizejProguNiskiego: 6000,
+  cenaPonizejProguWysokiego: 9000,
+  cenaPowyzejProguWysokiego: 10500,
+  podstawoweWyposazeniePunkty: 61,
 };
 
 /**
@@ -294,6 +324,7 @@ export const DEFAULT_DISCOUNT_SETTINGS: CalculatorDiscountSettings = {
 
 export type CalculatorSettings = {
   baseSystem: CalculatorBaseSystemSettings;
+  rozdzielnia: CalculatorRozdzielniaSettings;
   hardware: CalculatorHardwareCatalog;
   laborRatePerHour: number;
   addons: CalculatorAddonPricing;
@@ -305,6 +336,7 @@ export type CalculatorSettings = {
 
 export const DEFAULT_CALCULATOR_SETTINGS: CalculatorSettings = {
   baseSystem: DEFAULT_BASE_SYSTEM_SETTINGS,
+  rozdzielnia: DEFAULT_ROZDZIELNIA_SETTINGS,
   hardware: DEFAULT_HARDWARE_CATALOG,
   laborRatePerHour: DEFAULT_LABOR_RATE_PER_HOUR,
   addons: DEFAULT_ADDON_PRICING,
@@ -334,14 +366,6 @@ export function normalizeCalculatorSettings(value: unknown): CalculatorSettings 
     projektWieleKondygnacji: asNumber(baseSystemData.projektWieleKondygnacji, DEFAULT_BASE_SYSTEM_SETTINGS.projektWieleKondygnacji),
     projektDuzyDomProgM2: asNumber(baseSystemData.projektDuzyDomProgM2, DEFAULT_BASE_SYSTEM_SETTINGS.projektDuzyDomProgM2),
     projektDuzyDomDoplata: asNumber(baseSystemData.projektDuzyDomDoplata, DEFAULT_BASE_SYSTEM_SETTINGS.projektDuzyDomDoplata),
-    rozdzielniaWykonanieJednaKondygnacja: asNumber(
-      baseSystemData.rozdzielniaWykonanieJednaKondygnacja,
-      DEFAULT_BASE_SYSTEM_SETTINGS.rozdzielniaWykonanieJednaKondygnacja,
-    ),
-    rozdzielniaWykonanieWieleKondygnacji: asNumber(
-      baseSystemData.rozdzielniaWykonanieWieleKondygnacji,
-      DEFAULT_BASE_SYSTEM_SETTINGS.rozdzielniaWykonanieWieleKondygnacji,
-    ),
     bazaZasilanieJednaKondygnacja: asNumber(
       baseSystemData.bazaZasilanieJednaKondygnacja,
       DEFAULT_BASE_SYSTEM_SETTINGS.bazaZasilanieJednaKondygnacja,
@@ -349,6 +373,31 @@ export function normalizeCalculatorSettings(value: unknown): CalculatorSettings 
     bazaZasilanieWieleKondygnacji: asNumber(
       baseSystemData.bazaZasilanieWieleKondygnacji,
       DEFAULT_BASE_SYSTEM_SETTINGS.bazaZasilanieWieleKondygnacji,
+    ),
+  };
+
+  const rozdzielniaData = asObject(data.rozdzielnia);
+  const rozdzielnia: CalculatorRozdzielniaSettings = {
+    sprzetJednaKondygnacja: asNumber(rozdzielniaData.sprzetJednaKondygnacja, DEFAULT_ROZDZIELNIA_SETTINGS.sprzetJednaKondygnacja),
+    sprzetWieleKondygnacji: asNumber(rozdzielniaData.sprzetWieleKondygnacji, DEFAULT_ROZDZIELNIA_SETTINGS.sprzetWieleKondygnacji),
+    wzrostCenProcent: asNumber(rozdzielniaData.wzrostCenProcent, DEFAULT_ROZDZIELNIA_SETTINGS.wzrostCenProcent),
+    progPunktowNiski: asNumber(rozdzielniaData.progPunktowNiski, DEFAULT_ROZDZIELNIA_SETTINGS.progPunktowNiski),
+    progPunktowWysoki: asNumber(rozdzielniaData.progPunktowWysoki, DEFAULT_ROZDZIELNIA_SETTINGS.progPunktowWysoki),
+    cenaPonizejProguNiskiego: asNumber(
+      rozdzielniaData.cenaPonizejProguNiskiego,
+      DEFAULT_ROZDZIELNIA_SETTINGS.cenaPonizejProguNiskiego,
+    ),
+    cenaPonizejProguWysokiego: asNumber(
+      rozdzielniaData.cenaPonizejProguWysokiego,
+      DEFAULT_ROZDZIELNIA_SETTINGS.cenaPonizejProguWysokiego,
+    ),
+    cenaPowyzejProguWysokiego: asNumber(
+      rozdzielniaData.cenaPowyzejProguWysokiego,
+      DEFAULT_ROZDZIELNIA_SETTINGS.cenaPowyzejProguWysokiego,
+    ),
+    podstawoweWyposazeniePunkty: asNumber(
+      rozdzielniaData.podstawoweWyposazeniePunkty,
+      DEFAULT_ROZDZIELNIA_SETTINGS.podstawoweWyposazeniePunkty,
     ),
   };
 
@@ -432,5 +481,5 @@ export function normalizeCalculatorSettings(value: unknown): CalculatorSettings 
     cenaZaDodatkowaCzujke: asNumber(extrasData.cenaZaDodatkowaCzujke, DEFAULT_EXTRAS_SETTINGS.cenaZaDodatkowaCzujke),
   };
 
-  return { baseSystem, hardware, laborRatePerHour, addons, otherSystems, electrical, discounts, extras };
+  return { baseSystem, rozdzielnia, hardware, laborRatePerHour, addons, otherSystems, electrical, discounts, extras };
 }

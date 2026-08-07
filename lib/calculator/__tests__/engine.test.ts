@@ -58,6 +58,32 @@ describe("calculateBaseSystem — zweryfikowane przeciw DANE!T109:T111", () => {
     expect(result.projektNet).toBe(8000);
     expect(result.rozdzielniaWykonanieNet).toBe(14520); // nietknięte
   });
+
+  it("wykonanie rozdzielni skaluje się z liczbą punktów elektrycznych (nie tylko kondygnacjami) — realny przykład: 317.5 pkt -> próg 9000 zł, 17520 zł łącznie", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.liczbaKondygnacji = 1;
+    answers.strefaPrywatna = true;
+    answers.strefaOtwarta = true;
+    answers.komunikacja = true;
+    answers.liczbaSypialniDodatkowych = 5;
+    answers.liczbaPomieszczenWilgotnych = 4;
+    answers.liczbaPozostalychPomieszczen = 1;
+    answers.iloscGarazy = 1;
+    answers.liczbaOkienOtwieranych = 10;
+    answers.liczbaRolet = 8;
+    answers.korzystamZArchitekta = true;
+    answers.strefyOgrzewaniaPodlogowego = 14;
+    answers.instalacjaDoTelewizjiLubLan = true;
+    answers.instalacjaDoGlosnikow = true;
+    answers.instalacjaDoMonitoringu = true;
+    answers.iloscKamerMonitoringu = 8;
+    answers.sterowanieOgrodem = true;
+    answers.iloscOswietlenZewnetrznych = 4;
+    answers.iloscSekcjiPodlewania = 4;
+
+    const result = calculateBaseSystem(answers, DEFAULT_CALCULATOR_SETTINGS);
+    expect(result.rozdzielniaWykonanieNet).toBe(17520);
+  });
 });
 
 describe("calculateCalculatorTotals — kategorie funkcjonalne jako lista materiałowa (BOM)", () => {
