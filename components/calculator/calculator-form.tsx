@@ -155,37 +155,50 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
 
   const a = offer.answers;
 
+  const totalBarContent = (
+    <div className="mx-auto w-full max-w-[1500px] space-y-1.5 px-4 py-2.5 sm:px-5 xl:px-8">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-0.5">
+        <p className="min-w-0 truncate text-sm font-medium text-foreground">
+          {offer.title.trim() || "Kalkulacja"}
+        </p>
+        <p className="shrink-0 text-lg font-bold tabular-nums text-accent">
+          {formatMoney(totals.totalNet)} <span className="text-xs font-normal text-muted">netto</span>
+        </p>
+      </div>
+      <div className="flex gap-x-3 overflow-x-auto whitespace-nowrap text-xs text-muted [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <span>
+          Baza <span className="font-medium tabular-nums text-foreground/90">{formatMoney(totals.baseSystem.totalNet)}</span>
+        </span>
+        <span>
+          Funkcjonalne <span className="font-medium tabular-nums text-foreground/90">{formatMoney(totals.functionalNet)}</span>
+        </span>
+        <span>
+          Dodatki <span className="font-medium tabular-nums text-foreground/90">{formatMoney(totals.addonsNet)}</span>
+        </span>
+        <span>
+          Elektryka <span className="font-medium tabular-nums text-foreground/90">{formatMoney(totals.electrical.finalNet)}</span>
+        </span>
+        <span>
+          Inne systemy <span className="font-medium tabular-nums text-foreground/90">{formatMoney(totals.otherSystems.finalNet)}</span>
+        </span>
+      </div>
+    </div>
+  );
+
   return (
+    <>
+      {/* Naprawdę zawsze widoczny pasek sumy — position:fixed zamiast sticky, bo sticky potrafi się
+          "odklejać" na mobile gdy klawiatura ekranowa zmienia wysokość widoku podczas wpisywania. */}
+      <div className="fixed inset-x-0 top-16 z-30 border-b border-accent/30 bg-surface-elevated/95 shadow-soft backdrop-blur xl:left-72">
+        {totalBarContent}
+      </div>
+      {/* Niewidoczny odstępnik — dokładnie tej samej wysokości co pasek powyżej, żeby treść pod spodem się nie chowała. */}
+      <div aria-hidden="true" className="invisible mt-16">
+        {totalBarContent}
+      </div>
+
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
       <div className="grid gap-6">
-        <div className="sticky top-16 z-10 space-y-2 overflow-hidden rounded-2xl border border-accent/30 bg-surface-elevated/95 p-3 shadow-soft backdrop-blur xl:top-0 xl:z-20">
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-            <p className="min-w-0 truncate text-sm font-medium text-foreground">
-              {offer.title.trim() || "Kalkulacja"}
-            </p>
-            <p className="shrink-0 text-lg font-bold tabular-nums text-accent">
-              {formatMoney(totals.totalNet)} <span className="text-xs font-normal text-muted">netto</span>
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
-            <span>
-              Baza <span className="font-medium tabular-nums text-foreground/90">{formatMoney(totals.baseSystem.totalNet)}</span>
-            </span>
-            <span>
-              Funkcjonalne <span className="font-medium tabular-nums text-foreground/90">{formatMoney(totals.functionalNet)}</span>
-            </span>
-            <span>
-              Dodatki <span className="font-medium tabular-nums text-foreground/90">{formatMoney(totals.addonsNet)}</span>
-            </span>
-            <span>
-              Elektryka <span className="font-medium tabular-nums text-foreground/90">{formatMoney(totals.electrical.finalNet)}</span>
-            </span>
-            <span>
-              Inne systemy <span className="font-medium tabular-nums text-foreground/90">{formatMoney(totals.otherSystems.finalNet)}</span>
-            </span>
-          </div>
-        </div>
-
         <Card>
           <CardContent className="grid gap-4 pt-5">
             <Field label="Tytuł kalkulacji">
@@ -783,6 +796,7 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
         </Card>
       </div>
     </div>
+    </>
   );
 }
 
