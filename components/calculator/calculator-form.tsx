@@ -447,6 +447,34 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
                   <NumericInput value={a.dodatkoweBruzdowanieM} decimals={false} onChange={(v) => setAnswers({ dodatkoweBruzdowanieM: v })} />
                 </Field>
               </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  Przyciski i dodatkowe czujki — ceny orientacyjne, do ustalenia indywidualnie z klientem
+                </p>
+                <div className="mt-2 grid gap-4 sm:grid-cols-3">
+                  <Field label="Przyciski PRESTIŻ — ilość">
+                    <NumericInput
+                      value={a.iloscPrzyciskowPrestiz}
+                      decimals={false}
+                      onChange={(v) => setAnswers({ iloscPrzyciskowPrestiz: v })}
+                    />
+                  </Field>
+                  <Field label="Przyciski NORMAL — ilość">
+                    <NumericInput
+                      value={a.iloscPrzyciskowNormal}
+                      decimals={false}
+                      onChange={(v) => setAnswers({ iloscPrzyciskowNormal: v })}
+                    />
+                  </Field>
+                  <Field label="Dodatkowe czujki wpisane ręcznie — ilość">
+                    <NumericInput
+                      value={a.iloscCzujekDodatkowychRecznie}
+                      decimals={false}
+                      onChange={(v) => setAnswers({ iloscCzujekDodatkowychRecznie: v })}
+                    />
+                  </Field>
+                </div>
+              </div>
             </Section>
 
             <Section title="Finanse i wyjątki">

@@ -114,6 +114,14 @@ export type CalculatorElectricalFixedPricing = {
   formalnosciOdbiorowe: number;
   pomiaryWewnetrzneZaPunkt: number;
   dodatkoweBruzdowanieZaMetr: number;
+  /**
+   * Bazowe wyposażenie instalacji — czujki, bramy, furtka, domofon, rozdzielnice pomocnicze
+   * (El rozbudowa, wiersze 10–32 — "BAZA SYSTEMU" peryferiów). Zweryfikowane empirycznie jako
+   * niemal stałe (~4239 zł), niezależnie od większości parametrów domu — zawsze wliczane.
+   */
+  podstawoweWyposazenieInstalacji: number;
+  /** Dopłata za każdą bramę garażową (kontaktron) — zweryfikowana empirycznie: +162 zł/bramę. */
+  doplataZaBrameGarazowa: number;
 };
 
 export const DEFAULT_ELECTRICAL_FIXED_PRICING: CalculatorElectricalFixedPricing = {
@@ -125,6 +133,26 @@ export const DEFAULT_ELECTRICAL_FIXED_PRICING: CalculatorElectricalFixedPricing 
   formalnosciOdbiorowe: 1500,
   pomiaryWewnetrzneZaPunkt: 12,
   dodatkoweBruzdowanieZaMetr: 40,
+  podstawoweWyposazenieInstalacji: 4239,
+  doplataZaBrameGarazowa: 162,
+};
+
+/**
+ * Przyciski i dodatkowe czujki — w arkuszu źródłowym oznaczone jako "do ustalenia z Inwestorem"
+ * (sterowane wewnętrzną checklistą przypisań pokój-po-pokoju, nie prostym wzorem ilość×cena).
+ * Tu uproszczone do ilość × cena orientacyjna — do potwierdzenia indywidualnie z klientem,
+ * dokładnie jak w źródle.
+ */
+export type CalculatorExtrasSettings = {
+  cenaPrzyciskuPrestiz: number;
+  cenaPrzyciskuNormal: number;
+  cenaZaDodatkowaCzujke: number;
+};
+
+export const DEFAULT_EXTRAS_SETTINGS: CalculatorExtrasSettings = {
+  cenaPrzyciskuPrestiz: 600,
+  cenaPrzyciskuNormal: 400,
+  cenaZaDodatkowaCzujke: 300,
 };
 
 export type CalculatorElectricalSettings = {
@@ -170,6 +198,7 @@ export type CalculatorSettings = {
   otherSystems: CalculatorOtherSystemPricing;
   electrical: CalculatorElectricalSettings;
   discounts: CalculatorDiscountSettings;
+  extras: CalculatorExtrasSettings;
 };
 
 export const DEFAULT_CALCULATOR_SETTINGS: CalculatorSettings = {
@@ -179,6 +208,7 @@ export const DEFAULT_CALCULATOR_SETTINGS: CalculatorSettings = {
   otherSystems: DEFAULT_OTHER_SYSTEM_PRICING,
   electrical: DEFAULT_ELECTRICAL_SETTINGS,
   discounts: DEFAULT_DISCOUNT_SETTINGS,
+  extras: DEFAULT_EXTRAS_SETTINGS,
 };
 
 export const CALCULATOR_SETTINGS_ID = "calculator_settings";
@@ -265,6 +295,11 @@ export function normalizeCalculatorSettings(value: unknown): CalculatorSettings 
       fixedData.dodatkoweBruzdowanieZaMetr,
       DEFAULT_ELECTRICAL_FIXED_PRICING.dodatkoweBruzdowanieZaMetr,
     ),
+    podstawoweWyposazenieInstalacji: asNumber(
+      fixedData.podstawoweWyposazenieInstalacji,
+      DEFAULT_ELECTRICAL_FIXED_PRICING.podstawoweWyposazenieInstalacji,
+    ),
+    doplataZaBrameGarazowa: asNumber(fixedData.doplataZaBrameGarazowa, DEFAULT_ELECTRICAL_FIXED_PRICING.doplataZaBrameGarazowa),
   };
   const electrical: CalculatorElectricalSettings = {
     rates,
@@ -286,5 +321,12 @@ export function normalizeCalculatorSettings(value: unknown): CalculatorSettings 
     inneSystemyMaxPercent: asNumber(discountsData.inneSystemyMaxPercent, DEFAULT_DISCOUNT_SETTINGS.inneSystemyMaxPercent),
   };
 
-  return { baseSystem, functional, addons, otherSystems, electrical, discounts };
+  const extrasData = asObject(data.extras);
+  const extras: CalculatorExtrasSettings = {
+    cenaPrzyciskuPrestiz: asNumber(extrasData.cenaPrzyciskuPrestiz, DEFAULT_EXTRAS_SETTINGS.cenaPrzyciskuPrestiz),
+    cenaPrzyciskuNormal: asNumber(extrasData.cenaPrzyciskuNormal, DEFAULT_EXTRAS_SETTINGS.cenaPrzyciskuNormal),
+    cenaZaDodatkowaCzujke: asNumber(extrasData.cenaZaDodatkowaCzujke, DEFAULT_EXTRAS_SETTINGS.cenaZaDodatkowaCzujke),
+  };
+
+  return { baseSystem, functional, addons, otherSystems, electrical, discounts, extras };
 }

@@ -279,6 +279,62 @@ export default function CalculatorSettingsPage() {
                   }
                 />
               </Field>
+              <Field label="Podstawowe wyposażenie instalacji (czujki, bramy, domofon, RG)">
+                <NumericInput
+                  value={settings.electrical.fixed.podstawoweWyposazenieInstalacji}
+                  disabled={loading}
+                  onChange={(v) =>
+                    setSettings({
+                      ...settings,
+                      electrical: {
+                        ...settings.electrical,
+                        fixed: { ...settings.electrical.fixed, podstawoweWyposazenieInstalacji: v },
+                      },
+                    })
+                  }
+                />
+              </Field>
+              <Field label="Dopłata za bramę garażową">
+                <NumericInput
+                  value={settings.electrical.fixed.doplataZaBrameGarazowa}
+                  disabled={loading}
+                  onChange={(v) =>
+                    setSettings({
+                      ...settings,
+                      electrical: { ...settings.electrical, fixed: { ...settings.electrical.fixed, doplataZaBrameGarazowa: v } },
+                    })
+                  }
+                />
+              </Field>
+            </div>
+          </Section>
+
+          <Section
+            title="Przyciski i dodatkowe czujki"
+            description="Ceny orientacyjne — w źródłowym pliku oznaczone jako „do ustalenia z Inwestorem”, tu wycenione ilość×cena."
+          >
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="Przycisk PRESTIŻ">
+                <NumericInput
+                  value={settings.extras.cenaPrzyciskuPrestiz}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, extras: { ...settings.extras, cenaPrzyciskuPrestiz: v } })}
+                />
+              </Field>
+              <Field label="Przycisk NORMAL">
+                <NumericInput
+                  value={settings.extras.cenaPrzyciskuNormal}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, extras: { ...settings.extras, cenaPrzyciskuNormal: v } })}
+                />
+              </Field>
+              <Field label="Dodatkowa czujka">
+                <NumericInput
+                  value={settings.extras.cenaZaDodatkowaCzujke}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, extras: { ...settings.extras, cenaZaDodatkowaCzujke: v } })}
+                />
+              </Field>
             </div>
           </Section>
 

@@ -129,6 +129,10 @@ export function normalizeCalculatorAnswers(value: unknown): CalculatorAnswers {
     iloscKanalowTv: asNullableNumber(data.iloscKanalowTv),
     dodatkoweBruzdowanieM: asNumber(data.dodatkoweBruzdowanieM, fallback.dodatkoweBruzdowanieM),
 
+    iloscPrzyciskowPrestiz: asNumber(data.iloscPrzyciskowPrestiz, fallback.iloscPrzyciskowPrestiz),
+    iloscPrzyciskowNormal: asNumber(data.iloscPrzyciskowNormal, fallback.iloscPrzyciskowNormal),
+    iloscCzujekDodatkowychRecznie: asNumber(data.iloscCzujekDodatkowychRecznie, fallback.iloscCzujekDodatkowychRecznie),
+
     trudnyKlientWspolczynnik: asNumber(data.trudnyKlientWspolczynnik, fallback.trudnyKlientWspolczynnik),
     platnoscZGory: asBoolean(data.platnoscZGory, fallback.platnoscZGory),
     istniejePodstawowyAlarm: asBoolean(data.istniejePodstawowyAlarm, fallback.istniejePodstawowyAlarm),

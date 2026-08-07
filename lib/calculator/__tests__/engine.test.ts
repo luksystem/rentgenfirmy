@@ -99,6 +99,24 @@ describe("calculateCalculatorTotals — kategorie funkcjonalne jako stała cena 
     expect(net("oswietlenie")).toBe(2559.9);
   });
 
+  it("ręcznie wpisane dodatkowe czujki dolicza się do budżetu bezpieczeństwa (orientacyjnie, poza checkboxem)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.iloscCzujekDodatkowychRecznie = 4;
+    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const item = totals.functional.find((entry) => entry.category === "bezpieczenstwo");
+    expect(item?.selected).toBe(true);
+    expect(item?.net).toBe(4 * DEFAULT_CALCULATOR_SETTINGS.extras.cenaZaDodatkowaCzujke);
+  });
+
+  it("dodatkowe czujki sumują się z ceną kategorii, gdy alarm też zaznaczony", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.alarmIKontrolaDostepu = true;
+    answers.iloscCzujekDodatkowychRecznie = 2;
+    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const item = totals.functional.find((entry) => entry.category === "bezpieczenstwo");
+    expect(item?.net).toBe(14930.7 + 2 * DEFAULT_CALCULATOR_SETTINGS.extras.cenaZaDodatkowaCzujke);
+  });
+
   it("współczynnik outdoor (CRM!Q25) mnoży tylko zewnętrzne — zweryfikowane ×2 -> 9935", () => {
     const answers = emptyCalculatorAnswers();
     answers.sterowanieOgrodem = true;
@@ -110,11 +128,11 @@ describe("calculateCalculatorTotals — kategorie funkcjonalne jako stała cena 
 });
 
 describe("calculateElectricalItems — model itemizowany (ilości × stawka wg typu)", () => {
-  it("bez zaznaczonych pomieszczeń/toggle'ów — brak pozycji", () => {
+  it("bez zaznaczonych pomieszczeń/toggle'ów — tylko pozycje zawsze wliczone", () => {
     const answers = emptyCalculatorAnswers();
     const items = calculateElectricalItems(answers, DEFAULT_CALCULATOR_SETTINGS);
-    expect(items).toHaveLength(1); // tylko "obsadzenie rozdzielni głównej" (zawsze wliczone)
-    expect(items[0].key).toBe("obsadzenie_rg");
+    const keys = items.map((entry) => entry.key);
+    expect(keys).toEqual(["podstawowe_wyposazenie", "obsadzenie_rg"]);
   });
 
   it("strefa prywatna generuje pozycję gniazd wg stawki ID (162 zł)", () => {
@@ -145,6 +163,34 @@ describe("calculateElectricalItems — model itemizowany (ilości × stawka wg t
     answers.instalacjaDoMonitoringu = true;
     const withToggle = calculateElectricalItems(answers, DEFAULT_CALCULATOR_SETTINGS);
     expect(withToggle.find((entry) => entry.key === "monitoring")?.quantity).toBe(8);
+  });
+
+  it("podstawowe wyposażenie instalacji jest zawsze wliczone (~4239 zł, El rozbudowa K33, zweryfikowane)", () => {
+    const answers = emptyCalculatorAnswers();
+    const items = calculateElectricalItems(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const baza = items.find((entry) => entry.key === "podstawowe_wyposazenie");
+    expect(baza?.net).toBe(4239);
+  });
+
+  it("brama garażowa dolicza dopłatę do podstawowego wyposażenia — zweryfikowane ×2 -> +324", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.liczbaBramGarazowych = 2;
+    const items = calculateElectricalItems(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const doplata = items.find((entry) => entry.key === "doplata_brama_garazowa");
+    expect(doplata?.net).toBe(324);
+  });
+
+  it("przyciski PRESTIŻ/NORMAL liczone ilość × cena z ustawień (wycena orientacyjna)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.iloscPrzyciskowPrestiz = 3;
+    answers.iloscPrzyciskowNormal = 5;
+    const items = calculateElectricalItems(answers, DEFAULT_CALCULATOR_SETTINGS);
+    expect(items.find((entry) => entry.key === "przyciski_prestiz")?.net).toBe(
+      3 * DEFAULT_CALCULATOR_SETTINGS.extras.cenaPrzyciskuPrestiz,
+    );
+    expect(items.find((entry) => entry.key === "przyciski_normal")?.net).toBe(
+      5 * DEFAULT_CALCULATOR_SETTINGS.extras.cenaPrzyciskuNormal,
+    );
   });
 
   it("kompleksowa instalacja daje rabat na sumę pozycji elektrycznych", () => {

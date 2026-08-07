@@ -80,25 +80,33 @@ const FUNCTIONAL_GATE: Record<CalculatorFunctionalCategory, keyof CalculatorAnsw
 /**
  * Budżety kategorii funkcjonalnych — cena stała odblokowywana odpowiadającym checkboxem
  * funkcjonalności (nie trzypoziomowy wybór, patrz komentarz w types.ts). "Tylko rozdzielnia"
- * (CRM!S8) zeruje kategorię bezpieczeństwa niezależnie od checkboxa (DANE!T112).
+ * (CRM!S8) zeruje kategorię bezpieczeństwa niezależnie od checkboxa (DANE!T112). Ręcznie wpisana
+ * ilość dodatkowych czujek dolicza się do budżetu bezpieczeństwa niezależnie od checkboxa
+ * (odpowiednik ręcznych pól ilości czujek w CRM, których dokładnej formuły nie udało się
+ * jednoznacznie prześledzić w źródle — patrz komentarz w types.ts).
  */
 export function calculateFunctionalBudgets(
   answers: CalculatorAnswers,
   settings: CalculatorSettings,
 ): CalculatorFunctionalResult[] {
   return CALCULATOR_FUNCTIONAL_CATEGORIES.map((category) => {
+    const czujkiDodatkoweNet =
+      category === "bezpieczenstwo"
+        ? roundMoney(Math.max(0, answers.iloscCzujekDodatkowychRecznie || 0) * settings.extras.cenaZaDodatkowaCzujke)
+        : 0;
+
     if (category === "bezpieczenstwo" && answers.tylkoRozdzielnia) {
-      return { category, selected: false, net: 0 };
+      return { category, selected: czujkiDodatkoweNet > 0, net: czujkiDodatkoweNet };
     }
     const selected = Boolean(answers[FUNCTIONAL_GATE[category]]);
     if (!selected) {
-      return { category, selected: false, net: 0 };
+      return { category, selected: czujkiDodatkoweNet > 0, net: czujkiDodatkoweNet };
     }
     let net = settings.functional[category];
     if (category === "zewnetrzne") {
       net = roundMoney(net * Math.max(0, answers.wspolczynnikOutdoor || 1));
     }
-    return { category, selected: true, net };
+    return { category, selected: true, net: roundMoney(net + czujkiDodatkoweNet) };
   });
 }
 
@@ -120,10 +128,12 @@ function electricalRate(settings: CalculatorSettings, answers: CalculatorAnswers
 /**
  * Instalacja elektryczna — pozycje z ilościami (nie zryczałtowana stawka za punkt), wzorem
  * arkusza `El rozbudowa` (wiersze 62–100): każda pozycja ma własny typ stawki i własną ilość,
- * auto-wyliczoną z parametrów domu albo wpisaną ręcznie (CRM!U-kolumny). Uproszczenie względem
- * źródła: pominięte pozycje "BAZA SYSTEMU peryferiów" (wiersze 10–32, głównie stałe wyposażenie
- * jak czujki/bramy/domofon liczone przez osobny, mocno zagnieżdżony łańcuch odwołań) — do
- * ewentualnego doprecyzowania później.
+ * auto-wyliczoną z parametrów domu albo wpisaną ręcznie (CRM!U-kolumny). Zawiera też bazowe
+ * wyposażenie instalacji (czujki/bramy/furtka/domofon/rozdzielnice pomocnicze — El rozbudowa,
+ * wiersze 10–32, "BAZA SYSTEMU" peryferiów) — zweryfikowane empirycznie jako niemal stałe
+ * (~4239 zł, DANE!K33) i zawsze wliczane, plus dopłata za każdą bramę garażową (+162 zł/bramę,
+ * zweryfikowane ×2 -> +324) oraz przyciski PRESTIŻ/NORMAL, wycenione orientacyjnie ilość×cena z
+ * ustawień (w źródle oznaczone jako "do ustalenia z Inwestorem" — patrz komentarz w types.ts).
  */
 export function calculateElectricalItems(
   answers: CalculatorAnswers,
@@ -146,6 +156,37 @@ export function calculateElectricalItems(
   });
 
   const items: CalculatorElectricalLineItem[] = [];
+
+  items.push(
+    item(
+      "podstawowe_wyposazenie",
+      "Podstawowe wyposażenie instalacji (czujki, bramy, furtka, domofon, rozdzielnice pomocnicze)",
+      "fixed",
+      settings.electrical.fixed.podstawoweWyposazenieInstalacji,
+      1,
+    ),
+  );
+  if (answers.liczbaBramGarazowych > 0) {
+    items.push(
+      item(
+        "doplata_brama_garazowa",
+        "Dopłata za bramę garażową",
+        "fixed",
+        settings.electrical.fixed.doplataZaBrameGarazowa,
+        answers.liczbaBramGarazowych,
+      ),
+    );
+  }
+  if (answers.iloscPrzyciskowPrestiz > 0) {
+    items.push(
+      item("przyciski_prestiz", "Przyciski PRESTIŻ", "fixed", settings.extras.cenaPrzyciskuPrestiz, answers.iloscPrzyciskowPrestiz),
+    );
+  }
+  if (answers.iloscPrzyciskowNormal > 0) {
+    items.push(
+      item("przyciski_normal", "Przyciski NORMAL", "fixed", settings.extras.cenaPrzyciskuNormal, answers.iloscPrzyciskowNormal),
+    );
+  }
 
   const gniazdaAuto =
     (answers.strefaPrywatna ? 2 : 0) +

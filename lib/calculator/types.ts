@@ -231,6 +231,15 @@ export type CalculatorAnswers = {
   iloscKanalowTv: number | null;
   dodatkoweBruzdowanieM: number;
 
+  // Przyciski i czujki dodatkowe — pozycje, które w arkuszu źródłowym są oznaczone jako
+  // "do ustalenia z Inwestorem" (nie mają w pełni zautomatyzowanej wyceny — sterowane osobną
+  // checklistą przypisań pokój-po-pokoju) — tu wycenione uproszczenie: ilość × cena orientacyjna
+  // z ustawień, do potwierdzenia indywidualnie z klientem.
+  iloscPrzyciskowPrestiz: number;
+  iloscPrzyciskowNormal: number;
+  /** Dodatkowe czujki ponad standardowy zakres pakietu (CRM!O11/O14/O17) — orientacyjna dopłata. */
+  iloscCzujekDodatkowychRecznie: number;
+
   // Finanse / rabaty / wyjątki
   trudnyKlientWspolczynnik: number;
   platnoscZGory: boolean;
@@ -312,6 +321,10 @@ export function emptyCalculatorAnswers(): CalculatorAnswers {
     iloscKabliGlosnikowych: null,
     iloscKanalowTv: null,
     dodatkoweBruzdowanieM: 0,
+
+    iloscPrzyciskowPrestiz: 0,
+    iloscPrzyciskowNormal: 0,
+    iloscCzujekDodatkowychRecznie: 0,
 
     trudnyKlientWspolczynnik: 1,
     platnoscZGory: false,
