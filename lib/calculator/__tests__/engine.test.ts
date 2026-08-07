@@ -312,4 +312,18 @@ describe("calculateCalculatorTotals — pozostała mechanika", () => {
     const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
     expect(totals.addonsNet).toBe(38616.48);
   });
+
+  it("dodatki premium (gwarancje/dokumentacja) — bez współczynnika trudny klient, zgodne z DANE!T120 (3000 zł)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.trudnyKlientWspolczynnik = 1.2; // nie powinien dotknąć tych pozycji
+    answers.addons.dokumentacjaPowykonawcza = true; // 0 zł, zawsze "w cenie"
+    answers.addons.ustaleniaZInnymiBranzami = true; // 3000 zł
+    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
+
+    const dokumentacja = totals.addons.find((item) => item.key === "dokumentacjaPowykonawcza");
+    const ustalenia = totals.addons.find((item) => item.key === "ustaleniaZInnymiBranzami");
+    expect(dokumentacja?.net).toBe(0);
+    expect(ustalenia?.net).toBe(3000);
+    expect(totals.addonsNet).toBe(3000);
+  });
 });

@@ -65,6 +65,11 @@ export const CALCULATOR_ADDON_KEYS = [
   "ipad",
   "oswietlenieAwaryjne",
   "integracjeZInnymiSystemami",
+  "dokumentacjaPowykonawcza",
+  "ustaleniaZInnymiBranzami",
+  "konsultacjeZdalne24_7",
+  "przedluzenieGwarancji12Miesiecy",
+  "gwarancjaCenyOfertowej",
 ] as const;
 export type CalculatorAddonKey = (typeof CALCULATOR_ADDON_KEYS)[number];
 
@@ -86,6 +91,11 @@ export const CALCULATOR_ADDON_LABELS: Record<CalculatorAddonKey, string> = {
   ipad: "iPad",
   oswietlenieAwaryjne: "Oświetlenie awaryjne (podtrzymanie LED)",
   integracjeZInnymiSystemami: "Integracje z innymi systemami (klimatyzacja/wentylacja/rekuperacja/pompa ciepła)",
+  dokumentacjaPowykonawcza: "Dokumentacja powykonawcza",
+  ustaleniaZInnymiBranzami: "Ustalenia z innymi branżami z ramienia Inwestora",
+  konsultacjeZdalne24_7: "Konsultacje zdalne 24/7 (w czasie gwarancji)",
+  przedluzenieGwarancji12Miesiecy: "Przedłużenie gwarancji o 12 miesięcy",
+  gwarancjaCenyOfertowej: "Gwarancja ceny od oferty do końca realizacji",
 };
 
 export const CALCULATOR_OTHER_SYSTEM_KEYS = [

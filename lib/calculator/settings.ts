@@ -174,6 +174,11 @@ export const DEFAULT_ADDON_PRICING: CalculatorAddonPricing = {
   ipad: 2925.6,
   oswietlenieAwaryjne: 1462.8,
   integracjeZInnymiSystemami: 1950.4,
+  dokumentacjaPowykonawcza: 0,
+  ustaleniaZInnymiBranzami: 3000,
+  konsultacjeZdalne24_7: 3000,
+  przedluzenieGwarancji12Miesiecy: 4000,
+  gwarancjaCenyOfertowej: 1500,
 };
 
 export type CalculatorOtherSystemPricing = Record<CalculatorOtherSystemKey, number>;

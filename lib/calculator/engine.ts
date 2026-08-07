@@ -523,9 +523,21 @@ function addonQuantity(key: CalculatorAddonKey, answers: CalculatorAnswers): num
   }
 }
 
-/** "Rozdzielnia +++" (przeszklona) to jedyny dodatek bez współczynnika "trudny klient" w źródle (DANE!T94: flat 3500). */
+/**
+ * "Rozdzielnia +++" (DANE!T94) i "Dodatki premium" — gwarancje/dokumentacja (DANE!V137:V141) — nie
+ * mają współczynnika "trudny klient" w źródle, w przeciwieństwie do pozostałych dodatków.
+ */
+const ADDONS_WITHOUT_TRUDNY_KLIENT = new Set<CalculatorAddonKey>([
+  "rozdzielniaPlusPlusPlus",
+  "dokumentacjaPowykonawcza",
+  "ustaleniaZInnymiBranzami",
+  "konsultacjeZdalne24_7",
+  "przedluzenieGwarancji12Miesiecy",
+  "gwarancjaCenyOfertowej",
+]);
+
 function addonAppliesTrudnyKlient(key: CalculatorAddonKey): boolean {
-  return key !== "rozdzielniaPlusPlusPlus";
+  return !ADDONS_WITHOUT_TRUDNY_KLIENT.has(key);
 }
 
 export function calculateAddons(answers: CalculatorAnswers, settings: CalculatorSettings): CalculatorAddonResult[] {
