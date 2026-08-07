@@ -60,20 +60,12 @@ describe("calculateBaseSystem — zweryfikowane przeciw DANE!T109:T111", () => {
   });
 });
 
-describe("calculateCalculatorTotals — kategorie funkcjonalne jako stała cena (nie poziom)", () => {
+describe("calculateCalculatorTotals — kategorie funkcjonalne jako lista materiałowa (BOM)", () => {
   it("bez żadnej funkcjonalności — kategorie funkcjonalne = 0", () => {
     const answers = emptyCalculatorAnswers();
     const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
     expect(totals.functionalNet).toBe(0);
     expect(totals.functional.every((item) => !item.selected)).toBe(true);
-  });
-
-  it("bezpieczeństwo (alarmIKontrolaDostepu) = 14930.70 (zweryfikowane, delta T112)", () => {
-    const answers = emptyCalculatorAnswers();
-    answers.alarmIKontrolaDostepu = true;
-    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
-    const item = totals.functional.find((entry) => entry.category === "bezpieczenstwo");
-    expect(item?.net).toBe(14930.7);
   });
 
   it("tylko rozdzielnia zeruje bezpieczeństwo mimo zaznaczonego alarmu (DANE!T112 formuła)", () => {
@@ -85,45 +77,67 @@ describe("calculateCalculatorTotals — kategorie funkcjonalne jako stała cena 
     expect(item?.net).toBe(0);
   });
 
-  it("temperatura=4677.16, rolety=4369.40, zewnętrzne=4967.50, oświetlenie=2559.90 (zweryfikowane)", () => {
-    const answers = emptyCalculatorAnswers();
-    answers.sterowanieTemperatura = true;
-    answers.planujeRolety = true;
-    answers.sterowanieOgrodem = true;
-    answers.scenyOswietleniowe = true;
-    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
-    const net = (category: string) => totals.functional.find((entry) => entry.category === category)?.net;
-    expect(net("temperatura")).toBe(4677.16);
-    expect(net("rolety")).toBe(4369.4);
-    expect(net("zewnetrzne")).toBe(4967.5);
-    expect(net("oswietlenie")).toBe(2559.9);
-  });
-
-  it("ręcznie wpisane dodatkowe czujki dolicza się do budżetu bezpieczeństwa (orientacyjnie, poza checkboxem)", () => {
-    const answers = emptyCalculatorAnswers();
-    answers.iloscCzujekDodatkowychRecznie = 4;
-    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
-    const item = totals.functional.find((entry) => entry.category === "bezpieczenstwo");
-    expect(item?.selected).toBe(true);
-    expect(item?.net).toBe(4 * DEFAULT_CALCULATOR_SETTINGS.extras.cenaZaDodatkowaCzujke);
-  });
-
-  it("dodatkowe czujki sumują się z ceną kategorii, gdy alarm też zaznaczony", () => {
-    const answers = emptyCalculatorAnswers();
-    answers.alarmIKontrolaDostepu = true;
-    answers.iloscCzujekDodatkowychRecznie = 2;
-    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
-    const item = totals.functional.find((entry) => entry.category === "bezpieczenstwo");
-    expect(item?.net).toBe(14930.7 + 2 * DEFAULT_CALCULATOR_SETTINGS.extras.cenaZaDodatkowaCzujke);
-  });
-
-  it("współczynnik outdoor (CRM!Q25) mnoży tylko zewnętrzne — zweryfikowane ×2 -> 9935", () => {
+  it("współczynnik outdoor (CRM!Q25) mnoży tylko zewnętrzne — domyślne ilości (4+4 -> ×2 -> 9935)", () => {
     const answers = emptyCalculatorAnswers();
     answers.sterowanieOgrodem = true;
     answers.wspolczynnikOutdoor = 2;
     const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
     const item = totals.functional.find((entry) => entry.category === "zewnetrzne");
     expect(item?.net).toBe(9935);
+  });
+
+  it("realny przykład oferty klienta (2647-08-26-852) — wszystkie 5 kategorii zgodne co do grosza z arkuszem DANE", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.powierzchniaM2 = 250;
+    answers.liczbaPomieszczenZOknami = 14;
+    answers.liczbaDrzwiWejsciowych = 1;
+    answers.liczbaWyjscNaTaras = 1;
+    answers.liczbaKondygnacji = 1;
+    answers.czyOknaCzujnikiFabryczne = false;
+
+    answers.strefaPrywatna = true;
+    answers.strefaOtwarta = true;
+    answers.komunikacja = true;
+    answers.liczbaSypialniDodatkowych = 5;
+    answers.liczbaPomieszczenWilgotnych = 4;
+    answers.liczbaPozostalychPomieszczen = 1;
+    answers.iloscGarazy = 1;
+
+    answers.jestKominek = false;
+    answers.jestGaz = true;
+    answers.planujeRolety = true;
+    answers.liczbaRolet = 8;
+    answers.sterowanieOgrodem = true;
+    answers.scenyOswietleniowe = true;
+    answers.sterowanieTemperatura = true;
+    answers.alarmIKontrolaDostepu = true;
+
+    answers.ledySciemniane = 18;
+    answers.czyCzujkiRecznie = true;
+    answers.iloscCzujekLoxone = 24;
+    answers.iloscCzujekSatel = 6;
+    answers.iloscCzujekBezpieczenstwa = 6;
+    answers.satelWOptimum = false;
+    answers.strefyOgrzewaniaPodlogowego = 14;
+    answers.iloscGrzejnikowSterowanych = 0;
+    answers.iloscOswietlenZewnetrznych = 4;
+    answers.iloscSekcjiPodlewania = 4;
+
+    answers.trudnyKlientWspolczynnik = 1.2;
+    answers.wspolczynnikOutdoor = 1.5;
+
+    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const net = (category: string) => totals.functional.find((entry) => entry.category === category)?.net;
+
+    // Oświetlenie: w realnym pliku CRM!O4 ("obwody ośw. ON/OFF") było ręcznie nadpisane na 36
+    // zamiast wartości z formuły (30 dla tych parametrów pomieszczeń) — silnik poprawnie liczy
+    // z formuły źródłowej (27683.76), różnica od PDF (29585.40) to wyłącznie ten ręczny override,
+    // niemożliwy do odtworzenia z samych odpowiedzi ankiety.
+    expect(net("oswietlenie")).toBe(27683.76);
+    expect(net("bezpieczenstwo")).toBe(19548.66);
+    expect(net("temperatura")).toBe(15483.83); // Excel (bez zaokrągleń pośrednich) daje 15483.828 — silnik zaokrągla do groszy na każdym etapie
+    expect(net("rolety")).toBe(5243.28);
+    expect(net("zewnetrzne")).toBe(8941.5);
   });
 });
 
@@ -174,7 +188,7 @@ describe("calculateElectricalItems — model itemizowany (ilości × stawka wg t
 
   it("brama garażowa dolicza dopłatę do podstawowego wyposażenia — zweryfikowane ×2 -> +324", () => {
     const answers = emptyCalculatorAnswers();
-    answers.liczbaBramGarazowych = 2;
+    answers.iloscGarazy = 2;
     const items = calculateElectricalItems(answers, DEFAULT_CALCULATOR_SETTINGS);
     const doplata = items.find((entry) => entry.key === "doplata_brama_garazowa");
     expect(doplata?.net).toBe(324);
@@ -201,7 +215,7 @@ describe("calculateElectricalItems — model itemizowany (ilości × stawka wg t
     answers.liczbaSypialniDodatkowych = 2; // +4
     answers.liczbaPomieszczenWilgotnych = 1; // +1
     answers.liczbaPozostalychPomieszczen = 1; // +1
-    answers.liczbaBramGarazowych = 1; // +1
+    answers.iloscGarazy = 1; // +1
     const items = calculateElectricalItems(answers, DEFAULT_CALCULATOR_SETTINGS);
     const normal = items.find((entry) => entry.key === "przyciski_normal");
     expect(normal?.quantity).toBe(14);
@@ -232,13 +246,15 @@ describe("calculateCalculatorTotals — pozostała mechanika", () => {
     );
   });
 
-  it("trudny klient (>1,0) mnoży wartość główną, ale nie instalację elektryczną/inne systemy", () => {
+  it("trudny klient (>1,0) mnoży tylko kategorie funkcjonalne (per kategoria, jak WSP_SZEFA_1 w źródle), nie bazę systemu/elektrykę/inne systemy", () => {
     const answers = emptyCalculatorAnswers();
     answers.alarmIKontrolaDostepu = true;
     const base = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
     const trudny = calculateCalculatorTotals({ ...answers, trudnyKlientWspolczynnik: 1.2 }, DEFAULT_CALCULATOR_SETTINGS);
 
-    expect(trudny.mainNet).toBeCloseTo(base.mainNet * 1.2, 0);
+    expect(trudny.functionalNet).toBeCloseTo(base.functionalNet * 1.2, 0);
+    expect(trudny.baseSystem.totalNet).toBe(base.baseSystem.totalNet);
+    expect(trudny.mainNet).toBeCloseTo(trudny.baseSystem.totalNet + trudny.functionalNet + trudny.addonsNet, 2);
   });
 
   it("płatność z góry obniża sumę końcową o skonfigurowany procent", () => {

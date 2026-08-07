@@ -8,7 +8,7 @@ import {
   type CalculatorFunctionalCategory,
   type CalculatorOtherSystemKey,
 } from "@/lib/calculator/types";
-import type { CalculatorSettings } from "@/lib/calculator/settings";
+import type { CalculatorHardwareCatalog, CalculatorSettings } from "@/lib/calculator/settings";
 
 /**
  * Silnik przeliczeń kalkulatora — odpowiednik łańcucha arkuszy KALKULATOR -> ZESTAWIENIE ->
@@ -21,6 +21,27 @@ import type { CalculatorSettings } from "@/lib/calculator/settings";
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function roundUp(value: number) {
+  return Math.ceil(Math.max(0, value));
+}
+
+/**
+ * Ilość sterowanych obwodów ON/OFF 230V (CRM!O4) — zweryfikowana formuła źródłowa, używana
+ * zarówno w kategorii funkcjonalnej "Oświetlenie" (ZESTAWIENIE!L8 -> Parametry!G15 -> N14) jak i
+ * w pozycji "Oświetlenie — punkty" instalacji elektrycznej (zastępuje wcześniejszą heurystykę).
+ */
+function obwodyOswietleniaOnOff(answers: CalculatorAnswers): number {
+  return (
+    (answers.strefaPrywatna ? 4 : 0) +
+    (answers.strefaOtwarta ? 6 : 0) +
+    (answers.komunikacja ? 2 : 0) +
+    answers.liczbaSypialniDodatkowych * 2 +
+    answers.liczbaPomieszczenWilgotnych * 1 +
+    answers.liczbaPozostalychPomieszczen * 2 +
+    answers.iloscGarazy * 2
+  );
 }
 
 export type CalculatorBaseSystemResult = {
@@ -77,36 +98,152 @@ const FUNCTIONAL_GATE: Record<CalculatorFunctionalCategory, keyof CalculatorAnsw
   zewnetrzne: "sterowanieOgrodem",
 };
 
+type CategoryBudget = { sprzet: number; godziny: number };
+
+/** ZESTAWIENIE!L column (kategoria Oświetlenie, poziom PRESTIŻ — stały domyślny dobór biura). */
+function calculateOswietlenieBudget(answers: CalculatorAnswers, hw: CalculatorHardwareCatalog): CategoryBudget {
+  const relayQty = roundUp(obwodyOswietleniaOnOff(answers) / 16);
+  const rgbwQty = answers.ledySciemniane > 0 ? roundUp(answers.ledySciemniane / 4) : answers.liczbaSypialniDodatkowych * 2;
+  const czujkaLoxoneQty = answers.czyCzujkiRecznie
+    ? answers.iloscCzujekLoxone
+    : answers.satelWOptimum
+      ? 0
+      : Math.max(0, answers.liczbaPomieszczenZOknami - 3);
+
+  const sprzet =
+    relayQty * hw.relayLoxone14 + rgbwQty * hw.rgbwModule + czujkaLoxoneQty * hw.czujkaLoxone;
+  return { sprzet, godziny: czujkaLoxoneQty * 2 };
+}
+
+/** ZESTAWIENIE!P column (kategoria Bezpieczeństwo, poziom KOMFORT). */
+function calculateBezpieczenstwoBudget(answers: CalculatorAnswers, hw: CalculatorHardwareCatalog): CategoryBudget {
+  const extensionDIQty = answers.satelWOptimum ? 0 : 2;
+  const zaworQty = answers.liczbaPomieszczenWilgotnych > 0 ? 1 : 0;
+  const centralaQty = answers.satelWOptimum ? 1 : 0;
+  const intKnxQty = answers.satelWOptimum ? 1 : 0;
+  const syrenaQty = 1;
+  const czujkiSufitoweQty = answers.czyCzujkiRecznie
+    ? answers.iloscCzujekSatel
+    : answers.satelWOptimum
+      ? Math.max(0, answers.liczbaPomieszczenZOknami - 3)
+      : 0;
+  const czujkiDualneQty = answers.czyCzujkiRecznie ? 0 : answers.iloscGarazy;
+  const czujkiBezpieczenstwaQty = answers.czyCzujkiRecznie
+    ? answers.iloscCzujekBezpieczenstwa
+    : (answers.jestKominek ? 1 : 0) + (answers.jestGaz ? 1 : 0);
+  const kontaktronBramaQty = answers.iloscGarazy;
+  const kontaktronOknoDrzwiQty = answers.liczbaDrzwiWejsciowych + answers.liczbaWyjscNaTaras;
+  const kontaktronOknoDrzwiPrice = answers.czyOknaCzujnikiFabryczne
+    ? hw.kontaktronOknoDrzwiFabryczne
+    : hw.kontaktronOknoDrzwiStandard;
+  const czujkaZalaniaQty = answers.liczbaPomieszczenWilgotnych;
+  const klawiaturaMalaQty = answers.satelWOptimum ? 1 : 0;
+  const klawiaturaGarazQty = answers.satelWOptimum ? 1 : 0;
+
+  const sprzet =
+    extensionDIQty * hw.extensionDI +
+    zaworQty * hw.zaworOdciecia +
+    centralaQty * hw.centralaAlarmowa +
+    intKnxQty * hw.intKnx +
+    syrenaQty * hw.syrenaAlarmowa +
+    czujkiSufitoweQty * hw.czujkiSufitowe +
+    czujkiDualneQty * hw.czujkiDualne +
+    czujkiBezpieczenstwaQty * hw.czujkiBezpieczenstwaSprzet +
+    kontaktronBramaQty * hw.kontaktronBrama +
+    kontaktronOknoDrzwiQty * kontaktronOknoDrzwiPrice +
+    czujkaZalaniaQty * hw.czujkaZalania +
+    klawiaturaMalaQty * hw.klawiaturaMala +
+    klawiaturaGarazQty * hw.klawiaturaGarazStrefowa;
+
+  const godziny =
+    zaworQty +
+    centralaQty * 12 +
+    intKnxQty * 2 +
+    syrenaQty * 2 +
+    czujkiSufitoweQty * 2 +
+    czujkiDualneQty +
+    czujkiBezpieczenstwaQty * 2 +
+    kontaktronBramaQty * 2 +
+    kontaktronOknoDrzwiQty * 2 +
+    czujkaZalaniaQty * 2 +
+    klawiaturaMalaQty * 2 +
+    klawiaturaGarazQty * 2;
+
+  return { sprzet, godziny };
+}
+
+/** ZESTAWIENIE!U column (kategoria Temperatura, poziom KOMFORT). */
+function calculateTemperaturaBudget(answers: CalculatorAnswers, hw: CalculatorHardwareCatalog): CategoryBudget {
+  const relayQty = roundUp(answers.strefyOgrzewaniaPodlogowego / 8);
+  const oneWireExtQty = answers.scenyOswietleniowe ? 1 : 0;
+  const silownikQty = answers.strefyOgrzewaniaPodlogowego * 2;
+  const glowicaQty = Math.max(0, answers.iloscGrzejnikowSterowanych);
+  const czujniki1WireQty = answers.scenyOswietleniowe ? answers.strefyOgrzewaniaPodlogowego + 2 : 0;
+
+  const sprzet =
+    relayQty * hw.relayLoxone14 +
+    oneWireExtQty * hw.oneWireExt +
+    silownikQty * hw.silownikSalus +
+    glowicaQty * hw.glowicaGrzejnika +
+    czujniki1WireQty * hw.czujniki1Wire;
+
+  return { sprzet, godziny: glowicaQty + czujniki1WireQty };
+}
+
+/** ZESTAWIENIE!Z column (kategoria Rolety, poziom KOMFORT). */
+function calculateRoletyBudget(answers: CalculatorAnswers, hw: CalculatorHardwareCatalog): CategoryBudget {
+  const relayQty = roundUp((answers.liczbaRolet * 2) / 14);
+  return { sprzet: relayQty * hw.relayLoxone14, godziny: relayQty * 5 };
+}
+
+/** ZESTAWIENIE!AE column (kategoria Zewnętrzne, poziom KOMFORT). */
+function calculateZewnetrzneBudget(answers: CalculatorAnswers, hw: CalculatorHardwareCatalog): CategoryBudget {
+  const relayQty = roundUp((answers.iloscOswietlenZewnetrznych + answers.iloscSekcjiPodlewania) / 14);
+  const sprzet = relayQty * hw.relayLoxone14 + hw.czujnikDeszczuZestaw;
+  return { sprzet, godziny: 16 }; // ZESTAWIENIE!AE69 — stała wartość w źródle
+}
+
 /**
- * Budżety kategorii funkcjonalnych — cena stała odblokowywana odpowiadającym checkboxem
- * funkcjonalności (nie trzypoziomowy wybór, patrz komentarz w types.ts). "Tylko rozdzielnia"
- * (CRM!S8) zeruje kategorię bezpieczeństwa niezależnie od checkboxa (DANE!T112). Ręcznie wpisana
- * ilość dodatkowych czujek dolicza się do budżetu bezpieczeństwa niezależnie od checkboxa
- * (odpowiednik ręcznych pól ilości czujek w CRM, których dokładnej formuły nie udało się
- * jednoznacznie prześledzić w źródle — patrz komentarz w types.ts).
+ * Budżety kategorii funkcjonalnych — pełna lista materiałowa (BOM), zweryfikowana co do grosza na
+ * realnym przykładzie oferty klienta (ZESTAWIENIE!L/P/U/Z/AE, przy stałych domyślnych poziomach
+ * biura: PRESTIŻ dla oświetlenia, KOMFORT dla pozostałych — Parametry!B8:B12, niezależne od
+ * odpowiedzi klienta). Każda kategoria = (SUMA sprzęt×ilość + godziny pracy×stawka) ×
+ * współczynnik "trudny klient" (WSP_SZEFA_1 = CRM!S3); zewnętrzne dodatkowo × współczynnik
+ * outdoor (CRM!Q25). "Tylko rozdzielnia" (CRM!S8) zeruje bezpieczeństwo niezależnie od checkboxa
+ * (DANE!T112). Nieaktywna funkcjonalność = cała kategoria zerowa (potwierdzone formułą źródłową).
  */
 export function calculateFunctionalBudgets(
   answers: CalculatorAnswers,
   settings: CalculatorSettings,
 ): CalculatorFunctionalResult[] {
-  return CALCULATOR_FUNCTIONAL_CATEGORIES.map((category) => {
-    const czujkiDodatkoweNet =
-      category === "bezpieczenstwo"
-        ? roundMoney(Math.max(0, answers.iloscCzujekDodatkowychRecznie || 0) * settings.extras.cenaZaDodatkowaCzujke)
-        : 0;
+  const hw = settings.hardware;
+  const wspSzefa = Math.max(0, answers.trudnyKlientWspolczynnik || 1);
 
+  return CALCULATOR_FUNCTIONAL_CATEGORIES.map((category) => {
     if (category === "bezpieczenstwo" && answers.tylkoRozdzielnia) {
-      return { category, selected: czujkiDodatkoweNet > 0, net: czujkiDodatkoweNet };
+      return { category, selected: false, net: 0 };
     }
     const selected = Boolean(answers[FUNCTIONAL_GATE[category]]);
     if (!selected) {
-      return { category, selected: czujkiDodatkoweNet > 0, net: czujkiDodatkoweNet };
+      return { category, selected: false, net: 0 };
     }
-    let net = settings.functional[category];
+
+    const budget =
+      category === "oswietlenie"
+        ? calculateOswietlenieBudget(answers, hw)
+        : category === "bezpieczenstwo"
+          ? calculateBezpieczenstwoBudget(answers, hw)
+          : category === "temperatura"
+            ? calculateTemperaturaBudget(answers, hw)
+            : category === "rolety"
+              ? calculateRoletyBudget(answers, hw)
+              : calculateZewnetrzneBudget(answers, hw);
+
+    let net = roundMoney((budget.sprzet + budget.godziny * settings.laborRatePerHour) * wspSzefa);
     if (category === "zewnetrzne") {
       net = roundMoney(net * Math.max(0, answers.wspolczynnikOutdoor || 1));
     }
-    return { category, selected: true, net: roundMoney(net + czujkiDodatkoweNet) };
+    return { category, selected: true, net };
   });
 }
 
@@ -168,14 +305,14 @@ export function calculateElectricalItems(
       1,
     ),
   );
-  if (answers.liczbaBramGarazowych > 0) {
+  if (answers.iloscGarazy > 0) {
     items.push(
       item(
         "doplata_brama_garazowa",
         "Dopłata za bramę garażową",
         "fixed",
         settings.electrical.fixed.doplataZaBrameGarazowa,
-        answers.liczbaBramGarazowych,
+        answers.iloscGarazy,
       ),
     );
   }
@@ -195,7 +332,7 @@ export function calculateElectricalItems(
     answers.liczbaSypialniDodatkowych * 2 +
     answers.liczbaPomieszczenWilgotnych +
     answers.liczbaPozostalychPomieszczen +
-    answers.liczbaBramGarazowych +
+    answers.iloscGarazy +
     (answers.strefaPrywatna ? 2 : 0) +
     (answers.strefaOtwarta ? 3 : 0);
   const przyciskiNormalQty = answers.iloscPrzyciskowNormal ?? przyciskiNormalAuto;
@@ -212,7 +349,7 @@ export function calculateElectricalItems(
     answers.liczbaSypialniDodatkowych +
     answers.liczbaPomieszczenWilgotnych +
     answers.liczbaPozostalychPomieszczen +
-    answers.liczbaBramGarazowych * 6;
+    answers.iloscGarazy * 6;
   items.push(
     item("gniazda_obwody", "Gniazda — obwody", "inteligentny", rate("inteligentny"), answers.iloscObwodowGniazd230V ?? gniazdaAuto),
   );
@@ -234,12 +371,12 @@ export function calculateElectricalItems(
     ),
   );
 
-  const gniazda400Auto = (answers.strefaOtwarta ? 1 : 0) + answers.liczbaBramGarazowych;
+  const gniazda400Auto = (answers.strefaOtwarta ? 1 : 0) + answers.iloscGarazy;
   items.push(
     item("gniazda_400v", "Gniazda 400V", "gotowe_urzadzenie", rate("gotowe_urzadzenie"), answers.iloscGniazd400V ?? gniazda400Auto),
   );
 
-  const oswietlenieAuto = answers.liczbaPomieszczenZOknami + answers.liczbaOkienOtwieranych;
+  const oswietlenieAuto = obwodyOswietleniaOnOff(answers);
   items.push(
     item(
       "oswietlenie_punkty",
@@ -430,7 +567,7 @@ export type CalculatorTotals = {
   addons: CalculatorAddonResult[];
   addonsNet: number;
   otherSystems: CalculatorOtherSystemsResult;
-  /** Trudny klient — współczynnik 1,0–1,3 dolicza się do całości (CRM!S3). */
+  /** Trudny klient — współczynnik 1,0–1,3, wliczony per kategoria funkcjonalna (CRM!S3, WSP_SZEFA_1). */
   trudnyKlientWspolczynnik: number;
   /** Wartość główna (baza systemu + kategorie funkcjonalne + dodatki), przed instalacją elektryczną i inne systemy. */
   mainNet: number;
@@ -450,8 +587,10 @@ export function calculateCalculatorTotals(answers: CalculatorAnswers, settings: 
 
   const trudnyKlientWspolczynnik = Math.min(1.3, Math.max(1, answers.trudnyKlientWspolczynnik || 1));
 
-  const mainNetBeforeCoefficient = roundMoney(baseSystem.totalNet + functionalNet + addonsNet);
-  const mainNet = roundMoney(mainNetBeforeCoefficient * trudnyKlientWspolczynnik);
+  // Współczynnik "trudny klient" jest już wliczony per kategorię funkcjonalną wewnątrz
+  // calculateFunctionalBudgets (WSP_SZEFA_1 w źródle mnoży każdą kategorię z osobna, nie sumę na
+  // końcu) — tu nie doliczamy go drugi raz. Baza systemu i dodatki nie są nim objęte w źródle.
+  const mainNet = roundMoney(baseSystem.totalNet + functionalNet + addonsNet);
 
   const subtotalNet = roundMoney(mainNet + electrical.finalNet + otherSystems.finalNet);
   const platnoscZGoryDiscountNet = answers.platnoscZGory

@@ -289,8 +289,8 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
                 <Field label="Pozostałe pomieszczenia">
                   <NumericInput value={a.liczbaPozostalychPomieszczen} decimals={false} onChange={(v) => setAnswers({ liczbaPozostalychPomieszczen: v })} />
                 </Field>
-                <Field label="Bramy garażowe">
-                  <NumericInput value={a.liczbaBramGarazowych} decimals={false} onChange={(v) => setAnswers({ liczbaBramGarazowych: v })} />
+                <Field label="Ilość garaży">
+                  <NumericInput value={a.iloscGarazy} decimals={false} onChange={(v) => setAnswers({ iloscGarazy: v })} />
                 </Field>
               </div>
             </Section>
@@ -310,6 +310,84 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
                 <Field label="Liczba rolet / żaluzji / karniszy" className="sm:max-w-xs">
                   <NumericInput value={a.liczbaRolet} decimals={false} onChange={(v) => setAnswers({ liczbaRolet: v })} />
                 </Field>
+              ) : null}
+
+              {a.scenyOswietleniowe ? (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Field label="Ledy ściemniane — ilość">
+                    <NumericInput value={a.ledySciemniane} decimals={false} onChange={(v) => setAnswers({ ledySciemniane: v })} />
+                  </Field>
+                </div>
+              ) : null}
+
+              {a.sterowanieTemperatura ? (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Field label="Strefy ogrzewania podłogowego">
+                    <NumericInput
+                      value={a.strefyOgrzewaniaPodlogowego}
+                      decimals={false}
+                      onChange={(v) => setAnswers({ strefyOgrzewaniaPodlogowego: v })}
+                    />
+                  </Field>
+                  <Field label="Ilość sterowanych grzejników">
+                    <NumericInput
+                      value={a.iloscGrzejnikowSterowanych}
+                      decimals={false}
+                      onChange={(v) => setAnswers({ iloscGrzejnikowSterowanych: v })}
+                    />
+                  </Field>
+                </div>
+              ) : null}
+
+              {a.sterowanieOgrodem ? (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Field label="Ilość oświetleń zewnętrznych">
+                    <NumericInput
+                      value={a.iloscOswietlenZewnetrznych}
+                      decimals={false}
+                      onChange={(v) => setAnswers({ iloscOswietlenZewnetrznych: v })}
+                    />
+                  </Field>
+                  <Field label="Ilość sekcji podlewania">
+                    <NumericInput
+                      value={a.iloscSekcjiPodlewania}
+                      decimals={false}
+                      onChange={(v) => setAnswers({ iloscSekcjiPodlewania: v })}
+                    />
+                  </Field>
+                </div>
+              ) : null}
+
+              {a.alarmIKontrolaDostepu ? (
+                <div className="grid gap-3">
+                  <Toggle
+                    label="Architektura SATEL (zamiast natywnego alarmu Loxone)"
+                    checked={a.satelWOptimum}
+                    onChange={(v) => setAnswers({ satelWOptimum: v })}
+                  />
+                  <Toggle
+                    label="Ilości czujek wpisuję ręcznie (zamiast automatycznego wyliczenia z pomieszczeń)"
+                    checked={a.czyCzujkiRecznie}
+                    onChange={(v) => setAnswers({ czyCzujkiRecznie: v })}
+                  />
+                  {a.czyCzujkiRecznie ? (
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <Field label="Czujki Loxone — ilość">
+                        <NumericInput value={a.iloscCzujekLoxone} decimals={false} onChange={(v) => setAnswers({ iloscCzujekLoxone: v })} />
+                      </Field>
+                      <Field label="Czujki satel — ilość">
+                        <NumericInput value={a.iloscCzujekSatel} decimals={false} onChange={(v) => setAnswers({ iloscCzujekSatel: v })} />
+                      </Field>
+                      <Field label="Czujki bezpieczeństwa — ilość">
+                        <NumericInput
+                          value={a.iloscCzujekBezpieczenstwa}
+                          decimals={false}
+                          onChange={(v) => setAnswers({ iloscCzujekBezpieczenstwa: v })}
+                        />
+                      </Field>
+                    </div>
+                  ) : null}
+                </div>
               ) : null}
             </Section>
 
@@ -449,7 +527,7 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
               </div>
               <div>
                 <p className="text-sm font-medium text-foreground">
-                  Przyciski i dodatkowe czujki — ceny orientacyjne, do ustalenia indywidualnie z klientem
+                  Przyciski — ceny orientacyjne, do ustalenia indywidualnie z klientem
                 </p>
                 <div className="mt-2 grid gap-4 sm:grid-cols-3">
                   <Field label="Przyciski szklane / PRESTIŻ — ilość">
@@ -464,13 +542,6 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
                       value={a.iloscPrzyciskowNormal ?? 0}
                       decimals={false}
                       onChange={(v) => setAnswers({ iloscPrzyciskowNormal: v > 0 ? v : null })}
-                    />
-                  </Field>
-                  <Field label="Dodatkowe czujki wpisane ręcznie — ilość">
-                    <NumericInput
-                      value={a.iloscCzujekDodatkowychRecznie}
-                      decimals={false}
-                      onChange={(v) => setAnswers({ iloscCzujekDodatkowychRecznie: v })}
                     />
                   </Field>
                 </div>

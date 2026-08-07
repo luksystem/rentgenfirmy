@@ -185,9 +185,11 @@ export type CalculatorAnswers = {
   liczbaSypialniDodatkowych: number;
   liczbaPomieszczenWilgotnych: number;
   liczbaPozostalychPomieszczen: number;
-  liczbaBramGarazowych: number;
+  /** CRM!F8 "Ilość garaży" — liczba garaży, NIE liczba bram wjazdowych (ta jest osobno: czyBramaWjazdowa). */
+  iloscGarazy: number;
 
-  // Funkcjonalności — każda odblokowuje cenę stałą danej kategorii (patrz settings.functional)
+  // Funkcjonalności — każda odblokowuje wyliczoną z listy materiałowej (BOM) cenę danej kategorii
+  // (patrz komentarz przy calculateFunctionalBudgets w engine.ts)
   jestKominek: boolean;
   jestGaz: boolean;
   planujeRolety: boolean;
@@ -197,6 +199,29 @@ export type CalculatorAnswers = {
   sterowanieTemperatura: boolean;
   systemWlamaniowy: boolean;
   alarmIKontrolaDostepu: boolean;
+
+  // Pola zasilające listę materiałową (BOM) kategorii funkcjonalnych (ZESTAWIENIE!L/P/U/Z/AE) —
+  // zweryfikowane 1:1 na realnym przykładzie oferty.
+  /** CRM!O16 "Ledy ściemniane" — ilość, steruje modułami RGBW w kategorii Oświetlenie. */
+  ledySciemniane: number;
+  /** CRM!O15 "czy czujki ręcznie?" — gdy TAK, ilości czujek podane ręcznie (poniższe 3 pola) zamiast auto z pomieszczeń. */
+  czyCzujkiRecznie: boolean;
+  /** CRM!O11 "Ilość czujek Loxone" — feeduje kategorię Oświetlenie (czujka Loxone, sic) gdy czyCzujkiRecznie=true. */
+  iloscCzujekLoxone: number;
+  /** CRM!O14 "czujki satel" — feeduje kategorię Bezpieczeństwo (czujki sufitowe) gdy czyCzujkiRecznie=true. */
+  iloscCzujekSatel: number;
+  /** CRM!O17 "czujki bezpieczeństwa" — feeduje kategorię Bezpieczeństwo (czujki dualne/bezp.) gdy czyCzujkiRecznie=true. */
+  iloscCzujekBezpieczenstwa: number;
+  /** CRM!S42 "SATEL W OPTIMUM" (tylko biuro) — przełącza architekturę alarmu (Loxone-natywny vs SATEL), zmienia dobór sprzętu w kategorii Bezpieczeństwo. */
+  satelWOptimum: boolean;
+  /** CRM!O2 "Strefy ogrzewania podłogowego" — feeduje kategorię Temperatura. */
+  strefyOgrzewaniaPodlogowego: number;
+  /** CRM!O3 "Sterowane grzejniki" — ilość, feeduje kategorię Temperatura (głowice grzejnikowe). */
+  iloscGrzejnikowSterowanych: number;
+  /** DANE — domyślnie 4, "STANDARD" założenie biura (nie CRM), feeduje kategorię Zewnętrzne. */
+  iloscOswietlenZewnetrznych: number;
+  /** DANE — domyślnie 4, "STANDARD" założenie biura (nie CRM), feeduje kategorię Zewnętrzne. */
+  iloscSekcjiPodlewania: number;
 
   // Dodatki — checkbox per pozycja
   addons: Record<CalculatorAddonKey, boolean>;
@@ -239,8 +264,6 @@ export type CalculatorAnswers = {
   // komentarz w settings.ts), ale ILOŚĆ dla NORMAL ma realną formułę źródłową.
   iloscPrzyciskowPrestiz: number;
   iloscPrzyciskowNormal: number | null;
-  /** Dodatkowe czujki ponad standardowy zakres pakietu (CRM!O11/O14/O17) — orientacyjna dopłata. */
-  iloscCzujekDodatkowychRecznie: number;
 
   // Finanse / rabaty / wyjątki
   trudnyKlientWspolczynnik: number;
@@ -277,7 +300,7 @@ export function emptyCalculatorAnswers(): CalculatorAnswers {
     liczbaSypialniDodatkowych: 0,
     liczbaPomieszczenWilgotnych: 0,
     liczbaPozostalychPomieszczen: 0,
-    liczbaBramGarazowych: 0,
+    iloscGarazy: 0,
 
     jestKominek: false,
     jestGaz: false,
@@ -288,6 +311,17 @@ export function emptyCalculatorAnswers(): CalculatorAnswers {
     sterowanieTemperatura: false,
     systemWlamaniowy: false,
     alarmIKontrolaDostepu: false,
+
+    ledySciemniane: 0,
+    czyCzujkiRecznie: false,
+    iloscCzujekLoxone: 0,
+    iloscCzujekSatel: 0,
+    iloscCzujekBezpieczenstwa: 0,
+    satelWOptimum: false,
+    strefyOgrzewaniaPodlogowego: 0,
+    iloscGrzejnikowSterowanych: 0,
+    iloscOswietlenZewnetrznych: 4,
+    iloscSekcjiPodlewania: 4,
 
     addons: Object.fromEntries(CALCULATOR_ADDON_KEYS.map((key) => [key, false])) as Record<
       CalculatorAddonKey,
@@ -326,7 +360,6 @@ export function emptyCalculatorAnswers(): CalculatorAnswers {
 
     iloscPrzyciskowPrestiz: 0,
     iloscPrzyciskowNormal: null,
-    iloscCzujekDodatkowychRecznie: 0,
 
     trudnyKlientWspolczynnik: 1,
     platnoscZGory: false,

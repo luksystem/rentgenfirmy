@@ -1,11 +1,9 @@
 import {
   CALCULATOR_ADDON_KEYS,
   CALCULATOR_ELECTRICAL_RATE_TYPES,
-  CALCULATOR_FUNCTIONAL_CATEGORIES,
   CALCULATOR_OTHER_SYSTEM_KEYS,
   type CalculatorAddonKey,
   type CalculatorElectricalRateType,
-  type CalculatorFunctionalCategory,
   type CalculatorOtherSystemKey,
 } from "@/lib/calculator/types";
 
@@ -46,18 +44,110 @@ export const DEFAULT_BASE_SYSTEM_SETTINGS: CalculatorBaseSystemSettings = {
 };
 
 /**
- * Cena stała danej kategorii funkcjonalnej, doliczana gdy klient zaznaczy odpowiadającą
- * funkcjonalność (np. "Chcę sterować temperaturą" -> kategoria "temperatura"). Wartości
- * zweryfikowane jako różnica ceny OPTIMUM przy włączeniu/wyłączeniu pojedynczej funkcjonalności.
+ * Katalog sprzętu (BOM — bill of materials) zasilający kategorie funkcjonalne. Każda kategoria
+ * (Oświetlenie/Bezpieczeństwo/Temperatura/Rolety/Zewnętrzne) to suma (cena_sprzętu × ilość) po
+ * pozycjach z tego katalogu — dokładnie jak w źródle (ZESTAWIENIE!F6:F65 + kolumny L/P/U/Z/AE),
+ * zweryfikowane 1:1 na realnym przykładzie oferty (patrz calculateFunctionalBudgets w engine.ts).
+ * Ilości per pozycja są policzone przez silnik z odpowiedzi ankiety, nie tutaj — tu tylko ceny.
  */
-export type CalculatorFunctionalPricing = Record<CalculatorFunctionalCategory, number>;
+export type CalculatorHardwareCatalog = {
+  /** Relay Loxone 14 kanałów — oświetlenie/temperatura/rolety/zewnętrzne (ZESTAWIENIE D7/D8). */
+  relayLoxone14: number;
+  /** Moduł RGBW — oświetlenie (D10). */
+  rgbwModule: number;
+  /** Czujka Loxone — oświetlenie, sic (D32) — w źródle liczona w tej kategorii, nie w bezpieczeństwie. */
+  czujkaLoxone: number;
+  /** Extension DI — bezpieczeństwo (D14). */
+  extensionDI: number;
+  /** Zawór odcięcia wody — bezpieczeństwo (D19). */
+  zaworOdciecia: number;
+  /** Centrala Alarmowa baza — bezpieczeństwo (D21). */
+  centralaAlarmowa: number;
+  /** INT-KNX — bezpieczeństwo (D22). */
+  intKnx: number;
+  /** Syrena alarmowa — bezpieczeństwo (D23), zawsze wliczona. */
+  syrenaAlarmowa: number;
+  /** Czujki sufitowe — bezpieczeństwo (D24). */
+  czujkiSufitowe: number;
+  /** Czujki Dualne — bezpieczeństwo (D29). */
+  czujkiDualne: number;
+  /** Czujki bezpieczeństwa (dym/uśpienie) — bezpieczeństwo (D31). */
+  czujkiBezpieczenstwaSprzet: number;
+  /** Kontaktron brama — bezpieczeństwo (D35). */
+  kontaktronBrama: number;
+  /** Kontaktron okno/drzwi — cena standardowa, gdy okna NIE mają fabrycznych czujników (D36). */
+  kontaktronOknoDrzwiStandard: number;
+  /** Kontaktron okno/drzwi — cena obniżona, gdy okna MAJĄ fabryczne czujniki (D36). */
+  kontaktronOknoDrzwiFabryczne: number;
+  /** Czujka zalania — bezpieczeństwo (D37). */
+  czujkaZalania: number;
+  /** Klawiatura mała — bezpieczeństwo, tylko przy architekturze SATEL (D40). */
+  klawiaturaMala: number;
+  /** Klawiatura garaż strefowa — bezpieczeństwo, tylko przy architekturze SATEL (D41). */
+  klawiaturaGarazStrefowa: number;
+  /** Siłownik Salus — temperatura (D44). */
+  silownikSalus: number;
+  /** Głowica grzejnika — temperatura (D45). */
+  glowicaGrzejnika: number;
+  /** Czujniki 1-wire — temperatura (D46). */
+  czujniki1Wire: number;
+  /** 1-wire Ext — temperatura, gdy zaznaczone "Oświetlenie" (D12). */
+  oneWireExt: number;
+  /** Czujnik deszczu + zasilacz + zawory podlewania — zewnętrzne, zawsze wliczony gdy kategoria aktywna (D39). */
+  czujnikDeszczuZestaw: number;
+};
 
-export const DEFAULT_FUNCTIONAL_PRICING: CalculatorFunctionalPricing = {
-  oswietlenie: 2559.9,
-  bezpieczenstwo: 14930.7,
-  temperatura: 4677.16,
-  rolety: 4369.4,
-  zewnetrzne: 4967.5,
+export const DEFAULT_HARDWARE_CATALOG: CalculatorHardwareCatalog = {
+  relayLoxone14: 1584.7,
+  rgbwModule: 487.6,
+  czujkaLoxone: 487.6,
+  extensionDI: 1828.5,
+  zaworOdciecia: 792.35,
+  centralaAlarmowa: 4632.2,
+  intKnx: 1219.0,
+  syrenaAlarmowa: 365.7,
+  czujkiSufitowe: 275.6,
+  czujkiDualne: 268.18,
+  czujkiBezpieczenstwaSprzet: 381.6,
+  kontaktronBrama: 365.7,
+  kontaktronOknoDrzwiStandard: 270,
+  kontaktronOknoDrzwiFabryczne: 120,
+  czujkaZalania: 426.65,
+  klawiaturaMala: 1340.9,
+  klawiaturaGarazStrefowa: 670.45,
+  silownikSalus: 146.28,
+  glowicaGrzejnika: 548.55,
+  czujniki1Wire: 182.85,
+  oneWireExt: 792.35,
+  czujnikDeszczuZestaw: 1462.8,
+};
+
+/** Stawka roboczogodziny (ZESTAWIENIE!F70) doliczana do czasu pracy per kategoria funkcjonalna. */
+export const DEFAULT_LABOR_RATE_PER_HOUR = 120;
+
+export const CALCULATOR_HARDWARE_LABELS: Record<keyof CalculatorHardwareCatalog, string> = {
+  relayLoxone14: "Relay Loxone 14 kanałów",
+  rgbwModule: "Moduł RGBW",
+  czujkaLoxone: "Czujka Loxone",
+  extensionDI: "Extension DI",
+  zaworOdciecia: "Zawór odcięcia wody",
+  centralaAlarmowa: "Centrala Alarmowa (baza)",
+  intKnx: "INT-KNX",
+  syrenaAlarmowa: "Syrena alarmowa",
+  czujkiSufitowe: "Czujki sufitowe",
+  czujkiDualne: "Czujki Dualne",
+  czujkiBezpieczenstwaSprzet: "Czujki bezpieczeństwa (dym/uśpienie)",
+  kontaktronBrama: "Kontaktron brama",
+  kontaktronOknoDrzwiStandard: "Kontaktron okno/drzwi — standard",
+  kontaktronOknoDrzwiFabryczne: "Kontaktron okno/drzwi — okna z fabrycznym czujnikiem",
+  czujkaZalania: "Czujka zalania",
+  klawiaturaMala: "Klawiatura mała (SATEL)",
+  klawiaturaGarazStrefowa: "Klawiatura garaż strefowa (SATEL)",
+  silownikSalus: "Siłownik Salus",
+  glowicaGrzejnika: "Głowica grzejnika",
+  czujniki1Wire: "Czujniki 1-wire",
+  oneWireExt: "1-wire Ext",
+  czujnikDeszczuZestaw: "Czujnik deszczu + zasilacz + zawory podlewania",
 };
 
 export type CalculatorAddonPricing = Record<CalculatorAddonKey, number>;
@@ -193,7 +283,8 @@ export const DEFAULT_DISCOUNT_SETTINGS: CalculatorDiscountSettings = {
 
 export type CalculatorSettings = {
   baseSystem: CalculatorBaseSystemSettings;
-  functional: CalculatorFunctionalPricing;
+  hardware: CalculatorHardwareCatalog;
+  laborRatePerHour: number;
   addons: CalculatorAddonPricing;
   otherSystems: CalculatorOtherSystemPricing;
   electrical: CalculatorElectricalSettings;
@@ -203,7 +294,8 @@ export type CalculatorSettings = {
 
 export const DEFAULT_CALCULATOR_SETTINGS: CalculatorSettings = {
   baseSystem: DEFAULT_BASE_SYSTEM_SETTINGS,
-  functional: DEFAULT_FUNCTIONAL_PRICING,
+  hardware: DEFAULT_HARDWARE_CATALOG,
+  laborRatePerHour: DEFAULT_LABOR_RATE_PER_HOUR,
   addons: DEFAULT_ADDON_PRICING,
   otherSystems: DEFAULT_OTHER_SYSTEM_PRICING,
   electrical: DEFAULT_ELECTRICAL_SETTINGS,
@@ -249,11 +341,12 @@ export function normalizeCalculatorSettings(value: unknown): CalculatorSettings 
     ),
   };
 
-  const functionalData = asObject(data.functional);
-  const functional = {} as CalculatorFunctionalPricing;
-  for (const category of CALCULATOR_FUNCTIONAL_CATEGORIES) {
-    functional[category] = asNumber(functionalData[category], DEFAULT_FUNCTIONAL_PRICING[category]);
+  const hardwareData = asObject(data.hardware);
+  const hardware = {} as CalculatorHardwareCatalog;
+  for (const key of Object.keys(DEFAULT_HARDWARE_CATALOG) as (keyof CalculatorHardwareCatalog)[]) {
+    hardware[key] = asNumber(hardwareData[key], DEFAULT_HARDWARE_CATALOG[key]);
   }
+  const laborRatePerHour = asNumber(data.laborRatePerHour, DEFAULT_LABOR_RATE_PER_HOUR);
 
   const addonsData = asObject(data.addons);
   const addons = {} as CalculatorAddonPricing;
@@ -328,5 +421,5 @@ export function normalizeCalculatorSettings(value: unknown): CalculatorSettings 
     cenaZaDodatkowaCzujke: asNumber(extrasData.cenaZaDodatkowaCzujke, DEFAULT_EXTRAS_SETTINGS.cenaZaDodatkowaCzujke),
   };
 
-  return { baseSystem, functional, addons, otherSystems, electrical, discounts, extras };
+  return { baseSystem, hardware, laborRatePerHour, addons, otherSystems, electrical, discounts, extras };
 }

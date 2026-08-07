@@ -88,7 +88,7 @@ export function normalizeCalculatorAnswers(value: unknown): CalculatorAnswers {
     liczbaSypialniDodatkowych: asNumber(data.liczbaSypialniDodatkowych, fallback.liczbaSypialniDodatkowych),
     liczbaPomieszczenWilgotnych: asNumber(data.liczbaPomieszczenWilgotnych, fallback.liczbaPomieszczenWilgotnych),
     liczbaPozostalychPomieszczen: asNumber(data.liczbaPozostalychPomieszczen, fallback.liczbaPozostalychPomieszczen),
-    liczbaBramGarazowych: asNumber(data.liczbaBramGarazowych, fallback.liczbaBramGarazowych),
+    iloscGarazy: asNumber(data.iloscGarazy, fallback.iloscGarazy),
 
     jestKominek: asBoolean(data.jestKominek, fallback.jestKominek),
     jestGaz: asBoolean(data.jestGaz, fallback.jestGaz),
@@ -99,6 +99,17 @@ export function normalizeCalculatorAnswers(value: unknown): CalculatorAnswers {
     sterowanieTemperatura: asBoolean(data.sterowanieTemperatura, fallback.sterowanieTemperatura),
     systemWlamaniowy: asBoolean(data.systemWlamaniowy, fallback.systemWlamaniowy),
     alarmIKontrolaDostepu: asBoolean(data.alarmIKontrolaDostepu, fallback.alarmIKontrolaDostepu),
+
+    ledySciemniane: asNumber(data.ledySciemniane, fallback.ledySciemniane),
+    czyCzujkiRecznie: asBoolean(data.czyCzujkiRecznie, fallback.czyCzujkiRecznie),
+    iloscCzujekLoxone: asNumber(data.iloscCzujekLoxone, fallback.iloscCzujekLoxone),
+    iloscCzujekSatel: asNumber(data.iloscCzujekSatel, fallback.iloscCzujekSatel),
+    iloscCzujekBezpieczenstwa: asNumber(data.iloscCzujekBezpieczenstwa, fallback.iloscCzujekBezpieczenstwa),
+    satelWOptimum: asBoolean(data.satelWOptimum, fallback.satelWOptimum),
+    strefyOgrzewaniaPodlogowego: asNumber(data.strefyOgrzewaniaPodlogowego, fallback.strefyOgrzewaniaPodlogowego),
+    iloscGrzejnikowSterowanych: asNumber(data.iloscGrzejnikowSterowanych, fallback.iloscGrzejnikowSterowanych),
+    iloscOswietlenZewnetrznych: asNumber(data.iloscOswietlenZewnetrznych, fallback.iloscOswietlenZewnetrznych),
+    iloscSekcjiPodlewania: asNumber(data.iloscSekcjiPodlewania, fallback.iloscSekcjiPodlewania),
 
     addons,
     iloscStacjiDokujacychZIpadem: asNumber(data.iloscStacjiDokujacychZIpadem, fallback.iloscStacjiDokujacychZIpadem),
@@ -131,7 +142,6 @@ export function normalizeCalculatorAnswers(value: unknown): CalculatorAnswers {
 
     iloscPrzyciskowPrestiz: asNumber(data.iloscPrzyciskowPrestiz, fallback.iloscPrzyciskowPrestiz),
     iloscPrzyciskowNormal: asNullableNumber(data.iloscPrzyciskowNormal),
-    iloscCzujekDodatkowychRecznie: asNumber(data.iloscCzujekDodatkowychRecznie, fallback.iloscCzujekDodatkowychRecznie),
 
     trudnyKlientWspolczynnik: asNumber(data.trudnyKlientWspolczynnik, fallback.trudnyKlientWspolczynnik),
     platnoscZGory: asBoolean(data.platnoscZGory, fallback.platnoscZGory),

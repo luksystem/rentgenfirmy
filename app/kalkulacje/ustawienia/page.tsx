@@ -12,12 +12,16 @@ import {
   CALCULATOR_ADDON_LABELS,
   CALCULATOR_ELECTRICAL_RATE_TYPES,
   CALCULATOR_ELECTRICAL_RATE_TYPE_LABELS,
-  CALCULATOR_FUNCTIONAL_CATEGORIES,
-  CALCULATOR_FUNCTIONAL_CATEGORY_LABELS,
   CALCULATOR_OTHER_SYSTEM_KEYS,
   CALCULATOR_OTHER_SYSTEM_LABELS,
 } from "@/lib/calculator/types";
-import { DEFAULT_CALCULATOR_SETTINGS, type CalculatorSettings } from "@/lib/calculator/settings";
+import {
+  CALCULATOR_HARDWARE_LABELS,
+  DEFAULT_CALCULATOR_SETTINGS,
+  DEFAULT_HARDWARE_CATALOG,
+  type CalculatorHardwareCatalog,
+  type CalculatorSettings,
+} from "@/lib/calculator/settings";
 import { fetchCalculatorSettings, saveCalculatorSettings } from "@/lib/supabase/calculator-settings-repository";
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
@@ -140,17 +144,27 @@ export default function CalculatorSettingsPage() {
             </div>
           </Section>
 
-          <Section title="Kategorie funkcjonalne" description="Cena stała odblokowywana odpowiadającym checkboxem funkcjonalności.">
+          <Section
+            title="Katalog sprzętu (kategorie funkcjonalne)"
+            description="Ceny jednostkowe pozycji sprzętu, z których liczą się kategorie Oświetlenie/Bezpieczeństwo/Temperatura/Rolety/Zewnętrzne — ilości dobiera silnik z odpowiedzi ankiety."
+          >
             <div className="grid gap-4 sm:grid-cols-3">
-              {CALCULATOR_FUNCTIONAL_CATEGORIES.map((category) => (
-                <Field key={category} label={CALCULATOR_FUNCTIONAL_CATEGORY_LABELS[category]}>
+              {(Object.keys(DEFAULT_HARDWARE_CATALOG) as (keyof CalculatorHardwareCatalog)[]).map((key) => (
+                <Field key={key} label={CALCULATOR_HARDWARE_LABELS[key]}>
                   <NumericInput
-                    value={settings.functional[category]}
+                    value={settings.hardware[key]}
                     disabled={loading}
-                    onChange={(v) => setSettings({ ...settings, functional: { ...settings.functional, [category]: v } })}
+                    onChange={(v) => setSettings({ ...settings, hardware: { ...settings.hardware, [key]: v } })}
                   />
                 </Field>
               ))}
+              <Field label="Stawka roboczogodziny">
+                <NumericInput
+                  value={settings.laborRatePerHour}
+                  disabled={loading}
+                  onChange={(v) => setSettings({ ...settings, laborRatePerHour: v })}
+                />
+              </Field>
             </div>
           </Section>
 
