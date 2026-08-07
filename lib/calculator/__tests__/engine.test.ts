@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateBaseSystem, calculateCalculatorTotals, calculateElectricalItems } from "@/lib/calculator/engine";
+import { calculateAddons, calculateBaseSystem, calculateCalculatorTotals, calculateElectricalItems } from "@/lib/calculator/engine";
 import { DEFAULT_CALCULATOR_SETTINGS } from "@/lib/calculator/settings";
 import { emptyCalculatorAnswers } from "@/lib/calculator/types";
 
@@ -351,5 +351,25 @@ describe("calculateCalculatorTotals — pozostała mechanika", () => {
     expect(dokumentacja?.net).toBe(0);
     expect(ustalenia?.net).toBe(3000);
     expect(totals.addonsNet).toBe(3000);
+  });
+
+  it("czujniki otwarcia okien — cena zależy od tego, czy okna mają fabryczne czujniki (ZESTAWIENIE!F36: 270 zł standard / 120 zł fabryczne)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.addons.czujnikiOtwarciaOkien = true;
+    answers.liczbaOkienOtwieranych = 10;
+
+    const standard = calculateAddons({ ...answers, czyOknaCzujnikiFabryczne: false }, DEFAULT_CALCULATOR_SETTINGS);
+    const fabryczne = calculateAddons({ ...answers, czyOknaCzujnikiFabryczne: true }, DEFAULT_CALCULATOR_SETTINGS);
+
+    expect(standard.find((item) => item.key === "czujnikiOtwarciaOkien")?.net).toBe(2700);
+    expect(fabryczne.find((item) => item.key === "czujnikiOtwarciaOkien")?.net).toBe(1200);
+  });
+
+  it("sauna (Inne systemy) — cena stała 5430 zł (InneSystemy!V13, kolumna OPTIMUM)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.otherSystems.sauna = true;
+    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const item = totals.otherSystems.items.find((entry) => entry.key === "sauna");
+    expect(item?.net).toBe(5430);
   });
 });

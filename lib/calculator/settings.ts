@@ -190,6 +190,7 @@ export const DEFAULT_ADDON_PRICING: CalculatorAddonPricing = {
   stacjaPogodowa: 3150,
   oswietlenieSciemniane230V: 2316.1,
   oswietlenieKoloroweRGBW: 687.6,
+  /** Nieużywane — cena zależy od hardware.kontaktronOknoDrzwiStandard/Fabryczne (patrz addonUnitPrice w engine.ts). */
   czujnikiOtwarciaOkien: 270,
   klawiaturyNfc: 1950.4,
   przygotowanieDostepuDrzwi: 731.4,
@@ -221,7 +222,8 @@ export const DEFAULT_OTHER_SYSTEM_PRICING: CalculatorOtherSystemPricing = {
   monitoring: 5200,
   naglosnienie: 8500,
   multiroom: 12400,
-  sauna: 0,
+  /** InneSystemy!V13 (kolumna OPTIMUM, pozycja "SAUNA") — stała, niezależna od parametrów domu. */
+  sauna: 5430,
   alarmTymczasowy: 1000,
 };
 

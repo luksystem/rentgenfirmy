@@ -620,13 +620,27 @@ function addonAppliesTrudnyKlient(key: CalculatorAddonKey): boolean {
   return !ADDONS_WITHOUT_TRUDNY_KLIENT.has(key);
 }
 
+/**
+ * Cena jednostkowa dodatku. "Czujniki otwarcia okien" — jedyny wyjątek: cena zależy od tego, czy
+ * okna mają już fabryczne czujniki (ZESTAWIENIE!F36, ta sama pozycja co w kategorii Bezpieczeństwo)
+ * — niższa gdy tak (montaż prostszy), wyższa gdy trzeba doinstalować własne.
+ */
+function addonUnitPrice(key: CalculatorAddonKey, answers: CalculatorAnswers, settings: CalculatorSettings): number {
+  if (key === "czujnikiOtwarciaOkien") {
+    return answers.czyOknaCzujnikiFabryczne
+      ? settings.hardware.kontaktronOknoDrzwiFabryczne
+      : settings.hardware.kontaktronOknoDrzwiStandard;
+  }
+  return settings.addons[key];
+}
+
 export function calculateAddons(answers: CalculatorAnswers, settings: CalculatorSettings): CalculatorAddonResult[] {
   const wspSzefa = Math.max(0, answers.trudnyKlientWspolczynnik || 1);
   return CALCULATOR_ADDON_KEYS.map((key) => {
     const selected = answers.addons[key];
     const quantity = addonQuantity(key, answers);
     const coefficient = addonAppliesTrudnyKlient(key) ? wspSzefa : 1;
-    const net = selected ? roundMoney(settings.addons[key] * Math.max(0, quantity) * coefficient) : 0;
+    const net = selected ? roundMoney(addonUnitPrice(key, answers, settings) * Math.max(0, quantity) * coefficient) : 0;
     return { key, selected, quantity, net };
   });
 }

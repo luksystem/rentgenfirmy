@@ -407,9 +407,12 @@ export default function CalculatorSettingsPage() {
             </div>
           </Section>
 
-          <Section title="Dodatki" description="Cena jednostkowa netto per pozycja.">
+          <Section
+            title="Dodatki"
+            description="Cena jednostkowa netto per pozycja. „Czujniki otwarcia okien” nie są tu edytowalne — cena zależy od tego, czy okna mają fabryczne czujniki (patrz katalog sprzętu: Kontaktron okno/drzwi)."
+          >
             <div className="grid gap-4 sm:grid-cols-3">
-              {CALCULATOR_ADDON_KEYS.map((key) => (
+              {CALCULATOR_ADDON_KEYS.filter((key) => key !== "czujnikiOtwarciaOkien").map((key) => (
                 <Field key={key} label={CALCULATOR_ADDON_LABELS[key]}>
                   <NumericInput
                     value={settings.addons[key]}
