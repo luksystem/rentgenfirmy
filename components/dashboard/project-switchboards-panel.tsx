@@ -33,6 +33,7 @@ import {
   SWITCHBOARD_CIRCUIT_STATUS_LABELS,
   SWITCHBOARD_HANDLED_BADGE_CLASS,
   buildSwitchboardCircuitReportDescription,
+  buildSwitchboardCircuitTitle,
   buildSwitchboardProgress,
   groupSwitchboardCircuitsBySection,
   switchboardCircuitIsHandled,
@@ -108,10 +109,12 @@ function CircuitCard({ circuit, onClick }: { circuit: SwitchboardCircuit; onClic
           ) : null}
         </p>
         <p className="truncate text-sm font-medium text-foreground">
-          {circuit.circuitDescription || circuit.circuitNo || circuit.location || "Bez opisu"}
+          {buildSwitchboardCircuitTitle(circuit) || circuit.location || "Bez opisu"}
         </p>
-        {circuit.location && (circuit.circuitDescription || circuit.circuitNo) ? (
-          <p className="truncate text-xs text-muted">{circuit.location}</p>
+        {circuit.location || circuit.detail2 ? (
+          <p className="truncate text-xs text-muted">
+            {[circuit.location, circuit.detail2].filter(Boolean).join(" · ")}
+          </p>
         ) : null}
         {circuit.note ? <p className="mt-1 truncate text-xs text-muted">{circuit.note}</p> : null}
       </div>
@@ -252,7 +255,9 @@ function CircuitStatusDialog({
           <DialogHeader>
             <DialogTitle>{switchboardCircuitLabel(circuit)}</DialogTitle>
             <DialogDescription>
-              {[circuit.circuitDescription, circuit.location].filter(Boolean).join(" · ") || "Brak opisu"}
+              {[buildSwitchboardCircuitTitle(circuit), circuit.location, circuit.detail2 ? `kolor: ${circuit.detail2}` : null]
+                .filter(Boolean)
+                .join(" · ") || "Brak opisu"}
             </DialogDescription>
           </DialogHeader>
 
@@ -340,7 +345,10 @@ function CircuitStatusDialog({
                     itemDescription={buildSwitchboardCircuitReportDescription(switchboardName, {
                       zugNo: circuit.zugNo,
                       zugSubNo: circuit.zugSubNo,
+                      circuitNo: circuit.circuitNo,
                       circuitDescription: circuit.circuitDescription,
+                      detail1: circuit.detail1,
+                      detail2: circuit.detail2,
                       location: circuit.location,
                       note,
                     })}

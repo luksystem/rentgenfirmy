@@ -134,15 +134,33 @@ export function switchboardCircuitLabel(circuit: Pick<SwitchboardCircuit, "zugSu
   return circuit.zugSubNo || circuit.zugNo || circuit.breakerNo || "—";
 }
 
+/**
+ * Pełna nazwa pozycji: kolumna G (NR_OBWODU/urządzenie) + H (opis/typ) + I (specyfikacja
+ * przewodu, np. "YDY 5x4") — na życzenie właściciela kolumna I MUSI być w nazwie, bo bez niej
+ * pozycja jest nieczytelna dla elektryka (nie wiadomo jakim przewodem to podłączyć). Kolumna J
+ * (kolor przewodu) świadomie NIE wchodzi do nazwy — pokazywana osobno na karcie/w dialogu.
+ */
+export function buildSwitchboardCircuitTitle(
+  circuit: Pick<SwitchboardCircuit, "circuitNo" | "circuitDescription" | "detail1">,
+): string | null {
+  const namePart = [circuit.circuitNo, circuit.circuitDescription].filter(Boolean).join(" ");
+  if (!namePart) return circuit.detail1;
+  return circuit.detail1 ? `${namePart}, ${circuit.detail1}` : namePart;
+}
+
 export function buildSwitchboardCircuitReportDescription(
   switchboardName: string,
-  circuit: Pick<SwitchboardCircuit, "zugNo" | "zugSubNo" | "circuitDescription" | "location" | "note">,
+  circuit: Pick<
+    SwitchboardCircuit,
+    "zugNo" | "zugSubNo" | "circuitNo" | "circuitDescription" | "detail1" | "detail2" | "location" | "note"
+  >,
 ) {
   const zug = [circuit.zugNo, circuit.zugSubNo].filter(Boolean).join(" / ");
   const parts = [
     `Rozdzielnica ${switchboardName}`,
     zug ? `Zug ${zug}` : null,
-    circuit.circuitDescription,
+    buildSwitchboardCircuitTitle(circuit),
+    circuit.detail2 ? `kolor: ${circuit.detail2}` : null,
     circuit.location ? `(${circuit.location})` : null,
   ].filter(Boolean);
   const header = parts.join(", ");
