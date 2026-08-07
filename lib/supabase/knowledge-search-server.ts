@@ -1,9 +1,14 @@
 import type { KnowledgeSuggestionExcerpt } from "@/lib/ai/knowledge-suggestion-generator";
 import { buildOrTsQuery } from "@/lib/knowledge/search-query";
-import type { KnowledgeChunkRow, KnowledgeSourceRow } from "@/lib/supabase/database.types";
+import type { KnowledgeSourceRow } from "@/lib/supabase/database.types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-/** Przeszukuje wycinki bazy wiedzy (dokumenty/linki/YouTube dodane ręcznie) pod dany opis. */
+/**
+ * Przeszukuje wycinki bazy wiedzy (dokumenty/linki/YouTube dodane ręcznie) pod dany opis.
+ * Zamawia `limit * 4` kandydatów posortowanych wg trafności (ts_rank_cd — patrz migracja 317),
+ * nie pierwsze trafienia po kolei — przy dużym źródle (np. archiwum zgłoszeń z ActiveCollab, setki
+ * wycinków) proste "pierwsze n dopasowań" prawie zawsze pomijało najlepiej pasujące fragmenty.
+ */
 export async function searchKnowledgeChunks(
   description: string,
   limit = 6,
@@ -14,17 +19,16 @@ export async function searchKnowledgeChunks(
   }
 
   const supabase = getSupabaseAdmin();
-  const { data: chunkRows, error: chunkError } = await supabase
-    .from("knowledge_chunks")
-    .select("content, source_id")
-    .textSearch("content", query, { config: "simple" })
-    .limit(limit * 4);
+  const { data: chunkRows, error: chunkError } = await supabase.rpc(
+    "search_knowledge_chunks_ranked",
+    { p_query: query, p_limit: limit * 4 },
+  );
 
   if (chunkError || !chunkRows || chunkRows.length === 0) {
     return [];
   }
 
-  const sourceIds = [...new Set(chunkRows.map((row) => (row as KnowledgeChunkRow).source_id))];
+  const sourceIds = [...new Set(chunkRows.map((row) => row.source_id))];
   const { data: sourceRows } = await supabase
     .from("knowledge_sources")
     .select("id, title, type, status")
@@ -37,7 +41,7 @@ export async function searchKnowledgeChunks(
   );
 
   const excerpts: KnowledgeSuggestionExcerpt[] = [];
-  for (const row of chunkRows as Array<Pick<KnowledgeChunkRow, "content" | "source_id">>) {
+  for (const row of chunkRows) {
     const source = sourcesById.get(row.source_id);
     if (!source || source.status !== "ready") {
       continue;
@@ -51,7 +55,8 @@ export async function searchKnowledgeChunks(
   return excerpts;
 }
 
-/** Przeszukuje na żywo opisy i komentarze historycznych zgłoszeń serwisowych pod dany opis. */
+/** Przeszukuje na żywo opisy i komentarze historycznych zgłoszeń serwisowych pod dany opis —
+ *  posortowane wg trafności (ts_rank_cd), tym samym wzorcem co searchKnowledgeChunks. */
 export async function searchServiceIntakeHistory(
   description: string,
   limit = 6,
@@ -64,29 +69,19 @@ export async function searchServiceIntakeHistory(
   const supabase = getSupabaseAdmin();
 
   const [descriptionResult, commentResult] = await Promise.all([
-    supabase
-      .from("service_intake_requests")
-      .select("description")
-      .textSearch("description", query, { config: "simple" })
-      .limit(limit),
-    supabase
-      .from("service_intake_comments")
-      .select("body")
-      .textSearch("body", query, { config: "simple" })
-      .limit(limit),
+    supabase.rpc("search_service_intake_descriptions_ranked", { p_query: query, p_limit: limit }),
+    supabase.rpc("search_service_intake_comments_ranked", { p_query: query, p_limit: limit }),
   ]);
 
   const excerpts: string[] = [];
   for (const row of descriptionResult.data ?? []) {
-    const description = (row as { description: string }).description;
-    if (description) {
-      excerpts.push(description);
+    if (row.description) {
+      excerpts.push(row.description);
     }
   }
   for (const row of commentResult.data ?? []) {
-    const body = (row as { body: string }).body;
-    if (body) {
-      excerpts.push(body);
+    if (row.body) {
+      excerpts.push(row.body);
     }
   }
 

@@ -341,13 +341,16 @@ export function KnowledgeSourceManager() {
                     {source.status === "error" && source.errorMessage ? (
                       <p className="mt-1 text-xs text-rose-400">{source.errorMessage}</p>
                     ) : null}
+                    {source.status === "ready" && source.errorMessage ? (
+                      <p className="mt-1 text-xs text-amber-400">{source.errorMessage}</p>
+                    ) : null}
                     <p className="mt-1 text-xs text-muted">
                       Dodano {formatDateTime(source.createdAt)} — {source.createdByName}
                       {source.charCount > 0 ? ` · ${source.charCount.toLocaleString("pl-PL")} znaków` : ""}
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-2">
-                    {source.status === "error" ? (
+                    {source.status === "error" || (source.status === "ready" && source.errorMessage) ? (
                       <Button
                         type="button"
                         size="sm"
@@ -355,7 +358,7 @@ export function KnowledgeSourceManager() {
                         onClick={() => void retrySource(source.id)}
                       >
                         <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                        Spróbuj ponownie
+                        Przetwórz ponownie
                       </Button>
                     ) : null}
                     <Button

@@ -6076,6 +6076,18 @@ export type Database = {
           band: string;
         }[];
       };
+      search_knowledge_chunks_ranked: {
+        Args: { p_query: string; p_limit: number };
+        Returns: { content: string; source_id: string; rank: number }[];
+      };
+      search_service_intake_descriptions_ranked: {
+        Args: { p_query: string; p_limit: number };
+        Returns: { description: string; rank: number }[];
+      };
+      search_service_intake_comments_ranked: {
+        Args: { p_query: string; p_limit: number };
+        Returns: { body: string; rank: number }[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

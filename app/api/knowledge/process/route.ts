@@ -20,7 +20,7 @@ export const maxDuration = 60;
 
 async function extractContent(
   source: KnowledgeSourceRow,
-): Promise<{ text: string; titleOverride?: string | null }> {
+): Promise<{ text: string; titleOverride?: string | null; truncated?: boolean }> {
   const supabase = getSupabaseAdmin();
 
   if (
@@ -41,31 +41,35 @@ async function extractContent(
     const buffer = Buffer.from(await data.arrayBuffer());
 
     if (source.type === "pdf") {
-      return { text: await extractTextFromPdfBuffer(buffer) };
+      const extracted = await extractTextFromPdfBuffer(buffer);
+      return { text: extracted.text, truncated: extracted.truncated };
     }
     if (source.type === "whatsapp") {
-      return { text: extractTextFromWhatsAppBuffer(buffer) };
+      const extracted = extractTextFromWhatsAppBuffer(buffer);
+      return { text: extracted.text, truncated: extracted.truncated };
     }
     if (source.type === "csv") {
-      return { text: extractTextFromCsvBuffer(buffer) };
+      const extracted = extractTextFromCsvBuffer(buffer);
+      return { text: extracted.text, truncated: extracted.truncated };
     }
-    return { text: extractTextFromPlainBuffer(buffer) };
+    const extracted = extractTextFromPlainBuffer(buffer);
+    return { text: extracted.text, truncated: extracted.truncated };
   }
 
   if (source.type === "link") {
     if (!source.url) {
       throw new Error("Brak adresu URL dla tego źródła.");
     }
-    const { text, title } = await fetchAndExtractLinkContent(source.url);
-    return { text, titleOverride: title };
+    const { text, title, truncated } = await fetchAndExtractLinkContent(source.url);
+    return { text, titleOverride: title, truncated };
   }
 
   if (source.type === "youtube") {
     if (!source.url) {
       throw new Error("Brak adresu URL filmu YouTube.");
     }
-    const { text, title } = await fetchYoutubeTranscriptAndTitle(source.url);
-    return { text, titleOverride: title };
+    const { text, title, truncated } = await fetchYoutubeTranscriptAndTitle(source.url);
+    return { text, titleOverride: title, truncated };
   }
 
   if (source.type === "image") {
@@ -129,7 +133,7 @@ export async function POST(request: Request) {
     .eq("id", sourceId);
 
   try {
-    const { text, titleOverride } = await extractContent(sourceRow as KnowledgeSourceRow);
+    const { text, titleOverride, truncated } = await extractContent(sourceRow as KnowledgeSourceRow);
     const trimmed = text.trim();
     if (!trimmed) {
       throw new Error("Nie udało się wydobyć żadnej treści z tego źródła.");
@@ -157,18 +161,31 @@ export async function POST(request: Request) {
         ? { title: titleOverride }
         : {};
 
+    // Nie fatalne — źródło jest gotowe i przeszukiwalne, ale nie w całości. Wcześniej takie
+    // obcięcie (np. archiwum CSV wgrane jako baza wiedzy, patrz migracja 317) było całkowicie
+    // ciche: status "ready", error_message puste, jedyny ślad to okrągła liczba w char_count,
+    // której nikt nie miał powodu podejrzewać.
+    const truncationWarning = truncated
+      ? "Uwaga: plik był za duży i został przycięty przy przetwarzaniu — baza wiedzy zna tylko jego początkową część. Podziel go na mniejsze pliki, żeby ująć całość."
+      : null;
+
     await supabase
       .from("knowledge_sources")
       .update({
         status: "ready",
-        error_message: null,
+        error_message: truncationWarning,
         char_count: trimmed.length,
         updated_at: new Date().toISOString(),
         ...titleUpdate,
       })
       .eq("id", sourceId);
 
-    return NextResponse.json({ ok: true, chunkCount: chunks.length, charCount: trimmed.length });
+    return NextResponse.json({
+      ok: true,
+      chunkCount: chunks.length,
+      charCount: trimmed.length,
+      truncated: Boolean(truncated),
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Nie udało się przetworzyć źródła.";
     await supabase

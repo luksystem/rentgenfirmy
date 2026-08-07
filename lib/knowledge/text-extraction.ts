@@ -6,18 +6,26 @@ import { YoutubeTranscript } from "youtube-transcript";
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
 export const LINK_FETCH_TIMEOUT_MS = 15_000;
-const MAX_EXTRACTED_CHARS = 400_000;
+// Podniesione z 400 000 (D: archiwum zgłoszeń z ActiveCollab wgrane jako CSV lądowało dokładnie na
+// tym limicie — cichym obcięciem, bez żadnego ostrzeżenia w UI). Nowy limit + zwracana flaga
+// `truncated` (patrz niżej) razem eliminują to dla realistycznych rozmiarów eksportów firmowych.
+const MAX_EXTRACTED_CHARS = 2_000_000;
 
-function clamp(text: string) {
-  return text.length > MAX_EXTRACTED_CHARS ? text.slice(0, MAX_EXTRACTED_CHARS) : text;
+export type ExtractedText = { text: string; truncated: boolean };
+
+function clamp(text: string): ExtractedText {
+  if (text.length > MAX_EXTRACTED_CHARS) {
+    return { text: text.slice(0, MAX_EXTRACTED_CHARS), truncated: true };
+  }
+  return { text, truncated: false };
 }
 
-export async function extractTextFromPdfBuffer(buffer: Buffer): Promise<string> {
+export async function extractTextFromPdfBuffer(buffer: Buffer): Promise<ExtractedText> {
   const result = await pdfParse(buffer);
   return clamp(result.text.trim());
 }
 
-export function extractTextFromPlainBuffer(buffer: Buffer): string {
+export function extractTextFromPlainBuffer(buffer: Buffer): ExtractedText {
   return clamp(buffer.toString("utf8").trim());
 }
 
@@ -28,7 +36,7 @@ export function extractTextFromPlainBuffer(buffer: Buffer): string {
 const WHATSAPP_LINE_PATTERN =
   /^(?:\[)?\d{1,2}[./]\d{1,2}[./]\d{2,4},?\s+\d{1,2}:\d{2}(?::\d{2})?(?:\])?\s*[-–]?\s*([^:]{1,80}):\s*(.*)$/;
 
-export function extractTextFromWhatsAppBuffer(buffer: Buffer): string {
+export function extractTextFromWhatsAppBuffer(buffer: Buffer): ExtractedText {
   const raw = buffer.toString("utf8");
   const lines = raw.split(/\r?\n/);
   const cleaned: string[] = [];
@@ -107,19 +115,24 @@ function parseCsvRows(text: string, delimiter: string): string[][] {
   return rows.filter((cells) => cells.some((cell) => cell.trim() !== ""));
 }
 
-const CSV_MAX_ROWS = 4_000;
+// Podniesione z 4 000 — archiwa eksportowane z ActiveCollab/podobnych narzędzi po latach działania
+// firmy potrafią mieć dziesiątki tysięcy wierszy; przy starym limicie większość historii nigdy nie
+// trafiała do bazy wiedzy, bez żadnego widocznego ostrzeżenia poza jedną linijką na końcu tekstu,
+// która sama bywała ucinana przez MAX_EXTRACTED_CHARS zanim ktokolwiek ją zobaczył.
+const CSV_MAX_ROWS = 20_000;
 
-export function extractTextFromCsvBuffer(buffer: Buffer): string {
+export function extractTextFromCsvBuffer(buffer: Buffer): ExtractedText {
   const raw = buffer.toString("utf8").replace(/^\uFEFF/, "");
   const delimiter = detectCsvDelimiter(raw);
   const rows = parseCsvRows(raw, delimiter);
 
   if (rows.length === 0) {
-    return "";
+    return { text: "", truncated: false };
   }
 
   const [header, ...dataRows] = rows;
   const limitedRows = dataRows.slice(0, CSV_MAX_ROWS);
+  const rowsTruncated = dataRows.length > CSV_MAX_ROWS;
 
   const lines = limitedRows.map((cells, index) => {
     const parts = cells
@@ -132,18 +145,19 @@ export function extractTextFromCsvBuffer(buffer: Buffer): string {
     return `Rekord ${index + 1} — ${parts.join(" | ")}`;
   });
 
-  if (dataRows.length > CSV_MAX_ROWS) {
+  if (rowsTruncated) {
     lines.push(
       `… plik zawiera więcej rekordów (${dataRows.length} łącznie) — pokazano pierwsze ${CSV_MAX_ROWS}.`,
     );
   }
 
-  return clamp(lines.join("\n\n").trim());
+  const clamped = clamp(lines.join("\n\n").trim());
+  return { text: clamped.text, truncated: rowsTruncated || clamped.truncated };
 }
 
 export async function fetchAndExtractLinkContent(
   url: string,
-): Promise<{ text: string; title: string | null }> {
+): Promise<{ text: string; title: string | null; truncated: boolean }> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), LINK_FETCH_TIMEOUT_MS);
 
@@ -164,7 +178,8 @@ export async function fetchAndExtractLinkContent(
     const title = $("title").first().text().trim() || null;
     const text = $("body").text().replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 
-    return { text: clamp(text), title };
+    const clamped = clamp(text);
+    return { text: clamped.text, title, truncated: clamped.truncated };
   } finally {
     clearTimeout(timeout);
   }
@@ -172,7 +187,7 @@ export async function fetchAndExtractLinkContent(
 
 export async function fetchYoutubeTranscriptAndTitle(
   url: string,
-): Promise<{ text: string; title: string | null }> {
+): Promise<{ text: string; title: string | null; truncated: boolean }> {
   const [transcriptResult, titleResult] = await Promise.allSettled([
     YoutubeTranscript.fetchTranscript(url, { lang: "pl" }).catch(() =>
       YoutubeTranscript.fetchTranscript(url),
@@ -191,7 +206,8 @@ export async function fetchYoutubeTranscriptAndTitle(
   const text = transcriptResult.value.map((entry) => entry.text).join(" ");
   const title = titleResult.status === "fulfilled" ? titleResult.value : null;
 
-  return { text: clamp(text.trim()), title };
+  const clamped = clamp(text.trim());
+  return { text: clamped.text, title, truncated: clamped.truncated };
 }
 
 async function fetchYoutubeOembedTitle(url: string): Promise<string | null> {

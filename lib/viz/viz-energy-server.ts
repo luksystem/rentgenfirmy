@@ -144,7 +144,7 @@ async function downloadPdfText(storagePath: string | null) {
 
   const buffer = Buffer.from(await data.arrayBuffer());
   const text = await extractTextFromPdfBuffer(buffer);
-  return excerptPdfText(text);
+  return excerptPdfText(text.text);
 }
 
 export async function countVizEnergyInvoices(dashboardId: string) {
