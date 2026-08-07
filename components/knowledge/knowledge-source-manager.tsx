@@ -350,7 +350,7 @@ export function KnowledgeSourceManager() {
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-2">
-                    {source.status === "error" || (source.status === "ready" && source.errorMessage) ? (
+                    {source.status === "error" || source.status === "ready" ? (
                       <Button
                         type="button"
                         size="sm"
