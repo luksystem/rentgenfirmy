@@ -125,6 +125,16 @@ export function normalizeCalculatorAnswers(value: unknown): CalculatorAnswers {
     integracjaRekuperacja: asBoolean(data.integracjaRekuperacja, fallback.integracjaRekuperacja),
     integracjaPompaCiepla: asBoolean(data.integracjaPompaCiepla, fallback.integracjaPompaCiepla),
 
+    szafkaRackLan: asBoolean(data.szafkaRackLan, fallback.szafkaRackLan),
+    iloscAP: asNumber(data.iloscAP, fallback.iloscAP),
+    multiswitchTv: asBoolean(data.multiswitchTv, fallback.multiswitchTv),
+    szafaRackTv: asBoolean(data.szafaRackTv, fallback.szafaRackTv),
+    loxoneDoplataWideodomofon: asBoolean(data.loxoneDoplataWideodomofon, fallback.loxoneDoplataWideodomofon),
+    monitoringRejestrator: asBoolean(data.monitoringRejestrator, fallback.monitoringRejestrator),
+    monitoring8Mpx: asBoolean(data.monitoring8Mpx, fallback.monitoring8Mpx),
+    glosnikWcNaglosnienie: asBoolean(data.glosnikWcNaglosnienie, fallback.glosnikWcNaglosnienie),
+    iloscSkrzynekMultiroom: asNumber(data.iloscSkrzynekMultiroom, fallback.iloscSkrzynekMultiroom),
+
     instalacjaDoGlosnikow: asBoolean(data.instalacjaDoGlosnikow, fallback.instalacjaDoGlosnikow),
     instalacjaDoMonitoringu: asBoolean(data.instalacjaDoMonitoringu, fallback.instalacjaDoMonitoringu),
     instalacjaDoTelewizjiLubLan: asBoolean(data.instalacjaDoTelewizjiLubLan, fallback.instalacjaDoTelewizjiLubLan),

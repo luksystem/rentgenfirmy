@@ -259,6 +259,27 @@ export type CalculatorAnswers = {
   integracjaRekuperacja: boolean;
   integracjaPompaCiepla: boolean;
 
+  // Pola zasilające listę materiałową (BOM) systemów LAN/TV/Wideodomofon/Monitoring/Multiroom
+  // (InneSystemy!D:S) — zweryfikowane 1:1 na realnym przykładzie oferty (DANE!T119).
+  /** CRM!M17 "Szafka RACK" — dolicza się do LAN (i jest reużywana jako pozycja szafy w TV). */
+  szafkaRackLan: boolean;
+  /** CRM!M19 "Ilość AP" — liczba punktów dostępowych WiFi, skaluje cenę LAN. */
+  iloscAP: number;
+  /** CRM!M23 "Multiswitch" — dopłata do instalacji TV + podwaja cenę anteny. */
+  multiswitchTv: boolean;
+  /** CRM!M26 "Szafa RACK" (TV) — osobna od szafkiRackLan, dolicza się do TV. */
+  szafaRackTv: boolean;
+  /** CRM!M34 "Loxone / dopłata" — architektura wideodomofonu zintegrowana z Loxone (droższa). */
+  loxoneDoplataWideodomofon: boolean;
+  /** CRM!M40 "Czy ma być rejestrator?" — zmienia strukturę cenową monitoringu. */
+  monitoringRejestrator: boolean;
+  /** CRM!M41 "Monitoring 8Mpx" — wyższa jakość kamer, wyższe stawki monitoringu. */
+  monitoring8Mpx: boolean;
+  /** CRM!M46 "Głośnik w WC" — dopłata do nagłośnienia. */
+  glosnikWcNaglosnienie: boolean;
+  /** CRM!M50 "Multiroom ilość skrzynek" — skaluje cenę multiroom. */
+  iloscSkrzynekMultiroom: number;
+
   // Instalacja elektryczna — toggle'e (CRM!U2:U12)
   instalacjaDoGlosnikow: boolean;
   instalacjaDoMonitoringu: boolean;
@@ -368,6 +389,16 @@ export function emptyCalculatorAnswers(): CalculatorAnswers {
     integracjaWentylacja: false,
     integracjaRekuperacja: false,
     integracjaPompaCiepla: false,
+
+    szafkaRackLan: false,
+    iloscAP: 1,
+    multiswitchTv: false,
+    szafaRackTv: false,
+    loxoneDoplataWideodomofon: false,
+    monitoringRejestrator: false,
+    monitoring8Mpx: false,
+    glosnikWcNaglosnienie: false,
+    iloscSkrzynekMultiroom: 0,
 
     instalacjaDoGlosnikow: false,
     instalacjaDoMonitoringu: false,

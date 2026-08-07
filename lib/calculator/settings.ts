@@ -214,17 +214,167 @@ export const DEFAULT_ADDON_PRICING: CalculatorAddonPricing = {
 
 export type CalculatorOtherSystemPricing = Record<CalculatorOtherSystemKey, number>;
 
-/** Cena bazowa per system (InneSystemy!D13:Y13, zweryfikowane niezależnie przez CoMozemy!G18 dla monitoringu). */
+/**
+ * Cena per system. sieciLan/telewizja/wideodomofon/monitoring/naglosnienie/multiroom są tu
+ * NIEUŻYWANE — ich rzeczywista cena to lista materiałowa (BOM) z warunkami, licz ona z
+ * `otherSystemsCatalog` (patrz calculateOtherSystems w engine.ts). Sauna i alarm tymczasowy to
+ * jedyne prawdziwie stałe ceny.
+ */
 export const DEFAULT_OTHER_SYSTEM_PRICING: CalculatorOtherSystemPricing = {
-  sieciLan: 3260,
-  telewizja: 1920,
-  wideodomofon: 3300,
-  monitoring: 5200,
-  naglosnienie: 8500,
-  multiroom: 12400,
+  sieciLan: 0,
+  telewizja: 0,
+  wideodomofon: 0,
+  monitoring: 0,
+  naglosnienie: 0,
+  multiroom: 0,
   /** InneSystemy!V13 (kolumna OPTIMUM, pozycja "SAUNA") — stała, niezależna od parametrów domu. */
   sauna: 5430,
   alarmTymczasowy: 1000,
+};
+
+/**
+ * Katalog cen "Inne systemy" (InneSystemy!C:S) — składowe wykorzystywane w obliczeniach BOM per
+ * system w `calculateOtherSystems` (engine.ts), zweryfikowane 1:1 na realnym przykładzie oferty
+ * (LAN=6660, TV=1920, Wideodomofon=5470, Monitoring=13300, Multiroom=6734, Nagłośnienie=8500,
+ * suma zgodna z DANE!T119=32164 dla wybranych systemów).
+ */
+export type CalculatorOtherSystemsCatalog = {
+  lanSzafkaRack: number;
+  lanBaza: number;
+  lanDodatek: number;
+  lanZaPunktAP: number;
+  lanDrugaSzafka: number;
+
+  tvBaza: number;
+  tvMultiswitchDoplata: number;
+  tvDodatek: number;
+  tvAntena: number;
+
+  wideodomofonBaza: number;
+  wideodomofonLoxoneMaly: number;
+  /** Dopłata za większy moduł Loxone (delta I6-I4 w źródle) — nie pełna cena I6. */
+  wideodomofonLoxoneDuzyDoplata: number;
+  wideodomofonDodatkowy: number;
+
+  monitoringRejestratorBaza: number;
+  monitoringKameraStandard: number;
+  monitoringKamera8Mpx: number;
+  monitoringWyjscieStandard: number;
+  monitoringWyjscie8Mpx: number;
+  monitoringBezRejestratoraStandard: number;
+  monitoringBezRejestratora8Mpx: number;
+  monitoringSzafaStandard: number;
+  monitoringSzafa8Mpx: number;
+  monitoringDodatekStandard: number;
+  monitoringDodatek8Mpx: number;
+
+  multiroomBaza: number;
+  multiroomStrefaDodatkowaPowyzej4: number;
+  multiroomZaGlosnik: number;
+  multiroomZaSkrzynke: number;
+  multiroomDodatek1: number;
+  multiroomStrefaBazowa: number;
+  multiroomDodatek2: number;
+  multiroomStrefaMnoznik: number;
+  multiroomGlosnikMnoznik: number;
+  multiroomStala: number;
+
+  naglosnienieBaza: number;
+  naglosnienieSrodkowy: number;
+  naglosnienieDodatekWC: number;
+  naglosnienieKolejny: number;
+};
+
+export const DEFAULT_OTHER_SYSTEMS_CATALOG: CalculatorOtherSystemsCatalog = {
+  lanSzafkaRack: 600,
+  lanBaza: 400,
+  lanDodatek: 60,
+  lanZaPunktAP: 700,
+  lanDrugaSzafka: 1400,
+
+  tvBaza: 300,
+  tvMultiswitchDoplata: 800,
+  tvDodatek: 120,
+  tvAntena: 1500,
+
+  wideodomofonBaza: 2800,
+  wideodomofonLoxoneMaly: 270,
+  wideodomofonLoxoneDuzyDoplata: 1400,
+  wideodomofonDodatkowy: 500,
+
+  monitoringRejestratorBaza: 600,
+  monitoringKameraStandard: 400,
+  monitoringKamera8Mpx: 600,
+  monitoringWyjscieStandard: 800,
+  monitoringWyjscie8Mpx: 1100,
+  monitoringBezRejestratoraStandard: 800,
+  monitoringBezRejestratora8Mpx: 1300,
+  monitoringSzafaStandard: 1700,
+  monitoringSzafa8Mpx: 2100,
+  monitoringDodatekStandard: 600,
+  monitoringDodatek8Mpx: 1200,
+
+  multiroomBaza: 1850,
+  multiroomStrefaDodatkowaPowyzej4: 925,
+  multiroomZaGlosnik: 430,
+  multiroomZaSkrzynke: 174.1,
+  multiroomDodatek1: 400,
+  multiroomStrefaBazowa: 564,
+  multiroomDodatek2: 200,
+  multiroomStrefaMnoznik: 100,
+  multiroomGlosnikMnoznik: 200,
+  multiroomStala: 1000,
+
+  naglosnienieBaza: 3000,
+  naglosnienieSrodkowy: 4500,
+  naglosnienieDodatekWC: 430,
+  naglosnienieKolejny: 1000,
+};
+
+export const CALCULATOR_OTHER_SYSTEMS_CATALOG_LABELS: Record<keyof CalculatorOtherSystemsCatalog, string> = {
+  lanSzafkaRack: "LAN — szafka RACK",
+  lanBaza: "LAN — baza",
+  lanDodatek: "LAN — dodatek",
+  lanZaPunktAP: "LAN — za punkt dostępowy (AP)",
+  lanDrugaSzafka: "LAN — druga szafka",
+
+  tvBaza: "TV — baza",
+  tvMultiswitchDoplata: "TV — dopłata za multiswitch",
+  tvDodatek: "TV — dodatek",
+  tvAntena: "TV — antena",
+
+  wideodomofonBaza: "Wideodomofon — baza",
+  wideodomofonLoxoneMaly: "Wideodomofon — moduł Loxone (mały)",
+  wideodomofonLoxoneDuzyDoplata: "Wideodomofon — moduł Loxone (dopłata, duży)",
+  wideodomofonDodatkowy: "Wideodomofon — dodatkowy",
+
+  monitoringRejestratorBaza: "Monitoring — rejestrator (baza)",
+  monitoringKameraStandard: "Monitoring — kamera (standard)",
+  monitoringKamera8Mpx: "Monitoring — kamera (8Mpx)",
+  monitoringWyjscieStandard: "Monitoring — wyjście (standard)",
+  monitoringWyjscie8Mpx: "Monitoring — wyjście (8Mpx)",
+  monitoringBezRejestratoraStandard: "Monitoring — bez rejestratora (standard)",
+  monitoringBezRejestratora8Mpx: "Monitoring — bez rejestratora (8Mpx)",
+  monitoringSzafaStandard: "Monitoring — szafa (standard)",
+  monitoringSzafa8Mpx: "Monitoring — szafa (8Mpx)",
+  monitoringDodatekStandard: "Monitoring — dodatek (standard)",
+  monitoringDodatek8Mpx: "Monitoring — dodatek (8Mpx)",
+
+  multiroomBaza: "Multiroom — baza",
+  multiroomStrefaDodatkowaPowyzej4: "Multiroom — strefa dodatkowa (powyżej 4)",
+  multiroomZaGlosnik: "Multiroom — za głośnik",
+  multiroomZaSkrzynke: "Multiroom — za skrzynkę",
+  multiroomDodatek1: "Multiroom — dodatek 1",
+  multiroomStrefaBazowa: "Multiroom — strefa bazowa (za 4 strefy)",
+  multiroomDodatek2: "Multiroom — dodatek 2",
+  multiroomStrefaMnoznik: "Multiroom — mnożnik za strefę",
+  multiroomGlosnikMnoznik: "Multiroom — mnożnik za głośnik",
+  multiroomStala: "Multiroom — stała",
+
+  naglosnienieBaza: "Nagłośnienie — baza",
+  naglosnienieSrodkowy: "Nagłośnienie — środkowy",
+  naglosnienieDodatekWC: "Nagłośnienie — dopłata za głośnik w WC",
+  naglosnienieKolejny: "Nagłośnienie — kolejny",
 };
 
 /** Stawka za punkt wg typu (El rozbudowa!A2:A6, wartości bazowe bez dojazdów — patrz `referencyjnyDystansKm`). */
@@ -331,6 +481,7 @@ export type CalculatorSettings = {
   laborRatePerHour: number;
   addons: CalculatorAddonPricing;
   otherSystems: CalculatorOtherSystemPricing;
+  otherSystemsCatalog: CalculatorOtherSystemsCatalog;
   electrical: CalculatorElectricalSettings;
   discounts: CalculatorDiscountSettings;
   extras: CalculatorExtrasSettings;
@@ -343,6 +494,7 @@ export const DEFAULT_CALCULATOR_SETTINGS: CalculatorSettings = {
   laborRatePerHour: DEFAULT_LABOR_RATE_PER_HOUR,
   addons: DEFAULT_ADDON_PRICING,
   otherSystems: DEFAULT_OTHER_SYSTEM_PRICING,
+  otherSystemsCatalog: DEFAULT_OTHER_SYSTEMS_CATALOG,
   electrical: DEFAULT_ELECTRICAL_SETTINGS,
   discounts: DEFAULT_DISCOUNT_SETTINGS,
   extras: DEFAULT_EXTRAS_SETTINGS,
@@ -422,6 +574,12 @@ export function normalizeCalculatorSettings(value: unknown): CalculatorSettings 
     otherSystems[key] = asNumber(otherSystemsData[key], DEFAULT_OTHER_SYSTEM_PRICING[key]);
   }
 
+  const otherSystemsCatalogData = asObject(data.otherSystemsCatalog);
+  const otherSystemsCatalog = {} as CalculatorOtherSystemsCatalog;
+  for (const key of Object.keys(DEFAULT_OTHER_SYSTEMS_CATALOG) as (keyof CalculatorOtherSystemsCatalog)[]) {
+    otherSystemsCatalog[key] = asNumber(otherSystemsCatalogData[key], DEFAULT_OTHER_SYSTEMS_CATALOG[key]);
+  }
+
   const electricalData = asObject(data.electrical);
   const ratesData = asObject(electricalData.rates);
   const rates = {} as CalculatorElectricalRatePricing;
@@ -483,5 +641,16 @@ export function normalizeCalculatorSettings(value: unknown): CalculatorSettings 
     cenaZaDodatkowaCzujke: asNumber(extrasData.cenaZaDodatkowaCzujke, DEFAULT_EXTRAS_SETTINGS.cenaZaDodatkowaCzujke),
   };
 
-  return { baseSystem, rozdzielnia, hardware, laborRatePerHour, addons, otherSystems, electrical, discounts, extras };
+  return {
+    baseSystem,
+    rozdzielnia,
+    hardware,
+    laborRatePerHour,
+    addons,
+    otherSystems,
+    otherSystemsCatalog,
+    electrical,
+    discounts,
+    extras,
+  };
 }

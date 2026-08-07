@@ -463,10 +463,37 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
                 ))}
               </div>
               <div className="grid gap-4 sm:grid-cols-3">
+                {a.otherSystems.sieciLan ? (
+                  <>
+                    <Field label="Liczba punktów dostępowych WiFi (AP)">
+                      <NumericInput value={a.iloscAP} decimals={false} onChange={(v) => setAnswers({ iloscAP: v })} />
+                    </Field>
+                    <div className="sm:col-span-2">
+                      <Toggle label="Szafka RACK" checked={a.szafkaRackLan} onChange={(v) => setAnswers({ szafkaRackLan: v })} />
+                    </div>
+                  </>
+                ) : null}
+                {a.otherSystems.telewizja ? (
+                  <>
+                    <Toggle label="Multiswitch" checked={a.multiswitchTv} onChange={(v) => setAnswers({ multiswitchTv: v })} />
+                    <Toggle label="Szafa RACK (TV)" checked={a.szafaRackTv} onChange={(v) => setAnswers({ szafaRackTv: v })} />
+                  </>
+                ) : null}
+                {a.otherSystems.wideodomofon ? (
+                  <Toggle
+                    label="Integracja z Loxone (dopłata)"
+                    checked={a.loxoneDoplataWideodomofon}
+                    onChange={(v) => setAnswers({ loxoneDoplataWideodomofon: v })}
+                  />
+                ) : null}
                 {a.otherSystems.monitoring ? (
-                  <Field label="Liczba kamer">
-                    <NumericInput value={a.iloscKamerMonitoringu} decimals={false} onChange={(v) => setAnswers({ iloscKamerMonitoringu: v })} />
-                  </Field>
+                  <>
+                    <Field label="Liczba kamer">
+                      <NumericInput value={a.iloscKamerMonitoringu} decimals={false} onChange={(v) => setAnswers({ iloscKamerMonitoringu: v })} />
+                    </Field>
+                    <Toggle label="Rejestrator" checked={a.monitoringRejestrator} onChange={(v) => setAnswers({ monitoringRejestrator: v })} />
+                    <Toggle label="Kamery 8Mpx" checked={a.monitoring8Mpx} onChange={(v) => setAnswers({ monitoring8Mpx: v })} />
+                  </>
                 ) : null}
                 {a.otherSystems.multiroom ? (
                   <>
@@ -476,7 +503,17 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
                     <Field label="Liczba głośników multiroom">
                       <NumericInput value={a.iloscGlosnikowMultiroom} decimals={false} onChange={(v) => setAnswers({ iloscGlosnikowMultiroom: v })} />
                     </Field>
+                    <Field label="Liczba skrzynek multiroom">
+                      <NumericInput value={a.iloscSkrzynekMultiroom} decimals={false} onChange={(v) => setAnswers({ iloscSkrzynekMultiroom: v })} />
+                    </Field>
                   </>
+                ) : null}
+                {a.otherSystems.naglosnienie ? (
+                  <Toggle
+                    label="Głośnik w WC"
+                    checked={a.glosnikWcNaglosnienie}
+                    onChange={(v) => setAnswers({ glosnikWcNaglosnienie: v })}
+                  />
                 ) : null}
               </div>
             </Section>

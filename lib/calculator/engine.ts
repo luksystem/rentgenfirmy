@@ -8,7 +8,7 @@ import {
   type CalculatorFunctionalCategory,
   type CalculatorOtherSystemKey,
 } from "@/lib/calculator/types";
-import type { CalculatorHardwareCatalog, CalculatorSettings } from "@/lib/calculator/settings";
+import type { CalculatorHardwareCatalog, CalculatorOtherSystemsCatalog, CalculatorSettings } from "@/lib/calculator/settings";
 
 /**
  * Silnik przeliczeń kalkulatora — odpowiednik łańcucha arkuszy KALKULATOR -> ZESTAWIENIE ->
@@ -659,16 +659,106 @@ export type CalculatorOtherSystemsResult = {
   finalNet: number;
 };
 
-function otherSystemQuantityFactor(key: CalculatorOtherSystemKey, answers: CalculatorAnswers): number {
-  if (key === "monitoring") {
-    return answers.iloscKamerMonitoringu > 0 ? answers.iloscKamerMonitoringu / 6 : 1;
+/** LAN — InneSystemy!D13, zweryfikowane: 6660 zł (M17=true, iloscAP=6). */
+function calculateLanPrice(answers: CalculatorAnswers, cat: CalculatorOtherSystemsCatalog): number {
+  return (
+    (answers.szafkaRackLan ? cat.lanSzafkaRack : 0) +
+    cat.lanBaza +
+    cat.lanDodatek +
+    cat.lanZaPunktAP * answers.iloscAP +
+    cat.lanDrugaSzafka
+  );
+}
+
+/** Instalacja telewizyjna — InneSystemy!G13, zweryfikowane: 1920 zł. Szafa RACK reużywa ceny lanSzafkaRack (F8=C4 w źródle). */
+function calculateTvPrice(answers: CalculatorAnswers, cat: CalculatorOtherSystemsCatalog): number {
+  const antena = answers.multiswitchTv ? cat.tvAntena * 2 : cat.tvAntena;
+  return (
+    cat.tvBaza +
+    (answers.multiswitchTv ? cat.tvMultiswitchDoplata : 0) +
+    cat.tvDodatek +
+    antena +
+    (answers.szafaRackTv ? cat.lanSzafkaRack : 0)
+  );
+}
+
+/** Wideodomofon — InneSystemy!J13, zweryfikowane: 5470 zł (loxoneDoplata=true). */
+function calculateWideodomofonPrice(answers: CalculatorAnswers, cat: CalculatorOtherSystemsCatalog): number {
+  return (
+    cat.wideodomofonBaza +
+    (answers.loxoneDoplataWideodomofon ? cat.wideodomofonLoxoneMaly + cat.wideodomofonLoxoneDuzyDoplata : 0) +
+    (answers.loxoneDoplataWideodomofon ? cat.wideodomofonDodatkowy * 2 : cat.wideodomofonDodatkowy)
+  );
+}
+
+/** Monitoring — InneSystemy!M13, zweryfikowane: 13300 zł (rejestrator=true, 8Mpx=true, 8 kamer). */
+function calculateMonitoringPrice(answers: CalculatorAnswers, cat: CalculatorOtherSystemsCatalog): number {
+  const kamery = answers.iloscKamerMonitoringu;
+  const kameraCena = answers.monitoring8Mpx ? cat.monitoringKamera8Mpx : cat.monitoringKameraStandard;
+  const wyjscieCena = answers.monitoring8Mpx ? cat.monitoringWyjscie8Mpx : cat.monitoringWyjscieStandard;
+  const bezRejestratoraCena = answers.monitoring8Mpx
+    ? cat.monitoringBezRejestratora8Mpx
+    : cat.monitoringBezRejestratoraStandard;
+  const szafaCena = answers.monitoring8Mpx ? cat.monitoringSzafa8Mpx : cat.monitoringSzafaStandard;
+  const dodatekCena = answers.monitoring8Mpx ? cat.monitoringDodatek8Mpx : cat.monitoringDodatekStandard;
+
+  const rejestrator = answers.monitoringRejestrator ? 1 : 0;
+  return (
+    rejestrator * cat.monitoringRejestratorBaza +
+    (kamery > 8 ? kameraCena * 2 : kameraCena) +
+    rejestrator * wyjscieCena * kamery +
+    (rejestrator ? 0 : bezRejestratoraCena * kamery) +
+    rejestrator * szafaCena +
+    rejestrator * dodatekCena
+  );
+}
+
+/** Multiroom (w źródle mylnie podpisany "Nagłośnienie - system multiroom") — InneSystemy!S13, zweryfikowane: 6734 zł. */
+function calculateMultiroomPrice(answers: CalculatorAnswers, cat: CalculatorOtherSystemsCatalog): number {
+  const strefy = answers.iloscStrefMultiroom;
+  const glosniki = answers.iloscGlosnikowMultiroom;
+  const skrzynki = answers.iloscSkrzynekMultiroom;
+
+  return (
+    cat.multiroomBaza +
+    (strefy > 4 ? (strefy - 4) * cat.multiroomStrefaDodatkowaPowyzej4 : 0) +
+    glosniki * cat.multiroomZaGlosnik +
+    skrzynki * cat.multiroomZaSkrzynke +
+    cat.multiroomDodatek1 +
+    roundUp(strefy / 4) * cat.multiroomStrefaBazowa +
+    cat.multiroomDodatek2 +
+    (strefy * cat.multiroomStrefaMnoznik + glosniki * cat.multiroomGlosnikMnoznik + cat.multiroomStala)
+  );
+}
+
+/** Nagłośnienie — InneSystemy!P13, zweryfikowane: 8500 zł (osobna pozycja, nie wliczona w DANE!T119 w źródle). */
+function calculateNaglosnieniePrice(answers: CalculatorAnswers, cat: CalculatorOtherSystemsCatalog): number {
+  return (
+    cat.naglosnienieBaza +
+    cat.naglosnienieSrodkowy +
+    (answers.glosnikWcNaglosnienie ? cat.naglosnienieDodatekWC : 0) +
+    cat.naglosnienieKolejny
+  );
+}
+
+function otherSystemPrice(key: CalculatorOtherSystemKey, answers: CalculatorAnswers, settings: CalculatorSettings): number {
+  const cat = settings.otherSystemsCatalog;
+  switch (key) {
+    case "sieciLan":
+      return calculateLanPrice(answers, cat);
+    case "telewizja":
+      return calculateTvPrice(answers, cat);
+    case "wideodomofon":
+      return calculateWideodomofonPrice(answers, cat);
+    case "monitoring":
+      return calculateMonitoringPrice(answers, cat);
+    case "multiroom":
+      return calculateMultiroomPrice(answers, cat);
+    case "naglosnienie":
+      return calculateNaglosnieniePrice(answers, cat);
+    default:
+      return settings.otherSystems[key];
   }
-  if (key === "multiroom") {
-    const strefyRatio = answers.iloscStrefMultiroom > 0 ? answers.iloscStrefMultiroom / 4 : 1;
-    const glosnikiRatio = answers.iloscGlosnikowMultiroom > 0 ? answers.iloscGlosnikowMultiroom / 6 : 1;
-    return (strefyRatio + glosnikiRatio) / 2;
-  }
-  return 1;
 }
 
 /** Inne systemy — rabat proporcjonalny do liczby wybranych spośród wszystkich (CRM!Q7 × wybrane/wszystkie). */
@@ -678,8 +768,7 @@ export function calculateOtherSystems(
 ): CalculatorOtherSystemsResult {
   const items = CALCULATOR_OTHER_SYSTEM_KEYS.map((key) => {
     const selected = answers.otherSystems[key];
-    const factor = otherSystemQuantityFactor(key, answers);
-    let net = selected ? roundMoney(settings.otherSystems[key] * factor) : 0;
+    let net = selected ? roundMoney(otherSystemPrice(key, answers, settings)) : 0;
     if (key === "alarmTymczasowy" && selected) {
       net = roundMoney(net * Math.max(0, answers.wspolczynnikAlarmTymczasowy || 1));
     }

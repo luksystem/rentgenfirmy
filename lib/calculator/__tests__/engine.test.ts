@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { calculateAddons, calculateBaseSystem, calculateCalculatorTotals, calculateElectricalItems } from "@/lib/calculator/engine";
+import {
+  calculateAddons,
+  calculateBaseSystem,
+  calculateCalculatorTotals,
+  calculateElectricalItems,
+  calculateOtherSystems,
+} from "@/lib/calculator/engine";
 import { DEFAULT_CALCULATOR_SETTINGS } from "@/lib/calculator/settings";
 import { emptyCalculatorAnswers } from "@/lib/calculator/types";
 
@@ -256,6 +262,57 @@ describe("calculateElectricalItems — model itemizowany (ilości × stawka wg t
     const zRabatem = calculateCalculatorTotals({ ...answers, kompleksowaInstalacja: true }, DEFAULT_CALCULATOR_SETTINGS);
     expect(zRabatem.electrical.discountNet).toBeGreaterThan(0);
     expect(zRabatem.electrical.finalNet).toBeLessThan(bez.electrical.net);
+  });
+});
+
+describe("calculateOtherSystems — model BOM (LAN/TV/Wideodomofon/Monitoring/Multiroom/Nagłośnienie)", () => {
+  it("realny przykład oferty klienta — LAN=6660, TV=1920(baza, niezaznaczone), Wideodomofon=5470, Monitoring=13300, Multiroom=6734 (DANE!T119=32164 dla zaznaczonych)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.otherSystems.sieciLan = true;
+    answers.szafkaRackLan = true;
+    answers.iloscAP = 6;
+
+    answers.otherSystems.wideodomofon = true;
+    answers.loxoneDoplataWideodomofon = true;
+
+    answers.otherSystems.monitoring = true;
+    answers.monitoringRejestrator = true;
+    answers.monitoring8Mpx = true;
+    answers.iloscKamerMonitoringu = 8;
+
+    answers.otherSystems.multiroom = true;
+    answers.iloscStrefMultiroom = 2;
+    answers.iloscGlosnikowMultiroom = 4;
+    answers.iloscSkrzynekMultiroom = 0;
+
+    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const net = (key: string) => totals.otherSystems.items.find((item) => item.key === key)?.net;
+
+    expect(net("sieciLan")).toBe(6660);
+    expect(net("wideodomofon")).toBe(5470);
+    expect(net("monitoring")).toBe(13300);
+    expect(net("multiroom")).toBe(6734);
+    expect(totals.otherSystems.selectedNet).toBe(6660 + 5470 + 13300 + 6734);
+  });
+
+  it("instalacja telewizyjna — bez multiswitcha 1920 zł, z multiswitchem podwaja cenę anteny", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.otherSystems.telewizja = true;
+    const base = calculateOtherSystems(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const zMultiswitchem = calculateOtherSystems(
+      { ...answers, multiswitchTv: true },
+      DEFAULT_CALCULATOR_SETTINGS,
+    );
+
+    expect(base.items.find((item) => item.key === "telewizja")?.net).toBe(1920);
+    expect(zMultiswitchem.items.find((item) => item.key === "telewizja")?.net).toBe(1920 + 800 + 1500);
+  });
+
+  it("nagłośnienie — cena stała 8500 zł (osobna pozycja, dopłata za głośnik w WC opcjonalna)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.otherSystems.naglosnienie = true;
+    const totals = calculateOtherSystems(answers, DEFAULT_CALCULATOR_SETTINGS);
+    expect(totals.items.find((item) => item.key === "naglosnienie")?.net).toBe(8500);
   });
 });
 

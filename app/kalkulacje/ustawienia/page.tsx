@@ -12,14 +12,16 @@ import {
   CALCULATOR_ADDON_LABELS,
   CALCULATOR_ELECTRICAL_RATE_TYPES,
   CALCULATOR_ELECTRICAL_RATE_TYPE_LABELS,
-  CALCULATOR_OTHER_SYSTEM_KEYS,
   CALCULATOR_OTHER_SYSTEM_LABELS,
 } from "@/lib/calculator/types";
 import {
   CALCULATOR_HARDWARE_LABELS,
+  CALCULATOR_OTHER_SYSTEMS_CATALOG_LABELS,
   DEFAULT_CALCULATOR_SETTINGS,
   DEFAULT_HARDWARE_CATALOG,
+  DEFAULT_OTHER_SYSTEMS_CATALOG,
   type CalculatorHardwareCatalog,
+  type CalculatorOtherSystemsCatalog,
   type CalculatorSettings,
 } from "@/lib/calculator/settings";
 import { fetchCalculatorSettings, saveCalculatorSettings } from "@/lib/supabase/calculator-settings-repository";
@@ -424,14 +426,36 @@ export default function CalculatorSettingsPage() {
             </div>
           </Section>
 
-          <Section title="Inne systemy" description="Cena bazowa per system (dla domyślnych ilości).">
+          <Section
+            title="Inne systemy — ceny stałe"
+            description="Sauna i alarm tymczasowy — jedyne pozycje z prawdziwie stałą ceną (pozostałe systemy liczą się z katalogu poniżej)."
+          >
             <div className="grid gap-4 sm:grid-cols-3">
-              {CALCULATOR_OTHER_SYSTEM_KEYS.map((key) => (
+              {(["sauna", "alarmTymczasowy"] as const).map((key) => (
                 <Field key={key} label={CALCULATOR_OTHER_SYSTEM_LABELS[key]}>
                   <NumericInput
                     value={settings.otherSystems[key]}
                     disabled={loading}
                     onChange={(v) => setSettings({ ...settings, otherSystems: { ...settings.otherSystems, [key]: v } })}
+                  />
+                </Field>
+              ))}
+            </div>
+          </Section>
+
+          <Section
+            title="Inne systemy — katalog cen (LAN/TV/Wideodomofon/Monitoring/Multiroom/Nagłośnienie)"
+            description="Składowe wykorzystywane w obliczeniach — ilości i przełączniki (np. rejestrator, 8Mpx, multiswitch) dobiera silnik z odpowiedzi ankiety."
+          >
+            <div className="grid gap-4 sm:grid-cols-3">
+              {(Object.keys(DEFAULT_OTHER_SYSTEMS_CATALOG) as (keyof CalculatorOtherSystemsCatalog)[]).map((key) => (
+                <Field key={key} label={CALCULATOR_OTHER_SYSTEMS_CATALOG_LABELS[key]}>
+                  <NumericInput
+                    value={settings.otherSystemsCatalog[key]}
+                    disabled={loading}
+                    onChange={(v) =>
+                      setSettings({ ...settings, otherSystemsCatalog: { ...settings.otherSystemsCatalog, [key]: v } })
+                    }
                   />
                 </Field>
               ))}
