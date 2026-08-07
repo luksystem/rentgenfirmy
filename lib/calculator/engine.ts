@@ -132,8 +132,10 @@ function electricalRate(settings: CalculatorSettings, answers: CalculatorAnswers
  * wyposażenie instalacji (czujki/bramy/furtka/domofon/rozdzielnice pomocnicze — El rozbudowa,
  * wiersze 10–32, "BAZA SYSTEMU" peryferiów) — zweryfikowane empirycznie jako niemal stałe
  * (~4239 zł, DANE!K33) i zawsze wliczane, plus dopłata za każdą bramę garażową (+162 zł/bramę,
- * zweryfikowane ×2 -> +324) oraz przyciski PRESTIŻ/NORMAL, wycenione orientacyjnie ilość×cena z
- * ustawień (w źródle oznaczone jako "do ustalenia z Inwestorem" — patrz komentarz w types.ts).
+ * zweryfikowane ×2 -> +324) oraz przyciski szklane PRESTIŻ (CRM!O6, ręczna ilość) i plastikowe
+ * NORMAL (CRM!O7, auto-wyliczane z pomieszczeń jak w źródle, nadpisywalne ręcznie) — cena za
+ * sztukę orientacyjna, ustawialna w ustawieniach (w źródle oznaczona jako "do ustalenia z
+ * Inwestorem" — patrz komentarz w types.ts).
  */
 export function calculateElectricalItems(
   answers: CalculatorAnswers,
@@ -179,12 +181,27 @@ export function calculateElectricalItems(
   }
   if (answers.iloscPrzyciskowPrestiz > 0) {
     items.push(
-      item("przyciski_prestiz", "Przyciski PRESTIŻ", "fixed", settings.extras.cenaPrzyciskuPrestiz, answers.iloscPrzyciskowPrestiz),
+      item(
+        "przyciski_prestiz",
+        "Przyciski szklane (PRESTIŻ)",
+        "fixed",
+        settings.extras.cenaPrzyciskuPrestiz,
+        answers.iloscPrzyciskowPrestiz,
+      ),
     );
   }
-  if (answers.iloscPrzyciskowNormal > 0) {
+  const przyciskiNormalAuto =
+    (answers.komunikacja ? 2 : 0) +
+    answers.liczbaSypialniDodatkowych * 2 +
+    answers.liczbaPomieszczenWilgotnych +
+    answers.liczbaPozostalychPomieszczen +
+    answers.liczbaBramGarazowych +
+    (answers.strefaPrywatna ? 2 : 0) +
+    (answers.strefaOtwarta ? 3 : 0);
+  const przyciskiNormalQty = answers.iloscPrzyciskowNormal ?? przyciskiNormalAuto;
+  if (przyciskiNormalQty > 0) {
     items.push(
-      item("przyciski_normal", "Przyciski NORMAL", "fixed", settings.extras.cenaPrzyciskuNormal, answers.iloscPrzyciskowNormal),
+      item("przyciski_normal", "Przyciski plastikowe / dotykowe (NORMAL)", "fixed", settings.extras.cenaPrzyciskuNormal, przyciskiNormalQty),
     );
   }
 

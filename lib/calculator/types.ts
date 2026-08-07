@@ -231,12 +231,14 @@ export type CalculatorAnswers = {
   iloscKanalowTv: number | null;
   dodatkoweBruzdowanieM: number;
 
-  // Przyciski i czujki dodatkowe — pozycje, które w arkuszu źródłowym są oznaczone jako
-  // "do ustalenia z Inwestorem" (nie mają w pełni zautomatyzowanej wyceny — sterowane osobną
-  // checklistą przypisań pokój-po-pokoju) — tu wycenione uproszczenie: ilość × cena orientacyjna
-  // z ustawień, do potwierdzenia indywidualnie z klientem.
+  // Przyciski — CRM rozróżnia dwa osobne materiały/standardy: PRESTIŻ (szklane, CRM!O6 — pole
+  // ręczne, bez formuły w źródle) i NORMAL (plastikowe/dotykowe, CRM!O7 — auto-wyliczane z
+  // pomieszczeń: komunikacja×2 + sypialnie_dodatkowe×2 + wilgotne×1 + pozostałe×1 + garaże×1 +
+  // strefa_prywatna×2 + strefa_otwarta×3, nadpisywalne ręcznie jak inne pola "0 = auto" w tej
+  // sekcji). Cena za sztukę jest orientacyjna (do ustalenia z Inwestorem w źródle — patrz
+  // komentarz w settings.ts), ale ILOŚĆ dla NORMAL ma realną formułę źródłową.
   iloscPrzyciskowPrestiz: number;
-  iloscPrzyciskowNormal: number;
+  iloscPrzyciskowNormal: number | null;
   /** Dodatkowe czujki ponad standardowy zakres pakietu (CRM!O11/O14/O17) — orientacyjna dopłata. */
   iloscCzujekDodatkowychRecznie: number;
 
@@ -323,7 +325,7 @@ export function emptyCalculatorAnswers(): CalculatorAnswers {
     dodatkoweBruzdowanieM: 0,
 
     iloscPrzyciskowPrestiz: 0,
-    iloscPrzyciskowNormal: 0,
+    iloscPrzyciskowNormal: null,
     iloscCzujekDodatkowychRecznie: 0,
 
     trudnyKlientWspolczynnik: 1,

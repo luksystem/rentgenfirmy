@@ -314,14 +314,14 @@ export default function CalculatorSettingsPage() {
             description="Ceny orientacyjne — w źródłowym pliku oznaczone jako „do ustalenia z Inwestorem”, tu wycenione ilość×cena."
           >
             <div className="grid gap-4 sm:grid-cols-3">
-              <Field label="Przycisk PRESTIŻ">
+              <Field label="Przycisk szklany (PRESTIŻ)">
                 <NumericInput
                   value={settings.extras.cenaPrzyciskuPrestiz}
                   disabled={loading}
                   onChange={(v) => setSettings({ ...settings, extras: { ...settings.extras, cenaPrzyciskuPrestiz: v } })}
                 />
               </Field>
-              <Field label="Przycisk NORMAL">
+              <Field label="Przycisk plastikowy / dotykowy (NORMAL)">
                 <NumericInput
                   value={settings.extras.cenaPrzyciskuNormal}
                   disabled={loading}

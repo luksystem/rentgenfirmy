@@ -130,7 +130,7 @@ export function normalizeCalculatorAnswers(value: unknown): CalculatorAnswers {
     dodatkoweBruzdowanieM: asNumber(data.dodatkoweBruzdowanieM, fallback.dodatkoweBruzdowanieM),
 
     iloscPrzyciskowPrestiz: asNumber(data.iloscPrzyciskowPrestiz, fallback.iloscPrzyciskowPrestiz),
-    iloscPrzyciskowNormal: asNumber(data.iloscPrzyciskowNormal, fallback.iloscPrzyciskowNormal),
+    iloscPrzyciskowNormal: asNullableNumber(data.iloscPrzyciskowNormal),
     iloscCzujekDodatkowychRecznie: asNumber(data.iloscCzujekDodatkowychRecznie, fallback.iloscCzujekDodatkowychRecznie),
 
     trudnyKlientWspolczynnik: asNumber(data.trudnyKlientWspolczynnik, fallback.trudnyKlientWspolczynnik),

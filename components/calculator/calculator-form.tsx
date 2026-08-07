@@ -452,18 +452,18 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
                   Przyciski i dodatkowe czujki — ceny orientacyjne, do ustalenia indywidualnie z klientem
                 </p>
                 <div className="mt-2 grid gap-4 sm:grid-cols-3">
-                  <Field label="Przyciski PRESTIŻ — ilość">
+                  <Field label="Przyciski szklane / PRESTIŻ — ilość">
                     <NumericInput
                       value={a.iloscPrzyciskowPrestiz}
                       decimals={false}
                       onChange={(v) => setAnswers({ iloscPrzyciskowPrestiz: v })}
                     />
                   </Field>
-                  <Field label="Przyciski NORMAL — ilość">
+                  <Field label="Przyciski plastikowe / dotykowe / NORMAL — ilość (0 = auto z pomieszczeń)">
                     <NumericInput
-                      value={a.iloscPrzyciskowNormal}
+                      value={a.iloscPrzyciskowNormal ?? 0}
                       decimals={false}
-                      onChange={(v) => setAnswers({ iloscPrzyciskowNormal: v })}
+                      onChange={(v) => setAnswers({ iloscPrzyciskowNormal: v > 0 ? v : null })}
                     />
                   </Field>
                   <Field label="Dodatkowe czujki wpisane ręcznie — ilość">

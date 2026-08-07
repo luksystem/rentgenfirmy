@@ -180,7 +180,7 @@ describe("calculateElectricalItems — model itemizowany (ilości × stawka wg t
     expect(doplata?.net).toBe(324);
   });
 
-  it("przyciski PRESTIŻ/NORMAL liczone ilość × cena z ustawień (wycena orientacyjna)", () => {
+  it("przyciski szklane (PRESTIŻ) i ręcznie nadpisane plastikowe (NORMAL) liczone ilość × cena z ustawień", () => {
     const answers = emptyCalculatorAnswers();
     answers.iloscPrzyciskowPrestiz = 3;
     answers.iloscPrzyciskowNormal = 5;
@@ -191,6 +191,21 @@ describe("calculateElectricalItems — model itemizowany (ilości × stawka wg t
     expect(items.find((entry) => entry.key === "przyciski_normal")?.net).toBe(
       5 * DEFAULT_CALCULATOR_SETTINGS.extras.cenaPrzyciskuNormal,
     );
+  });
+
+  it("przyciski plastikowe (NORMAL) domyślnie auto-liczone z pomieszczeń jak CRM!O7 (gdy ilość nie nadpisana ręcznie)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.strefaPrywatna = true; // +2
+    answers.strefaOtwarta = true; // +3
+    answers.komunikacja = true; // +2
+    answers.liczbaSypialniDodatkowych = 2; // +4
+    answers.liczbaPomieszczenWilgotnych = 1; // +1
+    answers.liczbaPozostalychPomieszczen = 1; // +1
+    answers.liczbaBramGarazowych = 1; // +1
+    const items = calculateElectricalItems(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const normal = items.find((entry) => entry.key === "przyciski_normal");
+    expect(normal?.quantity).toBe(14);
+    expect(normal?.net).toBe(14 * DEFAULT_CALCULATOR_SETTINGS.extras.cenaPrzyciskuNormal);
   });
 
   it("kompleksowa instalacja daje rabat na sumę pozycji elektrycznych", () => {
