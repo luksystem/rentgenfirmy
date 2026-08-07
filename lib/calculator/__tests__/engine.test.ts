@@ -270,16 +270,46 @@ describe("calculateCalculatorTotals — pozostała mechanika", () => {
     );
   });
 
-  it("stacja dokująca i iPad skalują się razem z ilością (Pakiety!E65/E67)", () => {
+  it("stacja dokująca i iPad to stała ilość 1 (zweryfikowane — DANE!T89/T90 nie skalują się żadną ilością)", () => {
     const answers = emptyCalculatorAnswers();
     answers.addons.stacjaDokujacaIpad = true;
     answers.addons.ipad = true;
-    answers.iloscStacjiDokujacychZIpadem = 3;
     const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
 
     const stacja = totals.addons.find((item) => item.key === "stacjaDokujacaIpad");
     const ipad = totals.addons.find((item) => item.key === "ipad");
-    expect(stacja?.net).toBe(DEFAULT_CALCULATOR_SETTINGS.addons.stacjaDokujacaIpad * 3);
-    expect(ipad?.net).toBe(DEFAULT_CALCULATOR_SETTINGS.addons.ipad * 3);
+    expect(stacja?.net).toBe(1462.8);
+    expect(ipad?.net).toBe(2925.6);
+  });
+
+  it("dodatki BOM — realny przykład oferty klienta, suma dodatków zgodna z DANE!T118 (38616.48 zł)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.trudnyKlientWspolczynnik = 1.2;
+    answers.liczbaOkienOtwieranych = 10;
+    answers.czyOknaCzujnikiFabryczne = false;
+    answers.liczbaDrzwiWejsciowych = 1;
+    answers.liczbaRolet = 8;
+
+    answers.addons.stacjaPogodowa = true;
+    answers.addons.czujnikiOtwarciaOkien = true;
+    answers.addons.przygotowanieDostepuDrzwi = true;
+    answers.iloscElektrozaczepow = 2;
+    answers.addons.klawiaturyNfc = true;
+    answers.iloscKlawiaturNfc = 4;
+    answers.addons.oswietlenieAwaryjne = true;
+    answers.addons.bezpieczenstwoPlusPlusPlus = true;
+    answers.addons.oswietlenieSciemniane230V = true;
+    answers.iloscOswSciemniane = 4;
+    answers.addons.stacjaDokujacaIpad = true;
+    answers.addons.ipad = true;
+    answers.addons.integracjeZInnymiSystemami = true;
+    answers.integracjaKlimatyzacja = true;
+    answers.integracjaWentylacja = false;
+    answers.integracjaRekuperacja = true;
+    answers.integracjaPompaCiepla = true;
+    answers.addons.dodatkowyLicznikPradu = true;
+
+    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
+    expect(totals.addonsNet).toBe(38616.48);
   });
 });

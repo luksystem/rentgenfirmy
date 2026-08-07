@@ -112,12 +112,18 @@ export function normalizeCalculatorAnswers(value: unknown): CalculatorAnswers {
     iloscSekcjiPodlewania: asNumber(data.iloscSekcjiPodlewania, fallback.iloscSekcjiPodlewania),
 
     addons,
-    iloscStacjiDokujacychZIpadem: asNumber(data.iloscStacjiDokujacychZIpadem, fallback.iloscStacjiDokujacychZIpadem),
+    iloscElektrozaczepow: asNumber(data.iloscElektrozaczepow, fallback.iloscElektrozaczepow),
+    iloscKlawiaturNfc: asNumber(data.iloscKlawiaturNfc, fallback.iloscKlawiaturNfc),
+    iloscOswSciemniane: asNumber(data.iloscOswSciemniane, fallback.iloscOswSciemniane),
 
     otherSystems,
     iloscKamerMonitoringu: asNumber(data.iloscKamerMonitoringu, fallback.iloscKamerMonitoringu),
     iloscStrefMultiroom: asNumber(data.iloscStrefMultiroom, fallback.iloscStrefMultiroom),
     iloscGlosnikowMultiroom: asNumber(data.iloscGlosnikowMultiroom, fallback.iloscGlosnikowMultiroom),
+    integracjaKlimatyzacja: asBoolean(data.integracjaKlimatyzacja, fallback.integracjaKlimatyzacja),
+    integracjaWentylacja: asBoolean(data.integracjaWentylacja, fallback.integracjaWentylacja),
+    integracjaRekuperacja: asBoolean(data.integracjaRekuperacja, fallback.integracjaRekuperacja),
+    integracjaPompaCiepla: asBoolean(data.integracjaPompaCiepla, fallback.integracjaPompaCiepla),
 
     instalacjaDoGlosnikow: asBoolean(data.instalacjaDoGlosnikow, fallback.instalacjaDoGlosnikow),
     instalacjaDoMonitoringu: asBoolean(data.instalacjaDoMonitoringu, fallback.instalacjaDoMonitoringu),

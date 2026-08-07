@@ -397,14 +397,57 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
                   <Toggle key={key} label={CALCULATOR_ADDON_LABELS[key]} checked={a.addons[key]} onChange={(v) => toggleAddon(key, v)} />
                 ))}
               </div>
-              {a.addons.stacjaDokujacaIpad || a.addons.ipad ? (
-                <Field label="Ilość stacji dokujących z iPadem" className="sm:max-w-xs">
-                  <NumericInput
-                    value={a.iloscStacjiDokujacychZIpadem}
-                    decimals={false}
-                    onChange={(v) => setAnswers({ iloscStacjiDokujacychZIpadem: v })}
-                  />
-                </Field>
+              <div className="grid gap-4 sm:grid-cols-3">
+                {a.addons.przygotowanieDostepuDrzwi ? (
+                  <Field label="Ilość elektrozaczepów">
+                    <NumericInput
+                      value={a.iloscElektrozaczepow}
+                      decimals={false}
+                      onChange={(v) => setAnswers({ iloscElektrozaczepow: v })}
+                    />
+                  </Field>
+                ) : null}
+                {a.addons.klawiaturyNfc ? (
+                  <Field label="Ilość klawiatur NFC">
+                    <NumericInput value={a.iloscKlawiaturNfc} decimals={false} onChange={(v) => setAnswers({ iloscKlawiaturNfc: v })} />
+                  </Field>
+                ) : null}
+                {a.addons.oswietlenieSciemniane230V ? (
+                  <Field label="Ilość obwodów ściemnianych 230V">
+                    <NumericInput
+                      value={a.iloscOswSciemniane}
+                      decimals={false}
+                      onChange={(v) => setAnswers({ iloscOswSciemniane: v })}
+                    />
+                  </Field>
+                ) : null}
+              </div>
+              {a.addons.integracjeZInnymiSystemami ? (
+                <div>
+                  <p className="text-sm font-medium text-foreground">Integracje z innymi systemami — które?</p>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <Toggle
+                      label="Klimatyzacja"
+                      checked={a.integracjaKlimatyzacja}
+                      onChange={(v) => setAnswers({ integracjaKlimatyzacja: v })}
+                    />
+                    <Toggle
+                      label="Wentylacja"
+                      checked={a.integracjaWentylacja}
+                      onChange={(v) => setAnswers({ integracjaWentylacja: v })}
+                    />
+                    <Toggle
+                      label="Rekuperacja"
+                      checked={a.integracjaRekuperacja}
+                      onChange={(v) => setAnswers({ integracjaRekuperacja: v })}
+                    />
+                    <Toggle
+                      label="Pompa ciepła"
+                      checked={a.integracjaPompaCiepla}
+                      onChange={(v) => setAnswers({ integracjaPompaCiepla: v })}
+                    />
+                  </div>
+                </div>
               ) : null}
             </Section>
 

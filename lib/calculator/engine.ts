@@ -494,16 +494,47 @@ export type CalculatorAddonResult = {
   net: number;
 };
 
-/** Ilość jest istotna tylko dla stacji dokującej i iPada (skalują się razem, wzorem Pakiety!E65/E67). */
+/**
+ * Ilość per pozycja dodatku — zweryfikowana 1:1 na realnym przykładzie oferty (DANE!T77:T94, przez
+ * ZESTAWIENIE!AI-column formuły). Większość pozycji to stała ilość 1 (proste włącz/wyłącz), kilka
+ * skaluje się z realnymi parametrami domu.
+ */
 function addonQuantity(key: CalculatorAddonKey, answers: CalculatorAnswers): number {
-  return key === "stacjaDokujacaIpad" || key === "ipad" ? Math.max(1, answers.iloscStacjiDokujacychZIpadem) : 1;
+  switch (key) {
+    case "czujnikiOtwarciaOkien":
+      return answers.liczbaOkienOtwieranych;
+    case "przygotowanieDostepuDrzwi":
+      return answers.iloscElektrozaczepow;
+    case "klawiaturyNfc":
+      return answers.iloscKlawiaturNfc;
+    case "oswietlenieSciemniane230V":
+      return roundUp(answers.iloscOswSciemniane / 4);
+    case "bezpieczenstwoPlusPlusPlus":
+      return 2; // El rozbudowa/DANE — stała ilość niezależna od parametrów domu (zweryfikowane)
+    case "integracjeZInnymiSystemami":
+      return (
+        (answers.integracjaKlimatyzacja ? 1 : 0) +
+        (answers.integracjaWentylacja ? 1 : 0) +
+        (answers.integracjaRekuperacja ? 1 : 0) +
+        (answers.integracjaPompaCiepla ? 1 : 0)
+      );
+    default:
+      return 1;
+  }
+}
+
+/** "Rozdzielnia +++" (przeszklona) to jedyny dodatek bez współczynnika "trudny klient" w źródle (DANE!T94: flat 3500). */
+function addonAppliesTrudnyKlient(key: CalculatorAddonKey): boolean {
+  return key !== "rozdzielniaPlusPlusPlus";
 }
 
 export function calculateAddons(answers: CalculatorAnswers, settings: CalculatorSettings): CalculatorAddonResult[] {
+  const wspSzefa = Math.max(0, answers.trudnyKlientWspolczynnik || 1);
   return CALCULATOR_ADDON_KEYS.map((key) => {
     const selected = answers.addons[key];
     const quantity = addonQuantity(key, answers);
-    const net = selected ? roundMoney(settings.addons[key] * quantity) : 0;
+    const coefficient = addonAppliesTrudnyKlient(key) ? wspSzefa : 1;
+    const net = selected ? roundMoney(settings.addons[key] * Math.max(0, quantity) * coefficient) : 0;
     return { key, selected, quantity, net };
   });
 }

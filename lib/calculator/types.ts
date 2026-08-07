@@ -63,6 +63,8 @@ export const CALCULATOR_ADDON_KEYS = [
   "przyciskUkryty",
   "stacjaDokujacaIpad",
   "ipad",
+  "oswietlenieAwaryjne",
+  "integracjeZInnymiSystemami",
 ] as const;
 export type CalculatorAddonKey = (typeof CALCULATOR_ADDON_KEYS)[number];
 
@@ -72,16 +74,18 @@ export const CALCULATOR_ADDON_LABELS: Record<CalculatorAddonKey, string> = {
   oswietlenieKoloroweRGBW: "Oświetlenie kolorowe RGBW",
   czujnikiOtwarciaOkien: "Czujniki otwarcia okien",
   klawiaturyNfc: "Klawiatury dostępowe NFC",
-  przygotowanieDostepuDrzwi: "Przygotowanie dostępu do drzwi",
-  bezpieczenstwoPlusPlusPlus: "Bezpieczeństwo +++",
+  przygotowanieDostepuDrzwi: "Elektrozaczep do drzwi",
+  bezpieczenstwoPlusPlusPlus: "Dodatkowe czujki bezpieczeństwa (dym/uśpienie)",
   sterowaneGniazda: "Sterowane gniazda",
   dodatkowyLicznikPradu: "Dodatkowy licznik prądu",
-  dodatkowyZasilaczUps: "Dodatkowy zasilacz UPS",
+  dodatkowyZasilaczUps: "Dodatkowy zasilacz UPS (rolety)",
   rozdzielniaPlusPlusPlus: "Rozdzielnia +++ (przeszklona)",
   budzikInteligentny: "Budzik inteligentny",
   przyciskUkryty: "Przycisk ukryty Touch Surface",
   stacjaDokujacaIpad: "Stacja dokująca do iPada",
   ipad: "iPad",
+  oswietlenieAwaryjne: "Oświetlenie awaryjne (podtrzymanie LED)",
+  integracjeZInnymiSystemami: "Integracje z innymi systemami (klimatyzacja/wentylacja/rekuperacja/pompa ciepła)",
 };
 
 export const CALCULATOR_OTHER_SYSTEM_KEYS = [
@@ -223,15 +227,27 @@ export type CalculatorAnswers = {
   /** DANE — domyślnie 4, "STANDARD" założenie biura (nie CRM), feeduje kategorię Zewnętrzne. */
   iloscSekcjiPodlewania: number;
 
-  // Dodatki — checkbox per pozycja
+  // Dodatki — checkbox per pozycja, ilości dla pozycji skalujących się z parametrami domu
+  // (zweryfikowane 1:1 na realnym przykładzie oferty, DANE!T77:T94)
   addons: Record<CalculatorAddonKey, boolean>;
-  iloscStacjiDokujacychZIpadem: number;
+  /** CRM!O13 "Ilość elektrozaczepów" — feeduje dodatek "Elektrozaczep do drzwi". */
+  iloscElektrozaczepow: number;
+  /** CRM!O12 "Ilości klawiatur NFC" — feeduje dodatek "Klawiatury dostępowe NFC". */
+  iloscKlawiaturNfc: number;
+  /** CRM!O10 "Ośw.ściemniane 230V" — feeduje dodatek "Oświetlenie ściemniane 230V" (ROUNDUP/4). */
+  iloscOswSciemniane: number;
 
   // Inne systemy — checkbox per system + ich ilości
   otherSystems: Record<CalculatorOtherSystemKey, boolean>;
   iloscKamerMonitoringu: number;
   iloscStrefMultiroom: number;
   iloscGlosnikowMultiroom: number;
+  // Integracje z innymi systemami (CRM!M2:M5) — nie mają własnej ceny w "Inne systemy", tylko
+  // zasilają ilość w dodatku "integracjeZInnymiSystemami" (DANE!T91, CRM!L30/Q5).
+  integracjaKlimatyzacja: boolean;
+  integracjaWentylacja: boolean;
+  integracjaRekuperacja: boolean;
+  integracjaPompaCiepla: boolean;
 
   // Instalacja elektryczna — toggle'e (CRM!U2:U12)
   instalacjaDoGlosnikow: boolean;
@@ -327,7 +343,9 @@ export function emptyCalculatorAnswers(): CalculatorAnswers {
       CalculatorAddonKey,
       boolean
     >,
-    iloscStacjiDokujacychZIpadem: 1,
+    iloscElektrozaczepow: 1,
+    iloscKlawiaturNfc: 2,
+    iloscOswSciemniane: 4,
 
     otherSystems: Object.fromEntries(CALCULATOR_OTHER_SYSTEM_KEYS.map((key) => [key, false])) as Record<
       CalculatorOtherSystemKey,
@@ -336,6 +354,10 @@ export function emptyCalculatorAnswers(): CalculatorAnswers {
     iloscKamerMonitoringu: 6,
     iloscStrefMultiroom: 4,
     iloscGlosnikowMultiroom: 6,
+    integracjaKlimatyzacja: false,
+    integracjaWentylacja: false,
+    integracjaRekuperacja: false,
+    integracjaPompaCiepla: false,
 
     instalacjaDoGlosnikow: false,
     instalacjaDoMonitoringu: false,

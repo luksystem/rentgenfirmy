@@ -152,22 +152,28 @@ export const CALCULATOR_HARDWARE_LABELS: Record<keyof CalculatorHardwareCatalog,
 
 export type CalculatorAddonPricing = Record<CalculatorAddonKey, number>;
 
+/**
+ * Cena jednostkowa dodatku (DANE!T77:T94), zweryfikowana 1:1 na realnym przykładzie oferty —
+ * ilość per pozycja liczy silnik (patrz calculateAddons w engine.ts), tu tylko cena za sztukę.
+ */
 export const DEFAULT_ADDON_PRICING: CalculatorAddonPricing = {
   stacjaPogodowa: 3150,
-  oswietlenieSciemniane230V: 2300,
-  oswietlenieKoloroweRGBW: 1400,
-  czujnikiOtwarciaOkien: 400,
-  klawiaturyNfc: 3900,
-  przygotowanieDostepuDrzwi: 0,
-  bezpieczenstwoPlusPlusPlus: 0,
-  sterowaneGniazda: 2700,
-  dodatkowyLicznikPradu: 1850,
+  oswietlenieSciemniane230V: 2316.1,
+  oswietlenieKoloroweRGBW: 687.6,
+  czujnikiOtwarciaOkien: 270,
+  klawiaturyNfc: 1950.4,
+  przygotowanieDostepuDrzwi: 731.4,
+  bezpieczenstwoPlusPlusPlus: 609.5,
+  sterowaneGniazda: 2681.8,
+  dodatkowyLicznikPradu: 1828.5,
   dodatkowyZasilaczUps: 1900,
-  rozdzielniaPlusPlusPlus: 4600,
+  rozdzielniaPlusPlusPlus: 3500,
   budzikInteligentny: 1500,
   przyciskUkryty: 1500,
-  stacjaDokujacaIpad: 1000,
-  ipad: 2500,
+  stacjaDokujacaIpad: 1462.8,
+  ipad: 2925.6,
+  oswietlenieAwaryjne: 1462.8,
+  integracjeZInnymiSystemami: 1950.4,
 };
 
 export type CalculatorOtherSystemPricing = Record<CalculatorOtherSystemKey, number>;
