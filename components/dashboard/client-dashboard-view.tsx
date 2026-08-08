@@ -1089,6 +1089,8 @@ export function ClientDashboardView({
                 liveTemplate={template!}
                 process={process}
                 actorName={teamAuthorName}
+                projectName={selectedProject.name}
+                onNavigateToStageReports={() => setActiveTab("stage-reports")}
               />
             )}
           </div>

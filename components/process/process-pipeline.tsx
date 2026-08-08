@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Circle,
   FileCheck2,
+  FileText,
   LayoutGrid,
   Loader2,
   Lock,
@@ -133,6 +134,18 @@ type ProcessPipelineProps = {
   stageResponsible?: Record<string, StageResponsible>;
   /** D46 — odświeżenie stageResponsible po zapisaniu lidera etapu (dane wyliczane, żyją u rodzica). */
   onStageLeadChanged?: () => void;
+  /** Kamienie milowe gotowe do wygenerowania raportu etapowego (wszystkie elementy ukończone,
+   *  raport jeszcze nie istnieje) — pozwala pokazać przycisk generowania wprost przy kamieniu. */
+  readyMilestoneIds?: Set<string>;
+  /** Id kamienia w trakcie generowania raportu — dla stanu "Generowanie…" na przycisku. */
+  generatingMilestoneId?: string | null;
+  /** Id kamienia, dla którego raport właśnie powstał w tej sesji — pokazuje link do zakładki
+   *  raportów zamiast przycisku generowania. */
+  justGeneratedMilestoneId?: string | null;
+  /** Wygenerowanie raportu etapowego dla danego kamienia wprost z widoku procesu. */
+  onGenerateReport?: (milestoneId: string) => void;
+  /** Przejście do zakładki "Raporty etapowe" po wygenerowaniu. */
+  onNavigateToStageReports?: () => void;
 };
 
 export function ProcessPipeline({
@@ -162,6 +175,11 @@ export function ProcessPipeline({
   activeStageHealth,
   stageResponsible,
   onStageLeadChanged,
+  readyMilestoneIds,
+  generatingMilestoneId,
+  justGeneratedMilestoneId,
+  onGenerateReport,
+  onNavigateToStageReports,
 }: ProcessPipelineProps) {
   const [activeItem, setActiveItem] = useState<ProcessItem | null>(null);
   // D44 — etap otwartego elementu; potrzebny, by element bez wlasnego przypisania odziedziczyl
@@ -694,6 +712,38 @@ export function ProcessPipeline({
                             <MilestoneDateBadge date={plannedDate} />
                           )}
                         </div>
+
+                        {onGenerateReport && readyMilestoneIds?.has(milestone.id) ? (
+                          <div className="mt-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              disabled={generatingMilestoneId === milestone.id}
+                              onClick={() => onGenerateReport(milestone.id)}
+                            >
+                              <FileText className="mr-1.5 h-3.5 w-3.5" />
+                              {generatingMilestoneId === milestone.id
+                                ? "Generowanie…"
+                                : "Generuj raport etapowy"}
+                            </Button>
+                          </div>
+                        ) : null}
+                        {justGeneratedMilestoneId === milestone.id ? (
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-emerald-300">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Raport wygenerowany.
+                            {onNavigateToStageReports ? (
+                              <button
+                                type="button"
+                                onClick={onNavigateToStageReports}
+                                className="underline hover:text-emerald-200"
+                              >
+                                Przejdź do zakładki Raporty etapowe
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
 
                         <div className="mt-3 grid gap-2">
                           {milestone.items

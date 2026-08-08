@@ -15,7 +15,13 @@ import {
 import { hasFullAppAccess, isAdministratorRole } from "@/lib/auth/types";
 import { resolveAnchoredProcessTemplate } from "@/lib/process/anchored-template";
 import type { ProcessTemplate, ProjectProcess } from "@/lib/process/types";
+import { findReadyMilestones } from "@/lib/stage-report/ready-milestones";
 import { fetchStageHealth } from "@/lib/supabase/stage-health-repository";
+import {
+  fetchStageReports,
+  fetchStageReportsPilotEnabled,
+  generateStageReport,
+} from "@/lib/supabase/stage-report-repository";
 import {
   fetchStageResponsible,
   indexStageResponsibleByStageId,
@@ -41,12 +47,19 @@ export function ProjectProcessPipelineSection({
   liveTemplate,
   process,
   actorName,
+  projectName,
+  onNavigateToStageReports,
 }: {
   projectId: string;
   projectType: string;
   liveTemplate: ProcessTemplate;
   process: ProjectProcess;
   actorName?: string;
+  /** Wymagane tylko razem z możliwością generowania raportu wprost z widoku procesu. */
+  projectName?: string;
+  /** Po wygenerowaniu raportu — przejście do zakładki "Raporty etapowe", żeby dokończyć
+   *  komentarz/zatwierdzenie. Brak propa = generowanie zostaje niedostępne w tym widoku. */
+  onNavigateToStageReports?: () => void;
 }) {
   const profile = useAuthStore((state) => state.profile);
   const displayName = useAuthStore((state) => state.displayName);
@@ -89,6 +102,13 @@ export function ProjectProcessPipelineSection({
   // powodu co stageResponsible: to informacja wewnętrzna, ProcessPipeline renderuje też publiczny
   // dashboard klienta.
   const [communicationGate, setCommunicationGate] = useState<ProjectCommunicationGate | null>(null);
+  // Generowanie raportu wprost z widoku procesu — te same dane co panel "Raporty etapowe"
+  // (findReadyMilestones, współdzielone), tylko pobrane tutaj zamiast zmuszać do przełączania
+  // zakładki, żeby sprawdzić, czy kamień jest gotowy.
+  const [readyMilestoneIds, setReadyMilestoneIds] = useState<Set<string>>(new Set());
+  const [generatingMilestoneId, setGeneratingMilestoneId] = useState<string | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+  const [justGeneratedMilestoneId, setJustGeneratedMilestoneId] = useState<string | null>(null);
 
   const anchoredTemplate = useMemo(
     () => resolveAnchoredProcessTemplate(process, liveTemplate),
@@ -173,6 +193,52 @@ export function ProjectProcessPipelineSection({
       cancelled = true;
     };
   }, [projectId]);
+
+  const reloadReadyMilestones = useCallback(() => {
+    if (!onNavigateToStageReports || !anchoredTemplate) return;
+    void (async () => {
+      try {
+        const pilotEnabled = await fetchStageReportsPilotEnabled(projectId);
+        if (!pilotEnabled) {
+          setReadyMilestoneIds(new Set());
+          return;
+        }
+        const reports = await fetchStageReports(projectId);
+        const existingIds = new Set(reports.map((r) => r.milestoneId));
+        const ready = findReadyMilestones(anchoredTemplate, process.completions ?? {}, existingIds);
+        setReadyMilestoneIds(new Set(ready.map((m) => m.milestoneId)));
+      } catch {
+        // Generowanie z widoku procesu jest dodatkiem — brak danych nie ma blokować pipeline'u,
+        // po prostu żaden kamień nie pokaże się jako gotowy.
+        setReadyMilestoneIds(new Set());
+      }
+    })();
+  }, [anchoredTemplate, onNavigateToStageReports, process.completions, projectId]);
+
+  useEffect(() => {
+    reloadReadyMilestones();
+  }, [reloadReadyMilestones]);
+
+  async function handleGenerateReport(milestoneId: string) {
+    if (!profile || !projectName || !anchoredTemplate) return;
+    const stage = anchoredTemplate.stages.find((s) => s.milestones.some((m) => m.id === milestoneId));
+    if (!stage) return;
+    setGeneratingMilestoneId(milestoneId);
+    setGenerateError(null);
+    try {
+      await generateStageReport(projectId, projectName, stage.id, milestoneId, profile.id);
+      setReadyMilestoneIds((current) => {
+        const next = new Set(current);
+        next.delete(milestoneId);
+        return next;
+      });
+      setJustGeneratedMilestoneId(milestoneId);
+    } catch (error) {
+      setGenerateError(error instanceof Error ? error.message : "Nie udało się wygenerować raportu.");
+    } finally {
+      setGeneratingMilestoneId(null);
+    }
+  }
 
   async function handleConfirmSync() {
     setSyncing(true);
@@ -262,7 +328,13 @@ export function ProjectProcessPipelineSection({
         onAddItem={(milestoneId, input) => addProjectProcessItem(projectId, milestoneId, input)}
         onRemoveItem={(itemId) => removeProjectProcessItem(projectId, itemId)}
         activeStageHealth={stageHealth}
+        readyMilestoneIds={readyMilestoneIds}
+        generatingMilestoneId={generatingMilestoneId}
+        justGeneratedMilestoneId={justGeneratedMilestoneId}
+        onGenerateReport={canManageAssignment ? (milestoneId) => void handleGenerateReport(milestoneId) : undefined}
+        onNavigateToStageReports={onNavigateToStageReports}
       />
+      {generateError ? <p className="mt-2 text-sm text-rose-400">{generateError}</p> : null}
 
       <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
         <DialogContent>

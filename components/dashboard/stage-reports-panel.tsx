@@ -20,8 +20,8 @@ import {
   updateStageReportComment,
 } from "@/lib/supabase/stage-report-repository";
 import { renderStageReportText } from "@/lib/stage-report/render";
+import { findReadyMilestones, type ReadyMilestone } from "@/lib/stage-report/ready-milestones";
 import { STAGE_REPORT_STATUS_LABELS, type StageReport, type StageReportDelivery } from "@/lib/stage-report/types";
-import type { ProcessTemplate } from "@/lib/process/types";
 import { useAuthStore } from "@/store/auth-store";
 
 const STATUS_TONES: Record<StageReport["status"], "waiting" | "blue" | "active"> = {
@@ -29,32 +29,6 @@ const STATUS_TONES: Record<StageReport["status"], "waiting" | "blue" | "active">
   zatwierdzony: "blue",
   wyslany: "active",
 };
-
-type ReadyMilestone = { stageId: string; stageTitle: string; milestoneId: string; milestoneTitle: string };
-
-function findReadyMilestones(
-  template: ProcessTemplate,
-  completions: Record<string, { completedAt: string } | undefined>,
-  existingMilestoneIds: Set<string>,
-): ReadyMilestone[] {
-  const ready: ReadyMilestone[] = [];
-  for (const stage of template.stages) {
-    for (const milestone of stage.milestones) {
-      if (milestone.items.length === 0) continue;
-      if (existingMilestoneIds.has(milestone.id)) continue;
-      const allDone = milestone.items.every((item) => completions[item.id]?.completedAt);
-      if (allDone) {
-        ready.push({
-          stageId: stage.id,
-          stageTitle: stage.title,
-          milestoneId: milestone.id,
-          milestoneTitle: milestone.title,
-        });
-      }
-    }
-  }
-  return ready;
-}
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
