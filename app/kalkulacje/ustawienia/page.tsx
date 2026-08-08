@@ -236,6 +236,23 @@ export default function CalculatorSettingsPage() {
             </div>
           </Section>
 
+          <Section
+            title="Koszty zakupu — sprzęt (WEWNĘTRZNE)"
+            description="Realna cena zakupu per pozycja — do panelu marży w widoku oferty. Nigdy nie pojawia się w PDF ani na publicznym linku dla klienta. Domyślnie 0 — dopóki nie uzupełnisz, panel pokaże 100% marży na sprzęcie."
+          >
+            <div className="grid gap-4 sm:grid-cols-3">
+              {(Object.keys(DEFAULT_HARDWARE_CATALOG) as (keyof CalculatorHardwareCatalog)[]).map((key) => (
+                <Field key={key} label={CALCULATOR_HARDWARE_LABELS[key]}>
+                  <NumericInput
+                    value={settings.hardwareCost[key]}
+                    disabled={loading}
+                    onChange={(v) => setSettings({ ...settings, hardwareCost: { ...settings.hardwareCost, [key]: v } })}
+                  />
+                </Field>
+              ))}
+            </div>
+          </Section>
+
           <Section title="Instalacja elektryczna — stawki wg typu punktu">
             <div className="grid gap-4 sm:grid-cols-4">
               {CALCULATOR_ELECTRICAL_RATE_TYPES.map((type) => (
@@ -431,6 +448,23 @@ export default function CalculatorSettingsPage() {
                     value={settings.addons[key]}
                     disabled={loading}
                     onChange={(v) => setSettings({ ...settings, addons: { ...settings.addons, [key]: v } })}
+                  />
+                </Field>
+              ))}
+            </div>
+          </Section>
+
+          <Section
+            title="Koszty zakupu — dodatki (WEWNĘTRZNE)"
+            description="Jak wyżej — realna cena zakupu, tylko do panelu marży, nigdy nie widoczna klientowi."
+          >
+            <div className="grid gap-4 sm:grid-cols-3">
+              {CALCULATOR_ADDON_KEYS.map((key) => (
+                <Field key={key} label={CALCULATOR_ADDON_LABELS[key]}>
+                  <NumericInput
+                    value={settings.addonsCost[key]}
+                    disabled={loading}
+                    onChange={(v) => setSettings({ ...settings, addonsCost: { ...settings.addonsCost, [key]: v } })}
                   />
                 </Field>
               ))}

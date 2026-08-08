@@ -1,5 +1,6 @@
 import {
   CALCULATOR_ADDON_KEYS,
+  CALCULATOR_ADDON_LABELS,
   CALCULATOR_FUNCTIONAL_CATEGORIES,
   CALCULATOR_OTHER_SYSTEM_KEYS,
   type CalculatorAddonKey,
@@ -131,25 +132,17 @@ function calculateElectricalPointsTotal(answers: CalculatorAnswers, settings: Ca
  * wybrano dodatek "Czujniki otwarcia okien" — te same wyjazdy montażowe co dla pozostałych
  * elementów instalacji.
  */
-function calculateBazaZasilania(answers: CalculatorAnswers, settings: CalculatorSettings): number {
+export type CalculatorLogistykaBreakdown = {
+  /** Koszt realny wyjazdów (paliwo/dieta/nocleg/opłata stała/godziny dojazdu), BEZ mnożnika trudny klient. */
+  costNet: number;
+  /** To samo × trudny klient — dokładnie wartość, jaka dziś wchodzi do bazaZasilanieNet (cena dla klienta). */
+  sellNet: number;
+};
+
+/** Wydzielone z calculateBazaZasilania, żeby panel kosztu/marży mógł pokazać koszt logistyki osobno od ceny dla klienta — bez zmiany samej formuły. */
+function calculateLogistyka(answers: CalculatorAnswers, settings: CalculatorSettings): CalculatorLogistykaBreakdown {
   const b = settings.bazaZasilania;
-  const wieleKondygnacji = answers.liczbaKondygnacji > 1;
-  const rozdzielniaWspolczynnik = Math.max(0, answers.wspolczynnikRozdzielnica || 1);
   const wspSzefa = Math.max(0, answers.trudnyKlientWspolczynnik || 1);
-
-  const wstepnaKonfiguracja =
-    (wieleKondygnacji ? b.wstepnaKonfiguracjaWieleKondygnacji : b.wstepnaKonfiguracjaJednaKondygnacja) * rozdzielniaWspolczynnik;
-
-  const automatykaPodstawa =
-    (answers.rozszerzenieKnx ? b.automatykaPodstawaKnx : b.automatykaPodstawaStandard) +
-    (answers.tylkoRozdzielnia ? b.tylkoRozdzielniaSprzet : 0);
-
-  const zasilaczeLed =
-    rgbwModuleQty(answers) * b.zasilaczeLedZaModulRgbw +
-    (answers.addons.dodatkowyZasilaczUps ? b.zasilaczeLedUpsRoletyDoplata : 0);
-  const zasilanie = b.zasilanieBuforoweRezerwowe + (answers.rozszerzenieKnx ? b.zasilanieKnxDoplata : 0);
-  const linkiMaterialy = wieleKondygnacji ? b.linkiMaterialyWieleKondygnacji : b.linkiMaterialyJednaKondygnacja;
-  const zasilanieIDodatki = zasilaczeLed + zasilanie + linkiMaterialy + b.oznaczniki;
 
   const selectedFunctionalCount =
     (answers.alarmIKontrolaDostepu ? 1 : 0) +
@@ -167,7 +160,30 @@ function calculateBazaZasilania(answers: CalculatorAnswers, settings: Calculator
   const sumaOsobodniMinusDzien = 3 * (czujnikiOtwarciaWyjazd - 1) + 3 * (selectedFunctionalCount - 1) + 3;
   const nocleg = dist > b.logistykaProgNoclegowKm ? b.logistykaNoclegStawka * sumaOsobodniMinusDzien : 0;
 
-  const logistyka = (paliwo + dieta + nocleg + b.logistykaStalaOplata + godziny) * wspSzefa;
+  const costNet = paliwo + dieta + nocleg + b.logistykaStalaOplata + godziny;
+  return { costNet, sellNet: costNet * wspSzefa };
+}
+
+function calculateBazaZasilania(answers: CalculatorAnswers, settings: CalculatorSettings): number {
+  const b = settings.bazaZasilania;
+  const wieleKondygnacji = answers.liczbaKondygnacji > 1;
+  const rozdzielniaWspolczynnik = Math.max(0, answers.wspolczynnikRozdzielnica || 1);
+
+  const wstepnaKonfiguracja =
+    (wieleKondygnacji ? b.wstepnaKonfiguracjaWieleKondygnacji : b.wstepnaKonfiguracjaJednaKondygnacja) * rozdzielniaWspolczynnik;
+
+  const automatykaPodstawa =
+    (answers.rozszerzenieKnx ? b.automatykaPodstawaKnx : b.automatykaPodstawaStandard) +
+    (answers.tylkoRozdzielnia ? b.tylkoRozdzielniaSprzet : 0);
+
+  const zasilaczeLed =
+    rgbwModuleQty(answers) * b.zasilaczeLedZaModulRgbw +
+    (answers.addons.dodatkowyZasilaczUps ? b.zasilaczeLedUpsRoletyDoplata : 0);
+  const zasilanie = b.zasilanieBuforoweRezerwowe + (answers.rozszerzenieKnx ? b.zasilanieKnxDoplata : 0);
+  const linkiMaterialy = wieleKondygnacji ? b.linkiMaterialyWieleKondygnacji : b.linkiMaterialyJednaKondygnacja;
+  const zasilanieIDodatki = zasilaczeLed + zasilanie + linkiMaterialy + b.oznaczniki;
+
+  const logistyka = calculateLogistyka(answers, settings).sellNet;
 
   return roundMoney(wstepnaKonfiguracja + automatykaPodstawa + zasilanieIDodatki + logistyka);
 }
@@ -692,6 +708,8 @@ export type CalculatorAddonResult = {
   key: CalculatorAddonKey;
   selected: boolean;
   quantity: number;
+  /** Cena jednostkowa z cennika, BEZ mnożnika trudny klient — punkt odniesienia dla panelu kosztu/marży. */
+  unitPrice: number;
   net: number;
 };
 
@@ -765,9 +783,10 @@ export function calculateAddons(answers: CalculatorAnswers, settings: Calculator
   return CALCULATOR_ADDON_KEYS.map((key) => {
     const selected = answers.addons[key];
     const quantity = addonQuantity(key, answers);
+    const unitPrice = addonUnitPrice(key, answers, settings);
     const coefficient = addonAppliesTrudnyKlient(key) ? wspSzefa : 1;
-    const net = selected ? roundMoney(addonUnitPrice(key, answers, settings) * Math.max(0, quantity) * coefficient) : 0;
-    return { key, selected, quantity, net };
+    const net = selected ? roundMoney(unitPrice * Math.max(0, quantity) * coefficient) : 0;
+    return { key, selected, quantity, unitPrice, net };
   });
 }
 
@@ -962,5 +981,97 @@ export function calculateCalculatorTotals(answers: CalculatorAnswers, settings: 
     mainNet,
     platnoscZGoryDiscountNet,
     totalNet,
+  };
+}
+
+export type CalculatorCostLine = {
+  key: string;
+  label: string;
+  quantity: number;
+  unitCost: number;
+  costNet: number;
+  unitPrice: number;
+  priceNet: number;
+};
+
+/**
+ * Szacunek kosztu wewnętrznego i marży — WYŁĄCZNIE sprzęt (kategorie funkcjonalne + dodatki) i
+ * logistyka, zgodnie z zakresem ustalonym z właścicielem. Instalacja elektryczna i "inne systemy"
+ * (LAN/TV/monitoring/itd.) NIE są tu liczone — ich cena w silniku nie jest jeszcze rozbita na
+ * pojedyncze zakupione pozycje sprzętu, więc `trackedPriceNet`/`trackedCostNet` to CZĘŚĆ oferty,
+ * nie cały totalNet. Koszty domyślnie 0 dopóki biuro nie uzupełni realnych cen zakupu w ustawieniach
+ * (`hardwareCost`/`addonsCost`) — wtedy marża pokazuje 100%, celowo, żeby nie sugerować fałszywej
+ * dokładności zgadniętą liczbą. WEWNĘTRZNE — nigdy nie pokazywać klientowi (PDF/publiczny link).
+ */
+export type CalculatorCostEstimate = {
+  hardwareLines: CalculatorCostLine[];
+  hardwareCostNet: number;
+  hardwarePriceNet: number;
+  logistykaCostNet: number;
+  logistykaPriceNet: number;
+  trackedCostNet: number;
+  trackedPriceNet: number;
+  marginNet: number;
+  marginPercent: number;
+};
+
+export function calculateCalculatorCostEstimate(
+  answers: CalculatorAnswers,
+  settings: CalculatorSettings,
+  totals: CalculatorTotals,
+): CalculatorCostEstimate {
+  const hardwareLines: CalculatorCostLine[] = [];
+
+  for (const category of totals.functional) {
+    for (const item of category.items) {
+      const unitCost = settings.hardwareCost[item.key as keyof CalculatorHardwareCatalog] ?? 0;
+      hardwareLines.push({
+        key: item.key,
+        label: item.label,
+        quantity: item.quantity,
+        unitCost,
+        costNet: roundMoney(item.quantity * unitCost),
+        unitPrice: item.unitPrice,
+        priceNet: roundMoney(item.net),
+      });
+    }
+  }
+
+  for (const addon of totals.addons) {
+    if (!addon.selected || addon.quantity <= 0) continue;
+    const unitCost = settings.addonsCost[addon.key] ?? 0;
+    hardwareLines.push({
+      key: addon.key,
+      label: CALCULATOR_ADDON_LABELS[addon.key],
+      quantity: addon.quantity,
+      unitCost,
+      costNet: roundMoney(addon.quantity * unitCost),
+      unitPrice: addon.unitPrice,
+      priceNet: roundMoney(addon.quantity * addon.unitPrice),
+    });
+  }
+
+  const hardwareCostNet = roundMoney(hardwareLines.reduce((sum, line) => sum + line.costNet, 0));
+  const hardwarePriceNet = roundMoney(hardwareLines.reduce((sum, line) => sum + line.priceNet, 0));
+
+  const logistyka = calculateLogistyka(answers, settings);
+  const logistykaCostNet = roundMoney(logistyka.costNet);
+  const logistykaPriceNet = roundMoney(logistyka.sellNet);
+
+  const trackedCostNet = roundMoney(hardwareCostNet + logistykaCostNet);
+  const trackedPriceNet = roundMoney(hardwarePriceNet + logistykaPriceNet);
+  const marginNet = roundMoney(trackedPriceNet - trackedCostNet);
+  const marginPercent = trackedPriceNet > 0 ? roundMoney((marginNet / trackedPriceNet) * 100) : 0;
+
+  return {
+    hardwareLines,
+    hardwareCostNet,
+    hardwarePriceNet,
+    logistykaCostNet,
+    logistykaPriceNet,
+    trackedCostNet,
+    trackedPriceNet,
+    marginNet,
+    marginPercent,
   };
 }

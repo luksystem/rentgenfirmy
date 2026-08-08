@@ -2,12 +2,19 @@ import { describe, expect, it } from "vitest";
 import {
   calculateAddons,
   calculateBaseSystem,
+  calculateCalculatorCostEstimate,
   calculateCalculatorTotals,
   calculateElectricalItems,
   calculateFunctionalBudgets,
   calculateOtherSystems,
 } from "@/lib/calculator/engine";
-import { DEFAULT_CALCULATOR_SETTINGS } from "@/lib/calculator/settings";
+import {
+  DEFAULT_ADDON_PRICING,
+  DEFAULT_BAZA_ZASILANIA_SETTINGS,
+  DEFAULT_CALCULATOR_SETTINGS,
+  DEFAULT_HARDWARE_CATALOG,
+  type CalculatorSettings,
+} from "@/lib/calculator/settings";
 import { emptyCalculatorAnswers } from "@/lib/calculator/types";
 
 /**
@@ -615,5 +622,80 @@ describe("calculateCalculatorTotals — pozostała mechanika", () => {
     const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
     const item = totals.otherSystems.items.find((entry) => entry.key === "sauna");
     expect(item?.net).toBe(5430);
+  });
+});
+
+describe("calculateCalculatorCostEstimate — koszt zakupu sprzętu i logistyki (marża wewnętrzna)", () => {
+  it("liczy koszt/cenę per pozycja sprzętu i dodatku, oraz koszt/cenę logistyki, niezależnie od siebie", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.scenyOswietleniowe = true;
+    answers.liczbaPomieszczenZOknami = 5; // satelWOptimum=false, czyCzujkiRecznie=false -> czujkaLoxoneQty = max(0, 5-3) = 2
+    answers.addons.ipad = true; // ilość dodatku "ipad" zawsze = 1 (addonQuantity default case)
+    answers.odlegloscKm = 10; // poniżej progu diety (80km) i noclegu (120km) -> tylko paliwo+stała opłata+godziny
+
+    const settings: CalculatorSettings = {
+      ...DEFAULT_CALCULATOR_SETTINGS,
+      hardwareCost: { ...DEFAULT_CALCULATOR_SETTINGS.hardwareCost, czujkaLoxone: 200 },
+      addonsCost: { ...DEFAULT_CALCULATOR_SETTINGS.addonsCost, ipad: 1500 },
+    };
+
+    const totals = calculateCalculatorTotals(answers, settings);
+    const estimate = calculateCalculatorCostEstimate(answers, settings, totals);
+
+    const czujkaLine = estimate.hardwareLines.find((line) => line.key === "czujkaLoxone");
+    expect(czujkaLine?.quantity).toBe(2);
+    expect(czujkaLine?.unitCost).toBe(200);
+    expect(czujkaLine?.costNet).toBe(400);
+    expect(czujkaLine?.unitPrice).toBe(DEFAULT_HARDWARE_CATALOG.czujkaLoxone);
+    expect(czujkaLine?.priceNet).toBe(2 * DEFAULT_HARDWARE_CATALOG.czujkaLoxone);
+
+    const ipadLine = estimate.hardwareLines.find((line) => line.key === "ipad");
+    expect(ipadLine?.quantity).toBe(1);
+    expect(ipadLine?.unitCost).toBe(1500);
+    expect(ipadLine?.costNet).toBe(1500);
+    expect(ipadLine?.priceNet).toBe(DEFAULT_ADDON_PRICING.ipad);
+
+    expect(estimate.hardwareCostNet).toBe(400 + 1500);
+    expect(estimate.hardwarePriceNet).toBe(2 * DEFAULT_HARDWARE_CATALOG.czujkaLoxone + DEFAULT_ADDON_PRICING.ipad);
+
+    const expectedLogistykaCost =
+      10 * DEFAULT_BAZA_ZASILANIA_SETTINGS.logistykaPaliwoZaKm +
+      DEFAULT_BAZA_ZASILANIA_SETTINGS.logistykaStalaOplata +
+      10 * DEFAULT_BAZA_ZASILANIA_SETTINGS.logistykaGodzinowaZaKm;
+    expect(estimate.logistykaCostNet).toBeCloseTo(expectedLogistykaCost, 2);
+    // trudny klient domyślnie 0 -> silnik traktuje jako współczynnik 1 (Math.max(0, 0 || 1))
+    expect(estimate.logistykaPriceNet).toBe(estimate.logistykaCostNet);
+
+    expect(estimate.trackedCostNet).toBeCloseTo(estimate.hardwareCostNet + estimate.logistykaCostNet, 2);
+    expect(estimate.trackedPriceNet).toBeCloseTo(estimate.hardwarePriceNet + estimate.logistykaPriceNet, 2);
+    expect(estimate.marginNet).toBeCloseTo(estimate.trackedPriceNet - estimate.trackedCostNet, 2);
+    expect(estimate.marginPercent).toBeCloseTo((estimate.marginNet / estimate.trackedPriceNet) * 100, 2);
+  });
+
+  it("bez uzupełnionych kosztów zakupu sprzętu (domyślnie 0) marża na sprzęcie wynosi 100%, ale opłata stała logistyki nadal jest realnym kosztem nawet przy odległości=0", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.scenyOswietleniowe = true;
+    answers.liczbaPomieszczenZOknami = 5;
+    answers.odlegloscKm = 0;
+
+    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const estimate = calculateCalculatorCostEstimate(answers, DEFAULT_CALCULATOR_SETTINGS, totals);
+
+    expect(estimate.hardwareCostNet).toBe(0);
+    expect(estimate.hardwarePriceNet).toBeGreaterThan(0);
+    // Przy odległości=0 paliwo/dieta/nocleg/godziny wynoszą 0 — zostaje tylko opłata stała.
+    expect(estimate.logistykaCostNet).toBe(DEFAULT_BAZA_ZASILANIA_SETTINGS.logistykaStalaOplata);
+    expect(estimate.trackedCostNet).toBe(estimate.logistykaCostNet);
+  });
+
+  it("niezaznaczony/zerowy dodatek nie trafia do listy pozycji sprzętu; sama opłata logistyczna stała nie ma dziś marży (koszt = cena)", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.odlegloscKm = 0;
+    const totals = calculateCalculatorTotals(answers, DEFAULT_CALCULATOR_SETTINGS);
+    const estimate = calculateCalculatorCostEstimate(answers, DEFAULT_CALCULATOR_SETTINGS, totals);
+    expect(estimate.hardwareLines).toEqual([]);
+    expect(estimate.trackedCostNet).toBe(DEFAULT_BAZA_ZASILANIA_SETTINGS.logistykaStalaOplata);
+    expect(estimate.trackedPriceNet).toBe(estimate.trackedCostNet);
+    expect(estimate.marginPercent).toBe(0);
   });
 });

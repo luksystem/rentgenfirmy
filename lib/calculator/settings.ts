@@ -260,6 +260,39 @@ export const CALCULATOR_HARDWARE_LABELS: Record<keyof CalculatorHardwareCatalog,
   czujnikDeszczuZestaw: "Czujnik deszczu + zasilacz + zawory podlewania",
 };
 
+/**
+ * Koszt zakupu per pozycja katalogu sprzętu — WEWNĘTRZNE, nigdy nie pokazywane klientowi (nie w
+ * PDF, nie na publicznym linku ofertowym). Domyślnie 0 dla wszystkich pozycji — dopóki biuro nie
+ * uzupełni realnych cen zakupu w ustawieniach, panel marży pokaże 100% marży na sprzęcie (celowo,
+ * żeby nie sugerować fałszywej dokładności zgadniętą liczbą).
+ */
+export type CalculatorHardwareCostCatalog = Record<keyof CalculatorHardwareCatalog, number>;
+
+export const DEFAULT_HARDWARE_COST_CATALOG: CalculatorHardwareCostCatalog = {
+  relayLoxone14: 0,
+  rgbwModule: 0,
+  czujkaLoxone: 0,
+  extensionDI: 0,
+  zaworOdciecia: 0,
+  centralaAlarmowa: 0,
+  intKnx: 0,
+  syrenaAlarmowa: 0,
+  czujkiSufitowe: 0,
+  czujkiDualne: 0,
+  czujkiBezpieczenstwaSprzet: 0,
+  kontaktronBrama: 0,
+  kontaktronOknoDrzwiStandard: 0,
+  kontaktronOknoDrzwiFabryczne: 0,
+  czujkaZalania: 0,
+  klawiaturaMala: 0,
+  klawiaturaGarazStrefowa: 0,
+  silownikSalus: 0,
+  glowicaGrzejnika: 0,
+  czujniki1Wire: 0,
+  oneWireExt: 0,
+  czujnikDeszczuZestaw: 0,
+};
+
 export type CalculatorAddonPricing = Record<CalculatorAddonKey, number>;
 
 /**
@@ -290,6 +323,34 @@ export const DEFAULT_ADDON_PRICING: CalculatorAddonPricing = {
   konsultacjeZdalne24_7: 3000,
   przedluzenieGwarancji12Miesiecy: 4000,
   gwarancjaCenyOfertowej: 1500,
+};
+
+/** Koszt zakupu per dodatek — WEWNĘTRZNE, jak `CalculatorHardwareCostCatalog` powyżej. Domyślnie 0. */
+export type CalculatorAddonCostPricing = Record<CalculatorAddonKey, number>;
+
+export const DEFAULT_ADDON_COST_PRICING: CalculatorAddonCostPricing = {
+  stacjaPogodowa: 0,
+  oswietlenieSciemniane230V: 0,
+  oswietlenieKoloroweRGBW: 0,
+  czujnikiOtwarciaOkien: 0,
+  klawiaturyNfc: 0,
+  przygotowanieDostepuDrzwi: 0,
+  bezpieczenstwoPlusPlusPlus: 0,
+  sterowaneGniazda: 0,
+  dodatkowyLicznikPradu: 0,
+  dodatkowyZasilaczUps: 0,
+  rozdzielniaPlusPlusPlus: 0,
+  budzikInteligentny: 0,
+  przyciskUkryty: 0,
+  stacjaDokujacaIpad: 0,
+  ipad: 0,
+  oswietlenieAwaryjne: 0,
+  integracjeZInnymiSystemami: 0,
+  dokumentacjaPowykonawcza: 0,
+  ustaleniaZInnymiBranzami: 0,
+  konsultacjeZdalne24_7: 0,
+  przedluzenieGwarancji12Miesiecy: 0,
+  gwarancjaCenyOfertowej: 0,
 };
 
 export type CalculatorOtherSystemPricing = Record<CalculatorOtherSystemKey, number>;
@@ -559,8 +620,11 @@ export type CalculatorSettings = {
   bazaZasilania: CalculatorBazaZasilaniaSettings;
   rozdzielnia: CalculatorRozdzielniaSettings;
   hardware: CalculatorHardwareCatalog;
+  /** Koszty zakupu — WEWNĘTRZNE (marża), patrz komentarze przy typach powyżej. */
+  hardwareCost: CalculatorHardwareCostCatalog;
   laborRatePerHour: number;
   addons: CalculatorAddonPricing;
+  addonsCost: CalculatorAddonCostPricing;
   otherSystems: CalculatorOtherSystemPricing;
   otherSystemsCatalog: CalculatorOtherSystemsCatalog;
   electrical: CalculatorElectricalSettings;
@@ -573,8 +637,10 @@ export const DEFAULT_CALCULATOR_SETTINGS: CalculatorSettings = {
   bazaZasilania: DEFAULT_BAZA_ZASILANIA_SETTINGS,
   rozdzielnia: DEFAULT_ROZDZIELNIA_SETTINGS,
   hardware: DEFAULT_HARDWARE_CATALOG,
+  hardwareCost: DEFAULT_HARDWARE_COST_CATALOG,
   laborRatePerHour: DEFAULT_LABOR_RATE_PER_HOUR,
   addons: DEFAULT_ADDON_PRICING,
+  addonsCost: DEFAULT_ADDON_COST_PRICING,
   otherSystems: DEFAULT_OTHER_SYSTEM_PRICING,
   otherSystemsCatalog: DEFAULT_OTHER_SYSTEMS_CATALOG,
   electrical: DEFAULT_ELECTRICAL_SETTINGS,
@@ -640,12 +706,22 @@ export function normalizeCalculatorSettings(value: unknown): CalculatorSettings 
   for (const key of Object.keys(DEFAULT_HARDWARE_CATALOG) as (keyof CalculatorHardwareCatalog)[]) {
     hardware[key] = asNumber(hardwareData[key], DEFAULT_HARDWARE_CATALOG[key]);
   }
+  const hardwareCostData = asObject(data.hardwareCost);
+  const hardwareCost = {} as CalculatorHardwareCostCatalog;
+  for (const key of Object.keys(DEFAULT_HARDWARE_COST_CATALOG) as (keyof CalculatorHardwareCostCatalog)[]) {
+    hardwareCost[key] = asNumber(hardwareCostData[key], DEFAULT_HARDWARE_COST_CATALOG[key]);
+  }
   const laborRatePerHour = asNumber(data.laborRatePerHour, DEFAULT_LABOR_RATE_PER_HOUR);
 
   const addonsData = asObject(data.addons);
   const addons = {} as CalculatorAddonPricing;
   for (const key of CALCULATOR_ADDON_KEYS) {
     addons[key] = asNumber(addonsData[key], DEFAULT_ADDON_PRICING[key]);
+  }
+  const addonsCostData = asObject(data.addonsCost);
+  const addonsCost = {} as CalculatorAddonCostPricing;
+  for (const key of CALCULATOR_ADDON_KEYS) {
+    addonsCost[key] = asNumber(addonsCostData[key], DEFAULT_ADDON_COST_PRICING[key]);
   }
 
   const otherSystemsData = asObject(data.otherSystems);
@@ -726,8 +802,10 @@ export function normalizeCalculatorSettings(value: unknown): CalculatorSettings 
     bazaZasilania,
     rozdzielnia,
     hardware,
+    hardwareCost,
     laborRatePerHour,
     addons,
+    addonsCost,
     otherSystems,
     otherSystemsCatalog,
     electrical,

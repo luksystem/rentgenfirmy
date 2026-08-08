@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { buildContractFromCalculatorOffer } from "@/lib/calculator/to-contract";
-import { calculateCalculatorTotals } from "@/lib/calculator/engine";
+import { calculateCalculatorCostEstimate, calculateCalculatorTotals } from "@/lib/calculator/engine";
 import { DEFAULT_CALCULATOR_SETTINGS, type CalculatorSettings } from "@/lib/calculator/settings";
 import { fetchCalculatorSettings } from "@/lib/supabase/calculator-settings-repository";
 import { fetchCompanyProfile } from "@/lib/supabase/company-profile-repository";
@@ -80,6 +80,7 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [materialsOpen, setMaterialsOpen] = useState(false);
+  const [costOpen, setCostOpen] = useState(false);
 
   useEffect(() => {
     void fetchCalculatorSettings().then(setSettings).catch(() => undefined);
@@ -125,6 +126,11 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
 
     return groups;
   }, [totals]);
+
+  const costEstimate = useMemo(
+    () => calculateCalculatorCostEstimate(offer.answers, settings, totals),
+    [offer.answers, settings, totals],
+  );
 
   function setAnswers(patch: Partial<CalculatorAnswers>) {
     setOffer((prev) => ({ ...prev, answers: { ...prev.answers, ...patch } }));
@@ -810,6 +816,98 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
                     </div>
                   </div>
                 ))}
+              </CardContent>
+            ) : null}
+          </Card>
+        ) : null}
+
+        {costEstimate.hardwareLines.length > 0 || costEstimate.trackedCostNet > 0 || costEstimate.trackedPriceNet > 0 ? (
+          <Card>
+            <button
+              type="button"
+              onClick={() => setCostOpen((v) => !v)}
+              className="flex w-full items-center gap-3 px-5 py-4 text-left"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className={cn("h-4 w-4 shrink-0 text-muted transition-transform", costOpen && "rotate-90")}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+              <span className="flex-1">
+                <span className="flex flex-wrap items-center gap-2">
+                  <CardTitle>Koszt i marża</CardTitle>
+                  <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                    Wewnętrzne — nie pokazuj klientowi
+                  </span>
+                </span>
+                <p className="mt-1 text-sm text-muted">
+                  Koszt zakupu sprzętu i logistyki wobec ceny w tej ofercie. Instalacja elektryczna i inne systemy
+                  (LAN/TV/monitoring itd.) nie są tu jeszcze liczone — nie mają rozbicia na pojedyncze pozycje sprzętu.
+                </p>
+              </span>
+            </button>
+            {costOpen ? (
+              <CardContent className="grid gap-5 pt-0">
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-lg border border-border/60 bg-surface-muted/30 p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted">Koszt (sprzęt + logistyka)</p>
+                    <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+                      {formatMoney(costEstimate.trackedCostNet)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border/60 bg-surface-muted/30 p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted">Cena (ta sama część oferty)</p>
+                    <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+                      {formatMoney(costEstimate.trackedPriceNet)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-accent/40 bg-accent/5 p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted">Marża</p>
+                    <p className="mt-1 text-lg font-semibold tabular-nums text-accent">
+                      {formatMoney(costEstimate.marginNet)} · {costEstimate.marginPercent.toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-1.5 sm:grid-cols-2">
+                  <Row label="Koszt logistyki (wyjazd)" value={costEstimate.logistykaCostNet} />
+                  <Row label="Cena logistyki dla klienta" value={costEstimate.logistykaPriceNet} muted />
+                </div>
+
+                {costEstimate.hardwareLines.length > 0 ? (
+                  <div className="overflow-x-auto rounded-lg border border-border/60">
+                    <table className="w-full min-w-[560px] text-sm">
+                      <thead>
+                        <tr className="border-b border-border/60 bg-surface-muted/30 text-left text-xs uppercase tracking-wide text-muted">
+                          <th className="px-3 py-2 font-medium">Element</th>
+                          <th className="px-3 py-2 text-right font-medium">Ilość</th>
+                          <th className="px-3 py-2 text-right font-medium">Koszt jedn.</th>
+                          <th className="px-3 py-2 text-right font-medium">Koszt</th>
+                          <th className="px-3 py-2 text-right font-medium">Wartość wg cennika</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {costEstimate.hardwareLines.map((line) => (
+                          <tr key={line.key} className="border-b border-border/40 last:border-b-0">
+                            <td className="px-3 py-2">{line.label}</td>
+                            <td className="px-3 py-2 text-right tabular-nums">
+                              {Number.isInteger(line.quantity) ? line.quantity : line.quantity.toFixed(2)}
+                            </td>
+                            <td className="px-3 py-2 text-right tabular-nums text-muted">{formatMoney(line.unitCost)}</td>
+                            <td className="px-3 py-2 text-right tabular-nums">{formatMoney(line.costNet)}</td>
+                            <td className="px-3 py-2 text-right tabular-nums text-muted">{formatMoney(line.priceNet)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
               </CardContent>
             ) : null}
           </Card>
