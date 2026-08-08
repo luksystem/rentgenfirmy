@@ -5,14 +5,19 @@ import { useEffect, useMemo, useState } from "react";
 import { RuleEditor } from "@/components/calculator/rule-editor";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { Input, Select } from "@/components/ui/input";
+import { Field, Input, Select } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { buildScope, evaluateRules } from "@/lib/calculator/rules-engine";
 import { sampleCalculatorAnswers } from "@/lib/calculator/rules-sample-answers";
 import {
+  CALCULATOR_LABOR_ROLES,
+  CALCULATOR_LABOR_ROLE_LABELS,
   CALCULATOR_RULE_CATEGORIES,
   DEFAULT_CALCULATOR_RULES,
+  DEFAULT_LABOR_ROLE_RATES,
   type CalculatorRule,
   type CalculatorRuleCategory,
+  type LaborRoleRates,
 } from "@/lib/calculator/rules-types";
 import { DEFAULT_CALCULATOR_SETTINGS, type CalculatorSettings } from "@/lib/calculator/settings";
 import { fetchCalculatorRules, saveCalculatorRules } from "@/lib/supabase/calculator-rules-repository";
@@ -38,6 +43,7 @@ function emptyFlatRule(category: CalculatorRuleCategory): CalculatorRule {
     notes: null,
     contributesToTotal: true,
     roundingGroup: null,
+    roundEachMultiplier: false,
     kind: "flat",
     amount: 0,
   };
@@ -45,6 +51,7 @@ function emptyFlatRule(category: CalculatorRuleCategory): CalculatorRule {
 
 export default function CalculatorRulesPage() {
   const [rules, setRules] = useState<CalculatorRule[]>(DEFAULT_CALCULATOR_RULES);
+  const [laborRoleRates, setLaborRoleRates] = useState<LaborRoleRates>(DEFAULT_LABOR_ROLE_RATES);
   const [settings, setSettings] = useState<CalculatorSettings>(DEFAULT_CALCULATOR_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -55,7 +62,8 @@ export default function CalculatorRulesPage() {
   useEffect(() => {
     void Promise.all([fetchCalculatorRules(), fetchCalculatorSettings()])
       .then(([loadedRules, loadedSettings]) => {
-        setRules(loadedRules);
+        setRules(loadedRules.rules);
+        setLaborRoleRates(loadedRules.laborRoleRates);
         setSettings(loadedSettings);
       })
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : "Nie udało się wczytać reguł."))
@@ -64,23 +72,23 @@ export default function CalculatorRulesPage() {
 
   const preview = useMemo(() => {
     const answers = sampleCalculatorAnswers();
-    const scope = buildScope(answers, settings);
+    const scope = buildScope(answers, settings, laborRoleRates);
     try {
       return evaluateRules(rules, scope);
     } catch {
       return null;
     }
-  }, [rules, settings]);
+  }, [rules, settings, laborRoleRates]);
 
   const knownVariables = useMemo(() => {
     const answers = sampleCalculatorAnswers();
-    const scope = buildScope(answers, settings);
+    const scope = buildScope(answers, settings, laborRoleRates);
     const names = new Set(Object.keys(scope));
     for (const rule of rules) {
       names.add(rule.key.split(".").pop() ?? rule.key);
     }
     return names;
-  }, [rules, settings]);
+  }, [rules, settings, laborRoleRates]);
 
   function updateRule(index: number, next: CalculatorRule) {
     setRules((prev) => prev.map((r, i) => (i === index ? next : r)));
@@ -92,12 +100,17 @@ export default function CalculatorRulesPage() {
     setRules((prev) => [...prev, emptyFlatRule(category)]);
   }
 
+  function updateRoleRate(role: (typeof CALCULATOR_LABOR_ROLES)[number], amount: number) {
+    setLaborRoleRates((prev) => ({ ...prev, [role]: amount }));
+  }
+
   async function handleSave() {
     setSaving(true);
     setError(null);
     try {
-      const saved = await saveCalculatorRules(rules);
-      setRules(saved);
+      const saved = await saveCalculatorRules(rules, laborRoleRates);
+      setRules(saved.rules);
+      setLaborRoleRates(saved.laborRoleRates);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Nie udało się zapisać reguł.");
     } finally {
@@ -150,6 +163,17 @@ export default function CalculatorRulesPage() {
         <p className="text-lg font-bold tabular-nums text-accent">
           {preview ? `${formatMoney(preview.total)} netto` : "błąd w jednej z formuł — sprawdź czerwone pozycje"}
         </p>
+      </div>
+
+      <div className="mb-5 rounded-2xl border border-border bg-surface px-4 py-3 shadow-card">
+        <p className="mb-2 text-sm font-medium text-foreground">Stawki ról (robocizna doliczana do pozycji cennika)</p>
+        <div className="flex flex-wrap gap-4">
+          {CALCULATOR_LABOR_ROLES.map((role) => (
+            <Field key={role} label={`${CALCULATOR_LABOR_ROLE_LABELS[role]} — zł/h`} className="w-36">
+              <NumericInput value={laborRoleRates[role]} onChange={(v) => updateRoleRate(role, v)} />
+            </Field>
+          ))}
+        </div>
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-2">

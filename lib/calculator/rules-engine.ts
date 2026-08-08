@@ -10,11 +10,15 @@
 
 import { evaluateFormula, type FormulaScope } from "@/lib/calculator/formula";
 import {
+  CALCULATOR_LABOR_ROLES,
+  DEFAULT_LABOR_ROLE_RATES,
   isConditionalPrice,
   isFormulaPrice,
   scopeVariableName,
+  scopeVariableNameForRoleRate,
   type CalculatorRule,
   type CalculatorRuleCategory,
+  type LaborRoleRates,
   type QuantitySource,
   type RulePrice,
 } from "@/lib/calculator/rules-types";
@@ -60,12 +64,24 @@ function evaluateRuleAmount(rule: CalculatorRule, scope: FormulaScope): number {
     case "quantity":
       return resolveQuantity(rule.quantity, scope) * resolvePrice(rule.unitPrice, scope);
     case "bom": {
-      const linesTotal = rule.lines.reduce(
+      // Materiały i robocizna sumowane OSOBNO (materiałyTotal + laborTotal na końcu), a nie per-linia
+      // (ilość × (cena+robocizna)) — replikuje dokładną kolejność dodawań ze źródła (sprzet + godziny×stawka),
+      // istotną przy zaokrągleniach na granicy (patrz roundEachMultiplier w rules-types.ts).
+      const linesMaterialTotal = rule.lines.reduce(
         (sum, line) => sum + resolveQuantity(line.quantity, scope) * resolvePrice(line.unitPrice, scope),
         0,
       );
-      const laborTotal = rule.labor ? resolveQuantity(rule.labor.hours, scope) * rule.labor.ratePerHour : 0;
-      return linesTotal + laborTotal;
+      const laborTotal = rule.lines.reduce((sum, line) => {
+        const quantity = resolveQuantity(line.quantity, scope);
+        const roleCost = CALCULATOR_LABOR_ROLES.reduce((roleSum, role) => {
+          const hours = line.roleHours[role] ?? 0;
+          if (hours === 0) return roleSum;
+          const rate = scope[scopeVariableNameForRoleRate(role)] ?? 0;
+          return roleSum + hours * rate;
+        }, 0);
+        return sum + quantity * roleCost;
+      }, 0);
+      return linesMaterialTotal + laborTotal;
     }
     case "formula":
       return evaluateFormula(rule.expression, scope);
@@ -113,6 +129,9 @@ export function evaluateRules(rules: CalculatorRule[], initialScope: FormulaScop
         const raw = scope[multiplierName];
         const coefficient = Math.max(0, raw || 1);
         rawValue *= coefficient;
+        if (rule.roundEachMultiplier) {
+          rawValue = roundMoney(rawValue);
+        }
       }
     }
 
@@ -182,12 +201,18 @@ function manualFields(name: string, value: number | null): FormulaScope {
 export function buildScope(
   answers: import("@/lib/calculator/types").CalculatorAnswers,
   settings: import("@/lib/calculator/settings").CalculatorSettings,
+  laborRoleRates: LaborRoleRates = DEFAULT_LABOR_ROLE_RATES,
 ): FormulaScope {
   const b = settings.bazaZasilania;
   const r = settings.rozdzielnia;
   const s = settings.baseSystem;
+  const roleRateScope: FormulaScope = {};
+  for (const role of CALCULATOR_LABOR_ROLES) {
+    roleRateScope[scopeVariableNameForRoleRate(role)] = laborRoleRates[role];
+  }
 
   return {
+    ...roleRateScope,
     // -- odpowiedzi ankiety (bool -> 0/1) --
     liczbaKondygnacji: answers.liczbaKondygnacji,
     powierzchniaM2: answers.powierzchniaM2,

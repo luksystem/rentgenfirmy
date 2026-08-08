@@ -1,7 +1,19 @@
-import { CALCULATOR_RULES_ID, normalizeCalculatorRules, type CalculatorRule } from "@/lib/calculator/rules-types";
+import {
+  CALCULATOR_RULES_ID,
+  DEFAULT_LABOR_ROLE_RATES,
+  normalizeCalculatorRules,
+  normalizeLaborRoleRates,
+  type CalculatorRule,
+  type LaborRoleRates,
+} from "@/lib/calculator/rules-types";
 import { getSupabase } from "@/lib/supabase/client";
 
-export async function fetchCalculatorRules(): Promise<CalculatorRule[]> {
+export type CalculatorRulesBundle = {
+  rules: CalculatorRule[];
+  laborRoleRates: LaborRoleRates;
+};
+
+export async function fetchCalculatorRules(): Promise<CalculatorRulesBundle> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("app_settings")
@@ -13,17 +25,29 @@ export async function fetchCalculatorRules(): Promise<CalculatorRule[]> {
     throw new Error(error.message);
   }
 
-  return normalizeCalculatorRules((data?.data as { rules?: unknown } | undefined)?.rules);
+  const raw = data?.data as { rules?: unknown; laborRoleRates?: unknown } | undefined;
+  return {
+    rules: normalizeCalculatorRules(raw?.rules),
+    laborRoleRates: normalizeLaborRoleRates(raw?.laborRoleRates),
+  };
 }
 
-export async function saveCalculatorRules(rules: CalculatorRule[]): Promise<CalculatorRule[]> {
+export async function saveCalculatorRules(
+  rules: CalculatorRule[],
+  laborRoleRates: LaborRoleRates = DEFAULT_LABOR_ROLE_RATES,
+): Promise<CalculatorRulesBundle> {
   const supabase = getSupabase();
-  const normalized = normalizeCalculatorRules(rules);
+  const normalizedRules = normalizeCalculatorRules(rules);
+  const normalizedRates = normalizeLaborRoleRates(laborRoleRates);
 
   const { data, error } = await supabase
     .from("app_settings")
     .upsert(
-      { id: CALCULATOR_RULES_ID, data: { rules: normalized }, updated_at: new Date().toISOString() },
+      {
+        id: CALCULATOR_RULES_ID,
+        data: { rules: normalizedRules, laborRoleRates: normalizedRates },
+        updated_at: new Date().toISOString(),
+      },
       { onConflict: "id" },
     )
     .select("data")
@@ -33,5 +57,9 @@ export async function saveCalculatorRules(rules: CalculatorRule[]): Promise<Calc
     throw new Error(error.message);
   }
 
-  return normalizeCalculatorRules((data.data as { rules?: unknown }).rules);
+  const raw = data.data as { rules?: unknown; laborRoleRates?: unknown };
+  return {
+    rules: normalizeCalculatorRules(raw.rules),
+    laborRoleRates: normalizeLaborRoleRates(raw.laborRoleRates),
+  };
 }

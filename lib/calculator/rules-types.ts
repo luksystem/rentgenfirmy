@@ -54,11 +54,34 @@ export type RuleTier = {
   amount: number;
 };
 
+/** Cztery role rozliczane robocizną — odpowiednik arkusza ZESTAWIENIE, komórka F70 (dziś: jedna stawka dla wszystkich). */
+export const CALCULATOR_LABOR_ROLES = ["nadzor", "projektant", "instalator", "programista"] as const;
+export type LaborRoleKey = (typeof CALCULATOR_LABOR_ROLES)[number];
+export const CALCULATOR_LABOR_ROLE_LABELS: Record<LaborRoleKey, string> = {
+  nadzor: "Nadzór",
+  projektant: "Projektant",
+  instalator: "Instalator",
+  programista: "Programista",
+};
+export type LaborRoleRates = Record<LaborRoleKey, number>;
+/** Domyślnie wszystkie role po 120 zł/h — dokładnie stawka z F70, żeby wynik nie zmienił się bez ręcznej edycji. */
+export const DEFAULT_LABOR_ROLE_RATES: LaborRoleRates = {
+  nadzor: 120,
+  projektant: 120,
+  instalator: 120,
+  programista: 120,
+};
+export function scopeVariableNameForRoleRate(role: LaborRoleKey): string {
+  return `rate_${role}`;
+}
+
 export type BomLine = {
   id: string;
   label: string;
   quantity: QuantitySource;
   unitPrice: RulePrice;
+  /** Godziny robocizny NA JEDNĄ SZTUKĘ tej pozycji, per rola — mnożone przez quantity linii i stawkę roli. Pusty/pominięty = brak robocizny. */
+  roleHours: Partial<Record<LaborRoleKey, number>>;
 };
 
 type RuleBase = {
@@ -89,6 +112,12 @@ type RuleBase = {
    * zaokrąglana niezależnie od innych, jak "Projekt" czy "Wykonanie rozdzielni").
    */
   roundingGroup: string | null;
+  /**
+   * true = po KAŻDYM zastosowaniu mnożnika z postMultipliers wynik jest zaokrąglany od razu (nie
+   * dopiero raz na końcu) — dla reguł z dwoma mnożnikami z rzędu, gdzie źródło (arkusz) też
+   * zaokrąglało dwukrotnie. Domyślnie false (jedno zaokrąglenie na końcu, jak w większości reguł).
+   */
+  roundEachMultiplier: boolean;
 };
 
 /** Nazwa zmiennej, pod jaką wynik reguły trafia do scope formuł — ostatni segment klucza ("baza.punktyElektryczne" -> "punktyElektryczne"). */
@@ -118,8 +147,6 @@ export type QuantityRule = RuleBase & {
 export type BomRule = RuleBase & {
   kind: "bom";
   lines: BomLine[];
-  /** Opcjonalna robocizna doliczana do sumy pozycji: godziny (formuła/pole) × stawka za h. */
-  labor: { hours: QuantitySource; ratePerHour: number } | null;
 };
 
 export type FormulaRule = RuleBase & {
@@ -130,7 +157,7 @@ export type FormulaRule = RuleBase & {
 export type CalculatorRule = FlatRule | TieredRule | QuantityRule | BomRule | FormulaRule;
 
 export function emptyBomLine(id: string): BomLine {
-  return { id, label: "Nowa pozycja", quantity: { type: "fixed", value: 1 }, unitPrice: 0 };
+  return { id, label: "Nowa pozycja", quantity: { type: "fixed", value: 1 }, unitPrice: 0, roleHours: {} };
 }
 
 const RULE_DEFAULTS = {
@@ -139,6 +166,7 @@ const RULE_DEFAULTS = {
   notes: null,
   contributesToTotal: true,
   roundingGroup: null,
+  roundEachMultiplier: false,
 };
 
 function formulaRule(
@@ -156,7 +184,7 @@ function tieredRule(
 function bomRule(
   partial: Pick<BomRule, "key" | "category" | "label" | "lines"> & Partial<BomRule>,
 ): BomRule {
-  return { ...RULE_DEFAULTS, kind: "bom", labor: null, ...partial };
+  return { ...RULE_DEFAULTS, kind: "bom", ...partial };
 }
 
 function quantityRule(
@@ -178,9 +206,14 @@ function fixedQty(value: number): QuantitySource {
 }
 
 let bomLineCounter = 0;
-function line(label: string, quantity: QuantitySource, unitPrice: RulePrice): BomLine {
+function line(
+  label: string,
+  quantity: QuantitySource,
+  unitPrice: RulePrice,
+  roleHours: Partial<Record<LaborRoleKey, number>> = {},
+): BomLine {
   bomLineCounter += 1;
-  return { id: `bl-${bomLineCounter}`, label, quantity, unitPrice };
+  return { id: `bl-${bomLineCounter}`, label, quantity, unitPrice, roleHours };
 }
 
 /**
@@ -396,9 +429,8 @@ export const DEFAULT_CALCULATOR_RULES: CalculatorRule[] = [
     lines: [
       line("Przekaźnik Loxone 14 kanałów", formulaQty("ROUNDUP(obwodyOswietleniaOnOff/16;0)"), 1584.7),
       line("Moduł RGBW", fieldQty("rgbwModuleQty"), 487.6),
-      line("Czujka Loxone", fieldQty("czujkaLoxoneQty"), 487.6),
+      line("Czujka Loxone", fieldQty("czujkaLoxoneQty"), 487.6, { instalator: 2 }),
     ],
-    labor: { hours: formulaQty("czujkaLoxoneQty*2"), ratePerHour: 120 },
   }),
 
   formulaRule({
@@ -465,29 +497,24 @@ export const DEFAULT_CALCULATOR_RULES: CalculatorRule[] = [
     postMultipliers: ["trudnyKlientWspolczynnik"],
     lines: [
       line("Extension DI", fieldQty("extensionDIQty"), 1828.5),
-      line("Zawór odcięcia wody", fieldQty("zaworQty"), 792.35),
-      line("Centrala Alarmowa (baza)", fieldQty("satelSlaveQty"), 4632.2),
-      line("INT-KNX", fieldQty("satelSlaveQty"), 1219.0),
-      line("Syrena alarmowa", fixedQty(1), 365.7),
-      line("Czujki sufitowe", fieldQty("czujkiSufitoweQty"), 275.6),
-      line("Czujki Dualne", fieldQty("czujkiDualneQty"), 268.18),
-      line("Czujki bezpieczeństwa (dym/uśpienie)", fieldQty("czujkiBezpieczenstwaQty"), 381.6),
-      line("Kontaktron brama", fieldQty("iloscGarazy"), 365.7),
+      line("Zawór odcięcia wody", fieldQty("zaworQty"), 792.35, { instalator: 1 }),
+      line("Centrala Alarmowa (baza)", fieldQty("satelSlaveQty"), 4632.2, { instalator: 12 }),
+      line("INT-KNX", fieldQty("satelSlaveQty"), 1219.0, { instalator: 2 }),
+      line("Syrena alarmowa", fixedQty(1), 365.7, { instalator: 2 }),
+      line("Czujki sufitowe", fieldQty("czujkiSufitoweQty"), 275.6, { instalator: 2 }),
+      line("Czujki Dualne", fieldQty("czujkiDualneQty"), 268.18, { instalator: 1 }),
+      line("Czujki bezpieczeństwa (dym/uśpienie)", fieldQty("czujkiBezpieczenstwaQty"), 381.6, { instalator: 2 }),
+      line("Kontaktron brama", fieldQty("iloscGarazy"), 365.7, { instalator: 2 }),
       line(
         "Kontaktron okno/drzwi",
         fieldQty("kontaktronOknoDrzwiQty"),
         { ifField: "czyOknaCzujnikiFabryczne", whenTrue: 120, whenFalse: 270 },
+        { instalator: 2 },
       ),
-      line("Czujka zalania", fieldQty("liczbaPomieszczenWilgotnych"), 426.65),
-      line("Klawiatura mała (SATEL)", fieldQty("satelSlaveQty"), 1340.9),
-      line("Klawiatura garaż strefowa (SATEL)", fieldQty("satelSlaveQty"), 670.45),
+      line("Czujka zalania", fieldQty("liczbaPomieszczenWilgotnych"), 426.65, { instalator: 2 }),
+      line("Klawiatura mała (SATEL)", fieldQty("satelSlaveQty"), 1340.9, { instalator: 2 }),
+      line("Klawiatura garaż strefowa (SATEL)", fieldQty("satelSlaveQty"), 670.45, { instalator: 2 }),
     ],
-    labor: {
-      hours: formulaQty(
-        "zaworQty+satelSlaveQty*18+2+czujkiSufitoweQty*2+czujkiDualneQty+czujkiBezpieczenstwaQty*2+iloscGarazy*2+kontaktronOknoDrzwiQty*2+liczbaPomieszczenWilgotnych*2",
-      ),
-      ratePerHour: 120,
-    },
   }),
 
   formulaRule({
@@ -514,10 +541,9 @@ export const DEFAULT_CALCULATOR_RULES: CalculatorRule[] = [
       line("Przekaźnik Loxone 14 kanałów", formulaQty("ROUNDUP(strefyOgrzewaniaPodlogowego/8;0)"), 1584.7),
       line("Rozszerzenie 1-Wire", formulaQty("IF(scenyOswietleniowe;1;0)"), 792.35),
       line("Siłownik Salus", formulaQty("strefyOgrzewaniaPodlogowego*2"), 146.28),
-      line("Głowica grzejnika", fieldQty("glowicaQty"), 548.55),
-      line("Czujniki 1-Wire", fieldQty("czujniki1WireQty"), 182.85),
+      line("Głowica grzejnika", fieldQty("glowicaQty"), 548.55, { instalator: 1 }),
+      line("Czujniki 1-Wire", fieldQty("czujniki1WireQty"), 182.85, { instalator: 1 }),
     ],
-    labor: { hours: formulaQty("glowicaQty+czujniki1WireQty"), ratePerHour: 120 },
   }),
 
   formulaRule({
@@ -533,8 +559,7 @@ export const DEFAULT_CALCULATOR_RULES: CalculatorRule[] = [
     label: "Rolety / żaluzje / karnisze",
     gate: "planujeRolety",
     postMultipliers: ["trudnyKlientWspolczynnik"],
-    lines: [line("Przekaźnik Loxone 14 kanałów", fieldQty("roletyRelayQty"), 1584.7)],
-    labor: { hours: formulaQty("roletyRelayQty*5"), ratePerHour: 120 },
+    lines: [line("Przekaźnik Loxone 14 kanałów", fieldQty("roletyRelayQty"), 1584.7, { instalator: 5 })],
   }),
 
   formulaRule({
@@ -544,16 +569,19 @@ export const DEFAULT_CALCULATOR_RULES: CalculatorRule[] = [
     contributesToTotal: false,
     expression: "ROUNDUP((iloscOswietlenZewnetrznych+iloscSekcjiPodlewania)/14;0)",
   }),
-  formulaRule({
+  bomRule({
     key: "funkcjonalne.zewnetrzne",
     category: "funkcjonalne",
     label: "Zewnętrzne (ogród, elewacja)",
     gate: "sterowanieOgrodem",
-    postMultipliers: ["wspolczynnikOutdoor"],
-    expression:
-      "ROUND((zewnetrzneRelayQty*1584.7+1462.8+16*120)*IF(trudnyKlientWspolczynnik>0;trudnyKlientWspolczynnik;1);2)",
+    postMultipliers: ["trudnyKlientWspolczynnik", "wspolczynnikOutdoor"],
+    roundEachMultiplier: true,
+    lines: [
+      line("Przekaźnik Loxone 14 kanałów", fieldQty("zewnetrzneRelayQty"), 1584.7),
+      line("Czujnik deszczu", fixedQty(1), 1462.8, { instalator: 16 }),
+    ],
     notes:
-      "Jedyna kategoria z dwoma mnożnikami naraz (trudny klient × współczynnik outdoor). W źródle to DWA osobne zaokrąglenia z rzędu (najpierw × trudny klient, zaokrąglenie, potem × outdoor, drugie zaokrąglenie) — stąd jawny ROUND() w środku formuły zamiast dwóch reguł postMultipliers na raz. Znalezione i naprawione dzięki szerokiemu testowi porównawczemu (rozbieżność -0,01 zł przy trudny=1,15 i outdoor=1,4).",
+      "Jedyna kategoria z dwoma mnożnikami naraz (trudny klient × współczynnik outdoor). W źródle to DWA osobne zaokrąglenia z rzędu (najpierw × trudny klient, zaokrąglenie, potem × outdoor, drugie zaokrąglenie) — stąd roundEachMultiplier zamiast pojedynczego zaokrąglenia na końcu. Znalezione i naprawione dzięki szerokiemu testowi porównawczemu (rozbieżność -0,01 zł przy trudny=1,15 i outdoor=1,4).",
   }),
 
   // ==================================================================================
@@ -1141,5 +1169,32 @@ export function normalizeCalculatorRules(value: unknown): CalculatorRule[] {
   }
   // Reguły są już w pełni ustrukturyzowanym jsonb (bez częściowych/starych kształtów do migracji na
   // razie) — walidacja poprawności formuł odbywa się przy zapisie w edytorze (validateFormula).
-  return arr as CalculatorRule[];
+  // Wyjątek: roundEachMultiplier/roleHours dopisane później — uzupełniamy brakujące wartości
+  // domyślnymi, żeby zapisy sprzed tej zmiany dalej się wczytywały bez wywrócenia UI.
+  return arr.map((raw) => {
+    const rawRule = raw as Record<string, unknown>;
+    const withDefaults = { roundEachMultiplier: false, ...rawRule } as CalculatorRule;
+    if (withDefaults.kind === "bom") {
+      return {
+        ...withDefaults,
+        lines: withDefaults.lines.map(
+          (l) => ({ roleHours: {}, ...(l as unknown as Record<string, unknown>) }) as BomLine,
+        ),
+      };
+    }
+    return withDefaults;
+  });
+}
+
+/** Normalizuje stawki ról z bazy — brakujące/błędne role dopełnia domyślną stawką (F70, 120 zł/h). */
+export function normalizeLaborRoleRates(value: unknown): LaborRoleRates {
+  const raw = (value ?? {}) as Partial<Record<LaborRoleKey, unknown>>;
+  const result = { ...DEFAULT_LABOR_ROLE_RATES };
+  for (const role of CALCULATOR_LABOR_ROLES) {
+    const candidate = raw[role];
+    if (typeof candidate === "number" && Number.isFinite(candidate)) {
+      result[role] = candidate;
+    }
+  }
+  return result;
 }

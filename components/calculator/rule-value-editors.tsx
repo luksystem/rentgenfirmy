@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import {
+  CALCULATOR_LABOR_ROLES,
+  CALCULATOR_LABOR_ROLE_LABELS,
   emptyBomLine,
   isConditionalPrice,
   isFormulaPrice,
   type BomLine,
+  type LaborRoleKey,
   type QuantitySource,
   type RuleTier,
   type RulePrice,
@@ -167,6 +170,30 @@ export function TiersEditor({ tiers, onChange }: { tiers: RuleTier[]; onChange: 
   );
 }
 
+export function RoleHoursEditor({
+  value,
+  onChange,
+}: {
+  value: Partial<Record<LaborRoleKey, number>>;
+  onChange: (next: Partial<Record<LaborRoleKey, number>>) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {CALCULATOR_LABOR_ROLES.map((role) => (
+        <div key={role} className="flex items-center gap-1.5">
+          <span className="text-[11px] text-muted">{CALCULATOR_LABOR_ROLE_LABELS[role]}</span>
+          <NumericInput
+            value={value[role] ?? 0}
+            onChange={(v) => onChange({ ...value, [role]: v === 0 ? undefined : v })}
+            className="w-16"
+          />
+        </div>
+      ))}
+      <span className="text-[11px] text-muted">godz./szt.</span>
+    </div>
+  );
+}
+
 export function BomLinesEditor({ lines, onChange }: { lines: BomLine[]; onChange: (next: BomLine[]) => void }) {
   function update(index: number, patch: Partial<BomLine>) {
     onChange(lines.map((l, i) => (i === index ? { ...l, ...patch } : l)));
@@ -196,6 +223,10 @@ export function BomLinesEditor({ lines, onChange }: { lines: BomLine[]; onChange
           <div>
             <p className="mb-1 text-[11px] uppercase tracking-wide text-muted">Cena jednostkowa</p>
             <RulePriceEditor value={line.unitPrice} onChange={(v) => update(index, { unitPrice: v })} />
+          </div>
+          <div>
+            <p className="mb-1 text-[11px] uppercase tracking-wide text-muted">Robocizna na sztukę</p>
+            <RoleHoursEditor value={line.roleHours} onChange={(v) => update(index, { roleHours: v })} />
           </div>
         </div>
       ))}

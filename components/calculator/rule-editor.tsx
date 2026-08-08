@@ -7,7 +7,12 @@ import { NumericInput } from "@/components/ui/numeric-input";
 import { validateFormula } from "@/lib/calculator/formula";
 import type { CalculatorRule } from "@/lib/calculator/rules-types";
 import { formatMoney } from "@/lib/utils";
-import { BomLinesEditor, QuantitySourceEditor, RulePriceEditor, TiersEditor } from "@/components/calculator/rule-value-editors";
+import {
+  BomLinesEditor,
+  QuantitySourceEditor,
+  RulePriceEditor,
+  TiersEditor,
+} from "@/components/calculator/rule-value-editors";
 
 const KIND_LABELS: Record<CalculatorRule["kind"], string> = {
   flat: "Stała kwota",
@@ -139,6 +144,13 @@ export function RuleEditor({
                 className="w-40 font-mono text-xs"
               />
             </div>
+            {rule.postMultipliers.length > 1 ? (
+              <Toggle
+                label="Zaokrąglaj po każdym mnożniku z osobna (nie raz na końcu)"
+                checked={rule.roundEachMultiplier}
+                onChange={(v) => patch({ roundEachMultiplier: v })}
+              />
+            ) : null}
           </div>
 
           <div>
@@ -155,14 +167,13 @@ export function RuleEditor({
                 delete base.quantity;
                 delete base.unitPrice;
                 delete base.lines;
-                delete base.labor;
                 delete base.expression;
                 if (kind === "flat") onChange({ ...(base as CalculatorRule), kind, amount: 0 } as CalculatorRule);
                 else if (kind === "tiered")
                   onChange({ ...(base as CalculatorRule), kind, input: { type: "fixed", value: 0 }, tiers: [] } as CalculatorRule);
                 else if (kind === "quantity")
                   onChange({ ...(base as CalculatorRule), kind, quantity: { type: "fixed", value: 1 }, unitPrice: 0 } as CalculatorRule);
-                else if (kind === "bom") onChange({ ...(base as CalculatorRule), kind, lines: [], labor: null } as CalculatorRule);
+                else if (kind === "bom") onChange({ ...(base as CalculatorRule), kind, lines: [] } as CalculatorRule);
                 else onChange({ ...(base as CalculatorRule), kind, expression: "" } as CalculatorRule);
               }}
               className="w-56"
@@ -205,30 +216,6 @@ export function RuleEditor({
             <div className="grid gap-3">
               <p className="text-xs font-medium text-foreground/90">Pozycje</p>
               <BomLinesEditor lines={rule.lines} onChange={(v) => patch({ lines: v })} />
-              <div className="rounded-lg border border-border/60 bg-surface-muted/30 p-3">
-                <Toggle
-                  label="Dolicz robociznę (godziny × stawka)"
-                  checked={rule.labor !== null}
-                  onChange={(v) => patch({ labor: v ? { hours: { type: "fixed", value: 0 }, ratePerHour: 120 } : null })}
-                />
-                {rule.labor ? (
-                  <div className="mt-2 grid gap-2">
-                    <div>
-                      <p className="mb-1 text-[11px] uppercase tracking-wide text-muted">Godziny</p>
-                      <QuantitySourceEditor
-                        value={rule.labor.hours}
-                        onChange={(v) => patch({ labor: { ...rule.labor!, hours: v } })}
-                      />
-                    </div>
-                    <Field label="Stawka za godzinę" className="max-w-xs">
-                      <NumericInput
-                        value={rule.labor.ratePerHour}
-                        onChange={(v) => patch({ labor: { ...rule.labor!, ratePerHour: v } })}
-                      />
-                    </Field>
-                  </div>
-                ) : null}
-              </div>
             </div>
           ) : (
             <Field label="Formuła" error={formulaError ?? undefined} invalid={Boolean(formulaError)}>
