@@ -97,6 +97,8 @@ export function evaluateRules(rules: CalculatorRule[], initialScope: FormulaScop
   const totalsByCategory = {} as Record<CalculatorRuleCategory, number>;
   /** Surowa (nieszaokrąglona) suma per (kategoria, roundingGroup) — zaokrąglana raz na końcu danej grupy. */
   const rawGroupSums = new Map<string, number>();
+  /** Ostatnio wliczony (zaokrąglony) wkład danej grupy do totalsByCategory — do odjęcia przy kolejnej aktualizacji tej samej grupy. */
+  const committedGroupContribution = new Map<string, number>();
 
   function groupKey(rule: CalculatorRule): string {
     return `${rule.category}::${rule.roundingGroup}`;
@@ -130,19 +132,28 @@ export function evaluateRules(rules: CalculatorRule[], initialScope: FormulaScop
       // wartość (dokładnie jak w źródle: calculateFunctionalBudgets zaokrągla KAŻDĄ kategorię z
       // osobna, a dopiero wywołujący sumuje te już-zaokrąglone wartości).
       totalsByCategory[rule.category] = roundMoney((totalsByCategory[rule.category] ?? 0) + roundedValue);
-      // Suma kategorii "do tej pory" pod stałą nazwą — pozwala kolejnej regule w tej samej
-      // kategorii (np. rabat proporcjonalny na końcu) odwołać się do JUŻ ZAOKRĄGLONEJ sumy
-      // poprzednich pozycji, bez ręcznego powtarzania ich formuł (patrz "inne_systemy.rabat...").
-      scope[`total_${rule.category}`] = totalsByCategory[rule.category];
     } else {
+      // Grupa: suma SUROWYCH wartości członków, zaokrąglana RAZEM. Wkład grupy do sumy kategorii
+      // jest aktualizowany PO KAŻDYM członku (nie dopiero na końcu wszystkich reguł) — inaczej
+      // reguła spoza tej kategorii, odwołująca się do total_<kategoria> (np. rabat płatności z
+      // góry na końcu CAŁEJ listy reguł), widziałaby sumę BEZ wkładu tej grupy, jeśli grupa nie
+      // jest ostatnią rzeczą w kategorii. Znalezione szerokim testem porównawczym całej oferty.
       const key = groupKey(rule);
-      rawGroupSums.set(key, (rawGroupSums.get(key) ?? 0) + rawValue);
+      const newRawSum = (rawGroupSums.get(key) ?? 0) + rawValue;
+      rawGroupSums.set(key, newRawSum);
+      const newContribution = roundMoney(newRawSum);
+      const previousContribution = committedGroupContribution.get(key) ?? 0;
+      committedGroupContribution.set(key, newContribution);
+      totalsByCategory[rule.category] = roundMoney(
+        (totalsByCategory[rule.category] ?? 0) - previousContribution + newContribution,
+      );
     }
-  }
 
-  for (const [key, rawSum] of rawGroupSums) {
-    const category = key.split("::")[0] as CalculatorRuleCategory;
-    totalsByCategory[category] = roundMoney((totalsByCategory[category] ?? 0) + roundMoney(rawSum));
+    // Suma kategorii "do tej pory" pod stałą nazwą — pozwala KAŻDEJ kolejnej regule (w tej samej
+    // kategorii, np. rabat proporcjonalny, albo w zupełnie innej, np. rabat płatności z góry na
+    // końcu całej listy) odwołać się do JUŻ ZAOKRĄGLONEJ sumy poprzednich pozycji, bez ręcznego
+    // powtarzania ich formuł.
+    scope[`total_${rule.category}`] = totalsByCategory[rule.category];
   }
 
   const total = roundMoney(Object.values(totalsByCategory).reduce((sum, v) => sum + v, 0));
@@ -234,6 +245,8 @@ export function buildScope(
     pomiaryWewnetrzne: answers.pomiaryWewnetrzne ? 1 : 0,
     dodatkoweBruzdowanieM: answers.dodatkoweBruzdowanieM,
     kompleksowaInstalacja: answers.kompleksowaInstalacja ? 1 : 0,
+    platnoscZGory: answers.platnoscZGory ? 1 : 0,
+    platnoscZGoryPercent: settings.discounts.platnoscZGoryPercent,
     iloscElektrozaczepow: answers.iloscElektrozaczepow,
     iloscKlawiaturNfc: answers.iloscKlawiaturNfc,
     iloscOswSciemniane: answers.iloscOswSciemniane,

@@ -1107,6 +1107,24 @@ export const DEFAULT_CALCULATOR_RULES: CalculatorRule[] = [
     notes:
       "Ujemna pozycja (rabat), deklarowana jako OSTATNIA reguła tej kategorii — total_inne_systemy to suma WSZYSTKICH wcześniejszych, już zaokrąglonych pozycji tej kategorii (automatycznie udostępniana przez silnik). Sauna i Alarm tymczasowy są rzadko wybierane, więc w praktyce rabat rzadko sięga pełnych 15%.",
   }),
+
+  // ==================================================================================
+  // RABATY I WSPÓŁCZYNNIKI GLOBALNE — dopełnienie calculateCalculatorTotals z engine.ts.
+  // Trudny klient/projekt/rozdzielnica/outdoor są już wliczone jako postMultipliers przy
+  // poszczególnych regułach (patrz kategorie powyżej) — jedyna PRAWDZIWIE globalna, końcowa
+  // pozycja to rabat za płatność z góry, liczony od sumy WSZYSTKICH 5 kategorii razem.
+  // Musi być OSTATNIĄ regułą w całej liście (odwołuje się do total_* wszystkich kategorii).
+  // ==================================================================================
+  formulaRule({
+    key: "rabaty.platnoscZGory",
+    category: "rabaty",
+    label: "Rabat za płatność z góry",
+    gate: "platnoscZGory",
+    expression:
+      "-1*ROUND((total_baza+total_funkcjonalne+total_dodatki+total_elektryka+total_inne_systemy)*(platnoscZGoryPercent/100);2)",
+    notes:
+      "Liczony od sumy wszystkich 5 kategorii RAZEM (każda już zaokrąglona z osobna) — dokładnie jak subtotalNet w calculateCalculatorTotals. Musi zostać zadeklarowany jako ostatnia reguła w całej liście, żeby total_* wszystkich kategorii było już policzone.",
+  }),
 ];
 
 export const CALCULATOR_RULES_ID = "calculator_rules";
