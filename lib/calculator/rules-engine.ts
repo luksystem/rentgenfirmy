@@ -11,6 +11,7 @@
 import { evaluateFormula, type FormulaScope } from "@/lib/calculator/formula";
 import {
   isConditionalPrice,
+  isFormulaPrice,
   scopeVariableName,
   type CalculatorRule,
   type CalculatorRuleCategory,
@@ -36,6 +37,9 @@ function resolveQuantity(source: QuantitySource, scope: FormulaScope): number {
 function resolvePrice(price: RulePrice, scope: FormulaScope): number {
   if (isConditionalPrice(price)) {
     return scope[price.ifField] ? price.whenTrue : price.whenFalse;
+  }
+  if (isFormulaPrice(price)) {
+    return evaluateFormula(price.formula, scope);
   }
   return price;
 }
@@ -142,6 +146,18 @@ export function evaluateRules(rules: CalculatorRule[], initialScope: FormulaScop
 }
 
 /**
+ * Pola ankiety `number | null` (ręczna ilość, null = licz automatycznie) nie mają odpowiednika w
+ * FormulaScope (tylko liczby) — rozbite na dwie zmienne: `<name>Manual` (0/1, czy podano ręcznie)
+ * i `<name>Value` (podana wartość, 0 gdy nie podano). Formuła sama decyduje: IF(xManual;xValue;auto).
+ */
+function manualFields(name: string, value: number | null): FormulaScope {
+  return {
+    [`${name}Manual`]: value === null ? 0 : 1,
+    [`${name}Value`]: value ?? 0,
+  };
+}
+
+/**
  * Scope wspólny dla wszystkich kategorii reguł — pola ankiety i stałe z ustawień, które dowolna
  * reguła może nazwać po imieniu w swojej formule. Rośnie wraz z kolejnymi migrowanymi kategoriami
  * (na razie: baza, funkcjonalne). Pomocnicze wartości pośrednie (np. rgbwModuleQty,
@@ -204,9 +220,47 @@ export function buildScope(
     czyOknaCzujnikiFabryczne: answers.czyOknaCzujnikiFabryczne ? 1 : 0,
     iloscGrzejnikowSterowanych: answers.iloscGrzejnikowSterowanych,
     wspolczynnikOutdoor: answers.wspolczynnikOutdoor,
+    iloscPrzyciskowPrestiz: answers.iloscPrzyciskowPrestiz,
+    kanalyPrzepustyDoTv: answers.kanalyPrzepustyDoTv ? 1 : 0,
+    instalacjaMasztuAnteny: answers.instalacjaMasztuAnteny ? 1 : 0,
+    rozdzielniaBudowlana: answers.rozdzielniaBudowlana ? 1 : 0,
+    przylaczeDoDomu: answers.przylaczeDoDomu ? 1 : 0,
+    dlugoscPrzylaczaM: answers.dlugoscPrzylaczaM,
+    formalnosciOdbiorowe: answers.formalnosciOdbiorowe ? 1 : 0,
+    pomiaryWewnetrzne: answers.pomiaryWewnetrzne ? 1 : 0,
+    dodatkoweBruzdowanieM: answers.dodatkoweBruzdowanieM,
+    kompleksowaInstalacja: answers.kompleksowaInstalacja ? 1 : 0,
+    ...manualFields("iloscObwodowGniazd230V", answers.iloscObwodowGniazd230V),
+    ...manualFields("iloscKolejnychGniazdObwody230V", answers.iloscKolejnychGniazdObwody230V),
+    ...manualFields("iloscGniazd400V", answers.iloscGniazd400V),
+    ...manualFields("iloscObwodowOswietleniaWszystkich", answers.iloscObwodowOswietleniaWszystkich),
+    ...manualFields("iloscOswietleniaKolejne", answers.iloscOswietleniaKolejne),
+    ...manualFields("iloscGniazdLanTv", answers.iloscGniazdLanTv),
+    ...manualFields("iloscKabliGlosnikowych", answers.iloscKabliGlosnikowych),
+    ...manualFields("iloscKanalowTv", answers.iloscKanalowTv),
+    ...manualFields("iloscPrzyciskowNormal", answers.iloscPrzyciskowNormal),
 
     // -- ustawienia (edytowalne w panelu) --
     laborRatePerHour: settings.laborRatePerHour,
+    stawkaStandardBaza: settings.electrical.rates.standard,
+    stawkaInteligentnyBaza: settings.electrical.rates.inteligentny,
+    stawkaGotoweUrzadzenieBaza: settings.electrical.rates.gotowe_urzadzenie,
+    stawkaPetlaBaza: settings.electrical.rates.petla,
+    referencyjnyDystansKm: settings.electrical.referencyjnyDystansKm,
+    doplataZaKmNettoNaPunkt: settings.electrical.doplataZaKmNettoNaPunkt,
+    kanalTv: settings.electrical.fixed.kanalTv,
+    antenaZMasztem: settings.electrical.fixed.antenaZMasztem,
+    dzierzawaRozdzielniBudowlanej: settings.electrical.fixed.dzierzawaRozdzielniBudowlanej,
+    obsadzenieRozdzielniGlownej: settings.electrical.fixed.obsadzenieRozdzielniGlownej,
+    przylaczeZaMetr: settings.electrical.fixed.przylaczeZaMetr,
+    formalnosciOdbioroweCena: settings.electrical.fixed.formalnosciOdbiorowe,
+    pomiaryWewnetrzneZaPunkt: settings.electrical.fixed.pomiaryWewnetrzneZaPunkt,
+    dodatkoweBruzdowanieZaMetr: settings.electrical.fixed.dodatkoweBruzdowanieZaMetr,
+    podstawoweWyposazenieInstalacji: settings.electrical.fixed.podstawoweWyposazenieInstalacji,
+    doplataZaBrameGarazowa: settings.electrical.fixed.doplataZaBrameGarazowa,
+    cenaPrzyciskuPrestiz: settings.extras.cenaPrzyciskuPrestiz,
+    cenaPrzyciskuNormal: settings.extras.cenaPrzyciskuNormal,
+    instalacjaKompleksowaPercent: settings.discounts.instalacjaKompleksowaPercent,
     projektJednaKondygnacja: s.projektJednaKondygnacja,
     projektWieleKondygnacji: s.projektWieleKondygnacji,
     projektDuzyDomProgM2: s.projektDuzyDomProgM2,

@@ -22,17 +22,24 @@ export const CALCULATOR_RULE_CATEGORIES = [
 ] as const;
 export type CalculatorRuleCategory = (typeof CALCULATOR_RULE_CATEGORIES)[number];
 
-/** Cena warunkowa — jedyny "warunek" dopuszczalny bez pisania formuły (np. czujnik: fabryczny/standard). */
+/** Cena warunkowa — prosty "warunek" dopuszczalny bez pisania formuły (np. czujnik: fabryczny/standard). */
 export type ConditionalPrice = {
   ifField: string;
   whenTrue: number;
   whenFalse: number;
 };
 
-export type RulePrice = number | ConditionalPrice;
+/** Cena liczona formułą — dla pozycji, których stawka zależy od czegoś więcej niż jednego warunku (np. stawka punktu elektrycznego + dopłata za km). */
+export type FormulaPrice = { formula: string };
+
+export type RulePrice = number | ConditionalPrice | FormulaPrice;
 
 export function isConditionalPrice(price: RulePrice): price is ConditionalPrice {
-  return typeof price === "object" && price !== null;
+  return typeof price === "object" && price !== null && "ifField" in price;
+}
+
+export function isFormulaPrice(price: RulePrice): price is FormulaPrice {
+  return typeof price === "object" && price !== null && "formula" in price;
 }
 
 /** Źródło ilości — wprost pole ankiety, stała liczba, albo (rzadko) formuła tekstowa. */
@@ -541,6 +548,233 @@ export const DEFAULT_CALCULATOR_RULES: CalculatorRule[] = [
       "ROUND((zewnetrzneRelayQty*1584.7+1462.8+16*120)*IF(trudnyKlientWspolczynnik>0;trudnyKlientWspolczynnik;1);2)",
     notes:
       "Jedyna kategoria z dwoma mnożnikami naraz (trudny klient × współczynnik outdoor). W źródle to DWA osobne zaokrąglenia z rzędu (najpierw × trudny klient, zaokrąglenie, potem × outdoor, drugie zaokrąglenie) — stąd jawny ROUND() w środku formuły zamiast dwóch reguł postMultipliers na raz. Znalezione i naprawione dzięki szerokiemu testowi porównawczemu (rozbieżność -0,01 zł przy trudny=1,15 i outdoor=1,4).",
+  }),
+
+  // ==================================================================================
+  // INSTALACJA ELEKTRYCZNA — 1:1 odtworzenie calculateElectricalItems z engine.ts. Jedna
+  // duża lista pozycji (BOM) — każda ze swoją formułą ilości (ręczna wartość, jeśli podana,
+  // inaczej auto z parametrów domu) i stawką zależną od typu punktu + dopłaty za km.
+  // ==================================================================================
+  formulaRule({
+    key: "elektryka.stawkaStandard",
+    category: "elektryka",
+    label: "Stawka punktu — standard (pomocnicza)",
+    contributesToTotal: false,
+    expression: "stawkaStandardBaza+MAX(0;odlegloscKm-referencyjnyDystansKm)*doplataZaKmNettoNaPunkt",
+  }),
+  formulaRule({
+    key: "elektryka.stawkaInteligentny",
+    category: "elektryka",
+    label: "Stawka punktu — inteligentny dom (pomocnicza)",
+    contributesToTotal: false,
+    expression: "stawkaInteligentnyBaza+MAX(0;odlegloscKm-referencyjnyDystansKm)*doplataZaKmNettoNaPunkt",
+  }),
+  formulaRule({
+    key: "elektryka.stawkaGotoweUrzadzenie",
+    category: "elektryka",
+    label: "Stawka punktu — gotowe urządzenie (pomocnicza)",
+    contributesToTotal: false,
+    expression: "stawkaGotoweUrzadzenieBaza+MAX(0;odlegloscKm-referencyjnyDystansKm)*doplataZaKmNettoNaPunkt",
+  }),
+  formulaRule({
+    key: "elektryka.stawkaPetla",
+    category: "elektryka",
+    label: "Stawka punktu — pętla/magistrala (pomocnicza)",
+    contributesToTotal: false,
+    expression: "stawkaPetlaBaza+MAX(0;odlegloscKm-referencyjnyDystansKm)*doplataZaKmNettoNaPunkt",
+  }),
+
+  formulaRule({
+    key: "elektryka.przyciskiNormalAuto",
+    category: "elektryka",
+    label: "Przyciski NORMAL — ilość auto z pomieszczeń (pomocnicza)",
+    contributesToTotal: false,
+    expression:
+      "IF(komunikacja;2;0)+liczbaSypialniDodatkowych*2+liczbaPomieszczenWilgotnych+liczbaPozostalychPomieszczen+iloscGarazy+IF(strefaPrywatna;2;0)+IF(strefaOtwarta;3;0)",
+  }),
+  formulaRule({
+    key: "elektryka.przyciskiNormalQty",
+    category: "elektryka",
+    label: "Przyciski NORMAL — ilość finalna (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(iloscPrzyciskowNormalManual;iloscPrzyciskowNormalValue;przyciskiNormalAuto)",
+  }),
+  formulaRule({
+    key: "elektryka.gniazdaObwodyAuto",
+    category: "elektryka",
+    label: "Gniazda obwody — ilość auto (pomocnicza)",
+    contributesToTotal: false,
+    expression:
+      "IF(strefaPrywatna;2;0)+IF(strefaOtwarta;4;0)+IF(komunikacja;1;0)+liczbaSypialniDodatkowych+liczbaPomieszczenWilgotnych+liczbaPozostalychPomieszczen+iloscGarazy",
+  }),
+  formulaRule({
+    key: "elektryka.gniazdaObwodyQty",
+    category: "elektryka",
+    label: "Gniazda obwody — ilość finalna (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(iloscObwodowGniazd230VManual;iloscObwodowGniazd230VValue;gniazdaObwodyAuto)",
+  }),
+  formulaRule({
+    key: "elektryka.gniazdaKolejneAuto",
+    category: "elektryka",
+    label: "Gniazda kolejne w obwodzie — ilość auto (pomocnicza)",
+    contributesToTotal: false,
+    expression:
+      "IF(strefaPrywatna;6;0)+IF(strefaOtwarta;8;0)+IF(komunikacja;3;0)+liczbaSypialniDodatkowych*3+liczbaPomieszczenWilgotnych+liczbaPozostalychPomieszczen+iloscGarazy*6",
+  }),
+  formulaRule({
+    key: "elektryka.gniazdaKolejneQty",
+    category: "elektryka",
+    label: "Gniazda kolejne w obwodzie — ilość finalna (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(iloscKolejnychGniazdObwody230VManual;iloscKolejnychGniazdObwody230VValue;gniazdaKolejneAuto)",
+  }),
+  formulaRule({
+    key: "elektryka.gniazda400Auto",
+    category: "elektryka",
+    label: "Gniazda 400V — ilość auto (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(strefaOtwarta;1;0)+iloscGarazy",
+  }),
+  formulaRule({
+    key: "elektryka.gniazda400Qty",
+    category: "elektryka",
+    label: "Gniazda 400V — ilość finalna (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(iloscGniazd400VManual;iloscGniazd400VValue;gniazda400Auto)",
+  }),
+  formulaRule({
+    key: "elektryka.oswietleniePunktyQty",
+    category: "elektryka",
+    label: "Oświetlenie punkty ON/LED — ilość finalna (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(iloscObwodowOswietleniaWszystkichManual;iloscObwodowOswietleniaWszystkichValue;oswietleniePunkty)",
+  }),
+  formulaRule({
+    key: "elektryka.oswietlenieKolejneAuto",
+    category: "elektryka",
+    label: "Oświetlenie kolejne w obwodzie — ilość auto (pomocnicza)",
+    contributesToTotal: false,
+    expression: "oswietleniePunkty*IF(korzystamZArchitekta;1.5;0.5)",
+  }),
+  formulaRule({
+    key: "elektryka.oswietlenieKolejneQty",
+    category: "elektryka",
+    label: "Oświetlenie kolejne w obwodzie — ilość finalna (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(iloscOswietleniaKolejneManual;iloscOswietleniaKolejneValue;oswietlenieKolejneAuto)",
+  }),
+  formulaRule({
+    key: "elektryka.glosnikiAuto",
+    category: "elektryka",
+    label: "Instalacja do głośników — ilość auto (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(strefaOtwarta;5;0)+IF(strefaPrywatna;2;0)+liczbaSypialniDodatkowych+liczbaPozostalychPomieszczen",
+  }),
+  formulaRule({
+    key: "elektryka.glosnikiQty",
+    category: "elektryka",
+    label: "Instalacja do głośników — ilość finalna (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(iloscKabliGlosnikowychManual;iloscKabliGlosnikowychValue;glosnikiAuto)",
+  }),
+  formulaRule({
+    key: "elektryka.lanTvAuto",
+    category: "elektryka",
+    label: "Instalacja do TV/LAN — ilość auto (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(strefaPrywatna;2;0)+IF(strefaOtwarta;2;0)+liczbaSypialniDodatkowych+5",
+  }),
+  formulaRule({
+    key: "elektryka.lanTvQty",
+    category: "elektryka",
+    label: "Instalacja do TV/LAN — ilość finalna (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(iloscGniazdLanTvManual;iloscGniazdLanTvValue;lanTvAuto)",
+  }),
+  formulaRule({
+    key: "elektryka.kanalyAuto",
+    category: "elektryka",
+    label: "Kanały/przepusty TV — ilość auto (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(strefaPrywatna;1;0)+IF(strefaOtwarta;1;0)+liczbaSypialniDodatkowych",
+  }),
+  formulaRule({
+    key: "elektryka.kanalyQty",
+    category: "elektryka",
+    label: "Kanały/przepusty TV — ilość finalna (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(iloscKanalowTvManual;iloscKanalowTvValue;kanalyAuto)",
+  }),
+  formulaRule({
+    key: "elektryka.sumaPunktowDoPomiarow",
+    category: "elektryka",
+    label: "Suma punktów do pomiarów wewnętrznych (pomocnicza)",
+    contributesToTotal: false,
+    notes: "Odtwarza sumę ilości wszystkich pozycji WCZEŚNIEJSZYCH niż „pomiary” w źródłowej liście (El rozbudowa) — dokładnie te same pozycje, w tej samej kolejności.",
+    expression:
+      "1" + // podstawowe wyposażenie
+      "+iloscGarazy" + // dopłata brama garażowa
+      "+iloscPrzyciskowPrestiz" +
+      "+przyciskiNormalQty" +
+      "+gniazdaObwodyQty" +
+      "+gniazdaKolejneQty" +
+      "+gniazda400Qty" +
+      "+oswietleniePunktyQty" +
+      "+oswietlenieKolejneQty" +
+      "+IF(planujeRolety;liczbaRolet;0)" +
+      "+IF(sterowanieOgrodem;8;0)" + // zewnętrzne oświetlenie
+      "+IF(sterowanieOgrodem;4;0)" + // podlewanie
+      "+IF(sterowanieOgrodem;1;0)" + // czujnik deszczu
+      "+IF(instalacjaDoGlosnikow;glosnikiQty;0)" +
+      "+IF(instalacjaDoMonitoringu;iloscKamerMonitoringu;0)" +
+      "+IF(instalacjaDoTelewizjiLubLan;lanTvQty;0)" +
+      "+IF(kanalyPrzepustyDoTv;kanalyQty;0)" +
+      "+IF(instalacjaMasztuAnteny;1;0)" +
+      "+IF(rozdzielniaBudowlana;1;0)" +
+      "+1" + // obsadzenie rozdzielni głównej
+      "+IF(przylaczeDoDomu;dlugoscPrzylaczaM;0)" +
+      "+IF(formalnosciOdbiorowe;1;0)",
+  }),
+
+  bomRule({
+    key: "elektryka.instalacja",
+    category: "elektryka",
+    label: "Instalacja elektryczna",
+    lines: [
+      line("Podstawowe wyposażenie instalacji (czujki, bramy, furtka, domofon, rozdzielnice pomocnicze)", fixedQty(1), { formula: "podstawoweWyposazenieInstalacji" }),
+      line("Dopłata za bramę garażową", fieldQty("iloscGarazy"), { formula: "doplataZaBrameGarazowa" }),
+      line("Przyciski szklane (PRESTIŻ)", fieldQty("iloscPrzyciskowPrestiz"), { formula: "cenaPrzyciskuPrestiz" }),
+      line("Przyciski plastikowe / dotykowe (NORMAL)", fieldQty("przyciskiNormalQty"), { formula: "cenaPrzyciskuNormal" }),
+      line("Gniazda — obwody", fieldQty("gniazdaObwodyQty"), { formula: "stawkaInteligentny" }),
+      line("Gniazda — kolejne w obwodzie", fieldQty("gniazdaKolejneQty"), { formula: "stawkaStandard" }),
+      line("Gniazda 400V", fieldQty("gniazda400Qty"), { formula: "stawkaGotoweUrzadzenie" }),
+      line("Oświetlenie — punkty ON/LED", fieldQty("oswietleniePunktyQty"), { formula: "stawkaInteligentny" }),
+      line("Oświetlenie — kolejne w obwodzie", fieldQty("oswietlenieKolejneQty"), { formula: "stawkaStandard" }),
+      line("Rolety — zasilanie", formulaQty("IF(planujeRolety;liczbaRolet;0)"), { formula: "stawkaInteligentny" }),
+      line("Oświetlenie zewnętrzne i ogród", formulaQty("IF(sterowanieOgrodem;8;0)"), { formula: "stawkaInteligentny" }),
+      line("Podlewanie ogrodu", formulaQty("IF(sterowanieOgrodem;4;0)"), { formula: "stawkaInteligentny" }),
+      line("Czujnik deszczu", formulaQty("IF(sterowanieOgrodem;1;0)"), { formula: "stawkaInteligentny" }),
+      line("Instalacja do głośników", formulaQty("IF(instalacjaDoGlosnikow;glosnikiQty;0)"), { formula: "stawkaInteligentny" }),
+      line("Instalacja do monitoringu", formulaQty("IF(instalacjaDoMonitoringu;iloscKamerMonitoringu;0)"), { formula: "stawkaInteligentny" }),
+      line("Instalacja do TV / LAN", formulaQty("IF(instalacjaDoTelewizjiLubLan;lanTvQty;0)"), { formula: "stawkaInteligentny" }),
+      line("Kanały / przepusty do TV", formulaQty("IF(kanalyPrzepustyDoTv;kanalyQty;0)"), { formula: "kanalTv" }),
+      line("Instalacja masztu antenowego z anteną", formulaQty("IF(instalacjaMasztuAnteny;1;0)"), { formula: "antenaZMasztem" }),
+      line("Dzierżawa rozdzielni budowlanej", formulaQty("IF(rozdzielniaBudowlana;1;0)"), { formula: "dzierzawaRozdzielniBudowlanej" }),
+      line("Obsadzenie rozdzielni głównej", fixedQty(1), { formula: "obsadzenieRozdzielniGlownej" }),
+      line("Przyłącze elektryczne do domu", formulaQty("IF(przylaczeDoDomu;dlugoscPrzylaczaM;0)"), { formula: "przylaczeZaMetr" }),
+      line("Formalności odbiorowe", formulaQty("IF(formalnosciOdbiorowe;1;0)"), { formula: "formalnosciOdbioroweCena" }),
+      line("Pomiary wewnętrzne i uziemienia", formulaQty("IF(pomiaryWewnetrzne;sumaPunktowDoPomiarow;0)"), { formula: "pomiaryWewnetrzneZaPunkt" }),
+      line("Dodatkowe bruzdowanie", fieldQty("dodatkoweBruzdowanieM"), { formula: "dodatkoweBruzdowanieZaMetr" }),
+    ],
+  }),
+  formulaRule({
+    key: "elektryka.rabatKompleksowosci",
+    category: "elektryka",
+    label: "Rabat kompleksowości instalacji",
+    expression: "IF(kompleksowaInstalacja;-1*ROUND(ROUND(instalacja;2)*(instalacjaKompleksowaPercent/100);2);0)",
+    notes:
+      "Ujemna pozycja (rabat) — obniża sumę kategorii Elektryka. Dotyczy WYŁĄCZNIE tej kategorii, nie całej oferty. Trzy celowe detale zgodne ze źródłem co do grosza: (1) rabat liczy się od JUŻ ZAOKRĄGLONEJ sumy instalacji, nie surowej; (2) nawiasy wokół (percent/100) wymuszają TĘ SAMĄ kolejność działań co w źródle (net*(percent/100), nie (net*percent)/100) — różna kolejność mnożenia/dzielenia daje różny wynik zmiennoprzecinkowy dokładnie na granicy pół grosza; (3) kwota rabatu jest zaokrąglana jako liczba DODATNIA przed zanegowaniem, bo Math.round() w JS zaokrągla -x.5 w dół, nie w górę jak dla +x.5. Wszystkie trzy znalezione szerokim testem porównawczym.",
   }),
 ];
 
