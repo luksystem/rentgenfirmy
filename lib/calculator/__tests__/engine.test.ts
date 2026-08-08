@@ -4,6 +4,7 @@ import {
   calculateBaseSystem,
   calculateCalculatorTotals,
   calculateElectricalItems,
+  calculateFunctionalBudgets,
   calculateOtherSystems,
 } from "@/lib/calculator/engine";
 import { DEFAULT_CALCULATOR_SETTINGS } from "@/lib/calculator/settings";
@@ -89,6 +90,53 @@ describe("calculateBaseSystem — zweryfikowane przeciw DANE!T109:T111", () => {
 
     const result = calculateBaseSystem(answers, DEFAULT_CALCULATOR_SETTINGS);
     expect(result.rozdzielniaWykonanieNet).toBe(17520);
+  });
+});
+
+describe("calculateFunctionalBudgets — zestawienie materiałowe (items) per kategoria", () => {
+  it("nieaktywna kategoria ma pustą listę pozycji, aktywna zwraca dodatnie ilości spójne z ceną", () => {
+    const answers = emptyCalculatorAnswers();
+    answers.scenyOswietleniowe = true;
+    answers.ledySciemniane = 12;
+    answers.satelWOptimum = true;
+    answers.alarmIKontrolaDostepu = true;
+    answers.sterowanieTemperatura = true;
+    answers.strefyOgrzewaniaPodlogowego = 6;
+    answers.iloscGrzejnikowSterowanych = 2;
+    answers.planujeRolety = true;
+    answers.liczbaRolet = 8;
+    answers.sterowanieOgrodem = true;
+    answers.iloscOswietlenZewnetrznych = 4;
+    answers.iloscSekcjiPodlewania = 4;
+    answers.liczbaPomieszczenZOknami = 10;
+    answers.liczbaDrzwiWejsciowych = 1;
+    answers.liczbaWyjscNaTaras = 1;
+    answers.liczbaPomieszczenWilgotnych = 2;
+    answers.iloscGarazy = 1;
+
+    const result = calculateFunctionalBudgets(answers, DEFAULT_CALCULATOR_SETTINGS);
+    for (const category of result) {
+      if (!category.selected) {
+        expect(category.items).toEqual([]);
+        continue;
+      }
+      expect(category.items.length).toBeGreaterThan(0);
+      for (const item of category.items) {
+        expect(item.quantity).toBeGreaterThan(0);
+        expect(item.net).toBeCloseTo(item.quantity * item.unitPrice, 6);
+      }
+    }
+
+    const oswietlenie = result.find((r) => r.category === "oswietlenie")!;
+    expect(oswietlenie.items.map((i) => i.key)).toEqual(
+      expect.arrayContaining(["relayLoxone14", "rgbwModule"]),
+    );
+
+    const bezpieczenstwo = result.find((r) => r.category === "bezpieczenstwo")!;
+    expect(bezpieczenstwo.items.find((i) => i.key === "centralaAlarmowa")?.quantity).toBe(1);
+
+    const zewnetrzne = result.find((r) => r.category === "zewnetrzne")!;
+    expect(zewnetrzne.items.find((i) => i.key === "czujnikDeszczuZestaw")?.quantity).toBe(1);
   });
 });
 

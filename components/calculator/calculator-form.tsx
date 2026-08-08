@@ -79,12 +79,52 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
   const [isConverting, setIsConverting] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [materialsOpen, setMaterialsOpen] = useState(false);
 
   useEffect(() => {
     void fetchCalculatorSettings().then(setSettings).catch(() => undefined);
   }, []);
 
   const totals = useMemo(() => calculateCalculatorTotals(offer.answers, settings), [offer.answers, settings]);
+
+  const materialGroups = useMemo(() => {
+    type MaterialLine = { key: string; label: string; quantity: number; unitPrice: number; net: number };
+    const groups: { title: string; lines: MaterialLine[] }[] = [];
+
+    for (const category of totals.functional) {
+      if (category.selected && category.items.length > 0) {
+        groups.push({ title: CALCULATOR_FUNCTIONAL_CATEGORY_LABELS[category.category], lines: category.items });
+      }
+    }
+
+    if (totals.electrical.items.length > 0) {
+      groups.push({
+        title: "Instalacja elektryczna",
+        lines: totals.electrical.items.map((item) => ({
+          key: item.key,
+          label: item.label,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          net: item.net,
+        })),
+      });
+    }
+
+    const addonLines = totals.addons
+      .filter((addon) => addon.selected && addon.quantity > 0)
+      .map((addon) => ({
+        key: addon.key,
+        label: CALCULATOR_ADDON_LABELS[addon.key],
+        quantity: addon.quantity,
+        unitPrice: addon.net / addon.quantity,
+        net: addon.net,
+      }));
+    if (addonLines.length > 0) {
+      groups.push({ title: "Dodatki", lines: addonLines });
+    }
+
+    return groups;
+  }, [totals]);
 
   function setAnswers(patch: Partial<CalculatorAnswers>) {
     setOffer((prev) => ({ ...prev, answers: { ...prev.answers, ...patch } }));
@@ -712,6 +752,68 @@ export function CalculatorForm({ initialOffer }: { initialOffer: CalculatorOffer
             </Section>
           </CardContent>
         </Card>
+
+        {materialGroups.length > 0 ? (
+          <Card>
+            <button
+              type="button"
+              onClick={() => setMaterialsOpen((v) => !v)}
+              className="flex w-full items-center gap-3 px-5 py-4 text-left"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className={cn("h-4 w-4 shrink-0 text-muted transition-transform", materialsOpen && "rotate-90")}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+              <span className="flex-1">
+                <CardTitle>Zestawienie elementów systemu</CardTitle>
+                <p className="mt-1 text-sm text-muted">
+                  Elementy i ilości auto-dobrane przez kalkulator na podstawie odpowiedzi ankiety (bez ręcznie
+                  nadpisanych pozycji instalacji elektrycznej i dodatków — te liczą się identycznie).
+                </p>
+              </span>
+            </button>
+            {materialsOpen ? (
+              <CardContent className="grid gap-5 pt-0">
+                {materialGroups.map((group) => (
+                  <div key={group.title} className="grid gap-1.5">
+                    <p className="text-sm font-medium text-foreground">{group.title}</p>
+                    <div className="overflow-x-auto rounded-lg border border-border/60">
+                      <table className="w-full min-w-[420px] text-sm">
+                        <thead>
+                          <tr className="border-b border-border/60 bg-surface-muted/30 text-left text-xs uppercase tracking-wide text-muted">
+                            <th className="px-3 py-2 font-medium">Element</th>
+                            <th className="px-3 py-2 text-right font-medium">Ilość</th>
+                            <th className="px-3 py-2 text-right font-medium">Cena jedn.</th>
+                            <th className="px-3 py-2 text-right font-medium">Wartość</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {group.lines.map((line) => (
+                            <tr key={line.key} className="border-b border-border/40 last:border-b-0">
+                              <td className="px-3 py-2">{line.label}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">
+                                {Number.isInteger(line.quantity) ? line.quantity : line.quantity.toFixed(2)}
+                              </td>
+                              <td className="px-3 py-2 text-right tabular-nums text-muted">{formatMoney(line.unitPrice)}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">{formatMoney(line.net)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            ) : null}
+          </Card>
+        ) : null}
 
         {error ? <p className="text-sm text-rose-400">{error}</p> : null}
 

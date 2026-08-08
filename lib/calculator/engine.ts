@@ -8,7 +8,12 @@ import {
   type CalculatorFunctionalCategory,
   type CalculatorOtherSystemKey,
 } from "@/lib/calculator/types";
-import type { CalculatorHardwareCatalog, CalculatorOtherSystemsCatalog, CalculatorSettings } from "@/lib/calculator/settings";
+import {
+  CALCULATOR_HARDWARE_LABELS,
+  type CalculatorHardwareCatalog,
+  type CalculatorOtherSystemsCatalog,
+  type CalculatorSettings,
+} from "@/lib/calculator/settings";
 
 /**
  * Silnik przeliczeń kalkulatora — odpowiednik łańcucha arkuszy KALKULATOR -> ZESTAWIENIE ->
@@ -213,6 +218,8 @@ export type CalculatorFunctionalResult = {
   category: CalculatorFunctionalCategory;
   selected: boolean;
   net: number;
+  /** Zestawienie materiałowe auto-dobrane przez silnik dla tej kategorii (puste, gdy kategoria nieaktywna). */
+  items: CalculatorFunctionalLineItem[];
 };
 
 const FUNCTIONAL_GATE: Record<CalculatorFunctionalCategory, keyof CalculatorAnswers> = {
@@ -223,7 +230,35 @@ const FUNCTIONAL_GATE: Record<CalculatorFunctionalCategory, keyof CalculatorAnsw
   zewnetrzne: "sterowanieOgrodem",
 };
 
-type CategoryBudget = { sprzet: number; godziny: number };
+export type CalculatorFunctionalLineItem = {
+  key: string;
+  label: string;
+  quantity: number;
+  unitPrice: number;
+  net: number;
+};
+
+type CategoryBudget = { items: CalculatorFunctionalLineItem[]; sprzet: number; godziny: number };
+
+/** Buduje pozycję zestawienia materiałowego z katalogu sprzętu (pomija ilości <= 0). */
+function hwItem(
+  hw: CalculatorHardwareCatalog,
+  key: keyof CalculatorHardwareCatalog,
+  quantity: number,
+  labelOverride?: string,
+): CalculatorFunctionalLineItem[] {
+  if (quantity <= 0) return [];
+  const unitPrice = hw[key];
+  return [
+    {
+      key,
+      label: labelOverride ?? CALCULATOR_HARDWARE_LABELS[key],
+      quantity,
+      unitPrice,
+      net: quantity * unitPrice,
+    },
+  ];
+}
 
 /** ZESTAWIENIE!L column (kategoria Oświetlenie, poziom PRESTIŻ — stały domyślny dobór biura). */
 /** Ilość modułów RGBW (ZESTAWIENIE!L10) — współdzielona między kategorią Oświetlenie i "Zasilacze LED" w bazie zasilania. */
@@ -242,7 +277,12 @@ function calculateOswietlenieBudget(answers: CalculatorAnswers, hw: CalculatorHa
 
   const sprzet =
     relayQty * hw.relayLoxone14 + rgbwQty * hw.rgbwModule + czujkaLoxoneQty * hw.czujkaLoxone;
-  return { sprzet, godziny: czujkaLoxoneQty * 2 };
+  const items = [
+    ...hwItem(hw, "relayLoxone14", relayQty),
+    ...hwItem(hw, "rgbwModule", rgbwQty),
+    ...hwItem(hw, "czujkaLoxone", czujkaLoxoneQty),
+  ];
+  return { items, sprzet, godziny: czujkaLoxoneQty * 2 };
 }
 
 /** ZESTAWIENIE!P column (kategoria Bezpieczeństwo, poziom KOMFORT). */
@@ -285,6 +325,27 @@ function calculateBezpieczenstwoBudget(answers: CalculatorAnswers, hw: Calculato
     klawiaturaMalaQty * hw.klawiaturaMala +
     klawiaturaGarazQty * hw.klawiaturaGarazStrefowa;
 
+  const items = [
+    ...hwItem(hw, "extensionDI", extensionDIQty),
+    ...hwItem(hw, "zaworOdciecia", zaworQty),
+    ...hwItem(hw, "centralaAlarmowa", centralaQty),
+    ...hwItem(hw, "intKnx", intKnxQty),
+    ...hwItem(hw, "syrenaAlarmowa", syrenaQty),
+    ...hwItem(hw, "czujkiSufitowe", czujkiSufitoweQty),
+    ...hwItem(hw, "czujkiDualne", czujkiDualneQty),
+    ...hwItem(hw, "czujkiBezpieczenstwaSprzet", czujkiBezpieczenstwaQty),
+    ...hwItem(hw, "kontaktronBrama", kontaktronBramaQty),
+    ...hwItem(
+      hw,
+      answers.czyOknaCzujnikiFabryczne ? "kontaktronOknoDrzwiFabryczne" : "kontaktronOknoDrzwiStandard",
+      kontaktronOknoDrzwiQty,
+      "Kontaktron okno/drzwi",
+    ),
+    ...hwItem(hw, "czujkaZalania", czujkaZalaniaQty),
+    ...hwItem(hw, "klawiaturaMala", klawiaturaMalaQty),
+    ...hwItem(hw, "klawiaturaGarazStrefowa", klawiaturaGarazQty),
+  ];
+
   const godziny =
     zaworQty +
     centralaQty * 12 +
@@ -299,7 +360,7 @@ function calculateBezpieczenstwoBudget(answers: CalculatorAnswers, hw: Calculato
     klawiaturaMalaQty * 2 +
     klawiaturaGarazQty * 2;
 
-  return { sprzet, godziny };
+  return { items, sprzet, godziny };
 }
 
 /** ZESTAWIENIE!U column (kategoria Temperatura, poziom KOMFORT). */
@@ -317,20 +378,29 @@ function calculateTemperaturaBudget(answers: CalculatorAnswers, hw: CalculatorHa
     glowicaQty * hw.glowicaGrzejnika +
     czujniki1WireQty * hw.czujniki1Wire;
 
-  return { sprzet, godziny: glowicaQty + czujniki1WireQty };
+  const items = [
+    ...hwItem(hw, "relayLoxone14", relayQty),
+    ...hwItem(hw, "oneWireExt", oneWireExtQty),
+    ...hwItem(hw, "silownikSalus", silownikQty),
+    ...hwItem(hw, "glowicaGrzejnika", glowicaQty),
+    ...hwItem(hw, "czujniki1Wire", czujniki1WireQty),
+  ];
+
+  return { items, sprzet, godziny: glowicaQty + czujniki1WireQty };
 }
 
 /** ZESTAWIENIE!Z column (kategoria Rolety, poziom KOMFORT). */
 function calculateRoletyBudget(answers: CalculatorAnswers, hw: CalculatorHardwareCatalog): CategoryBudget {
   const relayQty = roundUp((answers.liczbaRolet * 2) / 14);
-  return { sprzet: relayQty * hw.relayLoxone14, godziny: relayQty * 5 };
+  return { items: hwItem(hw, "relayLoxone14", relayQty), sprzet: relayQty * hw.relayLoxone14, godziny: relayQty * 5 };
 }
 
 /** ZESTAWIENIE!AE column (kategoria Zewnętrzne, poziom KOMFORT). */
 function calculateZewnetrzneBudget(answers: CalculatorAnswers, hw: CalculatorHardwareCatalog): CategoryBudget {
   const relayQty = roundUp((answers.iloscOswietlenZewnetrznych + answers.iloscSekcjiPodlewania) / 14);
   const sprzet = relayQty * hw.relayLoxone14 + hw.czujnikDeszczuZestaw;
-  return { sprzet, godziny: 16 }; // ZESTAWIENIE!AE69 — stała wartość w źródle
+  const items = [...hwItem(hw, "relayLoxone14", relayQty), ...hwItem(hw, "czujnikDeszczuZestaw", 1)];
+  return { items, sprzet, godziny: 16 }; // ZESTAWIENIE!AE69 — stała wartość w źródle
 }
 
 /**
@@ -351,11 +421,11 @@ export function calculateFunctionalBudgets(
 
   return CALCULATOR_FUNCTIONAL_CATEGORIES.map((category) => {
     if (category === "bezpieczenstwo" && answers.tylkoRozdzielnia) {
-      return { category, selected: false, net: 0 };
+      return { category, selected: false, net: 0, items: [] };
     }
     const selected = Boolean(answers[FUNCTIONAL_GATE[category]]);
     if (!selected) {
-      return { category, selected: false, net: 0 };
+      return { category, selected: false, net: 0, items: [] };
     }
 
     const budget =
@@ -373,7 +443,7 @@ export function calculateFunctionalBudgets(
     if (category === "zewnetrzne") {
       net = roundMoney(net * Math.max(0, answers.wspolczynnikOutdoor || 1));
     }
-    return { category, selected: true, net };
+    return { category, selected: true, net, items: budget.items };
   });
 }
 
